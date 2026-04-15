@@ -17,7 +17,7 @@ export default function CtaSection() {
           Kostenloses Erstgespräch buchen
         </a>
         <p className="text-[#7a8fa6] text-xs tracking-[0.1em] uppercase mt-8">
-          Martin Gaspar · ARGONAUT · 71132 Böblingen
+          Martin Gaspar · ARGONAUT · 71032 Böblingen
         </p>
       </div>
     </section>

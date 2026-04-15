@@ -7,21 +7,21 @@ const services = [
 
 export default function Services() {
   return (
-    <section id="leistungen" className="bg-white px-8 md:px-16 py-24">
-      <div className="max-w-[1200px] mx-auto">
+    <section id="leistungen" className="bg-white px-20 py-28">
+      <div className="max-w-[1300px] mx-auto">
         <div className="flex items-center gap-3 mb-12">
-          <span className="inline-block w-8 h-px bg-[#2563eb]" />
-          <span className="text-[#2563eb] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)] font-semibold">Leistungen</span>
+          <span className="inline-block w-8 h-px bg-[#c9a84c]" />
+          <span className="text-[#c9a84c] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)] font-semibold">Leistungen</span>
         </div>
-        <h2 className="font-[family-name:var(--font-syne)] font-semibold text-4xl md:text-5xl leading-tight tracking-tight text-[#1a1a2e] mb-12">
+        <h2 className="font-[family-name:var(--font-syne)] font-semibold text-5xl leading-tight tracking-tight text-[#1a1a2e] mb-16">
           Was wir für Sie<br />automatisieren
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[#e2e8f0]">
+        <div className="grid grid-cols-2 gap-px bg-[#e8e4dc]">
           {services.map(({ num, title, desc }) => (
-            <div key={num} className="group bg-white hover:bg-[#f8fafc] px-8 py-10 relative overflow-hidden transition-colors duration-200 border-t-2 border-transparent hover:border-[#2563eb]">
-              <div className="font-[family-name:var(--font-syne)] text-xs tracking-[0.2em] text-[#2563eb] opacity-50 mb-6">{num}</div>
-              <h3 className="font-[family-name:var(--font-syne)] font-semibold text-lg text-[#1a1a2e] mb-3">{title}</h3>
-              <p className="text-sm text-[#64748b] leading-relaxed font-light">{desc}</p>
+            <div key={num} className="group bg-white hover:bg-[#faf9f6] px-10 py-12 border-t-2 border-transparent hover:border-[#c9a84c] transition-all duration-300">
+              <div className="font-[family-name:var(--font-syne)] text-xs tracking-[0.2em] text-[#c9a84c] opacity-60 mb-6">{num}</div>
+              <h3 className="font-[family-name:var(--font-syne)] font-semibold text-xl text-[#1a1a2e] mb-4">{title}</h3>
+              <p className="text-sm text-[#6b6b72] leading-relaxed font-light">{desc}</p>
             </div>
           ))}
         </div>

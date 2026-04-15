@@ -6,18 +6,21 @@ const industries = [
 
 export default function Industries() {
   return (
-    <section id="branchen" className="bg-white px-8 md:px-16 py-24">
-      <div className="max-w-[1200px] mx-auto">
+    <section id="branchen" className="bg-white px-20 py-28">
+      <div className="max-w-[1300px] mx-auto">
         <div className="flex items-center gap-3 mb-12">
-          <span className="inline-block w-8 h-px bg-[#2563eb]" />
-          <span className="text-[#2563eb] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)] font-semibold">Branchen</span>
+          <span className="inline-block w-8 h-px bg-[#c9a84c]" />
+          <span className="text-[#c9a84c] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)] font-semibold">Branchen</span>
         </div>
-        <h2 className="font-[family-name:var(--font-syne)] font-semibold text-4xl md:text-5xl leading-tight tracking-tight text-[#1a1a2e] mb-10">
+        <h2 className="font-[family-name:var(--font-syne)] font-semibold text-5xl leading-tight tracking-tight text-[#1a1a2e] mb-16">
           Vertraut mit dem<br />deutschen Mittelstand
         </h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           {industries.map((name) => (
-            <span key={name} className="px-5 py-2.5 border border-[#e2e8f0] text-xs text-[#64748b] tracking-[0.04em] hover:border-[#2563eb] hover:text-[#2563eb] transition-all duration-200 cursor-default">
+            <span
+              key={name}
+              className="px-6 py-3 border border-[#e8e4dc] text-sm text-[#6b6b72] tracking-[0.04em] hover:border-[#c9a84c] hover:text-[#c9a84c] transition-all duration-200 cursor-default font-light"
+            >
               {name}
             </span>
           ))}
