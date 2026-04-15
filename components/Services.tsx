@@ -7,23 +7,24 @@ const services = [
 
 export default function Services() {
   return (
-    <section id="leistungen" className="px-8 md:px-16 py-24 max-w-[1200px] mx-auto">
-      <div className="flex items-center gap-3 mb-12">
-        <span className="inline-block w-8 h-px bg-[#c9a84c]" />
-        <span className="text-[#c9a84c] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)]">Leistungen</span>
-      </div>
-      <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl md:text-5xl leading-tight tracking-tight text-[#f0ede6]">
-        Was wir für Sie<br />automatisieren
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 border border-[#1e1e22] mt-12" style={{ gap: '1px', background: '#1e1e22' }}>
-        {services.map(({ num, title, desc }) => (
-          <div key={num} className="group bg-[#0a0a0b] hover:bg-[#111113] px-8 py-10 relative overflow-hidden transition-colors duration-200">
-            <div className="absolute top-0 left-0 w-[3px] h-0 bg-[#c9a84c] group-hover:h-full transition-all duration-300" />
-            <div className="font-[family-name:var(--font-syne)] text-xs tracking-[0.2em] text-[#8a6e2f] mb-6">{num}</div>
-            <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg text-[#e8e6e0] mb-3">{title}</h3>
-            <p className="text-sm text-[#6b6b72] leading-relaxed font-light">{desc}</p>
-          </div>
-        ))}
+    <section id="leistungen" className="bg-white px-8 md:px-16 py-24">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex items-center gap-3 mb-12">
+          <span className="inline-block w-8 h-px bg-[#2563eb]" />
+          <span className="text-[#2563eb] text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-syne)] font-semibold">Leistungen</span>
+        </div>
+        <h2 className="font-[family-name:var(--font-syne)] font-semibold text-4xl md:text-5xl leading-tight tracking-tight text-[#1a1a2e] mb-12">
+          Was wir für Sie<br />automatisieren
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[#e2e8f0]">
+          {services.map(({ num, title, desc }) => (
+            <div key={num} className="group bg-white hover:bg-[#f8fafc] px-8 py-10 relative overflow-hidden transition-colors duration-200 border-t-2 border-transparent hover:border-[#2563eb]">
+              <div className="font-[family-name:var(--font-syne)] text-xs tracking-[0.2em] text-[#2563eb] opacity-50 mb-6">{num}</div>
+              <h3 className="font-[family-name:var(--font-syne)] font-semibold text-lg text-[#1a1a2e] mb-3">{title}</h3>
+              <p className="text-sm text-[#64748b] leading-relaxed font-light">{desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )
