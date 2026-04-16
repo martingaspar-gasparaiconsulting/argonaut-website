@@ -1,6 +1,8 @@
 import Navbar from '@/components/Navbar'
 import Hero from '@/components/Hero'
 import Services from '@/components/Services'
+import AgentTeam from '@/components/AgentTeam'
+import ScrollingBanner from '@/components/ScrollingBanner'
 import Process from '@/components/Process'
 import Industries from '@/components/Industries'
 import CtaSection from '@/components/CtaSection'
@@ -11,6 +13,8 @@ export default function Home() {
     <main>
       <Navbar />
       <Hero />
+      <ScrollingBanner />
+      <AgentTeam />
       <Services />
       <Process />
       <Industries />

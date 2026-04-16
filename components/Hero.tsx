@@ -1,162 +1,158 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 
-const stats = [
-  { num: '3×', label: 'Schnellere Prozesse' },
-  { num: '-60%', label: 'Manueller Aufwand' },
-  { num: '24/7', label: 'Automatisiert & aktiv' },
-  { num: 'EU', label: 'DSGVO-konform' },
-  { num: '-40%', label: 'Betriebskosten' },
-  { num: '100%', label: 'Mittelstand-Fokus' },
-]
-
-const outerNodes = [
-  { id: 'n1', cx: 280, cy: 80, label: ['DATEN', 'ANALYSE'], delay: 200 },
-  { id: 'n2', cx: 480, cy: 120, label: ['KI', 'AGENT'], delay: 400 },
-  { id: 'n3', cx: 500, cy: 320, label: ['REPORT', 'ING'], delay: 600 },
-  { id: 'n4', cx: 320, cy: 480, label: ['STRATE', 'GIE'], delay: 800 },
-  { id: 'n5', cx: 100, cy: 420, label: ['PROZESS', 'AUTO'], delay: 1000 },
-  { id: 'n6', cx: 80, cy: 180, label: ['BERATUNG', ''], delay: 1200 },
+const automatisierungen = [
+  'Lead-Automatisierung',
+  'Angebotserstellung',
+  'Kundenservice',
+  'Rechnungsverarbeitung',
+  'Terminbuchung',
+  'E-Mail-Marketing',
+  'WhatsApp-Kommunikation',
+  'Mitarbeiter-Onboarding',
+  'Dokumentenmanagement',
+  'Buchhaltung & Reporting',
 ]
 
 export default function Hero() {
-  const svgRef = useRef<SVGSVGElement>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
-
-    const nodeGroups = svg.querySelectorAll<SVGGElement>('.anim-node')
-    const lines = svg.querySelectorAll<SVGLineElement>('.anim-line')
-    const rings = svg.querySelectorAll<SVGCircleElement>('.anim-ring')
-
-    nodeGroups.forEach((g) => {
-      g.style.opacity = '0'
-      g.style.transform = 'scale(0)'
-      g.style.transformBox = 'fill-box'
-      g.style.transformOrigin = 'center'
-    })
-    lines.forEach((l) => { l.style.opacity = '0' })
-    rings.forEach((r) => { r.style.opacity = '0' })
-
-    nodeGroups.forEach((g) => {
-      const delay = parseInt(g.dataset.delay || '0')
+    const interval = setInterval(() => {
+      setVisible(false)
       setTimeout(() => {
-        g.style.transition = 'opacity 0.4s ease, transform 0.5s cubic-bezier(0.34,1.56,0.64,1)'
-        g.style.opacity = '1'
-        g.style.transform = 'scale(1)'
-      }, delay)
-    })
-
-    setTimeout(() => {
-      lines.forEach((l) => {
-        l.style.transition = 'opacity 0.8s ease'
-        l.style.opacity = '1'
-      })
-      rings.forEach((r) => {
-        r.style.transition = 'opacity 1.2s ease'
-        r.style.opacity = '1'
-      })
-    }, 1400)
+        setCurrentIndex((prev) => (prev + 1) % automatisierungen.length)
+        setVisible(true)
+      }, 400)
+    }, 2500)
+    return () => clearInterval(interval)
   }, [])
 
   return (
-    <section className="bg-white">
-      <div className="max-w-[1400px] mx-auto px-20">
-        <div className="grid grid-cols-2 items-center min-h-[620px] gap-8">
+    <section className="bg-white pt-36 pb-0 px-6">
+      <div className="max-w-4xl mx-auto text-center">
 
-          {/* Left */}
-          <div className="py-24 pr-20 border-r border-[#e8e4dc]">
-            <div className="flex items-center gap-3 mb-10">
-              <span className="inline-block w-10 h-px bg-[#c9a84c]" />
-              <span className="text-[#c9a84c] text-xs tracking-[0.25em] uppercase font-[family-name:var(--font-syne)] font-semibold">
-                KI-Agentur für den Mittelstand
-              </span>
-            </div>
-            <h1 className="font-[family-name:var(--font-syne)] font-semibold leading-[1.02] tracking-tight text-[#1a1a2e] mb-10" style={{fontSize:'4.8rem'}}>
-              KI, die<br />wirklich<br />
-              <span className="text-[#c9a84c]">wirkt.</span>
-            </h1>
-            <p className="text-[#6b6b72] text-xl font-light leading-relaxed mb-14" style={{maxWidth:'420px'}}>
-              ARGONAUT automatisiert Prozesse, die heute noch Ihre besten Leute binden — messbar, sicher und auf Ihren Betrieb zugeschnitten.
-            </p>
-            <div className="flex gap-6 items-center">
-              <Link href="#kontakt" className="font-[family-name:var(--font-syne)] font-semibold text-xs tracking-[0.15em] uppercase px-12 py-5 bg-[#c9a84c] text-white hover:bg-[#e0b85a] transition-all duration-200">
-                Kostenloses Erstgespräch
-              </Link>
-              <Link href="#leistungen" className="text-sm text-[#6b6b72] hover:text-[#1a1a2e] transition-colors flex items-center gap-2 font-light">
-                Leistungen entdecken <span className="text-[#c9a84c] text-base">→</span>
-              </Link>
-            </div>
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 mb-10">
+          <span className="text-[#C9A84C] text-xs font-bold tracking-[0.3em] uppercase">
+            KI-Agentur für den Mittelstand · D/A/CH
+          </span>
+        </div>
+
+        {/* Headline */}
+        <h1 style={{ fontSize: 'clamp(3rem, 8vw, 6rem)', fontWeight: 900, color: '#0A1628', lineHeight: 1.1, marginBottom: '1rem' }}>
+          Ihre Automatisierung für
+        </h1>
+
+        {/* Wechselndes Wort */}
+        <div style={{ minHeight: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '2.5rem', padding: '0 16px' }}>
+          <span style={{
+            fontSize: 'clamp(2.5rem, 7vw, 5.5rem)',
+            fontWeight: 900,
+            color: '#0A1628',
+            lineHeight: 1.15,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0)' : 'translateY(12px)',
+            transition: 'all 0.3s ease',
+            display: 'inline-block',
+            paddingBottom: '16px',
+            borderBottom: '6px solid #C9A84C',
+            marginBottom: '4px',
+          }}>
+            {automatisierungen[currentIndex]}
+          </span>
+        </div>
+
+        {/* OPTION E — Emotional + kursiv */}
+        <div style={{ marginBottom: '40px' }}>
+          <p style={{ fontSize: '26px', fontWeight: 700, color: '#0A1628', marginBottom: '14px', lineHeight: 1.4 }}>
+            Ihre Prozesse laufen heute noch manuell.
+          </p>
+          <p style={{ fontSize: '24px', fontStyle: 'italic', color: '#C9A84C', fontWeight: 600, marginBottom: '20px', lineHeight: 1.4 }}>
+            Mit ARGONAUT gehört das der Vergangenheit an.
+          </p>
+          <p style={{ fontSize: '15px', color: '#9ca3af' }}>
+            Für 2.000.000+ Unternehmen in D/A/CH — vom Solopreneur bis zur GmbH.
+          </p>
+        </div>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '32px' }}>
+          <a href="#kontakt" style={{
+            background: '#C9A84C',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '13px',
+            padding: '20px 40px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}>
+            Kostenloses Erstgespräch
+          </a>
+          <a href="#leistungen" style={{
+            color: '#0A1628',
+            fontWeight: 600,
+            fontSize: '13px',
+            padding: '20px 40px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            display: 'inline-block',
+            border: '1px solid #e5e7eb',
+          }}>
+            Leistungen entdecken →
+          </a>
+        </div>
+
+        {/* Trust Badges */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', marginBottom: '80px', fontSize: '14px', color: '#9ca3af' }}>
+          <span>✓ Kein Vorwissen nötig</span>
+          <span>✓ In 90 Min. startklar</span>
+          <span>✓ DSGVO-konform</span>
+          <span>✓ 100% auf Ihren Betrieb zugeschnitten</span>
+        </div>
+
+      </div>
+
+      {/* STATS KACHELN */}
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0">
+
+          <div style={{ background: 'linear-gradient(135deg, #0A1628 0%, #1a2d4a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#C9A84C' }}></div>
+            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#C9A84C', lineHeight: 1, marginBottom: '20px' }}>2Mio<span style={{ fontSize: '65%' }}>+</span></p>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.95)', fontWeight: 700, marginBottom: '8px' }}>Unternehmen in D/A/CH</p>
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.55)' }}>warten auf ihre Automatisierung</p>
           </div>
 
-          {/* Right — Animated Network */}
-          <div className="flex items-center justify-center pl-8 py-12">
-            <svg ref={svgRef} width="100%" viewBox="0 0 580 580" xmlns="http://www.w3.org/2000/svg">
-
-              {/* Connector lines */}
-              {outerNodes.map((node) => (
-                <line
-                  key={`line-${node.id}`}
-                  className="anim-line"
-                  x1="290" y1="290"
-                  x2={node.cx} y2={node.cy}
-                  stroke="#e8e4dc"
-                  strokeWidth="1.5"
-                />
-              ))}
-
-              {/* Dashed outer ring */}
-              <circle className="anim-ring" cx="290" cy="290" r="220" fill="none" stroke="#e8e4dc" strokeWidth="1" strokeDasharray="4 8"/>
-
-              {/* Outer nodes */}
-              {outerNodes.map((node) => (
-                <g key={node.id} className="anim-node" data-delay={node.delay}>
-                  <circle cx={node.cx} cy={node.cy} r="42" fill="#faf9f6" stroke="#e8e4dc" strokeWidth="1.5"/>
-                  {node.label.filter(l => l).map((line, i) => (
-                    <text
-                      key={i}
-                      x={node.cx}
-                      y={node.cy + (node.label.filter(l=>l).length === 1 ? 4 : i === 0 ? -4 : 12)}
-                      fontSize="9"
-                      fill="#6b6b72"
-                      textAnchor="middle"
-                      fontFamily="sans-serif"
-                      letterSpacing="0.8"
-                      fontWeight="400"
-                    >
-                      {line}
-                    </text>
-                  ))}
-                </g>
-              ))}
-
-              {/* Center node */}
-              <g className="anim-node" data-delay="0">
-                <circle cx="290" cy="290" r="90" fill="#fff" stroke="#c9a84c" strokeWidth="2"/>
-                <circle cx="290" cy="290" r="106" fill="none" stroke="#c9a84c" strokeWidth="0.8" opacity="0.3"/>
-                <text x="290" y="282" fontSize="13" fill="#c9a84c" textAnchor="middle" fontFamily="sans-serif" fontWeight="600" letterSpacing="3">ARGO</text>
-                <text x="290" y="302" fontSize="13" fill="#c9a84c" textAnchor="middle" fontFamily="sans-serif" fontWeight="600" letterSpacing="3">NAUT</text>
-              </g>
-
-            </svg>
+          <div style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #e8c46a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#0A1628' }}></div>
+            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#0A1628', lineHeight: 1, marginBottom: '20px' }}>4.045</p>
+            <p style={{ fontSize: '18px', color: 'rgba(10,22,40,0.95)', fontWeight: 700, marginBottom: '8px' }}>Automatisierungen startklar</p>
+            <p style={{ fontSize: '15px', color: 'rgba(10,22,40,0.55)' }}>individuell anpassbar — für jede Branche</p>
           </div>
+
+          <div style={{ background: 'linear-gradient(135deg, #0A1628 0%, #1a2d4a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#C9A84C' }}></div>
+            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#C9A84C', lineHeight: 1, marginBottom: '20px' }}>90<span style={{ fontSize: '55%', marginLeft: '6px' }}>Min.</span></p>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.95)', fontWeight: 700, marginBottom: '8px' }}>Vom Formular</p>
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.55)' }}>zur ersten laufenden Automatisierung</p>
+          </div>
+
+          <div style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #e8c46a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#0A1628' }}></div>
+            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#0A1628', lineHeight: 1, marginBottom: '20px' }}>110</p>
+            <p style={{ fontSize: '18px', color: 'rgba(10,22,40,0.95)', fontWeight: 700, marginBottom: '8px' }}>Branchen abgedeckt</p>
+            <p style={{ fontSize: '15px', color: 'rgba(10,22,40,0.55)' }}>eine Lösung — maßgeschneidert für Sie</p>
+          </div>
+
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="border-t border-[#e8e4dc] bg-[#faf9f6]">
-        <div className="max-w-[1400px] mx-auto grid grid-cols-6">
-          {stats.map(({ num, label }, i) => (
-            <div key={label} className={`px-10 py-8 ${i < 5 ? 'border-r border-[#e8e4dc]' : ''}`}>
-              <div className="font-[family-name:var(--font-syne)] font-semibold text-3xl text-[#c9a84c] mb-1">{num}</div>
-              <div className="text-[#6b6b72] text-xs tracking-[0.1em] uppercase font-light leading-snug">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   )
 }
