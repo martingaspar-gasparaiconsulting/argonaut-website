@@ -42,7 +42,7 @@ export default function ScrollingBanner() {
 
       {/* Reihe 1 — Agenten — scrollt nach links */}
       <div style={{ overflow: 'hidden', marginBottom: '20px', padding: '12px 0' }}>
-        <div style={{ display: 'flex', gap: '24px', animation: 'scrollLeft 35s linear infinite', width: 'max-content' }}>
+        <div style={{ display: 'flex', gap: '16px', animation: 'scrollLeft 35s linear infinite', width: 'max-content' }}>
           {agentenDoppelt.map((agent, i) => (
             <div
               key={i}
@@ -51,8 +51,7 @@ export default function ScrollingBanner() {
                 border: '1px solid #e5e7eb',
                 borderLeft: '4px solid #C9A84C',
                 borderRadius: '12px',
-                padding: '20px 44px',
-                minWidth: '320px',
+                padding: '16px 28px',
                 background: '#fff',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
               }}
@@ -67,7 +66,7 @@ export default function ScrollingBanner() {
 
       {/* Reihe 2 — Automatisierungen — scrollt nach rechts */}
       <div style={{ overflow: 'hidden', padding: '12px 0' }}>
-        <div style={{ display: 'flex', gap: '24px', animation: 'scrollRight 28s linear infinite', width: 'max-content' }}>
+        <div style={{ display: 'flex', gap: '12px', animation: 'scrollRight 28s linear infinite', width: 'max-content' }}>
           {automatisierungenDoppelt.map((item, i) => (
             <div
               key={i}
@@ -75,13 +74,12 @@ export default function ScrollingBanner() {
                 flexShrink: 0,
                 border: '1px solid #C9A84C',
                 borderRadius: '999px',
-                padding: '16px 40px',
-                minWidth: '220px',
+                padding: '12px 28px',
                 background: '#fff',
                 boxShadow: '0 2px 12px rgba(201,168,76,0.08)',
               }}
             >
-              <p style={{ color: '#C9A84C', fontWeight: 700, fontSize: '13px', letterSpacing: '0.15em', textTransform: 'uppercase', whiteSpace: 'nowrap', textAlign: 'center' }}>
+              <p style={{ color: '#C9A84C', fontWeight: 700, fontSize: '13px', letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap', textAlign: 'center' }}>
                 {item}
               </p>
             </div>
