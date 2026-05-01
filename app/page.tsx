@@ -6,6 +6,7 @@ import ScrollingBanner from '@/components/ScrollingBanner'
 import Process from '@/components/Process'
 import Industries from '@/components/Industries'
 import CtaSection from '@/components/CtaSection'
+import ContactForm from '@/components/ContactForm'
 import Footer from '@/components/Footer'
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
       <Process />
       <Industries />
       <CtaSection />
+      <ContactForm />
       <Footer />
     </main>
   )
