@@ -88,10 +88,10 @@ export default function Footer() {
                 onMouseEnter={(e) => e.currentTarget.style.color = '#C9A84C'}
                 onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
               >Datenschutz</Link>
-              <a href="#" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none' }}
+              <Link href="/agb" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none' }}
                 onMouseEnter={(e) => e.currentTarget.style.color = '#C9A84C'}
                 onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
-              >AGB</a>
+              >AGB</Link>
             </div>
           </div>
 
