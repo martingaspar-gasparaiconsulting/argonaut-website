@@ -5,129 +5,127 @@ import Image from 'next/image'
 import { useState } from 'react'
 
 const alleBranchen = [
+  { kategorie: 'Medizin & Gesundheit', branchen: [
+    { name: 'Ärzte & Praxen', slug: 'aerzte' },
+    { name: 'Zahnärzte', slug: 'zahnaerzte' },
+    { name: 'Physiotherapie', slug: 'physiotherapie' },
+    { name: 'Apotheken', slug: 'apotheken' },
+    { name: 'Optiker', slug: 'optiker' },
+    { name: 'Hörgeräteakustiker', slug: 'hoergeraete' },
+    { name: 'Pflegedienste', slug: 'pflege' },
+    { name: 'Kinderbetreuung & Kitas', slug: 'kinderbetreuung' },
+    { name: 'Krankenhäuser & Kliniken', slug: 'krankenhauser' },
+    { name: 'Medizintechnik', slug: 'medizintechnik' },
+    { name: 'Pharmazeutischer Großhandel', slug: 'apotheken-grosshandel' },
+    { name: 'Tierärzte', slug: 'tierarzte' },
+  ]},
+  { kategorie: 'Recht, Steuern & Finanzen', branchen: [
+    { name: 'Steuerberatung', slug: 'steuerberatung' },
+    { name: 'Steuerberatungsgesellschaften', slug: 'steuerbehoerden' },
+    { name: 'Rechtsanwälte', slug: 'rechtsanwaelte' },
+    { name: 'Notare', slug: 'notare' },
+    { name: 'Finanzberater', slug: 'finanzberater' },
+    { name: 'Versicherungsmakler', slug: 'versicherungen' },
+    { name: 'Banken & Sparkassen', slug: 'banken' },
+    { name: 'Unternehmensberater', slug: 'unternehmensberater' },
+    { name: 'Digitalberatung', slug: 'unternehmensberatung-digital' },
+  ]},
   { kategorie: 'Handwerk & Bau', branchen: [
-    { name: 'Elektriker & Elektroinstallation', slug: 'elektriker' },
-    { name: 'SHK & Heizungsbau', slug: 'shk' },
-    { name: 'Schreiner & Tischler', slug: 'schreiner' },
+    { name: 'Elektriker & Elektrobetriebe', slug: 'elektriker' },
+    { name: 'Sanitär & Heizung', slug: 'sanitaer-heizung' },
     { name: 'Maler & Lackierer', slug: 'maler' },
-    { name: 'Dachdecker', slug: 'dachdecker' },
-    { name: 'Fliesenleger', slug: 'fliesenleger' },
-    { name: 'Maurer & Betonbauer', slug: 'maurer' },
-    { name: 'Zimmerer', slug: 'zimmerer' },
-    { name: 'Gerüstbauer', slug: 'geruestbauer' },
-    { name: 'Trockenbauer', slug: 'trockenbauer' },
-    { name: 'Bodenleger', slug: 'bodenleger' },
-    { name: 'Glaser', slug: 'glaser' },
+    { name: 'Schreiner & Tischler', slug: 'schreiner' },
+    { name: 'Bauunternehmen', slug: 'bauunternehmen' },
+    { name: 'Architekten', slug: 'architekten' },
+    { name: 'Ingenieurbüros', slug: 'ingenieurbueros' },
+    { name: 'Immobilienentwicklung', slug: 'immobilien-entwicklung' },
   ]},
   { kategorie: 'Industrie & Produktion', branchen: [
+    { name: 'Industrie & Produktion', slug: 'industrie-produktion' },
     { name: 'Maschinenbau', slug: 'maschinenbau' },
-    { name: 'Fertigung & Produktion', slug: 'fertigung' },
-    { name: 'Automotive-Zulieferer', slug: 'automotive' },
-    { name: 'Metallverarbeitung', slug: 'metallverarbeitung' },
-    { name: 'Kunststoffverarbeitung', slug: 'kunststoff' },
-    { name: 'Elektronikfertigung', slug: 'elektronik' },
-    { name: 'Lebensmittelproduktion', slug: 'lebensmittel' },
-    { name: 'Pharmahersteller', slug: 'pharma' },
-    { name: 'Chemieindustrie', slug: 'chemie' },
-    { name: 'Druckereien', slug: 'druckerei' },
-    { name: 'Verpackungsindustrie', slug: 'verpackung' },
-    { name: 'Textilindustrie', slug: 'textil' },
-  ]},
-  { kategorie: 'Logistik & Transport', branchen: [
-    { name: 'Spedition & Logistik', slug: 'spedition' },
-    { name: 'Kurierdienste', slug: 'kurier' },
-    { name: 'Lagerhaltung & Fulfillment', slug: 'lager' },
-    { name: 'Fuhrparkmanagement', slug: 'fuhrpark' },
-    { name: 'Umzugsunternehmen', slug: 'umzug' },
-    { name: 'Taxiunternehmen', slug: 'taxi' },
-    { name: 'Busunternehmen', slug: 'bus' },
-    { name: 'Schifffahrt & Hafen', slug: 'schifffahrt' },
-    { name: 'Luftfrachtlogistik', slug: 'luftfracht' },
+    { name: 'Chemie & Pharma', slug: 'chemie' },
+    { name: 'Lebensmittelproduktion', slug: 'lebensmittelproduktion' },
+    { name: 'Textil & Mode', slug: 'textilproduktion' },
+    { name: 'Möbel & Einrichtung', slug: 'moebel' },
+    { name: 'Elektronik & Technologie', slug: 'elektronik' },
+    { name: 'Automobilzulieferer', slug: 'automobilzulieferer' },
+    { name: 'Luft- & Raumfahrt', slug: 'luft-raumfahrt' },
+    { name: 'Verteidigung & Sicherheit', slug: 'verteidigung-sicherheit' },
+    { name: 'Bergbau & Rohstoffe', slug: 'bergbau' },
+    { name: 'Druckereien', slug: 'druckereien' },
   ]},
   { kategorie: 'Handel & E-Commerce', branchen: [
     { name: 'Einzelhandel', slug: 'einzelhandel' },
     { name: 'Großhandel', slug: 'grosshandel' },
-    { name: 'Online-Shops & E-Commerce', slug: 'ecommerce' },
-    { name: 'Autohändler', slug: 'autohandel' },
-    { name: 'Möbelhäuser', slug: 'moebel' },
-    { name: 'Elektronikhändler', slug: 'elektronikhandel' },
-    { name: 'Baustoffhandel', slug: 'baustoff' },
-    { name: 'Lebensmittelhandel', slug: 'lebensmittelhandel' },
-    { name: 'Modehändler', slug: 'mode' },
+    { name: 'E-Commerce', slug: 'e-commerce' },
+    { name: 'KFZ-Werkstätten', slug: 'kfz-werkstaetten' },
+    { name: 'KFZ-Handel', slug: 'kfz-handel' },
   ]},
-  { kategorie: 'Dienstleistungen', branchen: [
-    { name: 'Steuerberatung & Kanzleien', slug: 'steuerberatung' },
-    { name: 'Rechtsanwälte', slug: 'rechtsanwaelte' },
-    { name: 'Unternehmensberatung', slug: 'unternehmensberatung' },
-    { name: 'Personalvermittlung & HR', slug: 'personal' },
-    { name: 'Marketingagenturen', slug: 'marketing' },
-    { name: 'Werbeagenturen', slug: 'werbung' },
-    { name: 'PR-Agenturen', slug: 'pr' },
-    { name: 'Eventmanagement', slug: 'event' },
-    { name: 'Reinigung & Facility Management', slug: 'reinigung' },
-    { name: 'Sicherheitsdienste', slug: 'sicherheit' },
-    { name: 'Bewachungsunternehmen', slug: 'bewachung' },
-    { name: 'Detekteien', slug: 'detektei' },
+  { kategorie: 'Immobilien & Verwaltung', branchen: [
+    { name: 'Immobilienmakler', slug: 'immobilienmakler' },
+    { name: 'Hausverwaltungen', slug: 'hausverwaltungen' },
+    { name: 'Franchise-Systeme', slug: 'franchise' },
+    { name: 'Stadtverwaltungen & Behörden', slug: 'stadtverwaltungen' },
+  ]},
+  { kategorie: 'Logistik & Transport', branchen: [
+    { name: 'Logistik & Spedition', slug: 'logistik' },
+    { name: 'Transport & Fuhrpark', slug: 'transport' },
+    { name: 'Post & Kurierdienste', slug: 'postdienste' },
   ]},
   { kategorie: 'IT & Technologie', branchen: [
-    { name: 'IT-Dienstleister', slug: 'it' },
-    { name: 'Softwareentwicklung', slug: 'software' },
-    { name: 'Webagenturen', slug: 'web' },
-    { name: 'IT-Security', slug: 'security' },
-    { name: 'Cloud-Dienstleister', slug: 'cloud' },
-    { name: 'Telekommunikation', slug: 'telekom' },
-    { name: 'Drohnendienstleister', slug: 'drohnen' },
-    { name: 'KI-Unternehmen', slug: 'ki' },
-    { name: 'Medientechnik', slug: 'medien' },
+    { name: 'IT-Dienstleister', slug: 'it-dienstleister' },
+    { name: 'Softwareentwicklung', slug: 'softwareentwicklung' },
+    { name: 'Telekommunikation', slug: 'telekommunikation' },
+    { name: 'Wasserwirtschaft & Umwelt', slug: 'wasserwirtschaft' },
+    { name: 'Erneuerbare Energien', slug: 'erneuerbare-energien' },
+    { name: 'Startups & Scale-ups', slug: 'startups' },
   ]},
-  { kategorie: 'Gesundheit & Pflege', branchen: [
-    { name: 'Arztpraxen', slug: 'arzt' },
-    { name: 'Zahnarztpraxen', slug: 'zahnarzt' },
-    { name: 'Physiotherapie', slug: 'physio' },
-    { name: 'Pflegeheime', slug: 'pflege' },
-    { name: 'Ambulante Pflege', slug: 'ambulante-pflege' },
-    { name: 'Apotheken', slug: 'apotheke' },
-    { name: 'Sanitätshäuser', slug: 'sanitaet' },
-    { name: 'Optiker', slug: 'optiker' },
-    { name: 'Hörakustiker', slug: 'hoer' },
-  ]},
-  { kategorie: 'Immobilien & Finanzen', branchen: [
-    { name: 'Immobilienmakler', slug: 'immobilien' },
-    { name: 'Hausverwaltungen', slug: 'hausverwaltung' },
-    { name: 'Bauträger', slug: 'bautraeger' },
-    { name: 'Versicherungen', slug: 'versicherung' },
-    { name: 'Finanzberater', slug: 'finanzen' },
-    { name: 'Banken & Sparkassen', slug: 'bank' },
-    { name: 'Leasinggesellschaften', slug: 'leasing' },
-    { name: 'Inkassounternehmen', slug: 'inkasso' },
+  { kategorie: 'Marketing & Kommunikation', branchen: [
+    { name: 'Marketing-Agenturen', slug: 'marketing-agenturen' },
+    { name: 'Werbeagenturen', slug: 'werbeagenturen' },
+    { name: 'PR-Agenturen', slug: 'pr-agenturen' },
+    { name: 'Unternehmenskommunikation', slug: 'unternehmenskommunikation' },
+    { name: 'Verlage & Medien', slug: 'verlage' },
+    { name: 'Fotografen & Videografen', slug: 'fotografen' },
+    { name: 'Film & TV-Produktion', slug: 'film-tv' },
+    { name: 'Musik & Entertainment', slug: 'musikbranche' },
+    { name: 'Spieleentwicklung & Gaming', slug: 'spieleentwicklung' },
+    { name: 'Künstler & Kreative', slug: 'kuenstler' },
   ]},
   { kategorie: 'Gastronomie & Tourismus', branchen: [
-    { name: 'Restaurants & Gastronomie', slug: 'restaurant' },
-    { name: 'Hotels & Pensionen', slug: 'hotel' },
-    { name: 'Catering', slug: 'catering' },
-    { name: 'Reisebüros', slug: 'reise' },
-    { name: 'Tourismusverbände', slug: 'tourismus' },
-    { name: 'Freizeitparks', slug: 'freizeit' },
-    { name: 'Fitnessstudios', slug: 'fitness' },
-    { name: 'Wellnessanlagen', slug: 'wellness' },
+    { name: 'Gastronomie & Restaurants', slug: 'gastronomie' },
+    { name: 'Hotels & Beherbergung', slug: 'hotels' },
+    { name: 'Catering & Eventgastronomie', slug: 'catering' },
+    { name: 'Reisebüros', slug: 'reisebueros' },
+    { name: 'Eventmanagement', slug: 'eventmanagement' },
+    { name: 'Freizeit & Unterhaltung', slug: 'freizeitparks' },
+    { name: 'Fitnessstudios & Sport', slug: 'fitnessstudios' },
+    { name: 'Kosmetik & Beauty', slug: 'kosmetik' },
+    { name: 'Friseure & Salons', slug: 'friseure' },
+    { name: 'Tattoo Studios', slug: 'tattoo-studios' },
+    { name: 'Sportvereine', slug: 'sportvereine' },
   ]},
-  { kategorie: 'Bildung & Coaching', branchen: [
-    { name: 'Fahrschulen', slug: 'fahrschule' },
-    { name: 'Nachhilfeinstitute', slug: 'nachhilfe' },
-    { name: 'Sprachschulen', slug: 'sprache' },
-    { name: 'Business-Coaching', slug: 'coaching' },
-    { name: 'Personalentwicklung', slug: 'personalentwicklung' },
-    { name: 'Weiterbildung', slug: 'weiterbildung' },
-    { name: 'Kindertagesstätten', slug: 'kita' },
-    { name: 'Kindergärten', slug: 'kindergarten' },
+  { kategorie: 'Bildung & Soziales', branchen: [
+    { name: 'Bildung & Weiterbildung', slug: 'bildung-weiterbildung' },
+    { name: 'Fahrschulen', slug: 'fahrschulen' },
+    { name: 'Schulen & Gymnasien', slug: 'schulen' },
+    { name: 'Universitäten & Hochschulen', slug: 'universitaeten' },
+    { name: 'Wohlfahrtsverbände & NGOs', slug: 'wohlfahrtsverbaende' },
+    { name: 'Verbände & Kammern', slug: 'verbände' },
+    { name: 'Berufsverbände & Innungen', slug: 'berufsverbände' },
+    { name: 'Kirchen & Religionsgemeinschaften', slug: 'kirchen-religionsgemeinschaften' },
+    { name: 'Museen & Kultureinrichtungen', slug: 'museen-kultur' },
+    { name: 'Bibliotheken & Archive', slug: 'bibliotheken' },
+    { name: 'Archiv & Dokumentenmanagement', slug: 'archiv-dokumentation' },
   ]},
-  { kategorie: 'Land & Forstwirtschaft', branchen: [
-    { name: 'Landwirtschaft', slug: 'landwirtschaft' },
-    { name: 'Forstwirtschaft & Holzernteservice', slug: 'forstwirtschaft' },
-    { name: 'Gartenbau & Landschaftspflege', slug: 'gartenbau' },
-    { name: 'Tierhaltung & Veterinäre', slug: 'tiere' },
-    { name: 'Weinbau', slug: 'weinbau' },
-    { name: 'Fischerei', slug: 'fischerei' },
+  { kategorie: 'Dienstleistungen', branchen: [
+    { name: 'Reinigungsunternehmen', slug: 'reinigungsunternehmen' },
+    { name: 'Sicherheitsdienste', slug: 'sicherheitsdienste' },
+    { name: 'Personalvermittlung', slug: 'personalvermittlung' },
+    { name: 'Landwirtschaft & Agrar', slug: 'landwirtschaft' },
+    { name: 'Gartenbau & Landschaftsbau', slug: 'gartenbau' },
+    { name: 'Forstwirtschaft & Holz', slug: 'forstwirtschaft' },
+    { name: 'Nachhaltigkeit & ESG', slug: 'nachhaltigkeit' },
   ]},
 ]
 
@@ -163,7 +161,6 @@ export default function BranchenPage() {
   return (
     <main style={{ background: '#fff', minHeight: '100vh' }}>
 
-      {/* Mini Navbar */}
       <nav style={{
         position: 'fixed',
         top: 0, left: 0, right: 0,
@@ -181,18 +178,11 @@ export default function BranchenPage() {
           <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={40} height={40} style={{ objectFit: 'contain' }} />
           <span style={{ fontSize: '22px', fontWeight: 900, color: '#0A1628', letterSpacing: '0.15em' }}>ARGONAUT</span>
         </Link>
-        <Link href="/" style={{
-          fontSize: '13px',
-          color: '#C9A84C',
-          fontWeight: 700,
-          textDecoration: 'none',
-          letterSpacing: '0.05em',
-        }}>
-          ← Zurück zur Startseite
+        <Link href="/" style={{ fontSize: '13px', color: '#C9A84C', fontWeight: 700, textDecoration: 'none', letterSpacing: '0.05em' }}>
+          &larr; Zurück zur Startseite
         </Link>
       </nav>
 
-      {/* Header */}
       <div style={{ background: '#fff', padding: '120px 24px 60px', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '16px' }}>
@@ -207,7 +197,6 @@ export default function BranchenPage() {
         </div>
       </div>
 
-      {/* Branchen */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '60px 24px' }}>
         {alleBranchen.map((gruppe, gi) => (
           <div key={gi} style={{ marginBottom: '48px' }}>
@@ -224,7 +213,6 @@ export default function BranchenPage() {
           </div>
         ))}
 
-        {/* CTA */}
         <div style={{ textAlign: 'center', padding: '60px 0 20px', borderTop: '1px solid #e5e7eb' }}>
           <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '24px' }}>
             Ihre Branche nicht dabei? Wir automatisieren auch für Sie!
@@ -234,7 +222,7 @@ export default function BranchenPage() {
             padding: '16px 40px', borderRadius: '999px', letterSpacing: '0.12em',
             textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block',
           }}>
-            Kostenloses Erstgespräch →
+            Kostenloses Erstgespräch &rarr;
           </Link>
         </div>
       </div>
