@@ -27,7 +27,7 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <a href="#leistungen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Leistungen</a>
         <a href="#vorgehen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Vorgehen</a>
-        <a href="#branchen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Branchen</a>
+        <a href="/multistandort" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 12px' }}>Multistandort</a><a href="#branchen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Branchen</a>
         <a href="#uber-uns" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>&#220;ber uns</a>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
