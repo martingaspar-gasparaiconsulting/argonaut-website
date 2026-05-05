@@ -53,7 +53,7 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
 
         
-          href="/login"
+         <a href="/login"
           style={{
             background: 'transparent',
             color: '#C9A84C',
@@ -74,7 +74,7 @@ export default function Navbar() {
         </a>
 
         
-          href="#kontakt"
+         <a href="#kontakt"
           style={{
             background: '#C9A84C',
             color: '#fff',
