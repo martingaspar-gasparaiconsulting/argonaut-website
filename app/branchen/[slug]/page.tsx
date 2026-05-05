@@ -174,7 +174,7 @@ export default function BranchenDetailPage() {
             padding: '16px 40px', borderRadius: '999px', letterSpacing: '0.12em',
             textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block',
           }}>
-            Kostenloses Erstgespräch →
+            Multistandort? Jetzt starten. →
           </Link>
         </div>
       </div>
