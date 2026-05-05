@@ -31,7 +31,7 @@ export default function Navbar() {
         <a href="#uber-uns" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>&#220;ber uns</a>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <a href="/login" style={{ background: 'transparent', color: '#C9A84C', fontWeight: 700, fontSize: '14px', padding: '14px 32px', borderRadius: '999px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', border: '2px solid #C9A84C', whiteSpace: 'nowrap' }}>Login</a>
+        <a href="/auth/login" style={{ background: 'transparent', color: '#C9A84C', fontWeight: 700, fontSize: '14px', padding: '14px 32px', borderRadius: '999px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', border: '2px solid #C9A84C', whiteSpace: 'nowrap' }}>Login</a>
         <a href="#kontakt" style={{ background: '#C9A84C', color: '#fff', fontWeight: 700, fontSize: '14px', padding: '14px 32px', borderRadius: '999px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', border: '2px solid #C9A84C', whiteSpace: 'nowrap' }}>Multi-Standort? Jetzt starten</a>
       </div>
     </nav>
