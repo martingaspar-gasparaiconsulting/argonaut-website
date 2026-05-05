@@ -14,7 +14,7 @@ export default function CtaSection() {
           30 Minuten. Keine Agentur-Phrasen. Nur ehrliche Einschätzung für Ihr Unternehmen.
         </p>
         <a href="mailto:martin.gaspar@argonaut.de" className="inline-block font-[family-name:var(--font-syne)] font-bold text-sm tracking-[0.12em] uppercase px-14 py-5 bg-[#c9a84c] text-[#0d1b2e] hover:bg-[#e0b85a] transition-all duration-200 rounded-full">
-          Kostenloses Erstgespräch buchen
+          Multistandort? Jetzt starten.
         </a>
         <p className="text-[#4a5a6a] text-sm tracking-[0.1em] uppercase mt-10">
           Martin Gaspar · ARGONAUT · 71032 Böblingen
