@@ -2,7 +2,7 @@ import { getBrancheBySlug, getAllBrancheSlugs } from '@/lib/branchen'
 import { notFound } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-
+import ROIRechner from '@/components/ROIRechner'
 export async function generateStaticParams() {
   const slugs = getAllBrancheSlugs()
   return slugs.map((slug) => ({ slug }))
@@ -125,73 +125,7 @@ export default async function BranchenPage({ params }: { params: Promise<{ slug:
           </div>
         </div>
 
-        {/* ROI RECHNER */}
-        <div className="bg-[#F7F6F3] rounded-2xl p-8 mb-16">
-          <div className="mb-6">
-            <div className="text-[#C9A84C] text-xs tracking-widest uppercase font-medium mb-2">ROI-Rechner</div>
-            <h3 className="text-[#0A1628] text-2xl font-bold">Was sparen Sie konkret?</h3>
-            <p className="text-gray-500 text-sm mt-1">Berechnen Sie Ihre individuelle Ersparnis — basierend auf Praxisdaten aus Ihrer Branche.</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div>
-                <label className="text-[#0A1628] text-sm font-medium mb-2 block">Anzahl Mitarbeiter</label>
-                <div className="flex gap-3">
-                  {[
-                    { label: '1–3 MA', key: 'klein', stunden: stundenKlein },
-                    { label: '4–10 MA', key: 'mittel', stunden: stundenMittel },
-                    { label: '11–25 MA', key: 'gross', stunden: stundenGross },
-                  ].map((opt) => (
-                    <label key={opt.key} className="flex-1 cursor-pointer">
-                      <input type="radio" name="groesse" value={opt.key} className="sr-only peer" defaultChecked={opt.key === 'mittel'} />
-                      <div className="border border-gray-200 rounded-xl p-3 text-center text-sm text-gray-500 peer-checked:border-[#C9A84C] peer-checked:text-[#0A1628] peer-checked:font-semibold transition-all">
-                        {opt.label}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[#0A1628] text-sm font-medium mb-2 block">Stundenlohn (€)</label>
-                <input
-                  type="number"
-                  defaultValue={35}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[#0A1628] text-sm focus:outline-none focus:border-[#C9A84C]"
-                />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-100">
-              <div className="text-xs text-gray-400 uppercase tracking-wider mb-4">Ihre Ersparnis</div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-gray-500 text-sm">Stunden gespart / Woche</span>
-                  <span className="text-[#0A1628] font-bold">{stundenMittel} Std</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-gray-500 text-sm">Stunden gespart / Jahr</span>
-                  <span className="text-[#0A1628] font-bold">{stundenMittel * 52} Std</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-gray-500 text-sm">Wert bei 35 €/Std</span>
-                  <span className="text-[#C9A84C] font-bold">{(stundenMittel * 52 * 35).toLocaleString('de-DE')} €</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 text-sm">ARGONAUT Kosten / Jahr</span>
-                  <span className="text-gray-400 text-sm">ab 18.000 €</span>
-                </div>
-              </div>
-              <div className="mt-4 bg-[#0A1628] rounded-xl p-4 text-center">
-                <div className="text-white/60 text-xs mb-1">Ihr ROI</div>
-                <div className="text-[#C9A84C] text-2xl font-bold">
-                  {Math.round((stundenMittel * 52 * 35) / 18000 * 10) / 10}x
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ROIRechner stundenProWoche={branche.stundenProWoche} />
 
         {/* CTA */}
         <div className="bg-[#0A1628] rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-6">
