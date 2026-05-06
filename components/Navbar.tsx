@@ -1,7 +1,5 @@
-﻿'use client'
-
+﻿ import Link from 'next/link'
 import Image from 'next/image'
-import Link from 'next/link'
 
 export default function Navbar() {
   return (
@@ -24,12 +22,15 @@ export default function Navbar() {
         <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT Logo" width={48} height={48} style={{ objectFit: 'contain' }} />
         <span style={{ fontSize: '26px', fontWeight: 900, color: '#0A1628', letterSpacing: '0.15em', textTransform: 'uppercase' }}>ARGONAUT</span>
       </Link>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <a href="#leistungen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Leistungen</a>
         <a href="#vorgehen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Vorgehen</a>
-        <a href="/multistandort" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 12px' }}>Multistandort</a><a href="#branchen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Branchen</a>
-        <a href="#uber-uns" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>&#220;ber uns</a>
+        <a href="/multistandort" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 12px' }}>Multistandort</a>
+        <Link href="/branchen" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Branchen</Link>
+        <a href="#uber-uns" style={{ color: '#0A1628', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '8px 16px', borderRadius: '999px' }}>Über uns</a>
       </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <a href="/auth/login" style={{ background: 'transparent', color: '#C9A84C', fontWeight: 700, fontSize: '14px', padding: '14px 32px', borderRadius: '999px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', border: '2px solid #C9A84C', whiteSpace: 'nowrap' }}>Login</a>
         <a href="#kontakt" style={{ background: '#C9A84C', color: '#fff', fontWeight: 700, fontSize: '14px', padding: '14px 32px', borderRadius: '999px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', border: '2px solid #C9A84C', whiteSpace: 'nowrap' }}>Multi-Standort? Jetzt starten</a>

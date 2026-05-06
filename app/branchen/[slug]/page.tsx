@@ -32,7 +32,7 @@ export default async function BranchenPage({ params }: { params: Promise<{ slug:
       <Navbar />
 
       {/* HERO */}
-      <section className="bg-[#0A1628] pt-32 pb-16 px-6">
+      <section className="bg-[#0A1628] pt-40 pb-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="inline-block bg-[#C9A84C]/10 border border-[#C9A84C]/30 text-[#C9A84C] text-xs tracking-widest uppercase px-4 py-1 rounded-full mb-6">
             {branche.kategorie}
