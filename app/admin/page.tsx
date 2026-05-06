@@ -213,14 +213,7 @@ export default async function AdminPage() {
                   padding: '24px 20px',
                   transition: 'border-color 0.2s, background 0.2s',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.15)'
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                }}
+      
               >
                 <div style={{
                   width: '44px',
