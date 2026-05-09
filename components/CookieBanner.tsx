@@ -1,22 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function CookieBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const consent = localStorage.getItem("cookie-consent");
-    if (!consent) setVisible(true);
-  }, []);
+  const [visible, setVisible] = useState(true);
 
   const accept = () => {
-    localStorage.setItem("cookie-consent", "accepted");
     setVisible(false);
   };
 
   const decline = () => {
-    localStorage.setItem("cookie-consent", "declined");
     setVisible(false);
   };
 
@@ -48,32 +41,28 @@ export default function CookieBanner() {
         </a>.
       </p>
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-        <button
-          onClick={accept}
-          style={{
-            backgroundColor: "#D4A843",
-            color: "#0D1B3E",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            fontSize: "14px",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}>
+        <button onClick={accept} style={{
+          backgroundColor: "#D4A843",
+          color: "#0D1B3E",
+          border: "none",
+          borderRadius: "8px",
+          padding: "10px 24px",
+          fontSize: "14px",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}>
           Akzeptieren
         </button>
-        <button
-          onClick={decline}
-          style={{
-            backgroundColor: "transparent",
-            color: "#FFFFFF",
-            border: "1px solid #FFFFFF",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            fontSize: "14px",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}>
+        <button onClick={decline} style={{
+          backgroundColor: "transparent",
+          color: "#FFFFFF",
+          border: "1px solid #FFFFFF",
+          borderRadius: "8px",
+          padding: "10px 24px",
+          fontSize: "14px",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}>
           Ablehnen
         </button>
       </div>
