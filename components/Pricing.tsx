@@ -35,6 +35,10 @@ const agenten = {
     { code: "D4", name: "Der Kampagnen-Manager", beschreibung: "Plant und steuert automatisierte Marketing-Kampagnen" },
     { code: "A10", name: "Der Sammler", beschreibung: "Aggregiert Daten aus allen Quellen für maximale OS-Intelligenz" },
   ],
+  solo: [
+    { code: "E1", name: "Der Akquisiteur", beschreibung: "Automatisiert Leadgenerierung und Erstansprache" },
+    { code: "E4", name: "Der Kundenbetreuer", beschreibung: "Automatisiert Onboarding und Kundenkommunikation" },
+  ],
 };
 
 const pakete = [
@@ -86,6 +90,40 @@ function PaketCard({ plan }: { plan: typeof pakete[0] }) {
   );
 }
 
+function SoloCard() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ background: "#ffffff", border: "1.5px solid #e8dfc8", borderRadius: "12px", padding: "20px 24px", marginBottom: "10px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: "12px", fontWeight: 700, color: "#C9A84C", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Nur 3 Monate · Dann Upgrade auf min. START</p>
+          <p style={{ fontSize: "16px", fontWeight: 700, color: "#0D1B3E", marginBottom: "6px" }}>SOLO Beta — 2 Agenten</p>
+          <p style={{ fontSize: "13px", color: "#888", marginBottom: "12px" }}>Für Solopreneure &amp; Teams bis 3 Personen · Dashboard inklusive · kein Basis-Paket nötig</p>
+          <button onClick={() => setOpen(!open)} style={{ background: "transparent", border: "1px solid #e0e0e0", borderRadius: "6px", padding: "8px 12px", fontSize: "13px", color: "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "10px" }}>{open ? "▲" : "▼"}</span>
+            KI-Agenten anzeigen (2)
+          </button>
+          {open && (
+            <div style={{ marginTop: "12px" }}>
+              {agenten.solo.map((a) => (
+                <div key={a.code} style={{ padding: "8px 0", borderBottom: "0.5px solid #f0f0f0" }}>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: "#0D1B3E", marginBottom: "2px" }}>{a.name}</p>
+                  <p style={{ fontSize: "13px", color: "#666" }}>{a.beschreibung}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <span style={{ fontSize: "34px", fontWeight: 800, color: "#0D1B3E", lineHeight: 1 }}>499 &euro;</span>
+          <span style={{ fontSize: "13px", color: "#aaa", display: "block" }}>/ Monat</span>
+          <Link href="#" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>Jetzt testen</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Pricing() {
   return (
     <section id="preise" style={{ backgroundColor: "#ffffff", padding: "80px 24px" }}>
@@ -94,7 +132,7 @@ export default function Pricing() {
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <p style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "2px", color: "#C9A84C", textTransform: "uppercase", marginBottom: "12px" }}>PREISE</p>
           <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 700, color: "#0D1B3E", marginBottom: "10px", lineHeight: 1.2 }}>Ihr KI-Team. Transparent bepreist.</h2>
-          <p style={{ fontSize: "14px", color: "#999" }}>Alle Preise zzgl. 19% MwSt. &middot; Monatlich kündbar</p>
+          <p style={{ fontSize: "14px", color: "#999" }}>Alle Preise zzgl. 19% MwSt. · Monatlich kündbar</p>
         </div>
 
         <div style={{ background: "#fdf6e3", border: "1.5px solid #C9A84C", borderRadius: "12px", padding: "16px 24px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
@@ -154,18 +192,7 @@ export default function Pricing() {
 
         <div style={{ borderTop: "1px dashed #ddd", paddingTop: "24px", marginBottom: "20px" }}>
           <p style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "1.5px", color: "#C9A84C", textTransform: "uppercase", textAlign: "center", marginBottom: "14px" }}>SOLO BETA — Zum Testen &amp; Starten</p>
-          <div style={{ background: "#ffffff", border: "1.5px solid #e8dfc8", borderRadius: "12px", padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", marginBottom: "10px" }}>
-            <div>
-              <p style={{ fontSize: "12px", fontWeight: 700, color: "#C9A84C", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Nur 3 Monate · Dann Upgrade auf min. START</p>
-              <p style={{ fontSize: "16px", fontWeight: 700, color: "#0D1B3E", marginBottom: "6px" }}>SOLO Beta — 2 Agenten</p>
-              <p style={{ fontSize: "13px", color: "#888" }}>Für Solopreneure &amp; Teams bis 3 Personen · Dashboard inklusive · kein Basis-Paket nötig</p>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <span style={{ fontSize: "34px", fontWeight: 800, color: "#0D1B3E", lineHeight: 1 }}>499 &euro;</span>
-              <span style={{ fontSize: "13px", color: "#aaa", display: "block" }}>/ Monat</span>
-              <Link href="#" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>Jetzt testen</Link>
-            </div>
-          </div>
+          <SoloCard />
           <p style={{ fontSize: "13px", color: "#aaa", textAlign: "center" }}>Nach 3 Monaten automatischer Upgrade-Hinweis auf START — Basis-Paket wird dann Pflicht.</p>
         </div>
 
