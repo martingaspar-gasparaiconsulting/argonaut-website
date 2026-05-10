@@ -57,7 +57,7 @@ export default async function AdminPage() {
   const activeKunden = customers.filter((c) => c.status === 'active').length
 
   const mrr = customers
-    .filter((c) => c.status === 'aktiv' || c.status === 'active') && c.paket && c.paket in MRR_BY_PLAN)
+    .filter((c) => (c.status === 'aktiv' || c.status === 'active') && c.paket && c.paket in MRR_BY_PLAN)
     .reduce((sum, c) => sum + MRR_BY_PLAN[c.paket as string], 0)
 
   const weekCutoff   = oneWeekAgo()
