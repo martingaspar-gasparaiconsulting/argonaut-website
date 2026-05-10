@@ -103,7 +103,7 @@ export default function Process() {
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 05</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Go-Live</p>
                 <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>16 – 48 Stunden</p>
-                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Alle Agenten aktiv. Dashboard live. 30-Min-Einweisung online — dann läuft ARGONAUT OS für Sie.</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Alle Agenten aktiv. Dashboard live. Onboarding-Video im Dashboard — sofort abrufbar. ARGONAUT OS läuft.</p>
               </div>
 
             </div>
