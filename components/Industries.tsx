@@ -61,7 +61,7 @@ export default function Industries() {
                 borderRadius: '999px',
                 border: `1px solid ${hovered === i ? '#C9A84C' : '#e5e7eb'}`,
                 background: hovered === i ? '#0A1628' : '#fff',
-                cursor: 'default',
+                cursor: 'pointer',
                 transition: 'all 0.2s',
                 boxShadow: hovered === i ? '0 4px 20px rgba(201,168,76,0.2)' : '0 1px 4px rgba(0,0,0,0.04)',
                 transform: hovered === i ? 'translateY(-2px)' : 'translateY(0)',
