@@ -131,7 +131,7 @@ export default function Process() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10" stroke="#C9A84C" strokeWidth="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round"/></svg>
               <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>
                 <strong style={{ color: '#0A1628', fontWeight: 700 }}>Solo Beta — für 1–3 Personen.</strong>{' '}
-                3 Monate testen, 299 €/Mo · kein Basis-Paket nötig · 2 Agenten inklusive. Nach Ablauf freie Entscheidung: Upgrade auf 12-Monats-Abo (Start, Pro, Business oder Enterprise inkl. Basis) — oder Vertragsende. Kein Automatik-Verlängerungszwang.
+                3 Monate testen, 499 €/Mo · kein Basis-Paket nötig · 2 Agenten inklusive. Nach Ablauf freie Entscheidung: Upgrade auf 12-Monats-Abo (Start, Pro, Business oder Enterprise inkl. Basis) — oder Vertragsende. Kein Automatik-Verlängerungszwang.
               </p>
             </div>
 
@@ -145,7 +145,7 @@ export default function Process() {
                 <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', background: 'rgba(10,22,40,0.08)', color: '#0A1628', marginBottom: '10px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Solo Beta</div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 01</p>
                 <p style={{ fontSize: '17px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Solo Beta buchen</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>299 €/Mo · 3 Monate</p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>499 €/Mo · 3 Monate</p>
                 <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Direkt online buchen — kein Gespräch, kein Warten. 2 Agenten für 1–3 Personen, sofort aktiv.</p>
               </div>
 
