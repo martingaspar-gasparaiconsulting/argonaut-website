@@ -85,7 +85,7 @@ function PaketCard({ plan }: { plan: typeof pakete[0] }) {
           ))}
         </div>
       )}
-      <Link href="#" style={{ display: "block", textAlign: "center", padding: "11px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: plan.hot ? "#C9A84C" : "transparent", color: plan.hot ? "#ffffff" : "#0D1B3E", border: plan.hot ? "none" : "1.5px solid #0D1B3E" }}>Jetzt starten</Link>
+      <Link href={plan.name==="START" ? "https://buy.stripe.com/00waEXgGK6Yq3gFb9S6wE04" : plan.name==="PRO" ? "https://buy.stripe.com/9B66oH2PU0A2aJ7di06wE05" : plan.name==="BUSINESS" ? "https://buy.stripe.com/4gM14n1LQgz09F3guc6wE06" : "https://buy.stripe.com/fZu3cv76aaaCaJ72Dm6wE07"} style={{ display: "block", textAlign: "center", padding: "11px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: plan.hot ? "#C9A84C" : "transparent", color: plan.hot ? "#ffffff" : "#0D1B3E", border: plan.hot ? "none" : "1.5px solid #0D1B3E" }}>Jetzt starten</Link>
     </div>
   );
 }
@@ -117,7 +117,7 @@ function SoloCard() {
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <span style={{ fontSize: "34px", fontWeight: 800, color: "#0D1B3E", lineHeight: 1 }}>499 &euro;</span>
           <span style={{ fontSize: "13px", color: "#aaa", display: "block" }}>/ Monat</span>
-          <Link href="#" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>Jetzt testen</Link>
+          <Link href="https://buy.stripe.com/9B6fZh76aeqSbNbem46wE02" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>Jetzt testen</Link>
         </div>
       </div>
     </div>
