@@ -7,18 +7,32 @@ import AgentCard from './AgentCard'
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
 type Status = 'active' | 'inactive' | 'trial'
 
-const PLAN_LABELS: Record<Plan, string> = {
+const PLAN_LABELS: Record<string, string> = {
   starter: 'Starter',
   professional: 'Professional',
   business: 'Business',
   enterprise: 'Enterprise',
+  solo: 'SOLO Beta',
+  start: 'START',
+  pro: 'PRO',
+  bus: 'BUSINESS',
+  ent: 'ENTERPRISE',
+  basis: 'BASIS',
+  unbekannt: 'Unbekannt',
 }
 
-const PLAN_COLORS: Record<Plan, string> = {
+const PLAN_COLORS: Record<string, string> = {
   starter: '#6b7280',
   professional: '#C9A84C',
   business: '#4f94e8',
   enterprise: '#a855f7',
+  solo: '#C9A84C',
+  start: '#C9A84C',
+  pro: '#4f94e8',
+  bus: '#4f94e8',
+  ent: '#a855f7',
+  basis: '#6b7280',
+  unbekannt: '#6b7280',
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string }> = {
@@ -94,8 +108,15 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
+  const { data: customerData } = await supabase
+    .from('customers')
+    .select('paket, status')
+    .eq('email', user.email)
+    .single()
+
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Nutzer'
-  const plan = ((profile?.plan as Plan) || 'starter')
+  const rawPaket = customerData?.paket?.toLowerCase() || profile?.plan || 'starter'
+  const plan = (rawPaket as Plan)
   const status = ((profile?.status as Status) || 'active')
   const planLabel = PLAN_LABELS[plan] ?? plan
   const planColor = PLAN_COLORS[plan] ?? '#6b7280'
