@@ -1,4 +1,6 @@
-"use client";
+const fs = require('fs');
+
+const content = `"use client";
 import Link from "next/link";
 
 const plans = [
@@ -114,3 +116,7 @@ export default function Pricing() {
     </section>
   );
 }
+`;
+
+fs.writeFileSync('components/Pricing.tsx', content);
+console.log('Pricing.tsx erfolgreich geschrieben!');
