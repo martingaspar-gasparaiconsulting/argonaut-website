@@ -112,6 +112,8 @@ export default async function DashboardPage() {
     .from('customers')
     .select('paket, status')
     .eq('email', user.email)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single()
 
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Nutzer'
