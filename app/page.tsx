@@ -1,6 +1,4 @@
-const fs = require('fs');
-
-const content = `import Navbar from '@/components/Navbar'
+import Navbar from '@/components/Navbar'
 import Hero from '@/components/Hero'
 import Services from '@/components/Services'
 import AgentTeam from '@/components/AgentTeam'
@@ -27,7 +25,3 @@ export default function Home() {
     </main>
   )
 }
-`;
-
-fs.writeFileSync('app/page.tsx', content);
-console.log('app/page.tsx erfolgreich geschrieben!');
