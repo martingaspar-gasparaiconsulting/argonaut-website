@@ -6,11 +6,13 @@ import CustomersTable, { type Customer, type Plan } from './CustomersTable'
 
 // ─── MRR config ───────────────────────────────────────────────────────────────
 
-const MRR_BY_PLAN: Record<Plan, number> = {
-  starter:      3000,
-  professional: 4000,
-  business:     7000,
-  enterprise:   9000,
+const MRR_BY_PLAN: Record<string, number> = {
+  SOLO:  1799,
+  START: 3000,
+  PRO:   4000,
+  BUS:   6000,
+  ENT:   9000,
+  BASIS: 1500,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,8 +46,8 @@ export default async function AdminPage() {
 
   // ── Fetch all customers ────────────────────────────────
   const { data: rawCustomers } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, company, plan, status, role, created_at')
+    .from('customers')
+    .select('id, name, email, paket, status, created_at')
     .order('created_at', { ascending: false })
 
   const customers: Customer[] = (rawCustomers ?? []) as Customer[]
@@ -55,8 +57,8 @@ export default async function AdminPage() {
   const activeKunden = customers.filter((c) => c.status === 'active').length
 
   const mrr = customers
-    .filter((c) => c.status === 'active' && c.plan && c.plan in MRR_BY_PLAN)
-    .reduce((sum, c) => sum + MRR_BY_PLAN[c.plan as Plan], 0)
+    .filter((c) => c.status === 'aktiv' || c.status === 'active') && c.paket && c.paket in MRR_BY_PLAN)
+    .reduce((sum, c) => sum + MRR_BY_PLAN[c.paket as string], 0)
 
   const weekCutoff   = oneWeekAgo()
   const neueWoche    = customers.filter((c) => c.created_at && c.created_at >= weekCutoff).length
