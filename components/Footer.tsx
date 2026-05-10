@@ -22,7 +22,7 @@ export default function Footer() {
             </p>
             <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.7 }}>
               Martin Gaspar<br />
-              71132 Böblingen<br />
+              71032 Böblingen<br />
               Stuttgart · Sindelfingen · Leonberg
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function Footer() {
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '20px 48px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>
-            © 2025 ARGONAUT · Martin Gaspar · 71132 Böblingen
+            © 2026 ARGONAUT · Martin Gaspar · 71032 Böblingen
           </p>
           <div style={{ display: 'flex', gap: '24px' }}>
             <a href="mailto:martin@gasparaiconsulting.cloud"
