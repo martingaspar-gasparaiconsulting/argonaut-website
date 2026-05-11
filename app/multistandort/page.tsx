@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const pakete = [
   { name: 'STARTER', preis: 1500, farbe: '#6b7280' },
@@ -45,6 +45,16 @@ export default function MultistandortPage() {
   const gesamtPaket = selectedPaket.preis * selectedStandorte
   const gesamtMonatlich = gesamtBasis + gesamtPaket
   const setupGebuehr = selectedStandorte <= 3 ? 2500 : selectedStandorte <= 5 ? 4500 : 7500
+
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://js-eu1.hsforms.net/forms/embed/146991109.js'
+    script.defer = true
+    document.body.appendChild(script)
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
 
   return (
     <main style={{
@@ -429,7 +439,7 @@ export default function MultistandortPage() {
           ))}
         </div>
 
-        
+        <a
           href="#kontakt"
           style={{
             display: 'inline-block',
