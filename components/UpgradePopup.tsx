@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function UpgradePopup() {
   const [visible, setVisible] = useState(false)
@@ -13,32 +14,95 @@ export default function UpgradePopup() {
       const hoursPassed = (Date.now() - snoozedAt) / (1000 * 60 * 60)
       if (hoursPassed < 24) return
     }
+
     const checkPopup = async () => {
-      const res = await fetch('/api/check-popup')
-      const json = await res.json()
-      if (json.popup_aktiv === true) setVisible(true)
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('popup_aktiv, paket')
+        .eq('supabase_user_id', user.id)
+        .single()
+
+      if (customer?.popup_aktiv === true) {
+        setVisible(true)
+      }
     }
+
     checkPopup()
   }, [])
 
-  const handleClose = () => { setVisible(false); setDismissed(true) }
-  const handleSnooze = () => { localStorage.setItem('upgrade_popup_snoozed', Date.now().toString()); setVisible(false) }
+  const handleClose = () => {
+    setVisible(false)
+    setDismissed(true)
+  }
+
+  const handleSnooze = () => {
+    localStorage.setItem('upgrade_popup_snoozed', Date.now().toString())
+    setVisible(false)
+  }
 
   if (!visible || dismissed) return null
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}>
-      <div style={{position:'relative',background:'#0D1B3E',border:'1px solid #D4A843',borderRadius:'1rem',maxWidth:'440px',width:'100%',margin:'0 1rem',padding:'2rem'}}>
-        <button onClick={handleClose} style={{position:'absolute',top:'1rem',right:'1rem',color:'rgba(255,255,255,0.4)',background:'none',border:'none',fontSize:'1.2rem',cursor:'pointer'}}>x</button>
-        <div style={{display:'inline-block',background:'#D4A843',color:'#0D1B3E',fontSize:'0.7rem',fontWeight:'bold',padding:'0.2rem 0.8rem',borderRadius:'9999px',marginBottom:'1rem'}}>SOLO BETA LAEUFT AUS</div>
-        <h2 style={{color:'white',fontSize:'1.4rem',fontWeight:'bold',marginBottom:'0.75rem'}}>Bereit fuer den naechsten Schritt?</h2>
-        <p style={{color:'rgba(255,255,255,0.7)',fontSize:'0.875rem',marginBottom:'1.5rem',lineHeight:1.6}}>Dein SOLO Beta-Zugang endet in wenigen Wochen. Wechsle jetzt zu einem ARGONAUT OS Paket ohne Unterbrechung.</p>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1.5rem'}}>
-          <div style={{border:'1px solid rgba(255,255,255,0.2)',borderRadius:'0.75rem',padding:'0.75rem',textAlign:'center'}}><div style={{color:'#D4A843',fontWeight:'bold'}}>START</div><div style={{color:'white',fontSize:'0.75rem'}}>8 Agenten</div><div style={{color:'rgba(255,255,255,0.6)',fontSize:'0.75rem'}}>1.500 EUR/Monat</div></div>
-          <div style={{border:'1px solid rgba(255,255,255,0.2)',borderRadius:'0.75rem',padding:'0.75rem',textAlign:'center'}}><div style={{color:'#D4A843',fontWeight:'bold'}}>PRO</div><div style={{color:'white',fontSize:'0.75rem'}}>16 Agenten</div><div style={{color:'rgba(255,255,255,0.6)',fontSize:'0.75rem'}}>2.500 EUR/Monat</div></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="relative bg-[#0D1B3E] border border-[#D4A843] rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+        
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-white/40 hover:text-white text-xl leading-none"
+        >
+          ✕
+        </button>
+
+        {/* Badge */}
+        <div className="inline-block bg-[#D4A843] text-[#0D1B3E] text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+          Dein SOLO Beta läuft aus
         </div>
-        <a href='/dashboard/upgrade' style={{display:'block',background:'#D4A843',color:'#0D1B3E',fontWeight:'bold',textAlign:'center',padding:'0.75rem',borderRadius:'0.75rem',textDecoration:'none',marginBottom:'0.75rem'}}>Jetzt upgraden</a>
-        <button onClick={handleSnooze} style={{display:'block',width:'100%',textAlign:'center',color:'rgba(255,255,255,0.4)',background:'none',border:'none',fontSize:'0.75rem',cursor:'pointer'}}>Spaeter erinnern (24h)</button>
+
+        {/* Headline */}
+        <h2 className="text-white text-2xl font-bold mb-3 leading-tight">
+          Bereit für den nächsten Schritt?
+        </h2>
+
+        {/* Text */}
+        <p className="text-white/70 text-sm mb-6 leading-relaxed">
+          Dein SOLO Beta-Zugang endet in wenigen Wochen. Wechsle jetzt zu einem vollwertigen ARGONAUT OS Paket und behalte alle Agenten, alle Automatisierungen — ohne Unterbrechung.
+        </p>
+
+        {/* Paket Optionen */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {[
+            { name: 'START', agents: '8 Agenten', preis: '1.500€' },
+            { name: 'PRO', agents: '16 Agenten', preis: '2.500€' },
+          ].map((p) => (
+            <div key={p.name} className="border border-white/20 rounded-xl p-3 text-center hover:border-[#D4A843] transition-colors cursor-pointer">
+              <div className="text-[#D4A843] font-bold text-sm">{p.name}</div>
+              <div className="text-white text-xs mt-1">{p.agents}</div>
+              <div className="text-white/60 text-xs">{p.preis}/Monat</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA Button */}
+        
+          href="/dashboard/upgrade"
+          className="block w-full bg-[#D4A843] hover:bg-[#C9A84C] text-[#0D1B3E] font-bold text-center py-3 rounded-xl transition-colors mb-3"
+        >
+          Jetzt upgraden →
+        </a>
+
+        {/* Snooze */}
+        <button
+          onClick={handleSnooze}
+          className="block w-full text-center text-white/40 hover:text-white/70 text-xs transition-colors"
+        >
+          Später erinnern (24h)
+        </button>
+
       </div>
     </div>
   )
