@@ -150,6 +150,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      <>
+      <UpgradePopup />
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 80px' }}>
 
         <section style={{ marginBottom: '40px' }}>
@@ -189,6 +191,7 @@ export default async function DashboardPage() {
         </section>
 
       </main>
+    </>
     </div>
   )
 }
