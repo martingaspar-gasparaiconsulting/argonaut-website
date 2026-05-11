@@ -473,8 +473,7 @@ export default function MultistandortPage() {
         </div>
 
         <div style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(201,168,76,0.2)',
+          background: '#ffffff',
           borderRadius: '20px',
           padding: '48px',
         }}>
