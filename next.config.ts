@@ -1,10 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["@supabase/ssr"]
-  },
-  output: "standalone"
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
