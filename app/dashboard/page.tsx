@@ -1,3 +1,4 @@
+import UpgradePopup from '@/components/UpgradePopup'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase-server'
