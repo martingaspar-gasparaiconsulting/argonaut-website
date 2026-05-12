@@ -191,7 +191,7 @@ letterSpacing: '-0.02em',
                 margin: '0 auto 12px',
                 fontSize: '20px',
               }}>🏢</div>
-              <p style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px' }}>{s}</p>
+              <p style={{ fontWeight: 700, fontSize: '18px', marginBottom: '8px' }}>{s}</p>
               <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigene Automatisierung</p>
               <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigene Daten</p>
               <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigenes Team</p>
