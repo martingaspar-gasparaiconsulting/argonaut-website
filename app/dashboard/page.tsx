@@ -173,7 +173,7 @@ export default async function DashboardPage() {
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px 0' }}>Ihr Abonnement verwalten</h3>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Rechnungen, Zahlungsmethode und Kündigung — alles an einem Ort.</p>
           </div>
-          <a href="https://billing.stripe.com/p/login/test_bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          <a href="https://billing.stripe.com/p/login/bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             Abo verwalten →
           </a>
         </div>
