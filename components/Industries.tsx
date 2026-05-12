@@ -49,7 +49,7 @@ export default function Industries() {
         {/* Branchen Pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
           {branchen.map((b, i) => (
-            <div
+            <Link href="/branchen"
               key={i}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
@@ -78,7 +78,7 @@ export default function Industries() {
               }}>
                 {b.name}
               </span>
-            </div>
+            </Link>
           ))}
 
           {/* Alle 110 Branchen Button */}
