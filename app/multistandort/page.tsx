@@ -33,6 +33,29 @@ const beispiele = [
     branche: 'Hotel-Gruppe',
     beschreibung: '8 Häuser, eine Buchungsplattform',
     detail: 'Verfügbarkeiten, Preise, Gästekommunikation — alles zentral gesteuert. Jedes Haus behält sein eigenes Team.',
+  },{
+    icon: '🏗️',
+    branche: 'Bauunternehmen',
+    beschreibung: '6 Baustellen, ein Projektmanagement',
+    detail: 'Aufträge, Materialbestellung und Zeiterfassung laufen zentral. Jede Baustelle bleibt autonom.',
+  },
+  {
+    icon: '🚗',
+    branche: 'Autohaus-Gruppe',
+    beschreibung: '4 Standorte, ein CRM',
+    detail: 'Leads, Probefahrten und Verkaufsberichte laufen zentral. Jedes Haus behält seine eigene Kasse.',
+  },
+  {
+    icon: '🍽️',
+    branche: 'Restaurantkette',
+    beschreibung: '10 Filialen, ein Bestellsystem',
+    detail: 'Speisekarten, Bestellungen und Personal zentral gesteuert. Jede Filiale bleibt flexibel.',
+  },
+  {
+    icon: '📦',
+    branche: 'Logistik & Lager',
+    beschreibung: '5 Lager, eine Plattform',
+    detail: 'Bestände, Lieferungen und Routen laufen automatisch. Die Zentrale hat immer den Überblick.',
   },
 ]
 
