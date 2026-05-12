@@ -13,8 +13,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'magic'>('login')
   const [magicSent, setMagicSent] = useState(false)
-  const [acceptedTerms, setAcceptedTerms] = useState(false)
-  const [isNewUser, setIsNewUser] = useState(false)
 
   const supabase = createClient()
 
@@ -22,15 +20,12 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error) {
       setError('E-Mail oder Passwort falsch.')
       setLoading(false)
       return
     }
-
     router.push('/dashboard')
     router.refresh()
   }
@@ -39,30 +34,15 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-
-    if (isNewUser && !acceptedTerms) {
-      setError('Bitte akzeptieren Sie AGB und Datenschutzerklärung.')
-      setLoading(false)
-      return
-    }
-
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          accepted_terms: isNewUser ? acceptedTerms : undefined,
-          accepted_terms_at: isNewUser && acceptedTerms ? new Date().toISOString() : undefined,
-        },
-      },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
-
     if (error) {
       setError(error.message)
       setLoading(false)
       return
     }
-
     setMagicSent(true)
     setLoading(false)
   }
@@ -141,7 +121,6 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            {/* Mode Toggle */}
             <div style={{
               display: 'flex', background: 'rgba(255,255,255,0.06)',
               borderRadius: '8px', padding: '3px', marginBottom: '28px',
@@ -160,7 +139,6 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={mode === 'login' ? handleLogin : handleMagicLink}>
-              {/* E-Mail */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
                   display: 'block', fontSize: '12px', fontWeight: 600,
@@ -174,7 +152,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Passwort (nur bei Login-Mode) */}
               {mode === 'login' && (
                 <div style={{ marginBottom: '24px' }}>
                   <label style={{
@@ -190,54 +167,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Magic Link: Neuer Nutzer Toggle + DSGVO */}
-              {mode === 'magic' && (
-                <div style={{ marginBottom: '20px' }}>
-                  {/* Neuer Nutzer Checkbox */}
-                  <label style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    cursor: 'pointer', marginBottom: '14px',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={isNewUser}
-                      onChange={(e) => { setIsNewUser(e.target.checked); if (!e.target.checked) setAcceptedTerms(false) }}
-                      style={{ width: '16px', height: '16px', accentColor: '#C9A84C', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
-                      Ich bin Neukunde / Registrierung
-                    </span>
-                  </label>
-
-                  {/* DSGVO Checkbox — nur wenn isNewUser */}
-                  {isNewUser && (
-                    <label style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '10px',
-                      cursor: 'pointer',
-                      padding: '14px',
-                      background: 'rgba(201,168,76,0.06)',
-                      border: `1px solid ${acceptedTerms ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.2)'}`,
-                      borderRadius: '8px',
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={acceptedTerms}
-                        onChange={(e) => setAcceptedTerms(e.target.checked)}
-                        style={{ width: '16px', height: '16px', accentColor: '#C9A84C', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
-                      />
-                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
-                        Ich akzeptiere die{' '}
-                        <a href="/agb" target="_blank" style={{ color: '#C9A84C', textDecoration: 'underline' }}>AGB</a>
-                        {' '}und die{' '}
-                        <a href="/datenschutz" target="_blank" style={{ color: '#C9A84C', textDecoration: 'underline' }}>Datenschutzerklärung</a>
-                        {' '}von ARGONAUT OS. *
-                      </span>
-                    </label>
-                  )}
-                </div>
-              )}
-
-              {mode === 'login' && <div style={{ marginBottom: '0' }} />}
+              {mode === 'magic' && <div style={{ marginBottom: '24px' }} />}
 
               {error && (
                 <div style={{
@@ -247,25 +177,17 @@ export default function LoginPage() {
                 }}>{error}</div>
               )}
 
-              <button type="submit" disabled={loading || (mode === 'magic' && isNewUser && !acceptedTerms)}
-                style={{
-                  width: '100%', padding: '14px',
-                  background: (loading || (mode === 'magic' && isNewUser && !acceptedTerms))
-                    ? 'rgba(201,168,76,0.4)' : '#C9A84C',
-                  color: '#0A1628', border: 'none', borderRadius: '8px',
-                  fontSize: '14px', fontWeight: 700, letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: (loading || (mode === 'magic' && isNewUser && !acceptedTerms)) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s', marginTop: '8px',
-                }}>
+              <button type="submit" disabled={loading} style={{
+                width: '100%', padding: '14px',
+                background: loading ? 'rgba(201,168,76,0.5)' : '#C9A84C',
+                color: '#0A1628', border: 'none', borderRadius: '8px',
+                fontSize: '14px', fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+              }}>
                 {loading ? 'Bitte warten...' : mode === 'login' ? 'Anmelden' : 'Link senden'}
               </button>
-
-              {mode === 'magic' && isNewUser && (
-                <p style={{ marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-                  * Pflichtfeld für die Registrierung
-                </p>
-              )}
             </form>
           </>
         )}
