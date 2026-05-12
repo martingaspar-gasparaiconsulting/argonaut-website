@@ -6,12 +6,12 @@ const automatisierungen = [
   'Lead-Automatisierung',
   'Angebotserstellung',
   'Kundenservice',
-  'Rechnungsverarbeitung',
+  'Rechnungs-verarbeitung',
   'Terminbuchung',
   'E-Mail-Marketing',
   'WhatsApp-Kommunikation',
   'Mitarbeiter-Onboarding',
-  'Dokumentenmanagement',
+  'Dokumenten-management',
   'Buchhaltung & Reporting',
 ]
 
