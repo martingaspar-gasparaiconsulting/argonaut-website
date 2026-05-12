@@ -105,7 +105,7 @@ export default function Footer() {
             © 2026 ARGONAUT · Martin Gaspar · 71032 Böblingen
           </p>
           <div style={{ display: 'flex', gap: '24px' }}>
-            <a href="mailto:martin@gasparaiconsulting.cloud"
+            <a href="mailto:info@argonaut-os.com"
               style={{ fontSize: '13px', color: '#9ca3af', textDecoration: 'none' }}
               onMouseEnter={(e) => e.currentTarget.style.color = '#C9A84C'}
               onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
