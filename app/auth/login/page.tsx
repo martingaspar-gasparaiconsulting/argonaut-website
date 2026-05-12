@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'magic'>('login')
   const [magicSent, setMagicSent] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   const supabase = createClient()
 
@@ -24,7 +26,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError(error.message)
+      setError('E-Mail oder Passwort falsch.')
       setLoading(false)
       return
     }
@@ -38,9 +40,21 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
+    if (isNewUser && !acceptedTerms) {
+      setError('Bitte akzeptieren Sie AGB und Datenschutzerklärung.')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          accepted_terms: isNewUser ? acceptedTerms : undefined,
+          accepted_terms_at: isNewUser && acceptedTerms ? new Date().toISOString() : undefined,
+        },
+      },
     })
 
     if (error) {
@@ -51,6 +65,19 @@ export default function LoginPage() {
 
     setMagicSent(true)
     setLoading(false)
+  }
+
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '8px',
+    color: '#FFFFFF',
+    fontSize: '15px',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.2s',
   }
 
   return (
@@ -64,8 +91,6 @@ export default function LoginPage() {
       padding: '24px',
       fontFamily: 'var(--font-dm-sans), sans-serif',
     }}>
-
-      {/* Card */}
       <div style={{
         width: '100%',
         maxWidth: '420px',
@@ -75,7 +100,6 @@ export default function LoginPage() {
         padding: '48px 40px',
         backdropFilter: 'blur(12px)',
       }}>
-
         {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '36px' }}>
           <Image
@@ -86,52 +110,32 @@ export default function LoginPage() {
             style={{ objectFit: 'contain', marginBottom: '14px' }}
           />
           <span style={{
-            fontSize: '22px',
-            fontWeight: 900,
-            color: '#FFFFFF',
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
+            fontSize: '22px', fontWeight: 900, color: '#FFFFFF',
+            letterSpacing: '0.2em', textTransform: 'uppercase',
             fontFamily: 'var(--font-syne), sans-serif',
-          }}>
-            ARGONAUT
-          </span>
+          }}>ARGONAUT</span>
           <span style={{
-            marginTop: '6px',
-            fontSize: '13px',
-            color: '#C9A84C',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}>
-            Mitgliederbereich
-          </span>
+            marginTop: '6px', fontSize: '13px', color: '#C9A84C',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+          }}>Mitgliederbereich</span>
         </div>
 
         {magicSent ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'rgba(201,168,76,0.15)',
-              border: '1px solid rgba(201,168,76,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              fontSize: '24px',
-            }}>
-              ✉
-            </div>
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', fontSize: '24px',
+            }}>✉</div>
             <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>
               E-Mail gesendet
             </p>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '14px', lineHeight: 1.6 }}>
               Prüfen Sie Ihr Postfach und klicken Sie auf den Link, um sich anzumelden.
             </p>
-            <button
-              onClick={() => setMagicSent(false)}
-              style={{ marginTop: '24px', color: '#C9A84C', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
-            >
+            <button onClick={() => setMagicSent(false)}
+              style={{ marginTop: '24px', color: '#C9A84C', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>
               Zurück
             </button>
           </div>
@@ -139,168 +143,140 @@ export default function LoginPage() {
           <>
             {/* Mode Toggle */}
             <div style={{
-              display: 'flex',
-              background: 'rgba(255,255,255,0.06)',
-              borderRadius: '8px',
-              padding: '3px',
-              marginBottom: '28px',
+              display: 'flex', background: 'rgba(255,255,255,0.06)',
+              borderRadius: '8px', padding: '3px', marginBottom: '28px',
             }}>
               {(['login', 'magic'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => { setMode(m); setError(null) }}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    transition: 'all 0.2s',
-                    background: mode === m ? '#C9A84C' : 'transparent',
-                    color: mode === m ? '#0A1628' : 'rgba(255,255,255,0.5)',
-                  }}
-                >
+                <button key={m} onClick={() => { setMode(m); setError(null) }} style={{
+                  flex: 1, padding: '8px', borderRadius: '6px', border: 'none',
+                  cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                  letterSpacing: '0.04em', transition: 'all 0.2s',
+                  background: mode === m ? '#C9A84C' : 'transparent',
+                  color: mode === m ? '#0A1628' : 'rgba(255,255,255,0.5)',
+                }}>
                   {m === 'login' ? 'Passwort' : 'Magic Link'}
                 </button>
               ))}
             </div>
 
-            {/* Form */}
             <form onSubmit={mode === 'login' ? handleLogin : handleMagicLink}>
+              {/* E-Mail */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: 'rgba(255,255,255,0.5)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  marginBottom: '8px',
-                }}>
-                  E-Mail
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="name@unternehmen.de"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '8px',
-                    color: '#FFFFFF',
-                    fontSize: '15px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.2s',
-                  }}
+                  display: 'block', fontSize: '12px', fontWeight: 600,
+                  color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', marginBottom: '8px',
+                }}>E-Mail</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  required placeholder="name@unternehmen.de" style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)' }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
                 />
               </div>
 
+              {/* Passwort (nur bei Login-Mode) */}
               {mode === 'login' && (
                 <div style={{ marginBottom: '24px' }}>
                   <label style={{
-                    display: 'block',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.5)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    marginBottom: '8px',
-                  }}>
-                    Passwort
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: '8px',
-                      color: '#FFFFFF',
-                      fontSize: '15px',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.2s',
-                    }}
+                    display: 'block', fontSize: '12px', fontWeight: 600,
+                    color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', marginBottom: '8px',
+                  }}>Passwort</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                    required placeholder="••••••••" style={inputStyle}
                     onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)' }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
                   />
                 </div>
               )}
 
-              {mode === 'magic' && <div style={{ marginBottom: '24px' }} />}
+              {/* Magic Link: Neuer Nutzer Toggle + DSGVO */}
+              {mode === 'magic' && (
+                <div style={{ marginBottom: '20px' }}>
+                  {/* Neuer Nutzer Checkbox */}
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    cursor: 'pointer', marginBottom: '14px',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={isNewUser}
+                      onChange={(e) => { setIsNewUser(e.target.checked); if (!e.target.checked) setAcceptedTerms(false) }}
+                      style={{ width: '16px', height: '16px', accentColor: '#C9A84C', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                      Ich bin Neukunde / Registrierung
+                    </span>
+                  </label>
 
-              {error && (
-                <div style={{
-                  marginBottom: '16px',
-                  padding: '10px 14px',
-                  background: 'rgba(220,53,69,0.15)',
-                  border: '1px solid rgba(220,53,69,0.35)',
-                  borderRadius: '8px',
-                  color: '#ff8b96',
-                  fontSize: '13px',
-                }}>
-                  {error}
+                  {/* DSGVO Checkbox — nur wenn isNewUser */}
+                  {isNewUser && (
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '10px',
+                      cursor: 'pointer',
+                      padding: '14px',
+                      background: 'rgba(201,168,76,0.06)',
+                      border: `1px solid ${acceptedTerms ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.2)'}`,
+                      borderRadius: '8px',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        style={{ width: '16px', height: '16px', accentColor: '#C9A84C', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>
+                        Ich akzeptiere die{' '}
+                        <a href="/agb" target="_blank" style={{ color: '#C9A84C', textDecoration: 'underline' }}>AGB</a>
+                        {' '}und die{' '}
+                        <a href="/datenschutz" target="_blank" style={{ color: '#C9A84C', textDecoration: 'underline' }}>Datenschutzerklärung</a>
+                        {' '}von ARGONAUT OS. *
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
+              {mode === 'login' && <div style={{ marginBottom: '0' }} />}
+
+              {error && (
+                <div style={{
+                  marginBottom: '16px', padding: '10px 14px',
+                  background: 'rgba(220,53,69,0.15)', border: '1px solid rgba(220,53,69,0.35)',
+                  borderRadius: '8px', color: '#ff8b96', fontSize: '13px',
+                }}>{error}</div>
+              )}
+
+              <button type="submit" disabled={loading || (mode === 'magic' && isNewUser && !acceptedTerms)}
                 style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: loading ? 'rgba(201,168,76,0.5)' : '#C9A84C',
-                  color: '#0A1628',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
+                  width: '100%', padding: '14px',
+                  background: (loading || (mode === 'magic' && isNewUser && !acceptedTerms))
+                    ? 'rgba(201,168,76,0.4)' : '#C9A84C',
+                  color: '#0A1628', border: 'none', borderRadius: '8px',
+                  fontSize: '14px', fontWeight: 700, letterSpacing: '0.08em',
                   textTransform: 'uppercase',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {loading
-                  ? 'Bitte warten...'
-                  : mode === 'login'
-                    ? 'Anmelden'
-                    : 'Link senden'}
+                  cursor: (loading || (mode === 'magic' && isNewUser && !acceptedTerms)) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s', marginTop: '8px',
+                }}>
+                {loading ? 'Bitte warten...' : mode === 'login' ? 'Anmelden' : 'Link senden'}
               </button>
+
+              {mode === 'magic' && isNewUser && (
+                <p style={{ marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+                  * Pflichtfeld für die Registrierung
+                </p>
+              )}
             </form>
           </>
         )}
       </div>
 
-      {/* Footer link */}
-      <a
-        href="/"
-        style={{
-          marginTop: '24px',
-          color: 'rgba(255,255,255,0.3)',
-          fontSize: '13px',
-          textDecoration: 'none',
-          letterSpacing: '0.04em',
-          transition: 'color 0.2s',
-        }}
+      <a href="/" style={{
+        marginTop: '24px', color: 'rgba(255,255,255,0.3)', fontSize: '13px',
+        textDecoration: 'none', letterSpacing: '0.04em', transition: 'color 0.2s',
+      }}
         onMouseEnter={(e) => { e.currentTarget.style.color = '#C9A84C' }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}
-      >
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}>
         Zurück zur Website
       </a>
     </div>
