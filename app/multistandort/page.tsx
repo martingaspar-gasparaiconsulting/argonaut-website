@@ -400,6 +400,7 @@ letterSpacing: '-0.02em',
                 <p style={{ fontSize: '24px', fontWeight: 900, color: '#C9A84C' }}>{item.wert}</p>
               </div>
             ))}
+          <a href="#kontakt" style={{ display: 'inline-block', marginTop: '32px', padding: '14px 40px', background: '#D4A843', color: '#0D1B3E', borderRadius: '999px', fontWeight: 700, fontSize: '15px', textDecoration: 'none' }}>Anfrage stellen →</a>
           </div>
         </div>
       </section>
