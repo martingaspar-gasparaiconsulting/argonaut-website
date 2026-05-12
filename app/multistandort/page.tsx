@@ -99,10 +99,11 @@ export default function MultistandortPage() {
 
         <h1 style={{
           fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-          fontWeight: 900,
-          lineHeight: 1.05,
-          marginBottom: '24px',
-          fontFamily: 'var(--font-syne), sans-serif',
+          fontWeight: 700,
+lineHeight: 1.05,
+marginBottom: '24px',
+fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
+letterSpacing: '-0.02em',
         }}>
           Ein Gehirn.<br />
           <span style={{ color: '#C9A84C' }}>Viele Standorte.</span>
@@ -163,11 +164,7 @@ export default function MultistandortPage() {
           <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
             Das Konzept
           </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
-            Jeder Standort ist eigenständig.<br />Gemeinsam sind sie unschlagbar.
-          </h2>
-        </div>
-
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 700, fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif', letterSpacing: '-0.02em' }}>Jeder Standort ist eigenständig.<br />Gemeinsam sind sie unschlagbar.</h2></div>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
