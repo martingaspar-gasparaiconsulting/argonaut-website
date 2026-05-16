@@ -52,7 +52,7 @@ export default function AGB() {
               Allgemeine Geschäftsbedingungen
             </h1>
             <p style={{ fontSize: '15px', color: '#9ca3af', margin: 0 }}>
-              ARGONAUT OS SaaS · Gaspar AI Consulting · Stand: Mai 2025
+              ARGONAUT OS SaaS · Gaspar AI Consulting · Stand: Mai 2026
             </p>
           </div>
         </div>
@@ -146,8 +146,6 @@ export default function AGB() {
                 <p style={textStyle}>
                   <strong style={{ color: '#0A1628' }}>3.1</strong> Alle Preise verstehen sich als Nettopreise in Euro (EUR) zuzüglich der gesetzlichen Mehrwertsteuer (derzeit 19 % MwSt.). Die Vergütungsstruktur besteht aus zwei verpflichtenden Komponenten:
                 </p>
-
-                {/* Basis fee callout */}
                 <div style={{ padding: '16px 20px', background: '#0A1628', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ flexShrink: 0 }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pflichtkomponente (alle Kunden)</span>
@@ -161,8 +159,6 @@ export default function AGB() {
                 <p style={{ ...textStyle, marginBottom: '16px' }}>
                   <strong style={{ color: '#0A1628' }}>Zusätzlich</strong> wählt der Kunde eines der folgenden Pakete (Paketpreis + Basis = Gesamtpreis):
                 </p>
-
-                {/* Pricing Table */}
                 <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
@@ -190,7 +186,6 @@ export default function AGB() {
                     </tbody>
                   </table>
                 </div>
-
                 <p style={textStyle}>
                   <strong style={{ color: '#0A1628' }}>3.2</strong> Individuelle Implementierungsleistungen, Custom-Integrationen sowie Beratungsprojekte werden gesondert auf Basis eines Angebots abgerechnet und sind nicht im monatlichen Grundentgelt enthalten.
                 </p>
@@ -231,9 +226,9 @@ export default function AGB() {
               <div style={cardStyle}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                   {[
-                    { label: 'Mindestlaufzeit', value: '1 Monat', icon: '📅' },
-                    { label: 'Verlängerung', value: 'Automatisch um 1 Monat', icon: '🔄' },
-                    { label: 'Kündigungsfrist', value: '30 Tage zum Monatsende', icon: '📋' },
+                    { label: 'Mindestlaufzeit', value: '12 Monate', icon: '📅' },
+                    { label: 'Verlängerung', value: 'Automatisch um 12 Monate', icon: '🔄' },
+                    { label: 'Kündigungsfrist', value: '30 Tage vor Laufzeitende', icon: '📋' },
                   ].map(({ label, value, icon }) => (
                     <div key={label} style={{ padding: '20px', background: '#0A1628', borderRadius: '10px', textAlign: 'center' }}>
                       <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
@@ -243,10 +238,10 @@ export default function AGB() {
                   ))}
                 </div>
                 <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>5.1</strong> Der Vertrag wird auf unbestimmte Zeit geschlossen und läuft monatlich. Er verlängert sich automatisch um jeweils einen Monat, wenn er nicht rechtzeitig gekündigt wird.
+                  <strong style={{ color: '#0A1628' }}>5.1</strong> Der Vertrag wird mit einer Mindestlaufzeit von 12 Monaten abgeschlossen. Er verlängert sich automatisch um jeweils weitere 12 Monate, wenn er nicht rechtzeitig gekündigt wird.
                 </p>
                 <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>5.2</strong> Die Kündigung muss spätestens 30 Tage vor Ende des laufenden Abrechnungszeitraums schriftlich (E-Mail genügt) beim Anbieter eingehen. Eine Kündigung über das Dashboard ist ebenfalls möglich.
+                  <strong style={{ color: '#0A1628' }}>5.2</strong> Die Kündigung muss spätestens 30 Tage vor Ablauf der jeweiligen Vertragslaufzeit schriftlich (E-Mail genügt) beim Anbieter eingehen. Eine Kündigung über das Dashboard ist ebenfalls möglich.
                 </p>
                 <p style={textStyle}>
                   <strong style={{ color: '#0A1628' }}>5.3</strong> Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt. Ein wichtiger Grund auf Seiten des Anbieters liegt insbesondere vor, wenn der Kunde mit mehr als zwei Monatsentgelten in Zahlungsverzug gerät.
@@ -327,7 +322,7 @@ export default function AGB() {
                   <strong style={{ color: '#0A1628' }}>9.1</strong> Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit sowie für vorsätzlich oder grob fahrlässig verursachte Schäden und bei Übernahme einer Garantie.
                 </p>
                 <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>9.2</strong> Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalspflichten) ist die Haftung auf den vertragstypisch vorhersehbaren Schaden begrenzt. Diese beträgt maximal das 3-fache des in den letzten 12 Monaten vom Kunden gezahlten Nettoentgelts.
+                  <strong style={{ color: '#0A1628' }}>9.2</strong> Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) ist die Haftung auf den vertragstypisch vorhersehbaren Schaden begrenzt. Diese beträgt maximal das 3-fache des in den letzten 12 Monaten vom Kunden gezahlten Nettoentgelts.
                 </p>
                 <p style={textStyle}>
                   <strong style={{ color: '#0A1628' }}>9.3</strong> Für leicht fahrlässige Verletzung nicht wesentlicher Vertragspflichten ist die Haftung des Anbieters ausgeschlossen.
@@ -386,9 +381,9 @@ export default function AGB() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
                 {[
                   { label: 'Anbieter', value: 'Gaspar AI Consulting\nMartin Gaspar' },
-                  { label: 'Adresse', value: '[Straße]\n71132 Böblingen, Deutschland' },
-                  { label: 'Kontakt', value: 'martin@gasparaiconsulting.de' },
-                  { label: 'Stand', value: 'Mai 2025' },
+                  { label: 'Adresse', value: 'Tübinger Straße\n71032 Böblingen, Deutschland' },
+                  { label: 'Kontakt', value: 'info@argonaut-os.com' },
+                  { label: 'Stand', value: 'Mai 2026' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
