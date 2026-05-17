@@ -20,6 +20,13 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: 'ARGONAUT — KI-Agentur für den deutschen Mittelstand',
   description: 'ARGONAUT automatisiert Prozesse, die heute noch Ihre besten Leute binden – messbar, sicher und auf Ihren Betrieb zugeschnitten.',
+  manifest: '/manifest.json',
+  themeColor: '#0A1628',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'ARGONAUT OS',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

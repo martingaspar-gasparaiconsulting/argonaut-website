@@ -1,0 +1,22 @@
+ {
+  "name": "ARGONAUT OS",
+  "short_name": "ARGONAUT",
+  "description": "KI-Betriebssystem für den Mittelstand",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0A1628",
+  "theme_color": "#0A1628",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/ARGONAUT_HELM_SPARTAN .png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/ARGONAUT_HELM_SPARTAN .png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
