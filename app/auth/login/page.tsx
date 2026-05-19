@@ -16,6 +16,9 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
+ 
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
