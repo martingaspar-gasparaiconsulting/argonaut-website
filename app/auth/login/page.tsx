@@ -15,8 +15,6 @@ export default function LoginPage() {
   const [magicSent, setMagicSent] = useState(false)
 
   const supabase = createClient()
-
- 
   }
 
   async function handleLogin(e: React.FormEvent) {
