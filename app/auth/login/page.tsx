@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
@@ -15,7 +15,13 @@ export default function LoginPage() {
   const [magicSent, setMagicSent] = useState(false)
 
   const supabase = createClient()
-  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'churn_locked') {
+      setError('Ihr Zugang wurde gesperrt. Für eine erneute Nutzung ist das Mindestpaket (3.000 € netto/Monat) erforderlich. Kontakt: info@argonaut-os.com')
+    }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
