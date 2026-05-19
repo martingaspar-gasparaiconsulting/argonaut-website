@@ -30,6 +30,21 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Churn-Lock Check
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user?.email) {
+        const { data: churned } = await supabase
+          .from('churned_customers')
+          .select('id')
+          .eq('email', user.email)
+          .single()
+
+        if (churned) {
+          return NextResponse.redirect(`${origin}/auth/login?error=churn_locked`)
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
