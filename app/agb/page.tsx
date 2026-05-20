@@ -1,6 +1,4 @@
 'use client'
-
-import Link from 'next/link'
 import { useState } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -9,21 +7,23 @@ const sections = [
   { id: 'gegenstand', label: '§ 1 Gegenstand & Leistungen' },
   { id: 'vertragsschluss', label: '§ 2 Vertragsschluss' },
   { id: 'preise', label: '§ 3 Preise & Tarife' },
-  { id: 'zahlung', label: '§ 4 Zahlung & SEPA' },
+  { id: 'zahlung', label: '§ 4 Zahlung & Abrechnung' },
   { id: 'laufzeit', label: '§ 5 Laufzeit & Kündigung' },
   { id: 'leistungsumfang', label: '§ 6 Leistungsumfang & SLA' },
   { id: 'nutzungsrechte', label: '§ 7 Nutzungsrechte' },
   { id: 'ki-training', label: '§ 8 KI-Training & Daten' },
-  { id: 'haftung', label: '§ 9 Haftungsbeschränkung' },
-  { id: 'datenschutz', label: '§ 10 Datenschutz' },
-  { id: 'schluss', label: '§ 11 Schlussbestimmungen' },
+  { id: 'fair-use', label: '§ 9 Fair-Use & Kontingente' },
+  { id: 'haftung', label: '§ 10 Haftungsbeschränkung' },
+  { id: 'datenschutz', label: '§ 11 Datenschutz' },
+  { id: 'schluss', label: '§ 12 Schlussbestimmungen' },
 ]
 
 const tarife = [
-  { name: 'Starter', paket: '1.500', gesamt: '3.000', agents: '3 KI-Agenten', workflows: '15 Workflows', users: '10 Nutzer', support: 'E-Mail & Chat-Support', highlight: false },
-  { name: 'Professional', paket: '2.500', gesamt: '4.000', agents: '8 KI-Agenten', workflows: '50 Workflows', users: '25 Nutzer', support: 'Prioritäts-Support', highlight: true },
-  { name: 'Business', paket: '4.500', gesamt: '6.000', agents: '20 KI-Agenten', workflows: 'Unbegrenzt', users: '100 Nutzer', support: 'Dedicated Manager', highlight: false },
-  { name: 'Enterprise', paket: '7.500', gesamt: '9.000', agents: 'Unbegrenzt', workflows: 'Unbegrenzt', users: 'Unbegrenzt', support: 'SLA + On-Site', highlight: false },
+  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen', kontingent: '5.000 KI-Calls/Monat', highlight: false },
+  { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 Automatisierungen', kontingent: '15.000 KI-Calls/Monat', highlight: false },
+  { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 Automatisierungen', kontingent: '35.000 KI-Calls/Monat', highlight: true },
+  { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 Automatisierungen', kontingent: '75.000 KI-Calls/Monat', highlight: false },
+  { name: 'ENTERPRISE', preis: '9.000', laufzeit: '12 Monate', agenten: '24 KI-Agenten', automatisierungen: '128 Automatisierungen + Branchen-spezifisch', kontingent: '150.000 KI-Calls/Monat', highlight: false },
 ]
 
 export default function AGB() {
@@ -42,370 +42,186 @@ export default function AGB() {
       <Navbar />
       <main style={{ background: '#faf9f6', minHeight: '100vh' }}>
 
-        {/* Hero */}
         <div style={{ background: '#0A1628', padding: '80px 48px 60px' }}>
-          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <p style={{ fontSize: '12px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Rechtliches
-            </p>
-            <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900, color: '#ffffff', margin: '0 0 16px', letterSpacing: '-0.02em' }}>
-              Allgemeine Geschäftsbedingungen
-            </h1>
-            <p style={{ fontSize: '15px', color: '#9ca3af', margin: 0 }}>
-              ARGONAUT OS SaaS · Gaspar AI Consulting · Stand: Mai 2026
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ color: '#C9A84C', fontSize: '12px', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>Rechtliches</div>
+            <h1 style={{ color: '#FFFFFF', fontSize: '42px', fontWeight: '700', marginBottom: '16px', fontFamily: 'Syne, sans-serif' }}>Allgemeine Geschäftsbedingungen</h1>
+            <p style={{ color: '#94a3b8', fontSize: '16px', lineHeight: '1.7' }}>
+              ARGONAUT OS — Gaspar AI Consulting, Martin Gaspar, Böblingen<br />
+              Stand: Mai 2026 | Es gelten ausschließlich diese AGB
             </p>
           </div>
         </div>
 
-        {/* Intro Banner */}
-        <div style={{ background: '#C9A84C', padding: '20px 48px' }}>
-          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <p style={{ fontSize: '13px', color: '#0A1628', fontWeight: 600, margin: 0, lineHeight: 1.6 }}>
-              Diese AGB gelten für alle Verträge zwischen Gaspar AI Consulting (Martin Gaspar, Böblingen) und gewerblichen Kunden über die Nutzung der SaaS-Plattform ARGONAUT OS. Es gelten ausschließlich diese AGB; abweichende Bedingungen des Kunden werden nicht anerkannt.
-            </p>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '60px 24px', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '48px', alignItems: 'start' }}>
+
+          <div style={{ position: 'sticky', top: '24px', background: '#FFFFFF', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '2px', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '16px' }}>Inhaltsverzeichnis</div>
+            {sections.map((s) => (
+              <button key={s.id} onClick={() => scrollTo(s.id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', marginBottom: '4px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', background: activeSection === s.id ? '#0A1628' : 'transparent', color: activeSection === s.id ? '#C9A84C' : '#374151', fontWeight: activeSection === s.id ? '600' : '400', transition: 'all 0.2s' }}>
+                {s.label}
+              </button>
+            ))}
           </div>
-        </div>
 
-        {/* Layout */}
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '64px 48px', display: 'grid', gridTemplateColumns: '240px 1fr', gap: '48px', alignItems: 'start' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '48px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
 
-          {/* TOC */}
-          <aside style={{ position: 'sticky', top: '100px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#0A1628', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Inhalt
-            </p>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {sections.map(({ id, label }) => (
-                <button key={id} onClick={() => scrollTo(id)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    padding: '7px 10px', borderRadius: '6px', fontSize: '12px',
-                    color: activeSection === id ? '#C9A84C' : '#6b7280',
-                    fontWeight: activeSection === id ? 700 : 400,
-                    borderLeft: activeSection === id ? '2px solid #C9A84C' : '2px solid transparent',
-                    transition: 'all 0.15s', lineHeight: 1.4,
-                  }}
-                  onMouseEnter={(e) => { if (activeSection !== id) e.currentTarget.style.color = '#0A1628' }}
-                  onMouseLeave={(e) => { if (activeSection !== id) e.currentTarget.style.color = '#6b7280' }}
-                >{label}</button>
-              ))}
-            </nav>
-          </aside>
-
-          {/* Content */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-
-            {/* § 1 Gegenstand */}
-            <section id="gegenstand">
-              <h2 style={headingStyle}>§ 1 Gegenstand & Leistungen</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>1.1</strong> Gaspar AI Consulting (nachfolgend „Anbieter") betreibt die KI-Automatisierungsplattform ARGONAUT OS (nachfolgend „Plattform") und stellt diese gewerblichen Unternehmen (nachfolgend „Kunde") als Software-as-a-Service (SaaS) zur Verfügung.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>1.2</strong> Die Plattform umfasst insbesondere:
-                </p>
-                <ul style={{ margin: '0 0 16px', padding: '0 0 0 24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {[
-                    'KI-gestützte Prozessautomatisierung und Workflow-Management',
-                    'Intelligente KI-Agenten zur Automatisierung operativer Aufgaben',
-                    'Integration in bestehende Unternehmenssysteme (CRM, ERP, E-Mail, WhatsApp)',
-                    'Datenanalyse, Reporting und KI-Auswertungen',
-                    'Dashboard und Verwaltungsoberfläche für alle gebuchten KI-Agenten',
-                    'Technischer Support gemäß gewähltem Tarif',
-                  ].map((item) => (
-                    <li key={item} style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.7 }}>{item}</li>
-                  ))}
-                </ul>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>1.3</strong> Der genaue Leistungsumfang richtet sich nach dem vom Kunden gewählten Tarif (§ 3) und dem jeweiligen Auftragsformular. Individuelle Implementierungs- und Beratungsleistungen werden separat vereinbart.
-                </p>
-              </div>
+            <section id="gegenstand" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 1 Gegenstand & Leistungen</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>1.1 Die Gaspar AI Consulting, vertreten durch Martin Gaspar, Böblingen (nachfolgend „Anbieter") betreibt die KI-gestützte Unternehmensplattform ARGONAUT OS, zugänglich unter argonaut-os.com (nachfolgend „Plattform").</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>1.2 ARGONAUT OS bietet Unternehmen des deutschen Mittelstands (nachfolgend „Kunde") KI-Agenten, Automatisierungsworkflows, Analyse- und Verwaltungsfunktionen als Software-as-a-Service (SaaS) an.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>1.3 Die konkret gebuchten Leistungen richten sich nach dem jeweiligen Paket (SOLO Beta, START, PRO, BUSINESS, ENTERPRISE). Der Leistungsumfang ist in § 6 und der aktuellen Leistungsbeschreibung auf argonaut-os.com definiert.</p>
             </section>
 
-            {/* § 2 Vertragsschluss */}
-            <section id="vertragsschluss">
-              <h2 style={headingStyle}>§ 2 Vertragsschluss</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>2.1</strong> Der Vertrag kommt zustande durch die Registrierung auf der ARGONAUT OS Plattform, die Auswahl eines Tarifs und die Bestätigung des Auftrags (Angebot des Kunden) sowie der anschließenden Auftragsbestätigung durch den Anbieter per E-Mail (Annahme).
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>2.2</strong> Der Anbieter bietet Leistungen ausschließlich für Unternehmen, Gewerbetreibende, Freiberufler und Behörden an (B2B). Vertragsabschlüsse mit Verbrauchern (§ 13 BGB) sind ausgeschlossen.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>2.3</strong> Mit dem Vertragsschluss erkennt der Kunde diese AGB in der zum Zeitpunkt des Vertragsschlusses gültigen Fassung an. Änderungen der AGB werden dem Kunden mindestens 30 Tage vor Inkrafttreten schriftlich oder per E-Mail mitgeteilt.
-                </p>
-              </div>
+            <section id="vertragsschluss" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 2 Vertragsschluss</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>2.1 Der Vertrag kommt durch Auswahl eines Pakets, Eingabe der Zahlungsdaten und Bestätigung der Buchung zustande. Mit Abschluss der Buchung erklärt der Kunde sein Einverständnis mit diesen AGB sowie der Datenschutzerklärung.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>2.2 Der Anbieter ist berechtigt, eine Buchung ohne Angabe von Gründen abzulehnen, insbesondere bei begründetem Verdacht auf missbräuchliche Nutzung.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>2.3 Der Vertrag wird in deutscher Sprache geschlossen. Der Vertragstext wird nach Vertragsschluss nicht gesondert gespeichert und ist über das Kundenkonto abrufbar.</p>
             </section>
 
-            {/* § 3 Preise */}
-            <section id="preise">
-              <h2 style={headingStyle}>§ 3 Preise & Tarife</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>3.1</strong> Alle Preise verstehen sich als Nettopreise in Euro (EUR) zuzüglich der gesetzlichen Mehrwertsteuer (derzeit 19 % MwSt.). Die Vergütungsstruktur besteht aus zwei verpflichtenden Komponenten:
-                </p>
-                <div style={{ padding: '16px 20px', background: '#0A1628', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ flexShrink: 0 }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pflichtkomponente (alle Kunden)</span>
-                    <span style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff' }}>Basis-Automatisierungen</span>
-                  </div>
-                  <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
-                    <span style={{ fontSize: '22px', fontWeight: 900, color: '#C9A84C' }}>1.500 €</span>
-                    <span style={{ fontSize: '12px', color: '#9ca3af', display: 'block' }}>/Monat netto</span>
-                  </div>
-                </div>
-                <p style={{ ...textStyle, marginBottom: '16px' }}>
-                  <strong style={{ color: '#0A1628' }}>Zusätzlich</strong> wählt der Kunde eines der folgenden Pakete (Paketpreis + Basis = Gesamtpreis):
-                </p>
-                <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ background: '#0A1628' }}>
-                        {['Paket', 'Paketpreis/Monat', '+ Basis 1.500 €', 'Gesamt/Monat (netto)', 'KI-Agenten', 'Workflows', 'Support'].map((h) => (
-                          <th key={h} style={{ padding: '12px 16px', color: '#C9A84C', fontWeight: 700, textAlign: 'left', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
+            <section id="preise" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 3 Preise & Tarife</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '24px' }}>3.1 Alle Preise verstehen sich in Euro, netto, zuzüglich der gesetzlichen Mehrwertsteuer (derzeit 19 %). Die aktuellen Preise sind:</p>
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#0A1628', color: '#FFFFFF' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Paket</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Preis/Monat (netto)</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Laufzeit</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>KI-Agenten</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Inkl. Kontingent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tarife.map((t, i) => (
+                      <tr key={i} style={{ background: t.highlight ? '#fef9ee' : i % 2 === 0 ? '#f8fafc' : '#FFFFFF', borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: '700', color: '#0A1628' }}>
+                          {t.highlight && <span style={{ background: '#C9A84C', color: '#0A1628', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', marginRight: '8px' }}>BELIEBT</span>}
+                          {t.name}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.preis} €</td>
+                        <td style={{ padding: '12px 16px', color: '#374151', fontSize: '13px' }}>{t.laufzeit}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.agenten}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.kontingent}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {tarife.map((t, i) => (
-                        <tr key={t.name} style={{ background: t.highlight ? '#fef3c7' : i % 2 === 0 ? '#ffffff' : '#faf9f6', borderBottom: '1px solid #e5e7eb' }}>
-                          <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0A1628' }}>
-                            {t.highlight && <span style={{ fontSize: '10px', fontWeight: 700, color: '#ffffff', background: '#C9A84C', padding: '2px 6px', borderRadius: '4px', marginRight: '8px' }}>BELIEBT</span>}
-                            {t.name}
-                          </td>
-                          <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0A1628' }}>{t.paket} €</td>
-                          <td style={{ padding: '12px 16px', color: '#6b7280' }}>1.500 €</td>
-                          <td style={{ padding: '12px 16px', fontWeight: 900, color: '#0A1628', fontSize: '14px' }}>{t.gesamt} €</td>
-                          <td style={{ padding: '12px 16px', color: '#374151' }}>{t.agents}</td>
-                          <td style={{ padding: '12px 16px', color: '#374151' }}>{t.workflows}</td>
-                          <td style={{ padding: '12px 16px', color: '#374151' }}>{t.support}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>3.2</strong> Individuelle Implementierungsleistungen, Custom-Integrationen sowie Beratungsprojekte werden gesondert auf Basis eines Angebots abgerechnet und sind nicht im monatlichen Grundentgelt enthalten.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>3.3</strong> Der Anbieter behält sich das Recht vor, Preise mit einer Ankündigungsfrist von 60 Tagen zum Ende des nächsten Abrechnungszeitraums anzupassen. Der Kunde hat in diesem Fall ein Sonderkündigungsrecht bis zum Inkrafttreten der Preisänderung.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>3.4</strong> Tarifwechsel sind jederzeit möglich. Upgrades werden anteilig zum nächsten Abrechnungszeitraum wirksam; Downgrades werden zum Beginn des nächsten vollständigen Abrechnungszeitraums wirksam.
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>3.2 Das Paket SOLO Beta ist auf 3 Monate befristet. Nach Ablauf wird der Vertrag automatisch auf START (1.500 €/Monat, netto) umgestellt, sofern der Kunde nicht spätestens bis zum Ende von Monat 2 schriftlich per E-Mail an info@argonaut-os.com kündigt. Der Kunde wird spätestens 30 Tage vor Umstellung per E-Mail informiert.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>3.3 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>3.4 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
+            </section>
+
+            <section id="zahlung" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 4 Zahlung & Abrechnung</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.1 Die Zahlung erfolgt monatlich im Voraus per Kreditkarte oder SEPA-Lastschrift über den Zahlungsdienstleister Stripe. Die erste Zahlung ist bei Vertragsschluss fällig.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.2 Overuse-Gebühren gemäß § 9 werden im Folgemonat automatisch eingezogen. Der Kunde erhält vor dem Einzug eine Rechnung per E-Mail.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.3 Bei Zahlungsverzug von mehr als 14 Tagen ist der Anbieter berechtigt, den Zugang zur Plattform zu sperren. Die Zahlungsverpflichtung bleibt davon unberührt.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>4.4 Rechnungen werden ausschließlich in elektronischer Form per E-Mail zugestellt.</p>
+            </section>
+
+            <section id="laufzeit" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 5 Laufzeit & Kündigung</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>5.1 Alle Pakete (außer SOLO Beta) haben eine Mindestlaufzeit von 12 Monaten. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>5.2 SOLO Beta hat eine feste Laufzeit von 3 Monaten. Danach erfolgt das automatische Upgrade auf START gemäß § 3.2, sofern keine Kündigung vorliegt.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>5.3 Kündigungen sind ausschließlich in Textform (E-Mail) an info@argonaut-os.com zu richten.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>5.4 Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.</p>
+            </section>
+
+            <section id="leistungsumfang" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 6 Leistungsumfang & SLA</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>6.1 Der Anbieter stellt die Plattform mit einer Verfügbarkeit von mindestens 99,0 % im Jahresmittel bereit (ohne geplante Wartungsfenster).</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>6.2 Wartungsarbeiten werden nach Möglichkeit außerhalb der Geschäftszeiten (Mo–Fr, 08:00–18:00 Uhr MEZ) durchgeführt und mindestens 24 Stunden vorher angekündigt.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>6.3 Der Anbieter ist berechtigt, den Leistungsumfang weiterzuentwickeln, sofern die Kernfunktionen des gebuchten Pakets erhalten bleiben.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>6.4 Ein Anspruch auf bestimmte zukünftige Funktionen besteht nicht, sofern diese nicht ausdrücklich vertraglich zugesichert wurden.</p>
+            </section>
+
+            <section id="nutzungsrechte" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 7 Nutzungsrechte</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.1 Der Anbieter räumt dem Kunden für die Dauer des Vertragsverhältnisses ein nicht-exklusives, nicht übertragbares Nutzungsrecht an der Plattform ein.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.2 Eine Weitergabe von Zugangsdaten an Dritte außerhalb des Unternehmens ist nicht gestattet, sofern kein Mehrstandort-Vertrag vorliegt.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>7.3 Alle Rechte an der Plattform, den KI-Modellen, Workflows und Agenten verbleiben beim Anbieter.</p>
+            </section>
+
+            <section id="ki-training" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 8 KI-Training & Daten</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>8.1 Mit der Nutzung von ARGONAUT OS stimmt der Kunde zu, dass anonymisierte, nicht personenbezogene Nutzungsdaten (z. B. Workflow-Strukturen, Automatisierungsmuster, Interaktionsdaten) zur Verbesserung und zum Training von ARGONAUT OS KI-Modellen verwendet werden dürfen.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>8.2 Personenbezogene Daten werden nicht für KI-Training verwendet. Die Anonymisierung erfolgt vor jeder Verwendung zu Trainingszwecken.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>8.3 Der Kunde kann der Verwendung jederzeit schriftlich per E-Mail an info@argonaut-os.com widersprechen. Der Widerspruch gilt für zukünftige Daten.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>8.4 Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).</p>
+            </section>
+
+            <section id="fair-use" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 9 Fair-Use & KI-Nutzungskontingente</h2>
+              <div style={{ background: '#fef9ee', border: '1px solid #C9A84C', borderRadius: '8px', padding: '16px 20px', marginBottom: '24px' }}>
+                <p style={{ color: '#0A1628', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Transparenz-Hinweis</p>
+                <p style={{ color: '#374151', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>Jedes Paket enthält ein monatliches KI-Call-Kontingent. Der aktuelle Verbrauch ist jederzeit im persönlichen Dashboard einsehbar. Bei Annäherung an das Kontingent erhält der Kunde automatische Warnmeldungen.</p>
+              </div>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9.1 Im jeweiligen Paket ist ein monatliches KI-Nutzungskontingent enthalten (siehe § 3). Ein KI-Call bezeichnet eine einzelne Anfrage an das KI-System im Rahmen eines Workflows oder Agenten.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9.2 Bei Überschreitung des inkludierten Kontingents gelten folgende Overuse-Staffeln (netto, zzgl. 19 % MwSt.):</p>
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#0A1628', color: '#FFFFFF' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Mehrbedarf über Kontingent</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Zusatzkosten/Monat (netto)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ['bis +25.000 KI-Calls', '99 €'],
+                      ['bis +50.000 KI-Calls', '179 €'],
+                      ['bis +100.000 KI-Calls', '299 €'],
+                      ['über +100.000 KI-Calls', 'Individuell — Kontakt: info@argonaut-os.com'],
+                    ].map(([stufe, preis], i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#FFFFFF', borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{stufe}</td>
+                        <td style={{ padding: '12px 16px', color: '#0A1628', fontWeight: '600' }}>{preis}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.3 Der Kunde wird per E-Mail informiert, sobald 80 % des monatlichen Kontingents verbraucht sind. Bei 100 % erfolgt eine weitere Benachrichtigung mit Hinweis auf anfallende Overuse-Kosten.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.4 Overuse-Beträge werden im Folgemonat automatisch per Stripe eingezogen. Der Kunde erhält vorab eine Rechnung per E-Mail.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.5 Nicht verbrauchte Kontingente verfallen monatlich und können nicht übertragen werden.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>9.6 Bei dauerhafter erheblicher Überschreitung (mehr als 3 aufeinanderfolgende Monate über 100.000 Calls) ist der Anbieter berechtigt, ein individuelles Angebot zu unterbreiten oder den Vertrag mit 30 Tagen Frist zu kündigen.</p>
+            </section>
+
+            <section id="haftung" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 10 Haftungsbeschränkung</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>10.1 Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit sowie für vorsätzlich oder grob fahrlässig verursachte Schäden.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>10.2 Für leicht fahrlässig verursachte Schäden haftet der Anbieter nur bei Verletzung wesentlicher Vertragspflichten, begrenzt auf den vertragstypischen Schaden und die Höhe des in den letzten 12 Monaten gezahlten Entgelts.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>10.3 Der Anbieter haftet nicht für Schäden durch fehlerhafte Eingaben, KI-generierte Inhalte ohne menschliche Prüfung oder Systemausfälle Dritter.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>10.4 KI-generierte Ausgaben sind keine Rechts-, Steuer- oder Finanzberatung. Der Kunde ist für die Prüfung und Verwendung der Ergebnisse selbst verantwortlich.</p>
+            </section>
+
+            <section id="datenschutz" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 11 Datenschutz</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.1 Die Verarbeitung personenbezogener Daten erfolgt gemäß DSGVO und BDSG. Details entnehmen Sie der Datenschutzerklärung unter argonaut-os.com/datenschutz.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.2 Der Anbieter verarbeitet Nutzungsdaten (Verbrauchsdaten, Login-Zeiten, Workflow-Aktivitäten) zur Vertragserfüllung gemäß Art. 6 Abs. 1 lit. b DSGVO sowie zur Abrechnung von Overuse-Gebühren.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>11.3 Sofern der Kunde personenbezogene Daten seiner Mitarbeiter oder Kunden eingibt, ist er selbst Verantwortlicher im Sinne der DSGVO. Auf Anfrage stellt der Anbieter einen Auftragsverarbeitungsvertrag (AVV) zur Verfügung.</p>
+            </section>
+
+            <section id="schluss" style={{ marginBottom: '24px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 12 Schlussbestimmungen</h2>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>12.1 Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>12.2 Gerichtsstand ist, soweit gesetzlich zulässig, Böblingen.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>12.3 Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>12.4 Der Anbieter ist berechtigt, diese AGB mit 30 Tagen Ankündigungsfrist zu ändern. Widerspricht der Kunde nicht innerhalb von 14 Tagen, gelten die geänderten AGB als akzeptiert.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>12.5 Mündliche Nebenabreden bestehen nicht. Änderungen bedürfen der Textform.</p>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', marginTop: '32px' }}>
+                <p style={{ color: '#374151', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>
+                  <strong>Anbieter:</strong> Gaspar AI Consulting, Martin Gaspar<br />
+                  Böblingen, Baden-Württemberg, Deutschland<br />
+                  E-Mail: info@argonaut-os.com | Web: argonaut-os.com<br />
+                  <strong>Stand:</strong> Mai 2026
                 </p>
               </div>
             </section>
-
-            {/* § 4 Zahlung */}
-            <section id="zahlung">
-              <h2 style={headingStyle}>§ 4 Zahlung & SEPA-Lastschrift</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>4.1</strong> Die Zahlung erfolgt monatlich im Voraus. Der Rechnungsbetrag wird jeweils zum 1. des Monats fällig.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>4.2</strong> Die bevorzugte Zahlungsweise ist das SEPA-Lastschriftverfahren. Mit Erteilung des SEPA-Lastschriftmandats ermächtigt der Kunde den Anbieter, monatliche Zahlungen von seinem Konto einzuziehen. Die Vorankündigungsfrist (Pre-notification) beträgt 5 Kalendertage.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>4.3</strong> Alternativ werden Zahlungen per Kreditkarte (Visa, Mastercard) und SEPA-Überweisung akzeptiert. Die Zahlungsabwicklung erfolgt über Stripe (vgl. Datenschutzerklärung § 5).
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>4.4</strong> Bei Zahlungsverzug ist der Anbieter berechtigt, nach Mahnung die Leistungen vorübergehend zu sperren. Verzugszinsen werden gemäß § 288 BGB berechnet (Geschäftsverkehr: 9 Prozentpunkte über dem Basiszinssatz).
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>4.5</strong> Rechnungen werden ausschließlich elektronisch per E-Mail in PDF-Format übermittelt. Der Kunde erklärt sich mit der elektronischen Rechnungsstellung einverstanden.
-                </p>
-              </div>
-            </section>
-
-            {/* § 5 Laufzeit */}
-            <section id="laufzeit">
-              <h2 style={headingStyle}>§ 5 Vertragslaufzeit & Kündigung</h2>
-              <div style={cardStyle}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  {[
-                    { label: 'Mindestlaufzeit', value: '12 Monate', icon: '📅' },
-                    { label: 'Verlängerung', value: 'Automatisch um 12 Monate', icon: '🔄' },
-                    { label: 'Kündigungsfrist', value: '30 Tage vor Laufzeitende', icon: '📋' },
-                  ].map(({ label, value, icon }) => (
-                    <div key={label} style={{ padding: '20px', background: '#0A1628', borderRadius: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
-                      <p style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
-                      <p style={{ fontSize: '15px', color: '#C9A84C', fontWeight: 700, margin: 0 }}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>5.1</strong> Der Vertrag wird mit einer Mindestlaufzeit von 12 Monaten abgeschlossen. Er verlängert sich automatisch um jeweils weitere 12 Monate, wenn er nicht rechtzeitig gekündigt wird.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>5.2</strong> Die Kündigung muss spätestens 30 Tage vor Ablauf der jeweiligen Vertragslaufzeit schriftlich (E-Mail genügt) beim Anbieter eingehen. Eine Kündigung über das Dashboard ist ebenfalls möglich.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>5.3</strong> Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt. Ein wichtiger Grund auf Seiten des Anbieters liegt insbesondere vor, wenn der Kunde mit mehr als zwei Monatsentgelten in Zahlungsverzug gerät.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>5.4</strong> Nach Vertragsende erhält der Kunde eine 30-tägige Frist, um seine Daten zu exportieren. Danach werden alle Kundendaten unwiderruflich gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten bestehen.
-                </p>
-              </div>
-            </section>
-
-            {/* § 6 Leistungsumfang */}
-            <section id="leistungsumfang">
-              <h2 style={headingStyle}>§ 6 Leistungsumfang & Verfügbarkeit</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>6.1</strong> Der Anbieter stellt die Plattform mit einer angestrebten Verfügbarkeit von 99,0 % im monatlichen Durchschnitt bereit (ausgenommen geplante Wartungsfenster und höhere Gewalt).
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>6.2</strong> Geplante Wartungsarbeiten werden, soweit möglich, mindestens 24 Stunden im Voraus angekündigt und außerhalb der üblichen Geschäftszeiten (Mo–Fr, 9–18 Uhr MEZ) durchgeführt.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>6.3</strong> Der Anbieter behält sich das Recht vor, die Plattform weiterzuentwickeln, Features zu ändern oder einzustellen, sofern die wesentliche Funktionalität erhalten bleibt. Wesentliche Änderungen werden dem Kunden mit 30 Tagen Vorlauf mitgeteilt.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>6.4</strong> Der Kunde ist für die Bereitstellung geeigneter Hardware, Internetverbindung und kompatiblen Browsers verantwortlich.
-                </p>
-              </div>
-            </section>
-
-            {/* § 7 Nutzungsrechte */}
-            <section id="nutzungsrechte">
-              <h2 style={headingStyle}>§ 7 Nutzungsrechte & Pflichten</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>7.1</strong> Der Anbieter räumt dem Kunden für die Dauer des Vertrags ein einfaches, nicht übertragbares, nicht unterlizenzierbares Nutzungsrecht an der Plattform gemäß dem jeweiligen Tarif ein.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>7.2</strong> Der Kunde darf die Plattform nicht: (a) reverse engineeren, dekompilieren oder disassemblieren; (b) für illegale Zwecke nutzen; (c) Zugangsdaten an Dritte außerhalb seiner Organisation weitergeben; (d) automatisierte Massenanfragen stellen, die die Infrastruktur übermäßig belasten.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>7.3</strong> Der Kunde bleibt Eigentümer seiner in die Plattform eingespeisten Daten und Inhalte. Er gewährt dem Anbieter ein beschränktes Recht zur Verarbeitung dieser Daten, soweit dies zur Erbringung der Leistungen erforderlich ist.
-                </p>
-              </div>
-            </section>
-
-            {/* § 8 KI-Training */}
-            <section id="ki-training">
-              <h2 style={headingStyle}>§ 8 KI-Training & Datennutzung</h2>
-              <div style={{ ...cardStyle, borderColor: '#C9A84C', borderWidth: '1.5px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ width: '40px', height: '40px', background: '#0A1628', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="2">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-                    </svg>
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Einwilligungsklausel KI-Training</span>
-                </div>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>8.1</strong> Der Anbieter kann Nutzungsdaten des Kunden zur Verbesserung seiner KI-Modelle und Algorithmen verwenden. Dies erfolgt <strong style={{ color: '#0A1628' }}>ausschließlich auf Basis der ausdrücklichen, schriftlichen Einwilligung des Kunden</strong> und nur in vollständig anonymisierter und aggregierter Form.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>8.2</strong> Ohne Einwilligung werden keinerlei Kundendaten für KI-Trainingsmaßnahmen verwendet. Die Einwilligung ist optional und hat keinen Einfluss auf den Leistungsumfang oder den Preis.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>8.3</strong> Bei Einwilligung gilt: (a) Alle Daten werden vor der Verwendung vollständig anonymisiert; (b) Eine Rückführung auf den Kunden oder einzelne Nutzer ist technisch ausgeschlossen; (c) Keine Weitergabe von Rohdaten an Dritte; (d) Nur strukturelle Muster (Workflow-Typen, Konfigurationsmuster) werden genutzt – keine Inhalte oder Geschäftsdaten.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>8.4</strong> Die Einwilligung kann jederzeit ohne Angabe von Gründen mit Wirkung für die Zukunft widerrufen werden (Dashboard → Einstellungen → Datenschutz oder per E-Mail). Der Widerruf berührt die Rechtmäßigkeit der bis dahin erfolgten Verarbeitung nicht.
-                </p>
-              </div>
-            </section>
-
-            {/* § 9 Haftung */}
-            <section id="haftung">
-              <h2 style={headingStyle}>§ 9 Haftungsbeschränkung</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>9.1</strong> Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit sowie für vorsätzlich oder grob fahrlässig verursachte Schäden und bei Übernahme einer Garantie.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>9.2</strong> Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) ist die Haftung auf den vertragstypisch vorhersehbaren Schaden begrenzt. Diese beträgt maximal das 3-fache des in den letzten 12 Monaten vom Kunden gezahlten Nettoentgelts.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>9.3</strong> Für leicht fahrlässige Verletzung nicht wesentlicher Vertragspflichten ist die Haftung des Anbieters ausgeschlossen.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>9.4</strong> Der Anbieter übernimmt keine Haftung für: (a) Datenverluste, die durch unzureichende Datensicherung des Kunden entstehen; (b) Schäden durch unsachgemäße Nutzung der Plattform; (c) Ausfälle von Drittanbieterdiensten (z. B. Stripe, Supabase, HubSpot) außerhalb des Einflussbereichs des Anbieters.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>9.5</strong> Die KI-Ausgaben der Plattform sind als Unterstützungswerkzeug zu verstehen und ersetzen keine Rechts-, Finanz- oder Fachberatung. Der Kunde ist für die Überprüfung und Verwendung von KI-generierten Inhalten eigenverantwortlich.
-                </p>
-              </div>
-            </section>
-
-            {/* § 10 Datenschutz */}
-            <section id="datenschutz">
-              <h2 style={headingStyle}>§ 10 Datenschutz</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>10.1</strong> Beide Parteien verpflichten sich zur Einhaltung der geltenden Datenschutzgesetze, insbesondere der DSGVO (EU) 2016/679 und des BDSG.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>10.2</strong> Soweit der Anbieter personenbezogene Daten im Auftrag des Kunden verarbeitet, wird ein separater Auftragsverarbeitungsvertrag (AVV) gemäß Art. 28 DSGVO abgeschlossen.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>10.3</strong> Einzelheiten zur Datenverarbeitung sind der{' '}
-                  <Link href="/datenschutz" style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: 600 }}>Datenschutzerklärung</Link>{' '}
-                  zu entnehmen.
-                </p>
-              </div>
-            </section>
-
-            {/* § 11 Schluss */}
-            <section id="schluss">
-              <h2 style={headingStyle}>§ 11 Schlussbestimmungen</h2>
-              <div style={cardStyle}>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>11.1 Anwendbares Recht:</strong> Es gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>11.2 Gerichtsstand:</strong> Ausschließlicher Gerichtsstand für alle Streitigkeiten aus oder im Zusammenhang mit diesem Vertrag ist – sofern der Kunde Vollkaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen ist – Stuttgart. Der Anbieter ist berechtigt, den Kunden auch an seinem allgemeinen Gerichtsstand zu verklagen.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>11.3 Schriftform:</strong> Änderungen und Ergänzungen dieser AGB bedürfen der Textform (E-Mail genügt). Mündliche Nebenabreden haben keine Gültigkeit.
-                </p>
-                <p style={textStyle}>
-                  <strong style={{ color: '#0A1628' }}>11.4 Salvatorische Klausel:</strong> Sollten einzelne Bestimmungen dieser AGB unwirksam oder undurchführbar sein oder werden, berührt dies die Wirksamkeit der übrigen Bestimmungen nicht. An Stelle der unwirksamen Bestimmung tritt eine wirksame Regelung, die dem wirtschaftlichen Zweck der unwirksamen Bestimmung am nächsten kommt.
-                </p>
-                <p style={{ ...textStyle, marginBottom: 0 }}>
-                  <strong style={{ color: '#0A1628' }}>11.5 Abtretungsverbot:</strong> Der Kunde darf Rechte und Pflichten aus diesem Vertrag nur mit vorheriger schriftlicher Zustimmung des Anbieters an Dritte abtreten.
-                </p>
-              </div>
-            </section>
-
-            {/* Footer Info */}
-            <div style={{ padding: '24px 28px', background: '#0A1628', borderRadius: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}>
-                {[
-                  { label: 'Anbieter', value: 'Gaspar AI Consulting\nMartin Gaspar' },
-                  { label: 'Adresse', value: 'Tübinger Straße\n71032 Böblingen, Deutschland' },
-                  { label: 'Kontakt', value: 'info@argonaut-os.com' },
-                  { label: 'Stand', value: 'Mai 2026' },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
-                    <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0, whiteSpace: 'pre-line', lineHeight: 1.6 }}>{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-              {[
-                { label: '← Datenschutzerklärung', href: '/datenschutz' },
-                { label: 'Impressum →', href: '/impressum' },
-              ].map(({ label, href }) => (
-                <Link key={href} href={href}
-                  style={{ fontSize: '14px', color: '#C9A84C', textDecoration: 'none', fontWeight: 600 }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.75'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                >{label}</Link>
-              ))}
-            </div>
 
           </div>
         </div>
@@ -413,28 +229,4 @@ export default function AGB() {
       <Footer />
     </>
   )
-}
-
-const headingStyle: React.CSSProperties = {
-  fontSize: '20px',
-  fontWeight: 700,
-  color: '#0A1628',
-  marginBottom: '20px',
-  paddingBottom: '12px',
-  borderBottom: '2px solid #C9A84C',
-  display: 'inline-block',
-}
-
-const cardStyle: React.CSSProperties = {
-  background: '#ffffff',
-  border: '1px solid #e5e7eb',
-  borderRadius: '12px',
-  padding: '28px 32px',
-}
-
-const textStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#6b7280',
-  lineHeight: 1.8,
-  marginBottom: '12px',
 }
