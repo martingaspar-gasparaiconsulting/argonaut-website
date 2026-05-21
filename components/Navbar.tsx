@@ -22,7 +22,7 @@ export default function Navbar() {
           <a href='#vorgehen' style={{ color:'#0A1628', textDecoration:'none', fontSize:'14px', fontWeight:500, padding:'8px 16px', borderRadius:'999px' }}>Vorgehen</a>
           <Link href='/multistandort' style={{ color:'#0A1628', textDecoration:'none', fontSize:'14px', fontWeight:500, padding:'8px 12px' }}>Multistandort</Link>
           <Link href='/branchen' style={{ color:'#0A1628', textDecoration:'none', fontSize:'14px', fontWeight:500, padding:'8px 16px', borderRadius:'999px' }}>Branchen</Link>
-          <a href='#uber-uns' style={{ color:'#0A1628', textDecoration:'none', fontSize:'14px', fontWeight:500, padding:'8px 16px', borderRadius:'999px' }}>Ueber uns</a>
+          <a href='#uber-uns' style={{ color:'#0A1628', textDecoration:'none', fontSize:'14px', fontWeight:500, padding:'8px 16px', borderRadius:'999px' }}>Über uns</a>
         </div>
 
         {/* Desktop Buttons */}
