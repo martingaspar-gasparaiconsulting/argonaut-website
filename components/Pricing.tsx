@@ -51,7 +51,7 @@ const pakete = [
     badge: "",
     features: ["8 KI-Agenten aktiv", "40 Automatisierungen", "15.000 KI-Calls/Monat", "Dashboard inklusive", "Priority Support", "1 Standort"],
     agentKeys: ["start"],
-    stripeUrl: "https://buy.stripe.com/TEMP_PLACEHOLDER",
+    stripeUrl: "https://buy.stripe.com/dRmeVd3TY0A2cRf1zi6wE0b",
   },
   {
     name: "PRO",
@@ -73,7 +73,7 @@ const pakete = [
     badge: "",
     features: ["20 KI-Agenten aktiv", "110 Automatisierungen", "75.000 KI-Calls/Monat", "Dashboard inklusive", "Account Manager", "1 Standort"],
     agentKeys: ["start", "pro", "business"],
-    stripeUrl: "https://buy.stripe.com/dRmeVd3TY0A2cRf1zi6wE0b",
+    stripeUrl: "https://buy.stripe.com/cNifZheyC0A2cRf5Py6wE09",
   },
   {
     name: "ENTERPRISE",
