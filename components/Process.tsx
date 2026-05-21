@@ -49,7 +49,7 @@ export default function Process() {
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 02</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Daten übermitteln</p>
                 <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}></p>
-                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Onboarding-PDF ausfüllen, Zugangsdaten und Betriebsinfos sicher übermitteln.</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Zugangsdaten im Dashboard hinterlegen — sicher, schnell, vollautomatisch gespeichert.</p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderTop: '4px solid #C9A84C', borderRadius: '16px', padding: '22px 14px 20px', textAlign: 'center' }}>
