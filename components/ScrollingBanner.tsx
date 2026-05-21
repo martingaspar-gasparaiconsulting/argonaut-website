@@ -1,13 +1,30 @@
 'use client'
 
 const agenten = [
-  'Der Architekt — Plant jede Mission',
-  'Der Schmied — Baut Automatisierungen',
-  'Der Wächter — Testet jeden Schritt',
-  'Der Chronist — Dokumentiert alles',
-  'Der Schärfer — Optimiert kontinuierlich',
-  'Der Bote — Aktualisiert die Website',
-  'Der Empfänger — Onboarded neue Kunden',
+  'A1 Empfänger — Onboarded neue Kunden',
+  'A2 Schmied — Baut Automatisierungen',
+  'A3 Wächter — Testet jeden Schritt',
+  'A4 Buchhalter — Verwaltet Finanzen',
+  'A5 Schreiber — Erstellt Inhalte',
+  'A6 Planer — Koordiniert Termine',
+  'A7 Verkäufer — Generiert Leads',
+  'A8 Regisseur — Steuert Kampagnen',
+  'B1 Forscher — Analysiert Märkte',
+  'B2 Übersetzer — Lokalisiert Inhalte',
+  'B3 Moderator — Managed Community',
+  'B4 Personalchef — Rekrutiert Talente',
+  'B5 Einkäufer — Optimiert Beschaffung',
+  'C1 Analyst — Wertet Daten aus',
+  'C2 Stratege — Entwickelt Konzepte',
+  'C3 Jurist — Prüft Verträge',
+  'C4 Trainer — Schult Mitarbeiter',
+  'D1 Techniker — Wartet Systeme',
+  'D2 Sicherheitschef — Schützt Daten',
+  'D3 Integrator — Verbindet Systeme',
+  'E1 Netzwerker — Pflegt Kontakte',
+  'E2 Botschafter — Repräsentiert die Marke',
+  'E3 Späher — Beobachtet Wettbewerb',
+  'E4 Assistent — Unterstützt täglich',
 ]
 
 const automatisierungen = [
@@ -21,6 +38,16 @@ const automatisierungen = [
   'Mitarbeiter-Onboarding',
   'Dokumentenmanagement',
   'Buchhaltung & Reporting',
+  'Vertragsmanagement',
+  'Social Media',
+  'Qualitätskontrolle',
+  'Lieferantenmanagement',
+  'Projektplanung',
+  'Datenschutz & Compliance',
+  'Marktanalyse',
+  'Personalplanung',
+  'Einkaufsoptimierung',
+  'CRM-Pflege',
 ]
 
 const agentenDoppelt = [...agenten, ...agenten, ...agenten]
@@ -36,7 +63,7 @@ export default function ScrollingBanner() {
           Ihre komplette KI-Crew
         </p>
         <h2 className="text-3xl md:text-4xl font-black text-[#0A1628]">
-          7 Spezialisten. 10 Automatisierungen. Ein System.
+          24 Agenten. 1.229 Automatisierungen. Ein System.
         </h2>
       </div>
 
