@@ -51,7 +51,7 @@ const pakete = [
     badge: "",
     features: ["8 KI-Agenten aktiv", "40 Automatisierungen", "15.000 KI-Calls/Monat", "Dashboard inklusive", "Priority Support", "1 Standort"],
     agentKeys: ["start"],
-    stripeUrl: "https://buy.stripe.com/00waEXgGK6Yq3gFb9S6wE04",
+    stripeUrl: "https://buy.stripe.com/cNifZheyC0A2cRf5Py6wE09",
   },
   {
     name: "PRO",
@@ -62,7 +62,7 @@ const pakete = [
     badge: "Beliebteste Wahl",
     features: ["16 KI-Agenten aktiv", "70 Automatisierungen", "35.000 KI-Calls/Monat", "Dashboard inklusive", "Dedizierter Support", "1 Standort"],
     agentKeys: ["start", "pro"],
-    stripeUrl: "https://buy.stripe.com/9B66oH2PU0A2aJ7di06wE05",
+    stripeUrl: "https://buy.stripe.com/aFafZh0HMgz0aJ7em46wE0a",
   },
   {
     name: "BUSINESS",
@@ -73,7 +73,7 @@ const pakete = [
     badge: "",
     features: ["20 KI-Agenten aktiv", "110 Automatisierungen", "75.000 KI-Calls/Monat", "Dashboard inklusive", "Account Manager", "1 Standort"],
     agentKeys: ["start", "pro", "business"],
-    stripeUrl: "https://buy.stripe.com/4gM14n1LQgz09F3guc6wE06",
+    stripeUrl: "https://buy.stripe.com/dRmeVd3TY0A2cRf1zi6wE0b",
   },
   {
     name: "ENTERPRISE",
@@ -84,7 +84,7 @@ const pakete = [
     badge: "",
     features: ["24 KI-Agenten aktiv", "128 Automatisierungen + Branchen-Workflows", "150.000 KI-Calls/Monat", "Dashboard inklusive", "VIP Support & Onboarding", "1 Standort"],
     agentKeys: ["start", "pro", "business", "enterprise"],
-    stripeUrl: "https://buy.stripe.com/fZu3cv76aaaCaJ72Dm6wE07",
+    stripeUrl: "https://buy.stripe.com/8x29AT4Y24Qi18xem46wE0c",
     enterpriseText: "24 KI-Agenten. 128 Automatisierungen. Während Ihre Mitbewerber noch manuell arbeiten, ist bei Ihnen bereits alles erledigt — kein Prozess zu klein, kein Fehler zu groß, kein Mitarbeiter der noch Zeit mit Routineaufgaben verliert.",
   },
 ];
@@ -165,7 +165,7 @@ function SoloCard() {
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <span style={{ fontSize: "34px", fontWeight: 800, color: "#0D1B3E", lineHeight: 1 }}>499 €</span>
           <span style={{ fontSize: "13px", color: "#aaa", display: "block" }}>/ Monat</span>
-          <Link href="https://buy.stripe.com/9B6fZh76aeqSbNbem46wE02" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>
+          <Link href="https://buy.stripe.com/6oUaEX3TYdmO9F31zi6wE08" style={{ display: "inline-block", marginTop: "10px", padding: "11px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 700, textDecoration: "none", background: "#0D1B3E", color: "#ffffff" }}>
             Jetzt testen
           </Link>
         </div>
