@@ -41,7 +41,7 @@ export default function Agents() {
   const [activeAgent, setActiveAgent] = useState<number | null>(null);
 
   return (
-    <section className="bg-[#060E1A] py-24 px-6" id="agenten">
+    <section className="bg-white py-24 px-6" id="agenten">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-[#C9A84C] text-sm font-medium tracking-widest uppercase mb-4">
