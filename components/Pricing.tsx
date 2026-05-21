@@ -51,7 +51,7 @@ const pakete = [
     badge: "",
     features: ["8 KI-Agenten aktiv", "40 Automatisierungen", "15.000 KI-Calls/Monat", "Dashboard inklusive", "Priority Support", "1 Standort"],
     agentKeys: ["start"],
-    stripeUrl: "https://buy.stripe.com/cNifZheyC0A2cRf5Py6wE09",
+    stripeUrl: "https://buy.stripe.com/TEMP_PLACEHOLDER",
   },
   {
     name: "PRO",
