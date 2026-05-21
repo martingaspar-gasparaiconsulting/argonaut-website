@@ -9,8 +9,8 @@ const stats = [
         <path d="M12 2L15 9H22L16.5 13.5L18.5 21L12 17L5.5 21L7.5 13.5L2 9H9L12 2Z" fill="#C9A84C"/>
       </svg>
     ),
-    zahl: '7',
-    titel: 'KI-Spezialisten',
+    zahl: '24',
+    titel: 'KI-Agenten',
     sub: 'rund um die Uhr aktiv',
   },
   {
@@ -34,7 +34,7 @@ const stats = [
         <path d="M10 6.5H14M17.5 10V14M10 17.5H14M6.5 10V14" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
-    zahl: '4.045',
+    zahl: '1.229',
     titel: 'Automatisierungen',
     sub: 'für jede Branche startklar',
   },
@@ -63,7 +63,7 @@ export default function AgentTeam() {
             Ihre KI-Crew
           </p>
           <h2 className="text-3xl md:text-5xl font-black text-[#0A1628] mb-4">
-            7 Spezialisten. Rund um die Uhr. Für Sie.
+            24 Agenten. Rund um die Uhr. Für Sie.
           </h2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
             Kein Freelancer. Kein Zufall. Sondern ein eingespieltes KI-Team —
@@ -75,7 +75,7 @@ export default function AgentTeam() {
         <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-100 mb-14">
           <Image
             src="/images/argonaut-team.png"
-            alt="Das ARGONAUT Team — 7 KI-Agenten"
+            alt="Das ARGONAUT Team — 24 KI-Agenten"
             width={1920}
             height={1080}
             className="w-full h-auto"
@@ -111,7 +111,6 @@ export default function AgentTeam() {
                 el.style.transform = 'translateY(0)'
               }}
             >
-              {/* Icon Kreis */}
               <div style={{
                 width: '52px',
                 height: '52px',
@@ -126,7 +125,6 @@ export default function AgentTeam() {
                 {stat.icon}
               </div>
 
-              {/* Zahl */}
               <p style={{
                 fontSize: 'clamp(2rem, 4vw, 2.8rem)',
                 fontWeight: 900,
@@ -137,7 +135,6 @@ export default function AgentTeam() {
                 {stat.zahl}
               </p>
 
-              {/* Titel */}
               <p style={{
                 fontSize: '15px',
                 fontWeight: 700,
@@ -147,7 +144,6 @@ export default function AgentTeam() {
                 {stat.titel}
               </p>
 
-              {/* Subtitle */}
               <p style={{
                 fontSize: '13px',
                 color: '#9ca3af',
@@ -161,7 +157,7 @@ export default function AgentTeam() {
 
         {/* CTA */}
         <div className="text-center mt-12">
-          <a
+          
             href="#kontakt"
             style={{
               background: '#C9A84C',
