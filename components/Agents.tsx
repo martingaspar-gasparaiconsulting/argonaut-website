@@ -43,7 +43,7 @@ export default function Agents() {
     <section style={{ background: '#ffffff', padding: '80px 24px' }} id="agenten">
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '16px' }}>Ihre KI-Crew</p>
+          <p style={{ fontSize: '14px', color: '#C9A84C', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '16px' }}>Ihre KI-Crew</p>
           <h2 style={{ fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 900, color: '#0A1628', margin: '0 0 20px', lineHeight: 1.1 }}>24 Agenten. Rund um die Uhr. Für Sie.</h2>
           <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '640px', margin: '0 auto' }}>Jeder Spezialist für seine Mission. Zusammen unschlagbar. Rund um die Uhr — ohne Urlaub, ohne Krankentage.</p>
         </div>
