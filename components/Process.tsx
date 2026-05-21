@@ -58,7 +58,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 03</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Automatische Konfiguration</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>2 – </p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}> </p>
                 <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Branchen-Template laden, Agenten konfigurieren, alle Workflows automatisch aufbauen und prüfen.</p>
               </div>
 
@@ -68,7 +68,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 04</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Go-Live</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>16 – </p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}> </p>
                 <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Alle Agenten aktiv. Dashboard live. Onboarding-Video im Dashboard — sofort abrufbar. ARGONAUT OS läuft.</p>
               </div>
 
@@ -118,7 +118,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 02</p>
                 <p style={{ fontSize: '17px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Onboarding & Go-Live</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>0 – 24 Stunden</p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}></p>
                 <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Daten übermitteln — Konfiguration, Qualitätsprüfung und Go-Live vollautomatisch in 24h.</p>
               </div>
 
