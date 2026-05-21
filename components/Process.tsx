@@ -48,7 +48,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 02</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Daten übermitteln</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>0 – 2 Stunden</p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}></p>
                 <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Onboarding-PDF ausfüllen, Zugangsdaten und Betriebsinfos sicher übermitteln.</p>
               </div>
 
@@ -58,7 +58,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 03</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Automatische Konfiguration</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>2 – 16 Stunden</p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>2 – </p>
                 <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Branchen-Template laden, Agenten konfigurieren, alle Workflows automatisch aufbauen und prüfen.</p>
               </div>
 
@@ -68,7 +68,7 @@ export default function Process() {
                 </div>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 04</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Go-Live</p>
-                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>16 – 48 Stunden</p>
+                <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>16 – </p>
                 <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>Alle Agenten aktiv. Dashboard live. Onboarding-Video im Dashboard — sofort abrufbar. ARGONAUT OS läuft.</p>
               </div>
 
@@ -78,7 +78,7 @@ export default function Process() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9 12 11 14 15 10" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div>
-                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Go-Live-Garantie: 24–48 Stunden</p>
+                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Go-Live-Garantie: </p>
                   <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Nach vollständiger Datenübermittlung. Solo & Start in 24h · Pro bis 36h · Business & Enterprise bis 48h.</p>
                 </div>
               </div>
