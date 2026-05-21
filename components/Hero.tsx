@@ -111,7 +111,7 @@ export default function Hero() {
         {/* Trust Badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', marginBottom: '80px', fontSize: '14px', color: '#9ca3af' }}>
           <span>✓ Kein Vorwissen nötig</span>
-          <span>✓ In 60 Min. startklar</span>
+          <span>✓ Go-Live in 24h garantiert</span>
           <span>✓ DSGVO-konform</span>
           <span>✓ 100% auf Ihren Betrieb zugeschnitten</span>
         </div>
