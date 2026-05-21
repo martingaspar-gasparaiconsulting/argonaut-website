@@ -47,7 +47,7 @@ export default function Navbar() {
           <a href='#vorgehen' onClick={() => setOpen(false)} style={{ color:'#0A1628', textDecoration:'none', fontSize:'16px', fontWeight:600, padding:'12px 0', borderBottom:'1px solid #f3f4f6' }}>Vorgehen</a>
           <Link href='/multistandort' onClick={() => setOpen(false)} style={{ color:'#0A1628', textDecoration:'none', fontSize:'16px', fontWeight:600, padding:'12px 0', borderBottom:'1px solid #f3f4f6' }}>Multistandort</Link>
           <Link href='/branchen' onClick={() => setOpen(false)} style={{ color:'#0A1628', textDecoration:'none', fontSize:'16px', fontWeight:600, padding:'12px 0', borderBottom:'1px solid #f3f4f6' }}>Branchen</Link>
-          <a href='#uber-uns' onClick={() => setOpen(false)} style={{ color:'#0A1628', textDecoration:'none', fontSize:'16px', fontWeight:600, padding:'12px 0', borderBottom:'1px solid #f3f4f6' }}>Ueber uns</a>
+          <a href='#uber-uns' onClick={() => setOpen(false)} style={{ color:'#0A1628', textDecoration:'none', fontSize:'16px', fontWeight:600, padding:'12px 0', borderBottom:'1px solid #f3f4f6' }}>Über uns</a>
           <div style={{ display:'flex', flexDirection:'column', gap:'12px', paddingTop:'8px' }}>
             <a href='/auth/login' style={{ background:'transparent', color:'#C9A84C', fontWeight:700, fontSize:'15px', padding:'14px 24px', borderRadius:'999px', textTransform:'uppercase', textDecoration:'none', border:'2px solid #C9A84C', textAlign:'center' }}>Login</a>
             <a href='#kontakt' onClick={() => setOpen(false)} style={{ background:'#C9A84C', color:'#fff', fontWeight:700, fontSize:'15px', padding:'14px 24px', borderRadius:'999px', textTransform:'uppercase', textDecoration:'none', textAlign:'center' }}>Jetzt starten</a>
