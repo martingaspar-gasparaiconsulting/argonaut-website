@@ -12,7 +12,7 @@ export default function Process() {
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '14px' }}>Vorgehen</p>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#0A1628', marginBottom: '14px', lineHeight: 1.2 }}>
-            Vom Kauf zum laufenden Betrieb —<br />vollautomatisch in 24–48 Stunden
+            Vom Kauf zum laufenden Betrieb —<br />vollautomatisch in 24 Stunden
           </h2>
           <p style={{ fontSize: '16px', color: '#6b7280', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
             Kein Gespräch nötig. Paket wählen, Daten übermitteln — ARGONAUT OS konfiguriert alles automatisch.
