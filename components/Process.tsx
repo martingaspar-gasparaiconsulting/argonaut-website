@@ -148,7 +148,7 @@ export default function Process() {
                   <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Auch für Solo Beta. Vollautomatisch live nach Datenübermittlung.</p>
                 </div>
               </div>
-              <a href="#solo" style={{ background: '#C9A84C', color: '#0A1628', fontSize: '13px', fontWeight: 700, padding: '12px 28px', borderRadius: '999px', whiteSpace: 'nowrap', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block' }}>
+              <a href="https://buy.stripe.com/6oUaEX3TYdmO9F31zi6wE08" style={{ background: '#C9A84C', color: '#0A1628', fontSize: '13px', fontWeight: 700, padding: '12px 28px', borderRadius: '999px', whiteSpace: 'nowrap', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block' }}>
                 Solo Beta buchen
               </a>
             </div>
