@@ -35,8 +35,8 @@ export default function Impressum() {
                 <strong>Gaspar AI Consulting</strong><br />
                 Martin Gaspar<br />
                 Einzelunternehmer<br /><br />
-                <span style={{ color: '#6b7280' }}>[Straße und Hausnummer]</span><br />
-                71132 Böblingen<br />
+                <span style={{ color: '#6b7280' }}>Tübinger Straße 50</span><br />
+                71032 Böblingen<br />
                 Deutschland
               </p>
             </div>
@@ -75,7 +75,7 @@ export default function Impressum() {
                 <tbody>
                   {[
                     { label: 'Steuernummer', value: '[XX/XXX/XXXXX]' },
-                    { label: 'USt-IdNr.', value: '[DE XXXXXXXXX]' },
+                    { label: 'USt-IdNr.', value: 'DE326706056' },
                   ].map(({ label, value }) => (
                     <tr key={label} style={{ borderBottom: '1px solid #f3f4f6' }}>
                       <td style={{ padding: '12px 0', fontSize: '14px', fontWeight: 600, color: '#0A1628', width: '160px' }}>{label}</td>
