@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-server'
 import LogoutButton from './LogoutButton'
 import AgentCard from './AgentCard'
 import DashboardChat from './DashboardChat'
+import OnboardingProgress from './OnboardingProgress'
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
 type Status = 'active' | 'inactive' | 'trial'
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, plan, status, automations_count, agents_count, last_activity, next_billing')
+    .select('full_name, plan, status, automations_count, agents_count, last_activity, next_billing, onboarding_completed, onboarding_data')
     .eq('id', user.id)
     .single()
 
@@ -107,6 +108,9 @@ export default async function DashboardPage() {
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active
 
   const kiLimit = usageData?.ki_calls_limit ?? KI_CALL_LIMITS[rawPaket] ?? 15000
+  const onboardingCompleted = profile?.onboarding_completed ?? false
+  const onboardingData = profile?.onboarding_data ? JSON.parse(profile.onboarding_data as string) : null
+  const hasApiKeys = onboardingData?.toolEntries?.some((e: {apiKey?: string}) => e.apiKey && e.apiKey.length > 0) ?? false
   const kiUsed = usageData?.ki_calls_used ?? 0
 
   const stats = [
@@ -192,6 +196,9 @@ export default async function DashboardPage() {
             </div>
           </a>
         </section>
+
+        {/* ONBOARDING PROGRESS */}
+        <OnboardingProgress onboardingCompleted={onboardingCompleted} hasApiKeys={hasApiKeys} />
 
         {/* KI-Call Fortschrittsbalken */}
         <section style={{ marginBottom: '32px' }}>
