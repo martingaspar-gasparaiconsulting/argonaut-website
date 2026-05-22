@@ -20,10 +20,10 @@ const sections = [
 
 const tarife = [
   { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen (frei w├ñhlbar)', kontingent: '5.000 KI-Calls/Monat', highlight: false },
-  { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 Automatisierungen', kontingent: '15.000 KI-Calls/Monat', highlight: false },
-  { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 Automatisierungen', kontingent: '35.000 KI-Calls/Monat', highlight: true },
-  { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 Automatisierungen', kontingent: '75.000 KI-Calls/Monat', highlight: false },
-  { name: 'ENTERPRISE', preis: '9.000', laufzeit: '12 Monate', agenten: '24 KI-Agenten', automatisierungen: '128 Automatisierungen + Branchen-spezifisch', kontingent: '150.000 KI-Calls/Monat', highlight: false },
+  { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 (frei wählbar)', kontingent: '15.000 KI-Calls/Monat', highlight: false },
+  { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 (frei wählbar)', kontingent: '35.000 KI-Calls/Monat', highlight: true },
+  { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 (frei wählbar)', kontingent: '75.000 KI-Calls/Monat', highlight: false },
+  { name: 'ENTERPRISE', preis: '9.000', laufzeit: '12 Monate', agenten: '24 KI-Agenten', automatisierungen: '128 (frei wählbar)', kontingent: '150.000 KI-Calls/Monat', highlight: false },
 ]
 
 export default function AGB() {
@@ -90,7 +90,7 @@ export default function AGB() {
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Paket</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Preis/Monat (netto)</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Laufzeit</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>KI-Agenten</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Automatisierungen</th><th style={{ padding: '12px 16px', textAlign: 'left' }}>KI-Agenten</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Inkl. Kontingent</th>
                     </tr>
                   </thead>
@@ -103,7 +103,7 @@ export default function AGB() {
                         </td>
                         <td style={{ padding: '12px 16px', color: '#374151' }}>{t.preis} €</td>
                         <td style={{ padding: '12px 16px', color: '#374151', fontSize: '13px' }}>{t.laufzeit}</td>
-                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.agenten}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.automatisierungen}</td><td style={{ padding: '12px 16px', color: '#374151' }}>{t.agenten}</td>
                         <td style={{ padding: '12px 16px', color: '#374151' }}>{t.kontingent}</td>
                       </tr>
                     ))}
