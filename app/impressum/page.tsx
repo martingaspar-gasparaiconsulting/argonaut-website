@@ -51,7 +51,6 @@ export default function Impressum() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <tbody>
                   {[
-                    { label: 'Telefon', value: '[+49 XXX XXXXXXXX]' },
                     { label: 'E-Mail', value: 'martin@gasparaiconsulting.de' },
                     { label: 'Website', value: 'www.argonaut-os.de' },
                   ].map(({ label, value }) => (
