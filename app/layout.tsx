@@ -36,23 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased">
         {children}
         <CookieBanner />
-        <Script
-          id="crisp-chat"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.$crisp=[];
-              window.CRISP_WEBSITE_ID="c268dca7-a811-49c1-91c5-88c7b65fa82d";
-              (function(){
-                var d=document;
-                var s=d.createElement("script");
-                s.src="https://client.crisp.chat/l.js";
-                s.async=1;
-                d.getElementsByTagName("head")[0].appendChild(s);
-              })();
-            `,
-          }}
-        />
       <WebsiteChat />
 </body>
     </html>
