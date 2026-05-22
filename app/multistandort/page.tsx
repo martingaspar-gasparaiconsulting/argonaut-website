@@ -58,6 +58,60 @@ const beispiele = [
     beschreibung: '5 Lager, eine Plattform',
     detail: 'Bestände, Lieferungen und Routen laufen automatisch. Die Zentrale hat immer den Überblick.',
   },
+  {
+    icon: '🦷',
+    branche: 'Zahnarztpraxis-Kette',
+    beschreibung: '4 Praxen, ein Abrechnungssystem',
+    detail: 'Behandlungspläne, Abrechnung und Terminverwaltung laufen zentral. Jede Praxis behält ihr eigenes Team.',
+  },
+  {
+    icon: '🧘',
+    branche: 'Physiotherapie-Gruppe',
+    beschreibung: '6 Studios, ein Terminkalender',
+    detail: 'Patienten buchen online, Therapeuten sehen ihren Kalender. Auslastung und Abrechnung laufen zentral.',
+  },
+  {
+    icon: '📊',
+    branche: 'Steuerberatungskanzlei',
+    beschreibung: '3 Standorte, ein Mandantensystem',
+    detail: 'Mandanten, Dokumente und Fristen zentral verwaltet. Jeder Standort arbeitet autonom — die Zentrale behält den Überblick.',
+  },
+  {
+    icon: '🏠',
+    branche: 'Immobilienmakler',
+    beschreibung: '5 Büros, eine Objektverwaltung',
+    detail: 'Objekte, Interessenten und Besichtigungen zentral gesteuert. Jedes Büro behält seine eigenen Makler und Provisionen.',
+  },
+  {
+    icon: '💊',
+    branche: 'Apothekenkette',
+    beschreibung: '8 Filialen, ein Lagersystem',
+    detail: 'Bestände, Rezepte und Bestellungen laufen automatisch. Jede Filiale bleibt voll funktionsfähig — auch offline.',
+  },
+  {
+    icon: '✂️',
+    branche: 'Friseur-Kette',
+    beschreibung: '10 Salons, ein Buchungssystem',
+    detail: 'Kunden buchen online bei jedem Salon. Marketing, Gutscheine und Auswertungen laufen zentral.',
+  },
+  {
+    icon: '🚨',
+    branche: 'Sicherheitsdienst',
+    beschreibung: '12 Einsatzgebiete, ein Dispositionssystem',
+    detail: 'Einsätze, Schichtpläne und Berichte zentral disponiert. Jedes Team meldet sich automatisch — lückenlose Dokumentation.',
+  },
+  {
+    icon: '🧹',
+    branche: 'Reinigungsunternehmen',
+    beschreibung: '7 Teams, ein Auftragsmanagement',
+    detail: 'Aufträge, Routen und Zeiterfassung automatisch verteilt. Die Zentrale sieht jeden Auftragsstatus in Echtzeit.',
+  },
+  {
+    icon: '❤️',
+    branche: 'Pflegedienst',
+    beschreibung: '4 Standorte, eine Tourenplanung',
+    detail: 'Touren, Pflegeprotokolle und Abrechnung laufen zentral. Jeder Pflegedienst bleibt eigenständig — mit vollem Überblick für die Leitung.',
+  },
 ]
 
 const fragen = [
@@ -174,7 +228,6 @@ export default function MultistandortPage() {
           ARGONAUT verbindet alle Ihre Standorte zu einem intelligenten Netzwerk — jeder Standort autonom, alle gemeinsam gesteuert.
         </p>
 
-        {/* Video Placeholder */}
         <div style={{
           maxWidth: '760px',
           margin: '0 auto 80px',
@@ -304,6 +357,67 @@ export default function MultistandortPage() {
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{b.detail}</p>
               </div>
             ))}
+
+            {/* WILDCARD KARTE */}
+            <a href="#kontakt" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)',
+                border: '2px solid #C9A84C',
+                borderRadius: '16px',
+                padding: '32px',
+                transition: 'all 0.3s',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+                height: '100%',
+                boxSizing: 'border-box',
+                boxShadow: '0 0 32px rgba(201,168,76,0.12)',
+              }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 48px rgba(201,168,76,0.28)';
+                  (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(201,168,76,0.08) 100%)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 32px rgba(201,168,76,0.12)';
+                  (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)';
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '-20px',
+                  right: '-20px',
+                  width: '120px',
+                  height: '120px',
+                  background: 'radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%)',
+                  pointerEvents: 'none',
+                }} />
+                <div style={{ fontSize: '36px', marginBottom: '16px' }}>⚡</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#C9A84C' }}>
+                  Ihre Branche fehlt?
+                </h3>
+                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'rgba(255,255,255,0.9)' }}>
+                  Multistandort für jedes Unternehmen
+                </p>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '24px' }}>
+                  ARGONAUT passt sich jeder Branche an. Wenn Sie mehrere Standorte haben, haben wir die Lösung.
+                </p>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#C9A84C',
+                  color: '#0A1628',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}>
+                  Jetzt Gespräch vereinbaren →
+                </div>
+              </div>
+            </a>
           </div>
         </div>
       </section>
@@ -408,7 +522,7 @@ export default function MultistandortPage() {
         </div>
       </section>
 
-      {/* FAQ — 8 FRAGEN */}
+      {/* FAQ */}
       <section style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
@@ -467,7 +581,22 @@ export default function MultistandortPage() {
           Jedes Multistandort-Setup ist einzigartig. In einem strukturierten Gespräch klären wir Ihre genaue Struktur, welche Standorte verbunden werden sollen und wie die Zentrale gesteuert wird. Kein Verkaufsgespräch — nur technische Klärung, damit wir sofort loslegen können.
         </p>
 
-        <a href="/#preise" style={{ display: 'inline-block', background: '#C9A84C', color: '#0A1628', fontWeight: 700, fontSize: '13px', padding: '20px 48px', letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', borderRadius: '4px', marginBottom: '16px' }}>
+        <a
+          href="#kontakt"
+          style={{
+            display: 'inline-block',
+            background: '#C9A84C',
+            color: '#0A1628',
+            fontWeight: 700,
+            fontSize: '13px',
+            padding: '20px 48px',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            borderRadius: '4px',
+            marginBottom: '16px',
+          }}
+        >
           Jetzt Gespräch vereinbaren →
         </a>
         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
