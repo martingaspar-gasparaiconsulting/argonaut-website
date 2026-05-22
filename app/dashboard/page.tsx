@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase-server'
 import LogoutButton from './LogoutButton'
 import AgentCard from './AgentCard'
+import DashboardChat from './DashboardChat'
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
 type Status = 'active' | 'inactive' | 'trial'
@@ -65,6 +66,7 @@ function KiCallBar({ used, limit }: { used: number; limit: number }) {
       <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '999px', height: '10px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '999px', transition: 'width 0.5s ease' }} />
       </div>
+      <DashboardChat />
     </div>
   )
 }
@@ -148,6 +150,47 @@ export default async function DashboardPage() {
             </span>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '15px', margin: 0 }}>Hier sehen Sie eine Übersicht Ihrer aktiven KI-Agenten und Automatisierungen.</p>
+        </section>
+
+        {/* ONBOARDING BANNER */}
+        <section style={{ marginBottom: '32px' }}>
+          <a href="/dashboard/onboarding" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.05) 100%)',
+              border: '2px solid rgba(201,168,76,0.5)',
+              borderRadius: '14px',
+              padding: '24px 28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px',
+              boxShadow: '0 0 32px rgba(201,168,76,0.1)',
+              cursor: 'pointer',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '50%',
+                  background: 'rgba(201,168,76,0.2)', border: '2px solid rgba(201,168,76,0.5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0,
+                }}>⚡</div>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: '#C9A84C' }}>
+                    System einrichten — Go-Live in 24h
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+                    Teilen Sie uns Ihre Tools und Zugangsdaten mit — wir richten alles automatisch ein.
+                  </p>
+                </div>
+              </div>
+              <div style={{
+                padding: '12px 28px', background: '#C9A84C', color: '#0A1628',
+                borderRadius: '8px', fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap',
+              }}>
+                Jetzt einrichten →
+              </div>
+            </div>
+          </a>
         </section>
 
         {/* KI-Call Fortschrittsbalken */}
