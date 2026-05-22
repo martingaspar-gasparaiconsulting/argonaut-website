@@ -58,6 +58,60 @@ const beispiele = [
     beschreibung: '5 Lager, eine Plattform',
     detail: 'Bestände, Lieferungen und Routen laufen automatisch. Die Zentrale hat immer den Überblick.',
   },
+  {
+    icon: '🦷',
+    branche: 'Zahnarztpraxis-Kette',
+    beschreibung: '4 Praxen, ein Abrechnungssystem',
+    detail: 'Behandlungspläne, Abrechnung und Terminverwaltung laufen zentral. Jede Praxis behält ihr eigenes Team.',
+  },
+  {
+    icon: '🧘',
+    branche: 'Physiotherapie-Gruppe',
+    beschreibung: '6 Studios, ein Terminkalender',
+    detail: 'Patienten buchen online, Therapeuten sehen ihren Kalender. Auslastung und Abrechnung laufen zentral.',
+  },
+  {
+    icon: '📊',
+    branche: 'Steuerberatungskanzlei',
+    beschreibung: '3 Standorte, ein Mandantensystem',
+    detail: 'Mandanten, Dokumente und Fristen zentral verwaltet. Jeder Standort arbeitet autonom — die Zentrale behält den Überblick.',
+  },
+  {
+    icon: '🏠',
+    branche: 'Immobilienmakler',
+    beschreibung: '5 Büros, eine Objektverwaltung',
+    detail: 'Objekte, Interessenten und Besichtigungen zentral gesteuert. Jedes Büro behält seine eigenen Makler und Provisionen.',
+  },
+  {
+    icon: '💊',
+    branche: 'Apothekenkette',
+    beschreibung: '8 Filialen, ein Lagersystem',
+    detail: 'Bestände, Rezepte und Bestellungen laufen automatisch. Jede Filiale bleibt voll funktionsfähig — auch offline.',
+  },
+  {
+    icon: '✂️',
+    branche: 'Friseur-Kette',
+    beschreibung: '10 Salons, ein Buchungssystem',
+    detail: 'Kunden buchen online bei jedem Salon. Marketing, Gutscheine und Auswertungen laufen zentral.',
+  },
+  {
+    icon: '🚨',
+    branche: 'Sicherheitsdienst',
+    beschreibung: '12 Einsatzgebiete, ein Dispositionssystem',
+    detail: 'Einsätze, Schichtpläne und Berichte zentral disponiert. Jedes Team meldet sich automatisch — lückenlose Dokumentation.',
+  },
+  {
+    icon: '🧹',
+    branche: 'Reinigungsunternehmen',
+    beschreibung: '7 Teams, ein Auftragsmanagement',
+    detail: 'Aufträge, Routen und Zeiterfassung automatisch verteilt. Die Zentrale sieht jeden Auftragsstatus in Echtzeit.',
+  },
+  {
+    icon: '❤️',
+    branche: 'Pflegedienst',
+    beschreibung: '4 Standorte, eine Tourenplanung',
+    detail: 'Touren, Pflegeprotokolle und Abrechnung laufen zentral. Jeder Pflegedienst bleibt eigenständig — mit vollem Überblick für die Leitung.',
+  },
 ]
 
 const fragen = [
