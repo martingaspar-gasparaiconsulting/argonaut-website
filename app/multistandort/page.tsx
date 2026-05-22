@@ -582,7 +582,8 @@ export default function MultistandortPage() {
         </p>
 
         <a
-          href="#kontakt"
+        <a
+          href="/#preise"
           style={{
             display: 'inline-block',
             background: '#C9A84C',
