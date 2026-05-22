@@ -217,12 +217,12 @@ export default function BranchenPage() {
           <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '24px' }}>
             Ihre Branche nicht dabei? Wir automatisieren auch für Sie!
           </p>
-          <Link href="/#kontakt" style={{
+          <Link href="/#preise" style={{
             background: '#C9A84C', color: '#fff', fontWeight: 700, fontSize: '14px',
             padding: '16px 40px', borderRadius: '999px', letterSpacing: '0.12em',
             textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block',
           }}>
-            Kostenloses Erstgespräch &rarr;
+            Paket buchen &rarr;
           </Link>
         </div>
       </div>
