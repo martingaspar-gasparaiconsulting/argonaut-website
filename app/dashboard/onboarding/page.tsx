@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import { useRouter } from 'next/navigation'
 
 // ─── TYPEN ───────────────────────────────────────────────────────────────────
 interface ChatMessage {
@@ -241,7 +239,6 @@ Deine Aufgaben:
 
 // ─── HAUPTKOMPONENTE ──────────────────────────────────────────────────────────
 export default function OnboardingPage() {
-  const router = useRouter()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -292,10 +289,7 @@ export default function OnboardingPage() {
   async function saveAndFinish() {
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
+      // Daten lokal speichern
       const onboardingData = {
         firmenname, ansprechpartner, branche, standorte, mitarbeiter, website,
         digitalisierung,
@@ -304,13 +298,14 @@ export default function OnboardingPage() {
         toolEntries: toolEntries.map(e => ({ ...e, apiKey: e.apiKey ? encrypt(e.apiKey) : '' })),
         completed_at: new Date().toISOString(),
       }
+      localStorage.setItem('argonaut_onboarding', JSON.stringify(onboardingData))
 
-      await supabase.from('profiles').update({
-        onboarding_completed: true,
-        onboarding_data: JSON.stringify(onboardingData),
-        company_name: firmenname,
-        industry: branche,
-      }).eq('id', user.id)
+      // API Route aufrufen zum Speichern in Supabase
+      await fetch('/api/onboarding/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(onboardingData),
+      }).catch(() => {}) // Fehler ignorieren - Step 5 trotzdem zeigen
 
     } catch (e) {
       console.error(e)
@@ -649,7 +644,7 @@ export default function OnboardingPage() {
             </div>
 
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => { window.location.href = '/dashboard' }}
               style={{ padding: '18px 48px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', letterSpacing: '0.05em' }}
             >
               Zum Dashboard →
