@@ -3,6 +3,7 @@ import { Syne, DM_Sans } from 'next/font/google'
 import './globals.css'
 import Script from 'next/script'
 import CookieBanner from '../components/CookieBanner';
+import WebsiteChat from './components/WebsiteChat'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -52,7 +53,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             `,
           }}
         />
-      </body>
+      <WebsiteChat />
+</body>
     </html>
   )
 }
