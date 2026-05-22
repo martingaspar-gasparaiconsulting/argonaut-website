@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 
 const pakete = [
-  { name: 'STARTER', preis: 1500, farbe: '#6b7280' },
-  { name: 'PROFESSIONAL', preis: 2500, farbe: '#C9A84C' },
-  { name: 'BUSINESS', preis: 4500, farbe: '#C9A84C' },
-  { name: 'ENTERPRISE', preis: 7500, farbe: '#C9A84C' },
+  { name: 'STARTER', preis: 2500, farbe: '#6b7280' },
+  { name: 'PROFESSIONAL', preis: 3000, farbe: '#C9A84C' },
+  { name: 'BUSINESS', preis: 6000, farbe: '#C9A84C' },
+  { name: 'ENTERPRISE', preis: 9000, farbe: '#C9A84C' },
 ]
 
 const beispiele = [
@@ -33,7 +33,8 @@ const beispiele = [
     branche: 'Hotel-Gruppe',
     beschreibung: '8 Häuser, eine Buchungsplattform',
     detail: 'Verfügbarkeiten, Preise, Gästekommunikation — alles zentral gesteuert. Jedes Haus behält sein eigenes Team.',
-  },{
+  },
+  {
     icon: '🏗️',
     branche: 'Bauunternehmen',
     beschreibung: '6 Baustellen, ein Projektmanagement',
@@ -59,15 +60,46 @@ const beispiele = [
   },
 ]
 
+const fragen = [
+  {
+    frage: 'Welche Standorte können verbunden werden?',
+    antwort: 'Alle Standorte Ihres Unternehmens — egal ob 2 oder 20. Jede Filiale, jede Niederlassung, jedes Büro wird in einem zentralen Dashboard zusammengeführt.',
+  },
+  {
+    frage: 'Bleiben die Daten jedes Standorts getrennt?',
+    antwort: 'Ja. Jeder Standort hat seinen eigenen Bereich. Die Zentrale sieht alles — ein Standort sieht nur seine eigenen Daten. Keine Überschneidungen, kein Datenmix.',
+  },
+  {
+    frage: 'Was kostet die Einrichtung?',
+    antwort: 'Es gibt keine Setup-Gebühr. Sie wählen Ihr Paket, wir richten alles ein. Go-Live in 24 Stunden — garantiert.',
+  },
+  {
+    frage: 'Müssen alle Standorte dasselbe Paket haben?',
+    antwort: 'Ja, für eine einheitliche Infrastruktur buchen alle Standorte dasselbe Paket. Das sichert Kompatibilität und reibungslosen Datenaustausch zwischen den Standorten.',
+  },
+  {
+    frage: 'Wer hat Zugriff auf was?',
+    antwort: 'Sie bestimmen das vollständig. Standortleiter sehen nur ihren Bereich. Die Geschäftsführung hat Zugriff auf alle Standorte. Individuelle Rollen sind konfigurierbar.',
+  },
+  {
+    frage: 'Wie schnell sind neue Standorte eingebunden?',
+    antwort: 'Einen neuen Standort hinzufügen dauert weniger als 24 Stunden. Kein zusätzlicher Technikeinsatz — alles läuft über Ihr zentrales ARGONAUT Dashboard.',
+  },
+  {
+    frage: 'Funktioniert das auch für internationale Standorte?',
+    antwort: 'Ja. ARGONAUT ist sprachunabhängig einsetzbar und unterstützt mehrere Zeitzonen. Standorte in Deutschland, Österreich, Schweiz und darüber hinaus sind problemlos integrierbar.',
+  },
+  {
+    frage: 'Was passiert, wenn ein Standort ausfällt?',
+    antwort: 'Die anderen Standorte laufen vollständig weiter. Kein Standort ist vom anderen abhängig. Der ausgefallene Standort wird automatisch neu synchronisiert sobald er wieder online ist.',
+  },
+]
+
 export default function MultistandortPage() {
   const [selectedStandorte, setSelectedStandorte] = useState(5)
   const [selectedPaket, setSelectedPaket] = useState(pakete[1])
 
-  const basis = 1500
-  const gesamtBasis = basis * selectedStandorte
   const gesamtPaket = selectedPaket.preis * selectedStandorte
-  const gesamtMonatlich = gesamtBasis + gesamtPaket
-  const setupGebuehr = selectedStandorte <= 3 ? 2500 : selectedStandorte <= 5 ? 4500 : 7500
 
   useEffect(() => {
     const script = document.createElement('script')
@@ -123,10 +155,10 @@ export default function MultistandortPage() {
         <h1 style={{
           fontSize: 'clamp(2.5rem, 6vw, 5rem)',
           fontWeight: 700,
-lineHeight: 1.05,
-marginBottom: '24px',
-fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
-letterSpacing: '-0.02em',
+          lineHeight: 1.05,
+          marginBottom: '24px',
+          fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
+          letterSpacing: '-0.02em',
         }}>
           Ein Gehirn.<br />
           <span style={{ color: '#C9A84C' }}>Viele Standorte.</span>
@@ -142,7 +174,6 @@ letterSpacing: '-0.02em',
           ARGONAUT verbindet alle Ihre Standorte zu einem intelligenten Netzwerk — jeder Standort autonom, alle gemeinsam gesteuert.
         </p>
 
-        {/* Video Placeholder */}
         <div style={{
           maxWidth: '760px',
           margin: '0 auto 80px',
@@ -187,7 +218,10 @@ letterSpacing: '-0.02em',
           <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
             Das Konzept
           </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 700, fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif', letterSpacing: '-0.02em' }}>Jeder Standort ist eigenständig.<br />Gemeinsam sind sie unschlagbar.</h2></div>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 700, fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif', letterSpacing: '-0.02em' }}>
+            Jeder Standort ist eigenständig.<br />Gemeinsam sind sie unschlagbar.
+          </h2>
+        </div>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -283,7 +317,7 @@ letterSpacing: '-0.02em',
             Ihr individuelles Paket
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '16px' }}>
-            Alle Standorte müssen dasselbe Paket buchen. Basis (1.500€) ist immer Pflicht.
+            Alle Standorte buchen dasselbe Paket — auf Anfrage kalkulieren wir Ihren Gesamtpreis.
           </p>
         </div>
 
@@ -344,7 +378,7 @@ letterSpacing: '-0.02em',
                     {p.name}
                   </p>
                   <p style={{ fontSize: '18px', fontWeight: 900 }}>{p.preis.toLocaleString('de-DE')}€</p>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/ Monat</p>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/ Monat / Standort</p>
                 </button>
               ))}
             </div>
@@ -358,20 +392,12 @@ letterSpacing: '-0.02em',
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
               <div>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Basis × {selectedStandorte}</p>
-                <p style={{ fontSize: '20px', fontWeight: 700 }}>{gesamtBasis.toLocaleString('de-DE')} €</p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{selectedPaket.name} × {selectedStandorte}</p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{selectedPaket.name} × {selectedStandorte} Standorte</p>
                 <p style={{ fontSize: '20px', fontWeight: 700 }}>{gesamtPaket.toLocaleString('de-DE')} €</p>
               </div>
               <div>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Setup-Gebühr (einmalig)</p>
-                <p style={{ fontSize: '20px', fontWeight: 700 }}>{setupGebuehr.toLocaleString('de-DE')} €</p>
-              </div>
-              <div>
                 <p style={{ fontSize: '12px', color: '#C9A84C', fontWeight: 700, marginBottom: '4px' }}>Gesamt / Monat</p>
-                <p style={{ fontSize: '28px', fontWeight: 900, color: '#C9A84C' }}>{gesamtMonatlich.toLocaleString('de-DE')} €</p>
+                <p style={{ fontSize: '28px', fontWeight: 900, color: '#C9A84C' }}>{gesamtPaket.toLocaleString('de-DE')} €</p>
               </div>
             </div>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
@@ -381,84 +407,64 @@ letterSpacing: '-0.02em',
         </div>
       </section>
 
-      {/* WHITE LABEL */}
+      {/* FAQ */}
       <section style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(201,168,76,0.1)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            borderRadius: '999px',
-            padding: '6px 16px',
-            marginBottom: '32px',
-          }}>
-            <span style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              Nur 50 Plätze verfügbar
-            </span>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
+              Häufige Fragen
+            </p>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
+              Was Unternehmer wissen wollen
+            </h2>
           </div>
 
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif', marginBottom: '24px' }}>
-            White Label Partner
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, marginBottom: '40px', fontSize: '18px' }}>
-            Vermarkten Sie ARGONAUT unter Ihrem eigenen Brand. Perfekt für Unternehmensgruppen, die ihre eigene KI-Lösung anbieten möchten — ohne Entwicklungskosten.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-            {[
-              { label: 'Einmalige Lizenzgebühr', wert: '50.000 €' },
-              { label: 'Monatliche Lizenz', wert: '12.000 €' },
-              { label: 'Provision pro Kunde', wert: '10 %' },
-              { label: 'Verfügbare Plätze', wert: '50 max.' },
-            ].map((item, i) => (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '24px',
+          }}>
+            {fragen.map((f, i) => (
               <div key={i} style={{
                 background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(201,168,76,0.2)',
-                borderRadius: '12px',
-                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '16px',
+                padding: '32px',
               }}>
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>{item.label}</p>
-                <p style={{ fontSize: '24px', fontWeight: 900, color: '#C9A84C' }}>{item.wert}</p>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: 'rgba(201,168,76,0.15)',
+                    border: '1px solid rgba(201,168,76,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    color: '#C9A84C',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                  }}>?</div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', lineHeight: 1.4 }}>{f.frage}</h3>
+                </div>
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, paddingLeft: '40px' }}>
+                  {f.antwort}
+                </p>
               </div>
             ))}
-          <a href="#kontakt" style={{ display: 'inline-block', marginTop: '32px', padding: '14px 40px', background: '#D4A843', color: '#0D1B3E', borderRadius: '999px', fontWeight: 700, fontSize: '15px', textDecoration: 'none' }}>Anfrage stellen →</a>
           </div>
         </div>
       </section>
 
-      {/* WARUM EIN GESPRÄCH */}
+      {/* WARUM 60 MINUTEN */}
       <section style={{ padding: '80px 24px', maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
         <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif', marginBottom: '24px' }}>
-          Warum 15–20 Minuten?
+          Warum 60 Minuten?
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, fontSize: '18px', marginBottom: '48px' }}>
-          Jedes Multistandort-Setup ist einzigartig. In einem kurzen Gespräch klären wir Ihre genaue Struktur, welche Standorte verbunden werden sollen und wie die Zentrale gesteuert wird. Kein Verkaufsgespräch — nur technische Klärung damit wir sofort loslegen können.
+          Jedes Multistandort-Setup ist einzigartig. In einem strukturierten Gespräch klären wir Ihre genaue Struktur, welche Standorte verbunden werden sollen und wie die Zentrale gesteuert wird. Kein Verkaufsgespräch — nur technische Klärung, damit wir sofort loslegen können.
         </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', marginBottom: '48px' }}>
-          {[
-            '✓ Welche Standorte werden verbunden?',
-            '✓ Welche Daten bleiben lokal, welche zentral?',
-            '✓ Wer hat welche Zugriffsrechte?',
-            '✓ Wann können wir starten?',
-          ].map((punkt, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '8px',
-              padding: '16px 24px',
-              width: '100%',
-              maxWidth: '500px',
-              textAlign: 'left',
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '15px',
-            }}>
-              {punkt}
-            </div>
-          ))}
-        </div>
 
         <a
           href="#kontakt"
@@ -472,10 +478,11 @@ letterSpacing: '-0.02em',
             letterSpacing: '0.15em',
             textTransform: 'uppercase',
             textDecoration: 'none',
+            borderRadius: '4px',
             marginBottom: '16px',
           }}
         >
-          Jetzt Gespräch vereinbaren
+          Jetzt Gespräch vereinbaren →
         </a>
         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
           Martin Gaspar · ARGONAUT · 71032 Böblingen
