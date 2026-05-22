@@ -19,7 +19,7 @@ const sections = [
 ]
 
 const tarife = [
-  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen', kontingent: '5.000 KI-Calls/Monat', highlight: false },
+  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen (frei w├ñhlbar)', kontingent: '5.000 KI-Calls/Monat', highlight: false },
   { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 Automatisierungen', kontingent: '15.000 KI-Calls/Monat', highlight: false },
   { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 Automatisierungen', kontingent: '35.000 KI-Calls/Monat', highlight: true },
   { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 Automatisierungen', kontingent: '75.000 KI-Calls/Monat', highlight: false },
@@ -216,7 +216,7 @@ export default function AGB() {
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', marginTop: '32px' }}>
                 <p style={{ color: '#374151', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>
                   <strong>Anbieter:</strong> Gaspar AI Consulting, Martin Gaspar<br />
-                  Böblingen, Baden-Württemberg, Deutschland<br />
+                  Tübinger Straße 50, 71032 Böblingen, Baden-Württemberg, Deutschland<br />
                   E-Mail: info@argonaut-os.com | Web: argonaut-os.com<br />
                   <strong>Stand:</strong> Mai 2026
                 </p>
