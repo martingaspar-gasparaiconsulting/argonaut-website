@@ -125,12 +125,18 @@ export default async function DashboardPage() {
 
       <header style={{ borderBottom: '1px solid rgba(201,168,76,0.15)', background: 'rgba(10,22,40,0.95)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={36} height={36} style={{ objectFit: 'contain' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-              <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>ARGONAUT</span>
-              <span style={{ fontSize: '10px', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>Dashboard</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+              <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={36} height={36} style={{ objectFit: 'contain' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>ARGONAUT</span>
+                <span style={{ fontSize: '10px', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>Dashboard</span>
+              </div>
             </div>
+            <nav style={{ display: 'flex', gap: '4px' }}>
+              <a href="/dashboard" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>Übersicht</a>
+              <a href="/dashboard/documents" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#C9A84C', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}>📂 Dokumente</a>
+            </nav>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{user.email}</span>
@@ -242,7 +248,7 @@ export default async function DashboardPage() {
         </section>
 
       </main>
-    </>
+      </>
     </div>
   )
 }
