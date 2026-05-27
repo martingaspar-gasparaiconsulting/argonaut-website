@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   try {
-    const data = await req.json()
+    const body = await req.text()
+    const data = JSON.parse(body)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -15,24 +16,24 @@ export async function POST(req: NextRequest) {
       onboarding_completed: true,
       onboarding_status: 'setup',
       onboarding_data: data,
-      company_name: data.firmenname,
-      industry: data.branche,
-      standorte: data.standorte,
-      mitarbeiter: data.mitarbeiter,
-      website: data.website,
-      digitalisierung: data.digitalisierung,
-      tools: data.tools,
-      full_name: data.ansprechpartner,
+      company_name: data.firmenname || null,
+      industry: data.branche || null,
+      standorte: data.standorte || null,
+      mitarbeiter: data.mitarbeiter || null,
+      website: data.website || null,
+      digitalisierung: data.digitalisierung || null,
+      tools: data.tools || null,
+      full_name: data.ansprechpartner || null,
     }).eq('id', user.id)
 
     if (error) {
-      console.error('Supabase update error:', error)
+      console.error('Supabase error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Onboarding save error:', error)
-    return NextResponse.json({ error: 'Fehler beim Speichern' }, { status: 500 })
+    return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
