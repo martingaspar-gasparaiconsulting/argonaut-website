@@ -11,12 +11,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nicht eingeloggt' }, { status: 401 })
     }
 
-    await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').update({
       onboarding_completed: true,
-      onboarding_data: JSON.stringify(data),
+      onboarding_status: 'setup',
+      onboarding_data: data,
       company_name: data.firmenname,
       industry: data.branche,
+      standorte: data.standorte,
+      mitarbeiter: data.mitarbeiter,
+      website: data.website,
+      digitalisierung: data.digitalisierung,
+      tools: data.tools,
+      full_name: data.ansprechpartner,
     }).eq('id', user.id)
+
+    if (error) {
+      console.error('Supabase update error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
