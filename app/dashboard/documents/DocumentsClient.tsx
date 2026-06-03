@@ -59,12 +59,6 @@ const ALL_AGENTS = [
   { name: 'B4 Personalchef', plans: ['start', 'pro', 'bus', 'ent'] },
 ]
 
-const AUTO_ASSIGN: Record<string, string[]> = {
-  PDF:  ['A4 Buchhalter', 'A3 Wächter'],
-  DOCX: ['A5 Schreiber', 'A1 Empfänger'],
-  XLSX: ['A4 Buchhalter', 'A7 Verkäufer'],
-  TXT:  ['A5 Schreiber'],
-}
 
 // Lesbare Bezeichnungen für die in B1.4 erkannten Dokumenttypen
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -162,17 +156,25 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
     if (dbError || !doc) { setUploadError('Datenbankfehler: ' + dbError?.message); setUploading(false); return }
 
-    // Auto-Agenten zuweisen
-    const autoAgents = (AUTO_ASSIGN[fileType] ?? []).filter(a => availableAgents.some(ag => ag.name === a))
-    if (autoAgents.length > 0) {
-      const inserts = autoAgents.map(a => ({ document_id: doc.id, user_id: userId, agent_name: a }))
-      const { data: newAgents } = await supabase.from('document_agents').insert(inserts).select()
-      if (newAgents) setDocumentAgents(prev => [...prev, ...newAgents])
+    // Analyse-Pipeline automatisch starten (n8n-Webhook ueber sichere Server-Route)
+    try {
+      await fetch('/api/documents/trigger-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          document_id: doc.id,
+          user_id: userId,
+          storage_path: path,
+          file_type: fileType,
+        }),
+      })
+    } catch (e) {
+      console.error('Analyse-Trigger fehlgeschlagen:', e)
     }
 
     setDocuments(prev => [doc, ...prev])
     setUploading(false)
-  }, [userId, maxMB, storageFull, availableAgents, supabase])
+  }, [userId, maxMB, storageFull, supabase])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
