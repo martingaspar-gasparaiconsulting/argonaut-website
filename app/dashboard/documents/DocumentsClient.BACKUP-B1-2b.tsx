@@ -45,38 +45,26 @@ const FILE_SIZE_LIMITS: Record<string, number> = {
 const STORAGE_LIMIT_GB = 5
 
 const ALL_AGENTS = [
-  // Serie A – Kernprozesse
-  { name: 'Der Empfänger',      plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Schmied',        plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Wächter',        plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Buchhalter',     plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Schreiber',      plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Planer',         plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Verkäufer',      plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Regisseur',      plans: ['pro', 'bus', 'ent'] },
-  // Serie B – Kommunikation & Wissen
-  { name: 'Der Forscher',       plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Übersetzer',     plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Moderator',      plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Personalchef',   plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Einkäufer',      plans: ['pro', 'bus', 'ent'] },
-  // Serie C – Strategie & Analyse
-  { name: 'Der Analyst',        plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Stratege',       plans: ['bus', 'ent'] },
-  { name: 'Der Jurist',         plans: ['ent'] },
-  { name: 'Der Trainer',        plans: ['bus', 'ent'] },
-  // Serie D – Technik & Sicherheit
-  { name: 'Der Techniker',      plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Sicherheitschef', plans: ['bus', 'ent'] },
-  { name: 'Der Integrator',     plans: ['ent'] },
-  // Serie E – Netzwerk & Außenwelt
-  { name: 'Der Netzwerker',     plans: ['bus', 'ent'] },
-  { name: 'Der Botschafter',    plans: ['ent'] },
-  { name: 'Der Späher',         plans: ['ent'] },
-  { name: 'Der Assistent',      plans: ['pro', 'bus', 'ent'] },
+  { name: 'A1 Empfänger', plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
+  { name: 'A2 Schmied',   plans: ['pro', 'bus', 'ent'] },
+  { name: 'A3 Wächter',   plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A4 Buchhalter',plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A5 Schreiber', plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
+  { name: 'A6 Planer',    plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A7 Verkäufer', plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A8 Regisseur', plans: ['pro', 'bus', 'ent'] },
+  { name: 'B1 Forscher',  plans: ['pro', 'bus', 'ent'] },
+  { name: 'B2 Übersetzer',plans: ['pro', 'bus', 'ent'] },
+  { name: 'B3 Moderator', plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'B4 Personalchef', plans: ['start', 'pro', 'bus', 'ent'] },
 ]
 
-
+const AUTO_ASSIGN: Record<string, string[]> = {
+  PDF:  ['A4 Buchhalter', 'A3 Wächter'],
+  DOCX: ['A5 Schreiber', 'A1 Empfänger'],
+  XLSX: ['A4 Buchhalter', 'A7 Verkäufer'],
+  TXT:  ['A5 Schreiber'],
+}
 
 // Lesbare Bezeichnungen für die in B1.4 erkannten Dokumenttypen
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -174,25 +162,17 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
     if (dbError || !doc) { setUploadError('Datenbankfehler: ' + dbError?.message); setUploading(false); return }
 
-    // Analyse-Pipeline automatisch starten (n8n-Webhook ueber sichere Server-Route)
-    try {
-      await fetch('/api/documents/trigger-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: doc.id,
-          user_id: userId,
-          storage_path: path,
-          file_type: fileType,
-        }),
-      })
-    } catch (e) {
-      console.error('Analyse-Trigger fehlgeschlagen:', e)
+    // Auto-Agenten zuweisen
+    const autoAgents = (AUTO_ASSIGN[fileType] ?? []).filter(a => availableAgents.some(ag => ag.name === a))
+    if (autoAgents.length > 0) {
+      const inserts = autoAgents.map(a => ({ document_id: doc.id, user_id: userId, agent_name: a }))
+      const { data: newAgents } = await supabase.from('document_agents').insert(inserts).select()
+      if (newAgents) setDocumentAgents(prev => [...prev, ...newAgents])
     }
 
     setDocuments(prev => [doc, ...prev])
     setUploading(false)
-  }, [userId, maxMB, storageFull, supabase])
+  }, [userId, maxMB, storageFull, availableAgents, supabase])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)

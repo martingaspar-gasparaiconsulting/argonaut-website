@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 
-// ===== Typen =====
+// ── Typen ──────────────────────────────────────────────────────────────────
 interface Document {
   id: string
   user_id: string
@@ -12,8 +12,6 @@ interface Document {
   file_size: number
   storage_path: string
   created_at: string
-  status: string
-  document_type: string | null
 }
 
 interface DocumentAgent {
@@ -29,7 +27,7 @@ interface Props {
   initialDocumentAgents: DocumentAgent[]
 }
 
-// ===== Konstanten =====
+// ── Konstanten ─────────────────────────────────────────────────────────────
 const ALLOWED_TYPES: Record<string, string> = {
   'application/pdf': 'PDF',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
@@ -45,47 +43,25 @@ const FILE_SIZE_LIMITS: Record<string, number> = {
 const STORAGE_LIMIT_GB = 5
 
 const ALL_AGENTS = [
-  // Serie A – Kernprozesse
-  { name: 'Der Empfänger',      plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Schmied',        plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Wächter',        plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Buchhalter',     plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Schreiber',      plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Planer',         plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Verkäufer',      plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Regisseur',      plans: ['pro', 'bus', 'ent'] },
-  // Serie B – Kommunikation & Wissen
-  { name: 'Der Forscher',       plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Übersetzer',     plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Moderator',      plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Personalchef',   plans: ['start', 'pro', 'bus', 'ent'] },
-  { name: 'Der Einkäufer',      plans: ['pro', 'bus', 'ent'] },
-  // Serie C – Strategie & Analyse
-  { name: 'Der Analyst',        plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Stratege',       plans: ['bus', 'ent'] },
-  { name: 'Der Jurist',         plans: ['ent'] },
-  { name: 'Der Trainer',        plans: ['bus', 'ent'] },
-  // Serie D – Technik & Sicherheit
-  { name: 'Der Techniker',      plans: ['pro', 'bus', 'ent'] },
-  { name: 'Der Sicherheitschef', plans: ['bus', 'ent'] },
-  { name: 'Der Integrator',     plans: ['ent'] },
-  // Serie E – Netzwerk & Außenwelt
-  { name: 'Der Netzwerker',     plans: ['bus', 'ent'] },
-  { name: 'Der Botschafter',    plans: ['ent'] },
-  { name: 'Der Späher',         plans: ['ent'] },
-  { name: 'Der Assistent',      plans: ['pro', 'bus', 'ent'] },
+  { name: 'A1 Empfänger', plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
+  { name: 'A2 Schmied',   plans: ['pro', 'bus', 'ent'] },
+  { name: 'A3 Wächter',   plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A4 Buchhalter',plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A5 Schreiber', plans: ['solo', 'start', 'pro', 'bus', 'ent'] },
+  { name: 'A6 Planer',    plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A7 Verkäufer', plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'A8 Regisseur', plans: ['pro', 'bus', 'ent'] },
+  { name: 'B1 Forscher',  plans: ['pro', 'bus', 'ent'] },
+  { name: 'B2 Übersetzer',plans: ['pro', 'bus', 'ent'] },
+  { name: 'B3 Moderator', plans: ['start', 'pro', 'bus', 'ent'] },
+  { name: 'B4 Personalchef', plans: ['start', 'pro', 'bus', 'ent'] },
 ]
 
-
-
-// Lesbare Bezeichnungen für die in B1.4 erkannten Dokumenttypen
-const DOC_TYPE_LABELS: Record<string, string> = {
-  rechnung: 'Rechnung',
-  preisliste: 'Preisliste',
-  vertrag: 'Vertrag',
-  agb: 'AGB',
-  produktdatenblatt: 'Produktdatenblatt',
-  sonstiges: 'Sonstiges',
+const AUTO_ASSIGN: Record<string, string[]> = {
+  PDF:  ['A4 Buchhalter', 'A3 Wächter'],
+  DOCX: ['A5 Schreiber', 'A1 Empfänger'],
+  XLSX: ['A4 Buchhalter', 'A7 Verkäufer'],
+  TXT:  ['A5 Schreiber'],
 }
 
 function formatBytes(bytes: number): string {
@@ -106,28 +82,7 @@ function fileTypeIcon(type: string) {
   )
 }
 
-// Status-Abzeichen je Dokument (wartet / wird_analysiert / bereit / fehler)
-function statusBadge(status: string) {
-  const map: Record<string, { label: string; color: string; icon: string }> = {
-    wartet:          { label: 'Wartet',           color: '#94a3b8', icon: '⏸' },
-    wird_analysiert: { label: 'Wird analysiert',   color: '#f59e0b', icon: '⏳' },
-    bereit:          { label: 'Bereit',            color: '#22c55e', icon: '✅' },
-    fehler:          { label: 'Fehler',            color: '#ef4444', icon: '⚠️' },
-  }
-  const s = map[status] ?? map.wartet
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '4px 10px', borderRadius: 999,
-      background: `${s.color}1a`, border: `1px solid ${s.color}55`,
-      color: s.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
-    }}>
-      <span>{s.icon}</span>{s.label}
-    </span>
-  )
-}
-
-// ===== Hauptkomponente =====
+// ── Hauptkomponente ────────────────────────────────────────────────────────
 export default function DocumentsClient({ userId, paket, initialDocuments, initialDocumentAgents }: Props) {
   const supabase = createClient()
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
@@ -149,7 +104,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
   const availableAgents = ALL_AGENTS.filter(a => a.plans.includes(paket))
 
-  // ===== Upload =====
+  // ── Upload ──────────────────────────────────────────────────────────────
   const handleUpload = useCallback(async (file: File) => {
     setUploadError('')
     const fileType = ALLOWED_TYPES[file.type]
@@ -158,6 +113,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     if (storageFull) { setUploadError('Speicherlimit erreicht. Bitte Paket upgraden.'); return }
 
     setUploading(true)
+    const ext = file.name.split('.').pop()
     const path = `${userId}/${Date.now()}_${file.name}`
 
     const { error: storageError } = await supabase.storage
@@ -168,31 +124,23 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
     const { data: doc, error: dbError } = await supabase
       .from('documents')
-      .insert({ user_id: userId, file_name: file.name, file_type: fileType, file_size: file.size, storage_path: path, status: 'wartet' })
+      .insert({ user_id: userId, file_name: file.name, file_type: fileType, file_size: file.size, storage_path: path })
       .select()
       .single()
 
     if (dbError || !doc) { setUploadError('Datenbankfehler: ' + dbError?.message); setUploading(false); return }
 
-    // Analyse-Pipeline automatisch starten (n8n-Webhook ueber sichere Server-Route)
-    try {
-      await fetch('/api/documents/trigger-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: doc.id,
-          user_id: userId,
-          storage_path: path,
-          file_type: fileType,
-        }),
-      })
-    } catch (e) {
-      console.error('Analyse-Trigger fehlgeschlagen:', e)
+    // Auto-Agenten zuweisen
+    const autoAgents = (AUTO_ASSIGN[fileType] ?? []).filter(a => availableAgents.some(ag => ag.name === a))
+    if (autoAgents.length > 0) {
+      const inserts = autoAgents.map(a => ({ document_id: doc.id, user_id: userId, agent_name: a }))
+      const { data: newAgents } = await supabase.from('document_agents').insert(inserts).select()
+      if (newAgents) setDocumentAgents(prev => [...prev, ...newAgents])
     }
 
     setDocuments(prev => [doc, ...prev])
     setUploading(false)
-  }, [userId, maxMB, storageFull, supabase])
+  }, [userId, maxMB, storageFull, availableAgents, supabase])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
@@ -200,7 +148,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     if (file) handleUpload(file)
   }, [handleUpload])
 
-  // ===== Löschen =====
+  // ── Löschen ─────────────────────────────────────────────────────────────
   const handleDelete = async (doc: Document) => {
     await supabase.storage.from('customer-documents').remove([doc.storage_path])
     await supabase.from('documents').delete().eq('id', doc.id)
@@ -208,7 +156,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     setDocumentAgents(prev => prev.filter(da => da.document_id !== doc.id))
   }
 
-  // ===== Agenten-Modal =====
+  // ── Agenten-Modal ────────────────────────────────────────────────────────
   const openAgentModal = (doc: Document) => {
     const current = documentAgents.filter(da => da.document_id === doc.id).map(da => da.agent_name)
     const toggles: Record<string, boolean> = {}
@@ -233,7 +181,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     setAgentModal(null)
   }
 
-  // ===== Render =====
+  // ── Render ───────────────────────────────────────────────────────────────
   const barColor = storagePercent >= 100 ? '#ef4444' : storagePercent >= 80 ? '#f59e0b' : '#22c55e'
 
   return (
@@ -312,15 +260,11 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                       <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.file_name}</p>
                       <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
                         {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('de-DE')}
-                        {doc.document_type && (
-                          <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.55)' }}>· {DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</span>
-                        )}
                         {assignedAgents.length > 0 && (
                           <span style={{ marginLeft: 8, color: '#C9A84C' }}>· {assignedAgents.length} Agent{assignedAgents.length !== 1 ? 'en' : ''}</span>
                         )}
                       </p>
                     </div>
-                    {statusBadge(doc.status)}
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                       <button onClick={() => openAgentModal(doc)} style={{ padding: '7px 14px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, color: '#C9A84C', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         🤖 Agenten
