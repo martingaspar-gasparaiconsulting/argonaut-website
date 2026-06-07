@@ -40,7 +40,7 @@ export default function Datenschutz() {
             <h1 style={{ color: '#FFFFFF', fontSize: '42px', fontWeight: '700', marginBottom: '16px', fontFamily: 'Syne, sans-serif' }}>Datenschutzerklärung</h1>
             <p style={{ color: '#94a3b8', fontSize: '16px', lineHeight: '1.7' }}>
               ARGONAUT OS — Gaspar AI Consulting, Martin Gaspar, Böblingen<br />
-              Stand: Mai 2026 | Gemäß DSGVO und BDSG
+              Stand: Juni 2026 | Gemäß DSGVO und BDSG
             </p>
           </div>
         </div>
@@ -157,10 +157,11 @@ export default function Datenschutz() {
                     {[
                       ['Stripe Inc.', 'Zahlungsabwicklung', 'Art. 6 Abs. 1 lit. b DSGVO'],
                       ['Lexoffice (Haufe)', 'Rechnungsstellung & Buchhaltung', 'Art. 6 Abs. 1 lit. c DSGVO'],
-                      ['Supabase Inc.', 'Datenbankhosting (verschlüsselt)', 'Art. 6 Abs. 1 lit. b DSGVO'],
+                      ['Supabase Inc.', 'Datenbankhosting (verschlüsselt, EU-North-1 Stockholm)', 'Art. 6 Abs. 1 lit. b DSGVO'],
                       ['Vercel Inc.', 'Website-Hosting', 'Art. 6 Abs. 1 lit. f DSGVO'],
-                      ['HubSpot Inc.', 'CRM & Kundenkommunikation', 'Art. 6 Abs. 1 lit. f DSGVO'],
-                      ['Anthropic / OpenAI', 'KI-API für Workflow-Ausführung (anonymisiert)', 'Art. 6 Abs. 1 lit. b DSGVO'],
+                      ['Anthropic PBC', 'KI-API für Agenten & Workflow-Ausführung (anonymisiert, USA)', 'Art. 6 Abs. 1 lit. b DSGVO, SCC gemäß Art. 46 DSGVO'],
+                      ['Voyage AI Inc.', 'Embedding-API für Dokumentensuche & RAG (anonymisierte Chunks, USA)', 'Art. 6 Abs. 1 lit. b DSGVO, SCC gemäß Art. 46 DSGVO'],
+                      ['n8n GmbH', 'Workflow-Automatisierungsplattform (selbstgehostet)', 'Art. 6 Abs. 1 lit. b DSGVO'],
                     ].map(([emp, zweck, grund], i) => (
                       <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#FFFFFF', borderBottom: '1px solid #e2e8f0' }}>
                         <td style={{ padding: '12px 16px', fontWeight: '600', color: '#0A1628' }}>{emp}</td>
@@ -190,7 +191,7 @@ export default function Datenschutz() {
               <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 7 Verbrauchsdaten & Overuse-Abrechnung</h2>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.1 ARGONAUT OS erfasst automatisch den monatlichen KI-Call-Verbrauch jedes Kunden zur Abrechnung gemäß den Fair-Use-Kontingenten (siehe AGB § 9).</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.2 Der aktuelle Verbrauch ist jederzeit im persönlichen Dashboard einsehbar. Transparenz über den eigenen Datenverbrauch ist ein Kernprinzip von ARGONAUT OS.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.3 Bei Überschreitung des inkludierten Kontingents wird der Kunde per E-Mail informiert (bei 80% und bei 100%). Overuse-Gebühren werden im Folgemonat automatisch eingezogen.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>7.3 Bei Überschreitung des inkludierten Kontingents wird der Kunde per E-Mail informiert (bei 80 % und bei 100 %). Overuse-Gebühren werden im Folgemonat automatisch eingezogen.</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>7.4 Rechtsgrundlage der Verbrauchserfassung ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</p>
             </section>
 
@@ -232,9 +233,10 @@ export default function Datenschutz() {
 
             <section id="drittanbieter" style={{ marginBottom: '48px' }}>
               <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 11 Drittanbieter & internationale Übermittlungen</h2>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.1 Einige unserer Dienstleister (Stripe, Supabase, Vercel, HubSpot, Anthropic) haben ihren Sitz in den USA. Die Datenübermittlung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 DSGVO.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.2 Stripe ist unter dem EU-U.S. Data Privacy Framework zertifiziert.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>11.3 Alle Dienstleister wurden sorgfältig ausgewählt und sind vertraglich zur Einhaltung der DSGVO verpflichtet (Auftragsverarbeitungsverträge gemäß Art. 28 DSGVO).</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.1 Einige unserer Dienstleister (Stripe, Supabase, Vercel, Anthropic, Voyage AI) haben ihren Sitz in den USA. Die Datenübermittlung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 DSGVO.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.2 Stripe ist unter dem EU-U.S. Data Privacy Framework zertifiziert. Supabase betreibt unsere Datenbank in der EU (eu-north-1, Stockholm).</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>11.3 Voyage AI verarbeitet ausschließlich anonymisierte Textfragmente (Chunks) aus hochgeladenen Dokumenten zur Erstellung von Embeddings für die Dokumentensuche. Personenbezogene Daten werden vor der Übermittlung entfernt. Für Voyage AI liegt ein Data Processing Agreement (DPA) vor.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>11.4 Alle Dienstleister wurden sorgfältig ausgewählt und sind vertraglich zur Einhaltung der DSGVO verpflichtet (Auftragsverarbeitungsverträge gemäß Art. 28 DSGVO).</p>
             </section>
 
             <section id="aenderungen" style={{ marginBottom: '24px' }}>
@@ -246,7 +248,7 @@ export default function Datenschutz() {
                   <strong>Anbieter:</strong> Gaspar AI Consulting, Martin Gaspar<br />
                   Böblingen, Baden-Württemberg, Deutschland<br />
                   E-Mail: info@argonaut-os.com | Web: argonaut-os.com<br />
-                  <strong>Stand:</strong> Mai 2026
+                  <strong>Stand:</strong> Juni 2026
                 </p>
               </div>
             </section>

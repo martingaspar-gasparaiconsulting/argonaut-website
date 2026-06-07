@@ -13,13 +13,14 @@ const sections = [
   { id: 'nutzungsrechte', label: '§ 7 Nutzungsrechte' },
   { id: 'ki-training', label: '§ 8 KI-Training & Daten' },
   { id: 'fair-use', label: '§ 9 Fair-Use & Kontingente' },
+  { id: 'speicher', label: '§ 9a Speicher-Upgrade' },
   { id: 'haftung', label: '§ 10 Haftungsbeschränkung' },
   { id: 'datenschutz', label: '§ 11 Datenschutz' },
   { id: 'schluss', label: '§ 12 Schlussbestimmungen' },
 ]
 
 const tarife = [
-  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen (frei w├ñhlbar)', kontingent: '5.000 KI-Calls/Monat', highlight: false },
+  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen (frei wählbar)', kontingent: '5.000 KI-Calls/Monat', highlight: false },
   { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 (frei wählbar)', kontingent: '15.000 KI-Calls/Monat', highlight: false },
   { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 (frei wählbar)', kontingent: '35.000 KI-Calls/Monat', highlight: true },
   { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 (frei wählbar)', kontingent: '75.000 KI-Calls/Monat', highlight: false },
@@ -48,7 +49,7 @@ export default function AGB() {
             <h1 style={{ color: '#FFFFFF', fontSize: '42px', fontWeight: '700', marginBottom: '16px', fontFamily: 'Syne, sans-serif' }}>Allgemeine Geschäftsbedingungen</h1>
             <p style={{ color: '#94a3b8', fontSize: '16px', lineHeight: '1.7' }}>
               ARGONAUT OS — Gaspar AI Consulting, Martin Gaspar, Böblingen<br />
-              Stand: Mai 2026 | Es gelten ausschließlich diese AGB
+              Stand: Juni 2026 | Es gelten ausschließlich diese AGB
             </p>
           </div>
         </div>
@@ -90,7 +91,8 @@ export default function AGB() {
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Paket</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Preis/Monat (netto)</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Laufzeit</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Automatisierungen</th><th style={{ padding: '12px 16px', textAlign: 'left' }}>KI-Agenten</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Automatisierungen</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>KI-Agenten</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left' }}>Inkl. Kontingent</th>
                     </tr>
                   </thead>
@@ -103,7 +105,8 @@ export default function AGB() {
                         </td>
                         <td style={{ padding: '12px 16px', color: '#374151' }}>{t.preis} €</td>
                         <td style={{ padding: '12px 16px', color: '#374151', fontSize: '13px' }}>{t.laufzeit}</td>
-                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.automatisierungen}</td><td style={{ padding: '12px 16px', color: '#374151' }}>{t.agenten}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.automatisierungen}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{t.agenten}</td>
                         <td style={{ padding: '12px 16px', color: '#374151' }}>{t.kontingent}</td>
                       </tr>
                     ))}
@@ -118,7 +121,7 @@ export default function AGB() {
             <section id="zahlung" style={{ marginBottom: '48px' }}>
               <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 4 Zahlung & Abrechnung</h2>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.1 Die Zahlung erfolgt monatlich im Voraus per Kreditkarte oder SEPA-Lastschrift über den Zahlungsdienstleister Stripe. Die erste Zahlung ist bei Vertragsschluss fällig.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.2 Overuse-Gebühren gemäß § 9 werden im Folgemonat automatisch eingezogen. Der Kunde erhält vor dem Einzug eine Rechnung per E-Mail.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.2 Overuse-Gebühren gemäß § 9 sowie Speicher-Upgrade-Gebühren gemäß § 9a werden im Folgemonat automatisch eingezogen. Der Kunde erhält vor dem Einzug eine Rechnung per E-Mail.</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>4.3 Bei Zahlungsverzug von mehr als 14 Tagen ist der Anbieter berechtigt, den Zugang zur Plattform zu sperren. Die Zahlungsverpflichtung bleibt davon unberührt.</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>4.4 Rechnungen werden ausschließlich in elektronischer Form per E-Mail zugestellt.</p>
             </section>
@@ -161,7 +164,7 @@ export default function AGB() {
                 <p style={{ color: '#374151', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>Jedes Paket enthält ein monatliches KI-Call-Kontingent. Der aktuelle Verbrauch ist jederzeit im persönlichen Dashboard einsehbar. Bei Annäherung an das Kontingent erhält der Kunde automatische Warnmeldungen.</p>
               </div>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9.1 Im jeweiligen Paket ist ein monatliches KI-Nutzungskontingent enthalten (siehe § 3). Ein KI-Call bezeichnet eine einzelne Anfrage an das KI-System im Rahmen eines Workflows oder Agenten.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9.2 Bei Überschreitung des inkludierten Kontingents gelten folgende Overuse-Staffeln (netto, zzgl. 19 % MwSt.):</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9.2 Bei Überschreitung des inkludierten Kontingents gelten folgende Overuse-Pauschalen (netto, zzgl. 19 % MwSt.):</p>
               <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
@@ -172,10 +175,9 @@ export default function AGB() {
                   </thead>
                   <tbody>
                     {[
-                      ['bis +25.000 KI-Calls', '99 €'],
-                      ['bis +50.000 KI-Calls', '179 €'],
-                      ['bis +100.000 KI-Calls', '299 €'],
-                      ['über +100.000 KI-Calls', 'Individuell — Kontakt: info@argonaut-os.com'],
+                      ['bis +25.000 KI-Calls', '299 €'],
+                      ['bis +50.000 KI-Calls', '599 €'],
+                      ['über +50.000 KI-Calls', 'Individuell — Kontakt: info@argonaut-os.com'],
                     ].map(([stufe, preis], i) => (
                       <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#FFFFFF', borderBottom: '1px solid #e2e8f0' }}>
                         <td style={{ padding: '12px 16px', color: '#374151' }}>{stufe}</td>
@@ -188,7 +190,44 @@ export default function AGB() {
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.3 Der Kunde wird per E-Mail informiert, sobald 80 % des monatlichen Kontingents verbraucht sind. Bei 100 % erfolgt eine weitere Benachrichtigung mit Hinweis auf anfallende Overuse-Kosten.</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.4 Overuse-Beträge werden im Folgemonat automatisch per Stripe eingezogen. Der Kunde erhält vorab eine Rechnung per E-Mail.</p>
               <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9.5 Nicht verbrauchte Kontingente verfallen monatlich und können nicht übertragen werden.</p>
-              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>9.6 Bei dauerhafter erheblicher Überschreitung (mehr als 3 aufeinanderfolgende Monate über 100.000 Calls) ist der Anbieter berechtigt, ein individuelles Angebot zu unterbreiten oder den Vertrag mit 30 Tagen Frist zu kündigen.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>9.6 Bei dauerhafter erheblicher Überschreitung (mehr als 3 aufeinanderfolgende Monate über 50.000 Calls) ist der Anbieter berechtigt, ein individuelles Angebot zu unterbreiten oder den Vertrag mit 30 Tagen Frist zu kündigen.</p>
+            </section>
+
+            <section id="speicher" style={{ marginBottom: '48px' }}>
+              <h2 style={{ color: '#0A1628', fontSize: '22px', fontWeight: '700', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #C9A84C' }}>§ 9a Speicher-Upgrade & Zusatz-Kontingente</h2>
+              <div style={{ background: '#fef9ee', border: '1px solid #C9A84C', borderRadius: '8px', padding: '16px 20px', marginBottom: '24px' }}>
+                <p style={{ color: '#0A1628', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Flexibler Speicher für dokumentenintensive Betriebe</p>
+                <p style={{ color: '#374151', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>Kunden mit hohem Dokumentenaufkommen (z. B. Kanzleien, Arztpraxen, Logistik) können ihren verfügbaren Speicher flexibel erweitern. Alle Speicher-Add-ons gelten pro Kalendermonat und verlängern sich automatisch.</p>
+              </div>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '16px' }}>9a.1 Jedes Paket enthält ein inkludiertes Speicherkontingent von 5 GB pro Monat für hochgeladene Dokumente und Dateien. Bei Bedarf können folgende Speicher-Upgrades gebucht werden (netto, zzgl. 19 % MwSt.):</p>
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: '#0A1628', color: '#FFFFFF' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Speicher-Paket</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Zusätzlicher Speicher</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left' }}>Preis/Monat (netto)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ['Starter', '+10 GB', '9 €'],
+                      ['Pro', '+50 GB', '29 €'],
+                      ['Business', '+100 GB', '49 €'],
+                      ['Enterprise', '+500 GB', '149 €'],
+                    ].map(([paket, speicher, preis], i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#FFFFFF', borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: '600', color: '#0A1628' }}>{paket}</td>
+                        <td style={{ padding: '12px 16px', color: '#374151' }}>{speicher}</td>
+                        <td style={{ padding: '12px 16px', color: '#0A1628', fontWeight: '600' }}>{preis}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9a.2 Speicher-Upgrades können jederzeit über das Dashboard oder per E-Mail an info@argonaut-os.com gebucht werden. Die Aktivierung erfolgt werktags innerhalb von 24 Stunden.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8', marginBottom: '12px' }}>9a.3 Die Kündigung eines Speicher-Upgrades ist monatlich zum Monatsende möglich. Hochgeladene Dateien, die das Grundkontingent überschreiten, müssen vor Kündigung des Add-ons gelöscht oder exportiert werden.</p>
+              <p style={{ color: '#374151', fontSize: '15px', lineHeight: '1.8' }}>9a.4 Bei dauerhafter Überschreitung des gebuchten Speicherkontingents ist der Anbieter berechtigt, neue Uploads vorübergehend zu sperren und den Kunden per E-Mail zu informieren.</p>
             </section>
 
             <section id="haftung" style={{ marginBottom: '48px' }}>
@@ -218,7 +257,7 @@ export default function AGB() {
                   <strong>Anbieter:</strong> Gaspar AI Consulting, Martin Gaspar<br />
                   Tübinger Straße 50, 71032 Böblingen, Baden-Württemberg, Deutschland<br />
                   E-Mail: info@argonaut-os.com | Web: argonaut-os.com<br />
-                  <strong>Stand:</strong> Mai 2026
+                  <strong>Stand:</strong> Juni 2026
                 </p>
               </div>
             </section>
