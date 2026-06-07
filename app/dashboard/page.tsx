@@ -135,7 +135,8 @@ export default async function DashboardPage() {
             </div>
             <nav style={{ display: 'flex', gap: '4px' }}>
               <a href="/dashboard" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>Übersicht</a>
-              <a href="/dashboard/documents" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#C9A84C', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}>📂 Dokumente</a>
+              <a href="/dashboard/documents" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>📄 Dokumente</a>
+              <a href="/dashboard/automatisierungen" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#C9A84C', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}>⚡ Automatisierungen</a>
             </nav>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -209,6 +210,35 @@ export default async function DashboardPage() {
         {/* KI-Call Fortschrittsbalken */}
         <section style={{ marginBottom: '32px' }}>
           <KiCallBar used={kiUsed} limit={kiLimit} />
+        </section>
+
+        {/* Automatisierungen Banner */}
+        <section style={{ marginBottom: '32px' }}>
+          <a href="/dashboard/automatisierungen" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              borderRadius: '14px',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px',
+              cursor: 'pointer',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '28px' }}>⚡</span>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Automatisierungs-Bibliothek</p>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>128 Workflows in 15 Clustern — sehen Sie wie viele Stunden Sie sparen.</p>
+                </div>
+              </div>
+              <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
+                Bibliothek öffnen →
+              </div>
+            </div>
+          </a>
         </section>
 
         {/* Stripe Kundenportal */}
