@@ -4,11 +4,28 @@ import { useState } from 'react'
 
 interface Props {
   stundenProWoche: { klein: number; mittel: number; gross: number }
+  selectedPaket?: string
 }
 
 const NK = 1.2
 
-export default function ROIRechner({ stundenProWoche }: Props) {
+const PAKET_PREISE: Record<string, number> = {
+  SOLO: 499 * 12,
+  START: 1500 * 12,
+  PRO: 3000 * 12,
+  BUSINESS: 6000 * 12,
+  ENTERPRISE: 9000 * 12,
+}
+
+const PAKET_MULTIPLIKATOR: Record<string, number> = {
+  SOLO: 0.6,
+  START: 1.0,
+  PRO: 1.8,
+  BUSINESS: 2.6,
+  ENTERPRISE: 3.5,
+}
+
+export default function ROIRechner({ stundenProWoche, selectedPaket = 'PRO' }: Props) {
   const [groesse, setGroesse] = useState<'klein' | 'mittel' | 'gross'>('mittel')
   const [preset, setPreset] = useState<number>(21.6)
   const [indivMA, setIndivMA] = useState<string>('')
@@ -29,9 +46,11 @@ export default function ROIRechner({ stundenProWoche }: Props) {
 
   const isIndiv = indivMA !== '' || indivStunde !== '' || indivMonat !== ''
 
+  const basisStunden = stundenProWoche[groesse]
+  const multiplikator = PAKET_MULTIPLIKATOR[selectedPaket] ?? 1.0
   const stunden = isIndiv && indivMA
     ? Math.round(parseInt(indivMA) * stundenProWoche.mittel / 7)
-    : stundenProWoche[groesse]
+    : Math.round(basisStunden * multiplikator)
 
   let lohnMitNK = preset
   if (isIndiv) {
@@ -40,9 +59,9 @@ export default function ROIRechner({ stundenProWoche }: Props) {
   }
 
   const jahresersparnis = Math.round(stunden * 52 * lohnMitNK)
-  const argonautKosten = 18000
+  const argonautKosten = PAKET_PREISE[selectedPaket] ?? 36000
   const roi = Math.round((jahresersparnis / argonautKosten) * 10) / 10
-  const rating = roi >= 3 ? 'Ausgezeichnet' : roi >= 2 ? 'Sehr gut' : roi >= 1.5 ? 'Gut' : 'Positiv'
+  const rating = roi >= 4 ? 'Ausgezeichnet' : roi >= 2.5 ? 'Sehr gut' : roi >= 1.5 ? 'Gut' : roi >= 1 ? 'Positiv' : 'Grenzwertig'
 
   const handlePreset = (val: number) => {
     setPreset(val)
@@ -61,12 +80,13 @@ export default function ROIRechner({ stundenProWoche }: Props) {
       <div className="mb-6">
         <div className="text-[#C9A84C] text-xs tracking-widest uppercase font-medium mb-2">ROI-Rechner</div>
         <h3 className="text-[#0A1628] text-2xl font-bold">Was sparen Sie konkret?</h3>
-        <p className="text-gray-500 text-sm mt-1">Wählen Sie Ihre Kategorie oder geben Sie eigene Werte ein — inkl. Lohnnebenkosten.</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Berechnung für Paket <strong>{selectedPaket}</strong> ({(argonautKosten / 12).toLocaleString('de-DE')} €/Monat netto) — wählen Sie Ihre Kategorie oder geben Sie eigene Werte ein.
+        </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="space-y-5">
-
           <div>
             <label className="text-[#0A1628] text-sm font-medium mb-3 block">Anzahl Mitarbeiter</label>
             <div className="flex gap-3">
@@ -133,11 +153,10 @@ export default function ROIRechner({ stundenProWoche }: Props) {
             </div>
             <div className="text-gray-300 text-xs mt-2 text-center">Arbeitgeberanteile (~20%) werden automatisch addiert.</div>
           </div>
-
         </div>
 
         <div className="bg-white rounded-xl p-6 border border-gray-100">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-4">Ihre Ersparnis</div>
+          <div className="text-xs text-gray-400 uppercase tracking-wider mb-4">Ihre Ersparnis — Paket {selectedPaket}</div>
           <div className="space-y-3">
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
               <span className="text-gray-500 text-sm">Stunden gespart / Woche</span>
@@ -156,8 +175,8 @@ export default function ROIRechner({ stundenProWoche }: Props) {
               <span className="text-[#C9A84C] font-bold">{jahresersparnis.toLocaleString('de-DE')} €</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-500 text-sm">ARGONAUT / Jahr</span>
-              <span className="text-gray-400 text-sm">ab 18.000 €</span>
+              <span className="text-gray-500 text-sm">ARGONAUT {selectedPaket} / Jahr</span>
+              <span className="text-gray-400 text-sm">{argonautKosten.toLocaleString('de-DE')} € netto</span>
             </div>
           </div>
           <div className="mt-4 bg-[#0A1628] rounded-xl p-4 text-center">
