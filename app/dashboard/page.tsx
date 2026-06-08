@@ -6,6 +6,7 @@ import LogoutButton from './LogoutButton'
 import AgentCard from './AgentCard'
 import DashboardChat from './DashboardChat'
 import OnboardingProgress from './OnboardingProgress'
+import OverusePopup from '@/components/OverusePopup'
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
 type Status = 'active' | 'inactive' | 'trial'
@@ -148,6 +149,7 @@ export default async function DashboardPage() {
 
       <>
       <UpgradePopup />
+      <OverusePopup kiUsed={kiUsed} kiLimit={kiLimit} currentPaket={rawPaket} userEmail={user.email || ''} />
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 80px' }}>
 
         <section style={{ marginBottom: '40px' }}>
