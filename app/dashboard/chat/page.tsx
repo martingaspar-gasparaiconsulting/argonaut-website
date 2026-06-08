@@ -8,6 +8,70 @@ type Nachricht = {
   quellen?: string[];
 };
 
+// Schlanker Markdown-Renderer: wandelt ##, **, Listen und Absaetze in gestyltes HTML.
+function renderMarkdown(text: string): string {
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const lines = text.split('\n');
+  let html = '';
+  let inUl = false;
+  let inOl = false;
+
+  const closeLists = () => {
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+  };
+
+  const inline = (s: string) => {
+    let r = esc(s);
+    // **fett**
+    r = r.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#C9A84C;font-weight:700">$1</strong>');
+    // *kursiv*
+    r = r.replace(/(^|[^*])\*([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+    return r;
+  };
+
+  for (let raw of lines) {
+    const line = raw.trimEnd();
+
+    if (line.trim() === '') { closeLists(); continue; }
+
+    // Ueberschriften ### / ## / #
+    const h = line.match(/^(#{1,3})\s+(.*)$/);
+    if (h) {
+      closeLists();
+      const level = h[1].length;
+      const size = level === 1 ? 20 : level === 2 ? 17 : 15;
+      const mt = level === 1 ? 18 : 14;
+      html += `<div style="font-family:Syne,sans-serif;font-weight:700;color:#C9A84C;font-size:${size}px;margin:${mt}px 0 8px">${inline(h[2])}</div>`;
+      continue;
+    }
+
+    // Nummerierte Liste: "1. ..."
+    const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (ol) {
+      if (!inOl) { closeLists(); html += '<ol style="margin:6px 0 6px 20px;padding:0">'; inOl = true; }
+      html += `<li style="margin:4px 0">${inline(ol[1])}</li>`;
+      continue;
+    }
+
+    // Aufzaehlung: "- ..." oder "* ..." oder Emoji-Bullet wie "✅ ..."
+    const ul = line.match(/^\s*[-*•]\s+(.*)$/);
+    if (ul) {
+      if (!inUl) { closeLists(); html += '<ul style="margin:6px 0 6px 20px;padding:0;list-style:none">'; inUl = true; }
+      html += `<li style="margin:4px 0;position:relative;padding-left:16px"><span style="position:absolute;left:0;color:#00e5ff">›</span>${inline(ul[1])}</li>`;
+      continue;
+    }
+
+    // Normaler Absatz
+    closeLists();
+    html += `<div style="margin:6px 0">${inline(line)}</div>`;
+  }
+  closeLists();
+  return html;
+}
+
 export default function MitarbeiterChatSeite() {
   const [nachrichten, setNachrichten] = useState<Nachricht[]>([]);
   const [eingabe, setEingabe] = useState('');
@@ -76,12 +140,13 @@ export default function MitarbeiterChatSeite() {
               fontFamily: 'DM Sans, sans-serif',
               fontSize: 15,
               lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
               background: m.rolle === 'user' ? '#C9A84C' : 'rgba(255,255,255,0.06)',
               color: m.rolle === 'user' ? '#0A1628' : '#fff',
               border: m.rolle === 'user' ? 'none' : '1px solid rgba(0,229,255,0.2)',
             }}>
-              {m.text}
+              {m.rolle === 'assistent'
+                ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }} />
+                : <span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span>}
               {m.quellen && m.quellen.length > 0 && (
                 <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,229,255,0.2)', fontSize: 12, color: '#00e5ff' }}>
                   Quellen: {m.quellen.join(', ')}
