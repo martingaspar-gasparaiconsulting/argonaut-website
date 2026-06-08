@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Lokale Diagnose-/Backup-Dateien (nicht committen)
+*.backup
+check-chunks.js
+debug-key.js
+fix_agb.js

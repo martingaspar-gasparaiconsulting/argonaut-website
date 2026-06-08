@@ -110,7 +110,7 @@ export default async function DashboardPage() {
 
   const kiLimit = usageData?.ki_calls_limit ?? KI_CALL_LIMITS[rawPaket] ?? 15000
   const onboardingCompleted = profile?.onboarding_completed ?? false
-  const onboardingData = profile?.onboarding_data ? JSON.parse(profile.onboarding_data as string) : null
+  const onboardingData = profile?.onboarding_data ? (typeof profile.onboarding_data === 'string' ? JSON.parse(profile.onboarding_data) : profile.onboarding_data) : null
   const hasApiKeys = onboardingData?.toolEntries?.some((e: {apiKey?: string}) => e.apiKey && e.apiKey.length > 0) ?? false
   const kiUsed = usageData?.ki_calls_used ?? 0
 
