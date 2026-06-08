@@ -147,9 +147,8 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
               <div className="text-white/40 text-xs mt-1">Arbeitszeit gespart / Jahr</div>
             </div>
             <div>
-              <div className="text-[#C9A84C] text-2xl font-bold">{agentenVerfuegbar.length} von {agentenAll.length}</div>
-              <div className="text-white/40 text-xs mt-1">Agenten im {paket.label}-Paket</div>
-            </div>
+            <div className="text-[#C9A84C] text-2xl font-bold">{paket.agenten} Agenten</div>
+              <div className="text-white/40 text-xs mt-1">im {paket.label}-Paket verfügbar</div></div>
           </div>
         </div>
       </section>
