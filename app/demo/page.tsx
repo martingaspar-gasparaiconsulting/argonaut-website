@@ -186,7 +186,7 @@ export default function DemoPage() {
               Automatisierungs-Bibliothek
             </h2>
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>
-              {loading ? 'Lade...' : `${verfuegbarCount} von 128 Workflows im ${paket.label}-Paket verfügbar`}
+              {loading ? 'Lade...' : `${verfuegbarCount} von 2.100+ Workflows im ${paket.label}-Paket verfügbar`}
             </p>
           </div>
           <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '12px', padding: '12px 20px', textAlign: 'center' }}>

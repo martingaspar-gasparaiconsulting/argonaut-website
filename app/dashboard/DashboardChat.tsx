@@ -19,8 +19,8 @@ const SYSTEM_PROMPT = `Du bist der ARGONAUT KI-Assistent \u2014 der pers\u00f6nl
 
 \u2550\u2550\u2550 WAS ARGONAUT OS IST \u2550\u2550\u2550
 ARGONAUT OS ist ein KI-Betriebssystem f\u00fcr den deutschen Mittelstand.
-Es automatisiert Gesch\u00e4ftsprozesse mit 24 KI-Agenten \u00fcber 110 Branchen.
-1.229 vorgefertigte Workflow-Shells. Keine Agentur. Kein Berater. Reine Automatisierung.
+Es automatisiert Gesch\u00e4ftsprozesse mit 24 KI-Agenten \u00fcber 198 Branchen.
+2.100 vorgefertigte Workflow-Shells. Keine Agentur. Kein Berater. Reine Automatisierung.
 
 \u2550\u2550\u2550 PAKETE & PREISE (netto zzgl. 19% MwSt.) \u2550\u2550\u2550
 SOLO Beta: 499\u20ac/Mo | 3 Monate fix | dann AUTO-Upgrade auf START | 2 Agenten | 5.000 KI-Calls | 25 Automatisierungen
