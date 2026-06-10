@@ -1083,6 +1083,7 @@ export function getAllBranchen(): Branche[] {
   return branchen
 }
 
+  },
 
   {
     name: 'Bäckereien',
