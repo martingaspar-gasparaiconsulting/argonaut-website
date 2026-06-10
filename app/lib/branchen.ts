@@ -6,6 +6,7 @@ export interface Branche {
   schmerzen: string[]
   ergebnisse: string[]
   agenten: string[]
+  pflichtagenten?: string[]
   stundenProWoche: { klein: number; mittel: number; gross: number }
 }
 
@@ -20,7 +21,8 @@ const branchen: Branche[] = [
     beschreibung: 'KI-Automatisierung für Arztpraxen: Terminmanagement, Patientenkommunikation und Dokumentation ohne Mehraufwand.',
     schmerzen: ['Überfüllte Wartezimmer & Terminchaos', 'Manuelle Patientenakten & Dokumentation', 'Überlastetes Praxispersonal', 'Ineffiziente Rezeptbearbeitung'],
     ergebnisse: ['40% weniger Telefonanfragen', 'Automatische Terminerinnerungen', 'Digitale Patientenakte in Echtzeit', 'Schnellere Rezeptbearbeitung'],
-    agenten: ['Der Empfänger', 'Der Planer', 'Der Schreiber', 'Der Assistent'],
+    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Schreiber', 'Der Wächter', 'Der Assistent', 'Der Personalchef', 'Der Techniker', 'Der Schmied', 'Der Analyst', 'Der Regisseur', 'Der Forscher', 'Der Moderator', 'Der Verkäufer', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Einkäufer', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
@@ -30,7 +32,8 @@ const branchen: Branche[] = [
     beschreibung: 'Automatisierte Terminplanung, Recall-Management und Patientenkommunikation für Zahnarztpraxen.',
     schmerzen: ['Manuelle Recall-Listen', 'Hohe No-Show-Quote', 'Aufwendige Abrechnung', 'Zeitintensive Patientenkorrespondenz'],
     ergebnisse: ['Automatischer Recall per SMS/E-Mail', '30% weniger No-Shows', 'Digitale Abrechnungsvorbereitung', 'Sofortige Patientenantworten'],
-    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Assistent'],
+    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Schreiber', 'Der Wächter', 'Der Assistent', 'Der Personalchef', 'Der Schmied', 'Der Analyst', 'Der Regisseur', 'Der Techniker', 'Der Trainer', 'Der Sicherheitschef', 'Der Moderator', 'Der Verkäufer', 'Der Forscher', 'Der Netzwerker', 'Der Einkäufer', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter'],
     stundenProWoche: { klein: 7, mittel: 12, gross: 20 },
   },
   {
@@ -40,7 +43,8 @@ const branchen: Branche[] = [
     beschreibung: 'Terminverwaltung, Übungsplan-Erstellung und Patientenbegleitung für Physiotherapiepraxen.',
     schmerzen: ['Aufwendige Terminkoordination', 'Manuelle Übungsplan-Erstellung', 'Fehlende Therapiedokumentation', 'Hoher Verwaltungsaufwand'],
     ergebnisse: ['Automatische Terminbuchung online', 'KI-generierte Übungspläne', 'Lückenlose Therapiedokumentation', '50% weniger Verwaltungszeit'],
-    agenten: ['Der Planer', 'Der Schreiber', 'Der Assistent', 'Der Empfänger'],
+    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Schreiber', 'Der Wächter', 'Der Assistent', 'Der Personalchef', 'Der Schmied', 'Der Analyst', 'Der Moderator', 'Der Trainer', 'Der Techniker', 'Der Regisseur', 'Der Verkäufer', 'Der Forscher', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Einkäufer', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Planer'],
     stundenProWoche: { klein: 6, mittel: 10, gross: 16 },
   },
   {
@@ -50,7 +54,8 @@ const branchen: Branche[] = [
     beschreibung: 'Bestellmanagement, Kundenkommunikation und Lageroptimierung für moderne Apotheken.',
     schmerzen: ['Komplexe Bestellprozesse', 'Manuelle Lagerführung', 'Aufwendige Kundenberatung', 'Hoher Dokumentationsaufwand'],
     ergebnisse: ['Automatische Nachbestellung', 'Echtzeit-Lagerübersicht', 'KI-Beratungsunterstützung', 'Digitale Dokumentation'],
-    agenten: ['Der Einkäufer', 'Der Analyst', 'Der Empfänger', 'Der Buchhalter'],
+    agenten: ['Der Buchhalter', 'Der Wächter', 'Der Empfänger', 'Der Einkäufer', 'Der Schreiber', 'Der Planer', 'Der Assistent', 'Der Analyst', 'Der Techniker', 'Der Schmied', 'Der Sicherheitschef', 'Der Trainer', 'Der Moderator', 'Der Verkäufer', 'Der Forscher', 'Der Personalchef', 'Der Netzwerker', 'Der Übersetzer', 'Der Regisseur', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Buchhalter', 'Der Wächter', 'Der Einkäufer'],
     stundenProWoche: { klein: 8, mittel: 15, gross: 24 },
   },
   {
@@ -60,7 +65,8 @@ const branchen: Branche[] = [
     beschreibung: 'Terminmanagement, Bestellabwicklung und Kundenbindung für Optikerbetriebe.',
     schmerzen: ['Manuelle Terminverwaltung', 'Aufwendige Bestellprozesse', 'Fehlende Kundenbindung', 'Papierbasierte Kundendaten'],
     ergebnisse: ['Online-Terminbuchung 24/7', 'Automatische Bestellverfolgung', 'Personalisierte Kundenkommunikation', 'Digitale Kundenkartei'],
-    agenten: ['Der Planer', 'Der Einkäufer', 'Der Netzwerker', 'Der Assistent'],
+    agenten: ['Der Empfänger', 'Der Buchhalter', 'Der Einkäufer', 'Der Wächter', 'Der Planer', 'Der Verkäufer', 'Der Schreiber', 'Der Assistent', 'Der Analyst', 'Der Techniker', 'Der Personalchef', 'Der Moderator', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Buchhalter', 'Der Einkäufer'],
     stundenProWoche: { klein: 5, mittel: 9, gross: 14 },
   },
   {
@@ -110,7 +116,8 @@ const branchen: Branche[] = [
     beschreibung: 'Angebotserstellung, Serviceverwaltung und Compliance-Dokumentation für Medizintechnikunternehmen.',
     schmerzen: ['Komplexe Angebotsprozesse', 'Aufwendige Servicedokumentation', 'Strenge Compliance-Anforderungen', 'Manuelle Wartungsplanung'],
     ergebnisse: ['Automatisierte Angebotserstellung', 'Lückenlose Servicedokumentation', 'Compliance-konforme Prozesse', 'Proaktive Wartungsplanung'],
-    agenten: ['Der Verkäufer', 'Der Jurist', 'Der Schreiber', 'Der Techniker'],
+    agenten: ['Der Techniker', 'Der Wächter', 'Der Forscher', 'Der Buchhalter', 'Der Analyst', 'Der Einkäufer', 'Der Schreiber', 'Der Schmied', 'Der Jurist', 'Der Planer', 'Der Assistent', 'Der Sicherheitschef', 'Der Empfänger', 'Der Personalchef', 'Der Regisseur', 'Der Trainer', 'Der Moderator', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Integrator', 'Der Verkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Wächter', 'Der Forscher'],
     stundenProWoche: { klein: 10, mittel: 18, gross: 28 },
   },
   {
@@ -163,7 +170,8 @@ const branchen: Branche[] = [
     beschreibung: 'Mandatsverwaltung, Vertragsanalyse und Fristenkontrolle für Anwaltskanzleien.',
     schmerzen: ['Zeitaufwendige Vertragsanalyse', 'Komplexe Fristenverwaltung', 'Hoher Rechercheaufwand', 'Aufwendige Mandantenkommunikation'],
     ergebnisse: ['KI-gestützte Vertragsanalyse', 'Automatische Fristenüberwachung', 'Schnelle Rechtsprechungsrecherche', 'Strukturierte Mandantenkommunikation'],
-    agenten: ['Der Jurist', 'Der Forscher', 'Der Schreiber', 'Der Empfänger'],
+    agenten: ['Der Jurist', 'Der Wächter', 'Der Schreiber', 'Der Buchhalter', 'Der Analyst', 'Der Empfänger', 'Der Planer', 'Der Assistent', 'Der Forscher', 'Der Techniker', 'Der Sicherheitschef', 'Der Personalchef', 'Der Moderator', 'Der Regisseur', 'Der Trainer', 'Der Netzwerker', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Integrator', 'Der Einkäufer', 'Der Verkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Jurist', 'Der Wächter', 'Der Schreiber'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -173,7 +181,8 @@ const branchen: Branche[] = [
     beschreibung: 'Urkundenverwaltung, Terminkoordination und Mandantenkommunikation für Notariate.',
     schmerzen: ['Aufwendige Urkundenvorbereitung', 'Komplexe Terminkoordination', 'Hoher Dokumentationsaufwand', 'Zeitintensive Mandantenbetreuung'],
     ergebnisse: ['Automatische Urkundenvorbereitung', 'Optimierte Terminplanung', 'Digitale Dokumentenverwaltung', 'Effiziente Mandantenbetreuung'],
-    agenten: ['Der Jurist', 'Der Planer', 'Der Schreiber', 'Der Empfänger'],
+    agenten: ['Der Jurist', 'Der Wächter', 'Der Schreiber', 'Der Buchhalter', 'Der Empfänger', 'Der Planer', 'Der Analyst', 'Der Assistent', 'Der Forscher', 'Der Techniker', 'Der Sicherheitschef', 'Der Personalchef', 'Der Moderator', 'Der Regisseur', 'Der Trainer', 'Der Netzwerker', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Integrator', 'Der Einkäufer', 'Der Verkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Jurist', 'Der Wächter', 'Der Schreiber'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 26 },
   },
   {
@@ -193,7 +202,8 @@ const branchen: Branche[] = [
     beschreibung: 'Angebotserstellung, Schadensabwicklung und Kundenbindung für Versicherungsmakler.',
     schmerzen: ['Aufwendige Angebotserstellung', 'Manuelle Schadensbearbeitung', 'Hoher Verwaltungsaufwand', 'Fehlende Kundenbindung'],
     ergebnisse: ['Automatisierte Angebotserstellung', 'Schnelle Schadensabwicklung', '50% weniger Verwaltungsaufwand', 'Systematische Kundenbindung'],
-    agenten: ['Der Verkäufer', 'Der Analyst', 'Der Schreiber', 'Der Netzwerker'],
+    agenten: ['Der Verkäufer', 'Der Buchhalter', 'Der Wächter', 'Der Empfänger', 'Der Schreiber', 'Der Analyst', 'Der Planer', 'Der Jurist', 'Der Assistent', 'Der Netzwerker', 'Der Forscher', 'Der Moderator', 'Der Regisseur', 'Der Trainer', 'Der Personalchef', 'Der Techniker', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Integrator', 'Der Einkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Verkäufer', 'Der Buchhalter', 'Der Wächter'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -203,7 +213,8 @@ const branchen: Branche[] = [
     beschreibung: 'Kundenservice, Compliance und interne Prozessautomatisierung für Banken und Sparkassen.',
     schmerzen: ['Hoher manueller Kundenservice-Aufwand', 'Komplexe Compliance-Prozesse', 'Langsame interne Abläufe', 'Papierbasierte Prozesse'],
     ergebnisse: ['KI-Kundenservice 24/7', 'Automatische Compliance-Checks', 'Schnellere Genehmigungsprozesse', 'Vollständig digitale Prozesse'],
-    agenten: ['Der Empfänger', 'Der Jurist', 'Der Analyst', 'Der Integrator'],
+    agenten: ['Der Buchhalter', 'Der Wächter', 'Der Analyst', 'Der Jurist', 'Der Sicherheitschef', 'Der Empfänger', 'Der Schreiber', 'Der Planer', 'Der Verkäufer', 'Der Assistent', 'Der Netzwerker', 'Der Forscher', 'Der Moderator', 'Der Personalchef', 'Der Techniker', 'Der Regisseur', 'Der Trainer', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Integrator', 'Der Einkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Buchhalter', 'Der Wächter', 'Der Analyst'],
     stundenProWoche: { klein: 20, mittel: 35, gross: 55 },
   },
   {
@@ -246,7 +257,8 @@ const branchen: Branche[] = [
     beschreibung: 'Notfallmanagement, Wartungsplanung und Angebotserstellung für SHK-Betriebe.',
     schmerzen: ['Chaotisches Notfallmanagement', 'Manuelle Wartungsplanung', 'Aufwendige Angebotserstellung', 'Materialengpässe'],
     ergebnisse: ['Strukturiertes Notfallsystem', 'Automatische Wartungserinnerungen', 'Schnelle digitale Angebote', 'Optimierte Materialdisposition'],
-    agenten: ['Der Planer', 'Der Verkäufer', 'Der Einkäufer', 'Der Techniker'],
+    agenten: ['Der Techniker', 'Der Planer', 'Der Buchhalter', 'Der Einkäufer', 'Der Wächter', 'Der Schmied', 'Der Schreiber', 'Der Verkäufer', 'Der Assistent', 'Der Personalchef', 'Der Analyst', 'Der Empfänger', 'Der Trainer', 'Der Regisseur', 'Der Forscher', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Planer', 'Der Buchhalter'],
     stundenProWoche: { klein: 8, mittel: 13, gross: 21 },
   },
   {
@@ -276,7 +288,8 @@ const branchen: Branche[] = [
     beschreibung: 'Projektsteuerung, Nachunternehmerverwaltung und Dokumentation für Bauunternehmen.',
     schmerzen: ['Komplexe Projektsteuerung', 'Schwierige Nachunternehmerverwaltung', 'Lückenhafte Baudokumentation', 'Kostenüberschreitungen'],
     ergebnisse: ['KI-Projektsteuerung in Echtzeit', 'Digitale Nachunternehmerverwaltung', 'Vollständige Baudokumentation', 'Frühzeitige Kostenwarnungen'],
-    agenten: ['Der Planer', 'Der Analyst', 'Der Schreiber', 'Der Einkäufer'],
+    agenten: ['Der Buchhalter', 'Der Planer', 'Der Wächter', 'Der Einkäufer', 'Der Schreiber', 'Der Verkäufer', 'Der Personalchef', 'Der Schmied', 'Der Analyst', 'Der Techniker', 'Der Empfänger', 'Der Assistent', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Buchhalter', 'Der Planer', 'Der Einkäufer'],
     stundenProWoche: { klein: 15, mittel: 25, gross: 40 },
   },
   {
@@ -296,7 +309,8 @@ const branchen: Branche[] = [
     beschreibung: 'Technische Dokumentation, Projektmanagement und Normenrecherche für Ingenieurbüros.',
     schmerzen: ['Aufwendige technische Dokumentation', 'Zeitintensive Normenrecherche', 'Komplexe Projektkoordination', 'Aufwendige Berichterstellung'],
     ergebnisse: ['Automatisierte technische Berichte', 'KI-Normenrecherche', 'Digitale Projektkoordination', 'Schnelle Berichterstellung'],
-    agenten: ['Der Schreiber', 'Der Forscher', 'Der Analyst', 'Der Planer'],
+    agenten: ['Der Techniker', 'Der Planer', 'Der Analyst', 'Der Buchhalter', 'Der Wächter', 'Der Schmied', 'Der Schreiber', 'Der Forscher', 'Der Assistent', 'Der Empfänger', 'Der Verkäufer', 'Der Personalchef', 'Der Regisseur', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Einkäufer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Planer', 'Der Analyst'],
     stundenProWoche: { klein: 10, mittel: 18, gross: 28 },
   },
   {
@@ -329,7 +343,8 @@ const branchen: Branche[] = [
     beschreibung: 'Angebotserstellung, technische Dokumentation und Servicemanagement für Maschinenbauunternehmen.',
     schmerzen: ['Komplexe Angebotskalkulation', 'Aufwendige technische Dokumentation', 'Manuelle Serviceverwaltung', 'Lange Lieferzeiten'],
     ergebnisse: ['KI-gestützte Angebotskalkulation', 'Automatisierte technische Dokumentation', 'Digitales Servicemanagement', 'Optimierte Lieferkette'],
-    agenten: ['Der Verkäufer', 'Der Schreiber', 'Der Techniker', 'Der Einkäufer'],
+    agenten: ['Der Techniker', 'Der Einkäufer', 'Der Buchhalter', 'Der Planer', 'Der Wächter', 'Der Schmied', 'Der Analyst', 'Der Schreiber', 'Der Verkäufer', 'Der Assistent', 'Der Empfänger', 'Der Personalchef', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Einkäufer', 'Der Buchhalter'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -349,7 +364,8 @@ const branchen: Branche[] = [
     beschreibung: 'HACCP-Dokumentation, Lieferantenmanagement und Qualitätssicherung für Lebensmittelproduzenten.',
     schmerzen: ['Aufwendige HACCP-Dokumentation', 'Komplexes Lieferantenmanagement', 'Strenge Hygienevorschriften', 'Hoher Rückverfolgungsaufwand'],
     ergebnisse: ['Automatische HACCP-Protokolle', 'Digitales Lieferantenmanagement', 'KI-Hygieneüberwachung', 'Lückenlose Rückverfolgung'],
-    agenten: ['Der Jurist', 'Der Einkäufer', 'Der Analyst', 'Der Schreiber'],
+    agenten: ['Der Wächter', 'Der Einkäufer', 'Der Buchhalter', 'Der Planer', 'Der Techniker', 'Der Personalchef', 'Der Analyst', 'Der Schreiber', 'Der Schmied', 'Der Assistent', 'Der Empfänger', 'Der Verkäufer', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Wächter', 'Der Einkäufer', 'Der Buchhalter'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -399,7 +415,8 @@ const branchen: Branche[] = [
     beschreibung: 'Zertifizierungsmanagement, technische Dokumentation und Compliance für Luft- und Raumfahrtunternehmen.',
     schmerzen: ['Extrem strenge Zertifizierungsanforderungen', 'Aufwendige technische Dokumentation', 'Komplexe Compliance-Prozesse', 'Hohe Sicherheitsanforderungen'],
     ergebnisse: ['Strukturiertes Zertifizierungsmanagement', 'Automatisierte technische Dokumentation', 'Lückenlose Compliance-Nachverfolgung', 'Digitale Sicherheitsprotokolle'],
-    agenten: ['Der Jurist', 'Der Schreiber', 'Der Analyst', 'Der Sicherheitschef'],
+    agenten: ['Der Techniker', 'Der Wächter', 'Der Planer', 'Der Analyst', 'Der Buchhalter', 'Der Sicherheitschef', 'Der Schmied', 'Der Forscher', 'Der Schreiber', 'Der Assistent', 'Der Einkäufer', 'Der Personalchef', 'Der Regisseur', 'Der Empfänger', 'Der Trainer', 'Der Moderator', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Integrator', 'Der Jurist', 'Der Verkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Wächter', 'Der Sicherheitschef'],
     stundenProWoche: { klein: 20, mittel: 35, gross: 55 },
   },
   {
@@ -429,7 +446,8 @@ const branchen: Branche[] = [
     beschreibung: 'Auftragsmanagement, Druckvorstufe und Kundenkommunikation für Druckbetriebe.',
     schmerzen: ['Aufwendiges Auftragsmanagement', 'Manuelle Druckvorbereitung', 'Fehlerhafte Kundenaufträge', 'Hoher Korrekturaufwand'],
     ergebnisse: ['Digitales Auftragsmanagement', 'KI-gestützte Druckvorstufe', 'Automatische Auftragsprüfung', 'Schnellere Korrekturprozesse'],
-    agenten: ['Der Empfänger', 'Der Planer', 'Der Verkäufer', 'Der Techniker'],
+    agenten: ['Der Einkäufer', 'Der Buchhalter', 'Der Techniker', 'Der Wächter', 'Der Planer', 'Der Verkäufer', 'Der Schreiber', 'Der Schmied', 'Der Empfänger', 'Der Assistent', 'Der Analyst', 'Der Personalchef', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Einkäufer', 'Der Buchhalter', 'Der Techniker'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
 
@@ -442,7 +460,8 @@ const branchen: Branche[] = [
     beschreibung: 'Bestandsmanagement, Kundenbindung und Kassenabschluss für Einzelhändler.',
     schmerzen: ['Manuelle Bestandsverwaltung', 'Aufwendige Kassenabschlüsse', 'Fehlende Kundenbindung', 'Hoher Personalaufwand'],
     ergebnisse: ['Automatisches Bestandsmanagement', 'Digitale Kassenabschlüsse', 'KI-Kundenbindungsprogramm', '30% weniger Personalaufwand'],
-    agenten: ['Der Einkäufer', 'Der Analyst', 'Der Netzwerker', 'Der Buchhalter'],
+    agenten: ['Der Verkäufer', 'Der Buchhalter', 'Der Einkäufer', 'Der Empfänger', 'Der Wächter', 'Der Schreiber', 'Der Planer', 'Der Schmied', 'Der Analyst', 'Der Regisseur', 'Der Assistent', 'Der Moderator', 'Der Techniker', 'Der Personalchef', 'Der Forscher', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Verkäufer', 'Der Buchhalter', 'Der Einkäufer'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 27 },
   },
   {
@@ -452,7 +471,8 @@ const branchen: Branche[] = [
     beschreibung: 'Bestellabwicklung, Lieferantenmanagement und Lagerverwaltung für Großhändler.',
     schmerzen: ['Aufwendige Bestellabwicklung', 'Komplexes Lieferantenmanagement', 'Manuelle Lagerverwaltung', 'Hoher Kommunikationsaufwand'],
     ergebnisse: ['Automatisierte Bestellabwicklung', 'Digitales Lieferantenmanagement', 'KI-Lagerverwaltung', 'Automatische Kundenkommunikation'],
-    agenten: ['Der Einkäufer', 'Der Analyst', 'Der Empfänger', 'Der Buchhalter'],
+    agenten: ['Der Einkäufer', 'Der Buchhalter', 'Der Verkäufer', 'Der Wächter', 'Der Planer', 'Der Schreiber', 'Der Analyst', 'Der Schmied', 'Der Empfänger', 'Der Assistent', 'Der Techniker', 'Der Personalchef', 'Der Regisseur', 'Der Forscher', 'Der Moderator', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Einkäufer', 'Der Buchhalter', 'Der Verkäufer'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -462,7 +482,8 @@ const branchen: Branche[] = [
     beschreibung: 'Produktdatenpflege, Kundensupport und Retourenmanagement für Online-Händler.',
     schmerzen: ['Aufwendige Produktdatenpflege', 'Hoher Kundensupport-Aufwand', 'Komplexes Retourenmanagement', 'Viele Marktplätze gleichzeitig'],
     ergebnisse: ['KI-Produktdatenpflege', 'Automatisierter Kundensupport 24/7', 'Digitales Retourenmanagement', 'Zentrale Marktplatzverwaltung'],
-    agenten: ['Der Schreiber', 'Der Empfänger', 'Der Analyst', 'Der Integrator'],
+    agenten: ['Der Verkäufer', 'Der Schreiber', 'Der Buchhalter', 'Der Einkäufer', 'Der Regisseur', 'Der Schmied', 'Der Analyst', 'Der Wächter', 'Der Empfänger', 'Der Assistent', 'Der Techniker', 'Der Planer', 'Der Moderator', 'Der Forscher', 'Der Übersetzer', 'Der Personalchef', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Verkäufer', 'Der Schreiber', 'Der Buchhalter'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -472,7 +493,8 @@ const branchen: Branche[] = [
     beschreibung: 'Terminmanagement, Kostenvoranschläge und Kundenkommunikation für KFZ-Werkstätten.',
     schmerzen: ['Überfüllter Terminkalender', 'Aufwendige Kostenvoranschläge', 'Schlechte Kundenkommunikation', 'Manuelle Teilebestellung'],
     ergebnisse: ['Online-Terminbuchung 24/7', 'Digitale Kostenvoranschläge', 'Automatische Kundenupdates', 'Schnelle Teilebestellung'],
-    agenten: ['Der Planer', 'Der Verkäufer', 'Der Einkäufer', 'Der Empfänger'],
+    agenten: ['Der Techniker', 'Der Buchhalter', 'Der Einkäufer', 'Der Planer', 'Der Wächter', 'Der Schreiber', 'Der Verkäufer', 'Der Schmied', 'Der Empfänger', 'Der Assistent', 'Der Analyst', 'Der Personalchef', 'Der Regisseur', 'Der Trainer', 'Der Forscher', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Buchhalter', 'Der Einkäufer'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
@@ -495,7 +517,8 @@ const branchen: Branche[] = [
     beschreibung: 'Exposé-Erstellung, Lead-Qualifizierung und Besichtigungsmanagement für Immobilienmakler.',
     schmerzen: ['Aufwendige Exposé-Erstellung', 'Unqualifizierte Anfragen', 'Zeitintensive Besichtigungsplanung', 'Hoher Kommunikationsaufwand'],
     ergebnisse: ['KI-generierte Exposés in Minuten', 'Automatische Lead-Qualifizierung', 'Optimierte Besichtigungsplanung', 'Automatische Interessentenkommunikation'],
-    agenten: ['Der Schreiber', 'Der Verkäufer', 'Der Planer', 'Der Empfänger'],
+    agenten: ['Der Verkäufer', 'Der Empfänger', 'Der Buchhalter', 'Der Schreiber', 'Der Planer', 'Der Wächter', 'Der Netzwerker', 'Der Analyst', 'Der Assistent', 'Der Regisseur', 'Der Forscher', 'Der Jurist', 'Der Moderator', 'Der Personalchef', 'Der Techniker', 'Der Trainer', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Verkäufer', 'Der Empfänger', 'Der Buchhalter'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 27 },
   },
   {
@@ -571,7 +594,8 @@ const branchen: Branche[] = [
     beschreibung: 'Ticketsystem, Kundensupport und Projektmanagement für IT-Dienstleister.',
     schmerzen: ['Überfülltes Ticketsystem', 'Reaktiver statt proaktiver Support', 'Aufwendiges Projektmanagement', 'Fehlende Wissensdatenbank'],
     ergebnisse: ['KI-Ticketpriorisierung', 'Proaktives Monitoring & Alerting', 'Strukturiertes Projektmanagement', 'Automatisch wachsende Wissensdatenbank'],
-    agenten: ['Der Techniker', 'Der Empfänger', 'Der Planer', 'Der Forscher'],
+    agenten: ['Der Techniker', 'Der Schmied', 'Der Wächter', 'Der Analyst', 'Der Buchhalter', 'Der Schreiber', 'Der Planer', 'Der Sicherheitschef', 'Der Assistent', 'Der Empfänger', 'Der Verkäufer', 'Der Integrator', 'Der Forscher', 'Der Regisseur', 'Der Personalchef', 'Der Trainer', 'Der Moderator', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Einkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Schmied', 'Der Sicherheitschef'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -581,7 +605,8 @@ const branchen: Branche[] = [
     beschreibung: 'Entwicklungsdokumentation, Projektmanagement und Kundenkommunikation für Softwareunternehmen.',
     schmerzen: ['Aufwendige technische Dokumentation', 'Kommunikationslücken mit Kunden', 'Langsame Releasezyklen', 'Mangelndes Wissensmanagement'],
     ergebnisse: ['Automatische Code-Dokumentation', 'Strukturierte Kundenkommunikation', 'Beschleunigte Releasezyklen', 'Zentrale Wissensdatenbank'],
-    agenten: ['Der Schreiber', 'Der Techniker', 'Der Planer', 'Der Empfänger'],
+    agenten: ['Der Schmied', 'Der Techniker', 'Der Wächter', 'Der Schreiber', 'Der Analyst', 'Der Planer', 'Der Buchhalter', 'Der Assistent', 'Der Verkäufer', 'Der Regisseur', 'Der Empfänger', 'Der Forscher', 'Der Sicherheitschef', 'Der Integrator', 'Der Personalchef', 'Der Moderator', 'Der Trainer', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Einkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Schmied', 'Der Techniker', 'Der Wächter'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -591,7 +616,8 @@ const branchen: Branche[] = [
     beschreibung: 'Kundenservice, Vertragsmanagement und Netzwerkdokumentation für Telekommunikationsunternehmen.',
     schmerzen: ['Hoher Kundenservice-Aufwand', 'Komplexes Vertragsmanagement', 'Aufwendige Netzwerkdokumentation', 'Hohe Churn-Rate'],
     ergebnisse: ['KI-Kundenservice 24/7', 'Automatisches Vertragsmanagement', 'Digitale Netzwerkdokumentation', 'Proaktive Churn-Prävention'],
-    agenten: ['Der Empfänger', 'Der Jurist', 'Der Analyst', 'Der Techniker'],
+    agenten: ['Der Techniker', 'Der Buchhalter', 'Der Wächter', 'Der Analyst', 'Der Schmied', 'Der Sicherheitschef', 'Der Empfänger', 'Der Planer', 'Der Schreiber', 'Der Verkäufer', 'Der Assistent', 'Der Forscher', 'Der Integrator', 'Der Regisseur', 'Der Personalchef', 'Der Moderator', 'Der Trainer', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Einkäufer', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Buchhalter', 'Der Sicherheitschef'],
     stundenProWoche: { klein: 16, mittel: 27, gross: 43 },
   },
   {
@@ -611,7 +637,8 @@ const branchen: Branche[] = [
     beschreibung: 'Anlagenmonitoring, Fördermittelmanagement und Kundenkommunikation für Erneuerbare-Energien-Unternehmen.',
     schmerzen: ['Komplexes Anlagenmonitoring', 'Aufwendiges Fördermittelmanagement', 'Viele Genehmigungsprozesse', 'Hoher Dokumentationsaufwand'],
     ergebnisse: ['Automatisches Anlagenmonitoring', 'KI-Fördermittelrecherche', 'Strukturiertes Genehmigungsmanagement', 'Digitale Compliance-Dokumentation'],
-    agenten: ['Der Analyst', 'Der Forscher', 'Der Jurist', 'Der Schreiber'],
+    agenten: ['Der Techniker', 'Der Planer', 'Der Buchhalter', 'Der Wächter', 'Der Analyst', 'Der Einkäufer', 'Der Schmied', 'Der Schreiber', 'Der Verkäufer', 'Der Assistent', 'Der Forscher', 'Der Empfänger', 'Der Regisseur', 'Der Personalchef', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Techniker', 'Der Planer', 'Der Buchhalter'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -644,7 +671,8 @@ const branchen: Branche[] = [
     beschreibung: 'Briefing-Management, Kreativprozesse und Kundenpräsentationen für Werbeagenturen.',
     schmerzen: ['Unstrukturierte Briefingprozesse', 'Zeitaufwendige Präsentationen', 'Schwieriges Feedbackmanagement', 'Hoher Korrekturaufwand'],
     ergebnisse: ['Strukturierte Briefingprozesse', 'KI-gestützte Präsentationen', 'Systematisches Feedbackmanagement', 'Reduzierter Korrekturaufwand'],
-    agenten: ['Der Schreiber', 'Der Regisseur', 'Der Moderator', 'Der Stratege'],
+    agenten: ['Der Regisseur', 'Der Schreiber', 'Der Analyst', 'Der Verkäufer', 'Der Moderator', 'Der Empfänger', 'Der Buchhalter', 'Der Forscher', 'Der Assistent', 'Der Übersetzer', 'Der Planer', 'Der Wächter', 'Der Personalchef', 'Der Techniker', 'Der Trainer', 'Der Netzwerker', 'Der Sicherheitschef', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Regisseur', 'Der Schreiber', 'Der Analyst'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -654,7 +682,8 @@ const branchen: Branche[] = [
     beschreibung: 'Pressemitteilungen, Medienmonitoring und Krisenkommunikation für PR-Agenturen.',
     schmerzen: ['Aufwendige Pressemitteilungen', 'Manuelles Medienmonitoring', 'Reaktive Krisenkommunikation', 'Hoher Rechercheaufwand'],
     ergebnisse: ['KI-Pressemitteilungen in Minuten', 'Automatisches Medienmonitoring', 'Proaktive Krisenkommunikation', 'Schnelle Hintergrundrecherche'],
-    agenten: ['Der Schreiber', 'Der Forscher', 'Der Botschafter', 'Der Späher'],
+    agenten: ['Der Schreiber', 'Der Botschafter', 'Der Regisseur', 'Der Moderator', 'Der Analyst', 'Der Empfänger', 'Der Buchhalter', 'Der Verkäufer', 'Der Netzwerker', 'Der Forscher', 'Der Assistent', 'Der Planer', 'Der Übersetzer', 'Der Wächter', 'Der Personalchef', 'Der Techniker', 'Der Trainer', 'Der Sicherheitschef', 'Der Schmied', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Einkäufer', 'Der Späher'],
+    pflichtagenten: ['Der Schreiber', 'Der Botschafter', 'Der Regisseur'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -674,7 +703,8 @@ const branchen: Branche[] = [
     beschreibung: 'Redaktionsmanagement, Content-Produktion und Vertriebssteuerung für Verlage.',
     schmerzen: ['Aufwendige Content-Produktion', 'Komplexes Redaktionsmanagement', 'Sinkende Printauflagen', 'Digitale Transformation'],
     ergebnisse: ['KI-unterstützte Content-Produktion', 'Digitales Redaktionssystem', 'Neue digitale Erlösmodelle', 'Schnelle digitale Transformation'],
-    agenten: ['Der Schreiber', 'Der Analyst', 'Der Stratege', 'Der Regisseur'],
+    agenten: ['Der Schreiber', 'Der Regisseur', 'Der Analyst', 'Der Buchhalter', 'Der Empfänger', 'Der Übersetzer', 'Der Moderator', 'Der Wächter', 'Der Verkäufer', 'Der Forscher', 'Der Assistent', 'Der Planer', 'Der Personalchef', 'Der Techniker', 'Der Trainer', 'Der Netzwerker', 'Der Sicherheitschef', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Schreiber', 'Der Regisseur', 'Der Buchhalter'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -714,7 +744,8 @@ const branchen: Branche[] = [
     beschreibung: 'Community-Management, Spielerdaten-Analyse und Content-Pipeline für Gaming-Unternehmen.',
     schmerzen: ['Aufwendiges Community-Management', 'Hoher Content-Produktionsaufwand', 'Spielerbindungsprobleme', 'Komplexe Datenanalyse'],
     ergebnisse: ['KI-Community-Management', 'Automatisierte Content-Pipeline', 'Datengestützte Spielerbindung', 'Echtzeit-Spieleranalyse'],
-    agenten: ['Der Botschafter', 'Der Analyst', 'Der Schreiber', 'Der Forscher'],
+    agenten: ['Der Schmied', 'Der Techniker', 'Der Regisseur', 'Der Schreiber', 'Der Analyst', 'Der Planer', 'Der Buchhalter', 'Der Wächter', 'Der Assistent', 'Der Empfänger', 'Der Forscher', 'Der Moderator', 'Der Personalchef', 'Der Verkäufer', 'Der Trainer', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Schmied', 'Der Techniker', 'Der Regisseur'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -747,7 +778,8 @@ const branchen: Branche[] = [
     beschreibung: 'Buchungsmanagement, Gästekommunikation und Revenue-Management für Hotels.',
     schmerzen: ['Aufwendiges Channel-Management', 'Manuelle Gästekommunikation', 'Komplexes Revenue-Management', 'Hoher Check-in/out-Aufwand'],
     ergebnisse: ['Automatisiertes Channel-Management', 'KI-Gästekommunikation 24/7', 'Dynamisches Revenue-Management', 'Digitaler Check-in/out'],
-    agenten: ['Der Empfänger', 'Der Analyst', 'Der Planer', 'Der Botschafter'],
+    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Schreiber', 'Der Personalchef', 'Der Wächter', 'Der Verkäufer', 'Der Moderator', 'Der Assistent', 'Der Regisseur', 'Der Analyst', 'Der Einkäufer', 'Der Techniker', 'Der Schmied', 'Der Trainer', 'Der Forscher', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter'],
     stundenProWoche: { klein: 14, mittel: 24, gross: 38 },
   },
   {
@@ -757,7 +789,8 @@ const branchen: Branche[] = [
     beschreibung: 'Eventplanung, Menükonfiguration und Lieferantenkoordination für Cateringunternehmen.',
     schmerzen: ['Komplexe Eventplanung', 'Aufwendige Menükonfiguration', 'Schwierige Lieferantenkoordination', 'Hoher Kommunikationsaufwand mit Kunden'],
     ergebnisse: ['Digitale Eventplanung', 'KI-Menükonfiguration', 'Automatische Lieferantenkoordination', 'Strukturierte Kundenkommunikation'],
-    agenten: ['Der Planer', 'Der Einkäufer', 'Der Empfänger', 'Der Verkäufer'],
+    agenten: ['Der Planer', 'Der Buchhalter', 'Der Einkäufer', 'Der Empfänger', 'Der Schreiber', 'Der Wächter', 'Der Verkäufer', 'Der Personalchef', 'Der Assistent', 'Der Moderator', 'Der Analyst', 'Der Schmied', 'Der Regisseur', 'Der Techniker', 'Der Trainer', 'Der Forscher', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Planer', 'Der Buchhalter', 'Der Einkäufer'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 27 },
   },
   {
@@ -777,7 +810,8 @@ const branchen: Branche[] = [
     beschreibung: 'Eventlogistik, Teilnehmermanagement und Sponsorenakquise für Eventmanagement-Unternehmen.',
     schmerzen: ['Komplexe Eventlogistik', 'Aufwendiges Teilnehmermanagement', 'Schwierige Sponsorenakquise', 'Hoher Kommunikationsaufwand'],
     ergebnisse: ['Digitale Eventlogistik', 'Automatisiertes Teilnehmermanagement', 'Systematische Sponsorenakquise', 'Strukturierte Eventkommunikation'],
-    agenten: ['Der Planer', 'Der Moderator', 'Der Verkäufer', 'Der Empfänger'],
+    agenten: ['Der Planer', 'Der Empfänger', 'Der Schreiber', 'Der Buchhalter', 'Der Regisseur', 'Der Moderator', 'Der Verkäufer', 'Der Wächter', 'Der Assistent', 'Der Personalchef', 'Der Analyst', 'Der Techniker', 'Der Forscher', 'Der Netzwerker', 'Der Trainer', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Planer', 'Der Empfänger', 'Der Schreiber'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -797,7 +831,8 @@ const branchen: Branche[] = [
     beschreibung: 'Mitgliederverwaltung, Kursplanung und Kundenbindung für Fitnessstudios.',
     schmerzen: ['Aufwendige Mitgliederverwaltung', 'Hohe Kündigungsrate', 'Manuelle Kursplanung', 'Fehlende Kundenbindung'],
     ergebnisse: ['Automatische Mitgliederverwaltung', 'Proaktive Churn-Prävention', 'KI-Kursplanung', 'Systematische Kundenbindung'],
-    agenten: ['Der Empfänger', 'Der Planer', 'Der Analyst', 'Der Netzwerker'],
+    agenten: ['Der Empfänger', 'Der Buchhalter', 'Der Verkäufer', 'Der Planer', 'Der Schreiber', 'Der Personalchef', 'Der Moderator', 'Der Wächter', 'Der Assistent', 'Der Analyst', 'Der Regisseur', 'Der Trainer', 'Der Schmied', 'Der Techniker', 'Der Forscher', 'Der Netzwerker', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Einkäufer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Buchhalter', 'Der Verkäufer'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
@@ -817,7 +852,8 @@ const branchen: Branche[] = [
     beschreibung: 'Terminbuchung, Kundenbindung und Social-Media-Management für Friseurbetriebe.',
     schmerzen: ['Viele Telefon-Terminanfragen', 'Hohe No-Show-Quote', 'Fehlende Online-Präsenz', 'Schwache Kundenbindung'],
     ergebnisse: ['Online-Buchung rund um die Uhr', 'Automatische Terminerinnerungen', 'Starke Social-Media-Präsenz', 'Loyales Stammkundenprogramm'],
-    agenten: ['Der Planer', 'Der Botschafter', 'Der Empfänger', 'Der Netzwerker'],
+    agenten: ['Der Empfänger', 'Der Buchhalter', 'Der Planer', 'Der Schreiber', 'Der Verkäufer', 'Der Moderator', 'Der Wächter', 'Der Assistent', 'Der Regisseur', 'Der Analyst', 'Der Personalchef', 'Der Trainer', 'Der Forscher', 'Der Techniker', 'Der Netzwerker', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Buchhalter'],
     stundenProWoche: { klein: 5, mittel: 9, gross: 14 },
   },
   {
@@ -837,7 +873,8 @@ const branchen: Branche[] = [
     beschreibung: 'Mitgliederverwaltung, Spielbetrieb-Koordination und Vereinskommunikation für Sportvereine.',
     schmerzen: ['Aufwendige Mitgliederverwaltung', 'Schwierige Spielplankoordination', 'Manuelle Beitragsverwaltung', 'Fehlende Vereinskommunikation'],
     ergebnisse: ['Digitale Mitgliederverwaltung', 'Automatische Spielplanverwaltung', 'Automatisches Beitragsmanagement', 'Vereins-Newsletter automatisch'],
-    agenten: ['Der Empfänger', 'Der Planer', 'Der Buchhalter', 'Der Moderator'],
+    agenten: ['Der Empfänger', 'Der Buchhalter', 'Der Moderator', 'Der Planer', 'Der Schreiber', 'Der Personalchef', 'Der Verkäufer', 'Der Wächter', 'Der Assistent', 'Der Analyst', 'Der Regisseur', 'Der Trainer', 'Der Forscher', 'Der Techniker', 'Der Netzwerker', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Buchhalter', 'Der Moderator'],
     stundenProWoche: { klein: 6, mittel: 10, gross: 16 },
   },
 
@@ -860,7 +897,8 @@ const branchen: Branche[] = [
     beschreibung: 'Terminplanung, Lernfortschrittsverwaltung und Prüfungsanmeldung für Fahrschulen.',
     schmerzen: ['Aufwendige Fahrstundenplanung', 'Manuelle Lernfortschrittsdokumentation', 'Komplizierte Prüfungsanmeldung', 'Hoher Verwaltungsaufwand'],
     ergebnisse: ['Automatische Fahrstundenplanung', 'Digitale Lernfortschrittsanalyse', 'Vereinfachte Prüfungsanmeldung', '40% weniger Verwaltungsaufwand'],
-    agenten: ['Der Planer', 'Der Trainer', 'Der Empfänger', 'Der Schreiber'],
+    agenten: ['Der Empfänger', 'Der Buchhalter', 'Der Planer', 'Der Schreiber', 'Der Wächter', 'Der Trainer', 'Der Verkäufer', 'Der Assistent', 'Der Moderator', 'Der Analyst', 'Der Personalchef', 'Der Techniker', 'Der Regisseur', 'Der Forscher', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Empfänger', 'Der Buchhalter', 'Der Planer'],
     stundenProWoche: { klein: 7, mittel: 12, gross: 19 },
   },
   {
@@ -940,7 +978,8 @@ const branchen: Branche[] = [
     beschreibung: 'Bestandsverwaltung, Nutzerkommunikation und Digitalisierungsprozesse für Bibliotheken.',
     schmerzen: ['Aufwendige Bestandsverwaltung', 'Manuelle Ausleihprozesse', 'Komplexe Digitalisierungsprojekte', 'Fehlende digitale Services'],
     ergebnisse: ['Digitale Bestandsverwaltung', 'Automatisierte Ausleihprozesse', 'KI-unterstützte Digitalisierung', 'Moderner digitaler Nutzerservice'],
-    agenten: ['Der Analyst', 'Der Schreiber', 'Der Empfänger', 'Der Forscher'],
+    agenten: ['Der Schreiber', 'Der Buchhalter', 'Der Empfänger', 'Der Moderator', 'Der Planer', 'Der Wächter', 'Der Analyst', 'Der Assistent', 'Der Forscher', 'Der Techniker', 'Der Trainer', 'Der Personalchef', 'Der Übersetzer', 'Der Regisseur', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Verkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Schreiber', 'Der Buchhalter', 'Der Empfänger'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
@@ -963,7 +1002,8 @@ const branchen: Branche[] = [
     beschreibung: 'Einsatzplanung, Qualitätskontrolle und Kundenkommunikation für Reinigungsdienstleister.',
     schmerzen: ['Aufwendige Einsatzplanung', 'Schwierige Qualitätskontrolle', 'Hohe Mitarbeiterfluktuation', 'Aufwendige Kundenkommunikation'],
     ergebnisse: ['KI-optimierte Einsatzplanung', 'Digitale Qualitätschecks', 'Bessere Mitarbeiterbindung', 'Automatische Kundenkommunikation'],
-    agenten: ['Der Planer', 'Der Personalchef', 'Der Empfänger', 'Der Analyst'],
+    agenten: ['Der Buchhalter', 'Der Personalchef', 'Der Planer', 'Der Wächter', 'Der Schreiber', 'Der Verkäufer', 'Der Einkäufer', 'Der Schmied', 'Der Empfänger', 'Der Assistent', 'Der Analyst', 'Der Techniker', 'Der Regisseur', 'Der Trainer', 'Der Moderator', 'Der Forscher', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Buchhalter', 'Der Personalchef'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
@@ -973,7 +1013,8 @@ const branchen: Branche[] = [
     beschreibung: 'Schichtplanung, Einsatzdokumentation und Kundenkommunikation für Sicherheitsdienstleister.',
     schmerzen: ['Komplexe Schichtplanung', 'Aufwendige Einsatzdokumentation', 'Hoher Koordinationsaufwand', 'Manuelle Berichterstellung'],
     ergebnisse: ['KI-Schichtplanung', 'Automatische Einsatzdokumentation', 'Zentrale Koordinationsplattform', 'Automatische Kundenberichte'],
-    agenten: ['Der Planer', 'Der Sicherheitschef', 'Der Schreiber', 'Der Personalchef'],
+    agenten: ['Der Sicherheitschef', 'Der Wächter', 'Der Planer', 'Der Buchhalter', 'Der Personalchef', 'Der Techniker', 'Der Analyst', 'Der Schreiber', 'Der Empfänger', 'Der Assistent', 'Der Schmied', 'Der Forscher', 'Der Regisseur', 'Der Trainer', 'Der Moderator', 'Der Verkäufer', 'Der Netzwerker', 'Der Übersetzer', 'Der Einkäufer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Sicherheitschef', 'Der Wächter', 'Der Planer'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 27 },
   },
   {
@@ -983,7 +1024,8 @@ const branchen: Branche[] = [
     beschreibung: 'Kandidatenmanagement, Matching-Prozesse und Kundenbetreuung für Personalvermittler.',
     schmerzen: ['Aufwendiges Kandidatenscreening', 'Schlechte Matching-Qualität', 'Zeitintensive Kundenbetreuung', 'Hoher Verwaltungsaufwand'],
     ergebnisse: ['KI-Kandidatenscreening', 'Intelligentes Matching', 'Automatische Kundenbetreuung', '50% weniger Verwaltungsaufwand'],
-    agenten: ['Der Personalchef', 'Der Analyst', 'Der Empfänger', 'Der Netzwerker'],
+    agenten: ['Der Personalchef', 'Der Verkäufer', 'Der Empfänger', 'Der Schreiber', 'Der Buchhalter', 'Der Wächter', 'Der Planer', 'Der Netzwerker', 'Der Assistent', 'Der Moderator', 'Der Analyst', 'Der Forscher', 'Der Regisseur', 'Der Trainer', 'Der Techniker', 'Der Sicherheitschef', 'Der Übersetzer', 'Der Schmied', 'Der Stratege', 'Der Einkäufer', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Personalchef', 'Der Verkäufer', 'Der Empfänger'],
     stundenProWoche: { klein: 12, mittel: 20, gross: 32 },
   },
   {
@@ -993,7 +1035,8 @@ const branchen: Branche[] = [
     beschreibung: 'Betriebsplanung, Fördermittelmanagement und Dokumentation für landwirtschaftliche Betriebe.',
     schmerzen: ['Aufwendige Fördermittelanträge', 'Komplexe Betriebsdokumentation', 'Wetterabhängige Planung', 'Hoher Verwaltungsaufwand'],
     ergebnisse: ['KI-Fördermittelanträge', 'Automatische Betriebsdokumentation', 'KI-Wetterbasierte Planung', '40% weniger Verwaltungsaufwand'],
-    agenten: ['Der Schreiber', 'Der Planer', 'Der Analyst', 'Der Jurist'],
+    agenten: ['Der Planer', 'Der Buchhalter', 'Der Einkäufer', 'Der Wächter', 'Der Techniker', 'Der Schmied', 'Der Analyst', 'Der Schreiber', 'Der Personalchef', 'Der Assistent', 'Der Empfänger', 'Der Verkäufer', 'Der Regisseur', 'Der Forscher', 'Der Trainer', 'Der Moderator', 'Der Sicherheitschef', 'Der Netzwerker', 'Der Übersetzer', 'Der Stratege', 'Der Jurist', 'Der Integrator', 'Der Botschafter', 'Der Späher'],
+    pflichtagenten: ['Der Planer', 'Der Buchhalter', 'Der Einkäufer'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 22 },
   },
   {
