@@ -335,7 +335,7 @@ const NEUE_BRANCHEN = [
 const filePath = path.join(__dirname, 'app', 'lib', 'branchen.ts');
 let content = fs.readFileSync(filePath, 'utf8');
 
-const insertPoint = content.lastIndexOf('];');
+const insertPoint = content.indexOf('export function getBranchenByKategorie') !== -1 ? content.indexOf('export function getBranchenByKategorie') : content.indexOf('export default branchen');
 if (insertPoint === -1) {
   console.error('FEHLER: Konnte das Ende des branchen-Arrays nicht finden.');
   process.exit(1);
