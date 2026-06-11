@@ -1069,21 +1069,6 @@ const branchen: Branche[] = [
     agenten: ['Der Analyst', 'Der Schreiber', 'Der Jurist', 'Der Stratege'],
     stundenProWoche: { klein: 10, mittel: 17, gross: 27 },
   },
-]
-
-export function getAllBrancheSlugs(): string[] {
-  return branchen.map((b) => b.slug)
-}
-
-export function getBrancheBySlug(slug: string): Branche | undefined {
-  return branchen.find((b) => b.slug === slug)
-}
-
-export function getAllBranchen(): Branche[] {
-  return branchen
-}
-
-
   {
     name: 'Bäckereien',
     slug: 'baeckereien',
@@ -2262,6 +2247,21 @@ export function getAllBranchen(): Branche[] {
     pflichtagenten: ['Der Wächter', 'Der Analyst', 'Der Techniker'],
     stundenProWoche: { klein: 8, mittel: 14, gross: 20 },
   },
+]
+
+
+export function getAllBrancheSlugs(): string[] {
+  return branchen.map((b) => b.slug)
+}
+
+export function getBrancheBySlug(slug: string): Branche | undefined {
+  return branchen.find((b) => b.slug === slug)
+}
+
+export function getAllBranchen(): Branche[] {
+  return branchen
+}
+
 export function getBranchenByKategorie(kategorie: string): Branche[] {
   return branchen.filter((b) => b.kategorie === kategorie)
 }
