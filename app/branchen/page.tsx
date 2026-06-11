@@ -103,7 +103,7 @@ export default function BranchenPage() {
             Alle Branchen
           </p>
           <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', fontWeight: 900, color: '#0A1628', marginBottom: '20px', lineHeight: 1.1 }}>
-            198 Branchen. <span style={{ color: '#C9A84C' }}>Eine Crew.</span>
+            205 Branchen. <span style={{ color: '#C9A84C' }}>Eine Crew.</span>
           </h1>
           <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '600px', margin: '0 auto', lineHeight: 1.7 }}>
             Für jeden Betrieb die passende Automatisierung — maßgeschneidert, messbar und sofort startklar.

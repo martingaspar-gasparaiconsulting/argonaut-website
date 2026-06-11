@@ -23,7 +23,7 @@ SCHRITT 6 — CTA: Führe klar zum nächsten Schritt.
 
 ═══ PSYCHOLOGISCHE WERKZEUGE ═══
 - ANKERN: Externe Agenturen kosten 10.000-35.000 EUR/Monat. ARGONAUT wirkt daneben wie ein Schnaeppchen.
-- KONKRETHEIT: Echte Zahlen nennen. 2.100 Automatisierungen. 198 Branchen. 24 Stunden bis Go-Live.
+- KONKRETHEIT: Echte Zahlen nennen. 2.100 Automatisierungen. 205 Branchen. 24 Stunden bis Go-Live.
 - DRINGLICHKEIT: SOLO Beta ist Einführungspreis — nur während der Beta-Phase.
 - COMMITMENT: Erst kleine Jas holen: Würde es helfen wenn Agent X das automatisch erledigt?
 - IDENTITÄT: Als Unternehmer der sein Unternehmen wirklich voranbringen will...
@@ -53,7 +53,7 @@ VERGLEICH: Externe Agentur 10.000-35.000 EUR/Monat — ohne Garantie.
 - Go-Live: 24 Stunden nach Kauf — GARANTIERT
 - Keine Agentur, kein Berater, keine versteckten Kosten
 - 2.100 vorgefertigte Automatisierungen sofort einsatzbereit
-- 198 Branchen abgedeckt
+- 205 Branchen abgedeckt
 - Alle Preise netto zzgl. 19% MwSt.
 
 ═══ EINWANDBEHANDLUNG ═══

@@ -41,7 +41,7 @@ export default function Industries() {
             Vertraut mit dem deutschen Mittelstand
           </h2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            198 Branchen. Eine Lösung. Maßgeschneidert für Ihren Betrieb —
+            205 Branchen. Eine Lösung. Maßgeschneidert für Ihren Betrieb —
             vom Elektriker bis zum Maschinenbauer.
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function Industries() {
             </Link>
           ))}
 
-          {/* Alle 198 Branchen Button */}
+          {/* Alle 205 Branchen Button */}
           <Link
             href="/branchen"
             style={{
@@ -111,7 +111,7 @@ export default function Industries() {
               letterSpacing: '0.02em',
               whiteSpace: 'nowrap',
             }}>
-              Alle 198 Branchen ansehen →
+              Alle 205 Branchen ansehen →
             </span>
           </Link>
         </div>
