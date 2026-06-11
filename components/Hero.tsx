@@ -145,7 +145,7 @@ export default function Hero() {
 
           <div style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #e8c46a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#0A1628' }}></div>
-            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#0A1628', lineHeight: 1, marginBottom: '20px' }}>110</p>
+            <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#0A1628', lineHeight: 1, marginBottom: '20px' }}>198</p>
             <p style={{ fontSize: '18px', color: 'rgba(10,22,40,0.95)', fontWeight: 700, marginBottom: '8px' }}>Branchen abgedeckt</p>
             <p style={{ fontSize: '15px', color: 'rgba(10,22,40,0.55)' }}>eine Lösung — maßgeschneidert für Sie</p>
           </div>
