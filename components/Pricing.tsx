@@ -207,7 +207,7 @@ export default function Pricing() {
 
         <div style={{ background: "#f8f6f0", border: "1px solid #e8dfc8", borderRadius: "10px", padding: "16px 24px", textAlign: "center", marginBottom: "20px" }}>
           <p style={{ fontSize: "14px", color: "#0D1B3E" }}>
-            <strong>1.229 Automatisierungen</strong> decken alle wichtigen Prozesse ab — zusätzlich erhalten Sie branchenspezifische Automatisierungen, exakt auf Ihre Branche zugeschnitten.
+            <strong>2.100+ Automatisierungen</strong> decken alle wichtigen Prozesse ab — zusätzlich erhalten Sie branchenspezifische Automatisierungen, exakt auf Ihre Branche zugeschnitten.
           </p>
         </div>
 

@@ -63,7 +63,7 @@ export default function ScrollingBanner() {
           Ihre komplette KI-Crew
         </p>
         <h2 className="text-3xl md:text-4xl font-black text-[#0A1628]">
-          24 Agenten. 1.229 Automatisierungen. Ein System.
+          24 Agenten. 2.100+ Automatisierungen. Ein System.
         </h2>
       </div>
 

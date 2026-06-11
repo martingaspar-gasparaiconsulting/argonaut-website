@@ -39,7 +39,7 @@ export default function Process() {
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 01</p>
                 <p style={{ fontSize: '15px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Paket wählen</p>
                 <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>Start / Pro / Business / Enterprise</p>
-                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>8 bis 24 Agenten. Je nach Betrieb und Wachstumsziel. Alles inklusive — kein Basis-Paket nötig.</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.65 }}>8 bis 24 Agenten. Starten Sie passend zu Ihrer Größe und wachsen Sie flexibel mit.</p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderTop: '4px solid #C9A84C', borderRadius: '16px', padding: '22px 14px 20px', textAlign: 'center' }}>

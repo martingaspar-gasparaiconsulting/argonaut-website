@@ -58,7 +58,7 @@ export default function Footer() {
               ))}
               <Link href="/branchen"
                 style={{ fontSize: '14px', color: '#C9A84C', textDecoration: 'none', fontWeight: 700 }}
-              >Alle 110 Branchen →</Link>
+              >Alle 198 Branchen →</Link>
             </div>
           </div>
 
