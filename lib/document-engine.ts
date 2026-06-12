@@ -1,5 +1,6 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import ExcelJS from 'exceljs';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export interface DocxParagraph {
   text: string;
@@ -76,4 +77,62 @@ export async function buildXlsx(
   rows.forEach((r) => ws.addRow(r));
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
+}
+
+const BUCKET = 'erstellte-dokumente';
+
+export interface SaveOptions {
+  userId: string;
+  name: string;
+  typ: 'pdf' | 'xlsx' | 'docx';
+  contentType: string;
+  status?: string;
+  herkunft?: string;
+  agent?: string;
+}
+
+export interface SavedDocument {
+  id: string;
+  name: string;
+  typ: string;
+  status: string;
+  storage_path: string;
+  herkunft: string | null;
+  agent: string | null;
+  created_at: string;
+}
+
+export async function saveToStorage(fileBuffer: Buffer, opts: SaveOptions): Promise<SavedDocument> {
+  const supabase = createAdminClient();
+  const safeName = opts.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `${opts.userId}/${Date.now()}_${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, new Uint8Array(fileBuffer), {
+      contentType: opts.contentType,
+      upsert: false,
+    });
+  if (uploadError) {
+    throw new Error('Storage-Upload fehlgeschlagen: ' + uploadError.message);
+  }
+
+  const { data, error: insertError } = await supabase
+    .from('erstellte_dokumente')
+    .insert({
+      user_id: opts.userId,
+      name: opts.name,
+      typ: opts.typ,
+      status: opts.status ?? 'entwurf',
+      storage_path: storagePath,
+      herkunft: opts.herkunft ?? null,
+      agent: opts.agent ?? null,
+    })
+    .select()
+    .single();
+  if (insertError) {
+    throw new Error('Tabellen-Eintrag fehlgeschlagen: ' + insertError.message);
+  }
+
+  return data as SavedDocument;
 }
