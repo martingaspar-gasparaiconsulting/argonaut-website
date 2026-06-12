@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const jetzt = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
     const docxBuffer = await buildDocx('ARGONAUT Test-Dokument', [
       { text: 'Block 2 funktioniert', heading: true },
       { text: 'Dieses Dokument wurde als Word erzeugt und ueber Gotenberg in PDF umgewandelt.' },
-      { text: 'Erstellt am: ' + new Date().toLocaleString('de-DE') },
+      { text: 'Erstellt am: ' + jetzt + ' (Europe/Berlin)' },
     ]);
     const pdfBuffer = await docxToPdf(docxBuffer, 'argonaut-test.docx');
     return new NextResponse(new Uint8Array(pdfBuffer), {
