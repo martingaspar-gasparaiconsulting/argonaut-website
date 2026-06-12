@@ -240,7 +240,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A1628', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif', color: '#FFFFFF', padding: '40px 24px 80px' }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
@@ -293,9 +293,6 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
           </div>
         )}
 
-        {/* Zwei Spalten: Quelle | Erstellt */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, alignItems: 'start' }}>
-
         {/* Dateiliste */}
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
@@ -340,14 +337,10 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
             </div>
           )}
         </div>
-
-        {/* Erstellt via Chat */}
-        <ErstellteDokumente />
-
-        </div>
       </div>
 
       {/* Agenten-Modal */}
+      <ErstellteDokumente />
 
       {agentModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: 24 }}>
