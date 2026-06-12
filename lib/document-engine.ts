@@ -1,4 +1,5 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import ExcelJS from 'exceljs';
 
 export interface DocxParagraph {
   text: string;
@@ -52,4 +53,27 @@ export async function docxToPdf(docxBuffer: Buffer, filename = 'document.docx'):
     throw new Error('Gotenberg Fehler ' + res.status + ': ' + (await res.text()));
   }
   return Buffer.from(await res.arrayBuffer());
+}
+
+export interface XlsxColumn {
+  header: string;
+  key: string;
+  width?: number;
+}
+
+export async function buildXlsx(
+  sheetName: string,
+  columns: XlsxColumn[],
+  rows: Record<string, any>[],
+): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'ARGONAUT OS';
+  wb.created = new Date();
+  const ws = wb.addWorksheet(sheetName);
+  ws.columns = columns.map((c) => ({ header: c.header, key: c.key, width: c.width ?? 20 }));
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  rows.forEach((r) => ws.addRow(r));
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
 }
