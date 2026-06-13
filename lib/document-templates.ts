@@ -345,14 +345,159 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: "datum", label: "Datum", typ: "datum", pflicht: true },
     ],
   },
-];
+{
+    id: "praktikumsvertrag",
+    name: "Praktikumsvertrag",
+    beschreibung: "Vertrag fuer ein Praktikum (mit oder ohne Verguetung).",
+    format: "docx",
+    agent: "Der Personaler",
+    felder: [
+      { key: "praktikant_name", label: "Name des Praktikanten / der Praktikantin", typ: "text", pflicht: true },
+      { key: "praktikant_adresse", label: "Adresse des Praktikanten", typ: "mehrzeilig", pflicht: true },
+      { key: "abteilung", label: "Abteilung / Taetigkeitsbereich", typ: "text", pflicht: false, beispiel: "Marketing" },
+      { key: "von_datum", label: "Praktikum von", typ: "datum", pflicht: true },
+      { key: "bis_datum", label: "Praktikum bis", typ: "datum", pflicht: true },
+      { key: "verguetung", label: "Verguetung (falls vorhanden)", typ: "betrag", pflicht: false, beispiel: "450.00" },
+      { key: "wochenstunden", label: "Wochenarbeitszeit in Stunden", typ: "zahl", pflicht: false, beispiel: "35" },
+      { key: "betreuer", label: "Betreuende Person", typ: "text", pflicht: false },
+    ],
+  },
+  {
+    id: "aufhebungsvertrag",
+    name: "Aufhebungsvertrag",
+    beschreibung: "Einvernehmliche Beendigung eines Arbeitsverhaeltnisses.",
+    format: "docx",
+    agent: "Der Personaler",
+    felder: [
+      { key: "arbeitnehmer_name", label: "Name des Arbeitnehmers", typ: "text", pflicht: true },
+      { key: "arbeitnehmer_adresse", label: "Adresse des Arbeitnehmers", typ: "mehrzeilig", pflicht: true },
+      { key: "vertrag_bezeichnung", label: "Bezeichnung des Arbeitsvertrags", typ: "text", pflicht: false, beispiel: "Arbeitsvertrag vom 01.01.2024" },
+      { key: "beendigung_zum", label: "Beendigung des Arbeitsverhaeltnisses zum", typ: "datum", pflicht: true },
+      { key: "abfindung", label: "Abfindung (falls vereinbart)", typ: "betrag", pflicht: false, beispiel: "5000.00" },
+      { key: "freistellung", label: "Freistellung bis Beendigung (ja/nein, ggf. Details)", typ: "text", pflicht: false, beispiel: "ja, ab sofort" },
+      { key: "zeugnis", label: "Vereinbarung zum Arbeitszeugnis", typ: "text", pflicht: false, beispiel: "wohlwollendes Zeugnis" },
+      { key: "datum", label: "Datum", typ: "datum", pflicht: true },
+    ],
+  },
+  {
+    id: "einladung_vorstellungsgespraech",
+    name: "Einladung zum Vorstellungsgespraech",
+    beschreibung: "Einladung eines Bewerbers / einer Bewerberin zum Vorstellungsgespraech.",
+    format: "docx",
+    agent: "Der Personaler",
+    felder: [
+      { key: "bewerber_name", label: "Name des Bewerbers / der Bewerberin", typ: "text", pflicht: true },
+      { key: "bewerber_adresse", label: "Adresse des Bewerbers", typ: "mehrzeilig", pflicht: false },
+      { key: "position", label: "Beworbene Position", typ: "text", pflicht: true, beispiel: "Vertriebsmitarbeiter" },
+      { key: "termin", label: "Termin (Datum und Uhrzeit)", typ: "text", pflicht: true, beispiel: "20.06.2026, 10:00 Uhr" },
+      { key: "ort", label: "Ort / Format (vor Ort, Video)", typ: "text", pflicht: false, beispiel: "Vor Ort, Boeblingen" },
+      { key: "ansprechpartner", label: "Ansprechpartner fuer Rueckfragen", typ: "text", pflicht: false },
+      { key: "unterlagen", label: "Mitzubringende Unterlagen", typ: "mehrzeilig", pflicht: false },
+    ],
+  },
+  {
+    id: "bewerbungsabsage",
+    name: "Bewerbungsabsage",
+    beschreibung: "Absage an einen Bewerber / eine Bewerberin nach Bewerbungsprozess.",
+    format: "docx",
+    agent: "Der Personaler",
+    felder: [
+      { key: "bewerber_name", label: "Name des Bewerbers / der Bewerberin", typ: "text", pflicht: true },
+      { key: "bewerber_adresse", label: "Adresse des Bewerbers", typ: "mehrzeilig", pflicht: false },
+      { key: "position", label: "Beworbene Position", typ: "text", pflicht: true, beispiel: "Vertriebsmitarbeiter" },
+      { key: "begruendung", label: "Begruendung (optional, allgemein gehalten)", typ: "mehrzeilig", pflicht: false },
+      { key: "datum", label: "Datum", typ: "datum", pflicht: true },
+    ],
+  },
+  {
+    id: "mietvertrag_gewerbe",
+    name: "Mietvertrag Gewerbe (einfach)",
+    beschreibung: "Einfacher Mietvertrag fuer Gewerberaeume.",
+    format: "docx",
+    agent: "Der Jurist",
+    felder: [
+      { key: "vermieter_name", label: "Name des Vermieters", typ: "text", pflicht: true },
+      { key: "vermieter_adresse", label: "Adresse des Vermieters", typ: "mehrzeilig", pflicht: true },
+      { key: "mieter_name", label: "Name des Mieters", typ: "text", pflicht: true },
+      { key: "mieter_adresse", label: "Adresse des Mieters", typ: "mehrzeilig", pflicht: true },
+      { key: "mietobjekt", label: "Beschreibung des Mietobjekts", typ: "mehrzeilig", pflicht: true, beispiel: "Bueroraeume, 120 qm, 2. OG" },
+      { key: "miete", label: "Monatliche Miete (netto)", typ: "betrag", pflicht: true, beispiel: "1200.00" },
+      { key: "nebenkosten", label: "Nebenkostenvorauszahlung", typ: "betrag", pflicht: false, beispiel: "200.00" },
+      { key: "beginn", label: "Mietbeginn", typ: "datum", pflicht: true },
+      { key: "laufzeit", label: "Laufzeit / Kuendigungsfrist", typ: "text", pflicht: false, beispiel: "unbefristet, 6 Monate Kuendigungsfrist" },
+      { key: "kaution", label: "Kaution", typ: "betrag", pflicht: false, beispiel: "3600.00" },
+    ],
+  },
+  {
+    id: "dsgvo_auskunft",
+    name: "DSGVO-Auskunft (Art. 15)",
+    beschreibung: "Antwortschreiben auf ein Auskunftsersuchen nach Art. 15 DSGVO.",
+    format: "docx",
+    agent: "Der Jurist",
+    felder: [
+      { key: "betroffene_person_name", label: "Name der betroffenen Person", typ: "text", pflicht: true },
+      { key: "betroffene_person_adresse", label: "Adresse der betroffenen Person", typ: "mehrzeilig", pflicht: true },
+      { key: "anfrage_datum", label: "Datum der Anfrage", typ: "datum", pflicht: false },
+      { key: "gespeicherte_daten", label: "Uebersicht der gespeicherten Daten", typ: "mehrzeilig", pflicht: true, beispiel: "Name, Adresse, E-Mail, Bestellhistorie" },
+      { key: "verarbeitungszweck", label: "Zweck der Verarbeitung", typ: "mehrzeilig", pflicht: false, beispiel: "Vertragsabwicklung und Kundenkommunikation" },
+      { key: "speicherdauer", label: "Speicherdauer / Loeschfristen", typ: "text", pflicht: false, beispiel: "10 Jahre (gesetzliche Aufbewahrungspflicht)" },
+      { key: "empfaenger", label: "Empfaenger / Kategorien von Empfaengern", typ: "text", pflicht: false, beispiel: "Steuerberater, Versanddienstleister" },
+      { key: "datum", label: "Datum des Schreibens", typ: "datum", pflicht: true },
+    ],
+  },
+  {
+    id: "terminbestaetigung",
+    name: "Terminbestaetigung",
+    beschreibung: "Bestaetigung eines vereinbarten Termins gegenueber einem Kunden oder Partner.",
+    format: "docx",
+    agent: "Der Assistent",
+    felder: [
+      { key: "empfaenger_name", label: "Name des Empfaengers", typ: "text", pflicht: true },
+      { key: "empfaenger_adresse", label: "Adresse des Empfaengers", typ: "mehrzeilig", pflicht: false },
+      { key: "termin", label: "Termin (Datum und Uhrzeit)", typ: "text", pflicht: true, beispiel: "20.06.2026, 14:00 Uhr" },
+      { key: "ort", label: "Ort / Format", typ: "text", pflicht: false, beispiel: "Vor Ort, Boeblingen" },
+      { key: "thema", label: "Thema / Anlass", typ: "text", pflicht: false, beispiel: "Projektbesprechung" },
+      { key: "ansprechpartner", label: "Ansprechpartner", typ: "text", pflicht: false },
+      { key: "datum", label: "Datum des Schreibens", typ: "datum", pflicht: true },
+    ],
+  },
+  {
+    id: "einladung_meeting",
+    name: "Einladung zu Meeting / Veranstaltung",
+    beschreibung: "Einladung zu einem internen oder externen Meeting bzw. einer Veranstaltung.",
+    format: "docx",
+    agent: "Der Assistent",
+    felder: [
+      { key: "empfaenger_name", label: "Name des Empfaengers / der Gruppe", typ: "text", pflicht: true },
+      { key: "titel", label: "Titel der Veranstaltung / des Meetings", typ: "text", pflicht: true, beispiel: "Quartalsmeeting Q2 2026" },
+      { key: "termin", label: "Termin (Datum und Uhrzeit)", typ: "text", pflicht: true, beispiel: "25.06.2026, 09:00 Uhr" },
+      { key: "ort", label: "Ort / Format", typ: "text", pflicht: false, beispiel: "Konferenzraum 1 / Videocall" },
+      { key: "agenda", label: "Agenda / Themen", typ: "mehrzeilig", pflicht: false },
+      { key: "datum", label: "Datum des Schreibens", typ: "datum", pflicht: true },
+    ],
+  },
+  {
+    id: "dankschreiben",
+    name: "Dankschreiben / Follow-up",
+    beschreibung: "Dankschreiben oder Follow-up nach einem Termin, Gespraech oder Auftrag.",
+    format: "docx",
+    agent: "Der Assistent",
+    felder: [
+      { key: "empfaenger_name", label: "Name des Empfaengers", typ: "text", pflicht: true },
+      { key: "empfaenger_adresse", label: "Adresse des Empfaengers", typ: "mehrzeilig", pflicht: false },
+      { key: "anlass", label: "Anlass (Termin, Gespraech, Auftrag)", typ: "text", pflicht: true, beispiel: "Unser Gespraech am 12.06.2026" },
+      { key: "text", label: "Individueller Text", typ: "mehrzeilig", pflicht: false },
+      { key: "naechste_schritte", label: "Naechste Schritte", typ: "mehrzeilig", pflicht: false },
+      { key: "datum", label: "Datum", typ: "datum", pflicht: true },
+    ],
+  },];
 
 // Hilfsfunktion: Template per ID holen ------------------------------------------
 export function getTemplate(id: string): DocumentTemplate | undefined {
   return DOCUMENT_TEMPLATES.find((t) => t.id === id);
 }
 
-// Kurzliste für den Chat-Tool-Use (id + name + format) -------------------------
+// Kurzliste fuer den Chat-Tool-Use (id + name + format) -------------------------
 export function templateListe(): { id: string; name: string; format: DateiFormat }[] {
   return DOCUMENT_TEMPLATES.map((t) => ({ id: t.id, name: t.name, format: t.format }));
 }
