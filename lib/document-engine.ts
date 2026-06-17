@@ -1,5 +1,6 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import ExcelJS from 'exceljs';
+import PptxGenJS from 'pptxgenjs';
 import { createAdminClient } from '@/lib/supabase-admin';
 
 export interface DocxParagraph {
@@ -79,12 +80,90 @@ export async function buildXlsx(
   return Buffer.from(buf);
 }
 
+export interface PptxSlide {
+  title: string;
+  bullets?: string[];
+  subtitle?: string;
+}
+
+export interface PptxBranding {
+  primary?: string;   // Hauptfarbe (Cover-Hintergrund + Titel auf Inhalts-Slides), HEX ohne #
+  accent?: string;    // Akzentfarbe (Untertitel + Logo-Schriftzug), HEX ohne #
+  logoText?: string;  // Schriftzug auf Cover (Default: ARGONAUT OS)
+}
+
+// Normalisiert eine Farbeingabe zu 6-stelligem HEX ohne #. Fallback bei Unsinn.
+function normHex(input: string | undefined, fallback: string): string {
+  if (!input) return fallback;
+  let h = String(input).trim().replace(/^#/, '').toUpperCase();
+  // 3-stelliges Kuerzel (z.B. F00) auf 6 expandieren
+  if (/^[0-9A-F]{3}$/.test(h)) {
+    h = h.split('').map((c) => c + c).join('');
+  }
+  return /^[0-9A-F]{6}$/.test(h) ? h : fallback;
+}
+
+export async function buildPptx(
+  title: string,
+  slides: PptxSlide[],
+  branding?: PptxBranding,
+): Promise<Buffer> {
+  // ARGONAUT-Defaults (greifen, wenn der Kunde keine Farben angibt)
+  const NAVY = normHex(branding?.primary, '0A1628');
+  const GOLD = normHex(branding?.accent, 'C9A84C');
+  const WHITE = 'FFFFFF';
+  const LOGO_TEXT = (branding?.logoText && branding.logoText.trim()) || 'ARGONAUT OS';
+
+  const pptx = new PptxGenJS();
+  pptx.author = 'ARGONAUT OS';
+  pptx.company = 'Gaspar AI Consulting';
+  pptx.defineLayout({ name: 'WIDE', width: 13.33, height: 7.5 });
+  pptx.layout = 'WIDE';
+
+  // Titel-Slide (dunkel)
+  const cover = pptx.addSlide();
+  cover.background = { color: NAVY };
+  cover.addText(title, {
+    x: 0.8, y: 2.6, w: 11.7, h: 1.6,
+    fontSize: 40, bold: true, color: WHITE, fontFace: 'Calibri', align: 'left',
+  });
+  cover.addText(LOGO_TEXT, {
+    x: 0.8, y: 4.3, w: 11.7, h: 0.5,
+    fontSize: 16, color: GOLD, fontFace: 'Calibri', align: 'left',
+  });
+
+  // Inhalts-Slides (hell)
+  for (const slide of slides) {
+    const s2 = pptx.addSlide();
+    s2.background = { color: WHITE };
+    s2.addText(slide.title, {
+      x: 0.6, y: 0.5, w: 12.1, h: 0.9,
+      fontSize: 30, bold: true, color: NAVY, fontFace: 'Calibri', align: 'left',
+    });
+    if (slide.subtitle) {
+      s2.addText(slide.subtitle, {
+        x: 0.6, y: 1.35, w: 12.1, h: 0.5,
+        fontSize: 16, italic: true, color: GOLD, fontFace: 'Calibri', align: 'left',
+      });
+    }
+    if (slide.bullets && slide.bullets.length) {
+      s2.addText(
+        slide.bullets.map((b) => ({ text: b, options: { bullet: true, color: NAVY, fontSize: 16 } })),
+        { x: 0.8, y: 2.1, w: 11.7, h: 4.6, fontFace: 'Calibri', valign: 'top', lineSpacingMultiple: 1.2 }
+      );
+    }
+  }
+
+  const out = await pptx.write({ outputType: 'nodebuffer' });
+  return out as Buffer;
+}
+
 const BUCKET = 'erstellte-dokumente';
 
 export interface SaveOptions {
   userId: string;
   name: string;
-  typ: 'pdf' | 'xlsx' | 'docx';
+  typ: 'pdf' | 'xlsx' | 'docx' | 'pptx';
   contentType: string;
   status?: string;
   herkunft?: string;

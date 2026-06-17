@@ -47,3 +47,9 @@ next-env.d.ts
 check-chunks.js
 debug-key.js
 fix_agb.js
+
+# Backups & Test-Routen (Block 4)
+*.BACKUP
+*.BACKUP-*
+**/test-pptx/
+*.ts.BACKUP
