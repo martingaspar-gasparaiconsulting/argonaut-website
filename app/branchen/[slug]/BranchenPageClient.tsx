@@ -171,11 +171,11 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
           <div className="flex items-baseline gap-3 mb-4">
             <h2 className="text-2xl font-bold text-[#0A1628]">Empfohlene KI-Agenten</h2>
             <span style={{ fontSize: '11px', fontWeight: 700, color: paket.color, background: `${paket.color}15`, border: `1px solid ${paket.color}40`, borderRadius: '999px', padding: '3px 12px' }}>
-              {agentenVerfuegbar.length} VON {agentenAll.length} IM {paket.label}
+              {agentenVerfuegbar.length} sofort aktiv
             </span>
           </div>
           <p className="text-gray-500 text-sm mb-8 max-w-2xl">
-            Speziell für <strong>{branche.name}</strong> optimiert. Mit {paket.label} sind {agentenVerfuegbar.length} von {agentenAll.length} Agenten sofort aktiv.
+            Speziell für <strong>{branche.name}</strong> optimiert. Im {paket.label}-Paket sind {agentenVerfuegbar.length} der {agentenAll.length} empfohlenen Agenten sofort aktiv.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -223,7 +223,7 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
                   : `Alle ${agentenAll.length} Agenten im ${paket.label}-Paket aktiv`}
               </p>
               <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
-                Ab SOLO Beta — 2 Agenten sofort verfügbar. Mehr Agenten mit höherem Paket.
+                Mit jedem höheren Paket schaltest du mehr Agenten frei — bis zu allen 24 Agenten und 128 Automationen im ENTERPRISE-Paket.
               </p>
             </div>
             <a href="/#preise" style={{ padding: '10px 24px', background: '#C9A84C', color: '#0A1628', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
