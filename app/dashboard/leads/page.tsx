@@ -14,7 +14,7 @@ export default async function LeadsPage() {
 
   const { data } = await supabase
     .from('leads')
-    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, intent, score, zusammenfassung, quelle, ist_bestand')
+    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand')
     .order('created_at', { ascending: false })
 
   const leads = (data ?? []) as Lead[]

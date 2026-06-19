@@ -14,9 +14,10 @@ export type Lead = {
   wunschtermin: string | null
   nachricht: string | null
   status: string | null
-  intent: string | null
   score: number | null
-  zusammenfassung: string | null
+  ki_intent: string | null
+  ki_zusammenfassung: string | null
+  ki_naechster_schritt: string | null
   quelle: string | null
   ist_bestand: boolean | null
 }
@@ -44,6 +45,18 @@ function formatDate(iso: string | null): string {
     return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
   } catch {
     return '—'
+  }
+}
+
+type ScoreInfo = { label: string; color: string }
+function scoreInfo(score: number | null): ScoreInfo | null {
+  switch (score) {
+    case 5: return { label: 'Prioritaet 5 - Heiss', color: '#22c55e' }
+    case 4: return { label: 'Prioritaet 4 - Hoch',  color: '#84cc16' }
+    case 3: return { label: 'Prioritaet 3 - Mittel', color: '#C9A84C' }
+    case 2: return { label: 'Prioritaet 2 - Niedrig', color: '#e08c3c' }
+    case 1: return { label: 'Prioritaet 1 - Gering', color: '#b5677a' }
+    default: return null
   }
 }
 
@@ -76,7 +89,15 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
   const nachHerkunft = leads.filter((l) =>
     herkunft === 'alle' ? true : herkunft === 'bestand' ? l.ist_bestand === true : l.ist_bestand !== true
   )
-  const gefiltert = nachHerkunft.filter((l) => (status === 'alle' ? true : l.status === status))
+  const gefiltert = nachHerkunft
+    .filter((l) => (status === 'alle' ? true : l.status === status))
+    .slice()
+    .sort((a, b) => {
+      const sa = a.score ?? -1
+      const sb = b.score ?? -1
+      if (sb !== sa) return sb - sa
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
   const zaehle = (s: StatusKey) => nachHerkunft.filter((l) => l.status === s).length
 
   const neueWartend = leads.filter((l) => l.status === 'neu' && l.ist_bestand !== true).length
@@ -127,6 +148,9 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>{l.name || 'Ohne Namen'}</span>
                     <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: si.color, background: si.color + '22', border: '1px solid ' + si.color + '55', borderRadius: '999px', padding: '3px 10px' }}>{si.label}</span>
+                    {(() => { const pi = scoreInfo(l.score); return pi ? (
+                      <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em', color: pi.color, background: pi.color + '22', border: '1px solid ' + pi.color + '66', borderRadius: '999px', padding: '3px 10px' }}>{'\u2605 ' + l.score + ' - ' + pi.label.split(' - ')[1]}</span>
+                    ) : null })()}
                     {l.ist_bestand ? (
                       <span style={{ fontSize: '11px', fontWeight: 700, color: '#9AA7B5', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '999px', padding: '3px 10px' }}>Bestand</span>
                     ) : (
@@ -150,6 +174,16 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
 
                 {l.nachricht ? (
                   <p style={{ margin: '12px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{l.nachricht}</p>
+                ) : null}
+
+                {l.ki_zusammenfassung ? (
+                  <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.18)', borderRadius: '10px' }}>
+                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#00e5ff' }}>KI-Einschaetzung</p>
+                    <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>{l.ki_zusammenfassung}</p>
+                    {l.ki_naechster_schritt ? (
+                      <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}><strong style={{ color: '#C9A84C' }}>Naechster Schritt:</strong> {l.ki_naechster_schritt}</p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             )
