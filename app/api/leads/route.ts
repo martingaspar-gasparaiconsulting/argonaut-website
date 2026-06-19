@@ -100,6 +100,32 @@ export async function POST(req: Request) {
     }
     // ------------------------------------------------------------------------
 
+    // --- P4: Lead-Qualifizierung ueber n8n ausloesen ----------------------
+    // Fire-and-forget: schickt den kompletten Lead an die KI-Bewertung.
+    // Schlaegt der Webhook fehl, wird der Fehler nur geloggt.
+    const N8N_QUALIFIZIERUNG_URL =
+      "https://n8n.srv1133627.hstgr.cloud/webhook/lead-qualifizierung";
+    try {
+      await fetch(N8N_QUALIFIZIERUNG_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: data.id,
+          name,
+          email,
+          telefon,
+          dienstleistung,
+          menge,
+          einheit,
+          wunschtermin,
+          nachricht,
+        }),
+      });
+    } catch (qualiErr) {
+      console.error("Lead-Qualifizierung (n8n) fehlgeschlagen:", qualiErr);
+    }
+    // ------------------------------------------------------------------------
+
     return NextResponse.json({ ok: true, id: data.id });
   } catch (err) {
     console.error("Lead-Route Fehler:", err);
