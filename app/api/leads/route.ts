@@ -84,6 +84,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Speichern fehlgeschlagen." }, { status: 500 });
     }
 
+    // --- P3: Sofort-Reaktion ueber n8n ausloesen ----------------------------
+    // Fire-and-forget: Lead ist bereits gespeichert. Schlaegt der Webhook
+    // fehl, wird der Fehler nur geloggt - der Lead-Empfang wird NIE gestoert.
+    const N8N_SOFORT_REAKTION_URL =
+      "https://n8n.srv1133627.hstgr.cloud/webhook/lead-sofort-reaktion";
+    try {
+      await fetch(N8N_SOFORT_REAKTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, telefon }),
+      });
+    } catch (webhookErr) {
+      console.error("Sofort-Reaktion (n8n) fehlgeschlagen:", webhookErr);
+    }
+    // ------------------------------------------------------------------------
+
     return NextResponse.json({ ok: true, id: data.id });
   } catch (err) {
     console.error("Lead-Route Fehler:", err);
