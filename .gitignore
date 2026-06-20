@@ -53,3 +53,12 @@ fix_agb.js
 *.BACKUP-*
 **/test-pptx/
 *.ts.BACKUP
+
+# Patch-Skripte & weitere Backups (nicht committen)
+*.cjs
+*.backup-*
+
+# Weitere Backup-Endungen (nicht committen)
+*.backup2
+*.bak
+*.bak-*
