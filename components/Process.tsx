@@ -12,7 +12,7 @@ export default function Process() {
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '14px' }}>Vorgehen</p>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: '#0A1628', marginBottom: '14px', lineHeight: 1.2 }}>
-            Vom Kauf zum laufenden Betrieb —<br />vollautomatisch in 24 Stunden
+            Vom Erstkontakt zur Live-Demo —<br />innerhalb von 24 Stunden
           </h2>
           <p style={{ fontSize: '16px', color: '#6b7280', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
             Kein Gespräch nötig. Paket wählen, Daten übermitteln — ARGONAUT OS konfiguriert alles automatisch.
@@ -78,7 +78,7 @@ export default function Process() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9 12 11 14 15 10" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div>
-                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Go-Live-Garantie: 24 Stunden</p>
+                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Erstgespräch + Live-Demo: 24h</p>
                   <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Sie erhalten eine E-Mail — sobald Ihr System live ist.</p>
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function Process() {
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 02</p>
                 <p style={{ fontSize: '17px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Onboarding & Go-Live</p>
                 <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}></p>
-                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Daten übermitteln — Konfiguration, Qualitätsprüfung und Go-Live vollautomatisch in 24h.</p>
+                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Wir melden uns persönlich für Demo & Einrichtung.</p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderTop: '4px solid #C9A84C', borderRadius: '16px', padding: '26px 20px 22px', textAlign: 'center' }}>
@@ -144,8 +144,8 @@ export default function Process() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9 12 11 14 15 10" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div>
-                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Go-Live-Garantie: 24 Stunden</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Auch für Solo Beta. Vollautomatisch live nach Datenübermittlung.</p>
+                  <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Erstgespräch + Live-Demo: 24h</p>
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Auch für Solo Beta. Persönliche Demo nach Anfrage.</p>
                 </div>
               </div>
               <a href="https://buy.stripe.com/6oUaEX3TYdmO9F31zi6wE08" style={{ background: '#C9A84C', color: '#0A1628', fontSize: '13px', fontWeight: 700, padding: '12px 28px', borderRadius: '999px', whiteSpace: 'nowrap', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block' }}>

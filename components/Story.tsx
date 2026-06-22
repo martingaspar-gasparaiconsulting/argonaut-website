@@ -146,7 +146,7 @@ export default function Story() {
               🏆 Das Goldene Vlies wartet.
             </p>
             <p className="text-gray-300 mb-6">
-              Deine Crew ist bereit. In 90 Minuten läuft deine erste Mission.
+              Deine Crew ist bereit. Deine Crew ist bereit. Zeit, durchzustarten.
             </p>
             <a
               href="#kontakt"

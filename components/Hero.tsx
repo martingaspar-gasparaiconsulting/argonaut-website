@@ -111,7 +111,7 @@ export default function Hero() {
         {/* Trust Badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', marginBottom: '80px', fontSize: '14px', color: '#9ca3af' }}>
           <span>✓ Kein Vorwissen nötig</span>
-          <span>✓ Go-Live in 24h garantiert</span>
+          <span>✓ Erstgespräch + Live-Demo in 24h</span>
           <span>✓ DSGVO-konform</span>
           <span>✓ 100% auf Ihren Betrieb zugeschnitten</span>
         </div>
@@ -139,7 +139,7 @@ export default function Hero() {
           <div style={{ background: 'linear-gradient(135deg, #0A1628 0%, #1a2d4a 100%)', padding: '56px 28px', textAlign: 'center', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#C9A84C' }}></div>
             <p style={{ fontSize: 'clamp(3rem, 5vw, 5rem)', fontWeight: 900, color: '#C9A84C', lineHeight: 1, marginBottom: '20px' }}>24<span style={{ fontSize: '55%', marginLeft: '6px' }}>h</span></p>
-            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.95)', fontWeight: 700, marginBottom: '8px' }}>Go-Live-Garantie</p>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.95)', fontWeight: 700, marginBottom: '8px' }}>bis zum Erstgespräch</p>
             <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.55)' }}>Sie erhalten eine E-Mail — sobald alles läuft</p>
           </div>
 

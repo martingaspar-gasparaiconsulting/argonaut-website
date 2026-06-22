@@ -11,7 +11,7 @@ export default function CtaSection() {
           Bereit für Ihren<br />KI-Vorteil?
         </h2>
         <p className="text-[#4a5a6a] text-xl font-light mb-14 max-w-md mx-auto leading-relaxed">
-          Paket wählen. Daten übermitteln. In 60 Minuten läuft Ihr erstes KI-System — vollautomatisch.
+          Paket wählen, Erstgespräch führen — und Ihr System wird startklar gemacht.
         </p>
         <a href="#preise" className="inline-block font-[family-name:var(--font-syne)] font-bold text-sm tracking-[0.12em] uppercase px-14 py-5 bg-[#c9a84c] text-[#0d1b2e] hover:bg-[#e0b85a] transition-all duration-200 rounded-full">
           Jetzt Paket wählen →
