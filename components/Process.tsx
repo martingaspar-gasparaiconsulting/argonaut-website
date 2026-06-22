@@ -79,7 +79,7 @@ export default function Process() {
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9 12 11 14 15 10" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div>
                   <p style={{ fontSize: '15px', fontWeight: 900, color: '#fff', marginBottom: '5px' }}>Erstgespräch + Live-Demo: 24h</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Sie erhalten eine E-Mail — sobald Ihr System live ist.</p>
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Wir melden uns persönlich für Demo & Einrichtung.</p>
                 </div>
               </div>
               <a href="#preise" style={{ background: '#C9A84C', color: '#0A1628', fontSize: '13px', fontWeight: 700, padding: '12px 28px', borderRadius: '999px', whiteSpace: 'nowrap', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block' }}>
