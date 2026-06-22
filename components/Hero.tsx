@@ -91,7 +91,7 @@ export default function Hero() {
             textDecoration: 'none',
             display: 'inline-block',
           }}>
-            Jetzt starten →
+            Live-Demo vereinbaren →
           </a>
           <a href="#leistungen" style={{
             color: '#0A1628',

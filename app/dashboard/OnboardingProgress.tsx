@@ -17,7 +17,7 @@ export default function OnboardingProgress({ onboardingCompleted, hasApiKeys }: 
     { id: 'konto', label: 'Konto erstellt & eingeloggt', done: true },
     { id: 'onboarding', label: 'Onboarding ausgef\u00fcllt', done: onboardingCompleted, link: '/dashboard/onboarding' },
     { id: 'apikeys', label: 'Zugangsdaten & API-Keys eingetragen', done: hasApiKeys, link: '/dashboard/onboarding' },
-    { id: 'golive', label: 'Go-Live best\u00e4tigt (innerhalb 24h)', done: false },
+    { id: 'golive', label: 'Erstgespr\u00e4ch + Live-Demo (innerhalb 24h)', done: false },
   ]
 
   const doneCount = items.filter(i => i.done).length

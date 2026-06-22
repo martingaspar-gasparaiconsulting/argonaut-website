@@ -191,7 +191,7 @@ export default async function DashboardPage() {
                 }}>⚡</div>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: '#C9A84C' }}>
-                    System einrichten — Go-Live in 24h
+                    System einrichten — Erstgespräch in 24h
                   </p>
                   <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
                     Teilen Sie uns Ihre Tools und Zugangsdaten mit — wir richten alles automatisch ein.

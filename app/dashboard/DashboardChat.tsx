@@ -6,12 +6,14 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   loading?: boolean
+  vorschlag?: any
+  quellen?: string[]
 }
 
 const SYSTEM_PROMPT = `Du bist der ARGONAUT KI-Assistent \u2014 der pers\u00f6nliche Support-Assistent f\u00fcr bestehende ARGONAUT OS Kunden.
 
 \u2550\u2550\u2550 KRITISCHE FAKTEN \u2014 NIEMALS ABWEICHEN \u2550\u2550\u2550
-- Go-Live: IMMER innerhalb 24 Stunden nach Onboarding-Abschluss \u2014 garantiert
+- Erstgespr\u00e4ch + Live-Demo: innerhalb 24h nach Onboarding-Start
 - Onboarding dauert: 10-15 Minuten
 - Kein manueller Aufwand f\u00fcr den Kunden
 - ARGONAUT richtet alles automatisch ein
@@ -69,7 +71,7 @@ ENTERPRISE (+4 Agenten, gesamt 24):
 1. Kauf abgeschlossen \u2192 sofort Zugang zum Dashboard
 2. Onboarding-Formular ausf\u00fcllen (10-15 Min): Branche, Tools, Zugangsdaten
 3. ARGONAUT richtet alles automatisch ein
-4. Go-Live innerhalb 24 Stunden \u2014 GARANTIERT
+4. Erstgespr\u00e4ch + Live-Demo innerhalb 24h
 5. Best\u00e4tigungs-E-Mail wenn System live ist
 
 \u2550\u2550\u2550 KI-CALL LIMITS \u2550\u2550\u2550
@@ -111,7 +113,7 @@ export default function DashboardChat() {
     setMessages(prev => [...prev, { role: 'assistant', content: '', loading: true }])
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/mitarbeiter-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,8 +124,8 @@ export default function DashboardChat() {
             .concat([{ role: 'user', content: userMsg }]),
         }),
       })
-      const data = await res.json()
-      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: data.reply, loading: false } : m))
+      const data = await res.json(); if(data.modus==="vorschlag"){setMessages(p=>[...p.slice(0,-1),{role:"assistant",content:data.text||"",vorschlag:data.vorschlag,quellen:data.quellen,loading:false}]);setLoading(false);return}
+      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: data.antwort, loading: false } : m))
     } catch {
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: 'Verbindungsfehler. Bitte versuchen Sie es erneut.', loading: false } : m))
     }
@@ -170,6 +172,15 @@ export default function DashboardChat() {
                 }}>
                   {msg.loading ? <span style={{ opacity: 0.6 }}>tippt…</span> : msg.content}
                 </div>
+                {msg.vorschlag && (
+                  <div style={{ marginTop: '8px', padding: '14px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '12px' }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#C9A84C', fontSize: '13px' }}>📄 {msg.vorschlag.name}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>{msg.vorschlag.format} · {msg.vorschlag.agent}</p>
+                    {msg.vorschlag.fehlend && msg.vorschlag.fehlend.length > 0 && (
+                      <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#FFD593' }}>Fehlende: {msg.vorschlag.fehlend.join(', ')}</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             <div ref={bottomRef} />

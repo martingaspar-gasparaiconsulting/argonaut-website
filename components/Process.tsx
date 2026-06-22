@@ -15,7 +15,7 @@ export default function Process() {
             Vom Erstkontakt zur Live-Demo —<br />innerhalb von 24 Stunden
           </h2>
           <p style={{ fontSize: '16px', color: '#6b7280', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
-            Kein Gespräch nötig. Paket wählen, Daten übermitteln — ARGONAUT OS konfiguriert alles automatisch.
+            Anfrage stellen, Erstgespräch führen — ARGONAUT OS wird passgenau für Sie eingerichtet.
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function Process() {
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '7px' }}>Schritt 01</p>
                 <p style={{ fontSize: '17px', fontWeight: 900, color: '#0A1628', marginBottom: '5px' }}>Solo Beta buchen</p>
                 <p style={{ fontSize: '11px', color: '#C9A84C', fontWeight: 700, marginBottom: '9px' }}>499 €/Mo · 3 Monate</p>
-                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Direkt online buchen — kein Gespräch, kein Warten. 2 Agenten für 1–3 Personen, sofort aktiv.</p>
+                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>Auch für 1–3 Personen ideal — 2 Agenten, schneller Einstieg nach der Demo.</p>
               </div>
 
               <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderTop: '4px solid #C9A84C', borderRadius: '16px', padding: '26px 20px 22px', textAlign: 'center' }}>

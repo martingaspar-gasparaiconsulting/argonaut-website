@@ -125,7 +125,7 @@ const fragen = [
   },
   {
     frage: 'Was kostet die Einrichtung?',
-    antwort: 'Es gibt keine Setup-Gebühr. Sie wählen Ihr Paket, wir richten alles ein. Go-Live in 24 Stunden — garantiert.',
+    antwort: 'Es gibt keine Setup-Gebühr. Sie wählen Ihr Paket, wir richten alles ein. Erstgespräch + Live-Demo in 24h.',
   },
   {
     frage: 'Müssen alle Standorte dasselbe Paket haben?',

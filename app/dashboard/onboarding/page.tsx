@@ -626,7 +626,7 @@ export default function OnboardingPage() {
               Ihr ARGONAUT System<br />wird eingerichtet!
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '17px', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 48px' }}>
-              Wir haben alles erhalten. Innerhalb von <strong style={{ color: '#C9A84C' }}>24 Stunden</strong> ist Ihr System live. Sie erhalten eine E-Mail sobald alles bereit ist.
+              Wir haben alles erhalten. Innerhalb von <strong style={{ color: '#C9A84C' }}>24 Stunden</strong> melden wir uns für Erstgespräch + Live-Demo. Sie erhalten eine E-Mail sobald alles bereit ist.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', maxWidth: '600px', margin: '0 auto 48px', textAlign: 'left' }}>
@@ -634,7 +634,7 @@ export default function OnboardingPage() {
                 { icon: '✅', text: `Unternehmen: ${firmenname}` },
                 { icon: '✅', text: `Branche: ${branche}` },
                 { icon: '✅', text: `Tools: ${getSelectedToolsList().length} verbunden` },
-                { icon: '⏳', text: 'Go-Live: innerhalb 24h' },
+                { icon: '⏳', text: 'Erstgespräch + Demo: innerhalb 24h' },
               ].map((item, i) => (
                 <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '18px' }}>{item.icon}</span>

@@ -65,7 +65,7 @@ export default function UberUns() {
           <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px', textAlign: 'center' }}>
             {[
               { zahl: '2.100', label: 'Automatisierungen bereit', sub: 'individuell anpassbar — für jede Branche' },
-              { zahl: '24h', label: 'Go-Live-Garantie', sub: 'Sie erhalten eine E-Mail — sobald alles läuft' },
+              { zahl: '24h', label: 'Erstgespräch + Live-Demo', sub: 'Sie erhalten eine E-Mail — sobald alles läuft' },
               { zahl: '110', label: 'Branchen abgedeckt', sub: 'eine Lösung — maßgeschneidert für Sie' },
               { zahl: '24/7', label: 'Ihre Crew im Einsatz', sub: 'non-stop — auch wenn Sie schlafen' },
             ].map(({ zahl, label, sub }) => (
