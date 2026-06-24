@@ -126,6 +126,29 @@ export async function POST(req: Request) {
     }
     // ------------------------------------------------------------------------
 
+    // --- V1: R\u00fcckfrage bei unvollst\u00e4ndigen Leads ueber n8n --------
+    // Fire-and-forget: triggert eine R\u00fcckfrage-Mail, wenn dienstleistung
+    // oder menge fehlt. Telefon ist bereits Pflichtfeld (siehe oben).
+    const N8N_RUECKFRAGE_URL =
+      "https://n8n.srv1133627.hstgr.cloud/webhook/lead-rueckfrage";
+    try {
+      await fetch(N8N_RUECKFRAGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: data.id,
+          name,
+          email,
+          telefon,
+          dienstleistung,
+          menge,
+        }),
+      });
+    } catch (rueckfrageErr) {
+      console.error("R\u00fcckfrage (n8n) fehlgeschlagen:", rueckfrageErr);
+    }
+    // ------------------------------------------------------------------------
+
     return NextResponse.json({ ok: true, id: data.id });
   } catch (err) {
     console.error("Lead-Route Fehler:", err);
