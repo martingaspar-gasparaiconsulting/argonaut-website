@@ -1,5 +1,4 @@
-'use client'
-
+import { useRouter } from 'next/navigation';
 import { useState, type CSSProperties } from 'react'
 
 export type Lead = {
@@ -32,6 +31,7 @@ const STATUS: Record<StatusKey, { label: string; color: string }> = {
 }
 
 const STATUS_REIHENFOLGE: StatusKey[] = ['neu', 'offen', 'gewonnen', 'verloren']
+const plus = { marginLeft: '16px', fontSize: '20px', lineHeight: '20px' };
 
 const css = [
   '.arg-leads button:hover { filter: brightness(1.12); }',
@@ -81,10 +81,11 @@ function pillStyle(active: boolean, accent: string): CSSProperties {
 
 const labelStyle: CSSProperties = { fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', margin: '0 0 8px', fontWeight: 700 }
 const cardStyle: CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '18px 20px' }
-
 export default function LeadsClient({ leads }: { leads: Lead[] }) {
   const [status, setStatus] = useState<'alle' | StatusKey>('alle')
   const [herkunft, setHerkunft] = useState<'alle' | 'neu' | 'bestand'>('alle')
+  const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
 
   const nachHerkunft = leads.filter((l) =>
     herkunft === 'alle' ? true : herkunft === 'bestand' ? l.ist_bestand === true : l.ist_bestand !== true
@@ -131,9 +132,11 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
           {STATUS_REIHENFOLGE.map((s) => (
             <button key={s} onClick={() => setStatus(s)} style={pillStyle(status === s, STATUS[s].color)}>{STATUS[s].label} ({zaehle(s)})</button>
           ))}
+          <button onClick={() => setModalOpen(true)} style={{ ...pillStyle(false, '#C9A84C'), whiteSpace: 'nowrap' }}>
+            + Kontakt manuell anlegen<span style={plus}>&#xFF0B;</span>
+          </button>
         </div>
       </div>
-
       {gefiltert.length === 0 ? (
         <div style={{ ...cardStyle, textAlign: 'center', color: 'rgba(255,255,255,0.45)', padding: '40px 20px' }}>
           Keine Anfragen in dieser Ansicht.
@@ -143,7 +146,7 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
           {gefiltert.map((l) => {
             const si = statusInfo(l.status)
             return (
-              <div key={l.id} className="lead-card" style={cardStyle}>
+              <a key={l.id} href={"/dashboard/leads/" + l.id} className="lead-card" style={{ ...cardStyle, display: "block", textDecoration: "none", color: "inherit" }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>{l.name || 'Ohne Namen'}</span>
@@ -185,11 +188,78 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                     ) : null}
                   </div>
                 ) : null}
-              </div>
+              </a>
             )
           })}
         </div>
       )}
+
+      {modalOpen ? (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: '500px', borderRadius: '12px', background: '#0A1628', border: '1px solid #1C3F53', boxShadow: '0 0 20px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#FFFFFF' }}>Kontakt manuell anlegen</h3>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M15 5L5 15M5 5l10 10" />
+                </svg>
+              </button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const body = {
+                  name: form.name.value,
+                  email: form.email.value,
+                  telefon: form.telefon.value,
+                  dienstleistung: form.dienstleistung.value,
+                  nachricht: form.nachricht.value,
+                  ist_bestand: form.ist_bestand.checked,
+                  werbung_einwilligung: form.werbung_einwilligung.checked,
+                };
+                const res = await fetch('/api/leads/manuell', { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                });
+                if (res.ok) {
+                  setModalOpen(false);
+                  router.refresh();
+                }
+              }}>
+                <p style={labelStyle}>Name *</p>
+                <input name="name" required style={{ width: '100%', padding: '10px', border: 'none', borderRadius: '6px', marginBottom: '12px' }} />
+                
+                <p style={labelStyle}>E-Mail</p>
+                <input name="email" type="email" style={{ width: '100%', padding: '10px', border: 'none', borderRadius: '6px', marginBottom: '12px' }} />
+
+                <p style={labelStyle}>Telefon</p>
+                <input name="telefon" style={{ width: '100%', padding: '10px', border: 'none', borderRadius: '6px', marginBottom: '12px' }} />
+
+                <p style={labelStyle}>Dienstleistung</p>  
+                <input name="dienstleistung" style={{ width: '100%', padding: '10px', border: 'none', borderRadius: '6px', marginBottom: '12px' }} />
+
+                <p style={labelStyle}>Nachricht / Notiz</p>
+                <textarea name="nachricht" rows={3} style={{ width: '100%', padding: '10px', border: 'none', borderRadius: '6px', marginBottom: '12px', resize: 'vertical' }}></textarea>
+
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                  <label style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input name="ist_bestand" type="checkbox" /> Bestandskunde
+                  </label>
+                  <label style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input name="werbung_einwilligung" type="checkbox" /> Werbe-Einwilligung liegt vor
+                  </label>
+                </div>
+
+                <button type="submit" style={{ width: '100%', padding: '12px', border: 'none', borderRadius: '6px', background: '#C9A84C', color: '#0A1628', fontSize: '14px', fontWeight: 700 }}>
+                  Kontakt anlegen
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
