@@ -61,6 +61,8 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [ladend, setLadend] = useState(false)
   const [speichernd, setSpeichernd] = useState(false)
   const [meldung, setMeldung] = useState<string | null>(null)
+  const [pdfLadend, setPdfLadend] = useState(false)
+  const [pdfMeldung, setPdfMeldung] = useState<string | null>(null)
 
   const mengeAnzeige = [lead.menge, lead.einheit].filter(Boolean).join(' ') || null
 
@@ -114,6 +116,27 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
       setSpeichernd(false)
     }
   }
+
+  async function pdfErzeugen() {
+    setPdfLadend(true)
+    setPdfMeldung(null)
+    try {
+      const res = await fetch('/api/leads/angebot-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: lead.id }),
+      })
+      const j = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(j?.error || 'PDF konnte nicht erzeugt werden.')
+      setPdfMeldung('PDF erstellt \u2013 im Bereich Dokumente abrufbar.')
+    } catch (e) {
+      setPdfMeldung(e instanceof Error ? e.message : 'Fehler bei der PDF-Erzeugung.')
+    } finally {
+      setPdfLadend(false)
+    }
+  }
+
+  const istFreigegeben = angebotStatus === 'Freigegeben'
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)', gap: '24px', alignItems: 'start' }}>
@@ -273,6 +296,37 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '14px 0 0', lineHeight: 1.5 }}>
           Der Entwurf wird nicht automatisch versendet. Prüfen, bei Bedarf bearbeiten und erst dann freigeben.
         </p>
+
+        {/* PDF-Erzeugung - erst nach Freigabe */}
+        <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <button
+            onClick={pdfErzeugen}
+            disabled={pdfLadend || !istFreigegeben}
+            style={{
+              width: '100%',
+              padding: '12px 18px',
+              borderRadius: '10px',
+              border: 'none',
+              background: istFreigegeben ? '#C9A84C' : 'rgba(255,255,255,0.06)',
+              color: istFreigegeben ? '#0A1628' : 'rgba(255,255,255,0.4)',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: (pdfLadend || !istFreigegeben) ? 'default' : 'pointer',
+              opacity: pdfLadend ? 0.6 : 1,
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+            }}
+          >
+            {pdfLadend ? 'PDF wird erzeugt…' : 'Als PDF erzeugen'}
+          </button>
+          {!istFreigegeben && (
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+              Erst nach Freigabe des Angebots verfügbar – so geht kein Entwurf mit Platzhaltern raus.
+            </p>
+          )}
+          {pdfMeldung && (
+            <p style={{ fontSize: '13px', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>{pdfMeldung}</p>
+          )}
+        </div>
       </section>
     </div>
   )
