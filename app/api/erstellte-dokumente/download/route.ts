@@ -14,6 +14,21 @@ export const dynamic = "force-dynamic";
 
 const BUCKET = "erstellte-dokumente";
 
+// Sauberen Download-Dateinamen bauen: schoener Name + garantierte Endung.
+function downloadName(name: string | null, typ: string | null, storagePath: string): string {
+  const ext = "." + (typ && typ.trim() !== "" ? typ.trim().toLowerCase() : "pdf");
+  // Bevorzugt der Klartext-Name; Fallback auf den Dateinamen im storage_path.
+  let basis = (name && name.trim() !== "") ? name.trim() : (storagePath.split("/").pop() || "dokument");
+  // Falls der Fallback einen Zeitstempel-Praefix hat (123456789_Name), diesen entfernen.
+  basis = basis.replace(/^\d{10,}_/, "");
+  // Vorhandene Endung abschneiden, damit wir sie sauber neu setzen.
+  basis = basis.replace(/\.(pdf|docx|xlsx|pptx)$/i, "");
+  // Dateisystem-unfreundliche Zeichen ersetzen.
+  basis = basis.replace(/[\/\\:*?"<>|]/g, "_").trim();
+  if (basis === "") basis = "dokument";
+  return basis + ext;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -34,22 +49,19 @@ export async function GET(req: Request) {
     // RLS sorgt dafuer, dass nur EIGENE Dokumente sichtbar sind
     const { data: doc, error } = await supabase
       .from("erstellte_dokumente")
-      .select("storage_path, name")
+      .select("storage_path, name, typ")
       .eq("id", id)
       .single();
-
     if (error || !doc) {
       return NextResponse.json({ ok: false, error: "Dokument nicht gefunden." }, { status: 404 });
     }
 
     // 2) Signed URL mit Admin-Client erzeugen (Bucket ist privat, Storage-RLS umgehen)
     const admin = createAdminClient();
-    // Den vollständigen Dateinamen aus storage_path extrahieren (enthält die Endung)
-    const downloadFileName = doc.storage_path.split('/').pop() || doc.name;
+    const dateiname = downloadName(doc.name, doc.typ, doc.storage_path);
     const { data: signed, error: signErr } = await admin.storage
       .from(BUCKET)
-      .createSignedUrl(doc.storage_path, 60, { download: downloadFileName });
-
+      .createSignedUrl(doc.storage_path, 60, { download: dateiname });
     if (signErr || !signed) {
       console.error("DOWNLOAD: createSignedUrl fehlgeschlagen", { signErr, storage_path: doc.storage_path });
       return NextResponse.json({ ok: false, error: "Link konnte nicht erstellt werden." }, { status: 500 });
