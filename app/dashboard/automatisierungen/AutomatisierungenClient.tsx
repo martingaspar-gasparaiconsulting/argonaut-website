@@ -93,6 +93,7 @@ export default function AutomatisierungenClient({ paket, userName }: Props) {
               <a href="/dashboard" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>Übersicht</a>
               <a href="/dashboard/documents" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>📄 Dokumente</a>
               <a href="/dashboard/automatisierungen" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#C9A84C', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}>⚡ Automatisierungen</a>
+              <a href="/dashboard/einstellungen" style={{ padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', background: 'rgba(255,255,255,0.06)' }}>Einstellungen</a>
             </nav>
           </div>
           <Link href="/dashboard" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>← Zurück</Link>
