@@ -20,6 +20,7 @@ const ERLAUBTE_FELDER = [
   "firma_iban",
   "firma_bank",
   "firma_bic",
+  "firma_akzentfarbe",
 ] as const;
 
 export async function PATCH(req: NextRequest) {

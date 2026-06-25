@@ -19,6 +19,7 @@ export type FirmaProfil = {
   firma_iban?: string | null
   firma_bank?: string | null
   firma_bic?: string | null
+  firma_akzentfarbe?: string | null
 }
 
 type FeldKey = keyof FirmaProfil
@@ -100,6 +101,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
   for (const k of ALLE_KEYS) initial[k] = (profil[k] ?? '') as string
 
   const [werte, setWerte] = useState<Record<FeldKey, string>>(initial)
+  const [akzentfarbe, setAkzentfarbe] = useState<string>(profil.firma_akzentfarbe || '#1A1A2E')
   const [speichernd, setSpeichernd] = useState(false)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [istFehler, setIstFehler] = useState(false)
@@ -117,7 +119,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
       const res = await fetch('/api/profil', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(werte),
+        body: JSON.stringify({ ...werte, firma_akzentfarbe: akzentfarbe }),
       })
       if (res.ok) {
         setMeldung('Firmenprofil gespeichert.')
@@ -156,6 +158,26 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
           </div>
         </section>
       ))}
+
+      <section style={card}>
+        <h2 style={gruppenTitel}>Dokument-Branding</h2>
+        <p style={hinweisStil}>Akzentfarbe für Überschriften und Linien in Ihren PDF-Dokumenten. Der Text bleibt schwarz/weiß. (Logo-Upload folgt.)</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <input
+            type="color"
+            value={akzentfarbe}
+            onChange={(e) => setAkzentfarbe(e.target.value)}
+            style={{ width: '56px', height: '40px', padding: 0, border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', background: 'transparent', cursor: 'pointer' }}
+          />
+          <input
+            value={akzentfarbe}
+            onChange={(e) => setAkzentfarbe(e.target.value)}
+            placeholder="#1A1A2E"
+            style={{ ...inputStil, maxWidth: '160px', marginBottom: 0 }}
+          />
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>z. B. Dunkelgrün für einen Gärtnerbetrieb</span>
+        </div>
+      </section>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
         <button
