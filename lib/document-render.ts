@@ -6,10 +6,11 @@
 import { getTemplate, type DocumentTemplate } from "@/lib/document-templates";
 import type { DocxParagraph, XlsxColumn } from "@/lib/document-engine";
 
-const CONTENT_TYPES: Record<"pdf" | "docx" | "xlsx", string> = {
+const CONTENT_TYPES: Record<"pdf" | "docx" | "xlsx" | "pptx", string> = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 };
 
 // Ergebnis-Typen ---------------------------------------------------------------
@@ -32,6 +33,16 @@ export type RenderErgebnis =
       sheetName: string;
       columns: XlsxColumn[];
       rows: Record<string, any>[];
+    }
+  | {
+      kind: "slides"; // pptx -> buildPptx
+      typ: "pptx";
+      name: string;
+      filename: string;
+      contentType: string;
+      title: string;
+      slides: { title: string; bullets?: string[]; subtitle?: string }[];
+      branding?: { primary?: string; accent?: string; logoText?: string };
     };
 
 // Hilfsfunktionen --------------------------------------------------------------
@@ -89,6 +100,34 @@ export function renderDocument(templateId: string, data: Record<string, any>): R
   const safe = name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const filename = `${safe}.${tpl.format}`;
   const contentType = CONTENT_TYPES[tpl.format];
+
+  // pptx: Folien aus den Feldern + Kunden-Branding -------------------
+  if (tpl.format === "pptx") {
+    const BRAND_KEYS = ["primary", "accent", "logoText", "primarfarbe", "akzentfarbe", "logo"];
+    const norm = (k: string) => k.toLowerCase().replace(/[_\s]/g, "");
+    const get = (names: string[]) => {
+      for (const f of tpl.felder) {
+        if (names.some((n) => norm(n) === norm(f.key)) && data[f.key]) return String(data[f.key]);
+      }
+      return undefined;
+    };
+    const branding = {
+      primary: get(["primary", "primarfarbe"]),
+      accent: get(["accent", "akzentfarbe"]),
+      logoText: get(["logoText", "logo"]),
+    };
+    const slides = tpl.felder
+      .filter((f) => !BRAND_KEYS.some((n) => norm(n) === norm(f.key)))
+      .map((f) => {
+        const v = data[f.key];
+        const bullets = Array.isArray(v)
+          ? v.map((x) => String(x))
+          : String(v ?? "").split(/\n|;/).map((s) => s.trim()).filter(Boolean);
+        return { title: f.label, bullets };
+      });
+    return { kind: "slides", typ: "pptx", name, filename, contentType, title: tpl.name, slides, branding };
+  }
+
 
   // xlsx: eine Zeile aus den Feldern -------------------------------------------
   if (tpl.format === "xlsx") {

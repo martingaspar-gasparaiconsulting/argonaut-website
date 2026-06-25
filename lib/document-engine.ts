@@ -183,7 +183,12 @@ export interface SavedDocument {
 
 export async function saveToStorage(fileBuffer: Buffer, opts: SaveOptions): Promise<SavedDocument> {
   const supabase = createAdminClient();
-  const safeName = opts.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  // ENDUNG-FIX: Dateiendung passend zum Typ ergaenzen, falls sie fehlt
+  let safeName = opts.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const ext = '.' + opts.typ;
+  if (!safeName.toLowerCase().endsWith(ext)) {
+    safeName = safeName + ext;
+  }
   const storagePath = `${opts.userId}/${Date.now()}_${safeName}`;
 
   const { error: uploadError } = await supabase.storage

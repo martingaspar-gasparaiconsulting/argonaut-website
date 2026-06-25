@@ -24,7 +24,7 @@ export interface TemplateFeld {
   beispiel?: string;    // Beispielwert für den Chat / die Doku
 }
 
-export type DateiFormat = "pdf" | "docx" | "xlsx";
+export type DateiFormat = "pdf" | "docx" | "xlsx" | "pptx";
 
 export interface DocumentTemplate {
   id: string;              // eindeutige Template-ID (für Tool-Use)
@@ -627,7 +627,26 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: "tatsaechlich", label: "Tatsaechlicher Betrag", typ: "betrag", pflicht: false, beispiel: "4800.00" },
       { key: "zeitraum", label: "Zeitraum", typ: "text", pflicht: false, beispiel: "Q2 2026" },
     ],
-  },];
+    },
+  {
+    id: "firmenvorstellung",
+    name: "Firmenvorstellung",
+    beschreibung: "Präsentation zur Vorstellung des Unternehmens (im Kunden-Branding)",
+    format: "pptx",
+    agent: "A5 Schreiber",
+    felder: [
+      { key: "firmenname", label: "Firmenname", typ: "text", pflicht: true, beispiel: "Mustermann GmbH" },
+      { key: "slogan", label: "Slogan / Untertitel", typ: "text", pflicht: false, beispiel: "Ihr Partner für Qualität" },
+      { key: "ueber_uns", label: "Über uns", typ: "mehrzeilig", pflicht: true, beispiel: "Gegründet 2010; Sitz in Böblingen; 25 Mitarbeiter" },
+      { key: "leistungen", label: "Unsere Leistungen", typ: "mehrzeilig", pflicht: true, beispiel: "Beratung; Planung; Umsetzung; Service" },
+      { key: "warum_wir", label: "Warum wir?", typ: "mehrzeilig", pflicht: false, beispiel: "15 Jahre Erfahrung; 100% Zufriedenheit; regional" },
+      { key: "kontakt", label: "Kontakt", typ: "mehrzeilig", pflicht: true, beispiel: "Tel. 07031 123456; info@firma.de" },
+      { key: "primarfarbe", label: "Primärfarbe (HEX, z. B. 1A2B3C)", typ: "text", pflicht: false, beispiel: "1A2B3C" },
+      { key: "akzentfarbe", label: "Akzentfarbe (HEX)", typ: "text", pflicht: false, beispiel: "FF9900" },
+      { key: "logo", label: "Logo-Schriftzug (auf Titelfolie)", typ: "text", pflicht: false, beispiel: "Mustermann GmbH" },
+    ],
+  },
+];
 
 // Hilfsfunktion: Template per ID holen ------------------------------------------
 export function getTemplate(id: string): DocumentTemplate | undefined {

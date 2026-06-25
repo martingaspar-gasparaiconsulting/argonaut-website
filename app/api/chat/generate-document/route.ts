@@ -7,7 +7,7 @@
 // -----------------------------------------------------------------------------
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-import { buildDocx, docxToPdf, buildXlsx, saveToStorage } from "@/lib/document-engine";
+import { buildDocx, docxToPdf, buildXlsx, buildPptx, saveToStorage } from "@/lib/document-engine";
 import { renderDocument, type RenderErgebnis } from "@/lib/document-render";
 import { getTemplate, templateListe } from "@/lib/document-templates";
 
@@ -54,7 +54,9 @@ export async function POST(req: Request) {
     let fileBuffer: Buffer;
     if (render.kind === "tabelle") {
       fileBuffer = await buildXlsx(render.sheetName, render.columns, render.rows);
-    } else {
+    } else if (render.kind === "slides") {
+    fileBuffer = await buildPptx(render.title, render.slides, render.branding);
+  } else {
       const docxBuffer = await buildDocx(render.title, render.paragraphs);
       fileBuffer =
         render.typ === "pdf"
