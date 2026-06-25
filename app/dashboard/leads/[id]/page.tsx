@@ -42,6 +42,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               <a href="/dashboard/chat" style={navLink}>Chat</a>
               <a href="/dashboard/documents" style={navLink}>Dokumente</a>
               <a href="/dashboard/automatisierungen" style={navLink}>Automatisierungen</a>
+              <a href="/dashboard/einstellungen" style={navLink}>Einstellungen</a>
             </nav>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
