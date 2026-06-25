@@ -16,6 +16,7 @@ const TYP_STYLE: Record<string, { bg: string; color: string; label: string }> = 
   pdf: { bg: 'rgba(226,75,74,0.14)', color: '#F09595', label: 'PDF' },
   xlsx: { bg: 'rgba(40,180,120,0.14)', color: '#5DD6A0', label: 'XLS' },
   docx: { bg: 'rgba(55,138,221,0.16)', color: '#85B7EB', label: 'DOC' },
+  pptx: { bg: 'rgba(230,126,34,0.16)', color: '#F0B27A', label: 'PPTX' },
 }
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
@@ -28,6 +29,7 @@ export default function ErstellteDokumente() {
   const [docs, setDocs] = useState<ErstelltesDokument[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [ladeId, setLadeId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/erstellte-dokumente')
@@ -39,6 +41,24 @@ export default function ErstellteDokumente() {
       .catch(() => setError('Verbindungsfehler'))
       .finally(() => setLoading(false))
   }, [])
+
+  async function herunterladen(id: string) {
+    setLadeId(id)
+    try {
+      const res = await fetch('/api/erstellte-dokumente/download?id=' + encodeURIComponent(id))
+      const data = await res.json()
+      if (res.ok && data.ok && data.url) {
+        // Signed URL in neuem Tab oeffnen -> Browser startet den Download
+        window.open(data.url, '_blank')
+      } else {
+        alert(data.error || 'Download fehlgeschlagen.')
+      }
+    } catch {
+      alert('Verbindungsfehler beim Download.')
+    } finally {
+      setLadeId(null)
+    }
+  }
 
   const boxBase = {
     background: 'rgba(255,255,255,0.03)',
@@ -120,6 +140,23 @@ export default function ErstellteDokumente() {
                   >
                     {s.label}
                   </span>
+                  <button
+                    onClick={() => herunterladen(doc.id)}
+                    disabled={ladeId === doc.id}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: ladeId === doc.id ? 'rgba(201,168,76,0.4)' : '#C9A84C',
+                      color: '#0A1628',
+                      cursor: ladeId === doc.id ? 'not-allowed' : 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {ladeId === doc.id ? 'Lädt …' : 'Download'}
+                  </button>
                 </div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
                   {doc.herkunft ? doc.herkunft + ' · ' : ''}
