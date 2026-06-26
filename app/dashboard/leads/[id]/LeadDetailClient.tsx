@@ -23,6 +23,7 @@ export type LeadDetail = {
   angebot_entwurf: string | null
   angebot_status: string | null
   angebot_erstellt_am: string | null
+  angebot_versendet_am: string | null
 }
 
 const card = {
@@ -63,6 +64,9 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [meldung, setMeldung] = useState<string | null>(null)
   const [pdfLadend, setPdfLadend] = useState(false)
   const [pdfMeldung, setPdfMeldung] = useState<string | null>(null)
+  const [versendetAm, setVersendetAm] = useState<string | null>(lead.angebot_versendet_am ?? null)
+  const [sendLadend, setSendLadend] = useState(false)
+  const [sendMeldung, setSendMeldung] = useState<string | null>(null)
 
   const mengeAnzeige = [lead.menge, lead.einheit].filter(Boolean).join(' ') || null
 
@@ -136,7 +140,36 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
     }
   }
 
+  async function angebotSenden() {
+    // Sicherheits-Abfrage: nichts versehentlich rausschicken
+    const ziel = lead.email || 'den Lead'
+    const ok = window.confirm(
+      'Angebot als PDF per Mail an ' + ziel + ' senden?\n\n' +
+      'Die aktuelle, freigegebene Fassung wird als PDF erzeugt und verschickt.'
+    )
+    if (!ok) return
+
+    setSendLadend(true)
+    setSendMeldung(null)
+    try {
+      const res = await fetch('/api/leads/angebot-senden', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: lead.id }),
+      })
+      const j = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(j?.error || 'Versand fehlgeschlagen.')
+      setVersendetAm(j.versendet_am ?? new Date().toISOString())
+      setSendMeldung('Angebot wurde per Mail versendet.')
+    } catch (e) {
+      setSendMeldung(e instanceof Error ? e.message : 'Fehler beim Versand.')
+    } finally {
+      setSendLadend(false)
+    }
+  }
+
   const istFreigegeben = angebotStatus === 'Freigegeben'
+  const hatEmail = !!(lead.email && lead.email.trim() !== '')
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)', gap: '24px', alignItems: 'start' }}>
@@ -175,7 +208,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         {(lead.score != null || lead.ki_intent || lead.ki_zusammenfassung || lead.ki_naechster_schritt) && (
           <section style={{ ...card, border: '1px solid rgba(201,168,76,0.25)', background: 'rgba(201,168,76,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>KI-Einschätzung</span>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>KI-Einsch\u00e4tzung</span>
               {lead.score != null && (
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#0A1628', background: '#C9A84C', borderRadius: '6px', padding: '3px 10px' }}>
                   Score {lead.score}/5
@@ -185,7 +218,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <Feld label="Intent" wert={lead.ki_intent} />
               <Feld label="Zusammenfassung" wert={lead.ki_zusammenfassung} />
-              <Feld label="Nächster Schritt" wert={lead.ki_naechster_schritt} />
+              <Feld label="N\u00e4chster Schritt" wert={lead.ki_naechster_schritt} />
             </div>
           </section>
         )}
@@ -211,7 +244,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         <textarea
           value={entwurf}
           onChange={(e) => setEntwurf(e.target.value)}
-          placeholder="Noch kein Entwurf vorhanden. Klicken Sie auf „Entwurf erzeugen“, um aus den Lead-Daten einen Angebotsvorschlag zu erstellen."
+          placeholder="Noch kein Entwurf vorhanden. Klicken Sie auf \u201eEntwurf erzeugen\u201c, um aus den Lead-Daten einen Angebotsvorschlag zu erstellen."
           style={{
             width: '100%',
             minHeight: '320px',
@@ -249,7 +282,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               fontFamily: 'var(--font-dm-sans), sans-serif',
             }}
           >
-            {ladend ? 'Wird erzeugt…' : (entwurf ? 'Neu erzeugen' : 'Entwurf erzeugen')}
+            {ladend ? 'Wird erzeugt\u2026' : (entwurf ? 'Neu erzeugen' : 'Entwurf erzeugen')}
           </button>
 
           <button
@@ -294,7 +327,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         </div>
 
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '14px 0 0', lineHeight: 1.5 }}>
-          Der Entwurf wird nicht automatisch versendet. Prüfen, bei Bedarf bearbeiten und erst dann freigeben.
+          Der Entwurf wird nicht automatisch versendet. Pr\u00fcfen, bei Bedarf bearbeiten und erst dann freigeben.
         </p>
 
         {/* PDF-Erzeugung - erst nach Freigabe */}
@@ -316,15 +349,58 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               fontFamily: 'var(--font-dm-sans), sans-serif',
             }}
           >
-            {pdfLadend ? 'PDF wird erzeugt…' : 'Als PDF erzeugen'}
+            {pdfLadend ? 'PDF wird erzeugt\u2026' : 'Als PDF erzeugen'}
           </button>
           {!istFreigegeben && (
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
-              Erst nach Freigabe des Angebots verfügbar – so geht kein Entwurf mit Platzhaltern raus.
+              Erst nach Freigabe des Angebots verf\u00fcgbar \u2013 so geht kein Entwurf mit Platzhaltern raus.
             </p>
           )}
           {pdfMeldung && (
             <p style={{ fontSize: '13px', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>{pdfMeldung}</p>
+          )}
+        </div>
+
+        {/* V6: Angebot per Mail senden - erst nach Freigabe + nur mit E-Mail */}
+        <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <button
+            onClick={angebotSenden}
+            disabled={sendLadend || !istFreigegeben || !hatEmail}
+            style={{
+              width: '100%',
+              padding: '12px 18px',
+              borderRadius: '10px',
+              border: '1px solid rgba(0,229,255,0.4)',
+              background: (istFreigegeben && hatEmail) ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.06)',
+              color: (istFreigegeben && hatEmail) ? '#00e5ff' : 'rgba(255,255,255,0.4)',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: (sendLadend || !istFreigegeben || !hatEmail) ? 'default' : 'pointer',
+              opacity: sendLadend ? 0.6 : 1,
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+            }}
+          >
+            {sendLadend ? 'Wird versendet\u2026' : (versendetAm ? 'Angebot erneut senden' : 'Angebot per Mail senden')}
+          </button>
+
+          {versendetAm && (
+            <p style={{ fontSize: '12px', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>
+              Bereits versendet am {formatDatum(versendetAm)}
+            </p>
+          )}
+
+          {istFreigegeben && !hatEmail && (
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+              Kein Versand m\u00f6glich \u2013 f\u00fcr diesen Lead ist keine E-Mail-Adresse hinterlegt.
+            </p>
+          )}
+          {!istFreigegeben && (
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+              Erst nach Freigabe des Angebots verf\u00fcgbar.
+            </p>
+          )}
+          {sendMeldung && (
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '10px 0 0' }}>{sendMeldung}</p>
           )}
         </div>
       </section>

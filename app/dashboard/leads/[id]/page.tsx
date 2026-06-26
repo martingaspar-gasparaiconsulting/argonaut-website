@@ -15,7 +15,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   const { data } = await supabase
     .from('leads')
-    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand, angebot_entwurf, angebot_status, angebot_erstellt_am')
+    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand, angebot_entwurf, angebot_status, angebot_erstellt_am, angebot_versendet_am')
     .eq('id', id)
     .single()
 
@@ -37,7 +37,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               </div>
             </div>
             <nav style={{ display: 'flex', gap: '4px' }}>
-              <a href="/dashboard" style={navLink}>Übersicht</a>
+              <a href="/dashboard" style={navLink}>{'\u00dcbersicht'}</a>
               <a href="/dashboard/leads" style={navLinkAktiv}>Leads</a>
               <a href="/dashboard/chat" style={navLink}>Chat</a>
               <a href="/dashboard/documents" style={navLink}>Dokumente</a>
@@ -54,7 +54,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 80px' }}>
         <a href="/dashboard/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'rgba(255,255,255,0.55)', textDecoration: 'none', marginBottom: '24px' }}>
-          {'\u2190'} Zurück zur Übersicht
+          {'\u2190'} {'Zur\u00fcck zur \u00dcbersicht'}
         </a>
         <LeadDetailClient lead={lead} />
       </main>
