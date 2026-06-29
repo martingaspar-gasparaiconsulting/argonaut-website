@@ -49,8 +49,53 @@ function statusColor(s: string): string {
   return C.gold;
 }
 function dStr(d: string | null): string { if (!d) return '—'; try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; } }
-function tageZwischen(von: string, bis: string): number {
-  try { const a = new Date(von); const b = new Date(bis); const diff = Math.round((b.getTime() - a.getTime()) / 86400000) + 1; return diff > 0 ? diff : 1; } catch { return 1; }
+// ---- Arbeitstage & Feiertage (DE, pro Bundesland) — wartungsfrei berechnet ----
+function osterSonntag(jahr: number): Date {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tg = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(jahr, monat - 1, tg);
+}
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function feiertageSet(jahr: number, bl: string): Set<string> {
+  const s = new Set<string>();
+  const add = (d: Date) => s.add(ymdLocal(d));
+  const fix = (m: number, t: number) => new Date(jahr, m - 1, t);
+  const ostern = osterSonntag(jahr);
+  const off = (n: number) => { const d = new Date(ostern); d.setDate(d.getDate() + n); return d; };
+  add(fix(1, 1)); add(off(-2)); add(off(1)); add(fix(5, 1)); add(off(39)); add(off(50));
+  add(fix(10, 3)); add(fix(12, 25)); add(fix(12, 26));
+  if (['BW', 'BY', 'ST'].includes(bl)) add(fix(1, 6));
+  if (['BE', 'MV'].includes(bl)) add(fix(3, 8));
+  if (['BW', 'BY', 'HE', 'NW', 'RP', 'SL'].includes(bl)) add(off(60));
+  if (['SL'].includes(bl)) add(fix(8, 15));
+  if (['TH'].includes(bl)) add(fix(9, 20));
+  if (['BB', 'MV', 'SN', 'ST', 'TH', 'HB', 'HH', 'NI', 'SH'].includes(bl)) add(fix(10, 31));
+  if (['BW', 'BY', 'NW', 'RP', 'SL'].includes(bl)) add(fix(11, 1));
+  if (['SN'].includes(bl)) { const d = fix(11, 23); let back = ((d.getDay() - 3 + 7) % 7); if (back === 0) back = 7; d.setDate(23 - back); add(d); }
+  return s;
+}
+function kalendertage(von: string, bis: string): number {
+  try { const a = parseDate(von), b = parseDate(bis); const diff = Math.round((b.getTime() - a.getTime()) / 86400000) + 1; return diff > 0 ? diff : 1; } catch { return 1; }
+}
+function arbeitstage(von: string, bis: string, bl: string): number {
+  try {
+    const a = parseDate(von), b = parseDate(bis);
+    if (b < a) return 1;
+    const fset = new Set<string>();
+    [a.getFullYear(), b.getFullYear()].forEach((j) => feiertageSet(j, bl).forEach((x) => fset.add(x)));
+    let count = 0; const d = new Date(a);
+    while (d <= b) { const wd = d.getDay(); if (wd !== 0 && wd !== 6 && !fset.has(ymdLocal(d))) count++; d.setDate(d.getDate() + 1); }
+    return count;
+  } catch { return 1; }
 }
 function tageBis(d: string | null): number | null { if (!d) return null; try { return Math.round((new Date(d).getTime() - Date.now()) / 86400000); } catch { return null; } }
 
@@ -67,6 +112,7 @@ export default function MeinBereichPage() {
   // Krank-Form
   const [kVon, setKVon] = useState(''); const [kBis, setKBis] = useState(''); const [kSaving, setKSaving] = useState(false);
   const [auFile, setAuFile] = useState<File | null>(null);
+  const [bundesland, setBundesland] = useState('BW');
 
   const ladeAlles = useCallback(async () => {
     setLoading(true); setMsg(null);
@@ -82,6 +128,11 @@ export default function MeinBereichPage() {
       if (!maRow) { setKontoOhneProfil(true); setLoading(false); return; }
       const m = maRow as Mitarbeiter;
       setMa(m);
+
+      // Bundesland des Betriebs laden (für korrekte Urlaubs-Arbeitstage)
+      const { data: einst } = await supabase.from('hr_einstellungen')
+        .select('bundesland').eq('owner_user_id', m.owner_user_id).maybeSingle();
+      if (einst?.bundesland) setBundesland(einst.bundesland);
 
       const { data: abwRows } = await supabase.from('hr_abwesenheiten')
         .select('id,typ,von,bis,tage,status,au_vorhanden').eq('mitarbeiter_id', m.id).order('von', { ascending: false });
@@ -110,7 +161,7 @@ export default function MeinBereichPage() {
     try {
       const { error } = await supabase.from('hr_abwesenheiten').insert({
         owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id, typ: 'urlaub',
-        von: uVon, bis: uBis, tage: tageZwischen(uVon, uBis), status: 'beantragt',
+        von: uVon, bis: uBis, tage: arbeitstage(uVon, uBis, bundesland), status: 'beantragt',
       });
       if (error) throw error;
       setUVon(''); setUBis(''); setMsg('Urlaubsantrag eingereicht — dein Vorgesetzter prüft ihn.');
@@ -139,7 +190,7 @@ export default function MeinBereichPage() {
       }
       const { error } = await supabase.from('hr_abwesenheiten').insert({
         owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id, typ: 'krankheit',
-        von: kVon, bis: kBis, tage: tageZwischen(kVon, kBis), status: 'erfasst', au_vorhanden: auHochgeladen,
+        von: kVon, bis: kBis, tage: kalendertage(kVon, kBis), status: 'erfasst', au_vorhanden: auHochgeladen,
       });
       if (error) throw error;
       setKVon(''); setKBis(''); setAuFile(null);
@@ -199,6 +250,7 @@ export default function MeinBereichPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <Field label="Von"><input type="date" style={styles.input} value={uVon} onChange={(e) => setUVon(e.target.value)} /></Field>
                   <Field label="Bis"><input type="date" style={styles.input} value={uBis} onChange={(e) => setUBis(e.target.value)} /></Field>
+                  {uVon && uBis && <div style={{ fontSize: 12, color: C.textDim }}>= {arbeitstage(uVon, uBis, bundesland)} Arbeitstage (Wochenenden & Feiertage zählen nicht)</div>}
                   <button style={{ ...styles.primaryBtn, opacity: uSaving ? 0.6 : 1 }} onClick={urlaubBeantragen} disabled={uSaving}>{uSaving ? 'Sendet …' : 'Antrag einreichen'}</button>
                 </div>
               </section>

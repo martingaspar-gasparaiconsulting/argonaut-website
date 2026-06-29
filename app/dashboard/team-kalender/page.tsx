@@ -32,6 +32,37 @@ function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function parseD(s: string): Date { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+// ---- Feiertage (DE, pro Bundesland) — wartungsfrei berechnet ----
+function osterSonntag(jahr: number): Date {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tg = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(jahr, monat - 1, tg);
+}
+function feiertageSet(jahr: number, bl: string): Set<string> {
+  const s = new Set<string>();
+  const add = (d: Date) => s.add(ymd(d));
+  const fix = (m: number, t: number) => new Date(jahr, m - 1, t);
+  const ostern = osterSonntag(jahr);
+  const off = (n: number) => { const d = new Date(ostern); d.setDate(d.getDate() + n); return d; };
+  add(fix(1, 1)); add(off(-2)); add(off(1)); add(fix(5, 1)); add(off(39)); add(off(50));
+  add(fix(10, 3)); add(fix(12, 25)); add(fix(12, 26));
+  if (['BW', 'BY', 'ST'].includes(bl)) add(fix(1, 6));
+  if (['BE', 'MV'].includes(bl)) add(fix(3, 8));
+  if (['BW', 'BY', 'HE', 'NW', 'RP', 'SL'].includes(bl)) add(off(60));
+  if (['SL'].includes(bl)) add(fix(8, 15));
+  if (['TH'].includes(bl)) add(fix(9, 20));
+  if (['BB', 'MV', 'SN', 'ST', 'TH', 'HB', 'HH', 'NI', 'SH'].includes(bl)) add(fix(10, 31));
+  if (['BW', 'BY', 'NW', 'RP', 'SL'].includes(bl)) add(fix(11, 1));
+  if (['SN'].includes(bl)) { const d = fix(11, 23); let back = ((d.getDay() - 3 + 7) % 7); if (back === 0) back = 7; d.setDate(23 - back); add(d); }
+  return s;
+}
 
 export default function TeamKalenderPage() {
   const [ma, setMa] = useState<Mitarbeiter[]>([]);
@@ -42,10 +73,17 @@ export default function TeamKalenderPage() {
   const heute = new Date();
   const [jahr, setJahr] = useState(heute.getFullYear());
   const [monat, setMonat] = useState(heute.getMonth()); // 0-basiert
+  const [bundesland, setBundesland] = useState('BW');
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (uid) {
+        const { data: einst } = await supabase.from('hr_einstellungen').select('bundesland').eq('owner_user_id', uid).maybeSingle();
+        if (einst?.bundesland) setBundesland(einst.bundesland);
+      }
       const { data: maRows, error: maErr } = await supabase
         .from('mitarbeiter').select('id,vorname,nachname').order('nachname', { ascending: true });
       if (maErr) throw maErr;
@@ -76,6 +114,9 @@ export default function TeamKalenderPage() {
 
   const tageImMonat = new Date(jahr, monat + 1, 0).getDate();
   const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
+
+  const feiertage = feiertageSet(jahr, bundesland);
+  const istFeiertag = (tag: number) => feiertage.has(ymd(new Date(jahr, monat, tag)));
 
   // Belegung pro Mitarbeiter/Tag ermitteln
   function zustandFuer(maId: string, tag: number): { typ: string; status: string } | null {
@@ -126,6 +167,10 @@ export default function TeamKalenderPage() {
         <Legende farbe={C.urlaub} text="Urlaub (genehmigt)" />
         <Legende farbe="transparent" gestrichelt text="Urlaub (beantragt)" />
         <Legende farbe={C.krank} text="Krank" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 16, height: 16, borderRadius: 4, display: 'inline-block', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.3)' }} />
+          <span style={{ fontSize: 13, color: C.textDim }}>Feiertag</span>
+        </div>
       </div>
 
       {error && <div style={styles.errorBox}>{error}</div>}
@@ -142,7 +187,7 @@ export default function TeamKalenderPage() {
               <tr>
                 <th style={{ ...styles.thName }}>Mitarbeiter</th>
                 {tage.map((t) => (
-                  <th key={t} style={{ ...styles.thDay, ...(istWE(t) ? styles.weHead : {}), ...(istHeute(t) ? styles.todayHead : {}) }}>
+                  <th key={t} style={{ ...styles.thDay, ...(istWE(t) ? styles.weHead : {}), ...(istFeiertag(t) ? styles.feiertagHead : {}), ...(istHeute(t) ? styles.todayHead : {}) }} title={istFeiertag(t) ? 'Feiertag' : ''}>
                     <div style={{ fontSize: 10, color: C.textDim }}>{WT[wochentag(t)]}</div>
                     <div>{t}</div>
                   </th>
@@ -156,8 +201,8 @@ export default function TeamKalenderPage() {
                   {tage.map((t) => {
                     const z = zustandFuer(m.id, t);
                     return (
-                      <td key={t} style={{ ...styles.tdDay, ...(istWE(t) ? styles.weCell : {}), ...(istHeute(t) ? styles.todayCell : {}) }}>
-                        <div style={{ ...styles.dayMark, ...zellFarbe(z) }} title={z ? (z.typ === 'urlaub' ? (z.status === 'beantragt' ? 'Urlaub beantragt' : 'Urlaub') : 'Krank') : ''} />
+                      <td key={t} style={{ ...styles.tdDay, ...(istWE(t) ? styles.weCell : {}), ...(istFeiertag(t) ? styles.feiertagCell : {}), ...(istHeute(t) ? styles.todayCell : {}) }}>
+                        <div style={{ ...styles.dayMark, ...zellFarbe(z) }} title={z ? (z.typ === 'urlaub' ? (z.status === 'beantragt' ? 'Urlaub beantragt' : 'Urlaub') : 'Krank') : (istFeiertag(t) ? 'Feiertag' : '')} />
                       </td>
                     );
                   })}
@@ -201,6 +246,8 @@ const styles: Record<string, CSSProperties> = {
   thName: { position: 'sticky', left: 0, background: C.navySoft, textAlign: 'left', padding: '12px 14px', fontSize: 13, color: C.textDim, fontWeight: 600, zIndex: 2, minWidth: 160, borderBottom: `1px solid ${C.line}` },
   thDay: { padding: '6px 0', minWidth: 30, fontSize: 13, color: C.text, fontWeight: 600, textAlign: 'center', borderBottom: `1px solid ${C.line}` },
   weHead: { background: 'rgba(255,255,255,0.02)' },
+  feiertagHead: { background: 'rgba(0,229,255,0.06)' },
+  feiertagCell: { background: 'rgba(0,229,255,0.05)' },
   todayHead: { background: 'rgba(0,229,255,0.12)', color: C.cyan },
   tdName: { position: 'sticky', left: 0, background: C.navySoft, padding: '10px 14px', fontSize: 14, color: C.text, fontWeight: 500, whiteSpace: 'nowrap', zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.04)', borderRight: `1px solid ${C.line}` },
   tdDay: { padding: 3, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)' },

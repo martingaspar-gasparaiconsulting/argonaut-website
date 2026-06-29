@@ -77,12 +77,60 @@ function formatBytes(b: number | null): string {
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 }
-function tageZwischen(von: string, bis: string): number {
+// ---- Arbeitstage & Feiertage (DE, pro Bundesland) — wartungsfrei berechnet ----
+// Feiertage werden für jedes Jahr automatisch berechnet (Oster-Algorithmus +
+// feste/bewegliche Feiertage je Bundesland). Keine jährliche Pflege nötig.
+function osterSonntag(jahr: number): Date {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tg = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(jahr, monat - 1, tg);
+}
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function parseLocal(s: string): Date { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function feiertageSet(jahr: number, bl: string): Set<string> {
+  const s = new Set<string>();
+  const add = (d: Date) => s.add(ymdLocal(d));
+  const fix = (m: number, t: number) => new Date(jahr, m - 1, t);
+  const ostern = osterSonntag(jahr);
+  const off = (n: number) => { const d = new Date(ostern); d.setDate(d.getDate() + n); return d; };
+  add(fix(1, 1)); add(off(-2)); add(off(1)); add(fix(5, 1)); add(off(39)); add(off(50));
+  add(fix(10, 3)); add(fix(12, 25)); add(fix(12, 26));
+  if (['BW', 'BY', 'ST'].includes(bl)) add(fix(1, 6));
+  if (['BE', 'MV'].includes(bl)) add(fix(3, 8));
+  if (['BW', 'BY', 'HE', 'NW', 'RP', 'SL'].includes(bl)) add(off(60));
+  if (['SL'].includes(bl)) add(fix(8, 15));
+  if (['TH'].includes(bl)) add(fix(9, 20));
+  if (['BB', 'MV', 'SN', 'ST', 'TH', 'HB', 'HH', 'NI', 'SH'].includes(bl)) add(fix(10, 31));
+  if (['BW', 'BY', 'NW', 'RP', 'SL'].includes(bl)) add(fix(11, 1));
+  if (['SN'].includes(bl)) { const d = fix(11, 23); let back = ((d.getDay() - 3 + 7) % 7); if (back === 0) back = 7; d.setDate(23 - back); add(d); }
+  return s;
+}
+function kalendertage(von: string, bis: string): number {
+  try { const a = parseLocal(von), b = parseLocal(bis); const diff = Math.round((b.getTime() - a.getTime()) / 86400000) + 1; return diff > 0 ? diff : 1; } catch { return 1; }
+}
+function arbeitstage(von: string, bis: string, bl: string): number {
   try {
-    const a = new Date(von); const b = new Date(bis);
-    const diff = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
-    return diff > 0 ? diff : 1;
+    const a = parseLocal(von), b = parseLocal(bis);
+    if (b < a) return 1;
+    const fset = new Set<string>();
+    [a.getFullYear(), b.getFullYear()].forEach((j) => feiertageSet(j, bl).forEach((x) => fset.add(x)));
+    let count = 0; const d = new Date(a);
+    while (d <= b) { const wd = d.getDay(); if (wd !== 0 && wd !== 6 && !fset.has(ymdLocal(d))) count++; d.setDate(d.getDate() + 1); }
+    return count;
   } catch { return 1; }
+}
+// Dauer je nach Typ: Urlaub = Arbeitstage (ohne WE/Feiertage), Krankheit = Kalendertage
+function dauerTage(typ: string, von: string, bis: string, bl: string): number {
+  return typ === 'urlaub' ? arbeitstage(von, bis, bl) : kalendertage(von, bis);
 }
 function tageBis(d: string | null): number | null {
   if (!d) return null;
@@ -104,6 +152,29 @@ export default function PersonalPage() {
   // Benachrichtigungen (Glocke)
   const [benach, setBenach] = useState<Benachrichtigung[]>([]);
   const [glockeOffen, setGlockeOffen] = useState(false);
+
+  // Bundesland (für Feiertags-/Arbeitstage-Berechnung) — Einstellung des Betriebs
+  const [bundesland, setBundesland] = useState('BW');
+  const [blSaving, setBlSaving] = useState(false);
+
+  const ladeBundesland = useCallback(async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid) return;
+    const { data } = await supabase.from('hr_einstellungen').select('bundesland').eq('owner_user_id', uid).maybeSingle();
+    if (data?.bundesland) setBundesland(data.bundesland);
+  }, []);
+  useEffect(() => { ladeBundesland(); }, [ladeBundesland]);
+
+  async function bundeslandSpeichern(neu: string) {
+    setBundesland(neu); setBlSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return;
+      await supabase.from('hr_einstellungen').upsert({ owner_user_id: uid, bundesland: neu }, { onConflict: 'owner_user_id' });
+    } finally { setBlSaving(false); }
+  }
 
   const ladeBenach = useCallback(async () => {
     const { data } = await supabase.from('hr_benachrichtigungen')
@@ -163,6 +234,30 @@ export default function PersonalPage() {
           <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+          <select
+            value={bundesland}
+            onChange={(e) => bundeslandSpeichern(e.target.value)}
+            style={styles.blSelect}
+            title="Bundesland (für Feiertage / Urlaubsberechnung)"
+            disabled={blSaving}
+          >
+            <option value="BW">Baden-Württemberg</option>
+            <option value="BY">Bayern</option>
+            <option value="BE">Berlin</option>
+            <option value="BB">Brandenburg</option>
+            <option value="HB">Bremen</option>
+            <option value="HH">Hamburg</option>
+            <option value="HE">Hessen</option>
+            <option value="MV">Mecklenburg-Vorpommern</option>
+            <option value="NI">Niedersachsen</option>
+            <option value="NW">Nordrhein-Westfalen</option>
+            <option value="RP">Rheinland-Pfalz</option>
+            <option value="SL">Saarland</option>
+            <option value="SN">Sachsen</option>
+            <option value="ST">Sachsen-Anhalt</option>
+            <option value="SH">Schleswig-Holstein</option>
+            <option value="TH">Thüringen</option>
+          </select>
           <a href="/dashboard/team-kalender" style={styles.kalenderLink}>📅 Team-Kalender</a>
           <div style={{ position: 'relative' }}>
             <button
@@ -223,8 +318,8 @@ export default function PersonalPage() {
       </div>
 
       {modalOpen && <NeuModal tab={tab} onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); load(); }} />}
-      {selectedMA && <DetailDrawer typ="mitarbeiter" ma={selectedMA} onClose={() => setSelected(null)} onChanged={load} />}
-      {selectedBW && <DetailDrawer typ="bewerber" bw={selectedBW} onClose={() => setSelected(null)} onChanged={load} />}
+      {selectedMA && <DetailDrawer typ="mitarbeiter" ma={selectedMA} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
+      {selectedBW && <DetailDrawer typ="bewerber" bw={selectedBW} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
     </div>
   );
 }
@@ -290,8 +385,8 @@ function ClickRow({ onClick, children }: { onClick: () => void; children: React.
 // ============================================================
 type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'auswertung';
 
-function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClose: () => void; onChanged: () => void }) {
-  const { typ, ma, bw, onClose, onChanged } = props;
+function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundesland: string; onClose: () => void; onChanged: () => void }) {
+  const { typ, ma, bw, bundesland, onClose, onChanged } = props;
   const istMA = typ === 'mitarbeiter';
   const id = istMA ? ma!.id : bw!.id;
 
@@ -519,7 +614,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
             <DokumenteTab typ={typ} id={id} docs={docs} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeDocs} />
           )}
           {detailTab === 'abw' && (
-            <AbwesenheitenTab id={id} rows={abw} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeAbw} urlaubsanspruch={parseInt(urlaubsanspruch, 10) || 30} />
+            <AbwesenheitenTab id={id} rows={abw} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeAbw} urlaubsanspruch={parseInt(urlaubsanspruch, 10) || 30} bundesland={bundesland} />
           )}
           {detailTab === 'schul' && (
             <SchulungenTab id={id} rows={schul} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeSchul} />
@@ -631,8 +726,8 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
 // ============================================================
 // TAB: Abwesenheiten
 // ============================================================
-function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspruch }: {
-  id: string; rows: Abwesenheit[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void; urlaubsanspruch: number;
+function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspruch, bundesland }: {
+  id: string; rows: Abwesenheit[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void; urlaubsanspruch: number; bundesland: string;
 }) {
   const [typ, setTyp] = useState('urlaub');
   const [von, setVon] = useState('');
@@ -655,7 +750,7 @@ function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspr
       const ownerId = userData?.user?.id;
       if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); setSaving(false); return; }
       const { error } = await supabase.from('hr_abwesenheiten').insert({
-        owner_user_id: ownerId, mitarbeiter_id: id, typ, von, bis, tage: tageZwischen(von, bis),
+        owner_user_id: ownerId, mitarbeiter_id: id, typ, von, bis, tage: dauerTage(typ, von, bis, bundesland),
         status: typ === 'urlaub' ? 'beantragt' : 'erfasst', au_vorhanden: typ === 'krankheit' ? au : false,
       });
       if (error) throw error;
@@ -692,6 +787,13 @@ function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspr
         )}
         <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={hinzufuegen} disabled={saving}>+ Hinzufügen</button>
       </div>
+      {von && bis && (
+        <div style={{ fontSize: 12, color: C.textDim, marginTop: -4, marginBottom: 10 }}>
+          {typ === 'urlaub'
+            ? `= ${arbeitstage(von, bis, bundesland)} Arbeitstage (Wochenenden & Feiertage werden nicht als Urlaub gezählt)`
+            : `= ${kalendertage(von, bis)} Kalendertage`}
+        </div>
+      )}
       {msg && <div style={styles.infoMsg}>{msg}</div>}
 
       <div style={{ marginTop: 14 }}>
@@ -978,6 +1080,7 @@ const styles: Record<string, CSSProperties> = {
   zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
   glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 18, cursor: 'pointer', lineHeight: 1 },
   kalenderLink: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 600, color: C.text, textDecoration: 'none', whiteSpace: 'nowrap' },
+  blSelect: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 12px', fontSize: 13, fontWeight: 600, color: C.text, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer', outline: 'none' },
   glockeBadge: { position: 'absolute', top: -6, right: -6, background: C.danger, color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' },
   glockePanel: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, maxHeight: 420, overflowY: 'auto', background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 50, padding: 8 },
   glockeHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px 10px', borderBottom: `1px solid ${C.line}` },
