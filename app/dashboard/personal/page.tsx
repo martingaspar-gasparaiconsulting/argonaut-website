@@ -691,7 +691,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
             <SchulungenTab id={id} rows={schul} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeSchul} />
           )}
           {detailTab === 'zeit' && (
-            <ZeiterfassungTab id={id} rows={zeitRows} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeZeit} />
+            <ZeiterfassungTab id={id} rows={zeitRows} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeZeit} wochenstunden={parseFloat(wochenstunden.replace(',', '.')) || 0} bundesland={bundesland} />
           )}
           {detailTab === 'check' && (
             <ChecklistenTab id={id} rows={check} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeCheck} />
@@ -1100,8 +1100,8 @@ function zToLocal(iso: string | null): string {
 }
 function zFromLocal(s: string): string { return new Date(s).toISOString(); }
 
-function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload }: {
-  id: string; rows: ZeitSitzung[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void;
+function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload, wochenstunden, bundesland }: {
+  id: string; rows: ZeitSitzung[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void; wochenstunden: number; bundesland: string;
 }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [eKommen, setEKommen] = useState('');
@@ -1120,6 +1120,11 @@ function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload }: {
   const [protoOffen, setProtoOffen] = useState(false);
   const [proto, setProto] = useState<ZeitKorrektur[]>([]);
   const [protoLoading, setProtoLoading] = useState(false);
+
+  // Monats-Auswertung
+  const jetzt = new Date();
+  const [jahr, setJahr] = useState(jetzt.getFullYear());
+  const [monat, setMonat] = useState(jetzt.getMonth()); // 0-11
 
   async function ownerId(): Promise<string | null> {
     const { data } = await supabase.auth.getUser();
@@ -1241,15 +1246,72 @@ function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload }: {
     if (neu && proto.length === 0) protokollLaden();
   }
 
-  const monatMin = rows.reduce((s, r) => s + zNetto(r), 0);
+  const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   const AKTION_LABEL: Record<string, string> = { korrektur: 'Korrektur', nachtrag: 'Nachtrag', loeschung: 'Löschung' };
   const FELD_LABEL: Record<string, string> = { kommen_um: 'Kommen', gehen_um: 'Gehen', pause_minuten: 'Pause' };
 
+  // Monats-Auswertung
+  const praefix = `${jahr}-${zZwei(monat + 1)}`;
+  const monatRows = rows.filter((r) => (r.datum || '').startsWith(praefix));
+  const istMin = monatRows.reduce((s, r) => s + zNetto(r), 0);
+  const istH = istMin / 60;
+  const letzterTag = new Date(jahr, monat + 1, 0).getDate();
+  const ersterDatum = `${praefix}-01`;
+  const letzterDatum = `${praefix}-${zZwei(letzterTag)}`;
+  const arbeitstageMonat = arbeitstage(ersterDatum, letzterDatum, bundesland);
+  const sollH = wochenstunden > 0 ? (wochenstunden / 5) * arbeitstageMonat : null;
+  const saldoH = sollH !== null ? istH - sollH : null;
+
+  function monatWechseln(delta: number) {
+    let m = monat + delta, j = jahr;
+    if (m < 0) { m = 11; j -= 1; }
+    if (m > 11) { m = 0; j += 1; }
+    setMonat(m); setJahr(j);
+  }
+  function stundenStr(h: number): string { return (Math.round(h * 100) / 100).toFixed(2).replace('.', ',') + ' h'; }
+
+  function csvExport() {
+    const sep = ';';
+    const kopf = ['Datum', 'Kommen', 'Gehen', 'Pause (Min)', 'Netto (h)', 'Herkunft'].join(sep);
+    const zeilen = [...monatRows].sort((a, b) => a.kommen_um.localeCompare(b.kommen_um)).map((r) =>
+      [dStr(r.datum), zUhr(r.kommen_um), zUhr(r.gehen_um), String(r.pause_minuten || 0),
+       (Math.round((zNetto(r) / 60) * 100) / 100).toFixed(2).replace('.', ','),
+       r.quelle === 'nachtrag' ? 'Nachtrag' : 'Stempeluhr'].join(sep)
+    );
+    const summe = ['', '', '', 'Summe Ist:', (Math.round(istH * 100) / 100).toFixed(2).replace('.', ','), ''].join(sep);
+    const soll = sollH !== null ? ['', '', '', 'Soll:', (Math.round(sollH * 100) / 100).toFixed(2).replace('.', ','), `${arbeitstageMonat} Arbeitstage`].join(sep) : '';
+    const saldo = saldoH !== null ? ['', '', '', 'Saldo:', (Math.round(saldoH * 100) / 100).toFixed(2).replace('.', ','), ''].join(sep) : '';
+    const inhalt = '\uFEFF' + [kopf, ...zeilen, '', summe, soll, saldo].filter((z) => z !== '').join('\r\n');
+    const blob = new Blob([inhalt], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `zeiterfassung_${praefix}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
-      <div style={styles.statGrid}>
-        <Stat label="Sitzungen gesamt" value={String(rows.length)} />
-        <Stat label="Erfasste Arbeitszeit" value={zDauer(monatMin)} accent={C.cyan} />
+      {/* Monats-Auswertung: Ist / Soll / Saldo */}
+      <div style={{ ...styles.cardInner, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button style={styles.miniBtn} onClick={() => monatWechseln(-1)}>◀</button>
+            <span style={{ fontWeight: 700, color: C.gold, minWidth: 130, textAlign: 'center' }}>{MONATE[monat]} {jahr}</span>
+            <button style={styles.miniBtn} onClick={() => monatWechseln(1)}>▶</button>
+          </div>
+          <button style={styles.secondaryBtn} onClick={csvExport} disabled={monatRows.length === 0}>⤓ CSV exportieren</button>
+        </div>
+        <div style={styles.statGrid}>
+          <Stat label="Ist (Monat)" value={zDauer(istMin)} accent={C.cyan} />
+          <Stat label={`Soll (${arbeitstageMonat} AT)`} value={sollH !== null ? stundenStr(sollH) : '—'} />
+          <Stat
+            label="Saldo"
+            value={saldoH !== null ? (saldoH >= 0 ? '+' : '') + stundenStr(saldoH) : '—'}
+            accent={saldoH === null ? undefined : saldoH >= 0 ? C.green : C.danger}
+          />
+        </div>
+        {wochenstunden <= 0 && <div style={{ fontSize: 12, color: C.warn, marginTop: 8 }}>Soll nicht berechenbar: Wochenstunden in den Stammdaten hinterlegen.</div>}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 14px' }}>
@@ -1298,8 +1360,8 @@ function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload }: {
 
       <div style={{ marginTop: 4 }}>
         {loading && <div style={styles.listHint}>Lädt …</div>}
-        {!loading && rows.length === 0 && <div style={styles.listHint}>Noch keine Buchungen erfasst.</div>}
-        {!loading && rows.map((r) => (
+        {!loading && monatRows.length === 0 && <div style={styles.listHint}>Keine Buchungen in {MONATE[monat]} {jahr}.</div>}
+        {!loading && monatRows.map((r) => (
           <div key={r.id}>
             {editId === r.id ? (
               <div style={styles.cardInner}>
