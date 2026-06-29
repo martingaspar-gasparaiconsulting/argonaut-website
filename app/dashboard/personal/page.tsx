@@ -42,6 +42,7 @@ type Schulung = { id: string; titel: string; kategorie: string; absolviert_am: s
 
 type Tab = 'mitarbeiter' | 'bewerber';
 type Selected = { typ: Tab; id: string } | null;
+type Benachrichtigung = { id: string; typ: string; titel: string; text: string | null; gelesen: boolean; created_at: string };
 
 const MA_STATUS = ['aktiv', 'inaktiv', 'beurlaubt'];
 const BW_STATUS = ['neu', 'in_pruefung', 'eingeladen', 'abgesagt', 'eingestellt'];
@@ -100,6 +101,32 @@ export default function PersonalPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<Selected>(null);
 
+  // Benachrichtigungen (Glocke)
+  const [benach, setBenach] = useState<Benachrichtigung[]>([]);
+  const [glockeOffen, setGlockeOffen] = useState(false);
+
+  const ladeBenach = useCallback(async () => {
+    const { data } = await supabase.from('hr_benachrichtigungen')
+      .select('id,typ,titel,text,gelesen,created_at')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    setBenach((data as Benachrichtigung[]) ?? []);
+  }, []);
+
+  useEffect(() => { ladeBenach(); }, [ladeBenach]);
+
+  async function alsGelesen(id: string) {
+    await supabase.from('hr_benachrichtigungen').update({ gelesen: true }).eq('id', id);
+    setBenach((prev) => prev.map((b) => (b.id === id ? { ...b, gelesen: true } : b)));
+  }
+  async function alleGelesen() {
+    const offene = benach.filter((b) => !b.gelesen).map((b) => b.id);
+    if (offene.length === 0) return;
+    await supabase.from('hr_benachrichtigungen').update({ gelesen: true }).in('id', offene);
+    setBenach((prev) => prev.map((b) => ({ ...b, gelesen: true })));
+  }
+  const ungelesen = benach.filter((b) => !b.gelesen).length;
+
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -135,11 +162,42 @@ export default function PersonalPage() {
           <h1 style={styles.h1}>Personal</h1>
           <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort.</p>
         </div>
-        <button style={styles.primaryBtn} onClick={() => setModalOpen(true)}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.88')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}>
-          + {tab === 'mitarbeiter' ? 'Mitarbeiter anlegen' : 'Bewerber anlegen'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              style={styles.glockeBtn}
+              onClick={() => setGlockeOffen((o) => !o)}
+              title="Benachrichtigungen"
+            >
+              🔔
+              {ungelesen > 0 && <span style={styles.glockeBadge}>{ungelesen}</span>}
+            </button>
+            {glockeOffen && (
+              <div style={styles.glockePanel}>
+                <div style={styles.glockeHead}>
+                  <span style={{ fontWeight: 700, color: C.text }}>Benachrichtigungen</span>
+                  {ungelesen > 0 && <button style={styles.glockeMarkAll} onClick={alleGelesen}>Alle gelesen</button>}
+                </div>
+                {benach.length === 0 && <div style={styles.glockeEmpty}>Keine Benachrichtigungen.</div>}
+                {benach.map((b) => (
+                  <div key={b.id} style={{ ...styles.glockeItem, opacity: b.gelesen ? 0.5 : 1 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{b.titel}</div>
+                      {b.text && <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{b.text}</div>}
+                      <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>{new Date(b.created_at).toLocaleString('de-DE')}</div>
+                    </div>
+                    {!b.gelesen && <button style={styles.glockeDot} onClick={() => alsGelesen(b.id)} title="Als gelesen markieren" />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button style={styles.primaryBtn} onClick={() => setModalOpen(true)}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.88')}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}>
+            + {tab === 'mitarbeiter' ? 'Mitarbeiter anlegen' : 'Bewerber anlegen'}
+          </button>
+        </div>
       </div>
 
       <div style={styles.tabs}>
@@ -917,6 +975,14 @@ const styles: Record<string, CSSProperties> = {
   inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
   zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
+  glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 18, cursor: 'pointer', lineHeight: 1 },
+  glockeBadge: { position: 'absolute', top: -6, right: -6, background: C.danger, color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' },
+  glockePanel: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, maxHeight: 420, overflowY: 'auto', background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 50, padding: 8 },
+  glockeHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px 10px', borderBottom: `1px solid ${C.line}` },
+  glockeMarkAll: { background: 'transparent', color: C.cyan, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' },
+  glockeEmpty: { padding: 20, textAlign: 'center', color: C.textDim, fontSize: 13 },
+  glockeItem: { display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 10px', borderBottom: '1px solid rgba(255,255,255,0.04)' },
+  glockeDot: { width: 10, height: 10, borderRadius: 999, background: C.cyan, border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 4 },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   tabs: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
