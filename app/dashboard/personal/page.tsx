@@ -8,12 +8,11 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-// --- Supabase Browser-Client (selbst-enthalten) -------------
-// Falls du einen eigenen Helper hast, ersetze diese 4 Zeilen
-// durch deinen Import, z.B.: import { supabase } from '@/lib/supabase';
-const supabase = createClient(
+// --- Supabase Browser-Client (Cookie-Session, wie der Rest der App) ---
+// Nutzt @supabase/ssr, damit die eingeloggte Session (Cookies) erkannt wird.
+const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
