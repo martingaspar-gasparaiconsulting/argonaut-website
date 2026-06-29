@@ -1050,6 +1050,24 @@ const CHECK_ARTEN: { key: string; label: string }[] = [
   { key: 'offboarding', label: 'Offboarding (Austritt)' },
 ];
 
+type Vorlage = { id: string; name: string; art: string; punkte: string[] };
+
+// Eingebaute, branchenneutrale Bibliothek (Vorschläge — für alle Branchen)
+const CHECK_BIBLIOTHEK: Record<'onboarding' | 'offboarding', { kategorie: string; punkte: string[] }[]> = {
+  onboarding: [
+    { kategorie: 'Zugang & Schlüssel', punkte: ['Schlüssel/Transponder ausgehändigt', 'Zugangskarte/Chip aktiviert', 'Alarmcode erklärt', 'Spind zugewiesen'] },
+    { kategorie: 'IT & Kommunikation', punkte: ['E-Mail-Konto angelegt', 'Benutzerkonto/Logins eingerichtet', 'Laptop/PC ausgehändigt', 'Diensthandy ausgehändigt', 'Telefon/Durchwahl eingerichtet'] },
+    { kategorie: 'Arbeitsmittel', punkte: ['Arbeitskleidung ausgegeben', 'Schutzausrüstung (PSA) ausgegeben', 'Werkzeug/Ausrüstung übergeben', 'Stempelkarte/Zeiterfassung eingerichtet'] },
+    { kategorie: 'Unterlagen & Recht', punkte: ['Arbeitsvertrag unterschrieben', 'Personalbogen ausgefüllt', 'SV-Ausweis/Steuer-ID erfasst', 'Bankverbindung erfasst', 'Datenschutzerklärung unterzeichnet'] },
+    { kategorie: 'Einarbeitung & Sicherheit', punkte: ['Sicherheitsunterweisung durchgeführt', 'Brandschutzunterweisung durchgeführt', 'Ersthelfer & Fluchtwege gezeigt', 'Einarbeitungsplan besprochen', 'Team vorgestellt', 'Ansprechpartner/Pate benannt'] },
+  ],
+  offboarding: [
+    { kategorie: 'Rückgabe', punkte: ['Schlüssel/Transponder zurückerhalten', 'Zugangskarte/Chip eingezogen', 'Laptop/PC zurückerhalten', 'Diensthandy zurückerhalten', 'Arbeitskleidung/PSA zurückerhalten', 'Werkzeug/Ausrüstung zurückerhalten'] },
+    { kategorie: 'IT & Zugänge', punkte: ['E-Mail-Konto deaktiviert', 'Alle Logins/Zugänge gesperrt', 'E-Mail-Weiterleitung eingerichtet', 'Daten gesichert/übergeben'] },
+    { kategorie: 'Abschluss', punkte: ['Resturlaub abgegolten/geklärt', 'Arbeitszeugnis erstellt', 'Letzte Lohnabrechnung veranlasst', 'Abmeldung Sozialversicherung', 'Übergabe/Wissenstransfer dokumentiert', 'Austrittsgespräch geführt'] },
+  ],
+};
+
 function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
   id: string; rows: Checkliste[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void;
 }) {
@@ -1102,6 +1120,7 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
 
   return (
     <>
+      <VorlagenPanel id={id} rows={rows} onAdded={reload} setMsg={setMsg} />
       <div style={styles.miniForm}>
         <select style={{ ...styles.input, minWidth: 190 }} value={neuArt} onChange={(e) => setNeuArt(e.target.value)}>
           {CHECK_ARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
@@ -1152,6 +1171,143 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
         );
       })}
     </>
+  );
+}
+
+// ============================================================
+// Checklisten · Vorlagen & Bibliothek (Stufe 2)
+// ============================================================
+function VorlagenPanel({ id, rows, onAdded, setMsg }: {
+  id: string; rows: Checkliste[]; onAdded: () => void; setMsg: (s: string | null) => void;
+}) {
+  const [offen, setOffen] = useState(false);
+  const [bibArt, setBibArt] = useState<'onboarding' | 'offboarding'>('onboarding');
+  const [auswahl, setAuswahl] = useState<Set<string>>(new Set());
+  const [vorlagen, setVorlagen] = useState<Vorlage[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const ladeVorlagen = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('hr_checklisten_vorlagen')
+        .select('id,name,art,punkte').order('created_at', { ascending: false });
+      if (error) throw error;
+      setVorlagen((data as Vorlage[]) ?? []);
+    } catch { /* leise */ }
+  }, []);
+
+  useEffect(() => { if (offen) ladeVorlagen(); }, [offen, ladeVorlagen]);
+
+  function toggle(p: string) {
+    setAuswahl((prev) => { const n = new Set(prev); if (n.has(p)) n.delete(p); else n.add(p); return n; });
+  }
+  async function ownerId(): Promise<string | null> {
+    const { data } = await supabase.auth.getUser(); return data?.user?.id ?? null;
+  }
+
+  async function punkteEinfuegen(art: string, punkte: string[]) {
+    if (punkte.length === 0) { setMsg('Nichts ausgewählt.'); return; }
+    setBusy(true); setMsg(null);
+    try {
+      const oid = await ownerId();
+      if (!oid) { setMsg('Keine aktive Sitzung gefunden.'); setBusy(false); return; }
+      let r = rows.filter((x) => x.art === art).reduce((m, x) => Math.max(m, x.reihenfolge ?? 0), 0);
+      const insertRows = punkte.map((p) => ({ owner_user_id: oid, mitarbeiter_id: id, art, aufgabe: p, reihenfolge: ++r }));
+      const { error } = await supabase.from('hr_checklisten').insert(insertRows);
+      if (error) throw error;
+      setAuswahl(new Set());
+      onAdded();
+    } catch (e: unknown) { setMsg('Hinzufügen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+  }
+
+  async function alsVorlageSpeichern() {
+    const punkte = Array.from(auswahl);
+    if (punkte.length === 0) { setMsg('Bitte zuerst Punkte in der Bibliothek auswählen.'); return; }
+    const name = window.prompt('Name der Vorlage (z. B. „Onboarding Büro"):');
+    if (!name || !name.trim()) return;
+    setBusy(true); setMsg(null);
+    try {
+      const oid = await ownerId();
+      if (!oid) { setMsg('Keine aktive Sitzung gefunden.'); setBusy(false); return; }
+      const { error } = await supabase.from('hr_checklisten_vorlagen').insert({ owner_user_id: oid, name: name.trim(), art: bibArt, punkte });
+      if (error) throw error;
+      setMsg('Vorlage gespeichert.');
+      ladeVorlagen();
+    } catch (e: unknown) { setMsg('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+  }
+
+  async function vorlageLoeschen(vrl: Vorlage) {
+    if (!window.confirm(`Vorlage „${vrl.name}" löschen?`)) return;
+    try {
+      const { error } = await supabase.from('hr_checklisten_vorlagen').delete().eq('id', vrl.id);
+      if (error) throw error; ladeVorlagen();
+    } catch { setMsg('Löschen fehlgeschlagen.'); }
+  }
+
+  if (!offen) {
+    return <button style={{ ...styles.ghostBtn, marginBottom: 14 }} onClick={() => setOffen(true)}>📋 Aus Vorlage / Bibliothek hinzufügen</button>;
+  }
+
+  const meineVorlagen = vorlagen.filter((vrl) => vrl.art === bibArt);
+
+  return (
+    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, marginBottom: 16, background: C.cardBg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <strong style={{ color: C.gold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>Vorlagen &amp; Bibliothek</strong>
+        <button style={styles.closeBtn} onClick={() => setOffen(false)} aria-label="Schließen">×</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {(['onboarding', 'offboarding'] as const).map((a) => (
+          <button key={a} onClick={() => { setBibArt(a); setAuswahl(new Set()); }}
+            style={{ ...styles.tabBtn, borderColor: bibArt === a ? C.gold : C.line, color: bibArt === a ? C.navy : C.text, background: bibArt === a ? C.gold : 'transparent' }}>
+            {a === 'onboarding' ? 'Onboarding' : 'Offboarding'}
+          </button>
+        ))}
+      </div>
+
+      {meineVorlagen.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Vorlagen</div>
+          {meineVorlagen.map((vrl) => (
+            <div key={vrl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ flex: 1, fontSize: 14, color: C.text }}>{vrl.name} <span style={{ color: C.textDim }}>({vrl.punkte.length} Punkte)</span></span>
+              <button style={styles.miniBtn} disabled={busy} onClick={() => punkteEinfuegen(vrl.art, vrl.punkte)}>Übernehmen</button>
+              <button style={{ ...styles.miniBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => vorlageLoeschen(vrl)}>Löschen</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600, marginBottom: 10 }}>Bibliothek — Punkte antippen zum Auswählen</div>
+      {CHECK_BIBLIOTHEK[bibArt].map((grp) => (
+        <div key={grp.kategorie} style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.cyan, marginBottom: 6 }}>{grp.kategorie}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {grp.punkte.map((p) => {
+              const aktiv = auswahl.has(p);
+              return (
+                <button key={p} onClick={() => toggle(p)}
+                  style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    border: `1px solid ${aktiv ? C.gold : C.line}`, background: aktiv ? 'rgba(201,168,76,0.16)' : 'transparent', color: aktiv ? C.gold : C.text }}>
+                  {aktiv ? '✓ ' : '＋ '}{p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14, borderTop: `1px solid ${C.line}`, paddingTop: 14 }}>
+        <button style={{ ...styles.primaryBtn, opacity: busy || auswahl.size === 0 ? 0.6 : 1 }} disabled={busy || auswahl.size === 0}
+          onClick={() => punkteEinfuegen(bibArt, Array.from(auswahl))}>
+          Ausgewählte hinzufügen ({auswahl.size})
+        </button>
+        <button style={{ ...styles.ghostBtn, opacity: busy || auswahl.size === 0 ? 0.6 : 1 }} disabled={busy || auswahl.size === 0}
+          onClick={alsVorlageSpeichern}>
+          Als Vorlage speichern
+        </button>
+      </div>
+    </div>
   );
 }
 
