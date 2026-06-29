@@ -415,7 +415,6 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
   const [inviting, setInviting] = useState(false);
   const [eingeladen, setEingeladen] = useState(!!ma?.auth_user_id);
   const [zugang, setZugang] = useState<{ email: string; passwort: string; loginUrl: string } | null>(null);
-  const [vertragLoading, setVertragLoading] = useState<null | 'pdf' | 'docx'>(null);
 
   // Datensätze
   const [docs, setDocs] = useState<HrDokument[]>([]);
@@ -528,26 +527,6 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
     } catch (e: unknown) { setMsg('Zurücksetzen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setInviting(false); }
   }
 
-  async function vertragErzeugen(format: 'pdf' | 'docx') {
-    if (!istMA) return;
-    setVertragLoading(format); setMsg(null);
-    try {
-      const res = await fetch('/api/hr/arbeitsvertrag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mitarbeiter_id: id, format }),
-      });
-      const j = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(j?.error || 'Vertrag konnte nicht erzeugt werden.');
-      if (j?.url) {
-        window.open(j.url, '_blank');
-        setMsg('Arbeitsvertrag erzeugt und im Dokumente-Bereich abgelegt. Der Download wurde in einem neuen Tab geöffnet.');
-      } else {
-        setMsg('Vertrag erzeugt und abgelegt, aber kein Download-Link erhalten. Bitte im Dokumente-Bereich nachsehen.');
-      }
-    } catch (e: unknown) { setMsg('Vertrag fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setVertragLoading(null); }
-  }
-
   async function uebernehmen() {
     if (istMA) return;
     if (!window.confirm(`${vorname} ${nachname} als Mitarbeiter übernehmen?\n\nDie Person wird als aktiver Mitarbeiter angelegt und der Bewerber-Status auf „Eingestellt" gesetzt.`)) return;
@@ -652,25 +631,6 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
                   </button>
                   <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>Der Mitarbeiter loggt sich damit ein und kann sein Passwort danach jederzeit ändern.</div>
                 </div>
-              )}
-
-              {istMA && (
-                <>
-                  <div style={styles.sectionDivider}>Arbeitsvertrag</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <button style={{ ...styles.primaryBtn, opacity: vertragLoading ? 0.6 : 1, cursor: vertragLoading ? 'wait' : 'pointer' }} onClick={() => vertragErzeugen('pdf')} disabled={!!vertragLoading}>
-                        {vertragLoading === 'pdf' ? 'Erzeugt PDF …' : '📄 Arbeitsvertrag als PDF'}
-                      </button>
-                      <button style={{ ...styles.ghostBtn, opacity: vertragLoading ? 0.6 : 1, cursor: vertragLoading ? 'wait' : 'pointer' }} onClick={() => vertragErzeugen('docx')} disabled={!!vertragLoading}>
-                        {vertragLoading === 'docx' ? 'Erzeugt Word …' : '📝 Als Word (.docx)'}
-                      </button>
-                    </div>
-                    <span style={{ fontSize: 12, color: C.textDim, lineHeight: 1.5 }}>
-                      Wird aus den Stammdaten vorbefüllt. Fehlende Angaben (z. B. Gehalt, Wochenstunden) erscheinen als [BITTE ERGÄNZEN] und werden nie geraten. Unverbindliches Muster — keine Rechtsberatung. Das Dokument landet zusätzlich im Dokumente-Bereich.
-                    </span>
-                  </div>
-                </>
               )}
             </>
           )}
