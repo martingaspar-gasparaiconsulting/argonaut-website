@@ -30,6 +30,12 @@ const FARB_PRESETS = [
 ];
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+// Minijob-Rahmen 2026: 603 €/Monat bei Mindestlohn 13,90 €/h -> max. ~43,4 h/Monat
+const MINIJOB_EUR = 603;
+const MINDESTLOHN = 13.90;
+const MINIJOB_STD_MONAT = MINIJOB_EUR / MINDESTLOHN; // ≈ 43,38 h
 
 // --- Datums-Helfer (alles lokal, niemals toISOString fuer date) ---
 function montagDerWoche(d: Date): Date {
@@ -56,6 +62,13 @@ function ymd(d: Date): string {
 
 function tagMonat(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+}
+
+// 'YYYY-MM' -> 'Juli 2026'
+function monatLabel(key: string): string {
+  if (!key) return '';
+  const [y, m] = key.split('-').map(Number);
+  return `${MONATE[(m || 1) - 1]} ${y}`;
 }
 
 function kalenderwoche(d: Date): number {
@@ -142,6 +155,9 @@ export default function SchichtplanPage() {
   // Offene Tausch-Anfragen (Chef-Bearbeitung)
   const [tauschAntraege, setTauschAntraege] = useState<any[]>([]);
 
+  // Minijob-Stunden-Warnung (geplante Monatsstunden je Minijobber)
+  const [minijobWarnung, setMinijobWarnung] = useState<Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }>>({});
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -206,6 +222,35 @@ export default function SchichtplanPage() {
         };
       });
       setTauschAntraege(angereichert);
+
+      // --- Minijob-Monatscheck: geplante Schichtstunden je Kalendermonat ---
+      const mStart = new Date(wochenStart.getFullYear(), wochenStart.getMonth(), 1);
+      const sonntag = addTage(wochenStart, 6);
+      const mEnd = new Date(sonntag.getFullYear(), sonntag.getMonth() + 1, 0); // letzter Tag des Monats
+      const { data: monatRows } = await supabase
+        .from('hr_schichten')
+        .select('mitarbeiter_id,datum,beginn_um,ende_um,pause_minuten')
+        .eq('owner_user_id', uid)
+        .gte('datum', ymd(mStart)).lte('datum', ymd(mEnd));
+
+      const warn: Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }> = {};
+      maListe
+        .filter((m: any) => (m.arbeitszeit_modell || '') === 'minijob')
+        .forEach((m: any) => {
+          const proMonat: Record<string, number> = {};
+          (monatRows || [])
+            .filter((s: any) => s.mitarbeiter_id === m.id)
+            .forEach((s: any) => {
+              const key = String(s.datum).slice(0, 7); // YYYY-MM
+              proMonat[key] = (proMonat[key] || 0) + dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0);
+            });
+          let bestKey = ''; let bestStd = 0;
+          Object.entries(proMonat).forEach(([k, v]) => { if (v > bestStd) { bestStd = v; bestKey = k; } });
+          const status: 'ok' | 'knapp' | 'ueber' =
+            bestStd > MINIJOB_STD_MONAT ? 'ueber' : (bestStd >= MINIJOB_STD_MONAT * 0.9 ? 'knapp' : 'ok');
+          warn[m.id] = { std: bestStd, monat: bestKey, status };
+        });
+      setMinijobWarnung(warn);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -705,11 +750,26 @@ export default function SchichtplanPage() {
                       color: istUnbesetzt ? BRAND.warn : '#fff',
                     }}>
                       {istUnbesetzt ? '\u26A0 Unbesetzt' : maName(m)}
-                      {!istUnbesetzt && m.arbeitszeit_modell && (
+                      {!istUnbesetzt && m.arbeitszeit_modell && m.arbeitszeit_modell !== 'minijob' && (
                         <div style={{ fontSize: 11, color: BRAND.textDim, fontWeight: 500, marginTop: 2 }}>
                           {m.arbeitszeit_modell}
                         </div>
                       )}
+                      {!istUnbesetzt && m.arbeitszeit_modell === 'minijob' && (() => {
+                        const w = minijobWarnung[m.id];
+                        const std = w ? w.std : 0;
+                        const farbe = w?.status === 'ueber' ? BRAND.danger : w?.status === 'knapp' ? BRAND.warn : BRAND.textDim;
+                        const icon = w?.status === 'ueber' ? '\u26A0 ' : w?.status === 'knapp' ? '\u26A0 ' : '';
+                        return (
+                          <div
+                            style={{ fontSize: 11, color: farbe, fontWeight: w?.status === 'ok' ? 500 : 700, marginTop: 2 }}
+                            title={`Minijob-Grenze 2026: max. ~${MINIJOB_STD_MONAT.toFixed(1)} h/Monat (${MINIJOB_EUR} € ÷ ${MINDESTLOHN.toFixed(2).replace('.', ',')} €). Geplant ${monatLabel(w?.monat || '')}: ${std.toFixed(1)} h.`}
+                          >
+                            {icon}Minijob · {std.toFixed(1)}/{MINIJOB_STD_MONAT.toFixed(0)} h
+                            {w?.status === 'ueber' ? ' — Grenze überschritten!' : w?.status === 'knapp' ? ' — fast am Limit' : ''}
+                          </div>
+                        );
+                      })()}
                     </td>
                     {wochenTage.map((d, ci) => {
                       const datum = ymd(d);
@@ -805,6 +865,13 @@ export default function SchichtplanPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!laden && mitarbeiter.some((m) => (m.arbeitszeit_modell || '') === 'minijob') && (
+        <div style={{ marginTop: 10, fontSize: 12, color: BRAND.textDim }}>
+          Minijob-Grenze 2026: max. ~{MINIJOB_STD_MONAT.toFixed(1)} h/Monat ({MINIJOB_EUR} € ÷ {MINDESTLOHN.toFixed(2).replace('.', ',')} € Mindestlohn).
+          Angezeigt werden die geplanten Schichtstunden im jeweiligen Kalendermonat.
         </div>
       )}
 
