@@ -2,6 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Pfade, die ein eingeladener Mitarbeiter (Self-Service) erreichen darf.
+// Additiv erweiterbar — neue Mitarbeiter-Seiten hier eintragen.
+const MITARBEITER_ERLAUBT = ['/dashboard/mein-bereich', '/dashboard/zeiterfassung']
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
 
@@ -47,8 +51,9 @@ export async function middleware(req: NextRequest) {
         .maybeSingle()
 
       if (mitarbeiter) {
-        // MITARBEITER: nur der eigene Self-Service-Bereich ist erlaubt
-        if (!req.nextUrl.pathname.startsWith('/dashboard/mein-bereich')) {
+        // MITARBEITER: nur die freigeschalteten Self-Service-Bereiche sind erlaubt
+        const erlaubt = MITARBEITER_ERLAUBT.some((p) => req.nextUrl.pathname.startsWith(p))
+        if (!erlaubt) {
           return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
         }
       }
