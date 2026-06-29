@@ -24,14 +24,35 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', req.url))
     }
 
+    // --- Rollen-Weiche -------------------------------------------------------
+    // Kunde (Chef) = hat eine customers-Zeile. Mitarbeiter (Self-Service) =
+    // kein Kunde, aber ein mitarbeiter-Datensatz mit auth_user_id = Login.
     const { data: customer } = await supabase
       .from('customers')
       .select('status')
       .eq('email', session.user.email)
       .single()
 
-    if (customer?.status === 'gesperrt') {
-      return NextResponse.redirect(new URL('/dashboard/upgrade', req.url))
+    if (customer) {
+      // CHEF: bestehendes Verhalten unveraendert
+      if (customer.status === 'gesperrt') {
+        return NextResponse.redirect(new URL('/dashboard/upgrade', req.url))
+      }
+    } else {
+      // KEIN Kunde -> pruefen, ob es ein eingeladener Mitarbeiter ist
+      const { data: mitarbeiter } = await supabase
+        .from('mitarbeiter')
+        .select('id')
+        .eq('auth_user_id', session.user.id)
+        .maybeSingle()
+
+      if (mitarbeiter) {
+        // MITARBEITER: nur der eigene Self-Service-Bereich ist erlaubt
+        if (!req.nextUrl.pathname.startsWith('/dashboard/mein-bereich')) {
+          return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+        }
+      }
+      // weder Kunde noch Mitarbeiter: unveraendert durchlassen
     }
   }
 
