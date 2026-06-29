@@ -928,11 +928,17 @@ function SchulungenTab({ id, rows, loading, msg, setMsg, reload }: {
 }
 
 // ============================================================
-// TAB: Auswertung (regelbasiert, kein API-Call)
+// TAB: Auswertung — regelbasierte Hinweise (sofort) + KI-Einschätzung (auf Knopfdruck)
+// KI bekommt nur anonyme Eckdaten (keine Namen, keine Dokumente) → DSGVO-sparsam.
 // ============================================================
 function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig }: {
   abw: Abwesenheit[]; schul: Schulung[]; loading: boolean; urlaubsanspruch: number; stammVollstaendig: boolean;
 }) {
+  // --- KI-Einschätzung (auf Knopfdruck) — Hooks zuerst, vor jedem early return ---
+  const [kiText, setKiText] = useState<string | null>(null);
+  const [kiLoading, setKiLoading] = useState(false);
+  const [kiError, setKiError] = useState<string | null>(null);
+
   const jahr = new Date().getFullYear();
   const genommen = abw.filter((r) => r.typ === 'urlaub' && r.status === 'genehmigt' && new Date(r.von).getFullYear() === jahr).reduce((s, r) => s + (r.tage ?? 0), 0);
   const rest = urlaubsanspruch - genommen;
@@ -956,6 +962,30 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
   if (!stammVollstaendig) hinweise.push({ text: 'Stammdaten unvollständig (Geburtsdatum, Adresse, IBAN oder SV-Nummer fehlt).', farbe: C.cyan });
   if (hinweise.length === 0) hinweise.push({ text: 'Alles im grünen Bereich — keine offenen Auffälligkeiten.', farbe: C.green });
 
+  async function kiAuswerten() {
+    setKiLoading(true); setKiError(null); setKiText(null);
+    try {
+      const resp = await fetch('/api/hr/ki-auswertung', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          urlaubsanspruch,
+          genommen,
+          rest,
+          krankTage,
+          krankEintraege: krankEintraege.length,
+          wochenendNah,
+          stammVollstaendig,
+          schulungen: schul.map((s) => ({ kategorie: s.kategorie, status: s.status, tageBis: tageBis(s.gueltig_bis) })),
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { setKiError(data?.error ?? 'KI-Auswertung fehlgeschlagen.'); return; }
+      setKiText((data?.auswertung as string) ?? '');
+    } catch { setKiError('Verbindung zur KI-Auswertung fehlgeschlagen.'); }
+    finally { setKiLoading(false); }
+  }
+
   if (loading) return <div style={styles.listHint}>Wertet aus …</div>;
   return (
     <>
@@ -973,6 +1003,22 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
             <span style={{ fontSize: 14, color: C.text, lineHeight: 1.5 }}>{h.text}</span>
           </div>
         ))}
+      </div>
+
+      <div style={styles.sectionDivider}>KI-Einschätzung</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button style={{ ...styles.primaryBtn, opacity: kiLoading ? 0.6 : 1, cursor: kiLoading ? 'wait' : 'pointer' }} onClick={kiAuswerten} disabled={kiLoading}>
+            {kiLoading ? 'KI denkt nach …' : kiText ? '🤖 Neu auswerten' : '🤖 KI-Einschätzung erstellen'}
+          </button>
+          <span style={{ fontSize: 12, color: C.textDim }}>Es werden nur anonyme Eckdaten gesendet — keine Namen, keine Dokumente.</span>
+        </div>
+        {kiError && <div style={styles.formError}>{kiError}</div>}
+        {kiText && (
+          <div style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 12, padding: '16px 18px', whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.65, color: C.text }}>
+            {kiText}
+          </div>
+        )}
       </div>
     </>
   );
