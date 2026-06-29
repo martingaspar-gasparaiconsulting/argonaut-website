@@ -31,6 +31,7 @@ type Mitarbeiter = {
   geburtsdatum: string | null; adresse: string | null; sv_nummer: string | null;
   steuer_id: string | null; iban: string | null; notfall_kontakt: string | null;
   urlaubsanspruch_tage: number | null; auth_user_id: string | null;
+  arbeitszeit_modell: string | null; wochenstunden: number | null;
 };
 type Bewerber = {
   id: string; vorname: string; nachname: string; email: string | null; telefon: string | null;
@@ -49,6 +50,10 @@ const MA_STATUS = ['aktiv', 'inaktiv', 'beurlaubt'];
 const BW_STATUS = ['neu', 'in_pruefung', 'eingeladen', 'abgesagt', 'eingestellt'];
 const DOK_KATEGORIEN = ['vertrag', 'bewerbung', 'lohn', 'zeugnis', 'zertifikat', 'sonstiges'];
 const SCHUL_KATEGORIEN = ['arbeitsschutz', 'mutterschutz', 'brandschutz', 'datenschutz', 'erste_hilfe', 'sonstiges'];
+const ARBEITSZEIT_MODELLE = ['vollzeit', 'teilzeit', 'minijob', 'midijob'];
+const ARBEITSZEIT_LABEL: Record<string, string> = {
+  vollzeit: 'Vollzeit', teilzeit: 'Teilzeit', minijob: 'Minijob (bis 603 €/Mo)', midijob: 'Midijob (Übergangsbereich)',
+};
 
 const STATUS_LABEL: Record<string, string> = {
   aktiv: 'Aktiv', inaktiv: 'Inaktiv', beurlaubt: 'Beurlaubt',
@@ -204,7 +209,7 @@ export default function PersonalPage() {
     try {
       if (tab === 'mitarbeiter') {
         const { data, error } = await supabase.from('mitarbeiter')
-          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id')
+          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden')
           .order('created_at', { ascending: false });
         if (error) throw error;
         setMitarbeiter((data as Mitarbeiter[]) ?? []);
@@ -409,6 +414,8 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
   const [iban, setIban] = useState(ma?.iban ?? '');
   const [notfall, setNotfall] = useState(ma?.notfall_kontakt ?? '');
   const [urlaubsanspruch, setUrlaubsanspruch] = useState(String(ma?.urlaubsanspruch_tage ?? 30));
+  const [arbeitszeitModell, setArbeitszeitModell] = useState(ma?.arbeitszeit_modell ?? 'vollzeit');
+  const [wochenstunden, setWochenstunden] = useState(String(ma?.wochenstunden ?? 40));
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -488,6 +495,8 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           geburtsdatum: geburtsdatum || null, adresse: adresse.trim() || null, sv_nummer: svNummer.trim() || null,
           steuer_id: steuerId.trim() || null, iban: iban.trim() || null, notfall_kontakt: notfall.trim() || null,
           urlaubsanspruch_tage: parseInt(urlaubsanspruch, 10) || 30,
+          arbeitszeit_modell: arbeitszeitModell,
+          wochenstunden: parseFloat(wochenstunden.replace(',', '.')) || 0,
         }).eq('id', id);
         if (error) throw error;
       } else {
@@ -604,6 +613,12 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
                   <div style={styles.formGrid}>
                     <Field label="Geburtsdatum"><input type="date" style={styles.input} value={geburtsdatum} onChange={(e) => setGeburtsdatum(e.target.value)} /></Field>
                     <Field label="Urlaubsanspruch (Tage)"><input type="number" style={styles.input} value={urlaubsanspruch} onChange={(e) => setUrlaubsanspruch(e.target.value)} /></Field>
+                    <Field label="Arbeitszeit-Modell">
+                      <select style={styles.input} value={arbeitszeitModell} onChange={(e) => setArbeitszeitModell(e.target.value)}>
+                        {ARBEITSZEIT_MODELLE.map((m) => <option key={m} value={m}>{ARBEITSZEIT_LABEL[m]}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Wochenstunden"><input type="number" min="0" step="0.5" style={styles.input} value={wochenstunden} onChange={(e) => setWochenstunden(e.target.value)} /></Field>
                     <Field label="Adresse"><input style={styles.input} value={adresse} onChange={(e) => setAdresse(e.target.value)} /></Field>
                     <Field label="Notfallkontakt"><input style={styles.input} value={notfall} onChange={(e) => setNotfall(e.target.value)} /></Field>
                     <Field label="SV-Nummer"><input style={styles.input} value={svNummer} onChange={(e) => setSvNummer(e.target.value)} /></Field>
