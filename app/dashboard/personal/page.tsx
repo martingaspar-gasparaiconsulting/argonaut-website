@@ -163,6 +163,7 @@ export default function PersonalPage() {
           <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+          <a href="/dashboard/team-kalender" style={styles.kalenderLink}>📅 Team-Kalender</a>
           <div style={{ position: 'relative' }}>
             <button
               style={styles.glockeBtn}
@@ -976,6 +977,7 @@ const styles: Record<string, CSSProperties> = {
   invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
   zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
   glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 18, cursor: 'pointer', lineHeight: 1 },
+  kalenderLink: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 600, color: C.text, textDecoration: 'none', whiteSpace: 'nowrap' },
   glockeBadge: { position: 'absolute', top: -6, right: -6, background: C.danger, color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' },
   glockePanel: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, maxHeight: 420, overflowY: 'auto', background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 50, padding: 8 },
   glockeHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px 10px', borderBottom: `1px solid ${C.line}` },
