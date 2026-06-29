@@ -41,6 +41,8 @@ type HrDokument = { id: string; dateiname: string; storage_pfad: string; groesse
 type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: number | null; status: string; au_vorhanden: boolean; notiz: string | null };
 type Schulung = { id: string; titel: string; kategorie: string; absolviert_am: string | null; gueltig_bis: string | null; status: string; notiz: string | null };
 type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
+type ZeitSitzung = { id: string; datum: string; kommen_um: string; gehen_um: string | null; pause_minuten: number; pause_offen_seit: string | null; quelle: string; korrigiert: boolean };
+type ZeitKorrektur = { id: string; sitzung_id: string | null; aktion: string; feld: string | null; alt_wert: string | null; neu_wert: string | null; geaendert_von: string | null; geaendert_am: string };
 
 type Tab = 'mitarbeiter' | 'bewerber';
 type Selected = { typ: Tab; id: string } | null;
@@ -389,7 +391,7 @@ function ClickRow({ onClick, children }: { onClick: () => void; children: React.
 // ============================================================
 // DETAIL-DRAWER (Cockpit)
 // ============================================================
-type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'check' | 'auswertung';
+type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'zeit' | 'check' | 'auswertung';
 
 function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundesland: string; onClose: () => void; onChanged: () => void }) {
   const { typ, ma, bw, bundesland, onClose, onChanged } = props;
@@ -429,6 +431,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
   const [abw, setAbw] = useState<Abwesenheit[]>([]);
   const [schul, setSchul] = useState<Schulung[]>([]);
   const [check, setCheck] = useState<Checkliste[]>([]);
+  const [zeitRows, setZeitRows] = useState<ZeitSitzung[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listMsg, setListMsg] = useState<string | null>(null);
 
@@ -475,14 +478,26 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
     } catch { setListMsg('Checklisten konnten nicht geladen werden.'); } finally { setListLoading(false); }
   }, [id]);
 
+  const ladeZeit = useCallback(async () => {
+    setListLoading(true);
+    try {
+      const { data, error } = await supabase.from('hr_zeiterfassung')
+        .select('id,datum,kommen_um,gehen_um,pause_minuten,pause_offen_seit,quelle,korrigiert')
+        .eq('mitarbeiter_id', id).order('kommen_um', { ascending: false }).limit(200);
+      if (error) throw error;
+      setZeitRows((data as ZeitSitzung[]) ?? []);
+    } catch { setListMsg('Zeiterfassung konnte nicht geladen werden.'); } finally { setListLoading(false); }
+  }, [id]);
+
   useEffect(() => {
     setListMsg(null);
     if (detailTab === 'docs') ladeDocs();
     if (detailTab === 'abw') ladeAbw();
     if (detailTab === 'schul') ladeSchul();
+    if (detailTab === 'zeit') ladeZeit();
     if (detailTab === 'check') ladeCheck();
     if (detailTab === 'auswertung') { ladeAbw(); ladeSchul(); }
-  }, [detailTab, ladeDocs, ladeAbw, ladeSchul, ladeCheck]);
+  }, [detailTab, ladeDocs, ladeAbw, ladeSchul, ladeZeit, ladeCheck]);
 
   async function stammSpeichern() {
     setSaving(true); setMsg(null);
@@ -586,6 +601,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           <DetailTabBtn active={detailTab === 'docs'} onClick={() => setDetailTab('docs')}>Dokumente</DetailTabBtn>
           {istMA && <DetailTabBtn active={detailTab === 'abw'} onClick={() => setDetailTab('abw')}>Abwesenheiten</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'schul'} onClick={() => setDetailTab('schul')}>Schulungen</DetailTabBtn>}
+          {istMA && <DetailTabBtn active={detailTab === 'zeit'} onClick={() => setDetailTab('zeit')}>Zeiterfassung</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'check'} onClick={() => setDetailTab('check')}>Checklisten</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'auswertung'} onClick={() => setDetailTab('auswertung')}>Auswertung</DetailTabBtn>}
         </div>
@@ -673,6 +689,9 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           )}
           {detailTab === 'schul' && (
             <SchulungenTab id={id} rows={schul} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeSchul} />
+          )}
+          {detailTab === 'zeit' && (
+            <ZeiterfassungTab id={id} rows={zeitRows} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeZeit} />
           )}
           {detailTab === 'check' && (
             <ChecklistenTab id={id} rows={check} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeCheck} />
@@ -1052,6 +1071,270 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
             {kiText}
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+// ============================================================
+// TAB: Zeiterfassung — Chef-Korrektur + Nachtrag + Aenderungsprotokoll (B4)
+// ============================================================
+function zZwei(n: number): string { return n < 10 ? '0' + n : String(n); }
+function zUhr(iso: string | null): string { if (!iso) return '—'; const d = new Date(iso); return zZwei(d.getHours()) + ':' + zZwei(d.getMinutes()); }
+function zDauer(min: number): string { const m = Math.max(0, Math.round(min)); return Math.floor(m / 60) + 'h ' + zZwei(m % 60) + 'm'; }
+function zNetto(s: ZeitSitzung): number {
+  if (!s.gehen_um) return 0;
+  const brutto = (new Date(s.gehen_um).getTime() - new Date(s.kommen_um).getTime()) / 60000;
+  return Math.max(0, brutto - (s.pause_minuten || 0));
+}
+function zFmt(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return zZwei(d.getDate()) + '.' + zZwei(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + zZwei(d.getHours()) + ':' + zZwei(d.getMinutes());
+}
+// ISO <-> datetime-local (YYYY-MM-DDTHH:mm), lokale Zeit
+function zToLocal(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.getFullYear() + '-' + zZwei(d.getMonth() + 1) + '-' + zZwei(d.getDate()) + 'T' + zZwei(d.getHours()) + ':' + zZwei(d.getMinutes());
+}
+function zFromLocal(s: string): string { return new Date(s).toISOString(); }
+
+function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload }: {
+  id: string; rows: ZeitSitzung[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void;
+}) {
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eKommen, setEKommen] = useState('');
+  const [eGehen, setEGehen] = useState('');
+  const [ePause, setEPause] = useState('0');
+  const [saving, setSaving] = useState(false);
+
+  // Nachtrag-Formular
+  const [nOffen, setNOffen] = useState(false);
+  const [nDatum, setNDatum] = useState('');
+  const [nKommen, setNKommen] = useState('');
+  const [nGehen, setNGehen] = useState('');
+  const [nPause, setNPause] = useState('0');
+
+  // Protokoll
+  const [protoOffen, setProtoOffen] = useState(false);
+  const [proto, setProto] = useState<ZeitKorrektur[]>([]);
+  const [protoLoading, setProtoLoading] = useState(false);
+
+  async function ownerId(): Promise<string | null> {
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.id ?? null;
+  }
+
+  function bearbeiten(r: ZeitSitzung) {
+    setEditId(r.id);
+    setEKommen(zToLocal(r.kommen_um));
+    setEGehen(zToLocal(r.gehen_um));
+    setEPause(String(r.pause_minuten ?? 0));
+    setMsg(null);
+  }
+  function abbrechen() { setEditId(null); }
+
+  async function korrekturSpeichern(r: ZeitSitzung) {
+    if (!eKommen) { setMsg('Kommen-Zeit ist Pflicht.'); return; }
+    setSaving(true); setMsg(null);
+    try {
+      const oid = await ownerId();
+      if (!oid) { setMsg('Keine aktive Sitzung gefunden.'); setSaving(false); return; }
+
+      const neuKommen = zFromLocal(eKommen);
+      const neuGehen = eGehen ? zFromLocal(eGehen) : null;
+      const neuPause = parseInt(ePause, 10) || 0;
+      if (neuGehen && new Date(neuGehen).getTime() < new Date(neuKommen).getTime()) {
+        setMsg('Gehen-Zeit liegt vor Kommen-Zeit.'); setSaving(false); return;
+      }
+
+      // Diffs ermitteln -> Protokoll-Zeilen
+      const logs: Record<string, unknown>[] = [];
+      if (neuKommen !== r.kommen_um) logs.push({ feld: 'kommen_um', alt_wert: zFmt(r.kommen_um), neu_wert: zFmt(neuKommen) });
+      if ((neuGehen ?? null) !== (r.gehen_um ?? null)) logs.push({ feld: 'gehen_um', alt_wert: zFmt(r.gehen_um), neu_wert: zFmt(neuGehen) });
+      if (neuPause !== (r.pause_minuten ?? 0)) logs.push({ feld: 'pause_minuten', alt_wert: String(r.pause_minuten ?? 0) + ' Min', neu_wert: String(neuPause) + ' Min' });
+
+      if (logs.length === 0) { setMsg('Keine Änderung erkannt.'); setSaving(false); setEditId(null); return; }
+
+      const { error: upErr } = await supabase.from('hr_zeiterfassung')
+        .update({ kommen_um: neuKommen, gehen_um: neuGehen, pause_minuten: neuPause, korrigiert: true, pause_offen_seit: null, updated_at: new Date().toISOString() })
+        .eq('id', r.id);
+      if (upErr) throw upErr;
+
+      const { error: logErr } = await supabase.from('hr_zeit_korrekturen').insert(
+        logs.map((l) => ({ owner_user_id: oid, mitarbeiter_id: id, sitzung_id: r.id, aktion: 'korrektur', geaendert_von: 'Chef (Cockpit)', ...l }))
+      );
+      if (logErr) throw logErr;
+
+      setMsg('Korrektur gespeichert und protokolliert.');
+      setEditId(null);
+      reload();
+      if (protoOffen) protokollLaden();
+    } catch (e: unknown) { setMsg('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setSaving(false); }
+  }
+
+  async function nachtragen() {
+    if (!nDatum || !nKommen || !nGehen) { setMsg('Datum, Kommen und Gehen sind Pflicht.'); return; }
+    setSaving(true); setMsg(null);
+    try {
+      const oid = await ownerId();
+      if (!oid) { setMsg('Keine aktive Sitzung gefunden.'); setSaving(false); return; }
+      const kommen = new Date(`${nDatum}T${nKommen}:00`);
+      const gehen = new Date(`${nDatum}T${nGehen}:00`);
+      if (gehen.getTime() < kommen.getTime()) { setMsg('Gehen-Zeit liegt vor Kommen-Zeit.'); setSaving(false); return; }
+      const pause = parseInt(nPause, 10) || 0;
+
+      const { data: ins, error: insErr } = await supabase.from('hr_zeiterfassung').insert({
+        owner_user_id: oid, mitarbeiter_id: id, datum: nDatum,
+        kommen_um: kommen.toISOString(), gehen_um: gehen.toISOString(),
+        pause_minuten: pause, quelle: 'nachtrag',
+      }).select('id').single();
+      if (insErr) throw insErr;
+
+      const sid = (ins as { id: string } | null)?.id ?? null;
+      const { error: logErr } = await supabase.from('hr_zeit_korrekturen').insert({
+        owner_user_id: oid, mitarbeiter_id: id, sitzung_id: sid, aktion: 'nachtrag', feld: null,
+        alt_wert: null, neu_wert: `${zFmt(kommen.toISOString())} – ${zUhr(gehen.toISOString())} · Pause ${pause} Min`,
+        geaendert_von: 'Chef (Cockpit)',
+      });
+      if (logErr) throw logErr;
+
+      setMsg('Sitzung nachgetragen und protokolliert.');
+      setNOffen(false); setNDatum(''); setNKommen(''); setNGehen(''); setNPause('0');
+      reload();
+      if (protoOffen) protokollLaden();
+    } catch (e: unknown) { setMsg('Nachtragen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setSaving(false); }
+  }
+
+  async function loeschen(r: ZeitSitzung) {
+    if (!window.confirm('Diese Sitzung löschen? Die Löschung wird protokolliert.')) return;
+    setMsg(null);
+    try {
+      const oid = await ownerId();
+      if (!oid) { setMsg('Keine aktive Sitzung gefunden.'); return; }
+      await supabase.from('hr_zeit_korrekturen').insert({
+        owner_user_id: oid, mitarbeiter_id: id, sitzung_id: r.id, aktion: 'loeschung', feld: null,
+        alt_wert: `${zFmt(r.kommen_um)} – ${zUhr(r.gehen_um)} · Pause ${r.pause_minuten || 0} Min`, neu_wert: null,
+        geaendert_von: 'Chef (Cockpit)',
+      });
+      const { error } = await supabase.from('hr_zeiterfassung').delete().eq('id', r.id);
+      if (error) throw error;
+      setMsg('Sitzung gelöscht und protokolliert.');
+      reload();
+      if (protoOffen) protokollLaden();
+    } catch (e: unknown) { setMsg('Löschen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+  }
+
+  async function protokollLaden() {
+    setProtoLoading(true);
+    try {
+      const { data, error } = await supabase.from('hr_zeit_korrekturen')
+        .select('id,sitzung_id,aktion,feld,alt_wert,neu_wert,geaendert_von,geaendert_am')
+        .eq('mitarbeiter_id', id).order('geaendert_am', { ascending: false }).limit(100);
+      if (error) throw error;
+      setProto((data as ZeitKorrektur[]) ?? []);
+    } catch { setMsg('Protokoll konnte nicht geladen werden.'); } finally { setProtoLoading(false); }
+  }
+  function protokollToggle() {
+    const neu = !protoOffen; setProtoOffen(neu);
+    if (neu && proto.length === 0) protokollLaden();
+  }
+
+  const monatMin = rows.reduce((s, r) => s + zNetto(r), 0);
+  const AKTION_LABEL: Record<string, string> = { korrektur: 'Korrektur', nachtrag: 'Nachtrag', loeschung: 'Löschung' };
+  const FELD_LABEL: Record<string, string> = { kommen_um: 'Kommen', gehen_um: 'Gehen', pause_minuten: 'Pause' };
+
+  return (
+    <>
+      <div style={styles.statGrid}>
+        <Stat label="Sitzungen gesamt" value={String(rows.length)} />
+        <Stat label="Erfasste Arbeitszeit" value={zDauer(monatMin)} accent={C.cyan} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 14px' }}>
+        <button style={styles.primaryBtn} onClick={() => { setNOffen((v) => !v); setMsg(null); }}>{nOffen ? '× Nachtrag abbrechen' : '+ Sitzung nachtragen'}</button>
+        <button style={styles.secondaryBtn} onClick={protokollToggle}>{protoOffen ? 'Protokoll ausblenden' : '🛈 Änderungsprotokoll'}</button>
+      </div>
+
+      {nOffen && (
+        <div style={{ ...styles.cardInner, marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, color: C.gold, marginBottom: 10 }}>Sitzung nachtragen</div>
+          <div style={styles.miniForm}>
+            <label style={styles.miniFieldLabel}>Datum<input type="date" style={styles.input} value={nDatum} onChange={(e) => setNDatum(e.target.value)} /></label>
+            <label style={styles.miniFieldLabel}>Kommen<input type="time" style={styles.input} value={nKommen} onChange={(e) => setNKommen(e.target.value)} /></label>
+            <label style={styles.miniFieldLabel}>Gehen<input type="time" style={styles.input} value={nGehen} onChange={(e) => setNGehen(e.target.value)} /></label>
+            <label style={styles.miniFieldLabel}>Pause (Min)<input type="number" min="0" style={{ ...styles.input, maxWidth: 110 }} value={nPause} onChange={(e) => setNPause(e.target.value)} /></label>
+            <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={nachtragen} disabled={saving}>{saving ? 'Speichert …' : 'Nachtragen'}</button>
+          </div>
+        </div>
+      )}
+
+      {msg && <div style={styles.infoMsg}>{msg}</div>}
+
+      {protoOffen && (
+        <div style={{ ...styles.cardInner, marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, color: C.gold, marginBottom: 10 }}>Änderungsprotokoll (revisionssicher)</div>
+          {protoLoading && <div style={styles.listHint}>Lädt …</div>}
+          {!protoLoading && proto.length === 0 && <div style={styles.listHint}>Noch keine Änderungen protokolliert.</div>}
+          {!protoLoading && proto.map((p) => (
+            <div key={p.id} style={styles.docRow}>
+              <div style={{ minWidth: 0 }}>
+                <div style={styles.docName}>
+                  <span style={{ color: p.aktion === 'loeschung' ? C.danger : p.aktion === 'nachtrag' ? C.green : C.cyan, fontWeight: 700 }}>{AKTION_LABEL[p.aktion] || p.aktion}</span>
+                  {p.feld ? ` · ${FELD_LABEL[p.feld] || p.feld}` : ''}
+                </div>
+                <div style={styles.docMeta}>
+                  {p.alt_wert && <>alt: {p.alt_wert} </>}
+                  {p.alt_wert && p.neu_wert && '→ '}
+                  {p.neu_wert && <>neu: {p.neu_wert}</>}
+                </div>
+              </div>
+              <div style={{ ...styles.docMeta, flexShrink: 0, textAlign: 'right' }}>{p.geaendert_von || '—'}<br />{zFmt(p.geaendert_am)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 4 }}>
+        {loading && <div style={styles.listHint}>Lädt …</div>}
+        {!loading && rows.length === 0 && <div style={styles.listHint}>Noch keine Buchungen erfasst.</div>}
+        {!loading && rows.map((r) => (
+          <div key={r.id}>
+            {editId === r.id ? (
+              <div style={styles.cardInner}>
+                <div style={{ fontWeight: 700, color: C.gold, marginBottom: 10 }}>Sitzung korrigieren — {dStr(r.datum)}</div>
+                <div style={styles.miniForm}>
+                  <label style={styles.miniFieldLabel}>Kommen<input type="datetime-local" style={styles.input} value={eKommen} onChange={(e) => setEKommen(e.target.value)} /></label>
+                  <label style={styles.miniFieldLabel}>Gehen<input type="datetime-local" style={styles.input} value={eGehen} onChange={(e) => setEGehen(e.target.value)} /></label>
+                  <label style={styles.miniFieldLabel}>Pause (Min)<input type="number" min="0" style={{ ...styles.input, maxWidth: 110 }} value={ePause} onChange={(e) => setEPause(e.target.value)} /></label>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={() => korrekturSpeichern(r)} disabled={saving}>{saving ? 'Speichert …' : 'Korrektur speichern'}</button>
+                  <button style={styles.secondaryBtn} onClick={abbrechen}>Abbrechen</button>
+                </div>
+              </div>
+            ) : (
+              <div style={styles.docRow}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={styles.docName}>
+                    {dStr(r.datum)} · {zUhr(r.kommen_um)} – {zUhr(r.gehen_um)}
+                    {!r.gehen_um && <span style={{ color: C.green, fontWeight: 700 }}> · läuft</span>}
+                  </div>
+                  <div style={styles.docMeta}>
+                    Netto {zDauer(zNetto(r))}{(r.pause_minuten || 0) > 0 ? ` · Pause ${zDauer(r.pause_minuten)}` : ''}
+                    {r.quelle === 'nachtrag' && <span style={styles.tagBadge}>Nachtrag</span>}
+                    {r.korrigiert && <span style={styles.tagBadgeCyan}>korrigiert</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <button style={styles.miniBtn} onClick={() => bearbeiten(r)}>Korrigieren</button>
+                  <button style={{ ...styles.miniBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(r)}>×</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </>
   );
@@ -1523,6 +1806,11 @@ const styles: Record<string, CSSProperties> = {
   glockeDot: { width: 10, height: 10, borderRadius: 999, background: C.cyan, border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 4 },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  secondaryBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  cardInner: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16 },
+  miniFieldLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: C.textDim, fontWeight: 600 },
+  tagBadge: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.green, background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(76,175,125,0.35)', marginLeft: 4 },
+  tagBadgeCyan: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.cyan, background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.35)', marginLeft: 4 },
   tabs: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
   tabBtn: { border: '1px solid', borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'all .15s ease' },
   countPill: { marginLeft: 4, fontSize: 13, color: C.textDim, background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 999, padding: '4px 12px', fontWeight: 600 },
