@@ -36,6 +36,9 @@ const STATUS_LABEL: Record<string, string> = {
   beantragt: 'Beantragt', genehmigt: 'Genehmigt', abgelehnt: 'Abgelehnt', erfasst: 'Erfasst',
   offen: 'Offen', absolviert: 'Absolviert',
 };
+const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const WT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+function parseDate(s: string): Date { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
 const KAT_LABEL: Record<string, string> = {
   arbeitsschutz: 'Arbeitsschutz', mutterschutz: 'Mutterschutz', brandschutz: 'Brandschutz',
   datenschutz: 'Datenschutz', erste_hilfe: 'Erste Hilfe', sonstiges: 'Sonstiges',
@@ -229,6 +232,9 @@ export default function MeinBereichPage() {
               ))}
             </section>
 
+            {/* Mein Kalender */}
+            <MeinKalender abw={abw} />
+
             {/* Meine Schulungen */}
             <section style={{ ...styles.card, marginTop: 18 }}>
               <h2 style={styles.cardTitle}>Meine Schulungen</h2>
@@ -259,6 +265,89 @@ export default function MeinBereichPage() {
     </div>
   );
 }
+
+function MeinKalender({ abw }: { abw: Abwesenheit[] }) {
+  const heute = new Date();
+  const [jahr, setJahr] = useState(heute.getFullYear());
+  const [monat, setMonat] = useState(heute.getMonth());
+
+  const tageImMonat = new Date(jahr, monat + 1, 0).getDate();
+  const ersterWT = (() => { const wd = new Date(jahr, monat, 1).getDay(); return wd === 0 ? 6 : wd - 1; })(); // Mo=0
+  const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
+  const leer = Array.from({ length: ersterWT }, (_, i) => i);
+
+  function vor() { if (monat === 0) { setMonat(11); setJahr((j) => j - 1); } else setMonat((m) => m - 1); }
+  function nach() { if (monat === 11) { setMonat(0); setJahr((j) => j + 1); } else setMonat((m) => m + 1); }
+  function heuteSetzen() { setJahr(heute.getFullYear()); setMonat(heute.getMonth()); }
+
+  function zustand(tag: number): { typ: string; status: string } | null {
+    const d = new Date(jahr, monat, tag);
+    for (const a of abw) {
+      const von = parseDate(a.von); const bis = parseDate(a.bis);
+      if (d >= von && d <= bis) return { typ: a.typ, status: a.status };
+    }
+    return null;
+  }
+  function farbe(z: { typ: string; status: string } | null): CSSProperties {
+    if (!z) return {};
+    if (z.typ === 'urlaub') {
+      return z.status === 'beantragt'
+        ? { background: 'repeating-linear-gradient(45deg, rgba(201,168,76,0.3), rgba(201,168,76,0.3) 4px, transparent 4px, transparent 8px)', border: `1px dashed ${C.gold}`, color: C.text }
+        : { background: C.gold, color: C.navy };
+    }
+    if (z.typ === 'krankheit') return { background: C.danger, color: '#fff' };
+    return {};
+  }
+  const istHeute = (tag: number) => jahr === heute.getFullYear() && monat === heute.getMonth() && tag === heute.getDate();
+
+  return (
+    <section style={{ ...styles.card, marginTop: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+        <h2 style={{ ...styles.cardTitle, margin: 0 }}>Mein Kalender</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={kStyles.nav} onClick={vor}>‹</button>
+          <button style={kStyles.today} onClick={heuteSetzen}>Heute</button>
+          <button style={kStyles.nav} onClick={nach}>›</button>
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, minWidth: 130 }}>{MONATE[monat]} {jahr}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
+        <LegendeMini farbe={C.gold} text="Urlaub" />
+        <LegendeMini gestrichelt text="beantragt" />
+        <LegendeMini farbe={C.danger} text="Krank" />
+      </div>
+      <div style={kStyles.grid}>
+        {WT.map((w) => <div key={w} style={kStyles.wtHead}>{w}</div>)}
+        {leer.map((i) => <div key={'l' + i} />)}
+        {tage.map((t) => {
+          const z = zustand(t);
+          return (
+            <div key={t} style={{ ...kStyles.tag, ...farbe(z), ...(istHeute(t) ? kStyles.heute : {}) }}
+              title={z ? (z.typ === 'urlaub' ? (z.status === 'beantragt' ? 'Urlaub beantragt' : 'Urlaub') : 'Krank') : ''}>
+              {t}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+function LegendeMini({ farbe, text, gestrichelt }: { farbe?: string; text: string; gestrichelt?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ width: 14, height: 14, borderRadius: 4, display: 'inline-block', background: gestrichelt ? 'repeating-linear-gradient(45deg, rgba(201,168,76,0.3), rgba(201,168,76,0.3) 4px, transparent 4px, transparent 8px)' : farbe, border: gestrichelt ? `1px dashed ${C.gold}` : 'none' }} />
+      <span style={{ fontSize: 12, color: C.textDim }}>{text}</span>
+    </div>
+  );
+}
+const kStyles: Record<string, CSSProperties> = {
+  nav: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '4px 12px', color: C.text, fontSize: 16, cursor: 'pointer', lineHeight: 1 },
+  today: { background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 8, padding: '6px 12px', color: C.cyan, fontSize: 12, fontWeight: 600, cursor: 'pointer' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 },
+  wtHead: { textAlign: 'center', fontSize: 11, color: C.textDim, fontWeight: 600, padding: '2px 0' },
+  tag: { aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontSize: 13, color: C.textDim, background: 'rgba(255,255,255,0.03)' },
+  heute: { outline: `2px solid ${C.cyan}`, outlineOffset: -2 },
+};
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
