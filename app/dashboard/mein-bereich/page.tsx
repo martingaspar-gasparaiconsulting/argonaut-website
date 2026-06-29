@@ -32,6 +32,7 @@ type Mitarbeiter = {
 type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: number | null; status: string; au_vorhanden: boolean };
 type Schulung = { id: string; titel: string; kategorie: string; gueltig_bis: string | null; status: string };
 type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
+type ZeitSitzung = { id: string; datum: string; kommen_um: string; gehen_um: string | null; pause_minuten: number; pause_offen_seit: string | null };
 
 const CHECK_ARTEN: { key: string; label: string }[] = [
   { key: 'onboarding', label: 'Onboarding (Eintritt)' },
@@ -104,6 +105,19 @@ function arbeitstage(von: string, bis: string, bl: string): number {
   } catch { return 1; }
 }
 function tageBis(d: string | null): number | null { if (!d) return null; try { return Math.round((new Date(d).getTime() - Date.now()) / 86400000); } catch { return null; } }
+// ---- Zeiterfassung-Helfer (read-only Anzeige) ----
+function zwei(n: number): string { return n < 10 ? '0' + n : String(n); }
+function uhrzeit(iso: string | null): string { if (!iso) return '—'; const d = new Date(iso); return zwei(d.getHours()) + ':' + zwei(d.getMinutes()); }
+function dauerStr(minuten: number): string { const m = Math.max(0, Math.round(minuten)); return Math.floor(m / 60) + 'h ' + zwei(m % 60) + 'm'; }
+function nettoMin(s: ZeitSitzung, nowMs: number): number {
+  const start = new Date(s.kommen_um).getTime();
+  const ende = s.gehen_um ? new Date(s.gehen_um).getTime() : nowMs;
+  let pause = s.pause_minuten;
+  if (s.pause_offen_seit) pause += (nowMs - new Date(s.pause_offen_seit).getTime()) / 60000;
+  return Math.max(0, (ende - start) / 60000 - pause);
+}
+function heuteISO(): string { const d = new Date(); return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-' + zwei(d.getDate()); }
+function monatsStart(): string { const d = new Date(); return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-01'; }
 
 export default function MeinBereichPage() {
   const [ma, setMa] = useState<Mitarbeiter | null>(null);
@@ -112,6 +126,9 @@ export default function MeinBereichPage() {
   const [check, setCheck] = useState<Checkliste[]>([]);
   const [abschluss, setAbschluss] = useState<Record<string, { am: string; von: string | null }>>({});
   const [bestaetigeArt, setBestaetigeArt] = useState<string | null>(null);
+  const [zeitHeute, setZeitHeute] = useState<ZeitSitzung[]>([]);
+  const [zeitMonatMin, setZeitMonatMin] = useState(0);
+  const [zeitStand, setZeitStand] = useState(Date.now());
   const [loading, setLoading] = useState(true);
   const [kontoOhneProfil, setKontoOhneProfil] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -162,6 +179,21 @@ export default function MeinBereichPage() {
         absMap[r.art] = { am: r.abgeschlossen_am, von: r.bestaetigt_von };
       });
       setAbschluss(absMap);
+
+      // Zeiterfassung (read-only Anzeige): heutige Sitzungen + Monatssumme
+      const jetzt = Date.now();
+      const { data: zHeute } = await supabase.from('hr_zeiterfassung')
+        .select('id,datum,kommen_um,gehen_um,pause_minuten,pause_offen_seit')
+        .eq('mitarbeiter_id', m.id).eq('datum', heuteISO())
+        .order('kommen_um', { ascending: true });
+      setZeitHeute((zHeute as ZeitSitzung[]) ?? []);
+
+      const { data: zMonat } = await supabase.from('hr_zeiterfassung')
+        .select('id,datum,kommen_um,gehen_um,pause_minuten,pause_offen_seit')
+        .eq('mitarbeiter_id', m.id).gte('datum', monatsStart());
+      const summe = ((zMonat as ZeitSitzung[]) ?? []).reduce((s, r) => s + nettoMin(r, jetzt), 0);
+      setZeitMonatMin(summe);
+      setZeitStand(jetzt);
     } catch {
       setMsg('Daten konnten nicht geladen werden.');
     } finally { setLoading(false); }
@@ -277,6 +309,34 @@ export default function MeinBereichPage() {
               <Stat label="Resturlaub" value={`${rest} Tage`} accent={rest <= 5 ? C.warn : C.green} />
               <Stat label={`Krank ${jahr}`} value={`${krankTage} Tage`} />
             </div>
+
+            {/* Meine Arbeitszeit (read-only Zusammenfassung der Zeiterfassung) */}
+            <section style={{ ...styles.card, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                <h2 style={{ ...styles.cardTitle, margin: 0 }}>Meine Arbeitszeit</h2>
+                <a href="/dashboard/zeiterfassung" style={styles.linkBtn}>⏱ Zur Stempeluhr</a>
+              </div>
+              <div style={styles.statGrid}>
+                <Stat label="Arbeitszeit heute" value={dauerStr(zeitHeute.reduce((s, r) => s + nettoMin(r, zeitStand), 0))} accent={C.cyan} />
+                <Stat label={`Summe ${new Date().toLocaleDateString('de-DE', { month: 'long' })}`} value={dauerStr(zeitMonatMin)} />
+                <Stat label="Sitzungen heute" value={String(zeitHeute.length)} />
+              </div>
+              <div style={{ marginTop: 6 }}>
+                {zeitHeute.length === 0 && <div style={styles.listHint}>Heute noch nicht gestempelt.</div>}
+                {zeitHeute.map((s) => (
+                  <div key={s.id} style={styles.row}>
+                    <div>
+                      <div style={styles.rowName}>{uhrzeit(s.kommen_um)} – {uhrzeit(s.gehen_um)}</div>
+                      <div style={styles.rowMeta}>
+                        {s.pause_minuten > 0 && <span>Pause {dauerStr(s.pause_minuten)}</span>}
+                        {!s.gehen_um && <span style={{ color: C.green, fontWeight: 700 }}>● läuft</span>}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: C.cyan }}>{dauerStr(nettoMin(s, zeitStand))}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div style={styles.twoCol}>
               {/* Urlaub beantragen */}
@@ -510,6 +570,7 @@ const styles: Record<string, CSSProperties> = {
   fileInput: { color: C.textDim, fontSize: 13 },
   primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  linkBtn: { display: 'inline-block', background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 10, padding: '8px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' },
   infoMsg: { marginBottom: 18, color: C.text, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
   listHint: { color: C.textDim, fontSize: 14, padding: '8px 0' },
   row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' },
