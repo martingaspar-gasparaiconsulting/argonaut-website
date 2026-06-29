@@ -63,14 +63,28 @@ export async function POST(req: Request) {
 
     const email = ma.email.trim().toLowerCase();
 
-    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!adminUrl || !serviceKey) {
+    // SCHUTZSPERRE: Eine Adresse, die bereits ein Chef-/Kunden-Konto ist, darf
+    // NICHT als Mitarbeiter-Zugang angelegt werden (sonst wuerde das vorhandene
+    // Passwort ueberschrieben -> Selbst-Aussperrung). Wir pruefen die customers-
+    // Tabelle mit dem Admin-Client, damit RLS hier nicht im Weg steht.
+    const adminUrl0 = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey0 = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!adminUrl0 || !serviceKey0) {
       return NextResponse.json({ error: "Server ist nicht korrekt konfiguriert (fehlende Umgebungsvariablen)." }, { status: 500 });
     }
-    const admin = createAdminClient(adminUrl, serviceKey, {
+    const adminCheck = createAdminClient(adminUrl0, serviceKey0, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    const { data: kundeMitMail } = await adminCheck
+      .from("customers")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+    if (kundeMitMail) {
+      return NextResponse.json({ error: "Diese E-Mail gehoert bereits zu einem Chef-/Kunden-Konto und kann nicht als Mitarbeiter-Zugang verwendet werden. Bitte eine andere E-Mail fuer den Mitarbeiter eintragen." }, { status: 409 });
+    }
+
+    const admin = adminCheck;
 
     const tempPw = tempPasswort();
     let authUserId: string | null = null;
