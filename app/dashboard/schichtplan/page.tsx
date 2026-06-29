@@ -135,6 +135,10 @@ export default function SchichtplanPage() {
     name: '', beginn_um: '', ende_um: '', pause_minuten: 0, farbe: '#00e5ff',
   });
 
+  // Drag & Drop (Schicht verschieben)
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -190,6 +194,44 @@ export default function SchichtplanPage() {
     return schichten
       .filter((s) => (maId === null ? !s.mitarbeiter_id : s.mitarbeiter_id === maId))
       .reduce((sum, s) => sum + dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0), 0);
+  }
+
+  // --- Drag & Drop: Schicht in andere Zelle ziehen (Tag/Mitarbeiter wechseln) ---
+  function zellKey(maId: string | null, datum: string): string {
+    return `${maId ?? ''}|${datum}`;
+  }
+
+  function onDragStartSchicht(e: React.DragEvent, s: Schicht) {
+    setDraggingId(s.id);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', s.id); } catch { /* ignore */ }
+  }
+
+  function onDragEndSchicht() {
+    setDraggingId(null);
+    setDragOverKey(null);
+  }
+
+  async function onDropZelle(maId: string | null, datum: string) {
+    const id = draggingId;
+    setDragOverKey(null);
+    setDraggingId(null);
+    if (!id) return;
+    const s = schichten.find((x) => x.id === id);
+    if (!s) return;
+    const zielMa = maId; // null = Unbesetzt
+    const unveraendert = s.datum === datum && (s.mitarbeiter_id || null) === (zielMa || null);
+    if (unveraendert) return;
+    try {
+      const res = await supabase
+        .from('hr_schichten')
+        .update({ datum, mitarbeiter_id: zielMa })
+        .eq('id', id);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Verschieben fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
   }
 
   // Schicht-Modal oeffnen (neu oder bearbeiten)
@@ -376,7 +418,7 @@ export default function SchichtplanPage() {
             Schichtplanung
           </h1>
           <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 14 }}>
-            Wochenplan &middot; Schichten anlegen und Mitarbeitern zuweisen
+            Wochenplan &middot; Schichten anlegen, ziehen zum Verschieben, klicken zum Bearbeiten
           </p>
         </div>
         <button style={btnGhost} onClick={() => setVorlagenModal(true)}>
@@ -479,16 +521,35 @@ export default function SchichtplanPage() {
                     {wochenTage.map((d, ci) => {
                       const datum = ymd(d);
                       const zellSchichten = schichtenFuer(maId, datum);
+                      const istDropZiel = dragOverKey === zellKey(maId, datum);
                       return (
-                        <td key={ci} style={{
-                          verticalAlign: 'top', padding: 6,
-                          borderBottom: `1px solid ${BRAND.border}`,
-                          borderLeft: `1px solid ${BRAND.border}`,
-                          minWidth: 100,
-                        }}>
+                        <td
+                          key={ci}
+                          onDragOver={(e) => {
+                            if (!draggingId) return;
+                            e.preventDefault();
+                            setDragOverKey(zellKey(maId, datum));
+                          }}
+                          onDragLeave={() => {
+                            setDragOverKey((prev) => (prev === zellKey(maId, datum) ? null : prev));
+                          }}
+                          onDrop={() => onDropZelle(maId, datum)}
+                          style={{
+                            verticalAlign: 'top', padding: 6,
+                            borderBottom: `1px solid ${BRAND.border}`,
+                            borderLeft: `1px solid ${BRAND.border}`,
+                            minWidth: 100,
+                            background: istDropZiel ? 'rgba(0,229,255,0.12)' : 'transparent',
+                            outline: istDropZiel ? `2px dashed ${BRAND.cyan}` : 'none',
+                            outlineOffset: '-2px',
+                            transition: 'background 0.12s ease',
+                          }}>
                           {zellSchichten.map((s) => (
                             <button
                               key={s.id}
+                              draggable
+                              onDragStart={(e) => onDragStartSchicht(e, s)}
+                              onDragEnd={onDragEndSchicht}
                               onClick={() => oeffneBearbeiten(s)}
                               style={{
                                 display: 'block', width: '100%', textAlign: 'left',
@@ -496,10 +557,11 @@ export default function SchichtplanPage() {
                                 borderLeft: `3px solid ${s.farbe || '#00e5ff'}`,
                                 border: 'none',
                                 borderRadius: 6, padding: '6px 8px', marginBottom: 5,
-                                cursor: 'pointer', color: '#fff',
+                                cursor: 'grab', color: '#fff',
+                                opacity: draggingId === s.id ? 0.4 : 1,
                                 fontFamily: 'DM Sans, sans-serif',
                               }}
-                              title={s.notiz || ''}
+                              title={s.notiz || 'Zum Verschieben ziehen, zum Bearbeiten klicken'}
                             >
                               <div style={{ fontSize: 12, fontWeight: 700 }}>
                                 {hhmm(s.beginn_um)}&ndash;{hhmm(s.ende_um)}
