@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'magic'>('login')
   const [magicSent, setMagicSent] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const supabase = createClient()
 
@@ -51,6 +52,23 @@ export default function LoginPage() {
       return
     }
     setMagicSent(true)
+    setLoading(false)
+  }
+
+  // Passwort vergessen: schickt eine Recovery-Mail mit Link auf /auth/passwort-neu
+  async function handleReset() {
+    setError(null)
+    if (!email) { setError('Bitte zuerst die E-Mail-Adresse eingeben.'); return }
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/passwort-neu`,
+    })
+    if (error) {
+      setError('Mail konnte nicht gesendet werden. Bitte E-Mail prüfen.')
+      setLoading(false)
+      return
+    }
+    setResetSent(true)
     setLoading(false)
   }
 
@@ -107,7 +125,26 @@ export default function LoginPage() {
           }}>Mitgliederbereich</span>
         </div>
 
-        {magicSent ? (
+        {resetSent ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', fontSize: '24px',
+            }}>✉</div>
+            <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>
+              Mail zum Zurücksetzen gesendet
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '14px', lineHeight: 1.6 }}>
+              Prüfen Sie Ihr Postfach und klicken Sie auf den Link, um ein neues Passwort zu vergeben.
+            </p>
+            <button onClick={() => setResetSent(false)}
+              style={{ marginTop: '24px', color: '#C9A84C', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>
+              Zurück
+            </button>
+          </div>
+        ) : magicSent ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{
               width: '56px', height: '56px', borderRadius: '50%',
@@ -171,6 +208,17 @@ export default function LoginPage() {
                     onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)' }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
                   />
+                  <div style={{ textAlign: 'right', marginTop: '10px' }}>
+                    <button type="button" onClick={handleReset} disabled={loading} style={{
+                      color: 'rgba(255,255,255,0.45)', background: 'none', border: 'none',
+                      cursor: loading ? 'not-allowed' : 'pointer', fontSize: '13px', padding: 0,
+                      transition: 'color 0.2s',
+                    }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#C9A84C' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}>
+                      Passwort vergessen?
+                    </button>
+                  </div>
                 </div>
               )}
 
