@@ -33,6 +33,8 @@ type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: nu
 type Schulung = { id: string; titel: string; kategorie: string; gueltig_bis: string | null; status: string };
 type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
 type ZeitSitzung = { id: string; datum: string; kommen_um: string; gehen_um: string | null; pause_minuten: number; pause_offen_seit: string | null };
+type Schicht = { id: string; datum: string; beginn_um: string; ende_um: string; pause_minuten: number; rolle: string | null; farbe: string | null };
+type SchichtTausch = { id: string; schicht_id: string; status: string; grund: string | null; erstellt_am: string };
 
 const CHECK_ARTEN: { key: string; label: string }[] = [
   { key: 'onboarding', label: 'Onboarding (Eintritt)' },
@@ -41,7 +43,7 @@ const CHECK_ARTEN: { key: string; label: string }[] = [
 
 const STATUS_LABEL: Record<string, string> = {
   beantragt: 'Beantragt', genehmigt: 'Genehmigt', abgelehnt: 'Abgelehnt', erfasst: 'Erfasst',
-  offen: 'Offen', absolviert: 'Absolviert',
+  offen: 'Offen', absolviert: 'Absolviert', zurueckgezogen: 'Zurückgezogen',
 };
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const WT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -53,9 +55,13 @@ const KAT_LABEL: Record<string, string> = {
 function statusColor(s: string): string {
   if (s === 'genehmigt' || s === 'absolviert') return C.green;
   if (s === 'abgelehnt') return C.danger;
+  if (s === 'zurueckgezogen') return C.textDim;
   return C.gold;
 }
 function dStr(d: string | null): string { if (!d) return '—'; try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; } }
+// ---- Schicht-Anzeige-Helfer ----
+function hhmmShift(t: string | null): string { return t ? t.slice(0, 5) : ''; }
+function datumLang(s: string): string { try { return parseDate(s).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }); } catch { return s; } }
 // ---- Arbeitstage & Feiertage (DE, pro Bundesland) — wartungsfrei berechnet ----
 function osterSonntag(jahr: number): Date {
   const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
@@ -129,6 +135,11 @@ export default function MeinBereichPage() {
   const [zeitHeute, setZeitHeute] = useState<ZeitSitzung[]>([]);
   const [zeitMonatMin, setZeitMonatMin] = useState(0);
   const [zeitStand, setZeitStand] = useState(Date.now());
+  const [schichten, setSchichten] = useState<Schicht[]>([]);
+  const [tausch, setTausch] = useState<SchichtTausch[]>([]);
+  const [abgabeSchichtId, setAbgabeSchichtId] = useState<string | null>(null);
+  const [abgabeGrund, setAbgabeGrund] = useState('');
+  const [abgabeSaving, setAbgabeSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [kontoOhneProfil, setKontoOhneProfil] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -194,6 +205,19 @@ export default function MeinBereichPage() {
       const summe = ((zMonat as ZeitSitzung[]) ?? []).reduce((s, r) => s + nettoMin(r, jetzt), 0);
       setZeitMonatMin(summe);
       setZeitStand(jetzt);
+
+      // Meine kommenden Schichten (ab heute) + eigene Tausch-Antraege
+      const { data: schRows } = await supabase.from('hr_schichten')
+        .select('id,datum,beginn_um,ende_um,pause_minuten,rolle,farbe')
+        .eq('mitarbeiter_id', m.id).gte('datum', heuteISO())
+        .order('datum', { ascending: true }).order('beginn_um', { ascending: true });
+      setSchichten((schRows as Schicht[]) ?? []);
+
+      const { data: tRows } = await supabase.from('hr_schicht_tausch')
+        .select('id,schicht_id,status,grund,erstellt_am')
+        .eq('von_mitarbeiter_id', m.id)
+        .order('erstellt_am', { ascending: false });
+      setTausch((tRows as SchichtTausch[]) ?? []);
     } catch {
       setMsg('Daten konnten nicht geladen werden.');
     } finally { setLoading(false); }
@@ -266,6 +290,32 @@ export default function MeinBereichPage() {
     } catch (e: unknown) { setMsg('Bestätigung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBestaetigeArt(null); }
   }
 
+  async function schichtAbgeben(schicht_id: string) {
+    if (!ma) return;
+    setAbgabeSaving(true); setMsg(null);
+    try {
+      const { error } = await supabase.from('hr_schicht_tausch').insert({
+        owner_user_id: ma.owner_user_id, schicht_id, von_mitarbeiter_id: ma.id,
+        status: 'beantragt', grund: abgabeGrund || null,
+      });
+      if (error) throw error;
+      setAbgabeSchichtId(null); setAbgabeGrund('');
+      setMsg('Antrag gesendet — dein Vorgesetzter wird benachrichtigt.');
+      ladeAlles();
+    } catch (e: unknown) { setMsg('Antrag fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setAbgabeSaving(false); }
+  }
+
+  async function antragZurueckziehen(id: string) {
+    if (!ma) return;
+    setMsg(null);
+    try {
+      const { error } = await supabase.from('hr_schicht_tausch').update({ status: 'zurueckgezogen' }).eq('id', id);
+      if (error) throw error;
+      setMsg('Antrag zurückgezogen.');
+      ladeAlles();
+    } catch (e: unknown) { setMsg('Konnte nicht zurückgezogen werden: ' + (e instanceof Error ? e.message : 'Fehler')); }
+  }
+
   // Resturlaub
   const jahr = new Date().getFullYear();
   const anspruch = ma?.urlaubsanspruch_tage ?? 30;
@@ -336,6 +386,89 @@ export default function MeinBereichPage() {
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* Meine Schichten + Abgabe/Tausch */}
+            <section style={{ ...styles.card, marginBottom: 18 }}>
+              <h2 style={styles.cardTitle}>Meine Schichten</h2>
+              {schichten.length === 0 && (
+                <div style={styles.listHint}>Aktuell sind keine kommenden Schichten für dich eingeplant.</div>
+              )}
+              {schichten.map((s) => {
+                const offen = tausch.find((t) => t.schicht_id === s.id && (t.status === 'beantragt' || t.status === 'genehmigt'));
+                const istFormOffen = abgabeSchichtId === s.id;
+                return (
+                  <div key={s.id} style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 4, height: 34, borderRadius: 2, background: s.farbe || C.cyan, display: 'inline-block', flexShrink: 0 }} />
+                        <div>
+                          <div style={styles.rowName}>{datumLang(s.datum)} · {hhmmShift(s.beginn_um)}–{hhmmShift(s.ende_um)}</div>
+                          <div style={styles.rowMeta}>
+                            {s.rolle && <span>{s.rolle}</span>}
+                            {s.pause_minuten > 0 && <span>Pause {s.pause_minuten} Min</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {offen ? (
+                        <StatusBadge status={offen.status} />
+                      ) : (
+                        <button
+                          style={styles.ghostBtn}
+                          onClick={() => { setAbgabeSchichtId(istFormOffen ? null : s.id); setAbgabeGrund(''); }}
+                        >
+                          {istFormOffen ? 'Abbrechen' : 'Abgeben / Tauschen'}
+                        </button>
+                      )}
+                    </div>
+                    {istFormOffen && !offen && (
+                      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <textarea
+                          style={{ ...styles.input, minHeight: 64, resize: 'vertical' }}
+                          placeholder="Grund (optional) – z.B. Arzttermin, Tausch mit Kollege gewünscht"
+                          value={abgabeGrund}
+                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAbgabeGrund(e.target.value)}
+                        />
+                        <div>
+                          <button style={styles.primaryBtn} onClick={() => schichtAbgeben(s.id)} disabled={abgabeSaving}>
+                            {abgabeSaving ? 'Sende …' : 'Antrag senden'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {tausch.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 13, color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Tausch-Anträge</div>
+                  {tausch.map((t) => {
+                    const s = schichten.find((x) => x.id === t.schicht_id);
+                    return (
+                      <div key={t.id} style={styles.row}>
+                        <div>
+                          <div style={styles.rowName}>
+                            {s ? `${datumLang(s.datum)} · ${hhmmShift(s.beginn_um)}–${hhmmShift(s.ende_um)}` : 'Schicht'}
+                          </div>
+                          <div style={styles.rowMeta}>
+                            {t.grund && <span>{t.grund}</span>}
+                            <span>gestellt {dStr(t.erstellt_am)}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <StatusBadge status={t.status} />
+                          {t.status === 'beantragt' && (
+                            <button style={{ ...styles.ghostBtn, padding: '6px 12px', fontSize: 13 }} onClick={() => antragZurueckziehen(t.id)}>
+                              Zurückziehen
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <div style={styles.twoCol}>
