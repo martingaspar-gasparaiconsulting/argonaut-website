@@ -260,6 +260,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
   const [hiring, setHiring] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [eingeladen, setEingeladen] = useState(!!ma?.auth_user_id);
+  const [zugang, setZugang] = useState<{ email: string; passwort: string; loginUrl: string } | null>(null);
 
   // Datensätze
   const [docs, setDocs] = useState<HrDokument[]>([]);
@@ -346,7 +347,8 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
       const j = await res.json().catch(() => null);
       if (!res.ok) throw new Error(j?.error || 'Einladung fehlgeschlagen.');
       setEingeladen(true);
-      setMsg(j?.message || 'Einladung versendet.');
+      setZugang({ email: j.email, passwort: j.temp_passwort, loginUrl: j.login_url });
+      setMsg(null);
       onChanged();
     } catch (e: unknown) { setMsg('Einladung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setInviting(false); }
   }
@@ -434,6 +436,23 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
                 )}
                 {istMA && eingeladen && <span style={styles.invitedHint}>✓ Zum Self-Service eingeladen</span>}
               </div>
+
+              {zugang && (
+                <div style={styles.zugangBox}>
+                  <div style={{ fontWeight: 700, color: C.cyan, marginBottom: 4 }}>Zugang erstellt</div>
+                  <div style={{ fontSize: 13, color: C.textDim, marginBottom: 12 }}>Bitte sicher an den Mitarbeiter weitergeben (Mail, WhatsApp, persönlich). Das Einmal-Passwort wird nur jetzt angezeigt.</div>
+                  <ZugangZeile label="E-Mail" wert={zugang.email} />
+                  <ZugangZeile label="Einmal-Passwort" wert={zugang.passwort} />
+                  <ZugangZeile label="Login-Link" wert={zugang.loginUrl} />
+                  <button
+                    style={{ ...styles.primaryBtn, marginTop: 10 }}
+                    onClick={() => navigator.clipboard?.writeText(`Dein ARGONAUT-Zugang:\nLogin: ${zugang.loginUrl}\nE-Mail: ${zugang.email}\nEinmal-Passwort: ${zugang.passwort}\n\nBitte einloggen und anschließend dein Passwort ändern.`)}
+                  >
+                    Alles kopieren
+                  </button>
+                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>Der Mitarbeiter loggt sich damit ein und kann sein Passwort danach jederzeit ändern.</div>
+                </div>
+              )}
             </>
           )}
 
@@ -869,6 +888,15 @@ function EmptyState({ title, text, onAdd, addLabel }: { title: string; text: str
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label style={styles.field}><span style={styles.fieldLabel}>{label}</span>{children}</label>;
 }
+function ZugangZeile({ label, wert }: { label: string; wert: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+      <span style={{ fontSize: 12, color: C.textDim, width: 120, flexShrink: 0 }}>{label}</span>
+      <code style={{ fontSize: 13, color: C.text, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wert}</code>
+      <button style={styles.miniBtn} onClick={() => navigator.clipboard?.writeText(wert)}>Kopieren</button>
+    </div>
+  );
+}
 function Th({ children }: { children: React.ReactNode }) { return <th style={styles.th}>{children}</th>; }
 function Td({ children }: { children: React.ReactNode }) { return <td style={styles.td}>{children}</td>; }
 function Dim({ children }: { children: React.ReactNode }) { return <span style={{ color: C.textDim }}>{children}</span>; }
@@ -888,6 +916,7 @@ const styles: Record<string, CSSProperties> = {
   hiredHint: { color: C.green, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
   inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
+  zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   tabs: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
