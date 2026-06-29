@@ -507,6 +507,26 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
     } catch (e: unknown) { setMsg('Einladung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setInviting(false); }
   }
 
+  async function zugangZuruecksetzen() {
+    if (!istMA) return;
+    if (!email.trim()) { setMsg('Für diesen Mitarbeiter ist keine E-Mail hinterlegt.'); return; }
+    if (!window.confirm(`Zugang von ${vorname} ${nachname} zurücksetzen?\n\nEs wird ein NEUES Einmal-Passwort erzeugt. Das bisherige Passwort des Mitarbeiters wird damit ungültig. Anschließend gibst du ihm den neuen Zugang weiter.`)) return;
+    setInviting(true); setMsg(null);
+    try {
+      const res = await fetch('/api/hr/zugang-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mitarbeiter_id: id }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error || 'Zurücksetzen fehlgeschlagen.');
+      setEingeladen(true);
+      setZugang({ email: j.email, passwort: j.temp_passwort, loginUrl: j.login_url });
+      setMsg(null);
+      onChanged();
+    } catch (e: unknown) { setMsg('Zurücksetzen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setInviting(false); }
+  }
+
   async function uebernehmen() {
     if (istMA) return;
     if (!window.confirm(`${vorname} ${nachname} als Mitarbeiter übernehmen?\n\nDie Person wird als aktiver Mitarbeiter angelegt und der Bewerber-Status auf „Eingestellt" gesetzt.`)) return;
@@ -588,12 +608,17 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
                 {istMA && !eingeladen && (
                   <button style={{ ...styles.inviteBtn, opacity: inviting ? 0.6 : 1 }} onClick={einladen} disabled={inviting}>{inviting ? 'Lädt ein …' : '✉ Zum Self-Service einladen'}</button>
                 )}
-                {istMA && eingeladen && <span style={styles.invitedHint}>✓ Zum Self-Service eingeladen</span>}
+                {istMA && eingeladen && (
+                  <>
+                    <span style={styles.invitedHint}>✓ Zum Self-Service eingeladen</span>
+                    <button style={{ ...styles.resetBtn, opacity: inviting ? 0.6 : 1 }} onClick={zugangZuruecksetzen} disabled={inviting}>{inviting ? 'Setzt zurück …' : '↻ Zugang zurücksetzen'}</button>
+                  </>
+                )}
               </div>
 
               {zugang && (
                 <div style={styles.zugangBox}>
-                  <div style={{ fontWeight: 700, color: C.cyan, marginBottom: 4 }}>Zugang erstellt</div>
+                  <div style={{ fontWeight: 700, color: C.cyan, marginBottom: 4 }}>Neuer Zugang bereit</div>
                   <div style={{ fontSize: 13, color: C.textDim, marginBottom: 12 }}>Bitte sicher an den Mitarbeiter weitergeben (Mail, WhatsApp, persönlich). Das Einmal-Passwort wird nur jetzt angezeigt.</div>
                   <ZugangZeile label="E-Mail" wert={zugang.email} />
                   <ZugangZeile label="Einmal-Passwort" wert={zugang.passwort} />
@@ -1077,6 +1102,7 @@ const styles: Record<string, CSSProperties> = {
   hiredHint: { color: C.green, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
   inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
+  resetBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
   glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 18, cursor: 'pointer', lineHeight: 1 },
   kalenderLink: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 600, color: C.text, textDecoration: 'none', whiteSpace: 'nowrap' },
