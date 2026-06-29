@@ -158,6 +158,11 @@ export default function SchichtplanPage() {
   // Minijob-Stunden-Warnung (geplante Monatsstunden je Minijobber)
   const [minijobWarnung, setMinijobWarnung] = useState<Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }>>({});
 
+  // Betriebs-Ruhetage (Wochentage 0=So..6=Sa) + Einstell-Dialog
+  const [ruhetage, setRuhetage] = useState<number[]>([]);
+  const [ruhetageModal, setRuhetageModal] = useState(false);
+  const [ruhetageEntwurf, setRuhetageEntwurf] = useState<number[]>([]);
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -176,13 +181,17 @@ export default function SchichtplanPage() {
       const von = ymd(wochenStart);
       const bis = ymd(addTage(wochenStart, 6));
 
-      const [maRes, schichtRes, vorlagenRes] = await Promise.all([
+      const [maRes, schichtRes, vorlagenRes, einstRes] = await Promise.all([
         supabase.from('mitarbeiter').select('*').eq('owner_user_id', uid),
         supabase.from('hr_schichten').select('*')
           .eq('owner_user_id', uid)
           .gte('datum', von).lte('datum', bis),
         supabase.from('hr_schicht_vorlagen').select('*').eq('owner_user_id', uid),
+        supabase.from('hr_einstellungen').select('ruhetage').eq('owner_user_id', uid).maybeSingle(),
       ]);
+
+      const geladeneRuhetage: number[] = Array.isArray(einstRes.data?.ruhetage) ? einstRes.data.ruhetage : [];
+      setRuhetage(geladeneRuhetage);
 
       const maListe = (maRes.data || []).slice().sort(
         (a: any, b: any) => maName(a).localeCompare(maName(b), 'de'),
@@ -465,7 +474,9 @@ export default function SchichtplanPage() {
     try {
       const neu: any[] = [];
       for (let i = 0; i < 7; i++) {
-        const datum = ymd(addTage(wochenStart, i));
+        const tag = addTage(wochenStart, i);
+        if (ruhetage.includes(tag.getDay())) continue; // Betriebs-Ruhetag ueberspringen
+        const datum = ymd(tag);
         const schonDa = schichten.some(
           (s) => (maId === null ? !s.mitarbeiter_id : s.mitarbeiter_id === maId) && s.datum === datum,
         );
@@ -473,7 +484,7 @@ export default function SchichtplanPage() {
         neu.push(schichtDatensatzAus(datum));
       }
       if (neu.length === 0) {
-        alert('In dieser Woche sind bei diesem Mitarbeiter schon an allen Tagen Schichten eingetragen.');
+        alert('In dieser Woche sind bei diesem Mitarbeiter schon an allen (geoeffneten) Tagen Schichten eingetragen.');
         setSpeichern(false);
         return;
       }
@@ -538,6 +549,29 @@ export default function SchichtplanPage() {
       await ladeDaten();
     } catch (e: any) {
       alert('Loeschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
+  // Betriebs-Ruhetage speichern (vorhandene Zeile updaten, sonst neu anlegen)
+  async function speichereRuhetage() {
+    try {
+      const sortiert = [...ruhetageEntwurf].sort((a, b) => a - b);
+      const { data: vorhanden } = await supabase.from('hr_einstellungen')
+        .select('owner_user_id').eq('owner_user_id', ownerId).maybeSingle();
+      let res;
+      if (vorhanden) {
+        res = await supabase.from('hr_einstellungen')
+          .update({ ruhetage: sortiert }).eq('owner_user_id', ownerId);
+      } else {
+        res = await supabase.from('hr_einstellungen')
+          .insert({ owner_user_id: ownerId, ruhetage: sortiert });
+      }
+      if (res.error) throw res.error;
+      setRuhetage(sortiert);
+      setRuhetageModal(false);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Ruhetage speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     }
   }
 
@@ -611,9 +645,14 @@ export default function SchichtplanPage() {
             Wochenplan &middot; Schichten anlegen, ziehen zum Verschieben, klicken zum Bearbeiten
           </p>
         </div>
-        <button style={btnGhost} onClick={() => setVorlagenModal(true)}>
-          &#9881; Schichtarten verwalten
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button style={btnGhost} onClick={() => { setRuhetageEntwurf(ruhetage); setRuhetageModal(true); }}>
+            &#128197; Ruhetage
+          </button>
+          <button style={btnGhost} onClick={() => setVorlagenModal(true)}>
+            &#9881; Schichtarten verwalten
+          </button>
+        </div>
       </div>
 
       {/* Wochen-Umschalter */}
@@ -711,18 +750,20 @@ export default function SchichtplanPage() {
                 </th>
                 {wochenTage.map((d, i) => {
                   const istHeute = ymd(d) === heute;
+                  const istRuhe = ruhetage.includes(d.getDay());
                   return (
                     <th key={i} style={{
                       textAlign: 'center', padding: '12px 8px',
                       borderBottom: `1px solid ${BRAND.border}`,
                       borderLeft: `1px solid ${BRAND.border}`,
-                      background: istHeute ? 'rgba(0,229,255,0.08)' : 'transparent',
+                      background: istRuhe ? 'rgba(143,163,190,0.10)' : istHeute ? 'rgba(0,229,255,0.08)' : 'transparent',
                       minWidth: 100,
                     }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: istHeute ? BRAND.cyan : '#fff' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: istRuhe ? BRAND.textDim : istHeute ? BRAND.cyan : '#fff' }}>
                         {WOCHENTAGE[i]}
                       </div>
                       <div style={{ fontSize: 12, color: BRAND.textDim }}>{tagMonat(d)}</div>
+                      {istRuhe && <div style={{ fontSize: 10, color: BRAND.textDim, marginTop: 2 }}>geschlossen</div>}
                     </th>
                   );
                 })}
@@ -775,25 +816,28 @@ export default function SchichtplanPage() {
                       const datum = ymd(d);
                       const zellSchichten = schichtenFuer(maId, datum);
                       const istDropZiel = dragOverKey === zellKey(maId, datum);
+                      const istRuhe = ruhetage.includes(d.getDay());
                       return (
                         <td
                           key={ci}
                           onDragOver={(e) => {
-                            if (!draggingId) return;
+                            if (!draggingId || istRuhe) return;
                             e.preventDefault();
                             setDragOverKey(zellKey(maId, datum));
                           }}
                           onDragLeave={() => {
                             setDragOverKey((prev) => (prev === zellKey(maId, datum) ? null : prev));
                           }}
-                          onDrop={() => onDropZelle(maId, datum)}
+                          onDrop={() => { if (!istRuhe) onDropZelle(maId, datum); }}
                           style={{
                             verticalAlign: 'top', padding: 6,
                             borderBottom: `1px solid ${BRAND.border}`,
                             borderLeft: `1px solid ${BRAND.border}`,
                             minWidth: 100,
-                            background: istDropZiel ? 'rgba(0,229,255,0.12)' : 'transparent',
-                            outline: istDropZiel ? `2px dashed ${BRAND.cyan}` : 'none',
+                            background: istRuhe
+                              ? 'rgba(143,163,190,0.07)'
+                              : istDropZiel ? 'rgba(0,229,255,0.12)' : 'transparent',
+                            outline: istDropZiel && !istRuhe ? `2px dashed ${BRAND.cyan}` : 'none',
                             outlineOffset: '-2px',
                             transition: 'background 0.12s ease',
                           }}>
@@ -828,18 +872,26 @@ export default function SchichtplanPage() {
                               </div>
                             </button>
                           ))}
-                          <button
-                            onClick={() => oeffneNeu(maId, datum)}
-                            style={{
-                              width: '100%', background: 'transparent',
-                              border: `1px dashed ${BRAND.border}`, borderRadius: 6,
-                              color: BRAND.textDim, padding: '4px 0', cursor: 'pointer',
-                              fontSize: 16, lineHeight: 1, fontFamily: 'DM Sans, sans-serif',
-                            }}
-                            title="Schicht hinzufuegen"
-                          >
-                            +
-                          </button>
+                          {istRuhe ? (
+                            zellSchichten.length === 0 && (
+                              <div style={{ textAlign: 'center', color: BRAND.textDim, fontSize: 11, padding: '6px 0' }}>
+                                &ndash;
+                              </div>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => oeffneNeu(maId, datum)}
+                              style={{
+                                width: '100%', background: 'transparent',
+                                border: `1px dashed ${BRAND.border}`, borderRadius: 6,
+                                color: BRAND.textDim, padding: '4px 0', cursor: 'pointer',
+                                fontSize: 16, lineHeight: 1, fontFamily: 'DM Sans, sans-serif',
+                              }}
+                              title="Schicht hinzufuegen"
+                            >
+                              +
+                            </button>
+                          )}
                         </td>
                       );
                     })}
@@ -1042,6 +1094,58 @@ export default function SchichtplanPage() {
                   {speichern ? 'Speichert\u2026' : 'Speichern'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Ruhetage-Modal (Betriebs-Ruhetage) ===== */}
+      {ruhetageModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20, zIndex: 50,
+        }} onClick={() => setRuhetageModal(false)}>
+          <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+              Betriebs-Ruhetage
+            </h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+              An welchen Wochentagen hat der Betrieb regelmäßig geschlossen? An diesen Tagen
+              werden keine Schichten geplant und der KI-Generator lässt sie aus.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+              {[
+                { l: 'Montag', n: 1 }, { l: 'Dienstag', n: 2 }, { l: 'Mittwoch', n: 3 },
+                { l: 'Donnerstag', n: 4 }, { l: 'Freitag', n: 5 }, { l: 'Samstag', n: 6 },
+                { l: 'Sonntag', n: 0 },
+              ].map((t) => {
+                const aktiv = ruhetageEntwurf.includes(t.n);
+                return (
+                  <button
+                    key={t.n}
+                    onClick={() => setRuhetageEntwurf(
+                      aktiv ? ruhetageEntwurf.filter((x) => x !== t.n) : [...ruhetageEntwurf, t.n],
+                    )}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                      background: aktiv ? 'rgba(224,162,76,0.12)' : BRAND.navy,
+                      border: `1px solid ${aktiv ? 'rgba(224,162,76,0.5)' : BRAND.border}`,
+                      color: aktiv ? BRAND.warn : '#fff', fontWeight: 600, fontSize: 14,
+                      fontFamily: 'DM Sans, sans-serif', textAlign: 'left',
+                    }}
+                  >
+                    <span>{t.l}</span>
+                    <span>{aktiv ? 'geschlossen' : 'geöffnet'}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button style={btnGhost} onClick={() => setRuhetageModal(false)}>Abbrechen</button>
+              <button style={btn} onClick={speichereRuhetage}>Speichern</button>
             </div>
           </div>
         </div>
