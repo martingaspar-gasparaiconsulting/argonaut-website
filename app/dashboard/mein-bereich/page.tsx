@@ -31,6 +31,12 @@ type Mitarbeiter = {
 };
 type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: number | null; status: string; au_vorhanden: boolean };
 type Schulung = { id: string; titel: string; kategorie: string; gueltig_bis: string | null; status: string };
+type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
+
+const CHECK_ARTEN: { key: string; label: string }[] = [
+  { key: 'onboarding', label: 'Onboarding (Eintritt)' },
+  { key: 'offboarding', label: 'Offboarding (Austritt)' },
+];
 
 const STATUS_LABEL: Record<string, string> = {
   beantragt: 'Beantragt', genehmigt: 'Genehmigt', abgelehnt: 'Abgelehnt', erfasst: 'Erfasst',
@@ -103,6 +109,9 @@ export default function MeinBereichPage() {
   const [ma, setMa] = useState<Mitarbeiter | null>(null);
   const [abw, setAbw] = useState<Abwesenheit[]>([]);
   const [schul, setSchul] = useState<Schulung[]>([]);
+  const [check, setCheck] = useState<Checkliste[]>([]);
+  const [abschluss, setAbschluss] = useState<Record<string, { am: string; von: string | null }>>({});
+  const [bestaetigeArt, setBestaetigeArt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [kontoOhneProfil, setKontoOhneProfil] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -141,6 +150,18 @@ export default function MeinBereichPage() {
       const { data: schulRows } = await supabase.from('hr_schulungen')
         .select('id,titel,kategorie,gueltig_bis,status').eq('mitarbeiter_id', m.id).order('gueltig_bis', { ascending: true });
       setSchul((schulRows as Schulung[]) ?? []);
+
+      const { data: checkRows } = await supabase.from('hr_checklisten')
+        .select('id,art,aufgabe,erledigt,erledigt_am,notiz,reihenfolge').eq('mitarbeiter_id', m.id).order('reihenfolge', { ascending: true });
+      setCheck((checkRows as Checkliste[]) ?? []);
+
+      const { data: absRows } = await supabase.from('hr_checklisten_abschluss')
+        .select('art,abgeschlossen_am,bestaetigt_von').eq('mitarbeiter_id', m.id);
+      const absMap: Record<string, { am: string; von: string | null }> = {};
+      ((absRows as { art: string; abgeschlossen_am: string; bestaetigt_von: string | null }[]) ?? []).forEach((r) => {
+        absMap[r.art] = { am: r.abgeschlossen_am, von: r.bestaetigt_von };
+      });
+      setAbschluss(absMap);
     } catch {
       setMsg('Daten konnten nicht geladen werden.');
     } finally { setLoading(false); }
@@ -197,6 +218,20 @@ export default function MeinBereichPage() {
       setMsg('Krankmeldung erfasst' + (auHochgeladen ? ' inkl. AU-Bescheinigung.' : '.'));
       ladeAlles();
     } catch (e: unknown) { setMsg('Meldung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setKSaving(false); }
+  }
+
+  async function selbstBestaetigen(art: string) {
+    if (!ma) return;
+    setBestaetigeArt(art); setMsg(null);
+    try {
+      const { error } = await supabase.from('hr_checklisten_abschluss').upsert(
+        { owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id, art, abgeschlossen_am: new Date().toISOString(), bestaetigt_von: 'Mitarbeiter (Self-Service)' },
+        { onConflict: 'mitarbeiter_id,art' }
+      );
+      if (error) throw error;
+      setMsg('Checkliste bestätigt. Danke!');
+      ladeAlles();
+    } catch (e: unknown) { setMsg('Bestätigung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBestaetigeArt(null); }
   }
 
   // Resturlaub
@@ -311,6 +346,48 @@ export default function MeinBereichPage() {
                 );
               })}
             </section>
+
+            {/* Meine Checkliste (Self-Service-Bestätigung) */}
+            {CHECK_ARTEN.some((a) => check.some((c) => c.art === a.key)) && (
+              <section style={{ ...styles.card, marginTop: 18 }}>
+                <h2 style={styles.cardTitle}>Meine Checkliste</h2>
+                {CHECK_ARTEN.map((a) => {
+                  const liste = check.filter((c) => c.art === a.key);
+                  if (liste.length === 0) return null;
+                  const erledigtN = liste.filter((c) => c.erledigt).length;
+                  const abs = abschluss[a.key];
+                  return (
+                    <div key={a.key} style={{ marginBottom: 18 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ fontWeight: 700, color: C.gold, fontSize: 14 }}>{a.label}</div>
+                        <div style={{ fontSize: 12, color: C.textDim }}>{erledigtN}/{liste.length} erledigt</div>
+                      </div>
+                      {liste.map((c) => (
+                        <div key={c.id} style={styles.row}>
+                          <div style={styles.rowName}>
+                            <span style={{ color: c.erledigt ? C.green : C.textDim, marginRight: 8 }}>{c.erledigt ? '✓' : '○'}</span>
+                            {c.aufgabe}
+                          </div>
+                        </div>
+                      ))}
+                      {abs ? (
+                        <div style={{ ...styles.infoMsg, marginTop: 12, marginBottom: 0 }}>
+                          ✓ Bestätigt am {dStr(abs.am)}{abs.von ? ` · ${abs.von}` : ''}
+                        </div>
+                      ) : (
+                        <button
+                          style={{ ...styles.primaryBtn, opacity: bestaetigeArt === a.key ? 0.6 : 1, marginTop: 12 }}
+                          onClick={() => selbstBestaetigen(a.key)}
+                          disabled={bestaetigeArt === a.key}
+                        >
+                          {bestaetigeArt === a.key ? 'Bestätigt …' : 'Checkliste bestätigen'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </section>
+            )}
           </>
         )}
       </div>
