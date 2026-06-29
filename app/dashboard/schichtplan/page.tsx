@@ -163,6 +163,9 @@ export default function SchichtplanPage() {
   const [ruhetageModal, setRuhetageModal] = useState(false);
   const [ruhetageEntwurf, setRuhetageEntwurf] = useState<number[]>([]);
 
+  // KI-Vorschlaege (Freigeben/Verwerfen)
+  const [vorschlagAktion, setVorschlagAktion] = useState(false);
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -575,6 +578,38 @@ export default function SchichtplanPage() {
     }
   }
 
+  // --- KI-Vorschlaege der angezeigten Woche freigeben / verwerfen ---
+  async function vorschlaegeFreigeben() {
+    const ids = schichten.filter((s) => s.status === 'vorschlag').map((s) => s.id);
+    if (ids.length === 0) return;
+    setVorschlagAktion(true);
+    try {
+      const res = await supabase.from('hr_schichten').update({ status: 'geplant' }).in('id', ids);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Freigeben fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setVorschlagAktion(false);
+    }
+  }
+
+  async function vorschlaegeVerwerfen() {
+    const ids = schichten.filter((s) => s.status === 'vorschlag').map((s) => s.id);
+    if (ids.length === 0) return;
+    if (!confirm('Alle Vorschläge dieser Woche verwerfen? Die vorgeschlagenen Schichten werden gelöscht.')) return;
+    setVorschlagAktion(true);
+    try {
+      const res = await supabase.from('hr_schichten').delete().in('id', ids);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Verwerfen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setVorschlagAktion(false);
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2,
@@ -623,6 +658,7 @@ export default function SchichtplanPage() {
   };
 
   const heute = ymd(new Date());
+  const vorschlaege = schichten.filter((s) => s.status === 'vorschlag');
 
   return (
     <div style={{
@@ -682,6 +718,41 @@ export default function SchichtplanPage() {
           ...card, borderColor: BRAND.danger, color: BRAND.danger, marginBottom: 16,
         }}>
           {fehler}
+        </div>
+      )}
+
+      {!laden && vorschlaege.length > 0 && (
+        <div style={{
+          ...card, marginBottom: 16,
+          borderColor: 'rgba(0,229,255,0.5)',
+          background: 'rgba(0,229,255,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, color: BRAND.cyan }}>
+              ✨ {vorschlaege.length} Schicht-Vorschläge in dieser Woche
+            </div>
+            <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 2 }}>
+              Du kannst sie vorher per Ziehen anpassen. Freigeben macht sie zu festen Schichten.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button
+              style={{ ...btn, background: BRAND.green }}
+              onClick={vorschlaegeFreigeben}
+              disabled={vorschlagAktion}
+            >
+              {vorschlagAktion ? 'Moment…' : 'Alle freigeben'}
+            </button>
+            <button
+              style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger }}
+              onClick={vorschlaegeVerwerfen}
+              disabled={vorschlagAktion}
+            >
+              Verwerfen
+            </button>
+          </div>
         </div>
       )}
 
@@ -841,7 +912,9 @@ export default function SchichtplanPage() {
                             outlineOffset: '-2px',
                             transition: 'background 0.12s ease',
                           }}>
-                          {zellSchichten.map((s) => (
+                          {zellSchichten.map((s) => {
+                            const istVorschlag = s.status === 'vorschlag';
+                            return (
                             <button
                               key={s.id}
                               draggable
@@ -850,16 +923,23 @@ export default function SchichtplanPage() {
                               onClick={() => oeffneBearbeiten(s)}
                               style={{
                                 display: 'block', width: '100%', textAlign: 'left',
-                                background: (s.farbe || '#00e5ff') + '22',
-                                borderLeft: `3px solid ${s.farbe || '#00e5ff'}`,
+                                background: (s.farbe || '#00e5ff') + (istVorschlag ? '14' : '22'),
+                                borderLeft: `3px ${istVorschlag ? 'dashed' : 'solid'} ${s.farbe || '#00e5ff'}`,
                                 border: 'none',
+                                outline: istVorschlag ? `1px dashed ${BRAND.cyan}` : 'none',
+                                outlineOffset: '-1px',
                                 borderRadius: 6, padding: '6px 8px', marginBottom: 5,
                                 cursor: 'grab', color: '#fff',
-                                opacity: draggingId === s.id ? 0.4 : 1,
+                                opacity: draggingId === s.id ? 0.4 : istVorschlag ? 0.85 : 1,
                                 fontFamily: 'DM Sans, sans-serif',
                               }}
                               title={s.notiz || 'Zum Verschieben ziehen, zum Bearbeiten klicken'}
                             >
+                              {istVorschlag && (
+                                <div style={{ fontSize: 9, fontWeight: 700, color: BRAND.cyan, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>
+                                  Vorschlag
+                                </div>
+                              )}
                               <div style={{ fontSize: 12, fontWeight: 700 }}>
                                 {hhmm(s.beginn_um)}&ndash;{hhmm(s.ende_um)}
                               </div>
@@ -871,7 +951,8 @@ export default function SchichtplanPage() {
                                 {s.pause_minuten > 0 ? ` · ${s.pause_minuten} Min Pause` : ''}
                               </div>
                             </button>
-                          ))}
+                            );
+                          })}
                           {istRuhe ? (
                             zellSchichten.length === 0 && (
                               <div style={{ textAlign: 'center', color: BRAND.textDim, fontSize: 11, padding: '6px 0' }}>
