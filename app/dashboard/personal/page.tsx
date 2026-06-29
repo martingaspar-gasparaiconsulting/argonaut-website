@@ -39,6 +39,7 @@ type Bewerber = {
 type HrDokument = { id: string; dateiname: string; storage_pfad: string; groesse_bytes: number | null; mime_type: string | null; kategorie: string; hochgeladen_am: string };
 type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: number | null; status: string; au_vorhanden: boolean; notiz: string | null };
 type Schulung = { id: string; titel: string; kategorie: string; absolviert_am: string | null; gueltig_bis: string | null; status: string; notiz: string | null };
+type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
 
 type Tab = 'mitarbeiter' | 'bewerber';
 type Selected = { typ: Tab; id: string } | null;
@@ -383,7 +384,7 @@ function ClickRow({ onClick, children }: { onClick: () => void; children: React.
 // ============================================================
 // DETAIL-DRAWER (Cockpit)
 // ============================================================
-type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'auswertung';
+type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'check' | 'auswertung';
 
 function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundesland: string; onClose: () => void; onChanged: () => void }) {
   const { typ, ma, bw, bundesland, onClose, onChanged } = props;
@@ -420,6 +421,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
   const [docs, setDocs] = useState<HrDokument[]>([]);
   const [abw, setAbw] = useState<Abwesenheit[]>([]);
   const [schul, setSchul] = useState<Schulung[]>([]);
+  const [check, setCheck] = useState<Checkliste[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listMsg, setListMsg] = useState<string | null>(null);
 
@@ -455,13 +457,25 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
     } catch { setListMsg('Schulungen konnten nicht geladen werden.'); } finally { setListLoading(false); }
   }, [id]);
 
+  const ladeCheck = useCallback(async () => {
+    setListLoading(true);
+    try {
+      const { data, error } = await supabase.from('hr_checklisten')
+        .select('id,art,aufgabe,erledigt,erledigt_am,notiz,reihenfolge').eq('mitarbeiter_id', id)
+        .order('reihenfolge', { ascending: true }).order('created_at', { ascending: true });
+      if (error) throw error;
+      setCheck((data as Checkliste[]) ?? []);
+    } catch { setListMsg('Checklisten konnten nicht geladen werden.'); } finally { setListLoading(false); }
+  }, [id]);
+
   useEffect(() => {
     setListMsg(null);
     if (detailTab === 'docs') ladeDocs();
     if (detailTab === 'abw') ladeAbw();
     if (detailTab === 'schul') ladeSchul();
+    if (detailTab === 'check') ladeCheck();
     if (detailTab === 'auswertung') { ladeAbw(); ladeSchul(); }
-  }, [detailTab, ladeDocs, ladeAbw, ladeSchul]);
+  }, [detailTab, ladeDocs, ladeAbw, ladeSchul, ladeCheck]);
 
   async function stammSpeichern() {
     setSaving(true); setMsg(null);
@@ -563,6 +577,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           <DetailTabBtn active={detailTab === 'docs'} onClick={() => setDetailTab('docs')}>Dokumente</DetailTabBtn>
           {istMA && <DetailTabBtn active={detailTab === 'abw'} onClick={() => setDetailTab('abw')}>Abwesenheiten</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'schul'} onClick={() => setDetailTab('schul')}>Schulungen</DetailTabBtn>}
+          {istMA && <DetailTabBtn active={detailTab === 'check'} onClick={() => setDetailTab('check')}>Checklisten</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'auswertung'} onClick={() => setDetailTab('auswertung')}>Auswertung</DetailTabBtn>}
         </div>
 
@@ -643,6 +658,9 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           )}
           {detailTab === 'schul' && (
             <SchulungenTab id={id} rows={schul} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeSchul} />
+          )}
+          {detailTab === 'check' && (
+            <ChecklistenTab id={id} rows={check} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeCheck} />
           )}
           {detailTab === 'auswertung' && (
             <AuswertungTab abw={abw} schul={schul} loading={listLoading} urlaubsanspruch={parseInt(urlaubsanspruch, 10) || 30} stammVollstaendig={!!(geburtsdatum && adresse && iban && svNummer)} />
@@ -1020,6 +1038,119 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+// ============================================================
+// TAB: Checklisten (Onboarding / Offboarding) — Stufe 1
+// ============================================================
+const CHECK_ARTEN: { key: string; label: string }[] = [
+  { key: 'onboarding', label: 'Onboarding (Eintritt)' },
+  { key: 'offboarding', label: 'Offboarding (Austritt)' },
+];
+
+function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
+  id: string; rows: Checkliste[]; loading: boolean; msg: string | null; setMsg: (s: string | null) => void; reload: () => void;
+}) {
+  const [neuArt, setNeuArt] = useState('onboarding');
+  const [neuAufgabe, setNeuAufgabe] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function hinzufuegen() {
+    if (!neuAufgabe.trim()) { setMsg('Bitte einen Punkt eingeben.'); return; }
+    setSaving(true); setMsg(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const ownerId = userData?.user?.id;
+      if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); setSaving(false); return; }
+      const maxR = rows.filter((r) => r.art === neuArt).reduce((m, r) => Math.max(m, r.reihenfolge ?? 0), 0);
+      const { error } = await supabase.from('hr_checklisten').insert({
+        owner_user_id: ownerId, mitarbeiter_id: id, art: neuArt, aufgabe: neuAufgabe.trim(), reihenfolge: maxR + 1,
+      });
+      if (error) throw error;
+      setNeuAufgabe(''); reload();
+    } catch (e: unknown) { setMsg('Hinzufügen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setSaving(false); }
+  }
+
+  async function umschalten(r: Checkliste) {
+    const neu = !r.erledigt;
+    try {
+      const { error } = await supabase.from('hr_checklisten')
+        .update({ erledigt: neu, erledigt_am: neu ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+        .eq('id', r.id);
+      if (error) throw error; reload();
+    } catch { setMsg('Konnte nicht gespeichert werden.'); }
+  }
+
+  async function notizSpeichern(r: Checkliste, text: string) {
+    const wert = text.trim();
+    if (wert === (r.notiz ?? '')) return;
+    try {
+      const { error } = await supabase.from('hr_checklisten').update({ notiz: wert || null, updated_at: new Date().toISOString() }).eq('id', r.id);
+      if (error) throw error; reload();
+    } catch { setMsg('Notiz konnte nicht gespeichert werden.'); }
+  }
+
+  async function loeschen(r: Checkliste) {
+    if (!window.confirm(`„${r.aufgabe}" löschen?`)) return;
+    try {
+      const { error } = await supabase.from('hr_checklisten').delete().eq('id', r.id);
+      if (error) throw error; reload();
+    } catch { setMsg('Löschen fehlgeschlagen.'); }
+  }
+
+  return (
+    <>
+      <div style={styles.miniForm}>
+        <select style={{ ...styles.input, minWidth: 190 }} value={neuArt} onChange={(e) => setNeuArt(e.target.value)}>
+          {CHECK_ARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+        </select>
+        <input
+          style={{ ...styles.input, minWidth: 220, flex: 1 }}
+          placeholder="z. B. Schlüssel ausgehändigt"
+          value={neuAufgabe}
+          onChange={(e) => setNeuAufgabe(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') hinzufuegen(); }}
+        />
+        <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={hinzufuegen} disabled={saving}>{saving ? 'Fügt hinzu …' : '＋ Punkt hinzufügen'}</button>
+      </div>
+      {msg && <div style={styles.infoMsg}>{msg}</div>}
+
+      {loading && <div style={styles.listHint}>Lädt …</div>}
+      {!loading && CHECK_ARTEN.map((a) => {
+        const liste = rows.filter((r) => r.art === a.key);
+        const erledigt = liste.filter((r) => r.erledigt).length;
+        return (
+          <div key={a.key} style={{ marginTop: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={styles.sectionDivider}>{a.label}</div>
+              {liste.length > 0 && (
+                <span style={{ fontSize: 13, fontWeight: 700, color: erledigt === liste.length ? C.green : C.gold, whiteSpace: 'nowrap' }}>
+                  {erledigt} / {liste.length} erledigt
+                </span>
+              )}
+            </div>
+            {liste.length === 0 && <div style={styles.listHint}>Noch keine Punkte. Oben hinzufügen.</div>}
+            {liste.map((r) => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 10, marginBottom: 8, background: r.erledigt ? 'rgba(76,175,125,0.06)' : C.cardBg }}>
+                <input type="checkbox" checked={r.erledigt} onChange={() => umschalten(r)} style={{ width: 18, height: 18, marginTop: 2, cursor: 'pointer', accentColor: C.green, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, textDecoration: r.erledigt ? 'line-through' : 'none', opacity: r.erledigt ? 0.7 : 1 }}>{r.aufgabe}</div>
+                  {r.erledigt && r.erledigt_am && <div style={{ fontSize: 12, color: C.green, marginTop: 2 }}>Erledigt am {dStr(r.erledigt_am)}</div>}
+                  <input
+                    style={{ ...styles.input, marginTop: 8, fontSize: 13, padding: '7px 10px' }}
+                    placeholder="Notiz (optional)"
+                    defaultValue={r.notiz ?? ''}
+                    onBlur={(e) => notizSpeichern(r, e.target.value)}
+                  />
+                </div>
+                <button style={{ ...styles.miniBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)', flexShrink: 0 }} onClick={() => loeschen(r)}>Löschen</button>
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </>
   );
 }
