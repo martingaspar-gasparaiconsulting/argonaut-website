@@ -318,6 +318,76 @@ export default function SchichtplanPage() {
     }
   }
 
+  // Datensatz aus dem aktuellen Formular bauen (fuer Kopier-Aktionen)
+  function schichtDatensatzAus(datum: string) {
+    return {
+      owner_user_id: ownerId,
+      mitarbeiter_id: schichtModal.mitarbeiter_id || null,
+      datum,
+      beginn_um: schichtModal.beginn_um,
+      ende_um: schichtModal.ende_um,
+      pause_minuten: Number(schichtModal.pause_minuten) || 0,
+      rolle: schichtModal.rolle || null,
+      notiz: schichtModal.notiz || null,
+      farbe: schichtModal.farbe || '#00e5ff',
+    };
+  }
+
+  // Diese Schicht auf alle leeren Tage der angezeigten Woche kopieren (gleicher Mitarbeiter)
+  async function aufGanzeWocheKopieren() {
+    if (!schichtModal) return;
+    if (!schichtModal.beginn_um || !schichtModal.ende_um) {
+      alert('Bitte Beginn und Ende eintragen.');
+      return;
+    }
+    const maId = schichtModal.mitarbeiter_id || null;
+    setSpeichern(true);
+    try {
+      const neu: any[] = [];
+      for (let i = 0; i < 7; i++) {
+        const datum = ymd(addTage(wochenStart, i));
+        const schonDa = schichten.some(
+          (s) => (maId === null ? !s.mitarbeiter_id : s.mitarbeiter_id === maId) && s.datum === datum,
+        );
+        if (schonDa) continue;
+        neu.push(schichtDatensatzAus(datum));
+      }
+      if (neu.length === 0) {
+        alert('In dieser Woche sind bei diesem Mitarbeiter schon an allen Tagen Schichten eingetragen.');
+        setSpeichern(false);
+        return;
+      }
+      const res = await supabase.from('hr_schichten').insert(neu);
+      if (res.error) throw res.error;
+      setSchichtModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Kopieren fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setSpeichern(false);
+    }
+  }
+
+  // Identische Kopie am selben Tag/Mitarbeiter anlegen (danach per Drag&Drop verschieben)
+  async function duplizieren() {
+    if (!schichtModal) return;
+    if (!schichtModal.beginn_um || !schichtModal.ende_um) {
+      alert('Bitte Beginn und Ende eintragen.');
+      return;
+    }
+    setSpeichern(true);
+    try {
+      const res = await supabase.from('hr_schichten').insert(schichtDatensatzAus(schichtModal.datum));
+      if (res.error) throw res.error;
+      setSchichtModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Duplizieren fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setSpeichern(false);
+    }
+  }
+
   async function speichereVorlage() {
     if (!neueVorlage.name || !neueVorlage.beginn_um || !neueVorlage.ende_um) {
       alert('Bitte Name, Beginn und Ende eintragen.');
@@ -737,6 +807,31 @@ export default function SchichtplanPage() {
                 ))}
               </div>
             </div>
+
+            {schichtModal.id && (
+              <div style={{
+                marginBottom: 18, paddingTop: 14,
+                borderTop: `1px solid ${BRAND.border}`,
+              }}>
+                <label style={labelStil}>Kopieren</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    style={{ ...btnGhost, color: BRAND.cyan, borderColor: 'rgba(0,229,255,0.4)' }}
+                    onClick={aufGanzeWocheKopieren} disabled={speichern}
+                    title="Diese Schicht auf alle freien Tage dieser Woche legen (gleicher Mitarbeiter)"
+                  >
+                    📋 Auf ganze Woche
+                  </button>
+                  <button
+                    style={btnGhost}
+                    onClick={duplizieren} disabled={speichern}
+                    title="Identische Kopie am selben Tag anlegen (danach per Ziehen verschieben)"
+                  >
+                    ⧉ Duplizieren
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
               <div>
