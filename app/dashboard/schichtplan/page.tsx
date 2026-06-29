@@ -139,6 +139,9 @@ export default function SchichtplanPage() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
+  // Offene Tausch-Anfragen (Chef-Bearbeitung)
+  const [tauschAntraege, setTauschAntraege] = useState<any[]>([]);
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -171,6 +174,38 @@ export default function SchichtplanPage() {
       setMitarbeiter(maListe);
       setSchichten(schichtRes.data || []);
       setVorlagen(vorlagenRes.data || []);
+
+      // Offene Tausch-Anfragen laden (unabhaengig von der angezeigten Woche)
+      const { data: tauschRows } = await supabase
+        .from('hr_schicht_tausch')
+        .select('id,schicht_id,von_mitarbeiter_id,grund,erstellt_am,status')
+        .eq('owner_user_id', uid)
+        .eq('status', 'beantragt')
+        .order('erstellt_am', { ascending: true });
+
+      const tListe = tauschRows || [];
+      const schichtIds = tListe.map((t: any) => t.schicht_id).filter(Boolean);
+      let schichtMap: Record<string, any> = {};
+      if (schichtIds.length > 0) {
+        const { data: tSchichten } = await supabase
+          .from('hr_schichten')
+          .select('id,datum,beginn_um,ende_um')
+          .in('id', schichtIds);
+        (tSchichten || []).forEach((s: any) => { schichtMap[s.id] = s; });
+      }
+      const angereichert = tListe.map((t: any) => {
+        const s = schichtMap[t.schicht_id];
+        const ma = maListe.find((m: any) => m.id === t.von_mitarbeiter_id);
+        return {
+          ...t,
+          ma_name: ma ? maName(ma) : 'Mitarbeiter',
+          datum: s?.datum || null,
+          beginn_um: s?.beginn_um || null,
+          ende_um: s?.ende_um || null,
+          schicht_existiert: !!s,
+        };
+      });
+      setTauschAntraege(angereichert);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -231,6 +266,46 @@ export default function SchichtplanPage() {
       await ladeDaten();
     } catch (e: any) {
       alert('Verschieben fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
+  // --- Tausch-Anfragen: genehmigen / ablehnen ---
+  async function tauschGenehmigen(antrag: any) {
+    if (!confirm('Antrag genehmigen? Die Schicht wird freigegeben (landet in "Unbesetzt") und kann per Ziehen einem anderen Mitarbeiter zugewiesen werden.')) return;
+    try {
+      // Schicht freigeben (nicht-destruktiv: nur Zuordnung entfernen)
+      if (antrag.schicht_existiert && antrag.schicht_id) {
+        const r1 = await supabase.from('hr_schichten')
+          .update({ mitarbeiter_id: null })
+          .eq('id', antrag.schicht_id);
+        if (r1.error) throw r1.error;
+      }
+      const r2 = await supabase.from('hr_schicht_tausch')
+        .update({ status: 'genehmigt', entschieden_am: new Date().toISOString(), entschieden_von: 'Chef (Cockpit)' })
+        .eq('id', antrag.id);
+      if (r2.error) throw r2.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Genehmigen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
+  async function tauschAblehnen(antrag: any) {
+    const notiz = window.prompt('Optional: kurzer Grund der Ablehnung (kann leer bleiben):', '');
+    if (notiz === null) return; // Abbrechen
+    try {
+      const r = await supabase.from('hr_schicht_tausch')
+        .update({
+          status: 'abgelehnt',
+          chef_notiz: notiz || null,
+          entschieden_am: new Date().toISOString(),
+          entschieden_von: 'Chef (Cockpit)',
+        })
+        .eq('id', antrag.id);
+      if (r.error) throw r.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Ablehnen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     }
   }
 
@@ -523,6 +598,54 @@ export default function SchichtplanPage() {
           ...card, borderColor: BRAND.danger, color: BRAND.danger, marginBottom: 16,
         }}>
           {fehler}
+        </div>
+      )}
+
+      {!laden && tauschAntraege.length > 0 && (
+        <div style={{
+          ...card, marginBottom: 16,
+          borderColor: 'rgba(224,162,76,0.5)',
+          background: 'rgba(224,162,76,0.06)',
+        }}>
+          <div style={{
+            fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16,
+            color: BRAND.warn, marginBottom: 12,
+          }}>
+            🔔 Offene Tausch-Anfragen ({tauschAntraege.length})
+          </div>
+          {tauschAntraege.map((a) => (
+            <div key={a.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 12, flexWrap: 'wrap',
+              padding: '10px 0', borderTop: `1px solid ${BRAND.border}`,
+            }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                  {a.ma_name} möchte abgeben:{' '}
+                  {a.datum
+                    ? `${a.datum.split('-').reverse().join('.')} · ${hhmm(a.beginn_um)}–${hhmm(a.ende_um)}`
+                    : '(Schicht nicht mehr vorhanden)'}
+                </div>
+                {a.grund && (
+                  <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>Grund: {a.grund}</div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  style={{ ...btn, background: BRAND.green, padding: '8px 14px' }}
+                  onClick={() => tauschGenehmigen(a)}
+                >
+                  Genehmigen
+                </button>
+                <button
+                  style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger }}
+                  onClick={() => tauschAblehnen(a)}
+                >
+                  Ablehnen
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
