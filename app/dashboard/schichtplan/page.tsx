@@ -185,6 +185,13 @@ export default function SchichtplanPage() {
       .sort((a, b) => hhmm(a.beginn_um).localeCompare(hhmm(b.beginn_um)));
   }
 
+  // Summe der Netto-Stunden aller Schichten eines Mitarbeiters in der angezeigten Woche
+  function wochenStundenFuer(maId: string | null): number {
+    return schichten
+      .filter((s) => (maId === null ? !s.mitarbeiter_id : s.mitarbeiter_id === maId))
+      .reduce((sum, s) => sum + dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0), 0);
+  }
+
   // Schicht-Modal oeffnen (neu oder bearbeiten)
   function oeffneNeu(maId: string | null, datum: string) {
     setSchichtModal(leereSchicht(datum, maId || ''));
@@ -439,6 +446,14 @@ export default function SchichtplanPage() {
                     </th>
                   );
                 })}
+                <th style={{
+                  position: 'sticky', right: 0, zIndex: 2, background: BRAND.navy2,
+                  textAlign: 'center', padding: '12px 12px', color: BRAND.gold,
+                  fontSize: 13, fontWeight: 700, borderBottom: `1px solid ${BRAND.border}`,
+                  borderLeft: `1px solid ${BRAND.border}`, minWidth: 90,
+                }}>
+                  &sum; Woche
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -492,6 +507,10 @@ export default function SchichtplanPage() {
                               {s.rolle && (
                                 <div style={{ fontSize: 11, color: BRAND.textDim }}>{s.rolle}</div>
                               )}
+                              <div style={{ fontSize: 10, color: BRAND.textDim }}>
+                                {dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0).toFixed(1)} h
+                                {s.pause_minuten > 0 ? ` · ${s.pause_minuten} Min Pause` : ''}
+                              </div>
                             </button>
                           ))}
                           <button
@@ -509,12 +528,21 @@ export default function SchichtplanPage() {
                         </td>
                       );
                     })}
+                    <td style={{
+                      position: 'sticky', right: 0, zIndex: 1, background: BRAND.navy2,
+                      textAlign: 'center', padding: '12px',
+                      borderBottom: `1px solid ${BRAND.border}`,
+                      borderLeft: `1px solid ${BRAND.border}`,
+                      fontWeight: 700, fontSize: 14, color: BRAND.gold,
+                    }}>
+                      {wochenStundenFuer(maId).toFixed(1)} h
+                    </td>
                   </tr>
                 );
               })}
               {mitarbeiter.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ padding: 20, color: BRAND.textDim, textAlign: 'center' }}>
+                  <td colSpan={9} style={{ padding: 20, color: BRAND.textDim, textAlign: 'center' }}>
                     Noch keine Mitarbeiter angelegt. Schichten lassen sich trotzdem in der
                     Zeile &bdquo;Unbesetzt&ldquo; planen.
                   </td>
