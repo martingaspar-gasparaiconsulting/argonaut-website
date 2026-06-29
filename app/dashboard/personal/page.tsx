@@ -1074,6 +1074,45 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
   const [neuArt, setNeuArt] = useState('onboarding');
   const [neuAufgabe, setNeuAufgabe] = useState('');
   const [saving, setSaving] = useState(false);
+  const [abschluss, setAbschluss] = useState<Record<string, { am: string; von: string | null }>>({});
+
+  const ladeAbschluss = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('hr_checklisten_abschluss')
+        .select('art,abgeschlossen_am,bestaetigt_von').eq('mitarbeiter_id', id);
+      if (error) throw error;
+      const map: Record<string, { am: string; von: string | null }> = {};
+      ((data as { art: string; abgeschlossen_am: string; bestaetigt_von: string | null }[]) ?? []).forEach((r) => {
+        map[r.art] = { am: r.abgeschlossen_am, von: r.bestaetigt_von };
+      });
+      setAbschluss(map);
+    } catch { /* leise */ }
+  }, [id]);
+
+  useEffect(() => { ladeAbschluss(); }, [ladeAbschluss]);
+
+  async function abschliessen(art: string) {
+    setMsg(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const ownerId = userData?.user?.id;
+      if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); return; }
+      const { error } = await supabase.from('hr_checklisten_abschluss').upsert(
+        { owner_user_id: ownerId, mitarbeiter_id: id, art, abgeschlossen_am: new Date().toISOString(), bestaetigt_von: 'Chef (Cockpit)' },
+        { onConflict: 'mitarbeiter_id,art' },
+      );
+      if (error) throw error;
+      ladeAbschluss();
+    } catch (e: unknown) { setMsg('Abschluss fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+  }
+
+  async function abschlussAufheben(art: string) {
+    if (!window.confirm('Abschluss dieser Liste wieder aufheben?')) return;
+    try {
+      const { error } = await supabase.from('hr_checklisten_abschluss').delete().eq('mitarbeiter_id', id).eq('art', art);
+      if (error) throw error; ladeAbschluss();
+    } catch { setMsg('Aufheben fehlgeschlagen.'); }
+  }
 
   async function hinzufuegen() {
     if (!neuAufgabe.trim()) { setMsg('Bitte einen Punkt eingeben.'); return; }
@@ -1150,6 +1189,26 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
                 </span>
               )}
             </div>
+            {(() => {
+              const ab = abschluss[a.key];
+              const alleErledigt = liste.length > 0 && erledigt === liste.length;
+              if (ab) {
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(76,175,125,0.10)', border: '1px solid rgba(76,175,125,0.4)' }}>
+                    <span style={{ fontSize: 14, color: C.green, fontWeight: 600, flex: 1 }}>✓ Abgeschlossen am {dStr(ab.am)}{ab.von ? ` · bestätigt: ${ab.von}` : ''}</span>
+                    <button style={{ ...styles.miniBtn, color: C.textDim }} onClick={() => abschlussAufheben(a.key)}>Aufheben</button>
+                  </div>
+                );
+              }
+              if (alleErledigt) {
+                return (
+                  <button style={{ ...styles.primaryBtn, marginTop: 10, background: C.green, borderColor: C.green }} onClick={() => abschliessen(a.key)}>
+                    ✓ Vorgang abschließen
+                  </button>
+                );
+              }
+              return null;
+            })()}
             {liste.length === 0 && <div style={styles.listHint}>Noch keine Punkte. Oben hinzufügen.</div>}
             {liste.map((r) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 10, marginBottom: 8, background: r.erledigt ? 'rgba(76,175,125,0.06)' : C.cardBg }}>
