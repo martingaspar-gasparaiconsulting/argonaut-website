@@ -30,7 +30,7 @@ type Mitarbeiter = {
   position: string | null; status: string; eintrittsdatum: string | null;
   geburtsdatum: string | null; adresse: string | null; sv_nummer: string | null;
   steuer_id: string | null; iban: string | null; notfall_kontakt: string | null;
-  urlaubsanspruch_tage: number | null;
+  urlaubsanspruch_tage: number | null; auth_user_id: string | null;
 };
 type Bewerber = {
   id: string; vorname: string; nachname: string; email: string | null; telefon: string | null;
@@ -105,7 +105,7 @@ export default function PersonalPage() {
     try {
       if (tab === 'mitarbeiter') {
         const { data, error } = await supabase.from('mitarbeiter')
-          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage')
+          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id')
           .order('created_at', { ascending: false });
         if (error) throw error;
         setMitarbeiter((data as Mitarbeiter[]) ?? []);
@@ -258,6 +258,8 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [hiring, setHiring] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [eingeladen, setEingeladen] = useState(!!ma?.auth_user_id);
 
   // Datensätze
   const [docs, setDocs] = useState<HrDokument[]>([]);
@@ -328,6 +330,25 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
       }
       setMsg('Gespeichert.'); onChanged();
     } catch (e: unknown) { setMsg('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setSaving(false); }
+  }
+
+  async function einladen() {
+    if (!istMA) return;
+    if (!email.trim()) { setMsg('Bitte zuerst eine E-Mail-Adresse in den Stammdaten eintragen und speichern.'); return; }
+    if (!window.confirm(`${vorname} ${nachname} zum Self-Service einladen?\n\nEs wird eine Einladungs-Mail an ${email.trim()} versendet, mit der die Person ihr Passwort festlegt und ihren eigenen Bereich nutzen kann.`)) return;
+    setInviting(true); setMsg(null);
+    try {
+      const res = await fetch('/api/hr/mitarbeiter-einladen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mitarbeiter_id: id }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error || 'Einladung fehlgeschlagen.');
+      setEingeladen(true);
+      setMsg(j?.message || 'Einladung versendet.');
+      onChanged();
+    } catch (e: unknown) { setMsg('Einladung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setInviting(false); }
   }
 
   async function uebernehmen() {
@@ -408,6 +429,10 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; onClos
                   <button style={{ ...styles.hireBtn, opacity: hiring ? 0.6 : 1 }} onClick={uebernehmen} disabled={hiring}>{hiring ? 'Übernimmt …' : '✓ Als Mitarbeiter übernehmen'}</button>
                 )}
                 {!istMA && status === 'eingestellt' && <span style={styles.hiredHint}>Bereits als Mitarbeiter übernommen</span>}
+                {istMA && !eingeladen && (
+                  <button style={{ ...styles.inviteBtn, opacity: inviting ? 0.6 : 1 }} onClick={einladen} disabled={inviting}>{inviting ? 'Lädt ein …' : '✉ Zum Self-Service einladen'}</button>
+                )}
+                {istMA && eingeladen && <span style={styles.invitedHint}>✓ Zum Self-Service eingeladen</span>}
               </div>
             </>
           )}
@@ -861,6 +886,8 @@ const styles: Record<string, CSSProperties> = {
   primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'opacity .15s ease' },
   hireBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   hiredHint: { color: C.green, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
+  inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   tabs: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
