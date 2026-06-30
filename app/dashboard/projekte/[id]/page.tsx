@@ -42,6 +42,13 @@ const REITER = [
   { key: 'einstellungen', label: 'Einstellungen' },
 ];
 
+const SPALTEN = [
+  { key: 'todo', label: 'To-Do', farbe: '#8FA3BE' },
+  { key: 'in_arbeit', label: 'In Arbeit', farbe: '#00e5ff' },
+  { key: 'review', label: 'Review', farbe: '#E0A24C' },
+  { key: 'fertig', label: 'Fertig', farbe: '#4CAF7D' },
+];
+
 function dStr(d: string | null | undefined): string {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; }
@@ -65,6 +72,13 @@ export default function ProjektDetailPage() {
   const [aufgaben, setAufgaben] = useState<Aufgabe[]>([]);
   const [reiter, setReiter] = useState('uebersicht');
 
+  // Aufgaben-Modal + Drag&Drop
+  const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
+  const [speichern, setSpeichern] = useState(false);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverSpalte, setDragOverSpalte] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState('');
+
   const ladeDaten = useCallback(async () => {
     setLaden(true);
     setFehler('');
@@ -72,10 +86,12 @@ export default function ProjektDetailPage() {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      setOwnerId(uid);
 
       const [projRes, aufgRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
-        supabase.from('aufgaben').select('id,projekt_id,status,erledigt,faellig_am,prioritaet').eq('projekt_id', projektId).eq('owner_user_id', uid),
+        supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
+          .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
@@ -89,6 +105,91 @@ export default function ProjektDetailPage() {
 
   useEffect(() => { void ladeDaten(); }, [ladeDaten]);
 
+  // --- Aufgaben: anlegen / bearbeiten / loeschen ---
+  function leereAufgabe(status: string): any {
+    return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '' };
+  }
+  function oeffneNeueAufgabe(status: string) { setAufgabeModal(leereAufgabe(status)); }
+  function oeffneAufgabe(a: Aufgabe) {
+    setAufgabeModal({
+      id: a.id, titel: a.titel || '', beschreibung: a.beschreibung || '',
+      status: a.status || 'todo', prioritaet: a.prioritaet || 'normal', faellig_am: a.faellig_am || '',
+    });
+  }
+
+  async function speichereAufgabe() {
+    if (!aufgabeModal) return;
+    if (!aufgabeModal.titel.trim()) { alert('Bitte einen Titel eingeben.'); return; }
+    setSpeichern(true);
+    try {
+      const datensatz = {
+        owner_user_id: ownerId,
+        projekt_id: projektId,
+        titel: aufgabeModal.titel.trim(),
+        beschreibung: aufgabeModal.beschreibung || null,
+        status: aufgabeModal.status,
+        prioritaet: aufgabeModal.prioritaet,
+        faellig_am: aufgabeModal.faellig_am || null,
+        erledigt: aufgabeModal.status === 'fertig',
+      };
+      let res;
+      if (aufgabeModal.id) {
+        res = await supabase.from('aufgaben').update(datensatz).eq('id', aufgabeModal.id);
+      } else {
+        res = await supabase.from('aufgaben').insert(datensatz);
+      }
+      if (res.error) throw res.error;
+      setAufgabeModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setSpeichern(false);
+    }
+  }
+
+  async function loescheAufgabe() {
+    if (!aufgabeModal?.id) return;
+    if (!confirm('Aufgabe wirklich löschen?')) return;
+    setSpeichern(true);
+    try {
+      const res = await supabase.from('aufgaben').delete().eq('id', aufgabeModal.id);
+      if (res.error) throw res.error;
+      setAufgabeModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Löschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setSpeichern(false);
+    }
+  }
+
+  // --- Drag & Drop zwischen Spalten ---
+  function onDragStartTask(e: React.DragEvent, a: Aufgabe) {
+    setDraggingTaskId(a.id);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', a.id); } catch { /* ignore */ }
+  }
+  function onDragEndTask() { setDraggingTaskId(null); setDragOverSpalte(null); }
+
+  async function onDropSpalte(status: string) {
+    const id = draggingTaskId;
+    setDragOverSpalte(null);
+    setDraggingTaskId(null);
+    if (!id) return;
+    const a = aufgaben.find((x) => x.id === id);
+    if (!a || a.status === status) return;
+    try {
+      const res = await supabase.from('aufgaben')
+        .update({ status, erledigt: status === 'fertig' })
+        .eq('id', id);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Verschieben fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 18,
@@ -97,6 +198,17 @@ export default function ProjektDetailPage() {
     background: 'transparent', color: BRAND.textDim, border: `1px solid ${BRAND.border}`,
     borderRadius: 10, padding: '8px 14px', fontWeight: 600, cursor: 'pointer',
     fontFamily: 'DM Sans, sans-serif', textDecoration: 'none', display: 'inline-block',
+  };
+  const btn: React.CSSProperties = {
+    background: BRAND.cyan, color: BRAND.navy, border: 'none', borderRadius: 10,
+    padding: '10px 16px', fontWeight: 700, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+  };
+  const inputStil: React.CSSProperties = {
+    width: '100%', background: BRAND.navy, color: '#fff', border: `1px solid ${BRAND.border}`,
+    borderRadius: 8, padding: '9px 10px', fontSize: 14, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
+  };
+  const labelStil: React.CSSProperties = {
+    display: 'block', color: BRAND.textDim, fontSize: 12, fontWeight: 600, marginBottom: 5, fontFamily: 'DM Sans, sans-serif',
   };
 
   if (laden) {
@@ -196,8 +308,79 @@ export default function ProjektDetailPage() {
       )}
 
       {reiter === 'aufgaben' && (
-        <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>
-          Aufgaben & Kanban-Board folgen im nächsten Schritt.
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
+          {SPALTEN.map((sp) => {
+            const spaltenAufgaben = aufgaben.filter((a) => a.status === sp.key);
+            const istDropZiel = dragOverSpalte === sp.key;
+            return (
+              <div
+                key={sp.key}
+                onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setDragOverSpalte(sp.key); }}
+                onDragLeave={() => setDragOverSpalte((p) => (p === sp.key ? null : p))}
+                onDrop={() => onDropSpalte(sp.key)}
+                style={{
+                  background: istDropZiel ? 'rgba(0,229,255,0.08)' : BRAND.navy2,
+                  border: `1px solid ${istDropZiel ? BRAND.cyan : BRAND.border}`,
+                  borderRadius: 14, padding: 12, minHeight: 120,
+                  transition: 'background 0.12s ease, border 0.12s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: sp.farbe, display: 'inline-block' }} />
+                    <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Syne, sans-serif' }}>{sp.label}</span>
+                    <span style={{ fontSize: 12, color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
+                  </div>
+                </div>
+
+                {spaltenAufgaben.map((a) => {
+                  const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
+                  const ueberfaellig = a.faellig_am && a.status !== 'fertig' && new Date(a.faellig_am) < new Date(new Date().toDateString());
+                  return (
+                    <div
+                      key={a.id}
+                      draggable
+                      onDragStart={(e) => onDragStartTask(e, a)}
+                      onDragEnd={onDragEndTask}
+                      onClick={() => oeffneAufgabe(a)}
+                      style={{
+                        background: BRAND.navy, border: `1px solid ${BRAND.border}`,
+                        borderLeft: `3px solid ${pm.farbe}`, borderRadius: 8,
+                        padding: '10px 12px', marginBottom: 8, cursor: 'grab',
+                        opacity: draggingTaskId === a.id ? 0.4 : 1,
+                      }}
+                    >
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: a.beschreibung ? 4 : 0 }}>{a.titel}</div>
+                      {a.beschreibung && (
+                        <div style={{ fontSize: 12, color: BRAND.textDim, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {a.beschreibung}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 11, alignItems: 'center' }}>
+                        <span style={{ color: pm.farbe, fontWeight: 700 }}>● {pm.label}</span>
+                        {a.faellig_am && (
+                          <span style={{ color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400 }}>
+                            📅 {dStr(a.faellig_am)}{ueberfaellig ? ' (überfällig)' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <button
+                  onClick={() => oeffneNeueAufgabe(sp.key)}
+                  style={{
+                    width: '100%', background: 'transparent', border: `1px dashed ${BRAND.border}`,
+                    borderRadius: 8, color: BRAND.textDim, padding: '8px 0', cursor: 'pointer',
+                    fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginTop: 2,
+                  }}
+                >
+                  + Aufgabe
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -210,6 +393,59 @@ export default function ProjektDetailPage() {
       {reiter === 'einstellungen' && (
         <div style={{ ...card, color: BRAND.textDim }}>
           Projekt-Einstellungen (bearbeiten/archivieren) folgen. Bis dahin: zurück zur Übersicht, dort „Bearbeiten".
+        </div>
+      )}
+
+      {/* ===== Aufgaben-Modal ===== */}
+      {aufgabeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
+          onClick={() => setAufgabeModal(null)}>
+          <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+              {aufgabeModal.id ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}
+            </h2>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStil}>Titel *</label>
+              <input style={inputStil} value={aufgabeModal.titel} onChange={(e) => setAufgabeModal({ ...aufgabeModal, titel: e.target.value })} placeholder="z.B. Material bestellen" />
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStil}>Beschreibung</label>
+              <textarea style={{ ...inputStil, minHeight: 64, resize: 'vertical' }} value={aufgabeModal.beschreibung} onChange={(e) => setAufgabeModal({ ...aufgabeModal, beschreibung: e.target.value })} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Spalte</label>
+                <select style={inputStil} value={aufgabeModal.status} onChange={(e) => setAufgabeModal({ ...aufgabeModal, status: e.target.value })}>
+                  {SPALTEN.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Priorität</label>
+                <select style={inputStil} value={aufgabeModal.prioritaet} onChange={(e) => setAufgabeModal({ ...aufgabeModal, prioritaet: e.target.value })}>
+                  {Object.keys(PRIO_META).map((s) => <option key={s} value={s}>{PRIO_META[s].label}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Fällig am</label>
+                <input type="date" style={inputStil} value={aufgabeModal.faellig_am} onChange={(e) => setAufgabeModal({ ...aufgabeModal, faellig_am: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+              <div>
+                {aufgabeModal.id && (
+                  <button style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger }} onClick={loescheAufgabe} disabled={speichern}>Löschen</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={btnGhost} onClick={() => setAufgabeModal(null)} disabled={speichern}>Abbrechen</button>
+                <button style={btn} onClick={speichereAufgabe} disabled={speichern}>{speichern ? 'Speichert…' : 'Speichern'}</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
