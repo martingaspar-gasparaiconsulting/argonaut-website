@@ -23,6 +23,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '📄 Dokumente', href: '/dashboard/documents' },
   { label: 'Personal', href: '/dashboard/personal' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan' },
+  { label: '📁 Projekte', href: '/dashboard/projekte' },
   { label: '⚡ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
   { label: 'Einstellungen', href: '/dashboard/einstellungen' },
 ];
