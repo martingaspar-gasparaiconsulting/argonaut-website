@@ -95,6 +95,38 @@ function dauerStunden(beginn: string, ende: string, pauseMin: number): number {
   return Math.max(0, min) / 60;
 }
 
+// --- Feiertage je Bundesland (wartungsfrei berechnet, Oster-Algorithmus) ---
+function osterSonntag(jahr: number): Date {
+  const a = jahr % 19, b = Math.floor(jahr / 100), c = jahr % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const monat = Math.floor((h + l - 7 * m + 114) / 31);
+  const tg = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(jahr, monat - 1, tg);
+}
+function feiertageSet(jahr: number, bl: string): Set<string> {
+  const s = new Set<string>();
+  const add = (d: Date) => s.add(ymd(d));
+  const fix = (mo: number, t: number) => new Date(jahr, mo - 1, t);
+  const ostern = osterSonntag(jahr);
+  const off = (n: number) => { const d = new Date(ostern); d.setDate(d.getDate() + n); return d; };
+  add(fix(1, 1)); add(off(-2)); add(off(1)); add(fix(5, 1)); add(off(39)); add(off(50));
+  add(fix(10, 3)); add(fix(12, 25)); add(fix(12, 26));
+  if (['BW', 'BY', 'ST'].includes(bl)) add(fix(1, 6));
+  if (['BE', 'MV'].includes(bl)) add(fix(3, 8));
+  if (['BW', 'BY', 'HE', 'NW', 'RP', 'SL'].includes(bl)) add(off(60));
+  if (['SL'].includes(bl)) add(fix(8, 15));
+  if (['TH'].includes(bl)) add(fix(9, 20));
+  if (['BB', 'MV', 'SN', 'ST', 'TH', 'HB', 'HH', 'NI', 'SH'].includes(bl)) add(fix(10, 31));
+  if (['BW', 'BY', 'NW', 'RP', 'SL'].includes(bl)) add(fix(11, 1));
+  if (['SN'].includes(bl)) { const d = fix(11, 23); let back = ((d.getDay() - 3 + 7) % 7); if (back === 0) back = 7; d.setDate(23 - back); add(d); }
+  return s;
+}
+
 // Mitarbeiter-Name robust ermitteln (Schema-unabhaengig)
 function maName(m: any): string {
   if (!m) return 'Unbesetzt';
@@ -166,6 +198,14 @@ export default function SchichtplanPage() {
   // KI-Vorschlaege (Freigeben/Verwerfen)
   const [vorschlagAktion, setVorschlagAktion] = useState(false);
 
+  // KI-Generator
+  const [bundesland, setBundesland] = useState('BW');
+  const [generatorModal, setGeneratorModal] = useState(false);
+  const [genVorlageId, setGenVorlageId] = useState('');
+  const [genMaIds, setGenMaIds] = useState<string[]>([]);
+  const [genNurOhne, setGenNurOhne] = useState(false);
+  const [genLaeuft, setGenLaeuft] = useState(false);
+
   const wochenTage: Date[] = Array.from({ length: 7 }, (_, i) => addTage(wochenStart, i));
 
   const ladeDaten = useCallback(async () => {
@@ -190,11 +230,12 @@ export default function SchichtplanPage() {
           .eq('owner_user_id', uid)
           .gte('datum', von).lte('datum', bis),
         supabase.from('hr_schicht_vorlagen').select('*').eq('owner_user_id', uid),
-        supabase.from('hr_einstellungen').select('ruhetage').eq('owner_user_id', uid).maybeSingle(),
+        supabase.from('hr_einstellungen').select('ruhetage,bundesland').eq('owner_user_id', uid).maybeSingle(),
       ]);
 
       const geladeneRuhetage: number[] = Array.isArray(einstRes.data?.ruhetage) ? einstRes.data.ruhetage : [];
       setRuhetage(geladeneRuhetage);
+      setBundesland(einstRes.data?.bundesland || 'BW');
 
       const maListe = (maRes.data || []).slice().sort(
         (a: any, b: any) => maName(a).localeCompare(maName(b), 'de'),
@@ -610,6 +651,85 @@ export default function SchichtplanPage() {
     }
   }
 
+  // --- KI-Generator: Schichten automatisch vorschlagen ---
+  function generatorOeffnen() {
+    setGenVorlageId(vorlagen[0]?.id || '');
+    setGenMaIds(mitarbeiter.map((m) => m.id));
+    setGenNurOhne(false);
+    setGeneratorModal(true);
+  }
+
+  async function vorschlagErzeugen() {
+    const vorlage = vorlagen.find((v) => v.id === genVorlageId);
+    if (!vorlage) { alert('Bitte eine Schichtart wählen.'); return; }
+    if (genMaIds.length === 0) { alert('Bitte mindestens einen Mitarbeiter wählen.'); return; }
+    setGenLaeuft(true);
+    try {
+      const dauer = dauerStunden(vorlage.beginn_um, vorlage.ende_um, vorlage.pause_minuten || 0);
+
+      // Feiertage der betroffenen Jahre der Woche
+      const jahre = new Set<number>();
+      for (let i = 0; i < 7; i++) jahre.add(addTage(wochenStart, i).getFullYear());
+      const fset = new Set<string>();
+      jahre.forEach((j) => feiertageSet(j, bundesland).forEach((x) => fset.add(x)));
+
+      // Abwesenheiten der Woche (nur definitive: genehmigt/erfasst)
+      const von = ymd(wochenStart);
+      const bis = ymd(addTage(wochenStart, 6));
+      const { data: abwRows } = await supabase.from('hr_abwesenheiten')
+        .select('mitarbeiter_id,von,bis,status')
+        .eq('owner_user_id', ownerId)
+        .lte('von', bis).gte('bis', von);
+      const abwListe = (abwRows || []).filter((a: any) => a.status === 'genehmigt' || a.status === 'erfasst');
+
+      const neu: any[] = [];
+      for (const maId of genMaIds) {
+        const m = mitarbeiter.find((x) => x.id === maId);
+        if (!m) continue;
+        const hatBestehend = schichten.some((s) => s.mitarbeiter_id === maId);
+        if (genNurOhne && hatBestehend) continue;
+
+        const soll = Number(m.wochenstunden) || 0;
+        const zielAnzahl = soll > 0 && dauer > 0 ? Math.max(1, Math.round(soll / dauer)) : 7;
+        let gesetzt = 0;
+        for (let i = 0; i < 7 && gesetzt < zielAnzahl; i++) {
+          const tag = addTage(wochenStart, i);
+          const datum = ymd(tag);
+          if (ruhetage.includes(tag.getDay())) continue;       // Betriebs-Ruhetag
+          if (fset.has(datum)) continue;                       // Feiertag
+          if (schichten.some((s) => s.mitarbeiter_id === maId && s.datum === datum)) continue; // bestehende Schicht
+          if (abwListe.some((a: any) => a.mitarbeiter_id === maId && a.von <= datum && a.bis >= datum)) continue; // Urlaub/Krank
+          neu.push({
+            owner_user_id: ownerId,
+            mitarbeiter_id: maId,
+            datum,
+            beginn_um: vorlage.beginn_um,
+            ende_um: vorlage.ende_um,
+            pause_minuten: vorlage.pause_minuten || 0,
+            rolle: vorlage.name || null,
+            farbe: vorlage.farbe || '#00e5ff',
+            status: 'vorschlag',
+          });
+          gesetzt++;
+        }
+      }
+
+      if (neu.length === 0) {
+        alert('Es konnten keine Vorschläge erzeugt werden — alle passenden Tage sind belegt, geschlossen, Feiertag oder Abwesenheit.');
+        setGenLaeuft(false);
+        return;
+      }
+      const res = await supabase.from('hr_schichten').insert(neu);
+      if (res.error) throw res.error;
+      setGeneratorModal(false);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Erzeugen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setGenLaeuft(false);
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2,
@@ -682,6 +802,9 @@ export default function SchichtplanPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button style={{ ...btn, background: BRAND.cyan }} onClick={generatorOeffnen}>
+            &#10024; KI-Schichtplan
+          </button>
           <button style={btnGhost} onClick={() => { setRuhetageEntwurf(ruhetage); setRuhetageModal(true); }}>
             &#128197; Ruhetage
           </button>
@@ -1176,6 +1299,95 @@ export default function SchichtplanPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== KI-Generator-Modal ===== */}
+      {generatorModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20, zIndex: 50,
+        }} onClick={() => setGeneratorModal(false)}>
+          <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+              ✨ KI-Schichtplan vorschlagen
+            </h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+              Verteilt die gewählte Schichtart auf die geöffneten Wochentage — bis zu den
+              Soll-Wochenstunden je Mitarbeiter. Ruhetage, Feiertage, Abwesenheiten und
+              bestehende Schichten werden ausgelassen. Du prüfst alles als Vorschlag, bevor es gilt.
+            </p>
+
+            {vorlagen.length === 0 ? (
+              <div style={{ ...card, borderColor: BRAND.warn, color: BRAND.warn, fontSize: 13 }}>
+                Du hast noch keine Schichtarten angelegt. Lege zuerst unter „Schichtarten verwalten"
+                mindestens eine an (z.B. Frühschicht 06:00–14:00).
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStil}>Schichtart</label>
+                  <select
+                    style={inputStil}
+                    value={genVorlageId}
+                    onChange={(e) => setGenVorlageId(e.target.value)}
+                  >
+                    {vorlagen.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({hhmm(v.beginn_um)}–{hhmm(v.ende_um)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStil}>Mitarbeiter einbeziehen</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+                    {mitarbeiter.map((m) => {
+                      const aktiv = genMaIds.includes(m.id);
+                      const soll = Number(m.wochenstunden) || 0;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => setGenMaIds(
+                            aktiv ? genMaIds.filter((x) => x !== m.id) : [...genMaIds, m.id],
+                          )}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                            background: aktiv ? 'rgba(0,229,255,0.10)' : BRAND.navy,
+                            border: `1px solid ${aktiv ? 'rgba(0,229,255,0.4)' : BRAND.border}`,
+                            color: '#fff', fontSize: 13, fontFamily: 'DM Sans, sans-serif', textAlign: 'left',
+                          }}
+                        >
+                          <span>{aktiv ? '☑ ' : '☐ '}{maName(m)}</span>
+                          <span style={{ color: BRAND.textDim, fontSize: 12 }}>
+                            {soll > 0 ? `Soll ${soll} h/Wo` : 'kein Soll → alle Tage'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, cursor: 'pointer', fontSize: 13 }}>
+                  <input type="checkbox" checked={genNurOhne} onChange={(e) => setGenNurOhne(e.target.checked)} />
+                  Nur Mitarbeiter ohne bestehende Schichten in dieser Woche
+                </label>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button style={btnGhost} onClick={() => setGeneratorModal(false)} disabled={genLaeuft}>
+                    Abbrechen
+                  </button>
+                  <button style={{ ...btn, background: BRAND.cyan }} onClick={vorschlagErzeugen} disabled={genLaeuft}>
+                    {genLaeuft ? 'Erzeuge…' : 'Vorschlag erzeugen'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
