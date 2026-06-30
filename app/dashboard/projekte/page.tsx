@@ -82,6 +82,12 @@ export default function ProjektePage() {
   const [modal, setModal] = useState<any | null>(null);
   const [speichern, setSpeichern] = useState(false);
 
+  // Vorlagen
+  const [vorlagen, setVorlagen] = useState<any[]>([]);
+  const [vorlagenModal, setVorlagenModal] = useState(false);
+  const [ausVorlage, setAusVorlage] = useState<any | null>(null); // {vorlage, name}
+  const [erstellen, setErstellen] = useState(false);
+
   const ladeDaten = useCallback(async () => {
     setLaden(true);
     setFehler('');
@@ -91,13 +97,20 @@ export default function ProjektePage() {
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
 
-      const [projRes, aufgRes] = await Promise.all([
+      const [projRes, aufgRes, vorlRes, vAufgRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('owner_user_id', uid)
           .order('erstellt_am', { ascending: false }),
         supabase.from('aufgaben').select('id,projekt_id,erledigt,status').eq('owner_user_id', uid),
+        supabase.from('projekt_vorlagen').select('*').eq('owner_user_id', uid)
+          .order('erstellt_am', { ascending: false }),
+        supabase.from('vorlagen_aufgaben').select('id,vorlage_id').eq('owner_user_id', uid),
       ]);
       setProjekte(projRes.data || []);
       setAufgaben(aufgRes.data || []);
+      // Vorlagen mit Aufgaben-Anzahl anreichern
+      const zaehl: Record<string, number> = {};
+      (vAufgRes.data || []).forEach((r: any) => { zaehl[r.vorlage_id] = (zaehl[r.vorlage_id] || 0) + 1; });
+      setVorlagen((vorlRes.data || []).map((v: any) => ({ ...v, anzahlAufgaben: zaehl[v.id] || 0 })));
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -116,8 +129,7 @@ export default function ProjektePage() {
     return { erledigt, gesamt, pct };
   }
 
-  function oeffneNeu() { setModal(leeresProjekt()); }
-  function oeffneBearbeiten(p: Projekt) {
+  function oeffneNeu() { setModal(leeresProjekt()); }  function oeffneBearbeiten(p: Projekt) {
     setModal({
       id: p.id,
       name: p.name || '',
@@ -177,6 +189,66 @@ export default function ProjektePage() {
     }
   }
 
+  // --- Aus Vorlage ein neues Projekt erstellen ---
+  function oeffneAusVorlage(v: any) {
+    setVorlagenModal(false);
+    setAusVorlage({ vorlage: v, name: (v.name || '').replace(/\s*\(Vorlage\)\s*$/i, '') });
+  }
+
+  async function erstelleAusVorlage() {
+    if (!ausVorlage) return;
+    const v = ausVorlage.vorlage;
+    if (!ausVorlage.name.trim()) { alert('Bitte einen Projektnamen eingeben.'); return; }
+    setErstellen(true);
+    try {
+      // 1) Projekt anlegen
+      const pRes = await supabase.from('projekte').insert({
+        owner_user_id: ownerId,
+        name: ausVorlage.name.trim(),
+        beschreibung: v.beschreibung || null,
+        status: 'aktiv',
+        prioritaet: v.prioritaet || 'normal',
+        farbe: v.farbe || '#00e5ff',
+      }).select('id').single();
+      if (pRes.error) throw pRes.error;
+      const projektId = pRes.data.id;
+
+      // 2) Standard-Aufgaben der Vorlage laden und uebernehmen
+      const { data: vAufg } = await supabase.from('vorlagen_aufgaben')
+        .select('*').eq('vorlage_id', v.id).order('sortierung', { ascending: true });
+      if (vAufg && vAufg.length > 0) {
+        const rows = vAufg.map((a: any, i: number) => ({
+          owner_user_id: ownerId,
+          projekt_id: projektId,
+          titel: a.titel,
+          beschreibung: a.beschreibung || null,
+          status: a.status || 'todo',
+          prioritaet: a.prioritaet || 'normal',
+          sortierung: i,
+          erledigt: a.status === 'fertig',
+        }));
+        const aRes = await supabase.from('aufgaben').insert(rows);
+        if (aRes.error) throw aRes.error;
+      }
+      // 3) Direkt ins neue Projekt springen
+      window.location.href = `/dashboard/projekte/${projektId}`;
+    } catch (e: any) {
+      alert('Erstellen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+      setErstellen(false);
+    }
+  }
+
+  async function loescheVorlage(v: any) {
+    if (!confirm(`Vorlage „${v.name}" löschen? (Bereits erstellte Projekte bleiben bestehen.)`)) return;
+    try {
+      const res = await supabase.from('projekt_vorlagen').delete().eq('id', v.id);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Löschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 18,
@@ -218,7 +290,12 @@ export default function ProjektePage() {
             Alle Projekte, Status und Fortschritt an einem Ort.
           </p>
         </div>
-        <button style={btn} onClick={oeffneNeu}>+ Neues Projekt</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {vorlagen.length > 0 && (
+            <button style={btnGhost} onClick={() => setVorlagenModal(true)}>📋 Aus Vorlage erstellen</button>
+          )}
+          <button style={btn} onClick={oeffneNeu}>+ Neues Projekt</button>
+        </div>
       </div>
 
       {/* Filterleiste */}
@@ -382,6 +459,67 @@ export default function ProjektePage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button style={btnGhost} onClick={() => setModal(null)} disabled={speichern}>Abbrechen</button>
               <button style={btn} onClick={speichereProjekt} disabled={speichern}>{speichern ? 'Speichert…' : 'Speichern'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Vorlagen-Liste ===== */}
+      {vorlagenModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
+          onClick={() => setVorlagenModal(false)}>
+          <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Aus Vorlage erstellen</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+              Wähle eine Vorlage — daraus entsteht ein neues Projekt mit allen Standard-Aufgaben.
+            </p>
+            {vorlagen.length === 0 ? (
+              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 20, textAlign: 'center' }}>
+                Noch keine Vorlagen. Öffne ein Projekt → Reiter „Einstellungen" → „Als Vorlage speichern".
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {vorlagen.map((v) => (
+                  <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${v.farbe}`, borderRadius: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{v.name}</div>
+                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
+                        {v.anzahlAufgaben} Standard-Aufgabe{v.anzahlAufgaben === 1 ? '' : 'n'}
+                        {v.beschreibung ? ` · ${v.beschreibung.slice(0, 60)}${v.beschreibung.length > 60 ? '…' : ''}` : ''}
+                      </div>
+                    </div>
+                    <button style={btn} onClick={() => oeffneAusVorlage(v)}>Verwenden</button>
+                    <button style={{ ...btnGhost, padding: '8px 10px', color: BRAND.danger, borderColor: BRAND.danger }} onClick={() => loescheVorlage(v)} title="Vorlage löschen">🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button style={btnGhost} onClick={() => setVorlagenModal(false)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Aus Vorlage: Name wählen ===== */}
+      {ausVorlage && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60 }}
+          onClick={() => !erstellen && setAusVorlage(null)}>
+          <div style={{ ...card, width: 440, maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Neues Projekt aus Vorlage</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+              Vorlage „{ausVorlage.vorlage.name}" → {ausVorlage.vorlage.anzahlAufgaben} Aufgabe{ausVorlage.vorlage.anzahlAufgaben === 1 ? '' : 'n'} werden übernommen.
+            </p>
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStil}>Projektname *</label>
+              <input style={inputStil} value={ausVorlage.name} autoFocus
+                onChange={(e) => setAusVorlage({ ...ausVorlage, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); erstelleAusVorlage(); } }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button style={btnGhost} onClick={() => setAusVorlage(null)} disabled={erstellen}>Abbrechen</button>
+              <button style={btn} onClick={erstelleAusVorlage} disabled={erstellen}>{erstellen ? 'Erstellt…' : 'Projekt erstellen'}</button>
             </div>
           </div>
         </div>

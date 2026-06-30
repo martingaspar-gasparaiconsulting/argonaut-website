@@ -95,6 +95,7 @@ export default function ProjektDetailPage() {
   const [neuerKommentar, setNeuerKommentar] = useState('');
   const [detailLaden, setDetailLaden] = useState(false);
   const [unterMap, setUnterMap] = useState<Record<string, { erl: number; ges: number }>>({});
+  const [vorlageSpeichern, setVorlageSpeichern] = useState(false);
 
   // Aufgaben-Modal + Drag&Drop
   const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
@@ -469,6 +470,47 @@ export default function ProjektDetailPage() {
       await ladeDaten();
     } catch (e: any) {
       alert('Zuordnung fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
+  // --- Projekt als Vorlage speichern ---
+  async function alsVorlageSpeichern() {
+    if (!projekt) return;
+    const name = prompt('Name der Vorlage:', projekt.name + ' (Vorlage)');
+    if (name === null) return;
+    if (!name.trim()) { alert('Bitte einen Namen eingeben.'); return; }
+    setVorlageSpeichern(true);
+    try {
+      // 1) Vorlage anlegen
+      const vRes = await supabase.from('projekt_vorlagen').insert({
+        owner_user_id: ownerId,
+        name: name.trim(),
+        beschreibung: projekt.beschreibung || null,
+        prioritaet: projekt.prioritaet || 'normal',
+        farbe: projekt.farbe || '#00e5ff',
+      }).select('id').single();
+      if (vRes.error) throw vRes.error;
+      const vorlageId = vRes.data.id;
+
+      // 2) Aufgaben (Top-Level) als Standard-Aufgaben uebernehmen (ohne Termine/Zuweisung)
+      if (aufgaben.length > 0) {
+        const rows = aufgaben.map((a, i) => ({
+          owner_user_id: ownerId,
+          vorlage_id: vorlageId,
+          titel: a.titel,
+          beschreibung: a.beschreibung || null,
+          status: a.status || 'todo',
+          prioritaet: a.prioritaet || 'normal',
+          sortierung: i,
+        }));
+        const aRes = await supabase.from('vorlagen_aufgaben').insert(rows);
+        if (aRes.error) throw aRes.error;
+      }
+      alert(`Vorlage „${name.trim()}" gespeichert — mit ${aufgaben.length} Standard-Aufgabe${aufgaben.length === 1 ? '' : 'n'}. Du findest sie auf der Projekte-Übersicht unter „Aus Vorlage erstellen".`);
+    } catch (e: any) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setVorlageSpeichern(false);
     }
   }
 
@@ -865,8 +907,21 @@ export default function ProjektDetailPage() {
       )}
 
       {reiter === 'einstellungen' && (
-        <div style={{ ...card, color: BRAND.textDim }}>
-          Projekt-Einstellungen (bearbeiten/archivieren) folgen. Bis dahin: zurück zur Übersicht, dort „Bearbeiten".
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ ...card }}>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Als Vorlage speichern</h3>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
+              Speichert dieses Projekt als wiederverwendbare Blaupause — mit Beschreibung, Priorität, Farbe und allen
+              Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellst du später mit einem Klick neue,
+              gleich strukturierte Projekte.
+            </p>
+            <button style={btn} onClick={alsVorlageSpeichern} disabled={vorlageSpeichern}>
+              {vorlageSpeichern ? 'Speichert…' : '📋 Als Vorlage speichern'}
+            </button>
+          </div>
+          <div style={{ ...card, color: BRAND.textDim, fontSize: 13 }}>
+            Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) findest du auf der Übersicht über „Bearbeiten".
+          </div>
         </div>
       )}
 
