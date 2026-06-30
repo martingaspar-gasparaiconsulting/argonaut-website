@@ -58,6 +58,30 @@ function dStr(d: string | null | undefined): string {
   try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; }
 }
 
+// Health-Ampel eines Projekts (reine Eigenlogik aus Projekt + Aufgaben)
+function projektHealth(projekt: any, projektAufgaben: any[]): { key: string; label: string; farbe: string } {
+  if (projekt.status === 'abgeschlossen') return { key: 'neutral', label: 'Abgeschlossen', farbe: '#5A8DEE' };
+  if (projekt.status === 'abgebrochen') return { key: 'neutral', label: 'Abgebrochen', farbe: '#8FA3BE' };
+
+  const heute = new Date(new Date().toDateString());
+  const offene = projektAufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
+  const ueberfaellig = offene.filter((a) => a.faellig_am && new Date(a.faellig_am) < heute).length;
+  const gesamt = projektAufgaben.length;
+  const erledigt = projektAufgaben.filter((a) => a.erledigt || a.status === 'fertig').length;
+  const pct = gesamt > 0 ? Math.round((erledigt / gesamt) * 100) : 0;
+
+  const endeUeberschritten = projekt.end_datum && new Date(projekt.end_datum) < heute;
+  let tageBisEnde = Infinity;
+  if (projekt.end_datum) {
+    tageBisEnde = Math.round((new Date(projekt.end_datum).getTime() - heute.getTime()) / 86400000);
+  }
+
+  if (ueberfaellig > 0 || endeUeberschritten) return { key: 'rot', label: 'Kritisch', farbe: '#E06666' };
+  if (projekt.status === 'pausiert') return { key: 'gelb', label: 'Pausiert', farbe: '#E0A24C' };
+  if (tageBisEnde <= 14 && pct < 70) return { key: 'gelb', label: 'Achtung', farbe: '#E0A24C' };
+  return { key: 'gruen', label: 'Im Plan', farbe: '#4CAF7D' };
+}
+
 type Projekt = any;
 type Aufgabe = any;
 
@@ -637,6 +661,15 @@ export default function ProjektDetailPage() {
               <h1 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800 }}>{projekt.name}</h1>
               <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{sm.label}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: pm.farbe, background: pm.farbe + '22', border: `1px solid ${pm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{pm.label}</span>
+              {(() => {
+                const h = projektHealth(projekt, aufgaben);
+                return (
+                  <span title={`Projekt-Status: ${h.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: h.farbe, background: h.farbe + '22', border: `1px solid ${h.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: h.farbe, display: 'inline-block' }} />
+                    {h.label}
+                  </span>
+                );
+              })()}
             </div>
             {projekt.beschreibung && (
               <p style={{ margin: '0 0 10px', color: BRAND.textDim, fontSize: 14, lineHeight: 1.5 }}>{projekt.beschreibung}</p>

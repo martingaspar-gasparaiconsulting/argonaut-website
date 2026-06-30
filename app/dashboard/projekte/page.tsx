@@ -47,6 +47,30 @@ function dStr(d: string | null | undefined): string {
   try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; }
 }
 
+// Health-Ampel eines Projekts (reine Eigenlogik aus Projekt + Aufgaben)
+function projektHealth(projekt: any, projektAufgaben: any[]): { key: string; label: string; farbe: string } {
+  if (projekt.status === 'abgeschlossen') return { key: 'neutral', label: 'Abgeschlossen', farbe: '#5A8DEE' };
+  if (projekt.status === 'abgebrochen') return { key: 'neutral', label: 'Abgebrochen', farbe: '#8FA3BE' };
+
+  const heute = new Date(new Date().toDateString());
+  const offene = projektAufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
+  const ueberfaellig = offene.filter((a) => a.faellig_am && new Date(a.faellig_am) < heute).length;
+  const gesamt = projektAufgaben.length;
+  const erledigt = projektAufgaben.filter((a) => a.erledigt || a.status === 'fertig').length;
+  const pct = gesamt > 0 ? Math.round((erledigt / gesamt) * 100) : 0;
+
+  const endeUeberschritten = projekt.end_datum && new Date(projekt.end_datum) < heute;
+  let tageBisEnde = Infinity;
+  if (projekt.end_datum) {
+    tageBisEnde = Math.round((new Date(projekt.end_datum).getTime() - heute.getTime()) / 86400000);
+  }
+
+  if (ueberfaellig > 0 || endeUeberschritten) return { key: 'rot', label: 'Kritisch', farbe: '#E06666' };
+  if (projekt.status === 'pausiert') return { key: 'gelb', label: 'Pausiert', farbe: '#E0A24C' };
+  if (tageBisEnde <= 14 && pct < 70) return { key: 'gelb', label: 'Achtung', farbe: '#E0A24C' };
+  return { key: 'gruen', label: 'Im Plan', farbe: '#4CAF7D' };
+}
+
 function leeresProjekt(): any {
   return {
     id: null,
@@ -383,6 +407,31 @@ export default function ProjektePage() {
         </div>
       </div>
 
+      {/* Mini-Übersicht: Portfolio-Health */}
+      {(() => {
+        const aktive = projekte.filter((p) => !p.archiviert && p.status !== 'abgeschlossen' && p.status !== 'abgebrochen');
+        if (aktive.length === 0) return null;
+        let gruen = 0, gelb = 0, rot = 0;
+        aktive.forEach((p) => {
+          const h = projektHealth(p, aufgaben.filter((a) => a.projekt_id === p.id));
+          if (h.key === 'rot') rot++; else if (h.key === 'gelb') gelb++; else if (h.key === 'gruen') gruen++;
+        });
+        const kachel = (zahl: number, label: string, farbe: string) => (
+          <div style={{ flex: 1, minWidth: 120, background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${farbe}`, borderRadius: 12, padding: '12px 16px' }}>
+            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800, color: farbe }}>{zahl}</div>
+            <div style={{ fontSize: 12, color: BRAND.textDim }}>{label}</div>
+          </div>
+        );
+        return (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+            {kachel(aktive.length, 'Aktive Projekte', BRAND.cyan)}
+            {kachel(gruen, '🟢 Im Plan', '#4CAF7D')}
+            {kachel(gelb, '🟡 Achtung', '#E0A24C')}
+            {kachel(rot, '🔴 Kritisch', '#E06666')}
+          </div>
+        );
+      })()}
+
       {/* Filterleiste */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
         {['alle', 'aktiv', 'pausiert', 'abgeschlossen', 'abgebrochen'].map((s) => (
@@ -425,15 +474,22 @@ export default function ProjektePage() {
             const fp = fortschritt(p.id);
             const sm = STATUS_META[p.status] || STATUS_META.aktiv;
             const pm = PRIO_META[p.prioritaet] || PRIO_META.normal;
+            const health = projektHealth(p, aufgaben.filter((a) => a.projekt_id === p.id));
             return (
               <div key={p.id} style={{ ...card, borderLeft: `4px solid ${p.farbe || BRAND.cyan}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <a href={`/dashboard/projekte/${p.id}`} style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 17, fontFamily: 'Syne, sans-serif' }}>
                     {p.name}
                   </a>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>
-                    {sm.label}
-                  </span>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                    <span title={`Status: ${health.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: health.farbe, background: health.farbe + '22', border: `1px solid ${health.farbe}55`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: health.farbe, display: 'inline-block' }} />
+                      {health.label}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+                      {sm.label}
+                    </span>
+                  </div>
                 </div>
 
                 {p.beschreibung && (
