@@ -74,7 +74,13 @@ export default function ProjektDetailPage() {
   const [fehler, setFehler] = useState('');
   const [projekt, setProjekt] = useState<Projekt | null>(null);
   const [aufgaben, setAufgaben] = useState<Aufgabe[]>([]);
+  const [beteiligte, setBeteiligte] = useState<any[]>([]);
   const [reiter, setReiter] = useState('uebersicht');
+
+  // Beteiligten-Verwaltung
+  const [beteiligteModal, setBeteiligteModal] = useState(false);
+  const [personModal, setPersonModal] = useState<any | null>(null);
+  const [personSpeichern, setPersonSpeichern] = useState(false);
 
   // Aufgaben-Modal + Drag&Drop
   const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
@@ -95,14 +101,17 @@ export default function ProjektDetailPage() {
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
 
-      const [projRes, aufgRes] = await Promise.all([
+      const [projRes, aufgRes, betRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
         supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
           .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
+        supabase.from('projekt_beteiligte').select('*').eq('owner_user_id', uid).eq('aktiv', true)
+          .order('name', { ascending: true }),
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
       setAufgaben(aufgRes.data || []);
+      setBeteiligte(betRes.data || []);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -114,13 +123,14 @@ export default function ProjektDetailPage() {
 
   // --- Aufgaben: anlegen / bearbeiten / loeschen ---
   function leereAufgabe(status: string): any {
-    return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '' };
+    return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '', mitarbeiter_id: '' };
   }
   function oeffneNeueAufgabe(status: string) { setAufgabeModal(leereAufgabe(status)); }
   function oeffneAufgabe(a: Aufgabe) {
     setAufgabeModal({
       id: a.id, titel: a.titel || '', beschreibung: a.beschreibung || '',
       status: a.status || 'todo', prioritaet: a.prioritaet || 'normal', faellig_am: a.faellig_am || '',
+      mitarbeiter_id: a.mitarbeiter_id || '',
     });
   }
 
@@ -137,6 +147,7 @@ export default function ProjektDetailPage() {
         status: aufgabeModal.status,
         prioritaet: aufgabeModal.prioritaet,
         faellig_am: aufgabeModal.faellig_am || null,
+        mitarbeiter_id: aufgabeModal.mitarbeiter_id || null,
         erledigt: aufgabeModal.status === 'fertig',
       };
       let res;
@@ -194,6 +205,69 @@ export default function ProjektDetailPage() {
       await ladeDaten();
     } catch (e: any) {
       alert('Verschieben fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
+
+  // --- Beteiligte: anlegen / bearbeiten / deaktivieren ---
+  function beteiligterById(id: string | null | undefined): any | null {
+    if (!id) return null;
+    return beteiligte.find((b) => b.id === id) || null;
+  }
+  function leerePerson(): any {
+    return { id: null, name: '', rolle: '', typ: 'intern', kostentyp: '', kostensatz: '', firma_name: '', farbe: '#5A8DEE' };
+  }
+  function oeffnePersonNeu() { setPersonModal(leerePerson()); }
+  function oeffnePersonBearbeiten(b: any) {
+    setPersonModal({
+      id: b.id, name: b.name || '', rolle: b.rolle || '', typ: b.typ || 'intern',
+      kostentyp: b.kostentyp || '', kostensatz: b.kostensatz ?? '', firma_name: b.firma_name || '', farbe: b.farbe || '#5A8DEE',
+    });
+  }
+
+  async function speicherePerson() {
+    if (!personModal) return;
+    if (!personModal.name.trim()) { alert('Bitte einen Namen eingeben.'); return; }
+    setPersonSpeichern(true);
+    try {
+      const datensatz = {
+        owner_user_id: ownerId,
+        name: personModal.name.trim(),
+        rolle: personModal.rolle || null,
+        typ: personModal.typ,
+        kostentyp: personModal.kostentyp || null,
+        kostensatz: personModal.kostensatz === '' ? null : Number(personModal.kostensatz),
+        firma_name: personModal.typ === 'extern' ? (personModal.firma_name || null) : null,
+        farbe: personModal.farbe || '#5A8DEE',
+      };
+      let res;
+      if (personModal.id) {
+        res = await supabase.from('projekt_beteiligte').update(datensatz).eq('id', personModal.id);
+      } else {
+        res = await supabase.from('projekt_beteiligte').insert(datensatz);
+      }
+      if (res.error) throw res.error;
+      setPersonModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setPersonSpeichern(false);
+    }
+  }
+
+  async function deaktivierePerson() {
+    if (!personModal?.id) return;
+    if (!confirm('Beteiligten entfernen? Er verschwindet aus der Auswahl. Bereits zugewiesene Aufgaben bleiben bestehen.')) return;
+    setPersonSpeichern(true);
+    try {
+      const res = await supabase.from('projekt_beteiligte').update({ aktiv: false }).eq('id', personModal.id);
+      if (res.error) throw res.error;
+      setPersonModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Entfernen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setPersonSpeichern(false);
     }
   }
 
@@ -306,11 +380,56 @@ export default function ProjektDetailPage() {
 
       {/* Reiter-Inhalt */}
       {reiter === 'uebersicht' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
-          <StatKachel label="Aufgaben gesamt" wert={String(gesamt)} farbe={BRAND.cyan} />
-          <StatKachel label="Offen" wert={String(offen)} farbe={BRAND.warn} />
-          <StatKachel label="Erledigt" wert={String(erledigt)} farbe={BRAND.green} />
-          <StatKachel label="Überfällig" wert={String(ueberfaellig)} farbe={ueberfaellig > 0 ? BRAND.danger : BRAND.textDim} />
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 18 }}>
+            <StatKachel label="Aufgaben gesamt" wert={String(gesamt)} farbe={BRAND.cyan} />
+            <StatKachel label="Offen" wert={String(offen)} farbe={BRAND.warn} />
+            <StatKachel label="Erledigt" wert={String(erledigt)} farbe={BRAND.green} />
+            <StatKachel label="Überfällig" wert={String(ueberfaellig)} farbe={ueberfaellig > 0 ? BRAND.danger : BRAND.textDim} />
+          </div>
+
+          {/* Mini-Auslastung */}
+          <div style={{ ...card }}>
+            <h3 style={{ margin: '0 0 12px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Auslastung der Beteiligten</h3>
+            {(() => {
+              const offeneAufgaben = aufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
+              const zeilen = beteiligte.map((b) => ({
+                b,
+                offen: offeneAufgaben.filter((a) => a.mitarbeiter_id === b.id).length,
+                gesamt: aufgaben.filter((a) => a.mitarbeiter_id === b.id).length,
+              })).filter((z) => z.gesamt > 0);
+              const nichtZugewiesen = offeneAufgaben.filter((a) => !a.mitarbeiter_id).length;
+              if (zeilen.length === 0 && nichtZugewiesen === 0) {
+                return <div style={{ color: BRAND.textDim, fontSize: 13 }}>Noch keine Aufgaben zugewiesen.</div>;
+              }
+              const maxOffen = Math.max(1, ...zeilen.map((z) => z.offen));
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {zeilen.sort((a, b) => b.offen - a.offen).map((z) => (
+                    <div key={z.b.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 160, flexShrink: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: z.b.farbe, display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {z.b.name}{z.b.typ === 'extern' ? ' (Sub)' : ''}
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 18, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: z.b.farbe, borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
+                      </div>
+                      <div style={{ width: 90, flexShrink: 0, fontSize: 12, color: BRAND.textDim, textAlign: 'right' }}>
+                        {z.offen} offen / {z.gesamt}
+                      </div>
+                    </div>
+                  ))}
+                  {nichtZugewiesen > 0 && (
+                    <div style={{ fontSize: 13, color: BRAND.warn, marginTop: 4 }}>
+                      ⚠ {nichtZugewiesen} offene Aufgabe{nichtZugewiesen === 1 ? '' : 'n'} ohne Zuständigen
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -350,6 +469,7 @@ export default function ProjektDetailPage() {
               </>
             )}
             <div style={{ flex: 1 }} />
+            <button style={btnGhost} onClick={() => setBeteiligteModal(true)}>👥 Beteiligte</button>
             <button style={btn} onClick={() => oeffneNeueAufgabe('todo')}>+ Aufgabe</button>
           </div>
 
@@ -409,6 +529,16 @@ export default function ProjektDetailPage() {
                                 📅 {dStr(a.faellig_am)}{ueberfaellig ? ' (überfällig)' : ''}
                               </span>
                             )}
+                            {(() => {
+                              const z = beteiligterById(a.mitarbeiter_id);
+                              if (!z) return null;
+                              return (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: z.farbe, fontWeight: 600 }}>
+                                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: z.farbe, display: 'inline-block' }} />
+                                  {z.name}{z.typ === 'extern' ? ' (Sub)' : ''}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -431,6 +561,7 @@ export default function ProjektDetailPage() {
           ) : (
             <AufgabenListe
               aufgaben={aufgaben}
+              beteiligte={beteiligte}
               sortFeld={sortFeld}
               onOeffnen={oeffneAufgabe}
               onStatusWechsel={async (id, status) => {
@@ -495,6 +626,21 @@ export default function ProjektDetailPage() {
               </div>
             </div>
 
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStil}>Zuständig</label>
+              <select style={inputStil} value={aufgabeModal.mitarbeiter_id} onChange={(e) => setAufgabeModal({ ...aufgabeModal, mitarbeiter_id: e.target.value })}>
+                <option value="">— niemand —</option>
+                {beteiligte.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}{b.rolle ? ` · ${b.rolle}` : ''}{b.typ === 'extern' ? ' (Subunternehmer)' : ''}</option>
+                ))}
+              </select>
+              {beteiligte.length === 0 && (
+                <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 5 }}>
+                  Noch keine Beteiligten. Lege sie über „👥 Beteiligte" an.
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
               <div>
                 {aufgabeModal.id && (
@@ -504,6 +650,134 @@ export default function ProjektDetailPage() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button style={btnGhost} onClick={() => setAufgabeModal(null)} disabled={speichern}>Abbrechen</button>
                 <button style={btn} onClick={speichereAufgabe} disabled={speichern}>{speichern ? 'Speichert…' : 'Speichern'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Beteiligte-Verwaltung ===== */}
+      {beteiligteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
+          onClick={() => setBeteiligteModal(false)}>
+          <div style={{ ...card, width: 560, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h2 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Beteiligte</h2>
+              <button style={btn} onClick={oeffnePersonNeu}>+ Neuer Beteiligter</button>
+            </div>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13 }}>
+              Eigene Mitarbeiter (intern) und Subunternehmer (extern) — betriebsweit, in jedem Projekt zuweisbar.
+            </p>
+            {beteiligte.length === 0 ? (
+              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 20, textAlign: 'center' }}>
+                Noch keine Beteiligten. Leg mit „+ Neuer Beteiligter" los.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {beteiligte.map((b) => (
+                  <div key={b.id} onClick={() => oeffnePersonBearbeiten(b)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${b.farbe}`, borderRadius: 8, cursor: 'pointer' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.farbe, display: 'inline-block', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>
+                        {b.name}
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: b.typ === 'extern' ? BRAND.warn : BRAND.green, background: (b.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
+                          {b.typ === 'extern' ? 'Subunternehmer' : 'Intern'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
+                        {b.rolle || '—'}
+                        {b.typ === 'extern' && b.firma_name ? ` · ${b.firma_name}` : ''}
+                        {b.kostentyp ? ` · ${b.kostentyp === 'stundenlohn' ? 'Stundenlohn' : b.kostentyp === 'tagessatz' ? 'Tagessatz' : 'Pauschale'}${b.kostensatz != null ? ` ${Number(b.kostensatz).toLocaleString('de-DE')} €` : ''}` : ''}
+                      </div>
+                    </div>
+                    <span style={{ color: BRAND.textDim, fontSize: 13 }}>bearbeiten ›</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button style={btnGhost} onClick={() => setBeteiligteModal(false)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Person-Editor ===== */}
+      {personModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60 }}
+          onClick={() => setPersonModal(null)}>
+          <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+              {personModal.id ? 'Beteiligten bearbeiten' : 'Neuer Beteiligter'}
+            </h2>
+
+            {/* Typ-Schalter */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStil}>Art</label>
+              <div style={{ display: 'flex', gap: 0, border: `1px solid ${BRAND.border}`, borderRadius: 10, overflow: 'hidden' }}>
+                {([['intern', 'Eigener Mitarbeiter'], ['extern', 'Subunternehmer']] as const).map(([wert, label]) => (
+                  <button key={wert} onClick={() => setPersonModal({ ...personModal, typ: wert })}
+                    style={{ flex: 1, background: personModal.typ === wert ? BRAND.cyan : 'transparent', color: personModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Name *</label>
+                <input style={inputStil} value={personModal.name} onChange={(e) => setPersonModal({ ...personModal, name: e.target.value })} placeholder="z.B. Max Müller" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Rolle</label>
+                <input style={inputStil} value={personModal.rolle} onChange={(e) => setPersonModal({ ...personModal, rolle: e.target.value })} placeholder="z.B. Baggerfahrer" />
+              </div>
+            </div>
+
+            {personModal.typ === 'extern' && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStil}>Fremdfirma</label>
+                <input style={inputStil} value={personModal.firma_name} onChange={(e) => setPersonModal({ ...personModal, firma_name: e.target.value })} placeholder="z.B. Kranverleih Schmidt GmbH" />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStil}>Kostenmodell</label>
+                <select style={inputStil} value={personModal.kostentyp} onChange={(e) => setPersonModal({ ...personModal, kostentyp: e.target.value })}>
+                  <option value="">— offen —</option>
+                  <option value="stundenlohn">Stundenlohn</option>
+                  <option value="tagessatz">Tagessatz</option>
+                  <option value="pauschale">Pauschale</option>
+                </select>
+              </div>
+              <div style={{ width: 140 }}>
+                <label style={labelStil}>Satz (€)</label>
+                <input type="number" min={0} style={inputStil} value={personModal.kostensatz} onChange={(e) => setPersonModal({ ...personModal, kostensatz: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStil}>Farbe</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['#5A8DEE', '#00e5ff', '#4CAF7D', '#E0A24C', '#E06666', '#C9A84C'].map((f) => (
+                  <button key={f} onClick={() => setPersonModal({ ...personModal, farbe: f })}
+                    style={{ width: 30, height: 30, borderRadius: '50%', background: f, border: personModal.farbe === f ? '3px solid #fff' : '2px solid transparent', cursor: 'pointer' }} />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+              <div>
+                {personModal.id && (
+                  <button style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger }} onClick={deaktivierePerson} disabled={personSpeichern}>Entfernen</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={btnGhost} onClick={() => setPersonModal(null)} disabled={personSpeichern}>Abbrechen</button>
+                <button style={btn} onClick={speicherePerson} disabled={personSpeichern}>{personSpeichern ? 'Speichert…' : 'Speichern'}</button>
               </div>
             </div>
           </div>
@@ -523,13 +797,15 @@ function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe
 }
 
 function AufgabenListe({
-  aufgaben, sortFeld, onOeffnen, onStatusWechsel,
+  aufgaben, beteiligte, sortFeld, onOeffnen, onStatusWechsel,
 }: {
   aufgaben: Aufgabe[];
+  beteiligte: any[];
   sortFeld: 'faellig' | 'prio' | 'status' | 'titel';
   onOeffnen: (a: Aufgabe) => void;
   onStatusWechsel: (id: string, status: string) => void | Promise<void>;
 }) {
+  const findBet = (id: string | null | undefined) => (id ? beteiligte.find((b) => b.id === id) : null);
   const heute = new Date(new Date().toDateString());
   const sortiert = [...aufgaben].sort((a, b) => {
     if (sortFeld === 'faellig') {
@@ -564,6 +840,7 @@ function AufgabenListe({
           <thead>
             <tr>
               <th style={zellKopf}>Aufgabe</th>
+              <th style={zellKopf}>Zuständig</th>
               <th style={zellKopf}>Priorität</th>
               <th style={zellKopf}>Fällig</th>
               <th style={{ ...zellKopf, width: 150 }}>Status</th>
@@ -580,6 +857,18 @@ function AufgabenListe({
                     {a.beschreibung && (
                       <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 360 }}>{a.beschreibung}</div>
                     )}
+                  </td>
+                  <td style={zelle} onClick={() => onOeffnen(a)}>
+                    {(() => {
+                      const z = findBet(a.mitarbeiter_id);
+                      if (!z) return <span style={{ color: BRAND.textDim, fontSize: 13 }}>—</span>;
+                      return (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: z.farbe, fontWeight: 600, fontSize: 13 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: z.farbe, display: 'inline-block' }} />
+                          {z.name}{z.typ === 'extern' ? ' (Sub)' : ''}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={zelle} onClick={() => onOeffnen(a)}>
                     <span style={{ color: pm.farbe, fontWeight: 700, fontSize: 13 }}>● {pm.label}</span>
