@@ -49,6 +49,10 @@ const SPALTEN = [
   { key: 'fertig', label: 'Fertig', farbe: '#4CAF7D' },
 ];
 
+const PRIO_RANG: Record<string, number> = { dringend: 0, hoch: 1, normal: 2, niedrig: 3 };
+const STATUS_RANG: Record<string, number> = { todo: 0, in_arbeit: 1, review: 2, fertig: 3 };
+function spalteLabel(key: string): string { return SPALTEN.find((s) => s.key === key)?.label || key; }
+
 function dStr(d: string | null | undefined): string {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; }
@@ -78,6 +82,9 @@ export default function ProjektDetailPage() {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverSpalte, setDragOverSpalte] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState('');
+  // Aufgaben-Ansicht: Kanban oder Liste
+  const [aufgabenAnsicht, setAufgabenAnsicht] = useState<'kanban' | 'liste'>('kanban');
+  const [sortFeld, setSortFeld] = useState<'faellig' | 'prio' | 'status' | 'titel'>('faellig');
 
   const ladeDaten = useCallback(async () => {
     setLaden(true);
@@ -308,79 +315,133 @@ export default function ProjektDetailPage() {
       )}
 
       {reiter === 'aufgaben' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
-          {SPALTEN.map((sp) => {
-            const spaltenAufgaben = aufgaben.filter((a) => a.status === sp.key);
-            const istDropZiel = dragOverSpalte === sp.key;
-            return (
-              <div
-                key={sp.key}
-                onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setDragOverSpalte(sp.key); }}
-                onDragLeave={() => setDragOverSpalte((p) => (p === sp.key ? null : p))}
-                onDrop={() => onDropSpalte(sp.key)}
-                style={{
-                  background: istDropZiel ? 'rgba(0,229,255,0.08)' : BRAND.navy2,
-                  border: `1px solid ${istDropZiel ? BRAND.cyan : BRAND.border}`,
-                  borderRadius: 14, padding: 12, minHeight: 120,
-                  transition: 'background 0.12s ease, border 0.12s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: sp.farbe, display: 'inline-block' }} />
-                    <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Syne, sans-serif' }}>{sp.label}</span>
-                    <span style={{ fontSize: 12, color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
-                  </div>
-                </div>
-
-                {spaltenAufgaben.map((a) => {
-                  const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
-                  const ueberfaellig = a.faellig_am && a.status !== 'fertig' && new Date(a.faellig_am) < new Date(new Date().toDateString());
-                  return (
-                    <div
-                      key={a.id}
-                      draggable
-                      onDragStart={(e) => onDragStartTask(e, a)}
-                      onDragEnd={onDragEndTask}
-                      onClick={() => oeffneAufgabe(a)}
-                      style={{
-                        background: BRAND.navy, border: `1px solid ${BRAND.border}`,
-                        borderLeft: `3px solid ${pm.farbe}`, borderRadius: 8,
-                        padding: '10px 12px', marginBottom: 8, cursor: 'grab',
-                        opacity: draggingTaskId === a.id ? 0.4 : 1,
-                      }}
-                    >
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: a.beschreibung ? 4 : 0 }}>{a.titel}</div>
-                      {a.beschreibung && (
-                        <div style={{ fontSize: 12, color: BRAND.textDim, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {a.beschreibung}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 11, alignItems: 'center' }}>
-                        <span style={{ color: pm.farbe, fontWeight: 700 }}>● {pm.label}</span>
-                        {a.faellig_am && (
-                          <span style={{ color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400 }}>
-                            📅 {dStr(a.faellig_am)}{ueberfaellig ? ' (überfällig)' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
+        <div>
+          {/* Umschalter Kanban / Liste */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 0, border: `1px solid ${BRAND.border}`, borderRadius: 10, overflow: 'hidden' }}>
+              {(['kanban', 'liste'] as const).map((v) => (
                 <button
-                  onClick={() => oeffneNeueAufgabe(sp.key)}
+                  key={v}
+                  onClick={() => setAufgabenAnsicht(v)}
                   style={{
-                    width: '100%', background: 'transparent', border: `1px dashed ${BRAND.border}`,
-                    borderRadius: 8, color: BRAND.textDim, padding: '8px 0', cursor: 'pointer',
-                    fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginTop: 2,
+                    background: aufgabenAnsicht === v ? BRAND.cyan : 'transparent',
+                    color: aufgabenAnsicht === v ? BRAND.navy : BRAND.textDim,
+                    border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 700,
+                    fontSize: 13, fontFamily: 'DM Sans, sans-serif',
                   }}
                 >
-                  + Aufgabe
+                  {v === 'kanban' ? '▦ Board' : '☰ Liste'}
                 </button>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+            {aufgabenAnsicht === 'liste' && (
+              <>
+                <span style={{ color: BRAND.textDim, fontSize: 13 }}>Sortieren:</span>
+                <select
+                  value={sortFeld}
+                  onChange={(e) => setSortFeld(e.target.value as any)}
+                  style={{ ...inputStil, width: 'auto', padding: '7px 10px' }}
+                >
+                  <option value="faellig">Fälligkeit</option>
+                  <option value="prio">Priorität</option>
+                  <option value="status">Status</option>
+                  <option value="titel">Titel (A–Z)</option>
+                </select>
+              </>
+            )}
+            <div style={{ flex: 1 }} />
+            <button style={btn} onClick={() => oeffneNeueAufgabe('todo')}>+ Aufgabe</button>
+          </div>
+
+          {aufgabenAnsicht === 'kanban' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
+              {SPALTEN.map((sp) => {
+                const spaltenAufgaben = aufgaben.filter((a) => a.status === sp.key);
+                const istDropZiel = dragOverSpalte === sp.key;
+                return (
+                  <div
+                    key={sp.key}
+                    onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setDragOverSpalte(sp.key); }}
+                    onDragLeave={() => setDragOverSpalte((p) => (p === sp.key ? null : p))}
+                    onDrop={() => onDropSpalte(sp.key)}
+                    style={{
+                      background: istDropZiel ? 'rgba(0,229,255,0.08)' : BRAND.navy2,
+                      border: `1px solid ${istDropZiel ? BRAND.cyan : BRAND.border}`,
+                      borderRadius: 14, padding: 12, minHeight: 120,
+                      transition: 'background 0.12s ease, border 0.12s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: sp.farbe, display: 'inline-block' }} />
+                        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Syne, sans-serif' }}>{sp.label}</span>
+                        <span style={{ fontSize: 12, color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
+                      </div>
+                    </div>
+
+                    {spaltenAufgaben.map((a) => {
+                      const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
+                      const ueberfaellig = a.faellig_am && a.status !== 'fertig' && new Date(a.faellig_am) < new Date(new Date().toDateString());
+                      return (
+                        <div
+                          key={a.id}
+                          draggable
+                          onDragStart={(e) => onDragStartTask(e, a)}
+                          onDragEnd={onDragEndTask}
+                          onClick={() => oeffneAufgabe(a)}
+                          style={{
+                            background: BRAND.navy, border: `1px solid ${BRAND.border}`,
+                            borderLeft: `3px solid ${pm.farbe}`, borderRadius: 8,
+                            padding: '10px 12px', marginBottom: 8, cursor: 'grab',
+                            opacity: draggingTaskId === a.id ? 0.4 : 1,
+                          }}
+                        >
+                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: a.beschreibung ? 4 : 0 }}>{a.titel}</div>
+                          {a.beschreibung && (
+                            <div style={{ fontSize: 12, color: BRAND.textDim, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {a.beschreibung}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 11, alignItems: 'center' }}>
+                            <span style={{ color: pm.farbe, fontWeight: 700 }}>● {pm.label}</span>
+                            {a.faellig_am && (
+                              <span style={{ color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400 }}>
+                                📅 {dStr(a.faellig_am)}{ueberfaellig ? ' (überfällig)' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <button
+                      onClick={() => oeffneNeueAufgabe(sp.key)}
+                      style={{
+                        width: '100%', background: 'transparent', border: `1px dashed ${BRAND.border}`,
+                        borderRadius: 8, color: BRAND.textDim, padding: '8px 0', cursor: 'pointer',
+                        fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginTop: 2,
+                      }}
+                    >
+                      + Aufgabe
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <AufgabenListe
+              aufgaben={aufgaben}
+              sortFeld={sortFeld}
+              onOeffnen={oeffneAufgabe}
+              onStatusWechsel={async (id, status) => {
+                try {
+                  const res = await supabase.from('aufgaben').update({ status, erledigt: status === 'fertig' }).eq('id', id);
+                  if (res.error) throw res.error;
+                  await ladeDaten();
+                } catch (e: any) { alert('Aktualisieren fehlgeschlagen: ' + (e?.message || 'Fehler')); }
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -457,6 +518,94 @@ function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: '20px 18px' }}>
       <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 800, color: farbe }}>{wert}</div>
       <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+function AufgabenListe({
+  aufgaben, sortFeld, onOeffnen, onStatusWechsel,
+}: {
+  aufgaben: Aufgabe[];
+  sortFeld: 'faellig' | 'prio' | 'status' | 'titel';
+  onOeffnen: (a: Aufgabe) => void;
+  onStatusWechsel: (id: string, status: string) => void | Promise<void>;
+}) {
+  const heute = new Date(new Date().toDateString());
+  const sortiert = [...aufgaben].sort((a, b) => {
+    if (sortFeld === 'faellig') {
+      const av = a.faellig_am ? new Date(a.faellig_am).getTime() : Infinity;
+      const bv = b.faellig_am ? new Date(b.faellig_am).getTime() : Infinity;
+      return av - bv;
+    }
+    if (sortFeld === 'prio') return (PRIO_RANG[a.prioritaet] ?? 9) - (PRIO_RANG[b.prioritaet] ?? 9);
+    if (sortFeld === 'status') return (STATUS_RANG[a.status] ?? 9) - (STATUS_RANG[b.status] ?? 9);
+    return String(a.titel).localeCompare(String(b.titel), 'de');
+  });
+
+  if (sortiert.length === 0) {
+    return (
+      <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 40, textAlign: 'center', color: BRAND.textDim }}>
+        Noch keine Aufgaben. Leg mit „+ Aufgabe" los.
+      </div>
+    );
+  }
+
+  const zellKopf: React.CSSProperties = {
+    textAlign: 'left', padding: '10px 12px', fontSize: 12, color: BRAND.textDim,
+    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+    borderBottom: `1px solid ${BRAND.border}`,
+  };
+  const zelle: React.CSSProperties = { padding: '10px 12px', fontSize: 14, borderBottom: `1px solid rgba(143,163,190,0.10)` };
+
+  return (
+    <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+          <thead>
+            <tr>
+              <th style={zellKopf}>Aufgabe</th>
+              <th style={zellKopf}>Priorität</th>
+              <th style={zellKopf}>Fällig</th>
+              <th style={{ ...zellKopf, width: 150 }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortiert.map((a) => {
+              const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
+              const ueberfaellig = a.faellig_am && a.status !== 'fertig' && new Date(a.faellig_am) < heute;
+              return (
+                <tr key={a.id} style={{ cursor: 'pointer' }}>
+                  <td style={zelle} onClick={() => onOeffnen(a)}>
+                    <div style={{ fontWeight: 600, color: a.status === 'fertig' ? BRAND.textDim : '#fff', textDecoration: a.status === 'fertig' ? 'line-through' : 'none' }}>{a.titel}</div>
+                    {a.beschreibung && (
+                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 360 }}>{a.beschreibung}</div>
+                    )}
+                  </td>
+                  <td style={zelle} onClick={() => onOeffnen(a)}>
+                    <span style={{ color: pm.farbe, fontWeight: 700, fontSize: 13 }}>● {pm.label}</span>
+                  </td>
+                  <td style={{ ...zelle, color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400, fontSize: 13, whiteSpace: 'nowrap' }} onClick={() => onOeffnen(a)}>
+                    {a.faellig_am ? dStr(a.faellig_am) : '—'}{ueberfaellig ? ' ⚠' : ''}
+                  </td>
+                  <td style={zelle}>
+                    <select
+                      value={a.status}
+                      onChange={(e) => onStatusWechsel(a.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        background: BRAND.navy, color: '#fff', border: `1px solid ${BRAND.border}`,
+                        borderRadius: 8, padding: '6px 8px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer',
+                      }}
+                    >
+                      {SPALTEN.map((s) => <option key={s.key} value={s.key}>{spalteLabel(s.key)}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
