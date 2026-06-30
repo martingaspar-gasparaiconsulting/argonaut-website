@@ -245,22 +245,43 @@ export default function MarketingCockpit() {
             Kampagnen, Inhalte und Redaktionsplanung an einem Ort.
           </p>
         </div>
-        <button
-          onClick={dialogNeu}
-          style={{
-            background: C.gold,
-            color: C.navy,
-            border: 'none',
-            borderRadius: 10,
-            padding: '12px 22px',
-            fontFamily: 'Syne, sans-serif',
-            fontWeight: 700,
-            fontSize: 15,
-            cursor: 'pointer',
-          }}
-        >
-          + Neue Kampagne
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href="/dashboard/marketing/kalender"
+            style={{
+              background: 'transparent',
+              color: C.cyan,
+              border: `1px solid ${C.cyan}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'Syne, sans-serif',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            📅 Redaktionskalender
+          </a>
+          <button
+            onClick={dialogNeu}
+            style={{
+              background: C.gold,
+              color: C.navy,
+              border: 'none',
+              borderRadius: 10,
+              padding: '12px 22px',
+              fontFamily: 'Syne, sans-serif',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+            }}
+          >
+            + Neue Kampagne
+          </button>
+        </div>
       </div>
 
       {/* KPI-Strip */}
