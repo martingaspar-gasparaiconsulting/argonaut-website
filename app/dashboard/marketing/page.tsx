@@ -247,6 +247,25 @@ export default function MarketingCockpit() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
+            href="/dashboard/marketing/studio"
+            style={{
+              background: 'transparent',
+              color: C.gold,
+              border: `1px solid ${C.gold}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'Syne, sans-serif',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            ✨ KI-Content-Studio
+          </a>
+          <a
             href="/dashboard/marketing/kalender"
             style={{
               background: 'transparent',
