@@ -75,12 +75,19 @@ export default function ProjektDetailPage() {
   const [projekt, setProjekt] = useState<Projekt | null>(null);
   const [aufgaben, setAufgaben] = useState<Aufgabe[]>([]);
   const [beteiligte, setBeteiligte] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [reiter, setReiter] = useState('uebersicht');
 
   // Beteiligten-Verwaltung
   const [beteiligteModal, setBeteiligteModal] = useState(false);
   const [personModal, setPersonModal] = useState<any | null>(null);
   const [personSpeichern, setPersonSpeichern] = useState(false);
+  // Team-Verwaltung
+  const [teamModal, setTeamModal] = useState<any | null>(null);
+  const [teamSpeichern, setTeamSpeichern] = useState(false);
+  // Drag&Drop Zuweisung (Karte -> Person/Team)
+  const [zuweisDrag, setZuweisDrag] = useState<string | null>(null);
+  const [zuweisOver, setZuweisOver] = useState<string | null>(null);
 
   // Aufgaben-Modal + Drag&Drop
   const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
@@ -101,17 +108,20 @@ export default function ProjektDetailPage() {
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
 
-      const [projRes, aufgRes, betRes] = await Promise.all([
+      const [projRes, aufgRes, betRes, teamRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
         supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
           .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
         supabase.from('projekt_beteiligte').select('*').eq('owner_user_id', uid).eq('aktiv', true)
+          .order('name', { ascending: true }),
+        supabase.from('projekt_teams').select('*').eq('owner_user_id', uid).eq('aktiv', true)
           .order('name', { ascending: true }),
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
       setAufgaben(aufgRes.data || []);
       setBeteiligte(betRes.data || []);
+      setTeams(teamRes.data || []);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -123,14 +133,15 @@ export default function ProjektDetailPage() {
 
   // --- Aufgaben: anlegen / bearbeiten / loeschen ---
   function leereAufgabe(status: string): any {
-    return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '', mitarbeiter_id: '' };
+    return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '', zuweisung: '' };
   }
   function oeffneNeueAufgabe(status: string) { setAufgabeModal(leereAufgabe(status)); }
   function oeffneAufgabe(a: Aufgabe) {
+    const zuweisung = a.team_id ? `t:${a.team_id}` : (a.mitarbeiter_id ? `p:${a.mitarbeiter_id}` : '');
     setAufgabeModal({
       id: a.id, titel: a.titel || '', beschreibung: a.beschreibung || '',
       status: a.status || 'todo', prioritaet: a.prioritaet || 'normal', faellig_am: a.faellig_am || '',
-      mitarbeiter_id: a.mitarbeiter_id || '',
+      zuweisung,
     });
   }
 
@@ -139,6 +150,7 @@ export default function ProjektDetailPage() {
     if (!aufgabeModal.titel.trim()) { alert('Bitte einen Titel eingeben.'); return; }
     setSpeichern(true);
     try {
+      const z = aufgabeModal.zuweisung || '';
       const datensatz = {
         owner_user_id: ownerId,
         projekt_id: projektId,
@@ -147,7 +159,8 @@ export default function ProjektDetailPage() {
         status: aufgabeModal.status,
         prioritaet: aufgabeModal.prioritaet,
         faellig_am: aufgabeModal.faellig_am || null,
-        mitarbeiter_id: aufgabeModal.mitarbeiter_id || null,
+        mitarbeiter_id: z.startsWith('p:') ? z.slice(2) : null,
+        team_id: z.startsWith('t:') ? z.slice(2) : null,
         erledigt: aufgabeModal.status === 'fertig',
       };
       let res;
@@ -213,6 +226,36 @@ export default function ProjektDetailPage() {
     if (!id) return null;
     return beteiligte.find((b) => b.id === id) || null;
   }
+  function teamById(id: string | null | undefined): any | null {
+    if (!id) return null;
+    return teams.find((t) => t.id === id) || null;
+  }
+  // Liefert die Zuweisung einer Aufgabe (Person ODER Team) einheitlich
+  function zustaendigerVon(a: Aufgabe): { name: string; farbe: string; istTeam: boolean; istExtern: boolean } | null {
+    if (a.team_id) {
+      const t = teamById(a.team_id);
+      if (t) return { name: t.name, farbe: t.farbe, istTeam: true, istExtern: t.typ === 'extern' };
+    }
+    if (a.mitarbeiter_id) {
+      const b = beteiligterById(a.mitarbeiter_id);
+      if (b) return { name: b.name, farbe: b.farbe, istTeam: false, istExtern: b.typ === 'extern' };
+    }
+    return null;
+  }
+  async function aufgabeZuweisen(aufgabeId: string, ziel: string) {
+    // ziel: 'p:<id>' | 't:<id>' | ''
+    const datensatz = {
+      mitarbeiter_id: ziel.startsWith('p:') ? ziel.slice(2) : null,
+      team_id: ziel.startsWith('t:') ? ziel.slice(2) : null,
+    };
+    try {
+      const res = await supabase.from('aufgaben').update(datensatz).eq('id', aufgabeId);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Zuweisen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  }
   function leerePerson(): any {
     return { id: null, name: '', rolle: '', typ: 'intern', kostentyp: '', kostensatz: '', firma_name: '', farbe: '#5A8DEE' };
   }
@@ -268,6 +311,72 @@ export default function ProjektDetailPage() {
       alert('Entfernen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     } finally {
       setPersonSpeichern(false);
+    }
+  }
+
+  // --- Teams: anlegen / bearbeiten / deaktivieren ---
+  function leeresTeam(): any {
+    return { id: null, name: '', typ: 'intern', firma_name: '', farbe: '#C9A84C' };
+  }
+  function oeffneTeamNeu() { setTeamModal(leeresTeam()); }
+  function oeffneTeamBearbeiten(t: any) {
+    setTeamModal({ id: t.id, name: t.name || '', typ: t.typ || 'intern', firma_name: t.firma_name || '', farbe: t.farbe || '#C9A84C' });
+  }
+
+  async function speichereTeam() {
+    if (!teamModal) return;
+    if (!teamModal.name.trim()) { alert('Bitte einen Team-Namen eingeben.'); return; }
+    setTeamSpeichern(true);
+    try {
+      const datensatz = {
+        owner_user_id: ownerId,
+        name: teamModal.name.trim(),
+        typ: teamModal.typ,
+        firma_name: teamModal.typ === 'extern' ? (teamModal.firma_name || null) : null,
+        farbe: teamModal.farbe || '#C9A84C',
+      };
+      let res;
+      if (teamModal.id) {
+        res = await supabase.from('projekt_teams').update(datensatz).eq('id', teamModal.id);
+      } else {
+        res = await supabase.from('projekt_teams').insert(datensatz);
+      }
+      if (res.error) throw res.error;
+      setTeamModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setTeamSpeichern(false);
+    }
+  }
+
+  async function deaktiviereTeam() {
+    if (!teamModal?.id) return;
+    if (!confirm('Team entfernen? Mitglieder und bereits zugewiesene Aufgaben bleiben bestehen.')) return;
+    setTeamSpeichern(true);
+    try {
+      // Team deaktivieren + Mitglieder lösen (team_id -> null), nicht-destruktiv
+      await supabase.from('projekt_beteiligte').update({ team_id: null }).eq('team_id', teamModal.id);
+      const res = await supabase.from('projekt_teams').update({ aktiv: false }).eq('id', teamModal.id);
+      if (res.error) throw res.error;
+      setTeamModal(null);
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Entfernen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setTeamSpeichern(false);
+    }
+  }
+
+  // Person einem Team zuordnen / lösen
+  async function personTeamSetzen(personId: string, teamId: string | null) {
+    try {
+      const res = await supabase.from('projekt_beteiligte').update({ team_id: teamId }).eq('id', personId);
+      if (res.error) throw res.error;
+      await ladeDaten();
+    } catch (e: any) {
+      alert('Zuordnung fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     }
   }
 
@@ -393,12 +502,18 @@ export default function ProjektDetailPage() {
             <h3 style={{ margin: '0 0 12px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Auslastung der Beteiligten</h3>
             {(() => {
               const offeneAufgaben = aufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
-              const zeilen = beteiligte.map((b) => ({
-                b,
+              const personenZeilen = beteiligte.map((b) => ({
+                id: b.id, name: b.name, farbe: b.farbe, istTeam: false, istExtern: b.typ === 'extern',
                 offen: offeneAufgaben.filter((a) => a.mitarbeiter_id === b.id).length,
                 gesamt: aufgaben.filter((a) => a.mitarbeiter_id === b.id).length,
-              })).filter((z) => z.gesamt > 0);
-              const nichtZugewiesen = offeneAufgaben.filter((a) => !a.mitarbeiter_id).length;
+              }));
+              const teamZeilen = teams.map((t) => ({
+                id: t.id, name: t.name, farbe: t.farbe, istTeam: true, istExtern: t.typ === 'extern',
+                offen: offeneAufgaben.filter((a) => a.team_id === t.id).length,
+                gesamt: aufgaben.filter((a) => a.team_id === t.id).length,
+              }));
+              const zeilen = [...teamZeilen, ...personenZeilen].filter((z) => z.gesamt > 0);
+              const nichtZugewiesen = offeneAufgaben.filter((a) => !a.mitarbeiter_id && !a.team_id).length;
               if (zeilen.length === 0 && nichtZugewiesen === 0) {
                 return <div style={{ color: BRAND.textDim, fontSize: 13 }}>Noch keine Aufgaben zugewiesen.</div>;
               }
@@ -406,15 +521,15 @@ export default function ProjektDetailPage() {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {zeilen.sort((a, b) => b.offen - a.offen).map((z) => (
-                    <div key={z.b.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 160, flexShrink: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: z.b.farbe, display: 'inline-block', flexShrink: 0 }} />
+                    <div key={(z.istTeam ? 't' : 'p') + z.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 170, flexShrink: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: z.farbe, display: 'inline-block', flexShrink: 0 }} />
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {z.b.name}{z.b.typ === 'extern' ? ' (Sub)' : ''}
+                          {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
                         </span>
                       </div>
                       <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 18, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: z.b.farbe, borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
+                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: z.farbe, borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
                       </div>
                       <div style={{ width: 90, flexShrink: 0, fontSize: 12, color: BRAND.textDim, textAlign: 'right' }}>
                         {z.offen} offen / {z.gesamt}
@@ -474,8 +589,71 @@ export default function ProjektDetailPage() {
           </div>
 
           {aufgabenAnsicht === 'kanban' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
-              {SPALTEN.map((sp) => {
+            <div>
+              {(beteiligte.length > 0 || teams.length > 0) && (
+                <div style={{ ...card, padding: '12px 14px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: BRAND.textDim, marginBottom: 8 }}>
+                    Zuweisen per Ziehen: Aufgaben-Karte auf eine Person oder ein Team ziehen.
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {teams.map((t) => {
+                      const over = zuweisOver === `t:${t.id}`;
+                      return (
+                        <div
+                          key={t.id}
+                          onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setZuweisOver(`t:${t.id}`); }}
+                          onDragLeave={() => setZuweisOver((p) => (p === `t:${t.id}` ? null : p))}
+                          onDrop={() => { if (draggingTaskId) aufgabeZuweisen(draggingTaskId, `t:${t.id}`); setZuweisOver(null); }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
+                            background: over ? t.farbe : t.farbe + '22', color: over ? BRAND.navy : '#fff',
+                            border: `1.5px solid ${t.farbe}`, fontSize: 13, fontWeight: 700,
+                            transform: over ? 'scale(1.06)' : 'none', transition: 'transform 0.1s ease',
+                          }}
+                        >
+                          👥 {t.name}{t.typ === 'extern' ? ' (Sub)' : ''}
+                        </div>
+                      );
+                    })}
+                    {beteiligte.map((b) => {
+                      const over = zuweisOver === `p:${b.id}`;
+                      return (
+                        <div
+                          key={b.id}
+                          onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setZuweisOver(`p:${b.id}`); }}
+                          onDragLeave={() => setZuweisOver((p) => (p === `p:${b.id}` ? null : p))}
+                          onDrop={() => { if (draggingTaskId) aufgabeZuweisen(draggingTaskId, `p:${b.id}`); setZuweisOver(null); }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
+                            background: over ? b.farbe : 'transparent', color: over ? BRAND.navy : '#fff',
+                            border: `1.5px solid ${b.farbe}`, fontSize: 13, fontWeight: 600,
+                            transform: over ? 'scale(1.06)' : 'none', transition: 'transform 0.1s ease',
+                          }}
+                        >
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.farbe, display: 'inline-block' }} />
+                          {b.name}{b.typ === 'extern' ? ' (Sub)' : ''}
+                        </div>
+                      );
+                    })}
+                    {/* Zuweisung loesen */}
+                    <div
+                      onDragOver={(e) => { if (!draggingTaskId) return; e.preventDefault(); setZuweisOver('none'); }}
+                      onDragLeave={() => setZuweisOver((p) => (p === 'none' ? null : p))}
+                      onDrop={() => { if (draggingTaskId) aufgabeZuweisen(draggingTaskId, ''); setZuweisOver(null); }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
+                        background: zuweisOver === 'none' ? BRAND.danger : 'transparent', color: zuweisOver === 'none' ? '#fff' : BRAND.textDim,
+                        border: `1.5px dashed ${BRAND.border}`, fontSize: 13, fontWeight: 600,
+                      }}
+                    >
+                      ✕ niemand
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, alignItems: 'start' }}>
+                {SPALTEN.map((sp) => {
                 const spaltenAufgaben = aufgaben.filter((a) => a.status === sp.key);
                 const istDropZiel = dragOverSpalte === sp.key;
                 return (
@@ -530,12 +708,12 @@ export default function ProjektDetailPage() {
                               </span>
                             )}
                             {(() => {
-                              const z = beteiligterById(a.mitarbeiter_id);
+                              const z = zustaendigerVon(a);
                               if (!z) return null;
                               return (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: z.farbe, fontWeight: 600 }}>
                                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: z.farbe, display: 'inline-block' }} />
-                                  {z.name}{z.typ === 'extern' ? ' (Sub)' : ''}
+                                  {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
                                 </span>
                               );
                             })()}
@@ -558,10 +736,12 @@ export default function ProjektDetailPage() {
                 );
               })}
             </div>
+            </div>
           ) : (
             <AufgabenListe
               aufgaben={aufgaben}
               beteiligte={beteiligte}
+              teams={teams}
               sortFeld={sortFeld}
               onOeffnen={oeffneAufgabe}
               onStatusWechsel={async (id, status) => {
@@ -628,15 +808,26 @@ export default function ProjektDetailPage() {
 
             <div style={{ marginBottom: 18 }}>
               <label style={labelStil}>Zuständig</label>
-              <select style={inputStil} value={aufgabeModal.mitarbeiter_id} onChange={(e) => setAufgabeModal({ ...aufgabeModal, mitarbeiter_id: e.target.value })}>
+              <select style={inputStil} value={aufgabeModal.zuweisung} onChange={(e) => setAufgabeModal({ ...aufgabeModal, zuweisung: e.target.value })}>
                 <option value="">— niemand —</option>
-                {beteiligte.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}{b.rolle ? ` · ${b.rolle}` : ''}{b.typ === 'extern' ? ' (Subunternehmer)' : ''}</option>
-                ))}
+                {teams.length > 0 && (
+                  <optgroup label="Teams">
+                    {teams.map((t) => (
+                      <option key={t.id} value={`t:${t.id}`}>👥 {t.name}{t.typ === 'extern' ? ' (Subunternehmer-Team)' : ''}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {beteiligte.length > 0 && (
+                  <optgroup label="Personen">
+                    {beteiligte.map((b) => (
+                      <option key={b.id} value={`p:${b.id}`}>{b.name}{b.rolle ? ` · ${b.rolle}` : ''}{b.typ === 'extern' ? ' (Sub)' : ''}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
-              {beteiligte.length === 0 && (
+              {beteiligte.length === 0 && teams.length === 0 && (
                 <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 5 }}>
-                  Noch keine Beteiligten. Lege sie über „👥 Beteiligte" an.
+                  Noch keine Beteiligten/Teams. Lege sie über „👥 Beteiligte" an.
                 </div>
               )}
             </div>
@@ -674,28 +865,99 @@ export default function ProjektDetailPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {beteiligte.map((b) => (
-                  <div key={b.id} onClick={() => oeffnePersonBearbeiten(b)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${b.farbe}`, borderRadius: 8, cursor: 'pointer' }}>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.farbe, display: 'inline-block', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>
-                        {b.name}
-                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: b.typ === 'extern' ? BRAND.warn : BRAND.green, background: (b.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
-                          {b.typ === 'extern' ? 'Subunternehmer' : 'Intern'}
-                        </span>
+                {beteiligte.map((b) => {
+                  const team = teamById(b.team_id);
+                  return (
+                    <div key={b.id} onClick={() => oeffnePersonBearbeiten(b)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${b.farbe}`, borderRadius: 8, cursor: 'pointer' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.farbe, display: 'inline-block', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>
+                          {b.name}
+                          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: b.typ === 'extern' ? BRAND.warn : BRAND.green, background: (b.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
+                            {b.typ === 'extern' ? 'Subunternehmer' : 'Intern'}
+                          </span>
+                          {team && (
+                            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: team.farbe, background: team.farbe + '22', borderRadius: 999, padding: '2px 8px' }}>
+                              👥 {team.name}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
+                          {b.rolle || '—'}
+                          {b.typ === 'extern' && b.firma_name ? ` · ${b.firma_name}` : ''}
+                          {b.kostentyp ? ` · ${b.kostentyp === 'stundenlohn' ? 'Stundenlohn' : b.kostentyp === 'tagessatz' ? 'Tagessatz' : 'Pauschale'}${b.kostensatz != null ? ` ${Number(b.kostensatz).toLocaleString('de-DE')} €` : ''}` : ''}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
-                        {b.rolle || '—'}
-                        {b.typ === 'extern' && b.firma_name ? ` · ${b.firma_name}` : ''}
-                        {b.kostentyp ? ` · ${b.kostentyp === 'stundenlohn' ? 'Stundenlohn' : b.kostentyp === 'tagessatz' ? 'Tagessatz' : 'Pauschale'}${b.kostensatz != null ? ` ${Number(b.kostensatz).toLocaleString('de-DE')} €` : ''}` : ''}
-                      </div>
+                      <span style={{ color: BRAND.textDim, fontSize: 13 }}>bearbeiten ›</span>
                     </div>
-                    <span style={{ color: BRAND.textDim, fontSize: 13 }}>bearbeiten ›</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+
+            {/* Teams-Sektion */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '22px 0 12px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18 }}>Teams</h2>
+              <button style={btnGhost} onClick={oeffneTeamNeu}>+ Neues Team</button>
+            </div>
+            <p style={{ margin: '0 0 12px', color: BRAND.textDim, fontSize: 13 }}>
+              Fasse Beteiligte zu Teams zusammen (intern oder Subunternehmer-Team) und weise Aufgaben dem ganzen Team zu.
+            </p>
+            {teams.length === 0 ? (
+              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 16, textAlign: 'center' }}>
+                Noch keine Teams. Leg mit „+ Neues Team" los.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {teams.map((t) => {
+                  const mitglieder = beteiligte.filter((b) => b.team_id === t.id);
+                  return (
+                    <div key={t.id} style={{ padding: '12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${t.farbe}`, borderRadius: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: t.farbe, display: 'inline-block' }} />
+                          👥 {t.name}
+                          <span style={{ fontSize: 11, fontWeight: 700, color: t.typ === 'extern' ? BRAND.warn : BRAND.green, background: (t.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
+                            {t.typ === 'extern' ? 'Subunternehmer-Team' : 'Intern'}
+                          </span>
+                        </div>
+                        <button style={{ ...btnGhost, padding: '5px 10px', fontSize: 12 }} onClick={() => oeffneTeamBearbeiten(t)}>bearbeiten</button>
+                      </div>
+                      {t.typ === 'extern' && t.firma_name && (
+                        <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 4 }}>{t.firma_name}</div>
+                      )}
+                      {/* Mitglieder verwalten */}
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 11, color: BRAND.textDim, marginBottom: 6 }}>Mitglieder ({mitglieder.length}):</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {beteiligte.map((b) => {
+                            const drin = b.team_id === t.id;
+                            return (
+                              <button
+                                key={b.id}
+                                onClick={() => personTeamSetzen(b.id, drin ? null : t.id)}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999,
+                                  background: drin ? b.farbe + '22' : 'transparent',
+                                  border: `1px solid ${drin ? b.farbe : BRAND.border}`,
+                                  color: drin ? '#fff' : BRAND.textDim, fontSize: 12, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                                }}
+                                title={drin ? 'Aus Team entfernen' : 'Zum Team hinzufügen'}
+                              >
+                                {drin ? '☑' : '☐'} {b.name}
+                              </button>
+                            );
+                          })}
+                          {beteiligte.length === 0 && <span style={{ fontSize: 12, color: BRAND.textDim }}>Erst Beteiligte anlegen.</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button style={btnGhost} onClick={() => setBeteiligteModal(false)}>Schließen</button>
             </div>
@@ -783,6 +1045,64 @@ export default function ProjektDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ===== Team-Editor ===== */}
+      {teamModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60 }}
+          onClick={() => setTeamModal(null)}>
+          <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+              {teamModal.id ? 'Team bearbeiten' : 'Neues Team'}
+            </h2>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStil}>Art</label>
+              <div style={{ display: 'flex', gap: 0, border: `1px solid ${BRAND.border}`, borderRadius: 10, overflow: 'hidden' }}>
+                {([['intern', 'Internes Team'], ['extern', 'Subunternehmer-Team']] as const).map(([wert, label]) => (
+                  <button key={wert} onClick={() => setTeamModal({ ...teamModal, typ: wert })}
+                    style={{ flex: 1, background: teamModal.typ === wert ? BRAND.cyan : 'transparent', color: teamModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStil}>Team-Name *</label>
+              <input style={inputStil} value={teamModal.name} onChange={(e) => setTeamModal({ ...teamModal, name: e.target.value })} placeholder="z.B. Team Erdarbeiten" />
+            </div>
+
+            {teamModal.typ === 'extern' && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStil}>Fremdfirma</label>
+                <input style={inputStil} value={teamModal.firma_name} onChange={(e) => setTeamModal({ ...teamModal, firma_name: e.target.value })} placeholder="z.B. Kranverleih Schmidt GmbH" />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStil}>Farbe</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['#C9A84C', '#00e5ff', '#4CAF7D', '#E0A24C', '#E06666', '#5A8DEE'].map((f) => (
+                  <button key={f} onClick={() => setTeamModal({ ...teamModal, farbe: f })}
+                    style={{ width: 30, height: 30, borderRadius: '50%', background: f, border: teamModal.farbe === f ? '3px solid #fff' : '2px solid transparent', cursor: 'pointer' }} />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+              <div>
+                {teamModal.id && (
+                  <button style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger }} onClick={deaktiviereTeam} disabled={teamSpeichern}>Entfernen</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button style={btnGhost} onClick={() => setTeamModal(null)} disabled={teamSpeichern}>Abbrechen</button>
+                <button style={btn} onClick={speichereTeam} disabled={teamSpeichern}>{teamSpeichern ? 'Speichert…' : 'Speichern'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -797,15 +1117,26 @@ function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe
 }
 
 function AufgabenListe({
-  aufgaben, beteiligte, sortFeld, onOeffnen, onStatusWechsel,
+  aufgaben, beteiligte, teams, sortFeld, onOeffnen, onStatusWechsel,
 }: {
   aufgaben: Aufgabe[];
   beteiligte: any[];
+  teams: any[];
   sortFeld: 'faellig' | 'prio' | 'status' | 'titel';
   onOeffnen: (a: Aufgabe) => void;
   onStatusWechsel: (id: string, status: string) => void | Promise<void>;
 }) {
-  const findBet = (id: string | null | undefined) => (id ? beteiligte.find((b) => b.id === id) : null);
+  const zustaendig = (a: Aufgabe): { name: string; farbe: string; istTeam: boolean; istExtern: boolean } | null => {
+    if (a.team_id) {
+      const t = teams.find((x) => x.id === a.team_id);
+      if (t) return { name: t.name, farbe: t.farbe, istTeam: true, istExtern: t.typ === 'extern' };
+    }
+    if (a.mitarbeiter_id) {
+      const b = beteiligte.find((x) => x.id === a.mitarbeiter_id);
+      if (b) return { name: b.name, farbe: b.farbe, istTeam: false, istExtern: b.typ === 'extern' };
+    }
+    return null;
+  };
   const heute = new Date(new Date().toDateString());
   const sortiert = [...aufgaben].sort((a, b) => {
     if (sortFeld === 'faellig') {
@@ -860,12 +1191,12 @@ function AufgabenListe({
                   </td>
                   <td style={zelle} onClick={() => onOeffnen(a)}>
                     {(() => {
-                      const z = findBet(a.mitarbeiter_id);
+                      const z = zustaendig(a);
                       if (!z) return <span style={{ color: BRAND.textDim, fontSize: 13 }}>—</span>;
                       return (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: z.farbe, fontWeight: 600, fontSize: 13 }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: z.farbe, display: 'inline-block' }} />
-                          {z.name}{z.typ === 'extern' ? ' (Sub)' : ''}
+                          {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
                         </span>
                       );
                     })()}
