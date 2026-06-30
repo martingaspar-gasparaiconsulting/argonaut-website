@@ -96,6 +96,8 @@ export default function ProjektDetailPage() {
   const [detailLaden, setDetailLaden] = useState(false);
   const [unterMap, setUnterMap] = useState<Record<string, { erl: number; ges: number }>>({});
   const [vorlageSpeichern, setVorlageSpeichern] = useState(false);
+  // Kalender-Ansicht: angezeigter Monat (1. des Monats)
+  const [kalMonat, setKalMonat] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   // Aufgaben-Modal + Drag&Drop
   const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
@@ -901,9 +903,12 @@ export default function ProjektDetailPage() {
       )}
 
       {reiter === 'kalender' && (
-        <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>
-          Kalenderansicht folgt.
-        </div>
+        <ProjektKalender
+          aufgaben={aufgaben}
+          monat={kalMonat}
+          setMonat={setKalMonat}
+          onOeffnen={oeffneAufgabe}
+        />
       )}
 
       {reiter === 'einstellungen' && (
@@ -1352,6 +1357,122 @@ function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: '20px 18px' }}>
       <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 800, color: farbe }}>{wert}</div>
       <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+function ProjektKalender({
+  aufgaben, monat, setMonat, onOeffnen,
+}: {
+  aufgaben: Aufgabe[];
+  monat: Date;
+  setMonat: (d: Date) => void;
+  onOeffnen: (a: Aufgabe) => void;
+}) {
+  const jahr = monat.getFullYear();
+  const mon = monat.getMonth();
+  const heute = new Date(new Date().toDateString());
+  const zwei = (n: number) => (n < 10 ? '0' + n : '' + n);
+  const tagKey = (d: Date) => `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`;
+
+  // Aufgaben nach Datum gruppieren (nur mit Faelligkeit)
+  const proTag: Record<string, Aufgabe[]> = {};
+  aufgaben.forEach((a) => {
+    if (!a.faellig_am) return;
+    const key = String(a.faellig_am).slice(0, 10);
+    if (!proTag[key]) proTag[key] = [];
+    proTag[key].push(a);
+  });
+
+  // Raster: Montag als erster Wochentag
+  const ersterTag = new Date(jahr, mon, 1);
+  const offset = (ersterTag.getDay() + 6) % 7; // Mo=0
+  const tageImMonat = new Date(jahr, mon + 1, 0).getDate();
+  const zellen: (Date | null)[] = [];
+  for (let i = 0; i < offset; i++) zellen.push(null);
+  for (let t = 1; t <= tageImMonat; t++) zellen.push(new Date(jahr, mon, t));
+  while (zellen.length % 7 !== 0) zellen.push(null);
+
+  const monatsName = monat.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+  const ohneDatum = aufgaben.filter((a) => !a.faellig_am).length;
+
+  const navBtn: React.CSSProperties = {
+    background: 'transparent', color: '#fff', border: `1px solid ${BRAND.border}`,
+    borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+  };
+
+  return (
+    <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 16 }}>
+      {/* Kopf */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        <h3 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18, textTransform: 'capitalize' }}>{monatsName}</h3>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button style={navBtn} onClick={() => setMonat(new Date(jahr, mon - 1, 1))}>‹ Voriger</button>
+          <button style={navBtn} onClick={() => { const d = new Date(); setMonat(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Heute</button>
+          <button style={navBtn} onClick={() => setMonat(new Date(jahr, mon + 1, 1))}>Nächster ›</button>
+        </div>
+      </div>
+
+      {/* Wochentage */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
+        {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((w) => (
+          <div key={w} style={{ textAlign: 'center', fontSize: 12, color: BRAND.textDim, fontWeight: 700, padding: '4px 0' }}>{w}</div>
+        ))}
+      </div>
+
+      {/* Tage */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+        {zellen.map((tag, i) => {
+          if (!tag) return <div key={i} style={{ minHeight: 90, background: 'transparent' }} />;
+          const key = tagKey(tag);
+          const tagsAufgaben = proTag[key] || [];
+          const istHeute = tag.getTime() === heute.getTime();
+          const istWE = tag.getDay() === 0 || tag.getDay() === 6;
+          return (
+            <div key={i} style={{
+              minHeight: 90, background: istWE ? 'rgba(255,255,255,0.02)' : BRAND.navy,
+              border: `1px solid ${istHeute ? BRAND.cyan : BRAND.border}`, borderRadius: 8, padding: 6,
+              display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: istHeute ? 800 : 600, color: istHeute ? BRAND.cyan : BRAND.textDim }}>
+                {tag.getDate()}
+              </div>
+              {tagsAufgaben.slice(0, 4).map((a) => {
+                const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
+                const ueberfaellig = a.status !== 'fertig' && tag < heute;
+                const fertig = a.status === 'fertig';
+                return (
+                  <div
+                    key={a.id}
+                    onClick={() => onOeffnen(a)}
+                    title={a.titel}
+                    style={{
+                      fontSize: 11, padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
+                      background: fertig ? 'rgba(76,175,125,0.15)' : pm.farbe + '22',
+                      borderLeft: `2px solid ${fertig ? BRAND.green : pm.farbe}`,
+                      color: fertig ? BRAND.textDim : '#fff',
+                      textDecoration: fertig ? 'line-through' : 'none',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      fontWeight: ueberfaellig ? 700 : 400,
+                    }}
+                  >
+                    {ueberfaellig ? '⚠ ' : ''}{a.titel}
+                  </div>
+                );
+              })}
+              {tagsAufgaben.length > 4 && (
+                <div style={{ fontSize: 10, color: BRAND.textDim }}>+{tagsAufgaben.length - 4} weitere</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {ohneDatum > 0 && (
+        <div style={{ marginTop: 12, fontSize: 12, color: BRAND.textDim }}>
+          {ohneDatum} Aufgabe{ohneDatum === 1 ? '' : 'n'} ohne Fälligkeitsdatum (nicht im Kalender sichtbar).
+        </div>
+      )}
     </div>
   );
 }
