@@ -88,6 +88,13 @@ export default function ProjektDetailPage() {
   // Drag&Drop Zuweisung (Karte -> Person/Team)
   const [zuweisDrag, setZuweisDrag] = useState<string | null>(null);
   const [zuweisOver, setZuweisOver] = useState<string | null>(null);
+  // Unteraufgaben + Kommentare (im Aufgaben-Dialog)
+  const [unterAufgaben, setUnterAufgaben] = useState<any[]>([]);
+  const [neueUnterAufgabe, setNeueUnterAufgabe] = useState('');
+  const [kommentare, setKommentare] = useState<any[]>([]);
+  const [neuerKommentar, setNeuerKommentar] = useState('');
+  const [detailLaden, setDetailLaden] = useState(false);
+  const [unterMap, setUnterMap] = useState<Record<string, { erl: number; ges: number }>>({});
 
   // Aufgaben-Modal + Drag&Drop
   const [aufgabeModal, setAufgabeModal] = useState<any | null>(null);
@@ -111,6 +118,7 @@ export default function ProjektDetailPage() {
       const [projRes, aufgRes, betRes, teamRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
         supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
+          .is('parent_id', null)
           .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
         supabase.from('projekt_beteiligte').select('*').eq('owner_user_id', uid).eq('aktiv', true)
           .order('name', { ascending: true }),
@@ -122,6 +130,19 @@ export default function ProjektDetailPage() {
       setAufgaben(aufgRes.data || []);
       setBeteiligte(betRes.data || []);
       setTeams(teamRes.data || []);
+
+      // Unteraufgaben-Zaehlung je Hauptaufgabe (fuer Karten-Badge)
+      const { data: subRows } = await supabase.from('aufgaben')
+        .select('parent_id,erledigt').eq('projekt_id', projektId).eq('owner_user_id', uid)
+        .not('parent_id', 'is', null);
+      const map: Record<string, { erl: number; ges: number }> = {};
+      (subRows || []).forEach((s: any) => {
+        if (!s.parent_id) return;
+        if (!map[s.parent_id]) map[s.parent_id] = { erl: 0, ges: 0 };
+        map[s.parent_id].ges += 1;
+        if (s.erledigt) map[s.parent_id].erl += 1;
+      });
+      setUnterMap(map);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -135,14 +156,85 @@ export default function ProjektDetailPage() {
   function leereAufgabe(status: string): any {
     return { id: null, titel: '', beschreibung: '', status, prioritaet: 'normal', faellig_am: '', zuweisung: '' };
   }
-  function oeffneNeueAufgabe(status: string) { setAufgabeModal(leereAufgabe(status)); }
+  function oeffneNeueAufgabe(status: string) {
+    setUnterAufgaben([]); setKommentare([]); setNeueUnterAufgabe(''); setNeuerKommentar('');
+    setAufgabeModal(leereAufgabe(status));
+  }
   function oeffneAufgabe(a: Aufgabe) {
     const zuweisung = a.team_id ? `t:${a.team_id}` : (a.mitarbeiter_id ? `p:${a.mitarbeiter_id}` : '');
+    setUnterAufgaben([]); setKommentare([]); setNeueUnterAufgabe(''); setNeuerKommentar('');
     setAufgabeModal({
       id: a.id, titel: a.titel || '', beschreibung: a.beschreibung || '',
       status: a.status || 'todo', prioritaet: a.prioritaet || 'normal', faellig_am: a.faellig_am || '',
       zuweisung,
     });
+    if (a.id) void ladeAufgabenDetail(a.id);
+  }
+
+  async function ladeAufgabenDetail(aufgabeId: string) {
+    setDetailLaden(true);
+    try {
+      const [uaRes, kRes] = await Promise.all([
+        supabase.from('aufgaben').select('id,titel,erledigt,status,sortierung').eq('parent_id', aufgabeId)
+          .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
+        supabase.from('aufgaben_kommentare').select('*').eq('aufgabe_id', aufgabeId)
+          .order('erstellt_am', { ascending: true }),
+      ]);
+      setUnterAufgaben(uaRes.data || []);
+      setKommentare(kRes.data || []);
+    } catch { /* ignore */ } finally {
+      setDetailLaden(false);
+    }
+  }
+
+  async function unterAufgabeHinzufuegen() {
+    if (!aufgabeModal?.id || !neueUnterAufgabe.trim()) return;
+    try {
+      const res = await supabase.from('aufgaben').insert({
+        owner_user_id: ownerId, projekt_id: projektId, parent_id: aufgabeModal.id,
+        titel: neueUnterAufgabe.trim(), status: 'todo', erledigt: false,
+      });
+      if (res.error) throw res.error;
+      setNeueUnterAufgabe('');
+      await ladeAufgabenDetail(aufgabeModal.id);
+    } catch (e: any) { alert('Hinzufügen fehlgeschlagen: ' + (e?.message || 'Fehler')); }
+  }
+
+  async function unterAufgabeToggle(ua: any) {
+    try {
+      const neu = !ua.erledigt;
+      const res = await supabase.from('aufgaben').update({ erledigt: neu, status: neu ? 'fertig' : 'todo' }).eq('id', ua.id);
+      if (res.error) throw res.error;
+      if (aufgabeModal?.id) await ladeAufgabenDetail(aufgabeModal.id);
+    } catch (e: any) { alert('Aktualisieren fehlgeschlagen: ' + (e?.message || 'Fehler')); }
+  }
+
+  async function unterAufgabeLoeschen(id: string) {
+    try {
+      const res = await supabase.from('aufgaben').delete().eq('id', id);
+      if (res.error) throw res.error;
+      if (aufgabeModal?.id) await ladeAufgabenDetail(aufgabeModal.id);
+    } catch (e: any) { alert('Löschen fehlgeschlagen: ' + (e?.message || 'Fehler')); }
+  }
+
+  async function kommentarHinzufuegen() {
+    if (!aufgabeModal?.id || !neuerKommentar.trim()) return;
+    try {
+      const res = await supabase.from('aufgaben_kommentare').insert({
+        owner_user_id: ownerId, aufgabe_id: aufgabeModal.id, text: neuerKommentar.trim(), autor: 'Ich',
+      });
+      if (res.error) throw res.error;
+      setNeuerKommentar('');
+      await ladeAufgabenDetail(aufgabeModal.id);
+    } catch (e: any) { alert('Speichern fehlgeschlagen: ' + (e?.message || 'Fehler')); }
+  }
+
+  async function kommentarLoeschen(id: string) {
+    try {
+      const res = await supabase.from('aufgaben_kommentare').delete().eq('id', id);
+      if (res.error) throw res.error;
+      if (aufgabeModal?.id) await ladeAufgabenDetail(aufgabeModal.id);
+    } catch (e: any) { alert('Löschen fehlgeschlagen: ' + (e?.message || 'Fehler')); }
   }
 
   async function speichereAufgabe() {
@@ -717,6 +809,16 @@ export default function ProjektDetailPage() {
                                 </span>
                               );
                             })()}
+                            {(() => {
+                              const u = unterMap[a.id];
+                              if (!u || u.ges === 0) return null;
+                              const fertig = u.erl === u.ges;
+                              return (
+                                <span style={{ color: fertig ? BRAND.green : BRAND.textDim, fontWeight: 600 }}>
+                                  ☑ {u.erl}/{u.ges}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -831,6 +933,89 @@ export default function ProjektDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Unteraufgaben + Kommentare nur bei bestehender Aufgabe */}
+            {aufgabeModal.id && (
+              <>
+                {/* Unteraufgaben / Checkliste */}
+                <div style={{ borderTop: `1px solid ${BRAND.border}`, paddingTop: 16, marginBottom: 16 }}>
+                  {(() => {
+                    const erl = unterAufgaben.filter((u) => u.erledigt).length;
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <label style={{ ...labelStil, margin: 0 }}>Unteraufgaben / Checkliste</label>
+                        {unterAufgaben.length > 0 && (
+                          <span style={{ fontSize: 12, color: erl === unterAufgaben.length ? BRAND.green : BRAND.textDim }}>
+                            {erl}/{unterAufgaben.length} erledigt
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {unterAufgaben.length > 0 && (
+                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 999, height: 5, overflow: 'hidden', marginBottom: 10 }}>
+                      <div style={{ height: '100%', width: `${Math.round((unterAufgaben.filter((u) => u.erledigt).length / unterAufgaben.length) * 100)}%`, background: BRAND.green, borderRadius: 999 }} />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                    {unterAufgaben.map((ua) => (
+                      <div key={ua.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8 }}>
+                        <input type="checkbox" checked={!!ua.erledigt} onChange={() => unterAufgabeToggle(ua)} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 14, color: ua.erledigt ? BRAND.textDim : '#fff', textDecoration: ua.erledigt ? 'line-through' : 'none' }}>{ua.titel}</span>
+                        <button onClick={() => unterAufgabeLoeschen(ua.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Löschen">×</button>
+                      </div>
+                    ))}
+                    {detailLaden && unterAufgaben.length === 0 && <div style={{ fontSize: 12, color: BRAND.textDim }}>Lade…</div>}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      style={{ ...inputStil, flex: 1 }}
+                      placeholder="Neuer Teilschritt…"
+                      value={neueUnterAufgabe}
+                      onChange={(e) => setNeueUnterAufgabe(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); unterAufgabeHinzufuegen(); } }}
+                    />
+                    <button style={btnGhost} onClick={unterAufgabeHinzufuegen}>+ Hinzufügen</button>
+                  </div>
+                </div>
+
+                {/* Kommentare */}
+                <div style={{ borderTop: `1px solid ${BRAND.border}`, paddingTop: 16, marginBottom: 18 }}>
+                  <label style={{ ...labelStil, marginBottom: 10 }}>Kommentare / Verlauf</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                    {kommentare.length === 0 && !detailLaden && (
+                      <div style={{ fontSize: 13, color: BRAND.textDim }}>Noch keine Kommentare.</div>
+                    )}
+                    {kommentare.map((k) => (
+                      <div key={k.id} style={{ background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8, padding: '8px 10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ fontSize: 12, color: BRAND.cyan, fontWeight: 700 }}>{k.autor || 'Ich'}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: BRAND.textDim }}>
+                              {(() => { try { return new Date(k.erstellt_am).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } })()}
+                            </span>
+                            <button onClick={() => kommentarLoeschen(k.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1 }} title="Löschen">×</button>
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 14, marginTop: 4, whiteSpace: 'pre-wrap' }}>{k.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <textarea
+                      style={{ ...inputStil, flex: 1, minHeight: 40, resize: 'vertical' }}
+                      placeholder="Kommentar schreiben…"
+                      value={neuerKommentar}
+                      onChange={(e) => setNeuerKommentar(e.target.value)}
+                    />
+                    <button style={btn} onClick={kommentarHinzufuegen}>Senden</button>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
               <div>
