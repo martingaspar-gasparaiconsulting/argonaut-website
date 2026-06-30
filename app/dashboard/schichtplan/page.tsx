@@ -190,6 +190,9 @@ export default function SchichtplanPage() {
   // Minijob-Stunden-Warnung (geplante Monatsstunden je Minijobber)
   const [minijobWarnung, setMinijobWarnung] = useState<Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }>>({});
 
+  // Schichtplan-Bestaetigungen je Mitarbeiter (angezeigte Woche)
+  const [bestaetigungen, setBestaetigungen] = useState<Record<string, { status: string; kommentar: string | null }>>({});
+
   // Betriebs-Ruhetage (Wochentage 0=So..6=Sa) + Einstell-Dialog
   const [ruhetage, setRuhetage] = useState<number[]>([]);
   const [ruhetageModal, setRuhetageModal] = useState(false);
@@ -304,6 +307,16 @@ export default function SchichtplanPage() {
           warn[m.id] = { std: bestStd, monat: bestKey, status };
         });
       setMinijobWarnung(warn);
+
+      // Schichtplan-Bestaetigungen fuer die angezeigte Woche (Montag = wochenStart)
+      const { data: bestRows } = await supabase
+        .from('hr_schicht_bestaetigung')
+        .select('mitarbeiter_id,status,kommentar')
+        .eq('owner_user_id', uid)
+        .eq('woche_start', von);
+      const bestMap: Record<string, { status: string; kommentar: string | null }> = {};
+      (bestRows || []).forEach((b: any) => { bestMap[b.mitarbeiter_id] = { status: b.status, kommentar: b.kommentar }; });
+      setBestaetigungen(bestMap);
     } catch (e: any) {
       setFehler(e?.message || 'Fehler beim Laden.');
     } finally {
@@ -1005,6 +1018,20 @@ export default function SchichtplanPage() {
                           </div>
                         );
                       })()}
+                      {!istUnbesetzt && bestaetigungen[m.id] && (
+                        bestaetigungen[m.id].status === 'bestaetigt' ? (
+                          <div style={{ fontSize: 11, color: BRAND.green, fontWeight: 700, marginTop: 3 }}>
+                            ✓ Plan bestätigt
+                          </div>
+                        ) : (
+                          <div
+                            style={{ fontSize: 11, color: BRAND.danger, fontWeight: 700, marginTop: 3 }}
+                            title={bestaetigungen[m.id].kommentar || ''}
+                          >
+                            ⚠ Einwand{bestaetigungen[m.id].kommentar ? ': ' + bestaetigungen[m.id].kommentar : ''}
+                          </div>
+                        )
+                      )}
                     </td>
                     {wochenTage.map((d, ci) => {
                       const datum = ymd(d);
