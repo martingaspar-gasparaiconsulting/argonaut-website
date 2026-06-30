@@ -124,6 +124,21 @@ function nettoMin(s: ZeitSitzung, nowMs: number): number {
 }
 function heuteISO(): string { const d = new Date(); return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-' + zwei(d.getDate()); }
 function monatsStart(): string { const d = new Date(); return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-01'; }
+function montagDerWoche(d: Date): Date {
+  const x = new Date(d); const t = x.getDay();
+  x.setDate(x.getDate() + (t === 0 ? -6 : 1 - t)); x.setHours(0, 0, 0, 0); return x;
+}
+function kalenderwoche(d: Date): number {
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const tag = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - tag);
+  const start = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return Math.ceil(((x.getTime() - start.getTime()) / 86400000 + 1) / 7);
+}
+function wochenRange(montag: Date): string {
+  const so = new Date(montag); so.setDate(so.getDate() + 6);
+  const f = (d: Date) => `${zwei(d.getDate())}.${zwei(d.getMonth() + 1)}.`;
+  return `${f(montag)} – ${f(so)}`;
+}
 
 export default function MeinBereichPage() {
   const [ma, setMa] = useState<Mitarbeiter | null>(null);
@@ -140,6 +155,11 @@ export default function MeinBereichPage() {
   const [abgabeSchichtId, setAbgabeSchichtId] = useState<string | null>(null);
   const [abgabeGrund, setAbgabeGrund] = useState('');
   const [abgabeSaving, setAbgabeSaving] = useState(false);
+  // Schichtplan-Bestaetigung (pro Woche)
+  const [bestaetigung, setBestaetigung] = useState<{ id: string; status: string; kommentar: string | null; woche_start: string } | null>(null);
+  const [bestSaving, setBestSaving] = useState(false);
+  const [einwandModus, setEinwandModus] = useState(false);
+  const [einwandText, setEinwandText] = useState('');
   const [loading, setLoading] = useState(true);
   const [kontoOhneProfil, setKontoOhneProfil] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -206,12 +226,25 @@ export default function MeinBereichPage() {
       setZeitMonatMin(summe);
       setZeitStand(jetzt);
 
-      // Meine kommenden Schichten (ab heute) + eigene Tausch-Antraege
+      // Meine kommenden Schichten (ab heute, nur freigegebene) + eigene Tausch-Antraege
       const { data: schRows } = await supabase.from('hr_schichten')
         .select('id,datum,beginn_um,ende_um,pause_minuten,rolle,farbe')
-        .eq('mitarbeiter_id', m.id).gte('datum', heuteISO())
+        .eq('mitarbeiter_id', m.id).eq('status', 'geplant').gte('datum', heuteISO())
         .order('datum', { ascending: true }).order('beginn_um', { ascending: true });
-      setSchichten((schRows as Schicht[]) ?? []);
+      const schListe = (schRows as Schicht[]) ?? [];
+      setSchichten(schListe);
+
+      // Bestaetigung fuer die Woche der naechsten Schicht laden
+      if (schListe.length > 0) {
+        const montag = montagDerWoche(parseDate(schListe[0].datum));
+        const montagISO = ymdLocal(montag);
+        const { data: bRow } = await supabase.from('hr_schicht_bestaetigung')
+          .select('id,status,kommentar,woche_start')
+          .eq('mitarbeiter_id', m.id).eq('woche_start', montagISO).maybeSingle();
+        setBestaetigung(bRow ? (bRow as { id: string; status: string; kommentar: string | null; woche_start: string }) : null);
+      } else {
+        setBestaetigung(null);
+      }
 
       const { data: tRows } = await supabase.from('hr_schicht_tausch')
         .select('id,schicht_id,status,grund,erstellt_am')
@@ -316,6 +349,29 @@ export default function MeinBereichPage() {
     } catch (e: unknown) { setMsg('Konnte nicht zurückgezogen werden: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
 
+  async function planBestaetigen(status: 'bestaetigt' | 'einwand', kommentar?: string) {
+    if (!ma || schichten.length === 0) return;
+    const montagISO = ymdLocal(montagDerWoche(parseDate(schichten[0].datum)));
+    setBestSaving(true); setMsg(null);
+    try {
+      const { error } = await supabase.from('hr_schicht_bestaetigung').upsert(
+        {
+          owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id,
+          woche_start: montagISO, status, kommentar: kommentar || null,
+        },
+        { onConflict: 'mitarbeiter_id,woche_start' },
+      );
+      if (error) throw error;
+      setMsg(status === 'bestaetigt'
+        ? 'Schichtplan bestätigt. Danke!'
+        : 'Einwand gemeldet — dein Vorgesetzter wird informiert.');
+      setEinwandModus(false); setEinwandText('');
+      ladeAlles();
+    } catch (e: unknown) {
+      setMsg('Aktion fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setBestSaving(false); }
+  }
+
   // Resturlaub
   const jahr = new Date().getFullYear();
   const anspruch = ma?.urlaubsanspruch_tage ?? 30;
@@ -394,6 +450,74 @@ export default function MeinBereichPage() {
               {schichten.length === 0 && (
                 <div style={styles.listHint}>Aktuell sind keine kommenden Schichten für dich eingeplant.</div>
               )}
+
+              {schichten.length > 0 && (() => {
+                const montag = montagDerWoche(parseDate(schichten[0].datum));
+                const istBestaetigt = bestaetigung?.status === 'bestaetigt';
+                const istEinwand = bestaetigung?.status === 'einwand';
+                return (
+                  <div style={{
+                    background: istBestaetigt ? 'rgba(76,175,125,0.1)' : istEinwand ? 'rgba(224,102,102,0.1)' : 'rgba(0,229,255,0.07)',
+                    border: `1px solid ${istBestaetigt ? 'rgba(76,175,125,0.35)' : istEinwand ? 'rgba(224,102,102,0.35)' : 'rgba(0,229,255,0.3)'}`,
+                    borderRadius: 12, padding: '14px 16px', marginBottom: 16,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>
+                          Schichtplan KW {kalenderwoche(montag)} · {wochenRange(montag)}
+                        </div>
+                        <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
+                          {istBestaetigt ? '✓ Du hast diesen Plan bestätigt.'
+                            : istEinwand ? '⚠ Du hast einen Einwand gemeldet.'
+                            : 'Bitte sieh dir deinen Plan an und bestätige ihn.'}
+                        </div>
+                        {istEinwand && bestaetigung?.kommentar && (
+                          <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Dein Einwand: {bestaetigung.kommentar}</div>
+                        )}
+                      </div>
+                      {!istBestaetigt && (
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <button
+                            style={{ ...styles.primaryBtn, background: C.green, marginTop: 0 }}
+                            onClick={() => planBestaetigen('bestaetigt')}
+                            disabled={bestSaving}
+                          >
+                            ✓ Gesehen & einverstanden
+                          </button>
+                          {!einwandModus && (
+                            <button style={styles.ghostBtn} onClick={() => setEinwandModus(true)} disabled={bestSaving}>
+                              Einwand melden
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {einwandModus && !istBestaetigt && (
+                      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <textarea
+                          style={{ ...styles.input, minHeight: 56, resize: 'vertical' }}
+                          placeholder="Was passt nicht? (z.B. Mittwoch geht nicht, Tausch gewünscht)"
+                          value={einwandText}
+                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEinwandText(e.target.value)}
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            style={{ ...styles.primaryBtn, background: C.danger, marginTop: 0 }}
+                            onClick={() => planBestaetigen('einwand', einwandText)}
+                            disabled={bestSaving}
+                          >
+                            Einwand senden
+                          </button>
+                          <button style={styles.ghostBtn} onClick={() => { setEinwandModus(false); setEinwandText(''); }} disabled={bestSaving}>
+                            Abbrechen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {schichten.map((s) => {
                 const offen = tausch.find((t) => t.schicht_id === s.id && (t.status === 'beantragt' || t.status === 'genehmigt'));
                 const istFormOffen = abgabeSchichtId === s.id;
