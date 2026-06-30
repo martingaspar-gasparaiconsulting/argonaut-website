@@ -284,6 +284,25 @@ export default function MarketingCockpit() {
           >
             📅 Redaktionskalender
           </a>
+          <a
+            href="/dashboard/marketing/bibliothek"
+            style={{
+              background: 'transparent',
+              color: C.textDim,
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'Syne, sans-serif',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            📚 Bibliothek
+          </a>
           <button
             onClick={dialogNeu}
             style={{
