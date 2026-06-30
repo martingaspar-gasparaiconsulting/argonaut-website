@@ -88,6 +88,14 @@ export default function ProjektePage() {
   const [ausVorlage, setAusVorlage] = useState<any | null>(null); // {vorlage, name}
   const [erstellen, setErstellen] = useState(false);
 
+  // KI-Projekt-Setup
+  const [kiModal, setKiModal] = useState(false);
+  const [kiBeschreibung, setKiBeschreibung] = useState('');
+  const [kiLaeuft, setKiLaeuft] = useState(false);
+  const [kiFehler, setKiFehler] = useState('');
+  const [kiVorschlag, setKiVorschlag] = useState<any | null>(null); // {name, beschreibung, prioritaet, aufgaben[]}
+  const [kiErstellen, setKiErstellen] = useState(false);
+
   const ladeDaten = useCallback(async () => {
     setLaden(true);
     setFehler('');
@@ -249,6 +257,82 @@ export default function ProjektePage() {
     }
   }
 
+  // --- KI-Projekt-Setup ---
+  function oeffneKi() {
+    setKiBeschreibung(''); setKiFehler(''); setKiVorschlag(null); setKiModal(true);
+  }
+
+  async function kiVorschlagErzeugen() {
+    if (kiBeschreibung.trim().length < 3) { setKiFehler('Bitte beschreibe das Projekt etwas genauer.'); return; }
+    setKiLaeuft(true); setKiFehler('');
+    try {
+      const res = await fetch('/api/projekt-ki-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beschreibung: kiBeschreibung.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setKiFehler(data?.error || 'KI-Anfrage fehlgeschlagen.'); setKiLaeuft(false); return; }
+      setKiVorschlag({
+        name: data.name || 'Neues Projekt',
+        beschreibung: data.beschreibung || '',
+        prioritaet: data.prioritaet || 'normal',
+        aufgaben: Array.isArray(data.aufgaben) ? data.aufgaben : [],
+      });
+    } catch (e: any) {
+      setKiFehler('Verbindungsfehler: ' + (e?.message || 'Unbekannt'));
+    } finally {
+      setKiLaeuft(false);
+    }
+  }
+
+  function kiAufgabeEntfernen(index: number) {
+    if (!kiVorschlag) return;
+    setKiVorschlag({ ...kiVorschlag, aufgaben: kiVorschlag.aufgaben.filter((_: any, i: number) => i !== index) });
+  }
+  function kiAufgabeTitel(index: number, titel: string) {
+    if (!kiVorschlag) return;
+    const neu = kiVorschlag.aufgaben.map((a: any, i: number) => (i === index ? { ...a, titel } : a));
+    setKiVorschlag({ ...kiVorschlag, aufgaben: neu });
+  }
+
+  async function kiProjektErstellen() {
+    if (!kiVorschlag) return;
+    if (!kiVorschlag.name.trim()) { setKiFehler('Bitte einen Projektnamen angeben.'); return; }
+    setKiErstellen(true); setKiFehler('');
+    try {
+      const pRes = await supabase.from('projekte').insert({
+        owner_user_id: ownerId,
+        name: kiVorschlag.name.trim(),
+        beschreibung: kiVorschlag.beschreibung || null,
+        status: 'aktiv',
+        prioritaet: kiVorschlag.prioritaet || 'normal',
+        farbe: '#00e5ff',
+      }).select('id').single();
+      if (pRes.error) throw pRes.error;
+      const projektId = pRes.data.id;
+
+      const aufgabenListe = kiVorschlag.aufgaben.filter((a: any) => a.titel && a.titel.trim());
+      if (aufgabenListe.length > 0) {
+        const rows = aufgabenListe.map((a: any, i: number) => ({
+          owner_user_id: ownerId,
+          projekt_id: projektId,
+          titel: a.titel.trim(),
+          status: a.status || 'todo',
+          prioritaet: a.prioritaet || 'normal',
+          sortierung: i,
+          erledigt: a.status === 'fertig',
+        }));
+        const aRes = await supabase.from('aufgaben').insert(rows);
+        if (aRes.error) throw aRes.error;
+      }
+      window.location.href = `/dashboard/projekte/${projektId}`;
+    } catch (e: any) {
+      setKiFehler('Erstellen fehlgeschlagen: ' + (e?.message || 'Unbekannt'));
+      setKiErstellen(false);
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 18,
@@ -291,6 +375,7 @@ export default function ProjektePage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button style={{ ...btn, background: BRAND.cyan }} onClick={oeffneKi}>✨ KI-Projekt</button>
           {vorlagen.length > 0 && (
             <button style={btnGhost} onClick={() => setVorlagenModal(true)}>📋 Aus Vorlage erstellen</button>
           )}
@@ -521,6 +606,85 @@ export default function ProjektePage() {
               <button style={btnGhost} onClick={() => setAusVorlage(null)} disabled={erstellen}>Abbrechen</button>
               <button style={btn} onClick={erstelleAusVorlage} disabled={erstellen}>{erstellen ? 'Erstellt…' : 'Projekt erstellen'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== KI-Projekt-Setup ===== */}
+      {kiModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
+          onClick={() => !kiLaeuft && !kiErstellen && setKiModal(false)}>
+          <div style={{ ...card, width: 600, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>✨ KI-Projekt-Setup</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+              Beschreibe kurz, worum es geht — die KI erstellt dir einen Projektnamen und eine sinnvolle Aufgabenliste als Vorschlag. Du prüfst alles, bevor das Projekt angelegt wird.
+            </p>
+
+            {!kiVorschlag ? (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStil}>Projektbeschreibung</label>
+                  <textarea
+                    style={{ ...inputStil, minHeight: 100, resize: 'vertical' }}
+                    placeholder="z.B. Garten neu anlegen für Kunde Müller: alte Fläche roden, Boden vorbereiten, Rasen und Beete anlegen, Bewässerung installieren. Etwa 3 Wochen."
+                    value={kiBeschreibung}
+                    onChange={(e) => setKiBeschreibung(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 13, marginBottom: 14 }}>{kiFehler}</div>}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button style={btnGhost} onClick={() => setKiModal(false)} disabled={kiLaeuft}>Abbrechen</button>
+                  <button style={{ ...btn, background: BRAND.cyan }} onClick={kiVorschlagErzeugen} disabled={kiLaeuft}>
+                    {kiLaeuft ? 'KI denkt nach…' : '✨ Vorschlag erzeugen'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={labelStil}>Projektname</label>
+                  <input style={inputStil} value={kiVorschlag.name} onChange={(e) => setKiVorschlag({ ...kiVorschlag, name: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={labelStil}>Beschreibung</label>
+                  <textarea style={{ ...inputStil, minHeight: 48, resize: 'vertical' }} value={kiVorschlag.beschreibung} onChange={(e) => setKiVorschlag({ ...kiVorschlag, beschreibung: e.target.value })} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={labelStil}>Priorität</label>
+                  <select style={{ ...inputStil, width: 'auto' }} value={kiVorschlag.prioritaet} onChange={(e) => setKiVorschlag({ ...kiVorschlag, prioritaet: e.target.value })}>
+                    {Object.keys(PRIO_META).map((s) => <option key={s} value={s}>{PRIO_META[s].label}</option>)}
+                  </select>
+                </div>
+
+                <label style={labelStil}>Vorgeschlagene Aufgaben ({kiVorschlag.aufgaben.length}) — du kannst anpassen oder löschen</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, maxHeight: 280, overflowY: 'auto' }}>
+                  {kiVorschlag.aufgaben.map((a: any, i: number) => {
+                    const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
+                    const sm = STATUS_META[a.status] || STATUS_META.aktiv;
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8 }}>
+                        <input style={{ ...inputStil, flex: 1, padding: '6px 8px' }} value={a.titel} onChange={(e) => kiAufgabeTitel(i, e.target.value)} />
+                        <span style={{ fontSize: 11, color: pm.farbe, fontWeight: 700, whiteSpace: 'nowrap' }}>● {pm.label}</span>
+                        <span style={{ fontSize: 11, color: BRAND.textDim, whiteSpace: 'nowrap' }}>{sm.label}</span>
+                        <button onClick={() => kiAufgabeEntfernen(i)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 16, padding: '0 4px' }} title="Entfernen">×</button>
+                      </div>
+                    );
+                  })}
+                  {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 13, color: BRAND.textDim }}>Keine Aufgaben — du kannst sie später im Projekt anlegen.</div>}
+                </div>
+
+                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 13, marginBottom: 14 }}>{kiFehler}</div>}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+                  <button style={btnGhost} onClick={() => setKiVorschlag(null)} disabled={kiErstellen}>← Neu beschreiben</button>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button style={btnGhost} onClick={() => setKiModal(false)} disabled={kiErstellen}>Abbrechen</button>
+                    <button style={btn} onClick={kiProjektErstellen} disabled={kiErstellen}>{kiErstellen ? 'Erstellt…' : 'Projekt erstellen'}</button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
