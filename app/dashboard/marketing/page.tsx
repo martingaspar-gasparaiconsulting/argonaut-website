@@ -216,7 +216,8 @@ export default function MarketingCockpit() {
   }
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ background: C.navy, minHeight: '100vh' }}>
+      <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
       {/* Kopf */}
       <div
         style={{
@@ -658,6 +659,7 @@ export default function MarketingCockpit() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
