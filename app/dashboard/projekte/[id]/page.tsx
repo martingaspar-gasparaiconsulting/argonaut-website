@@ -96,6 +96,7 @@ export default function ProjektDetailPage() {
   const [detailLaden, setDetailLaden] = useState(false);
   const [unterMap, setUnterMap] = useState<Record<string, { erl: number; ges: number }>>({});
   const [vorlageSpeichern, setVorlageSpeichern] = useState(false);
+  const [berichtLaeuft, setBerichtLaeuft] = useState(false);
   // Kalender-Ansicht: angezeigter Monat (1. des Monats)
   const [kalMonat, setKalMonat] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
@@ -516,6 +517,66 @@ export default function ProjektDetailPage() {
     }
   }
 
+  // --- KI-Statusbericht als PDF ---
+  async function statusberichtErzeugen() {
+    if (!projekt) return;
+    setBerichtLaeuft(true);
+    try {
+      // Auslastung (Teams + Personen) zusammenstellen
+      const auslastung = [
+        ...teams.map((t) => ({
+          name: t.name, istTeam: true,
+          offen: aufgaben.filter((a) => a.team_id === t.id && !a.erledigt && a.status !== 'fertig').length,
+          gesamt: aufgaben.filter((a) => a.team_id === t.id).length,
+        })),
+        ...beteiligte.map((b) => ({
+          name: b.name, istTeam: false,
+          offen: aufgaben.filter((a) => a.mitarbeiter_id === b.id && !a.erledigt && a.status !== 'fertig').length,
+          gesamt: aufgaben.filter((a) => a.mitarbeiter_id === b.id).length,
+        })),
+      ].filter((z) => z.gesamt > 0);
+
+      const res = await fetch('/api/projekt-statusbericht', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projekt: {
+            name: projekt.name, beschreibung: projekt.beschreibung, status: projekt.status,
+            prioritaet: projekt.prioritaet, start_datum: projekt.start_datum, end_datum: projekt.end_datum,
+            budget: projekt.budget, verantwortlich: projekt.verantwortlich,
+          },
+          aufgaben: aufgaben.map((a) => ({
+            titel: a.titel, status: a.status, prioritaet: a.prioritaet, faellig_am: a.faellig_am, erledigt: a.erledigt,
+          })),
+          auslastung,
+        }),
+      });
+
+      if (!res.ok) {
+        let msg = 'Bericht-Erstellung fehlgeschlagen.';
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
+        alert(msg);
+        setBerichtLaeuft(false);
+        return;
+      }
+
+      // PDF herunterladen
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Statusbericht_${String(projekt.name).replace(/[^a-zA-Z0-9äöüÄÖÜ ]/g, '').replace(/\s+/g, '_').slice(0, 60)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert('Fehler: ' + (e?.message || 'Unbekannt'));
+    } finally {
+      setBerichtLaeuft(false);
+    }
+  }
+
   // --- Styles ---
   const card: React.CSSProperties = {
     background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 18,
@@ -914,6 +975,17 @@ export default function ProjektDetailPage() {
       {reiter === 'einstellungen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ ...card }}>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>📄 KI-Statusbericht</h3>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
+              Erstellt auf Knopfdruck einen professionellen Fortschrittsbericht als PDF — mit Kennzahlen,
+              erledigten und offenen Punkten, Überfälligem und einem Ausblick. Ideal für Kunden oder die Geschäftsführung.
+            </p>
+            <button style={{ ...btn, background: BRAND.cyan }} onClick={statusberichtErzeugen} disabled={berichtLaeuft}>
+              {berichtLaeuft ? 'Erstellt Bericht…' : '📄 Statusbericht als PDF'}
+            </button>
+          </div>
+
+          <div style={{ ...card }}>
             <h3 style={{ margin: '0 0 8px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Als Vorlage speichern</h3>
             <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
               Speichert dieses Projekt als wiederverwendbare Blaupause — mit Beschreibung, Priorität, Farbe und allen
@@ -924,6 +996,7 @@ export default function ProjektDetailPage() {
               {vorlageSpeichern ? 'Speichert…' : '📋 Als Vorlage speichern'}
             </button>
           </div>
+
           <div style={{ ...card, color: BRAND.textDim, fontSize: 13 }}>
             Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) findest du auf der Übersicht über „Bearbeiten".
           </div>
