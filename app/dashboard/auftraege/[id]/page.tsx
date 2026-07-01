@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Detailseite A3+A4+A6+A7
-// Positionen, Live-Summen, geführter Status-Workflow & PDF-Export
+// ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+
+// Positionen, Live-Summen, Status-Workflow, PDF & KI-Assistent (RAG + Voice)
 // Route: /dashboard/auftraege/[id]
 // ============================================================
 
@@ -55,6 +55,16 @@ type Zeile = {
   einheit: string;
   einzelpreis: string;
   mwst_satz: string;
+};
+
+type KiVorschlag = {
+  bezeichnung: string;
+  menge: number;
+  einheit: string;
+  einzelpreis: number;
+  mwst_satz: number;
+  quelle: "dokument" | "geschaetzt";
+  quelle_datei?: string;
 };
 
 function parseZahl(s: string): number {
@@ -117,6 +127,15 @@ export default function AuftragDetail() {
   const [gespeichert, setGespeichert] = useState(false);
   const [pdfLaedt, setPdfLaedt] = useState(false);
 
+  // KI-Assistent (A8+)
+  const [kiText, setKiText] = useState("");
+  const [kiLaedt, setKiLaedt] = useState(false);
+  const [kiVorschlaege, setKiVorschlaege] = useState<KiVorschlag[]>([]);
+  const [hatDok, setHatDok] = useState<boolean | null>(null);
+  const [hoert, setHoert] = useState(false);
+  const recRef = useRef<any>(null);
+  const kiBasisRef = useRef<string>("");
+
   const [kontakte, setKontakte] = useState<any[]>([]);
   const [firmen, setFirmen] = useState<any[]>([]);
 
@@ -175,6 +194,14 @@ export default function AuftragDetail() {
     if (id) laden();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        recRef.current && recRef.current.stop();
+      } catch {}
+    };
+  }, []);
 
   function markDirty() {
     setDirty(true);
@@ -308,7 +335,6 @@ export default function AuftragDetail() {
     setTimeout(() => setGespeichert(false), 2500);
   }
 
-  // ---------- A7: Auftragsbestätigung als PDF ----------
   async function pdfErstellen() {
     if (dirty) {
       const weiter = window.confirm(
@@ -378,6 +404,110 @@ export default function AuftragDetail() {
       setFehler("PDF-Fehler: " + (e?.message || "unbekannt"));
     }
     setPdfLaedt(false);
+  }
+
+  // ---------- A8: Spracheingabe ----------
+  function voiceToggle() {
+    if (hoert) {
+      try {
+        recRef.current && recRef.current.stop();
+      } catch {}
+      setHoert(false);
+      return;
+    }
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) {
+      setFehler("Spracheingabe wird von diesem Browser nicht unterstützt. Bitte Text eintippen.");
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "de-DE";
+    rec.continuous = true;
+    rec.interimResults = true;
+    kiBasisRef.current = kiText ? kiText.trim() + " " : "";
+    rec.onresult = (ev: any) => {
+      let full = "";
+      for (let i = 0; i < ev.results.length; i++) {
+        full += ev.results[i][0].transcript;
+      }
+      setKiText((kiBasisRef.current + full).replace(/\s+/g, " ").trimStart());
+    };
+    rec.onerror = () => setHoert(false);
+    rec.onend = () => setHoert(false);
+    recRef.current = rec;
+    setHoert(true);
+    try {
+      rec.start();
+    } catch {
+      setHoert(false);
+    }
+  }
+
+  // ---------- A8+: Vorschläge holen (mit RAG) ----------
+  async function kiVorschlagen() {
+    const t = kiText.trim();
+    if (!t) {
+      setFehler("Bitte zuerst den Auftrag beschreiben (tippen oder sprechen).");
+      return;
+    }
+    if (hoert) {
+      try {
+        recRef.current && recRef.current.stop();
+      } catch {}
+      setHoert(false);
+    }
+    setKiLaedt(true);
+    setFehler(null);
+    setKiVorschlaege([]);
+    setHatDok(null);
+    try {
+      const resp = await fetch("/api/auftrag-ki-positionen", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: t, waehrung }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setFehler(data?.error || "Vorschläge fehlgeschlagen.");
+        setKiLaedt(false);
+        return;
+      }
+      const vs: KiVorschlag[] = Array.isArray(data?.positionen) ? data.positionen : [];
+      if (vs.length === 0) {
+        setFehler("Keine Positionen erkannt. Formulier es etwas konkreter.");
+      }
+      setKiVorschlaege(vs);
+      setHatDok(!!data?.hatDokumente);
+    } catch (e: any) {
+      setFehler("KI-Fehler: " + (e?.message || "unbekannt"));
+    }
+    setKiLaedt(false);
+  }
+
+  function vorschlagAlsZeile(v: KiVorschlag): Zeile {
+    return {
+      id: neueId(),
+      bezeichnung: v.bezeichnung || "",
+      menge: ladeStr(v.menge),
+      einheit: EINHEITEN.includes(v.einheit) ? v.einheit : "Stk",
+      einzelpreis: ladeStr(v.einzelpreis),
+      mwst_satz: ladeStr(v.mwst_satz != null ? v.mwst_satz : 19),
+    };
+  }
+  function vorschlagUebernehmen(idx: number) {
+    const v = kiVorschlaege[idx];
+    if (!v) return;
+    setZeilen((prev) => [...prev, vorschlagAlsZeile(v)]);
+    setKiVorschlaege((prev) => prev.filter((_, i) => i !== idx));
+    markDirty();
+  }
+  function alleUebernehmen() {
+    if (kiVorschlaege.length === 0) return;
+    const neu = kiVorschlaege.map(vorschlagAlsZeile);
+    setZeilen((prev) => [...prev, ...neu]);
+    setKiVorschlaege([]);
+    setKiText("");
+    markDirty();
   }
 
   if (loading) {
@@ -715,6 +845,193 @@ export default function AuftragDetail() {
         </Karte>
       </div>
 
+      {/* KI-ASSISTENT (A8+) */}
+      <div
+        style={{
+          background: C.navy2,
+          border: `1px solid ${C.gold}44`,
+          borderRadius: 14,
+          padding: "20px 22px",
+          marginBottom: 20,
+        }}
+      >
+        <div style={{ ...sektionLabel, color: C.gold }}>✨ Positionen mit KI</div>
+        <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 12px", lineHeight: 1.5 }}>
+          Beschreib den Auftrag in eigenen Worten — tippen oder aufs Mikrofon und reinsprechen.
+          ARGONAUT nutzt deine echten Preise aus deinen Dokumenten, wo vorhanden — und schätzt nur,
+          was neu ist. Alle Vorschläge kannst du vor dem Übernehmen frei anpassen.
+        </p>
+
+        <div style={{ position: "relative" }}>
+          <textarea
+            value={kiText}
+            onChange={(e) => setKiText(e.target.value)}
+            placeholder="z. B. Zwei Meter Edelstahlgeländer schleifen und montieren, dazu acht Stunden Arbeit und Anfahrt pauschal 60 Euro…"
+            rows={3}
+            style={{
+              ...inputStyle,
+              resize: "vertical",
+              minHeight: 80,
+              lineHeight: 1.5,
+              paddingRight: 54,
+            }}
+          />
+          <button
+            onClick={voiceToggle}
+            title={hoert ? "Aufnahme stoppen" : "Sprechen"}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              border: hoert ? `1px solid ${C.danger}` : `1px solid ${C.border}`,
+              background: hoert ? `${C.danger}22` : C.navy,
+              color: hoert ? C.danger : C.textDim,
+              cursor: "pointer",
+              fontSize: 18,
+            }}
+          >
+            {hoert ? "🔴" : "🎤"}
+          </button>
+        </div>
+
+        {hoert && (
+          <div style={{ color: C.danger, fontSize: 12.5, marginTop: 6 }}>
+            🔴 ARGONAUT hört zu… sprich einfach los, tippe zum Stoppen aufs Mikrofon.
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+          <button
+            onClick={kiVorschlagen}
+            disabled={kiLaedt || !kiText.trim()}
+            style={{
+              ...btnGold,
+              background: kiLaedt || !kiText.trim() ? C.border : C.gold,
+              color: kiLaedt || !kiText.trim() ? C.textDim : C.navy,
+              cursor: kiLaedt || !kiText.trim() ? "not-allowed" : "pointer",
+            }}
+          >
+            {kiLaedt ? "ARGONAUT denkt nach…" : "✨ Vorschläge erstellen"}
+          </button>
+          {(kiText || kiVorschlaege.length > 0) && !kiLaedt && (
+            <button
+              onClick={() => {
+                setKiText("");
+                setKiVorschlaege([]);
+                setHatDok(null);
+              }}
+              style={{
+                background: "transparent",
+                border: `1px solid ${C.border}`,
+                color: C.textDim,
+                borderRadius: 10,
+                padding: "11px 18px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Zurücksetzen
+            </button>
+          )}
+        </div>
+
+        {/* Vorschlags-Vorschau */}
+        {kiVorschlaege.length > 0 && (
+          <div style={{ marginTop: 18 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+              }}
+            >
+              <span style={{ color: C.textDim, fontSize: 13, fontWeight: 600 }}>
+                {kiVorschlaege.length} Vorschlag{kiVorschlaege.length === 1 ? "" : "e"} — prüfen & übernehmen
+              </span>
+              <button onClick={alleUebernehmen} style={btnKlein}>
+                ↧ Alle übernehmen
+              </button>
+            </div>
+
+            <div style={{ color: C.textDim, fontSize: 11.5, marginBottom: 12, lineHeight: 1.5 }}>
+              {hatDok
+                ? "📄 = Preis aus deinen Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für dich und erscheint nie beim Kunden."
+                : "Keine Preis-Dokumente gefunden — alle Preise wurden geschätzt. Nach dem Übernehmen frei anpassbar."}
+            </div>
+
+            {kiVorschlaege.map((v, idx) => {
+              const ausDok = v.quelle === "dokument";
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    background: C.navy,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{v.bezeichnung}</span>
+                      <span
+                        title={ausDok && v.quelle_datei ? "Quelle: " + v.quelle_datei : "Von ARGONAUT geschätzt"}
+                        style={{
+                          background: ausDok ? `${C.green}1f` : `${C.warn}1f`,
+                          color: ausDok ? C.green : C.warn,
+                          border: `1px solid ${ausDok ? C.green : C.warn}55`,
+                          borderRadius: 20,
+                          padding: "2px 9px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ausDok ? "📄 aus deinen Dokumenten" : "⚠️ geschätzt"}
+                      </span>
+                    </div>
+                    <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 4 }}>
+                      {new Intl.NumberFormat("de-DE").format(v.menge)} {v.einheit} ×{" "}
+                      {geld(v.einzelpreis, waehrung)} · {v.mwst_satz}% MwSt ={" "}
+                      <span style={{ color: C.cyan }}>{geld(v.menge * v.einzelpreis, waehrung)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => vorschlagUebernehmen(idx)}
+                    title="Übernehmen"
+                    style={{
+                      background: `${C.green}22`,
+                      color: C.green,
+                      border: `1px solid ${C.green}66`,
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    ↧ Übernehmen
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* POSITIONEN */}
       <div
         style={{
@@ -732,7 +1049,7 @@ export default function AuftragDetail() {
 
         {zeilen.length === 0 ? (
           <div style={{ padding: "28px 0", textAlign: "center", color: C.textDim, fontSize: 14 }}>
-            Noch keine Positionen. Füg oben rechts die erste hinzu.
+            Noch keine Positionen. Füg oben rechts eine hinzu — oder nutz den KI-Assistenten.
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
