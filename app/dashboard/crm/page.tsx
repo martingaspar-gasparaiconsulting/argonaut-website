@@ -368,6 +368,22 @@ export default function CrmCockpitPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
+              onClick={() => router.push("/dashboard/crm/pipeline")}
+              style={{
+                background: "transparent",
+                color: C.cyan,
+                border: `1px solid ${C.cyan}`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              📊 Pipeline
+            </button>
+            <button
               onClick={() => router.push("/dashboard/crm/firmen")}
               style={{
                 background: "transparent",
