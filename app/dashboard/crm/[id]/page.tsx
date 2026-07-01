@@ -5,9 +5,10 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3 Kontakt-Detailseite
-// Reiter: Stammdaten / Timeline / Notizen · tel:/mailto:-Aktionen
-// (Aktivitäten ERFASSEN + Wiedervorlage = C4, hier nur Anzeige)
+// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4 Kontakt-Detailseite
+// Reiter: Stammdaten / Timeline / Notizen
+// C4: Aktivitäten erfassen (Anruf/E-Mail/Termin/Notiz) + Wiedervorlage
+//     → setzt letzter_kontakt_am (Ampel) und naechster_kontakt_am (KPI)
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -37,6 +38,21 @@ const QUELLE_OPTIONEN = [
   "Telefon",
   "Sonstige",
 ];
+
+const AKT_TYPEN: { wert: string; label: string; icon: string }[] = [
+  { wert: "anruf", label: "Anruf", icon: "📞" },
+  { wert: "email", label: "E-Mail", icon: "✉" },
+  { wert: "termin", label: "Termin", icon: "📅" },
+  { wert: "notiz", label: "Notiz", icon: "📝" },
+];
+
+const TYP_ICON: Record<string, string> = {
+  anruf: "📞",
+  email: "✉",
+  termin: "📅",
+  notiz: "📝",
+  voice: "🎙",
+};
 
 interface Kontakt {
   id: string;
@@ -112,13 +128,21 @@ function datumZeit(iso: string | null): string {
   });
 }
 
-const TYP_ICON: Record<string, string> = {
-  anruf: "📞",
-  email: "✉",
-  termin: "📅",
-  notiz: "📝",
-  voice: "🎙",
-};
+// datetime-local-Wert (YYYY-MM-DDTHH:mm) für "jetzt", lokale Zeitzone
+function jetztLokalInput(): string {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  const lokal = new Date(d.getTime() - off * 60000);
+  return lokal.toISOString().slice(0, 16);
+}
+
+// date-Wert (YYYY-MM-DD) für heute, lokale Zeitzone
+function heuteDatumInput(): string {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  const lokal = new Date(d.getTime() - off * 60000);
+  return lokal.toISOString().slice(0, 10);
+}
 
 export default function CrmDetailPage() {
   const router = useRouter();
@@ -133,13 +157,26 @@ export default function CrmDetailPage() {
     "stammdaten"
   );
 
+  // Stammdaten bearbeiten
   const [bearbeiten, setBearbeiten] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [speichert, setSpeichert] = useState(false);
 
+  // Notizen
   const [notizEntwurf, setNotizEntwurf] = useState("");
   const [notizSpeichert, setNotizSpeichert] = useState(false);
   const [notizGespeichert, setNotizGespeichert] = useState(false);
+
+  // C4: Aktivität erfassen
+  const [aktTyp, setAktTyp] = useState("anruf");
+  const [aktInhalt, setAktInhalt] = useState("");
+  const [aktDatum, setAktDatum] = useState(jetztLokalInput());
+  const [aktSpeichert, setAktSpeichert] = useState(false);
+  const [aktLoeschId, setAktLoeschId] = useState<string | null>(null);
+
+  // C4: Wiedervorlage
+  const [wvDatum, setWvDatum] = useState("");
+  const [wvSpeichert, setWvSpeichert] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -155,8 +192,14 @@ export default function CrmDetailPage() {
       setLaden(false);
       return;
     }
-    setKontakt(k as Kontakt);
-    setNotizEntwurf((k as Kontakt).notizen || "");
+    const kk = k as Kontakt;
+    setKontakt(kk);
+    setNotizEntwurf(kk.notizen || "");
+    setWvDatum(
+      kk.naechster_kontakt_am
+        ? new Date(kk.naechster_kontakt_am).toISOString().slice(0, 10)
+        : ""
+    );
 
     const { data: akt } = await supabase
       .from("kontakt_aktivitaeten")
@@ -179,6 +222,12 @@ export default function CrmDetailPage() {
       "Unbenannter Kontakt"
     : "";
 
+  const wvFaellig = useMemo(() => {
+    if (!kontakt?.naechster_kontakt_am) return false;
+    return new Date(kontakt.naechster_kontakt_am).getTime() <= Date.now();
+  }, [kontakt]);
+
+  // ---------------- Stammdaten ----------------
   function bearbeitenStart() {
     if (!kontakt) return;
     setForm({
@@ -228,6 +277,7 @@ export default function CrmDetailPage() {
     laden_();
   }
 
+  // ---------------- Notizen ----------------
   async function notizSpeichern() {
     if (!kontakt) return;
     setNotizSpeichert(true);
@@ -247,6 +297,101 @@ export default function CrmDetailPage() {
     );
   }
 
+  // ---------------- C4: Aktivität erfassen ----------------
+  async function aktivitaetEintragen() {
+    if (!kontakt) return;
+    if (!aktInhalt.trim()) {
+      setFehler("Bitte einen kurzen Text zur Aktivität eingeben.");
+      return;
+    }
+    setAktSpeichert(true);
+    setFehler(null);
+
+    const wannIso = aktDatum
+      ? new Date(aktDatum).toISOString()
+      : new Date().toISOString();
+
+    const { error: e1 } = await supabase.from("kontakt_aktivitaeten").insert({
+      kontakt_id: kontakt.id,
+      typ: aktTyp,
+      inhalt: aktInhalt.trim(),
+      ki_generiert: false,
+      aktivitaet_am: wannIso,
+    });
+    if (e1) {
+      setAktSpeichert(false);
+      setFehler(e1.message);
+      return;
+    }
+
+    // letzter_kontakt_am nur nach vorne setzen (nicht zurückdatieren)
+    const bisher = kontakt.letzter_kontakt_am
+      ? new Date(kontakt.letzter_kontakt_am).getTime()
+      : 0;
+    if (new Date(wannIso).getTime() >= bisher) {
+      await supabase
+        .from("kontakte")
+        .update({ letzter_kontakt_am: wannIso })
+        .eq("id", kontakt.id);
+    }
+
+    setAktInhalt("");
+    setAktTyp("anruf");
+    setAktDatum(jetztLokalInput());
+    setAktSpeichert(false);
+    laden_();
+  }
+
+  async function aktivitaetLoeschen(aid: string) {
+    const { error } = await supabase
+      .from("kontakt_aktivitaeten")
+      .delete()
+      .eq("id", aid);
+    setAktLoeschId(null);
+    if (error) {
+      setFehler(error.message);
+      return;
+    }
+    laden_();
+  }
+
+  // ---------------- C4: Wiedervorlage ----------------
+  async function wiedervorlageSetzen() {
+    if (!kontakt || !wvDatum) return;
+    setWvSpeichert(true);
+    setFehler(null);
+    const iso = new Date(wvDatum + "T09:00:00").toISOString();
+    const { error } = await supabase
+      .from("kontakte")
+      .update({ naechster_kontakt_am: iso })
+      .eq("id", kontakt.id);
+    setWvSpeichert(false);
+    if (error) {
+      setFehler(error.message);
+      return;
+    }
+    setKontakt((prev) => (prev ? { ...prev, naechster_kontakt_am: iso } : prev));
+  }
+
+  async function wiedervorlageLoeschen() {
+    if (!kontakt) return;
+    setWvSpeichert(true);
+    const { error } = await supabase
+      .from("kontakte")
+      .update({ naechster_kontakt_am: null })
+      .eq("id", kontakt.id);
+    setWvSpeichert(false);
+    if (error) {
+      setFehler(error.message);
+      return;
+    }
+    setWvDatum("");
+    setKontakt((prev) =>
+      prev ? { ...prev, naechster_kontakt_am: null } : prev
+    );
+  }
+
+  // ---------------- Render ----------------
   if (laden) {
     return (
       <div style={{ background: C.navy, minHeight: "100vh", padding: "40px 28px" }}>
@@ -338,6 +483,21 @@ export default function CrmDetailPage() {
                   <span style={{ color: a.farbe, marginLeft: 10 }}>· {a.label}</span>
                 )}
               </div>
+              {/* Wiedervorlage-Hinweis im Kopf */}
+              {kontakt.naechster_kontakt_am && (
+                <div
+                  style={{
+                    marginLeft: 26,
+                    marginTop: 8,
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    color: wvFaellig ? C.warn : C.textDim,
+                  }}
+                >
+                  🔔 Wiedervorlage: {datumLang(kontakt.naechster_kontakt_am)}
+                  {wvFaellig && " · fällig"}
+                </div>
+              )}
             </div>
 
             {/* Aktions-Buttons */}
@@ -381,9 +541,7 @@ export default function CrmDetailPage() {
           </ReiterBtn>
         </div>
 
-        {fehler && (
-          <div style={fehlerBox}>{fehler}</div>
-        )}
+        {fehler && <div style={fehlerBox}>{fehler}</div>}
 
         {/* Reiter-Inhalt */}
         <div
@@ -506,32 +664,157 @@ export default function CrmDetailPage() {
             </div>
           )}
 
-          {/* --- TIMELINE --- */}
+          {/* --- TIMELINE (C4) --- */}
           {reiter === "timeline" && (
             <div>
+              {/* Erfassen-Box */}
               <div
                 style={{
-                  background: "rgba(0,229,255,0.06)",
-                  border: `1px dashed ${C.border}`,
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                  color: C.textDim,
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13,
-                  marginBottom: 18,
+                  background: C.navy,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "16px 18px",
+                  marginBottom: 22,
                 }}
               >
-                ℹ Aktivitäten erfassen (Anruf/E-Mail/Termin/Notiz) und die
-                Wiedervorlage kommen im nächsten Schritt dazu. Hier siehst du bereits
-                die vollständige Historie.
+                <div
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    color: C.gold,
+                    fontSize: 15,
+                    marginBottom: 12,
+                  }}
+                >
+                  Neue Aktivität erfassen
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                  {AKT_TYPEN.map((t) => (
+                    <button
+                      key={t.wert}
+                      onClick={() => setAktTyp(t.wert)}
+                      style={{
+                        background: aktTyp === t.wert ? C.gold : "transparent",
+                        color: aktTyp === t.wert ? C.navy : C.textDim,
+                        border: `1px solid ${aktTyp === t.wert ? C.gold : C.border}`,
+                        borderRadius: 20,
+                        padding: "6px 14px",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  style={{ ...inp, minHeight: 70, resize: "vertical", marginBottom: 10 }}
+                  value={aktInhalt}
+                  onChange={(e) => setAktInhalt(e.target.value)}
+                  placeholder="Was ist passiert? (z. B. Angebot besprochen, Rückruf vereinbart …)"
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: "0 0 auto" }}>
+                    <label style={{ color: C.textDim, fontSize: 12, marginRight: 8 }}>
+                      Wann
+                    </label>
+                    <input
+                      type="datetime-local"
+                      style={{ ...inp, width: "auto", display: "inline-block" }}
+                      value={aktDatum}
+                      onChange={(e) => setAktDatum(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={aktivitaetEintragen}
+                    disabled={aktSpeichert}
+                    style={goldBtn}
+                  >
+                    {aktSpeichert ? "Trägt ein…" : "Eintragen"}
+                  </button>
+                </div>
+                <div style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>
+                  Setzt automatisch „Letzter Kontakt" → aktualisiert die Ampel.
+                </div>
+              </div>
+
+              {/* Wiedervorlage */}
+              <div
+                style={{
+                  background: "rgba(224,162,76,0.06)",
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "14px 18px",
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    color: C.warn,
+                    fontSize: 15,
+                    marginBottom: 10,
+                  }}
+                >
+                  🔔 Wiedervorlage
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <input
+                    type="date"
+                    min={heuteDatumInput()}
+                    style={{ ...inp, width: "auto" }}
+                    value={wvDatum}
+                    onChange={(e) => setWvDatum(e.target.value)}
+                  />
+                  <button
+                    onClick={wiedervorlageSetzen}
+                    disabled={wvSpeichert || !wvDatum}
+                    style={{ ...goldBtn, opacity: !wvDatum ? 0.6 : 1 }}
+                  >
+                    {wvSpeichert ? "Speichert…" : "Wiedervorlage setzen"}
+                  </button>
+                  {kontakt.naechster_kontakt_am && (
+                    <button onClick={wiedervorlageLoeschen} disabled={wvSpeichert} style={grauBtn}>
+                      Entfernen
+                    </button>
+                  )}
+                </div>
+                {kontakt.naechster_kontakt_am && (
+                  <div style={{ color: C.textDim, fontSize: 13, marginTop: 8 }}>
+                    Aktuell gesetzt auf {datumLang(kontakt.naechster_kontakt_am)}
+                    {wvFaellig && <span style={{ color: C.warn }}> · fällig</span>}.
+                  </div>
+                )}
+              </div>
+
+              {/* Historie */}
+              <div
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  color: C.textDim,
+                  fontSize: 13,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginBottom: 14,
+                }}
+              >
+                Verlauf
               </div>
 
               {aktivitaeten.length === 0 ? (
-                <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", padding: "12px 0" }}>
+                <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", padding: "6px 0" }}>
                   Noch keine Aktivitäten erfasst.
                 </div>
               ) : (
-                <div style={{ position: "relative", paddingLeft: 8 }}>
+                <div style={{ position: "relative" }}>
                   {aktivitaeten.map((akt) => (
                     <div
                       key={akt.id}
@@ -597,6 +880,26 @@ export default function CrmDetailPage() {
                             >
                               KI
                             </span>
+                          )}
+                          {aktLoeschId === akt.id ? (
+                            <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => aktivitaetLoeschen(akt.id)}
+                                style={{ ...linkBtn, color: C.danger }}
+                              >
+                                Wirklich löschen?
+                              </button>
+                              <button onClick={() => setAktLoeschId(null)} style={linkBtn}>
+                                Abbrechen
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setAktLoeschId(akt.id)}
+                              style={{ ...linkBtn, marginLeft: "auto" }}
+                            >
+                              Löschen
+                            </button>
                           )}
                         </div>
                         <div
@@ -828,6 +1131,16 @@ const grauBtn: React.CSSProperties = {
   fontWeight: 600,
   fontSize: 14,
   cursor: "pointer",
+};
+
+const linkBtn: React.CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: C.textDim,
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: 12,
+  cursor: "pointer",
+  padding: 0,
 };
 
 const inp: React.CSSProperties = {
