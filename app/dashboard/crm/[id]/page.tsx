@@ -100,6 +100,15 @@ interface FirmaMini {
   name: string;
 }
 
+interface Briefing {
+  zusammenfassung: string;
+  beziehungsstatus: string;
+  status_begruendung: string;
+  offene_punkte: string[];
+  naechste_schritte: string[];
+  gespraechseinstieg: string;
+}
+
 interface FormState {
   vorname: string;
   nachname: string;
@@ -207,6 +216,15 @@ export default function CrmDetailPage() {
 
   // C6b: Firmen für Dropdown
   const [firmenListe, setFirmenListe] = useState<FirmaMini[]>([]);
+
+  // C8: KI-Briefing
+  const [briefingOffen, setBriefingOffen] = useState(false);
+  const [briefingLaden, setBriefingLaden] = useState(false);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [briefingQuellen, setBriefingQuellen] = useState<string[]>([]);
+  const [briefingFehler, setBriefingFehler] = useState<string | null>(null);
+  const [briefingSpeichert, setBriefingSpeichert] = useState(false);
+  const [briefingGespeichert, setBriefingGespeichert] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -519,6 +537,62 @@ export default function CrmDetailPage() {
     setTagAddOffen(false);
   }
 
+  // ---------------- C8: KI-Briefing ----------------
+  async function ladeBriefing() {
+    if (!kontakt) return;
+    setBriefingOffen(true);
+    setBriefingLaden(true);
+    setBriefing(null);
+    setBriefingQuellen([]);
+    setBriefingFehler(null);
+    setBriefingGespeichert(false);
+    try {
+      const res = await fetch("/api/crm-briefing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kontakt_id: kontakt.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBriefingFehler(data?.error || "Briefing fehlgeschlagen.");
+      } else {
+        setBriefing(data.briefing as Briefing);
+        setBriefingQuellen((data.quellen as string[]) || []);
+      }
+    } catch (e) {
+      setBriefingFehler("Netzwerkfehler. Bitte erneut versuchen.");
+    }
+    setBriefingLaden(false);
+  }
+
+  async function briefingAlsNotiz() {
+    if (!kontakt || !briefing) return;
+    setBriefingSpeichert(true);
+    const text =
+      "🧠 KI-Briefing\n\n" +
+      briefing.zusammenfassung +
+      (briefing.offene_punkte.length
+        ? "\n\nOffene Punkte:\n- " + briefing.offene_punkte.join("\n- ")
+        : "") +
+      (briefing.naechste_schritte.length
+        ? "\n\nNächste Schritte:\n- " + briefing.naechste_schritte.join("\n- ")
+        : "");
+    const { error } = await supabase.from("kontakt_aktivitaeten").insert({
+      kontakt_id: kontakt.id,
+      typ: "notiz",
+      inhalt: text,
+      ki_generiert: true,
+      aktivitaet_am: new Date().toISOString(),
+    });
+    setBriefingSpeichert(false);
+    if (error) {
+      setBriefingFehler(error.message);
+      return;
+    }
+    setBriefingGespeichert(true);
+    laden_();
+  }
+
   // ---------------- Render ----------------
   if (laden) {
     return (
@@ -628,6 +702,22 @@ export default function CrmDetailPage() {
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={ladeBriefing}
+                style={{
+                  background: "transparent",
+                  color: C.gold,
+                  border: `1px solid ${C.gold}`,
+                  borderRadius: 10,
+                  padding: "11px 18px",
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                🧠 KI-Briefing
+              </button>
               {kontakt.telefon && (
                 <a href={`tel:${kontakt.telefon}`} style={aktionBtn(C.green)}>
                   📞 Anrufen
@@ -809,6 +899,171 @@ export default function CrmDetailPage() {
             )}
           </div>
         </div>
+
+        {/* C8: KI-Briefing-Modal */}
+        {briefingOffen && (
+          <div style={overlayB} onClick={() => setBriefingOffen(false)}>
+            <div style={modalB} onClick={(e) => e.stopPropagation()}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <h2
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    color: C.gold,
+                    fontSize: 22,
+                    margin: 0,
+                  }}
+                >
+                  🧠 KI-Briefing · {anzeigeName}
+                </h2>
+                <button
+                  onClick={() => setBriefingOffen(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: C.textDim,
+                    fontSize: 20,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {briefingLaden && (
+                <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", padding: "8px 0" }}>
+                  Claude analysiert Historie &amp; Firmenwissen…
+                </div>
+              )}
+
+              {briefingFehler && <div style={fehlerBox}>{briefingFehler}</div>}
+
+              {briefing && !briefingLaden && (
+                <div>
+                  {/* Beziehungsstatus */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "3px 12px",
+                        borderRadius: 20,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: statusFarbe(briefing.beziehungsstatus),
+                        border: `1px solid ${statusFarbe(briefing.beziehungsstatus)}`,
+                      }}
+                    >
+                      {briefing.beziehungsstatus === "kalt"
+                        ? "🧊 kalt"
+                        : briefing.beziehungsstatus === "heiß"
+                        ? "🔥 heiß"
+                        : "☀ warm"}
+                    </span>
+                    {briefing.status_begruendung && (
+                      <span style={{ color: C.textDim, fontSize: 13 }}>
+                        {briefing.status_begruendung}
+                      </span>
+                    )}
+                  </div>
+
+                  {briefing.zusammenfassung && (
+                    <p
+                      style={{
+                        color: "#fff",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 15,
+                        lineHeight: 1.5,
+                        margin: "0 0 18px",
+                      }}
+                    >
+                      {briefing.zusammenfassung}
+                    </p>
+                  )}
+
+                  {briefing.gespraechseinstieg && (
+                    <div
+                      style={{
+                        background: "rgba(0,229,255,0.06)",
+                        border: `1px solid ${C.cyan}`,
+                        borderRadius: 10,
+                        padding: "12px 14px",
+                        marginBottom: 18,
+                      }}
+                    >
+                      <div style={{ color: C.cyan, fontSize: 12, marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                        Gesprächseinstieg
+                      </div>
+                      <div style={{ color: "#fff", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+                        {briefing.gespraechseinstieg}
+                      </div>
+                    </div>
+                  )}
+
+                  {briefing.offene_punkte.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={briefingLabel}>Offene Punkte</div>
+                      <ul style={briefingListe}>
+                        {briefing.offene_punkte.map((p, i) => (
+                          <li key={i} style={briefingItem}>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {briefing.naechste_schritte.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ ...briefingLabel, color: C.gold }}>
+                        Empfohlene nächste Schritte
+                      </div>
+                      <ul style={briefingListe}>
+                        {briefing.naechste_schritte.map((p, i) => (
+                          <li key={i} style={briefingItem}>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {briefingQuellen.length > 0 && (
+                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 14 }}>
+                      Firmenwissen aus: {briefingQuellen.join(", ")}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      onClick={briefingAlsNotiz}
+                      disabled={briefingSpeichert || briefingGespeichert}
+                      style={{ ...goldBtn, opacity: briefingGespeichert ? 0.6 : 1 }}
+                    >
+                      {briefingGespeichert
+                        ? "✓ In Timeline gespeichert"
+                        : briefingSpeichert
+                        ? "Speichert…"
+                        : "Als Notiz in Timeline speichern"}
+                    </button>
+                    <button onClick={ladeBriefing} style={grauBtn}>
+                      Neu generieren
+                    </button>
+                  </div>
+
+                  <div style={{ color: C.textDim, fontSize: 11, marginTop: 14 }}>
+                    KI-generiert auf Basis der erfassten Historie – bitte vor dem Gespräch kurz prüfen.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Reiter */}
         <div style={{ display: "flex", gap: 8, marginTop: 22, flexWrap: "wrap" }}>
@@ -1524,4 +1779,57 @@ const fehlerBox: React.CSSProperties = {
   marginTop: 14,
   fontFamily: "'DM Sans', sans-serif",
   fontSize: 14,
+};
+
+// --------------------------- C8 Briefing ---------------------------
+
+function statusFarbe(s: string): string {
+  if (s === "kalt") return C.cyan;
+  if (s === "heiß") return C.danger;
+  return C.warn;
+}
+
+const overlayB: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "center",
+  padding: "40px 16px",
+  overflowY: "auto",
+  zIndex: 1000,
+};
+
+const modalB: React.CSSProperties = {
+  background: C.navy2,
+  border: `1px solid ${C.border}`,
+  borderRadius: 16,
+  padding: "26px 26px 22px",
+  width: "100%",
+  maxWidth: 640,
+};
+
+const briefingLabel: React.CSSProperties = {
+  fontFamily: "Syne, sans-serif",
+  color: C.cyan,
+  fontSize: 13,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+  marginBottom: 8,
+};
+
+const briefingListe: React.CSSProperties = {
+  margin: 0,
+  paddingLeft: 20,
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+};
+
+const briefingItem: React.CSSProperties = {
+  color: "#fff",
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: 14,
+  lineHeight: 1.45,
 };
