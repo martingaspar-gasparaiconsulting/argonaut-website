@@ -23,6 +23,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '📣 Marketing', href: '/dashboard/marketing' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm' },
   { label: '📋 Aufträge', href: '/dashboard/auftraege' },
+  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
   { label: 'Einstellungen', href: '/dashboard/einstellungen' },
 ];
