@@ -5,8 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Detailseite A3+A4+A6
-// Positionen-Editor, Live-Summen & GEFÜHRTER Status-Workflow
+// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Detailseite A3+A4+A6+A7
+// Positionen, Live-Summen, geführter Status-Workflow & PDF-Export
 // Route: /dashboard/auftraege/[id]
 // ============================================================
 
@@ -44,7 +44,6 @@ const STATUS: Record<StatusKey, { label: string; farbe: string; icon: string }> 
     storniert: { label: "Storniert", farbe: C.textDim, icon: "⚪" },
   };
 
-// Der natürliche Fluss (ohne "storniert" — das ist ein Abbruch)
 const FLUSS: StatusKey[] = ["entwurf", "beauftragt", "in_bearbeitung", "abgeschlossen"];
 
 const EINHEITEN = ["Stk", "Std", "Tag", "m", "m²", "m³", "kg", "t", "lfm", "Psch"];
@@ -116,6 +115,7 @@ export default function AuftragDetail() {
   const [dirty, setDirty] = useState(false);
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
+  const [pdfLaedt, setPdfLaedt] = useState(false);
 
   const [kontakte, setKontakte] = useState<any[]>([]);
   const [firmen, setFirmen] = useState<any[]>([]);
@@ -308,6 +308,78 @@ export default function AuftragDetail() {
     setTimeout(() => setGespeichert(false), 2500);
   }
 
+  // ---------- A7: Auftragsbestätigung als PDF ----------
+  async function pdfErstellen() {
+    if (dirty) {
+      const weiter = window.confirm(
+        "Es gibt ungespeicherte Änderungen. Das PDF nutzt den aktuell sichtbaren Stand. Trotzdem erstellen?"
+      );
+      if (!weiter) return;
+    }
+    setPdfLaedt(true);
+    setFehler(null);
+
+    const gewaehlterKontakt = kontaktOptionen.find((k) => k.id === kontaktId);
+    const gewaehlteFirma = firmaOptionen.find((f) => f.id === firmaId);
+
+    const payload = {
+      auftrag: {
+        auftragsnummer: auftrag?.auftragsnummer || "",
+        titel: titel.trim(),
+        status,
+        auftragsdatum: auftragsdatum || null,
+        lieferdatum: lieferdatum || null,
+        waehrung,
+        netto_summe: summen.netto,
+        mwst_summe: summen.mwst,
+        brutto_summe: summen.brutto,
+        notizen: notizen || "",
+      },
+      positionen: zeilen.map((z, i) => ({
+        position: i + 1,
+        bezeichnung: z.bezeichnung,
+        menge: parseZahl(z.menge),
+        einheit: z.einheit,
+        einzelpreis: parseZahl(z.einzelpreis),
+        mwst_satz: parseZahl(z.mwst_satz),
+        gesamt_netto: zeileNetto(z),
+      })),
+      kontaktName: gewaehlterKontakt ? kontaktName(gewaehlterKontakt) : "",
+      firmaName: gewaehlteFirma ? firmaName(gewaehlteFirma) : "",
+    };
+
+    try {
+      const resp = await fetch("/api/auftragsbestaetigung-pdf", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        let msg = "PDF konnte nicht erstellt werden.";
+        try {
+          const j = await resp.json();
+          if (j?.error) msg = j.error;
+        } catch {}
+        setFehler(msg);
+        setPdfLaedt(false);
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const nr = auftrag?.auftragsnummer || "Auftrag";
+      a.download = `Auftragsbestaetigung_${String(nr).replace(/\s+/g, "_")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setFehler("PDF-Fehler: " + (e?.message || "unbekannt"));
+    }
+    setPdfLaedt(false);
+  }
+
   if (loading) {
     return (
       <Rahmen>
@@ -390,13 +462,31 @@ export default function AuftragDetail() {
             </h1>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             {gespeichert && (
               <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>✓ gespeichert</span>
             )}
             {dirty && (
               <span style={{ color: C.warn, fontSize: 13, fontWeight: 600 }}>● ungespeichert</span>
             )}
+            <button
+              onClick={pdfErstellen}
+              disabled={pdfLaedt}
+              style={{
+                background: "transparent",
+                color: C.cyan,
+                border: `1px solid ${C.cyan}77`,
+                borderRadius: 10,
+                padding: "11px 18px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: pdfLaedt ? "not-allowed" : "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                opacity: pdfLaedt ? 0.6 : 1,
+              }}
+            >
+              {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Bestätigung als PDF"}
+            </button>
             <button
               onClick={speichernJetzt}
               disabled={speichern || !dirty}
@@ -464,7 +554,6 @@ export default function AuftragDetail() {
           </div>
         ) : (
           <>
-            {/* Fortschrittskette */}
             <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 4 }}>
               {FLUSS.map((s, i) => {
                 const info = STATUS[s];
