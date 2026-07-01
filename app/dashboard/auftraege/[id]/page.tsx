@@ -5,8 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+
-// Positionen, Live-Summen, Status-Workflow, PDF & KI-Assistent (RAG + Voice)
+// ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+A9
+// Positionen, Live-Summen, Status-Workflow, PDF, KI-Assistent (RAG + Voice)
+// A9: Andock-Nahtstelle Modul 6 "Rechnung" (Rechnung-erstellen-Stub)
 // Route: /dashboard/auftraege/[id]
 // ============================================================
 
@@ -126,6 +127,9 @@ export default function AuftragDetail() {
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
   const [pdfLaedt, setPdfLaedt] = useState(false);
+
+  // A9: Rechnung-Nahtstelle (Modul 6)
+  const [rechnungModal, setRechnungModal] = useState(false);
 
   // KI-Assistent (A8+)
   const [kiText, setKiText] = useState("");
@@ -406,6 +410,22 @@ export default function AuftragDetail() {
     setPdfLaedt(false);
   }
 
+  // ---------- A9: Andock-Nahtstelle Modul 6 (Rechnung) ----------
+  function rechnungOeffnen() {
+    if (dirty) {
+      const weiter = window.confirm(
+        "Es gibt ungespeicherte Änderungen. Für eine korrekte Rechnung sollten die Positionen erst gespeichert werden. Trotzdem fortfahren?"
+      );
+      if (!weiter) return;
+    }
+    setRechnungModal(true);
+    // ANDOCK MODUL 6: Sobald das Modul "Rechnung" existiert, ruft diese Stelle
+    // /api/rechnung-aus-auftrag auf (übergibt auftrag.id) -> erzeugt die Rechnung,
+    // schreibt deren ID in auftraege.rechnung_id zurück und leitet dorthin weiter.
+    // Bis dahin nur ein ehrlicher Hinweis. Alle Daten (Positionen, Summen,
+    // Kontakt, Firma) liegen bereits im passenden Format vor -> 1:1 übernehmbar.
+  }
+
   // ---------- A8: Spracheingabe ----------
   function voiceToggle() {
     if (hoert) {
@@ -617,6 +637,39 @@ export default function AuftragDetail() {
             >
               {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Bestätigung als PDF"}
             </button>
+            {auftrag?.rechnung_id ? (
+              <span
+                style={{
+                  color: C.green,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: `1px solid ${C.green}55`,
+                  borderRadius: 10,
+                  padding: "10px 16px",
+                  alignSelf: "center",
+                }}
+                title="Für diesen Auftrag wurde bereits eine Rechnung erstellt."
+              >
+                ✓ Fakturiert
+              </span>
+            ) : (
+              <button
+                onClick={rechnungOeffnen}
+                style={{
+                  background: "transparent",
+                  color: C.gold,
+                  border: `1px solid ${C.gold}77`,
+                  borderRadius: 10,
+                  padding: "11px 18px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                🧾 Rechnung erstellen
+              </button>
+            )}
             <button
               onClick={speichernJetzt}
               disabled={speichern || !dirty}
@@ -1124,6 +1177,53 @@ export default function AuftragDetail() {
           }}
         >
           ⚠️ {fehler}
+        </div>
+      )}
+
+      {rechnungModal && (
+        <div
+          onClick={() => setRechnungModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(5,10,20,0.72)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: C.navy2,
+              border: `1px solid ${C.gold}44`,
+              borderRadius: 16,
+              padding: "28px 30px",
+              maxWidth: 470,
+              width: "100%",
+            }}
+          >
+            <div style={{ fontSize: 34, marginBottom: 10 }}>🧾</div>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.3px" }}>
+              Rechnung erstellen
+            </h2>
+            <p style={{ color: C.textDim, fontSize: 14, lineHeight: 1.6, margin: "0 0 12px" }}>
+              Die Fakturierung wird im nächsten Baustein{" "}
+              <strong style={{ color: "#fff" }}>Modul 6 „Rechnung"</strong> freigeschaltet.
+            </p>
+            <p style={{ color: C.textDim, fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
+              Dieser Auftrag ist bereits vollständig vorbereitet: Alle Positionen, Mengen,
+              Preise und Summen sowie Kontakt und Firma werden dann automatisch in die
+              Rechnung übernommen — du gibst nichts doppelt ein.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button onClick={() => setRechnungModal(false)} style={btnGold}>
+                Verstanden
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
