@@ -133,6 +133,26 @@ export default function CrmCockpitPage() {
 
   const [loeschId, setLoeschId] = useState<string | null>(null);
 
+  // C12: Visitenkarte
+  const [vkOffen, setVkOffen] = useState(false);
+  const [vkBase64, setVkBase64] = useState("");
+  const [vkMedia, setVkMedia] = useState("");
+  const [vkVorschau, setVkVorschau] = useState("");
+  const [vkLaden, setVkLaden] = useState(false);
+  const [vkFelder, setVkFelder] = useState<{
+    vorname: string;
+    nachname: string;
+    email: string;
+    telefon: string;
+    position: string;
+    firma: string;
+    website: string;
+  } | null>(null);
+  const [vkFehler, setVkFehler] = useState<string | null>(null);
+  const [vkSpeichert, setVkSpeichert] = useState(false);
+  const [vkDublette, setVkDublette] = useState<string | null>(null);
+  const [vkDubletteBestaetigt, setVkDubletteBestaetigt] = useState(false);
+
   async function laden_() {
     setLaden(true);
     setFehler(null);
@@ -329,6 +349,127 @@ export default function CrmCockpitPage() {
     laden_();
   }
 
+  // ---------------- C12: Visitenkarte ----------------
+  function vkOeffnen() {
+    setVkOffen(true);
+    setVkBase64("");
+    setVkMedia("");
+    setVkVorschau("");
+    setVkFelder(null);
+    setVkFehler(null);
+    setVkDublette(null);
+    setVkDubletteBestaetigt(false);
+  }
+
+  function vkDateiGewaehlt(datei: File | null) {
+    if (!datei) return;
+    setVkFehler(null);
+    setVkFelder(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      setVkVorschau(result);
+      const komma = result.indexOf(",");
+      const daten = komma !== -1 ? result.slice(komma + 1) : "";
+      const media =
+        (result.match(/^data:(.*?);base64,/) || [])[1] || datei.type || "image/jpeg";
+      setVkBase64(daten);
+      setVkMedia(media);
+    };
+    reader.onerror = () => setVkFehler("Bild konnte nicht gelesen werden.");
+    reader.readAsDataURL(datei);
+  }
+
+  async function vkAuslesen() {
+    if (!vkBase64) {
+      setVkFehler("Bitte zuerst ein Foto der Visitenkarte wählen.");
+      return;
+    }
+    setVkLaden(true);
+    setVkFehler(null);
+    setVkFelder(null);
+    try {
+      const res = await fetch("/api/crm-visitenkarte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media_type: vkMedia, base64: vkBase64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setVkFehler(data?.error || "Auslesen fehlgeschlagen.");
+      } else if (data.leer) {
+        setVkFehler(
+          "Keine Kontaktdaten erkennbar. Bitte ein schärferes Foto versuchen – oder Kontakt manuell anlegen."
+        );
+      } else {
+        setVkFelder(data.felder);
+        setVkDublette(null);
+        setVkDubletteBestaetigt(false);
+      }
+    } catch (e) {
+      setVkFehler("Netzwerkfehler. Bitte erneut versuchen.");
+    }
+    setVkLaden(false);
+  }
+
+  function vkFeld(k: string, v: string) {
+    setVkFelder((f) => (f ? { ...f, [k]: v } : f));
+    if (k === "email") {
+      setVkDublette(null);
+      setVkDubletteBestaetigt(false);
+    }
+  }
+
+  async function vkAnlegen() {
+    if (!vkFelder) return;
+    if (!vkFelder.vorname.trim() && !vkFelder.nachname.trim() && !vkFelder.firma.trim()) {
+      setVkFehler("Bitte mindestens Name oder Firma angeben.");
+      return;
+    }
+    setVkSpeichert(true);
+    setVkFehler(null);
+
+    if (vkFelder.email.trim() && !vkDubletteBestaetigt) {
+      const { data: treffer } = await supabase
+        .from("kontakte")
+        .select("id, vorname, nachname")
+        .ilike("email", vkFelder.email.trim());
+      if (treffer && treffer.length > 0) {
+        const t = treffer[0] as { vorname: string | null; nachname: string | null };
+        const nm = [t.vorname, t.nachname].filter(Boolean).join(" ") || "ein Kontakt";
+        setVkDublette(
+          `Diese E-Mail existiert bereits (${nm}). Trotzdem als neuen Kontakt anlegen?`
+        );
+        setVkSpeichert(false);
+        return;
+      }
+    }
+
+    const notiz = vkFelder.website.trim()
+      ? "Website: " + vkFelder.website.trim()
+      : null;
+
+    const { error } = await supabase.from("kontakte").insert({
+      vorname: vkFelder.vorname.trim() || null,
+      nachname: vkFelder.nachname.trim() || null,
+      email: vkFelder.email.trim() || null,
+      telefon: vkFelder.telefon.trim() || null,
+      position: vkFelder.position.trim() || null,
+      firma: vkFelder.firma.trim() || null,
+      status: "interessent",
+      quelle: "Visitenkarte",
+      betreuungs_intervall_tage: 30,
+      notizen: notiz,
+    });
+    setVkSpeichert(false);
+    if (error) {
+      setVkFehler(error.message);
+      return;
+    }
+    setVkOffen(false);
+    laden_();
+  }
+
   return (
     <div style={{ background: C.navy, minHeight: "100vh", padding: "32px 28px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -367,6 +508,22 @@ export default function CrmCockpitPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              onClick={vkOeffnen}
+              style={{
+                background: "transparent",
+                color: C.green,
+                border: `1px solid ${C.green}`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              📇 Visitenkarte
+            </button>
             <button
               onClick={() => router.push("/dashboard/crm/wochenfokus")}
               style={{
@@ -873,6 +1030,223 @@ export default function CrmCockpitPage() {
                 {speichert ? "Speichert…" : "Speichern"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* C12: Visitenkarte-Modal */}
+      {vkOffen && (
+        <div
+          style={overlay}
+          onClick={() => !vkSpeichert && !vkLaden && setVkOffen(false)}
+        >
+          <div style={modal} onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 18,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  color: C.green,
+                  fontSize: 22,
+                  margin: 0,
+                }}
+              >
+                📇 Visitenkarte auslesen
+              </h2>
+              <button
+                onClick={() => setVkOffen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: C.textDim,
+                  fontSize: 20,
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+              Foto wählen oder (am Handy) direkt aufnehmen – Claude liest die Kontaktdaten aus.
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => vkDateiGewaehlt(e.target.files ? e.target.files[0] : null)}
+              style={{
+                color: C.textDim,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13,
+                marginBottom: 12,
+                width: "100%",
+              }}
+            />
+
+            {vkVorschau && (
+              <img
+                src={vkVorschau}
+                alt="Visitenkarte"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: 200,
+                  borderRadius: 10,
+                  border: `1px solid ${C.border}`,
+                  marginBottom: 12,
+                  display: "block",
+                }}
+              />
+            )}
+
+            {!vkFelder && (
+              <button
+                onClick={vkAuslesen}
+                disabled={vkLaden || !vkBase64}
+                style={{
+                  background: C.green,
+                  color: C.navy,
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "11px 22px",
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  opacity: !vkBase64 ? 0.6 : 1,
+                }}
+              >
+                {vkLaden ? "Claude liest…" : "✨ Auslesen"}
+              </button>
+            )}
+
+            {vkFehler && (
+              <div
+                style={{
+                  background: "rgba(224,102,102,0.12)",
+                  border: `1px solid ${C.danger}`,
+                  color: C.danger,
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  marginTop: 12,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                }}
+              >
+                {vkFehler}
+              </div>
+            )}
+
+            {vkFelder && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ color: C.green, fontSize: 12, marginBottom: 12 }}>
+                  Erkannt – bitte prüfen &amp; anlegen
+                </div>
+                <div style={grid2}>
+                  <Feld label="Vorname">
+                    <input style={inp} value={vkFelder.vorname} onChange={(e) => vkFeld("vorname", e.target.value)} />
+                  </Feld>
+                  <Feld label="Nachname">
+                    <input style={inp} value={vkFelder.nachname} onChange={(e) => vkFeld("nachname", e.target.value)} />
+                  </Feld>
+                  <Feld label="E-Mail">
+                    <input style={inp} value={vkFelder.email} onChange={(e) => vkFeld("email", e.target.value)} />
+                  </Feld>
+                  <Feld label="Telefon">
+                    <input style={inp} value={vkFelder.telefon} onChange={(e) => vkFeld("telefon", e.target.value)} />
+                  </Feld>
+                  <Feld label="Firma">
+                    <input style={inp} value={vkFelder.firma} onChange={(e) => vkFeld("firma", e.target.value)} />
+                  </Feld>
+                  <Feld label="Position / Rolle">
+                    <input style={inp} value={vkFelder.position} onChange={(e) => vkFeld("position", e.target.value)} />
+                  </Feld>
+                  <Feld label="Website">
+                    <input style={inp} value={vkFelder.website} onChange={(e) => vkFeld("website", e.target.value)} />
+                  </Feld>
+                </div>
+
+                {vkDublette && (
+                  <div
+                    style={{
+                      background: "rgba(224,162,76,0.12)",
+                      border: `1px solid ${C.warn}`,
+                      color: C.warn,
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      margin: "8px 0",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                    }}
+                  >
+                    ⚠ {vkDublette}
+                    <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                      <button
+                        style={{ ...miniBtn, color: C.warn, borderColor: C.warn }}
+                        onClick={() => {
+                          setVkDubletteBestaetigt(true);
+                          setVkDublette(null);
+                          vkAnlegen();
+                        }}
+                      >
+                        Trotzdem anlegen
+                      </button>
+                      <button style={miniBtn} onClick={() => setVkDublette(null)}>
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                  <button
+                    onClick={vkAnlegen}
+                    disabled={vkSpeichert}
+                    style={{
+                      background: C.gold,
+                      color: C.navy,
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "11px 24px",
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      opacity: vkSpeichert ? 0.6 : 1,
+                    }}
+                  >
+                    {vkSpeichert ? "Legt an…" : "Kontakt anlegen"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setVkFelder(null);
+                      setVkVorschau("");
+                      setVkBase64("");
+                    }}
+                    style={{
+                      background: "transparent",
+                      color: C.textDim,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 10,
+                      padding: "11px 20px",
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Anderes Foto
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
