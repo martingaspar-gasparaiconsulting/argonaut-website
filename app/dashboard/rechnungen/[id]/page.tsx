@@ -134,6 +134,7 @@ export default function RechnungDetail() {
   const [dirty, setDirty] = useState(false);
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
+  const [pdfLaedt, setPdfLaedt] = useState(false);
 
   // Bezahlte Rechnungen sind schreibgeschützt (Storno+Neu ist der korrekte Weg)
   const gesperrt = status === "bezahlt" || status === "storniert";
@@ -344,6 +345,90 @@ export default function RechnungDetail() {
     setSpeichern(false);
   }
 
+  // ---------- PDF erzeugen (§14-konform, Gotenberg) ----------
+  async function pdfErstellen() {
+    if (pdfLaedt) return;
+    if (dirty) {
+      const weiter = window.confirm(
+        "Es gibt ungespeicherte Änderungen. Für ein korrektes PDF sollten die Daten erst gespeichert werden. Trotzdem fortfahren?"
+      );
+      if (!weiter) return;
+    }
+    setPdfLaedt(true);
+    setFehler(null);
+    try {
+      // Positionen im Format der Route (mit gesamt_netto)
+      const posDaten = zeilen.map((z) => ({
+        bezeichnung: z.bezeichnung,
+        menge: parseZahl(z.menge),
+        einheit: z.einheit,
+        einzelpreis: parseZahl(z.einzelpreis),
+        mwst_satz: kleinunternehmer ? 0 : parseZahl(z.mwst_satz),
+        gesamt_netto: zeileNetto(z),
+      }));
+
+      const rechnungDaten = {
+        rechnungsnummer: rechnung?.rechnungsnummer || "",
+        titel: titel,
+        rechnungsdatum,
+        leistungsdatum,
+        faelligkeitsdatum,
+        waehrung,
+        kleinunternehmer,
+        netto_summe: summen.netto,
+        mwst_summe: summen.mwst,
+        brutto_summe: summen.brutto,
+        notizen,
+      };
+
+      // Absenderdaten (§14) — Nahtstelle zu den Firmen-Einstellungen.
+      // Vorerst leer -> PDF zeigt Platzhalter, damit die Pflichtfelder sichtbar sind.
+      const aussteller = {
+        name: "",
+        anschrift: "",
+        steuernummer: "",
+        ust_idnr: "",
+        telefon: "",
+        email: "",
+        bank_iban: "",
+        bank_bic: "",
+        bank_name: "",
+      };
+
+      const res = await fetch("/api/rechnung-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rechnung: rechnungDaten,
+          positionen: posDaten,
+          kontaktName: kontakt ? kontaktName(kontakt) : "",
+          firmaName: firma ? firmaName(firma) : "",
+          aussteller,
+        }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setFehler(d?.error || "PDF konnte nicht erstellt werden.");
+        setPdfLaedt(false);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Rechnung_" + (rechnung?.rechnungsnummer || "Dokument") + ".pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setFehler("PDF-Fehler: " + (e?.message || "unbekannt"));
+    }
+    setPdfLaedt(false);
+  }
+
   // ---------- Status-Workflow ----------
   async function statusSetzen(neu: StatusKey) {
     setStatus(neu);
@@ -491,6 +576,24 @@ export default function RechnungDetail() {
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            onClick={pdfErstellen}
+            disabled={pdfLaedt}
+            style={{
+              background: "transparent",
+              color: C.gold,
+              border: `1px solid ${C.gold}77`,
+              borderRadius: 10,
+              padding: "11px 18px",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: pdfLaedt ? "wait" : "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              opacity: pdfLaedt ? 0.6 : 1,
+            }}
+          >
+            {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Rechnung als PDF"}
+          </button>
           <button
             onClick={speichernJetzt}
             disabled={speichern || !dirty}
