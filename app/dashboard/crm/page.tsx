@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2 Kontakt-Cockpit
+// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
+// C5: Tag-Chips pro Zeile + Tag-Filter
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -53,6 +54,12 @@ interface Kontakt {
   updated_at: string | null;
 }
 
+interface Tag {
+  id: string;
+  name: string;
+  farbe: string | null;
+}
+
 interface FormState {
   vorname: string;
   nachname: string;
@@ -81,8 +88,7 @@ const LEER_FORM: FormState = {
 
 function tageSeit(iso: string | null): number | null {
   if (!iso) return null;
-  const diff = Date.now() - new Date(iso).getTime();
-  return Math.floor(diff / 86400000);
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
 function ampel(k: Kontakt): { farbe: string; label: string } {
@@ -108,12 +114,15 @@ export default function CrmCockpitPage() {
   const router = useRouter();
 
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [tagMap, setTagMap] = useState<Record<string, string[]>>({}); // kontakt_id -> tag_ids
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
   const [quelleFilter, setQuelleFilter] = useState("alle");
+  const [tagFilter, setTagFilter] = useState("alle");
 
   const [dialogOffen, setDialogOffen] = useState(false);
   const [bearbeite, setBearbeite] = useState<Kontakt | null>(null);
@@ -127,6 +136,7 @@ export default function CrmCockpitPage() {
   async function laden_() {
     setLaden(true);
     setFehler(null);
+
     const { data, error } = await supabase
       .from("kontakte")
       .select("*")
@@ -134,15 +144,39 @@ export default function CrmCockpitPage() {
     if (error) {
       setFehler(error.message);
       setKontakte([]);
-    } else {
-      setKontakte((data as Kontakt[]) || []);
+      setLaden(false);
+      return;
     }
+    setKontakte((data as Kontakt[]) || []);
+
+    const { data: tagData } = await supabase
+      .from("kontakt_tags")
+      .select("*")
+      .order("name", { ascending: true });
+    setTags((tagData as Tag[]) || []);
+
+    const { data: zuord } = await supabase
+      .from("kontakt_tag_zuordnung")
+      .select("kontakt_id, tag_id");
+    const map: Record<string, string[]> = {};
+    ((zuord as { kontakt_id: string; tag_id: string }[]) || []).forEach((z) => {
+      if (!map[z.kontakt_id]) map[z.kontakt_id] = [];
+      map[z.kontakt_id].push(z.tag_id);
+    });
+    setTagMap(map);
+
     setLaden(false);
   }
 
   useEffect(() => {
     laden_();
   }, []);
+
+  const tagById = useMemo(() => {
+    const m: Record<string, Tag> = {};
+    tags.forEach((t) => (m[t.id] = t));
+    return m;
+  }, [tags]);
 
   const quellen = useMemo(() => {
     const s = new Set<string>();
@@ -159,21 +193,18 @@ export default function CrmCockpitPage() {
         return false;
       if (quelleFilter !== "alle" && (k.quelle || "") !== quelleFilter)
         return false;
+      if (tagFilter !== "alle") {
+        const ids = tagMap[k.id] || [];
+        if (!ids.includes(tagFilter)) return false;
+      }
       if (!q) return true;
-      const heu = [
-        k.vorname,
-        k.nachname,
-        k.email,
-        k.firma,
-        k.telefon,
-        k.position,
-      ]
+      const heu = [k.vorname, k.nachname, k.email, k.firma, k.telefon, k.position]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return heu.includes(q);
     });
-  }, [kontakte, suche, statusFilter, quelleFilter]);
+  }, [kontakte, suche, statusFilter, quelleFilter, tagFilter, tagMap]);
 
   const kpi = useMemo(() => {
     const gesamt = kontakte.length;
@@ -233,15 +264,18 @@ export default function CrmCockpitPage() {
     setSpeichert(true);
     setFehler(null);
 
-    // Dubletten-Check (nur beim Neuanlegen, nur wenn E-Mail vorhanden)
     if (!bearbeite && form.email.trim() && !dubletteBestaetigt) {
       const { data: treffer } = await supabase
         .from("kontakte")
         .select("id, vorname, nachname")
         .ilike("email", form.email.trim());
       if (treffer && treffer.length > 0) {
-        const t = treffer[0] as { vorname: string | null; nachname: string | null };
-        const name = [t.vorname, t.nachname].filter(Boolean).join(" ") || "ein Kontakt";
+        const t = treffer[0] as {
+          vorname: string | null;
+          nachname: string | null;
+        };
+        const name =
+          [t.vorname, t.nachname].filter(Boolean).join(" ") || "ein Kontakt";
         setDublette(
           `Diese E-Mail existiert bereits (${name}). Trotzdem als neuen Kontakt anlegen?`
         );
@@ -386,10 +420,7 @@ export default function CrmCockpitPage() {
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suche: Name, Firma, E-Mail, Telefon…"
-            style={{
-              ...inp,
-              flex: "1 1 260px",
-            }}
+            style={{ ...inp, flex: "1 1 240px" }}
           />
           <select
             value={statusFilter}
@@ -412,6 +443,18 @@ export default function CrmCockpitPage() {
             {quellen.map((q) => (
               <option key={q} value={q}>
                 {q}
+              </option>
+            ))}
+          </select>
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            style={{ ...inp, flex: "0 0 auto" }}
+          >
+            <option value="alle">Tag: alle</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
             ))}
           </select>
@@ -474,10 +517,14 @@ export default function CrmCockpitPage() {
                 <tbody>
                   {gefiltert.map((k) => {
                     const a = ampel(k);
+                    const kTagIds = tagMap[k.id] || [];
                     return (
                       <tr
                         key={k.id}
-                        style={{ borderTop: `1px solid ${C.border}`, cursor: "pointer" }}
+                        style={{
+                          borderTop: `1px solid ${C.border}`,
+                          cursor: "pointer",
+                        }}
                         onClick={() => router.push(`/dashboard/crm/${k.id}`)}
                       >
                         <td style={{ ...td, width: 40 }}>
@@ -495,22 +542,51 @@ export default function CrmCockpitPage() {
                         </td>
                         <td style={td}>
                           <div style={{ color: "#fff", fontWeight: 600 }}>
-                            {[k.vorname, k.nachname].filter(Boolean).join(" ") || "—"}
+                            {[k.vorname, k.nachname].filter(Boolean).join(" ") ||
+                              "—"}
                           </div>
                           {k.position && (
                             <div style={{ color: C.textDim, fontSize: 12 }}>
                               {k.position}
                             </div>
                           )}
+                          {kTagIds.length > 0 && (
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 5,
+                                flexWrap: "wrap",
+                                marginTop: 5,
+                              }}
+                            >
+                              {kTagIds.map((tid) => {
+                                const t = tagById[tid];
+                                if (!t) return null;
+                                return <TagChip key={tid} tag={t} klein />;
+                              })}
+                            </div>
+                          )}
                         </td>
-                        <td style={{ ...td, color: C.textDim }}>{k.firma || "—"}</td>
+                        <td style={{ ...td, color: C.textDim }}>
+                          {k.firma || "—"}
+                        </td>
                         <td style={td}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                            }}
+                          >
                             {k.email && (
                               <a
                                 href={`mailto:${k.email}`}
                                 onClick={(e) => e.stopPropagation()}
-                                style={{ color: C.cyan, textDecoration: "none", fontSize: 13 }}
+                                style={{
+                                  color: C.cyan,
+                                  textDecoration: "none",
+                                  fontSize: 13,
+                                }}
                               >
                                 {k.email}
                               </a>
@@ -519,7 +595,11 @@ export default function CrmCockpitPage() {
                               <a
                                 href={`tel:${k.telefon}`}
                                 onClick={(e) => e.stopPropagation()}
-                                style={{ color: C.cyan, textDecoration: "none", fontSize: 13 }}
+                                style={{
+                                  color: C.cyan,
+                                  textDecoration: "none",
+                                  fontSize: 13,
+                                }}
                               >
                                 {k.telefon}
                               </a>
@@ -552,7 +632,11 @@ export default function CrmCockpitPage() {
                                   e.stopPropagation();
                                   loeschen(k.id);
                                 }}
-                                style={{ ...miniBtn, color: C.danger, borderColor: C.danger }}
+                                style={{
+                                  ...miniBtn,
+                                  color: C.danger,
+                                  borderColor: C.danger,
+                                }}
                               >
                                 Wirklich?
                               </button>
@@ -658,6 +742,12 @@ export default function CrmCockpitPage() {
                 onChange={(e) => feld("notizen", e.target.value)}
               />
             </Feld>
+
+            {!bearbeite && (
+              <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>
+                Tags kannst du nach dem Anlegen auf der Kontakt-Detailseite vergeben.
+              </div>
+            )}
 
             {dublette && (
               <div
@@ -807,6 +897,25 @@ function StatusBadge({ status }: { status: string | null }) {
       }}
     >
       {status || "—"}
+    </span>
+  );
+}
+
+function TagChip({ tag, klein }: { tag: Tag; klein?: boolean }) {
+  const farbe = tag.farbe || C.gold;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: klein ? "1px 8px" : "3px 10px",
+        borderRadius: 20,
+        fontSize: klein ? 11 : 12,
+        fontWeight: 600,
+        color: farbe,
+        border: `1px solid ${farbe}`,
+      }}
+    >
+      {tag.name}
     </span>
   );
 }

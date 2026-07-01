@@ -5,10 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4 Kontakt-Detailseite
-// Reiter: Stammdaten / Timeline / Notizen
-// C4: Aktivitäten erfassen (Anruf/E-Mail/Termin/Notiz) + Wiedervorlage
-//     → setzt letzter_kontakt_am (Ampel) und naechster_kontakt_am (KPI)
+// ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4+C5 Kontakt-Detailseite
+// C5: Tags-Bereich (zuweisen/entfernen + neuen Tag anlegen)
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -54,6 +52,16 @@ const TYP_ICON: Record<string, string> = {
   voice: "🎙",
 };
 
+const TAG_FARBEN = [
+  "#C9A84C",
+  "#00e5ff",
+  "#4CAF7D",
+  "#E0A24C",
+  "#E06666",
+  "#5B8FF9",
+  "#A98CE0",
+];
+
 interface Kontakt {
   id: string;
   vorname: string | null;
@@ -78,6 +86,12 @@ interface Aktivitaet {
   inhalt: string | null;
   ki_generiert: boolean | null;
   aktivitaet_am: string | null;
+}
+
+interface Tag {
+  id: string;
+  name: string;
+  farbe: string | null;
 }
 
 interface FormState {
@@ -128,7 +142,6 @@ function datumZeit(iso: string | null): string {
   });
 }
 
-// datetime-local-Wert (YYYY-MM-DDTHH:mm) für "jetzt", lokale Zeitzone
 function jetztLokalInput(): string {
   const d = new Date();
   const off = d.getTimezoneOffset();
@@ -136,7 +149,6 @@ function jetztLokalInput(): string {
   return lokal.toISOString().slice(0, 16);
 }
 
-// date-Wert (YYYY-MM-DD) für heute, lokale Zeitzone
 function heuteDatumInput(): string {
   const d = new Date();
   const off = d.getTimezoneOffset();
@@ -178,6 +190,14 @@ export default function CrmDetailPage() {
   const [wvDatum, setWvDatum] = useState("");
   const [wvSpeichert, setWvSpeichert] = useState(false);
 
+  // C5: Tags
+  const [alleTags, setAlleTags] = useState<Tag[]>([]);
+  const [meineTagIds, setMeineTagIds] = useState<string[]>([]);
+  const [tagAddOffen, setTagAddOffen] = useState(false);
+  const [neuTagName, setNeuTagName] = useState("");
+  const [neuTagFarbe, setNeuTagFarbe] = useState(TAG_FARBEN[0]);
+  const [tagBusy, setTagBusy] = useState(false);
+
   async function laden_() {
     setLaden(true);
     setFehler(null);
@@ -207,6 +227,22 @@ export default function CrmDetailPage() {
       .eq("kontakt_id", id)
       .order("aktivitaet_am", { ascending: false });
     setAktivitaeten((akt as Aktivitaet[]) || []);
+
+    // Tags laden
+    const { data: tagData } = await supabase
+      .from("kontakt_tags")
+      .select("*")
+      .order("name", { ascending: true });
+    setAlleTags((tagData as Tag[]) || []);
+
+    const { data: zuord } = await supabase
+      .from("kontakt_tag_zuordnung")
+      .select("tag_id")
+      .eq("kontakt_id", id);
+    setMeineTagIds(
+      ((zuord as { tag_id: string }[]) || []).map((z) => z.tag_id)
+    );
+
     setLaden(false);
   }
 
@@ -226,6 +262,15 @@ export default function CrmDetailPage() {
     if (!kontakt?.naechster_kontakt_am) return false;
     return new Date(kontakt.naechster_kontakt_am).getTime() <= Date.now();
   }, [kontakt]);
+
+  const meineTags = useMemo(
+    () => alleTags.filter((t) => meineTagIds.includes(t.id)),
+    [alleTags, meineTagIds]
+  );
+  const verfuegbareTags = useMemo(
+    () => alleTags.filter((t) => !meineTagIds.includes(t.id)),
+    [alleTags, meineTagIds]
+  );
 
   // ---------------- Stammdaten ----------------
   function bearbeitenStart() {
@@ -297,7 +342,7 @@ export default function CrmDetailPage() {
     );
   }
 
-  // ---------------- C4: Aktivität erfassen ----------------
+  // ---------------- C4: Aktivität ----------------
   async function aktivitaetEintragen() {
     if (!kontakt) return;
     if (!aktInhalt.trim()) {
@@ -324,7 +369,6 @@ export default function CrmDetailPage() {
       return;
     }
 
-    // letzter_kontakt_am nur nach vorne setzen (nicht zurückdatieren)
     const bisher = kontakt.letzter_kontakt_am
       ? new Date(kontakt.letzter_kontakt_am).getTime()
       : 0;
@@ -386,9 +430,74 @@ export default function CrmDetailPage() {
       return;
     }
     setWvDatum("");
-    setKontakt((prev) =>
-      prev ? { ...prev, naechster_kontakt_am: null } : prev
+    setKontakt((prev) => (prev ? { ...prev, naechster_kontakt_am: null } : prev));
+  }
+
+  // ---------------- C5: Tags ----------------
+  async function tagZuweisen(tagId: string) {
+    if (!kontakt) return;
+    setTagBusy(true);
+    const { error } = await supabase.from("kontakt_tag_zuordnung").insert({
+      kontakt_id: kontakt.id,
+      tag_id: tagId,
+    });
+    setTagBusy(false);
+    if (error) {
+      setFehler(error.message);
+      return;
+    }
+    setMeineTagIds((prev) => [...prev, tagId]);
+    setTagAddOffen(false);
+  }
+
+  async function tagEntfernen(tagId: string) {
+    if (!kontakt) return;
+    setTagBusy(true);
+    const { error } = await supabase
+      .from("kontakt_tag_zuordnung")
+      .delete()
+      .eq("kontakt_id", kontakt.id)
+      .eq("tag_id", tagId);
+    setTagBusy(false);
+    if (error) {
+      setFehler(error.message);
+      return;
+    }
+    setMeineTagIds((prev) => prev.filter((x) => x !== tagId));
+  }
+
+  async function neuenTagAnlegen() {
+    if (!kontakt || !neuTagName.trim()) return;
+    setTagBusy(true);
+    setFehler(null);
+    const { data, error } = await supabase
+      .from("kontakt_tags")
+      .insert({ name: neuTagName.trim(), farbe: neuTagFarbe })
+      .select("id, name, farbe")
+      .single();
+    if (error || !data) {
+      setTagBusy(false);
+      setFehler(error ? error.message : "Tag konnte nicht angelegt werden.");
+      return;
+    }
+    const neuerTag = data as Tag;
+    setAlleTags((prev) =>
+      [...prev, neuerTag].sort((x, y) => x.name.localeCompare(y.name))
     );
+    // direkt zuweisen
+    const { error: e2 } = await supabase.from("kontakt_tag_zuordnung").insert({
+      kontakt_id: kontakt.id,
+      tag_id: neuerTag.id,
+    });
+    setTagBusy(false);
+    if (e2) {
+      setFehler(e2.message);
+      return;
+    }
+    setMeineTagIds((prev) => [...prev, neuerTag.id]);
+    setNeuTagName("");
+    setNeuTagFarbe(TAG_FARBEN[0]);
+    setTagAddOffen(false);
   }
 
   // ---------------- Render ----------------
@@ -483,7 +592,6 @@ export default function CrmDetailPage() {
                   <span style={{ color: a.farbe, marginLeft: 10 }}>· {a.label}</span>
                 )}
               </div>
-              {/* Wiedervorlage-Hinweis im Kopf */}
               {kontakt.naechster_kontakt_am && (
                 <div
                   style={{
@@ -500,7 +608,6 @@ export default function CrmDetailPage() {
               )}
             </div>
 
-            {/* Aktions-Buttons */}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {kontakt.telefon && (
                 <a href={`tel:${kontakt.telefon}`} style={aktionBtn(C.green)}>
@@ -513,6 +620,174 @@ export default function CrmDetailPage() {
                 </a>
               )}
             </div>
+          </div>
+
+          {/* C5: Tags */}
+          <div
+            style={{
+              marginTop: 18,
+              marginLeft: 26,
+              paddingTop: 16,
+              borderTop: `1px solid ${C.border}`,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  color: C.textDim,
+                  fontSize: 13,
+                }}
+              >
+                🏷 Tags:
+              </span>
+              {meineTags.length === 0 && (
+                <span style={{ color: C.textDim, fontSize: 13 }}>keine</span>
+              )}
+              {meineTags.map((t) => (
+                <span
+                  key={t.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "3px 8px 3px 10px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: t.farbe || C.gold,
+                    border: `1px solid ${t.farbe || C.gold}`,
+                  }}
+                >
+                  {t.name}
+                  <button
+                    onClick={() => tagEntfernen(t.id)}
+                    disabled={tagBusy}
+                    title="Entfernen"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: t.farbe || C.gold,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      lineHeight: 1,
+                      padding: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => setTagAddOffen((v) => !v)}
+                style={{
+                  background: "transparent",
+                  border: `1px dashed ${C.border}`,
+                  borderRadius: 20,
+                  padding: "3px 12px",
+                  color: C.textDim,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                + Tag
+              </button>
+            </div>
+
+            {tagAddOffen && (
+              <div
+                style={{
+                  marginTop: 12,
+                  background: C.navy,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                }}
+              >
+                {verfuegbareTags.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 8 }}>
+                      Vorhandene Tags
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {verfuegbareTags.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => tagZuweisen(t.id)}
+                          disabled={tagBusy}
+                          style={{
+                            background: "transparent",
+                            border: `1px solid ${t.farbe || C.gold}`,
+                            borderRadius: 20,
+                            padding: "3px 12px",
+                            color: t.farbe || C.gold,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ color: C.textDim, fontSize: 12, marginBottom: 8 }}>
+                  Neuen Tag anlegen
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    value={neuTagName}
+                    onChange={(e) => setNeuTagName(e.target.value)}
+                    placeholder="z. B. Stammkunde"
+                    style={{ ...inp, width: "auto", flex: "1 1 160px" }}
+                  />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {TAG_FARBEN.map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setNeuTagFarbe(f)}
+                        title={f}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          background: f,
+                          border:
+                            neuTagFarbe === f
+                              ? "2px solid #fff"
+                              : "2px solid transparent",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={neuenTagAnlegen}
+                    disabled={tagBusy || !neuTagName.trim()}
+                    style={{ ...goldBtn, opacity: !neuTagName.trim() ? 0.6 : 1 }}
+                  >
+                    Anlegen
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -667,7 +942,6 @@ export default function CrmDetailPage() {
           {/* --- TIMELINE (C4) --- */}
           {reiter === "timeline" && (
             <div>
-              {/* Erfassen-Box */}
               <div
                 style={{
                   background: C.navy,
@@ -746,7 +1020,6 @@ export default function CrmDetailPage() {
                 </div>
               </div>
 
-              {/* Wiedervorlage */}
               <div
                 style={{
                   background: "rgba(224,162,76,0.06)",
@@ -795,7 +1068,6 @@ export default function CrmDetailPage() {
                 )}
               </div>
 
-              {/* Historie */}
               <div
                 style={{
                   fontFamily: "Syne, sans-serif",
