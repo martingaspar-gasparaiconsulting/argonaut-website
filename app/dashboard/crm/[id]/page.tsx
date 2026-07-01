@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -107,6 +107,13 @@ interface Briefing {
   offene_punkte: string[];
   naechste_schritte: string[];
   gespraechseinstieg: string;
+}
+
+interface VoiceErgebnis {
+  typ: string;
+  notiz: string;
+  wiedervorlage_datum: string | null;
+  wiedervorlage_grund: string | null;
 }
 
 interface FormState {
@@ -225,6 +232,17 @@ export default function CrmDetailPage() {
   const [briefingFehler, setBriefingFehler] = useState<string | null>(null);
   const [briefingSpeichert, setBriefingSpeichert] = useState(false);
   const [briefingGespeichert, setBriefingGespeichert] = useState(false);
+
+  // C9: Voice-Memo
+  const [voiceOffen, setVoiceOffen] = useState(false);
+  const [aufnahme, setAufnahme] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [voiceLaden, setVoiceLaden] = useState(false);
+  const [voiceErgebnis, setVoiceErgebnis] = useState<VoiceErgebnis | null>(null);
+  const [voiceWvUebernehmen, setVoiceWvUebernehmen] = useState(false);
+  const [voiceFehler, setVoiceFehler] = useState<string | null>(null);
+  const [voiceSpeichert, setVoiceSpeichert] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   async function laden_() {
     setLaden(true);
@@ -590,6 +608,123 @@ export default function CrmDetailPage() {
       return;
     }
     setBriefingGespeichert(true);
+    laden_();
+  }
+
+  // ---------------- C9: Voice-Memo ----------------
+  function startAufnahme() {
+    const SR =
+      (typeof window !== "undefined" &&
+        ((window as any).webkitSpeechRecognition ||
+          (window as any).SpeechRecognition)) ||
+      null;
+    if (!SR) {
+      setVoiceFehler(
+        "Spracherkennung wird von diesem Browser nicht unterstützt (am besten Chrome). Du kannst den Text unten auch eintippen."
+      );
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "de-DE";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e: any) => {
+      let text = "";
+      for (let i = 0; i < e.results.length; i++) {
+        text += e.results[i][0].transcript;
+      }
+      setTranscript(text);
+    };
+    rec.onerror = (e: any) => {
+      setVoiceFehler("Aufnahmefehler: " + (e?.error || "unbekannt"));
+      setAufnahme(false);
+    };
+    rec.onend = () => setAufnahme(false);
+    recognitionRef.current = rec;
+    setVoiceFehler(null);
+    setAufnahme(true);
+    try {
+      rec.start();
+    } catch (e) {
+      setAufnahme(false);
+    }
+  }
+
+  function stopAufnahme() {
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {
+      /* ignore */
+    }
+    setAufnahme(false);
+  }
+
+  async function voiceAufbereiten() {
+    if (!transcript.trim()) {
+      setVoiceFehler("Bitte zuerst etwas aufnehmen oder eintippen.");
+      return;
+    }
+    setVoiceLaden(true);
+    setVoiceFehler(null);
+    setVoiceErgebnis(null);
+    try {
+      const res = await fetch("/api/crm-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roh: transcript.trim(), heute: heuteDatumInput() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setVoiceFehler(data?.error || "Aufbereitung fehlgeschlagen.");
+      } else {
+        const erg = data.ergebnis as VoiceErgebnis;
+        setVoiceErgebnis(erg);
+        setVoiceWvUebernehmen(!!erg?.wiedervorlage_datum);
+      }
+    } catch (e) {
+      setVoiceFehler("Netzwerkfehler. Bitte erneut versuchen.");
+    }
+    setVoiceLaden(false);
+  }
+
+  async function voiceUebernehmen() {
+    if (!kontakt || !voiceErgebnis) return;
+    setVoiceSpeichert(true);
+    setVoiceFehler(null);
+    const wannIso = new Date().toISOString();
+
+    const { error: e1 } = await supabase.from("kontakt_aktivitaeten").insert({
+      kontakt_id: kontakt.id,
+      typ: voiceErgebnis.typ || "notiz",
+      inhalt: voiceErgebnis.notiz,
+      ki_generiert: true,
+      aktivitaet_am: wannIso,
+    });
+    if (e1) {
+      setVoiceSpeichert(false);
+      setVoiceFehler(e1.message);
+      return;
+    }
+
+    await supabase
+      .from("kontakte")
+      .update({ letzter_kontakt_am: wannIso })
+      .eq("id", kontakt.id);
+
+    if (voiceWvUebernehmen && voiceErgebnis.wiedervorlage_datum) {
+      const iso = new Date(
+        voiceErgebnis.wiedervorlage_datum + "T09:00:00"
+      ).toISOString();
+      await supabase
+        .from("kontakte")
+        .update({ naechster_kontakt_am: iso })
+        .eq("id", kontakt.id);
+    }
+
+    setVoiceSpeichert(false);
+    setTranscript("");
+    setVoiceErgebnis(null);
+    setVoiceOffen(false);
     laden_();
   }
 
@@ -1263,6 +1398,221 @@ export default function CrmDetailPage() {
           {/* --- TIMELINE (C4) --- */}
           {reiter === "timeline" && (
             <div>
+              {/* C9: Voice-Memo */}
+              <div
+                style={{
+                  background: "rgba(0,229,255,0.05)",
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "16px 18px",
+                  marginBottom: 22,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "Syne, sans-serif",
+                      color: C.cyan,
+                      fontSize: 15,
+                    }}
+                  >
+                    🎙 Voice-Memo → KI-Notiz
+                  </div>
+                  {!voiceOffen && (
+                    <button
+                      onClick={() => setVoiceOffen(true)}
+                      style={{
+                        background: "transparent",
+                        color: C.cyan,
+                        border: `1px solid ${C.cyan}`,
+                        borderRadius: 10,
+                        padding: "8px 16px",
+                        fontFamily: "Syne, sans-serif",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Öffnen
+                    </button>
+                  )}
+                </div>
+
+                {voiceOffen && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+                      Nach dem Telefonat einfach reinsprechen – Claude macht eine saubere Notiz daraus und erkennt die Wiedervorlage.
+                    </div>
+
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+                      {!aufnahme ? (
+                        <button
+                          onClick={startAufnahme}
+                          style={{
+                            background: C.cyan,
+                            color: C.navy,
+                            border: "none",
+                            borderRadius: 10,
+                            padding: "10px 18px",
+                            fontFamily: "Syne, sans-serif",
+                            fontWeight: 700,
+                            fontSize: 14,
+                            cursor: "pointer",
+                          }}
+                        >
+                          🎙 Aufnahme starten
+                        </button>
+                      ) : (
+                        <button
+                          onClick={stopAufnahme}
+                          style={{
+                            background: C.danger,
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 10,
+                            padding: "10px 18px",
+                            fontFamily: "Syne, sans-serif",
+                            fontWeight: 700,
+                            fontSize: 14,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⏹ Aufnahme stoppen
+                        </button>
+                      )}
+                      {aufnahme && (
+                        <span style={{ color: C.danger, fontSize: 13, alignSelf: "center" }}>
+                          ● läuft…
+                        </span>
+                      )}
+                    </div>
+
+                    <textarea
+                      style={{ ...inp, minHeight: 80, resize: "vertical", marginBottom: 10 }}
+                      value={transcript}
+                      onChange={(e) => setTranscript(e.target.value)}
+                      placeholder="Gesprochener Text erscheint hier – oder direkt eintippen…"
+                    />
+
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <button
+                        onClick={voiceAufbereiten}
+                        disabled={voiceLaden || !transcript.trim()}
+                        style={{ ...goldBtn, opacity: !transcript.trim() ? 0.6 : 1 }}
+                      >
+                        {voiceLaden ? "Claude arbeitet…" : "✨ KI aufbereiten"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVoiceOffen(false);
+                          setTranscript("");
+                          setVoiceErgebnis(null);
+                          setVoiceFehler(null);
+                        }}
+                        style={grauBtn}
+                      >
+                        Schließen
+                      </button>
+                    </div>
+
+                    {voiceFehler && <div style={fehlerBox}>{voiceFehler}</div>}
+
+                    {voiceErgebnis && (
+                      <div
+                        style={{
+                          marginTop: 16,
+                          background: C.navy,
+                          border: `1px solid ${C.cyan}`,
+                          borderRadius: 12,
+                          padding: "16px 18px",
+                        }}
+                      >
+                        <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>
+                          Vorschlag von Claude – bitte prüfen &amp; übernehmen
+                        </div>
+
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                          <div style={{ flex: "0 0 auto" }}>
+                            <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                              Typ
+                            </label>
+                            <select
+                              style={{ ...inp, width: "auto" }}
+                              value={voiceErgebnis.typ}
+                              onChange={(e) =>
+                                setVoiceErgebnis((v) =>
+                                  v ? { ...v, typ: e.target.value } : v
+                                )
+                              }
+                            >
+                              <option value="anruf">Anruf</option>
+                              <option value="email">E-Mail</option>
+                              <option value="termin">Termin</option>
+                              <option value="notiz">Notiz</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                          Notiz
+                        </label>
+                        <textarea
+                          style={{ ...inp, minHeight: 70, resize: "vertical", marginBottom: 12 }}
+                          value={voiceErgebnis.notiz}
+                          onChange={(e) =>
+                            setVoiceErgebnis((v) =>
+                              v ? { ...v, notiz: e.target.value } : v
+                            )
+                          }
+                        />
+
+                        {voiceErgebnis.wiedervorlage_datum && (
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              color: C.warn,
+                              fontSize: 14,
+                              marginBottom: 14,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={voiceWvUebernehmen}
+                              onChange={(e) => setVoiceWvUebernehmen(e.target.checked)}
+                            />
+                            🔔 Wiedervorlage am{" "}
+                            {datumLang(voiceErgebnis.wiedervorlage_datum)}
+                            {voiceErgebnis.wiedervorlage_grund
+                              ? ` (${voiceErgebnis.wiedervorlage_grund})`
+                              : ""}{" "}
+                            setzen
+                          </label>
+                        )}
+
+                        <button
+                          onClick={voiceUebernehmen}
+                          disabled={voiceSpeichert}
+                          style={{ ...goldBtn, opacity: voiceSpeichert ? 0.6 : 1 }}
+                        >
+                          {voiceSpeichert ? "Übernimmt…" : "In Timeline übernehmen"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div
                 style={{
                   background: C.navy,
