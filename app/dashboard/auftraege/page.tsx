@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Block A2: Auftrags-Cockpit
+// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5
+// Auftrags-Cockpit MIT "Aus Verkaufschance"-Erzeugung
 // Route: /dashboard/auftraege
 // ============================================================
 
@@ -28,7 +29,7 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-// ---------- Status-Definitionen (Ampel) ----------
+// ---------- Auftrags-Status (Ampel) ----------
 type StatusKey =
   | "entwurf"
   | "beauftragt"
@@ -36,16 +37,14 @@ type StatusKey =
   | "abgeschlossen"
   | "storniert";
 
-const STATUS: Record<
-  StatusKey,
-  { label: string; farbe: string; icon: string }
-> = {
-  entwurf: { label: "Entwurf", farbe: C.gold, icon: "📝" },
-  beauftragt: { label: "Beauftragt", farbe: C.cyan, icon: "📩" },
-  in_bearbeitung: { label: "In Bearbeitung", farbe: C.green, icon: "🔧" },
-  abgeschlossen: { label: "Abgeschlossen", farbe: C.green, icon: "✅" },
-  storniert: { label: "Storniert", farbe: C.textDim, icon: "⚪" },
-};
+const STATUS: Record<StatusKey, { label: string; farbe: string; icon: string }> =
+  {
+    entwurf: { label: "Entwurf", farbe: C.gold, icon: "📝" },
+    beauftragt: { label: "Beauftragt", farbe: C.cyan, icon: "📩" },
+    in_bearbeitung: { label: "In Bearbeitung", farbe: C.green, icon: "🔧" },
+    abgeschlossen: { label: "Abgeschlossen", farbe: C.green, icon: "✅" },
+    storniert: { label: "Storniert", farbe: C.textDim, icon: "⚪" },
+  };
 
 const STATUS_REIHENFOLGE: StatusKey[] = [
   "entwurf",
@@ -55,7 +54,25 @@ const STATUS_REIHENFOLGE: StatusKey[] = [
   "storniert",
 ];
 
-// ---------- Typ eines Auftrags (locker, data = any aus Supabase) ----------
+// ---------- Verkaufschancen-Phasen (nur Anzeige im Modal) ----------
+const PHASE: Record<string, { label: string; farbe: string }> = {
+  erstkontakt: { label: "Erstkontakt", farbe: C.textDim },
+  qualifiziert: { label: "Qualifiziert", farbe: C.cyan },
+  angebot: { label: "Angebot", farbe: C.warn },
+  verhandlung: { label: "Verhandlung", farbe: C.lila },
+  gewonnen: { label: "Gewonnen", farbe: C.green },
+  verloren: { label: "Verloren", farbe: C.danger },
+};
+// Rang für Sortierung (gewonnen zuerst)
+const PHASE_RANG: Record<string, number> = {
+  gewonnen: 0,
+  verhandlung: 1,
+  angebot: 2,
+  qualifiziert: 3,
+  erstkontakt: 4,
+  verloren: 9,
+};
+
 type Auftrag = {
   id: string;
   auftragsnummer: string | null;
@@ -68,13 +85,25 @@ type Auftrag = {
   created_at: string;
 };
 
-// ---------- Geld formatieren ----------
+type Chance = {
+  id: string;
+  titel: string;
+  wert: number | null;
+  waehrung: string | null;
+  kontakt_id: string | null;
+  firma_id: string | null;
+  phase: string;
+};
+
 function geld(n: number | null | undefined, waehrung = "EUR"): string {
   const wert = typeof n === "number" ? n : 0;
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: waehrung || "EUR",
   }).format(wert);
+}
+function r2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 export default function AuftraegeCockpit() {
@@ -96,7 +125,13 @@ export default function AuftraegeCockpit() {
   );
   const [speichern, setSpeichern] = useState(false);
 
-  // ---------- Laden ----------
+  // Modal "Aus Verkaufschance"
+  const [chanceModalOffen, setChanceModalOffen] = useState(false);
+  const [chancen, setChancen] = useState<Chance[]>([]);
+  const [chancenLoading, setChancenLoading] = useState(false);
+  const [erstelltVon, setErstelltVon] = useState<string | null>(null);
+
+  // ---------- Aufträge laden ----------
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -154,11 +189,7 @@ export default function AuftraegeCockpit() {
     setSpeichern(true);
     const { data, error } = await supabase
       .from("auftraege")
-      .insert({
-        titel,
-        status: neuStatus,
-        auftragsdatum: neuDatum || null,
-      })
+      .insert({ titel, status: neuStatus, auftragsdatum: neuDatum || null })
       .select("id")
       .single();
     setSpeichern(false);
@@ -167,7 +198,6 @@ export default function AuftraegeCockpit() {
       setFehler(error.message);
       return;
     }
-    // direkt weiter — Positionen kommen auf der Detailseite (A4)
     setModalOffen(false);
     setNeuTitel("");
     setNeuStatus("entwurf");
@@ -192,6 +222,106 @@ export default function AuftraegeCockpit() {
       return;
     }
     setAuftraege((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  // ---------- Verkaufschancen laden (nur ohne Auftrag, nicht verloren) ----------
+  async function chancenModalOeffnen() {
+    setChanceModalOffen(true);
+    setChancenLoading(true);
+    setFehler(null);
+    const { data, error } = await supabase
+      .from("verkaufschancen")
+      .select("id, titel, wert, waehrung, kontakt_id, firma_id, phase")
+      .is("auftrag_id", null)
+      .neq("phase", "verloren");
+
+    if (error) {
+      setFehler(error.message);
+      setChancen([]);
+    } else {
+      const liste = ((data as any) || []) as Chance[];
+      liste.sort((a, b) => {
+        const ra = PHASE_RANG[a.phase] ?? 5;
+        const rb = PHASE_RANG[b.phase] ?? 5;
+        if (ra !== rb) return ra - rb;
+        return (Number(b.wert) || 0) - (Number(a.wert) || 0);
+      });
+      setChancen(liste);
+    }
+    setChancenLoading(false);
+  }
+
+  // ---------- Auftrag aus Verkaufschance erzeugen ----------
+  async function ausChanceErstellen(ch: Chance) {
+    setErstelltVon(ch.id);
+    setFehler(null);
+
+    const waehrung = ch.waehrung || "EUR";
+    const gewonnen = ch.phase === "gewonnen";
+    const wert = Number(ch.wert) || 0;
+
+    // 1) Auftrag anlegen
+    const { data: aData, error: aErr } = await supabase
+      .from("auftraege")
+      .insert({
+        titel: ch.titel || "Auftrag aus Verkaufschance",
+        status: gewonnen ? "beauftragt" : "entwurf",
+        kontakt_id: ch.kontakt_id || null,
+        firma_id: ch.firma_id || null,
+        verkaufschance_id: ch.id,
+        waehrung,
+      })
+      .select("id")
+      .single();
+
+    if (aErr || !aData) {
+      setErstelltVon(null);
+      setFehler("Auftrag anlegen: " + (aErr?.message || "unbekannt"));
+      return;
+    }
+    const auftragId = (aData as any).id as string;
+
+    // 2) Wert als erste Position übernehmen (Vorschlag)
+    let netto = 0;
+    let mwst = 0;
+    if (wert > 0) {
+      const mwstSatz = 19;
+      netto = r2(wert);
+      mwst = r2(wert * (mwstSatz / 100));
+      const { error: pErr } = await supabase.from("auftrag_positionen").insert({
+        auftrag_id: auftragId,
+        position: 1,
+        bezeichnung: ch.titel || "Leistung aus Verkaufschance",
+        menge: 1,
+        einheit: "Psch",
+        einzelpreis: netto,
+        mwst_satz: mwstSatz,
+        gesamt_netto: netto,
+      });
+      if (pErr) {
+        // Auftrag existiert schon — Position optional, wir warnen nur
+        setFehler("Hinweis: Position konnte nicht übernommen werden: " + pErr.message);
+      }
+    }
+
+    // 3) Summen am Auftrag festschreiben
+    await supabase
+      .from("auftraege")
+      .update({
+        netto_summe: netto,
+        mwst_summe: mwst,
+        brutto_summe: r2(netto + mwst),
+      })
+      .eq("id", auftragId);
+
+    // 4) Chance mit Auftrag verknüpfen (verbraucht)
+    await supabase
+      .from("verkaufschancen")
+      .update({ auftrag_id: auftragId })
+      .eq("id", ch.id);
+
+    // 5) zur Detailseite springen
+    router.push(`/dashboard/auftraege/${auftragId}`);
   }
 
   // ============================================================
@@ -236,22 +366,40 @@ export default function AuftraegeCockpit() {
               Abschluss.
             </p>
           </div>
-          <button
-            onClick={() => setModalOffen(true)}
-            style={{
-              background: C.gold,
-              color: C.navy,
-              border: "none",
-              borderRadius: 10,
-              padding: "12px 20px",
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            + Neuer Auftrag
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              onClick={chancenModalOeffnen}
+              style={{
+                background: "transparent",
+                color: C.cyan,
+                border: `1px solid ${C.cyan}77`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              📥 Aus Verkaufschance
+            </button>
+            <button
+              onClick={() => setModalOffen(true)}
+              style={{
+                background: C.gold,
+                color: C.navy,
+                border: "none",
+                borderRadius: 10,
+                padding: "12px 20px",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              + Neuer Auftrag
+            </button>
+          </div>
         </div>
 
         {/* KPI-Strip */}
@@ -263,30 +411,10 @@ export default function AuftraegeCockpit() {
             marginBottom: 28,
           }}
         >
-          <KpiKarte
-            label="Offen"
-            wert={String(kpi.offen)}
-            hint="Entwurf + Beauftragt"
-            farbe={C.cyan}
-          />
-          <KpiKarte
-            label="In Bearbeitung"
-            wert={String(kpi.inArbeit)}
-            hint="laufende Aufträge"
-            farbe={C.green}
-          />
-          <KpiKarte
-            label="Abgeschlossen"
-            wert={String(kpi.fertig)}
-            hint="fertige Aufträge"
-            farbe={C.gold}
-          />
-          <KpiKarte
-            label="Auftragswert"
-            wert={geld(kpi.summeNetto)}
-            hint="netto, ohne stornierte"
-            farbe={C.lila}
-          />
+          <KpiKarte label="Offen" wert={String(kpi.offen)} hint="Entwurf + Beauftragt" farbe={C.cyan} />
+          <KpiKarte label="In Bearbeitung" wert={String(kpi.inArbeit)} hint="laufende Aufträge" farbe={C.green} />
+          <KpiKarte label="Abgeschlossen" wert={String(kpi.fertig)} hint="fertige Aufträge" farbe={C.gold} />
+          <KpiKarte label="Auftragswert" wert={geld(kpi.summeNetto)} hint="netto, ohne stornierte" farbe={C.lila} />
         </div>
 
         {/* Such- & Filterleiste */}
@@ -316,20 +444,9 @@ export default function AuftraegeCockpit() {
             }}
           />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <FilterChip
-              aktiv={statusFilter === "alle"}
-              onClick={() => setStatusFilter("alle")}
-              label="Alle"
-              farbe={C.textDim}
-            />
+            <FilterChip aktiv={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" farbe={C.textDim} />
             {STATUS_REIHENFOLGE.map((s) => (
-              <FilterChip
-                key={s}
-                aktiv={statusFilter === s}
-                onClick={() => setStatusFilter(s)}
-                label={STATUS[s].label}
-                farbe={STATUS[s].farbe}
-              />
+              <FilterChip key={s} aktiv={statusFilter === s} onClick={() => setStatusFilter(s)} label={STATUS[s].label} farbe={STATUS[s].farbe} />
             ))}
           </div>
         </div>
@@ -360,7 +477,6 @@ export default function AuftraegeCockpit() {
             overflow: "hidden",
           }}
         >
-          {/* Tabellenkopf */}
           <div
             style={{
               display: "grid",
@@ -397,14 +513,11 @@ export default function AuftraegeCockpit() {
             </div>
           ) : (
             gefiltert.map((a) => {
-              const s = (STATUS[a.status as StatusKey] ||
-                STATUS.entwurf) as (typeof STATUS)[StatusKey];
+              const s = (STATUS[a.status as StatusKey] || STATUS.entwurf) as (typeof STATUS)[StatusKey];
               return (
                 <div
                   key={a.id}
-                  onClick={() =>
-                    router.push(`/dashboard/auftraege/${a.id}`)
-                  }
+                  onClick={() => router.push(`/dashboard/auftraege/${a.id}`)}
                   style={{
                     display: "grid",
                     gridTemplateColumns: "140px 1fr 160px 150px 44px",
@@ -415,26 +528,13 @@ export default function AuftraegeCockpit() {
                     cursor: "pointer",
                     transition: "background 0.15s",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background =
-                      "rgba(255,255,255,0.03)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <div
-                    style={{
-                      color: C.textDim,
-                      fontSize: 13,
-                      fontFamily: "monospace",
-                    }}
-                  >
+                  <div style={{ color: C.textDim, fontSize: 13, fontFamily: "monospace" }}>
                     {a.auftragsnummer || "—"}
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>
-                    {a.titel}
-                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{a.titel}</div>
                   <div>
                     <span
                       style={{
@@ -453,13 +553,7 @@ export default function AuftraegeCockpit() {
                       {s.icon} {s.label}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      textAlign: "right",
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
+                  <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600 }}>
                     {geld(a.netto_summe, a.waehrung || "EUR")}
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -477,12 +571,8 @@ export default function AuftraegeCockpit() {
                         fontSize: 16,
                         padding: 4,
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = C.danger)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.color = C.textDim)
-                      }
+                      onMouseEnter={(e) => (e.currentTarget.style.color = C.danger)}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = C.textDim)}
                     >
                       🗑
                     </button>
@@ -493,14 +583,7 @@ export default function AuftraegeCockpit() {
           )}
         </div>
 
-        <p
-          style={{
-            color: C.textDim,
-            fontSize: 12.5,
-            marginTop: 14,
-            textAlign: "center",
-          }}
-        >
+        <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 14, textAlign: "center" }}>
           {gefiltert.length} von {auftraege.length} Aufträgen
         </p>
       </div>
@@ -531,19 +614,11 @@ export default function AuftraegeCockpit() {
               maxWidth: 460,
             }}
           >
-            <h2
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 20,
-                fontWeight: 700,
-                margin: "0 0 4px",
-              }}
-            >
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
               Neuer Auftrag
             </h2>
             <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
-              Kopf-Daten anlegen — Positionen fügst du danach auf der
-              Detailseite hinzu.
+              Kopf-Daten anlegen — Positionen fügst du danach auf der Detailseite hinzu.
             </p>
 
             <label style={labelStyle}>Titel *</label>
@@ -559,11 +634,7 @@ export default function AuftraegeCockpit() {
             />
 
             <label style={labelStyle}>Status</label>
-            <select
-              value={neuStatus}
-              onChange={(e) => setNeuStatus(e.target.value as StatusKey)}
-              style={inputStyle}
-            >
+            <select value={neuStatus} onChange={(e) => setNeuStatus(e.target.value as StatusKey)} style={inputStyle}>
               {STATUS_REIHENFOLGE.map((s) => (
                 <option key={s} value={s} style={{ background: C.navy2 }}>
                   {STATUS[s].label}
@@ -572,21 +643,9 @@ export default function AuftraegeCockpit() {
             </select>
 
             <label style={labelStyle}>Auftragsdatum</label>
-            <input
-              type="date"
-              value={neuDatum}
-              onChange={(e) => setNeuDatum(e.target.value)}
-              style={inputStyle}
-            />
+            <input type="date" value={neuDatum} onChange={(e) => setNeuDatum(e.target.value)} style={inputStyle} />
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                justifyContent: "flex-end",
-                marginTop: 24,
-              }}
-            >
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 24 }}>
               <button
                 onClick={() => setModalOffen(false)}
                 style={{
@@ -607,21 +666,138 @@ export default function AuftraegeCockpit() {
                 onClick={anlegen}
                 disabled={!neuTitel.trim() || speichern}
                 style={{
-                  background:
-                    !neuTitel.trim() || speichern ? C.border : C.gold,
-                  color:
-                    !neuTitel.trim() || speichern ? C.textDim : C.navy,
+                  background: !neuTitel.trim() || speichern ? C.border : C.gold,
+                  color: !neuTitel.trim() || speichern ? C.textDim : C.navy,
                   border: "none",
                   borderRadius: 10,
                   padding: "11px 20px",
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor:
-                    !neuTitel.trim() || speichern ? "not-allowed" : "pointer",
+                  cursor: !neuTitel.trim() || speichern ? "not-allowed" : "pointer",
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
                 {speichern ? "Speichert…" : "Anlegen & öffnen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Modal: Aus Verkaufschance ---------- */}
+      {chanceModalOffen && (
+        <div
+          onClick={() => (erstelltVon ? null : setChanceModalOffen(false))}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: C.navy2,
+              border: `1px solid ${C.border}`,
+              borderRadius: 16,
+              padding: 28,
+              width: "100%",
+              maxWidth: 560,
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
+              Auftrag aus Verkaufschance
+            </h2>
+            <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
+              Wähle eine Chance — Titel, Kontakt, Firma & Wert werden übernommen. Gewonnene stehen oben.
+            </p>
+
+            <div style={{ overflowY: "auto", flex: 1, margin: "0 -4px" }}>
+              {chancenLoading ? (
+                <div style={{ padding: 30, textAlign: "center", color: C.textDim }}>
+                  ARGONAUT lädt die Verkaufschancen…
+                </div>
+              ) : chancen.length === 0 ? (
+                <div style={{ padding: 30, textAlign: "center", color: C.textDim, fontSize: 14 }}>
+                  Keine offenen Verkaufschancen ohne Auftrag gefunden.
+                  <br />
+                  Markiere im CRM eine Chance als „gewonnen" — dann taucht sie hier auf.
+                </div>
+              ) : (
+                chancen.map((ch) => {
+                  const ph = PHASE[ch.phase] || { label: ch.phase, farbe: C.textDim };
+                  const busy = erstelltVon === ch.id;
+                  const disabled = erstelltVon !== null;
+                  return (
+                    <button
+                      key={ch.id}
+                      onClick={() => !disabled && ausChanceErstellen(ch)}
+                      disabled={disabled}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        background: C.navy,
+                        border: `1px solid ${busy ? C.gold : C.border}`,
+                        borderRadius: 12,
+                        padding: "14px 16px",
+                        margin: "0 4px 10px",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        opacity: disabled && !busy ? 0.5 : 1,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>{ch.titel || "Ohne Titel"}</span>
+                        <span
+                          style={{
+                            background: `${ph.farbe}22`,
+                            color: ph.farbe,
+                            border: `1px solid ${ph.farbe}66`,
+                            borderRadius: 20,
+                            padding: "3px 10px",
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {ph.label}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: 6, color: C.textDim, fontSize: 13 }}>
+                        {busy ? "ARGONAUT erstellt den Auftrag…" : `Wert: ${geld(ch.wert, ch.waehrung || "EUR")}`}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <button
+                onClick={() => !erstelltVon && setChanceModalOffen(false)}
+                disabled={erstelltVon !== null}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${C.border}`,
+                  color: C.textDim,
+                  borderRadius: 10,
+                  padding: "11px 18px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: erstelltVon !== null ? "not-allowed" : "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                Schließen
               </button>
             </div>
           </div>
@@ -632,19 +808,9 @@ export default function AuftraegeCockpit() {
 }
 
 // ============================================================
-// Kleine Unterkomponenten
+// Unterkomponenten
 // ============================================================
-function KpiKarte({
-  label,
-  wert,
-  hint,
-  farbe,
-}: {
-  label: string;
-  wert: string;
-  hint: string;
-  farbe: string;
-}) {
+function KpiKarte({ label, wert, hint, farbe }: { label: string; wert: string; hint: string; farbe: string }) {
   return (
     <div
       style={{
@@ -655,9 +821,7 @@ function KpiKarte({
         borderLeft: `3px solid ${farbe}`,
       }}
     >
-      <div style={{ color: C.textDim, fontSize: 12.5, fontWeight: 600 }}>
-        {label}
-      </div>
+      <div style={{ color: C.textDim, fontSize: 12.5, fontWeight: 600 }}>{label}</div>
       <div
         style={{
           fontFamily: "'Syne', sans-serif",
@@ -674,17 +838,7 @@ function KpiKarte({
   );
 }
 
-function FilterChip({
-  aktiv,
-  onClick,
-  label,
-  farbe,
-}: {
-  aktiv: boolean;
-  onClick: () => void;
-  label: string;
-  farbe: string;
-}) {
+function FilterChip({ aktiv, onClick, label, farbe }: { aktiv: boolean; onClick: () => void; label: string; farbe: string }) {
   return (
     <button
       onClick={onClick}
