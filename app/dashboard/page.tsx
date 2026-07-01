@@ -122,24 +122,32 @@ export default async function DashboardPage() {
     { label: 'Nächste Abrechnung', value: formatDate(profile?.next_billing) },
   ]
 
+  // Zentrale Layout-Breite: waechst auf grossen Bildschirmen mit (1200 -> 1600).
+  const SHELL_MAX = '1600px'
+  const SHELL_PAD = 'clamp(16px, 3vw, 48px)'
+
   return (
     <div style={{ minHeight: '100vh', background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
 
       <header style={{ borderBottom: '1px solid rgba(201,168,76,0.15)', background: 'rgba(10,22,40,0.95)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-              <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={36} height={36} style={{ objectFit: 'contain' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>ARGONAUT</span>
-                <span style={{ fontSize: '10px', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>Dashboard</span>
-              </div>
+        {/* Zeile 1: Logo links, Konto + Abmelden rechts */}
+        <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `0 ${SHELL_PAD}`, minHeight: '72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={40} height={40} style={{ objectFit: 'contain' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+              <span style={{ fontSize: 'clamp(16px, 1.4vw, 22px)', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>ARGONAUT</span>
+              <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>Dashboard</span>
             </div>
-            <DashboardNav />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{user.email}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <span style={{ fontSize: 'clamp(12px, 0.9vw, 14px)', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>{user.email}</span>
             <LogoutButton />
+          </div>
+        </div>
+        {/* Zeile 2: Navigation ueber volle Breite (waechst mit, kein Umbruch-Ueberlappen mehr) */}
+        <div style={{ borderTop: '1px solid rgba(201,168,76,0.08)', background: 'rgba(255,255,255,0.015)' }}>
+          <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `10px ${SHELL_PAD}` }}>
+            <DashboardNav />
           </div>
         </div>
       </header>
@@ -147,19 +155,19 @@ export default async function DashboardPage() {
       <>
       <UpgradePopup />
       <OverusePopup kiUsed={kiUsed} kiLimit={kiLimit} currentPaket={rawPaket} userEmail={user.email || ''} />
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 80px' }}>
+      <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
 
         <section style={{ marginBottom: '40px' }}>
           <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-            <h1 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Willkommen zurück, {displayName}</h1>
+            <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Willkommen zurück, {displayName}</h1>
             <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: planColor, background: `${planColor}22`, border: `1px solid ${planColor}55` }}>{planLabel}</span>
             <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: statusCfg.color, background: statusCfg.bg, border: `1px solid ${statusCfg.color}55`, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.color, display: 'inline-block', flexShrink: 0 }} />
               {statusCfg.label}
             </span>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '15px', margin: 0 }}>Hier sehen Sie eine Übersicht Ihrer aktiven KI-Agenten und Automatisierungen.</p>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0 }}>Hier sehen Sie eine Übersicht Ihrer aktiven KI-Agenten und Automatisierungen.</p>
         </section>
 
         {/* ONBOARDING BANNER */}
@@ -257,8 +265,8 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <div key={stat.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '24px 20px' }}>
-                <p style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 900, margin: '0 0 6px', color: '#FFFFFF', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>{stat.value}</p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4 }}>{stat.label}</p>
+                <p style={{ fontSize: 'clamp(24px, 2.6vw, 40px)', fontWeight: 900, margin: '0 0 6px', color: '#FFFFFF', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>{stat.value}</p>
+                <p style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4 }}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -266,7 +274,7 @@ export default async function DashboardPage() {
 
         <section>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Meine Agenten</h2>
+            <h2 style={{ fontSize: 'clamp(20px, 2.4vw, 32px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Meine Agenten</h2>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '2px 10px' }}>8 AKTIV</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
