@@ -366,22 +366,40 @@ export default function CrmCockpitPage() {
               Deine Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
             </p>
           </div>
-          <button
-            onClick={dialogNeu}
-            style={{
-              background: C.gold,
-              color: C.navy,
-              border: "none",
-              borderRadius: 10,
-              padding: "12px 20px",
-              fontFamily: "Syne, sans-serif",
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: "pointer",
-            }}
-          >
-            + Neuer Kontakt
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              onClick={() => router.push("/dashboard/crm/firmen")}
+              style={{
+                background: "transparent",
+                color: C.gold,
+                border: `1px solid ${C.gold}`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              🏢 Firmen
+            </button>
+            <button
+              onClick={dialogNeu}
+              style={{
+                background: C.gold,
+                color: C.navy,
+                border: "none",
+                borderRadius: 10,
+                padding: "12px 20px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              + Neuer Kontakt
+            </button>
+          </div>
         </div>
 
         {/* KPI-Strip */}

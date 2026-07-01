@@ -70,6 +70,7 @@ interface Kontakt {
   telefon: string | null;
   position: string | null;
   firma: string | null;
+  firma_id: string | null;
   status: string | null;
   quelle: string | null;
   letzter_kontakt_am: string | null;
@@ -94,6 +95,11 @@ interface Tag {
   farbe: string | null;
 }
 
+interface FirmaMini {
+  id: string;
+  name: string;
+}
+
 interface FormState {
   vorname: string;
   nachname: string;
@@ -101,6 +107,7 @@ interface FormState {
   telefon: string;
   position: string;
   firma: string;
+  firma_id: string;
   status: string;
   quelle: string;
   betreuungs_intervall_tage: string;
@@ -198,6 +205,9 @@ export default function CrmDetailPage() {
   const [neuTagFarbe, setNeuTagFarbe] = useState(TAG_FARBEN[0]);
   const [tagBusy, setTagBusy] = useState(false);
 
+  // C6b: Firmen für Dropdown
+  const [firmenListe, setFirmenListe] = useState<FirmaMini[]>([]);
+
   async function laden_() {
     setLaden(true);
     setFehler(null);
@@ -243,6 +253,13 @@ export default function CrmDetailPage() {
       ((zuord as { tag_id: string }[]) || []).map((z) => z.tag_id)
     );
 
+    // C6b: Firmen für Dropdown
+    const { data: fdata } = await supabase
+      .from("firmen")
+      .select("id, name")
+      .order("name", { ascending: true });
+    setFirmenListe((fdata as FirmaMini[]) || []);
+
     setLaden(false);
   }
 
@@ -282,6 +299,7 @@ export default function CrmDetailPage() {
       telefon: kontakt.telefon || "",
       position: kontakt.position || "",
       firma: kontakt.firma || "",
+      firma_id: kontakt.firma_id || "",
       status: kontakt.status || "interessent",
       quelle: kontakt.quelle || "",
       betreuungs_intervall_tage: String(kontakt.betreuungs_intervall_tage || 30),
@@ -304,6 +322,7 @@ export default function CrmDetailPage() {
       telefon: form.telefon.trim() || null,
       position: form.position.trim() || null,
       firma: form.firma.trim() || null,
+      firma_id: form.firma_id || null,
       status: form.status,
       quelle: form.quelle || null,
       betreuungs_intervall_tage:
@@ -866,6 +885,27 @@ export default function CrmDetailPage() {
                 />
                 <Info label="Angelegt am" wert={datumLang(kontakt.created_at)} />
               </div>
+              {kontakt.firma_id && (
+                <div style={{ marginTop: 16 }}>
+                  <button
+                    onClick={() =>
+                      router.push(`/dashboard/crm/firmen/${kontakt.firma_id}`)
+                    }
+                    style={{
+                      background: "transparent",
+                      color: C.cyan,
+                      border: `1px solid ${C.cyan}`,
+                      borderRadius: 10,
+                      padding: "8px 16px",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🏢 Firma öffnen
+                  </button>
+                </div>
+              )}
               <div style={{ marginTop: 20 }}>
                 <button onClick={bearbeitenStart} style={goldBtn}>
                   Stammdaten bearbeiten
@@ -890,8 +930,34 @@ export default function CrmDetailPage() {
                 <Feld label="Telefon">
                   <input style={inp} value={form.telefon} onChange={(e) => feld("telefon", e.target.value)} />
                 </Feld>
-                <Feld label="Firma">
+                <Feld label="Firma (Freitext)">
                   <input style={inp} value={form.firma} onChange={(e) => feld("firma", e.target.value)} />
+                </Feld>
+                <Feld label="Firma zuordnen (aus Firmenliste)">
+                  <select
+                    style={inp}
+                    value={form.firma_id}
+                    onChange={(e) => {
+                      const fid = e.target.value;
+                      const gefunden = firmenListe.find((x) => x.id === fid);
+                      setForm((f) =>
+                        f
+                          ? {
+                              ...f,
+                              firma_id: fid,
+                              firma: gefunden ? gefunden.name : f.firma,
+                            }
+                          : f
+                      );
+                    }}
+                  >
+                    <option value="">— keine —</option>
+                    {firmenListe.map((fx) => (
+                      <option key={fx.id} value={fx.id}>
+                        {fx.name}
+                      </option>
+                    ))}
+                  </select>
                 </Feld>
                 <Feld label="Position / Rolle">
                   <input style={inp} value={form.position} onChange={(e) => feld("position", e.target.value)} />
