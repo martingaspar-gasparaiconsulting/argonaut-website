@@ -368,6 +368,22 @@ export default function CrmCockpitPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
+              onClick={() => router.push("/dashboard/crm/wochenfokus")}
+              style={{
+                background: "transparent",
+                color: C.warn,
+                border: `1px solid ${C.warn}`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              🎯 Wochenfokus
+            </button>
+            <button
               onClick={() => router.push("/dashboard/crm/pipeline")}
               style={{
                 background: "transparent",
