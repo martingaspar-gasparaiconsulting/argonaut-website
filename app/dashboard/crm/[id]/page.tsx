@@ -22,6 +22,7 @@ const C = {
   green: "#4CAF7D",
   danger: "#E06666",
   warn: "#E0A24C",
+  lila: "#A98CE0",
   textDim: "#8FA3BE",
   border: "rgba(255,255,255,0.08)",
 };
@@ -243,6 +244,18 @@ export default function CrmDetailPage() {
   const [voiceFehler, setVoiceFehler] = useState<string | null>(null);
   const [voiceSpeichert, setVoiceSpeichert] = useState(false);
   const recognitionRef = useRef<any>(null);
+
+  // C10: Follow-up-Texter
+  const [fuOffen, setFuOffen] = useState(false);
+  const [fuAnliegen, setFuAnliegen] = useState("");
+  const [fuTon, setFuTon] = useState("professionell");
+  const [fuLaden, setFuLaden] = useState(false);
+  const [fuBetreff, setFuBetreff] = useState("");
+  const [fuText, setFuText] = useState("");
+  const [fuQuellen, setFuQuellen] = useState<string[]>([]);
+  const [fuFehler, setFuFehler] = useState<string | null>(null);
+  const [fuKopiert, setFuKopiert] = useState(false);
+  const [fuGespeichert, setFuGespeichert] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -728,6 +741,90 @@ export default function CrmDetailPage() {
     laden_();
   }
 
+  // ---------------- C10: Follow-up-Texter ----------------
+  function fuOeffnen() {
+    setFuOffen(true);
+    setFuAnliegen("");
+    setFuBetreff("");
+    setFuText("");
+    setFuQuellen([]);
+    setFuFehler(null);
+    setFuKopiert(false);
+    setFuGespeichert(false);
+  }
+
+  async function fuGenerieren() {
+    if (!kontakt) return;
+    setFuLaden(true);
+    setFuFehler(null);
+    setFuKopiert(false);
+    setFuGespeichert(false);
+    try {
+      const res = await fetch("/api/crm-followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kontakt_id: kontakt.id,
+          anliegen: fuAnliegen.trim(),
+          tonalitaet: fuTon,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFuFehler(data?.error || "Entwurf fehlgeschlagen.");
+      } else {
+        setFuBetreff(data.entwurf?.betreff || "");
+        setFuText(data.entwurf?.text || "");
+        setFuQuellen((data.quellen as string[]) || []);
+      }
+    } catch (e) {
+      setFuFehler("Netzwerkfehler. Bitte erneut versuchen.");
+    }
+    setFuLaden(false);
+  }
+
+  async function fuKopieren() {
+    const inhalt = "Betreff: " + fuBetreff + "\n\n" + fuText;
+    try {
+      await navigator.clipboard.writeText(inhalt);
+      setFuKopiert(true);
+      setTimeout(() => setFuKopiert(false), 2500);
+    } catch (e) {
+      setFuFehler("Kopieren nicht möglich – bitte Text manuell markieren.");
+    }
+  }
+
+  function fuMailOeffnen() {
+    if (!kontakt?.email) return;
+    const url =
+      "mailto:" +
+      encodeURIComponent(kontakt.email) +
+      "?subject=" +
+      encodeURIComponent(fuBetreff) +
+      "&body=" +
+      encodeURIComponent(fuText);
+    window.location.href = url;
+  }
+
+  async function fuAlsAktivitaet() {
+    if (!kontakt) return;
+    setFuGespeichert(false);
+    const text = "✉ Follow-up-Entwurf\nBetreff: " + fuBetreff + "\n\n" + fuText;
+    const { error } = await supabase.from("kontakt_aktivitaeten").insert({
+      kontakt_id: kontakt.id,
+      typ: "email",
+      inhalt: text,
+      ki_generiert: true,
+      aktivitaet_am: new Date().toISOString(),
+    });
+    if (error) {
+      setFuFehler(error.message);
+      return;
+    }
+    setFuGespeichert(true);
+    laden_();
+  }
+
   // ---------------- Render ----------------
   if (laden) {
     return (
@@ -852,6 +949,22 @@ export default function CrmDetailPage() {
                 }}
               >
                 🧠 KI-Briefing
+              </button>
+              <button
+                onClick={fuOeffnen}
+                style={{
+                  background: "transparent",
+                  color: C.lila,
+                  border: `1px solid ${C.lila}`,
+                  borderRadius: 10,
+                  padding: "11px 18px",
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                📝 Follow-up
               </button>
               {kontakt.telefon && (
                 <a href={`tel:${kontakt.telefon}`} style={aktionBtn(C.green)}>
@@ -1193,6 +1306,145 @@ export default function CrmDetailPage() {
 
                   <div style={{ color: C.textDim, fontSize: 11, marginTop: 14 }}>
                     KI-generiert auf Basis der erfassten Historie – bitte vor dem Gespräch kurz prüfen.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* C10: Follow-up-Modal */}
+        {fuOffen && (
+          <div style={overlayB} onClick={() => setFuOffen(false)}>
+            <div style={modalB} onClick={(e) => e.stopPropagation()}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <h2
+                  style={{
+                    fontFamily: "Syne, sans-serif",
+                    color: C.lila,
+                    fontSize: 22,
+                    margin: 0,
+                  }}
+                >
+                  📝 Follow-up-Mail · {anzeigeName}
+                </h2>
+                <button
+                  onClick={() => setFuOffen(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: C.textDim,
+                    fontSize: 20,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Eingaben */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                  Worum geht's? (optional)
+                </label>
+                <input
+                  style={inp}
+                  value={fuAnliegen}
+                  onChange={(e) => setFuAnliegen(e.target.value)}
+                  placeholder="z. B. an Angebot erinnern, Termin vorschlagen…"
+                />
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 16 }}>
+                <div style={{ flex: "0 0 auto" }}>
+                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                    Tonalität
+                  </label>
+                  <select
+                    style={{ ...inp, width: "auto" }}
+                    value={fuTon}
+                    onChange={(e) => setFuTon(e.target.value)}
+                  >
+                    <option value="professionell">professionell</option>
+                    <option value="locker">locker</option>
+                    <option value="herzlich">herzlich</option>
+                    <option value="verbindlich">verbindlich</option>
+                  </select>
+                </div>
+                <button
+                  onClick={fuGenerieren}
+                  disabled={fuLaden}
+                  style={{ ...goldBtn, opacity: fuLaden ? 0.6 : 1 }}
+                >
+                  {fuLaden ? "Claude schreibt…" : "✨ Entwurf erstellen"}
+                </button>
+              </div>
+
+              {fuFehler && <div style={fehlerBox}>{fuFehler}</div>}
+
+              {/* Ergebnis */}
+              {fuText && !fuLaden && (
+                <div
+                  style={{
+                    background: C.navy,
+                    border: `1px solid ${C.lila}`,
+                    borderRadius: 12,
+                    padding: "16px 18px",
+                    marginTop: 8,
+                  }}
+                >
+                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                    Betreff
+                  </label>
+                  <input
+                    style={{ ...inp, marginBottom: 12 }}
+                    value={fuBetreff}
+                    onChange={(e) => setFuBetreff(e.target.value)}
+                  />
+                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                    Mailtext
+                  </label>
+                  <textarea
+                    style={{ ...inp, minHeight: 180, resize: "vertical", marginBottom: 14 }}
+                    value={fuText}
+                    onChange={(e) => setFuText(e.target.value)}
+                  />
+
+                  {fuQuellen.length > 0 && (
+                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 12 }}>
+                      Firmenwissen aus: {fuQuellen.join(", ")}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button onClick={fuKopieren} style={goldBtn}>
+                      {fuKopiert ? "✓ Kopiert" : "In Zwischenablage kopieren"}
+                    </button>
+                    {kontakt.email && (
+                      <button onClick={fuMailOeffnen} style={grauBtn}>
+                        In Mail-Programm öffnen
+                      </button>
+                    )}
+                    <button
+                      onClick={fuAlsAktivitaet}
+                      disabled={fuGespeichert}
+                      style={{ ...grauBtn, opacity: fuGespeichert ? 0.6 : 1 }}
+                    >
+                      {fuGespeichert ? "✓ In Timeline" : "Als E-Mail in Timeline"}
+                    </button>
+                    <button onClick={fuGenerieren} style={grauBtn}>
+                      Neu generieren
+                    </button>
+                  </div>
+
+                  <div style={{ color: C.textDim, fontSize: 11, marginTop: 14 }}>
+                    KI-Entwurf – bitte prüfen. Versand erfolgt manuell über dein Mail-Programm (Auto-Versand kommt später).
                   </div>
                 </div>
               )}
