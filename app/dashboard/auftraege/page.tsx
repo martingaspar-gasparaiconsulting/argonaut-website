@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5
-// Auftrags-Cockpit MIT "Aus Verkaufschance"-Erzeugung
+// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
+// Auftrags-Cockpit MIT "Aus Verkaufschance" (frische Phase, Doppel-Schutz)
 // Route: /dashboard/auftraege
 // ============================================================
 
@@ -15,7 +15,6 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ---------- Brand-Farben ----------
 const C = {
   navy: "#0A1628",
   navy2: "#0F1F33",
@@ -29,7 +28,6 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-// ---------- Auftrags-Status (Ampel) ----------
 type StatusKey =
   | "entwurf"
   | "beauftragt"
@@ -54,7 +52,6 @@ const STATUS_REIHENFOLGE: StatusKey[] = [
   "storniert",
 ];
 
-// ---------- Verkaufschancen-Phasen (nur Anzeige im Modal) ----------
 const PHASE: Record<string, { label: string; farbe: string }> = {
   erstkontakt: { label: "Erstkontakt", farbe: C.textDim },
   qualifiziert: { label: "Qualifiziert", farbe: C.cyan },
@@ -63,7 +60,6 @@ const PHASE: Record<string, { label: string; farbe: string }> = {
   gewonnen: { label: "Gewonnen", farbe: C.green },
   verloren: { label: "Verloren", farbe: C.danger },
 };
-// Rang für Sortierung (gewonnen zuerst)
 const PHASE_RANG: Record<string, number> = {
   gewonnen: 0,
   verhandlung: 1,
@@ -116,7 +112,6 @@ export default function AuftraegeCockpit() {
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState<"alle" | StatusKey>("alle");
 
-  // Modal "Neu anlegen"
   const [modalOffen, setModalOffen] = useState(false);
   const [neuTitel, setNeuTitel] = useState("");
   const [neuStatus, setNeuStatus] = useState<StatusKey>("entwurf");
@@ -125,13 +120,11 @@ export default function AuftraegeCockpit() {
   );
   const [speichern, setSpeichern] = useState(false);
 
-  // Modal "Aus Verkaufschance"
   const [chanceModalOffen, setChanceModalOffen] = useState(false);
   const [chancen, setChancen] = useState<Chance[]>([]);
   const [chancenLoading, setChancenLoading] = useState(false);
   const [erstelltVon, setErstelltVon] = useState<string | null>(null);
 
-  // ---------- Aufträge laden ----------
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -155,7 +148,6 @@ export default function AuftraegeCockpit() {
     laden();
   }, []);
 
-  // ---------- KPI ----------
   const kpi = useMemo(() => {
     let offen = 0;
     let inArbeit = 0;
@@ -171,7 +163,6 @@ export default function AuftraegeCockpit() {
     return { offen, inArbeit, fertig, summeNetto };
   }, [auftraege]);
 
-  // ---------- Gefilterte Liste ----------
   const gefiltert = useMemo(() => {
     const q = suche.trim().toLowerCase();
     return auftraege.filter((a) => {
@@ -182,7 +173,6 @@ export default function AuftraegeCockpit() {
     });
   }, [auftraege, suche, statusFilter]);
 
-  // ---------- Neu anlegen (nur Kopf-Daten) ----------
   async function anlegen() {
     const titel = neuTitel.trim();
     if (!titel) return;
@@ -208,7 +198,6 @@ export default function AuftraegeCockpit() {
     }
   }
 
-  // ---------- Löschen ----------
   async function loeschen(id: string, titel: string) {
     if (
       !window.confirm(
@@ -224,7 +213,6 @@ export default function AuftraegeCockpit() {
     setAuftraege((prev) => prev.filter((a) => a.id !== id));
   }
 
-  // ---------- Verkaufschancen laden (nur ohne Auftrag, nicht verloren) ----------
   async function chancenModalOeffnen() {
     setChanceModalOffen(true);
     setChancenLoading(true);
@@ -251,24 +239,50 @@ export default function AuftraegeCockpit() {
     setChancenLoading(false);
   }
 
-  // ---------- Auftrag aus Verkaufschance erzeugen ----------
+  // ---------- Auftrag aus Verkaufschance erzeugen (A6: frische Phase + Doppel-Schutz) ----------
   async function ausChanceErstellen(ch: Chance) {
     setErstelltVon(ch.id);
     setFehler(null);
 
-    const waehrung = ch.waehrung || "EUR";
-    const gewonnen = ch.phase === "gewonnen";
-    const wert = Number(ch.wert) || 0;
+    // Phase & Daten IM MOMENT DES KLICKS frisch laden — verhindert Timing-Fehler
+    const { data: fresh, error: fErr } = await supabase
+      .from("verkaufschancen")
+      .select("id, titel, wert, waehrung, kontakt_id, firma_id, phase, auftrag_id")
+      .eq("id", ch.id)
+      .single();
+
+    if (fErr || !fresh) {
+      setErstelltVon(null);
+      setFehler(
+        "Verkaufschance konnte nicht geladen werden: " +
+          (fErr?.message || "unbekannt")
+      );
+      return;
+    }
+    const f = fresh as any;
+
+    // Doppel-Auftrag-Schutz: schon verknüpft?
+    if (f.auftrag_id) {
+      setErstelltVon(null);
+      setFehler("Diese Verkaufschance hat bereits einen Auftrag.");
+      setChancen((prev) => prev.filter((c) => c.id !== ch.id));
+      return;
+    }
+
+    const waehrung = f.waehrung || "EUR";
+    const gewonnen = f.phase === "gewonnen";
+    const wert = Number(f.wert) || 0;
+    const titel = f.titel || "Auftrag aus Verkaufschance";
 
     // 1) Auftrag anlegen
     const { data: aData, error: aErr } = await supabase
       .from("auftraege")
       .insert({
-        titel: ch.titel || "Auftrag aus Verkaufschance",
+        titel,
         status: gewonnen ? "beauftragt" : "entwurf",
-        kontakt_id: ch.kontakt_id || null,
-        firma_id: ch.firma_id || null,
-        verkaufschance_id: ch.id,
+        kontakt_id: f.kontakt_id || null,
+        firma_id: f.firma_id || null,
+        verkaufschance_id: f.id,
         waehrung,
       })
       .select("id")
@@ -281,7 +295,7 @@ export default function AuftraegeCockpit() {
     }
     const auftragId = (aData as any).id as string;
 
-    // 2) Wert als erste Position übernehmen (Vorschlag)
+    // 2) Wert als erste Position übernehmen
     let netto = 0;
     let mwst = 0;
     if (wert > 0) {
@@ -291,7 +305,7 @@ export default function AuftraegeCockpit() {
       const { error: pErr } = await supabase.from("auftrag_positionen").insert({
         auftrag_id: auftragId,
         position: 1,
-        bezeichnung: ch.titel || "Leistung aus Verkaufschance",
+        bezeichnung: titel,
         menge: 1,
         einheit: "Psch",
         einzelpreis: netto,
@@ -299,12 +313,13 @@ export default function AuftraegeCockpit() {
         gesamt_netto: netto,
       });
       if (pErr) {
-        // Auftrag existiert schon — Position optional, wir warnen nur
-        setFehler("Hinweis: Position konnte nicht übernommen werden: " + pErr.message);
+        setFehler(
+          "Hinweis: Position konnte nicht übernommen werden: " + pErr.message
+        );
       }
     }
 
-    // 3) Summen am Auftrag festschreiben
+    // 3) Summen festschreiben
     await supabase
       .from("auftraege")
       .update({
@@ -314,19 +329,16 @@ export default function AuftraegeCockpit() {
       })
       .eq("id", auftragId);
 
-    // 4) Chance mit Auftrag verknüpfen (verbraucht)
+    // 4) Chance verknüpfen
     await supabase
       .from("verkaufschancen")
       .update({ auftrag_id: auftragId })
-      .eq("id", ch.id);
+      .eq("id", f.id);
 
-    // 5) zur Detailseite springen
+    // 5) zur Detailseite
     router.push(`/dashboard/auftraege/${auftragId}`);
   }
 
-  // ============================================================
-  // Render
-  // ============================================================
   return (
     <div
       style={{
@@ -338,7 +350,6 @@ export default function AuftraegeCockpit() {
       }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        {/* Kopf */}
         <div
           style={{
             display: "flex",
@@ -402,7 +413,6 @@ export default function AuftraegeCockpit() {
           </div>
         </div>
 
-        {/* KPI-Strip */}
         <div
           style={{
             display: "grid",
@@ -417,7 +427,6 @@ export default function AuftraegeCockpit() {
           <KpiKarte label="Auftragswert" wert={geld(kpi.summeNetto)} hint="netto, ohne stornierte" farbe={C.lila} />
         </div>
 
-        {/* Such- & Filterleiste */}
         <div
           style={{
             display: "flex",
@@ -451,7 +460,6 @@ export default function AuftraegeCockpit() {
           </div>
         </div>
 
-        {/* Fehler */}
         {fehler && (
           <div
             style={{
@@ -468,7 +476,6 @@ export default function AuftraegeCockpit() {
           </div>
         )}
 
-        {/* Liste */}
         <div
           style={{
             background: C.navy2,
@@ -588,7 +595,7 @@ export default function AuftraegeCockpit() {
         </p>
       </div>
 
-      {/* ---------- Modal: Neuer Auftrag ---------- */}
+      {/* Modal: Neuer Auftrag */}
       {modalOffen && (
         <div
           onClick={() => setModalOffen(false)}
@@ -684,7 +691,7 @@ export default function AuftraegeCockpit() {
         </div>
       )}
 
-      {/* ---------- Modal: Aus Verkaufschance ---------- */}
+      {/* Modal: Aus Verkaufschance */}
       {chanceModalOffen && (
         <div
           onClick={() => (erstelltVon ? null : setChanceModalOffen(false))}
@@ -807,9 +814,6 @@ export default function AuftraegeCockpit() {
   );
 }
 
-// ============================================================
-// Unterkomponenten
-// ============================================================
 function KpiKarte({ label, wert, hint, farbe }: { label: string; wert: string; hint: string; farbe: string }) {
   return (
     <div

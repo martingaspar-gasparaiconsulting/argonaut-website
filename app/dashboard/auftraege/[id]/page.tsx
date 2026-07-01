@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Block A3+A4
-// Auftrag-Detailseite MIT Positionen-Editor & Live-Summen
+// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Detailseite A3+A4+A6
+// Positionen-Editor, Live-Summen & GEFÜHRTER Status-Workflow
 // Route: /dashboard/auftraege/[id]
 // ============================================================
 
@@ -15,7 +15,6 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ---------- Brand-Farben ----------
 const C = {
   navy: "#0A1628",
   navy2: "#0F1F33",
@@ -29,7 +28,6 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-// ---------- Status-Definitionen (Ampel) ----------
 type StatusKey =
   | "entwurf"
   | "beauftragt"
@@ -46,19 +44,13 @@ const STATUS: Record<StatusKey, { label: string; farbe: string; icon: string }> 
     storniert: { label: "Storniert", farbe: C.textDim, icon: "⚪" },
   };
 
-const STATUS_REIHENFOLGE: StatusKey[] = [
-  "entwurf",
-  "beauftragt",
-  "in_bearbeitung",
-  "abgeschlossen",
-  "storniert",
-];
+// Der natürliche Fluss (ohne "storniert" — das ist ein Abbruch)
+const FLUSS: StatusKey[] = ["entwurf", "beauftragt", "in_bearbeitung", "abgeschlossen"];
 
 const EINHEITEN = ["Stk", "Std", "Tag", "m", "m²", "m³", "kg", "t", "lfm", "Psch"];
 
-// ---------- Positions-Zeile im Frontend (Zahlen als Strings zum Tippen) ----------
 type Zeile = {
-  id: string; // echte uuid oder neu generierte (wir upserten mit id)
+  id: string;
   bezeichnung: string;
   menge: string;
   einheit: string;
@@ -66,7 +58,6 @@ type Zeile = {
   mwst_satz: string;
 };
 
-// ---------- Zahl-Helfer (Komma ODER Punkt) ----------
 function parseZahl(s: string): number {
   if (!s) return 0;
   const n = parseFloat(String(s).replace(",", "."));
@@ -86,8 +77,6 @@ function geld(n: number | null | undefined, waehrung = "EUR"): string {
     currency: waehrung || "EUR",
   }).format(wert);
 }
-
-// ---------- Anzeigename Kontakt/Firma robust bauen ----------
 function kontaktName(k: any): string {
   return (
     k?.anzeigename ||
@@ -112,7 +101,6 @@ export default function AuftragDetail() {
 
   const [auftrag, setAuftrag] = useState<any>(null);
 
-  // Bearbeitbare Kopf-Felder
   const [titel, setTitel] = useState("");
   const [status, setStatus] = useState<StatusKey>("entwurf");
   const [auftragsdatum, setAuftragsdatum] = useState<string>("");
@@ -122,7 +110,6 @@ export default function AuftragDetail() {
   const [firmaId, setFirmaId] = useState<string>("");
   const [notizen, setNotizen] = useState("");
 
-  // Positionen
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [geladeneIds, setGeladeneIds] = useState<string[]>([]);
 
@@ -133,7 +120,6 @@ export default function AuftragDetail() {
   const [kontakte, setKontakte] = useState<any[]>([]);
   const [firmen, setFirmen] = useState<any[]>([]);
 
-  // ---------- Laden ----------
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -199,7 +185,6 @@ export default function AuftragDetail() {
     markDirty();
   }
 
-  // ---------- Positionen bearbeiten ----------
   function neueId(): string {
     try {
       return crypto.randomUUID();
@@ -210,21 +195,12 @@ export default function AuftragDetail() {
   function zeileHinzufuegen() {
     setZeilen((prev) => [
       ...prev,
-      {
-        id: neueId(),
-        bezeichnung: "",
-        menge: "1",
-        einheit: "Stk",
-        einzelpreis: "0",
-        mwst_satz: "19",
-      },
+      { id: neueId(), bezeichnung: "", menge: "1", einheit: "Stk", einzelpreis: "0", mwst_satz: "19" },
     ]);
     markDirty();
   }
   function zeileAendern(zid: string, feld: keyof Zeile, wert: string) {
-    setZeilen((prev) =>
-      prev.map((z) => (z.id === zid ? { ...z, [feld]: wert } : z))
-    );
+    setZeilen((prev) => prev.map((z) => (z.id === zid ? { ...z, [feld]: wert } : z)));
     markDirty();
   }
   function zeileLoeschen(zid: string) {
@@ -232,7 +208,6 @@ export default function AuftragDetail() {
     markDirty();
   }
 
-  // ---------- Live-Summen ----------
   const summen = useMemo(() => {
     let netto = 0;
     let mwst = 0;
@@ -251,19 +226,14 @@ export default function AuftragDetail() {
   }
 
   const kontaktOptionen = useMemo(
-    () =>
-      [...kontakte].sort((a, b) =>
-        kontaktName(a).localeCompare(kontaktName(b), "de")
-      ),
+    () => [...kontakte].sort((a, b) => kontaktName(a).localeCompare(kontaktName(b), "de")),
     [kontakte]
   );
   const firmaOptionen = useMemo(
-    () =>
-      [...firmen].sort((a, b) => firmaName(a).localeCompare(firmaName(b), "de")),
+    () => [...firmen].sort((a, b) => firmaName(a).localeCompare(firmaName(b), "de")),
     [firmen]
   );
 
-  // ---------- Speichern (Kopf + Positionen + Summen) ----------
   async function speichernJetzt() {
     if (!titel.trim()) {
       setFehler("Bitte einen Titel eingeben.");
@@ -272,7 +242,6 @@ export default function AuftragDetail() {
     setSpeichern(true);
     setFehler(null);
 
-    // 1) Positionen upserten
     const posRows = zeilen.map((z, i) => ({
       id: z.id,
       auftrag_id: id,
@@ -296,7 +265,6 @@ export default function AuftragDetail() {
       }
     }
 
-    // 2) entfernte Positionen löschen
     const aktuelleIds = zeilen.map((z) => z.id);
     const zuLoeschen = geladeneIds.filter((gid) => !aktuelleIds.includes(gid));
     if (zuLoeschen.length > 0) {
@@ -311,7 +279,6 @@ export default function AuftragDetail() {
       }
     }
 
-    // 3) Kopf + Summen speichern
     const { error } = await supabase
       .from("auftraege")
       .update({
@@ -341,9 +308,6 @@ export default function AuftragDetail() {
     setTimeout(() => setGespeichert(false), 2500);
   }
 
-  // ============================================================
-  // Render: Ladezustand / Nicht gefunden
-  // ============================================================
   if (loading) {
     return (
       <Rahmen>
@@ -365,10 +329,7 @@ export default function AuftragDetail() {
           <p style={{ color: C.textDim, marginBottom: 20 }}>
             Dieser Auftrag existiert nicht oder gehört nicht zu deinem Konto.
           </p>
-          <button
-            onClick={() => router.push("/dashboard/auftraege")}
-            style={btnGold}
-          >
+          <button onClick={() => router.push("/dashboard/auftraege")} style={btnGold}>
             ← Zurück zu den Aufträgen
           </button>
         </div>
@@ -376,14 +337,17 @@ export default function AuftragDetail() {
     );
   }
 
+  const aktIndex = FLUSS.indexOf(status);
+  const istStorniert = status === "storniert";
+  const naechster = aktIndex >= 0 && aktIndex < FLUSS.length - 1 ? FLUSS[aktIndex + 1] : null;
+
   return (
     <Rahmen>
       {/* Kopfzeile */}
       <div style={{ marginBottom: 20 }}>
         <button
           onClick={() => {
-            if (dirty && !window.confirm("Ungespeicherte Änderungen verwerfen?"))
-              return;
+            if (dirty && !window.confirm("Ungespeicherte Änderungen verwerfen?")) return;
             router.push("/dashboard/auftraege");
           }}
           style={{
@@ -410,14 +374,7 @@ export default function AuftragDetail() {
           }}
         >
           <div>
-            <div
-              style={{
-                color: C.textDim,
-                fontSize: 13,
-                fontFamily: "monospace",
-                marginBottom: 4,
-              }}
-            >
+            <div style={{ color: C.textDim, fontSize: 13, fontFamily: "monospace", marginBottom: 4 }}>
               {auftrag?.auftragsnummer || "—"}
             </div>
             <h1
@@ -435,14 +392,10 @@ export default function AuftragDetail() {
 
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {gespeichert && (
-              <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>
-                ✓ gespeichert
-              </span>
+              <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>✓ gespeichert</span>
             )}
             {dirty && (
-              <span style={{ color: C.warn, fontSize: 13, fontWeight: 600 }}>
-                ● ungespeichert
-              </span>
+              <span style={{ color: C.warn, fontSize: 13, fontWeight: 600 }}>● ungespeichert</span>
             )}
             <button
               onClick={speichernJetzt}
@@ -460,7 +413,7 @@ export default function AuftragDetail() {
         </div>
       </div>
 
-      {/* Status-Leiste */}
+      {/* GEFÜHRTER Status-Workflow */}
       <div
         style={{
           background: C.navy2,
@@ -470,35 +423,159 @@ export default function AuftragDetail() {
           marginBottom: 20,
         }}
       >
-        <div style={sektionLabel}>Status</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {STATUS_REIHENFOLGE.map((s) => {
-            const aktiv = status === s;
-            const info = STATUS[s];
-            return (
-              <button
-                key={s}
-                onClick={() => aendern(setStatus, s)}
-                style={{
-                  background: aktiv ? `${info.farbe}22` : "transparent",
-                  color: aktiv ? info.farbe : C.textDim,
-                  border: `1px solid ${aktiv ? `${info.farbe}88` : C.border}`,
-                  borderRadius: 22,
-                  padding: "8px 16px",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                {info.icon} {info.label}
-              </button>
-            );
-          })}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ ...sektionLabel, marginBottom: 0 }}>Status</div>
+          {istStorniert ? (
+            <button onClick={() => aendern(setStatus, "entwurf")} style={reaktivierBtn}>
+              ↺ Reaktivieren
+            </button>
+          ) : (
+            <button onClick={() => aendern(setStatus, "storniert")} style={stornoBtn}>
+              ⊘ Stornieren
+            </button>
+          )}
         </div>
+
+        {istStorniert ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0" }}>
+            <span
+              style={{
+                background: `${C.danger}22`,
+                color: C.danger,
+                border: `1px solid ${C.danger}66`,
+                borderRadius: 20,
+                padding: "6px 16px",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              ⚪ Storniert
+            </span>
+            <span style={{ color: C.textDim, fontSize: 13.5 }}>
+              Zählt nicht zum Auftragswert. Mit „Reaktivieren" zurück in den Entwurf.
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Fortschrittskette */}
+            <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 4 }}>
+              {FLUSS.map((s, i) => {
+                const info = STATUS[s];
+                const erledigt = i < aktIndex;
+                const aktuell = i === aktIndex;
+                const istNaechster = i === aktIndex + 1;
+
+                let kreisBg = "transparent";
+                let kreisBorder = `1px solid ${C.border}`;
+                let kreisColor = C.textDim;
+                let inhalt: string = info.icon;
+
+                if (erledigt) {
+                  kreisBg = C.green;
+                  kreisBorder = `1px solid ${C.green}`;
+                  kreisColor = C.navy;
+                  inhalt = "✓";
+                } else if (aktuell) {
+                  kreisBg = info.farbe;
+                  kreisBorder = `1px solid ${info.farbe}`;
+                  kreisColor = C.navy;
+                } else if (istNaechster) {
+                  kreisBg = "transparent";
+                  kreisBorder = `2px solid ${C.gold}`;
+                  kreisColor = C.gold;
+                }
+
+                const labelColor = erledigt
+                  ? C.green
+                  : aktuell
+                  ? info.farbe
+                  : istNaechster
+                  ? C.gold
+                  : C.textDim;
+
+                return (
+                  <React.Fragment key={s}>
+                    <button
+                      onClick={() => aendern(setStatus, s)}
+                      title={aktuell ? "Aktueller Status" : `Auf „${info.label}" setzen`}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 8,
+                        minWidth: 92,
+                        padding: 0,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: "50%",
+                          background: kreisBg,
+                          border: kreisBorder,
+                          color: kreisColor,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: erledigt ? 18 : 16,
+                          fontWeight: 700,
+                          boxShadow: aktuell ? `0 0 0 4px ${info.farbe}22` : "none",
+                        }}
+                      >
+                        {inhalt}
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: labelColor, textAlign: "center" }}>
+                        {info.label}
+                      </span>
+                    </button>
+
+                    {i < FLUSS.length - 1 && (
+                      <div
+                        style={{
+                          flex: 1,
+                          height: 2,
+                          minWidth: 20,
+                          marginTop: 18,
+                          background: i < aktIndex ? C.green : C.border,
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {naechster && (
+              <div style={{ marginTop: 14, fontSize: 13, color: C.textDim }}>
+                Nächster Schritt:{" "}
+                <span style={{ color: C.gold, fontWeight: 600 }}>
+                  {STATUS[naechster].icon} {STATUS[naechster].label}
+                </span>{" "}
+                — oder frei eine Stufe anklicken.
+              </div>
+            )}
+            {!naechster && aktIndex === FLUSS.length - 1 && (
+              <div style={{ marginTop: 14, fontSize: 13, color: C.green, fontWeight: 600 }}>
+                ✓ Auftrag abgeschlossen.
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Zwei-Spalten: Stammdaten + Zuordnung */}
+      {/* Stammdaten + Zuordnung */}
       <div
         style={{
           display: "grid",
@@ -509,83 +586,42 @@ export default function AuftragDetail() {
       >
         <Karte titel="Stammdaten">
           <label style={labelStyle}>Titel *</label>
-          <input
-            value={titel}
-            onChange={(e) => aendern(setTitel, e.target.value)}
-            style={inputStyle}
-          />
+          <input value={titel} onChange={(e) => aendern(setTitel, e.target.value)} style={inputStyle} />
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Auftragsdatum</label>
-              <input
-                type="date"
-                value={auftragsdatum}
-                onChange={(e) => aendern(setAuftragsdatum, e.target.value)}
-                style={inputStyle}
-              />
+              <input type="date" value={auftragsdatum} onChange={(e) => aendern(setAuftragsdatum, e.target.value)} style={inputStyle} />
             </div>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Lieferdatum</label>
-              <input
-                type="date"
-                value={lieferdatum}
-                onChange={(e) => aendern(setLieferdatum, e.target.value)}
-                style={inputStyle}
-              />
+              <input type="date" value={lieferdatum} onChange={(e) => aendern(setLieferdatum, e.target.value)} style={inputStyle} />
             </div>
           </div>
           <label style={labelStyle}>Währung</label>
-          <select
-            value={waehrung}
-            onChange={(e) => aendern(setWaehrung, e.target.value)}
-            style={inputStyle}
-          >
-            <option value="EUR" style={{ background: C.navy2 }}>
-              EUR (€)
-            </option>
-            <option value="CHF" style={{ background: C.navy2 }}>
-              CHF
-            </option>
-            <option value="USD" style={{ background: C.navy2 }}>
-              USD ($)
-            </option>
+          <select value={waehrung} onChange={(e) => aendern(setWaehrung, e.target.value)} style={inputStyle}>
+            <option value="EUR" style={{ background: C.navy2 }}>EUR (€)</option>
+            <option value="CHF" style={{ background: C.navy2 }}>CHF</option>
+            <option value="USD" style={{ background: C.navy2 }}>USD ($)</option>
           </select>
         </Karte>
 
         <Karte titel="Zuordnung">
           <label style={labelStyle}>Kontakt</label>
-          <select
-            value={kontaktId}
-            onChange={(e) => aendern(setKontaktId, e.target.value)}
-            style={inputStyle}
-          >
-            <option value="" style={{ background: C.navy2 }}>
-              — kein Kontakt —
-            </option>
+          <select value={kontaktId} onChange={(e) => aendern(setKontaktId, e.target.value)} style={inputStyle}>
+            <option value="" style={{ background: C.navy2 }}>— kein Kontakt —</option>
             {kontaktOptionen.map((k) => (
-              <option key={k.id} value={k.id} style={{ background: C.navy2 }}>
-                {kontaktName(k)}
-              </option>
+              <option key={k.id} value={k.id} style={{ background: C.navy2 }}>{kontaktName(k)}</option>
             ))}
           </select>
           <label style={labelStyle}>Firma</label>
-          <select
-            value={firmaId}
-            onChange={(e) => aendern(setFirmaId, e.target.value)}
-            style={inputStyle}
-          >
-            <option value="" style={{ background: C.navy2 }}>
-              — keine Firma —
-            </option>
+          <select value={firmaId} onChange={(e) => aendern(setFirmaId, e.target.value)} style={inputStyle}>
+            <option value="" style={{ background: C.navy2 }}>— keine Firma —</option>
             {firmaOptionen.map((f) => (
-              <option key={f.id} value={f.id} style={{ background: C.navy2 }}>
-                {firmaName(f)}
-              </option>
+              <option key={f.id} value={f.id} style={{ background: C.navy2 }}>{firmaName(f)}</option>
             ))}
           </select>
           <p style={{ color: C.textDim, fontSize: 12, marginTop: 14, lineHeight: 1.5 }}>
-            Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst
-            im Vertrieb/CRM an.
+            Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst im Vertrieb/CRM an.
           </p>
         </Karte>
       </div>
@@ -600,34 +636,17 @@ export default function AuftragDetail() {
           marginBottom: 20,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 14,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={{ ...sektionLabel, marginBottom: 0 }}>Positionen</div>
-          <button onClick={zeileHinzufuegen} style={btnKlein}>
-            + Position
-          </button>
+          <button onClick={zeileHinzufuegen} style={btnKlein}>+ Position</button>
         </div>
 
         {zeilen.length === 0 ? (
-          <div
-            style={{
-              padding: "28px 0",
-              textAlign: "center",
-              color: C.textDim,
-              fontSize: 14,
-            }}
-          >
+          <div style={{ padding: "28px 0", textAlign: "center", color: C.textDim, fontSize: 14 }}>
             Noch keine Positionen. Füg oben rechts die erste hinzu.
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            {/* Kopf */}
             <div style={posKopf}>
               <div>Bezeichnung</div>
               <div style={{ textAlign: "right" }}>Menge</div>
@@ -640,70 +659,19 @@ export default function AuftragDetail() {
 
             {zeilen.map((z) => (
               <div key={z.id} style={posZeile}>
-                <input
-                  value={z.bezeichnung}
-                  onChange={(e) =>
-                    zeileAendern(z.id, "bezeichnung", e.target.value)
-                  }
-                  placeholder="z. B. Edelstahlgeländer, 2 m"
-                  style={zellInput}
-                />
-                <input
-                  value={z.menge}
-                  onChange={(e) => zeileAendern(z.id, "menge", e.target.value)}
-                  inputMode="decimal"
-                  style={{ ...zellInput, textAlign: "right" }}
-                />
-                <select
-                  value={z.einheit}
-                  onChange={(e) => zeileAendern(z.id, "einheit", e.target.value)}
-                  style={zellInput}
-                >
+                <input value={z.bezeichnung} onChange={(e) => zeileAendern(z.id, "bezeichnung", e.target.value)} placeholder="z. B. Edelstahlgeländer, 2 m" style={zellInput} />
+                <input value={z.menge} onChange={(e) => zeileAendern(z.id, "menge", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
+                <select value={z.einheit} onChange={(e) => zeileAendern(z.id, "einheit", e.target.value)} style={zellInput}>
                   {EINHEITEN.map((e) => (
-                    <option key={e} value={e} style={{ background: C.navy2 }}>
-                      {e}
-                    </option>
+                    <option key={e} value={e} style={{ background: C.navy2 }}>{e}</option>
                   ))}
                 </select>
-                <input
-                  value={z.einzelpreis}
-                  onChange={(e) =>
-                    zeileAendern(z.id, "einzelpreis", e.target.value)
-                  }
-                  inputMode="decimal"
-                  style={{ ...zellInput, textAlign: "right" }}
-                />
-                <input
-                  value={z.mwst_satz}
-                  onChange={(e) =>
-                    zeileAendern(z.id, "mwst_satz", e.target.value)
-                  }
-                  inputMode="decimal"
-                  style={{ ...zellInput, textAlign: "right" }}
-                />
-                <div
-                  style={{
-                    textAlign: "right",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    alignSelf: "center",
-                    color: C.cyan,
-                  }}
-                >
+                <input value={z.einzelpreis} onChange={(e) => zeileAendern(z.id, "einzelpreis", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
+                <input value={z.mwst_satz} onChange={(e) => zeileAendern(z.id, "mwst_satz", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
+                <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600, alignSelf: "center", color: C.cyan }}>
                   {geld(zeileNetto(z), waehrung)}
                 </div>
-                <button
-                  onClick={() => zeileLoeschen(z.id)}
-                  title="Position löschen"
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: C.textDim,
-                    cursor: "pointer",
-                    fontSize: 15,
-                    alignSelf: "center",
-                  }}
-                >
+                <button onClick={() => zeileLoeschen(z.id)} title="Position löschen" style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 15, alignSelf: "center" }}>
                   🗑
                 </button>
               </div>
@@ -712,22 +680,15 @@ export default function AuftragDetail() {
         )}
       </div>
 
-      {/* SUMMEN (live) */}
+      {/* SUMMEN */}
       <Karte titel="Summen">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 16,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           <SummeFeld label="Netto" wert={geld(summen.netto, waehrung)} farbe={C.cyan} />
           <SummeFeld label="MwSt" wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
           <SummeFeld label="Brutto" wert={geld(summen.brutto, waehrung)} farbe={C.gold} />
         </div>
         <p style={{ color: C.textDim, fontSize: 12, marginTop: 14 }}>
-          Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie
-          festgeschrieben.
+          Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
       </Karte>
 
@@ -739,12 +700,7 @@ export default function AuftragDetail() {
             onChange={(e) => aendern(setNotizen, e.target.value)}
             placeholder="Interne Notizen zum Auftrag…"
             rows={5}
-            style={{
-              ...inputStyle,
-              resize: "vertical",
-              minHeight: 110,
-              lineHeight: 1.5,
-            }}
+            style={{ ...inputStyle, resize: "vertical", minHeight: 110, lineHeight: 1.5 }}
           />
         </Karte>
       </div>
@@ -770,9 +726,6 @@ export default function AuftragDetail() {
   );
 }
 
-// ============================================================
-// Layout-Bausteine
-// ============================================================
 function Rahmen({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -791,58 +744,22 @@ function Rahmen({ children }: { children: React.ReactNode }) {
 
 function Karte({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        background: C.navy2,
-        border: `1px solid ${C.border}`,
-        borderRadius: 14,
-        padding: "20px 22px",
-      }}
-    >
+    <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px 22px" }}>
       <div style={sektionLabel}>{titel}</div>
       {children}
     </div>
   );
 }
 
-function SummeFeld({
-  label,
-  wert,
-  farbe,
-}: {
-  label: string;
-  wert: string;
-  farbe: string;
-}) {
+function SummeFeld({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
-    <div
-      style={{
-        background: C.navy,
-        border: `1px solid ${C.border}`,
-        borderRadius: 10,
-        padding: "14px 16px",
-      }}
-    >
-      <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 20,
-          fontWeight: 700,
-          color: farbe,
-        }}
-      >
-        {wert}
-      </div>
+    <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
+      <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
-// ============================================================
-// Styles
-// ============================================================
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
   fontSize: 12.5,
@@ -893,6 +810,30 @@ const btnKlein: React.CSSProperties = {
   padding: "7px 14px",
   fontSize: 13,
   fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "'DM Sans', sans-serif",
+};
+
+const stornoBtn: React.CSSProperties = {
+  background: "transparent",
+  color: C.danger,
+  border: `1px solid ${C.danger}55`,
+  borderRadius: 8,
+  padding: "6px 12px",
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "'DM Sans', sans-serif",
+};
+
+const reaktivierBtn: React.CSSProperties = {
+  background: "transparent",
+  color: C.cyan,
+  border: `1px solid ${C.cyan}55`,
+  borderRadius: 8,
+  padding: "6px 12px",
+  fontSize: 12.5,
+  fontWeight: 600,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
 };
