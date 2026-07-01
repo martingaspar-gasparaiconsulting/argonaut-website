@@ -1186,7 +1186,7 @@ export default function CrmDetailPage() {
 
               {briefingLaden && (
                 <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", padding: "8px 0" }}>
-                  Claude analysiert Historie &amp; Firmenwissen…
+                  ARGONAUT analysiert Historie &amp; Firmenwissen…
                 </div>
               )}
 
@@ -1382,7 +1382,7 @@ export default function CrmDetailPage() {
                   disabled={fuLaden}
                   style={{ ...goldBtn, opacity: fuLaden ? 0.6 : 1 }}
                 >
-                  {fuLaden ? "Claude schreibt…" : "✨ Entwurf erstellen"}
+                  {fuLaden ? "ARGONAUT schreibt…" : "✨ Entwurf erstellen"}
                 </button>
               </div>
 
@@ -1701,7 +1701,7 @@ export default function CrmDetailPage() {
                 {voiceOffen && (
                   <div style={{ marginTop: 14 }}>
                     <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
-                      Nach dem Telefonat einfach reinsprechen – Claude macht eine saubere Notiz daraus und erkennt die Wiedervorlage.
+                      Nach dem Telefonat einfach reinsprechen – ARGONAUT macht eine saubere Notiz daraus und erkennt die Wiedervorlage.
                     </div>
 
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
@@ -1760,7 +1760,7 @@ export default function CrmDetailPage() {
                         disabled={voiceLaden || !transcript.trim()}
                         style={{ ...goldBtn, opacity: !transcript.trim() ? 0.6 : 1 }}
                       >
-                        {voiceLaden ? "Claude arbeitet…" : "✨ KI aufbereiten"}
+                        {voiceLaden ? "ARGONAUT arbeitet…" : "✨ KI aufbereiten"}
                       </button>
                       <button
                         onClick={() => {
@@ -1788,7 +1788,7 @@ export default function CrmDetailPage() {
                         }}
                       >
                         <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>
-                          Vorschlag von Claude – bitte prüfen &amp; übernehmen
+                          Vorschlag von ARGONAUT – bitte prüfen &amp; übernehmen
                         </div>
 
                         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>

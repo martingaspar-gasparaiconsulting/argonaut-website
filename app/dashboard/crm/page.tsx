@@ -1074,7 +1074,7 @@ export default function CrmCockpitPage() {
             </div>
 
             <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
-              Foto wählen oder (am Handy) direkt aufnehmen – Claude liest die Kontaktdaten aus.
+              Foto wählen oder (am Handy) direkt aufnehmen – ARGONAUT liest die Kontaktdaten aus.
             </div>
 
             <input
@@ -1123,7 +1123,7 @@ export default function CrmCockpitPage() {
                   opacity: !vkBase64 ? 0.6 : 1,
                 }}
               >
-                {vkLaden ? "Claude liest…" : "✨ Auslesen"}
+                {vkLaden ? "ARGONAUT liest…" : "✨ Auslesen"}
               </button>
             )}
 
