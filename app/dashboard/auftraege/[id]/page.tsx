@@ -128,8 +128,8 @@ export default function AuftragDetail() {
   const [gespeichert, setGespeichert] = useState(false);
   const [pdfLaedt, setPdfLaedt] = useState(false);
 
-  // A9: Rechnung-Nahtstelle (Modul 6)
-  const [rechnungModal, setRechnungModal] = useState(false);
+  // A9 / Modul 6: Rechnung-Nahtstelle
+  const [rechnungLaedt, setRechnungLaedt] = useState(false);
 
   // KI-Assistent (A8+)
   const [kiText, setKiText] = useState("");
@@ -410,20 +410,48 @@ export default function AuftragDetail() {
     setPdfLaedt(false);
   }
 
-  // ---------- A9: Andock-Nahtstelle Modul 6 (Rechnung) ----------
-  function rechnungOeffnen() {
+  // ---------- Modul 6: Rechnung aus Auftrag erzeugen ----------
+  async function rechnungOeffnen() {
+    if (rechnungLaedt) return;
+
+    // Bereits fakturiert? -> direkt zur bestehenden Rechnung
+    if (auftrag?.rechnung_id) {
+      router.push("/dashboard/rechnungen/" + auftrag.rechnung_id);
+      return;
+    }
+
     if (dirty) {
       const weiter = window.confirm(
         "Es gibt ungespeicherte Änderungen. Für eine korrekte Rechnung sollten die Positionen erst gespeichert werden. Trotzdem fortfahren?"
       );
       if (!weiter) return;
     }
-    setRechnungModal(true);
-    // ANDOCK MODUL 6: Sobald das Modul "Rechnung" existiert, ruft diese Stelle
-    // /api/rechnung-aus-auftrag auf (übergibt auftrag.id) -> erzeugt die Rechnung,
-    // schreibt deren ID in auftraege.rechnung_id zurück und leitet dorthin weiter.
-    // Bis dahin nur ein ehrlicher Hinweis. Alle Daten (Positionen, Summen,
-    // Kontakt, Firma) liegen bereits im passenden Format vor -> 1:1 übernehmbar.
+
+    setFehler(null);
+    setRechnungLaedt(true);
+    try {
+      const res = await fetch("/api/rechnung-aus-auftrag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auftragId: id }),
+      });
+      const daten = await res.json().catch(() => ({}));
+
+      if (!res.ok || !daten?.rechnungId) {
+        setFehler(daten?.error || "Rechnung konnte nicht erstellt werden.");
+        setRechnungLaedt(false);
+        return;
+      }
+
+      // Nahtstelle greift: Auftrag lokal als fakturiert markieren (Badge)
+      setAuftrag((prev: any) => (prev ? { ...prev, rechnung_id: daten.rechnungId } : prev));
+
+      // Weiter zur Rechnungs-Detailseite (kommt in R4)
+      router.push("/dashboard/rechnungen/" + daten.rechnungId);
+    } catch (e: any) {
+      setFehler("Netzwerkfehler: " + (e?.message || "unbekannt"));
+      setRechnungLaedt(false);
+    }
   }
 
   // ---------- A8: Spracheingabe ----------
@@ -655,6 +683,7 @@ export default function AuftragDetail() {
             ) : (
               <button
                 onClick={rechnungOeffnen}
+                disabled={rechnungLaedt}
                 style={{
                   background: "transparent",
                   color: C.gold,
@@ -663,11 +692,12 @@ export default function AuftragDetail() {
                   padding: "11px 18px",
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: rechnungLaedt ? "wait" : "pointer",
                   fontFamily: "'DM Sans', sans-serif",
+                  opacity: rechnungLaedt ? 0.6 : 1,
                 }}
               >
-                🧾 Rechnung erstellen
+                {rechnungLaedt ? "ARGONAUT erstellt die Rechnung…" : "🧾 Rechnung erstellen"}
               </button>
             )}
             <button
@@ -1177,53 +1207,6 @@ export default function AuftragDetail() {
           }}
         >
           ⚠️ {fehler}
-        </div>
-      )}
-
-      {rechnungModal && (
-        <div
-          onClick={() => setRechnungModal(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(5,10,20,0.72)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: 20,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: C.navy2,
-              border: `1px solid ${C.gold}44`,
-              borderRadius: 16,
-              padding: "28px 30px",
-              maxWidth: 470,
-              width: "100%",
-            }}
-          >
-            <div style={{ fontSize: 34, marginBottom: 10 }}>🧾</div>
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.3px" }}>
-              Rechnung erstellen
-            </h2>
-            <p style={{ color: C.textDim, fontSize: 14, lineHeight: 1.6, margin: "0 0 12px" }}>
-              Die Fakturierung wird im nächsten Baustein{" "}
-              <strong style={{ color: "#fff" }}>Modul 6 „Rechnung"</strong> freigeschaltet.
-            </p>
-            <p style={{ color: C.textDim, fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
-              Dieser Auftrag ist bereits vollständig vorbereitet: Alle Positionen, Mengen,
-              Preise und Summen sowie Kontakt und Firma werden dann automatisch in die
-              Rechnung übernommen — du gibst nichts doppelt ein.
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button onClick={() => setRechnungModal(false)} style={btnGold}>
-                Verstanden
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
