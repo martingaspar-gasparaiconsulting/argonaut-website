@@ -115,6 +115,7 @@ export default function RechnungDetail() {
   const [rechnung, setRechnung] = useState<any>(null);
   const [kontakt, setKontakt] = useState<any>(null);
   const [firma, setFirma] = useState<any>(null);
+  const [firmenprofil, setFirmenprofil] = useState<any>(null);
 
   const [titel, setTitel] = useState("");
   const [status, setStatus] = useState<StatusKey>("offen");
@@ -192,6 +193,21 @@ export default function RechnungDetail() {
     if (r.firma_id) {
       const { data: f } = await supabase.from("firmen").select("*").eq("id", r.firma_id).single();
       if (f) setFirma(f);
+    }
+
+    // Firmenprofil (Absenderdaten §14) aus profiles laden – dieselbe Quelle wie Einstellungen
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select(
+          "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic"
+        )
+        .eq("id", user.id)
+        .single();
+      if (prof) setFirmenprofil(prof);
     }
 
     setDirty(false);
@@ -381,18 +397,22 @@ export default function RechnungDetail() {
         notizen,
       };
 
-      // Absenderdaten (§14) — Nahtstelle zu den Firmen-Einstellungen.
-      // Vorerst leer -> PDF zeigt Platzhalter, damit die Pflichtfelder sichtbar sind.
+      // Absenderdaten (§14) aus dem Firmenprofil (profiles). Anschrift = Straße + PLZ Ort.
+      const p = firmenprofil || {};
+      const anschriftTeile = [
+        p.firma_strasse,
+        [p.firma_plz, p.firma_ort].filter(Boolean).join(" "),
+      ].filter((s: any) => s && String(s).trim());
       const aussteller = {
-        name: "",
-        anschrift: "",
-        steuernummer: "",
-        ust_idnr: "",
-        telefon: "",
-        email: "",
-        bank_iban: "",
-        bank_bic: "",
-        bank_name: "",
+        name: p.firma_name || "",
+        anschrift: anschriftTeile.join("\n"),
+        steuernummer: p.firma_steuernummer || "",
+        ust_idnr: p.firma_ust_id || "",
+        telefon: p.firma_telefon || "",
+        email: p.firma_email || "",
+        bank_iban: p.firma_iban || "",
+        bank_bic: p.firma_bic || "",
+        bank_name: p.firma_bank || "",
       };
 
       const res = await fetch("/api/rechnung-pdf", {

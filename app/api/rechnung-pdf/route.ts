@@ -43,6 +43,13 @@ function pflicht(wert: any, hinweis: string): string {
   return s ? esc(s) : `<span class="warn">⚠ ${esc(hinweis)}</span>`;
 }
 
+// Wie pflicht(), aber wandelt Zeilenumbrüche in <br> (für mehrzeilige Anschrift)
+function pflichtMehrzeilig(wert: any, hinweis: string): string {
+  const s = String(wert ?? '').trim();
+  if (!s) return `<span class="warn">⚠ ${esc(hinweis)}</span>`;
+  return esc(s).replace(/\n/g, '<br>');
+}
+
 function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
@@ -154,7 +161,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     <div class="aussteller">
       <div class="marke">Rechnung</div>
       <div class="name">${pflicht(aussteller?.name, 'Firmenname ergänzen')}</div>
-      <div class="dim">${pflicht(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
+      <div class="dim">${pflichtMehrzeilig(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
       <div class="dim">${steuerZeile}</div>
       ${aussteller?.telefon || aussteller?.email ? `<div class="dim">${esc(aussteller?.telefon || '')}${aussteller?.telefon && aussteller?.email ? ' &middot; ' : ''}${esc(aussteller?.email || '')}</div>` : ''}
     </div>
