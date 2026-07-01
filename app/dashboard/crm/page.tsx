@@ -153,6 +153,23 @@ export default function CrmCockpitPage() {
   const [vkDublette, setVkDublette] = useState<string | null>(null);
   const [vkDubletteBestaetigt, setVkDubletteBestaetigt] = useState(false);
 
+  // C13: CSV-Import
+  const [impOffen, setImpOffen] = useState(false);
+  const [impAlleZeilen, setImpAlleZeilen] = useState<string[][]>([]);
+  const [impHatHeader, setImpHatHeader] = useState(true);
+  const [impMapping, setImpMapping] = useState<Record<string, number>>({
+    vorname: -1,
+    nachname: -1,
+    email: -1,
+    telefon: -1,
+    firma: -1,
+    position: -1,
+  });
+  const [impFehler, setImpFehler] = useState<string | null>(null);
+  const [impSpeichert, setImpSpeichert] = useState(false);
+  const [impImportiert, setImpImportiert] = useState(0);
+  const [impUebersprungen, setImpUebersprungen] = useState(0);
+
   async function laden_() {
     setLaden(true);
     setFehler(null);
@@ -349,7 +366,211 @@ export default function CrmCockpitPage() {
     laden_();
   }
 
-  // ---------------- C12: Visitenkarte ----------------
+  // ---------------- C13: CSV-Import ----------------
+  function csvParse(text: string, delim: string): string[][] {
+    const zeilen: string[][] = [];
+    let feld = "";
+    let zeile: string[] = [];
+    let inQuote = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuote) {
+        if (c === '"') {
+          if (text[i + 1] === '"') {
+            feld += '"';
+            i++;
+          } else {
+            inQuote = false;
+          }
+        } else {
+          feld += c;
+        }
+      } else {
+        if (c === '"') {
+          inQuote = true;
+        } else if (c === delim) {
+          zeile.push(feld);
+          feld = "";
+        } else if (c === "\n") {
+          zeile.push(feld);
+          zeilen.push(zeile);
+          zeile = [];
+          feld = "";
+        } else if (c === "\r") {
+          // ignorieren (CRLF)
+        } else {
+          feld += c;
+        }
+      }
+    }
+    if (feld.length > 0 || zeile.length > 0) {
+      zeile.push(feld);
+      zeilen.push(zeile);
+    }
+    // komplett leere Zeilen entfernen
+    return zeilen.filter((z) => z.some((f) => f.trim() !== ""));
+  }
+
+  function rateMapping(header: string[]): Record<string, number> {
+    const m: Record<string, number> = {
+      vorname: -1,
+      nachname: -1,
+      email: -1,
+      telefon: -1,
+      firma: -1,
+      position: -1,
+    };
+    header.forEach((h, i) => {
+      const t = h.toLowerCase();
+      if (m.vorname === -1 && (t.includes("vorname") || t.includes("first")))
+        m.vorname = i;
+      else if (
+        m.nachname === -1 &&
+        (t.includes("nachname") || t.includes("last") || t.includes("surname"))
+      )
+        m.nachname = i;
+      else if (m.email === -1 && (t.includes("mail")))
+        m.email = i;
+      else if (
+        m.telefon === -1 &&
+        (t.includes("telefon") ||
+          t.includes("phone") ||
+          t.includes("tel") ||
+          t.includes("mobil") ||
+          t.includes("handy"))
+      )
+        m.telefon = i;
+      else if (
+        m.firma === -1 &&
+        (t.includes("firma") ||
+          t.includes("company") ||
+          t.includes("unternehmen") ||
+          t.includes("organis"))
+      )
+        m.firma = i;
+      else if (
+        m.position === -1 &&
+        (t.includes("position") ||
+          t.includes("rolle") ||
+          t.includes("funktion") ||
+          t.includes("title") ||
+          t.includes("titel"))
+      )
+        m.position = i;
+      else if (m.nachname === -1 && t === "name") m.nachname = i;
+    });
+    return m;
+  }
+
+  function impOeffnen() {
+    setImpOffen(true);
+    setImpAlleZeilen([]);
+    setImpHatHeader(true);
+    setImpMapping({
+      vorname: -1,
+      nachname: -1,
+      email: -1,
+      telefon: -1,
+      firma: -1,
+      position: -1,
+    });
+    setImpFehler(null);
+    setImpImportiert(0);
+    setImpUebersprungen(0);
+  }
+
+  function impDateiGewaehlt(datei: File | null) {
+    if (!datei) return;
+    setImpFehler(null);
+    setImpImportiert(0);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      const ersteZeile = text.split("\n")[0] || "";
+      const semi = (ersteZeile.match(/;/g) || []).length;
+      const komma = (ersteZeile.match(/,/g) || []).length;
+      const delim = semi > komma ? ";" : ",";
+      const zeilen = csvParse(text, delim);
+      if (zeilen.length === 0) {
+        setImpFehler("Die Datei enthält keine lesbaren Zeilen.");
+        return;
+      }
+      setImpAlleZeilen(zeilen);
+      setImpHatHeader(true);
+      setImpMapping(rateMapping(zeilen[0]));
+    };
+    reader.onerror = () => setImpFehler("Datei konnte nicht gelesen werden.");
+    reader.readAsText(datei, "UTF-8");
+  }
+
+  async function impStart(header: string[], datenZeilen: string[][]) {
+    setImpSpeichert(true);
+    setImpFehler(null);
+
+    const { data: best } = await supabase.from("kontakte").select("email");
+    const vorhanden = new Set(
+      ((best as { email: string | null }[]) || [])
+        .map((r) => (r.email || "").toLowerCase())
+        .filter(Boolean)
+    );
+    const gesehen = new Set<string>();
+    const neu: any[] = [];
+    let uebersprungen = 0;
+
+    const val = (row: string[], i: number) =>
+      i >= 0 && i < row.length ? (row[i] || "").trim() : "";
+
+    for (const row of datenZeilen) {
+      const vorname = val(row, impMapping.vorname);
+      const nachname = val(row, impMapping.nachname);
+      const email = val(row, impMapping.email);
+      const telefon = val(row, impMapping.telefon);
+      const firma = val(row, impMapping.firma);
+      const position = val(row, impMapping.position);
+      if (!vorname && !nachname && !email && !firma) continue;
+      const key = email.toLowerCase();
+      if (key && (vorhanden.has(key) || gesehen.has(key))) {
+        uebersprungen++;
+        continue;
+      }
+      if (key) gesehen.add(key);
+      neu.push({
+        vorname: vorname || null,
+        nachname: nachname || null,
+        email: email || null,
+        telefon: telefon || null,
+        firma: firma || null,
+        position: position || null,
+        status: "interessent",
+        quelle: "CSV-Import",
+        betreuungs_intervall_tage: 30,
+      });
+    }
+
+    if (neu.length === 0) {
+      setImpSpeichert(false);
+      setImpFehler(
+        "Keine neuen Kontakte zum Importieren – bitte Spalten-Zuordnung prüfen (mind. Name oder Firma)."
+      );
+      return;
+    }
+
+    let done = 0;
+    for (let i = 0; i < neu.length; i += 500) {
+      const chunk = neu.slice(i, i + 500);
+      const { error } = await supabase.from("kontakte").insert(chunk);
+      if (error) {
+        setImpSpeichert(false);
+        setImpFehler(error.message);
+        return;
+      }
+      done += chunk.length;
+    }
+    setImpSpeichert(false);
+    setImpImportiert(done);
+    setImpUebersprungen(uebersprungen);
+    laden_();
+  }
   function vkOeffnen() {
     setVkOffen(true);
     setVkBase64("");
@@ -470,6 +691,18 @@ export default function CrmCockpitPage() {
     laden_();
   }
 
+  // C13: abgeleitete Import-Ansicht
+  const impHeader: string[] = impAlleZeilen.length
+    ? impHatHeader
+      ? impAlleZeilen[0]
+      : impAlleZeilen[0].map((_, i) => "Spalte " + (i + 1))
+    : [];
+  const impDaten: string[][] = impAlleZeilen.length
+    ? impHatHeader
+      ? impAlleZeilen.slice(1)
+      : impAlleZeilen
+    : [];
+
   return (
     <div style={{ background: C.navy, minHeight: "100vh", padding: "32px 28px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -523,6 +756,22 @@ export default function CrmCockpitPage() {
               }}
             >
               📇 Visitenkarte
+            </button>
+            <button
+              onClick={impOeffnen}
+              style={{
+                background: "transparent",
+                color: C.cyan,
+                border: `1px solid ${C.cyan}`,
+                borderRadius: 10,
+                padding: "12px 18px",
+                fontFamily: "Syne, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              📥 Import
             </button>
             <button
               onClick={() => router.push("/dashboard/crm/wochenfokus")}
@@ -1245,6 +1494,266 @@ export default function CrmCockpitPage() {
                     Anderes Foto
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* C13: CSV-Import-Modal */}
+      {impOffen && (
+        <div
+          style={overlay}
+          onClick={() => !impSpeichert && setImpOffen(false)}
+        >
+          <div style={modal} onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 18,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  color: C.cyan,
+                  fontSize: 22,
+                  margin: 0,
+                }}
+              >
+                📥 Kontakte importieren (CSV)
+              </h2>
+              <button
+                onClick={() => setImpOffen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: C.textDim,
+                  fontSize: 20,
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {impImportiert > 0 ? (
+              <div>
+                <div
+                  style={{
+                    background: "rgba(76,175,125,0.12)",
+                    border: `1px solid ${C.green}`,
+                    color: C.green,
+                    borderRadius: 10,
+                    padding: "16px 18px",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 15,
+                    marginBottom: 16,
+                  }}
+                >
+                  ✅ {impImportiert} Kontakt(e) importiert
+                  {impUebersprungen > 0
+                    ? ` · ${impUebersprungen} Dublette(n) übersprungen`
+                    : ""}
+                  .
+                </div>
+                <button
+                  onClick={() => setImpOffen(false)}
+                  style={{
+                    background: C.gold,
+                    color: C.navy,
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "11px 24px",
+                    fontFamily: "Syne, sans-serif",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Fertig
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+                  CSV-Datei wählen (z. B. Export aus Excel/Outlook). Komma und Semikolon werden erkannt.
+                </div>
+
+                <input
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  onChange={(e) =>
+                    impDateiGewaehlt(e.target.files ? e.target.files[0] : null)
+                  }
+                  style={{
+                    color: C.textDim,
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    marginBottom: 14,
+                    width: "100%",
+                  }}
+                />
+
+                {impFehler && (
+                  <div
+                    style={{
+                      background: "rgba(224,102,102,0.12)",
+                      border: `1px solid ${C.danger}`,
+                      color: C.danger,
+                      borderRadius: 10,
+                      padding: "12px 16px",
+                      marginBottom: 14,
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                    }}
+                  >
+                    {impFehler}
+                  </div>
+                )}
+
+                {impAlleZeilen.length > 0 && (
+                  <div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        color: C.textDim,
+                        fontSize: 13,
+                        marginBottom: 16,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={impHatHeader}
+                        onChange={(e) => {
+                          setImpHatHeader(e.target.checked);
+                          if (e.target.checked) {
+                            setImpMapping(rateMapping(impAlleZeilen[0]));
+                          }
+                        }}
+                      />
+                      Erste Zeile enthält Spaltenüberschriften
+                    </label>
+
+                    {/* Spalten-Zuordnung */}
+                    <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>
+                      Spalten zuordnen
+                    </div>
+                    <div style={grid2}>
+                      {[
+                        ["vorname", "Vorname"],
+                        ["nachname", "Nachname"],
+                        ["email", "E-Mail"],
+                        ["telefon", "Telefon"],
+                        ["firma", "Firma"],
+                        ["position", "Position / Rolle"],
+                      ].map(([feld, label]) => (
+                        <Feld key={feld} label={label}>
+                          <select
+                            style={inp}
+                            value={impMapping[feld]}
+                            onChange={(e) =>
+                              setImpMapping((m) => ({
+                                ...m,
+                                [feld]: Number(e.target.value),
+                              }))
+                            }
+                          >
+                            <option value={-1}>— ignorieren —</option>
+                            {impHeader.map((h, i) => (
+                              <option key={i} value={i}>
+                                {h || "Spalte " + (i + 1)}
+                              </option>
+                            ))}
+                          </select>
+                        </Feld>
+                      ))}
+                    </div>
+
+                    {/* Vorschau */}
+                    <div style={{ color: C.cyan, fontSize: 12, margin: "16px 0 8px" }}>
+                      Vorschau ({impDaten.length} Datenzeile
+                      {impDaten.length === 1 ? "" : "n"})
+                    </div>
+                    <div style={{ overflowX: "auto", marginBottom: 16 }}>
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: 12,
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            {impHeader.map((h, i) => (
+                              <th
+                                key={i}
+                                style={{
+                                  textAlign: "left",
+                                  color: C.textDim,
+                                  borderBottom: `1px solid ${C.border}`,
+                                  padding: "6px 10px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {h || "Spalte " + (i + 1)}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {impDaten.slice(0, 5).map((row, ri) => (
+                            <tr key={ri}>
+                              {impHeader.map((_, ci) => (
+                                <td
+                                  key={ci}
+                                  style={{
+                                    color: "#fff",
+                                    borderBottom: `1px solid ${C.border}`,
+                                    padding: "6px 10px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {row[ci] || ""}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 14 }}>
+                      Dubletten (gleiche E-Mail wie bestehende Kontakte) werden automatisch übersprungen. Quelle wird „CSV-Import".
+                    </div>
+
+                    <button
+                      onClick={() => impStart(impHeader, impDaten)}
+                      disabled={impSpeichert || impDaten.length === 0}
+                      style={{
+                        background: C.gold,
+                        color: C.navy,
+                        border: "none",
+                        borderRadius: 10,
+                        padding: "11px 24px",
+                        fontFamily: "Syne, sans-serif",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: "pointer",
+                        opacity: impSpeichert || impDaten.length === 0 ? 0.6 : 1,
+                      }}
+                    >
+                      {impSpeichert
+                        ? "Importiert…"
+                        : impDaten.length + " Kontakt(e) importieren"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
