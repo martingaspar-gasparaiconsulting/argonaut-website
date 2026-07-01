@@ -5,7 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 // ============================================================
-// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Block A3: Auftrag-Detailseite
+// ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Block A3+A4
+// Auftrag-Detailseite MIT Positionen-Editor & Live-Summen
 // Route: /dashboard/auftraege/[id]
 // ============================================================
 
@@ -53,7 +54,31 @@ const STATUS_REIHENFOLGE: StatusKey[] = [
   "storniert",
 ];
 
-// ---------- Geld formatieren ----------
+const EINHEITEN = ["Stk", "Std", "Tag", "m", "m²", "m³", "kg", "t", "lfm", "Psch"];
+
+// ---------- Positions-Zeile im Frontend (Zahlen als Strings zum Tippen) ----------
+type Zeile = {
+  id: string; // echte uuid oder neu generierte (wir upserten mit id)
+  bezeichnung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  mwst_satz: string;
+};
+
+// ---------- Zahl-Helfer (Komma ODER Punkt) ----------
+function parseZahl(s: string): number {
+  if (!s) return 0;
+  const n = parseFloat(String(s).replace(",", "."));
+  return isNaN(n) ? 0 : n;
+}
+function ladeStr(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "";
+  return String(n).replace(".", ",");
+}
+function r2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
 function geld(n: number | null | undefined, waehrung = "EUR"): string {
   const wert = typeof n === "number" ? n : 0;
   return new Intl.NumberFormat("de-DE", {
@@ -85,10 +110,9 @@ export default function AuftragDetail() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [nichtGefunden, setNichtGefunden] = useState(false);
 
-  // Auftrag-Rohdaten (für Summen-Anzeige)
   const [auftrag, setAuftrag] = useState<any>(null);
 
-  // Bearbeitbare Felder
+  // Bearbeitbare Kopf-Felder
   const [titel, setTitel] = useState("");
   const [status, setStatus] = useState<StatusKey>("entwurf");
   const [auftragsdatum, setAuftragsdatum] = useState<string>("");
@@ -98,11 +122,14 @@ export default function AuftragDetail() {
   const [firmaId, setFirmaId] = useState<string>("");
   const [notizen, setNotizen] = useState("");
 
+  // Positionen
+  const [zeilen, setZeilen] = useState<Zeile[]>([]);
+  const [geladeneIds, setGeladeneIds] = useState<string[]>([]);
+
   const [dirty, setDirty] = useState(false);
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
 
-  // Auswahl-Listen
   const [kontakte, setKontakte] = useState<any[]>([]);
   const [firmen, setFirmen] = useState<any[]>([]);
 
@@ -111,8 +138,13 @@ export default function AuftragDetail() {
     setLoading(true);
     setFehler(null);
 
-    const [aRes, kRes, fRes] = await Promise.all([
+    const [aRes, pRes, kRes, fRes] = await Promise.all([
       supabase.from("auftraege").select("*").eq("id", id).single(),
+      supabase
+        .from("auftrag_positionen")
+        .select("*")
+        .eq("auftrag_id", id)
+        .order("position", { ascending: true }),
       supabase.from("kontakte").select("*"),
       supabase.from("firmen").select("*"),
     ]);
@@ -134,6 +166,18 @@ export default function AuftragDetail() {
     setFirmaId(a.firma_id || "");
     setNotizen(a.notizen || "");
 
+    const pos = (pRes.data as any[]) || [];
+    const zl: Zeile[] = pos.map((p) => ({
+      id: p.id,
+      bezeichnung: p.bezeichnung || "",
+      menge: ladeStr(p.menge),
+      einheit: p.einheit || "Stk",
+      einzelpreis: ladeStr(p.einzelpreis),
+      mwst_satz: ladeStr(p.mwst_satz),
+    }));
+    setZeilen(zl);
+    setGeladeneIds(zl.map((z) => z.id));
+
     if (!kRes.error && kRes.data) setKontakte(kRes.data as any[]);
     if (!fRes.error && fRes.data) setFirmen(fRes.data as any[]);
 
@@ -146,14 +190,66 @@ export default function AuftragDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // kleiner Helper: Feld ändern + dirty setzen
-  function aendern<T>(setter: (v: T) => void, v: T) {
-    setter(v);
+  function markDirty() {
     setDirty(true);
     setGespeichert(false);
   }
+  function aendern<T>(setter: (v: T) => void, v: T) {
+    setter(v);
+    markDirty();
+  }
 
-  // sortierte Auswahl-Listen
+  // ---------- Positionen bearbeiten ----------
+  function neueId(): string {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return "neu-" + Math.random().toString(36).slice(2) + Date.now();
+    }
+  }
+  function zeileHinzufuegen() {
+    setZeilen((prev) => [
+      ...prev,
+      {
+        id: neueId(),
+        bezeichnung: "",
+        menge: "1",
+        einheit: "Stk",
+        einzelpreis: "0",
+        mwst_satz: "19",
+      },
+    ]);
+    markDirty();
+  }
+  function zeileAendern(zid: string, feld: keyof Zeile, wert: string) {
+    setZeilen((prev) =>
+      prev.map((z) => (z.id === zid ? { ...z, [feld]: wert } : z))
+    );
+    markDirty();
+  }
+  function zeileLoeschen(zid: string) {
+    setZeilen((prev) => prev.filter((z) => z.id !== zid));
+    markDirty();
+  }
+
+  // ---------- Live-Summen ----------
+  const summen = useMemo(() => {
+    let netto = 0;
+    let mwst = 0;
+    for (const z of zeilen) {
+      const zn = parseZahl(z.menge) * parseZahl(z.einzelpreis);
+      netto += zn;
+      mwst += zn * (parseZahl(z.mwst_satz) / 100);
+    }
+    netto = r2(netto);
+    mwst = r2(mwst);
+    return { netto, mwst, brutto: r2(netto + mwst) };
+  }, [zeilen]);
+
+  function zeileNetto(z: Zeile): number {
+    return r2(parseZahl(z.menge) * parseZahl(z.einzelpreis));
+  }
+
   const kontaktOptionen = useMemo(
     () =>
       [...kontakte].sort((a, b) =>
@@ -163,13 +259,11 @@ export default function AuftragDetail() {
   );
   const firmaOptionen = useMemo(
     () =>
-      [...firmen].sort((a, b) =>
-        firmaName(a).localeCompare(firmaName(b), "de")
-      ),
+      [...firmen].sort((a, b) => firmaName(a).localeCompare(firmaName(b), "de")),
     [firmen]
   );
 
-  // ---------- Speichern ----------
+  // ---------- Speichern (Kopf + Positionen + Summen) ----------
   async function speichernJetzt() {
     if (!titel.trim()) {
       setFehler("Bitte einen Titel eingeben.");
@@ -177,6 +271,47 @@ export default function AuftragDetail() {
     }
     setSpeichern(true);
     setFehler(null);
+
+    // 1) Positionen upserten
+    const posRows = zeilen.map((z, i) => ({
+      id: z.id,
+      auftrag_id: id,
+      position: i + 1,
+      bezeichnung: z.bezeichnung || "",
+      menge: parseZahl(z.menge),
+      einheit: z.einheit || "Stk",
+      einzelpreis: parseZahl(z.einzelpreis),
+      mwst_satz: parseZahl(z.mwst_satz),
+      gesamt_netto: zeileNetto(z),
+    }));
+
+    if (posRows.length > 0) {
+      const { error: upErr } = await supabase
+        .from("auftrag_positionen")
+        .upsert(posRows, { onConflict: "id" });
+      if (upErr) {
+        setSpeichern(false);
+        setFehler("Positionen: " + upErr.message);
+        return;
+      }
+    }
+
+    // 2) entfernte Positionen löschen
+    const aktuelleIds = zeilen.map((z) => z.id);
+    const zuLoeschen = geladeneIds.filter((gid) => !aktuelleIds.includes(gid));
+    if (zuLoeschen.length > 0) {
+      const { error: delErr } = await supabase
+        .from("auftrag_positionen")
+        .delete()
+        .in("id", zuLoeschen);
+      if (delErr) {
+        setSpeichern(false);
+        setFehler("Positionen löschen: " + delErr.message);
+        return;
+      }
+    }
+
+    // 3) Kopf + Summen speichern
     const { error } = await supabase
       .from("auftraege")
       .update({
@@ -188,14 +323,19 @@ export default function AuftragDetail() {
         kontakt_id: kontaktId || null,
         firma_id: firmaId || null,
         notizen: notizen || null,
+        netto_summe: summen.netto,
+        mwst_summe: summen.mwst,
+        brutto_summe: summen.brutto,
       })
       .eq("id", id);
-    setSpeichern(false);
 
+    setSpeichern(false);
     if (error) {
       setFehler(error.message);
       return;
     }
+
+    setGeladeneIds(aktuelleIds);
     setDirty(false);
     setGespeichert(true);
     setTimeout(() => setGespeichert(false), 2500);
@@ -219,12 +359,7 @@ export default function AuftragDetail() {
       <Rahmen>
         <div style={{ padding: 60, textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
-          <h2
-            style={{
-              fontFamily: "'Syne', sans-serif",
-              margin: "0 0 8px",
-            }}
-          >
+          <h2 style={{ fontFamily: "'Syne', sans-serif", margin: "0 0 8px" }}>
             Auftrag nicht gefunden
           </h2>
           <p style={{ color: C.textDim, marginBottom: 20 }}>
@@ -241,18 +376,13 @@ export default function AuftragDetail() {
     );
   }
 
-  const st = STATUS[status] || STATUS.entwurf;
-
   return (
     <Rahmen>
       {/* Kopfzeile */}
       <div style={{ marginBottom: 20 }}>
         <button
           onClick={() => {
-            if (
-              dirty &&
-              !window.confirm("Ungespeicherte Änderungen verwerfen?")
-            )
+            if (dirty && !window.confirm("Ungespeicherte Änderungen verwerfen?"))
               return;
             router.push("/dashboard/auftraege");
           }}
@@ -303,9 +433,7 @@ export default function AuftragDetail() {
             </h1>
           </div>
 
-          <div
-            style={{ display: "flex", gap: 10, alignItems: "center" }}
-          >
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {gespeichert && (
               <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>
                 ✓ gespeichert
@@ -342,18 +470,7 @@ export default function AuftragDetail() {
           marginBottom: 20,
         }}
       >
-        <div
-          style={{
-            color: C.textDim,
-            fontSize: 12.5,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            marginBottom: 12,
-          }}
-        >
-          Status
-        </div>
+        <div style={sektionLabel}>Status</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {STATUS_REIHENFOLGE.map((s) => {
             const aktiv = status === s;
@@ -381,7 +498,7 @@ export default function AuftragDetail() {
         </div>
       </div>
 
-      {/* Zwei-Spalten-Layout */}
+      {/* Zwei-Spalten: Stammdaten + Zuordnung */}
       <div
         style={{
           display: "grid",
@@ -390,7 +507,6 @@ export default function AuftragDetail() {
           marginBottom: 20,
         }}
       >
-        {/* Stammdaten */}
         <Karte titel="Stammdaten">
           <label style={labelStyle}>Titel *</label>
           <input
@@ -398,7 +514,6 @@ export default function AuftragDetail() {
             onChange={(e) => aendern(setTitel, e.target.value)}
             style={inputStyle}
           />
-
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Auftragsdatum</label>
@@ -419,7 +534,6 @@ export default function AuftragDetail() {
               />
             </div>
           </div>
-
           <label style={labelStyle}>Währung</label>
           <select
             value={waehrung}
@@ -438,7 +552,6 @@ export default function AuftragDetail() {
           </select>
         </Karte>
 
-        {/* Zuordnung */}
         <Karte titel="Zuordnung">
           <label style={labelStyle}>Kontakt</label>
           <select
@@ -455,7 +568,6 @@ export default function AuftragDetail() {
               </option>
             ))}
           </select>
-
           <label style={labelStyle}>Firma</label>
           <select
             value={firmaId}
@@ -471,22 +583,136 @@ export default function AuftragDetail() {
               </option>
             ))}
           </select>
-
-          <p
-            style={{
-              color: C.textDim,
-              fontSize: 12,
-              marginTop: 14,
-              lineHeight: 1.5,
-            }}
-          >
-            Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie
-            zuerst im Vertrieb/CRM an.
+          <p style={{ color: C.textDim, fontSize: 12, marginTop: 14, lineHeight: 1.5 }}>
+            Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst
+            im Vertrieb/CRM an.
           </p>
         </Karte>
       </div>
 
-      {/* Summen (read-only, kommen aus den Positionen in A4) */}
+      {/* POSITIONEN */}
+      <div
+        style={{
+          background: C.navy2,
+          border: `1px solid ${C.border}`,
+          borderRadius: 14,
+          padding: "20px 22px",
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <div style={{ ...sektionLabel, marginBottom: 0 }}>Positionen</div>
+          <button onClick={zeileHinzufuegen} style={btnKlein}>
+            + Position
+          </button>
+        </div>
+
+        {zeilen.length === 0 ? (
+          <div
+            style={{
+              padding: "28px 0",
+              textAlign: "center",
+              color: C.textDim,
+              fontSize: 14,
+            }}
+          >
+            Noch keine Positionen. Füg oben rechts die erste hinzu.
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            {/* Kopf */}
+            <div style={posKopf}>
+              <div>Bezeichnung</div>
+              <div style={{ textAlign: "right" }}>Menge</div>
+              <div>Einheit</div>
+              <div style={{ textAlign: "right" }}>Einzelpreis</div>
+              <div style={{ textAlign: "right" }}>MwSt %</div>
+              <div style={{ textAlign: "right" }}>Summe netto</div>
+              <div></div>
+            </div>
+
+            {zeilen.map((z) => (
+              <div key={z.id} style={posZeile}>
+                <input
+                  value={z.bezeichnung}
+                  onChange={(e) =>
+                    zeileAendern(z.id, "bezeichnung", e.target.value)
+                  }
+                  placeholder="z. B. Edelstahlgeländer, 2 m"
+                  style={zellInput}
+                />
+                <input
+                  value={z.menge}
+                  onChange={(e) => zeileAendern(z.id, "menge", e.target.value)}
+                  inputMode="decimal"
+                  style={{ ...zellInput, textAlign: "right" }}
+                />
+                <select
+                  value={z.einheit}
+                  onChange={(e) => zeileAendern(z.id, "einheit", e.target.value)}
+                  style={zellInput}
+                >
+                  {EINHEITEN.map((e) => (
+                    <option key={e} value={e} style={{ background: C.navy2 }}>
+                      {e}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={z.einzelpreis}
+                  onChange={(e) =>
+                    zeileAendern(z.id, "einzelpreis", e.target.value)
+                  }
+                  inputMode="decimal"
+                  style={{ ...zellInput, textAlign: "right" }}
+                />
+                <input
+                  value={z.mwst_satz}
+                  onChange={(e) =>
+                    zeileAendern(z.id, "mwst_satz", e.target.value)
+                  }
+                  inputMode="decimal"
+                  style={{ ...zellInput, textAlign: "right" }}
+                />
+                <div
+                  style={{
+                    textAlign: "right",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    alignSelf: "center",
+                    color: C.cyan,
+                  }}
+                >
+                  {geld(zeileNetto(z), waehrung)}
+                </div>
+                <button
+                  onClick={() => zeileLoeschen(z.id)}
+                  title="Position löschen"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: C.textDim,
+                    cursor: "pointer",
+                    fontSize: 15,
+                    alignSelf: "center",
+                  }}
+                >
+                  🗑
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SUMMEN (live) */}
       <Karte titel="Summen">
         <div
           style={{
@@ -495,25 +721,13 @@ export default function AuftragDetail() {
             gap: 16,
           }}
         >
-          <SummeFeld
-            label="Netto"
-            wert={geld(auftrag?.netto_summe, waehrung)}
-            farbe={C.cyan}
-          />
-          <SummeFeld
-            label="MwSt"
-            wert={geld(auftrag?.mwst_summe, waehrung)}
-            farbe={C.textDim}
-          />
-          <SummeFeld
-            label="Brutto"
-            wert={geld(auftrag?.brutto_summe, waehrung)}
-            farbe={C.gold}
-          />
+          <SummeFeld label="Netto" wert={geld(summen.netto, waehrung)} farbe={C.cyan} />
+          <SummeFeld label="MwSt" wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
+          <SummeFeld label="Brutto" wert={geld(summen.brutto, waehrung)} farbe={C.gold} />
         </div>
         <p style={{ color: C.textDim, fontSize: 12, marginTop: 14 }}>
-          Die Summen berechnen sich automatisch aus den Positionen — der
-          Positions-Editor kommt im nächsten Bau-Schritt.
+          Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie
+          festgeschrieben.
         </p>
       </Karte>
 
@@ -535,7 +749,6 @@ export default function AuftragDetail() {
         </Karte>
       </div>
 
-      {/* Fehler */}
       {fehler && (
         <div
           style={{
@@ -571,18 +784,12 @@ function Rahmen({ children }: { children: React.ReactNode }) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>{children}</div>
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>{children}</div>
     </div>
   );
 }
 
-function Karte({
-  titel,
-  children,
-}: {
-  titel: string;
-  children: React.ReactNode;
-}) {
+function Karte({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -592,18 +799,7 @@ function Karte({
         padding: "20px 22px",
       }}
     >
-      <div
-        style={{
-          color: C.textDim,
-          fontSize: 12.5,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          marginBottom: 14,
-        }}
-      >
-        {titel}
-      </div>
+      <div style={sektionLabel}>{titel}</div>
       {children}
     </div>
   );
@@ -647,6 +843,15 @@ function SummeFeld({
 // ============================================================
 // Styles
 // ============================================================
+const sektionLabel: React.CSSProperties = {
+  color: C.textDim,
+  fontSize: 12.5,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  marginBottom: 14,
+};
+
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
@@ -678,4 +883,54 @@ const btnGold: React.CSSProperties = {
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
+};
+
+const btnKlein: React.CSSProperties = {
+  background: "transparent",
+  color: C.gold,
+  border: `1px solid ${C.gold}77`,
+  borderRadius: 8,
+  padding: "7px 14px",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "'DM Sans', sans-serif",
+};
+
+const posSpalten = "1fr 80px 90px 120px 80px 130px 36px";
+
+const posKopf: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: posSpalten,
+  gap: 10,
+  padding: "0 0 10px",
+  borderBottom: `1px solid ${C.border}`,
+  color: C.textDim,
+  fontSize: 11.5,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.4px",
+  minWidth: 640,
+};
+
+const posZeile: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: posSpalten,
+  gap: 10,
+  padding: "10px 0",
+  borderBottom: `1px solid ${C.border}`,
+  minWidth: 640,
+};
+
+const zellInput: React.CSSProperties = {
+  width: "100%",
+  background: C.navy,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  padding: "9px 10px",
+  color: "#fff",
+  fontSize: 13.5,
+  fontFamily: "'DM Sans', sans-serif",
+  outline: "none",
+  boxSizing: "border-box",
 };
