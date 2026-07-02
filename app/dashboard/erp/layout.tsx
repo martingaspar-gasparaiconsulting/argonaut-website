@@ -17,6 +17,7 @@ type Tab = { label: string; href: string };
 const TABS: Tab[] = [
   { label: "📦 Lager", href: "/dashboard/erp" },
   { label: "🚚 Lieferanten", href: "/dashboard/erp/lieferanten" },
+  { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen" },
 ];
 
 function istAktiv(href: string, pathname: string): boolean {
