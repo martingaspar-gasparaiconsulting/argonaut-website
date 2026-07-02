@@ -63,6 +63,7 @@ type PosEdit = {
   bezeichnung: string;
   menge: string;
   einzelpreis: string;
+  menge_geliefert: number;
   position: number;
 };
 
@@ -86,6 +87,16 @@ export default function BestellungDetail() {
   const [laden, setLaden] = useState(true);
   const [notizen, setNotizen] = useState("");
 
+  // Wareneingang
+  const [weOffen, setWeOffen] = useState(false);
+  const [weLieferschein, setWeLieferschein] = useState("");
+  const [weDatum, setWeDatum] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [weMengen, setWeMengen] = useState<Record<string, string>>({});
+  const [weBuchen, setWeBuchen] = useState(false);
+  const [weFehler, setWeFehler] = useState<string | null>(null);
+
   useEffect(() => {
     lade();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,7 +115,9 @@ export default function BestellungDetail() {
 
     const { data: pos } = await supabase
       .from("bestellpositionen")
-      .select("id, artikel_id, bezeichnung, menge, einzelpreis, position")
+      .select(
+        "id, artikel_id, bezeichnung, menge, einzelpreis, menge_geliefert, position"
+      )
       .eq("bestellung_id", bestellungId)
       .order("position", { ascending: true });
     setPositionen(
@@ -114,6 +127,7 @@ export default function BestellungDetail() {
         bezeichnung: p.bezeichnung ?? "",
         menge: p.menge != null ? String(p.menge) : "",
         einzelpreis: p.einzelpreis != null ? String(p.einzelpreis) : "",
+        menge_geliefert: Number(p.menge_geliefert) || 0,
         position: p.position ?? 1,
       }))
     );
@@ -219,6 +233,7 @@ export default function BestellungDetail() {
           bezeichnung: "",
           menge: "1",
           einzelpreis: "0",
+          menge_geliefert: 0,
           position: maxPos + 1,
         },
       ]);
@@ -233,6 +248,127 @@ export default function BestellungDetail() {
   const lieferantName = bestellung?.lieferant_id
     ? lieferanten.find((l) => l.id === bestellung.lieferant_id)?.name ?? null
     : null;
+
+  function oeffneWareneingang() {
+    const init: Record<string, string> = {};
+    positionen.forEach((p) => {
+      const bestellt = Number(p.menge.replace(",", ".")) || 0;
+      const offen = Math.max(0, bestellt - p.menge_geliefert);
+      init[p.id] = offen > 0 ? String(offen) : "0";
+    });
+    setWeMengen(init);
+    setWeLieferschein("");
+    setWeDatum(new Date().toISOString().slice(0, 10));
+    setWeFehler(null);
+    setWeOffen(true);
+  }
+
+  async function bucheWareneingang() {
+    if (!bestellung) return;
+    const zuBuchen = positionen
+      .map((p) => ({
+        p,
+        jetzt: Number((weMengen[p.id] ?? "0").replace(",", ".")) || 0,
+      }))
+      .filter((x) => x.jetzt > 0);
+    if (zuBuchen.length === 0) {
+      setWeFehler("Bitte mindestens eine Menge > 0 eingeben.");
+      return;
+    }
+    setWeBuchen(true);
+    setWeFehler(null);
+
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id ?? null;
+
+    // 1) Wareneingang-Kopf
+    const kopf = {
+      bestellung_id: bestellung.id,
+      lieferschein_nr: weLieferschein.trim() || null,
+      eingangsdatum: weDatum || null,
+      ...(uid ? { owner_user_id: uid } : {}),
+    };
+    const { data: weKopf, error: eKopf } = await supabase
+      .from("wareneingang")
+      .insert(kopf)
+      .select("id")
+      .single();
+    if (eKopf || !weKopf) {
+      setWeBuchen(false);
+      setWeFehler("Wareneingang fehlgeschlagen: " + (eKopf?.message ?? ""));
+      return;
+    }
+
+    const referenz =
+      weLieferschein.trim() || bestellung.bestellnummer || "Wareneingang";
+
+    for (const { p, jetzt } of zuBuchen) {
+      // 2) Wareneingang-Position
+      await supabase.from("wareneingang_positionen").insert({
+        wareneingang_id: weKopf.id,
+        bestellposition_id: p.id,
+        artikel_id: p.artikel_id,
+        menge: jetzt,
+        ...(uid ? { owner_user_id: uid } : {}),
+      });
+
+      // 3) Bestand hochbuchen (nur wenn Artikel verknuepft)
+      if (p.artikel_id) {
+        const { data: artRow } = await supabase
+          .from("artikel")
+          .select("aktueller_bestand")
+          .eq("id", p.artikel_id)
+          .single();
+        const alt = Number(artRow?.aktueller_bestand) || 0;
+        await supabase.from("lagerbewegungen").insert({
+          artikel_id: p.artikel_id,
+          typ: "eingang",
+          menge: jetzt,
+          grund: "Wareneingang " + referenz,
+          referenz: weKopf.id,
+          ...(uid ? { owner_user_id: uid } : {}),
+        });
+        await supabase
+          .from("artikel")
+          .update({ aktueller_bestand: alt + jetzt })
+          .eq("id", p.artikel_id);
+      }
+
+      // 4) menge_geliefert erhoehen
+      await supabase
+        .from("bestellpositionen")
+        .update({ menge_geliefert: p.menge_geliefert + jetzt })
+        .eq("id", p.id);
+    }
+
+    // 5) Bestellstatus neu bestimmen
+    let alleKomplett = true;
+    let etwasGeliefert = false;
+    positionen.forEach((p) => {
+      const bestellt = Number(p.menge.replace(",", ".")) || 0;
+      const jetzt = Number((weMengen[p.id] ?? "0").replace(",", ".")) || 0;
+      const neuGeliefert = p.menge_geliefert + jetzt;
+      if (neuGeliefert > 0) etwasGeliefert = true;
+      if (neuGeliefert < bestellt) alleKomplett = false;
+    });
+    if (bestellung.status !== "storniert") {
+      const neuerStatus = alleKomplett
+        ? "geliefert"
+        : etwasGeliefert
+        ? "teilweise_geliefert"
+        : bestellung.status;
+      if (neuerStatus !== bestellung.status) {
+        await supabase
+          .from("bestellungen")
+          .update({ status: neuerStatus })
+          .eq("id", bestellung.id);
+      }
+    }
+
+    setWeBuchen(false);
+    setWeOffen(false);
+    await lade();
+  }
 
   // ---------- Styles ----------
   const card: React.CSSProperties = {
@@ -344,19 +480,38 @@ export default function BestellungDetail() {
             )}
           </p>
         </div>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: aktuellerStatus.farbe,
-            background: "rgba(255,255,255,0.06)",
-            border: `1px solid ${aktuellerStatus.farbe}55`,
-            borderRadius: 8,
-            padding: "6px 12px",
-          }}
-        >
-          {aktuellerStatus.label}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {bestellung.status !== "storniert" && (
+            <button
+              style={{
+                padding: "8px 14px",
+                borderRadius: 8,
+                border: "none",
+                background: C.gold,
+                color: C.navy,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+              onClick={oeffneWareneingang}
+            >
+              📥 Wareneingang buchen
+            </button>
+          )}
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: aktuellerStatus.farbe,
+              background: "rgba(255,255,255,0.06)",
+              border: `1px solid ${aktuellerStatus.farbe}55`,
+              borderRadius: 8,
+              padding: "6px 12px",
+            }}
+          >
+            {aktuellerStatus.label}
+          </span>
+        </div>
       </div>
 
       {/* Kopf editierbar */}
@@ -518,16 +673,25 @@ export default function BestellungDetail() {
                         onChange={(e) => setPos(p.id, { menge: e.target.value })}
                         onBlur={() => speicherePos(p.id)}
                       />
-                      {einheit && (
+                      {(einheit || p.menge_geliefert > 0) && (
                         <div
                           style={{
                             fontSize: 11,
-                            color: C.textDim,
                             textAlign: "right",
                             marginTop: 2,
                           }}
                         >
-                          {einheit}
+                          {einheit && (
+                            <span style={{ color: C.textDim }}>{einheit} </span>
+                          )}
+                          {p.menge_geliefert > 0 && (
+                            <span style={{ color: C.green }}>
+                              · gel.{" "}
+                              {p.menge_geliefert.toLocaleString("de-DE", {
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>
@@ -599,6 +763,188 @@ export default function BestellungDetail() {
       <div style={{ marginTop: 14, fontSize: 12, color: C.textDim }}>
         Änderungen an Kopf und Positionen werden automatisch gespeichert.
       </div>
+
+      {/* Wareneingang-Modal */}
+      {weOffen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            padding: "40px 16px",
+            zIndex: 1000,
+            overflowY: "auto",
+          }}
+          onClick={() => setWeOffen(false)}
+        >
+          <div
+            style={{ ...card, width: "100%", maxWidth: 680, background: C.navy }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+              📥 Wareneingang buchen
+            </h2>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 13 }}>
+              Erfasste Mengen erhöhen den Lagerbestand und werden protokolliert.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+                marginBottom: 16,
+              }}
+            >
+              <div>
+                <label style={labelStil}>Lieferschein-Nr. (optional)</label>
+                <input
+                  style={inputStil}
+                  value={weLieferschein}
+                  onChange={(e) => setWeLieferschein(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStil}>Eingangsdatum</label>
+                <input
+                  type="date"
+                  style={inputStil}
+                  value={weDatum}
+                  onChange={(e) => setWeDatum(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  minWidth: 560,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={thStil}>Position</th>
+                    <th style={{ ...thStil, textAlign: "right" }}>Bestellt</th>
+                    <th style={{ ...thStil, textAlign: "right" }}>Bereits</th>
+                    <th style={{ ...thStil, textAlign: "right" }}>Offen</th>
+                    <th style={{ ...thStil, textAlign: "right", width: 120 }}>
+                      Jetzt
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positionen.map((p) => {
+                    const bestellt = Number(p.menge.replace(",", ".")) || 0;
+                    const offen = Math.max(0, bestellt - p.menge_geliefert);
+                    return (
+                      <tr key={p.id}>
+                        <td style={tdStil}>
+                          {p.bezeichnung || "Position"}
+                          {!p.artikel_id && (
+                            <span
+                              style={{
+                                marginLeft: 6,
+                                fontSize: 11,
+                                color: C.warn,
+                              }}
+                              title="Kein Artikel verknüpft – bucht keinen Lagerbestand"
+                            >
+                              (frei)
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ ...tdStil, textAlign: "right" }}>
+                          {bestellt.toLocaleString("de-DE")}
+                        </td>
+                        <td
+                          style={{
+                            ...tdStil,
+                            textAlign: "right",
+                            color: C.textDim,
+                          }}
+                        >
+                          {p.menge_geliefert.toLocaleString("de-DE")}
+                        </td>
+                        <td
+                          style={{
+                            ...tdStil,
+                            textAlign: "right",
+                            color: offen > 0 ? C.warn : C.green,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {offen.toLocaleString("de-DE")}
+                        </td>
+                        <td style={tdStil}>
+                          <input
+                            style={{ ...inputStil, textAlign: "right" }}
+                            value={weMengen[p.id] ?? "0"}
+                            inputMode="decimal"
+                            onChange={(e) =>
+                              setWeMengen((m) => ({
+                                ...m,
+                                [p.id]: e.target.value,
+                              }))
+                            }
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {weFehler && (
+              <div
+                style={{
+                  marginTop: 14,
+                  color: C.danger,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                {weFehler}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                marginTop: 20,
+              }}
+            >
+              <button style={btnGhost} onClick={() => setWeOffen(false)}>
+                Abbrechen
+              </button>
+              <button
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: C.gold,
+                  color: C.navy,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  opacity: weBuchen ? 0.6 : 1,
+                }}
+                onClick={bucheWareneingang}
+                disabled={weBuchen}
+              >
+                {weBuchen ? "Buche…" : "Bestand buchen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
