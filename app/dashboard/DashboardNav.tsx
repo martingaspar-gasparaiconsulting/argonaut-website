@@ -15,6 +15,7 @@ type NavLink = {
 const NAV_LINKS: NavLink[] = [
   { label: 'Übersicht', href: '/dashboard' },
   { label: '🤖 Agenten', href: '/dashboard/agenten' },
+  { label: '🎓 Academy', href: '/dashboard/academy' },
   { label: 'Leads', href: '/dashboard/leads' },
   { label: 'Chat', href: '/dashboard/chat' },
   { label: '📄 Dokumente', href: '/dashboard/documents' },
