@@ -53,6 +53,24 @@ interface BestellungRow {
   positionen: { menge: number; einzelpreis: number }[];
 }
 
+type KiItem = {
+  id: string;
+  bezeichnung: string;
+  einheit: string;
+  aktueller_bestand: number;
+  mindestbestand: number;
+  einkaufspreis: number;
+  lieferant_id: string | null;
+  vorschlag_menge: number;
+  begruendung: string;
+};
+
+type KiGruppe = {
+  lieferant_id: string | null;
+  lieferant_name: string;
+  items: KiItem[];
+};
+
 function eur(n: number): string {
   return (Number(n) || 0).toLocaleString("de-DE", {
     style: "currency",
@@ -88,6 +106,13 @@ export default function BestellungenListe() {
   const [neuLieferdatum, setNeuLieferdatum] = useState("");
   const [anlegen, setAnlegen] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+
+  // KI-Bestellvorschlag
+  const [kiOffen, setKiOffen] = useState(false);
+  const [kiLaden, setKiLaden] = useState(false);
+  const [kiFehler, setKiFehler] = useState<string | null>(null);
+  const [kiGruppen, setKiGruppen] = useState<KiGruppe[]>([]);
+  const [kiErstellen, setKiErstellen] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -175,6 +200,149 @@ export default function BestellungenListe() {
     if (error || !data) {
       setFehler("Anlegen fehlgeschlagen: " + (error?.message ?? "unbekannt"));
       return;
+    }
+    router.push(`/dashboard/erp/bestellungen/${data.id}`);
+  }
+
+  async function oeffneKiVorschlag() {
+    setKiOffen(true);
+    setKiLaden(true);
+    setKiFehler(null);
+    setKiGruppen([]);
+
+    // Aktive Artikel holen und clientseitig auf/unter Mindestbestand filtern
+    const { data: art } = await supabase
+      .from("artikel")
+      .select(
+        "id, bezeichnung, einheit, aktueller_bestand, mindestbestand, einkaufspreis, lieferant_id"
+      )
+      .eq("aktiv", true);
+    const unter = (art ?? []).filter((a: any) => {
+      const ist = Number(a.aktueller_bestand) || 0;
+      const min = Number(a.mindestbestand) || 0;
+      return ist <= 0 || (min > 0 && ist <= min);
+    });
+
+    if (unter.length === 0) {
+      setKiLaden(false);
+      setKiFehler("Aktuell liegt kein Artikel auf oder unter dem Mindestbestand. 🎉");
+      return;
+    }
+
+    // ARGONAUT-KI um Mengenvorschläge bitten
+    let vorschlaege: {
+      id: string;
+      vorschlag_menge: number;
+      begruendung: string;
+    }[] = [];
+    try {
+      const res = await fetch("/api/erp-bestellvorschlag", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artikel: unter.map((a: any) => ({
+            id: a.id,
+            bezeichnung: a.bezeichnung,
+            einheit: a.einheit,
+            aktueller_bestand: Number(a.aktueller_bestand) || 0,
+            mindestbestand: Number(a.mindestbestand) || 0,
+          })),
+        }),
+      });
+      const j = await res.json();
+      vorschlaege = j?.vorschlaege ?? [];
+    } catch {
+      vorschlaege = [];
+    }
+
+    const vMap = new Map(vorschlaege.map((v) => [v.id, v]));
+    const liefMap = new Map(lieferanten.map((l) => [l.id, l.name]));
+    const gruppenMap = new Map<string, KiGruppe>();
+
+    unter.forEach((a: any) => {
+      const v = vMap.get(a.id);
+      const min = Number(a.mindestbestand) || 0;
+      const ist = Number(a.aktueller_bestand) || 0;
+      const menge =
+        v?.vorschlag_menge ?? Math.max(1, Math.ceil(min * 2 - ist));
+      const key = a.lieferant_id ?? "__none__";
+      if (!gruppenMap.has(key)) {
+        gruppenMap.set(key, {
+          lieferant_id: a.lieferant_id ?? null,
+          lieferant_name: a.lieferant_id
+            ? liefMap.get(a.lieferant_id) ?? "Lieferant"
+            : "Ohne Lieferant",
+          items: [],
+        });
+      }
+      gruppenMap.get(key)!.items.push({
+        id: a.id,
+        bezeichnung: a.bezeichnung,
+        einheit: a.einheit,
+        aktueller_bestand: ist,
+        mindestbestand: min,
+        einkaufspreis: Number(a.einkaufspreis) || 0,
+        lieferant_id: a.lieferant_id ?? null,
+        vorschlag_menge: menge,
+        begruendung: v?.begruendung ?? "",
+      });
+    });
+
+    setKiGruppen(Array.from(gruppenMap.values()));
+    setKiLaden(false);
+  }
+
+  function setKiMenge(gIdx: number, artikelId: string, wert: string) {
+    const menge = Math.max(0, Math.round(Number(wert.replace(",", ".")) || 0));
+    setKiGruppen((gs) =>
+      gs.map((g, i) =>
+        i !== gIdx
+          ? g
+          : {
+              ...g,
+              items: g.items.map((it) =>
+                it.id === artikelId ? { ...it, vorschlag_menge: menge } : it
+              ),
+            }
+      )
+    );
+  }
+
+  async function bestellungAusGruppe(gruppe: KiGruppe) {
+    const key = gruppe.lieferant_id ?? "__none__";
+    setKiErstellen(key);
+    setKiFehler(null);
+    const nummer = await naechsteNummer();
+    const basis = {
+      bestellnummer: nummer,
+      lieferant_id: gruppe.lieferant_id,
+      status: "entwurf",
+      bestelldatum: new Date().toISOString().slice(0, 10),
+    };
+    const insertObj = userId ? { ...basis, owner_user_id: userId } : basis;
+    const { data, error } = await supabase
+      .from("bestellungen")
+      .insert(insertObj)
+      .select("id")
+      .single();
+    if (error || !data) {
+      setKiErstellen(null);
+      setKiFehler("Bestellung konnte nicht erstellt werden: " + (error?.message ?? ""));
+      return;
+    }
+    const positionen = gruppe.items
+      .filter((it) => it.vorschlag_menge > 0)
+      .map((it, idx) => ({
+        bestellung_id: data.id,
+        artikel_id: it.id,
+        bezeichnung: it.bezeichnung,
+        menge: it.vorschlag_menge,
+        einzelpreis: it.einkaufspreis,
+        position: idx + 1,
+        ...(userId ? { owner_user_id: userId } : {}),
+      }));
+    if (positionen.length > 0) {
+      await supabase.from("bestellpositionen").insert(positionen);
     }
     router.push(`/dashboard/erp/bestellungen/${data.id}`);
   }
@@ -278,9 +446,26 @@ export default function BestellungenListe() {
             Einkauf: Bestellungen an Lieferanten
           </p>
         </div>
-        <button style={btnGold} onClick={() => setModalOffen(true)}>
-          + Bestellung anlegen
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            style={{
+              padding: "10px 18px",
+              borderRadius: 8,
+              border: `1px solid ${C.gold}`,
+              background: "rgba(201,168,76,0.12)",
+              color: C.gold,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+            onClick={oeffneKiVorschlag}
+          >
+            🤖 KI-Bestellvorschlag
+          </button>
+          <button style={btnGold} onClick={() => setModalOffen(true)}>
+            + Bestellung anlegen
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -499,6 +684,198 @@ export default function BestellungenListe() {
                 disabled={anlegen}
               >
                 {anlegen ? "Lege an…" : "Anlegen & öffnen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KI-Bestellvorschlag-Modal */}
+      {kiOffen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            padding: "40px 16px",
+            zIndex: 1000,
+            overflowY: "auto",
+          }}
+          onClick={() => setKiOffen(false)}
+        >
+          <div
+            style={{ ...card, width: "100%", maxWidth: 840, background: C.navy }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+              🤖 KI-Bestellvorschlag
+            </h2>
+            <p style={{ margin: "0 0 18px", color: C.textDim, fontSize: 13 }}>
+              Artikel auf oder unter Mindestbestand – gruppiert nach Lieferant.
+              Mengen sind anpassbar, dann per Klick als Bestellung übernehmen.
+            </p>
+
+            {kiLaden ? (
+              <div style={{ padding: "20px 0", color: C.textDim }}>
+                Die ARGONAUT-KI analysiert deine Bestände…
+              </div>
+            ) : kiGruppen.length === 0 ? (
+              <div style={{ padding: "20px 0", color: C.textDim }}>
+                {kiFehler ?? "Keine Vorschläge verfügbar."}
+              </div>
+            ) : (
+              <>
+                {kiGruppen.map((g, gIdx) => {
+                  const key = g.lieferant_id ?? "__none__";
+                  const gSumme = g.items.reduce(
+                    (s, it) => s + it.vorschlag_menge * it.einkaufspreis,
+                    0
+                  );
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 12,
+                        padding: 14,
+                        marginBottom: 14,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: 10,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>
+                          🚚 {g.lieferant_name}
+                          <span
+                            style={{
+                              marginLeft: 10,
+                              color: C.textDim,
+                              fontWeight: 400,
+                              fontSize: 13,
+                            }}
+                          >
+                            {g.items.length} Artikel · ~{eur(gSumme)}
+                          </span>
+                        </div>
+                        <button
+                          style={{
+                            ...btnGold,
+                            opacity: kiErstellen === key ? 0.6 : 1,
+                            padding: "8px 14px",
+                            fontSize: 13,
+                          }}
+                          onClick={() => bestellungAusGruppe(g)}
+                          disabled={kiErstellen === key}
+                        >
+                          {kiErstellen === key
+                            ? "Erstelle…"
+                            : "🛒 Bestellung erstellen"}
+                        </button>
+                      </div>
+
+                      <div style={{ overflowX: "auto" }}>
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            minWidth: 620,
+                          }}
+                        >
+                          <thead>
+                            <tr>
+                              <th style={thStil}>Artikel</th>
+                              <th style={{ ...thStil, textAlign: "right" }}>
+                                Bestand / Min
+                              </th>
+                              <th style={{ ...thStil, textAlign: "right", width: 110 }}>
+                                Vorschlag
+                              </th>
+                              <th style={thStil}>KI-Begründung</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {g.items.map((it) => (
+                              <tr key={it.id}>
+                                <td style={tdStil}>{it.bezeichnung}</td>
+                                <td
+                                  style={{
+                                    ...tdStil,
+                                    textAlign: "right",
+                                    color: C.textDim,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <span style={{ color: C.danger, fontWeight: 700 }}>
+                                    {it.aktueller_bestand.toLocaleString("de-DE")}
+                                  </span>{" "}
+                                  / {it.mindestbestand.toLocaleString("de-DE")}{" "}
+                                  {it.einheit}
+                                </td>
+                                <td style={tdStil}>
+                                  <input
+                                    style={{
+                                      ...inputStil,
+                                      textAlign: "right",
+                                      padding: "7px 9px",
+                                    }}
+                                    value={String(it.vorschlag_menge)}
+                                    inputMode="numeric"
+                                    onChange={(e) =>
+                                      setKiMenge(gIdx, it.id, e.target.value)
+                                    }
+                                  />
+                                </td>
+                                <td
+                                  style={{
+                                    ...tdStil,
+                                    color: C.textDim,
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  {it.begruendung || "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+                {kiFehler && (
+                  <div
+                    style={{
+                      color: C.danger,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      marginBottom: 10,
+                    }}
+                  >
+                    {kiFehler}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 8,
+              }}
+            >
+              <button style={btnGhost} onClick={() => setKiOffen(false)}>
+                Schließen
               </button>
             </div>
           </div>
