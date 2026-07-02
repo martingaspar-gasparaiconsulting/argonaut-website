@@ -4,23 +4,23 @@ import { usePathname } from "next/navigation";
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · Sub-Navigation (Layout)
 // Erscheint automatisch auf allen /dashboard/erp-Seiten.
-// Neuer Bereich = eine Zeile in TABS (wird pro Baustein ergaenzt).
+// Karten-Buttons je Bereich mit eigener Akzentfarbe (wie CRM).
+// Neuer Bereich = eine Zeile in TABS.
 // ---------------------------------------------------------------------
 
 const C = {
-  gold: "#C9A84C",
   border: "rgba(255,255,255,0.08)",
 };
 
-type Tab = { label: string; href: string };
+type Tab = { label: string; href: string; farbe: string };
 
 const TABS: Tab[] = [
-  { label: "📦 Lager", href: "/dashboard/erp" },
-  { label: "🚚 Lieferanten", href: "/dashboard/erp/lieferanten" },
-  { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen" },
-  { label: "📥 Wareneingang", href: "/dashboard/erp/wareneingang" },
-  { label: "🔧 Inventar", href: "/dashboard/erp/inventar" },
-  { label: "🚜 Fuhrpark", href: "/dashboard/erp/fuhrpark" },
+  { label: "📦 Lager", href: "/dashboard/erp", farbe: "#00e5ff" },
+  { label: "🚚 Lieferanten", href: "/dashboard/erp/lieferanten", farbe: "#E06666" },
+  { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen", farbe: "#4CAF7D" },
+  { label: "📥 Wareneingang", href: "/dashboard/erp/wareneingang", farbe: "#A78BFA" },
+  { label: "🔧 Inventar", href: "/dashboard/erp/inventar", farbe: "#E0A24C" },
+  { label: "🚜 Fuhrpark", href: "/dashboard/erp/fuhrpark", farbe: "#C9A84C" },
 ];
 
 function istAktiv(href: string, pathname: string): boolean {
@@ -50,35 +50,36 @@ export default function ErpLayout({
           maxWidth: 1400,
           marginLeft: "auto",
           marginRight: "auto",
-          marginBottom: 22,
-          paddingBottom: 14,
+          marginBottom: 24,
+          paddingBottom: 18,
           borderBottom: `1px solid ${C.border}`,
         }}
       >
-        <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {TABS.map((tab) => {
-          const golden = istAktiv(tab.href, pathname);
-          const stil: React.CSSProperties = {
-            padding: "8px 16px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 700,
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-            color: golden ? C.gold : "rgba(255,255,255,0.7)",
-            background: golden
-              ? "rgba(201,168,76,0.12)"
-              : "rgba(255,255,255,0.05)",
-            border: golden
-              ? "1px solid rgba(201,168,76,0.3)"
-              : `1px solid ${C.border}`,
-          };
-          return (
-            <a key={tab.href} href={tab.href} style={stil}>
-              {tab.label}
-            </a>
-          );
-        })}
+        <nav style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {TABS.map((tab) => {
+            const aktiv = istAktiv(tab.href, pathname);
+            const stil: React.CSSProperties = {
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "11px 20px",
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 700,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              border: `1px solid ${aktiv ? tab.farbe : tab.farbe + "55"}`,
+              background: aktiv ? tab.farbe + "1F" : "rgba(255,255,255,0.03)",
+              color: aktiv ? tab.farbe : "rgba(255,255,255,0.85)",
+              boxShadow: aktiv ? `0 0 14px ${tab.farbe}33` : "none",
+              transition: "border-color 0.15s ease, background 0.15s ease",
+            };
+            return (
+              <a key={tab.href} href={tab.href} style={stil}>
+                {tab.label}
+              </a>
+            );
+          })}
         </nav>
       </div>
       {children}
