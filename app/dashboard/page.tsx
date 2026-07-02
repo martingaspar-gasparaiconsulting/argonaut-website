@@ -1,15 +1,14 @@
 import UpgradePopup from '@/components/UpgradePopup'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import AgentCard from './AgentCard'
-import OnboardingProgress from './OnboardingProgress'
 import OverusePopup from '@/components/OverusePopup'
 
 // ============================================================
 // ARGONAUT OS · DASHBOARD-UEBERSICHT (/dashboard)
-// Header + Navigation + PULS-Chat liegen jetzt zentral in
-// app/dashboard/layout.tsx. Diese Seite liefert nur noch den
-// Inhalt der Uebersicht.
+// Header + Navigation + PULS-Chat liegen zentral im Layout.
+// Onboarding/Verbrauch/Abo sind nach /dashboard/start ausgelagert.
+// Diese Seite wird zum Live-Command-Center (KPI-Kacheln + Feed
+// folgen im naechsten Schritt). Aktuell: Begruessung + Kennzahlen.
 // ============================================================
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
@@ -38,42 +37,9 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string }
   trial:    { label: 'Testphase', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
 }
 
-const AGENTS = [
-  { name: 'Der Empfänger', role: 'Kunden-Onboarding', desc: 'Onboarded neue Kunden automatisch und beantwortet erste Fragen.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 3V15M12 15L8 11M12 15L16 11" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 17V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V17" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-  { name: 'Der Wächter', role: 'Sicherheit & Compliance', desc: 'Überwacht alle laufenden Prozesse und meldet Abweichungen sofort.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6V12C4 16.4 7.4 20.5 12 22C16.6 20.5 20 16.4 20 12V6L12 2Z" stroke="#C9A84C" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 12L11 14L15 10" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-  { name: 'Der Buchhalter', role: 'Finanzen & Abrechnung', desc: 'Automatisiert Buchhaltung, Rechnungsstellung und Finanzreports.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="#C9A84C" strokeWidth="1.8"/><path d="M8 7H16M8 11H16M8 15H12" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-  { name: 'Der Schreiber', role: 'Content & Texte', desc: 'Erstellt professionelle Inhalte, E-Mails und Marketingtexte.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3L17.7 9.3L7 20H4V17L14.7 6.3Z" stroke="#C9A84C" strokeWidth="1.8" strokeLinejoin="round"/><path d="M16 4L20 8" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-  { name: 'Der Planer', role: 'Termine & Koordination', desc: 'Koordiniert Termine, Kalender und interne Aufgabenverteilung.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#C9A84C" strokeWidth="1.8"/><path d="M16 2V6M8 2V6M3 10H21" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-  { name: 'Der Verkäufer', role: 'Lead-Generierung', desc: 'Generiert Leads, versendet Angebote und führt Follow-ups durch.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 16.5C15.9 16.5 15 17.4 15 18.5S15.9 20.5 17 20.5S19 19.6 19 18.5S18.1 16.5 17 16.5ZM9 18.5C9 19.6 8.1 20.5 7 20.5S5 19.6 5 18.5S5.9 16.5 7 16.5S9 17.4 9 18.5Z" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-  { name: 'Der Moderator', role: 'Community & Social', desc: 'Managed Community, beantwortet Kommentare und Social-Media-Anfragen.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="#C9A84C" strokeWidth="1.8" strokeLinejoin="round"/><path d="M22 6L12 13L2 6" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-  { name: 'Der Personalchef', role: 'HR & Recruiting', desc: 'Automatisiert Recruiting, Onboarding und HR-Prozesse.', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#C9A84C" strokeWidth="1.8"/><path d="M4 20C4 17.8 7.6 16 12 16C16.4 16 20 17.8 20 20" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-]
-
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
-}
-
-function KiCallBar({ used, limit }: { used: number; limit: number }) {
-  const pct = Math.min(Math.round((used / limit) * 100), 100)
-  const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e'
-  const label = pct >= 100 ? '⚠️ Limit erreicht' : pct >= 80 ? '⚠️ Fast erreicht' : 'Normal'
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '14px', padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div>
-          <p style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 4px' }}>KI-Calls diesen Monat</p>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{used.toLocaleString('de-DE')} von {limit.toLocaleString('de-DE')} verwendet</p>
-        </div>
-        <span style={{ fontSize: '12px', fontWeight: 700, color: barColor, background: `${barColor}22`, border: `1px solid ${barColor}55`, borderRadius: '999px', padding: '4px 12px' }}>
-          {pct}% · {label}
-        </span>
-      </div>
-      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '999px', height: '10px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '999px', transition: 'width 0.5s ease' }} />
-      </div>
-    </div>
-  )
 }
 
 export default async function DashboardPage() {
@@ -112,10 +78,11 @@ export default async function DashboardPage() {
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active
 
   const kiLimit = usageData?.ki_calls_limit ?? KI_CALL_LIMITS[rawPaket] ?? 15000
+  const kiUsed = usageData?.ki_calls_used ?? 0
   const onboardingCompleted = profile?.onboarding_completed ?? false
   const onboardingData = profile?.onboarding_data ? (typeof profile.onboarding_data === 'string' ? JSON.parse(profile.onboarding_data) : profile.onboarding_data) : null
   const hasApiKeys = onboardingData?.toolEntries?.some((e: {apiKey?: string}) => e.apiKey && e.apiKey.length > 0) ?? false
-  const kiUsed = usageData?.ki_calls_used ?? 0
+  const setupFertig = onboardingCompleted && hasApiKeys
 
   const stats = [
     { label: 'Aktive Automatisierungen', value: profile?.automations_count ?? 0 },
@@ -144,57 +111,39 @@ export default async function DashboardPage() {
               {statusCfg.label}
             </span>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0 }}>Hier sehen Sie eine Übersicht Ihrer aktiven KI-Agenten und Automatisierungen.</p>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0 }}>Ihr Live-Überblick — was in Ihrem Betrieb gerade passiert.</p>
         </section>
 
-        {/* ONBOARDING BANNER */}
-        <section style={{ marginBottom: '32px' }}>
-          <a href="/dashboard/onboarding" style={{ textDecoration: 'none', display: 'block' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.05) 100%)',
-              border: '2px solid rgba(201,168,76,0.5)',
-              borderRadius: '14px',
-              padding: '24px 28px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '16px',
-              boxShadow: '0 0 32px rgba(201,168,76,0.1)',
-              cursor: 'pointer',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '50%',
-                  background: 'rgba(201,168,76,0.2)', border: '2px solid rgba(201,168,76,0.5)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0,
-                }}>⚡</div>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: '#C9A84C' }}>
-                    System einrichten — Erstgespräch in 24h
-                  </p>
-                  <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
-                    Teilen Sie uns Ihre Tools und Zugangsdaten mit — wir richten alles automatisch ein.
-                  </p>
+        {/* SETUP-STREIFEN — erscheint nur, solange die Einrichtung nicht abgeschlossen ist */}
+        {!setupFertig && (
+          <section style={{ marginBottom: '32px' }}>
+            <a href="/dashboard/start" style={{ textDecoration: 'none', display: 'block' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)',
+                border: '1px solid rgba(201,168,76,0.4)',
+                borderRadius: '14px',
+                padding: '16px 22px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                cursor: 'pointer',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '22px' }}>⚡</span>
+                  <div>
+                    <p style={{ margin: '0 0 2px', fontSize: '15px', fontWeight: 800, color: '#C9A84C' }}>Einrichtung abschließen</p>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>Onboarding & Zugangsdaten vervollständigen — dann ist Ihr System startklar.</p>
+                  </div>
+                </div>
+                <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
+                  Zur Einrichtung →
                 </div>
               </div>
-              <div style={{
-                padding: '12px 28px', background: '#C9A84C', color: '#0A1628',
-                borderRadius: '8px', fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap',
-              }}>
-                Jetzt einrichten →
-              </div>
-            </div>
-          </a>
-        </section>
-
-        {/* ONBOARDING PROGRESS */}
-        <OnboardingProgress onboardingCompleted={onboardingCompleted} hasApiKeys={hasApiKeys} />
-
-        {/* KI-Call Fortschrittsbalken */}
-        <section style={{ marginBottom: '32px' }}>
-          <KiCallBar used={kiUsed} limit={kiLimit} />
-        </section>
+            </a>
+          </section>
+        )}
 
         {/* Automatisierungen Banner */}
         <section style={{ marginBottom: '32px' }}>
@@ -225,19 +174,6 @@ export default async function DashboardPage() {
           </a>
         </section>
 
-        {/* Stripe Kundenportal */}
-        <section style={{ marginBottom: '40px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '14px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px 0' }}>Ihr Abonnement verwalten</h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Rechnungen, Zahlungsmethode und Kündigung — alles an einem Ort.</p>
-            </div>
-            <a href="https://billing.stripe.com/p/login/bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Abo verwalten →
-            </a>
-          </div>
-        </section>
-
         <section style={{ marginBottom: '52px' }}>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
@@ -245,18 +181,6 @@ export default async function DashboardPage() {
                 <p style={{ fontSize: 'clamp(24px, 2.6vw, 40px)', fontWeight: 900, margin: '0 0 6px', color: '#FFFFFF', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>{stat.value}</p>
                 <p style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4 }}>{stat.label}</p>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: 'clamp(20px, 2.4vw, 32px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Meine Agenten</h2>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '2px 10px' }}>8 AKTIV</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {AGENTS.map((agent) => (
-              <AgentCard key={agent.name} name={agent.name} role={agent.role} desc={agent.desc} icon={agent.icon} />
             ))}
           </div>
         </section>
