@@ -486,7 +486,12 @@ export default function LagerCockpit() {
                     </td>
                     <td style={tdStil}>
                       <div style={{ fontWeight: 600 }}>
-                        {a.bezeichnung}
+                        <a
+                          href={`/dashboard/erp/${a.id}`}
+                          style={{ color: C.cyan, textDecoration: "none" }}
+                        >
+                          {a.bezeichnung}
+                        </a>
                         {!a.aktiv && (
                           <span
                             style={{
