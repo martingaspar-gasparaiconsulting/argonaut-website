@@ -93,19 +93,164 @@ export default function DashboardChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Willkommen bei ARGONAUT! \u26A1\n\nIch bin Ihr pers\u00f6nlicher KI-Assistent. Fragen Sie mich alles \u2014 zu Ihren Agenten, dem Onboarding oder wie Sie API-Keys finden.',
+      content: 'Willkommen bei ARGONAUT! \u26A1\n\nIch bin Ihr pers\u00f6nlicher KI-Assistent. Fragen Sie mich alles \u2014 zu Ihren Agenten, dem Onboarding oder wie Sie API-Keys finden. Sie k\u00f6nnen auch auf das Mikrofon tippen und einfach sprechen.',
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hoert, setHoert] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState<{ text: string; fehler: boolean } | null>(null)
+  const [voiceOk, setVoiceOk] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const taRef = useRef<HTMLTextAreaElement>(null)
+  const recognitionRef = useRef<any>(null)
+  const aktivRef = useRef(false)        // Nutzer will zuhoeren (bis manueller Stopp)
+  const versuchRef = useRef(0)          // Zaehler erfolgloser Neustarts
+  const basisRef = useRef('')           // bereits erkannter Text (ueber Neustarts hinweg)
+  const letzterTextRef = useRef('')     // Text der aktuellen Erkennungs-Session
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Textfeld waechst mit dem Inhalt mit (bis max. Hoehe, dann scrollt es)
+  useEffect(() => {
+    const el = taRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = Math.min(el.scrollHeight, 130) + 'px'
+    }
+  }, [input])
+
+  // Sprach-Erkennung nur anzeigen, wenn der Browser sie unterstuetzt (Chrome/Edge)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      setVoiceOk(!!SR)
+    }
+  }, [])
+
+  const MAX_VERSUCHE = 6
+
+  function starteErkennung() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return
+    const rec = new SR()
+    rec.lang = 'de-DE'
+    rec.interimResults = true
+    rec.continuous = true
+    let sessionHatteText = false
+
+    rec.onstart = () => {
+      setVoiceStatus({ text: 'Ich höre zu … tippen Sie erneut aufs Mikrofon, wenn Sie fertig sind.', fehler: false })
+    }
+    rec.onresult = (e: any) => {
+      let seg = ''
+      for (let i = 0; i < e.results.length; i++) {
+        seg += e.results[i][0].transcript
+      }
+      if (seg.trim()) {
+        sessionHatteText = true
+        versuchRef.current = 0 // es klappt -> Zaehler zuruecksetzen
+      }
+      letzterTextRef.current = seg
+      const gesamt = (basisRef.current + ' ' + seg).trim()
+      setInput(gesamt)
+    }
+
+    // erkannten Text der Session in die Basis uebernehmen (fuer sauberen Neustart)
+    const textSichern = () => {
+      if (letzterTextRef.current.trim()) {
+        basisRef.current = (basisRef.current + ' ' + letzterTextRef.current).trim()
+      }
+      letzterTextRef.current = ''
+    }
+
+    rec.onerror = (e: any) => {
+      const code = e?.error || 'unbekannt'
+      // Manueller Abbruch -> stillschweigend beenden
+      if (code === 'aborted' || !aktivRef.current) {
+        return
+      }
+      // Harte Fehler -> nicht weiter versuchen
+      if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') {
+        aktivRef.current = false
+        const meldungen: Record<string, string> = {
+          'not-allowed': 'Mikrofon nicht erlaubt. Bitte oben in der Adressleiste auf das Schloss-Symbol tippen und das Mikrofon zulassen.',
+          'service-not-allowed': 'Mikrofon nicht erlaubt. Bitte in den Browser-Einstellungen das Mikrofon zulassen.',
+          'audio-capture': 'Kein Mikrofon gefunden. Bitte prüfen Sie, ob ein Mikrofon angeschlossen und aktiv ist.',
+        }
+        setVoiceStatus({ text: meldungen[code], fehler: true })
+        setHoert(false)
+        return
+      }
+      // Weiche Fehler (network, no-speech, ...) -> hartnaeckig neu versuchen
+      textSichern()
+    }
+
+    rec.onend = () => {
+      // Kein weiterer Versuch gewuenscht -> beenden
+      if (!aktivRef.current) {
+        setHoert(false)
+        setVoiceStatus(prev => (prev?.fehler ? prev : null))
+        return
+      }
+      textSichern()
+      // Bei erfolgreicher Session (Text erkannt) einfach weiter zuhoeren.
+      // Sonst Fehlversuch zaehlen und ggf. abbrechen.
+      if (!sessionHatteText) {
+        versuchRef.current += 1
+        if (versuchRef.current >= MAX_VERSUCHE) {
+          aktivRef.current = false
+          setHoert(false)
+          setVoiceStatus({ text: 'Ich konnte gerade nichts hören. Bitte prüfen Sie das Mikrofon und tippen Sie erneut.', fehler: true })
+          return
+        }
+      }
+      // Weiter zuhoeren (neue Session)
+      setTimeout(() => {
+        if (aktivRef.current) starteErkennung()
+      }, 250)
+    }
+
+    recognitionRef.current = rec
+    setHoert(true)
+    try {
+      rec.start()
+    } catch {
+      // start() direkt nach stop() kann werfen -> kurz warten und erneut
+      setTimeout(() => {
+        if (aktivRef.current) starteErkennung()
+      }, 300)
+    }
+  }
+
+  function toggleVoice() {
+    if (hoert || aktivRef.current) {
+      // Stoppen
+      aktivRef.current = false
+      recognitionRef.current?.stop()
+      setHoert(false)
+      setVoiceStatus(null)
+      return
+    }
+    // Starten
+    aktivRef.current = true
+    versuchRef.current = 0
+    basisRef.current = input.trim()   // bereits getippten Text als Basis behalten
+    letzterTextRef.current = ''
+    setVoiceStatus({ text: 'Mikrofon wird gestartet …', fehler: false })
+    starteErkennung()
+  }
+
   async function send() {
     if (!input.trim() || loading) return
+    // laufende Sprach-Erkennung sicher beenden
+    aktivRef.current = false
+    if (hoert) { recognitionRef.current?.stop() }
+    basisRef.current = ''
+    letzterTextRef.current = ''
+    setVoiceStatus(null)
     const userMsg = input.trim()
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMsg }])
@@ -194,14 +339,37 @@ export default function DashboardChat() {
             </div>
           )}
 
-          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px' }}>
-            <input
+          {voiceStatus && (
+            <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: voiceStatus.fehler ? '#E0A24C' : '#E06666', display: 'inline-block', animation: hoert ? 'argonautPulse 1s ease-in-out infinite' : 'none', flexShrink: 0 }} />
+              <span style={{ fontSize: '12px', color: voiceStatus.fehler ? '#E0A24C' : '#E06666', fontWeight: 600, lineHeight: 1.4 }}>{voiceStatus.text}</span>
+            </div>
+          )}
+
+          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+            <textarea
+              ref={taRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder="Ihre Frage..."
-              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: '13px', outline: 'none' }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+              placeholder={hoert ? 'Sprechen Sie …' : 'Ihre Frage...'}
+              rows={1}
+              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: '13px', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
+            {voiceOk && (
+              <button
+                onClick={toggleVoice}
+                title={hoert ? 'Aufnahme stoppen' : 'Per Sprache eingeben'}
+                style={{
+                  background: hoert ? '#E06666' : 'rgba(255,255,255,0.06)',
+                  border: hoert ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '10px', padding: '11px 13px', cursor: 'pointer',
+                  fontSize: '15px', lineHeight: 1,
+                  boxShadow: hoert ? '0 0 0 3px rgba(224,102,102,0.25)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >🎤</button>
+            )}
             <button onClick={send} disabled={loading} style={{ background: loading ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', padding: '11px 16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px' }}>→</button>
           </div>
         </div>
@@ -221,6 +389,8 @@ export default function DashboardChat() {
       >
         {open ? <span style={{ color: '#C9A84C', fontSize: '20px', fontWeight: 700 }}>×</span> : <span>⚡</span>}
       </button>
+
+      <style>{`@keyframes argonautPulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }`}</style>
     </>
   )
 }
