@@ -147,6 +147,13 @@ export default function VertragDetail() {
   const [speichern, setSpeichern] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  // KI-Kündigungsentwurf
+  const [kiOffen, setKiOffen] = useState(false);
+  const [kiLaden, setKiLaden] = useState(false);
+  const [kiText, setKiText] = useState("");
+  const [kiFehler, setKiFehler] = useState<string | null>(null);
+  const [kopiert, setKopiert] = useState(false);
+
   useEffect(() => {
     lade();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,6 +256,48 @@ export default function VertragDetail() {
       return;
     }
     window.location.href = "/dashboard/vertraege";
+  }
+
+  async function erstelleKuendigung() {
+    if (!vertrag) return;
+    setKiOffen(true);
+    setKiLaden(true);
+    setKiText("");
+    setKiFehler(null);
+    setKopiert(false);
+    try {
+      const res = await fetch("/api/vertrag-kuendigung", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          vertrag: {
+            bezeichnung: vertrag.bezeichnung,
+            kategorie: vertrag.kategorie,
+            vertragspartner: vertrag.vertragspartner,
+            vertragsnummer: vertrag.vertragsnummer,
+            ende: vertrag.ende,
+            kuendigungsfrist_tage: vertrag.kuendigungsfrist_tage,
+            kuendigungstermin: stichtag(vertrag),
+          },
+        }),
+      });
+      const j = await res.json();
+      if (j?.fehler) setKiFehler(j.fehler);
+      else setKiText(j?.text ?? "");
+    } catch {
+      setKiFehler("Verbindungsfehler. Bitte erneut versuchen.");
+    }
+    setKiLaden(false);
+  }
+
+  async function kopiereText() {
+    try {
+      await navigator.clipboard.writeText(kiText);
+      setKopiert(true);
+      setTimeout(() => setKopiert(false), 2000);
+    } catch {
+      setKopiert(false);
+    }
   }
 
   // ---------- Styles ----------
@@ -378,7 +427,22 @@ export default function VertragDetail() {
             {vertrag.vertragspartner ? ` · ${vertrag.vertragspartner}` : ""}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            style={{
+              padding: "9px 14px",
+              borderRadius: 8,
+              border: `1px solid ${C.gold}`,
+              background: "rgba(201,168,76,0.12)",
+              color: C.gold,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+            onClick={erstelleKuendigung}
+          >
+            🤖 Kündigung entwerfen
+          </button>
           <button style={btnGhost} onClick={oeffneBearbeiten}>
             Bearbeiten
           </button>
@@ -494,6 +558,100 @@ export default function VertragDetail() {
           {vertrag.notizen || "Keine Notizen hinterlegt."}
         </div>
       </div>
+
+      {/* KI-Kündigungsentwurf-Modal */}
+      {kiOffen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            padding: "40px 16px",
+            zIndex: 1000,
+            overflowY: "auto",
+          }}
+          onClick={() => setKiOffen(false)}
+        >
+          <div
+            style={{ ...card, width: "100%", maxWidth: 680, background: C.navy }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+              🤖 Kündigungsschreiben-Entwurf
+            </h2>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 13 }}>
+              Vorschlag der ARGONAUT-KI. Bitte die Platzhalter in eckigen Klammern
+              [ ] ausfüllen, prüfen und selbst versenden. Kein automatischer
+              Versand, keine Rechtsberatung.
+            </p>
+
+            {kiLaden ? (
+              <div style={{ padding: "24px 0", color: C.textDim }}>
+                Die ARGONAUT-KI formuliert deinen Entwurf…
+              </div>
+            ) : kiFehler ? (
+              <div
+                style={{ color: C.danger, fontSize: 14, fontWeight: 600, padding: "12px 0" }}
+              >
+                {kiFehler}
+              </div>
+            ) : (
+              <>
+                <textarea
+                  style={{
+                    width: "100%",
+                    minHeight: 320,
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: `1px solid ${C.border}`,
+                    background: "rgba(255,255,255,0.04)",
+                    color: "#fff",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                  }}
+                  value={kiText}
+                  onChange={(e) => setKiText(e.target.value)}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 10,
+                    marginTop: 14,
+                  }}
+                >
+                  <button style={btnGhost} onClick={() => setKiOffen(false)}>
+                    Schließen
+                  </button>
+                  <button style={btnGold} onClick={kopiereText}>
+                    {kopiert ? "✓ Kopiert!" : "In Zwischenablage kopieren"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {(kiLaden || kiFehler) && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 14,
+                }}
+              >
+                <button style={btnGhost} onClick={() => setKiOffen(false)}>
+                  Schließen
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bearbeiten-Modal */}
       {modalOffen && form && (
