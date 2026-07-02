@@ -13,13 +13,13 @@ type NavLink = {
   highlight?: boolean;
 };
 const NAV_LINKS: NavLink[] = [
-  { label: 'Übersicht', href: '/dashboard' },
+  { label: '🏠 Übersicht', href: '/dashboard' },
   { label: '🤖 Agenten', href: '/dashboard/agenten' },
   { label: '🎓 Academy', href: '/dashboard/academy' },
-  { label: 'Leads', href: '/dashboard/leads' },
-  { label: 'Chat', href: '/dashboard/chat' },
+  { label: '🎯 Leads', href: '/dashboard/leads' },
+  { label: '💬 Chat', href: '/dashboard/chat' },
   { label: '📄 Dokumente', href: '/dashboard/documents' },
-  { label: 'Personal', href: '/dashboard/personal' },
+  { label: '👥 Personal', href: '/dashboard/personal' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan' },
   { label: '📁 Projekte', href: '/dashboard/projekte' },
   { label: '📣 Marketing', href: '/dashboard/marketing' },
@@ -28,7 +28,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen' },
   { label: '📦 ERP/Lager', href: '/dashboard/erp' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
-  { label: 'Einstellungen', href: '/dashboard/einstellungen' },
+  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen' },
 ];
 export default function DashboardNav() {
   const pathname = usePathname();
