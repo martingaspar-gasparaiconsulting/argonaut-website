@@ -6,8 +6,8 @@ import KpiKachel from './KpiKachel'
 
 // ============================================================
 // ARGONAUT OS · DASHBOARD-UEBERSICHT = LIVE-COMMAND-CENTER
-// Header/Nav/PULS liegen im Layout. Diese Seite zeigt echte
-// Live-Zahlen als klickbare Kacheln (Sprung ins jeweilige Modul).
+// KPI-Kacheln (Live-Zahlen, klickbar) + Live-Feed "Letzte 24h"
+// (chronologischer Ereignis-Stream quer durch alle Module).
 // Alle Abfragen laufen unter RLS -> nur eigene Daten.
 // ============================================================
 
@@ -34,7 +34,6 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string }
   trial:    { label: 'Testphase', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
 }
 
-// Status-Werte, die als "abgeschlossen/nicht mehr offen" gelten (kleingeschrieben)
 const LEAD_ERLEDIGT = ['gewonnen', 'verloren', 'abgelehnt', 'kunde', 'archiviert', 'closed']
 const CHANCE_ERLEDIGT = ['gewonnen', 'verloren', 'closed', 'abgeschlossen']
 const AUFTRAG_ERLEDIGT = ['abgeschlossen', 'storniert', 'erledigt', 'abgerechnet']
@@ -53,13 +52,30 @@ function datumKurz(iso: string | null | undefined): string {
 function heuteISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
+function ts(v: string | null | undefined): number {
+  return v ? new Date(v).getTime() : 0
+}
+function vorZeit(ms: number): string {
+  const diff = Date.now() - ms
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'gerade eben'
+  if (min < 60) return `vor ${min} Min`
+  const std = Math.floor(min / 60)
+  if (std < 24) return `vor ${std} Std`
+  return 'gestern'
+}
+function kurz(s: string | null | undefined, n = 60): string {
+  const t = (s || '').trim()
+  return t.length > n ? t.slice(0, n) + '…' : t
+}
+
+type FeedEvent = { zeit: number; icon: string; farbe: string; text: string; href: string }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (!user || userError) redirect('/auth/login')
 
-  // Profil / Paket / Verbrauch
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, plan, status, automations_count, onboarding_completed, onboarding_data')
@@ -82,16 +98,18 @@ export default async function DashboardPage() {
     .limit(1)
     .single()
 
-  // Live-Daten aus allen Modulen (parallel, defensiv)
-  const [leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR] = await Promise.all([
-    supabase.from('leads').select('id, status'),
-    supabase.from('verkaufschancen').select('id, phase, wert'),
-    supabase.from('auftraege').select('id, status'),
-    supabase.from('rechnungen').select('id, zahlungsstatus, faelligkeitsdatum, brutto_summe, bezahlter_betrag'),
-    supabase.from('projekte').select('id, status, archiviert'),
-    supabase.from('hr_abwesenheiten').select('id, mitarbeiter_id, typ, von, bis, status'),
-    supabase.from('hr_zeiterfassung').select('id, mitarbeiter_id, datum, kommen_um, gehen_um'),
+  // Live-Daten aus allen Modulen (parallel, defensiv) — inkl. Feld fuer den Feed
+  const [leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR, kontakteR, aktivR] = await Promise.all([
+    supabase.from('leads').select('id, status, name, created_at'),
+    supabase.from('verkaufschancen').select('id, phase, wert, titel, created_at'),
+    supabase.from('auftraege').select('id, status, auftragsnummer, created_at'),
+    supabase.from('rechnungen').select('id, zahlungsstatus, faelligkeitsdatum, brutto_summe, bezahlter_betrag, rechnungsnummer, created_at, bezahlt_am'),
+    supabase.from('projekte').select('id, status, archiviert, name, erstellt_am'),
+    supabase.from('hr_abwesenheiten').select('id, mitarbeiter_id, typ, von, bis, status, created_at'),
+    supabase.from('hr_zeiterfassung').select('id, mitarbeiter_id, datum, kommen_um, gehen_um, created_at'),
     supabase.from('mitarbeiter').select('id, vorname, nachname'),
+    supabase.from('kontakte').select('id, vorname, nachname, created_at'),
+    supabase.from('kontakt_aktivitaeten').select('id, kontakt_id, typ, inhalt, created_at'),
   ])
 
   const leads = leadsR.data || []
@@ -102,31 +120,31 @@ export default async function DashboardPage() {
   const abwesenheiten = abwR.data || []
   const zeiten = zeitR.data || []
   const mitarbeiter = mitarbeiterR.data || []
+  const kontakte = kontakteR.data || []
+  const aktivitaeten = aktivR.data || []
 
   const heute = heuteISO()
   const low = (s: string | null | undefined) => (s || '').toLowerCase()
 
-  // Namens-Map fuer Mitarbeiter
   const maName: Record<string, string> = {}
   for (const m of mitarbeiter as any[]) {
     maName[m.id] = [m.vorname, m.nachname].filter(Boolean).join(' ') || 'Mitarbeiter'
   }
+  const kName: Record<string, string> = {}
+  for (const k of kontakte as any[]) {
+    kName[k.id] = [k.vorname, k.nachname].filter(Boolean).join(' ') || 'Kontakt'
+  }
 
   // --- KENNZAHLEN ---
   const leadsOffen = leads.filter((l: any) => !LEAD_ERLEDIGT.includes(low(l.status))).length
-
   const chancenAktiv = chancen.filter((c: any) => !CHANCE_ERLEDIGT.includes(low(c.phase)))
   const chancenSumme = chancenAktiv.reduce((s: number, c: any) => s + (Number(c.wert) || 0), 0)
-
   const auftraegeOffen = auftraege.filter((a: any) => !AUFTRAG_ERLEDIGT.includes(low(a.status))).length
-
   const rechnOffenListe = rechnungen.filter((r: any) => ['offen', 'teilbezahlt'].includes(low(r.zahlungsstatus)))
   const rechnOffenSumme = rechnOffenListe.reduce((s: number, r: any) => s + ((Number(r.brutto_summe) || 0) - (Number(r.bezahlter_betrag) || 0)), 0)
   const rechnUeberfaellig = rechnOffenListe.filter((r: any) => r.faelligkeitsdatum && String(r.faelligkeitsdatum).slice(0, 10) < heute)
-
   const projekteLaufend = projekte.filter((p: any) => !p.archiviert && !PROJEKT_ERLEDIGT.includes(low(p.status))).length
 
-  // Krankmeldungen: Typ enthaelt "krank", Zeitraum umschliesst heute
   const kranke = abwesenheiten.filter((a: any) => {
     const istKrank = low(a.typ).includes('krank')
     const von = a.von ? String(a.von).slice(0, 10) : null
@@ -140,11 +158,32 @@ export default async function DashboardPage() {
     const bis = a.bis ? `bis ${datumKurz(a.bis)}` : ''
     return `${name} ${bis}`.trim()
   })
-
-  // Eingestempelt heute (kommen gesetzt, noch nicht gegangen)
   const eingestempelt = zeiten.filter((z: any) =>
     z.datum && String(z.datum).slice(0, 10) === heute && z.kommen_um && !z.gehen_um
   ).length
+
+  // --- LIVE-FEED: Ereignisse der letzten 24h ---
+  const H24 = 24 * 60 * 60 * 1000
+  const grenze = Date.now() - H24
+  const ev: FeedEvent[] = []
+
+  for (const l of leads as any[]) if (ts(l.created_at) > grenze) ev.push({ zeit: ts(l.created_at), icon: '🎯', farbe: '#00e5ff', text: `Neuer Lead: ${l.name || 'Anfrage'}`, href: '/dashboard/leads' })
+  for (const c of chancen as any[]) if (ts(c.created_at) > grenze) ev.push({ zeit: ts(c.created_at), icon: '💼', farbe: '#A98CE0', text: `Neue Verkaufschance: ${c.titel || '—'}`, href: '/dashboard/crm/pipeline' })
+  for (const a of auftraege as any[]) if (ts(a.created_at) > grenze) ev.push({ zeit: ts(a.created_at), icon: '📋', farbe: '#C9A84C', text: `Neuer Auftrag ${a.auftragsnummer || ''}`.trim(), href: '/dashboard/auftraege' })
+  for (const r of rechnungen as any[]) {
+    if (ts(r.created_at) > grenze) ev.push({ zeit: ts(r.created_at), icon: '🧾', farbe: '#4CAF7D', text: `Rechnung ${r.rechnungsnummer || ''} erstellt`.trim(), href: '/dashboard/rechnungen' })
+    if (ts(r.bezahlt_am) > grenze) ev.push({ zeit: ts(r.bezahlt_am), icon: '✅', farbe: '#4CAF7D', text: `Rechnung ${r.rechnungsnummer || ''} bezahlt`.trim(), href: '/dashboard/rechnungen' })
+  }
+  for (const p of projekte as any[]) if (ts(p.erstellt_am) > grenze) ev.push({ zeit: ts(p.erstellt_am), icon: '📁', farbe: '#4f94e8', text: `Neues Projekt: ${p.name || '—'}`, href: '/dashboard/projekte' })
+  for (const a of abwesenheiten as any[]) if (ts(a.created_at) > grenze) {
+    const istKrank = low(a.typ).includes('krank')
+    ev.push({ zeit: ts(a.created_at), icon: istKrank ? '🤒' : '🌴', farbe: istKrank ? '#E06666' : '#C9A84C', text: `${maName[a.mitarbeiter_id] || 'Mitarbeiter'}: ${a.typ || 'Abwesenheit'}`, href: '/dashboard/personal' })
+  }
+  for (const z of zeiten as any[]) if (ts(z.created_at) > grenze && z.kommen_um) ev.push({ zeit: ts(z.created_at), icon: '🕐', farbe: '#00e5ff', text: `${maName[z.mitarbeiter_id] || 'Mitarbeiter'} hat gestempelt`, href: '/dashboard/zeiterfassung' })
+  for (const k of kontakte as any[]) if (ts(k.created_at) > grenze) ev.push({ zeit: ts(k.created_at), icon: '👤', farbe: '#A98CE0', text: `Neuer Kontakt: ${kName[k.id]}`, href: '/dashboard/crm' })
+  for (const akt of aktivitaeten as any[]) if (ts(akt.created_at) > grenze) ev.push({ zeit: ts(akt.created_at), icon: '💬', farbe: '#C9A84C', text: `${kName[akt.kontakt_id] || 'Kontakt'}: ${kurz(akt.inhalt) || akt.typ || 'Aktivität'}`, href: akt.kontakt_id ? `/dashboard/crm/${akt.kontakt_id}` : '/dashboard/crm' })
+
+  const feed = ev.sort((a, b) => b.zeit - a.zeit).slice(0, 25)
 
   // Ableitungen fuer Kopf / Popups
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Nutzer'
@@ -218,28 +257,51 @@ export default async function DashboardPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
-
             <KpiKachel href="/dashboard/leads" icon="🎯" label="Offene Leads" wert={leadsOffen} sub={`${leads.length} gesamt`} akzent="#00e5ff" />
-
             <KpiKachel href="/dashboard/crm/pipeline" icon="💼" label="Aktive Verkaufschancen" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
-
             <KpiKachel href="/dashboard/auftraege" icon="📋" label="Offene Aufträge" wert={auftraegeOffen} sub={`${auftraege.length} gesamt`} akzent="#C9A84C" />
-
             <KpiKachel href="/dashboard/rechnungen" icon="🧾" label="Offene Rechnungen" wert={rechnOffenListe.length} sub={rechnOffenSumme > 0 ? `${geld(rechnOffenSumme)} offen` : 'nichts offen'} akzent="#4CAF7D" />
-
             <KpiKachel href="/dashboard/rechnungen" icon="⚠️" label="Überfällige Rechnungen" wert={rechnUeberfaellig.length} sub={rechnUeberfaellig.length > 0 ? 'bitte anmahnen' : 'alles im Plan'} akzent="#E0A24C" alarm={rechnUeberfaellig.length > 0} />
-
             <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
-
             <KpiKachel href="/dashboard/personal" icon="🤒" label="Krankmeldungen" wert={kranke.length} sub={kranke.length === 0 ? 'alle an Bord' : 'aktuell krank'} details={krankeDetails} akzent="#4CAF7D" alarm={kranke.length > 0} />
-
             <KpiKachel href="/dashboard/zeiterfassung" icon="🕐" label="Jetzt eingestempelt" wert={eingestempelt} sub={eingestempelt === 1 ? 'Person im Dienst' : 'Personen im Dienst'} akzent="#00e5ff" />
-
             <KpiKachel href="/dashboard/automatisierungen" icon="⚙️" label="Aktive Automatisierungen" wert={automationsCount} sub="Bibliothek öffnen" akzent="#C9A84C" />
-
             <KpiKachel href="/dashboard/start" icon="⚡" label="KI-Calls diesen Monat" wert={`${kiPct}%`} sub={`${kiUsed.toLocaleString('de-DE')} / ${kiLimit.toLocaleString('de-DE')}`} akzent="#C9A84C" alarm={kiPct >= 100} />
-
           </div>
+        </section>
+
+        {/* LIVE-FEED: Letzte 24 Stunden */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
+            <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Letzte 24 Stunden</h2>
+            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>{feed.length > 0 ? `${feed.length} Ereignisse` : 'Aktivitäts-Stream'}</span>
+          </div>
+
+          {feed.length === 0 ? (
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '40px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>🌙</div>
+              <p style={{ margin: 0, fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>In den letzten 24 Stunden war es ruhig.</p>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>Neue Leads, Aufträge, Rechnungen und Team-Aktivitäten erscheinen hier automatisch.</p>
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', overflow: 'hidden' }}>
+              {feed.map((e, i) => (
+                <a key={i} href={e.href} style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '13px 20px', textDecoration: 'none',
+                  borderBottom: i < feed.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                }}>
+                  <span style={{
+                    width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                    background: `${e.farbe}1e`, border: `1px solid ${e.farbe}55`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
+                  }}>{e.icon}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: '14px', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.text}</span>
+                  <span style={{ flexShrink: 0, fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{vorZeit(e.zeit)}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Automatisierungs-Banner (CTA) */}
