@@ -101,6 +101,9 @@ export default function DashboardChat() {
   const [hoert, setHoert] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState<{ text: string; fehler: boolean } | null>(null)
   const [voiceOk, setVoiceOk] = useState(false)
+  const [gross, setGross] = useState(false)
+  const [sprichtIndex, setSprichtIndex] = useState<number | null>(null)
+  const [ttsOk, setTtsOk] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<any>(null)
@@ -122,11 +125,18 @@ export default function DashboardChat() {
     }
   }, [input])
 
-  // Sprach-Erkennung nur anzeigen, wenn der Browser sie unterstuetzt (Chrome/Edge)
+  // Sprach-Erkennung (Mikrofon) + Sprachausgabe (Vorlesen) nur anzeigen, wenn unterstützt
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
       setVoiceOk(!!SR)
+      const hatTts = 'speechSynthesis' in window
+      setTtsOk(hatTts)
+      if (hatTts) {
+        // Stimmen vorladen (getVoices() liefert anfangs oft eine leere Liste)
+        window.speechSynthesis.getVoices()
+        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices() }
+      }
     }
   }, [])
 
@@ -243,6 +253,60 @@ export default function DashboardChat() {
     starteErkennung()
   }
 
+  // Text fuer die Sprachausgabe von Markdown-/Sonderzeichen saeubern
+  function vorleseText(roh: string): string {
+    return roh
+      .replace(/\*\*/g, '')            // Fett-Sternchen
+      .replace(/[*_`#>]/g, '')         // weitere Markdown-Zeichen
+      .replace(/^\s*[-–•]\s+/gm, '')   // Aufzaehlungszeichen am Zeilenanfang
+      .replace(/\n{2,}/g, '. ')        // Absaetze -> kurze Pause
+      .replace(/\n/g, '. ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  }
+
+  // Beste installierte deutsche Stimme waehlen (klingt menschlicher als die Standardstimme)
+  function besteStimme(): SpeechSynthesisVoice | null {
+    try {
+      const voices = window.speechSynthesis.getVoices()
+      const de = voices.filter(v => v.lang.toLowerCase().startsWith('de'))
+      const natuerlich = de.find(v => /natural|online|neural|premium/i.test(v.name))
+      return natuerlich || de[0] || null
+    } catch {
+      return null
+    }
+  }
+
+  // Antwort vorlesen (Sprachausgabe, laeuft lokal im Geraet - offline & kostenlos)
+  function vorlesen(text: string, i: number) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    // Laeuft gerade genau diese Nachricht -> stoppen (Umschalter)
+    if (sprichtIndex === i) {
+      window.speechSynthesis.cancel()
+      setSprichtIndex(null)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(vorleseText(text))
+    u.lang = 'de-DE'
+    u.rate = 1.0
+    const stimme = besteStimme()
+    if (stimme) u.voice = stimme
+    u.onend = () => setSprichtIndex(null)
+    u.onerror = () => setSprichtIndex(null)
+    setSprichtIndex(i)
+    window.speechSynthesis.speak(u)
+  }
+
+  // Chat schliessen -> laufende Sprachausgabe stoppen
+  function schliessen() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    setSprichtIndex(null)
+    setOpen(false)
+  }
+
   async function send() {
     if (!input.trim() || loading) return
     // laufende Sprach-Erkennung sicher beenden
@@ -251,6 +315,9 @@ export default function DashboardChat() {
     basisRef.current = ''
     letzterTextRef.current = ''
     setVoiceStatus(null)
+    // laufende Sprachausgabe stoppen
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
+    setSprichtIndex(null)
     const userMsg = input.trim()
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMsg }])
@@ -258,7 +325,7 @@ export default function DashboardChat() {
     setMessages(prev => [...prev, { role: 'assistant', content: '', loading: true }])
 
     try {
-      const res = await fetch('/api/mitarbeiter-chat', {
+      const res = await fetch('/api/dashboard-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -270,7 +337,7 @@ export default function DashboardChat() {
         }),
       })
       const data = await res.json(); if(data.modus==="vorschlag"){setMessages(p=>[...p.slice(0,-1),{role:"assistant",content:data.text||"",vorschlag:data.vorschlag,quellen:data.quellen,loading:false}]);setLoading(false);return}
-      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: data.antwort, loading: false } : m))
+      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: data.antwort || data.error || 'Es kam keine Antwort zurück. Bitte erneut versuchen.', loading: false } : m))
     } catch {
       setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { role: 'assistant', content: 'Verbindungsfehler. Bitte versuchen Sie es erneut.', loading: false } : m))
     }
@@ -289,7 +356,7 @@ export default function DashboardChat() {
       {open && (
         <div style={{
           position: 'fixed', bottom: '90px', right: '24px', zIndex: 9999,
-          width: '380px', background: '#0D1F3C',
+          width: gross ? 'min(600px, 92vw)' : 'min(380px, 92vw)', background: '#0D1F3C',
           border: '1px solid rgba(201,168,76,0.35)', borderRadius: '20px',
           boxShadow: '0 16px 64px rgba(0,0,0,0.6)', overflow: 'hidden',
         }}>
@@ -301,22 +368,30 @@ export default function DashboardChat() {
                 <p style={{ margin: 0, fontSize: '11px', color: '#22c55e' }}>● Online — antwortet sofort</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '4px' }}>×</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <button onClick={() => setGross(g => !g)} title={gross ? 'Verkleinern' : 'Vergrößern'} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: '17px', lineHeight: 1, padding: '4px 6px' }}>{gross ? '🗕' : '🗖'}</button>
+              <button onClick={schliessen} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '4px' }}>×</button>
+            </div>
           </div>
 
-          <div style={{ height: '300px', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ height: gross ? 'min(560px, 66vh)' : '300px', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {messages.map((msg, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 <div style={{
-                  maxWidth: '88%', padding: '11px 15px',
+                  maxWidth: '88%', padding: gross ? '13px 17px' : '11px 15px',
                   borderRadius: msg.role === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                   background: msg.role === 'user' ? '#C9A84C' : 'rgba(255,255,255,0.07)',
                   color: msg.role === 'user' ? '#0A1628' : '#FFFFFF',
-                  fontSize: '13px', lineHeight: 1.55, fontWeight: msg.role === 'user' ? 600 : 400,
+                  fontSize: gross ? '15px' : '13px', lineHeight: 1.6, fontWeight: msg.role === 'user' ? 600 : 400,
                   whiteSpace: 'pre-wrap',
                 }}>
                   {msg.loading ? <span style={{ opacity: 0.6 }}>tippt…</span> : msg.content}
                 </div>
+                {msg.role === 'assistant' && !msg.loading && msg.content && ttsOk && (
+                  <button onClick={() => vorlesen(msg.content, i)} style={{ marginTop: '5px', background: 'none', border: 'none', color: sprichtIndex === i ? '#E06666' : 'rgba(201,168,76,0.85)', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }}>
+                    {sprichtIndex === i ? '⏹ Stopp' : '🔊 Vorlesen'}
+                  </button>
+                )}
                 {msg.vorschlag && (
                   <div style={{ marginTop: '8px', padding: '14px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '12px' }}>
                     <p style={{ margin: 0, fontWeight: 700, color: '#C9A84C', fontSize: '13px' }}>📄 {msg.vorschlag.name}</p>
@@ -376,7 +451,7 @@ export default function DashboardChat() {
       )}
 
       <button
-        onClick={() => setOpen(prev => !prev)}
+        onClick={() => open ? schliessen() : setOpen(true)}
         style={{
           position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
           width: '60px', height: '60px', borderRadius: '50%',
