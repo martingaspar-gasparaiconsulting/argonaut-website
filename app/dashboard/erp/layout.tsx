@@ -45,16 +45,17 @@ export default function ErpLayout({
   const pathname = usePathname();
   return (
     <div>
-      <nav
+      <div
         style={{
-          display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
+          maxWidth: 1400,
+          marginLeft: "auto",
+          marginRight: "auto",
           marginBottom: 22,
           paddingBottom: 14,
           borderBottom: `1px solid ${C.border}`,
         }}
       >
+        <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {TABS.map((tab) => {
           const golden = istAktiv(tab.href, pathname);
           const stil: React.CSSProperties = {
@@ -78,7 +79,8 @@ export default function ErpLayout({
             </a>
           );
         })}
-      </nav>
+        </nav>
+      </div>
       {children}
     </div>
   );
