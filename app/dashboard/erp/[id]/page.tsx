@@ -41,8 +41,14 @@ interface Artikel {
   mindestbestand: number;
   aktueller_bestand: number;
   lagerort: string | null;
+  lieferant_id: string | null;
   aktiv: boolean;
   created_at: string;
+}
+
+interface LieferantKurz {
+  id: string;
+  name: string;
 }
 
 interface Bewegung {
@@ -64,6 +70,7 @@ type FormState = {
   verkaufspreis: string;
   mindestbestand: string;
   lagerort: string;
+  lieferant_id: string;
   aktiv: boolean;
 };
 
@@ -105,6 +112,7 @@ export default function ArtikelDetail() {
 
   const [artikel, setArtikel] = useState<Artikel | null>(null);
   const [bewegungen, setBewegungen] = useState<Bewegung[]>([]);
+  const [lieferanten, setLieferanten] = useState<LieferantKurz[]>([]);
   const [laden, setLaden] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -145,12 +153,22 @@ export default function ArtikelDetail() {
       .eq("artikel_id", artikelId)
       .order("bewegung_am", { ascending: false });
     setBewegungen((bew as Bewegung[]) ?? []);
+
+    const { data: lief } = await supabase
+      .from("lieferanten")
+      .select("id, name")
+      .order("name", { ascending: true });
+    setLieferanten((lief as LieferantKurz[]) ?? []);
+
     setLaden(false);
   }
 
   const bestand = Number(artikel?.aktueller_bestand) || 0;
   const min = Number(artikel?.mindestbestand) || 0;
   const am = ampel(bestand, min);
+  const lieferantName = artikel?.lieferant_id
+    ? lieferanten.find((l) => l.id === artikel.lieferant_id)?.name ?? null
+    : null;
 
   // Vorschau des neuen Bestands
   const vorschau = useMemo(() => {
@@ -237,6 +255,7 @@ export default function ArtikelDetail() {
       mindestbestand:
         artikel.mindestbestand != null ? String(artikel.mindestbestand) : "",
       lagerort: artikel.lagerort ?? "",
+      lieferant_id: artikel.lieferant_id ?? "",
       aktiv: artikel.aktiv,
     });
     setFormFehler(null);
@@ -266,6 +285,7 @@ export default function ArtikelDetail() {
       verkaufspreis: zahl(form.verkaufspreis),
       mindestbestand: zahl(form.mindestbestand),
       lagerort: form.lagerort.trim() || null,
+      lieferant_id: form.lieferant_id || null,
       aktiv: form.aktiv,
     };
     const { error } = await supabase
@@ -469,6 +489,19 @@ export default function ArtikelDetail() {
           {infoZeile("Mindestbestand", `${num(min)} ${artikel.einheit}`)}
           {infoZeile("Einheit", artikel.einheit)}
           {infoZeile("Lagerort", artikel.lagerort || "—")}
+          {infoZeile(
+            "Lieferant",
+            artikel.lieferant_id ? (
+              <a
+                href={`/dashboard/erp/lieferanten/${artikel.lieferant_id}`}
+                style={{ color: C.cyan, textDecoration: "none" }}
+              >
+                {lieferantName || "Lieferant"}
+              </a>
+            ) : (
+              "—"
+            )
+          )}
           {infoZeile("Einkaufspreis", eur(artikel.einkaufspreis))}
           {infoZeile("Verkaufspreis", eur(artikel.verkaufspreis))}
           {infoZeile(
@@ -720,6 +753,21 @@ export default function ArtikelDetail() {
                   value={form.lagerort}
                   onChange={(e) => setF("lagerort", e.target.value)}
                 />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStil}>Lieferant</label>
+                <select
+                  style={inputStil}
+                  value={form.lieferant_id}
+                  onChange={(e) => setF("lieferant_id", e.target.value)}
+                >
+                  <option value="">— kein Lieferant —</option>
+                  {lieferanten.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStil}>Beschreibung</label>

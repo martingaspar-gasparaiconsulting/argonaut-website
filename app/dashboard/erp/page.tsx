@@ -40,8 +40,14 @@ interface Artikel {
   mindestbestand: number;
   aktueller_bestand: number;
   lagerort: string | null;
+  lieferant_id: string | null;
   aktiv: boolean;
   created_at: string;
+}
+
+interface LieferantKurz {
+  id: string;
+  name: string;
 }
 
 type FormState = {
@@ -55,6 +61,7 @@ type FormState = {
   mindestbestand: string;
   aktueller_bestand: string;
   lagerort: string;
+  lieferant_id: string;
   aktiv: boolean;
 };
 
@@ -69,6 +76,7 @@ const LEER_FORM: FormState = {
   mindestbestand: "",
   aktueller_bestand: "",
   lagerort: "",
+  lieferant_id: "",
   aktiv: true,
 };
 
@@ -95,6 +103,7 @@ function num(n: number | null): string {
 
 export default function LagerCockpit() {
   const [artikel, setArtikel] = useState<Artikel[]>([]);
+  const [lieferanten, setLieferanten] = useState<LieferantKurz[]>([]);
   const [laden, setLaden] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -112,7 +121,7 @@ export default function LagerCockpit() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUserId(userData.user?.id ?? null);
-      await ladeArtikel();
+      await Promise.all([ladeArtikel(), ladeLieferanten()]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -125,6 +134,14 @@ export default function LagerCockpit() {
       .order("bezeichnung", { ascending: true });
     if (!error && data) setArtikel(data as Artikel[]);
     setLaden(false);
+  }
+
+  async function ladeLieferanten() {
+    const { data } = await supabase
+      .from("lieferanten")
+      .select("id, name")
+      .order("name", { ascending: true });
+    if (data) setLieferanten(data as LieferantKurz[]);
   }
 
   const kategorien = useMemo(() => {
@@ -189,6 +206,7 @@ export default function LagerCockpit() {
       aktueller_bestand:
         a.aktueller_bestand != null ? String(a.aktueller_bestand) : "",
       lagerort: a.lagerort ?? "",
+      lieferant_id: a.lieferant_id ?? "",
       aktiv: a.aktiv,
     });
     setFehler(null);
@@ -221,6 +239,7 @@ export default function LagerCockpit() {
       mindestbestand: zahl(form.mindestbestand),
       aktueller_bestand: zahl(form.aktueller_bestand),
       lagerort: form.lagerort.trim() || null,
+      lieferant_id: form.lieferant_id || null,
       aktiv: form.aktiv,
     };
 
@@ -677,6 +696,22 @@ export default function LagerCockpit() {
                   onChange={(e) => setF("lagerort", e.target.value)}
                   placeholder="z.B. Halle A / Regal 3"
                 />
+              </div>
+
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStil}>Lieferant</label>
+                <select
+                  style={inputStil}
+                  value={form.lieferant_id}
+                  onChange={(e) => setF("lieferant_id", e.target.value)}
+                >
+                  <option value="">— kein Lieferant —</option>
+                  {lieferanten.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
