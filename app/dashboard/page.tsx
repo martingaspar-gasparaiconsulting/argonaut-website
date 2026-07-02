@@ -1,13 +1,16 @@
 import UpgradePopup from '@/components/UpgradePopup'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase-server'
-import LogoutButton from './LogoutButton'
 import AgentCard from './AgentCard'
-import DashboardChat from './DashboardChat'
 import OnboardingProgress from './OnboardingProgress'
 import OverusePopup from '@/components/OverusePopup'
-import DashboardNav from './DashboardNav'
+
+// ============================================================
+// ARGONAUT OS · DASHBOARD-UEBERSICHT (/dashboard)
+// Header + Navigation + PULS-Chat liegen jetzt zentral in
+// app/dashboard/layout.tsx. Diese Seite liefert nur noch den
+// Inhalt der Uebersicht.
+// ============================================================
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
 type Status = 'active' | 'inactive' | 'trial'
@@ -69,7 +72,6 @@ function KiCallBar({ used, limit }: { used: number; limit: number }) {
       <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '999px', height: '10px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '999px', transition: 'width 0.5s ease' }} />
       </div>
-      <DashboardChat />
     </div>
   )
 }
@@ -127,32 +129,7 @@ export default async function DashboardPage() {
   const SHELL_PAD = 'clamp(16px, 3vw, 48px)'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
-
-      <header style={{ borderBottom: '1px solid rgba(201,168,76,0.15)', background: 'rgba(10,22,40,0.95)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
-        {/* Zeile 1: Logo links, Konto + Abmelden rechts */}
-        <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `0 ${SHELL_PAD}`, minHeight: '72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={40} height={40} style={{ objectFit: 'contain' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-              <span style={{ fontSize: 'clamp(16px, 1.4vw, 22px)', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>ARGONAUT</span>
-              <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>Dashboard</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            <span style={{ fontSize: 'clamp(12px, 0.9vw, 14px)', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>{user.email}</span>
-            <LogoutButton />
-          </div>
-        </div>
-        {/* Zeile 2: Navigation ueber volle Breite (waechst mit, kein Umbruch-Ueberlappen mehr) */}
-        <div style={{ borderTop: '1px solid rgba(201,168,76,0.08)', background: 'rgba(255,255,255,0.015)' }}>
-          <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `10px ${SHELL_PAD}` }}>
-            <DashboardNav />
-          </div>
-        </div>
-      </header>
-
-      <>
+    <>
       <UpgradePopup />
       <OverusePopup kiUsed={kiUsed} kiLimit={kiLimit} currentPaket={rawPaket} userEmail={user.email || ''} />
       <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
@@ -285,7 +262,6 @@ export default async function DashboardPage() {
         </section>
 
       </main>
-      </>
-    </div>
+    </>
   )
 }
