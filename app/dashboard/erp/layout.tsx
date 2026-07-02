@@ -2,13 +2,15 @@
 import { usePathname } from "next/navigation";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · BLOCK 8 ERP · Sub-Navigation (Layout)
+// ARGONAUT OS · BLOCK 8 ERP · Sub-Navigation + Modul-Kopf (Layout)
+// Grosser Titel + Beschreibung + farbige Bereich-Buttons (wie CRM).
 // Erscheint automatisch auf allen /dashboard/erp-Seiten.
-// Karten-Buttons je Bereich mit eigener Akzentfarbe (wie CRM).
 // Neuer Bereich = eine Zeile in TABS.
 // ---------------------------------------------------------------------
 
 const C = {
+  gold: "#C9A84C",
+  textDim: "#8FA3BE",
   border: "rgba(255,255,255,0.08)",
 };
 
@@ -50,12 +52,45 @@ export default function ErpLayout({
           maxWidth: 1400,
           marginLeft: "auto",
           marginRight: "auto",
+          paddingTop: 28,
           marginBottom: 24,
-          paddingBottom: 18,
-          borderBottom: `1px solid ${C.border}`,
         }}
       >
-        <nav style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* Modul-Kopf */}
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 30,
+            fontWeight: 800,
+            color: C.gold,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          📦 ERP / Warenwirtschaft
+        </h1>
+        <p
+          style={{
+            margin: "8px 0 22px",
+            color: C.textDim,
+            fontSize: 15,
+            maxWidth: 720,
+          }}
+        >
+          Lager, Einkauf, Inventar &amp; Fuhrpark — deine komplette Warenwirtschaft
+          an einem Ort. Bestände im Blick, Nachschub per Klick, Prüf- und
+          TÜV-Fristen automatisch im Auge.
+        </p>
+
+        {/* Bereich-Buttons */}
+        <nav
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            paddingBottom: 18,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
           {TABS.map((tab) => {
             const aktiv = istAktiv(tab.href, pathname);
             const stil: React.CSSProperties = {
