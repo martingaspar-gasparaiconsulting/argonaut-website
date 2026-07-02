@@ -20,6 +20,7 @@ const TABS: Tab[] = [
   { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen" },
   { label: "📥 Wareneingang", href: "/dashboard/erp/wareneingang" },
   { label: "🔧 Inventar", href: "/dashboard/erp/inventar" },
+  { label: "🚜 Fuhrpark", href: "/dashboard/erp/fuhrpark" },
 ];
 
 function istAktiv(href: string, pathname: string): boolean {
