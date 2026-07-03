@@ -92,6 +92,11 @@ export default function BriefEditorPage() {
   // Löschen
   const [loeschDialog, setLoeschDialog] = useState(false);
 
+  // KI-Brief-Assistent
+  const [kiOffen, setKiOffen] = useState(false);
+  const [kiStichworte, setKiStichworte] = useState('');
+  const [kiLaden, setKiLaden] = useState(false);
+
   // ---- Laden ----
   const alles_laden = useCallback(async () => {
     if (!briefId) return;
@@ -278,6 +283,43 @@ export default function BriefEditorPage() {
       return;
     }
     window.location.href = '/dashboard/korrespondenz';
+  }
+
+  // ---- KI: Brief aus Stichworten formulieren ----
+  async function kiFormulieren() {
+    if (!kiStichworte.trim()) {
+      setFehler('Bitte ein paar Stichworte eingeben.');
+      return;
+    }
+    setKiLaden(true);
+    setFehler(null);
+    try {
+      const res = await fetch('/api/korrespondenz-ki', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          brief: {
+            brief_art: briefArt,
+            betreff: betreff.trim(),
+            empfaenger_name: empfName.trim(),
+            stichworte: kiStichworte.trim(),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data?.fehler) {
+        setFehler(data.fehler);
+      } else if (data?.text) {
+        setBrieftext(data.text);
+        setKiOffen(false);
+        setKiStichworte('');
+        setHinweis('Brieftext von ARGONAUT übernommen — bitte prüfen.');
+        setTimeout(() => setHinweis(null), 3000);
+      }
+    } catch {
+      setFehler('Verbindungsfehler zur KI. Bitte erneut versuchen.');
+    }
+    setKiLaden(false);
   }
 
   // ---- Styles ----
@@ -588,7 +630,106 @@ export default function BriefEditorPage() {
           </div>
 
           <div>
-            <label style={labelStil}>Brieftext</label>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '4px',
+                flexWrap: 'wrap',
+                gap: '6px',
+              }}
+            >
+              <label style={{ ...labelStil, margin: 0 }}>Brieftext</label>
+              <button
+                onClick={() => {
+                  setKiOffen(!kiOffen);
+                  setFehler(null);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: `1px solid ${GOLD}66`,
+                  background: 'rgba(201,168,76,0.12)',
+                  color: GOLD,
+                }}
+              >
+                {kiOffen ? 'KI schließen' : '✨ Von ARGONAUT formulieren'}
+              </button>
+            </div>
+
+            {kiOffen && (
+              <div
+                style={{
+                  border: `1px solid ${GOLD}44`,
+                  borderRadius: '10px',
+                  padding: '12px',
+                  marginBottom: '10px',
+                  background: 'rgba(201,168,76,0.05)',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '12.5px',
+                    color: 'rgba(255,255,255,0.65)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  Gib ein paar Stichworte ein — ARGONAUT formuliert daraus einen
+                  passenden Brieftext (editierbar, kein Versand).
+                </div>
+                <textarea
+                  style={{
+                    ...inputStil,
+                    minHeight: '70px',
+                    resize: 'vertical',
+                    marginBottom: '8px',
+                  }}
+                  value={kiStichworte}
+                  onChange={(e) => setKiStichworte(e.target.value)}
+                  placeholder={
+                    'z.B. Zahlungserinnerung zu Rechnung, freundlich, 14 Tage Frist'
+                  }
+                />
+                <button
+                  onClick={kiFormulieren}
+                  disabled={kiLaden || !kiStichworte.trim()}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    background: GOLD,
+                    color: NAVY,
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor:
+                      kiLaden || !kiStichworte.trim()
+                        ? 'not-allowed'
+                        : 'pointer',
+                    opacity: kiLaden || !kiStichworte.trim() ? 0.6 : 1,
+                  }}
+                >
+                  {kiLaden
+                    ? 'ARGONAUT formuliert …'
+                    : '✨ Brieftext erstellen'}
+                </button>
+                {brieftext.trim() && (
+                  <span
+                    style={{
+                      fontSize: '11.5px',
+                      color: 'rgba(255,255,255,0.45)',
+                      marginLeft: '10px',
+                    }}
+                  >
+                    Ersetzt den aktuellen Brieftext.
+                  </span>
+                )}
+              </div>
+            )}
+
             <textarea
               style={{
                 ...inputStil,
