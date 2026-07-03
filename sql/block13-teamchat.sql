@@ -254,8 +254,10 @@ end;
 $$;
 
 -- 11b) Kollegen des eigenen Teams (nur mit Login), inkl. "schon im Kanal?"
-create or replace function public.chat_team_kollegen(p_kanal uuid)
-returns table (auth_user_id uuid, anzeige text, email text, ist_mitglied boolean)
+--      Rueckgabe-Spalten mit k_-Prefix -> keine Ambiguitaet mit Tabellenspalten.
+drop function if exists public.chat_team_kollegen(uuid);
+create function public.chat_team_kollegen(p_kanal uuid)
+returns table (k_auth_user_id uuid, k_anzeige text, k_email text, k_ist_mitglied boolean)
 language plpgsql
 security definer
 set search_path = public
@@ -265,8 +267,8 @@ declare v_owner uuid;
 begin
   -- Team-Owner bestimmen: ist der User ein Mitarbeiter -> dessen owner_user_id,
   -- sonst (Chef) -> die eigene ID.
-  select owner_user_id into v_owner
-    from public.mitarbeiter where auth_user_id = auth.uid() limit 1;
+  select m.owner_user_id into v_owner
+    from public.mitarbeiter m where m.auth_user_id = auth.uid() limit 1;
   if v_owner is null then v_owner := auth.uid(); end if;
 
   return query
@@ -275,17 +277,17 @@ begin
     coalesce(
       nullif(trim(coalesce(m.vorname,'') || ' ' || coalesce(m.nachname,'')), ''),
       split_part(m.email, '@', 1)
-    ) as anzeige,
+    ),
     m.email,
     exists (
       select 1 from public.chat_mitglieder cm
       where cm.kanal_id = p_kanal and cm.user_id = m.auth_user_id
-    ) as ist_mitglied
+    )
   from public.mitarbeiter m
   where m.owner_user_id = v_owner
     and m.auth_user_id is not null
     and m.auth_user_id <> auth.uid()
-  order by anzeige;
+  order by 2;
 end;
 $$;
 
@@ -316,8 +318,10 @@ end;
 $$;
 
 -- 11d) Mitglieder eines Kanals mit aufgeloestem Namen + Moderator-Flag
-create or replace function public.chat_kanal_mitglieder(p_kanal uuid)
-returns table (user_id uuid, anzeige text, ist_moderator boolean)
+--      Rueckgabe-Spalten mit m_-Prefix + qualifizierter Guard -> keine Ambiguitaet.
+drop function if exists public.chat_kanal_mitglieder(uuid);
+create function public.chat_kanal_mitglieder(p_kanal uuid)
+returns table (m_user_id uuid, m_anzeige text, m_ist_moderator boolean)
 language plpgsql
 security definer
 set search_path = public
@@ -327,30 +331,30 @@ declare v_ersteller uuid;
 begin
   -- Nur Mitglieder duerfen die Mitgliederliste sehen
   if not exists (
-    select 1 from public.chat_mitglieder
-    where kanal_id = p_kanal and user_id = auth.uid()
+    select 1 from public.chat_mitglieder cm
+    where cm.kanal_id = p_kanal and cm.user_id = auth.uid()
   ) then
     return;
   end if;
 
-  select erstellt_von into v_ersteller from public.chat_kanaele where id = p_kanal;
+  select k.erstellt_von into v_ersteller from public.chat_kanaele k where k.id = p_kanal;
 
   return query
   select
     cm.user_id,
     coalesce(
       nullif(cm.anzeigename, ''),
-      nullif((select trim(coalesce(m.vorname,'') || ' ' || coalesce(m.nachname,''))
-                from public.mitarbeiter m where m.auth_user_id = cm.user_id limit 1), ''),
+      nullif((select trim(coalesce(mi.vorname,'') || ' ' || coalesce(mi.nachname,''))
+                from public.mitarbeiter mi where mi.auth_user_id = cm.user_id limit 1), ''),
       nullif((select p.full_name from public.profiles p where p.id = cm.user_id limit 1), ''),
       (select split_part(u.email, '@', 1) from auth.users u where u.id = cm.user_id limit 1),
       'Unbekannt'
-    ) as anzeige,
-    (cm.user_id = v_ersteller) as ist_moderator
+    ),
+    (cm.user_id = v_ersteller)
   from public.chat_mitglieder cm
   where cm.kanal_id = p_kanal
-  order by ist_moderator desc, anzeige;
+  order by 3 desc, 2;
 end;
 $$;
 
--- FERTIG — TC1 + TC2-RPC + TC2b (Namens-Einladen)
+-- FERTIG — TC1 + TC2-RPC + TC2b (Namens-Einladen, Fix Ambiguitaet)

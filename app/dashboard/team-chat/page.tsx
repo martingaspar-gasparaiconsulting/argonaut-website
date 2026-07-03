@@ -30,16 +30,16 @@ type Nachricht = {
 };
 
 type Kollege = {
-  auth_user_id: string;
-  anzeige: string;
-  email: string;
-  ist_mitglied: boolean;
+  k_auth_user_id: string;
+  k_anzeige: string;
+  k_email: string;
+  k_ist_mitglied: boolean;
 };
 
 type Mitglied = {
-  user_id: string;
-  anzeige: string;
-  ist_moderator: boolean;
+  m_user_id: string;
+  m_anzeige: string;
+  m_ist_moderator: boolean;
 };
 
 const NAVY = '#0A1628';
@@ -275,11 +275,11 @@ export default function TeamChatPage() {
   // --- Kollege einladen (per Klick aus der Liste) ----------------------------
   async function kollegeEinladen(k: Kollege) {
     if (!aktiverKanal) return;
-    setEinladenLaedt(k.auth_user_id);
+    setEinladenLaedt(k.k_auth_user_id);
     setEinladenFehler(null);
     const { data, error } = await supabase.rpc('chat_mitglied_hinzufuegen', {
       p_kanal: aktiverKanal,
-      p_user: k.auth_user_id,
+      p_user: k.k_auth_user_id,
     });
     setEinladenLaedt(null);
     if (!error && data === 'ok') {
@@ -291,15 +291,15 @@ export default function TeamChatPage() {
   }
 
   const aktKanalObj = kanaele.find((k) => k.id === aktiverKanal) || null;
-  const moderator = mitglieder.find((m) => m.ist_moderator) || null;
-  const andereMitglieder = mitglieder.filter((m) => !m.ist_moderator);
+  const moderator = mitglieder.find((m) => m.m_ist_moderator) || null;
+  const andereMitglieder = mitglieder.filter((m) => !m.m_ist_moderator);
 
   const suche = kollegenSuche.trim().toLowerCase();
   const gefilterteKollegen = suche
     ? kollegen.filter(
         (k) =>
-          k.anzeige.toLowerCase().includes(suche) ||
-          k.email.toLowerCase().includes(suche)
+          k.k_anzeige.toLowerCase().includes(suche) ||
+          k.k_email.toLowerCase().includes(suche)
       )
     : kollegen;
 
@@ -489,12 +489,12 @@ export default function TeamChatPage() {
                     </div>
                     <div style={{ color: DIM, fontSize: 12.5, marginTop: 4 }}>
                       <span style={{ color: GOLD }}>
-                        👑 Moderator: {moderator ? moderator.anzeige : '—'}
+                        👑 Moderator: {moderator ? moderator.m_anzeige : '—'}
                       </span>
                       {andereMitglieder.length > 0 ? (
                         <span>
                           {'  ·  '}
-                          {andereMitglieder.map((m) => m.anzeige).join(', ')}
+                          {andereMitglieder.map((m) => m.m_anzeige).join(', ')}
                         </span>
                       ) : (
                         <span>{'  ·  nur Sie'}</span>
@@ -551,7 +551,7 @@ export default function TeamChatPage() {
                       )}
                       {gefilterteKollegen.map((k) => (
                         <div
-                          key={k.auth_user_id}
+                          key={k.k_auth_user_id}
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -565,18 +565,18 @@ export default function TeamChatPage() {
                         >
                           <div style={{ minWidth: 0 }}>
                             <div style={{ color: TEXT, fontSize: 13.5, fontWeight: 600 }}>
-                              {k.anzeige || k.email}
+                              {k.k_anzeige || k.k_email}
                             </div>
-                            <div style={{ color: DIM, fontSize: 11.5 }}>{k.email}</div>
+                            <div style={{ color: DIM, fontSize: 11.5 }}>{k.k_email}</div>
                           </div>
-                          {k.ist_mitglied ? (
+                          {k.k_ist_mitglied ? (
                             <span style={{ color: GREEN, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
                               ✓ im Kanal
                             </span>
                           ) : (
                             <button
                               onClick={() => kollegeEinladen(k)}
-                              disabled={einladenLaedt === k.auth_user_id}
+                              disabled={einladenLaedt === k.k_auth_user_id}
                               style={{
                                 flexShrink: 0,
                                 background: CYAN,
@@ -589,7 +589,7 @@ export default function TeamChatPage() {
                                 fontSize: 12.5,
                               }}
                             >
-                              {einladenLaedt === k.auth_user_id ? '…' : 'Einladen'}
+                              {einladenLaedt === k.k_auth_user_id ? '…' : 'Einladen'}
                             </button>
                           )}
                         </div>
