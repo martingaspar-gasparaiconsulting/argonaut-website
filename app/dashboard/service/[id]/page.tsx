@@ -199,6 +199,12 @@ export default function TicketDetailPage() {
   // Löschen
   const [loeschDialog, setLoeschDialog] = useState(false);
 
+  // KI-Antwortentwurf
+  const [kiLaden, setKiLaden] = useState(false);
+  const [kiEntwurf, setKiEntwurf] = useState('');
+  const [kiOffen, setKiOffen] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
+
   // ---- Laden ----
   const alles_laden = useCallback(async () => {
     if (!ticketId) return;
@@ -344,6 +350,56 @@ export default function TicketDetailPage() {
       return;
     }
     window.location.href = '/dashboard/service';
+  }
+
+  // ---- KI-Antwortentwurf erzeugen ----
+  async function antwortErzeugen() {
+    if (!ticket) return;
+    setKiLaden(true);
+    setKiOffen(true);
+    setKiEntwurf('');
+    setFehler(null);
+    try {
+      const res = await fetch('/api/ticket-antwort', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ticket: {
+            ticket_nummer: ticket.ticket_nummer,
+            betreff: ticket.betreff,
+            beschreibung: ticket.beschreibung,
+            status: ticket.status,
+            prioritaet: ticket.prioritaet,
+            kategorie: ticket.kategorie,
+            kanal: ticket.kanal,
+            kunde_name: ticket.kunde_name,
+            verlauf: verlauf,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data?.fehler) {
+        setFehler(data.fehler);
+        setKiOffen(false);
+      } else {
+        setKiEntwurf(data?.text ?? '');
+      }
+    } catch {
+      setFehler('Verbindungsfehler zur KI. Bitte erneut versuchen.');
+      setKiOffen(false);
+    }
+    setKiLaden(false);
+  }
+
+  // ---- Entwurf kopieren ----
+  async function entwurfKopieren() {
+    try {
+      await navigator.clipboard.writeText(kiEntwurf);
+      setKopiert(true);
+      setTimeout(() => setKopiert(false), 2000);
+    } catch {
+      setFehler('Kopieren nicht möglich. Bitte Text manuell markieren.');
+    }
   }
 
   // ---- Styles ----
@@ -526,6 +582,124 @@ export default function TicketDetailPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* KI-ANTWORTENTWURF */}
+      <div style={{ ...karte, marginBottom: '16px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: GOLD,
+                fontSize: '15px',
+                fontWeight: 700,
+                marginBottom: '2px',
+              }}
+            >
+              ✨ Antwort-Entwurf
+            </div>
+            <div
+              style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}
+            >
+              ARGONAUT formuliert einen Antwortvorschlag an den Kunden —
+              editierbar, kein automatischer Versand.
+            </div>
+          </div>
+          <button
+            onClick={antwortErzeugen}
+            disabled={kiLaden}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '8px',
+              background: GOLD,
+              color: NAVY,
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: 700,
+              cursor: kiLaden ? 'not-allowed' : 'pointer',
+              opacity: kiLaden ? 0.6 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {kiLaden
+              ? 'Erstellt Entwurf …'
+              : kiEntwurf
+              ? '↻ Neu generieren'
+              : '✨ Entwurf erstellen'}
+          </button>
+        </div>
+
+        {kiOffen && (
+          <div style={{ marginTop: '14px' }}>
+            {kiLaden ? (
+              <div
+                style={{
+                  color: 'rgba(255,255,255,0.6)',
+                  fontSize: '14px',
+                  padding: '12px 0',
+                }}
+              >
+                ARGONAUT denkt nach und formuliert einen passenden Vorschlag …
+              </div>
+            ) : (
+              <>
+                <textarea
+                  style={{
+                    ...inputStil,
+                    minHeight: '220px',
+                    resize: 'vertical',
+                    lineHeight: 1.5,
+                    fontFamily: 'inherit',
+                  }}
+                  value={kiEntwurf}
+                  onChange={(e) => setKiEntwurf(e.target.value)}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    marginTop: '10px',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <button
+                    onClick={entwurfKopieren}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: '8px',
+                      background: kopiert ? '#66bb6a' : 'rgba(255,255,255,0.08)',
+                      color: kopiert ? '#fff' : 'rgba(255,255,255,0.85)',
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {kopiert ? '✓ Kopiert' : '📋 In Zwischenablage kopieren'}
+                  </button>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: 'rgba(255,255,255,0.45)',
+                    }}
+                  >
+                    Vor dem Versand prüfen und Platzhalter [in Klammern]
+                    ersetzen.
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* GRID: Details + Timeline */}
