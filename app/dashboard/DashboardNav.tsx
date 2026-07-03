@@ -28,6 +28,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen' },
   { label: '📦 ERP/Lager', href: '/dashboard/erp' },
   { label: '📑 Verträge', href: '/dashboard/vertraege' },
+  { label: '🎫 Service', href: '/dashboard/service' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
   { label: '🔧 Einstellungen', href: '/dashboard/einstellungen' },
 ];
