@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 // ---------------------------------------------------------------------------
-// ARGONAUT OS · BLOCK 13 · TC2 — Team-Chat Cockpit
-// Kanalliste + Nachrichten + Senden + Supabase Realtime (Live-Empfang)
-// Kanal anlegen + Mitglied per E-Mail einladen (RPC chat_mitglied_per_email)
+// ARGONAUT OS · BLOCK 13 · Team-Chat Cockpit (TC2 + TC3 + Namens-Einladen)
+// - Kanalliste, Realtime-Nachrichten, Senden
+// - "@ARGONAUT ..." holt KI-Antwort in den Kanal
+// - Einladen per Kollegen-Auswahlliste (Name + Suche), Moderator-/Mitglied-Anzeige
 // ---------------------------------------------------------------------------
 
 type Kanal = {
@@ -28,6 +29,19 @@ type Nachricht = {
   created_at: string;
 };
 
+type Kollege = {
+  auth_user_id: string;
+  anzeige: string;
+  email: string;
+  ist_mitglied: boolean;
+};
+
+type Mitglied = {
+  user_id: string;
+  anzeige: string;
+  ist_moderator: boolean;
+};
+
 const NAVY = '#0A1628';
 const PANEL = '#0F2038';
 const PANEL2 = '#132844';
@@ -35,7 +49,6 @@ const BORDER = '#1E3A5F';
 const GOLD = '#C9A84C';
 const CYAN = '#00e5ff';
 const GREEN = '#4CAF7D';
-const DANGER = '#E06666';
 const TEXT = '#E8EEF6';
 const DIM = '#8FA3BE';
 
@@ -56,13 +69,18 @@ export default function TeamChatPage() {
 
   const [entwurf, setEntwurf] = useState('');
   const [laedt, setLaedt] = useState(true);
+  const [kiDenkt, setKiDenkt] = useState(false);
 
   const [zeigeNeuerKanal, setZeigeNeuerKanal] = useState(false);
   const [neuerKanalName, setNeuerKanalName] = useState('');
 
   const [zeigeEinladen, setZeigeEinladen] = useState(false);
-  const [einladenEmail, setEinladenEmail] = useState('');
-  const [einladenStatus, setEinladenStatus] = useState<string | null>(null);
+  const [kollegen, setKollegen] = useState<Kollege[]>([]);
+  const [kollegenSuche, setKollegenSuche] = useState('');
+  const [einladenLaedt, setEinladenLaedt] = useState<string | null>(null);
+  const [einladenFehler, setEinladenFehler] = useState<string | null>(null);
+
+  const [mitglieder, setMitglieder] = useState<Mitglied[]>([]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,7 +95,23 @@ export default function TeamChatPage() {
     setAktiverKanal((prev) => prev ?? (liste.length > 0 ? liste[0].id : null));
   }, [supabase]);
 
-  // --- Initial: User + Kanaele ----------------------------------------------
+  const ladeMitglieder = useCallback(
+    async (kanalId: string) => {
+      const { data } = await supabase.rpc('chat_kanal_mitglieder', { p_kanal: kanalId });
+      setMitglieder((data as Mitglied[]) ?? []);
+    },
+    [supabase]
+  );
+
+  const ladeKollegen = useCallback(
+    async (kanalId: string) => {
+      const { data } = await supabase.rpc('chat_team_kollegen', { p_kanal: kanalId });
+      setKollegen((data as Kollege[]) ?? []);
+    },
+    [supabase]
+  );
+
+  // --- Initial: User (echter Name) + Kanaele --------------------------------
   useEffect(() => {
     (async () => {
       const {
@@ -85,7 +119,11 @@ export default function TeamChatPage() {
       } = await supabase.auth.getUser();
       setUserId(user?.id ?? null);
       const mail: string | undefined = user?.email;
-      setAnzeigename(mail ? mail.split('@')[0] : 'Ich');
+      const { data: meinName } = await supabase.rpc('chat_mein_name');
+      setAnzeigename(
+        (typeof meinName === 'string' && meinName.trim()) ||
+          (mail ? mail.split('@')[0] : 'Ich')
+      );
       await ladeKanaele();
       setLaedt(false);
     })();
@@ -133,11 +171,68 @@ export default function TeamChatPage() {
     };
   }, [aktiverKanal, supabase]);
 
-  // --- Auto-Scroll nach unten bei neuer Nachricht ----------------------------
+  // --- Mitglieder des aktiven Kanals laden -----------------------------------
+  useEffect(() => {
+    if (aktiverKanal) ladeMitglieder(aktiverKanal);
+    else setMitglieder([]);
+  }, [aktiverKanal, ladeMitglieder]);
+
+  // --- Kollegenliste laden, wenn Einladen-Panel geoeffnet wird ---------------
+  useEffect(() => {
+    if (zeigeEinladen && aktiverKanal) {
+      setEinladenFehler(null);
+      ladeKollegen(aktiverKanal);
+    }
+  }, [zeigeEinladen, aktiverKanal, ladeKollegen]);
+
+  // --- Auto-Scroll nach unten ------------------------------------------------
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [nachrichten]);
+  }, [nachrichten, kiDenkt]);
+
+  // --- ARGONAUT-Antwort in den Kanal holen -----------------------------------
+  async function argonautAntworten(ausloeser: string) {
+    if (!aktiverKanal) return;
+    setKiDenkt(true);
+    try {
+      const frage = ausloeser.replace(/@argonaut/gi, '').trim();
+      const verlauf = nachrichten.slice(-15).map((m) => ({
+        ist_ki: m.ist_ki,
+        absender_name: m.absender_name,
+        text: m.text,
+      }));
+      verlauf.push({ ist_ki: false, absender_name: anzeigename, text: ausloeser });
+
+      const res = await fetch('/api/team-chat-ki', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frage, verlauf }),
+      });
+      const data = await res.json();
+      const antwort: string =
+        (data && typeof data.text === 'string' && data.text.trim()) ||
+        'Entschuldigung, ich konnte gerade keine Antwort erzeugen.';
+
+      await supabase.from('chat_nachrichten').insert({
+        kanal_id: aktiverKanal,
+        absender_id: null,
+        absender_name: 'ARGONAUT',
+        ist_ki: true,
+        text: antwort,
+      });
+    } catch {
+      await supabase.from('chat_nachrichten').insert({
+        kanal_id: aktiverKanal,
+        absender_id: null,
+        absender_name: 'ARGONAUT',
+        ist_ki: true,
+        text: 'Entschuldigung, die Verbindung zu ARGONAUT ist gerade gestört.',
+      });
+    } finally {
+      setKiDenkt(false);
+    }
+  }
 
   // --- Nachricht senden ------------------------------------------------------
   async function senden() {
@@ -152,10 +247,12 @@ export default function TeamChatPage() {
       text,
     });
     if (error) {
-      // bei Fehler Entwurf zuruecklegen, damit nichts verloren geht
       setEntwurf(text);
+      return;
     }
-    // Anzeige erfolgt ueber Realtime-Event (kein doppeltes Einfuegen)
+    if (/@argonaut/i.test(text)) {
+      argonautAntworten(text);
+    }
   }
 
   // --- Kanal anlegen ---------------------------------------------------------
@@ -175,28 +272,36 @@ export default function TeamChatPage() {
     }
   }
 
-  // --- Mitglied per E-Mail einladen ------------------------------------------
-  async function einladen() {
-    const mail = einladenEmail.trim();
-    if (!mail || !aktiverKanal) return;
-    setEinladenStatus('Wird geprüft …');
-    const { data, error } = await supabase.rpc('chat_mitglied_per_email', {
+  // --- Kollege einladen (per Klick aus der Liste) ----------------------------
+  async function kollegeEinladen(k: Kollege) {
+    if (!aktiverKanal) return;
+    setEinladenLaedt(k.auth_user_id);
+    setEinladenFehler(null);
+    const { data, error } = await supabase.rpc('chat_mitglied_hinzufuegen', {
       p_kanal: aktiverKanal,
-      p_email: mail,
+      p_user: k.auth_user_id,
     });
-    if (error) {
-      setEinladenStatus('Fehler: ' + error.message);
-      return;
-    }
-    if (data === 'ok') {
-      setEinladenStatus('✓ Kollege wurde hinzugefügt.');
-      setEinladenEmail('');
+    setEinladenLaedt(null);
+    if (!error && data === 'ok') {
+      await ladeKollegen(aktiverKanal);
+      await ladeMitglieder(aktiverKanal);
     } else {
-      setEinladenStatus(String(data));
+      setEinladenFehler(error ? 'Fehler: ' + error.message : String(data));
     }
   }
 
   const aktKanalObj = kanaele.find((k) => k.id === aktiverKanal) || null;
+  const moderator = mitglieder.find((m) => m.ist_moderator) || null;
+  const andereMitglieder = mitglieder.filter((m) => !m.ist_moderator);
+
+  const suche = kollegenSuche.trim().toLowerCase();
+  const gefilterteKollegen = suche
+    ? kollegen.filter(
+        (k) =>
+          k.anzeige.toLowerCase().includes(suche) ||
+          k.email.toLowerCase().includes(suche)
+      )
+    : kollegen;
 
   function zeitFormat(iso: string): string {
     const d = new Date(iso);
@@ -215,7 +320,7 @@ export default function TeamChatPage() {
           letterSpacing: 0.3,
         }}
       >
-        👥 Team-Chat
+        🗨️ Team-Chat
       </h1>
       <p style={{ color: DIM, fontSize: 15, margin: '0 0 22px 0', maxWidth: 720 }}>
         Kommunizieren Sie in Echtzeit mit Ihrem Team. Legen Sie Kanäle an, laden
@@ -239,7 +344,7 @@ export default function TeamChatPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 6,
-              height: 620,
+              height: 640,
             }}
           >
             <div
@@ -250,9 +355,7 @@ export default function TeamChatPage() {
                 marginBottom: 6,
               }}
             >
-              <span style={{ color: TEXT, fontWeight: 600, fontSize: 14 }}>
-                Kanäle
-              </span>
+              <span style={{ color: TEXT, fontWeight: 600, fontSize: 14 }}>Kanäle</span>
               <button
                 onClick={() => setZeigeNeuerKanal((v) => !v)}
                 style={{
@@ -321,7 +424,7 @@ export default function TeamChatPage() {
                     onClick={() => {
                       setAktiverKanal(k.id);
                       setZeigeEinladen(false);
-                      setEinladenStatus(null);
+                      setKollegenSuche('');
                     }}
                     style={{
                       textAlign: 'left',
@@ -352,7 +455,7 @@ export default function TeamChatPage() {
               borderRadius: 12,
               display: 'flex',
               flexDirection: 'column',
-              height: 620,
+              height: 640,
             }}
           >
             {!aktiverKanal ? (
@@ -369,25 +472,39 @@ export default function TeamChatPage() {
               </div>
             ) : (
               <>
-                {/* Kanal-Kopf */}
+                {/* Kanal-Kopf mit Moderator + Mitgliedern */}
                 <div
                   style={{
-                    padding: '14px 18px',
+                    padding: '12px 18px',
                     borderBottom: '1px solid ' + BORDER,
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
+                    gap: 12,
                   }}
                 >
-                  <div style={{ color: TEXT, fontWeight: 600, fontSize: 16 }}>
-                    # {aktKanalObj?.name}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: TEXT, fontWeight: 600, fontSize: 16 }}>
+                      # {aktKanalObj?.name}
+                    </div>
+                    <div style={{ color: DIM, fontSize: 12.5, marginTop: 4 }}>
+                      <span style={{ color: GOLD }}>
+                        👑 Moderator: {moderator ? moderator.anzeige : '—'}
+                      </span>
+                      {andereMitglieder.length > 0 ? (
+                        <span>
+                          {'  ·  '}
+                          {andereMitglieder.map((m) => m.anzeige).join(', ')}
+                        </span>
+                      ) : (
+                        <span>{'  ·  nur Sie'}</span>
+                      )}
+                    </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setZeigeEinladen((v) => !v);
-                      setEinladenStatus(null);
-                    }}
+                    onClick={() => setZeigeEinladen((v) => !v)}
                     style={{
+                      flexShrink: 0,
                       background: 'transparent',
                       border: '1px solid ' + BORDER,
                       color: CYAN,
@@ -401,60 +518,85 @@ export default function TeamChatPage() {
                   </button>
                 </div>
 
-                {/* Einladen-Panel */}
+                {/* Einladen-Panel: Suche + Kollegenliste */}
                 {zeigeEinladen && (
                   <div
                     style={{
                       padding: '12px 18px',
                       borderBottom: '1px solid ' + BORDER,
                       background: PANEL2,
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
                     }}
                   >
                     <input
-                      value={einladenEmail}
-                      onChange={(e) => setEinladenEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && einladen()}
-                      placeholder="E-Mail des Kollegen"
+                      value={kollegenSuche}
+                      onChange={(e) => setKollegenSuche(e.target.value)}
+                      placeholder="Kollegen nach Namen suchen …"
                       style={{
-                        flex: 1,
-                        minWidth: 200,
+                        width: '100%',
+                        boxSizing: 'border-box',
                         background: NAVY,
                         border: '1px solid ' + BORDER,
                         color: TEXT,
                         borderRadius: 8,
                         padding: '8px 10px',
                         fontSize: 13,
+                        marginBottom: 8,
                       }}
                     />
-                    <button
-                      onClick={einladen}
-                      style={{
-                        background: CYAN,
-                        border: 'none',
-                        color: NAVY,
-                        borderRadius: 8,
-                        padding: '8px 14px',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        fontSize: 13,
-                      }}
-                    >
-                      Hinzufügen
-                    </button>
-                    {einladenStatus && (
-                      <span
-                        style={{
-                          color: einladenStatus.startsWith('✓') ? GREEN : DIM,
-                          fontSize: 13,
-                          width: '100%',
-                        }}
-                      >
-                        {einladenStatus}
-                      </span>
+                    <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {gefilterteKollegen.length === 0 && (
+                        <span style={{ color: DIM, fontSize: 13, padding: '4px 2px' }}>
+                          Keine Kollegen mit Login gefunden.
+                        </span>
+                      )}
+                      {gefilterteKollegen.map((k) => (
+                        <div
+                          key={k.auth_user_id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '7px 10px',
+                            background: NAVY,
+                            border: '1px solid ' + BORDER,
+                            borderRadius: 8,
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ color: TEXT, fontSize: 13.5, fontWeight: 600 }}>
+                              {k.anzeige || k.email}
+                            </div>
+                            <div style={{ color: DIM, fontSize: 11.5 }}>{k.email}</div>
+                          </div>
+                          {k.ist_mitglied ? (
+                            <span style={{ color: GREEN, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
+                              ✓ im Kanal
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => kollegeEinladen(k)}
+                              disabled={einladenLaedt === k.auth_user_id}
+                              style={{
+                                flexShrink: 0,
+                                background: CYAN,
+                                border: 'none',
+                                color: NAVY,
+                                borderRadius: 8,
+                                padding: '5px 12px',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: 12.5,
+                              }}
+                            >
+                              {einladenLaedt === k.auth_user_id ? '…' : 'Einladen'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {einladenFehler && (
+                      <div style={{ color: DIM, fontSize: 12.5, marginTop: 8 }}>{einladenFehler}</div>
                     )}
                   </div>
                 )}
@@ -471,7 +613,7 @@ export default function TeamChatPage() {
                     gap: 12,
                   }}
                 >
-                  {nachrichten.length === 0 && (
+                  {nachrichten.length === 0 && !kiDenkt && (
                     <div style={{ color: DIM, fontSize: 14, textAlign: 'center', marginTop: 20 }}>
                       Noch keine Nachrichten. Schreiben Sie die erste.
                     </div>
@@ -482,19 +624,9 @@ export default function TeamChatPage() {
                     return (
                       <div
                         key={m.id}
-                        style={{
-                          alignSelf: eigen ? 'flex-end' : 'flex-start',
-                          maxWidth: '72%',
-                        }}
+                        style={{ alignSelf: eigen ? 'flex-end' : 'flex-start', maxWidth: '72%' }}
                       >
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: farbe,
-                            marginBottom: 3,
-                            fontWeight: 600,
-                          }}
-                        >
+                        <div style={{ fontSize: 12, color: farbe, marginBottom: 3, fontWeight: 600 }}>
                           {m.ist_ki ? '⚡ ARGONAUT' : m.absender_name}
                           <span style={{ color: DIM, fontWeight: 400, marginLeft: 8 }}>
                             {zeitFormat(m.created_at)}
@@ -517,58 +649,87 @@ export default function TeamChatPage() {
                       </div>
                     );
                   })}
+
+                  {kiDenkt && (
+                    <div style={{ alignSelf: 'flex-start', maxWidth: '72%' }}>
+                      <div style={{ fontSize: 12, color: GOLD, marginBottom: 3, fontWeight: 600 }}>
+                        ⚡ ARGONAUT
+                      </div>
+                      <div
+                        style={{
+                          background: '#2A2413',
+                          border: '1px solid ' + GOLD,
+                          color: DIM,
+                          borderRadius: 10,
+                          padding: '9px 13px',
+                          fontSize: 14,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        schreibt …
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Eingabe */}
                 <div
                   style={{
-                    padding: 14,
                     borderTop: '1px solid ' + BORDER,
+                    padding: 14,
                     display: 'flex',
-                    gap: 10,
+                    flexDirection: 'column',
+                    gap: 8,
                   }}
                 >
-                  <textarea
-                    value={entwurf}
-                    onChange={(e) => setEntwurf(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        senden();
-                      }
-                    }}
-                    placeholder="Nachricht schreiben … (Enter = senden, Shift+Enter = neue Zeile)"
-                    rows={1}
-                    style={{
-                      flex: 1,
-                      resize: 'none',
-                      background: NAVY,
-                      border: '1px solid ' + BORDER,
-                      color: TEXT,
-                      borderRadius: 10,
-                      padding: '11px 13px',
-                      fontSize: 14,
-                      fontFamily: 'inherit',
-                      lineHeight: 1.4,
-                      maxHeight: 120,
-                    }}
-                  />
-                  <button
-                    onClick={senden}
-                    disabled={!entwurf.trim()}
-                    style={{
-                      background: entwurf.trim() ? GOLD : BORDER,
-                      border: 'none',
-                      color: entwurf.trim() ? NAVY : DIM,
-                      borderRadius: 10,
-                      padding: '0 22px',
-                      cursor: entwurf.trim() ? 'pointer' : 'default',
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    Senden
-                  </button>
+                  <div style={{ fontSize: 12, color: DIM }}>
+                    Tipp: Schreiben Sie{' '}
+                    <span style={{ color: GOLD, fontWeight: 600 }}>@ARGONAUT</span>{' '}
+                    …, um die KI in den Kanal zu holen.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <textarea
+                      value={entwurf}
+                      onChange={(e) => setEntwurf(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          senden();
+                        }
+                      }}
+                      placeholder="Nachricht schreiben … (Enter = senden, Shift+Enter = neue Zeile)"
+                      rows={1}
+                      style={{
+                        flex: 1,
+                        resize: 'none',
+                        background: NAVY,
+                        border: '1px solid ' + BORDER,
+                        color: TEXT,
+                        borderRadius: 10,
+                        padding: '11px 13px',
+                        fontSize: 14,
+                        fontFamily: 'inherit',
+                        lineHeight: 1.4,
+                        maxHeight: 120,
+                      }}
+                    />
+                    <button
+                      onClick={senden}
+                      disabled={!entwurf.trim()}
+                      style={{
+                        background: entwurf.trim() ? GOLD : BORDER,
+                        border: 'none',
+                        color: entwurf.trim() ? NAVY : DIM,
+                        borderRadius: 10,
+                        padding: '0 22px',
+                        cursor: entwurf.trim() ? 'pointer' : 'default',
+                        fontWeight: 700,
+                        fontSize: 14,
+                      }}
+                    >
+                      Senden
+                    </button>
+                  </div>
                 </div>
               </>
             )}

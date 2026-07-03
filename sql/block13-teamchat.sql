@@ -227,4 +227,130 @@ begin
 end;
 $$;
 
--- FERTIG — TC1 + TC2-RPC
+-- ----------------------------------------------------------------------------
+-- 11) TC2b — Namens-basiertes Einladen + Mitglieder-/Moderator-Anzeige
+-- ----------------------------------------------------------------------------
+
+-- 11a) Anzeigename des aktuellen Nutzers (mitarbeiter -> profiles -> E-Mail)
+create or replace function public.chat_mein_name()
+returns text
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare v_name text;
+begin
+  select trim(coalesce(vorname,'') || ' ' || coalesce(nachname,''))
+    into v_name from public.mitarbeiter where auth_user_id = auth.uid() limit 1;
+  if v_name is not null and v_name <> '' then return v_name; end if;
+
+  select full_name into v_name from public.profiles where id = auth.uid() limit 1;
+  if v_name is not null and v_name <> '' then return v_name; end if;
+
+  select split_part(email, '@', 1) into v_name from auth.users where id = auth.uid() limit 1;
+  return coalesce(v_name, 'Ich');
+end;
+$$;
+
+-- 11b) Kollegen des eigenen Teams (nur mit Login), inkl. "schon im Kanal?"
+create or replace function public.chat_team_kollegen(p_kanal uuid)
+returns table (auth_user_id uuid, anzeige text, email text, ist_mitglied boolean)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare v_owner uuid;
+begin
+  -- Team-Owner bestimmen: ist der User ein Mitarbeiter -> dessen owner_user_id,
+  -- sonst (Chef) -> die eigene ID.
+  select owner_user_id into v_owner
+    from public.mitarbeiter where auth_user_id = auth.uid() limit 1;
+  if v_owner is null then v_owner := auth.uid(); end if;
+
+  return query
+  select
+    m.auth_user_id,
+    coalesce(
+      nullif(trim(coalesce(m.vorname,'') || ' ' || coalesce(m.nachname,'')), ''),
+      split_part(m.email, '@', 1)
+    ) as anzeige,
+    m.email,
+    exists (
+      select 1 from public.chat_mitglieder cm
+      where cm.kanal_id = p_kanal and cm.user_id = m.auth_user_id
+    ) as ist_mitglied
+  from public.mitarbeiter m
+  where m.owner_user_id = v_owner
+    and m.auth_user_id is not null
+    and m.auth_user_id <> auth.uid()
+  order by anzeige;
+end;
+$$;
+
+-- 11c) Kollege zum Kanal hinzufuegen (nur Moderator/Ersteller), Name mitspeichern
+create or replace function public.chat_mitglied_hinzufuegen(p_kanal uuid, p_user uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_ersteller uuid; v_anzeige text;
+begin
+  select erstellt_von into v_ersteller from public.chat_kanaele where id = p_kanal;
+  if v_ersteller is null then return 'Kanal nicht gefunden.'; end if;
+  if v_ersteller <> auth.uid() then
+    return 'Nur der Moderator des Kanals darf Kollegen einladen.';
+  end if;
+
+  select trim(coalesce(vorname,'') || ' ' || coalesce(nachname,''))
+    into v_anzeige from public.mitarbeiter where auth_user_id = p_user limit 1;
+
+  insert into public.chat_mitglieder (kanal_id, user_id, anzeigename)
+  values (p_kanal, p_user, nullif(v_anzeige, ''))
+  on conflict (kanal_id, user_id) do nothing;
+
+  return 'ok';
+end;
+$$;
+
+-- 11d) Mitglieder eines Kanals mit aufgeloestem Namen + Moderator-Flag
+create or replace function public.chat_kanal_mitglieder(p_kanal uuid)
+returns table (user_id uuid, anzeige text, ist_moderator boolean)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare v_ersteller uuid;
+begin
+  -- Nur Mitglieder duerfen die Mitgliederliste sehen
+  if not exists (
+    select 1 from public.chat_mitglieder
+    where kanal_id = p_kanal and user_id = auth.uid()
+  ) then
+    return;
+  end if;
+
+  select erstellt_von into v_ersteller from public.chat_kanaele where id = p_kanal;
+
+  return query
+  select
+    cm.user_id,
+    coalesce(
+      nullif(cm.anzeigename, ''),
+      nullif((select trim(coalesce(m.vorname,'') || ' ' || coalesce(m.nachname,''))
+                from public.mitarbeiter m where m.auth_user_id = cm.user_id limit 1), ''),
+      nullif((select p.full_name from public.profiles p where p.id = cm.user_id limit 1), ''),
+      (select split_part(u.email, '@', 1) from auth.users u where u.id = cm.user_id limit 1),
+      'Unbekannt'
+    ) as anzeige,
+    (cm.user_id = v_ersteller) as ist_moderator
+  from public.chat_mitglieder cm
+  where cm.kanal_id = p_kanal
+  order by ist_moderator desc, anzeige;
+end;
+$$;
+
+-- FERTIG — TC1 + TC2-RPC + TC2b (Namens-Einladen)
