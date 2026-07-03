@@ -4,10 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 // ---------------------------------------------------------------------------
-// ARGONAUT OS · BLOCK 13 · Team-Chat Cockpit (TC2 + TC3 + Namens-Einladen)
-// - Kanalliste, Realtime-Nachrichten, Senden
-// - "@ARGONAUT ..." holt KI-Antwort in den Kanal
-// - Einladen per Kollegen-Auswahlliste (Name + Suche), Moderator-/Mitglied-Anzeige
+// ARGONAUT OS · BLOCK 13 · Team-Chat Cockpit (TC2 + TC3 + Namens-Einladen + Datei-Upload)
 // ---------------------------------------------------------------------------
 
 type Kanal = {
@@ -26,6 +23,8 @@ type Nachricht = {
   absender_name: string;
   ist_ki: boolean;
   text: string;
+  datei_pfad: string | null;
+  datei_name: string | null;
   created_at: string;
 };
 
@@ -51,6 +50,9 @@ const CYAN = '#00e5ff';
 const GREEN = '#4CAF7D';
 const TEXT = '#E8EEF6';
 const DIM = '#8FA3BE';
+
+const BUCKET = 'teamchat-dateien';
+const MAX_MB = 25;
 
 export default function TeamChatPage() {
   const [supabase] = useState(() =>
@@ -81,6 +83,10 @@ export default function TeamChatPage() {
   const [einladenFehler, setEinladenFehler] = useState<string | null>(null);
 
   const [mitglieder, setMitglieder] = useState<Mitglied[]>([]);
+
+  const [uploadLaedt, setUploadLaedt] = useState(false);
+  const [uploadFehler, setUploadFehler] = useState<string | null>(null);
+  const dateiInputRef = useRef<HTMLInputElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -194,9 +200,22 @@ export default function TeamChatPage() {
   // --- ARGONAUT-Antwort in den Kanal holen -----------------------------------
   async function argonautAntworten(ausloeser: string) {
     if (!aktiverKanal) return;
+    const frage = ausloeser.replace(/@argonaut/gi, '').trim();
+
+    // Kein Text hinter @ARGONAUT -> freundliche Rueckfrage statt Fehler
+    if (!frage) {
+      await supabase.from('chat_nachrichten').insert({
+        kanal_id: aktiverKanal,
+        absender_id: null,
+        absender_name: 'ARGONAUT',
+        ist_ki: true,
+        text: 'Gern! Stellen Sie mir Ihre Frage einfach direkt hinter @ARGONAUT — z. B. „@ARGONAUT fasse die letzten Nachrichten zusammen".',
+      });
+      return;
+    }
+
     setKiDenkt(true);
     try {
-      const frage = ausloeser.replace(/@argonaut/gi, '').trim();
       const verlauf = nachrichten.slice(-15).map((m) => ({
         ist_ki: m.ist_ki,
         absender_name: m.absender_name,
@@ -255,6 +274,52 @@ export default function TeamChatPage() {
     }
   }
 
+  // --- Datei hochladen (jedes Mitglied) --------------------------------------
+  async function dateiGewaehlt(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files && e.target.files[0];
+    if (e.target) e.target.value = '';
+    if (!file || !aktiverKanal || !userId) return;
+
+    setUploadFehler(null);
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setUploadFehler('Datei zu groß (max. ' + MAX_MB + ' MB).');
+      return;
+    }
+
+    setUploadLaedt(true);
+    try {
+      const punkt = file.name.lastIndexOf('.');
+      const ext = punkt >= 0 ? file.name.slice(punkt) : '';
+      const pfad = aktiverKanal + '/' + crypto.randomUUID() + ext;
+
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, file);
+      if (upErr) {
+        setUploadFehler('Upload fehlgeschlagen: ' + upErr.message);
+        return;
+      }
+
+      await supabase.from('chat_nachrichten').insert({
+        kanal_id: aktiverKanal,
+        absender_id: userId,
+        absender_name: anzeigename,
+        ist_ki: false,
+        text: '',
+        datei_pfad: pfad,
+        datei_name: file.name,
+      });
+    } finally {
+      setUploadLaedt(false);
+    }
+  }
+
+  // --- Datei herunterladen (Signed URL, 60s gueltig) -------------------------
+  async function dateiOeffnen(pfad: string) {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(pfad, 60);
+    if (data && data.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  }
+
   // --- Kanal anlegen ---------------------------------------------------------
   async function kanalErstellen() {
     const name = neuerKanalName.trim();
@@ -309,7 +374,7 @@ export default function TeamChatPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 4px' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 4px 44px' }}>
       {/* MODUL-KOPF */}
       <h1
         style={{
@@ -344,7 +409,7 @@ export default function TeamChatPage() {
               display: 'flex',
               flexDirection: 'column',
               gap: 6,
-              height: 640,
+              height: 600,
             }}
           >
             <div
@@ -455,7 +520,7 @@ export default function TeamChatPage() {
               borderRadius: 12,
               display: 'flex',
               flexDirection: 'column',
-              height: 640,
+              height: 600,
             }}
           >
             {!aktiverKanal ? (
@@ -644,7 +709,34 @@ export default function TeamChatPage() {
                             wordBreak: 'break-word',
                           }}
                         >
-                          {m.text}
+                          {m.text && <span>{m.text}</span>}
+                          {m.datei_pfad && (
+                            <button
+                              onClick={() => dateiOeffnen(m.datei_pfad as string)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                marginTop: m.text ? 8 : 0,
+                                background: NAVY,
+                                border: '1px solid ' + CYAN,
+                                color: CYAN,
+                                borderRadius: 8,
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                maxWidth: '100%',
+                              }}
+                              title="Herunterladen"
+                            >
+                              <span>📎</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.datei_name || 'Datei'}
+                              </span>
+                              <span style={{ color: DIM, fontWeight: 400 }}>· herunterladen</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -682,12 +774,40 @@ export default function TeamChatPage() {
                     gap: 8,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: DIM }}>
-                    Tipp: Schreiben Sie{' '}
-                    <span style={{ color: GOLD, fontWeight: 600 }}>@ARGONAUT</span>{' '}
-                    …, um die KI in den Kanal zu holen.
+                  <div style={{ fontSize: 12, color: DIM, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <span>
+                      Tipp: Schreiben Sie{' '}
+                      <span style={{ color: GOLD, fontWeight: 600 }}>@ARGONAUT</span>{' '}
+                      …, um die KI in den Kanal zu holen.
+                    </span>
+                    {uploadLaedt && <span style={{ color: CYAN }}>📎 Datei wird hochgeladen …</span>}
+                    {uploadFehler && <span style={{ color: '#E06666' }}>{uploadFehler}</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                    <input
+                      ref={dateiInputRef}
+                      type="file"
+                      onChange={dateiGewaehlt}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      onClick={() => dateiInputRef.current && dateiInputRef.current.click()}
+                      disabled={uploadLaedt}
+                      title="Datei anhängen"
+                      style={{
+                        flexShrink: 0,
+                        background: 'transparent',
+                        border: '1px solid ' + BORDER,
+                        color: uploadLaedt ? DIM : CYAN,
+                        borderRadius: 10,
+                        padding: '11px 14px',
+                        cursor: uploadLaedt ? 'default' : 'pointer',
+                        fontSize: 16,
+                        lineHeight: 1,
+                      }}
+                    >
+                      📎
+                    </button>
                     <textarea
                       value={entwurf}
                       onChange={(e) => setEntwurf(e.target.value)}
@@ -717,11 +837,13 @@ export default function TeamChatPage() {
                       onClick={senden}
                       disabled={!entwurf.trim()}
                       style={{
+                        flexShrink: 0,
                         background: entwurf.trim() ? GOLD : BORDER,
                         border: 'none',
                         color: entwurf.trim() ? NAVY : DIM,
                         borderRadius: 10,
                         padding: '0 22px',
+                        height: 44,
                         cursor: entwurf.trim() ? 'pointer' : 'default',
                         fontWeight: 700,
                         fontSize: 14,

@@ -358,3 +358,36 @@ end;
 $$;
 
 -- FERTIG — TC1 + TC2-RPC + TC2b (Namens-Einladen, Fix Ambiguitaet)
+
+-- ----------------------------------------------------------------------------
+-- 12) TC2c — Datei-Upload im Team-Chat (jedes Mitglied)
+-- ----------------------------------------------------------------------------
+
+-- 12a) Datei-Spalten an chat_nachrichten (additiv)
+alter table public.chat_nachrichten add column if not exists datei_pfad text;
+alter table public.chat_nachrichten add column if not exists datei_name text;
+
+-- 12b) Privater Storage-Bucket fuer Team-Chat-Dateien
+insert into storage.buckets (id, name, public)
+values ('teamchat-dateien', 'teamchat-dateien', false)
+on conflict (id) do nothing;
+
+-- 12c) Upload nur fuer Kanal-Mitglieder (Pfad = {kanal_id}/{datei})
+drop policy if exists teamchat_datei_upload on storage.objects;
+create policy teamchat_datei_upload on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'teamchat-dateien'
+    and public.ist_chat_mitglied(((storage.foldername(name))[1])::uuid, auth.uid())
+  );
+
+-- 12d) Lesen/Download nur fuer Kanal-Mitglieder
+drop policy if exists teamchat_datei_read on storage.objects;
+create policy teamchat_datei_read on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'teamchat-dateien'
+    and public.ist_chat_mitglied(((storage.foldername(name))[1])::uuid, auth.uid())
+  );
+
+-- FERTIG — TC1 + TC2 + TC2b + TC2c (Datei-Upload)
