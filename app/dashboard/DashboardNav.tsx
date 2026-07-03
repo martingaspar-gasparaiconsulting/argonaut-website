@@ -19,6 +19,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🎯 Leads', href: '/dashboard/leads' },
   { label: '💬 Chat', href: '/dashboard/chat' },
   { label: '📄 Dokumente', href: '/dashboard/documents' },
+  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz' },
   { label: '👥 Personal', href: '/dashboard/personal' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan' },
   { label: '📁 Projekte', href: '/dashboard/projekte' },
