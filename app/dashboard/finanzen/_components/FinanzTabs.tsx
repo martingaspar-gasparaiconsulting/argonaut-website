@@ -17,6 +17,7 @@ const C = {
 };
 
 const TABS = [
+  { label: "Übersicht", href: "/dashboard/finanzen" },
   { label: "Ausgaben", href: "/dashboard/finanzen/ausgaben" },
   { label: "EÜR", href: "/dashboard/finanzen/euer" },
   { label: "BWA", href: "/dashboard/finanzen/bwa" },
@@ -29,7 +30,10 @@ export default function FinanzTabs() {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
       {TABS.map((t) => {
-        const aktiv = pathname === t.href || pathname.startsWith(t.href + "/");
+        const aktiv =
+          t.href === "/dashboard/finanzen"
+            ? pathname === t.href
+            : pathname === t.href || pathname.startsWith(t.href + "/");
         return (
           <button
             key={t.href}
