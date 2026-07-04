@@ -1,0 +1,265 @@
+'use client';
+
+/**
+ * ══════════════════════════════════════════════════════════════════
+ * ARGONAUT OS · Analytics · Umsatz-Report (Block B-2)
+ * ------------------------------------------------------------------
+ * Wertet die Tabelle "rechnungen" aus. KPIs werden aus echten Datums-/
+ * Betragsspalten berechnet (robust gegen Status-Schreibweisen):
+ *   Gesamtumsatz  = Σ brutto_summe (ohne Entwürfe)
+ *   Bezahlt       = Σ bezahlter_betrag (auch Teilzahlungen)
+ *   Offen         = Σ (brutto - bezahlt), Rest > 0
+ *   Überfällig    = Offen, wo faelligkeitsdatum < heute
+ * Route: /dashboard/analytics/umsatz
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
+import {
+  KpiKarte,
+  KpiRaster,
+  DiagrammKarte,
+  type DiagrammPunkt,
+} from '../../_components/ReportBausteine';
+
+// ── Datensatz-Form (nur die Spalten, die wir brauchen) ────────────
+type Rechnung = {
+  id: string;
+  zahlungsstatus: string | null;
+  rechnungsdatum: string | null;
+  faelligkeitsdatum: string | null;
+  bezahlt_am: string | null;
+  brutto_summe: number | null;
+  bezahlter_betrag: number | null;
+};
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
+
+const MONATE = [
+  'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez',
+];
+
+// Euro-Format: 1.184,05
+function euro(n: number): string {
+  return n.toLocaleString('de-DE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export default function UmsatzReport() {
+  const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
+  const [laden, setLaden] = useState(true);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  // Daten laden (RLS filtert automatisch auf den eingeloggten Nutzer)
+  useEffect(() => {
+    let aktiv = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from('rechnungen')
+        .select(
+          'id, zahlungsstatus, rechnungsdatum, faelligkeitsdatum, bezahlt_am, brutto_summe, bezahlter_betrag',
+        );
+      if (!aktiv) return;
+      if (error) {
+        setFehler(error.message);
+        setLaden(false);
+        return;
+      }
+      setRechnungen((data ?? []) as Rechnung[]);
+      setLaden(false);
+    })();
+    return () => {
+      aktiv = false;
+    };
+  }, []);
+
+  // Auswertung (rechnet nur neu, wenn sich die Daten ändern)
+  const a = useMemo(() => {
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+
+    // Entwürfe zählen nicht als Umsatz
+    const gestellt = rechnungen.filter(
+      (r) => (r.zahlungsstatus ?? '') !== 'entwurf',
+    );
+
+    let gesamt = 0;
+    let bezahlt = 0;
+    let offen = 0;
+    let ueberfaellig = 0;
+
+    for (const r of gestellt) {
+      const brutto = Number(r.brutto_summe ?? 0);
+      const gezahlt = Number(r.bezahlter_betrag ?? 0);
+      const rest = Math.max(brutto - gezahlt, 0);
+      gesamt += brutto;
+      bezahlt += gezahlt;
+      offen += rest;
+      if (rest > 0 && r.faelligkeitsdatum) {
+        const faellig = new Date(r.faelligkeitsdatum);
+        faellig.setHours(0, 0, 0, 0);
+        if (faellig < heute) ueberfaellig += rest;
+      }
+    }
+
+    // Umsatz pro Monat — letzte 12 Monate vorbelegen (auch leere Monate)
+    const monatMap = new Map<string, number>();
+    const monate: { key: string; label: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(heute.getFullYear(), heute.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      monate.push({
+        key,
+        label: `${MONATE[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+      });
+      monatMap.set(key, 0);
+    }
+    for (const r of gestellt) {
+      if (!r.rechnungsdatum) continue;
+      const d = new Date(r.rechnungsdatum);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (monatMap.has(key)) {
+        monatMap.set(key, (monatMap.get(key) ?? 0) + Number(r.brutto_summe ?? 0));
+      }
+    }
+    const monatsUmsatz: DiagrammPunkt[] = monate.map((m) => ({
+      name: m.label,
+      wert: Math.round((monatMap.get(m.key) ?? 0) * 100) / 100,
+    }));
+
+    // Status-Verteilung (alle Rechnungen, inkl. Entwürfe)
+    const statusMap = new Map<string, number>();
+    for (const r of rechnungen) {
+      const s = r.zahlungsstatus ?? 'unbekannt';
+      statusMap.set(s, (statusMap.get(s) ?? 0) + 1);
+    }
+    const statusVerteilung: DiagrammPunkt[] = Array.from(
+      statusMap.entries(),
+    ).map(([name, wert]) => ({ name, wert }));
+
+    return {
+      gesamt,
+      bezahlt,
+      offen,
+      ueberfaellig,
+      monatsUmsatz,
+      statusVerteilung,
+      anzahl: gestellt.length,
+    };
+  }, [rechnungen]);
+
+  return (
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px' }}>
+      {/* ── Einheitlicher Modul-Kopf ── */}
+      <div style={{ marginBottom: 24 }}>
+        <h1
+          style={{
+            color: '#C9A84C',
+            fontSize: 30,
+            fontWeight: 800,
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <span>📊</span> Umsatz-Report
+        </h1>
+        <p
+          style={{
+            color: '#94a3b8',
+            fontSize: 15,
+            marginTop: 6,
+            maxWidth: 720,
+            lineHeight: 1.5,
+          }}
+        >
+          Umsatzentwicklung, Zahlungseingänge und offene Forderungen auf einen
+          Blick — direkt aus deinen Rechnungen.
+        </p>
+      </div>
+
+      {fehler && (
+        <div
+          style={{
+            background: 'rgba(239,68,68,0.12)',
+            border: '1px solid rgba(239,68,68,0.4)',
+            color: '#fca5a5',
+            borderRadius: 10,
+            padding: '14px 18px',
+            fontSize: 14,
+          }}
+        >
+          Daten konnten nicht geladen werden: {fehler}
+        </div>
+      )}
+
+      {laden ? (
+        <div style={{ color: '#64748b', fontSize: 15, padding: '40px 0' }}>
+          Lade Umsatzdaten …
+        </div>
+      ) : (
+        <>
+          <KpiRaster>
+            <KpiKarte
+              titel="Gesamtumsatz"
+              wert={euro(a.gesamt)}
+              einheit="€"
+              icon="💶"
+              unterzeile={`${a.anzahl} Rechnung${a.anzahl === 1 ? '' : 'en'}`}
+            />
+            <KpiKarte
+              titel="Bezahlt (eingegangen)"
+              wert={euro(a.bezahlt)}
+              einheit="€"
+              icon="✅"
+              akzentFarbe="#22c55e"
+            />
+            <KpiKarte
+              titel="Offen"
+              wert={euro(a.offen)}
+              einheit="€"
+              icon="⏳"
+              akzentFarbe="#00e5ff"
+            />
+            <KpiKarte
+              titel="Überfällig"
+              wert={euro(a.ueberfaellig)}
+              einheit="€"
+              icon="⚠️"
+              akzentFarbe="#ef4444"
+            />
+          </KpiRaster>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+              gap: 16,
+              marginTop: 20,
+            }}
+          >
+            <DiagrammKarte
+              titel="Umsatz pro Monat (letzte 12 Monate)"
+              typ="balken"
+              daten={a.monatsUmsatz}
+              einheit="€"
+            />
+            <DiagrammKarte
+              titel="Rechnungs-Status"
+              typ="torte"
+              daten={a.statusVerteilung}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
