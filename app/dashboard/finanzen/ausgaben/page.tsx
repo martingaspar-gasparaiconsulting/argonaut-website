@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import FinanzTabs from "../_components/FinanzTabs";
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-2 — AUSGABEN-COCKPIT
@@ -315,6 +316,7 @@ export default function AusgabenCockpit() {
       }}
     >
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <FinanzTabs />
         {/* Kopfzeile */}
         <div
           style={{
