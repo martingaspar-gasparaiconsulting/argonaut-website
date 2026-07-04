@@ -612,6 +612,12 @@ export default function RechnungDetail() {
 
   const stCfg = STATUS[status] || STATUS.offen;
 
+  // Anzeige der dritten Kachel: offener Rest ODER Guthaben (bei Überzahlung)
+  const restIstGuthaben = zahlungInfo.offen < 0;
+  const restLabel = restIstGuthaben ? "Guthaben" : "Offener Rest";
+  const restWert = geld(Math.abs(zahlungInfo.offen), waehrung);
+  const restFarbe = restIstGuthaben ? C.cyan : zahlungInfo.offen > 0 ? C.warn : C.green;
+
   return (
     <Rahmen>
       {/* KOPFZEILE */}
@@ -766,11 +772,7 @@ export default function RechnungDetail() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
             <SummeFeld label="Rechnungsbetrag" wert={geld(zahlungInfo.brutto, waehrung)} farbe={C.gold} />
             <SummeFeld label="Bereits bezahlt" wert={geld(zahlungInfo.bezahlt, waehrung)} farbe={C.green} />
-            <SummeFeld
-              label="Offener Rest"
-              wert={geld(zahlungInfo.offen, waehrung)}
-              farbe={zahlungInfo.offen > 0 ? C.warn : C.green}
-            />
+            <SummeFeld label={restLabel} wert={restWert} farbe={restFarbe} />
           </div>
         </Karte>
       </div>
