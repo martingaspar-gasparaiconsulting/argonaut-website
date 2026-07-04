@@ -46,7 +46,10 @@ function r2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 function iso(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const t = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${t}`;
 }
 
 type Zeitraum = "monat" | "quartal" | "jahr" | "vorjahr" | "frei";
