@@ -19,6 +19,7 @@ const C = {
 const TABS = [
   { label: "Ausgaben", href: "/dashboard/finanzen/ausgaben" },
   { label: "EÜR", href: "/dashboard/finanzen/euer" },
+  { label: "BWA", href: "/dashboard/finanzen/bwa" },
 ];
 
 export default function FinanzTabs() {
