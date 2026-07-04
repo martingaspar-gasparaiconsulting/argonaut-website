@@ -214,7 +214,7 @@ export default function MahnwesenCockpit() {
     setBusyId(null);
   }
 
-  const spalten = "120px 1fr 150px 130px 170px 230px";
+  const spalten = "120px 1fr 150px 130px 160px 270px";
 
   return (
     <div
@@ -317,7 +317,7 @@ export default function MahnwesenCockpit() {
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
-                  minWidth: 900,
+                  minWidth: 980,
                 }}
               >
                 <div>Nummer</div>
@@ -344,7 +344,7 @@ export default function MahnwesenCockpit() {
                 return (
                   <div
                     key={r.id}
-                    onClick={() => router.push(`/dashboard/rechnungen/${r.id}`)}
+                    onClick={() => router.push(`/dashboard/mahnwesen/${r.id}`)}
                     style={{
                       display: "grid",
                       gridTemplateColumns: spalten,
@@ -353,7 +353,7 @@ export default function MahnwesenCockpit() {
                       borderBottom: `1px solid ${C.border}`,
                       cursor: "pointer",
                       alignItems: "center",
-                      minWidth: 900,
+                      minWidth: 980,
                       transition: "background 0.12s",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
@@ -450,30 +450,44 @@ export default function MahnwesenCockpit() {
                       style={{ display: "flex", gap: 8, alignItems: "center" }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {meta.aktion ? (
+                      <button
+                        onClick={() => router.push(`/dashboard/mahnwesen/${r.id}`)}
+                        style={{
+                          background: meta.farbe,
+                          color: C.navy,
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "8px 14px",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontFamily: "'DM Sans', sans-serif",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ✉️ Mahnung erstellen
+                      </button>
+
+                      {stufe < 3 && (
                         <button
                           onClick={() => mahnstufeSetzen(r, stufe + 1)}
                           disabled={busy}
+                          title="Direkt hochstufen (ohne Schreiben)"
                           style={{
-                            background: meta.farbe,
-                            color: C.navy,
-                            border: "none",
+                            background: "transparent",
+                            color: meta.farbe,
+                            border: `1px solid ${meta.farbe}77`,
                             borderRadius: 8,
-                            padding: "8px 14px",
+                            padding: "8px 10px",
                             fontSize: 13,
                             fontWeight: 700,
                             cursor: busy ? "wait" : "pointer",
                             fontFamily: "'DM Sans', sans-serif",
                             opacity: busy ? 0.6 : 1,
-                            whiteSpace: "nowrap",
                           }}
                         >
-                          {busy ? "…" : meta.aktion}
+                          {busy ? "…" : "⏫"}
                         </button>
-                      ) : (
-                        <span style={{ color: C.textDim, fontSize: 12.5, fontWeight: 600 }}>
-                          Höchste Stufe
-                        </span>
                       )}
 
                       {stufe > 0 && (
@@ -505,8 +519,8 @@ export default function MahnwesenCockpit() {
 
         {!laden && !fehler && ueberfaellige.length > 0 && (
           <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 14, lineHeight: 1.5 }}>
-            Hinweis: „Hochstufen" vermerkt den Mahnfortschritt und das Datum. Das eigentliche
-            Mahnschreiben (PDF) und der KI-Assistent folgen im nächsten Schritt (C-4).
+            Hinweis: „✉️ Mahnung erstellen" öffnet den Assistenten (Text von ARGONAUT + PDF).
+            Mit „⏫" stufst du direkt hoch (ohne Schreiben), „↺" setzt die Stufe zurück.
           </p>
         )}
       </div>
