@@ -99,17 +99,19 @@ export default async function DashboardPage() {
     .single()
 
   // Live-Daten aus allen Modulen (parallel, defensiv) — inkl. Feld fuer den Feed
-  const [leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR, kontakteR, aktivR] = await Promise.all([
+  const [leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR, kontakteR, aktivR, zahlungenR, ausgabenR] = await Promise.all([
     supabase.from('leads').select('id, status, name, created_at'),
     supabase.from('verkaufschancen').select('id, phase, wert, titel, created_at'),
     supabase.from('auftraege').select('id, status, auftragsnummer, created_at'),
-    supabase.from('rechnungen').select('id, zahlungsstatus, faelligkeitsdatum, brutto_summe, bezahlter_betrag, rechnungsnummer, created_at, bezahlt_am'),
+    supabase.from('rechnungen').select('id, zahlungsstatus, faelligkeitsdatum, netto_summe, mwst_summe, brutto_summe, bezahlter_betrag, rechnungsnummer, created_at, bezahlt_am'),
     supabase.from('projekte').select('id, status, archiviert, name, erstellt_am'),
     supabase.from('hr_abwesenheiten').select('id, mitarbeiter_id, typ, von, bis, status, created_at'),
     supabase.from('hr_zeiterfassung').select('id, mitarbeiter_id, datum, kommen_um, gehen_um, created_at'),
     supabase.from('mitarbeiter').select('id, vorname, nachname'),
     supabase.from('kontakte').select('id, vorname, nachname, created_at'),
     supabase.from('kontakt_aktivitaeten').select('id, kontakt_id, typ, inhalt, created_at'),
+    supabase.from('zahlungen').select('betrag, zahlungsdatum, rechnung_id'),
+    supabase.from('ausgaben').select('betrag_brutto, mwst_satz, ausgabedatum'),
   ])
 
   const leads = leadsR.data || []
@@ -122,6 +124,8 @@ export default async function DashboardPage() {
   const mitarbeiter = mitarbeiterR.data || []
   const kontakte = kontakteR.data || []
   const aktivitaeten = aktivR.data || []
+  const zahlungen = zahlungenR.data || []
+  const ausgaben = ausgabenR.data || []
 
   const heute = heuteISO()
   const low = (s: string | null | undefined) => (s || '').toLowerCase()
@@ -161,6 +165,39 @@ export default async function DashboardPage() {
   const eingestempelt = zeiten.filter((z: any) =>
     z.datum && String(z.datum).slice(0, 10) === heute && z.kommen_um && !z.gehen_um
   ).length
+
+  // --- FINANZEN (Block C/D): Einnahmen/Ausgaben/Gewinn netto, laufendes Jahr ---
+  const jahrNow = new Date().getFullYear()
+  const jahrVon = (d: string | null | undefined) => Number((d || '').slice(0, 4))
+  const rMap: Record<string, any> = {}
+  for (const r of rechnungen as any[]) rMap[r.id] = r
+  let einnahmenNetto = 0
+  for (const z of zahlungen as any[]) {
+    if (jahrVon(z.zahlungsdatum) !== jahrNow) continue
+    const betrag = Number(z.betrag) || 0
+    const r = z.rechnung_id ? rMap[z.rechnung_id] : null
+    const brutto = r ? (Number(r.brutto_summe) || 0) : 0
+    einnahmenNetto += r && brutto > 0 ? betrag * (Number(r.netto_summe) / brutto) : betrag
+  }
+  let ausgabenNetto = 0
+  for (const a of ausgaben as any[]) {
+    if (jahrVon(a.ausgabedatum) !== jahrNow) continue
+    const brutto = Number(a.betrag_brutto) || 0
+    const satz = Number(a.mwst_satz) || 0
+    ausgabenNetto += brutto / (1 + satz / 100)
+  }
+  const gewinn = Math.round(einnahmenNetto - ausgabenNetto)
+
+  // Offene Genehmigungen (Urlaub/Abwesenheit, die auf Freigabe warten)
+  const offeneGenehmigungen = abwesenheiten.filter((a: any) => ['beantragt', 'offen'].includes(low(a.status))).length
+
+  // --- HEUTE IM BLICK (Chef-Radar): nur was Aufmerksamkeit braucht ---
+  type Radar = { icon: string; text: string; href: string; farbe: string }
+  const radar: Radar[] = []
+  if (rechnUeberfaellig.length > 0) radar.push({ icon: '⚠️', text: `${rechnUeberfaellig.length} überfällige Rechnung${rechnUeberfaellig.length > 1 ? 'en' : ''}`, href: '/dashboard/mahnwesen', farbe: '#E06666' })
+  if (offeneGenehmigungen > 0) radar.push({ icon: '🌴', text: `${offeneGenehmigungen} offene Genehmigung${offeneGenehmigungen > 1 ? 'en' : ''}`, href: '/dashboard/personal', farbe: '#C9A84C' })
+  if (kranke.length > 0) radar.push({ icon: '🤒', text: `${kranke.length} krank gemeldet`, href: '/dashboard/personal', farbe: '#E0A24C' })
+  if (rechnOffenSumme > 0) radar.push({ icon: '💶', text: `${geld(rechnOffenSumme)} offen`, href: '/dashboard/rechnungen', farbe: '#4CAF7D' })
 
   // --- LIVE-FEED: Ereignisse der letzten 24h ---
   const H24 = 24 * 60 * 60 * 1000
@@ -249,24 +286,71 @@ export default async function DashboardPage() {
           </section>
         )}
 
-        {/* LIVE-COCKPIT: KPI-Kacheln */}
+        {/* HEUTE IM BLICK: Chef-Radar */}
+        <section style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
+            <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Heute im Blick</h2>
+            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Was Aufmerksamkeit braucht</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            {radar.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(76,175,125,0.12)', border: '1px solid rgba(76,175,125,0.4)', borderRadius: '12px', padding: '12px 18px', fontSize: '14px', fontWeight: 600, color: '#4CAF7D' }}>
+                <span>✅</span><span>Alles im grünen Bereich – nichts Dringendes.</span>
+              </div>
+            ) : radar.map((r, i) => (
+              <a key={i} href={r.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: `${r.farbe}1e`, border: `1px solid ${r.farbe}55`, borderRadius: '12px', padding: '12px 18px', fontSize: '14px', fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
+                <span>{r.icon}</span><span>{r.text}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* LIVE-COCKPIT: KPI-Kacheln nach Bereichen gruppiert */}
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
             <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Live-Cockpit</h2>
             <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Echtzeit-Kennzahlen</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
-            <KpiKachel href="/dashboard/leads" icon="🎯" label="Offene Leads" wert={leadsOffen} sub={`${leads.length} gesamt`} akzent="#00e5ff" />
-            <KpiKachel href="/dashboard/crm/pipeline" icon="💼" label="Aktive Verkaufschancen" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
-            <KpiKachel href="/dashboard/auftraege" icon="📋" label="Offene Aufträge" wert={auftraegeOffen} sub={`${auftraege.length} gesamt`} akzent="#C9A84C" />
-            <KpiKachel href="/dashboard/rechnungen" icon="🧾" label="Offene Rechnungen" wert={rechnOffenListe.length} sub={rechnOffenSumme > 0 ? `${geld(rechnOffenSumme)} offen` : 'nichts offen'} akzent="#4CAF7D" />
-            <KpiKachel href="/dashboard/rechnungen" icon="⚠️" label="Überfällige Rechnungen" wert={rechnUeberfaellig.length} sub={rechnUeberfaellig.length > 0 ? 'bitte anmahnen' : 'alles im Plan'} akzent="#E0A24C" alarm={rechnUeberfaellig.length > 0} />
-            <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
-            <KpiKachel href="/dashboard/personal" icon="🤒" label="Krankmeldungen" wert={kranke.length} sub={kranke.length === 0 ? 'alle an Bord' : 'aktuell krank'} details={krankeDetails} akzent="#4CAF7D" alarm={kranke.length > 0} />
-            <KpiKachel href="/dashboard/zeiterfassung" icon="🕐" label="Jetzt eingestempelt" wert={eingestempelt} sub={eingestempelt === 1 ? 'Person im Dienst' : 'Personen im Dienst'} akzent="#00e5ff" />
-            <KpiKachel href="/dashboard/automatisierungen" icon="⚙️" label="Aktive Automatisierungen" wert={automationsCount} sub="Bibliothek öffnen" akzent="#C9A84C" />
-            <KpiKachel href="/dashboard/start" icon="⚡" label="KI-Calls diesen Monat" wert={`${kiPct}%`} sub={`${kiUsed.toLocaleString('de-DE')} / ${kiLimit.toLocaleString('de-DE')}`} akzent="#C9A84C" alarm={kiPct >= 100} />
+          {/* 💶 Finanzen */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>💶 Finanzen</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+              <KpiKachel href="/dashboard/finanzen" icon="📈" label={`Einnahmen ${jahrNow}`} wert={geld(einnahmenNetto)} sub="netto, laufendes Jahr" akzent="#4CAF7D" />
+              <KpiKachel href="/dashboard/finanzen/euer" icon="💰" label={`Gewinn ${jahrNow}`} wert={geld(gewinn)} sub="Einnahmen − Ausgaben" akzent="#C9A84C" alarm={gewinn < 0} />
+              <KpiKachel href="/dashboard/rechnungen" icon="🧾" label="Offene Rechnungen" wert={rechnOffenListe.length} sub={rechnOffenSumme > 0 ? `${geld(rechnOffenSumme)} offen` : 'nichts offen'} akzent="#4f94e8" />
+              <KpiKachel href="/dashboard/mahnwesen" icon="⚠️" label="Überfällige Rechnungen" wert={rechnUeberfaellig.length} sub={rechnUeberfaellig.length > 0 ? 'bitte anmahnen' : 'alles im Plan'} akzent="#E0A24C" alarm={rechnUeberfaellig.length > 0} />
+            </div>
+          </div>
+
+          {/* 🤝 Vertrieb */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🤝 Vertrieb</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+              <KpiKachel href="/dashboard/leads" icon="🎯" label="Offene Leads" wert={leadsOffen} sub={`${leads.length} gesamt`} akzent="#00e5ff" />
+              <KpiKachel href="/dashboard/crm/pipeline" icon="💼" label="Aktive Verkaufschancen" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
+              <KpiKachel href="/dashboard/auftraege" icon="📋" label="Offene Aufträge" wert={auftraegeOffen} sub={`${auftraege.length} gesamt`} akzent="#C9A84C" />
+            </div>
+          </div>
+
+          {/* 🏭 Betrieb */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🏭 Betrieb</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+              <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
+              <KpiKachel href="/dashboard/automatisierungen" icon="⚙️" label="Aktive Automatisierungen" wert={automationsCount} sub="Bibliothek öffnen" akzent="#C9A84C" />
+              <KpiKachel href="/dashboard/start" icon="⚡" label="KI-Calls diesen Monat" wert={`${kiPct}%`} sub={`${kiUsed.toLocaleString('de-DE')} / ${kiLimit.toLocaleString('de-DE')}`} akzent="#C9A84C" alarm={kiPct >= 100} />
+            </div>
+          </div>
+
+          {/* 👥 Personal */}
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>👥 Personal</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+              <KpiKachel href="/dashboard/personal" icon="🤒" label="Krankmeldungen" wert={kranke.length} sub={kranke.length === 0 ? 'alle an Bord' : 'aktuell krank'} details={krankeDetails} akzent="#4CAF7D" alarm={kranke.length > 0} />
+              <KpiKachel href="/dashboard/personal" icon="🌴" label="Offene Genehmigungen" wert={offeneGenehmigungen} sub={offeneGenehmigungen > 0 ? 'warten auf Freigabe' : 'nichts offen'} akzent="#A98CE0" alarm={offeneGenehmigungen > 0} />
+              <KpiKachel href="/dashboard/zeiterfassung" icon="🕐" label="Jetzt eingestempelt" wert={eingestempelt} sub={eingestempelt === 1 ? 'Person im Dienst' : 'Personen im Dienst'} akzent="#00e5ff" />
+            </div>
           </div>
         </section>
 
