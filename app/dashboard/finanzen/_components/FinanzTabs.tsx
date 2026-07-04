@@ -20,6 +20,7 @@ const TABS = [
   { label: "Ausgaben", href: "/dashboard/finanzen/ausgaben" },
   { label: "EÜR", href: "/dashboard/finanzen/euer" },
   { label: "BWA", href: "/dashboard/finanzen/bwa" },
+  { label: "Export", href: "/dashboard/finanzen/export" },
 ];
 
 export default function FinanzTabs() {
