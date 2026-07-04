@@ -50,6 +50,18 @@ type Zeile = {
   mwst_satz: string;
 };
 
+// Einzelne Zahlung (Quelle der Wahrheit für Zahlungsstatus + Block D)
+type Zahlung = {
+  id: string;
+  betrag: number;
+  zahlungsdatum: string;
+  zahlungsart: string;
+  referenz: string | null;
+  notiz: string | null;
+};
+
+const ZAHLUNGSARTEN = ["Überweisung", "Bar", "Karte", "Lastschrift", "PayPal", "Sonstige"];
+
 function parseZahl(s: string): number {
   if (!s) return 0;
   const n = parseFloat(String(s).replace(",", "."));
@@ -126,8 +138,13 @@ export default function RechnungDetail() {
   const [waehrung, setWaehrung] = useState("EUR");
   const [notizen, setNotizen] = useState("");
   const [kleinunternehmer, setKleinunternehmer] = useState(false);
-  const [bezahltAm, setBezahltAm] = useState<string>("");
-  const [bezahlterBetrag, setBezahlterBetrag] = useState<string>("");
+  // Zahlungen (Block C) – einzelne Geldeingänge dieser Rechnung
+  const [zahlungen, setZahlungen] = useState<Zahlung[]>([]);
+  const [zBetrag, setZBetrag] = useState<string>("");
+  const [zDatum, setZDatum] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [zArt, setZArt] = useState<string>("Überweisung");
+  const [zReferenz, setZReferenz] = useState<string>("");
+  const [zBusy, setZBusy] = useState(false);
 
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [geladeneIds, setGeladeneIds] = useState<string[]>([]);
@@ -170,8 +187,23 @@ export default function RechnungDetail() {
     setWaehrung(r.waehrung || "EUR");
     setNotizen(r.notizen || "");
     setKleinunternehmer(!!r.kleinunternehmer);
-    setBezahltAm(r.bezahlt_am || "");
-    setBezahlterBetrag(r.bezahlter_betrag != null ? ladeStr(r.bezahlter_betrag) : "");
+    // Einzel-Zahlungen dieser Rechnung laden (Quelle der Wahrheit für Block C/D)
+    const { data: zData } = await supabase
+      .from("zahlungen")
+      .select("*")
+      .eq("rechnung_id", id)
+      .order("zahlungsdatum", { ascending: false })
+      .order("created_at", { ascending: false });
+    setZahlungen(
+      ((zData as any[]) || []).map((z) => ({
+        id: z.id,
+        betrag: Number(z.betrag) || 0,
+        zahlungsdatum: z.zahlungsdatum,
+        zahlungsart: z.zahlungsart || "Überweisung",
+        referenz: z.referenz,
+        notiz: z.notiz,
+      }))
+    );
 
     const pos = (pRes.data as any[]) || [];
     const zl: Zeile[] = pos.map((p) => ({
@@ -300,8 +332,9 @@ export default function RechnungDetail() {
       const { error: rErr } = await supabase
         .from("rechnungen")
         .update({
+          // zahlungsstatus, bezahlt_am, bezahlter_betrag werden NICHT hier gesetzt –
+          // sie werden automatisch aus der Tabelle "zahlungen" berechnet (Block C).
           titel: titel || null,
-          zahlungsstatus: status,
           rechnungsdatum: rechnungsdatum || null,
           leistungsdatum: leistungsdatum || null,
           faelligkeitsdatum: faellig,
@@ -309,8 +342,6 @@ export default function RechnungDetail() {
           waehrung,
           kleinunternehmer,
           notizen: notizen || null,
-          bezahlt_am: bezahltAm || null,
-          bezahlter_betrag: parseZahl(bezahlterBetrag),
           netto_summe: summen.netto,
           mwst_summe: summen.mwst,
           brutto_summe: summen.brutto,
@@ -351,6 +382,9 @@ export default function RechnungDetail() {
         }
         pos++;
       }
+
+      // Zahlungsstatus/Bezahlt aus den Zahlungen neu berechnen (Brutto kann sich geändert haben)
+      await supabase.rpc("rechnung_zahlbetrag_neu_berechnen", { p_rechnung_id: id });
 
       setGespeichert(true);
       setDirty(false);
@@ -449,15 +483,82 @@ export default function RechnungDetail() {
     setPdfLaedt(false);
   }
 
-  // ---------- Status-Workflow ----------
-  async function statusSetzen(neu: StatusKey) {
-    setStatus(neu);
-    markDirty();
-    // Bei "bezahlt" automatisch Bezahlt-Datum + Vollbetrag vorschlagen
-    if (neu === "bezahlt") {
-      if (!bezahltAm) setBezahltAm(new Date().toISOString().slice(0, 10));
-      setBezahlterBetrag(ladeStr(summen.brutto));
+  // ---------- Zahlung erfassen (Block C) ----------
+  async function zahlungHinzufuegen() {
+    if (zBusy) return;
+    const betragNum = parseZahl(zBetrag);
+    if (betragNum <= 0) {
+      setFehler("Bitte einen Betrag größer als 0 eingeben.");
+      return;
     }
+    if (!zDatum) {
+      setFehler("Bitte ein Zahlungsdatum wählen.");
+      return;
+    }
+    setZBusy(true);
+    setFehler(null);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setFehler("Nicht eingeloggt.");
+        setZBusy(false);
+        return;
+      }
+      const { error } = await supabase.from("zahlungen").insert({
+        owner_user_id: user.id,
+        rechnung_id: id,
+        betrag: betragNum,
+        zahlungsdatum: zDatum,
+        zahlungsart: zArt,
+        referenz: zReferenz || null,
+      });
+      if (error) {
+        setFehler("Zahlung speichern fehlgeschlagen: " + error.message);
+        setZBusy(false);
+        return;
+      }
+      // Eingabefelder zurücksetzen
+      setZBetrag("");
+      setZReferenz("");
+      setZArt("Überweisung");
+      setZDatum(new Date().toISOString().slice(0, 10));
+      // Trigger hat die Rechnung bereits aktualisiert – frisch laden
+      await laden();
+    } catch (e: any) {
+      setFehler("Fehler: " + (e?.message || "unbekannt"));
+    }
+    setZBusy(false);
+  }
+
+  async function zahlungLoeschen(zid: string) {
+    if (!window.confirm("Diese Zahlung wirklich löschen? Der Rechnungsstatus wird neu berechnet.")) return;
+    setFehler(null);
+    const { error } = await supabase.from("zahlungen").delete().eq("id", zid);
+    if (error) {
+      setFehler("Löschen fehlgeschlagen: " + error.message);
+      return;
+    }
+    await laden();
+  }
+
+  // ---------- Stornieren / Reaktivieren (manueller Status) ----------
+  async function stornoUmschalten(neu: "storniert" | "offen") {
+    setFehler(null);
+    const { error } = await supabase
+      .from("rechnungen")
+      .update({ zahlungsstatus: neu, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      setFehler("Status ändern fehlgeschlagen: " + error.message);
+      return;
+    }
+    // Nach Reaktivierung den korrekten Status aus den Zahlungen ableiten
+    if (neu === "offen") {
+      await supabase.rpc("rechnung_zahlbetrag_neu_berechnen", { p_rechnung_id: id });
+    }
+    await laden();
   }
 
   const empfaengerName = useMemo(() => {
@@ -466,9 +567,11 @@ export default function RechnungDetail() {
     return titel || "—";
   }, [kontakt, firma, titel]);
 
-  const restBetrag = useMemo(() => {
-    return r2(summen.brutto - parseZahl(bezahlterBetrag));
-  }, [summen.brutto, bezahlterBetrag]);
+  const zahlungInfo = useMemo(() => {
+    const brutto = Number(rechnung?.brutto_summe) || 0;
+    const bezahlt = Number(rechnung?.bezahlter_betrag) || 0;
+    return { brutto, bezahlt, offen: r2(brutto - bezahlt) };
+  }, [rechnung]);
 
   const faelligInfo = useMemo(() => {
     if (status === "bezahlt" || status === "storniert") return null;
@@ -628,90 +731,160 @@ export default function RechnungDetail() {
         </div>
       </div>
 
-      {/* STATUS-WORKFLOW */}
+      {/* ZAHLUNGSSTATUS (automatisch aus erfassten Zahlungen) */}
       <div style={{ marginBottom: 20 }}>
         <Karte titel="Zahlungsstatus">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["offen", "teilbezahlt", "bezahlt"] as StatusKey[]).map((s) => {
-              const aktiv = status === s;
-              const cfg = STATUS[s];
-              return (
-                <button
-                  key={s}
-                  onClick={() => statusSetzen(s)}
-                  style={{
-                    background: aktiv ? cfg.farbe : "transparent",
-                    color: aktiv ? C.navy : cfg.farbe,
-                    border: `1px solid ${cfg.farbe}${aktiv ? "" : "77"}`,
-                    borderRadius: 10,
-                    padding: "9px 16px",
-                    fontSize: 13.5,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  {cfg.icon} {cfg.label}
-                </button>
-              );
-            })}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                background: `${stCfg.farbe}22`,
+                color: stCfg.farbe,
+                border: `1px solid ${stCfg.farbe}55`,
+                borderRadius: 999,
+                padding: "6px 14px",
+              }}
+            >
+              {stCfg.icon} {stCfg.label}
+            </span>
+            <span style={{ color: C.textDim, fontSize: 12.5 }}>
+              wird automatisch aus den erfassten Zahlungen berechnet
+            </span>
             <div style={{ flex: 1 }} />
             {status !== "storniert" ? (
-              <button onClick={() => statusSetzen("storniert")} style={stornoBtn}>
+              <button onClick={() => stornoUmschalten("storniert")} style={stornoBtn}>
                 Stornieren
               </button>
             ) : (
-              <button onClick={() => statusSetzen("offen")} style={reaktivierBtn}>
+              <button onClick={() => stornoUmschalten("offen")} style={reaktivierBtn}>
                 Reaktivieren
               </button>
             )}
           </div>
 
-          {/* Bezahlt-Erfassung (bei teilbezahlt/bezahlt sichtbar) */}
-          {(status === "teilbezahlt" || status === "bezahlt") && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 14,
-                marginTop: 18,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>Bezahlter Betrag ({waehrung})</label>
-                <input
-                  value={bezahlterBetrag}
-                  onChange={(e) => aendern(setBezahlterBetrag, e.target.value)}
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Bezahlt am</label>
-                <input
-                  type="date"
-                  value={bezahltAm}
-                  onChange={(e) => aendern(setBezahltAm, e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Offener Rest</label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
+            <SummeFeld label="Rechnungsbetrag" wert={geld(zahlungInfo.brutto, waehrung)} farbe={C.gold} />
+            <SummeFeld label="Bereits bezahlt" wert={geld(zahlungInfo.bezahlt, waehrung)} farbe={C.green} />
+            <SummeFeld
+              label="Offener Rest"
+              wert={geld(zahlungInfo.offen, waehrung)}
+              farbe={zahlungInfo.offen > 0 ? C.warn : C.green}
+            />
+          </div>
+        </Karte>
+      </div>
+
+      {/* ZAHLUNGEN ERFASSEN (Block C) */}
+      <div style={{ marginBottom: 20 }}>
+        <Karte titel="Zahlungen">
+          {/* Liste vorhandener Zahlungen */}
+          {zahlungen.length === 0 ? (
+            <p style={{ color: C.textDim, fontSize: 14, margin: "0 0 16px" }}>
+              Noch keine Zahlung erfasst.
+            </p>
+          ) : (
+            <div style={{ marginBottom: 18, overflowX: "auto" }}>
+              {zahlungen.map((z) => (
                 <div
+                  key={z.id}
                   style={{
-                    ...inputStyle,
-                    display: "flex",
+                    display: "grid",
+                    gridTemplateColumns: "110px 130px 1fr 120px 36px",
+                    gap: 10,
                     alignItems: "center",
-                    color: restBetrag > 0 ? C.warn : C.green,
-                    fontWeight: 700,
+                    padding: "10px 0",
+                    borderBottom: `1px solid ${C.border}`,
+                    fontSize: 13.5,
+                    minWidth: 520,
                   }}
                 >
-                  {geld(restBetrag, waehrung)}
+                  <div style={{ color: C.textDim }}>{datumDe(z.zahlungsdatum)}</div>
+                  <div>{z.zahlungsart}</div>
+                  <div
+                    style={{
+                      color: C.textDim,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {z.referenz || "—"}
+                  </div>
+                  <div style={{ textAlign: "right", fontWeight: 700, color: C.green }}>
+                    {geld(z.betrag, waehrung)}
+                  </div>
+                  <button
+                    onClick={() => zahlungLoeschen(z.id)}
+                    title="Zahlung löschen"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: C.textDim,
+                      cursor: "pointer",
+                      fontSize: 15,
+                    }}
+                  >
+                    🗑
+                  </button>
                 </div>
-              </div>
+              ))}
             </div>
           )}
+
+          {/* Neue Zahlung erfassen */}
+          <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
+            <div style={{ ...sektionLabel, marginBottom: 12 }}>Neue Zahlung erfassen</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Betrag ({waehrung})</label>
+                <input
+                  value={zBetrag}
+                  onChange={(e) => setZBetrag(e.target.value)}
+                  inputMode="decimal"
+                  placeholder={ladeStr(zahlungInfo.offen > 0 ? zahlungInfo.offen : 0)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Zahlungsdatum</label>
+                <input type="date" value={zDatum} onChange={(e) => setZDatum(e.target.value)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Zahlungsart</label>
+                <select value={zArt} onChange={(e) => setZArt(e.target.value)} style={inputStyle}>
+                  {ZAHLUNGSARTEN.map((a) => (
+                    <option key={a} value={a} style={{ background: C.navy2 }}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Referenz (optional)</label>
+                <input
+                  value={zReferenz}
+                  onChange={(e) => setZReferenz(e.target.value)}
+                  placeholder="z. B. Verwendungszweck"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                onClick={zahlungHinzufuegen}
+                disabled={zBusy}
+                style={{ ...btnGold, opacity: zBusy ? 0.6 : 1, cursor: zBusy ? "wait" : "pointer" }}
+              >
+                {zBusy ? "Speichert…" : "＋ Zahlung buchen"}
+              </button>
+            </div>
+            {zahlungInfo.offen > 0 && (
+              <p style={{ color: C.textDim, fontSize: 12, margin: "10px 2px 0" }}>
+                Tipp: Für die vollständige Bezahlung {geld(zahlungInfo.offen, waehrung)} eintragen.
+              </p>
+            )}
+          </div>
         </Karte>
       </div>
 
