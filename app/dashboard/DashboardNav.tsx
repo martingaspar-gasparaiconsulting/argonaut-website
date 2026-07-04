@@ -35,6 +35,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🎫 Service', href: '/dashboard/service' },
   { label: '📊 Analytics', href: '/dashboard/analytics' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
+  { label: '🔐 Rechte', href: '/dashboard/rechte' },
   { label: '🔧 Einstellungen', href: '/dashboard/einstellungen' },
 ];
 export default function DashboardNav() {
