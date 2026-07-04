@@ -167,8 +167,10 @@ export function DiagrammKarte({
   const leer = !daten || daten.length === 0;
 
   // Tooltip-Werte im deutschen Format + Einheit
-  const tooltipFormatter = (value: number | string): [string, string] => {
-    const zahl = typeof value === 'number' ? formatZahl(value) : String(value);
+  // (Parameter bewusst 'unknown' -> kompatibel mit allen recharts-Versionen)
+  const tooltipFormatter = (value: unknown): [string, string] => {
+    const zahl =
+      typeof value === 'number' ? formatZahl(value) : String(value ?? '');
     return [einheit ? `${zahl} ${einheit}` : zahl, 'Wert'];
   };
 
