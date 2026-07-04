@@ -1,50 +1,110 @@
 'use client';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
+
 // ============================================================
-// ARGONAUT OS · Dashboard-Navigation (zentral)
-// EINE Stelle fuer alle Menuepunkte. Neuer Eintrag = eine Zeile.
-//   label     : Text im Menue (Emoji optional)
-//   href      : Zielseite
-//   highlight  : true = dauerhaft golden hervorgehoben (wie Automatisierungen)
+// ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
+// Chef sieht alles. Mitarbeiter sieht nur freigeschaltete Module.
+// "immer" = jeder (Übersicht/Einstellungen). "nurChef" = nur der Chef.
+// modul-Schlüssel identisch mit /dashboard/rechte + middleware.
 // ============================================================
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 type NavLink = {
   label: string;
   href: string;
   highlight?: boolean;
+  modul?: string;   // erforderliches Recht
+  immer?: boolean;  // jeder darf
+  nurChef?: boolean;// nur der Chef
 };
+
 const NAV_LINKS: NavLink[] = [
-  { label: '🏠 Übersicht', href: '/dashboard' },
-  { label: '🤖 Agenten', href: '/dashboard/agenten' },
-  { label: '🎓 Academy', href: '/dashboard/academy' },
-  { label: '🎯 Leads', href: '/dashboard/leads' },
-  { label: '💬 Chat', href: '/dashboard/chat' },
-  { label: '🗨️ Team-Chat', href: '/dashboard/team-chat' },
-  { label: '📄 Dokumente', href: '/dashboard/documents' },
-  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz' },
-  { label: '👥 Personal', href: '/dashboard/personal' },
-  { label: '🗓 Schichtplan', href: '/dashboard/schichtplan' },
-  { label: '📁 Projekte', href: '/dashboard/projekte' },
-  { label: '📣 Marketing', href: '/dashboard/marketing' },
-  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm' },
-  { label: '📋 Aufträge', href: '/dashboard/auftraege' },
-  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen' },
-  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen' },
-  { label: '💶 Finanzen', href: '/dashboard/finanzen' },
-  { label: '📦 ERP/Lager', href: '/dashboard/erp' },
-  { label: '📑 Verträge', href: '/dashboard/vertraege' },
-  { label: '🎫 Service', href: '/dashboard/service' },
-  { label: '📊 Analytics', href: '/dashboard/analytics' },
-  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true },
-  { label: '🔐 Rechte', href: '/dashboard/rechte' },
-  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen' },
+  { label: '🏠 Übersicht', href: '/dashboard', immer: true },
+  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten' },
+  { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy' },
+  { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads' },
+  { label: '💬 Chat', href: '/dashboard/chat', modul: 'chat' },
+  { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat' },
+  { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente' },
+  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz' },
+  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal' },
+  { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan' },
+  { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte' },
+  { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing' },
+  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm' },
+  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege' },
+  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen' },
+  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen' },
+  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen' },
+  { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp' },
+  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege' },
+  { label: '🎫 Service', href: '/dashboard/service', modul: 'service' },
+  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
+  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
+  { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
+  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true },
 ];
+
 export default function DashboardNav() {
   const pathname = usePathname();
+  const [geladen, setGeladen] = useState(false);
+  const [istChef, setIstChef] = useState(false);
+  const [erlaubt, setErlaubt] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let aktiv = true;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { if (aktiv) setGeladen(true); return; }
+
+        // Ist der eingeloggte Nutzer ein Mitarbeiter? (kein Eintrag = Chef)
+        const { data: ma } = await supabase
+          .from('mitarbeiter')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+
+        if (!ma) {
+          if (aktiv) { setIstChef(true); setGeladen(true); }
+          return;
+        }
+
+        // Mitarbeiter -> freigeschaltete Module laden
+        const { data: recht } = await supabase
+          .from('mitarbeiter_rechte')
+          .select('module')
+          .eq('mitarbeiter_id', ma.id)
+          .maybeSingle();
+
+        if (aktiv) {
+          setErlaubt(new Set<string>((recht?.module as string[]) || []));
+          setGeladen(true);
+        }
+      } catch {
+        if (aktiv) setGeladen(true);
+      }
+    })();
+    return () => { aktiv = false; };
+  }, []);
+
+  const sichtbar = NAV_LINKS.filter((l) => {
+    if (l.immer) return true;
+    if (!geladen) return false;      // bis geladen: nur Grundausstattung (kein Aufblitzen)
+    if (istChef) return true;        // Chef sieht alles
+    if (l.nurChef) return false;     // nur-Chef-Punkte für Mitarbeiter aus
+    return l.modul ? erlaubt.has(l.modul) : false;
+  });
+
   return (
     <nav style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-      {NAV_LINKS.map((link) => {
-        // /dashboard nur exakt aktiv, sonst wuerde es auf jeder Unterseite leuchten;
-        // Unterseiten via startsWith (z.B. /dashboard/leads/123 -> Leads aktiv)
+      {sichtbar.map((link) => {
         const aktiv =
           link.href === '/dashboard'
             ? pathname === '/dashboard'

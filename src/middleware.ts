@@ -2,9 +2,35 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Pfade, die ein eingeladener Mitarbeiter (Self-Service) erreichen darf.
+// Pfade, die ein eingeladener Mitarbeiter (Self-Service) IMMER erreichen darf.
 // Additiv erweiterbar — neue Mitarbeiter-Seiten hier eintragen.
-const MITARBEITER_ERLAUBT = ['/dashboard/mein-bereich', '/dashboard/zeiterfassung']
+const MITARBEITER_ERLAUBT = ['/dashboard/mein-bereich', '/dashboard/zeiterfassung', '/dashboard/einstellungen']
+
+// Modul-Schlüssel (aus /dashboard/rechte) -> Pfad. Identisch mit der Navigation.
+// Ein Mitarbeiter erreicht zusätzlich die Module, die der Chef freigeschaltet hat.
+const MODUL_PFAD: Record<string, string> = {
+  agenten: '/dashboard/agenten',
+  academy: '/dashboard/academy',
+  leads: '/dashboard/leads',
+  chat: '/dashboard/chat',
+  'team-chat': '/dashboard/team-chat',
+  dokumente: '/dashboard/documents',
+  korrespondenz: '/dashboard/korrespondenz',
+  personal: '/dashboard/personal',
+  schichtplan: '/dashboard/schichtplan',
+  projekte: '/dashboard/projekte',
+  marketing: '/dashboard/marketing',
+  crm: '/dashboard/crm',
+  auftraege: '/dashboard/auftraege',
+  rechnungen: '/dashboard/rechnungen',
+  mahnwesen: '/dashboard/mahnwesen',
+  finanzen: '/dashboard/finanzen',
+  erp: '/dashboard/erp',
+  vertraege: '/dashboard/vertraege',
+  service: '/dashboard/service',
+  analytics: '/dashboard/analytics',
+  automatisierungen: '/dashboard/automatisierungen',
+}
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
@@ -51,8 +77,22 @@ export async function middleware(req: NextRequest) {
         .maybeSingle()
 
       if (mitarbeiter) {
-        // MITARBEITER: nur die freigeschalteten Self-Service-Bereiche sind erlaubt
-        const erlaubt = MITARBEITER_ERLAUBT.some((p) => req.nextUrl.pathname.startsWith(p))
+        // MITARBEITER: Basis-Bereiche + die vom Chef freigeschalteten Module
+        const { data: recht } = await supabase
+          .from('mitarbeiter_rechte')
+          .select('module')
+          .eq('mitarbeiter_id', mitarbeiter.id)
+          .maybeSingle()
+
+        const module: string[] = (recht?.module as string[]) || []
+        const erlaubtePfade = [
+          ...MITARBEITER_ERLAUBT,
+          ...module.map((k) => MODUL_PFAD[k]).filter(Boolean),
+        ]
+
+        const p = req.nextUrl.pathname
+        const erlaubt = erlaubtePfade.some((pf) => p === pf || p.startsWith(pf + '/'))
+
         if (!erlaubt) {
           return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
         }
