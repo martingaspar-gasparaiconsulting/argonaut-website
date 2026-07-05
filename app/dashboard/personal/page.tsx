@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import HrKennzahlen from '../_components/HrKennzahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -303,6 +304,9 @@ export default function PersonalPage() {
           </button>
         </div>
       </div>
+
+      {/* Quick-Win 10: HR-Kennzahlen – Krankenquote & Fluktuation (additiv) */}
+      <HrKennzahlen />
 
       <div style={styles.tabs}>
         <TabButton active={tab === 'mitarbeiter'} onClick={() => setTab('mitarbeiter')}>Mitarbeiter</TabButton>
