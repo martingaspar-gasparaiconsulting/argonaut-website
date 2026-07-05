@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E8 Fuhrpark
@@ -182,6 +183,39 @@ export default function FuhrparkCockpit() {
   const kpiWartung = fahrzeuge.filter(
     (f) => ampelRang(f.wartung_bis) >= 2
   ).length;
+
+  // KI-Kontext: alle anstehenden/überfälligen Fristen über alle aktiven Fahrzeuge
+  const fuhrparkKi = useMemo(() => {
+    type Frist = { bez: string; kennz: string; art: string; tage: number; rang: number };
+    const fristen: Frist[] = [];
+    const add = (f: Fahrzeug, art: string, d: string | null) => {
+      const r = ampelRang(d);
+      const t = tageBis(d);
+      if (r >= 2 && t !== null) {
+        fristen.push({ bez: f.bezeichnung, kennz: f.kennzeichen || "", art, tage: t, rang: r });
+      }
+    };
+    for (const f of fahrzeuge) {
+      if (!f.aktiv) continue;
+      add(f, "TÜV/HU", f.tuev_bis);
+      add(f, "Wartung", f.wartung_bis);
+      add(f, "Versicherung", f.versicherung_bis);
+    }
+    if (fristen.length === 0) return { text: "", hatRot: false };
+    fristen.sort((a, b) => b.rang - a.rang || a.tage - b.tage);
+    const rot = fristen.filter((x) => x.rang === 3).length;
+    const gelb = fristen.filter((x) => x.rang === 2).length;
+    const zeile = (x: Frist) => {
+      const wagen = x.kennz ? `${x.bez} (${x.kennz})` : x.bez;
+      const status = x.tage < 0 ? `${-x.tage} Tage überfällig` : `fällig in ${x.tage} Tagen`;
+      return `- ${wagen}: ${x.art} ${status}`;
+    };
+    const top = fristen.slice(0, 4).map(zeile).join("\n");
+    const text =
+      `${rot} Frist(en) überfällig, ${gelb} bald fällig im Fuhrpark.\n` +
+      `Am dringendsten:\n${top}`;
+    return { text, hatRot: rot > 0 };
+  }, [fahrzeuge]);
 
   function oeffneNeu() {
     setBearbeiteId(null);
@@ -408,6 +442,17 @@ export default function FuhrparkCockpit() {
           </div>
         </div>
       </div>
+
+      {/* KI-Klartext: priorisiert anstehende Fahrzeug-Fristen */}
+      {!laden && fuhrparkKi.text !== "" && (
+        <KiKlartext
+          kontext={fuhrparkKi.text}
+          modul="Fuhrpark / Fahrzeug-Fristen"
+          akzent={fuhrparkKi.hatRot ? C.danger : C.warn}
+          dunkel
+          style={{ marginBottom: 20 }}
+        />
+      )}
 
       {/* Toolbar */}
       <div
