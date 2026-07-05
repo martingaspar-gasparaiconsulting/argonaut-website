@@ -154,6 +154,8 @@ export default function PersonalPage() {
   const [mitarbeiter, setMitarbeiter] = useState<Mitarbeiter[]>([]);
   const [maAnsicht, setMaAnsicht] = useState<'stamm' | 'hr'>('stamm');
   const [abwAlle, setAbwAlle] = useState<AbwLite[]>([]);
+  const [chkAlle, setChkAlle] = useState<ChkLite[]>([]);
+  const [schulAlle, setSchulAlle] = useState<SchulLite[]>([]);
   const [bewerber, setBewerber] = useState<Bewerber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,6 +223,12 @@ export default function PersonalPage() {
         const { data: abwData } = await supabase.from('hr_abwesenheiten')
           .select('mitarbeiter_id,typ,von,bis,tage,status');
         setAbwAlle((abwData as AbwLite[]) ?? []);
+        const { data: chkData } = await supabase.from('hr_checklisten')
+          .select('mitarbeiter_id,erledigt');
+        setChkAlle((chkData as ChkLite[]) ?? []);
+        const { data: schulData } = await supabase.from('hr_schulungen')
+          .select('mitarbeiter_id,status,gueltig_bis');
+        setSchulAlle((schulData as SchulLite[]) ?? []);
       } else {
         const { data, error } = await supabase.from('bewerber')
           .select('id,vorname,nachname,email,telefon,position,quelle,status,bewerbungsdatum,mitarbeiter_id')
@@ -333,7 +341,7 @@ export default function PersonalPage() {
             {maAnsicht === 'stamm' ? (
               <MitarbeiterTabelle rows={mitarbeiter} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             ) : (
-              <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+              <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} chk={chkAlle} schul={schulAlle} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             )}
           </>
         )}
@@ -382,6 +390,8 @@ type AbwLite = {
   mitarbeiter_id: string | null; typ: string | null;
   von: string | null; bis: string | null; tage: number | null; status: string | null;
 };
+type ChkLite = { mitarbeiter_id: string | null; erledigt: boolean | null };
+type SchulLite = { mitarbeiter_id: string | null; status: string | null; gueltig_bis: string | null };
 
 // heutiges Datum als 'YYYY-MM-DD' (zeitzonen-sicher fuer Vergleich mit von/bis)
 function heuteISO(): string {
@@ -404,14 +414,14 @@ function dabeiSeit(eintritt: string | null): string {
   return `${(Number.isInteger(jahre) ? String(jahre) : jahre.toFixed(1)).replace('.', ',')} J`;
 }
 
-function MitarbeiterHrTabelle({ rows, abw, onAdd, onSelect }: { rows: Mitarbeiter[]; abw: AbwLite[]; onAdd: () => void; onSelect: (id: string) => void }) {
+function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect }: { rows: Mitarbeiter[]; abw: AbwLite[]; chk: ChkLite[]; schul: SchulLite[]; onAdd: () => void; onSelect: (id: string) => void }) {
   if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   const jahr = new Date().getFullYear();
   const jahrStr = String(jahr);
   const heute = heuteISO();
   return (
     <table style={styles.table}>
-      <thead><tr><Th>Name</Th><Th>Heute</Th><Th>Resturlaub</Th><Th>Krank ({jahr})</Th><Th>Dabei seit</Th><Th>Abteilung</Th></tr></thead>
+      <thead><tr><Th>Name</Th><Th>Heute</Th><Th>Resturlaub</Th><Th>Krank ({jahr})</Th><Th>Onboarding</Th><Th>Schulungen</Th><Th>Dabei seit</Th><Th>Abteilung</Th></tr></thead>
       <tbody>{rows.map((m) => {
         const meine = abw.filter((a) => a.mitarbeiter_id === m.id);
         // Resturlaub + Krank: exakt dieselbe Logik wie die Einzel-Auswertung im Drawer
@@ -430,6 +440,15 @@ function MitarbeiterHrTabelle({ rows, abw, onAdd, onSelect }: { rows: Mitarbeite
         const heuteFarbe = istKrank ? C.danger : istUrlaub ? C.warn : C.green;
         const heuteText = istKrank ? 'Krank' : istUrlaub ? 'Urlaub' : 'Anwesend';
         const seit = dabeiSeit(m.eintrittsdatum);
+        // Onboarding %: erledigte Checklisten-Punkte / alle Punkte des Mitarbeiters
+        const meineChk = chk.filter((c) => c.mitarbeiter_id === m.id);
+        const chkGesamt = meineChk.length;
+        const chkErledigt = meineChk.filter((c) => c.erledigt === true).length;
+        const onboardingProzent = chkGesamt > 0 ? Math.round((chkErledigt / chkGesamt) * 100) : null;
+        // Schulungen offen/abgelaufen — exakt dieselbe Formel wie die Einzel-Auswertung
+        const meineSchul = schul.filter((sc) => sc.mitarbeiter_id === m.id);
+        const schulAbgelaufen = meineSchul.filter((sc) => { const t = tageBis(sc.gueltig_bis); return t !== null && t < 0; }).length;
+        const schulOffen = meineSchul.filter((sc) => sc.status !== 'absolviert').length + schulAbgelaufen;
         return (
           <ClickRow key={m.id} onClick={() => onSelect(m.id)}>
             <Td><span style={styles.name}>{m.vorname} {m.nachname}</span></Td>
@@ -441,6 +460,16 @@ function MitarbeiterHrTabelle({ rows, abw, onAdd, onSelect }: { rows: Mitarbeite
             </Td>
             <Td><span style={{ color: rest <= 5 ? C.warn : C.green, fontWeight: 600 }}>{rest} Tage</span></Td>
             <Td><span style={{ color: krank > 0 ? C.text : C.textDim }}>{krank} Tage</span></Td>
+            <Td>
+              {onboardingProzent === null
+                ? <Dim>—</Dim>
+                : <span title={`${chkErledigt}/${chkGesamt} erledigt`} style={{ color: onboardingProzent === 100 ? C.green : C.gold, fontWeight: 600 }}>{onboardingProzent} %</span>}
+            </Td>
+            <Td>
+              {schulOffen > 0
+                ? <span style={{ color: C.danger, fontWeight: 700 }}>{schulOffen} offen</span>
+                : <Dim>0</Dim>}
+            </Td>
             <Td>{seit ? seit : <Dim>—</Dim>}</Td>
             <Td>{m.abteilung || <Dim>—</Dim>}</Td>
           </ClickRow>
