@@ -22,6 +22,7 @@ const TABS: Tab[] = [
   { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen", farbe: "#4CAF7D" },
   { label: "📥 Wareneingang", href: "/dashboard/erp/wareneingang", farbe: "#A78BFA" },
   { label: "🔧 Inventar", href: "/dashboard/erp/inventar", farbe: "#E0A24C" },
+  { label: "📋 Inventur", href: "/dashboard/erp/inventur", farbe: "#2DD4BF" },
   { label: "🚜 Fuhrpark", href: "/dashboard/erp/fuhrpark", farbe: "#C9A84C" },
 ];
 
