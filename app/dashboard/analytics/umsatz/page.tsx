@@ -22,6 +22,11 @@ import {
   DiagrammKarte,
   type DiagrammPunkt,
 } from '../../_components/ReportBausteine';
+import ZeitraumFilter, {
+  type Zeitraum,
+  imZeitraum,
+  ZEITRAUM_ALLES,
+} from '../../_components/ZeitraumFilter';
 
 // ── Datensatz-Form (nur die Spalten, die wir brauchen) ────────────
 type Rechnung = {
@@ -56,6 +61,7 @@ export default function UmsatzReport() {
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(ZEITRAUM_ALLES);
 
   // Daten laden (RLS filtert automatisch auf den eingeloggten Nutzer)
   useEffect(() => {
@@ -90,12 +96,15 @@ export default function UmsatzReport() {
       (r) => (r.zahlungsstatus ?? '') !== 'entwurf',
     );
 
+    // KPIs beziehen sich auf den gewählten Zeitraum (nach Rechnungsdatum)
+    const imBereich = gestellt.filter((r) => imZeitraum(r.rechnungsdatum, zeitraum));
+
     let gesamt = 0;
     let bezahlt = 0;
     let offen = 0;
     let ueberfaellig = 0;
 
-    for (const r of gestellt) {
+    for (const r of imBereich) {
       const brutto = Number(r.brutto_summe ?? 0);
       const gezahlt = Number(r.bezahlter_betrag ?? 0);
       const rest = Math.max(brutto - gezahlt, 0);
@@ -134,9 +143,10 @@ export default function UmsatzReport() {
       wert: Math.round((monatMap.get(m.key) ?? 0) * 100) / 100,
     }));
 
-    // Status-Verteilung (alle Rechnungen, inkl. Entwürfe)
+    // Status-Verteilung (im gewählten Zeitraum, inkl. Entwürfe)
     const statusMap = new Map<string, number>();
     for (const r of rechnungen) {
+      if (!imZeitraum(r.rechnungsdatum, zeitraum)) continue;
       const s = r.zahlungsstatus ?? 'unbekannt';
       statusMap.set(s, (statusMap.get(s) ?? 0) + 1);
     }
@@ -151,9 +161,9 @@ export default function UmsatzReport() {
       ueberfaellig,
       monatsUmsatz,
       statusVerteilung,
-      anzahl: gestellt.length,
+      anzahl: imBereich.length,
     };
-  }, [rechnungen]);
+  }, [rechnungen, zeitraum]);
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px' }}>
@@ -185,6 +195,9 @@ export default function UmsatzReport() {
           Blick — direkt aus deinen Rechnungen.
         </p>
       </div>
+
+      {/* Zeitraum-Filter (Schnellauswahl + Kalender) */}
+      <ZeitraumFilter wert={zeitraum} onChange={setZeitraum} />
 
       {fehler && (
         <div
