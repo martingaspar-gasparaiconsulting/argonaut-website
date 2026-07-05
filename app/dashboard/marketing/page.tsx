@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import MarketingRoi from '../_components/MarketingRoi';
 
 // ============================================================
 // ARGONAUT OS · MODUL 3 MARKETING · M2 Cockpit
@@ -381,6 +382,9 @@ export default function MarketingCockpit() {
           </div>
         ))}
       </div>
+
+      {/* Quick-Win 9: Marketing-ROI & Budget-Effizienz (additiv, Finale-ready) */}
+      <MarketingRoi />
 
       {/* Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
