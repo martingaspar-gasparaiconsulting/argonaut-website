@@ -10,17 +10,33 @@
 //   "zeile" – Bezeichnung links + Badge rechts (für Detailseiten)
 // ============================================================================
 
-import { berechneAmpel, AmpelOptionen } from './fristLogik';
+import { berechneAmpel, berechneReaktionsAmpel, AmpelStatus, AmpelOptionen } from './fristLogik';
+
+// Hellere Ampel-Farben für dunklen Hintergrund (z. B. Navy-Seiten).
+const FARBEN_DUNKEL: Record<AmpelStatus, { farbe: string; hintergrund: string; rand: string }> = {
+  gruen: { farbe: '#4ade80', hintergrund: 'rgba(74,222,128,0.14)',  rand: 'rgba(74,222,128,0.40)' },
+  gelb:  { farbe: '#fbbf24', hintergrund: 'rgba(251,191,36,0.14)',  rand: 'rgba(251,191,36,0.40)' },
+  rot:   { farbe: '#f87171', hintergrund: 'rgba(248,113,113,0.16)', rand: 'rgba(248,113,113,0.45)' },
+  grau:  { farbe: '#94a3b8', hintergrund: 'rgba(148,163,184,0.14)', rand: 'rgba(148,163,184,0.35)' },
+};
 
 export interface FristAmpelProps {
   /** Zieldatum: Date, "YYYY-MM-DD", ISO-String, oder null/undefined. */
   datum: Date | string | null | undefined;
   /** Optionaler Kontext, z. B. "TÜV", "Kündigungsfrist", "Rechnung fällig". */
   bezeichnung?: string;
-  /** Ab so vielen Resttagen wird es gelb. Default 30. */
+  /** "frist" = Resttage bis Zieldatum (Standard). "reaktion" = verstrichene Zeit seit Startpunkt. */
+  modus?: 'frist' | 'reaktion';
+  /** Ab so vielen Resttagen wird es gelb. Default 30. (nur modus="frist") */
   gelbAbTagen?: number;
-  /** Ab so vielen Resttagen wird es rot. Default 7. */
+  /** Ab so vielen Resttagen wird es rot. Default 7. (nur modus="frist") */
   rotAbTagen?: number;
+  /** Ab so vielen verstrichenen Stunden wird es gelb. Default 4. (nur modus="reaktion") */
+  gelbAbStunden?: number;
+  /** Ab so vielen verstrichenen Stunden wird es rot. Default 24. (nur modus="reaktion") */
+  rotAbStunden?: number;
+  /** Hellere Farben + weiße Bezeichnung für dunklen Hintergrund. */
+  dunkel?: boolean;
   /** Darstellung. Default "badge". */
   variante?: 'punkt' | 'badge' | 'zeile';
   /** Zusätzlicher Style am äußeren Container. */
@@ -30,13 +46,23 @@ export interface FristAmpelProps {
 export default function FristAmpel({
   datum,
   bezeichnung,
+  modus = 'frist',
   gelbAbTagen,
   rotAbTagen,
+  gelbAbStunden,
+  rotAbStunden,
+  dunkel = false,
   variante = 'badge',
   style,
 }: FristAmpelProps) {
-  const opt: AmpelOptionen = { gelbAbTagen, rotAbTagen };
-  const a = berechneAmpel(datum, opt);
+  const roh =
+    modus === 'reaktion'
+      ? berechneReaktionsAmpel(datum, { gelbAbStunden, rotAbStunden })
+      : berechneAmpel(datum, { gelbAbTagen, rotAbTagen } as AmpelOptionen);
+
+  // Farben je nach Hintergrund wählen (Status bleibt gleich, nur die Töne).
+  const toene = dunkel ? FARBEN_DUNKEL[roh.status] : { farbe: roh.farbe, hintergrund: roh.hintergrund, rand: roh.rand };
+  const a = { ...roh, ...toene };
 
   const punkt = (
     <span
@@ -116,7 +142,7 @@ export default function FristAmpel({
         <span
           style={{
             fontSize: 14,
-            color: '#0A1628',
+            color: dunkel ? 'rgba(255,255,255,0.85)' : '#0A1628',
             fontWeight: 600,
             fontFamily: "'DM Sans', sans-serif",
           }}

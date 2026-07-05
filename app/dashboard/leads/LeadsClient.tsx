@@ -1,7 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, useMemo, type CSSProperties, type FormEvent } from 'react'
+import FristAmpel from '../_components/FristAmpel'
+import KiKlartext from '../_components/KiKlartext'
+import { verstricheneStunden } from '../_components/fristLogik'
 
 export type Lead = {
   id: string
@@ -110,6 +113,27 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
   const anzahlNeu = leads.filter((l) => l.ist_bestand !== true).length
   const anzahlBestand = leads.filter((l) => l.ist_bestand === true).length
 
+  // Kontext für die KI-Klartext-Box: kompakt + stabil (nur bei Änderung von leads neu berechnet).
+  const kiKontext = useMemo(() => {
+    const offen = leads.filter((l) => l.status === 'neu' && l.ist_bestand !== true)
+    if (offen.length === 0) return ''
+    const mitZeit = offen
+      .map((l) => ({ l, std: verstricheneStunden(l.created_at) ?? 0 }))
+      .sort((a, b) => b.std - a.std)
+    const ueber4 = mitZeit.filter((x) => x.std >= 4).length
+    const ueber24 = mitZeit.filter((x) => x.std >= 24).length
+    const zeile = (x: { l: Lead; std: number }) => {
+      const std = Math.round(x.std)
+      const dauer = std >= 24 ? Math.floor(std / 24) + ' Tag(e)' : std + ' Std.'
+      const score = x.l.score ? ', Priorität ' + x.l.score + '/5' : ''
+      const leistung = x.l.dienstleistung ? ', ' + x.l.dienstleistung : ''
+      return '- ' + (x.l.name || 'Ohne Namen') + ': wartet seit ' + dauer + score + leistung
+    }
+    const top = mitZeit.slice(0, 3).map(zeile).join('\n')
+    return offen.length + ' neue Anfrage(n) offen, davon ' + ueber4 + ' seit über 4 Std. und '
+      + ueber24 + ' seit über 24 Std.\nÄlteste offene Anfragen:\n' + top
+  }, [leads])
+
   async function anlegen(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setFehler(null)
@@ -151,12 +175,13 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
       <style>{css}</style>
 
       {neueWartend > 0 ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.35)', borderRadius: '12px', padding: '14px 18px', marginBottom: '24px' }}>
-          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00e5ff', flexShrink: 0, boxShadow: '0 0 10px #00e5ff' }} />
-          <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF' }}>
-            {neueWartend === 1 ? '1 neue Anfrage wartet auf Reaktion' : neueWartend + ' neue Anfragen warten auf Reaktion'}
-          </span>
-        </div>
+        <KiKlartext
+          kontext={kiKontext}
+          modul="Leads / Anfragen (Reaktionszeit)"
+          akzent="#00e5ff"
+          dunkel
+          style={{ marginBottom: '24px' }}
+        />
       ) : null}
 
       <div style={{ marginBottom: '22px' }}>
@@ -200,7 +225,12 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                       <span style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '3px 10px' }}>Neue Anfrage</span>
                     )}
                   </div>
-                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</span>
+                    {l.status === 'neu' && l.ist_bestand !== true ? (
+                      <FristAmpel datum={l.created_at} modus="reaktion" variante="punkt" dunkel gelbAbStunden={4} rotAbStunden={24} />
+                    ) : null}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>

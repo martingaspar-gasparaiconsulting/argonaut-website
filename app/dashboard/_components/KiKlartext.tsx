@@ -31,6 +31,8 @@ export interface KiKlartextProps {
   staticAktion?: string;
   /** Akzentfarbe des linken Balkens (z. B. an die Ampel gekoppelt). Default Gold. */
   akzent?: string;
+  /** Weißer Text + dunkle Box für Navy-Hintergründe (z. B. Leads-Seite). */
+  dunkel?: boolean;
   /** Zusätzlicher Style am äußeren Container. */
   style?: React.CSSProperties;
 }
@@ -42,9 +44,22 @@ export default function KiKlartext({
   staticKlartext,
   staticAktion,
   akzent = GOLD,
+  dunkel = false,
   style,
 }: KiKlartextProps) {
   const statisch = typeof staticKlartext === "string" && staticKlartext.length > 0;
+
+  // Farbschema je nach Hintergrund
+  const boxBg = dunkel
+    ? "rgba(255,255,255,0.04)"
+    : "linear-gradient(180deg, rgba(10,22,40,0.04), rgba(10,22,40,0.02))";
+  const boxBorder = dunkel ? "rgba(255,255,255,0.12)" : "rgba(10,22,40,0.10)";
+  const textHaupt = dunkel ? "rgba(255,255,255,0.88)" : NAVY;
+  const textKopf = dunkel ? "rgba(255,255,255,0.92)" : NAVY;
+  const skeletonBg = dunkel ? "rgba(255,255,255,0.10)" : "rgba(10,22,40,0.12)";
+  const textFehler = dunkel ? "rgba(255,255,255,0.55)" : "#64748b";
+  const aktionBtnBg = dunkel ? GOLD : NAVY;
+  const aktionBtnText = dunkel ? NAVY : GOLD;
 
   const [laden, setLaden] = useState<boolean>(!statisch);
   const [fehler, setFehler] = useState<boolean>(false);
@@ -96,8 +111,8 @@ export default function KiKlartext({
         gap: 12,
         padding: "14px 16px",
         borderRadius: 12,
-        background: "linear-gradient(180deg, rgba(10,22,40,0.04), rgba(10,22,40,0.02))",
-        border: "1px solid rgba(10,22,40,0.10)",
+        background: boxBg,
+        border: `1px solid ${boxBorder}`,
         borderLeft: `4px solid ${akzent}`,
         ...style,
       }}
@@ -131,7 +146,7 @@ export default function KiKlartext({
               fontWeight: 700,
               letterSpacing: 0.5,
               textTransform: "uppercase",
-              color: NAVY,
+              color: textKopf,
               fontFamily: "'Syne', sans-serif",
             }}
           >
@@ -149,7 +164,7 @@ export default function KiKlartext({
                   height: 11,
                   width: `${w}%`,
                   borderRadius: 6,
-                  background: "rgba(10,22,40,0.12)",
+                  background: skeletonBg,
                   marginBottom: 8,
                   animation: "argKiPuls 1.2s ease-in-out infinite",
                 }}
@@ -160,7 +175,7 @@ export default function KiKlartext({
 
         {/* Fehler-Zustand (dezent, mit Wiederholen) */}
         {!laden && fehler && (
-          <div style={{ fontSize: 14, color: "#64748b", fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ fontSize: 14, color: textFehler, fontFamily: "'DM Sans', sans-serif" }}>
             Einschätzung gerade nicht verfügbar.{" "}
             <button
               onClick={laden_}
@@ -168,7 +183,7 @@ export default function KiKlartext({
                 background: "none",
                 border: "none",
                 padding: 0,
-                color: NAVY,
+                color: textKopf,
                 fontWeight: 600,
                 textDecoration: "underline",
                 cursor: "pointer",
@@ -189,7 +204,7 @@ export default function KiKlartext({
                 margin: 0,
                 fontSize: 14.5,
                 lineHeight: 1.55,
-                color: NAVY,
+                color: textHaupt,
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
@@ -207,8 +222,8 @@ export default function KiKlartext({
                       gap: 6,
                       padding: "7px 14px",
                       borderRadius: 8,
-                      background: NAVY,
-                      color: GOLD,
+                      background: aktionBtnBg,
+                      color: aktionBtnText,
                       fontSize: 13.5,
                       fontWeight: 700,
                       textDecoration: "none",
@@ -226,7 +241,7 @@ export default function KiKlartext({
                       gap: 6,
                       fontSize: 13.5,
                       fontWeight: 700,
-                      color: NAVY,
+                      color: textHaupt,
                       fontFamily: "'DM Sans', sans-serif",
                     }}
                   >

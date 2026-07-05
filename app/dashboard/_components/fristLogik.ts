@@ -123,3 +123,75 @@ export function berechneAmpel(
     ueberfaellig: resttage < 0,
   };
 }
+
+// ============================================================================
+// ERWEITERUNG (Etappe 2): Reaktionszeit-Ampel
+// Misst die bereits VERSTRICHENE Zeit ab einem Startpunkt (z. B. Eingang einer
+// Anfrage) in Stunden — statt Resttage bis zu einem Zieldatum. Gleiche Farben
+// und gleiche Ergebnis-Struktur, damit dieselbe FristAmpel-Komponente es
+// anzeigen kann. Einsatz: Leads-Reaktionszeit, später Ticket-Antwortzeit u. a.
+// ============================================================================
+
+export interface ReaktionsOptionen {
+  /** Ab so vielen verstrichenen Stunden (oder mehr) wird es GELB. Default 4. */
+  gelbAbStunden?: number;
+  /** Ab so vielen verstrichenen Stunden (oder mehr) wird es ROT. Default 24. */
+  rotAbStunden?: number;
+}
+
+/** Verstrichene Stunden seit einem Startzeitpunkt. null = kein gültiger Start. */
+export function verstricheneStunden(start: Date | string | null | undefined): number | null {
+  const s = parseDatum(start);
+  if (!s) return null;
+  return (Date.now() - s.getTime()) / 3_600_000;
+}
+
+function reaktionsLabel(stunden: number): string {
+  if (stunden < 0) return 'gerade eben';
+  if (stunden < 1) {
+    const min = Math.max(1, Math.round(stunden * 60));
+    return `vor ${min} Min. offen`;
+  }
+  if (stunden < 24) {
+    const h = Math.round(stunden);
+    return h === 1 ? 'seit 1 Std. offen' : `seit ${h} Std. offen`;
+  }
+  const tage = Math.floor(stunden / 24);
+  return tage === 1 ? 'seit 1 Tag offen' : `seit ${tage} Tagen offen`;
+}
+
+/**
+ * Reaktionszeit-Ampel: wie lange liegt etwas seit `start` bereits offen?
+ * grün < gelbAb, gelb ab gelbAb, rot ab rotAb (jeweils in Stunden).
+ */
+export function berechneReaktionsAmpel(
+  start: Date | string | null | undefined,
+  optionen: ReaktionsOptionen = {},
+): AmpelErgebnis {
+  const gelbAb = optionen.gelbAbStunden ?? 4;
+  const rotAb = optionen.rotAbStunden ?? 24;
+
+  const stunden = verstricheneStunden(start);
+  if (stunden === null) {
+    return {
+      status: 'grau',
+      resttage: null,
+      label: 'Kein Zeitpunkt',
+      ...FARBEN.grau,
+      ueberfaellig: false,
+    };
+  }
+
+  let status: AmpelStatus;
+  if (stunden >= rotAb) status = 'rot';
+  else if (stunden >= gelbAb) status = 'gelb';
+  else status = 'gruen';
+
+  return {
+    status,
+    resttage: null, // bei Reaktionszeit nicht sinnvoll
+    label: reaktionsLabel(stunden),
+    ...FARBEN[status],
+    ueberfaellig: status === 'rot',
+  };
+}
