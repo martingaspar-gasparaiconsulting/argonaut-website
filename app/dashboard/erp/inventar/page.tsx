@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E7 Inventar / Betriebsmittel
@@ -172,6 +173,42 @@ export default function InventarCockpit() {
     (s, i) => s + (Number(i.anschaffungswert) || 0),
     0
   );
+
+  // KI-Kontext: überfällige/bald fällige Prüffristen priorisieren
+  const inventarKi = useMemo(() => {
+    type Frist = { bez: string; nr: string; standort: string; tage: number; rang: number };
+    const fristen: Frist[] = [];
+    for (const i of inventar) {
+      const t = tageBis(i.naechste_pruefung_am);
+      if (t === null) continue;
+      let rang: number;
+      if (t < 0) rang = 3;
+      else if (t <= 30) rang = 2;
+      else continue;
+      fristen.push({
+        bez: i.bezeichnung,
+        nr: i.inventarnummer || "",
+        standort: i.standort || "",
+        tage: t,
+        rang,
+      });
+    }
+    if (fristen.length === 0) return { text: "", hatRot: false };
+    fristen.sort((a, b) => b.rang - a.rang || a.tage - b.tage);
+    const rot = fristen.filter((x) => x.rang === 3).length;
+    const gelb = fristen.filter((x) => x.rang === 2).length;
+    const zeile = (x: Frist) => {
+      const nr = x.nr ? ` (${x.nr})` : "";
+      const ort = x.standort ? `, Standort: ${x.standort}` : "";
+      const status = x.tage < 0 ? `${-x.tage} Tage überfällig` : `fällig in ${x.tage} Tagen`;
+      return `- ${x.bez}${nr}: Prüfung ${status}${ort}`;
+    };
+    const top = fristen.slice(0, 4).map(zeile).join("\n");
+    const text =
+      `${rot} Prüfung(en) überfällig, ${gelb} bald fällig.\n` +
+      `Am dringendsten:\n${top}`;
+    return { text, hatRot: rot > 0 };
+  }, [inventar]);
 
   function oeffneNeu() {
     setBearbeiteId(null);
@@ -385,6 +422,17 @@ export default function InventarCockpit() {
           </div>
         </div>
       </div>
+
+      {/* KI-Klartext: priorisiert überfällige/anstehende Prüffristen */}
+      {!laden && inventarKi.text !== "" && (
+        <KiKlartext
+          kontext={inventarKi.text}
+          modul="Inventar / Prüffristen"
+          akzent={inventarKi.hatRot ? C.danger : C.warn}
+          dunkel
+          style={{ marginBottom: 20 }}
+        />
+      )}
 
       {/* Toolbar */}
       <div
