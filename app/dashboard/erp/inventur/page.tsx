@@ -200,7 +200,7 @@ export default function InventurSeite() {
   ];
 
   return (
-    <div style={{ padding: "8px 0 40px" }}>
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "8px 0 40px" }}>
       {/* Kopf */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <span
