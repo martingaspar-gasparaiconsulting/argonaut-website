@@ -28,6 +28,7 @@ import ZeitraumFilter, {
   vorperiode,
   ZEITRAUM_ALLES,
 } from '../../_components/ZeitraumFilter';
+import KiKlartext from '../../_components/KiKlartext';
 
 // ── Datensatz-Form (nur die Spalten, die wir brauchen) ────────────
 type Rechnung = {
@@ -187,6 +188,25 @@ export default function UmsatzReport() {
     };
   }, [rechnungen, zeitraum]);
 
+  // Kompakter, stabiler KI-Kontext für die Klartext-Auswertung
+  const kiKontext = useMemo(() => {
+    const teile: string[] = [];
+    teile.push(`Zeitraum: ${zeitraum.label}.`);
+    teile.push(
+      `Gesamtumsatz: ${euro(a.gesamt)} aus ${a.anzahl} Rechnung${a.anzahl === 1 ? '' : 'en'}.`,
+    );
+    teile.push(
+      `Eingegangen (bezahlt): ${euro(a.bezahlt)}. Offen: ${euro(a.offen)}, davon überfällig: ${euro(a.ueberfaellig)}.`,
+    );
+    if (a.vorLabel && typeof a.trends.gesamt === 'number') {
+      const t = a.trends.gesamt;
+      teile.push(`Gegenüber ${a.vorLabel}: Umsatz ${Math.abs(t)} % ${t >= 0 ? 'höher' : 'niedriger'}.`);
+    } else if (a.vorLabel) {
+      teile.push(`Vergleich mit ${a.vorLabel}: keine Vergleichsdaten vorhanden.`);
+    }
+    return teile.join('\n');
+  }, [a, zeitraum]);
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px' }}>
       {/* ── Einheitlicher Modul-Kopf ── */}
@@ -275,6 +295,17 @@ export default function UmsatzReport() {
               akzentFarbe="#ef4444"
             />
           </KpiRaster>
+
+          {/* KI-Klartext: wertet die Zahlen des gewählten Zeitraums aus */}
+          {a.gesamt > 0 && (
+            <KiKlartext
+              kontext={kiKontext}
+              modul="Umsatz-Analyse"
+              akzent="#C9A84C"
+              dunkel
+              style={{ marginTop: 20 }}
+            />
+          )}
 
           <div
             style={{
