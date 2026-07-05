@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E5 Bestellungen-Liste (Einkauf)
@@ -89,6 +90,27 @@ function summe(p: { menge: number; einzelpreis: number }[]): number {
   );
 }
 
+// Tage bis zum erwarteten Liefertermin (negativ = überfällig)
+function tageBis(d: string | null): number | null {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  const heute = new Date();
+  heute.setHours(0, 0, 0, 0);
+  dt.setHours(0, 0, 0, 0);
+  return Math.round((dt.getTime() - heute.getTime()) / 86400000);
+}
+
+// Liefertermin-Ampel: rot überfällig, gelb ≤7 T., grün sonst; neutral bei geliefert/storniert
+function lieferFarbe(status: string, lieferdatum: string | null): string {
+  if (status === "geliefert" || status === "storniert") return C.textDim;
+  const t = tageBis(lieferdatum);
+  if (t === null) return C.textDim;
+  if (t < 0) return C.danger;
+  if (t <= 7) return C.warn;
+  return C.green;
+}
+
 export default function BestellungenListe() {
   const router = useRouter();
   const [bestellungen, setBestellungen] = useState<BestellungRow[]>([]);
@@ -163,6 +185,34 @@ export default function BestellungenListe() {
   );
   const kpiOffen = offen.length;
   const kpiOffenWert = offen.reduce((s, b) => s + summe(b.positionen), 0);
+
+  // KI-Kontext: überfällige/bald erwartete Lieferungen priorisieren
+  const bestellKi = useMemo(() => {
+    const offeneListe = bestellungen.filter(
+      (b) => b.status !== "geliefert" && b.status !== "storniert"
+    );
+    const relevante = offeneListe
+      .map((b) => ({ b, t: tageBis(b.lieferdatum_erwartet) }))
+      .filter((x) => x.t !== null && (x.t as number) <= 7)
+      .sort((a, b) => (a.t as number) - (b.t as number));
+    if (relevante.length === 0) return { text: "", hatRot: false };
+    const rot = relevante.filter((x) => (x.t as number) < 0).length;
+    const gelb = relevante.length - rot;
+    const zeile = (x: { b: BestellungRow; t: number | null }) => {
+      const nr = x.b.bestellnummer || "—";
+      const lief = x.b.lieferant?.name || "Lieferant";
+      const wert = eur(summe(x.b.positionen));
+      const t = x.t as number;
+      const status =
+        t < 0 ? `${-t} Tage überfällig` : t === 0 ? "heute fällig" : `fällig in ${t} Tagen`;
+      return `- ${nr} von ${lief}: Lieferung ${status}, Wert ${wert}`;
+    };
+    const top = relevante.slice(0, 4).map(zeile).join("\n");
+    const text =
+      `${rot} Lieferung(en) überfällig, ${gelb} in den nächsten Tagen erwartet.\n` +
+      `Am dringendsten:\n${top}`;
+    return { text, hatRot: rot > 0 };
+  }, [bestellungen]);
 
   async function naechsteNummer(): Promise<string> {
     const jahr = new Date().getFullYear();
@@ -497,6 +547,17 @@ export default function BestellungenListe() {
         </div>
       </div>
 
+      {/* KI-Klartext: priorisiert überfällige/anstehende Lieferungen */}
+      {!laden && bestellKi.text !== "" && (
+        <KiKlartext
+          kontext={bestellKi.text}
+          modul="Bestellungen / Liefertermine"
+          akzent={bestellKi.hatRot ? C.danger : C.warn}
+          dunkel
+          style={{ marginBottom: 20 }}
+        />
+      )}
+
       {/* Toolbar */}
       <div
         style={{
@@ -565,7 +626,7 @@ export default function BestellungenListe() {
                   <td style={{ ...tdStil, color: C.textDim }}>
                     {datum(b.bestelldatum)}
                   </td>
-                  <td style={{ ...tdStil, color: C.textDim }}>
+                  <td style={{ ...tdStil, color: lieferFarbe(b.status, b.lieferdatum_erwartet), fontWeight: 600 }}>
                     {datum(b.lieferdatum_erwartet)}
                   </td>
                   <td style={tdStil}>{badge(b.status)}</td>
