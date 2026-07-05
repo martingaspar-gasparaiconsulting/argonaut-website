@@ -10,7 +10,6 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import HrKennzahlen from '../_components/HrKennzahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -33,6 +32,7 @@ type Mitarbeiter = {
   steuer_id: string | null; iban: string | null; notfall_kontakt: string | null;
   urlaubsanspruch_tage: number | null; auth_user_id: string | null;
   arbeitszeit_modell: string | null; wochenstunden: number | null;
+  abteilung: string | null;
 };
 type Bewerber = {
   id: string; vorname: string; nachname: string; email: string | null; telefon: string | null;
@@ -152,6 +152,8 @@ function tageBis(d: string | null): number | null {
 export default function PersonalPage() {
   const [tab, setTab] = useState<Tab>('mitarbeiter');
   const [mitarbeiter, setMitarbeiter] = useState<Mitarbeiter[]>([]);
+  const [maAnsicht, setMaAnsicht] = useState<'stamm' | 'hr'>('stamm');
+  const [abwAlle, setAbwAlle] = useState<AbwLite[]>([]);
   const [bewerber, setBewerber] = useState<Bewerber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -212,10 +214,13 @@ export default function PersonalPage() {
     try {
       if (tab === 'mitarbeiter') {
         const { data, error } = await supabase.from('mitarbeiter')
-          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden')
+          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden,abteilung')
           .order('created_at', { ascending: false });
         if (error) throw error;
         setMitarbeiter((data as Mitarbeiter[]) ?? []);
+        const { data: abwData } = await supabase.from('hr_abwesenheiten')
+          .select('mitarbeiter_id,typ,von,bis,tage,status');
+        setAbwAlle((abwData as AbwLite[]) ?? []);
       } else {
         const { data, error } = await supabase.from('bewerber')
           .select('id,vorname,nachname,email,telefon,position,quelle,status,bewerbungsdatum,mitarbeiter_id')
@@ -305,9 +310,6 @@ export default function PersonalPage() {
         </div>
       </div>
 
-      {/* Quick-Win 10: HR-Kennzahlen – Krankenquote & Fluktuation (additiv) */}
-      <HrKennzahlen />
-
       <div style={styles.tabs}>
         <TabButton active={tab === 'mitarbeiter'} onClick={() => setTab('mitarbeiter')}>Mitarbeiter</TabButton>
         <TabButton active={tab === 'bewerber'} onClick={() => setTab('bewerber')}>Bewerber</TabButton>
@@ -322,7 +324,18 @@ export default function PersonalPage() {
           </div>
         )}
         {!loading && !error && tab === 'mitarbeiter' && (
-          <MitarbeiterTabelle rows={mitarbeiter} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+          <>
+            {/* Umschalter Stammdaten <-> HR-Kennzahlen (nur Chef-Bereich) */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <TabButton active={maAnsicht === 'stamm'} onClick={() => setMaAnsicht('stamm')}>Stammdaten</TabButton>
+              <TabButton active={maAnsicht === 'hr'} onClick={() => setMaAnsicht('hr')}>HR-Kennzahlen</TabButton>
+            </div>
+            {maAnsicht === 'stamm' ? (
+              <MitarbeiterTabelle rows={mitarbeiter} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+            ) : (
+              <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+            )}
+          </>
         )}
         {!loading && !error && tab === 'bewerber' && (
           <BewerberTabelle rows={bewerber} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'bewerber', id })} />
@@ -364,6 +377,79 @@ function MitarbeiterTabelle({ rows, onAdd, onSelect }: { rows: Mitarbeiter[]; on
     </table>
   );
 }
+// --- HR-Kennzahlen-Ansicht der Mitarbeiter-Liste (additiv, Etappe 3) ---
+type AbwLite = {
+  mitarbeiter_id: string | null; typ: string | null;
+  von: string | null; bis: string | null; tage: number | null; status: string | null;
+};
+
+// heutiges Datum als 'YYYY-MM-DD' (zeitzonen-sicher fuer Vergleich mit von/bis)
+function heuteISO(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const t = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${t}`;
+}
+
+// Betriebszugehoerigkeit als kurzer Text ("neu" / "5 Mon" / "1,5 J")
+function dabeiSeit(eintritt: string | null): string {
+  if (!eintritt) return '';
+  const start = new Date(eintritt);
+  const jetzt = new Date();
+  let monate = (jetzt.getFullYear() - start.getFullYear()) * 12 + (jetzt.getMonth() - start.getMonth());
+  if (jetzt.getDate() < start.getDate()) monate -= 1;
+  if (monate < 1) return 'neu';
+  if (monate < 12) return `${monate} Mon`;
+  const jahre = Math.round((monate / 12) * 10) / 10;
+  return `${(Number.isInteger(jahre) ? String(jahre) : jahre.toFixed(1)).replace('.', ',')} J`;
+}
+
+function MitarbeiterHrTabelle({ rows, abw, onAdd, onSelect }: { rows: Mitarbeiter[]; abw: AbwLite[]; onAdd: () => void; onSelect: (id: string) => void }) {
+  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
+  const jahr = new Date().getFullYear();
+  const jahrStr = String(jahr);
+  const heute = heuteISO();
+  return (
+    <table style={styles.table}>
+      <thead><tr><Th>Name</Th><Th>Heute</Th><Th>Resturlaub</Th><Th>Krank ({jahr})</Th><Th>Dabei seit</Th><Th>Abteilung</Th></tr></thead>
+      <tbody>{rows.map((m) => {
+        const meine = abw.filter((a) => a.mitarbeiter_id === m.id);
+        // Resturlaub + Krank: exakt dieselbe Logik wie die Einzel-Auswertung im Drawer
+        const anspruch = m.urlaubsanspruch_tage ?? 30;
+        const genommen = meine
+          .filter((a) => a.typ === 'urlaub' && a.status === 'genehmigt' && (a.von ?? '').slice(0, 4) === jahrStr)
+          .reduce((sum, a) => sum + (a.tage ?? 0), 0);
+        const rest = anspruch - genommen;
+        const krank = meine
+          .filter((a) => a.typ === 'krankheit' && (a.von ?? '').slice(0, 4) === jahrStr)
+          .reduce((sum, a) => sum + (a.tage ?? 0), 0);
+        // Heute anwesend / im Urlaub / krank?
+        const offenHeute = meine.filter((a) => a.von && a.bis && a.von <= heute && heute <= a.bis);
+        const istKrank = offenHeute.some((a) => a.typ === 'krankheit');
+        const istUrlaub = offenHeute.some((a) => a.typ === 'urlaub');
+        const heuteFarbe = istKrank ? C.danger : istUrlaub ? C.warn : C.green;
+        const heuteText = istKrank ? 'Krank' : istUrlaub ? 'Urlaub' : 'Anwesend';
+        const seit = dabeiSeit(m.eintrittsdatum);
+        return (
+          <ClickRow key={m.id} onClick={() => onSelect(m.id)}>
+            <Td><span style={styles.name}>{m.vorname} {m.nachname}</span></Td>
+            <Td>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: heuteFarbe, boxShadow: `0 0 7px ${heuteFarbe}`, display: 'inline-block' }} />
+                <span style={{ color: heuteFarbe, fontWeight: 600 }}>{heuteText}</span>
+              </span>
+            </Td>
+            <Td><span style={{ color: rest <= 5 ? C.warn : C.green, fontWeight: 600 }}>{rest} Tage</span></Td>
+            <Td><span style={{ color: krank > 0 ? C.text : C.textDim }}>{krank} Tage</span></Td>
+            <Td>{seit ? seit : <Dim>—</Dim>}</Td>
+            <Td>{m.abteilung || <Dim>—</Dim>}</Td>
+          </ClickRow>
+        );
+      })}</tbody>
+    </table>
+  );
+}
+
 function BewerberTabelle({ rows, onAdd, onSelect }: { rows: Bewerber[]; onAdd: () => void; onSelect: (id: string) => void }) {
   if (rows.length === 0) return <EmptyState title="Noch keine Bewerbungen" text="Trag die erste Bewerbung ein, um die Pipeline zu starten." onAdd={onAdd} addLabel="Bewerber anlegen" />;
   return (
