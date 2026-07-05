@@ -33,6 +33,8 @@ export interface KiKlartextProps {
   akzent?: string;
   /** Weißer Text + dunkle Box für Navy-Hintergründe (z. B. Leads-Seite). */
   dunkel?: boolean;
+  /** Wird aufgerufen, sobald ein Ergebnis vorliegt (z. B. für PDF-Export). */
+  onErgebnis?: (klartext: string, aktion: string) => void;
   /** Zusätzlicher Style am äußeren Container. */
   style?: React.CSSProperties;
 }
@@ -45,6 +47,7 @@ export default function KiKlartext({
   staticAktion,
   akzent = GOLD,
   dunkel = false,
+  onErgebnis,
   style,
 }: KiKlartextProps) {
   const statisch = typeof staticKlartext === "string" && staticKlartext.length > 0;
@@ -87,8 +90,11 @@ export default function KiKlartext({
       });
       if (!res.ok) throw new Error("http " + res.status);
       const data = await res.json();
-      setKlartext(String(data?.klartext || "").trim());
-      setAktion(String(data?.aktion || "").trim());
+      const kt = String(data?.klartext || "").trim();
+      const ak = String(data?.aktion || "").trim();
+      setKlartext(kt);
+      setAktion(ak);
+      onErgebnis?.(kt, ak);
     } catch (e: any) {
       if (e?.name === "AbortError") return; // absichtlich abgebrochen
       setFehler(true);

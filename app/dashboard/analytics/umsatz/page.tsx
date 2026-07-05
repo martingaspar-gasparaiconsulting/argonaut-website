@@ -29,6 +29,7 @@ import ZeitraumFilter, {
   ZEITRAUM_ALLES,
 } from '../../_components/ZeitraumFilter';
 import KiKlartext from '../../_components/KiKlartext';
+import { erstelleUmsatzReportPdf, type PdfFirma } from '../../_components/umsatzReportPdf';
 
 // ── Datensatz-Form (nur die Spalten, die wir brauchen) ────────────
 type Rechnung = {
@@ -64,6 +65,8 @@ export default function UmsatzReport() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [zeitraum, setZeitraum] = useState<Zeitraum>(ZEITRAUM_ALLES);
+  const [kiErgebnis, setKiErgebnis] = useState<{ klartext: string; aktion: string } | null>(null);
+  const [pdfLaden, setPdfLaden] = useState(false);
 
   // Daten laden (RLS filtert automatisch auf den eingeloggten Nutzer)
   useEffect(() => {
@@ -207,35 +210,125 @@ export default function UmsatzReport() {
     return teile.join('\n');
   }, [a, zeitraum]);
 
+  // PDF-Export: lädt die eigenen Firmendaten aus profiles und erzeugt das PDF
+  async function exportPdf() {
+    setPdfLaden(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let firma: PdfFirma = {};
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select(
+            'firma_name, firma_rechtsform, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_ust_id, firma_steuernummer, firma_geschaeftsfuehrer, firma_akzentfarbe',
+          )
+          .eq('id', user.id)
+          .maybeSingle();
+        if (prof) {
+          firma = {
+            name: prof.firma_name,
+            rechtsform: prof.firma_rechtsform,
+            strasse: prof.firma_strasse,
+            plz: prof.firma_plz,
+            ort: prof.firma_ort,
+            telefon: prof.firma_telefon,
+            email: prof.firma_email,
+            website: prof.firma_website,
+            ustId: prof.firma_ust_id,
+            steuernummer: prof.firma_steuernummer,
+            geschaeftsfuehrer: prof.firma_geschaeftsfuehrer,
+            akzentfarbe: prof.firma_akzentfarbe,
+          };
+        }
+      }
+      erstelleUmsatzReportPdf({
+        firma,
+        zeitraumLabel: zeitraum.label,
+        kpi: {
+          gesamt: a.gesamt,
+          bezahlt: a.bezahlt,
+          offen: a.offen,
+          ueberfaellig: a.ueberfaellig,
+          anzahl: a.anzahl,
+        },
+        vorLabel: a.vorLabel,
+        trendGesamt: a.trends.gesamt,
+        trendBezahlt: a.trends.bezahlt,
+        monate: a.monatsUmsatz,
+        kiText: kiErgebnis?.klartext,
+        kiAktion: kiErgebnis?.aktion,
+      });
+    } catch (e) {
+      console.error('PDF-Export fehlgeschlagen', e);
+      alert('Der PDF-Export ist fehlgeschlagen. Bitte erneut versuchen.');
+    } finally {
+      setPdfLaden(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px' }}>
       {/* ── Einheitlicher Modul-Kopf ── */}
-      <div style={{ marginBottom: 24 }}>
-        <h1
+      <div
+        style={{
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              color: '#C9A84C',
+              fontSize: 30,
+              fontWeight: 800,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <span>📊</span> Umsatz-Report
+          </h1>
+          <p
+            style={{
+              color: '#94a3b8',
+              fontSize: 15,
+              marginTop: 6,
+              maxWidth: 720,
+              lineHeight: 1.5,
+            }}
+          >
+            Umsatzentwicklung, Zahlungseingänge und offene Forderungen auf einen
+            Blick — direkt aus deinen Rechnungen.
+          </p>
+        </div>
+
+        <button
+          onClick={exportPdf}
+          disabled={pdfLaden || laden || !!fehler}
           style={{
-            color: '#C9A84C',
-            fontSize: 30,
-            fontWeight: 800,
-            margin: 0,
-            display: 'flex',
+            flexShrink: 0,
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 8,
+            padding: '10px 18px',
+            borderRadius: 10,
+            border: 'none',
+            background: '#C9A84C',
+            color: '#0A1628',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: pdfLaden || laden || !!fehler ? 'default' : 'pointer',
+            opacity: pdfLaden || laden || !!fehler ? 0.6 : 1,
           }}
         >
-          <span>📊</span> Umsatz-Report
-        </h1>
-        <p
-          style={{
-            color: '#94a3b8',
-            fontSize: 15,
-            marginTop: 6,
-            maxWidth: 720,
-            lineHeight: 1.5,
-          }}
-        >
-          Umsatzentwicklung, Zahlungseingänge und offene Forderungen auf einen
-          Blick — direkt aus deinen Rechnungen.
-        </p>
+          <span>📄</span>
+          {pdfLaden ? 'Erstelle PDF …' : 'Als PDF exportieren'}
+        </button>
       </div>
 
       {/* Zeitraum-Filter (Schnellauswahl + Kalender) */}
@@ -303,6 +396,7 @@ export default function UmsatzReport() {
               modul="Umsatz-Analyse"
               akzent="#C9A84C"
               dunkel
+              onErgebnis={(klartext, aktion) => setKiErgebnis({ klartext, aktion })}
               style={{ marginTop: 20 }}
             />
           )}
