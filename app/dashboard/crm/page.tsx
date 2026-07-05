@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
@@ -256,6 +257,31 @@ export default function CrmCockpitPage() {
       (k) => ampel(k).farbe === C.danger
     ).length;
     return { gesamt, kunden, wiedervorlage, einschlafend };
+  }, [kontakte]);
+
+  // Kompakter, stabiler Kontext für die KI-Klartext-Box: priorisiert vernachlässigte Kunden
+  const crmKiKontext = useMemo(() => {
+    const bewertet = kontakte
+      .map((k) => ({ k, a: ampel(k), tage: tageSeit(k.letzter_kontakt_am) }))
+      .filter((x) => x.a.farbe === C.danger || x.a.farbe === C.warn);
+    if (bewertet.length === 0) return "";
+    const rot = bewertet.filter((x) => x.a.farbe === C.danger).length;
+    const gelb = bewertet.filter((x) => x.a.farbe === C.warn).length;
+    const name = (k: Kontakt) =>
+      [k.vorname, k.nachname].filter(Boolean).join(" ") || k.firma || "Unbenannt";
+    const zeile = (x: { k: Kontakt; tage: number | null }) => {
+      const firma = x.k.firma ? ` (${x.k.firma})` : "";
+      const status = x.k.status ? `, Status: ${x.k.status}` : "";
+      const dauer = x.tage !== null ? `${x.tage} Tage kein Kontakt` : "noch kein Kontakt";
+      return `- ${name(x.k)}${firma}: ${dauer}${status}`;
+    };
+    const top = bewertet
+      .slice()
+      .sort((a, b) => (b.tage ?? 0) - (a.tage ?? 0))
+      .slice(0, 3)
+      .map(zeile)
+      .join("\n");
+    return `${rot} Kunde(n) überfällig, ${gelb} bald fällig für Betreuung.\nAm längsten vernachlässigt:\n${top}`;
   }, [kontakte]);
 
   function dialogNeu() {
@@ -862,6 +888,17 @@ export default function CrmCockpitPage() {
             farbe={C.danger}
           />
         </div>
+
+        {/* KI-Klartext: priorisiert vernachlässigte Kunden */}
+        {!laden && !fehler && crmKiKontext !== "" && (
+          <KiKlartext
+            kontext={crmKiKontext}
+            modul="CRM / Kundenbetreuung"
+            akzent={kpi.einschlafend > 0 ? C.danger : C.warn}
+            dunkel
+            style={{ marginBottom: 24 }}
+          />
+        )}
 
         {/* Filterleiste */}
         <div
