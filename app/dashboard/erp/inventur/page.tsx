@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../../_components/KiKlartext";
+import { erstelleInventurProtokollPdf } from "../../_components/inventurProtokollPdf";
 
 const C = {
   navy: "#0A1628",
@@ -64,6 +65,9 @@ export default function InventurSeite() {
   const [speichern, setSpeichern] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
+  const [kiText, setKiText] = useState<string | null>(null);
+  const [kiAktion, setKiAktion] = useState<string | null>(null);
+  const [pdfLaedt, setPdfLaedt] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -182,6 +186,59 @@ export default function InventurSeite() {
     }
   }
 
+  async function protokollDrucken() {
+    setPdfLaedt(true);
+    setMeldung(null);
+    try {
+      const { data: prof } = await supabase.from("profiles").select("*").limit(1).maybeSingle();
+      const pr = (prof ?? {}) as Record<string, unknown>;
+      const g = (k: string): string | null => {
+        const v = pr[k];
+        return v == null ? null : String(v);
+      };
+      const firma = {
+        name: g("firma_name"),
+        rechtsform: g("rechtsform"),
+        strasse: g("strasse"),
+        plz: g("plz"),
+        ort: g("ort"),
+        telefon: g("telefon") ?? g("firma_telefon"),
+        email: g("email") ?? g("firma_email"),
+        website: g("website") ?? g("firma_website"),
+        ustId: g("ust_id"),
+        steuernummer: g("steuernummer"),
+        geschaeftsfuehrer: g("geschaeftsfuehrer"),
+        akzentfarbe: g("akzentfarbe"),
+      };
+      const positionen = artikel.map((a) => {
+        const soll = Number(a.aktueller_bestand ?? 0);
+        const istVal = parseIst(ist[a.id]);
+        const wertDiff = istVal === null ? null : (istVal - soll) * Number(a.einkaufspreis ?? 0);
+        return {
+          bezeichnung: a.bezeichnung,
+          artikelnummer: a.artikelnummer,
+          einheit: a.einheit,
+          soll,
+          ist: istVal,
+          wertDiff,
+        };
+      });
+      const stichtag = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
+      erstelleInventurProtokollPdf({
+        firma,
+        stichtag,
+        kpi: { gesamt: kpi.gesamt, gezaehlt: kpi.gezaehlt, abweichungen: kpi.abweichungen, wertDiff: kpi.wertDiff },
+        positionen,
+        kiText,
+        kiAktion,
+      });
+    } catch (e: unknown) {
+      setMeldung("PDF konnte nicht erstellt werden: " + (e instanceof Error ? e.message : "Fehler"));
+    } finally {
+      setPdfLaedt(false);
+    }
+  }
+
   const kacheln: { label: string; wert: string; farbe: string; sub?: string }[] = [
     { label: "Artikel gesamt", wert: String(kpi.gesamt), farbe: C.cyan },
     { label: "Bereits gezählt", wert: `${kpi.gezaehlt} / ${kpi.gesamt}`, farbe: C.gold },
@@ -265,7 +322,7 @@ export default function InventurSeite() {
 
       {/* KI-Klartext */}
       {!laden && (
-        <KiKlartext kontext={kiKontext} modul="ERP / Inventur" akzent={kopfFarbe} dunkel style={{ marginBottom: 16 }} />
+        <KiKlartext kontext={kiKontext} modul="ERP / Inventur" akzent={kopfFarbe} dunkel style={{ marginBottom: 16 }} onErgebnis={(kt, ak) => { setKiText(kt); setKiAktion(ak); }} />
       )}
 
       {/* Aktionsleiste */}
@@ -303,6 +360,24 @@ export default function InventurSeite() {
           }}
         >
           {speichern ? "Speichert …" : "Zählung speichern"}
+        </button>
+        <button
+          onClick={protokollDrucken}
+          disabled={pdfLaedt || laden}
+          style={{
+            background: "transparent",
+            color: C.gold,
+            border: `1px solid ${C.gold}`,
+            borderRadius: 8,
+            padding: "10px 18px",
+            fontWeight: 700,
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            cursor: pdfLaedt || laden ? "default" : "pointer",
+            opacity: pdfLaedt || laden ? 0.6 : 1,
+          }}
+        >
+          {pdfLaedt ? "Erstellt …" : "📄 Protokoll (PDF)"}
         </button>
         {meldung && (
           <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>{meldung}</span>
