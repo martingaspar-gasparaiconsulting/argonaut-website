@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../_components/KiKlartext";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -32,6 +33,7 @@ type Rechnung = {
   zahlungsstatus: string;
   rechnungsdatum: string | null;
   faelligkeitsdatum: string | null;
+  bezahlt_am: string | null;
   netto_summe: number | null;
   mwst_summe: number | null;
   brutto_summe: number | null;
@@ -127,7 +129,7 @@ export default function RechnungenCockpit() {
         const { data: rData, error: rErr } = await supabase
           .from("rechnungen")
           .select(
-            "id,rechnungsnummer,titel,kontakt_id,firma_id,auftrag_id,zahlungsstatus,rechnungsdatum,faelligkeitsdatum,netto_summe,mwst_summe,brutto_summe,bezahlter_betrag,waehrung,kleinunternehmer"
+            "id,rechnungsnummer,titel,kontakt_id,firma_id,auftrag_id,zahlungsstatus,rechnungsdatum,faelligkeitsdatum,bezahlt_am,netto_summe,mwst_summe,brutto_summe,bezahlter_betrag,waehrung,kleinunternehmer"
           )
           .order("rechnungsdatum", { ascending: false })
           .order("created_at", { ascending: false });
@@ -230,6 +232,64 @@ export default function RechnungenCockpit() {
     });
   }, [rechnungen, suche, statusFilter, kontaktMap, firmaMap]);
 
+  // DSO (Ø Zahlungsdauer bezahlter Rechnungen) + überfällige Posten
+  const zahlungsAnalyse = useMemo(() => {
+    // DSO: bezahlt_am − rechnungsdatum, gemittelt über bezahlte Rechnungen
+    const bezahlteMitDaten = rechnungen.filter(
+      (r) => r.zahlungsstatus === "bezahlt" && r.rechnungsdatum && r.bezahlt_am
+    );
+    let dso: number | null = null;
+    if (bezahlteMitDaten.length > 0) {
+      const summeTage = bezahlteMitDaten.reduce((s, r) => {
+        const rd = new Date(r.rechnungsdatum as string).getTime();
+        const bz = new Date(r.bezahlt_am as string).getTime();
+        const tage = Math.round((bz - rd) / 86_400_000);
+        return s + Math.max(0, tage);
+      }, 0);
+      dso = Math.round(summeTage / bezahlteMitDaten.length);
+    }
+
+    // Überfällige offene/teilbezahlte Rechnungen (älteste zuerst)
+    const ueberfaellig = rechnungen
+      .filter((r) => {
+        if (r.zahlungsstatus !== "offen" && r.zahlungsstatus !== "teilbezahlt") return false;
+        const t = tageBisFaellig(r.faelligkeitsdatum);
+        return t !== null && t < 0;
+      })
+      .map((r) => {
+        const t = tageBisFaellig(r.faelligkeitsdatum) ?? 0;
+        const empf =
+          (r.kontakt_id && kontaktMap[r.kontakt_id]) ||
+          (r.firma_id && firmaMap[r.firma_id]) ||
+          r.titel ||
+          "Unbenannt";
+        const offenerBetrag = (r.brutto_summe || 0) - (r.bezahlter_betrag || 0);
+        return { empf, tageUeber: Math.abs(t), offenerBetrag, nummer: r.rechnungsnummer || "—" };
+      })
+      .sort((a, b) => b.tageUeber - a.tageUeber);
+
+    return { dso, ueberfaellig };
+  }, [rechnungen, kontaktMap, firmaMap]);
+
+  // Kompakter, stabiler Kontext für die KI-Klartext-Box
+  const rechnungenKiKontext = useMemo(() => {
+    const { dso, ueberfaellig } = zahlungsAnalyse;
+    const teile: string[] = [];
+    teile.push(`Offene Forderungen gesamt: ${eur(kpis.offen + kpis.ueberfaellig)}.`);
+    if (dso !== null) teile.push(`Kunden zahlen im Schnitt nach ${dso} Tagen (DSO).`);
+    if (ueberfaellig.length === 0) {
+      teile.push("Aktuell keine überfälligen Rechnungen.");
+    } else {
+      const summeUeber = ueberfaellig.reduce((s, u) => s + u.offenerBetrag, 0);
+      teile.push(`${ueberfaellig.length} Rechnung(en) überfällig, Summe ${eur(summeUeber)}.`);
+      const top = ueberfaellig
+        .slice(0, 3)
+        .map((u) => `- ${u.empf} (${u.nummer}): ${u.tageUeber} Tage über Ziel, ${eur(u.offenerBetrag)} offen`);
+      teile.push("Am längsten überfällig:\n" + top.join("\n"));
+    }
+    return teile.join("\n");
+  }, [zahlungsAnalyse, kpis]);
+
   return (
     <div
       style={{
@@ -291,7 +351,23 @@ export default function RechnungenCockpit() {
             wert={eur(kpis.umsatz)}
             farbe={C.gold}
           />
+          <KpiCard
+            label="Ø Zahlungsdauer (DSO)"
+            wert={zahlungsAnalyse.dso !== null ? `${zahlungsAnalyse.dso} Tage` : "—"}
+            farbe={C.lila}
+          />
         </div>
+
+        {/* KI-Klartext: priorisiert offene / überfällige Forderungen */}
+        {!laden && !fehler && (kpis.offen > 0 || kpis.ueberfaellig > 0) && (
+          <KiKlartext
+            kontext={rechnungenKiKontext}
+            modul="Rechnungen / offene Forderungen"
+            akzent={kpis.ueberfaellig > 0 ? C.danger : C.cyan}
+            dunkel
+            style={{ marginBottom: 24 }}
+          />
+        )}
 
         {/* Suche + Filter */}
         <div
