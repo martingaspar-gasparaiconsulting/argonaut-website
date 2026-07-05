@@ -46,7 +46,7 @@ export default function ErpLayout({
 }) {
   const pathname = usePathname();
   return (
-    <div>
+    <div style={{ paddingBottom: 80 }}>
       <div
         style={{
           maxWidth: 1400,
