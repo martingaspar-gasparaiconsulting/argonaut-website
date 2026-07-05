@@ -370,7 +370,7 @@ export default function FuhrparkCockpit() {
   );
 
   return (
-    <div style={{ color: "#fff", maxWidth: 1400, margin: "0 auto" }}>
+    <div style={{ color: "#fff", maxWidth: 1400, margin: "0 auto", paddingBottom: 80 }}>
       <div
         style={{
           display: "flex",
