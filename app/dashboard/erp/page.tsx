@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E2 Lager-Cockpit
@@ -184,6 +185,40 @@ export default function LagerCockpit() {
       sum + (Number(a.aktueller_bestand) || 0) * (Number(a.einkaufspreis) || 0),
     0
   );
+
+  // Lieferant-Name je ID (für die KI-Empfehlung "bei wem nachbestellen")
+  const lieferantNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    lieferanten.forEach((l) => {
+      m[l.id] = l.name;
+    });
+    return m;
+  }, [lieferanten]);
+
+  // KI-Kontext: kritische Artikel unter Mindestbestand priorisieren
+  const lagerKiKontext = useMemo(() => {
+    const kritisch = artikel.filter((a) => {
+      if (!a.aktiv) return false;
+      const bestand = Number(a.aktueller_bestand) || 0;
+      const min = Number(a.mindestbestand) || 0;
+      return bestand <= 0 || (min > 0 && bestand <= min);
+    });
+    if (kritisch.length === 0) return "";
+    const bewertet = kritisch
+      .map((a) => {
+        const bestand = Number(a.aktueller_bestand) || 0;
+        const min = Number(a.mindestbestand) || 0;
+        const lief = a.lieferant_id ? lieferantNameById[a.lieferant_id] || "" : "";
+        return { a, bestand, min, fehlmenge: Math.max(0, min - bestand), lief };
+      })
+      .sort((x, y) => y.fehlmenge - x.fehlmenge);
+    const zeile = (b: (typeof bewertet)[number]) => {
+      const liefTxt = b.lief ? `, Lieferant: ${b.lief}` : "";
+      return `- ${b.a.bezeichnung}: Bestand ${num(b.bestand)} ${b.a.einheit}, Mindest ${num(b.min)}${liefTxt}`;
+    };
+    const top = bewertet.slice(0, 4).map(zeile).join("\n");
+    return `${kritisch.length} Artikel unter Mindestbestand.\nAm dringendsten:\n${top}`;
+  }, [artikel, lieferantNameById]);
 
   function oeffneNeu() {
     setBearbeiteId(null);
@@ -412,6 +447,17 @@ export default function LagerCockpit() {
           </div>
         </div>
       </div>
+
+      {/* KI-Klartext: priorisiert Artikel unter Mindestbestand */}
+      {!laden && lagerKiKontext !== "" && (
+        <KiKlartext
+          kontext={lagerKiKontext}
+          modul="Lager / Nachbestellung"
+          akzent={C.danger}
+          dunkel
+          style={{ marginBottom: 20 }}
+        />
+      )}
 
       {/* Toolbar */}
       <div
