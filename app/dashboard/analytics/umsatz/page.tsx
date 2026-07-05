@@ -25,6 +25,7 @@ import {
 import ZeitraumFilter, {
   type Zeitraum,
   imZeitraum,
+  vorperiode,
   ZEITRAUM_ALLES,
 } from '../../_components/ZeitraumFilter';
 
@@ -96,27 +97,46 @@ export default function UmsatzReport() {
       (r) => (r.zahlungsstatus ?? '') !== 'entwurf',
     );
 
-    // KPIs beziehen sich auf den gewählten Zeitraum (nach Rechnungsdatum)
-    const imBereich = gestellt.filter((r) => imZeitraum(r.rechnungsdatum, zeitraum));
-
-    let gesamt = 0;
-    let bezahlt = 0;
-    let offen = 0;
-    let ueberfaellig = 0;
-
-    for (const r of imBereich) {
-      const brutto = Number(r.brutto_summe ?? 0);
-      const gezahlt = Number(r.bezahlter_betrag ?? 0);
-      const rest = Math.max(brutto - gezahlt, 0);
-      gesamt += brutto;
-      bezahlt += gezahlt;
-      offen += rest;
-      if (rest > 0 && r.faelligkeitsdatum) {
-        const faellig = new Date(r.faelligkeitsdatum);
-        faellig.setHours(0, 0, 0, 0);
-        if (faellig < heute) ueberfaellig += rest;
+    // KPI-Berechnung als wiederverwendbare Funktion (Zeitraum + Vorperiode)
+    function kpiFuer(liste: Rechnung[]) {
+      let gesamt = 0;
+      let bezahlt = 0;
+      let offen = 0;
+      let ueberfaellig = 0;
+      for (const r of liste) {
+        const brutto = Number(r.brutto_summe ?? 0);
+        const gezahlt = Number(r.bezahlter_betrag ?? 0);
+        const rest = Math.max(brutto - gezahlt, 0);
+        gesamt += brutto;
+        bezahlt += gezahlt;
+        offen += rest;
+        if (rest > 0 && r.faelligkeitsdatum) {
+          const faellig = new Date(r.faelligkeitsdatum);
+          faellig.setHours(0, 0, 0, 0);
+          if (faellig < heute) ueberfaellig += rest;
+        }
       }
+      return { gesamt, bezahlt, offen, ueberfaellig };
     }
+
+    // Aktueller Zeitraum
+    const imBereich = gestellt.filter((r) => imZeitraum(r.rechnungsdatum, zeitraum));
+    const { gesamt, bezahlt, offen, ueberfaellig } = kpiFuer(imBereich);
+
+    // Vorperiode (gleich lang / echter Vor-Kalenderzeitraum)
+    const vp = vorperiode(zeitraum);
+    const vorKpi = vp ? kpiFuer(gestellt.filter((r) => imZeitraum(r.rechnungsdatum, vp))) : null;
+
+    // Trend in % (undefined = kein sinnvoller Vergleich, z. B. Vorperiode leer)
+    const trendProzent = (aktuell: number, vor: number | undefined): number | undefined => {
+      if (vor === undefined || vor <= 0) return undefined;
+      return Math.round(((aktuell - vor) / vor) * 100);
+    };
+    const trends = {
+      gesamt: trendProzent(gesamt, vorKpi?.gesamt),
+      bezahlt: trendProzent(bezahlt, vorKpi?.bezahlt),
+    };
+    const vorLabel = vp?.label ?? null;
 
     // Umsatz pro Monat — letzte 12 Monate vorbelegen (auch leere Monate)
     const monatMap = new Map<string, number>();
@@ -162,6 +182,8 @@ export default function UmsatzReport() {
       monatsUmsatz,
       statusVerteilung,
       anzahl: imBereich.length,
+      trends,
+      vorLabel,
     };
   }, [rechnungen, zeitraum]);
 
@@ -226,7 +248,8 @@ export default function UmsatzReport() {
               wert={euro(a.gesamt)}
               einheit="€"
               icon="💶"
-              unterzeile={`${a.anzahl} Rechnung${a.anzahl === 1 ? '' : 'en'}`}
+              trend={a.trends.gesamt}
+              unterzeile={a.vorLabel ? `vs. ${a.vorLabel}` : `${a.anzahl} Rechnung${a.anzahl === 1 ? '' : 'en'}`}
             />
             <KpiKarte
               titel="Bezahlt (eingegangen)"
@@ -234,6 +257,8 @@ export default function UmsatzReport() {
               einheit="€"
               icon="✅"
               akzentFarbe="#22c55e"
+              trend={a.trends.bezahlt}
+              unterzeile={a.vorLabel ? `vs. ${a.vorLabel}` : undefined}
             />
             <KpiKarte
               titel="Offen"

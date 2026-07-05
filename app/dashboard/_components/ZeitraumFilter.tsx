@@ -122,6 +122,53 @@ export function imZeitraum(datum: string | null | undefined, z: Zeitraum): boole
 // Standard-Startwert für Reports
 export const ZEITRAUM_ALLES: Zeitraum = { modus: 'alles', von: null, bis: null, label: 'Gesamter Zeitraum' };
 
+// ── Vergleichs-Zeitraum (Vorperiode) berechnen ────────────────────────────
+// Kalendarische Modi -> echter Vor-Kalenderzeitraum (Vormonat, Vorquartal …).
+// Tage-/Frei-Modi -> gleich lange Periode direkt davor. "alles" -> null.
+export function vorperiode(z: Zeitraum): Zeitraum | null {
+  if (z.modus === 'alles' || z.von === null || z.bis === null) return null;
+  const v = z.von;
+
+  switch (z.modus) {
+    case 'dieser_monat':
+      return {
+        modus: 'frei',
+        von: new Date(v.getFullYear(), v.getMonth() - 1, 1),
+        bis: new Date(v.getFullYear(), v.getMonth(), 0, 23, 59, 59, 999),
+        label: 'Vormonat',
+      };
+    case 'dieses_quartal':
+    case 'letztes_quartal':
+      return {
+        modus: 'frei',
+        von: new Date(v.getFullYear(), v.getMonth() - 3, 1),
+        bis: new Date(v.getFullYear(), v.getMonth(), 0, 23, 59, 59, 999),
+        label: 'Vorquartal',
+      };
+    case 'dieses_halbjahr':
+      return {
+        modus: 'frei',
+        von: new Date(v.getFullYear(), v.getMonth() - 6, 1),
+        bis: new Date(v.getFullYear(), v.getMonth(), 0, 23, 59, 59, 999),
+        label: 'Vorhalbjahr',
+      };
+    case 'dieses_jahr':
+      return {
+        modus: 'frei',
+        von: new Date(v.getFullYear() - 1, 0, 1),
+        bis: new Date(v.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
+        label: 'Vorjahr',
+      };
+    default: {
+      // letzte_30/60/90/120 und frei: gleich lange Periode unmittelbar davor
+      const dauer = z.bis.getTime() - v.getTime();
+      const bisVor = new Date(v.getTime() - 1);
+      const vonVor = new Date(v.getTime() - 1 - dauer);
+      return { modus: 'frei', von: vonVor, bis: bisVor, label: 'Vorperiode' };
+    }
+  }
+}
+
 // ── Schnellauswahl-Liste ──────────────────────────────────────────────────
 const SCHNELL: { modus: ZeitraumModus; label: string }[] = [
   { modus: 'dieser_monat', label: 'Dieser Monat' },
