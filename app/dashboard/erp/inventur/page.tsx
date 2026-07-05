@@ -68,6 +68,8 @@ export default function InventurSeite() {
   const [kiText, setKiText] = useState<string | null>(null);
   const [kiAktion, setKiAktion] = useState<string | null>(null);
   const [pdfLaedt, setPdfLaedt] = useState(false);
+  const [korrekturOffen, setKorrekturOffen] = useState(false);
+  const [korrigiert, setKorrigiert] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -127,6 +129,20 @@ export default function InventurSeite() {
       }
     }
     return { gesamt: artikel.length, gezaehlt, abweichungen, wertDiff, groessteAbw };
+  }, [artikel, ist]);
+
+  // Artikel, die gezaehlt wurden UND eine Abweichung haben (nur diese werden korrigiert)
+  const zuKorrigieren = useMemo(() => {
+    const liste: { a: Artikel; soll: number; istVal: number; diff: number; wertDiff: number }[] = [];
+    for (const a of artikel) {
+      const soll = Number(a.aktueller_bestand ?? 0);
+      const istVal = parseIst(ist[a.id]);
+      if (istVal === null) continue;
+      const diff = istVal - soll;
+      if (diff === 0) continue;
+      liste.push({ a, soll, istVal, diff, wertDiff: diff * Number(a.einkaufspreis ?? 0) });
+    }
+    return liste;
   }, [artikel, ist]);
 
   const kopfFarbe = kpi.abweichungen > 0 ? C.danger : kpi.gezaehlt > 0 ? C.green : C.textDim;
@@ -236,6 +252,45 @@ export default function InventurSeite() {
       setMeldung("PDF konnte nicht erstellt werden: " + (e instanceof Error ? e.message : "Fehler"));
     } finally {
       setPdfLaedt(false);
+    }
+  }
+
+  async function bestandKorrigieren() {
+    setKorrigiert(true);
+    setMeldung(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) {
+        setMeldung("Nicht angemeldet – bitte neu einloggen.");
+        setKorrigiert(false);
+        return;
+      }
+      // 1) Zaehlungen als Historie sichern
+      const zRows = zuKorrigieren.map(({ a, soll, istVal }) => ({
+        owner_user_id: uid,
+        artikel_id: a.id,
+        artikel_name: a.bezeichnung,
+        einheit: a.einheit,
+        soll_bestand: soll,
+        ist_bestand: istVal,
+        gezaehlt_am: new Date().toISOString(),
+      }));
+      if (zRows.length > 0) {
+        await supabase.from("inventur_zaehlung").upsert(zRows, { onConflict: "owner_user_id,artikel_id" });
+      }
+      // 2) Lager-Bestand auf den gezaehlten Ist-Wert korrigieren
+      for (const { a, istVal } of zuKorrigieren) {
+        const { error } = await supabase.from("artikel").update({ aktueller_bestand: istVal }).eq("id", a.id);
+        if (error) throw error;
+      }
+      setMeldung(`Bestand von ${zuKorrigieren.length} Artikel korrigiert.`);
+      setKorrekturOffen(false);
+      await laden_();
+    } catch (e: unknown) {
+      setMeldung("Korrektur fehlgeschlagen: " + (e instanceof Error ? e.message : "Fehler"));
+    } finally {
+      setKorrigiert(false);
     }
   }
 
@@ -379,6 +434,25 @@ export default function InventurSeite() {
         >
           {pdfLaedt ? "Erstellt …" : "📄 Protokoll (PDF)"}
         </button>
+        <button
+          onClick={() => setKorrekturOffen(true)}
+          disabled={laden || zuKorrigieren.length === 0}
+          title={zuKorrigieren.length === 0 ? "Erst Artikel mit Abweichung zaehlen" : "Ist-Bestand ins Lager uebernehmen"}
+          style={{
+            background: "transparent",
+            color: C.cyan,
+            border: `1px solid ${C.cyan}`,
+            borderRadius: 8,
+            padding: "10px 18px",
+            fontWeight: 700,
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            cursor: laden || zuKorrigieren.length === 0 ? "default" : "pointer",
+            opacity: laden || zuKorrigieren.length === 0 ? 0.5 : 1,
+          }}
+        >
+          Bestand korrigieren{zuKorrigieren.length > 0 ? ` (${zuKorrigieren.length})` : ""}
+        </button>
         {meldung && (
           <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>{meldung}</span>
         )}
@@ -503,6 +577,111 @@ export default function InventurSeite() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Bestaetigungs-Modal fuer die Bestandskorrektur */}
+      {korrekturOffen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(3,8,16,0.65)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => !korrigiert && setKorrekturOffen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: C.navy2,
+              border: `1px solid ${C.cyan}`,
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 560,
+              width: "100%",
+              maxHeight: "82vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            }}
+          >
+            <h3 style={{ margin: "0 0 8px", color: C.text, fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800 }}>
+              Bestand ins Lager übernehmen?
+            </h3>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 14, lineHeight: 1.5 }}>
+              Der System-Bestand der folgenden <strong style={{ color: C.text }}>{zuKorrigieren.length}</strong> Artikel wird
+              auf den gezählten Ist-Wert gesetzt. Diese Änderung wirkt direkt im Lager und wird nicht automatisch rückgängig gemacht.
+            </p>
+
+            <div style={{ display: "grid", gap: 6, marginBottom: 16 }}>
+              {zuKorrigieren.map(({ a, soll, istVal, diff }) => (
+                <div
+                  key={a.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <span style={{ flex: 1, minWidth: 0, color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {a.bezeichnung}
+                  </span>
+                  <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                    {fmtNum(soll)} → {fmtNum(istVal)} {a.einheit || ""}
+                  </span>
+                  <span style={{ color: C.danger, fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, minWidth: 44, textAlign: "right" }}>
+                    {diff > 0 ? "+" : ""}{fmtNum(diff)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                onClick={() => setKorrekturOffen(false)}
+                disabled={korrigiert}
+                style={{
+                  background: "transparent",
+                  color: C.textDim,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 8,
+                  padding: "10px 16px",
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                  cursor: korrigiert ? "default" : "pointer",
+                }}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={bestandKorrigieren}
+                disabled={korrigiert}
+                style={{
+                  background: C.cyan,
+                  color: C.navy,
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 18px",
+                  fontWeight: 800,
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 14,
+                  cursor: korrigiert ? "default" : "pointer",
+                  opacity: korrigiert ? 0.6 : 1,
+                }}
+              >
+                {korrigiert ? "Korrigiert …" : "Ja, Bestand korrigieren"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
