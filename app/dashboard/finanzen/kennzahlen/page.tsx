@@ -75,6 +75,15 @@ export default function FinanzKennzahlen() {
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [ausgaben, setAusgaben] = useState<Ausgabe[]>([]);
 
+  // #C Anzahl fälliger Prüf-Erinnerungen (über alle Rechner)
+  const [faelligAnzahl, setFaelligAnzahl] = useState(0);
+  async function ladeFaellig() {
+    const { data } = await supabase.from("finanz_szenarien").select("pruef_am");
+    const heute = heuteISO();
+    const n = (data || []).filter((r: any) => r.pruef_am && r.pruef_am <= heute).length;
+    setFaelligAnzahl(n);
+  }
+
   useEffect(() => {
     (async () => {
       setLaden(true);
@@ -86,6 +95,7 @@ export default function FinanzKennzahlen() {
         router.push("/login");
         return;
       }
+      ladeFaellig();
       try {
         const [zRes, rRes, aRes] = await Promise.all([
           supabase.from("zahlungen").select("betrag,zahlungsdatum,rechnung_id"),
@@ -238,6 +248,26 @@ export default function FinanzKennzahlen() {
               </div>
             )}
 
+            {/* #C Fällige Prüf-Erinnerungen */}
+            {faelligAnzahl > 0 && (
+              <div
+                style={{
+                  marginBottom: 20,
+                  background: "rgba(224,102,102,0.1)",
+                  border: `1px solid ${C.danger}`,
+                  borderRadius: 12,
+                  padding: "12px 16px",
+                  color: C.danger,
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                🔔 {faelligAnzahl} gespeichertes Szenario
+                {faelligAnzahl === 1 ? " ist" : "e sind"} zur Prüfung fällig – schau bei den markierten
+                Einträgen unten, ob die Zahlen noch stimmen.
+              </div>
+            )}
+
             {/* RECHNER */}
             <div style={{ ...sektionLabel, marginBottom: 14 }}>Rechner</div>
             <div
@@ -249,6 +279,7 @@ export default function FinanzKennzahlen() {
             >
               <Rechner
                 typ="deckungsbeitrag"
+                onAenderung={ladeFaellig}
                 titel="Deckungsbeitrag"
                 unterzeile="Was pro Stück nach den variablen Kosten übrig bleibt"
                 farbe={C.cyan}
@@ -278,6 +309,7 @@ export default function FinanzKennzahlen() {
 
               <Rechner
                 typ="break_even"
+                onAenderung={ladeFaellig}
                 titel="Break-Even (Gewinnschwelle)"
                 unterzeile="Ab wie vielen Verkäufen du in die Gewinnzone kommst"
                 farbe={C.green}
@@ -309,6 +341,7 @@ export default function FinanzKennzahlen() {
 
               <Rechner
                 typ="sicherheitsmarge"
+                onAenderung={ladeFaellig}
                 titel="Sicherheitsmarge"
                 unterzeile="Wie weit dein Umsatz sinken darf, bevor es kritisch wird"
                 farbe={C.lila}
@@ -336,6 +369,7 @@ export default function FinanzKennzahlen() {
 
               <Rechner
                 typ="roi"
+                onAenderung={ladeFaellig}
                 titel="ROI (Kapitalrendite)"
                 unterzeile="Wie gut sich eine Investition rechnet"
                 farbe={C.gold}
@@ -414,6 +448,7 @@ type Szenario = {
   name: string;
   eingaben: Record<string, string>;
   ergebnis: { ergebnisse?: { label: string; wert: string; gross?: boolean }[] } | null;
+  pruef_am: string | null;
   created_at: string;
 };
 
@@ -424,6 +459,22 @@ function zusammenfassung(s: Szenario): string {
   return `${g.label}: ${g.wert}`;
 }
 
+// #C Kalender-Erinnerung: lokales Datum (kein UTC-Versatz)
+function heuteISO(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const t = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${t}`;
+}
+function istFaellig(pruef_am: string | null): boolean {
+  return !!pruef_am && pruef_am <= heuteISO();
+}
+function datumDe(iso: string | null): string {
+  if (!iso) return "—";
+  const [j, m, t] = iso.split("-");
+  return t && m && j ? `${t}.${m}.${j}` : iso;
+}
+
 function Rechner({
   typ,
   titel,
@@ -431,6 +482,7 @@ function Rechner({
   farbe,
   felder,
   berechne,
+  onAenderung,
 }: {
   typ: string;
   titel: string;
@@ -438,6 +490,7 @@ function Rechner({
   farbe: string;
   felder: Feld[];
   berechne: (werte: Record<string, number>) => RechnerErgebnis;
+  onAenderung?: () => void;
 }) {
   const [werte, setWerte] = useState<Record<string, string>>({});
 
@@ -454,7 +507,7 @@ function Rechner({
   async function ladeSzenarien() {
     const { data } = await supabase
       .from("finanz_szenarien")
-      .select("id,typ,name,eingaben,ergebnis,created_at")
+      .select("id,typ,name,eingaben,ergebnis,pruef_am,created_at")
       .eq("typ", typ)
       .order("created_at", { ascending: false });
     setGespeichert((data as Szenario[]) || []);
@@ -493,6 +546,7 @@ function Rechner({
     setName("");
     setSaveMsg({ text: "Szenario gespeichert.", ok: true });
     await ladeSzenarien();
+    onAenderung?.();
     setSaveBusy(false);
   }
 
@@ -504,6 +558,17 @@ function Rechner({
   async function loeschen(id: string) {
     await supabase.from("finanz_szenarien").delete().eq("id", id);
     await ladeSzenarien();
+    onAenderung?.();
+  }
+
+  // #C Prüf-Erinnerung setzen oder entfernen (datum = null -> entfernen)
+  async function erinnerungSetzen(id: string, datum: string | null) {
+    await supabase
+      .from("finanz_szenarien")
+      .update({ pruef_am: datum || null, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    await ladeSzenarien();
+    onAenderung?.();
   }
 
   return (
@@ -656,64 +721,128 @@ function Rechner({
               <div
                 key={s.id}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
                   background: C.navy,
                   border: `1px solid ${C.border}`,
                   borderRadius: 10,
-                  padding: "9px 12px",
+                  padding: "10px 12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
+                {/* Zeile 1: Name + Ergebnis + Aktionen */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: "#fff",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {s.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textDim }}>{zusammenfassung(s)}</div>
+                  </div>
+                  <button
+                    onClick={() => ladenIns(s)}
+                    title="Werte in den Rechner laden"
                     style={{
-                      fontSize: 13.5,
-                      fontWeight: 600,
-                      color: "#fff",
+                      background: "transparent",
+                      color: farbe,
+                      border: `1px solid ${farbe}77`,
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
                       whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
                     }}
                   >
-                    {s.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: C.textDim }}>{zusammenfassung(s)}</div>
+                    Laden
+                  </button>
+                  <button
+                    onClick={() => loeschen(s.id)}
+                    title="Szenario löschen"
+                    style={{
+                      background: "transparent",
+                      color: C.textDim,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      fontSize: 12.5,
+                      cursor: "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    🗑
+                  </button>
                 </div>
-                <button
-                  onClick={() => ladenIns(s)}
-                  title="Werte in den Rechner laden"
+
+                {/* Zeile 2: Prüf-Erinnerung */}
+                <div
                   style={{
-                    background: "transparent",
-                    color: farbe,
-                    border: `1px solid ${farbe}77`,
-                    borderRadius: 8,
-                    padding: "6px 12px",
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    borderTop: `1px solid ${C.border}`,
+                    paddingTop: 8,
                   }}
                 >
-                  Laden
-                </button>
-                <button
-                  onClick={() => loeschen(s.id)}
-                  title="Szenario löschen"
-                  style={{
-                    background: "transparent",
-                    color: C.textDim,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 8,
-                    padding: "6px 10px",
-                    fontSize: 12.5,
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  🗑
-                </button>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      color: s.pruef_am ? (istFaellig(s.pruef_am) ? C.danger : C.gold) : C.textDim,
+                    }}
+                  >
+                    {s.pruef_am
+                      ? istFaellig(s.pruef_am)
+                        ? `🔔 Prüfung fällig (${datumDe(s.pruef_am)})`
+                        : `🔔 Prüfen am ${datumDe(s.pruef_am)}`
+                      : "🔔 Erinnerung:"}
+                  </span>
+                  <input
+                    type="date"
+                    value={s.pruef_am || ""}
+                    onChange={(e) => erinnerungSetzen(s.id, e.target.value || null)}
+                    style={{
+                      background: C.navy2,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 8,
+                      padding: "5px 8px",
+                      color: "#fff",
+                      fontSize: 12.5,
+                      fontFamily: "'DM Sans', sans-serif",
+                      outline: "none",
+                      colorScheme: "dark",
+                    }}
+                  />
+                  {s.pruef_am && (
+                    <button
+                      onClick={() => erinnerungSetzen(s.id, null)}
+                      title="Erinnerung entfernen"
+                      style={{
+                        background: "transparent",
+                        color: C.textDim,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 8,
+                        padding: "5px 9px",
+                        fontSize: 12.5,
+                        cursor: "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
