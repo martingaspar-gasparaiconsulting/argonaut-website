@@ -192,7 +192,14 @@ export default function InventurSeite() {
       const { error } = await supabase
         .from("inventur_zaehlung")
         .upsert(rows, { onConflict: "owner_user_id,artikel_id" });
-      if (error) throw error;
+      if (error) {
+        setMeldung(
+          `Speichern fehlgeschlagen: ${error.message}. ` +
+          `Es wurden keine Zaehlungen gespeichert – bitte erneut versuchen.`
+        );
+        setSpeichern(false);
+        return;
+      }
       setMeldung(`${rows.length} Zaehlung(en) gespeichert.`);
       await laden_();
     } catch (e: unknown) {
@@ -266,7 +273,8 @@ export default function InventurSeite() {
         setKorrigiert(false);
         return;
       }
-      // 1) Zaehlungen als Historie sichern
+
+      // 1) Zaehlungen als Historie sichern (inventur_zaehlung)
       const zRows = zuKorrigieren.map(({ a, soll, istVal }) => ({
         owner_user_id: uid,
         artikel_id: a.id,
@@ -279,12 +287,71 @@ export default function InventurSeite() {
       if (zRows.length > 0) {
         await supabase.from("inventur_zaehlung").upsert(zRows, { onConflict: "owner_user_id,artikel_id" });
       }
-      // 2) Lager-Bestand auf den gezaehlten Ist-Wert korrigieren
-      for (const { a, istVal } of zuKorrigieren) {
-        const { error } = await supabase.from("artikel").update({ aktueller_bestand: istVal }).eq("id", a.id);
-        if (error) throw error;
+
+      // 2) Lager-Bestand je Artikel korrigieren — Erfolge/Fehler EINZELN sammeln,
+      //    damit die Meldung praezise ist (welcher Artikel fehlgeschlagen ist),
+      //    statt beim ersten Fehler generisch abzubrechen.
+      const erfolgreich: typeof zuKorrigieren = [];
+      const fehlgeschlagen: { name: string; grund: string }[] = [];
+
+      for (const eintrag of zuKorrigieren) {
+        const { a, istVal } = eintrag;
+        const { error } = await supabase
+          .from("artikel")
+          .update({ aktueller_bestand: istVal })
+          .eq("id", a.id);
+        if (error) {
+          fehlgeschlagen.push({ name: a.bezeichnung, grund: error.message });
+        } else {
+          erfolgreich.push(eintrag);
+        }
       }
-      setMeldung(`Bestand von ${zuKorrigieren.length} Artikel korrigiert.`);
+
+      // 3) GoBD-Audit-Log: fuer jede ERFOLGREICHE Korrektur einen
+      //    unveraenderbaren Protokoll-Eintrag anlegen (append-only Tabelle).
+      if (erfolgreich.length > 0) {
+        const auditRows = erfolgreich.map(({ a, soll, istVal, diff, wertDiff }) => ({
+          owner_user_id: uid,
+          artikel_id: a.id,
+          artikel_name: a.bezeichnung,
+          artikelnummer: a.artikelnummer,
+          einheit: a.einheit,
+          soll_bestand: soll,
+          ist_bestand: istVal,
+          differenz: diff,
+          einkaufspreis: a.einkaufspreis,
+          wert_differenz: wertDiff,
+          korrigiert_am: new Date().toISOString(),
+          korrigiert_von: "Bestandskorrektur (Inventur)",
+        }));
+        // Log-Fehler nur still vermerken – die eigentliche Korrektur ist schon erfolgt.
+        const { error: auditError } = await supabase.from("inventur_audit").insert(auditRows);
+        if (auditError) {
+          // Nicht abbrechen: Bestand ist korrigiert. Nur transparent hinweisen.
+          setMeldung(
+            `${erfolgreich.length} Artikel korrigiert, aber das GoBD-Protokoll konnte nicht ` +
+            `geschrieben werden (${auditError.message}). Bitte den Support informieren.`
+          );
+          setKorrekturOffen(false);
+          await laden_();
+          setKorrigiert(false);
+          return;
+        }
+      }
+
+      // 4) Praezise Abschluss-Meldung
+      if (fehlgeschlagen.length === 0) {
+        setMeldung(
+          `Bestand von ${erfolgreich.length} Artikel korrigiert und im GoBD-Protokoll gespeichert.`
+        );
+      } else {
+        const namen = fehlgeschlagen.map((f) => f.name).join(", ");
+        setMeldung(
+          `${erfolgreich.length} von ${zuKorrigieren.length} Artikeln korrigiert. ` +
+          `Fehlgeschlagen (${fehlgeschlagen.length}): ${namen}. ` +
+          `Grund beim ersten: ${fehlgeschlagen[0].grund}`
+        );
+      }
       setKorrekturOffen(false);
       await laden_();
     } catch (e: unknown) {
