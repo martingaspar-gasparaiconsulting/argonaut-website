@@ -45,6 +45,17 @@ const STUFE_FARBE: Record<number, string> = {
   3: "#B03030",
 };
 
+// #1 Mahngebühren je Stufe (in EUR) — bewusst 0 bei der Zahlungserinnerung. Anpassbar.
+const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10 };
+
+// #2 Verzugszinsen p.a. — B2B: Basiszinssatz + 9 Prozentpunkte (§ 288 Abs. 2 BGB).
+// Basiszinssatz ab 01.07.2026 = 1,52 % (Deutsche Bundesbank) -> 1,52 + 9 = 10,52 %.
+// WICHTIG: halbjährlich prüfen (jeweils 1.1. und 1.7.) und ggf. anpassen.
+// Verbrauchergeschäfte (§ 288 Abs. 1) = Basiszinssatz + 5 Prozentpunkte.
+const BASISZINS_PROZENT = 1.52;
+const VERZUGSZINS_AUFSCHLAG = 9;
+const VERZUGSZINS_PROZENT = BASISZINS_PROZENT + VERZUGSZINS_AUFSCHLAG; // 10,52
+
 type HistorieEintrag = {
   id: string;
   rechnung_id: string;
@@ -209,6 +220,22 @@ export default function MahnungErstellen() {
     return t !== null && t < 0 ? Math.abs(t) : 0;
   }, [rechnung]);
 
+  // #1 Mahngebühr: aus der gewählten Stufe (0 bei Zahlungserinnerung)
+  const mahngebuehr = useMemo(() => MAHN_GEBUEHR[stufe] ?? 0, [stufe]);
+
+  // #2 Verzugszinsen: erst ab 1. Mahnung, taggenau ohne Zinseszins
+  //    Zinsen = offener Betrag × Satz% × (Tage / 365)
+  const verzugszinsen = useMemo(() => {
+    if (stufe < 2 || tageUeberfaellig <= 0) return 0;
+    return Math.round(offenerRest * (VERZUGSZINS_PROZENT / 100) * (tageUeberfaellig / 365) * 100) / 100;
+  }, [stufe, tageUeberfaellig, offenerRest]);
+
+  // Gesamtforderung = offener Betrag + Mahngebühr + Verzugszinsen
+  const gesamtforderung = useMemo(
+    () => Math.round((offenerRest + mahngebuehr + verzugszinsen) * 100) / 100,
+    [offenerRest, mahngebuehr, verzugszinsen]
+  );
+
   // ---------- KI: Mahntext entwerfen ----------
   async function entwerfen() {
     if (kiBusy) return;
@@ -229,6 +256,11 @@ export default function MahnungErstellen() {
             tage_ueberfaellig: tageUeberfaellig,
             empfaenger_name: empfaengerName,
             absender_name: firmenprofil?.firma_name || "",
+            // #1/#2: Zuschläge + Gesamtforderung, damit die KI sie im Text nennt
+            mahngebuehr,
+            verzugszinsen,
+            zins_satz: VERZUGSZINS_PROZENT,
+            gesamtforderung,
           },
         }),
       });
@@ -288,6 +320,12 @@ export default function MahnungErstellen() {
             waehrung: rechnung?.waehrung || "EUR",
             brutto_summe: rechnung?.brutto_summe || 0,
             offener_betrag: offenerRest,
+            // #1/#2: Forderungsaufstellung fürs PDF
+            mahngebuehr,
+            verzugszinsen,
+            zins_satz: VERZUGSZINS_PROZENT,
+            zins_tage: tageUeberfaellig,
+            gesamtforderung,
           },
           empfaengerName,
           firmaName: firma ? firmaName(firma) : "",
@@ -332,10 +370,11 @@ export default function MahnungErstellen() {
       stufe,
       stufe_label: STUFE_LABEL[stufe],
       betrag_offen: offenerRest,
+      gebuehr_betrag: mahngebuehr,
+      zins_betrag: verzugszinsen,
       tage_ueberfaellig: tageUeberfaellig,
       kanal: "pdf",
       // owner_user_id wird per DB-Default (auth.uid()) gesetzt
-      // gebuehr_betrag / zins_betrag folgen mit #1 / #2
     });
     if (histErr) {
       setFehler("Konnte den Historie-Eintrag nicht speichern: " + histErr.message);
@@ -391,6 +430,7 @@ export default function MahnungErstellen() {
   }
 
   const aktuelleStufe = rechnung?.mahnstufe || 0;
+  const waehrung = rechnung?.waehrung || "EUR";
 
   return (
     <Rahmen>
@@ -498,6 +538,41 @@ export default function MahnungErstellen() {
             Vorgeschlagen ist die nächste sinnvolle Stufe. ARGONAUT passt den Ton automatisch an:
             höflich bei der Zahlungserinnerung, bestimmter bei den Mahnungen.
           </p>
+        </Karte>
+      </div>
+
+      {/* #1+#2: FORDERUNGSAUFSTELLUNG */}
+      <div style={{ marginBottom: 20 }}>
+        <Karte titel="Forderungsaufstellung">
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            <ZeileForderung label="Offener Rechnungsbetrag" wert={geld(offenerRest, waehrung)} />
+            {mahngebuehr > 0 && (
+              <ZeileForderung label="+ Mahngebühr" wert={geld(mahngebuehr, waehrung)} />
+            )}
+            {verzugszinsen > 0 && (
+              <ZeileForderung
+                label={`+ Verzugszinsen (${tageUeberfaellig} Tage · ${VERZUGSZINS_PROZENT.toLocaleString(
+                  "de-DE"
+                )} % p.a.)`}
+                wert={geld(verzugszinsen, waehrung)}
+              />
+            )}
+            <div style={{ borderTop: `1px solid ${C.border}`, margin: "3px 0" }} />
+            <ZeileForderung label="Gesamtforderung" wert={geld(gesamtforderung, waehrung)} gross />
+          </div>
+          {mahngebuehr === 0 && verzugszinsen === 0 ? (
+            <p style={{ color: C.textDim, fontSize: 12.5, margin: "14px 2px 0", lineHeight: 1.5 }}>
+              Bei einer Zahlungserinnerung berechnen wir bewusst noch keine Gebühren oder Zinsen –
+              ab der 1. Mahnung kommen Mahngebühr und Verzugszinsen (§ 288 BGB) automatisch dazu.
+            </p>
+          ) : (
+            <p style={{ color: C.textDim, fontSize: 12.5, margin: "14px 2px 0", lineHeight: 1.5 }}>
+              Verzugszinsen nach § 288 BGB ({VERZUGSZINS_PROZENT.toLocaleString("de-DE")} % p.a. =
+              Basiszinssatz {BASISZINS_PROZENT.toLocaleString("de-DE")} % + {VERZUGSZINS_AUFSCHLAG}{" "}
+              Prozentpunkte, Stand 01.07.2026). Mahngebühr und Zinssatz sind in den Einstellungen
+              der Vorlage hinterlegt.
+            </p>
+          )}
         </Karte>
       </div>
 
@@ -725,6 +800,33 @@ function Feld({ label, wert, farbe }: { label: string; wert: string; farbe: stri
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
       <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
       <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: farbe }}>{wert}</div>
+    </div>
+  );
+}
+
+function ZeileForderung({ label, wert, gross }: { label: string; wert: string; gross?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+      <span
+        style={{
+          color: gross ? "#fff" : C.textDim,
+          fontSize: gross ? 15 : 13.5,
+          fontWeight: gross ? 700 : 400,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: "'Syne', sans-serif",
+          color: gross ? C.gold : "#fff",
+          fontSize: gross ? 20 : 15,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {wert}
+      </span>
     </div>
   );
 }

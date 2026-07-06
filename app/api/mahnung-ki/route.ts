@@ -3,6 +3,9 @@
 // Formuliert aus den echten Rechnungsdaten einen Mahntext-ENTWURF (kein Versand).
 // Ton passt sich an die Mahnstufe an (Erinnerung -> 1. Mahnung -> 2. Mahnung).
 // Gleiche Anthropic-Anbindung wie der Brief-Assistent (Block 12 · K4).
+//
+// #1/#2 (06.07.26): Mahngebühr + Verzugszinsen + Gesamtforderung fliessen in
+// den Prompt, sobald sie anfallen (ab 1. Mahnung), damit der Text sie nennt.
 // ---------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -16,6 +19,11 @@ type MahnInput = {
   tage_ueberfaellig?: number;
   empfaenger_name?: string;
   absender_name?: string;
+  // #1/#2
+  mahngebuehr?: number;
+  verzugszinsen?: number;
+  zins_satz?: number;
+  gesamtforderung?: number;
 };
 
 const STUFE_HINWEIS: Record<number, string> = {
@@ -45,15 +53,19 @@ export async function POST(req: Request) {
   const stufeHinweis = STUFE_HINWEIS[stufe];
   const waehrung = m.waehrung || "EUR";
 
+  const fmtGeld = (n: number): string => {
+    try {
+      return new Intl.NumberFormat("de-DE", { style: "currency", currency: waehrung }).format(n);
+    } catch {
+      return `${n.toFixed(2)} ${waehrung}`;
+    }
+  };
+
   let betragText = "[offener Betrag]";
   if (m.betrag != null && String(m.betrag).trim() !== "") {
     const n = Number(String(m.betrag).replace(",", "."));
     if (!isNaN(n)) {
-      try {
-        betragText = new Intl.NumberFormat("de-DE", { style: "currency", currency: waehrung }).format(n);
-      } catch {
-        betragText = `${n.toFixed(2)} ${waehrung}`;
-      }
+      betragText = fmtGeld(n);
     }
   }
 
@@ -73,6 +85,31 @@ export async function POST(req: Request) {
       ? `${m.tage_ueberfaellig} Tage`
       : "[Anzahl] Tage";
 
+  // #1/#2: Zuschläge nur einbauen, wenn sie tatsächlich anfallen (ab 1. Mahnung)
+  const gebuehr = Number(m.mahngebuehr) || 0;
+  const zinsen = Number(m.verzugszinsen) || 0;
+  const gesamt = Number(m.gesamtforderung) || 0;
+  const zinsSatz = Number(m.zins_satz) || 0;
+
+  let forderungBlock = "";
+  let forderungAnweisung = "";
+  if (gebuehr > 0 || zinsen > 0) {
+    const zeilen: string[] = [];
+    zeilen.push(`- Offene Hauptforderung: ${betragText}`);
+    if (gebuehr > 0) zeilen.push(`- Mahngebühr: ${fmtGeld(gebuehr)}`);
+    if (zinsen > 0)
+      zeilen.push(
+        `- Verzugszinsen${zinsSatz > 0 ? ` (${zinsSatz.toLocaleString("de-DE")} % p.a. nach § 288 BGB)` : ""}: ${fmtGeld(zinsen)}`
+      );
+    zeilen.push(`- GESAMTFORDERUNG: ${fmtGeld(gesamt)}`);
+    forderungBlock = `\nForderungsaufstellung (bitte genau so verwenden):\n${zeilen.join("\n")}`;
+    forderungAnweisung =
+      " Weise im Text ausdrücklich auf die GESAMTFORDERUNG hin und erkläre knapp, dass sie sich aus der Hauptforderung" +
+      (gebuehr > 0 ? ", einer Mahngebühr" : "") +
+      (zinsen > 0 ? " und den Verzugszinsen" : "") +
+      " zusammensetzt. Fordere zur Zahlung der Gesamtforderung auf (nicht nur der Hauptforderung).";
+  }
+
   const prompt = `Du bist ARGONAUT, der Schreibassistent eines mittelständischen Unternehmens. Formuliere auf Deutsch den FLIESSTEXT eines Mahnschreibens. Es soll ${stufeHinweis}
 
 Echte Vorgangsdaten (bitte genau so verwenden, NICHTS erfinden):
@@ -81,11 +118,11 @@ Echte Vorgangsdaten (bitte genau so verwenden, NICHTS erfinden):
 - Fällig war die Zahlung am: ${faelligText}
 - Bereits überfällig seit: ${verzugText}
 - Empfänger: ${m.empfaenger_name || "der Empfänger"}
-- Absender (Unternehmen): ${m.absender_name || "[Unternehmen]"}
+- Absender (Unternehmen): ${m.absender_name || "[Unternehmen]"}${forderungBlock}
 
 Anforderungen:
 - Beginne mit einer passenden Anrede (nutze den Empfängernamen, falls sinnvoll, sonst "Sehr geehrte Damen und Herren,").
-- Nimm konkret Bezug auf die oben genannte Rechnungsnummer, den offenen Betrag und das Fälligkeitsdatum.
+- Nimm konkret Bezug auf die oben genannte Rechnungsnummer, den offenen Betrag und das Fälligkeitsdatum.${forderungAnweisung}
 - Formuliere einen vollständigen, gut lesbaren Fließtext in ganzen Sätzen und sinnvollen Absätzen, im Ton passend zur Mahnstufe.
 - Wo Angaben fehlen (z. B. eine Kontoverbindung), nutze KEINE erfundenen Werte – lasse solche Details weg (die Zahlungsangaben ergänzt das System automatisch unter dem Brief).
 - Schließe mit "Mit freundlichen Grüßen" und in der nächsten Zeile dem Absendernamen (${m.absender_name || "[Unternehmen]"}).

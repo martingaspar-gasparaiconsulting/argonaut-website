@@ -5,6 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Mahndaten (vom Client) -> HTML -> Gotenberg -> PDF.
 // Gleicher Absender-/Gotenberg-Weg wie die Rechnungs-PDF-Route.
 // Der Mahntext (Fließtext) kommt vom Client (KI-Entwurf, vom Nutzer editierbar).
+//
+// #1/#2 (06.07.26): Forderungsaufstellung (Hauptforderung + Mahngebühr +
+// Verzugszinsen = Gesamtforderung); Zahlbetrag = Gesamtforderung, sofern
+// Zuschläge anfallen.
 // ============================================================
 
 export const runtime = 'nodejs';
@@ -74,17 +78,48 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
 
   const offen = rechnung?.offener_betrag != null ? rechnung.offener_betrag : rechnung?.brutto_summe;
 
+  // #1/#2: Zuschläge + Gesamtforderung
+  const gebuehr = Number(rechnung?.mahngebuehr) || 0;
+  const zinsen = Number(rechnung?.verzugszinsen) || 0;
+  const zinsSatz = Number(rechnung?.zins_satz) || 0;
+  const zinsTage = Number(rechnung?.zins_tage) || 0;
+  const gesamt =
+    rechnung?.gesamtforderung != null
+      ? Number(rechnung.gesamtforderung)
+      : (Number(offen) || 0) + gebuehr + zinsen;
+  const hatZuschlaege = gebuehr + zinsen > 0.005;
+  const zahlBetrag = hatZuschlaege ? gesamt : offen;
+
+  let zinsLabel = 'Verzugszinsen';
+  if (zinsTage > 0 && zinsSatz > 0) {
+    zinsLabel += ` (${zinsTage} Tage · ${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
+  } else if (zinsSatz > 0) {
+    zinsLabel += ` (${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
+  }
+
+  const aufstellungHtml = hatZuschlaege
+    ? `<div class="aufstellung">
+        <div class="titel">Forderungsaufstellung</div>
+        <table>
+          <tr><td>Offene Hauptforderung</td><td class="r">${geld(offen, waehrung)}</td></tr>
+          ${gebuehr > 0 ? `<tr><td>Mahngebühr</td><td class="r">${geld(gebuehr, waehrung)}</td></tr>` : ''}
+          ${zinsen > 0 ? `<tr><td>${esc(zinsLabel)}</td><td class="r">${geld(zinsen, waehrung)}</td></tr>` : ''}
+          <tr class="summe"><td>Gesamtforderung</td><td class="r">${geld(gesamt, waehrung)}</td></tr>
+        </table>
+      </div>`
+    : '';
+
   // Mahntext (Fließtext) — Zeilenumbrüche in <br>
   const textHtml = mahnung?.text
     ? esc(mahnung.text).replace(/\n/g, '<br>')
     : '<span class="dim">— kein Mahntext —</span>';
 
-  // Zahlungsangaben
+  // Zahlungsangaben — Zahlbetrag = Gesamtforderung, falls Zuschläge anfallen
   const bank = aussteller?.bank_iban
-    ? `<div>Bitte überweisen Sie den offenen Betrag von <strong>${geld(offen, waehrung)}</strong> auf folgendes Konto:</div>
+    ? `<div>Bitte überweisen Sie den Betrag von <strong>${geld(zahlBetrag, waehrung)}</strong> auf folgendes Konto:</div>
        <div>IBAN: ${esc(aussteller.bank_iban)}${aussteller?.bank_bic ? ' &middot; BIC: ' + esc(aussteller.bank_bic) : ''}${aussteller?.bank_name ? ' (' + esc(aussteller.bank_name) + ')' : ''}</div>
        <div>Verwendungszweck: ${esc(rechnung?.rechnungsnummer) || ''}</div>`
-    : `<div>Bitte gleichen Sie den offenen Betrag von <strong>${geld(offen, waehrung)}</strong> aus.</div>
+    : `<div>Bitte gleichen Sie den offenen Betrag von <strong>${geld(zahlBetrag, waehrung)}</strong> aus.</div>
        <div class="warn">⚠ Bankverbindung in den Einstellungen ergänzen</div>`;
 
   return `<!DOCTYPE html>
@@ -112,6 +147,13 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
 
   .betreff { font-weight: bold; font-size: 14px; margin: 4px 0 16px; }
   .brieftext { font-size: 12.5px; line-height: 1.7; }
+
+  .aufstellung { margin-top: 24px; border: 1px solid #e1e6ee; border-radius: 8px; padding: 14px 16px; }
+  .aufstellung .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #8a99ad; font-weight: bold; margin-bottom: 10px; }
+  .aufstellung table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .aufstellung td { padding: 5px 0; }
+  .aufstellung td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .aufstellung tr.summe td { border-top: 2px solid #C9A84C; padding-top: 9px; font-weight: bold; font-size: 14px; color: #0A1628; }
 
   .zahlung { margin-top: 24px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; font-size: 12px; }
   .zahlung .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #5b6b80; font-weight: bold; margin-bottom: 4px; }
@@ -157,6 +199,8 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
   <div class="betreff">Betreff: ${esc(titel)} zur Rechnung ${esc(rechnung?.rechnungsnummer) || ''}</div>
 
   <div class="brieftext">${textHtml}</div>
+
+  ${aufstellungHtml}
 
   <div class="zahlung">
     <div class="titel">Zahlungsangaben</div>
