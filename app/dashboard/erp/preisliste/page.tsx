@@ -460,6 +460,21 @@ export default function PreislisteCockpit() {
             Preise direkt in der Zelle anklicken und ändern.
           </p>
         </div>
+        <a
+          href="/dashboard/erp/preisliste/import"
+          style={{
+            padding: "11px 20px",
+            borderRadius: 8,
+            background: C.gold,
+            color: C.navy,
+            fontWeight: 700,
+            fontSize: 14,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          🪄 KI-Import
+        </a>
       </div>
 
       {/* KPIs */}
