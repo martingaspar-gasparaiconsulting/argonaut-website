@@ -44,12 +44,13 @@ type Rechnung = {
   letzte_mahnung_am: string | null;
 };
 
-// Mahnstufen: 0 = überfällig/nicht gemahnt, 1 = Erinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung
+// Mahnstufen: 0 = überfällig/nicht gemahnt, 1 = Erinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung, 4 = Letzte Mahnung (Inkasso)
 const MAHN_META = [
   { label: "Überfällig", kurz: "Nicht gemahnt", farbe: C.warn, aktion: "→ Zahlungserinnerung" },
   { label: "Zahlungserinnerung", kurz: "Erinnerung raus", farbe: "#E07B3C", aktion: "→ 1. Mahnung" },
   { label: "1. Mahnung", kurz: "1. Mahnung raus", farbe: C.danger, aktion: "→ 2. Mahnung" },
-  { label: "2. Mahnung", kurz: "2. Mahnung raus", farbe: "#B03030", aktion: null },
+  { label: "2. Mahnung", kurz: "2. Mahnung raus", farbe: "#B03030", aktion: "→ Letzte Mahnung" },
+  { label: "Letzte Mahnung", kurz: "Inkasso-Ankündigung", farbe: "#8B1E1E", aktion: null },
 ];
 
 function eur(n: number | null | undefined, waehrung = "EUR"): string {
@@ -197,7 +198,7 @@ export default function MahnwesenCockpit() {
   const kiKontext = useMemo(() => {
     if (ueberfaellige.length === 0) return "Aktuell sind keine Rechnungen überfällig.";
     const zeilen = ueberfaellige.map((r) => {
-      const stufe = Math.min(Math.max(r.mahnstufe || 0, 0), 3);
+      const stufe = Math.min(Math.max(r.mahnstufe || 0, 0), 4);
       const meta = MAHN_META[stufe];
       const empf =
         (r.kontakt_id && kontaktMap[r.kontakt_id]) ||
@@ -364,7 +365,7 @@ export default function MahnwesenCockpit() {
               </div>
 
               {ueberfaellige.map((r) => {
-                const stufe = Math.min(Math.max(r.mahnstufe || 0, 0), 3);
+                const stufe = Math.min(Math.max(r.mahnstufe || 0, 0), 4);
                 const meta = MAHN_META[stufe];
                 const empfaenger =
                   (r.kontakt_id && kontaktMap[r.kontakt_id]) ||
@@ -503,7 +504,7 @@ export default function MahnwesenCockpit() {
                         ✉️ Mahnung erstellen
                       </button>
 
-                      {stufe < 3 && (
+                      {stufe < 4 && (
                         <button
                           onClick={() => mahnstufeSetzen(r, stufe + 1)}
                           disabled={busy}

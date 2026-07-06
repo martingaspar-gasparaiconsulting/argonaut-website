@@ -33,20 +33,22 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-// Stufe 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung
+// Stufe 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung, 4 = Letzte Mahnung (Inkasso)
 const STUFE_LABEL: Record<number, string> = {
   1: "Zahlungserinnerung",
   2: "1. Mahnung",
   3: "2. Mahnung",
+  4: "Letzte Mahnung",
 };
 const STUFE_FARBE: Record<number, string> = {
   1: "#E07B3C",
   2: C.danger,
   3: "#B03030",
+  4: "#8B1E1E",
 };
 
 // #1 Mahngebühren je Stufe (in EUR) — bewusst 0 bei der Zahlungserinnerung. Anpassbar.
-const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10 };
+const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 15 };
 
 // #2 Verzugszinsen p.a. — B2B: Basiszinssatz + 9 Prozentpunkte (§ 288 Abs. 2 BGB).
 // Basiszinssatz ab 01.07.2026 = 1,52 % (Deutsche Bundesbank) -> 1,52 + 9 = 10,52 %.
@@ -166,8 +168,8 @@ export default function MahnungErstellen() {
       return;
     }
     setRechnung(r);
-    // Vorschlag: nächste Stufe (0->1, 1->2, 2->3, 3->3)
-    setStufe(Math.min((r.mahnstufe || 0) + 1, 3));
+    // Vorschlag: nächste Stufe (0->1, 1->2, 2->3, 3->4, 4->4)
+    setStufe(Math.min((r.mahnstufe || 0) + 1, 4));
 
     if (r.kontakt_id) {
       const { data: k } = await supabase.from("kontakte").select("*").eq("id", r.kontakt_id).single();
@@ -343,7 +345,8 @@ export default function MahnungErstellen() {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const praefix = stufe >= 3 ? "Mahnung2" : stufe === 2 ? "Mahnung1" : "Zahlungserinnerung";
+      const praefix =
+        stufe >= 4 ? "LetzteMahnung" : stufe === 3 ? "Mahnung2" : stufe === 2 ? "Mahnung1" : "Zahlungserinnerung";
       a.href = url;
       a.download = `${praefix}_${rechnung?.rechnungsnummer || "Dokument"}.pdf`;
       document.body.appendChild(a);
@@ -510,7 +513,7 @@ export default function MahnungErstellen() {
       <div style={{ marginBottom: 20 }}>
         <Karte titel="Welche Mahnung erstellen?">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[1, 2, 3].map((s) => {
+            {[1, 2, 3, 4].map((s) => {
               const aktiv = stufe === s;
               const farbe = STUFE_FARBE[s];
               return (

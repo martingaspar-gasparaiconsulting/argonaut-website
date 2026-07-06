@@ -30,6 +30,7 @@ const STUFE_HINWEIS: Record<number, string> = {
   1: "eine erste, freundliche Zahlungserinnerung. Höflich und verständnisvoll – gehe davon aus, dass die Rechnung schlicht übersehen wurde. Bitte freundlich um Ausgleich.",
   2: "eine erste Mahnung. Freundlich, aber bestimmt. Weise sachlich darauf hin, dass die Zahlungsfrist bereits überschritten ist, und setze eine neue, konkrete Zahlungsfrist (z. B. 7 Tage).",
   3: "eine zweite und letzte Mahnung. Deutlich und bestimmt, aber weiterhin sachlich und korrekt. Setze eine letzte kurze Frist und weise darauf hin, dass andernfalls weitere Schritte (z. B. ein gerichtliches Mahnverfahren) eingeleitet werden können – ohne zu drohen.",
+  4: "eine letzte Mahnung vor Übergabe an ein Inkassounternehmen. Sachlich, bestimmt und korrekt – ohne Beleidigung, ohne unzulässige Drohung. Setze eine allerletzte kurze Frist (z. B. 5–7 Tage) und kündige sachlich an, dass die Forderung nach fruchtlosem Ablauf ohne weitere Ankündigung zur außergerichtlichen Beitreibung an ein Inkassounternehmen übergeben wird und dadurch zusätzliche Kosten (Inkassogebühren) für den Empfänger entstehen.",
 };
 
 export async function POST(req: Request) {
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const stufe = Number(m.stufe) === 3 ? 3 : Number(m.stufe) === 2 ? 2 : 1;
+  const stufe = [1, 2, 3, 4].includes(Number(m.stufe)) ? Number(m.stufe) : 1;
   const stufeHinweis = STUFE_HINWEIS[stufe];
   const waehrung = m.waehrung || "EUR";
 

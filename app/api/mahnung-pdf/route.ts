@@ -50,7 +50,8 @@ function pflichtMehrzeilig(wert: any, hinweis: string): string {
 
 // Mahnstufe -> Titel/Betreff
 function stufeTitel(stufe: number): string {
-  if (stufe >= 3) return '2. Mahnung';
+  if (stufe >= 4) return 'Letzte Mahnung';
+  if (stufe === 3) return '2. Mahnung';
   if (stufe === 2) return '1. Mahnung';
   return 'Zahlungserinnerung';
 }
@@ -253,7 +254,8 @@ export async function POST(req: NextRequest) {
 
     const pdfBuffer = await pdfResp.arrayBuffer();
     const stufe = Number(mahnung?.stufe) || 1;
-    const praefix = stufe >= 3 ? 'Mahnung2' : stufe === 2 ? 'Mahnung1' : 'Zahlungserinnerung';
+    const praefix =
+      stufe >= 4 ? 'LetzteMahnung' : stufe === 3 ? 'Mahnung2' : stufe === 2 ? 'Mahnung1' : 'Zahlungserinnerung';
     const basis = String(rechnung?.rechnungsnummer || 'Rechnung')
       .replace(/[^a-zA-Z0-9äöüÄÖÜ -]/g, '').replace(/\s+/g, '_').slice(0, 60);
     const dateiName = `${praefix}_${basis}.pdf`;
