@@ -10,6 +10,9 @@ import { createBrowserClient } from "@supabase/ssr";
 // Stufe wählen -> ARGONAUT entwirft Mahntext (/api/mahnung-ki) ->
 // editieren -> Mahnung als PDF (/api/mahnung-pdf) -> als gesendet markieren.
 // Absenderdaten aus profiles (gleiche Quelle wie die Rechnung).
+//
+// #3 (06.07.26): Beim "Als gesendet markieren" wird zusaetzlich ein
+// GoBD-Nachweis in mahnung_historie geschrieben; Verlauf wird angezeigt.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -42,6 +45,20 @@ const STUFE_FARBE: Record<number, string> = {
   3: "#B03030",
 };
 
+type HistorieEintrag = {
+  id: string;
+  rechnung_id: string;
+  stufe: number;
+  stufe_label: string;
+  betrag_offen: number | null;
+  gebuehr_betrag: number | null;
+  zins_betrag: number | null;
+  tage_ueberfaellig: number | null;
+  kanal: string | null;
+  notiz: string | null;
+  erstellt_am: string;
+};
+
 function geld(n: number | null | undefined, waehrung = "EUR"): string {
   const wert = typeof n === "number" ? n : 0;
   try {
@@ -54,6 +71,20 @@ function datumDe(d: string | null | undefined): string {
   if (!d) return "—";
   try {
     return new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return d;
+  }
+}
+function datumZeitDe(d: string | null | undefined): string {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return d;
   }
@@ -101,6 +132,18 @@ export default function MahnungErstellen() {
   const [sendBusy, setSendBusy] = useState(false);
   const [erfolg, setErfolg] = useState<string | null>(null);
 
+  // #3: Mahn-Historie dieser Rechnung
+  const [historie, setHistorie] = useState<HistorieEintrag[]>([]);
+
+  async function ladeHistorie() {
+    const { data } = await supabase
+      .from("mahnung_historie")
+      .select("*")
+      .eq("rechnung_id", id)
+      .order("erstellt_am", { ascending: false });
+    setHistorie((data || []) as HistorieEintrag[]);
+  }
+
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -137,6 +180,9 @@ export default function MahnungErstellen() {
         .single();
       if (prof) setFirmenprofil(prof);
     }
+
+    // #3: Historie mitladen
+    await ladeHistorie();
 
     setLoading(false);
   }
@@ -272,23 +318,48 @@ export default function MahnungErstellen() {
     setPdfBusy(false);
   }
 
-  // ---------- Als gesendet markieren ----------
+  // ---------- Als gesendet markieren (+ Historie-Nachweis) ----------
   async function alsGesendet() {
     if (sendBusy) return;
     setSendBusy(true);
     setFehler(null);
+    setErfolg(null);
     const heute = new Date().toISOString().slice(0, 10);
+
+    // 1) GoBD-Nachweis zuerst schreiben (append-only Historie)
+    const { error: histErr } = await supabase.from("mahnung_historie").insert({
+      rechnung_id: id,
+      stufe,
+      stufe_label: STUFE_LABEL[stufe],
+      betrag_offen: offenerRest,
+      tage_ueberfaellig: tageUeberfaellig,
+      kanal: "pdf",
+      // owner_user_id wird per DB-Default (auth.uid()) gesetzt
+      // gebuehr_betrag / zins_betrag folgen mit #1 / #2
+    });
+    if (histErr) {
+      setFehler("Konnte den Historie-Eintrag nicht speichern: " + histErr.message);
+      setSendBusy(false);
+      return;
+    }
+
+    // 2) Aktuellen Mahnstatus auf der Rechnung nachziehen
     const { error } = await supabase
       .from("rechnungen")
       .update({ mahnstufe: stufe, letzte_mahnung_am: heute, updated_at: new Date().toISOString() })
       .eq("id", id);
     if (error) {
-      setFehler("Konnte den Mahnstatus nicht speichern: " + error.message);
+      setFehler(
+        "Historie gespeichert, aber der Mahnstatus konnte nicht aktualisiert werden: " + error.message
+      );
+      await ladeHistorie();
       setSendBusy(false);
       return;
     }
+
     setRechnung((prev: any) => (prev ? { ...prev, mahnstufe: stufe, letzte_mahnung_am: heute } : prev));
-    setErfolg(`Als „${STUFE_LABEL[stufe]}" vermerkt (${datumDe(heute)}).`);
+    setErfolg(`Als „${STUFE_LABEL[stufe]}" vermerkt (${datumDe(heute)}) und in der Historie protokolliert.`);
+    await ladeHistorie();
     setSendBusy(false);
   }
 
@@ -547,9 +618,76 @@ export default function MahnungErstellen() {
         </div>
       )}
 
+      {/* #3: MAHN-VERLAUF (GoBD-Nachweis) */}
+      <div style={{ marginTop: 24 }}>
+        <Karte titel="Mahn-Verlauf">
+          {historie.length === 0 ? (
+            <div style={{ color: C.textDim, fontSize: 14 }}>
+              Noch keine Mahnung protokolliert. Sobald du oben „gesendet markierst",
+              erscheint hier der Nachweis.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {historie.map((h) => {
+                const farbe = STUFE_FARBE[h.stufe] || C.warn;
+                const zusatz = (Number(h.gebuehr_betrag) || 0) + (Number(h.zins_betrag) || 0);
+                return (
+                  <div
+                    key={h.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      background: C.navy,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        background: `${farbe}22`,
+                        color: farbe,
+                        border: `1px solid ${farbe}55`,
+                        borderRadius: 999,
+                        padding: "3px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h.stufe_label}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
+                      {geld(Number(h.betrag_offen) || 0)}
+                    </span>
+                    {zusatz > 0 && (
+                      <span style={{ fontSize: 12.5, color: C.textDim }}>
+                        + {geld(zusatz)} Gebühr/Zinsen
+                      </span>
+                    )}
+                    {typeof h.tage_ueberfaellig === "number" && h.tage_ueberfaellig > 0 && (
+                      <span style={{ fontSize: 12.5, color: C.textDim }}>
+                        {h.tage_ueberfaellig} Tage überfällig
+                      </span>
+                    )}
+                    <span style={{ fontSize: 12.5, color: C.textDim, marginLeft: "auto" }}>
+                      {h.kanal === "email" ? "✉️ E-Mail" : "📄 PDF"} · {datumZeitDe(h.erstellt_am)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Karte>
+      </div>
+
       <p style={{ color: C.textDim, fontSize: 12, marginTop: 20, lineHeight: 1.5 }}>
-        Hinweis: „Als gesendet markieren" setzt die Mahnstufe und das Datum – der eigentliche
-        Versand per E-Mail folgt im Finale (verifizierte Absender-Domain).
+        Hinweis: „Als gesendet markieren" setzt die Mahnstufe und das Datum und legt einen
+        Nachweis im Mahn-Verlauf ab – der eigentliche Versand per E-Mail folgt im Finale
+        (verifizierte Absender-Domain).
       </p>
 
       <div style={{ height: 40 }} />
