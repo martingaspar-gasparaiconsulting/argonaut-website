@@ -1,15 +1,17 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · BLOCK 2.3 · Auto-Nachbestellung (Phase A · Lesen)
+// ARGONAUT OS · BLOCK 2.3 · Auto-Nachbestellung (Phase A + B)
 // ------------------------------------------------------------
-// Liest die DB-Funktion public.nachbestell_vorschlag() und zeigt:
+// Liest public.nachbestell_vorschlag() und zeigt:
 // KPI-Kacheln · KI-Auge · nach Lieferant gruppierte Vorschläge
 // mit Meldebestand-Ampel, empfohlener Menge & geschätzten Kosten.
 //
-// Aktion (sicher, kein DB-Schreiben): "Bestell-E-Mail vorbereiten"
-// öffnet die Mail-App mit fertigem Text (mailto). Senden = manuell.
-// Der Ein-Klick-DB-Beleg folgt in Phase B.
+// Aktionen je Lieferant:
+//   1) "Als Bestellung anlegen" -> legt Entwurf-Bestellung (BE-JJJJ-XXXX)
+//      + Positionen an (owner_user_id via Trigger erp_set_owner) und
+//      springt in die bestehende Bestellungen-Detailseite.
+//   2) "Bestell-E-Mail vorbereiten" -> öffnet Mail-App (mailto), kein Versand.
 //
 // Inline-Styles · Branding: ARGONAUT / "die KI".
 // Marken: Navy #0A1628 · Gold #C9A84C · Cyan #00e5ff.
@@ -17,6 +19,7 @@
 // ============================================================
 
 import { useEffect, useState, useCallback, useMemo, CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import KiKlartext from '../../_components/KiKlartext';
 
@@ -83,9 +86,12 @@ function ampelFarbe(a: string): string {
 }
 
 export default function NachbestellungPage() {
+  const router = useRouter();
   const [zeilen, setZeilen] = useState<Vorschlag[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [anlegenKey, setAnlegenKey] = useState<string | null>(null);
+  const [anlegenFehler, setAnlegenFehler] = useState<string | null>(null);
 
   // --- Daten laden --------------------------------------------
   const datenLaden = useCallback(async () => {
@@ -123,7 +129,6 @@ export default function NachbestellungPage() {
       g.zeilen.push(z);
       g.summe += z.geschaetzte_kosten || 0;
     }
-    // Gruppen mit Lieferant zuerst, teuerste oben
     return [...map.values()].sort((a, b) => {
       if (a.key === 'ohne') return 1;
       if (b.key === 'ohne') return -1;
@@ -142,10 +147,7 @@ export default function NachbestellungPage() {
   // --- KI-Kontext ---------------------------------------------
   const kiKontext = useMemo(() => {
     if (laden || zeilen.length === 0) return '';
-    const kritisch = zeilen
-      .filter((z) => z.ampel === 'rot')
-      .map((z) => z.bezeichnung)
-      .slice(0, 4);
+    const kritisch = zeilen.filter((z) => z.ampel === 'rot').map((z) => z.bezeichnung).slice(0, 4);
     const knapp = zeilen
       .filter((z) => z.ampel === 'gelb')
       .map((z) => `${z.bezeichnung} (${z.aktueller_bestand} statt ${z.mindestbestand})`)
@@ -174,6 +176,71 @@ export default function NachbestellungPage() {
       `Bitte bestätigen Sie uns Verfügbarkeit und Liefertermin.\n\n` +
       `Mit freundlichen Grüßen`;
     return `mailto:${g.email ?? ''}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(body)}`;
+  }
+
+  // --- Ein-Klick: Entwurf-Bestellung + Positionen anlegen -----
+  async function bestellungAnlegen(g: Gruppe) {
+    if (g.zeilen.length === 0) return;
+    const ok = window.confirm(
+      `${g.zeilen.length} Position(en) als Entwurf-Bestellung bei "${g.name}" anlegen?\n\n` +
+        `Du kannst die Bestellung danach prüfen und selbst absenden.`,
+    );
+    if (!ok) return;
+
+    setAnlegenKey(g.key);
+    setAnlegenFehler(null);
+    try {
+      // 1) Nächste BE-JJJJ-XXXX-Nummer ermitteln (wie im Bestellwesen)
+      const jahr = new Date().getFullYear();
+      const { data: letzte } = await supabase
+        .from('bestellungen')
+        .select('bestellnummer')
+        .like('bestellnummer', `BE-${jahr}-%`)
+        .order('bestellnummer', { ascending: false })
+        .limit(1);
+      let seq = 1;
+      const vorhandene = letzte && letzte.length > 0 ? letzte[0].bestellnummer : null;
+      if (vorhandene) {
+        const m = String(vorhandene).match(/BE-\d{4}-(\d+)/);
+        if (m) seq = parseInt(m[1], 10) + 1;
+      }
+      const nummer = `BE-${jahr}-${String(seq).padStart(4, '0')}`;
+
+      // 2) Bestellkopf (Status entwurf) — owner_user_id setzt der Trigger
+      const { data: kopf, error: kopfFehler } = await supabase
+        .from('bestellungen')
+        .insert({
+          bestellnummer: nummer,
+          lieferant_id: g.key === 'ohne' ? null : g.key,
+          status: 'entwurf',
+          bestelldatum: new Date().toISOString().slice(0, 10),
+          notizen: 'Automatisch aus Nachbestell-Vorschlag erzeugt.',
+        })
+        .select('id')
+        .single();
+      if (kopfFehler || !kopf) {
+        throw new Error(kopfFehler?.message || 'Bestellung konnte nicht angelegt werden.');
+      }
+
+      // 3) Positionen — owner_user_id setzt der Trigger
+      const positionen = g.zeilen.map((z, i) => ({
+        bestellung_id: kopf.id as string,
+        artikel_id: z.artikel_id,
+        bezeichnung: z.bezeichnung,
+        menge: z.empfohlene_menge,
+        einzelpreis: z.einkaufspreis ?? 0,
+        menge_geliefert: 0,
+        position: i + 1,
+      }));
+      const { error: posFehler } = await supabase.from('bestellpositionen').insert(positionen);
+      if (posFehler) throw new Error(posFehler.message);
+
+      // 4) In die bestehende Detailseite springen
+      router.push(`/dashboard/erp/bestellungen/${kopf.id}`);
+    } catch (e: unknown) {
+      setAnlegenFehler(e instanceof Error ? e.message : 'Unbekannter Fehler beim Anlegen.');
+      setAnlegenKey(null);
+    }
   }
 
   // ============================================================
@@ -208,6 +275,22 @@ export default function NachbestellungPage() {
     borderBottom: `1px solid ${C.line}`,
     whiteSpace: 'nowrap',
   };
+  const btn = (aktiv: boolean, farbe: string): CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 18px',
+    borderRadius: 10,
+    border: `1px solid ${farbe}`,
+    background: aktiv ? 'transparent' : farbe + '24',
+    color: farbe,
+    fontSize: 14,
+    fontWeight: 700,
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    cursor: aktiv ? 'wait' : 'pointer',
+    opacity: aktiv ? 0.6 : 1,
+  });
 
   // ============================================================
   // Render
@@ -221,14 +304,21 @@ export default function NachbestellungPage() {
           Auto-Nachbestellung
         </h1>
         <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
-          Was ist knapp, wie viel nachbestellen, bei wem — gruppiert nach Lieferant.
+          Was ist knapp, wie viel nachbestellen, bei wem — mit einem Klick als Bestellung anlegen.
         </div>
       </div>
 
-      {/* Fehler */}
+      {/* Fehler laden */}
       {fehler && (
         <div style={{ ...karte, borderColor: C.red, color: C.red, marginBottom: 20 }}>
           Fehler beim Laden: {fehler}
+        </div>
+      )}
+
+      {/* Fehler anlegen */}
+      {anlegenFehler && (
+        <div style={{ ...karte, borderColor: C.red, color: C.red, marginBottom: 20 }}>
+          Bestellung anlegen fehlgeschlagen: {anlegenFehler}
         </div>
       )}
 
@@ -267,108 +357,103 @@ export default function NachbestellungPage() {
           </div>
 
           {/* Gruppen je Lieferant */}
-          {gruppen.map((g) => (
-            <div key={g.key} style={{ ...karte, padding: 0, overflow: 'hidden', marginBottom: 16 }}>
-              {/* Lieferant-Kopf */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '16px 20px',
-                  borderBottom: `1px solid ${C.line}`,
-                  background: 'rgba(255,255,255,0.02)',
-                }}
-              >
-                <div>
-                  <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700 }}>{g.name}</div>
-                  <div style={{ color: C.dim, fontSize: 13, marginTop: 2 }}>
-                    {g.zeilen.length} Position(en) · geschätzt {euro(g.summe)}
-                    {g.email ? ' · ' + g.email : ''}
+          {gruppen.map((g) => {
+            const laeuft = anlegenKey === g.key;
+            return (
+              <div key={g.key} style={{ ...karte, padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+                {/* Lieferant-Kopf */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '16px 20px',
+                    borderBottom: `1px solid ${C.line}`,
+                    background: 'rgba(255,255,255,0.02)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700 }}>{g.name}</div>
+                    <div style={{ color: C.dim, fontSize: 13, marginTop: 2 }}>
+                      {g.zeilen.length} Position(en) · geschätzt {euro(g.summe)}
+                      {g.email ? ' · ' + g.email : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    <button
+                      onClick={() => bestellungAnlegen(g)}
+                      disabled={laeuft}
+                      style={btn(laeuft, C.gold)}
+                    >
+                      {laeuft ? '⏳ wird angelegt …' : '📝 Als Bestellung anlegen'}
+                    </button>
+                    {g.email && (
+                      <a href={mailtoLink(g)} style={btn(false, C.cyan)}>
+                        📧 Bestell-E-Mail
+                      </a>
+                    )}
                   </div>
                 </div>
-                {g.email ? (
-                  <a
-                    href={mailtoLink(g)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '10px 18px',
-                      borderRadius: 10,
-                      border: `1px solid ${C.gold}`,
-                      background: 'rgba(201,168,76,0.14)',
-                      color: C.gold,
-                      fontSize: 14,
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    📧 Bestell-E-Mail vorbereiten
-                  </a>
-                ) : (
-                  <span style={{ color: C.dim, fontSize: 13 }}>Keine E-Mail hinterlegt</span>
-                )}
-              </div>
 
-              {/* Positionen */}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ ...th, textAlign: 'center' }}></th>
-                      <th style={th}>Art.-Nr.</th>
-                      <th style={th}>Bezeichnung</th>
-                      <th style={{ ...th, textAlign: 'right' }}>Bestand</th>
-                      <th style={{ ...th, textAlign: 'right' }}>Meldebestand</th>
-                      <th style={{ ...th, textAlign: 'right' }}>Empfehlung</th>
-                      <th style={{ ...th, textAlign: 'right' }}>EK / Einheit</th>
-                      <th style={{ ...th, textAlign: 'right' }}>geschätzt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.zeilen.map((z) => (
-                      <tr key={z.artikel_id}>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span
-                            title={z.ampel === 'rot' ? 'leer' : 'knapp'}
-                            style={{
-                              display: 'inline-block',
-                              width: 11,
-                              height: 11,
-                              borderRadius: '50%',
-                              background: ampelFarbe(z.ampel),
-                            }}
-                          />
-                        </td>
-                        <td style={{ ...td, color: C.dim }}>{z.artikelnummer ?? '–'}</td>
-                        <td style={{ ...td, fontWeight: 600 }}>{z.bezeichnung}</td>
-                        <td style={{ ...td, textAlign: 'right', color: z.ampel === 'rot' ? C.red : C.text }}>
-                          {zahl(z.aktueller_bestand)} <span style={{ color: C.dim, fontSize: 12 }}>{z.einheit}</span>
-                        </td>
-                        <td style={{ ...td, textAlign: 'right', color: C.dim }}>{zahl(z.mindestbestand)}</td>
-                        <td style={{ ...td, textAlign: 'right', fontWeight: 800, color: C.gold }}>
-                          + {zahl(z.empfohlene_menge)} {z.einheit}
-                        </td>
-                        <td style={{ ...td, textAlign: 'right', color: C.dim }}>{euro(z.einkaufspreis)}</td>
-                        <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{euro(z.geschaetzte_kosten)}</td>
+                {/* Positionen */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...th, textAlign: 'center' }}></th>
+                        <th style={th}>Art.-Nr.</th>
+                        <th style={th}>Bezeichnung</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Bestand</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Meldebestand</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Empfehlung</th>
+                        <th style={{ ...th, textAlign: 'right' }}>EK / Einheit</th>
+                        <th style={{ ...th, textAlign: 'right' }}>geschätzt</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {g.zeilen.map((z) => (
+                        <tr key={z.artikel_id}>
+                          <td style={{ ...td, textAlign: 'center' }}>
+                            <span
+                              title={z.ampel === 'rot' ? 'leer' : 'knapp'}
+                              style={{
+                                display: 'inline-block',
+                                width: 11,
+                                height: 11,
+                                borderRadius: '50%',
+                                background: ampelFarbe(z.ampel),
+                              }}
+                            />
+                          </td>
+                          <td style={{ ...td, color: C.dim }}>{z.artikelnummer ?? '–'}</td>
+                          <td style={{ ...td, fontWeight: 600 }}>{z.bezeichnung}</td>
+                          <td style={{ ...td, textAlign: 'right', color: z.ampel === 'rot' ? C.red : C.text }}>
+                            {zahl(z.aktueller_bestand)} <span style={{ color: C.dim, fontSize: 12 }}>{z.einheit}</span>
+                          </td>
+                          <td style={{ ...td, textAlign: 'right', color: C.dim }}>{zahl(z.mindestbestand)}</td>
+                          <td style={{ ...td, textAlign: 'right', fontWeight: 800, color: C.gold }}>
+                            + {zahl(z.empfohlene_menge)} {z.einheit}
+                          </td>
+                          <td style={{ ...td, textAlign: 'right', color: C.dim }}>{euro(z.einkaufspreis)}</td>
+                          <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{euro(z.geschaetzte_kosten)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Fußnote */}
           <div style={{ ...karte, borderColor: 'rgba(0,229,255,0.25)', color: C.dim, fontSize: 13 }}>
-            <b style={{ color: C.cyan }}>So wird gerechnet:</b> Empfehlung = Auffüllen auf den doppelten
-            Meldebestand (Sicherheitspuffer). Die „Bestell-E-Mail vorbereiten" öffnet nur deine Mail-App mit
-            fertigem Text — gesendet wird nichts automatisch. Der Ein-Klick-Beleg direkt in die Bestellungen
-            (Phase B) und die optimale Andler-Bestellmenge folgen als nächste Ausbaustufen.
+            <b style={{ color: C.cyan }}>So funktioniert&apos;s:</b> Empfehlung = Auffüllen auf den doppelten
+            Meldebestand (Sicherheitspuffer). „Als Bestellung anlegen" erzeugt eine <b>Entwurf</b>-Bestellung mit
+            allen Positionen und öffnet sie — dort prüfst du und schaltest sie auf „bestellt". „Bestell-E-Mail"
+            öffnet nur deine Mail-App mit fertigem Text (kein automatischer Versand). Die optimale
+            Andler-Bestellmenge folgt als spätere Ausbaustufe.
           </div>
         </>
       )}
