@@ -248,6 +248,7 @@ export default function FinanzKennzahlen() {
               }}
             >
               <Rechner
+                typ="deckungsbeitrag"
                 titel="Deckungsbeitrag"
                 unterzeile="Was pro Stück nach den variablen Kosten übrig bleibt"
                 farbe={C.cyan}
@@ -276,6 +277,7 @@ export default function FinanzKennzahlen() {
               />
 
               <Rechner
+                typ="break_even"
                 titel="Break-Even (Gewinnschwelle)"
                 unterzeile="Ab wie vielen Verkäufen du in die Gewinnzone kommst"
                 farbe={C.green}
@@ -306,6 +308,7 @@ export default function FinanzKennzahlen() {
               />
 
               <Rechner
+                typ="sicherheitsmarge"
                 titel="Sicherheitsmarge"
                 unterzeile="Wie weit dein Umsatz sinken darf, bevor es kritisch wird"
                 farbe={C.lila}
@@ -332,6 +335,7 @@ export default function FinanzKennzahlen() {
               />
 
               <Rechner
+                typ="roi"
                 titel="ROI (Kapitalrendite)"
                 unterzeile="Wie gut sich eine Investition rechnet"
                 farbe={C.gold}
@@ -403,13 +407,32 @@ function KpiCard({
 type Feld = { key: string; label: string; suffix?: string; placeholder?: string };
 type RechnerErgebnis = { ergebnisse: { label: string; wert: string; gross?: boolean }[]; klartext: string };
 
+// #B Gespeichertes Szenario
+type Szenario = {
+  id: string;
+  typ: string;
+  name: string;
+  eingaben: Record<string, string>;
+  ergebnis: { ergebnisse?: { label: string; wert: string; gross?: boolean }[] } | null;
+  created_at: string;
+};
+
+function zusammenfassung(s: Szenario): string {
+  const arr = s?.ergebnis?.ergebnisse;
+  if (!arr || !arr.length) return "";
+  const g = arr.find((e) => e.gross) || arr[0];
+  return `${g.label}: ${g.wert}`;
+}
+
 function Rechner({
+  typ,
   titel,
   unterzeile,
   farbe,
   felder,
   berechne,
 }: {
+  typ: string;
   titel: string;
   unterzeile: string;
   farbe: string;
@@ -418,9 +441,70 @@ function Rechner({
 }) {
   const [werte, setWerte] = useState<Record<string, string>>({});
 
+  // #B Speichern-Zustand
+  const [name, setName] = useState("");
+  const [gespeichert, setGespeichert] = useState<Szenario[]>([]);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
   const zahlen: Record<string, number> = {};
   felder.forEach((f) => (zahlen[f.key] = num(werte[f.key] || "")));
   const { ergebnisse, klartext } = berechne(zahlen);
+
+  async function ladeSzenarien() {
+    const { data } = await supabase
+      .from("finanz_szenarien")
+      .select("id,typ,name,eingaben,ergebnis,created_at")
+      .eq("typ", typ)
+      .order("created_at", { ascending: false });
+    setGespeichert((data as Szenario[]) || []);
+  }
+
+  useEffect(() => {
+    ladeSzenarien();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function speichern() {
+    if (saveBusy) return;
+    if (!name.trim()) {
+      setSaveMsg({ text: "Bitte einen Namen vergeben.", ok: false });
+      return;
+    }
+    const hatEingabe = felder.some((f) => (werte[f.key] || "").trim() !== "");
+    if (!hatEingabe) {
+      setSaveMsg({ text: "Bitte zuerst Werte eingeben.", ok: false });
+      return;
+    }
+    setSaveBusy(true);
+    setSaveMsg(null);
+    const { error } = await supabase.from("finanz_szenarien").insert({
+      typ,
+      name: name.trim(),
+      eingaben: werte,
+      ergebnis: { ergebnisse },
+      // owner_user_id wird per DB-Default (auth.uid()) gesetzt
+    });
+    if (error) {
+      setSaveMsg({ text: "Speichern fehlgeschlagen: " + error.message, ok: false });
+      setSaveBusy(false);
+      return;
+    }
+    setName("");
+    setSaveMsg({ text: "Szenario gespeichert.", ok: true });
+    await ladeSzenarien();
+    setSaveBusy(false);
+  }
+
+  function ladenIns(s: Szenario) {
+    setWerte(s.eingaben || {});
+    setSaveMsg({ text: `„${s.name}" geladen.`, ok: true });
+  }
+
+  async function loeschen(id: string) {
+    await supabase.from("finanz_szenarien").delete().eq("id", id);
+    await ladeSzenarien();
+  }
 
   return (
     <div
@@ -515,6 +599,126 @@ function Rechner({
       </div>
 
       <p style={{ color: C.textDim, fontSize: 12.5, margin: "12px 2px 0", lineHeight: 1.5 }}>{klartext}</p>
+
+      {/* #B Speichern */}
+      <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 14 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            value={name}
+            placeholder="Name, z. B. „Angebot Müller"
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              flex: 1,
+              minWidth: 140,
+              background: C.navy,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              padding: "9px 12px",
+              color: "#fff",
+              fontSize: 13.5,
+              fontFamily: "'DM Sans', sans-serif",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          <button
+            onClick={speichern}
+            disabled={saveBusy}
+            style={{
+              background: farbe,
+              color: C.navy,
+              border: "none",
+              borderRadius: 10,
+              padding: "9px 16px",
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: saveBusy ? "wait" : "pointer",
+              fontFamily: "'DM Sans', sans-serif",
+              opacity: saveBusy ? 0.6 : 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {saveBusy ? "…" : "💾 Speichern"}
+          </button>
+        </div>
+
+        {saveMsg && (
+          <div style={{ marginTop: 8, fontSize: 12.5, color: saveMsg.ok ? C.green : C.danger }}>
+            {saveMsg.ok ? "✓ " : "⚠️ "}
+            {saveMsg.text}
+          </div>
+        )}
+
+        {gespeichert.length > 0 && (
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+            {gespeichert.map((s) => (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: C.navy,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 10,
+                  padding: "9px 12px",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: "#fff",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {s.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textDim }}>{zusammenfassung(s)}</div>
+                </div>
+                <button
+                  onClick={() => ladenIns(s)}
+                  title="Werte in den Rechner laden"
+                  style={{
+                    background: "transparent",
+                    color: farbe,
+                    border: `1px solid ${farbe}77`,
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Laden
+                </button>
+                <button
+                  onClick={() => loeschen(s.id)}
+                  title="Szenario löschen"
+                  style={{
+                    background: "transparent",
+                    color: C.textDim,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: 12.5,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  🗑
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
