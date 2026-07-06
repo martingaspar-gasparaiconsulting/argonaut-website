@@ -53,6 +53,11 @@ const MAHN_META = [
   { label: "Letzte Mahnung", kurz: "Inkasso-Ankündigung", farbe: "#8B1E1E", aktion: null },
 ];
 
+// #5 Werte wie im Mahn-Assistenten — für die Historie beim Sammel-Mahnlauf
+const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 15 };
+// Verzugszinsen p.a. = Basiszins 01.07.2026 (1,52 %) + 9 Prozentpunkte = 10,52 %
+const VERZUGSZINS_PROZENT = 1.52 + 9;
+
 function eur(n: number | null | undefined, waehrung = "EUR"): string {
   const v = typeof n === "number" ? n : 0;
   try {
@@ -109,6 +114,11 @@ export default function MahnwesenCockpit() {
   const [kontaktMap, setKontaktMap] = useState<Record<string, string>>({});
   const [firmaMap, setFirmaMap] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // #5 Sammel-Mahnlauf
+  const [sammelConfirm, setSammelConfirm] = useState(false);
+  const [sammelBusy, setSammelBusy] = useState(false);
+  const [sammelErgebnis, setSammelErgebnis] = useState<string | null>(null);
 
   useEffect(() => {
     let aktiv = true;
@@ -194,6 +204,12 @@ export default function MahnwesenCockpit() {
     return { anzahl: ueberfaellige.length, offenerBetrag, nichtGemahnt, inMahnung };
   }, [ueberfaellige]);
 
+  // #5 Kandidaten: überfällig UND noch nicht auf höchster Stufe (4)
+  const sammelKandidaten = useMemo(
+    () => ueberfaellige.filter((r) => (r.mahnstufe || 0) < 4),
+    [ueberfaellige]
+  );
+
   // #6: Kontext für das KI-Auge — echte Zahlen + Dringlichkeit
   const kiKontext = useMemo(() => {
     if (ueberfaellige.length === 0) return "Aktuell sind keine Rechnungen überfällig.";
@@ -241,6 +257,78 @@ export default function MahnwesenCockpit() {
       )
     );
     setBusyId(null);
+  }
+
+  // #5 Sammel-Mahnlauf: alle Kandidaten um eine Stufe hoch, je mit Historie-Nachweis
+  async function sammelHochstufen() {
+    if (sammelBusy) return;
+    const kandidaten = sammelKandidaten;
+    if (kandidaten.length === 0) {
+      setSammelConfirm(false);
+      return;
+    }
+    setSammelBusy(true);
+    setFehler(null);
+    const heute = new Date().toISOString().slice(0, 10);
+    const nowIso = new Date().toISOString();
+    const erfolgIds: string[] = [];
+    let fehlgeschlagen = 0;
+
+    for (const r of kandidaten) {
+      const neu = Math.min((r.mahnstufe || 0) + 1, 4);
+      const t = tageBisFaellig(r.faelligkeitsdatum);
+      const tage = t === null ? 0 : Math.abs(t);
+      const offen = offenerRest(r);
+      const gebuehr = MAHN_GEBUEHR[neu] ?? 0;
+      const zinsen =
+        neu >= 2 && tage > 0
+          ? Math.round(offen * (VERZUGSZINS_PROZENT / 100) * (tage / 365) * 100) / 100
+          : 0;
+
+      // 1) GoBD-Nachweis
+      const { error: hErr } = await supabase.from("mahnung_historie").insert({
+        rechnung_id: r.id,
+        stufe: neu,
+        stufe_label: MAHN_META[neu].label,
+        betrag_offen: offen,
+        gebuehr_betrag: gebuehr,
+        zins_betrag: zinsen,
+        tage_ueberfaellig: tage,
+        kanal: "sammellauf",
+      });
+      if (hErr) {
+        fehlgeschlagen++;
+        continue;
+      }
+
+      // 2) Mahnstufe auf der Rechnung
+      const { error: uErr } = await supabase
+        .from("rechnungen")
+        .update({ mahnstufe: neu, letzte_mahnung_am: heute, updated_at: nowIso })
+        .eq("id", r.id);
+      if (uErr) {
+        fehlgeschlagen++;
+        continue;
+      }
+      erfolgIds.push(r.id);
+    }
+
+    // Lokalen Zustand nur für tatsächlich erfolgreiche Rechnungen aktualisieren
+    const idSet = new Set(erfolgIds);
+    setRechnungen((prev) =>
+      prev.map((x) =>
+        idSet.has(x.id)
+          ? { ...x, mahnstufe: Math.min((x.mahnstufe || 0) + 1, 4), letzte_mahnung_am: heute }
+          : x
+      )
+    );
+
+    setSammelBusy(false);
+    setSammelConfirm(false);
+    setSammelErgebnis(
+      `${erfolgIds.length} Rechnung${erfolgIds.length === 1 ? "" : "en"} hochgestuft und protokolliert` +
+        (fehlgeschlagen > 0 ? `, ${fehlgeschlagen} fehlgeschlagen.` : ".")
+    );
   }
 
   const spalten = "120px 1fr 150px 130px 160px 270px";
@@ -293,6 +381,100 @@ export default function MahnwesenCockpit() {
         {!laden && !fehler && ueberfaellige.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <KiKlartext kontext={kiKontext} modul="Mahnwesen" akzent={C.gold} dunkel />
+          </div>
+        )}
+
+        {/* #5: Sammel-Mahnlauf */}
+        {!laden && !fehler && sammelKandidaten.length > 0 && (
+          <div
+            style={{
+              marginBottom: 20,
+              background: C.navy2,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: "14px 18px",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            {!sammelConfirm ? (
+              <>
+                <button
+                  onClick={() => {
+                    setSammelErgebnis(null);
+                    setSammelConfirm(true);
+                  }}
+                  style={{
+                    background: C.gold,
+                    color: C.navy,
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px 16px",
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ⏫ Alle fälligen hochstufen ({sammelKandidaten.length})
+                </button>
+                <span style={{ color: C.textDim, fontSize: 13, flex: 1, minWidth: 200 }}>
+                  Setzt alle {sammelKandidaten.length} überfälligen Rechnungen um eine Mahnstufe hoch –
+                  mit Historie-Nachweis, ohne PDF-Stapel.
+                </span>
+                {sammelErgebnis && (
+                  <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>✓ {sammelErgebnis}</span>
+                )}
+              </>
+            ) : (
+              <>
+                <span style={{ color: "#fff", fontSize: 14, fontWeight: 600, flex: 1, minWidth: 220 }}>
+                  {sammelKandidaten.length} Rechnung{sammelKandidaten.length === 1 ? "" : "en"} werden um eine
+                  Mahnstufe hochgestuft und protokolliert. Fortfahren?
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={sammelHochstufen}
+                    disabled={sammelBusy}
+                    style={{
+                      background: C.danger,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "9px 16px",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: sammelBusy ? "wait" : "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                      opacity: sammelBusy ? 0.6 : 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sammelBusy ? "Läuft…" : "Ja, hochstufen"}
+                  </button>
+                  <button
+                    onClick={() => setSammelConfirm(false)}
+                    disabled={sammelBusy}
+                    style={{
+                      background: "transparent",
+                      color: C.textDim,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 8,
+                      padding: "9px 16px",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: sammelBusy ? "wait" : "pointer",
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
