@@ -6,6 +6,19 @@ import type { NextRequest } from 'next/server'
 // Additiv erweiterbar — neue Mitarbeiter-Seiten hier eintragen.
 const MITARBEITER_ERLAUBT = ['/dashboard/mein-bereich', '/dashboard/zeiterfassung', '/dashboard/einstellungen']
 
+// Module, die AUSSCHLIESSLICH der Chef sehen darf — NIE ein Mitarbeiter,
+// egal was in seinen Rechten steht. Schuetzt auch vor versehentlicher
+// Freigabe (z.B. ueber die Vorlage "Alle" auf der Rechte-Seite).
+// Entspricht der Rechte-Matrix (Block 1.3, zentral verankert).
+const NUR_CHEF = [
+  '/dashboard/personal',    // HR-Cockpit (Gehaelter, SV-Nr, IBAN, Bewerber ...)
+  '/dashboard/rechnungen',
+  '/dashboard/mahnwesen',
+  '/dashboard/finanzen',
+  '/dashboard/analytics',
+  '/dashboard/vertraege',   // Geschaeftsvertraege — bei Bedarf diese Zeile entfernen
+]
+
 // Modul-Schlüssel (aus /dashboard/rechte) -> Pfad. Identisch mit der Navigation.
 // Ein Mitarbeiter erreicht zusätzlich die Module, die der Chef freigeschaltet hat.
 const MODUL_PFAD: Record<string, string> = {
@@ -77,6 +90,15 @@ export async function middleware(req: NextRequest) {
         .maybeSingle()
 
       if (mitarbeiter) {
+        const p = req.nextUrl.pathname
+
+        // HARTE SPERRE (Block 1.3): Chef-only Module IMMER blockieren —
+        // unabhaengig von den vergebenen Rechten. Greift vor der Whitelist.
+        const istNurChef = NUR_CHEF.some((pf) => p === pf || p.startsWith(pf + '/'))
+        if (istNurChef) {
+          return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+        }
+
         // MITARBEITER: Basis-Bereiche + die vom Chef freigeschalteten Module
         const { data: recht } = await supabase
           .from('mitarbeiter_rechte')
@@ -90,7 +112,6 @@ export async function middleware(req: NextRequest) {
           ...module.map((k) => MODUL_PFAD[k]).filter(Boolean),
         ]
 
-        const p = req.nextUrl.pathname
         const erlaubt = erlaubtePfade.some((pf) => p === pf || p.startsWith(pf + '/'))
 
         if (!erlaubt) {
