@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import DateiImport from "../../../_components/DateiImport";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · ERP · Preisliste · KI-Import (Etappe 2, Baustein 2a-2)
@@ -337,6 +338,32 @@ export default function PreisImport() {
       {/* Eingabe (nur wenn keine Vorschau offen ist und kein Ergebnis steht) */}
       {!vorschau && !ergebnis && (
         <div style={{ ...card, marginBottom: 18 }}>
+          <DateiImport
+            dunkel
+            akzent={C.gold}
+            onText={(text, meta) => {
+              setRohtext(text);
+              setFehler(
+                meta.gekuerzt
+                  ? "Hinweis: Die Datei war sehr lang und wurde für die Aufbereitung auf 20.000 Zeichen gekürzt. Den Rest ggf. in einer zweiten Runde einlesen."
+                  : null
+              );
+            }}
+          />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              margin: "18px 0 14px",
+              color: C.textDim,
+              fontSize: 12.5,
+            }}
+          >
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+            oder Text direkt einfügen
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+          </div>
           <label
             style={{
               display: "block",
