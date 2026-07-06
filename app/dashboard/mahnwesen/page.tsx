@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import KiKlartext from "../_components/KiKlartext";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -11,6 +12,8 @@ import { createBrowserClient } from "@supabase/ssr";
 //   Fälligkeit < heute  UND  offener Rest > 0
 //   UND Status weder "bezahlt" noch "storniert".
 // Nutzt die vorhandenen Spalten rechnungen.mahnstufe + letzte_mahnung_am.
+//
+// #6 (06.07.26): KI-Auge (KiKlartext) oben — "Was heißt das für mich?"
 // ============================================================
 
 const C = {
@@ -190,6 +193,31 @@ export default function MahnwesenCockpit() {
     return { anzahl: ueberfaellige.length, offenerBetrag, nichtGemahnt, inMahnung };
   }, [ueberfaellige]);
 
+  // #6: Kontext für das KI-Auge — echte Zahlen + Dringlichkeit
+  const kiKontext = useMemo(() => {
+    if (ueberfaellige.length === 0) return "Aktuell sind keine Rechnungen überfällig.";
+    const zeilen = ueberfaellige.map((r) => {
+      const stufe = Math.min(Math.max(r.mahnstufe || 0, 0), 3);
+      const meta = MAHN_META[stufe];
+      const empf =
+        (r.kontakt_id && kontaktMap[r.kontakt_id]) ||
+        (r.firma_id && firmaMap[r.firma_id]) ||
+        r.titel ||
+        "Unbekannt";
+      const t = tageBisFaellig(r.faelligkeitsdatum);
+      const tage = t === null ? 0 : Math.abs(t);
+      return `${r.rechnungsnummer || "o. Nr."} (${empf}): ${eur(
+        offenerRest(r),
+        r.waehrung || "EUR"
+      )} offen, ${tage} Tage überfällig, aktueller Stand: ${meta.label}`;
+    });
+    return (
+      `Überfällige Rechnungen: ${kpis.anzahl}, offener Gesamtbetrag ${eur(kpis.offenerBetrag)}. ` +
+      `Noch nicht gemahnt: ${kpis.nichtGemahnt}. Bereits in Mahnung: ${kpis.inMahnung}. ` +
+      `Details nach Dringlichkeit (längster Verzug zuerst): ${zeilen.join(" | ")}.`
+    );
+  }, [ueberfaellige, kpis, kontaktMap, firmaMap]);
+
   async function mahnstufeSetzen(r: Rechnung, neu: number) {
     if (busyId) return;
     setBusyId(r.id);
@@ -259,6 +287,13 @@ export default function MahnwesenCockpit() {
           <KpiCard label="Noch nicht gemahnt" wert={String(kpis.nichtGemahnt)} farbe={C.warn} />
           <KpiCard label="In Mahnung" wert={String(kpis.inMahnung)} farbe="#E07B3C" />
         </div>
+
+        {/* #6: KI-Auge — "Was heißt das für mich?" */}
+        {!laden && !fehler && ueberfaellige.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <KiKlartext kontext={kiKontext} modul="Mahnwesen" akzent={C.gold} dunkel />
+          </div>
+        )}
 
         {/* Inhalt */}
         {laden ? (
