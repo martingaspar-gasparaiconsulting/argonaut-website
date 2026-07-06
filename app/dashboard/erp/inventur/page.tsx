@@ -13,6 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../../_components/KiKlartext";
 import { erstelleInventurProtokollPdf } from "../../_components/inventurProtokollPdf";
+import { erstelleAuditProtokollPdf, type AuditEintrag } from "../../_components/inventurAuditPdf";
+import ZeitraumFilter, { ZEITRAUM_ALLES, imZeitraum, type Zeitraum } from "../../_components/ZeitraumFilter";
 
 const C = {
   navy: "#0A1628",
@@ -70,6 +72,13 @@ export default function InventurSeite() {
   const [pdfLaedt, setPdfLaedt] = useState(false);
   const [korrekturOffen, setKorrekturOffen] = useState(false);
   const [korrigiert, setKorrigiert] = useState(false);
+
+  // --- Protokoll-Reiter (GoBD-Audit) ---
+  const [reiter, setReiter] = useState<"zaehlung" | "protokoll">("zaehlung");
+  const [auditRows, setAuditRows] = useState<AuditEintrag[]>([]);
+  const [auditLaden, setAuditLaden] = useState(false);
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(ZEITRAUM_ALLES);
+  const [auditPdfLaedt, setAuditPdfLaedt] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -361,6 +370,74 @@ export default function InventurSeite() {
     }
   }
 
+  // --- Audit-Log (Bestandskorrektur-Protokoll) laden ---
+  async function ladeAudit() {
+    setAuditLaden(true);
+    try {
+      const { data, error } = await supabase
+        .from("inventur_audit")
+        .select("artikel_name,artikelnummer,einheit,soll_bestand,ist_bestand,differenz,wert_differenz,korrigiert_am,korrigiert_von")
+        .order("korrigiert_am", { ascending: false });
+      if (error) throw error;
+      setAuditRows((data ?? []) as AuditEintrag[]);
+    } catch {
+      setAuditRows([]);
+    } finally {
+      setAuditLaden(false);
+    }
+  }
+
+  // Audit-Log laden, sobald der Protokoll-Reiter geoeffnet wird
+  useEffect(() => {
+    if (reiter === "protokoll") void ladeAudit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reiter]);
+
+  // Nach Zeitraum gefilterte Audit-Eintraege
+  const auditGefiltert = useMemo(
+    () => auditRows.filter((r) => imZeitraum(r.korrigiert_am, zeitraum)),
+    [auditRows, zeitraum]
+  );
+
+  const auditSummeWert = useMemo(
+    () => auditGefiltert.reduce((s, r) => s + (r.wert_differenz ?? 0), 0),
+    [auditGefiltert]
+  );
+
+  async function auditProtokollDrucken() {
+    setAuditPdfLaedt(true);
+    try {
+      const { data: prof } = await supabase.from("profiles").select("*").limit(1).maybeSingle();
+      const pr = (prof ?? {}) as Record<string, unknown>;
+      const g = (k: string): string | null => {
+        const v = pr[k];
+        return v == null ? null : String(v);
+      };
+      erstelleAuditProtokollPdf({
+        firma: {
+          name: g("firma_name"),
+          rechtsform: g("rechtsform"),
+          strasse: g("strasse"),
+          plz: g("plz"),
+          ort: g("ort"),
+          telefon: g("telefon") ?? g("firma_telefon"),
+          email: g("email") ?? g("firma_email"),
+          website: g("website") ?? g("firma_website"),
+          ustId: g("ust_id"),
+          steuernummer: g("steuernummer"),
+          geschaeftsfuehrer: g("geschaeftsfuehrer"),
+          akzentfarbe: g("akzentfarbe"),
+        },
+        zeitraumLabel: zeitraum.label,
+        eintraege: auditGefiltert,
+      });
+    } catch (e: unknown) {
+      setMeldung("PDF konnte nicht erstellt werden: " + (e instanceof Error ? e.message : "Fehler"));
+    } finally {
+      setAuditPdfLaedt(false);
+    }
+  }
+
   const kacheln: { label: string; wert: string; farbe: string; sub?: string }[] = [
     { label: "Artikel gesamt", wert: String(kpi.gesamt), farbe: C.cyan },
     { label: "Bereits gezählt", wert: `${kpi.gezaehlt} / ${kpi.gesamt}`, farbe: C.gold },
@@ -407,6 +484,38 @@ export default function InventurSeite() {
       <p style={{ margin: "0 0 20px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
         Zähle den tatsächlichen Bestand und vergleiche ihn mit dem System. Abweichungen werden farblich markiert.
       </p>
+
+      {/* Reiter-Umschalter: Zählung | Protokoll */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+        {([
+          { key: "zaehlung", label: "Zählung" },
+          { key: "protokoll", label: "📋 Protokoll" },
+        ] as const).map((t) => {
+          const aktiv = reiter === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setReiter(t.key)}
+              style={{
+                background: aktiv ? C.cyan + "1F" : "transparent",
+                color: aktiv ? C.cyan : C.textDim,
+                border: `1px solid ${aktiv ? C.cyan : "rgba(255,255,255,0.14)"}`,
+                borderRadius: 8,
+                padding: "8px 18px",
+                fontWeight: 700,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {reiter === "zaehlung" && (
+      <>
 
       {/* KPI-Kacheln */}
       <div
@@ -646,8 +755,151 @@ export default function InventurSeite() {
           </table>
         </div>
       )}
+      </>
+      )}
 
-      {/* Bestaetigungs-Modal fuer die Bestandskorrektur */}
+      {/* ===================== PROTOKOLL-REITER (GoBD) ===================== */}
+      {reiter === "protokoll" && (
+        <>
+          {/* Aktionsleiste Protokoll */}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
+            <ZeitraumFilter wert={zeitraum} onChange={setZeitraum} />
+            <button
+              onClick={auditProtokollDrucken}
+              disabled={auditPdfLaedt || auditLaden || auditGefiltert.length === 0}
+              title={auditGefiltert.length === 0 ? "Noch keine Korrekturen im Zeitraum" : "Protokoll als PDF herunterladen"}
+              style={{
+                background: "transparent",
+                color: C.gold,
+                border: `1px solid ${C.gold}`,
+                borderRadius: 8,
+                padding: "10px 18px",
+                fontWeight: 700,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14,
+                cursor: auditPdfLaedt || auditLaden || auditGefiltert.length === 0 ? "default" : "pointer",
+                opacity: auditPdfLaedt || auditLaden || auditGefiltert.length === 0 ? 0.5 : 1,
+              }}
+            >
+              {auditPdfLaedt ? "Erstellt …" : "📄 Als PDF herunterladen"}
+            </button>
+            <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>
+              {auditLaden
+                ? "Lade Protokoll …"
+                : `${auditGefiltert.length} Korrektur${auditGefiltert.length === 1 ? "" : "en"} · Summe Wert-Differenz: ${fmtEuro(auditSummeWert)}`}
+            </span>
+          </div>
+
+          {/* Erklaerungsbox */}
+          <div
+            style={{
+              background: C.navy2,
+              border: `1px solid ${C.cyan}33`,
+              borderRadius: 10,
+              padding: "12px 16px",
+              marginBottom: 16,
+              color: C.textDim,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            <strong style={{ color: C.text }}>GoBD-Protokoll:</strong> Jede Bestandskorrektur wird hier
+            unveränderbar festgehalten (wer, wann, welcher Artikel, von Soll auf Ist). Die Einträge lassen sich
+            nicht ändern oder löschen — genau das verlangt die GoBD. Für die Ablage oder eine Betriebsprüfung
+            kannst du das Protokoll als PDF herunterladen.
+          </div>
+
+          {/* Protokoll-Tabelle */}
+          {auditLaden ? (
+            <p style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif" }}>Lade Protokoll …</p>
+          ) : auditGefiltert.length === 0 ? (
+            <div
+              style={{
+                background: C.navy2,
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: 24,
+                color: C.textDim,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Noch keine Bestandskorrekturen im gewählten Zeitraum. Sobald du im Reiter „Zählung" eine
+              Korrektur durchführst, erscheint sie hier im Protokoll.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                <thead>
+                  <tr style={{ background: C.navy2 }}>
+                    {["Zeitpunkt", "Artikel", "Soll", "Ist", "Differenz", "Wert-Diff.", "Durchgeführt von"].map((h, i) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: i >= 2 && i <= 5 ? "right" : "left",
+                          padding: "11px 14px",
+                          color: C.textDim,
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditGefiltert.map((r, idx) => {
+                    const diffFarbe = r.differenz === 0 ? C.textDim : r.differenz > 0 ? C.green : C.danger;
+                    const wDiff = r.wert_differenz;
+                    return (
+                      <tr key={idx} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13, whiteSpace: "nowrap" }}>
+                          {new Date(r.korrigiert_am).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td style={{ padding: "10px 14px", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
+                          <div style={{ fontWeight: 600 }}>{r.artikel_name}</div>
+                          {r.artikelnummer && (
+                            <div style={{ color: C.textDim, fontSize: 12 }}>Nr. {r.artikelnummer}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, whiteSpace: "nowrap" }}>
+                          {fmtNum(r.soll_bestand)} {r.einheit || ""}
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, whiteSpace: "nowrap" }}>
+                          {fmtNum(r.ist_bestand)} {r.einheit || ""}
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                          <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 14 }}>
+                            {r.differenz > 0 ? "+" : ""}{fmtNum(r.differenz)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
+                          {wDiff === null || wDiff === 0 ? (
+                            <span style={{ color: C.textDim }}>—</span>
+                          ) : (
+                            <span style={{ color: wDiff < 0 ? C.danger : C.warn, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>
+                              {wDiff > 0 ? "+" : ""}{fmtEuro(wDiff)}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                          {r.korrigiert_von || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       {korrekturOffen && (
         <div
           style={{
