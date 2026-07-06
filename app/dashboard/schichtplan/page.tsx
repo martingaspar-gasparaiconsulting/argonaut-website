@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 
 // ============================================================
@@ -161,6 +162,53 @@ export default function SchichtplanPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
   );
+
+  const router = useRouter();
+
+  // --- Rollen-Guard -----------------------------------------------------------
+  // Dieses Cockpit ist ausschliesslich fuer den Chef (Kunde). Ein eingeladener
+  // Mitarbeiter darf hier NICHT erstellen/bearbeiten. Er hat seine eigene
+  // read-only Schichtplan-Ansicht inkl. Bestaetigen/Einwand unter
+  // /dashboard/mein-bereich. Logik identisch zu middleware.ts:
+  //   Chef      = Zeile in "customers" (per E-Mail).
+  //   Mitarbeiter = keine customers-Zeile, aber mitarbeiter.auth_user_id = Login.
+  // 'pruefe' = wird geprueft, 'chef' = Cockpit anzeigen, 'mitarbeiter' = Redirect.
+  const [rolle, setRolle] = useState<'pruefe' | 'chef' | 'mitarbeiter'>('pruefe');
+
+  useEffect(() => {
+    let aktiv = true;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) { if (aktiv) setRolle('chef'); return; } // Middleware faengt Nicht-Login ohnehin ab
+
+      // 1) Ist es ein Kunde (Chef)? -> Cockpit anzeigen.
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('email')
+        .eq('email', user.email as string)
+        .maybeSingle();
+
+      if (customer) { if (aktiv) setRolle('chef'); return; }
+
+      // 2) Kein Kunde -> ist es ein eingeladener Mitarbeiter? -> Redirect.
+      const { data: ma } = await supabase
+        .from('mitarbeiter')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (ma) {
+        if (aktiv) setRolle('mitarbeiter');
+        router.replace('/dashboard/mein-bereich');
+        return;
+      }
+
+      // 3) Weder Kunde noch Mitarbeiter -> unveraendert durchlassen (Cockpit).
+      if (aktiv) setRolle('chef');
+    })();
+    return () => { aktiv = false; };
+  }, [supabase, router]);
 
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string>('');
@@ -792,6 +840,31 @@ export default function SchichtplanPage() {
 
   const heute = ymd(new Date());
   const vorschlaege = schichten.filter((s) => s.status === 'vorschlag');
+
+  // --- Rollen-Guard: Cockpit erst rendern, wenn Rolle = Chef ---------------
+  // Waehrend der Pruefung und beim Mitarbeiter-Redirect wird NUR ein schlanker
+  // Lade-Screen gezeigt. So blitzt das Chef-Cockpit beim Mitarbeiter nie auf.
+  if (rolle !== 'chef') {
+    return (
+      <div style={{
+        background: BRAND.navy, minHeight: '100vh', color: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'DM Sans, sans-serif',
+      }}>
+        <div style={{ textAlign: 'center', color: BRAND.textDim }}>
+          <div style={{
+            width: 40, height: 40, margin: '0 auto 16px',
+            border: `3px solid ${BRAND.border}`, borderTopColor: BRAND.cyan,
+            borderRadius: '50%', animation: 'argoSpin 0.8s linear infinite',
+          }} />
+          <div style={{ fontSize: 14 }}>
+            {rolle === 'mitarbeiter' ? 'Weiterleitung zu deinem Bereich …' : 'Wird geladen …'}
+          </div>
+        </div>
+        <style>{`@keyframes argoSpin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{
