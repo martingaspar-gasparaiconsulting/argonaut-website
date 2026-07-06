@@ -45,8 +45,10 @@ interface Vorschau {
   kategorie: string;
   uebernehmen: boolean;
   matchId: string | null;
+  matchBezeichnung: string | null;
   altEk: number | null;
   altVk: number | null;
+  alsUpdate: boolean;
 }
 
 function zahl(s: string): number | null {
@@ -151,8 +153,10 @@ export default function PreisImport() {
           kategorie: a.kategorie ? String(a.kategorie) : "",
           uebernehmen: true,
           matchId: match?.id ?? null,
+          matchBezeichnung: match?.bezeichnung ?? null,
           altEk: match?.einkaufspreis ?? null,
           altVk: match?.verkaufspreis ?? null,
+          alsUpdate: !!match, // bei Treffer zunächst als Update vorschlagen
         };
       });
       setVorschau(v);
@@ -167,13 +171,24 @@ export default function PreisImport() {
   }
 
   const anzNeu = useMemo(
-    () => (vorschau || []).filter((x) => x.uebernehmen && !x.matchId).length,
+    () =>
+      (vorschau || []).filter(
+        (x) => x.uebernehmen && !(x.alsUpdate && x.matchId)
+      ).length,
     [vorschau]
   );
   const anzUpd = useMemo(
-    () => (vorschau || []).filter((x) => x.uebernehmen && x.matchId).length,
+    () =>
+      (vorschau || []).filter((x) => x.uebernehmen && x.alsUpdate && x.matchId)
+        .length,
     [vorschau]
   );
+
+  function toggleModus(i: number) {
+    setVorschau((v) =>
+      v ? v.map((x, idx) => (idx === i ? { ...x, alsUpdate: !x.alsUpdate } : x)) : v
+    );
+  }
 
   async function uebernehmen() {
     if (!vorschau) return;
@@ -196,7 +211,7 @@ export default function PreisImport() {
       const ek = zahl(x.ekStr);
       const vk = zahl(x.vkStr);
 
-      if (x.matchId) {
+      if (x.alsUpdate && x.matchId) {
         // Bestehender Artikel: NUR Preise aktualisieren (Stammdaten unangetastet)
         const { error } = await supabase
           .from("artikel")
@@ -509,7 +524,9 @@ export default function PreisImport() {
               </thead>
               <tbody>
                 {vorschau.map((x, i) => {
-                  const istUpdate = !!x.matchId;
+                  const hatMatch = !!x.matchId;
+                  const istUpdate = x.alsUpdate && hatMatch;
+                  const nummerKollision = hatMatch && !x.alsUpdate; // Match da, aber User will Neu
                   const aus = !x.uebernehmen;
                   return (
                     <tr key={i} style={{ opacity: aus ? 0.45 : 1 }}>
@@ -520,7 +537,7 @@ export default function PreisImport() {
                           onChange={(e) => setV(i, { uebernehmen: e.target.checked })}
                         />
                       </td>
-                      <td style={tdStil}>
+                      <td style={{ ...tdStil, minWidth: 150 }}>
                         <span
                           style={{
                             display: "inline-block",
@@ -540,6 +557,53 @@ export default function PreisImport() {
                         >
                           {istUpdate ? "Update" : "Neu"}
                         </span>
+                        {/* Herkunft des Treffers – macht Fehl-Matches sichtbar */}
+                        {istUpdate && x.matchBezeichnung && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: C.textDim,
+                              marginTop: 5,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            von: <span style={{ color: "#fff" }}>{x.matchBezeichnung}</span>
+                          </div>
+                        )}
+                        {/* Warnung, wenn Nummer existiert, aber als Neu angelegt wird */}
+                        {nummerKollision && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: C.warn,
+                              marginTop: 5,
+                              lineHeight: 1.3,
+                              fontWeight: 600,
+                            }}
+                          >
+                            ⚠ Nr. gibt es schon ({x.matchBezeichnung})
+                          </div>
+                        )}
+                        {/* Umschalter Update ↔ Neu (nur wenn es einen Treffer gibt) */}
+                        {hatMatch && (
+                          <button
+                            onClick={() => toggleModus(i)}
+                            style={{
+                              marginTop: 6,
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              color: C.cyan,
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              display: "block",
+                            }}
+                          >
+                            {x.alsUpdate ? "→ doch neu anlegen" : "→ doch aktualisieren"}
+                          </button>
+                        )}
                       </td>
                       <td style={{ ...tdStil, minWidth: 200 }}>
                         {istUpdate ? (
@@ -618,11 +682,15 @@ export default function PreisImport() {
               borderTop: `1px solid ${C.border}`,
               color: C.textDim,
               fontSize: 12.5,
+              lineHeight: 1.5,
             }}
           >
-            Bei „Update"-Zeilen werden nur die Preise aktualisiert – Bezeichnung,
-            Einheit und Kategorie des bestehenden Artikels bleiben unverändert. Jede
-            Preisänderung wird automatisch im Verlauf protokolliert.
+            <b style={{ color: "#fff" }}>Wichtig:</b> Bei „Update"-Zeilen steht unter
+            dem Status, welchen <i>bestehenden</i> Artikel die Zeile trifft („von: …").
+            Passt das nicht, klick auf „→ doch neu anlegen". Bei Updates werden nur die
+            Preise aktualisiert – Bezeichnung, Einheit und Kategorie des bestehenden
+            Artikels bleiben unverändert. Jede Preisänderung wird automatisch im Verlauf
+            protokolliert.
           </div>
         </div>
       )}
