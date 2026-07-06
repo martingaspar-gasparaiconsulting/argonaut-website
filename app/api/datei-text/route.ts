@@ -63,7 +63,11 @@ export async function POST(req: Request) {
     } else if (endung === "xlsx" || endung === "xlsm") {
       typ = "Excel";
       const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(buf);
+      // Node liefert je nach @types/node-Version Buffer<ArrayBuffer>, exceljs
+      // erwartet Buffer<ArrayBufferLike> - zur Laufzeit identisch. Cast an dieser
+      // Bibliotheks-Grenze, damit es versionsunabhängig kompiliert:
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await wb.xlsx.load(buf as any);
       const zeilen: string[] = [];
       wb.eachSheet((ws) => {
         ws.eachRow({ includeEmpty: false }, (row) => {
