@@ -18,6 +18,7 @@ type Tab = { label: string; href: string; farbe: string };
 
 const TABS: Tab[] = [
   { label: "📦 Lager", href: "/dashboard/erp", farbe: "#00e5ff" },
+  { label: "🏷️ Preisliste", href: "/dashboard/erp/preisliste", farbe: "#FFD166" },
   { label: "🚚 Lieferanten", href: "/dashboard/erp/lieferanten", farbe: "#E06666" },
   { label: "🛒 Bestellungen", href: "/dashboard/erp/bestellungen", farbe: "#4CAF7D" },
   { label: "📥 Wareneingang", href: "/dashboard/erp/wareneingang", farbe: "#A78BFA" },
