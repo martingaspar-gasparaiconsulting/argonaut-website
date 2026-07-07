@@ -1,20 +1,17 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
-
+import ModulFreischaltung from './ModulFreischaltung'
 export default async function EinstellungenPage() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (!user || userError) redirect('/auth/login')
-
   const { data } = await supabase
     .from('profiles')
     .select('firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_rechtsform, firma_registergericht, firma_hrb, firma_geschaeftsfuehrer, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic, firma_akzentfarbe')
     .eq('id', user.id)
     .single()
-
   const profil = (data ?? {}) as FirmaProfil
-
   return (
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -25,6 +22,7 @@ export default async function EinstellungenPage() {
           </p>
         </div>
         <EinstellungenClient profil={profil} />
+        <ModulFreischaltung />
       </main>
     </div>
   )
