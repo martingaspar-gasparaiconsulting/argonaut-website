@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import VertraegeAuge from "./VertraegeAuge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V2 Verträge-Cockpit
@@ -411,6 +412,9 @@ export default function VertraegeCockpit() {
           + Vertrag anlegen
         </button>
       </div>
+
+      {/* KI-Auge: was heißt die Vertrags-Lage gerade für mich? */}
+      <VertraegeAuge />
 
       {/* KPIs */}
       <div
