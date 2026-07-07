@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
+import MahnwesenAuge from "./MahnwesenAuge";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -377,12 +378,8 @@ export default function MahnwesenCockpit() {
           <KpiCard label="In Mahnung" wert={String(kpis.inMahnung)} farbe="#E07B3C" />
         </div>
 
-        {/* #6: KI-Auge — "Was heißt das für mich?" */}
-        {!laden && !fehler && ueberfaellige.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <KiKlartext kontext={kiKontext} modul="Mahnwesen" akzent={C.gold} dunkel />
-          </div>
-        )}
+        {/* KI-Auge: was heißt die Mahn-Lage gerade für mich? */}
+      <MahnwesenAuge />
 
         {/* #5: Sammel-Mahnlauf */}
         {!laden && !fehler && sammelKandidaten.length > 0 && (
