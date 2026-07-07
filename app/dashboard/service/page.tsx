@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import ServiceAuge from "./ServiceAuge";
 
 // ============================================================
 // ARGONAUT OS · BLOCK 11 · KUNDENSERVICE — T2 Ticket-Cockpit
@@ -366,6 +367,8 @@ export default function ServicePage() {
           Priorität und SLA-Ampel. Keine Reklamation rutscht mehr durch.
         </p>
       </div>
+      {/* KI-Auge: was heißt die Service-Lage gerade für mich? */}
+      <ServiceAuge />
 
       {/* ---- KPIs ---- */}
       <div
