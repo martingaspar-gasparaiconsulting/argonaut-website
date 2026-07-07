@@ -364,7 +364,7 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
-          Inhalte dieser Kampagne. Das KI-Content-Studio kommt in einem späteren Schritt.
+          Inhalte dieser Kampagne. KI-generierte Inhalte erstellst du im Content-Studio.
         </p>
         <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           + Inhalt
@@ -489,7 +489,7 @@ function TabKalender({ kampagneId, kalender, reload }: { kampagneId: string; kal
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
-          Geplante Veröffentlichungen. Der Drag&amp;Drop-Redaktionskalender kommt in einem späteren Schritt.
+          Geplante Veröffentlichungen dieser Kampagne im Überblick.
         </p>
         <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           + Termin
