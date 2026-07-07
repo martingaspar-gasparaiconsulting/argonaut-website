@@ -113,6 +113,16 @@ export default function KiAuge({
 
   return (
     <div style={{ marginBottom: 16 }}>
+      {/* Dezent pulsierende Cyan-Umrandung als "klick mich"-Signal.
+          Reine CSS-Animation → kostet keine Token. Pulsiert nur, solange
+          das Auge geschlossen ist; beim Öffnen hört das Pulsieren auf. */}
+      <style>{`
+        @keyframes argoAugePuls {
+          0%   { box-shadow: 0 0 0 0 rgba(0,229,255,0.45); }
+          70%  { box-shadow: 0 0 0 8px rgba(0,229,255,0); }
+          100% { box-shadow: 0 0 0 0 rgba(0,229,255,0); }
+        }
+      `}</style>
       {/* Auslöser: das Auge */}
       <button
         onClick={umschalten}
@@ -122,7 +132,7 @@ export default function KiAuge({
           gap: 10,
           padding: "10px 16px",
           borderRadius: 10,
-          border: `1px solid ${offen ? A.cyan : A.border}`,
+          border: `1px solid ${offen ? A.cyan : A.cyan}`,
           background: offen ? "rgba(0,229,255,0.10)" : "rgba(0,229,255,0.05)",
           color: offen ? A.cyan : "#fff",
           fontFamily: "DM Sans, sans-serif",
@@ -130,6 +140,7 @@ export default function KiAuge({
           fontWeight: 700,
           cursor: "pointer",
           transition: "all 0.15s ease",
+          animation: offen ? "none" : "argoAugePuls 2.4s ease-out infinite",
         }}
         title="Die KI liest die Übersicht und sagt dir, was jetzt wichtig ist"
       >
