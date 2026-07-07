@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import LieferantenAuge from "./LieferantenAuge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E4 Lieferanten-Cockpit
@@ -295,6 +296,10 @@ export default function LieferantenCockpit() {
           </button>
         </div>
       </div>
+
+      {!laden && lieferanten.length > 0 && (
+        <LieferantenAuge lieferanten={lieferanten} />
+      )}
 
       <div
         style={{
