@@ -268,9 +268,27 @@ export default function LieferantenCockpit() {
             Kontakte, Ansprechpartner und Bezugsquellen
           </p>
         </div>
-        <button style={btnGold} onClick={oeffneNeu}>
-          + Lieferant anlegen
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a
+            href="/dashboard/erp/lieferanten/import"
+            style={{
+              padding: "10px 18px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.05)",
+              border: `1px solid ${C.border}`,
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🪄 KI-Import
+          </a>
+          <button style={btnGold} onClick={oeffneNeu}>
+            + Lieferant anlegen
+          </button>
+        </div>
       </div>
 
       <div
