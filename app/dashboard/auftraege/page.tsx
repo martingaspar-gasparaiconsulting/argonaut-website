@@ -373,12 +373,14 @@ export default function AuftraegeCockpit() {
             >
               📄 Aufträge
             </h1>
-            import AuftraegeAuge from "./AuftraegeAuge";
             <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 14 }}>
               Verträge & Aufträge verwalten — von der Beauftragung bis zum
               Abschluss.
             </p>
           </div>
+
+          {/* KI-Auge: was heißt die Auftrags-Lage gerade für mich? */}
+      <AuftraegeAuge />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
               onClick={chancenModalOeffnen}
