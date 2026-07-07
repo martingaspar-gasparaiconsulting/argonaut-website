@@ -1,10 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useMemo, type CSSProperties, type FormEvent } from 'react'
+import { useState, type CSSProperties, type FormEvent } from 'react'
 import FristAmpel from '../_components/FristAmpel'
-import KiKlartext from '../_components/KiKlartext'
-import { verstricheneStunden } from '../_components/fristLogik'
+import LeadsAuge from './LeadsAuge'
 
 export type Lead = {
   id: string
@@ -109,30 +108,8 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
     })
   const zaehle = (s: StatusKey) => nachHerkunft.filter((l) => l.status === s).length
 
-  const neueWartend = leads.filter((l) => l.status === 'neu' && l.ist_bestand !== true).length
   const anzahlNeu = leads.filter((l) => l.ist_bestand !== true).length
   const anzahlBestand = leads.filter((l) => l.ist_bestand === true).length
-
-  // Kontext für die KI-Klartext-Box: kompakt + stabil (nur bei Änderung von leads neu berechnet).
-  const kiKontext = useMemo(() => {
-    const offen = leads.filter((l) => l.status === 'neu' && l.ist_bestand !== true)
-    if (offen.length === 0) return ''
-    const mitZeit = offen
-      .map((l) => ({ l, std: verstricheneStunden(l.created_at) ?? 0 }))
-      .sort((a, b) => b.std - a.std)
-    const ueber4 = mitZeit.filter((x) => x.std >= 4).length
-    const ueber24 = mitZeit.filter((x) => x.std >= 24).length
-    const zeile = (x: { l: Lead; std: number }) => {
-      const std = Math.round(x.std)
-      const dauer = std >= 24 ? Math.floor(std / 24) + ' Tag(e)' : std + ' Std.'
-      const score = x.l.score ? ', Priorität ' + x.l.score + '/5' : ''
-      const leistung = x.l.dienstleistung ? ', ' + x.l.dienstleistung : ''
-      return '- ' + (x.l.name || 'Ohne Namen') + ': wartet seit ' + dauer + score + leistung
-    }
-    const top = mitZeit.slice(0, 3).map(zeile).join('\n')
-    return offen.length + ' neue Anfrage(n) offen, davon ' + ueber4 + ' seit über 4 Std. und '
-      + ueber24 + ' seit über 24 Std.\nÄlteste offene Anfragen:\n' + top
-  }, [leads])
 
   async function anlegen(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -174,15 +151,7 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
     <div className="arg-leads">
       <style>{css}</style>
 
-      {neueWartend > 0 ? (
-        <KiKlartext
-          kontext={kiKontext}
-          modul="Leads / Anfragen (Reaktionszeit)"
-          akzent="#00e5ff"
-          dunkel
-          style={{ marginBottom: '24px' }}
-        />
-      ) : null}
+      <LeadsAuge leads={leads} />
 
       <div style={{ marginBottom: '22px' }}>
         <p style={labelStyle}>Herkunft</p>
