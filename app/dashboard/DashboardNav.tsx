@@ -8,6 +8,11 @@ import { createBrowserClient } from '@supabase/ssr';
 // Chef sieht alles. Mitarbeiter sieht nur freigeschaltete Module.
 // "immer" = jeder (Übersicht/Einstellungen). "nurChef" = nur der Chef.
 // modul-Schlüssel identisch mit /dashboard/rechte + middleware.
+//
+// P2-1 STARTER-MODUS: Der Chef kann Module ausblenden (profiles.sichtbare_module,
+// jsonb-Array der EINGESCHALTETEN modul-Schlüssel). NULL/leer = alles sichtbar
+// (safety-first, rückwärtskompatibel). Übersicht/Einstellungen bleiben IMMER da.
+// Greift nur beim Chef; Mitarbeiter bleiben bei der RBAC-Logik.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -56,6 +61,8 @@ export default function DashboardNav() {
   const [geladen, setGeladen] = useState(false);
   const [istChef, setIstChef] = useState(false);
   const [erlaubt, setErlaubt] = useState<Set<string>>(new Set());
+  // Starter-Modus: null = alle Module sichtbar; Set = nur diese modul-Schlüssel sichtbar
+  const [sichtbareModule, setSichtbareModule] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     let aktiv = true;
@@ -63,6 +70,15 @@ export default function DashboardNav() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { if (aktiv) setGeladen(true); return; }
+
+        // Starter-Modus des eingeloggten Nutzers laden (nur für den Chef relevant)
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('sichtbare_module')
+          .eq('id', user.id)
+          .maybeSingle();
+        const sm = prof?.sichtbare_module;
+        if (aktiv) setSichtbareModule(Array.isArray(sm) ? new Set(sm as string[]) : null);
 
         // Ist der eingeloggte Nutzer ein Mitarbeiter? (kein Eintrag = Chef)
         const { data: ma } = await supabase
@@ -95,10 +111,19 @@ export default function DashboardNav() {
   }, []);
 
   const sichtbar = NAV_LINKS.filter((l) => {
+    // Grundausstattung immer sichtbar - nie vom Starter-Modus versteckbar
     if (l.immer) return true;
     if (!geladen) return false;      // bis geladen: nur Grundausstattung (kein Aufblitzen)
-    if (istChef) return true;        // Chef sieht alles
-    if (l.nurChef) return false;     // nur-Chef-Punkte für Mitarbeiter aus
+
+    if (istChef) {
+      if (l.nurChef) return true;    // Chef sieht Rechte immer
+      // Starter-Modus: nur beim Chef, nur für Module mit modul-Schlüssel
+      if (l.modul && sichtbareModule !== null && !sichtbareModule.has(l.modul)) return false;
+      return true;
+    }
+
+    // Mitarbeiter: unveränderte RBAC-Logik
+    if (l.nurChef) return false;
     return l.modul ? erlaubt.has(l.modul) : false;
   });
 
