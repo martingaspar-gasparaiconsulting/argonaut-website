@@ -175,10 +175,19 @@ export default function SortimentPage() {
     const label = PRESETS.find((x) => x.key === preset)?.label ?? '';
     return (
       `Sortiment-Analyse Zeitraum ${label}. ${zeilen.length} aktive Artikel. ` +
-      `Gebundenes Kapital gesamt ${gebKapital.toFixed(2)} Euro. ${anzahlA} A-Artikel. ` +
+      `Gebundenes Kapital gesamt ${gebKapital.toFixed(2)} Euro. ${anzahlA} A-Artikel (Kapitaltraeger). ` +
       `Groesster Kapitaltraeger: ${topKapital ? topKapital.bezeichnung + ' mit ' + (topKapital.verbrauchswert || 0).toFixed(2) + ' Euro Verbrauchswert' : 'keiner'}. ` +
-      `${lada.length} Ladenhueter ohne Abgang: ${lada.slice(0, 4).map((z) => z.bezeichnung).join(', ') || 'keine'}. ` +
-      `${ueber.length} Artikel mit Reichweite ueber 180 Tage (Ueberbestand): ${ueber.slice(0, 4).map((z) => z.bezeichnung).join(', ') || 'keine'}.`
+      `WICHTIG: Es gibt zwei UNTERSCHIEDLICHE Problemtypen, die NICHT verwechselt werden duerfen. ` +
+      `Problemtyp 1 - LADENHUETER: ${lada.length} Artikel mit null Abgang im Zeitraum` +
+      `${lada.length > 0 ? ' (' + lada.slice(0, 4).map((z) => z.bezeichnung).join(', ') + ')' : ''}. ` +
+      `Diese verkaufen sich gar nicht - es gibt keine Nachfrage. Sinnvolle Massnahme: aus dem Sortiment nehmen pruefen, ` +
+      `Restbestand als Sonderposten abverkaufen und NICHT nachbestellen. Ein Rabatt allein hilft hier kaum, weil die Nachfrage fehlt. ` +
+      `Problemtyp 2 - UEBERBESTAND: ${ueber.length} Artikel, die zwar laufen, aber eine Reichweite ueber 180 Tage haben` +
+      `${ueber.length > 0 ? ' (' + ueber.slice(0, 4).map((z) => z.bezeichnung).join(', ') + ')' : ''}. ` +
+      `Hier ist Nachfrage vorhanden, es wurde nur zu viel eingekauft. Sinnvolle Massnahme: Nachbestellung stoppen oder reduzieren ` +
+      `und den Bestand ggf. mit einem Rabatt schneller abverkaufen. ` +
+      `Formuliere die Handlungsempfehlung so, dass Rabattaktionen nur den Ueberbestaenden (Problemtyp 2) zugeordnet werden, ` +
+      `und die Ladenhueter (Problemtyp 1) stattdessen zum Aussortieren/Abverkaufen empfohlen werden.`
     );
   }, [laden, zeilen, preset, gebKapital, anzahlA, topKapital]);
 
