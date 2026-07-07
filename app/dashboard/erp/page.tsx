@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
+import LagerAuge from "./LagerAuge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E2 Lager-Cockpit
@@ -448,16 +449,8 @@ export default function LagerCockpit() {
         </div>
       </div>
 
-      {/* KI-Klartext: priorisiert Artikel unter Mindestbestand */}
-      {!laden && lagerKiKontext !== "" && (
-        <KiKlartext
-          kontext={lagerKiKontext}
-          modul="Lager / Nachbestellung"
-          akzent={C.danger}
-          dunkel
-          style={{ marginBottom: 20 }}
-        />
-      )}
+      {/* KI-Auge: was heißt die Lager-Lage gerade für mich? */}
+      <LagerAuge />
 
       {/* Toolbar */}
       <div
