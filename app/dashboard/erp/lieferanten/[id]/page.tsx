@@ -34,6 +34,7 @@ interface Lieferant {
   adresse: string | null;
   website: string | null;
   kundennummer: string | null;
+  iban: string | null;
   notizen: string | null;
   aktiv: boolean;
   created_at: string;
@@ -56,6 +57,7 @@ type FormState = {
   adresse: string;
   website: string;
   kundennummer: string;
+  iban: string;
   notizen: string;
   aktiv: boolean;
 };
@@ -117,6 +119,7 @@ export default function LieferantDetail() {
       adresse: lieferant.adresse ?? "",
       website: lieferant.website ?? "",
       kundennummer: lieferant.kundennummer ?? "",
+      iban: lieferant.iban ?? "",
       notizen: lieferant.notizen ?? "",
       aktiv: lieferant.aktiv,
     });
@@ -144,6 +147,7 @@ export default function LieferantDetail() {
       adresse: form.adresse.trim() || null,
       website: form.website.trim() || null,
       kundennummer: form.kundennummer.trim() || null,
+      iban: form.iban.trim() || null,
       notizen: form.notizen.trim() || null,
       aktiv: form.aktiv,
     };
@@ -351,6 +355,16 @@ export default function LieferantDetail() {
             )
           )}
           {infoZeile("Adresse", lieferant.adresse || "—")}
+          {infoZeile(
+            "IBAN",
+            lieferant.iban ? (
+              <span style={{ fontFamily: "monospace", letterSpacing: 0.5 }}>
+                {lieferant.iban}
+              </span>
+            ) : (
+              "—"
+            )
+          )}
         </div>
 
         {/* Notizen */}
@@ -479,6 +493,15 @@ export default function LieferantDetail() {
                   style={inputStil}
                   value={form.kundennummer}
                   onChange={(e) => setF("kundennummer", e.target.value)}
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStil}>IBAN (für Überweisungen)</label>
+                <input
+                  style={inputStil}
+                  value={form.iban}
+                  onChange={(e) => setF("iban", e.target.value)}
+                  placeholder="z.B. DE89 3704 0044 0532 0130 00"
                 />
               </div>
               <div>
