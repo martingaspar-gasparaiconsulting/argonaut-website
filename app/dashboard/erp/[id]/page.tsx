@@ -603,6 +603,16 @@ export default function ArtikelDetail() {
             {buchen ? "Buche…" : "Buchen"}
           </button>
         </div>
+
+        {/* Optimale Bestellmenge (EOQ) */}
+        <EoqKarte
+          bewegungen={bewegungen}
+          einkaufspreis={Number(artikel.einkaufspreis) || 0}
+          einheit={artikel.einheit}
+          card={card}
+          inputStil={inputStil}
+          labelStil={labelStil}
+        />
       </div>
 
       {/* Historie */}
@@ -831,6 +841,180 @@ export default function ArtikelDetail() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// EOQ-Karte (Optimale Bestellmenge / Andler-Formel)
+// Jahresbedarf automatisch aus den Abgängen der letzten 12 Monate.
+// Formel: EOQ = wurzel( 2 * Jahresbedarf * Bestellkosten / (Einkaufspreis * Lagerzins%) )
+// ---------------------------------------------------------------------
+function EoqKarte({
+  bewegungen,
+  einkaufspreis,
+  einheit,
+  card,
+  inputStil,
+  labelStil,
+}: {
+  bewegungen: Bewegung[];
+  einkaufspreis: number;
+  einheit: string;
+  card: React.CSSProperties;
+  inputStil: React.CSSProperties;
+  labelStil: React.CSSProperties;
+}) {
+  const CE = {
+    gold: "#C9A84C",
+    cyan: "#00e5ff",
+    green: "#4CAF7D",
+    warn: "#E0A24C",
+    textDim: "#8FA3BE",
+    border: "rgba(255,255,255,0.08)",
+  };
+
+  // Jahresbedarf automatisch: Summe der Abgangs-Beträge der letzten 12 Monate.
+  // Abgänge sind in lagerbewegungen als NEGATIVE Menge gespeichert -> Betrag nehmen.
+  const autoJahresbedarf = useMemo(() => {
+    const jetzt = Date.now();
+    const grenze = jetzt - 365 * 24 * 60 * 60 * 1000;
+    let summe = 0;
+    for (const b of bewegungen) {
+      if (b.typ !== "ausgang") continue;
+      const t = new Date(b.bewegung_am).getTime();
+      if (isNaN(t) || t < grenze) continue;
+      summe += Math.abs(Number(b.menge) || 0);
+    }
+    return Math.round(summe * 100) / 100;
+  }, [bewegungen]);
+
+  // Eingaben (mit sinnvollen Standardwerten). Jahresbedarf ist überschreibbar.
+  const [bedarfText, setBedarfText] = useState<string>("");
+  const [bestellkosten, setBestellkosten] = useState<string>("15");
+  const [lagerzins, setLagerzins] = useState<string>("20");
+
+  const parse = (s: string) =>
+    s.trim() === "" ? NaN : Number(s.replace(",", "."));
+
+  // Wenn kein manueller Wert eingegeben ist, den Auto-Wert nutzen.
+  const bedarf =
+    bedarfText.trim() === "" ? autoJahresbedarf : parse(bedarfText);
+  const bk = parse(bestellkosten);
+  const lz = parse(lagerzins);
+
+  // Lagerkostensatz pro Einheit/Jahr = Einkaufspreis * Lagerzins%
+  const lagerkostenProEinheit =
+    einkaufspreis > 0 && !isNaN(lz) ? einkaufspreis * (lz / 100) : 0;
+
+  const berechenbar =
+    einkaufspreis > 0 &&
+    !isNaN(bedarf) &&
+    bedarf > 0 &&
+    !isNaN(bk) &&
+    bk > 0 &&
+    lagerkostenProEinheit > 0;
+
+  const eoq = berechenbar
+    ? Math.sqrt((2 * bedarf * bk) / lagerkostenProEinheit)
+    : 0;
+  const bestellungenProJahr = eoq > 0 ? bedarf / eoq : 0;
+
+  const fmt = (n: number) =>
+    (Number(n) || 0).toLocaleString("de-DE", { maximumFractionDigits: 1 });
+
+  return (
+    <div style={card}>
+      <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>📦 Optimale Bestellmenge</h3>
+      <p style={{ margin: "0 0 14px", color: CE.textDim, fontSize: 12, lineHeight: 1.5 }}>
+        Wie viel du pro Bestellung ordern solltest, damit Bestell- und Lagerkosten
+        zusammen am geringsten sind (Andler-Formel).
+      </p>
+
+      <div style={{ marginBottom: 10 }}>
+        <label style={labelStil}>
+          Jahresbedarf ({einheit}){" "}
+          {bedarfText.trim() === "" && autoJahresbedarf > 0 && (
+            <span style={{ color: CE.cyan, fontWeight: 400 }}>
+              · auto aus Abgängen
+            </span>
+          )}
+        </label>
+        <input
+          style={inputStil}
+          value={bedarfText}
+          onChange={(e) => setBedarfText(e.target.value)}
+          inputMode="decimal"
+          placeholder={
+            autoJahresbedarf > 0
+              ? `${fmt(autoJahresbedarf)} (automatisch)`
+              : "z.B. 200"
+          }
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
+        <div style={{ flex: 1 }}>
+          <label style={labelStil}>Bestellkosten (€)</label>
+          <input
+            style={inputStil}
+            value={bestellkosten}
+            onChange={(e) => setBestellkosten(e.target.value)}
+            inputMode="decimal"
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={labelStil}>Lagerzins (%)</label>
+          <input
+            style={inputStil}
+            value={lagerzins}
+            onChange={(e) => setLagerzins(e.target.value)}
+            inputMode="decimal"
+          />
+        </div>
+      </div>
+
+      {/* Ergebnis */}
+      {berechenbar ? (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "14px 16px",
+            borderRadius: 10,
+            background: "rgba(0,229,255,0.08)",
+            border: `1px solid rgba(0,229,255,0.3)`,
+          }}
+        >
+          <div style={{ fontSize: 13, color: CE.textDim }}>
+            Optimale Bestellmenge
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: CE.cyan }}>
+            {fmt(eoq)} {einheit}
+          </div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "#fff" }}>
+            ca. <b>{fmt(bestellungenProJahr)}</b> Bestellungen pro Jahr
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "12px 14px",
+            borderRadius: 10,
+            background: "rgba(224,162,76,0.10)",
+            border: `1px solid rgba(224,162,76,0.3)`,
+            fontSize: 13,
+            color: CE.warn,
+            lineHeight: 1.5,
+          }}
+        >
+          {einkaufspreis <= 0
+            ? "Für die Berechnung fehlt der Einkaufspreis. Trage ihn oben in den Stammdaten ein."
+            : !(bedarf > 0)
+            ? "Noch kein Jahresbedarf: Sobald Abgänge gebucht sind, wird er automatisch ermittelt — oder trage ihn oben von Hand ein."
+            : "Bitte Bestellkosten und Lagerzins ausfüllen."}
         </div>
       )}
     </div>
