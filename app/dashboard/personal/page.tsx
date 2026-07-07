@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import PersonalAuge from "./PersonalAuge";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -252,7 +253,7 @@ export default function PersonalPage() {
       <div style={styles.header}>
         <div>
           <div style={styles.eyebrow}>ARGONAUT OS · HR</div>
-          <h1 style={styles.h1}>Personal</h1>
+          <h1 style={styles.h1}>Personal</h1><PersonalAuge />
           <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
