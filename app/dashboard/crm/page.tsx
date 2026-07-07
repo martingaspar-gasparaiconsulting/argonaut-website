@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
+import CrmAuge from "./CrmAuge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
@@ -889,16 +890,8 @@ export default function CrmCockpitPage() {
           />
         </div>
 
-        {/* KI-Klartext: priorisiert vernachlässigte Kunden */}
-        {!laden && !fehler && crmKiKontext !== "" && (
-          <KiKlartext
-            kontext={crmKiKontext}
-            modul="CRM / Kundenbetreuung"
-            akzent={kpi.einschlafend > 0 ? C.danger : C.warn}
-            dunkel
-            style={{ marginBottom: 24 }}
-          />
-        )}
+        {/* KI-Auge: was heißt die CRM-Lage gerade für mich? */}
+      <CrmAuge />
 
         {/* Filterleiste */}
         <div
