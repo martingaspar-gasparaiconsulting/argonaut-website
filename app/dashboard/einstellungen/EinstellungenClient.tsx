@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type CSSProperties, type FormEvent } from 'react'
+import PruefAuge from './PruefAuge'
 
 export type FirmaProfil = {
   firma_name?: string | null
@@ -138,6 +139,8 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
 
   return (
     <form onSubmit={speichern}>
+      <PruefAuge daten={werte} />
+
       {GRUPPEN.map((g) => (
         <section key={g.titel} style={card}>
           <h2 style={gruppenTitel}>{g.titel}</h2>
