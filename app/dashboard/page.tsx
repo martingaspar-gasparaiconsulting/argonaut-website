@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import OverusePopup from '@/components/OverusePopup'
 import KpiKachel from './KpiKachel'
+import ChefCockpit from './ChefCockpit'
 
 // ============================================================
 // ARGONAUT OS · DASHBOARD-UEBERSICHT = LIVE-COMMAND-CENTER
@@ -285,6 +286,27 @@ export default async function DashboardPage() {
             </a>
           </section>
         )}
+
+        {/* ETAPPE 1: Sprechendes Chef-Cockpit */}
+        <ChefCockpit
+          chefName={displayName}
+          jahr={jahrNow}
+          einnahmen={Math.round(einnahmenNetto)}
+          gewinn={gewinn}
+          rechnungenOffen={rechnOffenListe.length}
+          rechnungenOffenSumme={Math.round(rechnOffenSumme)}
+          rechnungenUeberfaellig={rechnUeberfaellig.length}
+          leadsOffen={leadsOffen}
+          chancenAktiv={chancenAktiv.length}
+          chancenSumme={Math.round(chancenSumme)}
+          auftraegeOffen={auftraegeOffen}
+          projekteLaufend={projekteLaufend}
+          kranke={kranke.length}
+          krankeDetails={krankeDetails}
+          offeneGenehmigungen={offeneGenehmigungen}
+          eingestempelt={eingestempelt}
+          feedCount={feed.length}
+        />
 
         {/* HEUTE IM BLICK: Chef-Radar */}
         <section style={{ marginBottom: '28px' }}>
