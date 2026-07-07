@@ -2,7 +2,6 @@
 
 import { useState, type CSSProperties } from 'react'
 
-const NAVY2 = '#0F1F33'
 const GOLD = '#C9A84C'
 const CYAN = '#00e5ff'
 
@@ -36,6 +35,30 @@ function euro(n: number): string {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
   } catch {
     return Math.round(n || 0) + ' €'
+  }
+}
+
+// Text fuer die Sprachausgabe aufbereiten (Sternchen/Markdown raus, Absaetze -> kurze Pausen)
+function vorleseText(roh: string): string {
+  return roh
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // **fett** -> fett
+    .replace(/[*_`#>]/g, '')           // weitere Markdown-Zeichen
+    .replace(/^\s*[-–•]\s+/gm, '')     // Aufzaehlungszeichen am Zeilenanfang
+    .replace(/\n{2,}/g, '. ')          // Absaetze -> kurze Pause
+    .replace(/\n/g, '. ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+// Beste installierte deutsche Stimme waehlen (klingt menschlicher als die Standardstimme)
+function besteStimme(): SpeechSynthesisVoice | null {
+  try {
+    const voices = window.speechSynthesis.getVoices()
+    const de = voices.filter((v) => v.lang.toLowerCase().startsWith('de'))
+    const natuerlich = de.find((v) => /natural|online|neural|premium/i.test(v.name))
+    return natuerlich || de[0] || null
+  } catch {
+    return null
   }
 }
 
@@ -85,23 +108,23 @@ export default function ChefCockpit(props: Props) {
 
   function vorlesen() {
     if (!ttsVerfuegbar || !ki) return
-    const text = [ki.klartext || '', ...(ki.punkte || [])].filter(Boolean).join('. ')
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.lang = 'de-DE'
-    const stimmen = window.speechSynthesis.getVoices()
-    const de = stimmen.find((v) => v.lang && v.lang.toLowerCase().startsWith('de'))
-    if (de) utter.voice = de
-    utter.onend = () => setSpricht(false)
-    utter.onerror = () => setSpricht(false)
+    // Laeuft gerade -> stoppen (Umschalter)
+    if (spricht) {
+      window.speechSynthesis.cancel()
+      setSpricht(false)
+      return
+    }
+    const rohText = [ki.klartext || '', ...(ki.punkte || [])].filter(Boolean).join('\n')
     window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utter)
+    const u = new SpeechSynthesisUtterance(vorleseText(rohText))
+    u.lang = 'de-DE'
+    u.rate = 1.0
+    const stimme = besteStimme()
+    if (stimme) u.voice = stimme
+    u.onend = () => setSpricht(false)
+    u.onerror = () => setSpricht(false)
     setSpricht(true)
-  }
-
-  function stopp() {
-    if (!ttsVerfuegbar) return
-    window.speechSynthesis.cancel()
-    setSpricht(false)
+    window.speechSynthesis.speak(u)
   }
 
   const stimmung = ki?.stimmung || 'neutral'
@@ -152,18 +175,14 @@ export default function ChefCockpit(props: Props) {
                 {stimmungLabel[stimmung] || 'Überblick'}
               </span>
 
-              {ttsVerfuegbar ? (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {!spricht ? (
-                    <button onClick={vorlesen} style={nebenBtn} className="cockpit-btn">🔊 Vorlesen</button>
-                  ) : (
-                    <button onClick={stopp} style={{ ...nebenBtn, color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }} className="cockpit-btn">⏹ Stopp</button>
-                  )}
-                  <button onClick={berichtErstellen} style={nebenBtn} className="cockpit-btn">↻ Neu</button>
-                </div>
-              ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {ttsVerfuegbar ? (
+                  <button onClick={vorlesen} style={{ ...nebenBtn, ...(spricht ? { color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' } : null) }} className="cockpit-btn">
+                    {spricht ? '⏹ Stopp' : '🔊 Vorlesen'}
+                  </button>
+                ) : null}
                 <button onClick={berichtErstellen} style={nebenBtn} className="cockpit-btn">↻ Neu</button>
-              )}
+              </div>
             </div>
 
             {/* Klartext */}
