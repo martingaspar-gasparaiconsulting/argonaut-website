@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import ProjekteAuge from "./ProjekteAuge";
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P2 — Projekt-Liste + Anlegen
@@ -406,6 +407,9 @@ export default function ProjektePage() {
           <button style={btn} onClick={oeffneNeu}>+ Neues Projekt</button>
         </div>
       </div>
+
+      {/* KI-Auge: was heißt die Projekt-Lage gerade für mich? */}
+      <ProjekteAuge />
 
       {/* Mini-Übersicht: Portfolio-Health */}
       {(() => {
