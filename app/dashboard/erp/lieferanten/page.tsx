@@ -33,6 +33,7 @@ interface Lieferant {
   adresse: string | null;
   website: string | null;
   kundennummer: string | null;
+  iban: string | null;
   notizen: string | null;
   aktiv: boolean;
   created_at: string;
@@ -46,6 +47,7 @@ type FormState = {
   adresse: string;
   website: string;
   kundennummer: string;
+  iban: string;
   notizen: string;
   aktiv: boolean;
 };
@@ -58,6 +60,7 @@ const LEER_FORM: FormState = {
   adresse: "",
   website: "",
   kundennummer: "",
+  iban: "",
   notizen: "",
   aktiv: true,
 };
@@ -126,6 +129,7 @@ export default function LieferantenCockpit() {
       adresse: l.adresse ?? "",
       website: l.website ?? "",
       kundennummer: l.kundennummer ?? "",
+      iban: l.iban ?? "",
       notizen: l.notizen ?? "",
       aktiv: l.aktiv,
     });
@@ -152,6 +156,7 @@ export default function LieferantenCockpit() {
       adresse: form.adresse.trim() || null,
       website: form.website.trim() || null,
       kundennummer: form.kundennummer.trim() || null,
+      iban: form.iban.trim() || null,
       notizen: form.notizen.trim() || null,
       aktiv: form.aktiv,
     };
@@ -472,6 +477,15 @@ export default function LieferantenCockpit() {
                   style={inputStil}
                   value={form.kundennummer}
                   onChange={(e) => setF("kundennummer", e.target.value)}
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStil}>IBAN (für Überweisungen)</label>
+                <input
+                  style={inputStil}
+                  value={form.iban}
+                  onChange={(e) => setF("iban", e.target.value)}
+                  placeholder="z.B. DE89 3704 0044 0532 0130 00"
                 />
               </div>
               <div>
