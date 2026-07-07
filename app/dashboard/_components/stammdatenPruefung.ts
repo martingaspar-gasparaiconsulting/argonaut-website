@@ -1,6 +1,6 @@
 // Gemeinsame, wiederverwendbare Stammdaten-Pruefung.
 // Reine Funktionen – keine KI, keine Netzwerkzugriffe. Laeuft sofort und kostenlos.
-// Wird zuerst fuer Lieferanten genutzt, spaeter fuer Kunden erweiterbar.
+// Genutzt fuer Lieferanten UND Kunden (kontakte).
 
 export type Schwere = 'fehler' | 'warnung' | 'info'
 
@@ -45,7 +45,12 @@ export function landName(code: string): string {
   return LAENDER[code] || code
 }
 
-// ---- Eingabe-Form (Lieferant) ----
+function norm(s: string | null | undefined): string {
+  return (s ?? '').replace(/\s+/g, '').toUpperCase()
+}
+
+// ==================== LIEFERANTEN ====================
+
 export type LieferantEingabe = {
   id: string
   name?: string | null
@@ -69,17 +74,12 @@ export type LieferantenBericht = {
   anzahlFehler: number
   anzahlWarnung: number
   anzahlInfo: number
-  betroffene: number // Anzahl verschiedener Lieferanten mit mind. einem Befund
-}
-
-function norm(s: string | null | undefined): string {
-  return (s ?? '').replace(/\s+/g, '').toUpperCase()
+  betroffene: number
 }
 
 export function pruefeLieferantenListe(list: LieferantEingabe[]): LieferantenBericht {
   const befunde: LieferantBefund[] = []
 
-  // Dubletten vorbereiten (gleiche IBAN / gleiche E-Mail)
   const ibanMap = new Map<string, string[]>()
   const emailMap = new Map<string, string[]>()
   for (const l of list) {
@@ -92,9 +92,8 @@ export function pruefeLieferantenListe(list: LieferantEingabe[]): LieferantenBer
 
   for (const l of list) {
     const name = l.name ?? 'Ohne Namen'
-    const aktiv = l.aktiv !== false // undefined/true = aktiv
+    const aktiv = l.aktiv !== false
 
-    // --- IBAN ---
     const ibanRoh = (l.iban ?? '').trim()
     if (ibanRoh === '') {
       if (aktiv) befunde.push({ id: l.id, name, schwere: 'warnung', text: 'Keine IBAN hinterlegt.' })
@@ -110,13 +109,11 @@ export function pruefeLieferantenListe(list: LieferantEingabe[]): LieferantenBer
       }
     }
 
-    // --- E-Mail ---
     const email = (l.email ?? '').trim()
     if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       befunde.push({ id: l.id, name, schwere: 'warnung', text: 'E-Mail-Format ungueltig: ' + email })
     }
 
-    // --- Adresse (Freitext) ---
     const adr = (l.adresse ?? '').trim()
     if (adr === '') {
       if (aktiv) befunde.push({ id: l.id, name, schwere: 'warnung', text: 'Keine Adresse hinterlegt.' })
@@ -125,7 +122,6 @@ export function pruefeLieferantenListe(list: LieferantEingabe[]): LieferantenBer
     }
   }
 
-  // --- Dubletten ---
   for (const [ib, namen] of ibanMap) {
     if (namen.length > 1) {
       befunde.push({
@@ -152,7 +148,6 @@ export function pruefeLieferantenListe(list: LieferantEingabe[]): LieferantenBer
   return { gesamt: list.length, aktiv, befunde, anzahlFehler, anzahlWarnung, anzahlInfo, betroffene }
 }
 
-// ---- KI-Kontext fuer die Plausibilitaets-/Prioritaeten-Zusammenfassung ----
 export function baueLieferantenKiKontext(bericht: LieferantenBericht): string {
   const zeilen = bericht.befunde.slice(0, 40).map((b) => '- ' + b.name + ': ' + b.text)
   return (
@@ -163,5 +158,125 @@ export function baueLieferantenKiKontext(bericht: LieferantenBericht): string {
     + 'Fasse fuer den Chef in Klartext zusammen, was zuerst korrigiert werden sollte. '
     + 'Wichtigste Prioritaet: falsche IBANs zuerst, weil dort Geld ans falsche Konto gehen kann. '
     + 'Weise kurz darauf hin, worauf er bei auslaendischen Lieferanten achten muss (Gebuehren, laengere Laufzeiten).'
+  )
+}
+
+// ==================== KUNDEN (kontakte) ====================
+
+export type KundeEingabe = {
+  id: string
+  vorname?: string | null
+  nachname?: string | null
+  firma?: string | null
+  email?: string | null
+  telefon?: string | null
+  status?: string | null
+}
+
+export type KundeBefund = {
+  id: string
+  name: string
+  schwere: Schwere
+  text: string
+}
+
+export type KundenBericht = {
+  gesamt: number
+  firmenkunden: number
+  privatpersonen: number
+  befunde: KundeBefund[]
+  anzahlFehler: number
+  anzahlWarnung: number
+  anzahlInfo: number
+  betroffene: number
+}
+
+function kundenName(k: KundeEingabe): string {
+  const n = [k.vorname, k.nachname].map((x) => (x ?? '').trim()).filter(Boolean).join(' ')
+  return n || (k.firma ?? '').trim() || 'Ohne Namen'
+}
+
+export function pruefeKundenListe(list: KundeEingabe[]): KundenBericht {
+  const befunde: KundeBefund[] = []
+
+  const emailMap = new Map<string, string[]>()
+  const nameMap = new Map<string, string[]>()
+  for (const k of list) {
+    const em = norm(k.email)
+    if (em) emailMap.set(em, [...(emailMap.get(em) ?? []), kundenName(k)])
+    const nk = norm((k.vorname ?? '') + (k.nachname ?? '') + (k.firma ?? ''))
+    if (nk) nameMap.set(nk, [...(nameMap.get(nk) ?? []), kundenName(k)])
+  }
+
+  let firmenkunden = 0
+  let privatpersonen = 0
+
+  for (const k of list) {
+    const name = kundenName(k)
+    const istFirma = (k.firma ?? '').trim() !== ''
+    if (istFirma) firmenkunden++
+    else privatpersonen++
+
+    const email = (k.email ?? '').trim()
+    const telefon = (k.telefon ?? '').trim()
+
+    // Erreichbarkeit
+    if (email === '' && telefon === '') {
+      befunde.push({ id: k.id, name, schwere: 'warnung', text: 'Keine Kontaktmoeglichkeit – weder E-Mail noch Telefon hinterlegt.' })
+    } else {
+      if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        befunde.push({ id: k.id, name, schwere: 'warnung', text: 'E-Mail-Format ungueltig: ' + email })
+      }
+      if (istFirma && email === '') {
+        befunde.push({ id: k.id, name, schwere: 'info', text: 'Firmenkunde ohne E-Mail – fuer Rechnungsversand empfohlen.' })
+      }
+    }
+
+    if (telefon !== '' && !/[0-9]/.test(telefon)) {
+      befunde.push({ id: k.id, name, schwere: 'info', text: 'Telefonnummer enthaelt keine Ziffern.' })
+    }
+
+    // Namens-Vollstaendigkeit nur bei Privatpersonen
+    if (!istFirma) {
+      const hatNachname = (k.nachname ?? '').trim() !== ''
+      const hatVorname = (k.vorname ?? '').trim() !== ''
+      if (!hatNachname && hatVorname) {
+        befunde.push({ id: k.id, name, schwere: 'info', text: 'Nur Vorname erfasst – Nachname fehlt.' })
+      } else if (!hatNachname && !hatVorname) {
+        befunde.push({ id: k.id, name, schwere: 'warnung', text: 'Weder Name noch Firma erfasst.' })
+      }
+    }
+  }
+
+  for (const [em, namen] of emailMap) {
+    if (namen.length > 1) {
+      befunde.push({ id: 'dup-email-' + em, name: namen.join(', '), schwere: 'warnung', text: 'Gleiche E-Mail bei ' + namen.length + ' Kontakten – moegliche Dublette.' })
+    }
+  }
+  for (const [nk, namen] of nameMap) {
+    if (namen.length > 1) {
+      befunde.push({ id: 'dup-name-' + nk, name: namen[0], schwere: 'info', text: namen.length + ' Kontakte mit identischem Namen – evtl. Dublette.' })
+    }
+  }
+
+  const anzahlFehler = befunde.filter((b) => b.schwere === 'fehler').length
+  const anzahlWarnung = befunde.filter((b) => b.schwere === 'warnung').length
+  const anzahlInfo = befunde.filter((b) => b.schwere === 'info').length
+  const betroffene = new Set(befunde.map((b) => b.id)).size
+
+  return { gesamt: list.length, firmenkunden, privatpersonen, befunde, anzahlFehler, anzahlWarnung, anzahlInfo, betroffene }
+}
+
+export function baueKundenKiKontext(bericht: KundenBericht): string {
+  const zeilen = bericht.befunde.slice(0, 40).map((b) => '- ' + b.name + ': ' + b.text)
+  return (
+    'Ergebnis der Kunden-/Kontakt-Stammdatenpruefung: ' + bericht.gesamt + ' Kontakte gesamt ('
+    + bericht.firmenkunden + ' Firmenkunden, ' + bericht.privatpersonen + ' Privatpersonen), '
+    + bericht.betroffene + ' mit Auffaelligkeiten ('
+    + bericht.anzahlFehler + ' Fehler, ' + bericht.anzahlWarnung + ' Warnungen, ' + bericht.anzahlInfo + ' Hinweise).\n\n'
+    + 'Einzelbefunde:\n' + zeilen.join('\n') + '\n\n'
+    + 'Fasse fuer den Chef in Klartext zusammen, was zuerst bereinigt werden sollte. '
+    + 'Prioritaet: nicht erreichbare Kontakte und ungueltige E-Mails zuerst, danach Dubletten zusammenfuehren. '
+    + 'Beruecksichtige den Unterschied zwischen Firmenkunden (B2B – brauchen fuer Rechnungen vollstaendige Daten) und Privatpersonen (B2C).'
   )
 }

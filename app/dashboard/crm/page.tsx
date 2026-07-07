@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
 import CrmAuge from "./CrmAuge";
+import KundenAuge from "./KundenAuge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
@@ -892,6 +893,7 @@ export default function CrmCockpitPage() {
 
         {/* KI-Auge: was heißt die CRM-Lage gerade für mich? */}
       <CrmAuge />
+      <KundenAuge kontakte={kontakte} />
 
         {/* Filterleiste */}
         <div
