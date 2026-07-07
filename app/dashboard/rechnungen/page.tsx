@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
+import RechnungenAuge from "./RechnungenAuge";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -358,16 +359,8 @@ export default function RechnungenCockpit() {
           />
         </div>
 
-        {/* KI-Klartext: priorisiert offene / überfällige Forderungen */}
-        {!laden && !fehler && (kpis.offen > 0 || kpis.ueberfaellig > 0) && (
-          <KiKlartext
-            kontext={rechnungenKiKontext}
-            modul="Rechnungen / offene Forderungen"
-            akzent={kpis.ueberfaellig > 0 ? C.danger : C.cyan}
-            dunkel
-            style={{ marginBottom: 24 }}
-          />
-        )}
+        {/* KI-Auge: was heißt die Rechnungs-Lage gerade für mich? */}
+      <RechnungenAuge />
 
         {/* Suche + Filter */}
         <div
