@@ -166,12 +166,15 @@ export default function SchichtplanPage() {
   const router = useRouter();
 
   // --- Rollen-Guard -----------------------------------------------------------
-  // Dieses Cockpit ist ausschliesslich fuer den Chef (Kunde). Ein eingeladener
-  // Mitarbeiter darf hier NICHT erstellen/bearbeiten. Er hat seine eigene
-  // read-only Schichtplan-Ansicht inkl. Bestaetigen/Einwand unter
-  // /dashboard/mein-bereich. Logik identisch zu middleware.ts:
+  // Dieses Cockpit ist fuer den Chef (Kunde) UND fuer bewusst berechtigte
+  // Planer (z.B. Personalleiter/Filialleiter), denen der Chef das Modul
+  // "schichtplan" freigeschaltet hat. Ein eingeladener Mitarbeiter OHNE dieses
+  // Recht darf hier NICHT erstellen/bearbeiten — er hat seine eigene read-only
+  // Schichtplan-Ansicht inkl. Bestaetigen/Einwand unter /dashboard/mein-bereich.
+  // Logik identisch zu middleware.ts:
   //   Chef      = Zeile in "customers" (per E-Mail).
   //   Mitarbeiter = keine customers-Zeile, aber mitarbeiter.auth_user_id = Login.
+  //   Planer    = Mitarbeiter mit "schichtplan" in mitarbeiter_rechte.module.
   // 'pruefe' = wird geprueft, 'chef' = Cockpit anzeigen, 'mitarbeiter' = Redirect.
   const [rolle, setRolle] = useState<'pruefe' | 'chef' | 'mitarbeiter'>('pruefe');
 
@@ -191,7 +194,7 @@ export default function SchichtplanPage() {
 
       if (customer) { if (aktiv) setRolle('chef'); return; }
 
-      // 2) Kein Kunde -> ist es ein eingeladener Mitarbeiter? -> Redirect.
+      // 2) Kein Kunde -> ist es ein eingeladener Mitarbeiter?
       const { data: ma } = await supabase
         .from('mitarbeiter')
         .select('id')
@@ -199,6 +202,24 @@ export default function SchichtplanPage() {
         .maybeSingle();
 
       if (ma) {
+        // Bewusst berechtigte Planer (z.B. Personalleiter/Filialleiter) duerfen
+        // planen: Cockpit oeffnen, WENN der Chef das Modul "schichtplan" in
+        // mitarbeiter_rechte.module freigeschaltet hat. Sonst Redirect.
+        // Mechanismus identisch zu middleware.ts (module = text[]-Array).
+        const { data: recht } = await supabase
+          .from('mitarbeiter_rechte')
+          .select('module')
+          .eq('mitarbeiter_id', ma.id)
+          .maybeSingle();
+
+        const module: string[] = Array.isArray(recht?.module) ? recht.module : [];
+        const darfPlanen = module.includes('schichtplan');
+
+        if (darfPlanen) {
+          if (aktiv) setRolle('chef'); // Cockpit-Vollzugriff als berechtigter Planer
+          return;
+        }
+
         if (aktiv) setRolle('mitarbeiter');
         router.replace('/dashboard/mein-bereich');
         return;
