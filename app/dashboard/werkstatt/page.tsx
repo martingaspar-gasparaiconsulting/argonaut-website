@@ -34,6 +34,10 @@ import {
   type FreigabeStatus,
 } from '../_components/freigabeLogik';
 import { baueNachrichten, type NachrichtVorlage } from '../_components/kundenNachrichten';
+import {
+  findeKonflikte, baueZeitpunkt, uhrzeit, zeitraumText,
+  type BuchungBasis,
+} from '../_components/buchungsLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
@@ -73,6 +77,13 @@ type KatalogRow = KatalogEintrag & { id: string; aktiv: boolean };
 type PositionRow = PositionBasis & {
   id: string; owner_user_id: string; auftrag_id: string;
   katalog_id: string | null; artikel_id: string | null; extern_firma: string | null;
+};
+// Block 1.4 · Bühnen-/Ressourcen-Buchung
+type RessourceRow = { id: string; bezeichnung: string; typ: string | null; farbe: string | null };
+type BuchungRow = BuchungBasis & {
+  id: string; ressource_id: string; titel: string;
+  beginn_am: string; ende_am: string; status: string;
+  werkstatt_auftrag_id: string | null;
 };
 
 const PRIO_OPTIONEN = [
@@ -127,6 +138,13 @@ export default function WerkstattPage() {
   const [leiSuche, setLeiSuche] = useState('');
   const [leiOffen, setLeiOffen] = useState(false);
 
+  // Block 1.4 · Bühnen-/Ressourcen-Buchung
+  const [ressourcen, setRessourcen] = useState<RessourceRow[]>([]);
+  const [auftragBuchungen, setAuftragBuchungen] = useState<BuchungRow[]>([]);
+  const [resTagBuchungen, setResTagBuchungen] = useState<BuchungRow[]>([]);
+  const [buchForm, setBuchForm] = useState({ ressource_id: '', datum: '', start: '08:00', ende: '10:00' });
+  const [buchBusy, setBuchBusy] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -140,15 +158,17 @@ export default function WerkstattPage() {
     if (!uid) return;
     setLaden(true); setFehler(null);
     try {
-      const [aRes, fRes, kRes] = await Promise.all([
+      const [aRes, fRes, kRes, rRes] = await Promise.all([
         supabase.from('werkstatt_auftraege').select('*').eq('owner_user_id', uid).eq('archiviert', false).order('angenommen_am', { ascending: true }),
         supabase.from('werkstatt_fahrzeuge').select('id, owner_user_id, fin, kennzeichen, hersteller, modell, halter_name').eq('owner_user_id', uid).eq('archiviert', false),
         supabase.from('leistungskatalog').select('*').eq('owner_user_id', uid).eq('aktiv', true).order('bezeichnung', { ascending: true }),
+        supabase.from('ressourcen').select('id, bezeichnung, typ, farbe').eq('owner_user_id', uid).eq('archiviert', false).order('bezeichnung', { ascending: true }),
       ]);
       if (aRes.error) throw aRes.error;
       setAuftraege((aRes.data as AuftragRow[]) ?? []);
       setFahrzeuge((fRes.data as FahrzeugRow[]) ?? []);
       setKatalog((kRes.data as KatalogRow[]) ?? []);
+      setRessourcen((rRes.data as RessourceRow[]) ?? []);
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -167,6 +187,13 @@ export default function WerkstattPage() {
       .select('von_status, nach_status, geaendert_am').eq('auftrag_id', auftragId).order('geaendert_am', { ascending: true });
     setLog((data as StatusLogEintrag[]) ?? []);
   }, []);
+  // Block 1.4 · Buchungen dieses Auftrags laden
+  const ladeBuchungen = useCallback(async (auftragId: string) => {
+    const { data } = await supabase.from('buchungen')
+      .select('id, ressource_id, titel, beginn_am, ende_am, status, werkstatt_auftrag_id')
+      .eq('werkstatt_auftrag_id', auftragId).order('beginn_am', { ascending: true });
+    setAuftragBuchungen((data as BuchungRow[]) ?? []);
+  }, []);
 
   // --- Modal öffnen -----------------------------------------------------
   function neu() {
@@ -184,7 +211,11 @@ export default function WerkstattPage() {
     });
     setFzSuche(''); setFzNeuAuf(false); setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);
     setModalAuf(true);
-    await Promise.all([ladePositionen(a.id), ladeLog(a.id)]);
+    await Promise.all([ladePositionen(a.id), ladeLog(a.id), ladeBuchungen(a.id)]);
+    // Buchungsformular vorbelegen: heute, erste Ressource
+    const heute = new Date();
+    const iso = `${heute.getFullYear()}-${String(heute.getMonth() + 1).padStart(2, '0')}-${String(heute.getDate()).padStart(2, '0')}`;
+    setBuchForm({ ressource_id: '', datum: iso, start: '08:00', ende: '10:00' });
   }
   function setF<K extends keyof Form>(k: K, v: Form[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
@@ -534,6 +565,93 @@ export default function WerkstattPage() {
       setTimeout(() => setNachrichtKopiert(false), 2500);
     } catch {
       setFehler('Kopieren nicht möglich — bitte Text manuell markieren.');
+    }
+  }
+
+  // --- Bühnen-/Ressourcen-Buchung · Block 1.4 --------------------------
+  // Tagesbuchungen der gewählten Ressource laden (für Live-Konfliktprüfung)
+  const ladeResTag = useCallback(async (ressourceId: string, datum: string) => {
+    if (!ressourceId || !datum) { setResTagBuchungen([]); return; }
+    const tagStart = new Date(datum + 'T00:00:00');
+    const tagEnde = new Date(datum + 'T23:59:59');
+    const { data } = await supabase.from('buchungen')
+      .select('id, ressource_id, titel, beginn_am, ende_am, status, werkstatt_auftrag_id')
+      .eq('ressource_id', ressourceId)
+      .lte('beginn_am', tagEnde.toISOString())
+      .gte('ende_am', tagStart.toISOString());
+    setResTagBuchungen((data as BuchungRow[]) ?? []);
+  }, []);
+
+  function setBuch<K extends keyof typeof buchForm>(k: K, v: (typeof buchForm)[K]) {
+    setBuchForm((f) => {
+      const next = { ...f, [k]: v };
+      if (k === 'ressource_id' || k === 'datum') void ladeResTag(next.ressource_id, next.datum);
+      return next;
+    });
+  }
+
+  // Live-Konflikt der geplanten Bühnen-Buchung
+  const buchGeplant: BuchungBasis | null = useMemo(() => {
+    const s = baueZeitpunkt(buchForm.datum, buchForm.start);
+    const e = baueZeitpunkt(buchForm.datum, buchForm.ende);
+    if (!buchForm.ressource_id || !s || !e || e <= s) return null;
+    return { ressource_id: buchForm.ressource_id, beginn_am: s, ende_am: e, status: 'geplant' };
+  }, [buchForm]);
+
+  const buchKonflikte = useMemo(() => {
+    if (!buchGeplant) return [];
+    return findeKonflikte(buchGeplant, resTagBuchungen as BuchungBasis[]);
+  }, [buchGeplant, resTagBuchungen]);
+
+  async function buchungAnlegen() {
+    if (!uid || !form.id) return;
+    const a = auftraege.find((x) => x.id === form.id);
+    if (!a) return;
+    if (!buchForm.ressource_id) { setFehler('Bitte eine Ressource (z. B. Bühne) wählen.'); return; }
+    const s = baueZeitpunkt(buchForm.datum, buchForm.start);
+    const e = baueZeitpunkt(buchForm.datum, buchForm.ende);
+    if (!s || !e || e <= s) { setFehler('Bitte gültige Start-/Endzeit wählen (Ende nach Start).'); return; }
+    if (buchKonflikte.length > 0) { setFehler('Die Ressource ist in dem Zeitraum bereits belegt.'); return; }
+
+    const resName = ressourcen.find((r) => r.id === buchForm.ressource_id)?.bezeichnung ?? 'Ressource';
+    const fz = fahrzeuge.find((f) => f.id === a.fahrzeug_id);
+    const kennz = fz?.kennzeichen || a.kennzeichen || '';
+    const titel = `${a.titel}${kennz ? ' · ' + kennz : ''}`;
+    if (!window.confirm(`Bühne/Ressource buchen?\n\n• ${resName}\n• ${titel}\n• ${uhrzeit(s)}–${uhrzeit(e)} am ${buchForm.datum.split('-').reverse().join('.')}`)) return;
+
+    setBuchBusy(true); setFehler(null);
+    try {
+      const { error } = await supabase.from('buchungen').insert({
+        owner_user_id: uid,
+        ressource_id: buchForm.ressource_id,
+        titel,
+        beginn_am: s.toISOString(),
+        ende_am: e.toISOString(),
+        status: 'geplant',
+        werkstatt_auftrag_id: a.id,
+        aktualisiert_am: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await ladeBuchungen(a.id);
+      await ladeResTag(buchForm.ressource_id, buchForm.datum);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('23P01') || msg.toLowerCase().includes('exclusion') || msg.includes('buchung_keine_ueberschneidung')) {
+        setFehler('Diese Ressource ist in dem Zeitraum bereits belegt. Bitte anderen Zeitraum wählen.');
+      } else {
+        setFehler('Buchung fehlgeschlagen: ' + msg);
+      }
+    } finally { setBuchBusy(false); }
+  }
+
+  async function buchungStornieren(b: BuchungRow) {
+    if (!window.confirm(`Buchung "${b.titel}" stornieren?\n\nSie gibt den Zeitraum wieder frei.`)) return;
+    try {
+      const { error } = await supabase.from('buchungen').update({ status: 'storniert', aktualisiert_am: new Date().toISOString() }).eq('id', b.id);
+      if (error) throw error;
+      if (form.id) await ladeBuchungen(form.id);
+    } catch (e: unknown) {
+      setFehler('Stornieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     }
   }
 
@@ -904,6 +1022,79 @@ export default function WerkstattPage() {
                       {nachrichtKopiert && <span style={{ color: C.green, fontSize: 13 }}>✓ in Zwischenablage</span>}
                       <span style={{ color: C.textDim, fontSize: 11.5, marginLeft: 'auto' }}>„[Ihre Werkstatt]" einmal durch Ihren Betriebsnamen ersetzen.</span>
                     </div>
+                  </div>
+                )}
+
+                {/* Bühnen-/Ressourcen-Buchung · Block 1.4 */}
+                {aktAuftrag && (
+                  <div style={styles.sektion}>
+                    <div style={styles.sektionTitel}>🔧 Bühne / Termin</div>
+
+                    {ressourcen.length === 0 ? (
+                      <div style={{ fontSize: 13, color: C.textDim }}>
+                        Noch keine Ressourcen angelegt. Lege im Modul „Buchungen" z. B. „Hebebühne 1" an — danach kannst du sie hier terminieren.
+                      </div>
+                    ) : (
+                      <>
+                        {/* bereits gebuchte Termine dieses Auftrags */}
+                        {auftragBuchungen.filter((b) => b.status !== 'storniert').length > 0 && (
+                          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {auftragBuchungen.filter((b) => b.status !== 'storniert').map((b) => {
+                              const res = ressourcen.find((r) => r.id === b.ressource_id);
+                              return (
+                                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px' }}>
+                                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: res?.farbe || C.cyan, display: 'inline-block', flexShrink: 0 }} />
+                                  <span style={{ fontWeight: 700 }}>{res?.bezeichnung || 'Ressource'}</span>
+                                  <span style={{ color: C.textDim }}>{zeitraumText(b.beginn_am, b.ende_am)}</span>
+                                  <button onClick={() => buchungStornieren(b)} style={{ ...styles.miniBtnGhost, marginLeft: 'auto' }}>Stornieren</button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* neue Buchung */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={styles.lbl}>Ressource / Bühne</label>
+                            <select style={styles.input} value={buchForm.ressource_id} onChange={(e) => setBuch('ressource_id', e.target.value)}>
+                              <option value="">— wählen —</option>
+                              {ressourcen.map((r) => <option key={r.id} value={r.id}>{r.bezeichnung}{r.typ ? ` (${r.typ})` : ''}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={styles.lbl}>Datum</label>
+                            <input type="date" style={styles.input} value={buchForm.datum} onChange={(e) => setBuch('datum', e.target.value)} />
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={styles.lbl}>Von</label>
+                              <input type="time" style={styles.input} value={buchForm.start} onChange={(e) => setBuch('start', e.target.value)} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={styles.lbl}>Bis</label>
+                              <input type="time" style={styles.input} value={buchForm.ende} onChange={(e) => setBuch('ende', e.target.value)} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Live-Konflikt */}
+                        {buchForm.ressource_id && buchKonflikte.length > 0 && (
+                          <div style={{ ...styles.nachtragBox, background: 'rgba(224,102,102,0.12)', borderColor: 'rgba(224,102,102,0.4)', marginTop: 10 }}>
+                            ⚠ Belegt in diesem Zeitraum: {buchKonflikte.map((k) => `${k.titel || 'Buchung'} (${uhrzeit(k.beginn_am)}–${uhrzeit(k.ende_am)})`).join(', ')}
+                          </div>
+                        )}
+                        {buchForm.ressource_id && buchKonflikte.length === 0 && (
+                          <div style={{ fontSize: 12.5, color: C.green, marginTop: 8 }}>✓ Zeitraum frei</div>
+                        )}
+
+                        <div style={{ marginTop: 10 }}>
+                          <button onClick={buchungAnlegen} disabled={buchBusy || buchKonflikte.length > 0 || !buchForm.ressource_id} style={{ ...styles.kvaBtn, opacity: (buchBusy || buchKonflikte.length > 0 || !buchForm.ressource_id) ? 0.5 : 1 }}>
+                            {buchBusy ? 'Bucht …' : '+ Bühne/Termin buchen'}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
