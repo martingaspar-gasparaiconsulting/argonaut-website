@@ -4,8 +4,8 @@
 // ARGONAUT OS · Phase 2 · Modul A · Block A.3 · Wartungsverträge (Chef-Ansicht)
 // Liste wiederkehrender Wartungsverträge mit Fälligkeits-Ampel, Anlegen/
 // Bearbeiten (Bestätigung vor jedem DB-Schreiben), Auto-Berechnung der
-// nächsten Fälligkeit und KI-Klartext zur Gesamtlage.
-// Nutzt bestehende Bausteine: FristAmpel, KiKlartext, wartungsLogik.
+// nächsten Fälligkeit und aufklappbarem KI-Auge (on-demand) zur Gesamtlage.
+// Nutzt bestehende Bausteine: FristAmpel, KiAuge, wartungsLogik.
 // Design 1:1 wie arbeitszeit-nachweis/page.tsx (Inline-Styles, kein Tailwind).
 // Pfad: app/dashboard/wartung/page.tsx
 // ============================================================
@@ -13,7 +13,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import FristAmpel from '../_components/FristAmpel';
-import KiKlartext from '../_components/KiKlartext';
+import KiAuge from '../_components/KiAuge';
 import {
   naechsteFaelligkeitString,
   berechneNaechsteFaelligkeit,
@@ -292,11 +292,14 @@ export default function WartungPage() {
         </div>
       )}
 
-      {/* KI-Klartext zur Gesamtlage */}
+      {/* KI-Auge zur Gesamtlage (on-demand, startet erst beim Aufklappen) */}
       {!laden && !zeigeArchiv && kiKontext && (
-        <div style={{ marginBottom: 18 }}>
-          <KiKlartext kontext={kiKontext} modul="Wartungsverträge" aktionHref="#" dunkel akzent={C.gold} />
-        </div>
+        <KiAuge
+          modul="Wartungsverträge"
+          kontext={kiKontext}
+          aktionHref="/dashboard/wartung"
+          aktionText="Zu den Wartungsverträgen"
+        />
       )}
 
       {/* Archiv-Umschalter */}

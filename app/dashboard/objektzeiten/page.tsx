@@ -4,14 +4,14 @@
 // ARGONAUT OS · Phase 2 · Modul B · Block B.3 · Objekt-Zeiterfassung
 // Objektbezogene Zeiten (Einsatzort/Baustelle/Anlage) — NICHT gesetzliche
 // Arbeitszeit (die liegt in hr_zeiterfassung). Objekte verwalten, Zeit
-// erfassen, Auswertung je Objekt mit Kosten + KI-Klartext.
+// erfassen, Auswertung je Objekt mit Kosten + aufklappbarem KI-Auge.
 // Bestätigung vor jedem DB-Schreiben. Design 1:1 wie das übrige Dashboard.
 // Pfad: app/dashboard/objektzeiten/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import KiKlartext from '../_components/KiKlartext';
+import KiAuge from '../_components/KiAuge';
 import {
   summiereJeObjekt, summiereGesamt, stundenText, eur,
   type ObjektBasis, type ObjektZeitBasis,
@@ -329,10 +329,14 @@ export default function ObjektzeitenPage() {
             <SummeKarte label="Buchungen" value={String(gesamt.anzahlBuchungen)} />
           </div>
 
+          {/* KI-Auge zur Monatslage (on-demand, startet erst beim Aufklappen) */}
           {kiKontext && (
-            <div style={{ marginBottom: 18 }}>
-              <KiKlartext kontext={kiKontext} modul="Objekt-Zeiterfassung" aktionHref="#" dunkel akzent={C.gold} />
-            </div>
+            <KiAuge
+              modul="Objekt-Zeiterfassung"
+              kontext={kiKontext}
+              aktionHref="/dashboard/objektzeiten"
+              aktionText="Zur Objekt-Zeiterfassung"
+            />
           )}
 
           {/* Auswertung je Objekt */}
