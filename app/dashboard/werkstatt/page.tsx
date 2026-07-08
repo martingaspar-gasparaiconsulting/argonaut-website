@@ -14,6 +14,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import {
@@ -61,6 +62,7 @@ type AuftragRow = {
   freigabe_am: string | null;
   freigabe_notiz: string | null;
   freigabe_summe_netto: number | null;
+  rechnung_id: string | null;
 };
 type FahrzeugRow = {
   id: string; owner_user_id: string; fin: string; kennzeichen: string | null;
@@ -102,6 +104,7 @@ function num(s: string): number | null {
 }
 
 export default function WerkstattPage() {
+  const router = useRouter();
   const [uid, setUid] = useState<string | null>(null);
   const [auftraege, setAuftraege] = useState<AuftragRow[]>([]);
   const [fahrzeuge, setFahrzeuge] = useState<FahrzeugRow[]>([]);
@@ -439,6 +442,53 @@ export default function WerkstattPage() {
       fz ? { fin: fz.fin, kennzeichen: fz.kennzeichen, hersteller: fz.hersteller, modell: fz.modell, halter_name: fz.halter_name } : null,
       positionen,
     );
+  }
+
+  // --- Rechnung aus Werkstatt-Auftrag erstellen · Block 1.2 -------------
+  const [rechnungBusy, setRechnungBusy] = useState(false);
+  async function rechnungErstellen() {
+    if (!form.id) return;
+    const a = auftraege.find((x) => x.id === form.id);
+    if (!a) return;
+
+    if (positionen.length === 0) {
+      setFehler('Der Auftrag hat noch keine Positionen — bitte zuerst Leistungen/Material erfassen.');
+      return;
+    }
+
+    // Warnungen (nicht blockierend): offener Nachtrag / KVA nicht freigegeben
+    const fStatus = a.freigabe_status ?? 'kein_kva';
+    if (aktNachtrag) {
+      if (!window.confirm('Achtung: Es gibt einen offenen Nachtrag über dem freigegebenen Betrag. Trotzdem eine Rechnung erstellen?')) return;
+    } else if (fStatus === 'kva_offen') {
+      if (!window.confirm('Der Kostenvoranschlag ist noch nicht vom Kunden freigegeben. Trotzdem eine Rechnung erstellen?')) return;
+    } else if (fStatus === 'abgelehnt') {
+      if (!window.confirm('Der Kostenvoranschlag wurde vom Kunden abgelehnt. Trotzdem eine Rechnung erstellen?')) return;
+    } else {
+      if (!window.confirm(`Aus diesem Auftrag eine Rechnung erstellen?\n\nDie Positionen werden übernommen, die Rechnung wird als „offen" angelegt.`)) return;
+    }
+
+    setRechnungBusy(true); setFehler(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-werkstatt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auftragId: form.id }),
+      });
+      const daten = await res.json();
+      if (!res.ok) { setFehler(daten?.error || 'Rechnung konnte nicht erstellt werden.'); setRechnungBusy(false); return; }
+
+      const hinweis = daten.bereitsVorhanden
+        ? 'Zu diesem Auftrag existiert bereits eine Rechnung. Jetzt öffnen?'
+        : 'Rechnung wurde erstellt. Jetzt öffnen?';
+      if (window.confirm(hinweis)) {
+        router.push(`/dashboard/rechnungen/${daten.rechnungId}`);
+      } else {
+        await laden_();
+      }
+    } catch (e: unknown) {
+      setFehler('Rechnung erstellen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setRechnungBusy(false); }
   }
 
   return (
@@ -807,6 +857,11 @@ export default function WerkstattPage() {
               {form.id && (
                 <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
               )}
+              {form.id && (
+                <button onClick={rechnungErstellen} disabled={speichert || rechnungBusy} style={styles.rechnungBtn}>
+                  {rechnungBusy ? 'Erstellt …' : (auftraege.find((x) => x.id === form.id)?.rechnung_id ? '🧾 Rechnung öffnen' : '🧾 Rechnung erstellen')}
+                </button>
+              )}
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>{form.id ? 'Schließen' : 'Abbrechen'}</button>
               <button onClick={speichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>
                 {speichert ? 'Speichert …' : (form.id ? 'Kopfdaten speichern' : 'Anlegen')}
@@ -851,6 +906,7 @@ const styles: Record<string, CSSProperties> = {
   kvaBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
   freigebenBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.35)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
   ablehnenBtn: { background: 'rgba(224,102,102,0.12)', color: C.danger, border: `1px solid rgba(224,102,102,0.32)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  rechnungBtn: { background: 'rgba(201,168,76,0.14)', color: C.gold, border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
   nachtragBox: { background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '11px 13px', fontSize: 13, color: C.text, marginBottom: 10, lineHeight: 1.5 },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
