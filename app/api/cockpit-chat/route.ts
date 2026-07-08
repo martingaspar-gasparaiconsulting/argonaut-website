@@ -68,6 +68,7 @@ Die "aktion" hat je nach Typ diese Felder:
 - wiedervorlage:   {"typ":"wiedervorlage","kontakt_name":"<Pflicht: Name oder Firma>","datum":"<Pflicht, Format YYYY-MM-DD>","notiz":"<optional>"}
 
 REGELN fuer Befehle:
+- Formuliere den "titel" einer Aufgabe IMMER als kurze, praegnante To-do-Ueberschrift (maximal ca. 6 Woerter) — NICHT den ganzen Satz des Chefs. Beispiel: aus "Kannst du bitte fuer Franz eine Aufgabe anlegen, dass er die ueberfaelligen Rechnungen prueft" wird der Titel "Ueberfaellige Rechnungen pruefen". Zusaetzlichen Kontext oder Details packst du in "beschreibung".
 - Rechne relative Datumsangaben ("morgen", "naechsten Montag", "in 3 Tagen") immer in ein echtes Datum YYYY-MM-DD um, ausgehend von heute (${heuteIso}).
 - Uebernimm Namen genau so, wie der Chef sie sagt (z. B. nur "Thomas"). Erfinde KEINE Nachnamen und KEINE Daten.
 - Fehlt bei einem Befehl eine Pflichtangabe (z. B. der Nachrichtentext, das Datum oder der Kontaktname), dann nutze MODUS A und frage kurz nach, statt eine unvollstaendige Aktion zu bauen.
