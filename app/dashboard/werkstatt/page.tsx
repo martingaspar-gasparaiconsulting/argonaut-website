@@ -33,6 +33,7 @@ import {
   hatOffenenNachtrag, nachtragDifferenz, freigabeDatumText,
   type FreigabeStatus,
 } from '../_components/freigabeLogik';
+import { baueNachrichten, type NachrichtVorlage } from '../_components/kundenNachrichten';
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
@@ -491,6 +492,51 @@ export default function WerkstattPage() {
     } finally { setRechnungBusy(false); }
   }
 
+  // --- Kunden-Nachrichten · Block 1.3 ----------------------------------
+  const [nachrichtTyp, setNachrichtTyp] = useState<string | null>(null);
+  const [nachrichtText, setNachrichtText] = useState<string>('');
+  const [nachrichtKopiert, setNachrichtKopiert] = useState(false);
+
+  const nachrichtVorlagen = useMemo<NachrichtVorlage[]>(() => {
+    if (!aktAuftrag) return [];
+    const fz = fahrzeuge.find((f) => f.id === aktAuftrag.fahrzeug_id) || null;
+    const fahrzeugText = fz ? [fz.hersteller, fz.modell].filter(Boolean).join(' ') : '';
+    return baueNachrichten({
+      kunde_name: aktAuftrag.kunde_name,
+      kennzeichen: fz?.kennzeichen || aktAuftrag.kennzeichen,
+      fahrzeug_text: fahrzeugText || null,
+      status: aktAuftrag.status,
+      freigabe_status: aktAuftrag.freigabe_status,
+      zugesagt_am: aktAuftrag.zugesagt_am,
+      summe_brutto: summe.gesamtBetrag != null ? Math.round(summe.gesamtBetrag * 1.19 * 100) / 100 : null,
+    });
+  }, [aktAuftrag, fahrzeuge, summe.gesamtBetrag]);
+
+  // Beim Öffnen/Wechsel: empfohlene Vorlage vorwählen
+  useEffect(() => {
+    if (nachrichtVorlagen.length === 0) { setNachrichtTyp(null); setNachrichtText(''); return; }
+    const vorwahl = nachrichtVorlagen[0];
+    setNachrichtTyp(vorwahl.typ);
+    setNachrichtText(vorwahl.text);
+    setNachrichtKopiert(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.id]);
+
+  function nachrichtWaehlen(v: NachrichtVorlage) {
+    setNachrichtTyp(v.typ);
+    setNachrichtText(v.text);
+    setNachrichtKopiert(false);
+  }
+  async function nachrichtKopieren() {
+    try {
+      await navigator.clipboard.writeText(nachrichtText);
+      setNachrichtKopiert(true);
+      setTimeout(() => setNachrichtKopiert(false), 2500);
+    } catch {
+      setFehler('Kopieren nicht möglich — bitte Text manuell markieren.');
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Service</div>
@@ -819,6 +865,47 @@ export default function WerkstattPage() {
                     </div>
                   );
                 })()}
+
+                {/* Kunden-Nachrichten · Block 1.3 */}
+                {aktAuftrag && nachrichtVorlagen.length > 0 && (
+                  <div style={styles.sektion}>
+                    <div style={styles.sektionTitel}>💬 Kunden-Info</div>
+                    <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 10 }}>
+                      Fertige Nachricht wählen, bei Bedarf anpassen, kopieren und per WhatsApp/SMS senden.
+                    </div>
+
+                    {/* Vorlagen-Auswahl */}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {nachrichtVorlagen.map((v) => (
+                        <button
+                          key={v.typ}
+                          onClick={() => nachrichtWaehlen(v)}
+                          style={{
+                            ...styles.miniBtnGhost, marginLeft: 0,
+                            ...(nachrichtTyp === v.typ ? { color: C.cyan, borderColor: 'rgba(0,229,255,0.4)', background: 'rgba(0,229,255,0.08)' } : {}),
+                            ...(v.passtZurLage ? { fontWeight: 700 } : {}),
+                          }}
+                          title={v.passtZurLage ? 'Passt zur aktuellen Lage' : ''}
+                        >
+                          {v.passtZurLage ? '★ ' : ''}{v.titel}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Editierbarer Text */}
+                    <textarea
+                      style={{ ...styles.input, minHeight: 130, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' }}
+                      value={nachrichtText}
+                      onChange={(e) => { setNachrichtText(e.target.value); setNachrichtKopiert(false); }}
+                    />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                      <button onClick={nachrichtKopieren} style={styles.kvaBtn}>📋 Kopieren</button>
+                      {nachrichtKopiert && <span style={{ color: C.green, fontSize: 13 }}>✓ in Zwischenablage</span>}
+                      <span style={{ color: C.textDim, fontSize: 11.5, marginLeft: 'auto' }}>„[Ihre Werkstatt]" einmal durch Ihren Betriebsnamen ersetzen.</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Anhänge am Auftrag (Fotos vom Besuch, Belege) */}
                 <div style={styles.sektion}>
