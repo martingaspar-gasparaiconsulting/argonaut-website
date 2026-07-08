@@ -68,10 +68,15 @@ type AuftragRow = {
   freigabe_notiz: string | null;
   freigabe_summe_netto: number | null;
   rechnung_id: string | null;
+  // Block 1.5 · Fahrzeug-Annahme (additiv)
+  kilometerstand: number | null;
+  kundenanliegen: string | null;
+  annahme_zustand: string | null;
 };
 type FahrzeugRow = {
   id: string; owner_user_id: string; fin: string; kennzeichen: string | null;
   hersteller: string | null; modell: string | null; halter_name: string | null;
+  naechste_hu: string | null;
 };
 type KatalogRow = KatalogEintrag & { id: string; aktiv: boolean };
 type PositionRow = PositionBasis & {
@@ -99,10 +104,13 @@ type Form = {
   titel: string; nummer: string; kunde_name: string; kennzeichen: string;
   prioritaet: string; zugesagt_am: string; beschreibung: string; notiz: string;
   fahrzeug_id: string | null;
+  // Block 1.5 · Annahme
+  kilometerstand: string; kundenanliegen: string; annahme_zustand: string;
 };
 const LEER: Form = {
   id: null, titel: '', nummer: '', kunde_name: '', kennzeichen: '',
   prioritaet: 'normal', zugesagt_am: '', beschreibung: '', notiz: '', fahrzeug_id: null,
+  kilometerstand: '', kundenanliegen: '', annahme_zustand: '',
 };
 
 function datumHuebsch(iso: string | null): string {
@@ -133,7 +141,7 @@ export default function WerkstattPage() {
 
   const [fzSuche, setFzSuche] = useState('');
   const [fzNeuAuf, setFzNeuAuf] = useState(false);
-  const [fzNeu, setFzNeu] = useState({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '' });
+  const [fzNeu, setFzNeu] = useState({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '', naechste_hu: '' });
 
   const [leiSuche, setLeiSuche] = useState('');
   const [leiOffen, setLeiOffen] = useState(false);
@@ -160,7 +168,7 @@ export default function WerkstattPage() {
     try {
       const [aRes, fRes, kRes, rRes] = await Promise.all([
         supabase.from('werkstatt_auftraege').select('*').eq('owner_user_id', uid).eq('archiviert', false).order('angenommen_am', { ascending: true }),
-        supabase.from('werkstatt_fahrzeuge').select('id, owner_user_id, fin, kennzeichen, hersteller, modell, halter_name').eq('owner_user_id', uid).eq('archiviert', false),
+        supabase.from('werkstatt_fahrzeuge').select('id, owner_user_id, fin, kennzeichen, hersteller, modell, halter_name, naechste_hu').eq('owner_user_id', uid).eq('archiviert', false),
         supabase.from('leistungskatalog').select('*').eq('owner_user_id', uid).eq('aktiv', true).order('bezeichnung', { ascending: true }),
         supabase.from('ressourcen').select('id, bezeichnung, typ, farbe').eq('owner_user_id', uid).eq('archiviert', false).order('bezeichnung', { ascending: true }),
       ]);
@@ -198,7 +206,7 @@ export default function WerkstattPage() {
   // --- Modal öffnen -----------------------------------------------------
   function neu() {
     setForm(LEER); setLog([]); setPositionen([]); setFzSuche(''); setFzNeuAuf(false);
-    setFzNeu({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '' });
+    setFzNeu({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '', naechste_hu: '' });
     setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);
     setModalAuf(true);
   }
@@ -208,6 +216,8 @@ export default function WerkstattPage() {
       kennzeichen: a.kennzeichen ?? '', prioritaet: a.prioritaet ?? 'normal',
       zugesagt_am: a.zugesagt_am ?? '', beschreibung: a.beschreibung ?? '', notiz: a.notiz ?? '',
       fahrzeug_id: a.fahrzeug_id ?? null,
+      kilometerstand: a.kilometerstand != null ? String(a.kilometerstand) : '',
+      kundenanliegen: a.kundenanliegen ?? '', annahme_zustand: a.annahme_zustand ?? '',
     });
     setFzSuche(''); setFzNeuAuf(false); setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);
     setModalAuf(true);
@@ -233,7 +243,11 @@ export default function WerkstattPage() {
         kunde_name: form.kunde_name.trim() || null, kennzeichen: form.kennzeichen.trim() || null,
         prioritaet: form.prioritaet, zugesagt_am: form.zugesagt_am || null,
         beschreibung: form.beschreibung.trim() || null, notiz: form.notiz.trim() || null,
-        fahrzeug_id: form.fahrzeug_id, aktualisiert_am: new Date().toISOString(),
+        fahrzeug_id: form.fahrzeug_id,
+        kilometerstand: form.kilometerstand.trim() ? (num(form.kilometerstand) ?? null) : null,
+        kundenanliegen: form.kundenanliegen.trim() || null,
+        annahme_zustand: form.annahme_zustand.trim() || null,
+        aktualisiert_am: new Date().toISOString(),
       };
       if (istNeu) {
         const { data, error } = await supabase.from('werkstatt_auftraege').insert(payload).select('id').single();
@@ -283,10 +297,11 @@ export default function WerkstattPage() {
         owner_user_id: uid, fin, kennzeichen: fzNeu.kennzeichen.trim() || null,
         hersteller: fzNeu.hersteller.trim() || null, modell: fzNeu.modell.trim() || null,
         halter_name: fzNeu.halter_name.trim() || null,
+        naechste_hu: fzNeu.naechste_hu || null,
       }).select('id').single();
       if (error) throw error;
       setFzNeuAuf(false);
-      setFzNeu({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '' });
+      setFzNeu({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '', naechste_hu: '' });
       await laden_();
       await fahrzeugKoppeln((data as { id: string }).id);
     } catch (e: unknown) {
@@ -448,6 +463,23 @@ export default function WerkstattPage() {
   const oDurchlauf = abg.length > 0 ? dauerTextMinuten(Math.round(abg.reduce((s, a) => s + durchlaufzeitMinuten(a), 0) / abg.length)) : '—';
 
   const summe = auftragsSumme(positionen);
+
+  // Block 1.5 · HU-Wiedervorlage: Fahrzeuge mit HU fällig in <= 60 Tagen oder überfällig
+  const huTageBis = (iso: string | null): number | null => {
+    if (!iso) return null;
+    const ziel = new Date(iso + (iso.length <= 10 ? 'T00:00:00' : ''));
+    if (isNaN(ziel.getTime())) return null;
+    const heute = new Date();
+    const h0 = new Date(heute.getFullYear(), heute.getMonth(), heute.getDate());
+    const z0 = new Date(ziel.getFullYear(), ziel.getMonth(), ziel.getDate());
+    return Math.round((z0.getTime() - h0.getTime()) / 86400000);
+  };
+  const huFaellig = useMemo(() => {
+    return fahrzeuge
+      .map((f) => ({ f, tage: huTageBis(f.naechste_hu) }))
+      .filter((x) => x.tage !== null && x.tage <= 60)
+      .sort((a, b) => (a.tage ?? 0) - (b.tage ?? 0));
+  }, [fahrzeuge]);
 
   // Aktueller Auftrag im Modal (für Freigabe-Panel)
   const aktAuftrag = form.id ? auftraege.find((x) => x.id === form.id) ?? null : null;
@@ -655,6 +687,28 @@ export default function WerkstattPage() {
     }
   }
 
+  // Block 1.5 · HU-Kachel: aufklappen + Erinnerungstext kopieren
+  const [huOffen, setHuOffen] = useState(false);
+  async function huErinnerungKopieren(f: FahrzeugRow) {
+    const fahrzeugText = [f.hersteller, f.modell].filter(Boolean).join(' ');
+    // Halter als Kunde verwenden, falls vorhanden
+    const vorlagen = baueNachrichten({
+      kunde_name: f.halter_name,
+      kennzeichen: f.kennzeichen,
+      fahrzeug_text: fahrzeugText || null,
+      hu_faellig: f.naechste_hu,
+    });
+    const hu = vorlagen.find((v) => v.typ === 'hu_erinnerung');
+    if (!hu) return;
+    try {
+      await navigator.clipboard.writeText(hu.text);
+      setFehler(null);
+      window.alert('HU-Erinnerung in die Zwischenablage kopiert — jetzt per WhatsApp/SMS an den Kunden senden.');
+    } catch {
+      setFehler('Kopieren nicht möglich — bitte manuell aus der Fahrzeugakte übernehmen.');
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Service</div>
@@ -677,6 +731,43 @@ export default function WerkstattPage() {
 
       {!laden && kiKontext && (
         <KiAuge modul="Werkstatt-Durchlauf" kontext={kiKontext} aktionHref="/dashboard/werkstatt" aktionText="Zum Werkstatt-Board" />
+      )}
+
+      {/* Block 1.5 · HU-Wiedervorlage-Kachel */}
+      {!laden && huFaellig.length > 0 && (
+        <div style={{ background: C.navy2, border: `1px solid ${C.warn}55`, borderRadius: 14, padding: '14px 18px', marginBottom: 18 }}>
+          <button
+            onClick={() => setHuOffen((o) => !o)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', color: C.text, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+          >
+            <span style={{ fontSize: 18 }}>🗓</span>
+            <span style={{ fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 15 }}>
+              HU-Wiedervorlage: {huFaellig.length} {huFaellig.length === 1 ? 'Fahrzeug' : 'Fahrzeuge'} fällig
+            </span>
+            <span style={{ marginLeft: 'auto', color: C.textDim, fontSize: 13 }}>{huOffen ? '▲' : '▼'}</span>
+          </button>
+          {huOffen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              {huFaellig.map(({ f, tage }) => {
+                const t = tage ?? 0;
+                const farbe = t < 0 ? C.danger : t <= 30 ? C.warn : C.green;
+                const text = t < 0 ? `${Math.abs(t)} Tage überfällig` : t === 0 ? 'heute fällig' : `in ${t} Tagen`;
+                return (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 13.5 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: farbe, display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 700 }}>{[f.hersteller, f.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</span>
+                    <span style={{ color: C.textDim }}>{f.kennzeichen || `FIN …${f.fin.slice(-6)}`}{f.halter_name ? ` · ${f.halter_name}` : ''}</span>
+                    <span style={{ color: farbe, marginLeft: 'auto', fontWeight: 600 }}>{datumHuebsch(f.naechste_hu)} · {text}</span>
+                    <button onClick={() => huErinnerungKopieren(f)} style={styles.kvaBtn} title="HU-Erinnerung als Nachricht kopieren">💬 Erinnerung</button>
+                  </div>
+                );
+              })}
+              <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 4 }}>
+                Zeigt Fahrzeuge mit HU-Fälligkeit in den nächsten 60 Tagen. HU-Datum wird beim Fahrzeug im Auftrag gepflegt.
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -786,6 +877,28 @@ export default function WerkstattPage() {
               <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Fahrzeug und Leistungen hinzufügen.</div>
             ) : (
               <>
+                {/* Fahrzeug-Annahme · Block 1.5 */}
+                <div style={styles.sektion}>
+                  <div style={styles.sektionTitel}>📋 Annahme</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={styles.lbl}>Kilometerstand</label>
+                      <input style={styles.input} inputMode="numeric" value={form.kilometerstand}
+                        onChange={(e) => setF('kilometerstand', e.target.value)} placeholder="z. B. 84500" />
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>Kundenanliegen (O-Ton)</label>
+                      <input style={styles.input} value={form.kundenanliegen}
+                        onChange={(e) => setF('kundenanliegen', e.target.value)} placeholder='z. B. "bremst mit Geräusch"' />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={styles.lbl}>Zustand bei Annahme (Haftungsschutz)</label>
+                      <textarea style={{ ...styles.input, minHeight: 48, resize: 'vertical' }} value={form.annahme_zustand}
+                        onChange={(e) => setF('annahme_zustand', e.target.value)} placeholder="z. B. Kratzer Stoßstange hinten links, Tank halb voll" />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Fahrzeug (optional) */}
                 <div style={styles.sektion}>
                   <div style={styles.sektionTitel}>🚗 Fahrzeug <span style={{ color: C.textDim, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></div>
@@ -818,6 +931,7 @@ export default function WerkstattPage() {
                           <Feld label="Kennzeichen"><input style={styles.input} value={fzNeu.kennzeichen} onChange={(e) => setFzNeu((f) => ({ ...f, kennzeichen: e.target.value }))} /></Feld>
                           <Feld label="Hersteller"><input style={styles.input} value={fzNeu.hersteller} onChange={(e) => setFzNeu((f) => ({ ...f, hersteller: e.target.value }))} placeholder="z. B. Mercedes-Benz" /></Feld>
                           <Feld label="Modell"><input style={styles.input} value={fzNeu.modell} onChange={(e) => setFzNeu((f) => ({ ...f, modell: e.target.value }))} placeholder="z. B. C-Klasse" /></Feld>
+                          <Feld label="Nächste HU (TÜV)"><input type="date" style={styles.input} value={fzNeu.naechste_hu} onChange={(e) => setFzNeu((f) => ({ ...f, naechste_hu: e.target.value }))} /></Feld>
                           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button onClick={() => setFzNeuAuf(false)} style={styles.miniBtnGhost}>Abbrechen</button>
                             <button onClick={fahrzeugNeuAnlegen} style={styles.miniBtn}>Anlegen & koppeln</button>

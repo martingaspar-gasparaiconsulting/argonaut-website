@@ -17,6 +17,7 @@ export interface NachrichtKontext {
   freigabe_status?: string | null;  // kein_kva | kva_offen | freigegeben | abgelehnt
   zugesagt_am?: string | null;      // date (YYYY-MM-DD)
   summe_brutto?: number | null;     // für KVA-Freigabe-Text (brutto)
+  hu_faellig?: string | null;       // date (YYYY-MM-DD) — für HU-Erinnerung
 }
 
 // --- Vorlagen-Typen ----------------------------------------------------------
@@ -25,7 +26,8 @@ export type NachrichtTyp =
   | 'kva_freigabe'
   | 'warten_teile'
   | 'termin_erinnerung'
-  | 'in_arbeit';
+  | 'in_arbeit'
+  | 'hu_erinnerung';
 
 export interface NachrichtVorlage {
   typ: NachrichtTyp;
@@ -109,6 +111,16 @@ function vorlageInArbeit(ctx: NachrichtKontext): string {
     grussBlock();
 }
 
+function vorlageHuErinnerung(ctx: NachrichtKontext): string {
+  const d = datumDe(ctx.hu_faellig);
+  const faelligTeil = d ? ` am ${d}` : ' in Kürze';
+  return `${anrede(ctx.kunde_name)}\n\n` +
+    `die Hauptuntersuchung (HU/TÜV) für ${fahrzeugBez(ctx).replace(/^Ihr /, 'Ihr ')} ist${faelligTeil} fällig. ` +
+    `Gerne übernehmen wir das für Sie — melden Sie sich einfach für einen Termin. ` +
+    `So bleiben Sie sicher und vermeiden ein Bußgeld.` +
+    grussBlock();
+}
+
 // --- Hauptfunktion: alle Vorlagen bauen + nach Lage sortieren ----------------
 
 /**
@@ -149,6 +161,12 @@ export function baueNachrichten(ctx: NachrichtKontext): NachrichtVorlage[] {
       titel: 'Zwischenstand (in Arbeit)',
       text: vorlageInArbeit(ctx),
       passtZurLage: status === 'in_arbeit',
+    },
+    {
+      typ: 'hu_erinnerung',
+      titel: 'HU-Erinnerung',
+      text: vorlageHuErinnerung(ctx),
+      passtZurLage: false, // wird gezielt über die HU-Kachel genutzt, nicht statusabhängig
     },
   ];
 
