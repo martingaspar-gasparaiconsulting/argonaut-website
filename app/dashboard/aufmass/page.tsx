@@ -16,6 +16,7 @@ import {
   EINHEITEN, STATUS_LISTE, statusDef, aufmassSumme, positionsBetrag,
   mengeText, eur, type PositionBasis,
 } from '../_components/aufmassLogik';
+import { aufmassPdf } from '../_components/aufmassPdf';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -193,6 +194,22 @@ export default function AufmassPage() {
   const kiKontext = aufmasse.length === 0 ? '' :
     `${aufmasse.length} Aufmaße, davon ${entwuerfe} in Entwurf. Aktuell geöffnet: "${form.titel || '—'}" mit ${positionen.length} Positionen.`;
 
+  // --- PDF erzeugen -----------------------------------------------------
+  function pdfErzeugen() {
+    if (!form.id) return;
+    aufmassPdf(
+      {
+        nummer: form.nummer, titel: form.titel, status: form.status,
+        kunde_name: form.kunde_name, projekt: form.projekt, ort: form.ort,
+        aufmass_datum: form.aufmass_datum, bearbeiter: form.bearbeiter, notiz: form.notiz,
+      },
+      positionen.map((p) => ({
+        position_nr: p.position_nr, bezeichnung: p.bezeichnung, menge: p.menge,
+        einheit: p.einheit, einzelpreis_netto: p.einzelpreis_netto,
+      })),
+    );
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Service</div>
@@ -366,6 +383,9 @@ export default function AufmassPage() {
               {form.id && (
                 <button onClick={() => { const a = aufmasse.find((x) => x.id === form.id); if (a) archivieren(a); }} disabled={speichert}
                   style={{ ...styles.ghostBtn, color: C.textDim, marginRight: 'auto' }}>Archivieren</button>
+              )}
+              {form.id && (
+                <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Aufmaßblatt PDF</button>
               )}
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>{form.id ? 'Schließen' : 'Abbrechen'}</button>
               <button onClick={speichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>
