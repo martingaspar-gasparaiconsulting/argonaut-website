@@ -57,6 +57,7 @@ export default function GobdPage() {
   const [entwurfId, setEntwurfId] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [speichert, setSpeichert] = useState(false);
+  const [pdfLaeuft, setPdfLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -152,6 +153,32 @@ export default function GobdPage() {
     } finally { setSpeichert(false); }
   }
 
+  async function pdfErstellen() {
+    if (!uid || pdfLaeuft) return;
+    setPdfLaeuft(true); setFehler(null);
+    try {
+      await speichern(); // erst sichern, damit das PDF den aktuellen Stand zeigt
+      const res = await fetch('/api/gobd-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        let m = 'PDF-Erstellung fehlgeschlagen.';
+        try { const j = await res.json(); if (j?.error) m = j.error; } catch { /* ignore */ }
+        setFehler(m);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const name = (doku.firmenkopf.firmenname || 'Betrieb').replace(/[^a-zA-Z0-9äöüÄÖÜ ]/g, '').replace(/\s+/g, '_');
+      const a = document.createElement('a');
+      a.href = url; a.download = `GoBD-Verfahrensdokumentation_${name}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setFehler('Verbindungsfehler bei der PDF-Erstellung.');
+    } finally { setPdfLaeuft(false); }
+  }
+
   if (laden) return <div style={styles.page}><div style={styles.hint}>Lädt …</div></div>;
 
   const k = doku.firmenkopf;
@@ -215,6 +242,9 @@ export default function GobdPage() {
         <button onClick={speichern} disabled={speichert} style={{ ...styles.saveBtn, opacity: speichert ? 0.6 : 1 }}>
           {speichert ? 'Speichert …' : '💾 Entwurf speichern'}
         </button>
+        <button onClick={pdfErstellen} disabled={pdfLaeuft} style={{ ...styles.pdfBtn, opacity: pdfLaeuft ? 0.6 : 1 }}>
+          {pdfLaeuft ? 'Erstellt PDF …' : '📄 PDF erstellen'}
+        </button>
         {meldung && <span style={{ color: C.green, fontSize: 14 }}>✓ {meldung}</span>}
       </div>
       <div style={styles.footHint}>Im nächsten Schritt wird aus diesem Entwurf die fertige, versionierte PDF-Dokumentation erstellt.</div>
@@ -272,6 +302,7 @@ const styles: Record<string, CSSProperties> = {
   fieldHint: { fontSize: 12, color: C.textDim, marginTop: 5 },
   saveBar: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 },
   saveBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  pdfBtn: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   footHint: { color: C.textDim, fontSize: 13, marginTop: 12 },
   hint: { color: C.textDim, fontSize: 14, padding: '20px 0' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
