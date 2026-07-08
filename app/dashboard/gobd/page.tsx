@@ -67,32 +67,35 @@ export default function GobdPage() {
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
 
-      // 1) bestehenden Entwurf laden?
+      const basis: Doku = {
+        firmenkopf: leererKopf(),
+        verantwortung: { buchfuehrung: '', steuerberater: '', datev_nr: '', aufbewahrungsort: '' },
+        systeme: 'ARGONAUT OS (Angebote, Aufträge, Rechnungen, Belegarchiv, Zeiterfassung, Dokumente)',
+        abschnitte: standardAbschnitte(),
+      };
+
+      // bestehenden Entwurf laden?
       const { data: vorhanden } = await supabase.from('gobd_verfahrensdoku')
         .select('id,inhalt').eq('owner_user_id', id).eq('status', 'entwurf')
         .order('aktualisiert_am', { ascending: false }).limit(1).maybeSingle();
 
+      let d: Doku = basis;
       if (vorhanden?.inhalt && Object.keys(vorhanden.inhalt).length > 0) {
         const i = vorhanden.inhalt as Partial<Doku>;
-        setDoku((d) => ({
-          firmenkopf: { ...d.firmenkopf, ...(i.firmenkopf || {}) },
-          verantwortung: { ...d.verantwortung, ...(i.verantwortung || {}) },
-          systeme: i.systeme ?? d.systeme,
-          abschnitte: { ...d.abschnitte, ...(i.abschnitte || {}) },
-        }));
+        d = {
+          firmenkopf: { ...basis.firmenkopf, ...(i.firmenkopf || {}) },
+          verantwortung: { ...basis.verantwortung, ...(i.verantwortung || {}) },
+          systeme: i.systeme ?? basis.systeme,
+          abschnitte: { ...basis.abschnitte, ...(i.abschnitte || {}) },
+        };
         setEntwurfId(vorhanden.id);
-        setLaden(false);
-        return;
-      }
-
-      // 2) sonst: Firmenkopf aus profiles vorbelegen
-      const { data: p } = await supabase.from('profiles')
-        .select('firma_name,company_name,firma_rechtsform,firma_strasse,firma_plz,firma_ort,firma_geschaeftsfuehrer,firma_registergericht,firma_hrb,firma_ust_id,firma_steuernummer,industry,firma_telefon,firma_email,firma_website,firma_bank,firma_iban,firma_bic')
-        .eq('id', id).maybeSingle();
-      if (p) {
-        setDoku((d) => ({
-          ...d,
-          firmenkopf: {
+      } else {
+        // Firmenkopf aus profiles vorbelegen
+        const { data: p } = await supabase.from('profiles')
+          .select('firma_name,company_name,firma_rechtsform,firma_strasse,firma_plz,firma_ort,firma_geschaeftsfuehrer,firma_registergericht,firma_hrb,firma_ust_id,firma_steuernummer,industry,firma_telefon,firma_email,firma_website,firma_bank,firma_iban,firma_bic')
+          .eq('id', id).maybeSingle();
+        if (p) {
+          d = { ...basis, firmenkopf: {
             firmenname: p.firma_name || p.company_name || '',
             rechtsform: p.firma_rechtsform || '',
             strasse: p.firma_strasse || '', plz: p.firma_plz || '', ort: p.firma_ort || '',
@@ -102,9 +105,17 @@ export default function GobdPage() {
             branche: p.industry || '',
             telefon: p.firma_telefon || '', email: p.firma_email || '', website: p.firma_website || '',
             bank: p.firma_bank || '', iban: p.firma_iban || '', bic: p.firma_bic || '',
-          },
-        }));
+          } };
+        }
       }
+
+      // Smart-Defaults für leere Felder (spart Tipparbeit, erfindet KEINE Fakten)
+      const ver = { ...d.verantwortung };
+      if (!ver.buchfuehrung && d.firmenkopf.geschaeftsfuehrer) ver.buchfuehrung = d.firmenkopf.geschaeftsfuehrer;
+      if (!ver.aufbewahrungsort) ver.aufbewahrungsort = 'Digital in ARGONAUT OS (Cloud, EU-Rechenzentrum); Papierunterlagen am Unternehmenssitz.';
+      d = { ...d, verantwortung: ver };
+
+      setDoku(d);
       setLaden(false);
     })();
   }, []);
@@ -147,6 +158,7 @@ export default function GobdPage() {
 
   return (
     <div style={styles.page}>
+      <style>{`input::placeholder, textarea::placeholder { color: rgba(143,163,190,0.5); }`}</style>
       <div style={styles.eyebrow}>ARGONAUT OS · Compliance</div>
       <h1 style={styles.h1}>GoBD-Verfahrensdokumentation</h1>
       <p style={styles.sub}>Beschreibt, wie dein Betrieb Belege, Buchführung, Datensicherung und Zugriffsrechte handhabt — das Pflicht-Dokument für die Betriebsprüfung. Firmendaten sind vorbelegt; ergänze deine Specifics und speichere.</p>
@@ -161,7 +173,7 @@ export default function GobdPage() {
           <Feld label="Straße & Nr." value={k.strasse} onChange={(v) => setKopf('strasse', v)} />
           <Feld label="PLZ" value={k.plz} onChange={(v) => setKopf('plz', v)} />
           <Feld label="Ort" value={k.ort} onChange={(v) => setKopf('ort', v)} />
-          <Feld label="Branche" value={k.branche} onChange={(v) => setKopf('branche', v)} />
+          <Feld label="Branche" value={k.branche} onChange={(v) => setKopf('branche', v)} placeholder="z. B. Medien, Handwerk, Handel" />
           <Feld label="Geschäftsführer/in" value={k.geschaeftsfuehrer} onChange={(v) => setKopf('geschaeftsfuehrer', v)} />
           <Feld label="Registergericht" value={k.registergericht} onChange={(v) => setKopf('registergericht', v)} />
           <Feld label="HRB-Nr." value={k.hrb} onChange={(v) => setKopf('hrb', v)} />
@@ -177,8 +189,8 @@ export default function GobdPage() {
       <Bereich titel="2. Verantwortung & Steuerberater">
         <Grid>
           <Feld label="Verantwortlich für die Buchführung" value={doku.verantwortung.buchfuehrung} onChange={(v) => setVer('buchfuehrung', v)} />
-          <Feld label="Steuerberater / Kanzlei" value={doku.verantwortung.steuerberater} onChange={(v) => setVer('steuerberater', v)} />
-          <Feld label="DATEV-Beraternummer (optional)" value={doku.verantwortung.datev_nr} onChange={(v) => setVer('datev_nr', v)} />
+          <Feld label="Steuerberater / Kanzlei" value={doku.verantwortung.steuerberater} onChange={(v) => setVer('steuerberater', v)} placeholder="Name & Ort der Kanzlei" />
+          <Feld label="DATEV-Beraternummer (optional)" value={doku.verantwortung.datev_nr} onChange={(v) => setVer('datev_nr', v)} placeholder="falls vorhanden" />
           <Feld label="Aufbewahrungsort der Unterlagen" value={doku.verantwortung.aufbewahrungsort} onChange={(v) => setVer('aufbewahrungsort', v)} />
         </Grid>
       </Bereich>
@@ -222,11 +234,11 @@ function Bereich({ titel, children }: { titel: string; children: React.ReactNode
 function Grid({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12 }}>{children}</div>;
 }
-function Feld({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Feld({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div>
       <label style={styles.lbl}>{label}</label>
-      <input style={styles.input} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input style={styles.input} value={value} placeholder={placeholder || ''} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
