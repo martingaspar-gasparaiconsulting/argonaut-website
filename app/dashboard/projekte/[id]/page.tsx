@@ -771,7 +771,7 @@ export default function ProjektDetailPage() {
                         </span>
                       </div>
                       <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 18, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: z.farbe, borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
+                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: (() => { const r = maxOffen > 0 ? z.offen / maxOffen : 0; return r >= 0.8 ? '#A855F7' : r >= 0.5 ? '#E0A24C' : '#4CAF7D'; })(), borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
                       </div>
                       <div style={{ width: 90, flexShrink: 0, fontSize: 12, color: BRAND.textDim, textAlign: 'right' }}>
                         {z.offen} offen / {z.gesamt}
