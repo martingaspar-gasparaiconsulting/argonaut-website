@@ -52,7 +52,7 @@ type BuchungRow = BuchungBasis & {
   notiz: string | null;
 };
 
-const TYP_OPTIONEN = ['Mitarbeiter', 'Maschine', 'Fahrzeug', 'Raum', 'Gerät', 'Sonstiges'];
+const TYP_OPTIONEN = ['Mitarbeiter', 'Maschine', 'Fahrzeug', 'Raum', 'Tisch', 'Gerät', 'Werkzeug', 'Anlage', 'Behandlungsplatz', 'Sonstiges'];
 const FARB_OPTIONEN = ['#00e5ff', '#4CAF7D', '#C9A84C', '#E0A24C', '#A855F7', '#E06666'];
 const STATUS_OPTIONEN = [
   { wert: 'geplant', label: 'Geplant' },
