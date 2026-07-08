@@ -79,11 +79,11 @@ function baueHtml(inhalt: any, version: number, status: string): string {
   </table>
 
   ${abschnitt('3', 'Eingesetzte Systeme (DV-System)', inhalt?.systeme)}
-  ${abschnitt('4', 'Belegerfassung &amp; Archivierung', a.beleg_erfassung)}
-  ${abschnitt('5', 'Rechnungsstellung &amp; Buchung', a.buchung_ablauf)}
-  ${abschnitt('6', 'Zugriffsrechte &amp; internes Kontrollsystem (IKS)', a.zugriffsrechte)}
+  ${abschnitt('4', 'Belegerfassung & Archivierung', a.beleg_erfassung)}
+  ${abschnitt('5', 'Rechnungsstellung & Buchung', a.buchung_ablauf)}
+  ${abschnitt('6', 'Zugriffsrechte & internes Kontrollsystem (IKS)', a.zugriffsrechte)}
   ${abschnitt('7', 'Datensicherung', a.datensicherung)}
-  ${abschnitt('8', 'Aufbewahrung &amp; Fristen', a.aufbewahrung)}
+  ${abschnitt('8', 'Aufbewahrung & Fristen', a.aufbewahrung)}
 
   <div class="sig">
     <div>Ort, Datum</div>
