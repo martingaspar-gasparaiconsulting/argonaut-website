@@ -58,6 +58,8 @@ export default function GobdPage() {
   const [laden, setLaden] = useState(true);
   const [speichert, setSpeichert] = useState(false);
   const [pdfLaeuft, setPdfLaeuft] = useState(false);
+  const [finalisiert, setFinalisiert] = useState(false);
+  const [historie, setHistorie] = useState<Array<{ id: string; version: number; aktualisiert_am: string }>>([]);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -117,6 +119,12 @@ export default function GobdPage() {
       d = { ...d, verantwortung: ver };
 
       setDoku(d);
+
+      // Versionshistorie (finale Fassungen) laden
+      const { data: fin } = await supabase.from('gobd_verfahrensdoku')
+        .select('id,version,aktualisiert_am').eq('owner_user_id', id).eq('status', 'final')
+        .order('version', { ascending: false });
+      setHistorie(Array.isArray(fin) ? fin : []);
       setLaden(false);
     })();
   }, []);
@@ -177,6 +185,38 @@ export default function GobdPage() {
     } catch {
       setFehler('Verbindungsfehler bei der PDF-Erstellung.');
     } finally { setPdfLaeuft(false); }
+  }
+
+  async function finalisieren() {
+    if (finalisiert) return;
+    if (!window.confirm('Aktuellen Stand als finale, revisionssichere Version festschreiben?\n\nDie Fassung wird dauerhaft gesichert; du arbeitest danach an einer neuen Version weiter.')) return;
+    setFinalisiert(true); setFehler(null);
+    try {
+      await speichern(); // aktuellen Stand sichern, damit die finale Version stimmt
+      const res = await fetch('/api/gobd-finalisieren', { method: 'POST' });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) { setFehler(j?.error || 'Festschreiben fehlgeschlagen.'); setFinalisiert(false); return; }
+      window.location.reload(); // frischen Entwurf + neue Historie laden
+    } catch {
+      setFehler('Verbindungsfehler beim Festschreiben.');
+      setFinalisiert(false);
+    }
+  }
+
+  async function historiePdf(id: string, version: number) {
+    try {
+      const res = await fetch('/api/gobd-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dokuId: id }),
+      });
+      if (!res.ok) { setFehler('PDF konnte nicht geladen werden.'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const name = (doku.firmenkopf.firmenname || 'Betrieb').replace(/[^a-zA-Z0-9äöüÄÖÜ ]/g, '').replace(/\s+/g, '_');
+      const a = document.createElement('a');
+      a.href = url; a.download = `GoBD-Verfahrensdokumentation_${name}_v${version}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch { setFehler('Verbindungsfehler.'); }
   }
 
   if (laden) return <div style={styles.page}><div style={styles.hint}>Lädt …</div></div>;
@@ -247,7 +287,30 @@ export default function GobdPage() {
         </button>
         {meldung && <span style={{ color: C.green, fontSize: 14 }}>✓ {meldung}</span>}
       </div>
-      <div style={styles.footHint}>Im nächsten Schritt wird aus diesem Entwurf die fertige, versionierte PDF-Dokumentation erstellt.</div>
+      <div style={styles.card}>
+        <h2 style={styles.cardTitle}>Finale Version &amp; Historie</h2>
+        <p style={{ color: C.textDim, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+          Schreibe den aktuellen Stand als revisionssichere Version fest. Frühere Fassungen bleiben erhalten (GoBD verlangt die Nachvollziehbarkeit von Änderungen).
+        </p>
+        <button onClick={finalisieren} disabled={finalisiert} style={{ ...styles.finalBtn, opacity: finalisiert ? 0.6 : 1 }}>
+          {finalisiert ? 'Wird festgeschrieben …' : '✓ Finale Version festschreiben'}
+        </button>
+        {historie.length > 0 ? (
+          <div style={{ marginTop: 18 }}>
+            {historie.map((h) => (
+              <div key={h.id} style={styles.histZeile}>
+                <span style={{ fontWeight: 700 }}>Version {h.version}</span>
+                <span style={{ color: C.textDim, fontSize: 13 }}>
+                  {new Date(h.aktualisiert_am).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </span>
+                <button onClick={() => historiePdf(h.id, h.version)} style={styles.histBtn}>📄 PDF</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ marginTop: 14, color: C.textDim, fontSize: 13 }}>Noch keine finale Version festgeschrieben.</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -304,6 +367,9 @@ const styles: Record<string, CSSProperties> = {
   saveBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   pdfBtn: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   footHint: { color: C.textDim, fontSize: 13, marginTop: 12 },
+  finalBtn: { background: C.green, color: '#04160c', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  histZeile: { display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid rgba(143,163,190,0.1)' },
+  histBtn: { marginLeft: 'auto', background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   hint: { color: C.textDim, fontSize: 14, padding: '20px 0' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
 };
