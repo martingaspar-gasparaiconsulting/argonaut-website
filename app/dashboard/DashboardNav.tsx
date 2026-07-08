@@ -58,6 +58,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt' },
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte' },
+  { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
