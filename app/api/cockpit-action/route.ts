@@ -10,6 +10,9 @@
 // Bei keinem oder mehreren Treffern wird NICHT geraten, sondern eine Rueckfrage
 // zurueckgegeben. Alles ist owner-gescoped. Keine Dauer-Regeln, nur Einmal-Aktionen.
 //
+// Namens-Suche: zerlegt den gesuchten Namen in Woerter und sucht ueber Vorname UND
+// Nachname (bzw. Firma), sodass "Franz Gaspar" oder "Max Mueller" sauber gefunden werden.
+//
 // Body:    { aktion: { typ: 'aufgabe_anlegen' | 'team_nachricht' | 'wiedervorlage', ... } }
 // Antwort: { ok: true,  meldung: string }
 //     oder { ok: false, meldung?: string, rueckfrage?: string, optionen?: string[] }
@@ -171,25 +174,30 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
   if (!wunschKontakt) return NextResponse.json({ ok: false, meldung: "Es fehlt der Name des Kontakts." });
   if (!/^\d{4}-\d{2}-\d{2}/.test(datum)) return NextResponse.json({ ok: false, meldung: "Es fehlt ein gueltiges Datum fuer die Wiedervorlage." });
 
-  const safe = wunschKontakt.replace(/[,()%*]/g, " ").trim();
+  const tokens = tokenize(wunschKontakt);
+  if (tokens.length === 0) return NextResponse.json({ ok: false, meldung: "Es fehlt der Name des Kontakts." });
+
+  const orParts = tokens.flatMap((t) => [`nachname.ilike.%${t}%`, `vorname.ilike.%${t}%`, `firma.ilike.%${t}%`]);
   const { data: kontakte } = await supabase
     .from("kontakte")
     .select("id,vorname,nachname,firma")
     .eq("owner_user_id", ownerId)
-    .or(`nachname.ilike.%${safe}%,vorname.ilike.%${safe}%,firma.ilike.%${safe}%`)
-    .limit(10);
+    .or(orParts.join(","))
+    .limit(20);
   const liste = Array.isArray(kontakte) ? kontakte : [];
   const label = (k: any) => [`${k.vorname || ""} ${k.nachname || ""}`.trim(), k.firma ? `(${k.firma})` : ""].filter(Boolean).join(" ");
+  const heu = (k: any) => `${(k.vorname || "").toLowerCase()} ${(k.nachname || "").toLowerCase()} ${(k.firma || "").toLowerCase()}`;
+  const score = (k: any) => tokens.filter((t) => heu(k).includes(t)).length;
 
   if (liste.length === 0) return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kontakt "${wunschKontakt}" gefunden. Wen genau meinst du?` });
-  let kontakt = liste[0];
-  if (liste.length > 1) {
-    const exakt = liste.filter((k: any) => (k.nachname || "").toLowerCase() === safe.toLowerCase() || (k.firma || "").toLowerCase() === safe.toLowerCase());
-    if (exakt.length !== 1) {
-      return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Kontakte zu "${wunschKontakt}". Welchen meinst du?`, optionen: liste.map(label) });
-    }
-    kontakt = exakt[0];
+
+  // besten Treffer waehlen: erst alle Tokens getroffen, sonst Fallback
+  let kandidaten = liste.filter((k: any) => score(k) === tokens.length);
+  if (kandidaten.length === 0) kandidaten = liste;
+  if (kandidaten.length > 1) {
+    return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Kontakte zu "${wunschKontakt}". Welchen meinst du?`, optionen: kandidaten.map(label) });
   }
+  const kontakt = kandidaten[0];
 
   const datumIso = datum.length === 10 ? datum + "T09:00:00" : datum; // 09:00 als Tages-Erinnerung
   const { error: upErr } = await supabase
@@ -216,28 +224,45 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
 // ============================================================
 // Helfer
 // ============================================================
+
+// Namen in Suchwoerter zerlegen, Fuellwoerter/Anreden entfernen
+function tokenize(s: string): string[] {
+  const stop = new Set(["herr", "herrn", "frau", "dem", "den", "der", "die", "das", "und", "fuer", "für", "von", "zum", "zur", "an"]);
+  return (s || "")
+    .toLowerCase()
+    .replace(/[,()%*]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && !stop.has(t));
+}
+
 async function findeMitarbeiter(
   supabase: any,
   ownerId: string,
   name: string
 ): Promise<{ status: "einer" | "mehrere" | "keiner"; id?: string; name?: string; optionen?: string[] }> {
-  const safe = name.replace(/[,()%*]/g, " ").trim();
+  const tokens = tokenize(name);
+  if (tokens.length === 0) return { status: "keiner" };
+
+  const orParts = tokens.flatMap((t) => [`vorname.ilike.%${t}%`, `nachname.ilike.%${t}%`]);
   const { data } = await supabase
     .from("mitarbeiter")
     .select("id,vorname,nachname")
     .eq("owner_user_id", ownerId)
-    .or(`vorname.ilike.%${safe}%,nachname.ilike.%${safe}%`)
-    .limit(10);
+    .or(orParts.join(","))
+    .limit(20);
   const liste = Array.isArray(data) ? data : [];
   const voll = (m: any) => `${m.vorname || ""} ${m.nachname || ""}`.trim();
+  const heu = (m: any) => `${(m.vorname || "").toLowerCase()} ${(m.nachname || "").toLowerCase()}`;
+  const score = (m: any) => tokens.filter((t) => heu(m).includes(t)).length;
 
   if (liste.length === 0) return { status: "keiner" };
-  if (liste.length === 1) return { status: "einer", id: liste[0].id, name: voll(liste[0]) };
 
-  // bei mehreren: exakten Vornamen-Treffer bevorzugen
-  const exakt = liste.filter((m: any) => (m.vorname || "").toLowerCase() === safe.toLowerCase());
-  if (exakt.length === 1) return { status: "einer", id: exakt[0].id, name: voll(exakt[0]) };
-  return { status: "mehrere", optionen: liste.map(voll) };
+  // beste Treffer: alle Suchwoerter passen (z. B. Vorname + Nachname)
+  let kandidaten = liste.filter((m: any) => score(m) === tokens.length);
+  if (kandidaten.length === 0) kandidaten = liste; // Fallback: Teiltreffer
+  if (kandidaten.length === 1) return { status: "einer", id: kandidaten[0].id, name: voll(kandidaten[0]) };
+  return { status: "mehrere", optionen: kandidaten.map(voll) };
 }
 
 function erlaubtePrio(v: any): string {
