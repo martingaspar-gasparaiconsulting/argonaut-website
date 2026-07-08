@@ -759,7 +759,7 @@ export default function ProjektDetailPage() {
               if (zeilen.length === 0 && nichtZugewiesen === 0) {
                 return <div style={{ color: BRAND.textDim, fontSize: 13 }}>Noch keine Aufgaben zugewiesen.</div>;
               }
-              const maxOffen = Math.max(1, ...zeilen.map((z) => z.offen));
+              const maxGesamt = Math.max(1, ...zeilen.map((z) => z.gesamt));
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {zeilen.sort((a, b) => b.offen - a.offen).map((z) => (
@@ -770,8 +770,13 @@ export default function ProjektDetailPage() {
                           {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
                         </span>
                       </div>
-                      <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 18, overflow: 'hidden', position: 'relative' }}>
-                        <div style={{ height: '100%', width: `${(z.offen / maxOffen) * 100}%`, background: (() => { const r = maxOffen > 0 ? z.offen / maxOffen : 0; return r >= 0.8 ? '#A855F7' : r >= 0.5 ? '#E0A24C' : '#4CAF7D'; })(), borderRadius: 999, minWidth: z.offen > 0 ? 4 : 0 }} />
+                      <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 18, overflow: 'hidden', display: 'flex' }}>
+                        {z.gesamt - z.offen > 0 && (
+                          <div title={`${z.gesamt - z.offen} erledigt`} style={{ height: '100%', width: `${((z.gesamt - z.offen) / maxGesamt) * 100}%`, background: '#4CAF7D' }} />
+                        )}
+                        {z.offen > 0 && (
+                          <div title={`${z.offen} offen`} style={{ height: '100%', width: `${(z.offen / maxGesamt) * 100}%`, background: z.offen >= 8 ? '#A855F7' : z.offen >= 4 ? '#E0A24C' : '#4CAF7D', minWidth: 4 }} />
+                        )}
                       </div>
                       <div style={{ width: 90, flexShrink: 0, fontSize: 12, color: BRAND.textDim, textAlign: 'right' }}>
                         {z.offen} offen / {z.gesamt}
