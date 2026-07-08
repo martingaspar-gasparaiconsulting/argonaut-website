@@ -49,6 +49,7 @@ export default function ArbeitszeitNachweisPage() {
   const [sonntagErlaubt, setSonntagErlaubt] = useState(false);
   const [ruhezeit10, setRuhezeit10] = useState(false);
   const [warn8h, setWarn8h] = useState(true);
+  const [pdfLaeuft, setPdfLaeuft] = useState(false);
 
   // Mitarbeiter des Chefs laden
   useEffect(() => {
@@ -94,6 +95,35 @@ export default function ArbeitszeitNachweisPage() {
   };
   const nachweis = berechneNachweis(rows, optionen);
 
+  async function pdfErzeugen() {
+    if (!maId) return;
+    setPdfLaeuft(true); setFehler(null);
+    try {
+      const res = await fetch('/api/arbeitszeit-nachweis-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mitarbeiterId: maId, jahr: monat.getFullYear(), monat: monat.getMonth() + 1, optionen }),
+      });
+      if (!res.ok) {
+        let m = 'PDF-Erstellung fehlgeschlagen.';
+        try { const j = await res.json(); if (j?.error) m = j.error; } catch { /* ignore */ }
+        setFehler(m);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const m = maListe.find((x) => x.id === maId);
+      const name = m ? `${m.vorname}_${m.nachname}` : 'Mitarbeiter';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Arbeitszeitnachweis_${name}_${monat.getFullYear()}-${zwei(monat.getMonth() + 1)}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setFehler('Verbindungsfehler bei der PDF-Erstellung.');
+    } finally { setPdfLaeuft(false); }
+  }
+
   // Roh-Zeiten je Tag fuer die Kommen/Gehen-Anzeige
   const rohProTag = new Map<string, ZeitRow[]>();
   for (const r of rows) {
@@ -133,6 +163,12 @@ export default function ArbeitszeitNachweisPage() {
             <span style={{ minWidth: 130, textAlign: 'center', fontWeight: 700 }}>{monatsName}</span>
             <button style={styles.navBtn} onClick={() => setMonat(new Date(monat.getFullYear(), monat.getMonth() + 1, 1))}>›</button>
           </div>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <button onClick={pdfErzeugen} disabled={pdfLaeuft || !maId || nachweis.tage.length === 0}
+            style={{ ...styles.pdfBtn, opacity: (pdfLaeuft || nachweis.tage.length === 0) ? 0.55 : 1, cursor: (pdfLaeuft || nachweis.tage.length === 0) ? 'not-allowed' : 'pointer' }}>
+            {pdfLaeuft ? 'Erstellt PDF …' : '📄 Als PDF'}
+          </button>
         </div>
       </div>
 
@@ -269,6 +305,7 @@ const styles: Record<string, CSSProperties> = {
   lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   input: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit', minWidth: 220 },
   navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit' },
+  pdfBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit' },
 
   toggles: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 },
 
