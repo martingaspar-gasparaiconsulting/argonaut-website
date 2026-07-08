@@ -55,6 +55,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten' },
   { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen' },
+  { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
