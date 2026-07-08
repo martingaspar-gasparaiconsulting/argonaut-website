@@ -2,18 +2,17 @@
 // ============================================================
 // ARGONAUT OS · Chef-Cockpit · Etappe 3: Internes Handeln (Executor / "die Haende")
 // Fuehrt EINMALIGE, vom Chef bereits bestaetigte Aktionen aus:
-//   - aufgabe_anlegen  -> Tabelle "aufgaben"  (Default-Projekt "Interne Aufgaben")
+//   - aufgabe_anlegen  -> Tabelle "aufgaben" (Default-Projekt "Interne Aufgaben")
+//        NEU: mehrere Aufgaben in einem Befehl; Empfaenger je Aufgabe = eine Person,
+//        eine ganze Abteilung (-> pro Person eine Aufgabe) oder alle Mitarbeiter.
 //   - team_nachricht   -> Tabelle "chat_nachrichten" (erscheint als der Chef, NICHT als KI)
 //   - wiedervorlage    -> Tabelle "kontakte" (naechster_kontakt_am) + Aktivitaets-Log
 //
-// SICHERHEIT: Alle Namen (Mitarbeiter, Kontakt, Kanal) werden SERVERSEITIG aufgeloest.
-// Bei keinem oder mehreren Treffern wird NICHT geraten, sondern eine Rueckfrage
-// zurueckgegeben. Alles ist owner-gescoped. Keine Dauer-Regeln, nur Einmal-Aktionen.
+// SICHERHEIT: Namen werden serverseitig aufgeloest. Bei Unklarheit wird die
+// betroffene Aufgabe NICHT falsch zugewiesen, sondern als Hinweis gemeldet.
+// Alles owner-gescoped. Keine Dauer-Regeln, nur Einmal-Aktionen.
 //
-// Namens-Suche: zerlegt den gesuchten Namen in Woerter und sucht ueber Vorname UND
-// Nachname (bzw. Firma), sodass "Franz Gaspar" oder "Max Mueller" sauber gefunden werden.
-//
-// Body:    { aktion: { typ: 'aufgabe_anlegen' | 'team_nachricht' | 'wiedervorlage', ... } }
+// Body:    { aktion: { typ, ... } }
 // Antwort: { ok: true,  meldung: string }
 //     oder { ok: false, meldung?: string, rueckfrage?: string, optionen?: string[] }
 // ============================================================
@@ -23,6 +22,8 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const PROJEKT_DEFAULT = "Interne Aufgaben";
+const MAX_AUFGABEN = 100; // Sicherheitslimit gegen versehentliche Massen-Anlage
+const INAKTIV_STATUS = ["inaktiv", "ausgeschieden", "archiviert", "gekuendigt"];
 
 export async function POST(req: Request) {
   try {
@@ -55,69 +56,89 @@ export async function POST(req: Request) {
 }
 
 // ============================================================
-// Aktion 1: Aufgabe anlegen
+// Aktion 1: Aufgabe(n) anlegen — einzeln, mehrere, an Person / Abteilung / alle
 // ============================================================
 async function aufgabeAnlegen(supabase: any, ownerId: string, a: any) {
-  const titel = (a?.titel || "").toString().trim();
-  if (!titel) return NextResponse.json({ ok: false, meldung: "Der Aufgabe fehlt ein Titel." });
+  // Aufgabenliste ermitteln: neu = Array "aufgaben"; alt = flache Einzelfelder (rueckwaertskompatibel)
+  let liste: any[] = Array.isArray(a?.aufgaben) ? a.aufgaben : [{
+    titel: a?.titel, beschreibung: a?.beschreibung, prioritaet: a?.prioritaet,
+    faellig_am: a?.faellig_am, mitarbeiter_name: a?.mitarbeiter_name,
+    abteilung: a?.abteilung, an_alle: a?.an_alle,
+  }];
+  liste = liste.filter((t) => t && (t.titel || "").toString().trim());
+  if (liste.length === 0) return NextResponse.json({ ok: false, meldung: "Der Aufgabe fehlt ein Titel." });
 
-  // Default-Projekt "Interne Aufgaben" finden oder anlegen (pro Betrieb, additiver Andockpunkt)
-  let projektId: string | null = null;
-  const { data: proj } = await supabase
-    .from("projekte").select("id")
-    .eq("owner_user_id", ownerId).eq("name", PROJEKT_DEFAULT)
-    .maybeSingle();
-  if (proj?.id) {
-    projektId = proj.id;
-  } else {
-    const { data: neu, error: projErr } = await supabase
-      .from("projekte")
-      .insert({
-        owner_user_id: ownerId,
-        name: PROJEKT_DEFAULT,
-        beschreibung: "Sammelprojekt fuer Aufgaben aus dem Chef-Cockpit.",
-        farbe: "#00e5ff",
-      })
-      .select("id").single();
-    if (projErr) { console.error(projErr); return NextResponse.json({ ok: false, meldung: "Das Sammelprojekt konnte nicht angelegt werden." }); }
-    projektId = neu.id;
+  const projektId = await ensureDefaultProjekt(supabase, ownerId);
+  if (!projektId) return NextResponse.json({ ok: false, meldung: "Das Sammelprojekt konnte nicht angelegt werden." });
+
+  const rows: any[] = [];
+  const berichte: string[] = [];
+  const hinweise: string[] = [];
+  let limitHit = false;
+
+  for (const t of liste) {
+    if (limitHit) break;
+    const titel = (t.titel || "").toString().trim();
+
+    const basis: any = {
+      owner_user_id: ownerId,
+      projekt_id: projektId,
+      titel,
+      status: "todo",
+      prioritaet: erlaubtePrio(t.prioritaet),
+    };
+    if (t.beschreibung) basis.beschreibung = t.beschreibung.toString().trim();
+    if (t.faellig_am && /^\d{4}-\d{2}-\d{2}$/.test(t.faellig_am)) basis.faellig_am = t.faellig_am;
+    const bis = basis.faellig_am ? ` (bis ${datumHuebsch(basis.faellig_am)})` : "";
+
+    // Empfaenger bestimmen -> Liste von { id, name }
+    let empfaenger: { id: string; name: string }[] = [];
+    let zielText = "";
+
+    if (t.an_alle === true) {
+      empfaenger = await alleMitarbeiter(supabase, ownerId);
+      zielText = `alle (${empfaenger.length})`;
+      if (empfaenger.length === 0) hinweise.push(`"${titel}": keine Mitarbeiter gefunden — ohne Zuweisung angelegt.`);
+    } else if ((t.abteilung || "").toString().trim()) {
+      const abt = t.abteilung.toString().trim();
+      empfaenger = await mitarbeiterDerAbteilung(supabase, ownerId, abt);
+      zielText = `Abteilung ${abt} (${empfaenger.length})`;
+      if (empfaenger.length === 0) hinweise.push(`"${titel}": in Abteilung "${abt}" wurde niemand gefunden — ohne Zuweisung angelegt.`);
+    } else if ((t.mitarbeiter_name || "").toString().trim()) {
+      const r = await findeMitarbeiter(supabase, ownerId, t.mitarbeiter_name);
+      if (r.status === "einer") { empfaenger = [{ id: r.id!, name: r.name! }]; zielText = r.name!; }
+      else if (r.status === "mehrere") hinweise.push(`"${titel}": mehrere Treffer fuer "${t.mitarbeiter_name}" (${(r.optionen || []).join(", ")}) — ohne Zuweisung angelegt.`);
+      else hinweise.push(`"${titel}": Mitarbeiter "${t.mitarbeiter_name}" nicht gefunden — ohne Zuweisung angelegt.`);
+    }
+
+    if (empfaenger.length === 0) {
+      // ohne Zuweisung: genau eine Aufgabe
+      rows.push({ ...basis });
+      berichte.push(`${titel}${zielText ? " (" + zielText + ")" : ""}${bis}`);
+    } else {
+      let angelegt = 0;
+      for (const e of empfaenger) {
+        if (rows.length >= MAX_AUFGABEN) { limitHit = true; break; }
+        rows.push({ ...basis, mitarbeiter_id: e.id });
+        angelegt++;
+      }
+      const wer = zielText || empfaenger.map((e) => e.name).join(", ");
+      berichte.push(`${titel} -> ${wer}${bis}`);
+      void angelegt;
+    }
   }
 
-  // Optional: Mitarbeiter aufloesen
-  let mitarbeiterId: string | null = null;
-  let mitarbeiterName = "";
-  const wunschName = (a?.mitarbeiter_name || "").toString().trim();
-  if (wunschName) {
-    const t = await findeMitarbeiter(supabase, ownerId, wunschName);
-    if (t.status === "keiner") {
-      return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Mitarbeiter namens "${wunschName}" gefunden. Soll ich die Aufgabe ohne Zuweisung anlegen, oder meinst du jemand anderen?` });
-    }
-    if (t.status === "mehrere") {
-      return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Mitarbeiter zu "${wunschName}". Wen meinst du?`, optionen: t.optionen });
-    }
-    mitarbeiterId = t.id!;
-    mitarbeiterName = t.name!;
+  if (rows.length === 0) {
+    return NextResponse.json({ ok: false, meldung: "Es konnte keine Aufgabe angelegt werden. " + hinweise.join(" ") });
   }
 
-  const insert: any = {
-    owner_user_id: ownerId,
-    projekt_id: projektId,
-    titel,
-    status: "todo",
-    prioritaet: erlaubtePrio(a?.prioritaet),
-  };
-  if (a?.beschreibung) insert.beschreibung = a.beschreibung.toString().trim();
-  if (a?.faellig_am && /^\d{4}-\d{2}-\d{2}$/.test(a.faellig_am)) insert.faellig_am = a.faellig_am;
-  if (mitarbeiterId) insert.mitarbeiter_id = mitarbeiterId;
+  const { error } = await supabase.from("aufgaben").insert(rows);
+  if (error) { console.error(error); return NextResponse.json({ ok: false, meldung: "Die Aufgabe(n) konnten nicht gespeichert werden." }); }
 
-  const { error } = await supabase.from("aufgaben").insert(insert);
-  if (error) { console.error(error); return NextResponse.json({ ok: false, meldung: "Die Aufgabe konnte nicht gespeichert werden." }); }
-
-  const zusatz = [
-    mitarbeiterName ? `fuer ${mitarbeiterName}` : "",
-    insert.faellig_am ? `bis ${datumHuebsch(insert.faellig_am)}` : "",
-  ].filter(Boolean).join(", ");
-  return NextResponse.json({ ok: true, meldung: `Aufgabe "${titel}"${zusatz ? " " + zusatz : ""} wurde angelegt.` });
+  let meldung = `${rows.length} Aufgabe${rows.length === 1 ? "" : "n"} angelegt: ${berichte.join("; ")}.`;
+  if (limitHit) meldung += ` (Sicherheitslimit von ${MAX_AUFGABEN} erreicht — Rest nicht angelegt.)`;
+  if (hinweise.length) meldung += " Hinweis: " + hinweise.join(" ");
+  return NextResponse.json({ ok: true, meldung });
 }
 
 // ============================================================
@@ -127,7 +148,6 @@ async function teamNachricht(supabase: any, ownerId: string, a: any) {
   const text = (a?.text || "").toString().trim();
   if (!text) return NextResponse.json({ ok: false, meldung: "Der Nachricht fehlt ein Text." });
 
-  // Kanaele des Chefs laden
   const { data: kanaele } = await supabase
     .from("chat_kanaele")
     .select("id,name,firma_id")
@@ -157,7 +177,7 @@ async function teamNachricht(supabase: any, ownerId: string, a: any) {
     kanal_id: kanal.id,
     absender_id: ownerId,
     absender_name: absenderName,
-    ist_ki: false, // wichtig: Nachricht kommt vom Chef, die KI ist nur das Werkzeug
+    ist_ki: false,
     text,
     firma_id: kanal.firma_id ?? null,
   });
@@ -166,7 +186,7 @@ async function teamNachricht(supabase: any, ownerId: string, a: any) {
 }
 
 // ============================================================
-// Aktion 3: Wiedervorlage fuer Kontakt (naechster_kontakt_am + Aktivitaets-Log)
+// Aktion 3: Wiedervorlage fuer Kontakt
 // ============================================================
 async function wiedervorlage(supabase: any, ownerId: string, a: any) {
   const wunschKontakt = (a?.kontakt_name || "").toString().trim();
@@ -191,7 +211,6 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
 
   if (liste.length === 0) return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kontakt "${wunschKontakt}" gefunden. Wen genau meinst du?` });
 
-  // besten Treffer waehlen: erst alle Tokens getroffen, sonst Fallback
   let kandidaten = liste.filter((k: any) => score(k) === tokens.length);
   if (kandidaten.length === 0) kandidaten = liste;
   if (kandidaten.length > 1) {
@@ -199,14 +218,13 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
   }
   const kontakt = kandidaten[0];
 
-  const datumIso = datum.length === 10 ? datum + "T09:00:00" : datum; // 09:00 als Tages-Erinnerung
+  const datumIso = datum.length === 10 ? datum + "T09:00:00" : datum;
   const { error: upErr } = await supabase
     .from("kontakte")
     .update({ naechster_kontakt_am: datumIso, updated_at: new Date().toISOString() })
     .eq("id", kontakt.id).eq("owner_user_id", ownerId);
   if (upErr) { console.error(upErr); return NextResponse.json({ ok: false, meldung: "Die Wiedervorlage konnte nicht gesetzt werden." }); }
 
-  // Als Aktivitaet protokollieren (nachvollziehbar) — best effort, darf die Aktion nicht kippen
   try {
     const notiz = (a?.notiz || "").toString().trim();
     await supabase.from("kontakt_aktivitaeten").insert({
@@ -225,7 +243,53 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
 // Helfer
 // ============================================================
 
-// Namen in Suchwoerter zerlegen, Fuellwoerter/Anreden entfernen
+async function ensureDefaultProjekt(supabase: any, ownerId: string): Promise<string | null> {
+  const { data: proj } = await supabase
+    .from("projekte").select("id")
+    .eq("owner_user_id", ownerId).eq("name", PROJEKT_DEFAULT)
+    .maybeSingle();
+  if (proj?.id) return proj.id;
+  const { data: neu, error } = await supabase
+    .from("projekte")
+    .insert({
+      owner_user_id: ownerId,
+      name: PROJEKT_DEFAULT,
+      beschreibung: "Sammelprojekt fuer Aufgaben aus dem Chef-Cockpit.",
+      farbe: "#00e5ff",
+    })
+    .select("id").single();
+  if (error) { console.error(error); return null; }
+  return neu.id;
+}
+
+function istAktiv(status: any): boolean {
+  return !INAKTIV_STATUS.includes((status || "aktiv").toString().toLowerCase());
+}
+
+async function alleMitarbeiter(supabase: any, ownerId: string): Promise<{ id: string; name: string }[]> {
+  const { data } = await supabase
+    .from("mitarbeiter")
+    .select("id,vorname,nachname,status")
+    .eq("owner_user_id", ownerId);
+  const liste = Array.isArray(data) ? data : [];
+  return liste
+    .filter((m: any) => istAktiv(m.status))
+    .map((m: any) => ({ id: m.id, name: `${m.vorname || ""} ${m.nachname || ""}`.trim() }));
+}
+
+async function mitarbeiterDerAbteilung(supabase: any, ownerId: string, abteilung: string): Promise<{ id: string; name: string }[]> {
+  const safe = abteilung.replace(/[,()%*]/g, " ").trim();
+  const { data } = await supabase
+    .from("mitarbeiter")
+    .select("id,vorname,nachname,status,abteilung")
+    .eq("owner_user_id", ownerId)
+    .ilike("abteilung", `%${safe}%`);
+  const liste = Array.isArray(data) ? data : [];
+  return liste
+    .filter((m: any) => istAktiv(m.status))
+    .map((m: any) => ({ id: m.id, name: `${m.vorname || ""} ${m.nachname || ""}`.trim() }));
+}
+
 function tokenize(s: string): string[] {
   const stop = new Set(["herr", "herrn", "frau", "dem", "den", "der", "die", "das", "und", "fuer", "für", "von", "zum", "zur", "an"]);
   return (s || "")
@@ -257,10 +321,8 @@ async function findeMitarbeiter(
   const score = (m: any) => tokens.filter((t) => heu(m).includes(t)).length;
 
   if (liste.length === 0) return { status: "keiner" };
-
-  // beste Treffer: alle Suchwoerter passen (z. B. Vorname + Nachname)
   let kandidaten = liste.filter((m: any) => score(m) === tokens.length);
-  if (kandidaten.length === 0) kandidaten = liste; // Fallback: Teiltreffer
+  if (kandidaten.length === 0) kandidaten = liste;
   if (kandidaten.length === 1) return { status: "einer", id: kandidaten[0].id, name: voll(kandidaten[0]) };
   return { status: "mehrere", optionen: kandidaten.map(voll) };
 }

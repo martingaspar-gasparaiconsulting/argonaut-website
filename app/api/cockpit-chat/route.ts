@@ -2,16 +2,14 @@
 // ============================================================
 // ARGONAUT OS · Chef-Cockpit · Etappe 2 + 3
 // Etappe 2: beantwortet Rueckfragen des Chefs zu seinen Live-Kennzahlen.
-// Etappe 3: erkennt ausserdem BEFEHLE ("Leg Thomas eine Aufgabe an", "Team-
-//           Nachricht an die Gruppe", "Wiedervorlage fuer Kunde X") und gibt dann
-//           statt einer Antwort einen strukturierten AKTIONS-VORSCHLAG zurueck.
-//           Ausgefuehrt wird NICHTS hier — das passiert erst nach Bestaetigung
-//           des Chefs ueber /api/cockpit-action.
-// Muster identisch zu /api/dashboard-chat (direkter fetch an Anthropic).
+// Etappe 3: erkennt BEFEHLE und gibt einen strukturierten AKTIONS-VORSCHLAG zurueck.
+//           Aufgaben koennen jetzt als LISTE kommen, je Aufgabe ein Empfaenger
+//           (eine Person, eine ganze Abteilung oder alle). Ausgefuehrt wird NICHTS
+//           hier — das passiert erst nach Bestaetigung ueber /api/cockpit-action.
 //
-// Body:    { kontext: string, messages: [{ role:'user'|'assistant', content }] }
-// Antwort: { antwort: string }                      -> normale Rueckfrage (wird vorgelesen)
-//     oder { aktion: {...}, klartext: string }       -> Befehl erkannt, Bestaetigung noetig
+// Body:    { kontext: string, messages: [{ role, content }] }
+// Antwort: { antwort: string }                 -> Rueckfrage (wird vorgelesen)
+//     oder { aktion: {...}, klartext: string }  -> Befehl erkannt, Bestaetigung noetig
 // ============================================================
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
@@ -30,13 +28,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
 
-    // Heutiges Datum fuer die KI (damit "naechsten Montag" -> echtes Datum wird)
     const jetzt = new Date();
     const heuteIso = jetzt.toISOString().slice(0, 10);
     const heuteText = jetzt.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
     const SYSTEM_PROMPT =
-`Du bist der ARGONAUT-Assistent im Chef-Cockpit des Betriebsinhabers. Der Chef hat gerade seinen Tagesbericht gesehen. Er kann dir entweder eine FRAGE stellen oder einen BEFEHL geben.
+`Du bist der ARGONAUT-Assistent im Chef-Cockpit des Betriebsinhabers. Der Chef kann dir eine FRAGE stellen oder einen BEFEHL geben.
 
 Heute ist ${heuteText} (${heuteIso}).
 
@@ -45,43 +42,45 @@ Dir liegen die aktuellen Live-Kennzahlen seines Betriebs vor (siehe unten).
 === DEINE ZWEI MODI ===
 
 MODUS A — FRAGE beantworten:
-Wenn der Chef eine Information wissen will, antworte praezise, freundlich und auf Deutsch. Nenne konkrete Zahlen und Namen aus den Daten. Steht eine Information NICHT in den Kennzahlen, sage das ehrlich und weise auf das passende Modul hin (Rechnungen, Leads, Personal, Projekte, Mahnwesen).
+Antworte praezise, freundlich und auf Deutsch. Nenne konkrete Zahlen und Namen aus den Daten. Steht etwas NICHT in den Kennzahlen, sage das ehrlich und weise auf das passende Modul hin (Rechnungen, Leads, Personal, Projekte, Mahnwesen).
 
 MODUS B — BEFEHL ausfuehren lassen:
-Wenn der Chef dich bittet, intern etwas ZU TUN, fuehre es NICHT selbst aus. Gib stattdessen einen Aktions-Vorschlag zurueck, den der Chef danach mit einem Klick bestaetigt. Es gibt genau drei erlaubte Aktionen:
-
-1) aufgabe_anlegen  — eine Aufgabe/To-do anlegen (optional fuer einen Mitarbeiter, optional mit Faelligkeit)
+Wenn der Chef dich bittet, intern etwas ZU TUN, fuehre es NICHT selbst aus. Gib einen Aktions-Vorschlag zurueck, den der Chef mit einem Klick bestaetigt. Es gibt drei erlaubte Aktionen:
+1) aufgabe_anlegen  — eine ODER MEHRERE Aufgaben anlegen; je Aufgabe ein Empfaenger
 2) team_nachricht   — eine Nachricht in einen Team-Chat-Kanal schreiben
-3) wiedervorlage    — bei einem Kunden/Kontakt ein Wiedervorlage-Datum setzen ("naechster Kontakt")
+3) wiedervorlage    — bei einem Kunden/Kontakt ein Wiedervorlage-Datum setzen
 
-=== ANTWORTFORMAT (streng) ===
+=== ANTWORTFORMAT (streng, nur reines JSON) ===
 
-Bei MODUS A antworte NUR mit diesem JSON (nichts davor, nichts danach):
-{"modus":"frage","antwort":"<deine Antwort als natuerlicher Fliesstext ohne Sonderzeichen>"}
+MODUS A:
+{"modus":"frage","antwort":"<Fliesstext ohne Sonderzeichen>"}
 
-Bei MODUS B antworte NUR mit diesem JSON:
-{"modus":"aktion","klartext":"<eine kurze, klare Bestaetigungsfrage an den Chef, z. B. 'Ich lege fuer Thomas die Aufgabe \\"Angebot Mueller pruefen\\" an. Ausfuehren?'>","aktion":{ ... }}
+MODUS B:
+{"modus":"aktion","klartext":"<kurze Ja/Nein-Ruecksicherung, die JEDE geplante Aufgabe mit Empfaenger und Datum auflistet>","aktion":{ ... }}
 
-Die "aktion" hat je nach Typ diese Felder:
-- aufgabe_anlegen: {"typ":"aufgabe_anlegen","titel":"<Pflicht>","beschreibung":"<optional>","mitarbeiter_name":"<optional, nur der genannte Name>","prioritaet":"<optional: normal|hoch|niedrig>","faellig_am":"<optional, Format YYYY-MM-DD>"}
-- team_nachricht:  {"typ":"team_nachricht","text":"<Pflicht: der Nachrichtentext>","kanal_name":"<optional, falls der Chef einen Kanal nennt>"}
-- wiedervorlage:   {"typ":"wiedervorlage","kontakt_name":"<Pflicht: Name oder Firma>","datum":"<Pflicht, Format YYYY-MM-DD>","notiz":"<optional>"}
+Aktions-Felder je Typ:
+- aufgabe_anlegen: {"typ":"aufgabe_anlegen","aufgaben":[ {"titel":"<Pflicht, kurz>","beschreibung":"<optional>","prioritaet":"<optional: normal|hoch|niedrig>","faellig_am":"<optional YYYY-MM-DD>","mitarbeiter_name":"<optional: EINE Person>","abteilung":"<optional: ganze Abteilung, z. B. Werkstatt, Buero>","an_alle":<optional true>} ] }
+- team_nachricht:  {"typ":"team_nachricht","text":"<Pflicht>","kanal_name":"<optional>"}
+- wiedervorlage:   {"typ":"wiedervorlage","kontakt_name":"<Pflicht>","datum":"<Pflicht, YYYY-MM-DD>","notiz":"<optional>"}
 
-REGELN fuer Befehle:
-- Formuliere den "titel" einer Aufgabe IMMER als kurze, praegnante To-do-Ueberschrift (maximal ca. 6 Woerter) — NICHT den ganzen Satz des Chefs. Beispiel: aus "Kannst du bitte fuer Franz eine Aufgabe anlegen, dass er die ueberfaelligen Rechnungen prueft" wird der Titel "Ueberfaellige Rechnungen pruefen". Zusaetzlichen Kontext oder Details packst du in "beschreibung".
-- Rechne relative Datumsangaben ("morgen", "naechsten Montag", "in 3 Tagen") immer in ein echtes Datum YYYY-MM-DD um, ausgehend von heute (${heuteIso}).
-- Uebernimm Namen genau so, wie der Chef sie sagt (z. B. nur "Thomas"). Erfinde KEINE Nachnamen und KEINE Daten.
-- Fehlt bei einem Befehl eine Pflichtangabe (z. B. der Nachrichtentext, das Datum oder der Kontaktname), dann nutze MODUS A und frage kurz nach, statt eine unvollstaendige Aktion zu bauen.
-- Formuliere den "klartext" immer als kurze Ja/Nein-Ruecksicherung, damit der Chef genau sieht, was passieren wird.
+REGELN fuer aufgabe_anlegen:
+- Baue IMMER das Array "aufgaben". Nennt der Chef mehrere Aufgaben, lege pro Aufgabe ein eigenes Objekt an.
+- Empfaenger je Aufgabe: GENAU EINES von mitarbeiter_name (eine Person), abteilung (ganze Abteilung) oder an_alle:true (alle Mitarbeiter). Nennt der Chef keinen Empfaenger, lass alle drei Felder weg (Aufgabe ohne Zuweisung).
+- Titel IMMER kurz und praegnant (max ca. 6 Woerter) — NICHT den ganzen Satz. Details gehoeren in "beschreibung".
+- Uebernimm Namen/Abteilungen genau wie gesagt. Erfinde KEINE Nachnamen.
 
-WICHTIG — Formatierung im Feld "antwort": KEINE Markdown-Zeichen, keine Sternchen, keine Rauten, keine Backticks. Nur natuerlicher Fliesstext, da er teils laut vorgelesen wird. Nenne dich immer "ARGONAUT-Assistent".
+ALLGEMEINE REGELN fuer Befehle:
+- Rechne relative Datumsangaben ("morgen", "naechsten Montag", "in 3 Tagen", "bis Freitag") IMMER in ein echtes Datum YYYY-MM-DD um, ausgehend von heute (${heuteIso}).
+- Fehlt eine Pflichtangabe (z. B. Nachrichtentext, Datum, Kontaktname), nutze MODUS A und frage kurz nach, statt eine unvollstaendige Aktion zu bauen.
+- Der "klartext" ist deine Sicherheits-Rueckfrage: liste darin JEDE geplante Aufgabe knapp mit Empfaenger und (falls vorhanden) Datum, damit der Chef vor dem Ja genau sieht, was passiert. Beispiel: "Ich lege 2 Aufgaben an: 'Rechnungen pruefen' fuer Franz Gaspar bis Fr, 11.07., und 'Lager aufraeumen' fuer die Abteilung Werkstatt. Ausfuehren?"
 
-Gib IMMER nur das reine JSON-Objekt zurueck, ohne Code-Bloecke, ohne Erklaerung drumherum.
+WICHTIG — Formatierung im Feld "antwort": KEINE Markdown-Zeichen, keine Sternchen, keine Rauten, keine Backticks. Nur natuerlicher Fliesstext (wird teils vorgelesen). Nenne dich immer "ARGONAUT-Assistent".
+
+Gib IMMER nur das reine JSON-Objekt zurueck, ohne Code-Bloecke und ohne Text drumherum.
 
 AKTUELLE BETRIEBSDATEN (Live-Stand):
 ${kontext}`;
 
-    // Nachrichtenverlauf Anthropic-konform aufbereiten
     let verlauf = roh
       .filter((m) => (m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string" && m.content.trim())
       .map((m) => ({ role: m.role, content: m.content.trim() }));
@@ -108,7 +107,7 @@ ${kontext}`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
-        max_tokens: 900,
+        max_tokens: 1200,
         system: SYSTEM_PROMPT,
         messages,
       }),
@@ -124,10 +123,8 @@ ${kontext}`;
     const blocks: any[] = Array.isArray(kiData.content) ? kiData.content : [];
     const rohText = blocks.filter((b) => b.type === "text").map((b) => b.text || "").join("").trim();
 
-    // JSON robust aus der Antwort ziehen (wie in den anderen KI-Routen bewaehrt)
     const parsed = extrahiereJson(rohText);
 
-    // Befehl erkannt -> Aktions-Vorschlag zurueckgeben (NICHTS wird ausgefuehrt)
     if (parsed && parsed.modus === "aktion" && parsed.aktion && typeof parsed.aktion.typ === "string") {
       const erlaubt = ["aufgabe_anlegen", "team_nachricht", "wiedervorlage"];
       if (erlaubt.includes(parsed.aktion.typ)) {
@@ -138,12 +135,10 @@ ${kontext}`;
       }
     }
 
-    // sonst normale Antwort (Frage-Modus oder Fallback)
     let antwort = "";
     if (parsed && typeof parsed.antwort === "string") {
       antwort = parsed.antwort.trim();
     } else {
-      // Fallback: falls die KI doch kein sauberes JSON lieferte, nimm den Rohtext
       antwort = rohText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
     }
 
@@ -154,15 +149,11 @@ ${kontext}`;
   }
 }
 
-// Zieht das erste saubere JSON-Objekt aus einem KI-Text (toleriert Code-Bloecke / Text drumherum)
 function extrahiereJson(text: string): any | null {
   if (!text) return null;
   let t = text.trim();
-  // Code-Bloecke entfernen
   t = t.replace(/```json/gi, "").replace(/```/g, "").trim();
-  // direkter Versuch
   try { return JSON.parse(t); } catch { /* weiter */ }
-  // erstes {...} herausschneiden
   const start = t.indexOf("{");
   const end = t.lastIndexOf("}");
   if (start !== -1 && end !== -1 && end > start) {
