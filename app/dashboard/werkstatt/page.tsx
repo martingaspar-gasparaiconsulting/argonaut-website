@@ -25,6 +25,7 @@ import {
   zeitText, eur, finGueltig, finNormalisieren,
   type KatalogEintrag, type PositionBasis,
 } from '../_components/leistungLogik';
+import AnhaengeBox from '../_components/AnhaengeBox';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -588,6 +589,11 @@ export default function WerkstattPage() {
                       {summe.gesamtBetrag != null ? eur(summe.gesamtBetrag) + ' netto' : 'Betrag unvollständig (Preise fehlen)'}
                     </span>
                   </div>
+                </div>
+
+                {/* Anhänge am Auftrag (Fotos vom Besuch, Belege) */}
+                <div style={styles.sektion}>
+                  <AnhaengeBox bezug="auftrag" bezugId={form.id} titel="Anhänge zum Auftrag (Fotos, Belege)" />
                 </div>
 
                 {/* Verweildauer je Phase */}
