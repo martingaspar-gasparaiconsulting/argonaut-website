@@ -29,13 +29,28 @@ export async function POST(req: Request) {
     }
 
     const jetzt = new Date();
-    const heuteIso = jetzt.toISOString().slice(0, 10);
-    const heuteText = jetzt.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    const pad = (n: number) => (n < 10 ? "0" + n : "" + n);
+    const isoVon = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const WT = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+    const heuteIso = isoVon(jetzt);
+    const heuteText = `${WT[jetzt.getDay()]}, ${pad(jetzt.getDate())}.${pad(jetzt.getMonth() + 1)}.${jetzt.getFullYear()}`;
+    // Fertige Datumstabelle: die KI soll NICHT selbst rechnen, sondern hier ablesen.
+    const datumsZeilen: string[] = [];
+    for (let i = 0; i <= 16; i++) {
+      const d = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate() + i);
+      const label = i === 0 ? " (heute)" : i === 1 ? " (morgen)" : i === 2 ? " (uebermorgen)" : "";
+      datumsZeilen.push(`${WT[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} = ${isoVon(d)}${label}`);
+    }
+    const datumsTabelle = datumsZeilen.join("\n");
 
     const SYSTEM_PROMPT =
 `Du bist der ARGONAUT-Assistent im Chef-Cockpit des Betriebsinhabers. Der Chef kann dir eine FRAGE stellen oder einen BEFEHL geben.
 
 Heute ist ${heuteText} (${heuteIso}).
+
+DATUMS-TABELLE (nutze fuer JEDES Datum AUSSCHLIESSLICH diese Tabelle — rechne NIEMALS selbst):
+${datumsTabelle}
+Ein Wochentag ohne Wochenangabe (z. B. "bis Freitag", "am Montag") = der NAECHSTE passende Eintrag aus der Tabelle. "naechste Woche <Tag>" = der uebernaechste passende Eintrag. Liegt das gewuenschte Datum ausserhalb der Tabelle, frage lieber kurz nach.
 
 Dir liegen die aktuellen Live-Kennzahlen seines Betriebs vor (siehe unten).
 
@@ -70,7 +85,7 @@ REGELN fuer aufgabe_anlegen:
 - Uebernimm Namen/Abteilungen genau wie gesagt. Erfinde KEINE Nachnamen.
 
 ALLGEMEINE REGELN fuer Befehle:
-- Rechne relative Datumsangaben ("morgen", "naechsten Montag", "in 3 Tagen", "bis Freitag") IMMER in ein echtes Datum YYYY-MM-DD um, ausgehend von heute (${heuteIso}).
+- Setze Datumsangaben (faellig_am / datum) IMMER als YYYY-MM-DD aus der DATUMS-TABELLE oben. Rechne Wochentage NIEMALS selbst — lies den passenden Eintrag ab.
 - Fehlt eine Pflichtangabe (z. B. Nachrichtentext, Datum, Kontaktname), nutze MODUS A und frage kurz nach, statt eine unvollstaendige Aktion zu bauen.
 - Der "klartext" ist deine Sicherheits-Rueckfrage: liste darin JEDE geplante Aufgabe knapp mit Empfaenger und (falls vorhanden) Datum, damit der Chef vor dem Ja genau sieht, was passiert. Beispiel: "Ich lege 2 Aufgaben an: 'Rechnungen pruefen' fuer Franz Gaspar bis Fr, 11.07., und 'Lager aufraeumen' fuer die Abteilung Werkstatt. Ausfuehren?"
 
