@@ -27,6 +27,7 @@ import {
 } from '../_components/leistungLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
+import MaterialEntnahme from '../_components/MaterialEntnahme';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -576,6 +577,11 @@ export default function WerkstattPage() {
                                 <td style={styles.posTd}>
                                   <input style={styles.posInput} defaultValue={p.bezeichnung ?? ''} onBlur={(e) => positionAendern(p.id, { bezeichnung: e.target.value })} />
                                   {p.extern && <span style={styles.externBadge}>extern</span>}
+                                  {p.art === 'material' && (
+                                    <div style={{ marginTop: 5 }}>
+                                      <MaterialEntnahme positionId={p.id} auftragId={form.id!} menge={typeof p.menge === 'number' ? p.menge : 1} onGebucht={() => { /* Bestand aktualisiert im Lager */ }} />
+                                    </div>
+                                  )}
                                 </td>
                                 <td style={styles.posTd}>
                                   <input style={{ ...styles.posInput, textAlign: 'right' }} defaultValue={String(p.menge ?? 1)} onBlur={(e) => positionAendern(p.id, { menge: num(e.target.value) ?? 0 })} />
