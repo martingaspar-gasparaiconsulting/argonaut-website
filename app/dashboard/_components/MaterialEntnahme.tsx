@@ -139,9 +139,9 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
       const { data: aData } = await supabase.from('artikel').select('aktueller_bestand').eq('id', b.artikel_id).single();
       const bestand = (aData as { aktueller_bestand: number | null } | null)?.aktueller_bestand ?? 0;
 
-      // 1) Gegenbuchung 'zugang'
+      // 1) Gegenbuchung 'Zugang' (großes Z, exakt wie ERP)
       const { error: e1 } = await supabase.from('lagerbewegungen').insert({
-        owner_user_id: uid, artikel_id: b.artikel_id, typ: 'zugang', menge: b.menge,
+        owner_user_id: uid, artikel_id: b.artikel_id, typ: 'Zugang', menge: b.menge,
         grund: 'Werkstatt-Rückbuchung', referenz: `WA:${auftragId}`,
       });
       if (e1) throw e1;
