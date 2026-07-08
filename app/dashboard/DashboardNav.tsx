@@ -53,6 +53,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege' },
   { label: '🎫 Service', href: '/dashboard/service', modul: 'service' },
   { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung' },
+  { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
