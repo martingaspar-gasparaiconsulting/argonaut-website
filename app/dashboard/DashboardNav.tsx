@@ -40,6 +40,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz' },
   { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan' },
+  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', nurChef: true },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte' },
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm' },
