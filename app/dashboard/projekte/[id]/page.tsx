@@ -100,6 +100,7 @@ export default function ProjektDetailPage() {
   const [aufgaben, setAufgaben] = useState<Aufgabe[]>([]);
   const [beteiligte, setBeteiligte] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [mitarbeiterListe, setMitarbeiterListe] = useState<any[]>([]);
   const [reiter, setReiter] = useState('uebersicht');
 
   // Beteiligten-Verwaltung
@@ -143,7 +144,7 @@ export default function ProjektDetailPage() {
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
 
-      const [projRes, aufgRes, betRes, teamRes] = await Promise.all([
+      const [projRes, aufgRes, betRes, teamRes, maRes] = await Promise.all([
         supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
         supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
           .is('parent_id', null)
@@ -152,12 +153,14 @@ export default function ProjektDetailPage() {
           .order('name', { ascending: true }),
         supabase.from('projekt_teams').select('*').eq('owner_user_id', uid).eq('aktiv', true)
           .order('name', { ascending: true }),
+        supabase.from('mitarbeiter').select('id,vorname,nachname,abteilung').eq('owner_user_id', uid),
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
       setAufgaben(aufgRes.data || []);
       setBeteiligte(betRes.data || []);
       setTeams(teamRes.data || []);
+      setMitarbeiterListe(maRes.data || []);
 
       // Unteraufgaben-Zaehlung je Hauptaufgabe (fuer Karten-Badge)
       const { data: subRows } = await supabase.from('aufgaben')
@@ -359,6 +362,8 @@ export default function ProjektDetailPage() {
     if (a.mitarbeiter_id) {
       const b = beteiligterById(a.mitarbeiter_id);
       if (b) return { name: b.name, farbe: b.farbe, istTeam: false, istExtern: b.typ === 'extern' };
+      const m = mitarbeiterListe.find((x) => x.id === a.mitarbeiter_id);
+      if (m) return { name: `${m.vorname || ''} ${m.nachname || ''}`.trim(), farbe: '#5A8DEE', istTeam: false, istExtern: false };
     }
     return null;
   }
@@ -982,6 +987,7 @@ export default function ProjektDetailPage() {
               aufgaben={aufgaben}
               beteiligte={beteiligte}
               teams={teams}
+              mitarbeiter={mitarbeiterListe}
               sortFeld={sortFeld}
               onOeffnen={oeffneAufgabe}
               onStatusWechsel={async (id, status) => {
@@ -1089,6 +1095,13 @@ export default function ProjektDetailPage() {
                   <optgroup label="Personen">
                     {beteiligte.map((b) => (
                       <option key={b.id} value={`p:${b.id}`}>{b.name}{b.rolle ? ` · ${b.rolle}` : ''}{b.typ === 'extern' ? ' (Sub)' : ''}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {mitarbeiterListe.length > 0 && (
+                  <optgroup label="Mitarbeiter (Personal)">
+                    {mitarbeiterListe.map((m) => (
+                      <option key={m.id} value={`p:${m.id}`}>{`${m.vorname || ''} ${m.nachname || ''}`.trim()}{m.abteilung ? ` · ${m.abteilung}` : ''}</option>
                     ))}
                   </optgroup>
                 )}
@@ -1584,11 +1597,12 @@ function ProjektKalender({
 }
 
 function AufgabenListe({
-  aufgaben, beteiligte, teams, sortFeld, onOeffnen, onStatusWechsel,
+  aufgaben, beteiligte, teams, mitarbeiter, sortFeld, onOeffnen, onStatusWechsel,
 }: {
   aufgaben: Aufgabe[];
   beteiligte: any[];
   teams: any[];
+  mitarbeiter: any[];
   sortFeld: 'faellig' | 'prio' | 'status' | 'titel';
   onOeffnen: (a: Aufgabe) => void;
   onStatusWechsel: (id: string, status: string) => void | Promise<void>;
@@ -1601,6 +1615,8 @@ function AufgabenListe({
     if (a.mitarbeiter_id) {
       const b = beteiligte.find((x) => x.id === a.mitarbeiter_id);
       if (b) return { name: b.name, farbe: b.farbe, istTeam: false, istExtern: b.typ === 'extern' };
+      const m = mitarbeiter.find((x) => x.id === a.mitarbeiter_id);
+      if (m) return { name: `${m.vorname || ''} ${m.nachname || ''}`.trim(), farbe: '#5A8DEE', istTeam: false, istExtern: false };
     }
     return null;
   };
