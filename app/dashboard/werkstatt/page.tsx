@@ -26,6 +26,7 @@ import {
   type KatalogEintrag, type PositionBasis,
 } from '../_components/leistungLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
+import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -345,6 +346,24 @@ export default function WerkstattPage() {
   const kiKontext = auftraege.length === 0 ? '' :
     `${auftraege.length} Werkstatt-Aufträge, ${offen} offen, ${inArbeit} in Arbeit. Ø Durchlaufzeit: ${oDurchlauf}.`;
 
+  // --- PDF erzeugen -----------------------------------------------------
+  function pdfErzeugen() {
+    if (!form.id) return;
+    const a = auftraege.find((x) => x.id === form.id);
+    if (!a) return;
+    const fz = fahrzeuge.find((f) => f.id === form.fahrzeug_id) || null;
+    werkstattAuftragPdf(
+      {
+        nummer: form.nummer || a.nummer, titel: form.titel || a.titel, status: a.status,
+        kunde_name: form.kunde_name || a.kunde_name, kennzeichen: form.kennzeichen || a.kennzeichen,
+        angenommen_am: a.angenommen_am, fertig_am: a.fertig_am, zugesagt_am: form.zugesagt_am || a.zugesagt_am,
+        beschreibung: form.beschreibung || a.beschreibung,
+      },
+      fz ? { fin: fz.fin, kennzeichen: fz.kennzeichen, hersteller: fz.hersteller, modell: fz.modell, halter_name: fz.halter_name } : null,
+      positionen,
+    );
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Service</div>
@@ -624,6 +643,9 @@ export default function WerkstattPage() {
               {form.id && (
                 <button onClick={() => { const a = auftraege.find((x) => x.id === form.id); if (a) archivieren(a); }} disabled={speichert}
                   style={{ ...styles.ghostBtn, color: C.textDim, marginRight: 'auto' }}>Archivieren</button>
+              )}
+              {form.id && (
+                <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
               )}
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>{form.id ? 'Schließen' : 'Abbrechen'}</button>
               <button onClick={speichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>
