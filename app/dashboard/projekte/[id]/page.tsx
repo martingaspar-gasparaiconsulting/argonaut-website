@@ -747,7 +747,14 @@ export default function ProjektDetailPage() {
                 offen: offeneAufgaben.filter((a) => a.team_id === t.id).length,
                 gesamt: aufgaben.filter((a) => a.team_id === t.id).length,
               }));
-              const zeilen = [...teamZeilen, ...personenZeilen].filter((z) => z.gesamt > 0);
+              const mitarbeiterZeilen = mitarbeiterListe
+                .filter((m) => !beteiligte.some((b) => b.id === m.id))
+                .map((m) => ({
+                  id: m.id, name: `${m.vorname || ''} ${m.nachname || ''}`.trim(), farbe: '#5A8DEE', istTeam: false, istExtern: false,
+                  offen: offeneAufgaben.filter((a) => a.mitarbeiter_id === m.id).length,
+                  gesamt: aufgaben.filter((a) => a.mitarbeiter_id === m.id).length,
+                }));
+              const zeilen = [...teamZeilen, ...personenZeilen, ...mitarbeiterZeilen].filter((z) => z.gesamt > 0);
               const nichtZugewiesen = offeneAufgaben.filter((a) => !a.mitarbeiter_id && !a.team_id).length;
               if (zeilen.length === 0 && nichtZugewiesen === 0) {
                 return <div style={{ color: BRAND.textDim, fontSize: 13 }}>Noch keine Aufgaben zugewiesen.</div>;
