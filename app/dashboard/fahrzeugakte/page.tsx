@@ -17,6 +17,7 @@ import {
   type PositionBasis,
 } from '../_components/leistungLogik';
 import { statusDef } from '../_components/werkstattLogik';
+import AnhaengeBox from '../_components/AnhaengeBox';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -229,6 +230,11 @@ export default function FahrzeugaktePage() {
               </div>
 
               {kiKontext && <KiAuge modul="Fahrzeugakte" kontext={kiKontext} aktionHref="/dashboard/fahrzeugakte" aktionText="Zur Fahrzeugakte" />}
+
+              {/* Anhänge am Fahrzeug (HU-Bericht, Papiere …) */}
+              <div style={{ ...styles.card, marginTop: 12 }}>
+                <AnhaengeBox bezug="fahrzeug" bezugId={fz.id} titel="Fahrzeug-Anhänge (HU-Bericht, Papiere)" />
+              </div>
 
               {/* Halter-Historie */}
               {halter.length > 0 && (
