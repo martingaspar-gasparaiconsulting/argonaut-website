@@ -6,8 +6,10 @@
 //  - Fahrzeug-Kopplung (optional) per FIN/Kennzeichen (werkstatt_fahrzeuge)
 //  - Leistungs-Positionen aus dem Katalog (suchen → übernehmen → überschreibbar)
 //  - Material- & Fremdleistungs-Positionen, Live-Summe (Zeit + Betrag)
+//  - KVA-Kundenfreigabe (Block 1.1): Kostenvoranschlag → Freigabe/Ablehnung,
+//    Nachtrag-Erkennung, GoBD-Log (werkstatt_freigabe_log)
 // Positionen werden sofort gespeichert (schnelles Arbeiten), Entfernen fragt nach.
-// Kopfdaten + Archivieren bestätigungspflichtig. Design 1:1 wie das Dashboard.
+// Kopfdaten + Archivieren + Freigabe-Schritte bestätigungspflichtig. Design 1:1 wie das Dashboard.
 // Pfad: app/dashboard/werkstatt/page.tsx
 // ============================================================
 
@@ -25,6 +27,11 @@ import {
   zeitText, eur, finGueltig, finNormalisieren,
   type KatalogEintrag, type PositionBasis,
 } from '../_components/leistungLogik';
+import {
+  freigabeDef, freigabeAmpel, erlaubteUebergaenge, uebergangErlaubt,
+  hatOffenenNachtrag, nachtragDifferenz, freigabeDatumText,
+  type FreigabeStatus,
+} from '../_components/freigabeLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
@@ -49,6 +56,11 @@ type AuftragRow = {
   angenommen_am: string; fertig_am: string | null; zugesagt_am: string | null;
   fahrzeug_id: string | null;
   notiz: string | null; archiviert: boolean;
+  // Block 1.1 · KVA-Freigabe (additiv)
+  freigabe_status: string | null;
+  freigabe_am: string | null;
+  freigabe_notiz: string | null;
+  freigabe_summe_netto: number | null;
 };
 type FahrzeugRow = {
   id: string; owner_user_id: string; fin: string; kennzeichen: string | null;
@@ -101,16 +113,13 @@ export default function WerkstattPage() {
   const [form, setForm] = useState<Form>(LEER);
   const [speichert, setSpeichert] = useState(false);
   const [gespeichertHinweis, setGespeichertHinweis] = useState(false);
-
-  const [log, setLog] = useState<StatusLogEintrag[]>([]);
   const [positionen, setPositionen] = useState<PositionRow[]>([]);
+  const [log, setLog] = useState<StatusLogEintrag[]>([]);
 
-  // Fahrzeug-Suche im Modal
   const [fzSuche, setFzSuche] = useState('');
   const [fzNeuAuf, setFzNeuAuf] = useState(false);
   const [fzNeu, setFzNeu] = useState({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '' });
 
-  // Leistungs-Suche (Dropdown)
   const [leiSuche, setLeiSuche] = useState('');
   const [leiOffen, setLeiOffen] = useState(false);
 
@@ -164,7 +173,7 @@ export default function WerkstattPage() {
   }
   async function bearbeiten(a: AuftragRow) {
     setForm({
-      id: a.id, titel: a.titel ?? '', nummer: a.nummer ?? '', kunde_name: a.kunde_name ?? '',
+      id: a.id, titel: a.titel, nummer: a.nummer ?? '', kunde_name: a.kunde_name ?? '',
       kennzeichen: a.kennzeichen ?? '', prioritaet: a.prioritaet ?? 'normal',
       zugesagt_am: a.zugesagt_am ?? '', beschreibung: a.beschreibung ?? '', notiz: a.notiz ?? '',
       fahrzeug_id: a.fahrzeug_id ?? null,
@@ -194,7 +203,7 @@ export default function WerkstattPage() {
       if (istNeu) {
         const { data, error } = await supabase.from('werkstatt_auftraege').insert(payload).select('id').single();
         if (error) throw error;
-        setForm((f) => ({ ...f, id: (data as { id: string }).id }));  // in Bearbeiten-Modus wechseln
+        setForm((f) => ({ ...f, id: (data as { id: string }).id })); // in Bearbeiten-Modus wechseln
       } else {
         const { error } = await supabase.from('werkstatt_auftraege').update(payload).eq('id', form.id);
         if (error) throw error;
@@ -325,6 +334,66 @@ export default function WerkstattPage() {
       setFehler('Weiterrücken fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     }
   }
+
+  // --- KVA-Freigabe setzen (+ Log) · Block 1.1 --------------------------
+  // Setzt freigabe_status am Auftrag und protokolliert den Schritt append-only.
+  // Beim Freigeben wird die aktuelle Netto-Summe als Snapshot gespeichert —
+  // Basis für die spätere Nachtrag-Erkennung.
+  async function freigabeSetzen(nach: FreigabeStatus) {
+    if (!uid || !form.id) return;
+    const a = auftraege.find((x) => x.id === form.id);
+    if (!a) return;
+    const von = a.freigabe_status ?? 'kein_kva';
+    if (!uebergangErlaubt(von, nach)) {
+      setFehler('Dieser Freigabe-Schritt ist im aktuellen Zustand nicht möglich.');
+      return;
+    }
+
+    const aktuelleSumme = summe.gesamtBetrag; // netto, kann null sein (Preise fehlen)
+
+    // Klartext für Bestätigung + optionale Notiz
+    let frage = '';
+    let notizVorgabe = '';
+    if (nach === 'kva_offen') frage = `Kostenvoranschlag für "${a.titel}" zur Kundenfreigabe stellen?`;
+    else if (nach === 'freigegeben') frage = `Kunde hat den Kostenvoranschlag FREIGEGEBEN?\n\nDie aktuelle Summe (${aktuelleSumme != null ? eur(aktuelleSumme) + ' netto' : 'noch unvollständig'}) wird als freigegebener Stand gespeichert.`;
+    else if (nach === 'abgelehnt') frage = `Kunde hat den Kostenvoranschlag ABGELEHNT?`;
+
+    if (!window.confirm(frage)) return;
+
+    // Notiz optional erfassen (z. B. "telefonisch durch Herrn Müller" / Ablehnungsgrund)
+    const notizEingabe = window.prompt('Notiz zur Freigabe (optional — z. B. "telefonisch bestätigt durch Herrn Müller"):', notizVorgabe);
+    if (notizEingabe === null) return; // Abbruch im Prompt = Vorgang abbrechen
+    const notiz = notizEingabe.trim() || null;
+
+    setSpeichert(true);
+    try {
+      const jetzt = new Date().toISOString();
+      const update: Record<string, unknown> = {
+        freigabe_status: nach,
+        freigabe_am: jetzt,
+        freigabe_notiz: notiz,
+        aktualisiert_am: jetzt,
+      };
+      // Summen-Snapshot nur beim Freigeben setzen (Nachtrag-Basis).
+      if (nach === 'freigegeben') update.freigabe_summe_netto = aktuelleSumme;
+
+      const { error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id);
+      if (e1) throw e1;
+
+      const { error: e2 } = await supabase.from('werkstatt_freigabe_log').insert({
+        owner_user_id: uid, auftrag_id: a.id,
+        von_status: von, nach_status: nach,
+        summe_netto: nach === 'freigegeben' ? aktuelleSumme : null,
+        notiz,
+      });
+      if (e2) throw e2;
+
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Freigabe-Schritt fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSpeichert(false); }
+  }
+
   async function archivieren(a: AuftragRow) {
     if (!window.confirm(`Auftrag "${a.titel}" archivieren?\n\nDer Verlauf bleibt erhalten.`)) return;
     try {
@@ -344,6 +413,13 @@ export default function WerkstattPage() {
   const oDurchlauf = abg.length > 0 ? dauerTextMinuten(Math.round(abg.reduce((s, a) => s + durchlaufzeitMinuten(a), 0) / abg.length)) : '—';
 
   const summe = auftragsSumme(positionen);
+
+  // Aktueller Auftrag im Modal (für Freigabe-Panel)
+  const aktAuftrag = form.id ? auftraege.find((x) => x.id === form.id) ?? null : null;
+  const aktFreigabeAmpel = aktAuftrag ? freigabeAmpel(aktAuftrag, summe.gesamtBetrag) : null;
+  const aktNachtrag = aktAuftrag ? hatOffenenNachtrag(aktAuftrag, summe.gesamtBetrag) : false;
+  const aktNachtragDiff = aktAuftrag ? nachtragDifferenz(aktAuftrag, summe.gesamtBetrag) : 0;
+
   const kiKontext = auftraege.length === 0 ? '' :
     `${auftraege.length} Werkstatt-Aufträge, ${offen} offen, ${inArbeit} in Arbeit. Ø Durchlaufzeit: ${oDurchlauf}.`;
 
@@ -408,18 +484,31 @@ export default function WerkstattPage() {
                 {liste.length === 0 ? <div style={{ color: C.textDim, fontSize: 12, padding: '8px 4px' }}>—</div> : (
                   liste.map((a) => {
                     const ampel = dringlichkeitsAmpel(a);
+                    const fAmpel = freigabeAmpel(a);
+                    const zeigeFreigabe = (a.freigabe_status ?? 'kein_kva') !== 'kein_kva';
                     const naechster = naechsterStatus(a.status);
                     const fz = fahrzeuge.find((f) => f.id === a.fahrzeug_id);
                     return (
                       <div key={a.id} style={styles.karte}>
-                        <button onClick={() => bearbeiten(a)} style={styles.karteHaupt} title="Details / Bearbeiten">
+                        <button onClick={() => void bearbeiten(a)} style={styles.karteHaupt} title="Details / Bearbeiten">
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: ampel.farbe, display: 'inline-block', flexShrink: 0 }} />
+                            {zeigeFreigabe && (
+                              <span
+                                title={`Freigabe: ${fAmpel.label}`}
+                                style={{ width: 7, height: 7, borderRadius: '50%', background: fAmpel.farbe, display: 'inline-block', flexShrink: 0, boxShadow: `0 0 0 2px ${C.navy}` }}
+                              />
+                            )}
                             <span style={{ fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.titel}</span>
                           </div>
                           {(a.kunde_name || a.kennzeichen || fz) && (
                             <div style={{ fontSize: 12, color: C.textDim, marginBottom: 4 }}>
                               {[a.kunde_name, fz ? (fz.kennzeichen || fz.fin.slice(-6)) : a.kennzeichen].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                          {zeigeFreigabe && (
+                            <div style={{ fontSize: 10.5, color: fAmpel.farbe, marginBottom: 4, fontWeight: 600 }}>
+                              {fAmpel.aktionNoetig ? '⚠ ' : ''}{fAmpel.label}
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
@@ -616,6 +705,71 @@ export default function WerkstattPage() {
                   </div>
                 </div>
 
+                {/* KVA-Kundenfreigabe · Block 1.1 */}
+                {aktAuftrag && aktFreigabeAmpel && (() => {
+                  const von = aktAuftrag.freigabe_status ?? 'kein_kva';
+                  const naechste = erlaubteUebergaenge(von);
+                  const def = freigabeDef(von);
+                  return (
+                    <div style={styles.sektion}>
+                      <div style={styles.sektionTitel}>📋 Kostenvoranschlag &amp; Kundenfreigabe</div>
+
+                      {/* Status-Zeile mit Ampel */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <span style={{ width: 11, height: 11, borderRadius: '50%', background: aktFreigabeAmpel.farbe, display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, color: aktFreigabeAmpel.farbe }}>{aktFreigabeAmpel.label}</span>
+                        {aktAuftrag.freigabe_am && (
+                          <span style={{ color: C.textDim, fontSize: 12, marginLeft: 'auto' }}>
+                            {freigabeDatumText(aktAuftrag.freigabe_am)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Nachtrag-Warnung */}
+                      {aktNachtrag && (
+                        <div style={styles.nachtragBox}>
+                          ⚠ <strong>Nachtrag offen:</strong> Die aktuelle Summe liegt {eur(aktNachtragDiff)} netto über dem freigegebenen Stand
+                          {aktAuftrag.freigabe_summe_netto != null ? ` (freigegeben: ${eur(aktAuftrag.freigabe_summe_netto)} netto)` : ''}.
+                          Vor Weiterarbeit erneut vom Kunden freigeben lassen.
+                        </div>
+                      )}
+
+                      {/* Hinweis / Notiz */}
+                      {!aktNachtrag && (
+                        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 10 }}>{aktFreigabeAmpel.hinweis}</div>
+                      )}
+                      {aktAuftrag.freigabe_notiz && (
+                        <div style={{ fontSize: 12.5, color: C.text, marginBottom: 10, fontStyle: 'italic' }}>
+                          „{aktAuftrag.freigabe_notiz}"
+                        </div>
+                      )}
+
+                      {/* Aktions-Buttons je nach erlaubten Übergängen */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {naechste.includes('kva_offen') && (
+                          <button onClick={() => freigabeSetzen('kva_offen')} disabled={speichert} style={styles.kvaBtn}>
+                            {von === 'kein_kva' ? 'KVA zur Freigabe stellen' : (aktNachtrag ? 'Nachtrag zur Freigabe stellen' : 'Erneut zur Freigabe stellen')}
+                          </button>
+                        )}
+                        {naechste.includes('freigegeben') && (
+                          <button onClick={() => freigabeSetzen('freigegeben')} disabled={speichert} style={styles.freigebenBtn}>
+                            ✓ Kunde hat freigegeben
+                          </button>
+                        )}
+                        {naechste.includes('abgelehnt') && (
+                          <button onClick={() => freigabeSetzen('abgelehnt')} disabled={speichert} style={styles.ablehnenBtn}>
+                            ✕ Kunde hat abgelehnt
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>
+                        Jeder Freigabe-Schritt wird protokolliert. Bei zusätzlichen Positionen über dem freigegebenen Betrag meldet das System automatisch einen Nachtrag.
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Anhänge am Auftrag (Fotos vom Besuch, Belege) */}
                 <div style={styles.sektion}>
                   <AnhaengeBox bezug="auftrag" bezugId={form.id} titel="Anhänge zum Auftrag (Fotos, Belege)" />
@@ -692,6 +846,12 @@ const styles: Record<string, CSSProperties> = {
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
   miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
   miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
+
+  // KVA-Freigabe-Buttons (Block 1.1)
+  kvaBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  freigebenBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.35)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  ablehnenBtn: { background: 'rgba(224,102,102,0.12)', color: C.danger, border: `1px solid rgba(224,102,102,0.32)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  nachtragBox: { background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '11px 13px', fontSize: 13, color: C.text, marginBottom: 10, lineHeight: 1.5 },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
