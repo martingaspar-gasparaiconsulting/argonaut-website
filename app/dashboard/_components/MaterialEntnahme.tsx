@@ -182,30 +182,33 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ display: 'inline-block' }}>
       {!offen ? (
         <button onClick={panelOeffnen} style={styles.lagerBtn} title="Aus Lager entnehmen">🔗 Lager</button>
       ) : (
-        <div style={styles.panel}>
-          <input style={styles.input} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Artikel suchen …" autoFocus />
-          <div style={styles.liste}>
-            {treffer.length === 0 ? (
-              <div style={{ padding: '8px 10px', color: C.textDim, fontSize: 12 }}>{artikel.length === 0 ? 'Lade Lager …' : 'Kein Treffer.'}</div>
-            ) : treffer.map((a) => {
-              const b = a.aktueller_bestand ?? 0;
-              const knapp = b < menge;
-              return (
-                <button key={a.id} onClick={() => entnehmen(a)} disabled={busy} style={styles.artItem}>
-                  <span style={{ fontWeight: 600 }}>{a.bezeichnung}</span>
-                  <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 11 }}> · Bestand {b} {a.einheit || ''}{knapp ? ' ⚠' : ''}</span>
-                </button>
-              );
-            })}
+        <div style={styles.overlay} onClick={() => setOffen(false)}>
+          <div style={styles.panel} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.panelKopf}>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>Artikel aus Lager entnehmen</span>
+              <button onClick={() => setOffen(false)} style={styles.zurueckBtn}>✕</button>
+            </div>
+            <input style={styles.input} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Artikel suchen …" autoFocus />
+            <div style={styles.liste}>
+              {treffer.length === 0 ? (
+                <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 13 }}>{artikel.length === 0 ? 'Lade Lager …' : 'Kein Treffer.'}</div>
+              ) : treffer.map((a) => {
+                const b = a.aktueller_bestand ?? 0;
+                const knapp = b < menge;
+                return (
+                  <button key={a.id} onClick={() => entnehmen(a)} disabled={busy} style={styles.artItem}>
+                    <span style={{ fontWeight: 600 }}>{a.bezeichnung}</span>
+                    <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 11 }}> · Bestand {b} {a.einheit || ''}{knapp ? ' ⚠' : ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {fehler && <div style={styles.err}>{fehler}</div>}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: 6 }}>
-            <button onClick={() => setOffen(false)} style={styles.zurueckBtn}>Schließen</button>
-          </div>
-          {fehler && <div style={styles.err}>{fehler}</div>}
         </div>
       )}
     </div>
@@ -217,10 +220,12 @@ const styles: Record<string, CSSProperties> = {
   zurueckBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '3px 8px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
   gebuchtZeile: { display: 'flex', alignItems: 'center', fontSize: 12, whiteSpace: 'nowrap' },
 
-  panel: { position: 'absolute', right: 0, top: '100%', marginTop: 4, width: 280, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: '0 12px 30px rgba(0,0,0,0.4)', zIndex: 50 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: 'none', borderBottom: `1px solid ${C.border}`, borderRadius: '10px 10px 0 0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit' },
-  liste: { maxHeight: 200, overflowY: 'auto' },
-  artItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1100 },
+  panel: { width: '100%', maxWidth: 360, maxHeight: '70vh', display: 'flex', flexDirection: 'column', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', overflow: 'hidden' },
+  panelKopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderBottom: `1px solid ${C.border}` },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit' },
+  liste: { overflowY: 'auto', flex: 1 },
+  artItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 },
 
   err: { color: C.danger, fontSize: 11.5, padding: '6px 10px' },
 };
