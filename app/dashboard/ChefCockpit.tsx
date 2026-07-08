@@ -26,7 +26,13 @@ type Props = {
 }
 
 type KiAntwort = { ok: boolean; klartext?: string; punkte?: string[]; stimmung?: 'gut' | 'neutral' | 'achtung' }
-type ChatMsg = { role: 'user' | 'assistant'; content: string }
+// Etappe 3: eine Chat-Zeile kann Text ODER eine offene Aktions-Bestaetigung sein
+type ChatMsg = {
+  role: 'user' | 'assistant'
+  content: string
+  aktion?: any            // liegt vor -> Bestaetigungs-Karte anzeigen
+  status?: 'offen' | 'erledigt' | 'abgebrochen'
+}
 
 const stimmungFarbe: Record<string, string> = { gut: '#3ddc84', neutral: GOLD, achtung: '#ef4444' }
 const stimmungLabel: Record<string, string> = { gut: 'Alles im grünen Bereich', neutral: 'Einiges zu tun', achtung: 'Achtung nötig' }
@@ -93,10 +99,11 @@ export default function ChefCockpit(props: Props) {
   // Vorlese-Steuerung (ein Key kann gerade sprechen: 'bericht' oder 'a<index>')
   const [sprichtKey, setSprichtKey] = useState<string | null>(null)
 
-  // Rueckfragen (Etappe 2)
+  // Rueckfragen (Etappe 2) + Aktionen (Etappe 3)
   const [chat, setChat] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
   const [chatLaedt, setChatLaedt] = useState(false)
+  const [aktionLaeuft, setAktionLaeuft] = useState<number | null>(null) // Index der gerade ausgefuehrten Karte
 
   // Mikrofon
   const [voiceOk, setVoiceOk] = useState(false)
@@ -243,18 +250,79 @@ export default function ChefCockpit(props: Props) {
     setInput('')
     setChatLaedt(true)
     try {
+      // fuer die KI nur die reinen Text-Nachrichten mitgeben (ohne Aktions-Metadaten)
+      const verlauf = neu.map((m) => ({ role: m.role, content: m.content }))
       const res = await fetch('/api/cockpit-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kontext: datenZeilen(props), messages: neu }),
+        body: JSON.stringify({ kontext: datenZeilen(props), messages: verlauf }),
       })
       const data = await res.json()
-      setChat((prev) => [...prev, { role: 'assistant', content: data.antwort || data.error || 'Es kam keine Antwort zurück.' }])
+      if (data && data.aktion) {
+        // Etappe 3: Befehl erkannt -> Bestaetigungs-Karte anzeigen (noch nichts ausgefuehrt)
+        setChat((prev) => [...prev, { role: 'assistant', content: data.klartext || 'Soll ich das ausführen?', aktion: data.aktion, status: 'offen' }])
+      } else {
+        setChat((prev) => [...prev, { role: 'assistant', content: data.antwort || data.error || 'Es kam keine Antwort zurück.' }])
+      }
     } catch {
       setChat((prev) => [...prev, { role: 'assistant', content: 'Verbindungsfehler. Bitte erneut versuchen.' }])
     } finally {
       setChatLaedt(false)
     }
+  }
+
+  // ---- Etappe 3: Aktion nach Bestaetigung ausfuehren ----
+  async function aktionAusfuehren(index: number) {
+    const msg = chat[index]
+    if (!msg || !msg.aktion || msg.status !== 'offen' || aktionLaeuft !== null) return
+    setAktionLaeuft(index)
+
+    // Team-Nachrichten sollen als der Chef erscheinen -> Namen mitgeben
+    const aktion = { ...msg.aktion }
+    if (aktion.typ === 'team_nachricht' && !aktion.absender_name) {
+      aktion.absender_name = props.chefName || 'Chef'
+    }
+
+    try {
+      const res = await fetch('/api/cockpit-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aktion }),
+      })
+      const data = await res.json()
+      if (data && data.ok) {
+        // Karte als erledigt markieren + gruene Erfolgsmeldung anhaengen
+        setChat((prev) => {
+          const kopie = [...prev]
+          if (kopie[index]) kopie[index] = { ...kopie[index], status: 'erledigt' }
+          return [...kopie, { role: 'assistant', content: '✓ ' + (data.meldung || 'Erledigt.') }]
+        })
+      } else if (data && data.rueckfrage) {
+        // KI/Route braucht eine Praezisierung -> Karte schliessen, Rueckfrage als Bubble
+        const zusatz = Array.isArray(data.optionen) && data.optionen.length
+          ? '\n\n' + data.optionen.map((o: string) => '– ' + o).join('\n')
+          : ''
+        setChat((prev) => {
+          const kopie = [...prev]
+          if (kopie[index]) kopie[index] = { ...kopie[index], status: 'abgebrochen' }
+          return [...kopie, { role: 'assistant', content: (data.rueckfrage || 'Bitte präzisiere kurz.') + zusatz }]
+        })
+      } else {
+        setChat((prev) => [...prev, { role: 'assistant', content: (data && data.meldung) || 'Die Aktion konnte nicht ausgeführt werden.' }])
+      }
+    } catch {
+      setChat((prev) => [...prev, { role: 'assistant', content: 'Verbindungsfehler bei der Ausführung. Bitte erneut versuchen.' }])
+    } finally {
+      setAktionLaeuft(null)
+    }
+  }
+
+  function aktionAbbrechen(index: number) {
+    setChat((prev) => {
+      const kopie = [...prev]
+      if (kopie[index]) kopie[index] = { ...kopie[index], status: 'abgebrochen' }
+      return kopie
+    })
   }
 
   const stimmung = ki?.stimmung || 'neutral'
@@ -315,26 +383,51 @@ export default function ChefCockpit(props: Props) {
               </div>
             ) : null}
 
-            {/* ---- Etappe 2: Rueckfragen ---- */}
+            {/* ---- Etappe 2: Rueckfragen + Etappe 3: Aktionen ---- */}
             <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }}>Rückfrage stellen</p>
+              <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }}>Rückfrage oder Auftrag</p>
 
               {chat.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
                   {chat.map((m, i) => (
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                      <div style={{
-                        maxWidth: '90%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap',
-                        borderRadius: m.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                        background: m.role === 'user' ? GOLD : 'rgba(255,255,255,0.06)',
-                        color: m.role === 'user' ? '#0A1628' : 'rgba(255,255,255,0.9)',
-                        fontWeight: m.role === 'user' ? 600 : 400,
-                      }}>{m.content}</div>
-                      {m.role === 'assistant' && ttsVerfuegbar ? (
-                        <button onClick={() => sprich(m.content, 'a' + i)} style={{ marginTop: '4px', background: 'none', border: 'none', color: sprichtKey === 'a' + i ? '#ef4444' : 'rgba(201,168,76,0.85)', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }} className="cockpit-btn">
-                          {sprichtKey === 'a' + i ? '⏹ Stopp' : '🔊 Vorlesen'}
-                        </button>
-                      ) : null}
+                      {m.aktion ? (
+                        // ----- Etappe 3: Bestaetigungs-Karte -----
+                        <div style={{ ...aktionKarte, opacity: m.status && m.status !== 'offen' ? 0.7 : 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <span style={aktionBadge}>{aktionLabel(m.aktion.typ)}</span>
+                          </div>
+                          <p style={{ margin: '0 0 12px', fontSize: '14px', lineHeight: 1.55, color: 'rgba(255,255,255,0.92)', whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                          {m.status === 'offen' ? (
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              <button onClick={() => aktionAusfuehren(i)} disabled={aktionLaeuft !== null} style={{ ...jaBtn, ...(aktionLaeuft !== null ? { opacity: 0.6, cursor: 'not-allowed' } : null) }} className="cockpit-btn">
+                                {aktionLaeuft === i ? 'Führe aus…' : '✓ Ja, ausführen'}
+                              </button>
+                              <button onClick={() => aktionAbbrechen(i)} disabled={aktionLaeuft !== null} style={neinBtn} className="cockpit-btn">Abbrechen</button>
+                            </div>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: m.status === 'erledigt' ? '#3ddc84' : 'rgba(255,255,255,0.45)' }}>
+                              {m.status === 'erledigt' ? '✓ Ausgeführt' : 'Abgebrochen'}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        // ----- normale Text-Bubble -----
+                        <>
+                          <div style={{
+                            maxWidth: '90%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap',
+                            borderRadius: m.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                            background: m.role === 'user' ? GOLD : 'rgba(255,255,255,0.06)',
+                            color: m.role === 'user' ? '#0A1628' : 'rgba(255,255,255,0.9)',
+                            fontWeight: m.role === 'user' ? 600 : 400,
+                          }}>{m.content}</div>
+                          {m.role === 'assistant' && ttsVerfuegbar ? (
+                            <button onClick={() => sprich(m.content, 'a' + i)} style={{ marginTop: '4px', background: 'none', border: 'none', color: sprichtKey === 'a' + i ? '#ef4444' : 'rgba(201,168,76,0.85)', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }} className="cockpit-btn">
+                              {sprichtKey === 'a' + i ? '⏹ Stopp' : '🔊 Vorlesen'}
+                            </button>
+                          ) : null}
+                        </>
+                      )}
                     </div>
                   ))}
                   {chatLaedt ? <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>ARGONAUT denkt nach…</div> : null}
@@ -353,7 +446,7 @@ export default function ChefCockpit(props: Props) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); frageSenden() } }}
-                  placeholder={hoert ? 'Sprich jetzt …' : 'z. B. Welcher Kunde wartet am längsten?'}
+                  placeholder={hoert ? 'Sprich jetzt …' : 'Frage stellen oder Auftrag geben, z. B. „Leg Thomas eine Aufgabe an: Angebot Müller prüfen"'}
                   rows={1}
                   style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: '14px', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', fontFamily: 'inherit' }}
                 />
@@ -380,6 +473,13 @@ export default function ChefCockpit(props: Props) {
       <style>{cockpitCss}</style>
     </section>
   )
+}
+
+function aktionLabel(typ: string): string {
+  if (typ === 'aufgabe_anlegen') return 'AUFGABE'
+  if (typ === 'team_nachricht') return 'TEAM-NACHRICHT'
+  if (typ === 'wiedervorlage') return 'WIEDERVORLAGE'
+  return 'AKTION'
 }
 
 const wrap: CSSProperties = { marginBottom: '28px' }
@@ -413,6 +513,29 @@ const nebenBtn: CSSProperties = {
 
 const pulsPunkt: CSSProperties = {
   width: '10px', height: '10px', borderRadius: '999px', background: CYAN, display: 'inline-block', boxShadow: '0 0 10px ' + CYAN,
+}
+
+// ---- Etappe 3: Stile der Bestaetigungs-Karte ----
+const aktionKarte: CSSProperties = {
+  maxWidth: '92%', width: '100%', padding: '14px 16px',
+  borderRadius: '12px 12px 12px 3px',
+  background: 'rgba(0,229,255,0.07)', border: '1px solid rgba(0,229,255,0.35)',
+}
+
+const aktionBadge: CSSProperties = {
+  fontSize: '10px', fontWeight: 800, letterSpacing: '0.09em', color: CYAN,
+  background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.4)',
+  borderRadius: '6px', padding: '3px 8px',
+}
+
+const jaBtn: CSSProperties = {
+  background: '#3ddc84', color: '#04160c', border: 'none', borderRadius: '9px',
+  padding: '9px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+}
+
+const neinBtn: CSSProperties = {
+  background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)',
+  borderRadius: '9px', padding: '9px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const cockpitCss = '.cockpit-btn:hover { filter: brightness(1.1); }'
