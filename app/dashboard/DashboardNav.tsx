@@ -13,6 +13,8 @@ import { createBrowserClient } from '@supabase/ssr';
 // jsonb-Array der EINGESCHALTETEN modul-Schlüssel). NULL/leer = alles sichtbar
 // (safety-first, rückwärtskompatibel). Übersicht/Einstellungen bleiben IMMER da.
 // Greift nur beim Chef; Mitarbeiter bleiben bei der RBAC-Logik.
+//
+// Block 2 / A2-4: Modul 'holz' (Brennholz-Sortiment) ergänzt.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -59,6 +61,7 @@ const NAV_LINKS: NavLink[] = [
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass' },
+  { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },

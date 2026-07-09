@@ -21,6 +21,15 @@ const NUR_CHEF = [
 
 // Modul-Schlüssel (aus /dashboard/rechte) -> Pfad. Identisch mit der Navigation.
 // Ein Mitarbeiter erreicht zusätzlich die Module, die der Chef freigeschaltet hat.
+//
+// HINWEIS (Block 2 / A2-4): Diese Liste ist unvollstaendig. Es fehlen die
+// Schluessel werkstatt, leistungskatalog, fahrzeugakte, aufmass, wartung,
+// objektzeiten und buchungen — sie stehen in der Navigation, aber nicht hier.
+// Ein Mitarbeiter mit einem dieser Rechte sieht den Knopf, wird beim Klick
+// aber auf /dashboard/mein-bereich zurueckgeworfen. Beim Chef faellt es nicht
+// auf, weil der ueber den customers-Zweig laeuft.
+// Bewusst NICHT in diesem Commit mitgeaendert: Rechtevergabe ist
+// sicherheitsrelevant und gehoert in einen eigenen, gepruefen Schritt.
 const MODUL_PFAD: Record<string, string> = {
   agenten: '/dashboard/agenten',
   academy: '/dashboard/academy',
@@ -41,6 +50,7 @@ const MODUL_PFAD: Record<string, string> = {
   erp: '/dashboard/erp',
   vertraege: '/dashboard/vertraege',
   service: '/dashboard/service',
+  holz: '/dashboard/holz',
   analytics: '/dashboard/analytics',
   automatisierungen: '/dashboard/automatisierungen',
 }
