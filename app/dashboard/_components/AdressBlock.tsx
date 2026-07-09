@@ -10,15 +10,20 @@
 //     import AdressBlock from '../../_components/AdressBlock';
 //     <AdressBlock art="kontakt" id={kontakt.id} />
 //
+// `nurVerorten` — für Seiten, die ihre Adressfelder SCHON HABEN (z. B. das
+// Firmen-Detail). Dann zeigt der Block nur Status, Verorten und Handeingabe.
+// Zwei Formulare für dieselbe Straße wären ein Rezept für verlorene Änderungen.
+//     <AdressBlock art="firma" id={firma.id} nurVerorten />
+//
 // BRANCHENNEUTRAL. Kein Wort über Brennholz. Dieselbe Komponente trägt später
 // die KFZ-Werkstatt (Hol- und Bringservice) und den Aufmaß-Termin.
 //
-// ⚠️ EINE BEWUSSTE LÖSCHUNG:
+// ⚠️ DER WÄCHTER:
 //   Ändert sich die Anschrift, zeigen die alten Koordinaten auf das alte Haus.
 //   Ein grünes "verortet" wäre dann eine Lüge, und die Anfahrt würde still
-//   falsch gerechnet. Deshalb werden die Koordinaten beim Adresswechsel
-//   entfernt — nach ausdrücklicher Rückfrage. Sie sind in Sekunden neu
-//   ermittelt; eine falsche Koordinate ist schlimmer als keine.
+//   falsch gerechnet. `verortungVeraltet()` erkennt das an der Spalte
+//   `geocode_adresse` — und zwar auch dann, wenn die Adresse ANDERSWO
+//   geändert wurde (Firmen-Formular, CSV-Import, direkt in der DB).
 //
 // Pfad: app/dashboard/_components/AdressBlock.tsx
 // ============================================================
@@ -27,6 +32,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   ausKontakt, ausFirma, pruefeEmpfaenger, adresseEinzeilig, hatKoordinaten,
+  verortungVeraltet, adresseVollstaendig,
   type KontaktQuelle, type FirmaQuelle, type Empfaenger,
 } from './empfaengerLogik';
 
@@ -48,11 +54,18 @@ type Art = 'kontakt' | 'firma';
 
 const TABELLE: Record<Art, string> = { kontakt: 'kontakte', firma: 'firmen' };
 const FELDER: Record<Art, string> = {
-  kontakt: 'id, vorname, nachname, firma, firma_id, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status',
-  firma: 'id, name, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status',
+  kontakt: 'id, vorname, nachname, firma, firma_id, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status, geocode_adresse',
+  firma: 'id, name, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status, geocode_adresse',
 };
 
 type Form = { strasse: string; plz: string; ort: string };
+
+/** Derselbe Text, den auch /api/geocode an den Kartendienst schickt. */
+function geocodeSuchtextLokal(e: Empfaenger): string | null {
+  if (!e.plz && !e.ort) return null;
+  const ortZeile = [e.plz, e.ort].filter(Boolean).join(' ');
+  return [e.strasse, ortZeile, e.land].filter(Boolean).join(', ');
+}
 
 function datumHuebsch(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -74,7 +87,11 @@ function statusFarbe(s: string | null | undefined): string {
   return C.textDim;
 }
 
-export default function AdressBlock({ art, id }: { art: Art; id: string }) {
+export default function AdressBlock({
+  art,
+  id,
+  nurVerorten = false,
+}: { art: Art; id: string; nurVerorten?: boolean }) {
   const [empf, setEmpf] = useState<Empfaenger | null>(null);
   const [form, setForm] = useState<Form>({ strasse: '', plz: '', ort: '' });
   const [laden, setLaden] = useState(true);
@@ -114,14 +131,22 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
 
   useEffect(() => { void alles(); }, [alles]);
 
-  // --- Hat sich die Anschrift gegenüber dem Gespeicherten geändert? -----
+  // --- Ungespeicherte Änderung im Formular? (nur bei vollem Block) ------
   const geaendert =
-    !!empf &&
+    !nurVerorten && !!empf &&
     ((form.strasse.trim() || null) !== empf.strasse ||
       (form.plz.trim() || null) !== empf.plz ||
       (form.ort.trim() || null) !== empf.ort);
 
-  const koordinatenVeraltet = geaendert && !!empf && hatKoordinaten(empf);
+  /**
+   * Zeigen die GESPEICHERTEN Koordinaten noch auf die GESPEICHERTE Anschrift?
+   * Kommt aus empfaengerLogik und funktioniert überall — auch wenn die Adresse
+   * im Firmen-Formular oder per Import geändert wurde.
+   */
+  const verortungAlt = !!empf && verortungVeraltet(empf);
+
+  /** Beim Speichern einer geänderten Anschrift müssen alte Koordinaten weg. */
+  const koordinatenWerdenEntfernt = geaendert && !!empf && hatKoordinaten(empf);
 
   // --- Speichern --------------------------------------------------------
   async function speichern() {
@@ -131,7 +156,7 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
       return;
     }
 
-    if (koordinatenVeraltet) {
+    if (koordinatenWerdenEntfernt) {
       if (!window.confirm(
         'Die Anschrift hat sich geändert.\n\n' +
         'Die bisherigen Koordinaten gehören zur alten Adresse und werden entfernt. ' +
@@ -150,12 +175,13 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
         land: empf.land || 'DE',
       };
       // Falsche Koordinaten sind schlimmer als keine.
-      if (koordinatenVeraltet) {
+      if (koordinatenWerdenEntfernt) {
         payload.geo_lat = null;
         payload.geo_lon = null;
         payload.geocode_am = null;
         payload.geocode_status = null;
         payload.geocode_quelle = null;
+        payload.geocode_adresse = null;
       }
 
       const { error } = await supabase.from(TABELLE[art]).update(payload).eq('id', id);
@@ -163,7 +189,7 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
 
       setLabel(null);
       await alles();
-      melde(koordinatenVeraltet ? 'Gespeichert. Bitte jetzt neu verorten.' : 'Anschrift gespeichert.');
+      melde(koordinatenWerdenEntfernt ? 'Gespeichert. Bitte jetzt neu verorten.' : 'Anschrift gespeichert.');
     } catch (e: unknown) {
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaeuft(false); }
@@ -172,6 +198,10 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
   // --- Verorten ---------------------------------------------------------
   async function verorten() {
     if (geaendert) { setFehler('Bitte die geänderte Anschrift zuerst speichern.'); return; }
+    if (empf && !adresseVollstaendig(empf)) {
+      setFehler('Die gespeicherte Anschrift ist unvollständig — bitte zuerst Straße, PLZ und Ort ergänzen.');
+      return;
+    }
     setLaeuft(true); setFehler(null); setLabel(null);
     try {
       const res = await fetch('/api/geocode', {
@@ -224,11 +254,14 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
 
     setLaeuft(true); setFehler(null);
     try {
+      // Auch von Hand gesetzte Koordinaten merken sich ihre Anschrift —
+      // sonst schlaegt der Waechter beim naechsten Umzug nicht an.
       const { error } = await supabase.from(TABELLE[art]).update({
         geo_lat: lat, geo_lon: lon,
         geocode_am: new Date().toISOString(),
         geocode_status: 'manuell',
         geocode_quelle: 'manuell',
+        geocode_adresse: empf ? geocodeSuchtextLokal(empf) : null,
       }).eq('id', id);
       if (error) throw error;
       setManuellAuf(false); setLabel(null);
@@ -248,8 +281,8 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
       <div style={styles.kopf}>
         <span style={styles.titel}>📍 Anschrift & Anfahrt</span>
         {empf && (
-          <span style={{ color: koordinatenVeraltet ? C.warn : statusFarbe(empf.geocodeStatus), fontSize: 12.5 }}>
-            {koordinatenVeraltet ? '⚠ Adresse geändert' : statusText(empf.geocodeStatus)}
+          <span style={{ color: (verortungAlt || koordinatenWerdenEntfernt) ? C.warn : statusFarbe(empf.geocodeStatus), fontSize: 12.5 }}>
+            {(verortungAlt || koordinatenWerdenEntfernt) ? '⚠ Adresse geändert' : statusText(empf.geocodeStatus)}
           </span>
         )}
       </div>
@@ -261,32 +294,47 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
         <div style={styles.hint}>Lädt …</div>
       ) : (
         <>
-          <div style={styles.grid}>
-            <div>
-              <label style={styles.lbl}>Straße und Hausnummer</label>
-              <input style={styles.input} value={form.strasse} placeholder="z. B. Lindenweg 4"
-                onChange={(e) => setForm((f) => ({ ...f, strasse: e.target.value }))} />
+          {!nurVerorten ? (
+            <div style={styles.grid}>
+              <div>
+                <label style={styles.lbl}>Straße und Hausnummer</label>
+                <input style={styles.input} value={form.strasse} placeholder="z. B. Lindenweg 4"
+                  onChange={(e) => setForm((f) => ({ ...f, strasse: e.target.value }))} />
+              </div>
+              <div>
+                <label style={styles.lbl}>PLZ</label>
+                <input style={styles.input} inputMode="numeric" value={form.plz} placeholder="72108"
+                  onChange={(e) => setForm((f) => ({ ...f, plz: e.target.value }))} />
+              </div>
+              <div>
+                <label style={styles.lbl}>Ort</label>
+                <input style={styles.input} value={form.ort} placeholder="Rottenburg"
+                  onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))} />
+              </div>
             </div>
-            <div>
-              <label style={styles.lbl}>PLZ</label>
-              <input style={styles.input} inputMode="numeric" value={form.plz} placeholder="72108"
-                onChange={(e) => setForm((f) => ({ ...f, plz: e.target.value }))} />
+          ) : (
+            <div style={styles.hinweisBox}>
+              Anschrift oben unter „Stammdaten bearbeiten" pflegen. Hier geht es nur um die Verortung.
             </div>
-            <div>
-              <label style={styles.lbl}>Ort</label>
-              <input style={styles.input} value={form.ort} placeholder="Rottenburg"
-                onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))} />
-            </div>
-          </div>
+          )}
 
-          {koordinatenVeraltet && (
+          {koordinatenWerdenEntfernt && (
             <div style={styles.warnBox}>
               ⚠ Die Anschrift wurde geändert. Die gespeicherten Koordinaten gehören noch zur alten Adresse.
               Beim Speichern werden sie entfernt — danach bitte neu verorten.
             </div>
           )}
 
-          {verortet && !koordinatenVeraltet && empf && (
+          {verortungAlt && !koordinatenWerdenEntfernt && empf && (
+            <div style={styles.warnBox}>
+              ⚠ Die Anschrift wurde geändert, seit die Koordinaten ermittelt wurden.<br />
+              Verortet wurde: <em>{empf.geocodeAdresse}</em><br />
+              Heute gespeichert: <em>{adresseEinzeilig(empf)}</em><br />
+              Bitte neu verorten — sonst wird die Anfahrt zur alten Adresse gerechnet.
+            </div>
+          )}
+
+          {verortet && !koordinatenWerdenEntfernt && !verortungAlt && empf && (
             <div style={empf.geocodeStatus === 'ungenau' ? styles.warnBox : styles.infoBox}>
               <strong>{adresseEinzeilig(empf)}</strong><br />
               {empf.geoLat?.toFixed(5)} / {empf.geoLon?.toFixed(5)} · zuletzt {datumHuebsch(empf.geocodeAm)}
@@ -344,14 +392,16 @@ export default function AdressBlock({ art, id }: { art: Art; id: string }) {
               </button>
             )}
             <button onClick={verorten} disabled={laeuft || geaendert}
-              style={{ ...styles.ghostBtn, opacity: laeuft || geaendert ? 0.5 : 1 }}
+              style={{ ...(nurVerorten ? styles.goldBtn : styles.ghostBtn), opacity: laeuft || geaendert ? 0.5 : 1 }}
               title={geaendert ? 'Erst die geänderte Anschrift speichern' : 'Adresse über den Kartendienst suchen'}>
               🌍 Verorten
             </button>
-            <button onClick={speichern} disabled={laeuft || !geaendert}
-              style={{ ...styles.goldBtn, opacity: laeuft || !geaendert ? 0.5 : 1 }}>
-              {laeuft ? 'Speichert …' : 'Anschrift speichern'}
-            </button>
+            {!nurVerorten && (
+              <button onClick={speichern} disabled={laeuft || !geaendert}
+                style={{ ...styles.goldBtn, opacity: laeuft || !geaendert ? 0.5 : 1 }}>
+                {laeuft ? 'Speichert …' : 'Anschrift speichern'}
+              </button>
+            )}
           </div>
         </>
       )}

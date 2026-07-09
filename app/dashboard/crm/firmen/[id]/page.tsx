@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import AdressBlock from "../../../_components/AdressBlock";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C6a Firmen-Detailseite
@@ -343,6 +344,7 @@ export default function FirmaDetailPage() {
                 </div>
               )}
               <div style={{ marginTop: 18 }}>
+                <AdressBlock art="firma" id={firma.id} nurVerorten />
                 <button onClick={bearbeitenStart} style={goldBtn}>
                   Stammdaten bearbeiten
                 </button>

@@ -20,6 +20,11 @@
 //   Ein ungültiger Schlüssel setzt sofort pruef_status = 'ungueltig', damit
 //   die Oberfläche es beim nächsten Laden anzeigt.
 //
+// B1-4b: Der verwendete Suchtext wird in `geocode_adresse` festgehalten.
+//   Nur so laesst sich spaeter erkennen, ob die Koordinaten noch zur heutigen
+//   Anschrift gehoeren. Ohne das rechnet die Anfahrt nach einem Umzug still
+//   die Entfernung zum alten Haus.
+//
 // Body:    { art: 'standort' | 'kontakt' | 'firma', id: string }
 // Antwort: { ok, lat, lon, genauigkeit, label, kontingentRest, quelle }
 // ============================================================================
@@ -45,9 +50,9 @@ const TABELLE: Record<Art, string> = {
 };
 
 const FELDER: Record<Art, string> = {
-  standort: "id, bezeichnung, strasse, plz, ort, land, geo_lat, geo_lon, ist_standard, aktiv",
-  kontakt: "id, vorname, nachname, firma, firma_id, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status",
-  firma: "id, name, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status",
+  standort: "id, bezeichnung, strasse, plz, ort, land, geo_lat, geo_lon, geocode_adresse, ist_standard, aktiv",
+  kontakt: "id, vorname, nachname, firma, firma_id, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status, geocode_adresse",
+  firma: "id, name, email, telefon, strasse, plz, ort, land, geo_lat, geo_lon, geocode_am, geocode_status, geocode_adresse",
 };
 
 function istArt(w: unknown): w is Art {
@@ -159,7 +164,12 @@ export async function POST(req: Request) {
       // kein Systemfehler — und wird als solches festgehalten.
       await supabase
         .from(TABELLE[art])
-        .update({ geocode_status: "fehlgeschlagen", geocode_am: jetzt, geocode_quelle: "ors" })
+        .update({
+          geocode_status: "fehlgeschlagen",
+          geocode_am: jetzt,
+          geocode_quelle: "ors",
+          geocode_adresse: suchtext,
+        })
         .eq("id", id);
 
       return NextResponse.json(
@@ -178,6 +188,8 @@ export async function POST(req: Request) {
         geocode_am: jetzt,
         geocode_status: t.genauigkeit, // 'ok' | 'ungenau'
         geocode_quelle: "ors",
+        // Genau der Text, der an den Kartendienst ging. Der Vergleichsanker.
+        geocode_adresse: suchtext,
       })
       .eq("id", id);
 

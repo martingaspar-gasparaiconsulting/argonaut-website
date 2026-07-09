@@ -59,6 +59,7 @@ export interface KontaktQuelle {
   geo_lon: number | null;
   geocode_am: string | null;
   geocode_status: string | null;
+  geocode_adresse?: string | null;
 }
 
 /** Die Felder aus public.firmen, die uns interessieren. */
@@ -75,6 +76,7 @@ export interface FirmaQuelle {
   geo_lon: number | null;
   geocode_am: string | null;
   geocode_status: string | null;
+  geocode_adresse?: string | null;
 }
 
 /** Der Betriebsstandort (Startpunkt jeder Anfahrt). */
@@ -87,6 +89,7 @@ export interface StandortQuelle {
   land: string | null;
   geo_lat: number | null;
   geo_lon: number | null;
+  geocode_adresse?: string | null;
   ist_standard: boolean;
   aktiv: boolean;
 }
@@ -111,6 +114,15 @@ export interface Empfaenger {
   geoLon: number | null;
   geocodeAm: string | null;
   geocodeStatus: GeocodeStatus | null;
+  /**
+   * Die Anschrift, die tatsaechlich verortet wurde — als Freitext, so wie sie
+   * an den Kartendienst ging. Weicht sie von der heutigen Anschrift ab, zeigen
+   * die Koordinaten auf das alte Haus.
+   *
+   * null bedeutet: unbekannt (Altdatenbestand). Dann wird NICHT gewarnt —
+   * ein Fehlalarm waere schlimmer als gar keine Warnung.
+   */
+  geocodeAdresse: string | null;
 }
 
 /** Ein Punkt auf der Karte — Ein- und Ausgabe der Routenberechnung. */
@@ -162,6 +174,7 @@ export function ausKontakt(k: KontaktQuelle): Empfaenger {
     geoLon: k.geo_lon,
     geocodeAm: k.geocode_am,
     geocodeStatus: alsStatus(k.geocode_status),
+    geocodeAdresse: trimOderNull(k.geocode_adresse ?? null),
   };
 }
 
@@ -186,6 +199,7 @@ export function ausFirma(f: FirmaQuelle, ansprechpartner?: KontaktQuelle | null)
     geoLon: f.geo_lon,
     geocodeAm: f.geocode_am,
     geocodeStatus: alsStatus(f.geocode_status),
+    geocodeAdresse: trimOderNull(f.geocode_adresse ?? null),
   };
 }
 
@@ -206,6 +220,7 @@ export function ausStandort(s: StandortQuelle): Empfaenger {
     geoLon: s.geo_lon,
     geocodeAm: null,
     geocodeStatus: null,
+    geocodeAdresse: trimOderNull(s.geocode_adresse ?? null),
   };
 }
 
@@ -276,7 +291,7 @@ export function alsPunkt(e: Empfaenger): GeoPunkt | null {
 
 /** Kann für diesen Empfänger eine Anfahrt berechnet werden? */
 export function routeBereit(e: Empfaenger): boolean {
-  return hatKoordinaten(e) && e.geocodeStatus !== 'fehlgeschlagen';
+  return hatKoordinaten(e) && e.geocodeStatus !== 'fehlgeschlagen' && !verortungVeraltet(e);
 }
 
 /**
@@ -287,6 +302,42 @@ export function routeBereit(e: Empfaenger): boolean {
 export function adresseGeaendert(alt: Empfaenger, neu: Empfaenger): boolean {
   const k = (e: Empfaenger) => `${e.strasse ?? ''}|${e.plz ?? ''}|${e.ort ?? ''}|${e.land}`.toLowerCase();
   return k(alt) !== k(neu);
+}
+
+/**
+ * Vergleichsform einer Anschrift: klein, ohne Doppelleerzeichen, ohne
+ * Satzzeichen-Rauschen. "Lindenweg 4, 72108 Rottenburg" und
+ * "lindenweg 4 · 72108  rottenburg" gelten damit als gleich.
+ */
+function anschriftSchluessel(text: string | null): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/[.,;·\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Zeigen die gespeicherten Koordinaten noch auf die heutige Anschrift?
+ *
+ * Das ist der wichtigste Wächter der ganzen Anfahrtsberechnung. Ohne ihn
+ * rechnet das System nach einem Umzug still die Entfernung zum alten Haus —
+ * mit einem gruenen Haken daneben. Ein Fehler, der erst beim Kunden auffaellt.
+ *
+ * Rueckgabe false, wenn:
+ *   - keine Koordinaten da sind (dann gibt es nichts zu entwerten)
+ *   - `geocodeAdresse` unbekannt ist (Altdaten -> kein Fehlalarm)
+ */
+export function verortungVeraltet(e: Empfaenger): boolean {
+  if (!hatKoordinaten(e)) return false;
+  if (!e.geocodeAdresse) return false;
+
+  const heute = anschriftSchluessel(geocodeSuchtext(e));
+  const damals = anschriftSchluessel(e.geocodeAdresse);
+  if (!heute || !damals) return false;
+
+  return heute !== damals;
 }
 
 /** Liegt das Geocoding lange zurück? Standard: ein Jahr. */
@@ -349,6 +400,11 @@ export function pruefeEmpfaenger(e: Empfaenger): PruefErgebnis {
 
   if (!hatKoordinaten(e)) {
     hinweise.push('Noch keine Koordinaten hinterlegt — die Anfahrt kann nicht berechnet werden.');
+  } else if (verortungVeraltet(e)) {
+    hinweise.push(
+      'Die Anschrift wurde geändert, seit die Koordinaten ermittelt wurden. ' +
+        'Sie zeigen noch auf die alte Adresse — bitte neu verorten.',
+    );
   } else if (e.geocodeStatus === 'ungenau') {
     hinweise.push('Die Adresse konnte nur ungenau verortet werden — die Entfernung ist ein Näherungswert.');
   } else if (e.geocodeStatus === 'fehlgeschlagen') {
@@ -364,10 +420,12 @@ export function pruefeEmpfaenger(e: Empfaenger): PruefErgebnis {
 export function empfaengerKlartext(e: Empfaenger): string {
   const teile: string[] = [`${e.name} (${e.typ === 'firma' ? 'Firmenkunde' : 'Privatkunde'})`];
   teile.push(adresseVollstaendig(e) ? adresseEinzeilig(e) : 'Anschrift unvollständig');
-  if (hatKoordinaten(e)) {
-    teile.push(e.geocodeStatus === 'ungenau' ? 'ungenau verortet' : 'verortet — Anfahrt berechenbar');
-  } else {
+  if (!hatKoordinaten(e)) {
     teile.push('nicht verortet');
+  } else if (verortungVeraltet(e)) {
+    teile.push('Adresse geändert — Koordinaten veraltet');
+  } else {
+    teile.push(e.geocodeStatus === 'ungenau' ? 'ungenau verortet' : 'verortet — Anfahrt berechenbar');
   }
   return teile.join(' · ');
 }
