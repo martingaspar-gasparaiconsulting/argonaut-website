@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Block 1 · A4-3 + F1-3 · Brennholz-Aufträge
+// ARGONAUT OS · Block 1 · A4-3 + F1-3 + A3b-4 · Brennholz-Aufträge
 //
 // DIE SEITE RECHNET NICHTS.
 //   auftragLogik baut die Positionen, positionsLogik summiert.
@@ -24,6 +24,17 @@
 //   Die Rechnung entsteht nur aus Status "geliefert" und nur einmal. Steht
 //   sie, verschwindet der Knopf und ein Link tritt an seine Stelle.
 //
+// A3b-4: PAKETE
+//   Ein Paket wird HINZUGEFÜGT, nicht statt der Ware gewählt. Es klappt auf,
+//   seine Positionen erscheinen mit dem ANTEILIG VERTEILTEN Fixpreis.
+//
+//   Diese Zeilen sind schreibgeschützt: Wer an einem verteilten Fixpreis
+//   herumtippt, zerstört die Summe. Wer etwas ändern will, entfernt das Paket
+//   und fügt es neu hinzu.
+//
+//   Lieferschein und Rechnung sehen davon nichts. Für sie sind es Positionen
+//   wie alle anderen.
+//
 // Pfad: app/dashboard/holz/auftraege/page.tsx
 // ============================================================
 
@@ -44,6 +55,7 @@ import {
 } from '../../_components/auftragLogik';
 import { eur, steuerAusweisZeilen, type Position } from '../../_components/positionsLogik';
 import { lieferscheinPdf } from '../../_components/lieferscheinPdf';
+import { klappeAuf, paketKurz, type Paket, type PaketPosition } from '../../_components/paketLogik';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -75,7 +87,7 @@ type AuftragRow = {
   erstellt_am: string;
 };
 
-type PositionRow = Position & { id: string; auftrag_id: string };
+type PositionRow = Position & { id: string; auftrag_id: string; sortiment_id: string | null; artikel_id: string | null };
 type KundenEintrag = { art: 'kontakt' | 'firma'; empf: Empfaenger };
 type Zusatz = { bezeichnung: string; menge: string; einheit: string; preis: string; steuer: string };
 
@@ -103,6 +115,8 @@ export default function AuftraegePage() {
   const [stufen, setStufen] = useState<FahrtkostenStufe[]>([]);
   const [kunden, setKunden] = useState<KundenEintrag[]>([]);
   const [profil, setProfil] = useState<Record<string, string | null>>({});
+  const [pakete, setPakete] = useState<Paket[]>([]);
+  const [paketInhalte, setPaketInhalte] = useState<PaketPosition[]>([]);
 
   // --- Modal -------------------------------------------------------------
   const [modalAuf, setModalAuf] = useState(false);
@@ -119,6 +133,9 @@ export default function AuftraegePage() {
   const [menge, setMenge] = useState('8');
 
   const [zusatz, setZusatz] = useState<Zusatz[]>([]);
+  /** Aufgeklappte Paketpositionen. Schreibgeschützt — der Fixpreis ist verteilt. */
+  const [paketZeilen, setPaketZeilen] = useState<Position[]>([]);
+  const [paketWahl, setPaketWahl] = useState('');
   const [liefertermin, setLiefertermin] = useState('');
   const [restfeuchte, setRestfeuchte] = useState('');
   const [notiz, setNotiz] = useState('');
@@ -139,7 +156,7 @@ export default function AuftraegePage() {
       if (!id) { setFehler('Nicht angemeldet.'); return; }
       setUid(id);
 
-      const [aRes, sRes, pRes, rRes, kRes, stRes, kontRes, firmRes, profRes] = await Promise.all([
+      const [aRes, sRes, pRes, rRes, kRes, stRes, kontRes, firmRes, profRes, pkRes, ppRes] = await Promise.all([
         supabase.from('holz_auftraege').select('*').eq('owner_user_id', id).order('erstellt_am', { ascending: false }),
         supabase.from('holz_sortiment').select('*').eq('owner_user_id', id),
         supabase.from('holz_preise').select('*').eq('owner_user_id', id),
@@ -151,6 +168,8 @@ export default function AuftraegePage() {
         supabase.from('profiles').select(
           'firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_rechtsform, firma_registergericht, firma_hrb',
         ).eq('id', id).maybeSingle(),
+        supabase.from('pakete').select('*').eq('owner_user_id', id).eq('aktiv', true).order('bezeichnung'),
+        supabase.from('paket_positionen').select('*').eq('owner_user_id', id).order('position_nr'),
       ]);
 
       if (aRes.error) throw aRes.error;
@@ -162,6 +181,8 @@ export default function AuftraegePage() {
       setStufen((stRes.data as FahrtkostenStufe[]) ?? []);
 
       setProfil((profRes.data as Record<string, string | null>) ?? {});
+      setPakete((pkRes.data as Paket[]) ?? []);
+      setPaketInhalte((ppRes.data as unknown as PaketPosition[]) ?? []);
       setKunden([
         ...(((kontRes.data as unknown as KontaktQuelle[]) ?? []).map((k) => ({ art: 'kontakt' as const, empf: ausKontakt(k) }))),
         ...(((firmRes.data as unknown as FirmaQuelle[]) ?? []).map((f) => ({ art: 'firma' as const, empf: ausFirma(f) }))),
@@ -237,17 +258,33 @@ export default function AuftraegePage() {
   );
 
   const mengeZahl = num(menge);
+
+  /**
+   * Pakete und freie Zusatzzeilen laufen beide über `zusatz` in baueAuftrag.
+   * Die Paketzeilen tragen bereits ihren Anteil am Fixpreis — sie werden
+   * nicht noch einmal gerechnet.
+   */
+  const alleZusatz = useMemo(
+    () => [...paketZeilen, ...zusatzPositionen],
+    [paketZeilen, zusatzPositionen],
+  );
+
   const befund = useMemo(() => {
-    if (!sortiment || mengeZahl === null || mengeZahl <= 0) return null;
+    // Ohne Ware, aber mit Paket: der Auftrag besteht nur aus dem Paket.
+    const waren = sortiment && mengeZahl !== null && mengeZahl > 0
+      ? [{ sortiment, menge: mengeZahl, einheit }]
+      : [];
+    if (waren.length === 0 && alleZusatz.length === 0) return null;
+
     return baueAuftrag({
-      waren: [{ sortiment, menge: mengeZahl, einheit }],
+      waren,
       preise, rabatte,
       distanzMeter: distanz?.meter ?? null,
       distanzQuelle: distanz?.quelle,
       konfig, stufen,
-      zusatz: zusatzPositionen,
+      zusatz: alleZusatz,
     });
-  }, [sortiment, mengeZahl, einheit, preise, rabatte, distanz, konfig, stufen, zusatzPositionen]);
+  }, [sortiment, mengeZahl, einheit, preise, rabatte, distanz, konfig, stufen, alleZusatz]);
 
   /** Bei gespeicherten Aufträgen: hat sich die Preisliste seither geändert? */
   const abweichungen = useMemo(
@@ -259,7 +296,7 @@ export default function AuftraegePage() {
   function neu() {
     setAuftragId(null); setNummer(null); setStatus('entwurf');
     setKundeKey(''); setFreieKm(''); setEntfernung(null);
-    setSortimentId(''); setMenge('8'); setZusatz([]);
+    setSortimentId(''); setMenge('8'); setZusatz([]); setPaketZeilen([]); setPaketWahl('');
     setLiefertermin(''); setRestfeuchte(''); setNotiz('');
     setGespeichertePositionen([]); setRechnungId(null);
     setFehler(null); setModalAuf(true);
@@ -280,7 +317,10 @@ export default function AuftraegePage() {
 
     const { data } = await supabase.from('holz_auftrag_positionen').select('*')
       .eq('auftrag_id', a.id).order('position_nr', { ascending: true });
-    const pos = (data as unknown as PositionRow[]) ?? [];
+    const pos = ((data as unknown as PositionRow[]) ?? []).map((p) => ({
+      ...p,
+      quelle_id: p.sortiment_id ?? p.artikel_id ?? null,
+    }));
     setGespeichertePositionen(pos);
 
     // Ware und Zusatz zurück ins Formular
@@ -295,7 +335,72 @@ export default function AuftraegePage() {
       bezeichnung: p.bezeichnung, menge: String(p.menge), einheit: p.einheit,
       preis: String(p.einzelpreis_netto), steuer: String(p.steuersatz_prozent),
     })));
+    // Paketzeilen kommen fertig aus der DB — mit ihrem verteilten Fixpreis.
+    setPaketZeilen(pos.filter((p) => p.art === 'paket').map((p) => ({
+      art: 'paket' as const,
+      quelle_id: p.quelle_id ?? null,
+      bezeichnung: p.bezeichnung,
+      detail: p.detail ?? null,
+      menge: Number(p.menge),
+      einheit: p.einheit,
+      einzelpreis_netto: Number(p.einzelpreis_netto),
+      steuersatz_prozent: Number(p.steuersatz_prozent),
+      rabatt_prozent: null,
+    })));
+    setPaketWahl('');
   }
+
+  // --- A3b-4: Paket hinzufügen --------------------------------------------
+  /**
+   * Klappt das Paket auf und übernimmt die Positionen MIT dem verteilten
+   * Fixpreis. `art` wird auf 'paket' gesetzt — so erkennt man sie später
+   * im Auftrag wieder, und sie lassen sich als Block entfernen.
+   */
+  function paketHinzufuegen() {
+    if (!paketWahl) return;
+    const paket = pakete.find((p) => p.id === paketWahl);
+    if (!paket) return;
+
+    const inhalt = paketInhalte.filter((x) => x.paket_id === paket.id);
+    if (inhalt.length === 0) { setFehler('Dieses Paket enthält keine Positionen.'); return; }
+
+    const b = klappeAuf(paket, inhalt);
+    if (!b.ok) { setFehler(b.fehler.join(' ')); return; }
+
+    setPaketZeilen((z) => [
+      ...z,
+      ...b.positionen.map((p) => ({
+        ...p,
+        art: 'paket' as const,
+        quelle_id: paket.id,
+        detail: `aus Paket „${paket.bezeichnung}"`,
+        position_nr: null,
+      })),
+    ]);
+    setPaketWahl('');
+    if (b.gemischteSteuer) {
+      melde('Paket hinzugefügt. Es enthält zwei Steuersätze — der Ausweis erfolgt getrennt.');
+    }
+  }
+
+  /** Ein Paket wird als Block entfernt, nicht zeilenweise. */
+  function paketEntfernen(paketId: string, bezeichnung: string) {
+    if (!window.confirm(`Paket „${bezeichnung}" aus dem Auftrag entfernen?`)) return;
+    setPaketZeilen((z) => z.filter((p) => p.quelle_id !== paketId));
+  }
+
+  /** Welche Pakete stecken im Auftrag? Für die Anzeige als Block. */
+  const paketBloecke = useMemo(() => {
+    const karte = new Map<string, { id: string; bezeichnung: string; zeilen: Position[] }>();
+    for (const z of paketZeilen) {
+      const id = z.quelle_id ?? '';
+      const paket = pakete.find((p) => p.id === id);
+      const eintrag = karte.get(id) ?? { id, bezeichnung: paket?.bezeichnung ?? 'Paket', zeilen: [] };
+      eintrag.zeilen.push(z);
+      karte.set(id, eintrag);
+    }
+    return [...karte.values()];
+  }, [paketZeilen, pakete]);
 
   // --- F1-3: Lieferschein ------------------------------------------------
   /**
@@ -444,6 +549,8 @@ export default function AuftraegePage() {
           position_nr: p.position_nr,
           art: p.art,
           sortiment_id: p.art === 'sortiment' ? p.quelle_id : null,
+          // Paketzeilen merken sich ihr Paket — nur zum Wiederfinden.
+          artikel_id: p.art === 'paket' ? p.quelle_id : null,
           bezeichnung: p.bezeichnung,
           detail: p.detail ?? null,
           menge: p.menge,
@@ -652,10 +759,53 @@ export default function AuftraegePage() {
               )}
             </div>
 
+            {/* --- A3b-4: Pakete --- */}
+            {(pakete.length > 0 || paketBloecke.length > 0) && (
+              <div style={styles.sektion}>
+                <span style={styles.sektionTitel}>3 · Pakete</span>
+                <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
+                  Ein Paket klappt in seine Positionen auf. Der Festpreis wird anteilig verteilt —
+                  auf dem Beleg steht, was der Kunde bekommt.
+                </div>
+
+                {paketBloecke.map((b) => (
+                  <div key={b.id} style={styles.paketBlock}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 13.5 }}>📦 {b.bezeichnung}</strong>
+                      {bearbeitbar && (
+                        <button onClick={() => paketEntfernen(b.id, b.bezeichnung)} style={styles.xBtn}>✕ entfernen</button>
+                      )}
+                    </div>
+                    {b.zeilen.map((z, i) => (
+                      <div key={i} style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>
+                        {formatZahl(z.menge, 2)} {z.einheit} {z.bezeichnung} · {eur(z.einzelpreis_netto)} · {z.steuersatz_prozent} % USt.
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 6, fontStyle: 'italic' }}>
+                      Preise aus der Festpreis-Verteilung — nicht einzeln änderbar.
+                    </div>
+                  </div>
+                ))}
+
+                {bearbeitbar && pakete.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <select style={{ ...styles.input, flex: '1 1 220px' }} value={paketWahl}
+                      onChange={(e) => setPaketWahl(e.target.value)}>
+                      <option value="">— Paket wählen —</option>
+                      {pakete.map((p) => <option key={p.id} value={p.id}>{p.bezeichnung} · {eur(p.fixpreis_netto)} netto</option>)}
+                    </select>
+                    <button onClick={paketHinzufuegen} disabled={!paketWahl} style={{ ...styles.miniBtn, opacity: paketWahl ? 1 : 0.5 }}>
+                      + Hinzufügen
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* --- Zusatzpositionen --- */}
             <div style={styles.sektion}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                <span style={styles.sektionTitel}>3 · Zusatzleistungen</span>
+                <span style={styles.sektionTitel}>4 · Zusatzleistungen</span>
                 {bearbeitbar && (
                   <button onClick={() => setZusatz((z) => [...z, { bezeichnung: '', menge: '1', einheit: 'Std', preis: '', steuer: '19' }])}
                     style={styles.miniBtn}>+ Zeile</button>
@@ -686,7 +836,7 @@ export default function AuftraegePage() {
             {/* --- Ergebnis --- */}
             {befund && (
               <div style={styles.sektion}>
-                <span style={styles.sektionTitel}>4 · Der Auftrag</span>
+                <span style={styles.sektionTitel}>5 · Der Auftrag</span>
                 {!befund.ok ? (
                   <div style={styles.err}>{befund.fehler.map((f, i) => <div key={i}>{f}</div>)}</div>
                 ) : (
@@ -736,7 +886,7 @@ export default function AuftraegePage() {
 
             {/* --- Lieferung --- */}
             <div style={styles.sektion}>
-              <span style={styles.sektionTitel}>5 · Lieferung</span>
+              <span style={styles.sektionTitel}>6 · Lieferung</span>
               <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 150px' }}>
                   <label style={styles.lbl}>Liefertermin</label>
@@ -761,7 +911,7 @@ export default function AuftraegePage() {
             {/* --- F1-3: Beleg & Rechnung --- */}
             {auftragId && (
               <div style={styles.sektion}>
-                <span style={styles.sektionTitel}>6 · Beleg</span>
+                <span style={styles.sektionTitel}>7 · Beleg</span>
 
                 {rechnungId ? (
                   <div style={styles.infoBox}>
@@ -851,6 +1001,7 @@ const styles: Record<string, CSSProperties> = {
   sektion: { marginTop: 16, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
   sektionTitel: { fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
+  paketBlock: { background: C.navy2, border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 10, padding: '11px 13px', marginBottom: 8 },
   zusatzZeile: { display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap', alignItems: 'center' },
   posInput: { boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, fontFamily: 'inherit' },
   xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' },
