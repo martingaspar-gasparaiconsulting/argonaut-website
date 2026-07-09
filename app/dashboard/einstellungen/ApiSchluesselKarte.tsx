@@ -51,6 +51,11 @@ export default function ApiSchluesselKarte() {
   const [frischerSchluessel, setFrischerSchluessel] = useState<string | null>(null);
   const [kopiert, setKopiert] = useState(false);
 
+  // --- Verbindungstest: der Schlüssel ruft die echte API auf -----------
+  const [testSchluessel, setTestSchluessel] = useState('');
+  const [testLaeuft, setTestLaeuft] = useState(false);
+  const [testErgebnis, setTestErgebnis] = useState<{ ok: boolean; text: string } | null>(null);
+
   function melde(t: string) {
     setErfolg(t); setFehler(null);
     setTimeout(() => setErfolg(null), 3000);
@@ -113,6 +118,42 @@ export default function ApiSchluesselKarte() {
     } catch {
       setFehler('Widerrufen fehlgeschlagen.');
     } finally { setLaeuft(false); }
+  }
+
+  /**
+   * Ruft /api/preisauskunft mit dem eingegebenen Schlüssel auf — genau so,
+   * wie n8n es später tut. Der Schlüssel verlässt den Browser nur an ARGONAUT.
+   */
+  async function verbindungTesten() {
+    const k = testSchluessel.trim();
+    if (!k) { setFehler('Bitte den Schlüssel einfügen.'); return; }
+
+    setTestLaeuft(true); setFehler(null); setTestErgebnis(null);
+    try {
+      const res = await fetch('/api/preisauskunft', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holzart: 'buche', scheitlaenge_cm: 33, trocknungsgrad: 'lufttrocken', menge: 8, einheit: 'srm', km: 42 }),
+      });
+      const d = await res.json();
+
+      if (res.status === 401) {
+        setTestErgebnis({ ok: false, text: 'Der Schlüssel wurde abgelehnt. Ist er richtig kopiert?' });
+      } else if (d?.ok) {
+        setTestErgebnis({
+          ok: true,
+          text: `✓ Verbindung steht.\n\nTestanfrage: 8 SRM Buche 33 cm lufttrocken, 42 km Anfahrt\n\n${d.kurztext}`,
+        });
+      } else {
+        // Kein Fehler des Schlüssels — die Stammdaten sind unvollständig.
+        setTestErgebnis({
+          ok: false,
+          text: `Der Schlüssel funktioniert, aber die Testanfrage ging nicht durch:\n\n${d?.error ?? 'Unbekannter Grund.'}\n\nLeg unter Brennholz eine Variante „Buche · 33 cm · lufttrocken" mit Preis an, dann klappt der Test.`,
+        });
+      }
+    } catch {
+      setTestErgebnis({ ok: false, text: 'Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.' });
+    } finally { setTestLaeuft(false); }
   }
 
   async function kopieren() {
@@ -217,6 +258,32 @@ export default function ApiSchluesselKarte() {
           )}
         </div>
 
+        {/* --- Verbindungstest --- */}
+        <div style={styles.sektion}>
+          <div style={{ ...styles.titel, fontSize: 13.5, marginBottom: 4 }}>Verbindung testen</div>
+          <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 12px', lineHeight: 1.55 }}>
+            Füge einen Schlüssel ein und schick eine Testanfrage — genau so, wie es die Automatisierung
+            später tut. Der Schlüssel wird nirgends gespeichert.
+          </p>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 240px' }}>
+              <label style={styles.lbl}>Schlüssel</label>
+              <input type="password" autoComplete="off" style={styles.input} placeholder="argo_…"
+                value={testSchluessel} onChange={(e) => setTestSchluessel(e.target.value)} />
+            </div>
+            <button onClick={verbindungTesten} disabled={testLaeuft || !testSchluessel.trim()}
+              style={{ ...styles.ghostBtn, opacity: testLaeuft || !testSchluessel.trim() ? 0.5 : 1 }}>
+              {testLaeuft ? 'Prüft …' : '▶ Testanfrage senden'}
+            </button>
+          </div>
+
+          {testErgebnis && (
+            <div style={testErgebnis.ok ? styles.okBox : styles.warnBox}>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{testErgebnis.text}</div>
+            </div>
+          )}
+        </div>
+
         {/* --- Anleitung --- */}
         <div style={styles.infoBox}>
           <strong>So wird er benutzt</strong><br />
@@ -259,6 +326,7 @@ const styles: Record<string, CSSProperties> = {
 
   hint: { color: C.textDim, fontSize: 13.5, padding: '10px 0', lineHeight: 1.55 },
   err: { color: C.danger, fontSize: 13.5, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
+  warnBox: { color: C.text, fontSize: 13, background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 14, lineHeight: 1.6 },
   okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
   infoBox: { marginTop: 18, padding: '13px 15px', background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
   codeBlock: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, background: C.navy, borderRadius: 8, padding: '10px 12px', margin: '10px 0', color: C.cyan, lineHeight: 1.7 },

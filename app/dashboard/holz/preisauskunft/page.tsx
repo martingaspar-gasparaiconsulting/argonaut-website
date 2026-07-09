@@ -44,6 +44,8 @@ import {
 import {
   erstellePreisauskunft, preisauskunftText, preisauskunftKurz, auskunftZeilen,
 } from '../../_components/preisauskunftLogik';
+import { preisauskunftPdf } from '../../_components/preisauskunftPdf';
+import { anschriftBlock } from '../../_components/empfaengerLogik';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -87,6 +89,7 @@ export default function PreisauskunftPage() {
   const [stufen, setStufen] = useState<FahrtkostenStufe[]>([]);
   const [kunden, setKunden] = useState<KundenEintrag[]>([]);
   const [absender, setAbsender] = useState<string | null>(null);
+  const [profil, setProfil] = useState<Record<string, string | null>>({});
 
   // --- Auswahl ----------------------------------------------------------
   const [kundenSuche, setKundenSuche] = useState('');
@@ -117,7 +120,9 @@ export default function PreisauskunftPage() {
         supabase.from('fahrtkosten_staffel').select('*').eq('owner_user_id', id),
         supabase.from('kontakte').select(K_FELDER).eq('owner_user_id', id),
         supabase.from('firmen').select(F_FELDER).eq('owner_user_id', id),
-        supabase.from('profiles').select('firma_name').eq('id', id).maybeSingle(),
+        supabase.from('profiles').select(
+          'firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_rechtsform, firma_registergericht, firma_hrb, firma_ust_id, firma_steuernummer',
+        ).eq('id', id).maybeSingle(),
       ]);
 
       if (sRes.error) throw sRes.error;
@@ -127,6 +132,7 @@ export default function PreisauskunftPage() {
       setKonfig((kRes.data as AnfahrtKonfig) ?? null);
       setStufen((stRes.data as FahrtkostenStufe[]) ?? []);
       setAbsender((profRes.data?.firma_name as string) ?? null);
+      setProfil((profRes.data as Record<string, string | null>) ?? {});
 
       const liste: KundenEintrag[] = [
         ...(((kontRes.data as unknown as KontaktQuelle[]) ?? []).map((k) => ({ art: 'kontakt' as const, empf: ausKontakt(k) }))),
@@ -253,6 +259,21 @@ export default function PreisauskunftPage() {
     () => (auskunft?.ok && sortiment ? preisauskunftKurz(auskunft, sortiment) : ''),
     [auskunft, sortiment],
   );
+
+  /** Erzeugt das Angebots-PDF — mit denselben Zahlen wie oben auf dem Bildschirm. */
+  function pdfLaden() {
+    if (!auskunft?.ok || !sortiment) return;
+    preisauskunftPdf(auskunft, sortiment, {
+      firma: {
+        name: profil.firma_name, strasse: profil.firma_strasse,
+        plz_ort: [profil.firma_plz, profil.firma_ort].filter(Boolean).join(' ') || null,
+        telefon: profil.firma_telefon, email: profil.firma_email, website: profil.firma_website,
+        rechtsform: profil.firma_rechtsform, registergericht: profil.firma_registergericht,
+        hrb: profil.firma_hrb, ust_id: profil.firma_ust_id, steuernummer: profil.firma_steuernummer,
+      },
+      empfaengerZeilen: kunde ? anschriftBlock(kunde.empf) : null,
+    });
+  }
 
   async function kopieren(text: string, was: string) {
     try {
@@ -473,9 +494,12 @@ export default function PreisauskunftPage() {
                 <div style={styles.sektion}>
                   <div style={styles.sektionKopf}>
                     <span style={styles.sektionTitel}>Für die E-Mail</span>
-                    <button onClick={() => kopieren(volltext, 'voll')} style={styles.primaerBtn}>
-                      {kopiert === 'voll' ? '✓ In der Zwischenablage' : '📋 In die Zwischenablage'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button onClick={pdfLaden} style={styles.ghostBtn}>🖨 Angebot als PDF</button>
+                      <button onClick={() => kopieren(volltext, 'voll')} style={styles.primaerBtn}>
+                        {kopiert === 'voll' ? '✓ In der Zwischenablage' : '📋 In die Zwischenablage'}
+                      </button>
+                    </div>
                   </div>
                   <textarea readOnly style={styles.textarea} value={volltext} rows={18} />
                   {!kunde && (
