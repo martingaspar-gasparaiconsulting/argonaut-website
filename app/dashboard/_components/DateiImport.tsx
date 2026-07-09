@@ -5,6 +5,16 @@
 // onText-Callback zurück. Weiß NICHTS vom Ziel (Preise, Kontakte, …) und ist
 // damit in jedem Reiter einsetzbar.
 // Inline-Styles (kein Tailwind). Branding: ARGONAUT / "die KI" – nie "Claude".
+//
+// I-1c-2 (Block 1, Kontakt-Import): NEUER OPTIONALER PROP `onDatei`.
+//   Ohne ihn verhält sich die Komponente EXAKT wie bisher — Preisliste und
+//   Lieferanten bleiben unberührt.
+//   Mit ihm bekommt der Aufrufer die ROHE Datei und liest sie selbst.
+//
+//   Warum? /api/datei-text macht die Datei zu Text und unterstellt dabei eine
+//   Kodierung. Eine Lexware-CSV in Windows-1252 käme als "Sch?fer" an. Für
+//   Kundenadressen ist das tödlich: die Dublettenerkennung findet dann nichts.
+//   Wer die Bytes braucht, bekommt die Bytes.
 // ============================================================================
 "use client";
 
@@ -23,13 +33,23 @@ export interface DateiImportMeta {
 
 export interface DateiImportProps {
   /** Wird aufgerufen, sobald der Text aus der Datei ausgelesen wurde. */
-  onText: (text: string, meta: DateiImportMeta) => void;
+  onText?: (text: string, meta: DateiImportMeta) => void;
+  /**
+   * Optional: gibt die ROHE Datei durch, ohne sie an /api/datei-text zu schicken.
+   * Ist dieser Prop gesetzt, wird `onText` NICHT aufgerufen — der Aufrufer
+   * übernimmt das Lesen selbst (z. B. mit eigener Kodierungserkennung).
+   */
+  onDatei?: (datei: File) => void;
   /** Weiße Schrift + dunkle Fläche für Navy-Hintergründe (Dashboard). */
   dunkel?: boolean;
   /** Akzentfarbe (Rahmen beim Ziehen, Icon). Default Gold. */
   akzent?: string;
   /** Zusätzlicher Style am äußeren Container. */
   style?: React.CSSProperties;
+  /** Optional: Endungen einschränken, z. B. nur ["csv"] für den Kontakt-Import. */
+  endungen?: string[];
+  /** Optional: eigener Hinweistext unter der Fläche. */
+  hinweis?: string;
 }
 
 const ERLAUBTE_ENDUNGEN = ["pdf", "docx", "xlsx", "xlsm", "csv", "txt"];
@@ -37,9 +57,12 @@ const MAX_BYTES = 4 * 1024 * 1024; // 4 MB (passt zur Route)
 
 export default function DateiImport({
   onText,
+  onDatei,
   dunkel = false,
   akzent = GOLD,
   style,
+  endungen,
+  hinweis,
 }: DateiImportProps) {
   const [laden, setLaden] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -52,13 +75,23 @@ export default function DateiImport({
   const flaecheBg = dunkel ? "rgba(255,255,255,0.03)" : "rgba(10,22,40,0.02)";
   const rahmen = dunkel ? "rgba(255,255,255,0.18)" : "rgba(10,22,40,0.18)";
 
+  const erlaubt = endungen && endungen.length > 0 ? endungen : ERLAUBTE_ENDUNGEN;
+  const accept = erlaubt.map((e) => `.${e}`).join(",");
+  const hinweisText =
+    hinweis ??
+    (endungen && endungen.length > 0
+      ? `${erlaubt.map((e) => e.toUpperCase()).join(", ")} – bis 4 MB`
+      : "PDF, Word (.docx), Excel (.xlsx) oder CSV – bis 4 MB");
+
   async function verarbeite(datei: File) {
     setFehler(null);
     setErfolg(null);
     const endung = (datei.name.split(".").pop() || "").toLowerCase();
-    if (!ERLAUBTE_ENDUNGEN.includes(endung)) {
+    if (!erlaubt.includes(endung)) {
       setFehler(
-        `Format „.${endung}" wird nicht unterstützt. Erlaubt: PDF, Word (.docx), Excel (.xlsx), CSV.`
+        `Format „.${endung}" wird nicht unterstützt. Erlaubt: ${erlaubt
+          .map((e) => e.toUpperCase())
+          .join(", ")}.`
       );
       return;
     }
@@ -66,6 +99,17 @@ export default function DateiImport({
       setFehler("Datei zu groß (max. 4 MB). Bitte in kleineren Teilen einlesen.");
       return;
     }
+
+    // --- NEU: rohe Datei durchreichen, ohne Server-Umweg -----------------
+    if (onDatei) {
+      setErfolg(
+        `„${datei.name}" ausgewählt – ${datei.size.toLocaleString("de-DE")} Bytes`
+      );
+      onDatei(datei);
+      return;
+    }
+
+    // --- Bisheriges Verhalten, unverändert -------------------------------
     setLaden(true);
     try {
       const fd = new FormData();
@@ -83,12 +127,12 @@ export default function DateiImport({
           "de-DE"
         )} Zeichen`
       );
-      onText(text, {
+      onText?.(text, {
         dateiname: String(data.dateiname || ""),
         typ: String(data.typ || ""),
         gekuerzt: !!data.gekuerzt,
       });
-    } catch (e) {
+    } catch {
       setFehler("Verbindung fehlgeschlagen. Bitte erneut versuchen.");
     }
     setLaden(false);
@@ -130,7 +174,7 @@ export default function DateiImport({
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.docx,.xlsx,.xlsm,.csv,.txt"
+          accept={accept}
           onChange={onPick}
           style={{ display: "none" }}
         />
@@ -150,7 +194,7 @@ export default function DateiImport({
               </span>
             </div>
             <div style={{ color: textDim, fontSize: 12.5, marginTop: 6 }}>
-              PDF, Word (.docx), Excel (.xlsx) oder CSV – bis 4 MB
+              {hinweisText}
             </div>
           </>
         )}
