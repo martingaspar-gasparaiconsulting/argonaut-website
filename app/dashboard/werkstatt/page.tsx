@@ -313,6 +313,38 @@ export default function WerkstattPage() {
   }
   const gekoppeltesFahrzeug = fahrzeuge.find((f) => f.id === form.fahrzeug_id) || null;
 
+  // --- Feinschliff 1 · HU-Datum am gekoppelten Fahrzeug pflegen ---------
+  const [huEingabe, setHuEingabe] = useState('');
+  const [huBusy, setHuBusy] = useState(false);
+  useEffect(() => {
+    setHuEingabe(gekoppeltesFahrzeug?.naechste_hu ?? '');
+  }, [gekoppeltesFahrzeug?.id, gekoppeltesFahrzeug?.naechste_hu]);
+
+  /** Setzt das HU-Datum. `plusZweiJahre` = ab heute +2 Jahre (nach bestandener HU). */
+  async function huSpeichern(plusZweiJahre = false) {
+    if (!gekoppeltesFahrzeug) return;
+    let ziel = huEingabe;
+    if (plusZweiJahre) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 2);
+      ziel = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    if (!ziel) { setFehler('Bitte ein HU-Datum wählen.'); return; }
+    if (!window.confirm(`Nächste HU auf ${ziel.split('-').reverse().join('.')} setzen?`)) return;
+
+    setHuBusy(true); setFehler(null);
+    try {
+      const { error } = await supabase.from('werkstatt_fahrzeuge')
+        .update({ naechste_hu: ziel, aktualisiert_am: new Date().toISOString() })
+        .eq('id', gekoppeltesFahrzeug.id);
+      if (error) throw error;
+      setHuEingabe(ziel);
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('HU-Datum konnte nicht gespeichert werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setHuBusy(false); }
+  }
+
   // --- Positionen -------------------------------------------------------
   const leiTreffer = useMemo(() => {
     const q = leiSuche.trim().toLowerCase();
@@ -502,6 +534,10 @@ export default function WerkstattPage() {
         kunde_name: form.kunde_name || a.kunde_name, kennzeichen: form.kennzeichen || a.kennzeichen,
         angenommen_am: a.angenommen_am, fertig_am: a.fertig_am, zugesagt_am: form.zugesagt_am || a.zugesagt_am,
         beschreibung: form.beschreibung || a.beschreibung,
+        // Feinschliff 2 · Annahme-Doku ins PDF
+        kilometerstand: form.kilometerstand.trim() ? (num(form.kilometerstand) ?? null) : a.kilometerstand,
+        kundenanliegen: form.kundenanliegen || a.kundenanliegen,
+        annahme_zustand: form.annahme_zustand || a.annahme_zustand,
       },
       fz ? { fin: fz.fin, kennzeichen: fz.kennzeichen, hersteller: fz.hersteller, modell: fz.modell, halter_name: fz.halter_name } : null,
       positionen,
@@ -849,6 +885,9 @@ export default function WerkstattPage() {
               {gespeichertHinweis && <span style={{ color: C.green, fontSize: 13 }}>✓ gespeichert</span>}
             </div>
 
+            {/* Feinschliff 4 · Fehler auch im Modal sichtbar (nicht nur oben auf der Seite) */}
+            {fehler && <div style={{ ...styles.err, marginBottom: 16 }}>{fehler}</div>}
+
             {/* Kopfdaten */}
             <div style={styles.formGrid}>
               <Feld label="Titel *" voll>
@@ -903,13 +942,29 @@ export default function WerkstattPage() {
                 <div style={styles.sektion}>
                   <div style={styles.sektionTitel}>🚗 Fahrzeug <span style={{ color: C.textDim, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></div>
                   {gekoppeltesFahrzeug ? (
-                    <div style={styles.fzKarte}>
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{[gekoppeltesFahrzeug.hersteller, gekoppeltesFahrzeug.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</div>
-                        <div style={{ fontSize: 12, color: C.textDim }}>FIN {gekoppeltesFahrzeug.fin}{gekoppeltesFahrzeug.kennzeichen ? ` · ${gekoppeltesFahrzeug.kennzeichen}` : ''}</div>
+                    <>
+                      <div style={styles.fzKarte}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{[gekoppeltesFahrzeug.hersteller, gekoppeltesFahrzeug.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</div>
+                          <div style={{ fontSize: 12, color: C.textDim }}>FIN {gekoppeltesFahrzeug.fin}{gekoppeltesFahrzeug.kennzeichen ? ` · ${gekoppeltesFahrzeug.kennzeichen}` : ''}</div>
+                        </div>
+                        <button onClick={() => fahrzeugKoppeln(null)} style={styles.miniBtnGhost}>Entkoppeln</button>
                       </div>
-                      <button onClick={() => fahrzeugKoppeln(null)} style={styles.miniBtnGhost}>Entkoppeln</button>
-                    </div>
+
+                      {/* Feinschliff 1 · HU-Datum pflegen */}
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1 1 180px' }}>
+                          <label style={styles.lbl}>Nächste HU (TÜV)</label>
+                          <input type="date" style={styles.input} value={huEingabe} onChange={(e) => setHuEingabe(e.target.value)} />
+                        </div>
+                        <button onClick={() => void huSpeichern(false)} disabled={huBusy} style={{ ...styles.miniBtn, marginBottom: 1 }}>
+                          {huBusy ? 'Speichert …' : 'HU speichern'}
+                        </button>
+                        <button onClick={() => void huSpeichern(true)} disabled={huBusy} style={{ ...styles.miniBtnGhost, marginBottom: 1, marginLeft: 0 }} title="HU heute bestanden → nächste HU in 2 Jahren">
+                          ✓ HU bestanden (+2 J.)
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <input style={styles.input} value={fzSuche} onChange={(e) => setFzSuche(e.target.value)} placeholder="Fahrzeug suchen (FIN oder Kennzeichen) …" />
@@ -1092,7 +1147,7 @@ export default function WerkstattPage() {
                       </div>
 
                       <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>
-                        Jeder Freigabe-Schritt wird protokolliert. Bei zusätzlichen Positionen über dem freigegebenen Betrag meldet das System automatisch einen Nachtrag.
+                        Jeder Freigabe-Schritt wird protokolliert. Bei zusätzlichen Positionen über dem freigegebenen Betrag meldet das System hier automatisch einen Nachtrag — die Board-Karte zeigt nur den reinen Freigabe-Status.
                       </div>
                     </div>
                   );
@@ -1250,7 +1305,9 @@ export default function WerkstattPage() {
                 <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
               )}
               {form.id && (
-                <button onClick={rechnungErstellen} disabled={speichert || rechnungBusy} style={styles.rechnungBtn}>
+                <button onClick={rechnungErstellen} disabled={speichert || rechnungBusy || positionen.length === 0}
+                  title={positionen.length === 0 ? 'Erst Leistungen/Material erfassen' : ''}
+                  style={{ ...styles.rechnungBtn, opacity: (speichert || rechnungBusy || positionen.length === 0) ? 0.5 : 1, cursor: positionen.length === 0 ? 'not-allowed' : 'pointer' }}>
                   {rechnungBusy ? 'Erstellt …' : (auftraege.find((x) => x.id === form.id)?.rechnung_id ? '🧾 Rechnung öffnen' : '🧾 Rechnung erstellen')}
                 </button>
               )}

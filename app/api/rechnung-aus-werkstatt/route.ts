@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 //     Zeit-Position -> Menge = Stunden (dezimal), Einheit "Std", Einzelpreis = Stundensatz
 //     Material/Stück -> Menge * Einzelpreis direkt, Einheit "Stk"
 //   So gilt immer: menge * einzelpreis = gesamt_netto.
-// - kontakt_id bleibt null; kunde_name wandert in titel (Empfänger-Fallback der Liste).
+// - kontakt_id bleibt null; kunde_name wandert in empfaenger_name (Freitext-Empfänger).
 // - Doppel-Schutz: existiert bereits eine Rechnung zum Auftrag (rechnung_id gesetzt
 //   und Rechnung existiert), wird deren ID zurückgegeben — keine zweite Rechnung.
 // ============================================================
@@ -135,8 +135,11 @@ export async function POST(req: Request) {
     faellig.setDate(faellig.getDate() + zahlungszielTage);
     const faelligkeitsdatum = faellig.toISOString().slice(0, 10);
 
-    const titel = auftrag.kunde_name
-      ? `${auftrag.titel || "Werkstatt-Auftrag"} · ${auftrag.kunde_name}${auftrag.kennzeichen ? " · " + auftrag.kennzeichen : ""}`
+    // Feinschliff 3: Empfänger separat führen (Werkstatt-Kunden sind Freitext,
+    // kein CRM-Kontakt). Der Titel bleibt der Auftragstitel + Kennzeichen.
+    const empfaengerName = auftrag.kunde_name?.trim() || null;
+    const titel = auftrag.kennzeichen
+      ? `${auftrag.titel || "Werkstatt-Auftrag"} · ${auftrag.kennzeichen}`
       : (auftrag.titel || "Werkstatt-Auftrag");
 
     const { data: neueRechnung, error: rErr } = await supabase
@@ -144,9 +147,10 @@ export async function POST(req: Request) {
       .insert({
         owner_user_id: user.id,
         auftrag_id: null,          // kein US-CORE-Auftrag; Werkstatt-Verknüpfung läuft über werkstatt_auftraege.rechnung_id
-        kontakt_id: null,          // Werkstatt-Kunde ist Freitext -> siehe titel (Empfänger-Fallback)
+        kontakt_id: null,          // Werkstatt-Kunde ist Freitext -> siehe empfaenger_name
         firma_id: null,
         titel,
+        empfaenger_name: empfaengerName,
         zahlungsstatus: "offen",
         rechnungsdatum,
         leistungsdatum: rechnungsdatum,

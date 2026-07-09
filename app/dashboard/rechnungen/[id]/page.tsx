@@ -455,7 +455,7 @@ export default function RechnungDetail() {
         body: JSON.stringify({
           rechnung: rechnungDaten,
           positionen: posDaten,
-          kontaktName: kontakt ? kontaktName(kontakt) : "",
+          kontaktName: kontakt ? kontaktName(kontakt) : (rechnung?.empfaenger_name || ""),
           firmaName: firma ? firmaName(firma) : "",
           aussteller,
         }),
@@ -564,8 +564,9 @@ export default function RechnungDetail() {
   const empfaengerName = useMemo(() => {
     if (kontakt) return kontaktName(kontakt);
     if (firma) return firmaName(firma);
+    if (rechnung?.empfaenger_name) return rechnung.empfaenger_name as string;
     return titel || "—";
-  }, [kontakt, firma, titel]);
+  }, [kontakt, firma, titel, rechnung]);
 
   const zahlungInfo = useMemo(() => {
     const brutto = Number(rechnung?.brutto_summe) || 0;

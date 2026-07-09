@@ -3,6 +3,9 @@
 // Erzeugt einen Werkstattauftrag/Arbeitsnachweis als PDF und lädt ihn herunter.
 // Kein API-Call, kein Gotenberg, KEINE jspdf-autotable-Abhängigkeit — nur jsPDF
 // (bereits im Projekt). Tabelle wird manuell gezeichnet -> läuft garantiert.
+// ERWEITERT (Feinschliff 2): Annahme-Daten (Kilometerstand, Kundenanliegen im
+// O-Ton, Zustand bei Annahme) + Unterschriftenzeile — macht das PDF zum
+// rechtsfesten Annahmebeleg.
 // Branding: Navy #0A1628, Gold #C9A84C.
 // Pfad: app/dashboard/_components/werkstattAuftragPdf.ts
 // ============================================================
@@ -18,6 +21,10 @@ export interface PdfAuftrag {
   kunde_name?: string | null; kennzeichen?: string | null;
   angenommen_am?: string | null; fertig_am?: string | null;
   zugesagt_am?: string | null; beschreibung?: string | null;
+  // Feinschliff 2 · Annahme-Doku
+  kilometerstand?: number | null;
+  kundenanliegen?: string | null;
+  annahme_zustand?: string | null;
 }
 export interface PdfFahrzeug {
   fin?: string | null; kennzeichen?: string | null;
@@ -44,6 +51,10 @@ function statusText(s: string | null | undefined): string {
 function einheitText(art: string | null | undefined): string {
   const m: Record<string, string> = { minuten: 'Min', stunden: 'Std', aw: 'AW', stueck: 'Stk' };
   return (art && m[art]) || '';
+}
+function kmText(km: number | null | undefined): string {
+  if (km == null) return '—';
+  return km.toLocaleString('de-DE') + ' km';
 }
 
 export function werkstattAuftragPdf(
@@ -94,7 +105,7 @@ export function werkstattAuftragPdf(
 
   // ---- Info-Kästen: Kunde + Fahrzeug ----
   const boxB = (seiteB - rand * 2 - 6) / 2;
-  const boxY = y; const boxH = 30;
+  const boxY = y; const boxH = 34;
 
   doc.setDrawColor(...LINIE); doc.setFillColor(...HELL);
   doc.roundedRect(rand, boxY, boxB, boxH, 2, 2, 'FD');
@@ -116,12 +127,29 @@ export function werkstattAuftragPdf(
     doc.setFontSize(8); doc.setTextColor(...GRAU);
     doc.text(`FIN: ${fahrzeug.fin || '—'}`, fzX + 4, boxY + 19);
     doc.text(`Kennz.: ${fahrzeug.kennzeichen || auftrag.kennzeichen || '—'}`, fzX + 4, boxY + 24);
+    // Feinschliff 2: Kilometerstand gehoert zum Fahrzeugzustand
+    doc.text(`Kilometerstand: ${kmText(auftrag.kilometerstand)}`, fzX + 4, boxY + 29);
   } else {
     doc.setFontSize(9); doc.setTextColor(...GRAU);
     doc.text(auftrag.kennzeichen || 'Kein Fahrzeug gekoppelt', fzX + 4, boxY + 13);
+    doc.setFontSize(8);
+    doc.text(`Kilometerstand: ${kmText(auftrag.kilometerstand)}`, fzX + 4, boxY + 20);
   }
 
-  y = boxY + boxH + 10;
+  y = boxY + boxH + 8;
+
+  // ---- Feinschliff 2: Kundenanliegen im O-Ton (der Auftragsgrund) ----
+  if (auftrag.kundenanliegen) {
+    doc.setDrawColor(...GOLD); doc.setFillColor(255, 252, 242);
+    const anliegenZeilen = doc.splitTextToSize(auftrag.kundenanliegen, seiteB - rand * 2 - 8) as string[];
+    const kastenH = 10 + anliegenZeilen.length * 4.5;
+    doc.roundedRect(rand, y, seiteB - rand * 2, kastenH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAU);
+    doc.text('KUNDENANLIEGEN (ANGABE DES KUNDEN)', rand + 4, y + 5.5);
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(...NAVY);
+    doc.text(anliegenZeilen, rand + 4, y + 11.5);
+    y += kastenH + 8;
+  }
 
   // ---- Positionstabelle (manuell gezeichnet) ----
   // Spalten: Position(auto) | Menge | Zeit | Einzel | Betrag
@@ -216,6 +244,17 @@ export function werkstattAuftragPdf(
     y += 6;
   }
 
+  // ---- Feinschliff 2: Zustand bei Annahme (Haftungsschutz) ----
+  if (auftrag.annahme_zustand) {
+    y += 6; neueSeiteWennNoetig();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAU);
+    doc.text('ZUSTAND BEI ANNAHME', rand, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...NAVY);
+    const z = doc.splitTextToSize(auftrag.annahme_zustand, seiteB - rand * 2) as string[];
+    doc.text(z, rand, y);
+    y += z.length * 4.5 + 2;
+  }
+
   // ---- Beschreibung ----
   if (auftrag.beschreibung) {
     y += 4; neueSeiteWennNoetig();
@@ -224,7 +263,21 @@ export function werkstattAuftragPdf(
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...NAVY);
     const t = doc.splitTextToSize(auftrag.beschreibung, seiteB - rand * 2) as string[];
     doc.text(t, rand, y);
+    y += t.length * 4.5 + 2;
   }
+
+  // ---- Feinschliff 2: Unterschriftenzeile (macht den Annahmebeleg rechtsfest) ----
+  y += 12;
+  if (y > seiteH - 40) { doc.addPage(); y = 30; }
+  const unterschriftB = (seiteB - rand * 2 - 14) / 2;
+  doc.setDrawColor(...GRAU);
+  doc.line(rand, y, rand + unterschriftB, y);
+  doc.line(rand + unterschriftB + 14, y, seiteB - rand, y);
+  doc.setFontSize(8); doc.setTextColor(...GRAU); doc.setFont('helvetica', 'normal');
+  doc.text('Datum, Unterschrift Kunde', rand, y + 4.5);
+  doc.text('Datum, Unterschrift Werkstatt', rand + unterschriftB + 14, y + 4.5);
+  doc.setFontSize(7);
+  doc.text('Mit der Unterschrift bestätigt der Kunde den oben festgehaltenen Fahrzeugzustand bei Annahme.', rand, y + 10);
 
   // ---- Fußzeile ----
   const fussY = seiteH - 12;
