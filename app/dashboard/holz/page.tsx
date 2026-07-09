@@ -1,11 +1,14 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Block 2 · Welle 1 · A2-3 · Brennholz-Sortiment
+// ARGONAUT OS · Block 2 · Welle 1 · A2-3 + A3a-3 · Brennholz-Sortiment & Preise
 // Verkaufbare Varianten pflegen: Holzart × Scheitlänge × Trocknungsgrad.
 // Live-Prüfung (1. BImSchV, Restfeuchte-Plausibilität), Dubletten-Schutz vor
 // dem DB-Index, Umrechnungs-Vorschau. Bestätigung vor jedem Schreiben.
 // Kein Löschen — nur Deaktivieren (Belege bleiben lesbar, GoBD).
+//
+// A3a-3: Preise je Einheit (mit abgeleitetem Vorschlag), Mengenrabatt-Staffel,
+// Live-Beispielrechnung. Preise leben dort, wo die Variante lebt.
 // Pfad: app/dashboard/holz/page.tsx
 // ============================================================
 
@@ -13,8 +16,9 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import {
-  HOLZARTEN, SCHEITLAENGEN, holzartName, umrechnungsHinweis, formatZahl,
-  type HolzartSchluessel,
+  HOLZARTEN, SCHEITLAENGEN, EINHEITEN, holzartName, umrechnungsHinweis, formatZahl,
+  einheitKurz, einheitLang,
+  type HolzartSchluessel, type HolzEinheit,
 } from '../_components/holzLogik';
 import {
   TROCKNUNGSGRADE, BRENNFERTIG_GRENZE_PROZENT,
@@ -23,6 +27,13 @@ import {
   istBrennfertig, neuerSortimentEntwurf,
   type Sortiment, type SortimentEntwurf, type Trocknungsgrad,
 } from '../_components/sortimentLogik';
+import {
+  STANDARD_STEUERSATZ_BRENNHOLZ, STEUER_HINWEIS,
+  findePreis, alleVorschlaege, staffelFuerVariante, findeRabatt,
+  berechnePosition, positionKlartext, istVerkaufsfertig,
+  eur, eurJeEinheit, pruefePreis, pruefeRabatt,
+  type Preis, type Mengenrabatt,
+} from '../_components/preisLogik';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,6 +76,28 @@ function num(s: string): number | null {
   const n = Number(t); return Number.isFinite(n) ? n : null;
 }
 
+// --- A3a: Preis-Formular je Einheit -----------------------------------------
+type PreisZelle = { preis: string; steuer: string };
+type PreisForm = Record<HolzEinheit, PreisZelle>;
+
+function leerPreisForm(): PreisForm {
+  const f = {} as PreisForm;
+  for (const e of EINHEITEN) f[e.wert] = { preis: '', steuer: String(STANDARD_STEUERSATZ_BRENNHOLZ) };
+  return f;
+}
+
+function preisFormAus(preise: readonly Preis[], sortimentId: string): PreisForm {
+  const f = leerPreisForm();
+  for (const e of EINHEITEN) {
+    const p = findePreis(preise, sortimentId, e.wert);
+    if (p) f[e.wert] = { preis: String(p.preis_netto), steuer: String(p.steuersatz_prozent) };
+  }
+  return f;
+}
+
+type RabattForm = { ab_menge: string; rabatt_prozent: string; einheit: '' | HolzEinheit; nurVariante: boolean };
+const LEER_RABATT: RabattForm = { ab_menge: '', rabatt_prozent: '', einheit: '', nurVariante: true };
+
 export default function HolzSortimentPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [liste, setListe] = useState<Sortiment[]>([]);
@@ -75,6 +108,17 @@ export default function HolzSortimentPage() {
   const [form, setForm] = useState<Form>(leerForm());
   const [speichert, setSpeichert] = useState(false);
   const [gespeichertHinweis, setGespeichertHinweis] = useState(false);
+
+  // --- A3a: Preise & Rabatte -------------------------------------------
+  const [preise, setPreise] = useState<Preis[]>([]);
+  const [rabatte, setRabatte] = useState<Mengenrabatt[]>([]);
+  const [preisForm, setPreisForm] = useState<PreisForm>(leerPreisForm());
+  const [rabattForm, setRabattForm] = useState<RabattForm>(LEER_RABATT);
+  const [preisSpeichert, setPreisSpeichert] = useState(false);
+  const [preisFehler, setPreisFehler] = useState<string[]>([]);
+  const [preisGespeichert, setPreisGespeichert] = useState(false);
+  const [testMenge, setTestMenge] = useState('8');
+  const [testEinheit, setTestEinheit] = useState<HolzEinheit>('srm');
 
   useEffect(() => {
     (async () => {
@@ -89,10 +133,17 @@ export default function HolzSortimentPage() {
     if (!uid) return;
     setLaden(true); setFehler(null);
     try {
-      const { data, error } = await supabase.from('holz_sortiment').select('*')
-        .eq('owner_user_id', uid);
-      if (error) throw error;
-      setListe(sortiereSortimente((data as Sortiment[]) ?? []));
+      const [sRes, pRes, rRes] = await Promise.all([
+        supabase.from('holz_sortiment').select('*').eq('owner_user_id', uid),
+        supabase.from('holz_preise').select('*').eq('owner_user_id', uid),
+        supabase.from('holz_mengenrabatt').select('*').eq('owner_user_id', uid),
+      ]);
+      if (sRes.error) throw sRes.error;
+      if (pRes.error) throw pRes.error;
+      if (rRes.error) throw rRes.error;
+      setListe(sortiereSortimente((sRes.data as Sortiment[]) ?? []));
+      setPreise((pRes.data as Preis[]) ?? []);
+      setRabatte((rRes.data as Mengenrabatt[]) ?? []);
     } catch (e: unknown) {
       setFehler('Sortiment konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -100,7 +151,11 @@ export default function HolzSortimentPage() {
 
   useEffect(() => { void laden_(); }, [laden_]);
 
-  function neu() { setForm(leerForm()); setGespeichertHinweis(false); setFehler(null); setModalAuf(true); }
+  function neu() {
+    setForm(leerForm());
+    setPreisForm(leerPreisForm()); setRabattForm(LEER_RABATT); setPreisFehler([]);
+    setGespeichertHinweis(false); setFehler(null); setModalAuf(true);
+  }
 
   function bearbeiten(s: Sortiment) {
     setForm({
@@ -113,6 +168,7 @@ export default function HolzSortimentPage() {
       notiz: s.notiz ?? '',
       aktiv: s.aktiv,
     });
+    setPreisForm(preisFormAus(preise, s.id)); setRabattForm(LEER_RABATT); setPreisFehler([]);
     setGespeichertHinweis(false); setFehler(null); setModalAuf(true);
   }
 
@@ -203,15 +259,162 @@ export default function HolzSortimentPage() {
     }
   }
 
+  // --- A3a: Preis-Vorschlaege -------------------------------------------
+  // Basis ist die erste Einheit, in der ein Preis eingetragen ist (Reihenfolge
+  // aus EINHEITEN: SRM zuerst). Die anderen drei werden daraus abgeleitet.
+  const basisEinheit = useMemo<HolzEinheit | null>(() => {
+    for (const e of EINHEITEN) {
+      const w = num(preisForm[e.wert].preis);
+      if (w !== null && w > 0) return e.wert;
+    }
+    return null;
+  }, [preisForm]);
+
+  const vorschlaege = useMemo(() => {
+    if (!basisEinheit || !laenge || laenge <= 0) return null;
+    const basis = num(preisForm[basisEinheit].preis);
+    if (basis === null) return null;
+    return alleVorschlaege(basis, basisEinheit, { holzart: form.holzart, scheitlaenge_cm: laenge });
+  }, [basisEinheit, preisForm, form.holzart, laenge]);
+
+  function setPreisZelle(e: HolzEinheit, k: keyof PreisZelle, v: string) {
+    setPreisForm((f) => ({ ...f, [e]: { ...f[e], [k]: v } }));
+    setPreisGespeichert(false);
+  }
+
+  // --- A3a: Preise speichern --------------------------------------------
+  async function preiseSpeichern() {
+    if (!uid || !form.id) return;
+
+    const zeilen = EINHEITEN.map((e) => e.wert)
+      .map((e) => ({
+        einheit: e,
+        preis_netto: num(preisForm[e].preis),
+        steuersatz_prozent: num(preisForm[e].steuer) ?? STANDARD_STEUERSATZ_BRENNHOLZ,
+      }))
+      .filter((z): z is { einheit: HolzEinheit; preis_netto: number; steuersatz_prozent: number } =>
+        z.preis_netto !== null);
+
+    if (zeilen.length === 0) {
+      setPreisFehler(['Bitte mindestens einen Preis eintragen.']);
+      return;
+    }
+
+    const alleFehler: string[] = [];
+    for (const z of zeilen) {
+      const pr = pruefePreis({ einheit: z.einheit, preis_netto: z.preis_netto, steuersatz_prozent: z.steuersatz_prozent });
+      pr.fehler.forEach((f) => alleFehler.push(`${einheitKurz(z.einheit)}: ${f}`));
+    }
+    if (alleFehler.length > 0) { setPreisFehler(alleFehler); return; }
+    setPreisFehler([]);
+
+    const uebersicht = zeilen.map((z) => `• ${eurJeEinheit(z.preis_netto, z.einheit)} (${z.steuersatz_prozent} % USt.)`).join('\n');
+    if (!window.confirm(`Preise speichern?\n\n${uebersicht}`)) return;
+
+    setPreisSpeichert(true); setFehler(null);
+    try {
+      const payload = zeilen.map((z) => ({
+        owner_user_id: uid,
+        sortiment_id: form.id as string,
+        einheit: z.einheit,
+        preis_netto: z.preis_netto,
+        steuersatz_prozent: z.steuersatz_prozent,
+      }));
+      const { error } = await supabase
+        .from('holz_preise')
+        .upsert(payload, { onConflict: 'owner_user_id,sortiment_id,einheit' });
+      if (error) throw error;
+      setPreisGespeichert(true); setTimeout(() => setPreisGespeichert(false), 2500);
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Preise speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setPreisSpeichert(false); }
+  }
+
+  async function preisLoeschen(pr: Preis) {
+    if (!window.confirm(`Preis ${eurJeEinheit(pr.preis_netto, pr.einheit)} entfernen?`)) return;
+    try {
+      const { error } = await supabase.from('holz_preise').delete().eq('id', pr.id);
+      if (error) throw error;
+      setPreisForm((f) => ({ ...f, [pr.einheit]: { preis: '', steuer: String(STANDARD_STEUERSATZ_BRENNHOLZ) } }));
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Preis entfernen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    }
+  }
+
+  // --- A3a: Mengenrabatt --------------------------------------------------
+  async function rabattAnlegen() {
+    if (!uid || !form.id) return;
+    const entwurf = {
+      sortiment_id: rabattForm.nurVariante ? (form.id as string) : null,
+      einheit: (rabattForm.einheit || null) as HolzEinheit | null,
+      ab_menge: num(rabattForm.ab_menge) ?? 0,
+      rabatt_prozent: num(rabattForm.rabatt_prozent) ?? 0,
+    };
+    const pr = pruefeRabatt(entwurf, rabatte);
+    if (!pr.ok) { setPreisFehler(pr.fehler); return; }
+    setPreisFehler([]);
+
+    const geltung = entwurf.sortiment_id ? 'nur diese Variante' : 'alle Varianten';
+    const einh = entwurf.einheit ? einheitKurz(entwurf.einheit) : 'alle Einheiten';
+    if (!window.confirm(`Rabattstaffel anlegen?\n\n• ab ${entwurf.ab_menge} ${einh} = ${entwurf.rabatt_prozent} %\n• Gilt für: ${geltung}`)) return;
+
+    try {
+      const { error } = await supabase.from('holz_mengenrabatt').insert({ owner_user_id: uid, ...entwurf });
+      if (error) throw error;
+      setRabattForm(LEER_RABATT);
+      await laden_();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Fehler';
+      setFehler(msg.includes('duplicate key')
+        ? 'Für diese Schwelle existiert bereits eine Staffel.'
+        : 'Rabatt anlegen fehlgeschlagen: ' + msg);
+    }
+  }
+
+  async function rabattLoeschen(r: Mengenrabatt) {
+    const einh = r.einheit ? einheitKurz(r.einheit) : 'alle Einheiten';
+    if (!window.confirm(`Staffel „ab ${r.ab_menge} ${einh} = ${r.rabatt_prozent} %" entfernen?`)) return;
+    try {
+      const { error } = await supabase.from('holz_mengenrabatt').delete().eq('id', r.id);
+      if (error) throw error;
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Staffel entfernen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    }
+  }
+
+  // --- A3a: Live-Beispielrechnung (rechnet mit den GESPEICHERTEN Preisen) --
+  const beispiel = useMemo(() => {
+    if (!form.id) return null;
+    const m = num(testMenge);
+    if (m === null || m <= 0) return null;
+    return berechnePosition(m, testEinheit, form.id, preise, rabatte);
+  }, [form.id, testMenge, testEinheit, preise, rabatte]);
+
+  const staffel = useMemo(
+    () => (form.id ? staffelFuerVariante(rabatte, form.id, testEinheit) : []),
+    [rabatte, form.id, testEinheit],
+  );
+  const greifenderRabatt = useMemo(() => {
+    const m = num(testMenge);
+    if (!form.id || m === null) return null;
+    return findeRabatt(rabatte, form.id, testEinheit, m);
+  }, [rabatte, form.id, testEinheit, testMenge]);
+
   // --- Kennzahlen ------------------------------------------------------
   const aktive = liste.filter((s) => s.aktiv).length;
   const nichtBrennfertig = liste.filter(
     (s) => s.aktiv && s.restfeuchte_prozent != null && !istBrennfertig(s.restfeuchte_prozent),
   ).length;
+  const ohnePreis = liste.filter((s) => s.aktiv && !istVerkaufsfertig(preise, s.id)).length;
 
   const kiKontext = liste.length === 0 ? '' :
     `${liste.length} Brennholz-Varianten, davon ${aktive} im Verkauf. ` +
     `${nichtBrennfertig} aktive Variante(n) liegen über ${BRENNFERTIG_GRENZE_PROZENT} % Restfeuchte. ` +
+    `${ohnePreis} aktive Variante(n) haben noch keinen Preis. ` +
+    `${rabatte.filter((r) => r.aktiv).length} Rabattstaffel(n) hinterlegt. ` +
     `Holzarten: ${[...new Set(liste.map((s) => holzartName(s.holzart)))].join(', ')}.`;
 
   return (
@@ -237,6 +440,7 @@ export default function HolzSortimentPage() {
             value={String(nichtBrennfertig)}
             accent={nichtBrennfertig > 0 ? C.warn : C.green}
           />
+          <SummeKarte label="Ohne Preis" value={String(ohnePreis)} accent={ohnePreis > 0 ? C.warn : C.green} />
         </div>
       )}
 
@@ -261,9 +465,11 @@ export default function HolzSortimentPage() {
               const feucht = s.restfeuchte_prozent;
               const warnung = feucht != null && !istBrennfertig(feucht);
               const punkt = !s.aktiv ? C.textDim : warnung ? C.warn : C.green;
+              const hauptpreis = EINHEITEN.map((e) => findePreis(preise, s.id, e.wert)).find(Boolean);
               const unterzeile = [
                 trocknungsgradName(s.trocknungsgrad),
                 feucht != null ? `${formatZahl(feucht, 1)} % Restfeuchte` : null,
+                hauptpreis ? eurJeEinheit(hauptpreis.preis_netto, hauptpreis.einheit) : 'kein Preis',
                 s.notiz,
               ].filter(Boolean).join(' · ');
               return (
@@ -393,6 +599,203 @@ export default function HolzSortimentPage() {
               </div>
             )}
 
+            {/* ============ A3a: PREISE ============ */}
+            {!form.id ? (
+              <div style={styles.infoBox}>
+                Variante zuerst mit „Anlegen" speichern — danach kannst du Preise und Rabatte pflegen.
+              </div>
+            ) : (
+              <>
+                <div style={styles.sektion}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={styles.sektionTitel}>💶 Preise je Einheit</span>
+                    {preisGespeichert && <span style={{ color: C.green, fontSize: 13 }}>✓ gespeichert</span>}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 12, lineHeight: 1.5 }}>
+                    Trag einen Preis ein — die anderen Einheiten werden daraus vorgeschlagen.
+                    Der Vorschlag ist unverbindlich: mit „Übernehmen" einsetzen oder eigenen Wert tippen.
+                  </div>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={styles.posTable}>
+                      <thead>
+                        <tr>
+                          <th style={styles.posTh}>Einheit</th>
+                          <th style={{ ...styles.posTh, width: 120 }}>Preis netto</th>
+                          <th style={{ ...styles.posTh, width: 90 }}>USt. %</th>
+                          <th style={{ ...styles.posTh, width: 190 }}>Vorschlag</th>
+                          <th style={{ ...styles.posTh, width: 36 }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {EINHEITEN.map((e) => {
+                          const zelle = preisForm[e.wert];
+                          const gespeichert = findePreis(preise, form.id as string, e.wert);
+                          const v = vorschlaege ? vorschlaege[e.wert] : null;
+                          const eigen = num(zelle.preis);
+                          const zeigeVorschlag = v !== null && basisEinheit !== e.wert && (eigen === null || Math.abs(eigen - v) > 0.005);
+                          return (
+                            <tr key={e.wert}>
+                              <td style={styles.posTd}>
+                                <div style={{ fontWeight: 700 }}>{e.kurz}</div>
+                                <div style={{ fontSize: 11, color: C.textDim }}>{einheitLang(e.wert)}</div>
+                              </td>
+                              <td style={styles.posTd}>
+                                <input style={{ ...styles.posInput, textAlign: 'right' }} inputMode="decimal" placeholder="—"
+                                  value={zelle.preis} onChange={(ev) => setPreisZelle(e.wert, 'preis', ev.target.value)} />
+                              </td>
+                              <td style={styles.posTd}>
+                                <input style={{ ...styles.posInput, textAlign: 'right' }} inputMode="decimal"
+                                  value={zelle.steuer} onChange={(ev) => setPreisZelle(e.wert, 'steuer', ev.target.value)} />
+                              </td>
+                              <td style={styles.posTd}>
+                                {zeigeVorschlag ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ color: C.textDim, fontSize: 12.5 }}>{eur(v as number)}</span>
+                                    <button onClick={() => setPreisZelle(e.wert, 'preis', String(v))} style={styles.miniBtn}>
+                                      Übernehmen
+                                    </button>
+                                  </div>
+                                ) : basisEinheit === e.wert ? (
+                                  <span style={{ color: C.cyan, fontSize: 12 }}>Basis</span>
+                                ) : (
+                                  <span style={{ color: C.textDim, fontSize: 12 }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ ...styles.posTd, textAlign: 'center' }}>
+                                {gespeichert && (
+                                  <button onClick={() => preisLoeschen(gespeichert)} style={styles.xBtn} title="Preis entfernen">✕</button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>⚖ {STEUER_HINWEIS}</div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                    <button onClick={preiseSpeichern} disabled={preisSpeichert}
+                      style={{ ...styles.primaerBtn, opacity: preisSpeichert ? 0.5 : 1 }}>
+                      {preisSpeichert ? 'Speichert …' : 'Preise speichern'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* ============ A3a: MENGENRABATT ============ */}
+                <div style={styles.sektion}>
+                  <span style={styles.sektionTitel}>📉 Mengenrabatt</span>
+                  <div style={{ fontSize: 12.5, color: C.textDim, margin: '6px 0 12px', lineHeight: 1.5 }}>
+                    Es gilt immer die <strong>spezifischste</strong> Staffel — Variante + Einheit schlägt Variante,
+                    Variante schlägt global. Rabatte werden nicht addiert.
+                  </div>
+
+                  {staffel.length === 0 ? (
+                    <div style={{ color: C.textDim, fontSize: 13 }}>
+                      Keine Staffel für {einheitKurz(testEinheit)}. Leg unten die erste an.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {staffel.map((r) => {
+                        const greift = greifenderRabatt?.id === r.id;
+                        return (
+                          <div key={r.id} style={{ ...styles.staffelZeile, borderColor: greift ? C.cyan : C.border }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                                ab {formatZahl(r.ab_menge, 2)} {r.einheit ? einheitKurz(r.einheit) : 'beliebig'} → {formatZahl(r.rabatt_prozent, 0)} %
+                              </div>
+                              <div style={{ fontSize: 11.5, color: C.textDim }}>
+                                {r.sortiment_id ? 'nur diese Variante' : 'alle Varianten'}
+                                {r.einheit ? '' : ' · alle Einheiten'}
+                                {greift ? ' · greift bei der Testmenge' : ''}
+                              </div>
+                            </div>
+                            <button onClick={() => rabattLoeschen(r)} style={styles.xBtn} title="Staffel entfernen">✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div style={styles.rabattGrid}>
+                    <div>
+                      <label style={styles.lbl}>ab Menge</label>
+                      <input style={styles.input} inputMode="decimal" placeholder="z. B. 10"
+                        value={rabattForm.ab_menge} onChange={(e) => setRabattForm((f) => ({ ...f, ab_menge: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>Rabatt %</label>
+                      <input style={styles.input} inputMode="decimal" placeholder="z. B. 5"
+                        value={rabattForm.rabatt_prozent} onChange={(e) => setRabattForm((f) => ({ ...f, rabatt_prozent: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>Einheit</label>
+                      <select style={styles.input} value={rabattForm.einheit}
+                        onChange={(e) => setRabattForm((f) => ({ ...f, einheit: e.target.value as '' | HolzEinheit }))}>
+                        <option value="">alle Einheiten</option>
+                        {EINHEITEN.map((e) => <option key={e.wert} value={e.wert}>{e.kurz}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>Gilt für</label>
+                      <select style={styles.input} value={rabattForm.nurVariante ? 'variante' : 'alle'}
+                        onChange={(e) => setRabattForm((f) => ({ ...f, nurVariante: e.target.value === 'variante' }))}>
+                        <option value="variante">nur diese Variante</option>
+                        <option value="alle">alle Varianten</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <button onClick={rabattAnlegen} style={styles.miniBtn}>+ Staffel</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ============ A3a: BEISPIELRECHNUNG ============ */}
+                <div style={styles.sektion}>
+                  <span style={styles.sektionTitel}>🧮 Beispielrechnung</span>
+                  <div style={{ fontSize: 12.5, color: C.textDim, margin: '6px 0 12px' }}>
+                    Rechnet mit den <strong>gespeicherten</strong> Preisen — genau so wie später die Preisauskunft an den Kunden.
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+                    <input style={{ ...styles.input, width: 110 }} inputMode="decimal"
+                      value={testMenge} onChange={(e) => setTestMenge(e.target.value)} />
+                    <select style={{ ...styles.input, width: 130 }} value={testEinheit}
+                      onChange={(e) => setTestEinheit(e.target.value as HolzEinheit)}>
+                      {EINHEITEN.map((e) => <option key={e.wert} value={e.wert}>{e.kurz}</option>)}
+                    </select>
+                  </div>
+
+                  {!beispiel ? (
+                    <div style={{ color: C.textDim, fontSize: 13 }}>Menge eingeben.</div>
+                  ) : !beispiel.ok ? (
+                    <div style={styles.warnBox}>{beispiel.fehler.map((f, i) => <div key={i}>⚠ {f}</div>)}</div>
+                  ) : (
+                    <>
+                      <div style={styles.infoBox}>{positionKlartext(beispiel, {
+                        holzart: form.holzart, scheitlaenge_cm: entwurf.scheitlaenge_cm, trocknungsgrad: form.trocknungsgrad,
+                      })}</div>
+                      <div style={styles.summeZeile}>
+                        <span style={{ color: C.textDim, fontSize: 13 }}>
+                          {formatZahl(beispiel.grundNetto, 2)} € − {formatZahl(beispiel.rabattBetrag, 2)} € Rabatt
+                          {' '}+ {formatZahl(beispiel.steuerBetrag, 2)} € USt.
+                        </span>
+                        <span style={{ color: C.gold, fontWeight: 700 }}>
+                          {eur(beispiel.netto)} netto · {eur(beispiel.brutto)} brutto
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {preisFehler.length > 0 && (
+              <div style={styles.err}>{preisFehler.map((f, i) => <div key={i}>{f}</div>)}</div>
+            )}
+
             <div style={styles.modalAktionen}>
               {form.id && (
                 <button
@@ -460,6 +863,19 @@ const styles: Record<string, CSSProperties> = {
   infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.6 },
 
   checkZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', cursor: 'pointer' },
+
+  sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
+  sektionTitel: { fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+
+  posTable: { width: '100%', borderCollapse: 'collapse', minWidth: 560 },
+  posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  posTd: { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
+  posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit' },
+
+  staffelZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' },
+  rabattGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` },
+  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 14 },
 
   lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
