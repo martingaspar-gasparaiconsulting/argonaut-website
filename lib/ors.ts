@@ -38,6 +38,27 @@ export interface OrsPruefung {
 
 export type GeocodeGenauigkeit = 'ok' | 'ungenau';
 
+/** Ein Punkt auf der Karte. Reihenfolge wie ueberall sonst: erst Breite. */
+export interface Punkt {
+  lat: number;
+  lon: number;
+}
+
+export interface RouteTreffer {
+  /** Fahrstrecke in Metern. */
+  distanzMeter: number;
+  /** Fahrzeit in Sekunden. Kann fehlen. */
+  dauerSekunden: number | null;
+  kontingentRest: number | null;
+}
+
+export interface RouteErgebnis {
+  ok: boolean;
+  status: OrsStatus;
+  meldung: string;
+  treffer: RouteTreffer | null;
+}
+
 export interface GeocodeTreffer {
   lat: number;
   lon: number;
@@ -291,7 +312,106 @@ export async function geocodeAdresse(schluessel: string, suchtext: string): Prom
 }
 
 // ----------------------------------------------------------------------------
-// 6. LUFTLINIE — der Notnagel, wenn gar nichts geht
+// 6. ROUTE — die echte Fahrstrecke
+// ----------------------------------------------------------------------------
+
+/** Fahrzeugprofil. Fuer Brennholzlieferung und Werkstattfahrten: Auto. */
+export const STANDARD_PROFIL = 'driving-car';
+
+interface DirectionsFeature {
+  properties?: { summary?: { distance?: unknown; duration?: unknown } };
+}
+
+/**
+ * Fragt die Fahrstrecke zwischen zwei Punkten ab.
+ *
+ * ⚠️ ORS erwartet die Koordinaten als "lon,lat" — Laenge zuerst. Vertauscht
+ * kommt eine Route durch den Indischen Ozean zurueck, oder gar keine.
+ *
+ * Die URL enthaelt den Schluessel und wird deshalb NIE geloggt.
+ */
+export async function routeEntfernung(
+  schluessel: string,
+  start: Punkt,
+  ziel: Punkt,
+  profil: string = STANDARD_PROFIL,
+): Promise<RouteErgebnis> {
+  if (!schluesselPlausibel(schluessel)) {
+    return { ok: false, status: 'ungueltig', meldung: 'Der Schlüssel ist ungültig.', treffer: null };
+  }
+  for (const p of [start, ziel]) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon) || Math.abs(p.lat) > 90 || Math.abs(p.lon) > 180) {
+      return { ok: false, status: 'unbekannt', meldung: 'Ungültige Koordinaten übergeben.', treffer: null };
+    }
+  }
+
+  const url = new URL(`${ORS_BASIS}/v2/directions/${profil}`);
+  url.searchParams.set('api_key', schluessel);
+  url.searchParams.set('start', `${start.lon},${start.lat}`);
+  url.searchParams.set('end', `${ziel.lon},${ziel.lat}`);
+
+  const abbruch = new AbortController();
+  const uhr = setTimeout(() => abbruch.abort(), TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json, application/geo+json' },
+      signal: abbruch.signal,
+      cache: 'no-store',
+    });
+  } catch (e: unknown) {
+    const abgebrochen = e instanceof Error && e.name === 'AbortError';
+    return {
+      ok: false, status: 'unbekannt', treffer: null,
+      meldung: abgebrochen
+        ? 'OpenRouteService antwortet nicht (Zeitüberschreitung).'
+        : 'OpenRouteService ist nicht erreichbar.',
+    };
+  } finally {
+    clearTimeout(uhr);
+  }
+
+  const status = statusAus(res.status);
+  if (status !== 'ok') {
+    console.error('[ORS] Route, Status:', res.status);
+    // 404 heisst hier meist: kein Weg gefunden (z. B. Punkt im Wasser).
+    const meldung = res.status === 404
+      ? 'Zwischen diesen Punkten wurde keine Straßenverbindung gefunden.'
+      : meldungAus(status, res.status);
+    return { ok: false, status, meldung, treffer: null };
+  }
+
+  const rest = kontingentAus(res);
+
+  let daten: { features?: unknown };
+  try {
+    daten = (await res.json()) as { features?: unknown };
+  } catch {
+    return { ok: false, status: 'unbekannt', meldung: 'Antwort von OpenRouteService war nicht lesbar.', treffer: null };
+  }
+
+  const features = Array.isArray(daten.features) ? (daten.features as DirectionsFeature[]) : [];
+  const summary = features[0]?.properties?.summary;
+  const distanz = typeof summary?.distance === 'number' ? summary.distance : NaN;
+
+  if (!Number.isFinite(distanz) || distanz < 0) {
+    return { ok: false, status: 'unbekannt', meldung: 'Keine Streckenlänge in der Antwort.', treffer: null };
+  }
+
+  const dauer = typeof summary?.duration === 'number' ? summary.duration : null;
+
+  return {
+    ok: true,
+    status: 'ok',
+    meldung: 'Route berechnet.',
+    treffer: { distanzMeter: distanz, dauerSekunden: dauer, kontingentRest: rest },
+  };
+}
+
+// ----------------------------------------------------------------------------
+// 7. LUFTLINIE — der Notnagel, wenn gar nichts geht
 // ----------------------------------------------------------------------------
 
 /**
