@@ -1,10 +1,11 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Block 2 · Welle 1 · B1-3d + B1-3e
-// Zwei Karten, die zusammengehören:
+// ARGONAUT OS · Block 2 · Welle 1 · B1-3d + B1-3e + B3-3
+// Drei Karten, die zusammengehören:
 //   1. Betriebsstandort — der Startpunkt jeder Anfahrt
 //   2. OpenRouteService-Schlüssel — je Betrieb, eigenes Kontingent
+//   3. Fahrtkosten — BRANCHENNEUTRAL, standardmäßig AUS
 //
 // B1-3e: Koordinaten lassen sich auch VON HAND setzen. Damit ist der Standort
 // ohne jeden externen Dienst einsatzbereit. Der Kartendienst macht die
@@ -18,8 +19,13 @@
 // Pfad: app/dashboard/einstellungen/AnfahrtEinstellungen.tsx
 // ============================================================
 
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import {
+  STANDARD_KONFIG, berechneAnfahrt, anfahrtKlartext, pruefeStaffel, pruefeStufe,
+  sortiereStufen, formatKm, eur,
+  type AnfahrtKonfig, type FahrtkostenStufe, type Rundung, type DistanzQuelle,
+} from '../_components/anfahrtLogik';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,6 +71,43 @@ type SchluesselStatus = {
 
 type StandortForm = { bezeichnung: string; strasse: string; plz: string; ort: string };
 const LEER_STANDORT: StandortForm = { bezeichnung: 'Betriebssitz', strasse: '', plz: '', ort: '' };
+
+// --- B3-3: Fahrtkosten -------------------------------------------------
+type KonfigForm = {
+  aktiv: boolean;
+  frei_bis_km: string;
+  hin_und_rueck: boolean;
+  steuersatz_prozent: string;
+  mindestbetrag_netto: string;
+  rundung_km: Rundung;
+  luftlinie_aufschlag_prozent: string;
+};
+
+function leerKonfigForm(): KonfigForm {
+  return {
+    aktiv: STANDARD_KONFIG.aktiv,
+    frei_bis_km: String(STANDARD_KONFIG.frei_bis_km),
+    hin_und_rueck: STANDARD_KONFIG.hin_und_rueck,
+    steuersatz_prozent: String(STANDARD_KONFIG.steuersatz_prozent),
+    mindestbetrag_netto: '',
+    rundung_km: STANDARD_KONFIG.rundung_km,
+    luftlinie_aufschlag_prozent: String(STANDARD_KONFIG.luftlinie_aufschlag_prozent),
+  };
+}
+
+type StufeForm = { von_km: string; bis_km: string; betrag_netto: string };
+const LEER_STUFE: StufeForm = { von_km: '', bis_km: '', betrag_netto: '' };
+
+const RUNDUNGEN: Array<{ wert: Rundung; label: string }> = [
+  { wert: 'auf', label: 'immer aufrunden (42,1 → 43 km)' },
+  { wert: 'kaufmaennisch', label: 'kaufmännisch (42,4 → 42 km)' },
+  { wert: 'keine', label: 'nicht runden' },
+];
+
+function num(s: string): number | null {
+  const t = s.trim().replace(',', '.'); if (t === '') return null;
+  const n = Number(t); return Number.isFinite(n) ? n : null;
+}
 
 function datumHuebsch(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -120,6 +163,15 @@ export default function AnfahrtEinstellungen() {
   const [neuerSchluessel, setNeuerSchluessel] = useState('');
   const [schluesselLaeuft, setSchluesselLaeuft] = useState(false);
 
+  // --- B3-3: Fahrtkosten ------------------------------------------------
+  const [konfig, setKonfig] = useState<AnfahrtKonfig | null>(null);
+  const [kForm, setKForm] = useState<KonfigForm>(leerKonfigForm());
+  const [stufen, setStufen] = useState<FahrtkostenStufe[]>([]);
+  const [stufeForm, setStufeForm] = useState<StufeForm>(LEER_STUFE);
+  const [kLaeuft, setKLaeuft] = useState(false);
+  const [kFehler, setKFehler] = useState<string[]>([]);
+  const [testKm, setTestKm] = useState('42');
+
   function melde(text: string) {
     setErfolg(text);
     setFehler(null);
@@ -135,10 +187,12 @@ export default function AnfahrtEinstellungen() {
       if (!id) { setFehler('Nicht angemeldet.'); return; }
       setUid(id);
 
-      const [stRes, keyRes] = await Promise.all([
+      const [stRes, keyRes, kRes, sfRes] = await Promise.all([
         supabase.from('betriebs_standort').select('*')
           .eq('owner_user_id', id).eq('aktiv', true).eq('ist_standard', true).maybeSingle(),
         fetch('/api/betrieb/schluessel', { cache: 'no-store' }),
+        supabase.from('anfahrt_konfig').select('*').eq('owner_user_id', id).maybeSingle(),
+        supabase.from('fahrtkosten_staffel').select('*').eq('owner_user_id', id),
       ]);
 
       if (stRes.data) {
@@ -155,6 +209,21 @@ export default function AnfahrtEinstellungen() {
       }
 
       if (keyRes.ok) setSchluessel((await keyRes.json()) as SchluesselStatus);
+
+      if (kRes.data) {
+        const k = kRes.data as AnfahrtKonfig;
+        setKonfig(k);
+        setKForm({
+          aktiv: k.aktiv,
+          frei_bis_km: String(k.frei_bis_km),
+          hin_und_rueck: k.hin_und_rueck,
+          steuersatz_prozent: String(k.steuersatz_prozent),
+          mindestbetrag_netto: k.mindestbetrag_netto != null ? String(k.mindestbetrag_netto) : '',
+          rundung_km: k.rundung_km,
+          luftlinie_aufschlag_prozent: String(k.luftlinie_aufschlag_prozent),
+        });
+      }
+      setStufen(sortiereStufen((sfRes.data as FahrtkostenStufe[]) ?? []));
     } catch (e: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -338,6 +407,124 @@ export default function AnfahrtEinstellungen() {
     } finally { setSchluesselLaeuft(false); }
   }
 
+  // --- B3-3: Fahrtkosten speichern --------------------------------------
+  async function konfigSpeichern(nurSchalter = false) {
+    if (!uid) return;
+
+    const frei = num(kForm.frei_bis_km);
+    const steuer = num(kForm.steuersatz_prozent);
+    const aufschlag = num(kForm.luftlinie_aufschlag_prozent);
+    const mindest = num(kForm.mindestbetrag_netto);
+
+    const fehler: string[] = [];
+    if (frei === null || frei < 0) fehler.push('Die Freigrenze muss 0 oder größer sein.');
+    if (steuer === null || steuer < 0 || steuer > 100) fehler.push('Der Steuersatz muss zwischen 0 und 100 % liegen.');
+    if (aufschlag === null || aufschlag < 0 || aufschlag > 200) fehler.push('Der Luftlinien-Aufschlag muss zwischen 0 und 200 % liegen.');
+    if (kForm.mindestbetrag_netto.trim() !== '' && (mindest === null || mindest < 0)) fehler.push('Der Mindestbetrag darf nicht negativ sein.');
+    if (fehler.length > 0) { setKFehler(fehler); return; }
+    setKFehler([]);
+
+    if (!nurSchalter) {
+      if (!window.confirm(
+        `Fahrtkosten-Einstellungen speichern?\n\n` +
+        `• ${kForm.aktiv ? 'Aktiv' : 'Ausgeschaltet'}\n` +
+        `• kostenfrei bis ${frei} km\n` +
+        `• ${kForm.hin_und_rueck ? 'Hin- und Rückfahrt' : 'einfache Strecke'}\n` +
+        `• ${steuer} % USt.`
+      )) return;
+    }
+
+    setKLaeuft(true); setFehler(null);
+    try {
+      const payload = {
+        owner_user_id: uid,
+        aktiv: kForm.aktiv,
+        frei_bis_km: frei,
+        hin_und_rueck: kForm.hin_und_rueck,
+        steuersatz_prozent: steuer,
+        mindestbetrag_netto: kForm.mindestbetrag_netto.trim() === '' ? null : mindest,
+        rundung_km: kForm.rundung_km,
+        luftlinie_aufschlag_prozent: aufschlag,
+      };
+      const { error } = await supabase
+        .from('anfahrt_konfig')
+        .upsert(payload, { onConflict: 'owner_user_id' });
+      if (error) throw error;
+      await alesLaden();
+      melde(nurSchalter ? (kForm.aktiv ? 'Fahrtkosten eingeschaltet.' : 'Fahrtkosten ausgeschaltet.') : 'Einstellungen gespeichert.');
+    } catch (e: unknown) {
+      setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setKLaeuft(false); }
+  }
+
+  /** Der Ausschalter greift sofort — ohne Rückfrage, weil er nichts zerstört. */
+  async function schalterUmlegen(an: boolean) {
+    setKForm((f) => ({ ...f, aktiv: an }));
+    if (!uid) return;
+    setKLaeuft(true);
+    try {
+      const { error } = await supabase.from('anfahrt_konfig').upsert({
+        owner_user_id: uid,
+        aktiv: an,
+        frei_bis_km: num(kForm.frei_bis_km) ?? STANDARD_KONFIG.frei_bis_km,
+        hin_und_rueck: kForm.hin_und_rueck,
+        steuersatz_prozent: num(kForm.steuersatz_prozent) ?? STANDARD_KONFIG.steuersatz_prozent,
+        mindestbetrag_netto: kForm.mindestbetrag_netto.trim() === '' ? null : num(kForm.mindestbetrag_netto),
+        rundung_km: kForm.rundung_km,
+        luftlinie_aufschlag_prozent: num(kForm.luftlinie_aufschlag_prozent) ?? STANDARD_KONFIG.luftlinie_aufschlag_prozent,
+      }, { onConflict: 'owner_user_id' });
+      if (error) throw error;
+      await alesLaden();
+      melde(an ? 'Fahrtkosten eingeschaltet.' : 'Fahrtkosten ausgeschaltet.');
+    } catch (e: unknown) {
+      setFehler('Umschalten fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+      setKForm((f) => ({ ...f, aktiv: !an }));
+    } finally { setKLaeuft(false); }
+  }
+
+  async function stufeAnlegen() {
+    if (!uid) return;
+    const entwurf = {
+      von_km: num(stufeForm.von_km) ?? -1,
+      bis_km: stufeForm.bis_km.trim() === '' ? null : num(stufeForm.bis_km),
+      betrag_netto: num(stufeForm.betrag_netto) ?? -1,
+    };
+    const pr = pruefeStufe(entwurf, stufen);
+    if (!pr.ok) { setKFehler(pr.fehler); return; }
+    setKFehler([]);
+
+    const bis = entwurf.bis_km === null ? 'und weiter' : `bis ${entwurf.bis_km} km`;
+    if (!window.confirm(`Stufe anlegen?\n\nab ${entwurf.von_km} km ${bis} = ${eur(entwurf.betrag_netto)} netto`)) return;
+
+    setKLaeuft(true);
+    try {
+      const { error } = await supabase.from('fahrtkosten_staffel').insert({ owner_user_id: uid, ...entwurf });
+      if (error) throw error;
+      setStufeForm(LEER_STUFE);
+      await alesLaden();
+      melde('Stufe angelegt.');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Fehler';
+      setFehler(msg.includes('ueberlappung')
+        ? 'Diese Stufe überschneidet sich mit einer vorhandenen.'
+        : 'Anlegen fehlgeschlagen: ' + msg);
+    } finally { setKLaeuft(false); }
+  }
+
+  async function stufeEntfernen(st: FahrtkostenStufe) {
+    const bis = st.bis_km === null ? 'und weiter' : `bis ${st.bis_km} km`;
+    if (!window.confirm(`Stufe „ab ${st.von_km} km ${bis} = ${eur(st.betrag_netto)}" entfernen?`)) return;
+    setKLaeuft(true);
+    try {
+      const { error } = await supabase.from('fahrtkosten_staffel').delete().eq('id', st.id);
+      if (error) throw error;
+      await alesLaden();
+      melde('Stufe entfernt.');
+    } catch (e: unknown) {
+      setFehler('Entfernen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setKLaeuft(false); }
+  }
+
   // --- Ableitungen -------------------------------------------------------
   const hatKoordinaten = standort?.geo_lat != null && standort?.geo_lon != null;
   const ungenau = standort?.geocode_status === 'ungenau';
@@ -348,6 +535,19 @@ export default function AnfahrtEinstellungen() {
   // Entfernung als Luftlinie und sagt das auch. Der Schlüssel macht sie exakt.
   const bereitFuerAnfahrt = hatKoordinaten;
   const routeExakt = schluessel.vorhanden && schluessel.pruef_status !== 'ungueltig';
+
+  // --- B3-3: Live-Prüfung + Testrechnung -------------------------------
+  const freiBisKm = num(kForm.frei_bis_km) ?? STANDARD_KONFIG.frei_bis_km;
+  const staffelPruefung = useMemo(() => pruefeStaffel(stufen, freiBisKm), [stufen, freiBisKm]);
+
+  // Die Testrechnung nutzt die GESPEICHERTE Konfiguration — genau das,
+  // was die Preisauskunft dem Kunden später sagen würde.
+  const testQuelle: DistanzQuelle = routeExakt ? 'route' : 'luftlinie';
+  const testErgebnis = useMemo(() => {
+    const km = num(testKm);
+    if (km === null || km < 0) return null;
+    return berechneAnfahrt(km * 1000, testQuelle, konfig, stufen);
+  }, [testKm, testQuelle, konfig, stufen]);
 
   return (
     <section style={styles.wrap}>
@@ -576,6 +776,176 @@ export default function AnfahrtEinstellungen() {
               </>
             )}
           </div>
+
+          {/* ================= KARTE 3: FAHRTKOSTEN ================= */}
+          <div style={styles.card}>
+            <div style={styles.cardKopf}>
+              <span style={styles.cardTitel}>💶 Fahrtkosten</span>
+              <label style={styles.schalter}>
+                <input type="checkbox" checked={kForm.aktiv} disabled={kLaeuft}
+                  onChange={(e) => schalterUmlegen(e.target.checked)} />
+                <span style={{ fontSize: 13, color: kForm.aktiv ? C.green : C.textDim, fontWeight: 700 }}>
+                  {kForm.aktiv ? 'eingeschaltet' : 'ausgeschaltet'}
+                </span>
+              </label>
+            </div>
+            <p style={styles.cardSub}>
+              Gilt für jedes Gewerk — Brennholzlieferung, Hol- und Bringservice, Baustellentermin.
+              Solange der Schalter aus ist, berechnet ARGONAUT nirgends Fahrtkosten.
+            </p>
+
+            {!kForm.aktiv ? (
+              <div style={styles.hint}>
+                Einschalten, um Freigrenze und Staffel zu pflegen.
+              </div>
+            ) : (
+              <>
+                <div style={styles.grid}>
+                  <Feld label="Kostenfrei bis (km)">
+                    <input style={styles.input} inputMode="decimal" value={kForm.frei_bis_km}
+                      onChange={(e) => setKForm((f) => ({ ...f, frei_bis_km: e.target.value }))} />
+                  </Feld>
+                  <Feld label="Umsatzsteuer (%)">
+                    <input style={styles.input} inputMode="decimal" value={kForm.steuersatz_prozent}
+                      onChange={(e) => setKForm((f) => ({ ...f, steuersatz_prozent: e.target.value }))} />
+                  </Feld>
+                  <Feld label="Mindestbetrag netto (optional)">
+                    <input style={styles.input} inputMode="decimal" placeholder="—" value={kForm.mindestbetrag_netto}
+                      onChange={(e) => setKForm((f) => ({ ...f, mindestbetrag_netto: e.target.value }))} />
+                  </Feld>
+                  <Feld label="Kilometer runden">
+                    <select style={styles.input} value={kForm.rundung_km}
+                      onChange={(e) => setKForm((f) => ({ ...f, rundung_km: e.target.value as Rundung }))}>
+                      {RUNDUNGEN.map((r) => <option key={r.wert} value={r.wert}>{r.label}</option>)}
+                    </select>
+                  </Feld>
+                </div>
+
+                <label style={{ ...styles.schalterZeile, marginTop: 14 }}>
+                  <input type="checkbox" checked={kForm.hin_und_rueck}
+                    onChange={(e) => setKForm((f) => ({ ...f, hin_und_rueck: e.target.checked }))} />
+                  <span>
+                    <strong>Hin- und Rückfahrt berechnen</strong>
+                    <br />
+                    <span style={{ color: C.textDim, fontSize: 12.5 }}>
+                      Die Entfernung wird verdoppelt. Freigrenze und Staffel gelten dann für die
+                      <em> gefahrene</em> Strecke — 30 km einfach frei heißt hier 60 km eintragen.
+                    </span>
+                  </span>
+                </label>
+
+                {!routeExakt && (
+                  <div style={{ marginTop: 14 }}>
+                    <Feld label="Luftlinien-Aufschlag (%)">
+                      <input style={{ ...styles.input, maxWidth: 200 }} inputMode="decimal"
+                        value={kForm.luftlinie_aufschlag_prozent}
+                        onChange={(e) => setKForm((f) => ({ ...f, luftlinie_aufschlag_prozent: e.target.value }))} />
+                    </Feld>
+                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 6, lineHeight: 1.5 }}>
+                      Ohne Kartendienst wird die Luftlinie gerechnet — sie liegt spürbar unter der Fahrstrecke.
+                      Der Aufschlag gleicht das aus. Sobald ein Kartendienst hinterlegt ist, entfällt er.
+                    </div>
+                  </div>
+                )}
+
+                {/* ---- Staffel ---- */}
+                <div style={styles.sektion}>
+                  <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 10 }}>Staffel</div>
+
+                  <div style={styles.staffelZeile}>
+                    <span style={{ color: C.textDim }}>bis {formatKm(freiBisKm, 0)}</span>
+                    <span style={{ color: C.green, fontWeight: 700 }}>kostenfrei</span>
+                    <span style={{ width: 24 }} />
+                  </div>
+
+                  {stufen.map((st) => (
+                    <div key={st.id} style={styles.staffelZeile}>
+                      <span>
+                        ab {formatKm(st.von_km, 0)}{' '}
+                        {st.bis_km === null ? <em style={{ color: C.cyan }}>und weiter</em> : `bis ${formatKm(st.bis_km, 0)}`}
+                      </span>
+                      <span style={{ color: C.gold, fontWeight: 700 }}>{eur(st.betrag_netto)} netto</span>
+                      <button onClick={() => stufeEntfernen(st)} disabled={kLaeuft} style={styles.xBtn} title="Stufe entfernen">✕</button>
+                    </div>
+                  ))}
+
+                  {staffelPruefung.fehler.length > 0 && (
+                    <div style={styles.err}>{staffelPruefung.fehler.map((f, i) => <div key={i}>{f}</div>)}</div>
+                  )}
+                  {staffelPruefung.hinweise.length > 0 && (
+                    <div style={styles.warnBox}>
+                      {staffelPruefung.hinweise.map((h, i) => (
+                        <div key={i} style={{ marginBottom: i < staffelPruefung.hinweise.length - 1 ? 6 : 0 }}>⚠ {h}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={styles.stufeGrid}>
+                    <div>
+                      <label style={styles.lbl}>ab km</label>
+                      <input style={styles.input} inputMode="decimal" placeholder="30" value={stufeForm.von_km}
+                        onChange={(e) => setStufeForm((f) => ({ ...f, von_km: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>bis km (leer = offen)</label>
+                      <input style={styles.input} inputMode="decimal" placeholder="50" value={stufeForm.bis_km}
+                        onChange={(e) => setStufeForm((f) => ({ ...f, bis_km: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={styles.lbl}>Betrag netto</label>
+                      <input style={styles.input} inputMode="decimal" placeholder="50" value={stufeForm.betrag_netto}
+                        onChange={(e) => setStufeForm((f) => ({ ...f, betrag_netto: e.target.value }))} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <button onClick={stufeAnlegen} disabled={kLaeuft} style={styles.miniBtn}>+ Stufe</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ---- Testrechnung ---- */}
+                <div style={styles.sektion}>
+                  <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 4 }}>Probe aufs Exempel</div>
+                  <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 12px' }}>
+                    Rechnet mit den <strong>gespeicherten</strong> Einstellungen — genau wie später beim Kunden.
+                  </p>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+                    <span style={{ fontSize: 13.5, color: C.textDim }}>Was kostet die Anfahrt bei</span>
+                    <input style={{ ...styles.input, width: 100 }} inputMode="decimal" value={testKm}
+                      onChange={(e) => setTestKm(e.target.value)} />
+                    <span style={{ fontSize: 13.5, color: C.textDim }}>km?</span>
+                  </div>
+
+                  {!testErgebnis ? (
+                    <div style={styles.hint}>Entfernung eingeben.</div>
+                  ) : !testErgebnis.ok ? (
+                    <div style={styles.warnBox}>{testErgebnis.fehler.map((f, i) => <div key={i}>⚠ {f}</div>)}</div>
+                  ) : (
+                    <>
+                      <div style={testErgebnis.geschaetzt ? styles.warnBox : styles.infoBox}>
+                        {anfahrtKlartext(testErgebnis)}
+                      </div>
+                      {testErgebnis.hinweise.length > 0 && (
+                        <div style={{ fontSize: 12, color: C.textDim, marginTop: 8, lineHeight: 1.5 }}>
+                          {testErgebnis.hinweise.map((h, i) => <div key={i}>· {h}</div>)}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {kFehler.length > 0 && (
+                  <div style={styles.err}>{kFehler.map((f, i) => <div key={i}>{f}</div>)}</div>
+                )}
+
+                <div style={styles.aktionen}>
+                  <button onClick={() => konfigSpeichern(false)} disabled={kLaeuft}
+                    style={{ ...styles.primaerBtn, opacity: kLaeuft ? 0.6 : 1 }}>
+                    {kLaeuft ? 'Speichert …' : 'Einstellungen speichern'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </>
       )}
     </section>
@@ -618,6 +988,12 @@ const styles: Record<string, CSSProperties> = {
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
 
   sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
+  schalter: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' },
+  schalterZeile: { display: 'flex', alignItems: 'flex-start', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontSize: 13.5, lineHeight: 1.5 },
+  staffelZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '9px 12px', borderBottom: '1px solid rgba(143,163,190,0.1)', fontSize: 13.5 },
+  stufeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.border}` },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '10px 14px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', width: '100%' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit', width: 24 },
   hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 16, lineHeight: 1.5 },
   okBox: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
