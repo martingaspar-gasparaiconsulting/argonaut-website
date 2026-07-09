@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
 import ModulFreischaltung from './ModulFreischaltung'
+import AnfahrtEinstellungen from './AnfahrtEinstellungen'
 export default async function EinstellungenPage() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -22,6 +23,7 @@ export default async function EinstellungenPage() {
           </p>
         </div>
         <EinstellungenClient profil={profil} />
+        <AnfahrtEinstellungen />
         <ModulFreischaltung />
       </main>
     </div>
