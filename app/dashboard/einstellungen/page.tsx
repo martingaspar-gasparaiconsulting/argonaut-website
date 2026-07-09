@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
 import ModulFreischaltung from './ModulFreischaltung'
 import AnfahrtEinstellungen from './AnfahrtEinstellungen'
+import ApiSchluesselKarte from './ApiSchluesselKarte'
 export default async function EinstellungenPage() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -24,6 +25,7 @@ export default async function EinstellungenPage() {
         </div>
         <EinstellungenClient profil={profil} />
         <AnfahrtEinstellungen />
+        <ApiSchluesselKarte />
         <ModulFreischaltung />
       </main>
     </div>
