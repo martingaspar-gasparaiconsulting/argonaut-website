@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Block 1 · A4-3 · Brennholz-Aufträge
+// ARGONAUT OS · Block 1 · A4-3 + F1-3 · Brennholz-Aufträge
 //
 // DIE SEITE RECHNET NICHTS.
 //   auftragLogik baut die Positionen, positionsLogik summiert.
@@ -16,6 +16,13 @@
 // AB "GELIEFERT" IST SCHLUSS.
 //   Positionen lassen sich nicht mehr ändern. Ein Beleg, dessen Zeilen sich
 //   nachträglich anpassen lassen, ist kein Beleg.
+//
+// F1-3: LIEFERSCHEIN UND RECHNUNG
+//   Der Lieferschein zieht seine Daten aus den GESPEICHERTEN Positionen,
+//   nicht aus dem Formular. Was gedruckt wird, ist das, was gespeichert ist.
+//
+//   Die Rechnung entsteht nur aus Status "geliefert" und nur einmal. Steht
+//   sie, verschwindet der Knopf und ein Link tritt an seine Stelle.
 //
 // Pfad: app/dashboard/holz/auftraege/page.tsx
 // ============================================================
@@ -36,6 +43,7 @@ import {
   type AuftragStatus,
 } from '../../_components/auftragLogik';
 import { eur, steuerAusweisZeilen, type Position } from '../../_components/positionsLogik';
+import { lieferscheinPdf } from '../../_components/lieferscheinPdf';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,6 +71,7 @@ type AuftragRow = {
   restfeuchte_prozent: number | null; restfeuchte_gemessen_am: string | null;
   liefertermin: string | null; geliefert_am: string | null;
   notiz: string | null; interne_notiz: string | null;
+  rechnung_id: string | null;
   erstellt_am: string;
 };
 
@@ -93,6 +102,7 @@ export default function AuftraegePage() {
   const [konfig, setKonfig] = useState<AnfahrtKonfig | null>(null);
   const [stufen, setStufen] = useState<FahrtkostenStufe[]>([]);
   const [kunden, setKunden] = useState<KundenEintrag[]>([]);
+  const [profil, setProfil] = useState<Record<string, string | null>>({});
 
   // --- Modal -------------------------------------------------------------
   const [modalAuf, setModalAuf] = useState(false);
@@ -113,6 +123,8 @@ export default function AuftraegePage() {
   const [restfeuchte, setRestfeuchte] = useState('');
   const [notiz, setNotiz] = useState('');
   const [gespeichertePositionen, setGespeichertePositionen] = useState<PositionRow[]>([]);
+  const [rechnungId, setRechnungId] = useState<string | null>(null);
+  const [rechnungLaeuft, setRechnungLaeuft] = useState(false);
 
   const [speichert, setSpeichert] = useState(false);
 
@@ -127,7 +139,7 @@ export default function AuftraegePage() {
       if (!id) { setFehler('Nicht angemeldet.'); return; }
       setUid(id);
 
-      const [aRes, sRes, pRes, rRes, kRes, stRes, kontRes, firmRes] = await Promise.all([
+      const [aRes, sRes, pRes, rRes, kRes, stRes, kontRes, firmRes, profRes] = await Promise.all([
         supabase.from('holz_auftraege').select('*').eq('owner_user_id', id).order('erstellt_am', { ascending: false }),
         supabase.from('holz_sortiment').select('*').eq('owner_user_id', id),
         supabase.from('holz_preise').select('*').eq('owner_user_id', id),
@@ -136,6 +148,9 @@ export default function AuftraegePage() {
         supabase.from('fahrtkosten_staffel').select('*').eq('owner_user_id', id),
         supabase.from('kontakte').select(K_FELDER).eq('owner_user_id', id),
         supabase.from('firmen').select(F_FELDER).eq('owner_user_id', id),
+        supabase.from('profiles').select(
+          'firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_rechtsform, firma_registergericht, firma_hrb',
+        ).eq('id', id).maybeSingle(),
       ]);
 
       if (aRes.error) throw aRes.error;
@@ -146,6 +161,7 @@ export default function AuftraegePage() {
       setKonfig((kRes.data as AnfahrtKonfig) ?? null);
       setStufen((stRes.data as FahrtkostenStufe[]) ?? []);
 
+      setProfil((profRes.data as Record<string, string | null>) ?? {});
       setKunden([
         ...(((kontRes.data as unknown as KontaktQuelle[]) ?? []).map((k) => ({ art: 'kontakt' as const, empf: ausKontakt(k) }))),
         ...(((firmRes.data as unknown as FirmaQuelle[]) ?? []).map((f) => ({ art: 'firma' as const, empf: ausFirma(f) }))),
@@ -245,7 +261,7 @@ export default function AuftraegePage() {
     setKundeKey(''); setFreieKm(''); setEntfernung(null);
     setSortimentId(''); setMenge('8'); setZusatz([]);
     setLiefertermin(''); setRestfeuchte(''); setNotiz('');
-    setGespeichertePositionen([]);
+    setGespeichertePositionen([]); setRechnungId(null);
     setFehler(null); setModalAuf(true);
   }
 
@@ -259,6 +275,7 @@ export default function AuftraegePage() {
     setLiefertermin(a.liefertermin ?? '');
     setRestfeuchte(a.restfeuchte_prozent !== null ? String(a.restfeuchte_prozent) : '');
     setNotiz(a.notiz ?? '');
+    setRechnungId(a.rechnung_id ?? null);
     setFehler(null); setModalAuf(true);
 
     const { data } = await supabase.from('holz_auftrag_positionen').select('*')
@@ -278,6 +295,94 @@ export default function AuftraegePage() {
       bezeichnung: p.bezeichnung, menge: String(p.menge), einheit: p.einheit,
       preis: String(p.einzelpreis_netto), steuer: String(p.steuersatz_prozent),
     })));
+  }
+
+  // --- F1-3: Lieferschein ------------------------------------------------
+  /**
+   * Druckt die GESPEICHERTEN Positionen, nicht das Formular.
+   * Was auf dem Papier steht, ist das, was in der Datenbank steht — mit den
+   * eingefrorenen Preisen und dem Restfeuchte-Protokoll dieser Lieferung.
+   */
+  function lieferscheinDrucken() {
+    if (!auftragId || gespeichertePositionen.length === 0) {
+      setFehler('Bitte den Auftrag zuerst speichern.');
+      return;
+    }
+
+    const a = auftraege.find((x) => x.id === auftragId);
+    const empf = kunde ? anschriftBlock(kunde.empf) : (a?.empfaenger_name ? [a.empfaenger_name] : null);
+
+    const liefer = a && (a.liefer_strasse || a.liefer_ort)
+      ? [a.liefer_strasse, [a.liefer_plz, a.liefer_ort].filter(Boolean).join(' ')].filter(Boolean) as string[]
+      : null;
+
+    const protokoll: string[] = [];
+    const feuchte = feuchteProtokoll(a?.restfeuchte_prozent ?? null, a?.restfeuchte_gemessen_am ?? null);
+    if (feuchte) protokoll.push(feuchte);
+
+    lieferscheinPdf({
+      nummer: a?.nummer ?? null,
+      auftragsnummer: a?.nummer ?? null,
+      lieferdatum: a?.geliefert_am ?? a?.liefertermin ?? null,
+      firma: {
+        name: profil.firma_name, strasse: profil.firma_strasse,
+        plz_ort: [profil.firma_plz, profil.firma_ort].filter(Boolean).join(' ') || null,
+        telefon: profil.firma_telefon, email: profil.firma_email, website: profil.firma_website,
+        rechtsform: profil.firma_rechtsform, registergericht: profil.firma_registergericht, hrb: profil.firma_hrb,
+      },
+      empfaengerZeilen: empf,
+      // Nur zeigen, wenn sie sich vom Empfänger unterscheidet.
+      lieferanschrift: liefer && kunde && liefer.join() !== [kunde.empf.strasse, [kunde.empf.plz, kunde.empf.ort].filter(Boolean).join(' ')].filter(Boolean).join() ? liefer : null,
+      positionen: gespeichertePositionen.map((p) => ({
+        position_nr: p.position_nr,
+        bezeichnung: p.bezeichnung,
+        detail: p.detail ?? null,
+        menge: Number(p.menge),
+        einheit: p.einheit,
+      })),
+      protokoll: protokoll.length > 0 ? protokoll : null,
+      notiz: a?.notiz ?? null,
+      dateiname: a?.nummer ? `Lieferschein_${a.nummer}` : null,
+    });
+  }
+
+  // --- F1-3: Rechnung erstellen ------------------------------------------
+  async function rechnungErstellen() {
+    if (!auftragId) return;
+
+    if (!window.confirm(
+      'Rechnung aus diesem Auftrag erstellen?\n\n' +
+      'Die Positionen werden mit ihren eingefrorenen Preisen übernommen. ' +
+      'Der Auftrag wird auf „Abgerechnet" gesetzt und lässt sich danach nicht mehr ändern.',
+    )) return;
+
+    setRechnungLaeuft(true); setFehler(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-brennholz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auftragId }),
+      });
+      const d = await res.json();
+
+      if (!res.ok || !d?.rechnungId) {
+        setFehler(d?.error ?? 'Die Rechnung konnte nicht erstellt werden.');
+        return;
+      }
+
+      setRechnungId(d.rechnungId as string);
+      setStatus('abgerechnet');
+      await alles();
+
+      melde(
+        d.bereitsVorhanden
+          ? 'Für diesen Auftrag gab es bereits eine Rechnung.'
+          : `Rechnung erstellt: ${eur(Number(d.brutto ?? 0))} brutto.` +
+            (d.hinweis ? ` ${d.hinweis}` : ''),
+      );
+    } catch {
+      setFehler('Die Rechnung konnte nicht erstellt werden. Bitte erneut versuchen.');
+    } finally { setRechnungLaeuft(false); }
   }
 
   // --- Speichern ----------------------------------------------------------
@@ -350,6 +455,13 @@ export default function AuftraegePage() {
 
         const { error } = await supabase.from('holz_auftrag_positionen').insert(zeilen);
         if (error) throw error;
+      }
+
+      // Positionen neu laden — sonst druckt der Lieferschein den alten Stand.
+      if (id) {
+        const { data } = await supabase.from('holz_auftrag_positionen').select('*')
+          .eq('auftrag_id', id).order('position_nr', { ascending: true });
+        setGespeichertePositionen((data as unknown as PositionRow[]) ?? []);
       }
 
       await alles();
@@ -646,13 +758,57 @@ export default function AuftraegePage() {
               </div>
             </div>
 
+            {/* --- F1-3: Beleg & Rechnung --- */}
+            {auftragId && (
+              <div style={styles.sektion}>
+                <span style={styles.sektionTitel}>6 · Beleg</span>
+
+                {rechnungId ? (
+                  <div style={styles.infoBox}>
+                    ✓ <strong>Abgerechnet.</strong> Für diesen Auftrag besteht eine Rechnung.
+                    {' '}<a href={`/dashboard/rechnungen/${rechnungId}`} style={{ color: C.cyan }}>Rechnung ansehen →</a>
+                  </div>
+                ) : status !== 'geliefert' ? (
+                  <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
+                    Die Rechnung entsteht aus dem Status <strong>Geliefert</strong>. Erst liefern,
+                    dann abrechnen — sonst ändern sich die Positionen nach der Rechnung.
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
+                    Die Positionen werden mit ihren <strong>eingefrorenen</strong> Preisen übernommen.
+                    Danach ist der Auftrag gesperrt.
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  <button onClick={lieferscheinDrucken}
+                    disabled={gespeichertePositionen.length === 0 || speichert}
+                    style={{ ...styles.ghostBtn, opacity: gespeichertePositionen.length === 0 ? 0.5 : 1 }}
+                    title={gespeichertePositionen.length === 0 ? 'Auftrag zuerst speichern' : 'Lieferschein als PDF'}>
+                    🖨 Lieferschein
+                  </button>
+
+                  {!rechnungId && status === 'geliefert' && (
+                    <button onClick={rechnungErstellen} disabled={rechnungLaeuft || speichert}
+                      style={{ ...styles.goldBtn, opacity: rechnungLaeuft ? 0.6 : 1 }}>
+                      {rechnungLaeuft ? 'Erstellt …' : '→ Rechnung erstellen'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* --- Aktionen --- */}
             <div style={styles.modalAktionen}>
-              {auftragId && erlaubteFolgeStatus(status).map((s) => (
-                <button key={s} onClick={() => statusSetzen(s)} disabled={speichert} style={styles.ghostBtn}>
-                  → {statusInfo(s).label}
-                </button>
-              ))}
+              {/* "Abgerechnet" wird nicht von Hand gesetzt — nur über die Rechnung.
+                  Sonst gäbe es einen abgerechneten Auftrag ohne Beleg. */}
+              {auftragId && erlaubteFolgeStatus(status)
+                .filter((s) => s !== 'abgerechnet')
+                .map((s) => (
+                  <button key={s} onClick={() => statusSetzen(s)} disabled={speichert} style={styles.ghostBtn}>
+                    → {statusInfo(s).label}
+                  </button>
+                ))}
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={{ ...styles.ghostBtn, marginLeft: 'auto' }}>
                 Schließen
               </button>
