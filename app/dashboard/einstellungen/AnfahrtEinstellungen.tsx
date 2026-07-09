@@ -1,10 +1,14 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Block 2 · Welle 1 · B1-3d
+// ARGONAUT OS · Block 2 · Welle 1 · B1-3d + B1-3e
 // Zwei Karten, die zusammengehören:
 //   1. Betriebsstandort — der Startpunkt jeder Anfahrt
 //   2. OpenRouteService-Schlüssel — je Betrieb, eigenes Kontingent
+//
+// B1-3e: Koordinaten lassen sich auch VON HAND setzen. Damit ist der Standort
+// ohne jeden externen Dienst einsatzbereit. Der Kartendienst macht die
+// Entfernung später genauer — er ist Kür, nicht Pflicht.
 //
 // Der Schlüssel wird EINMAL eingegeben und danach nie wieder angezeigt.
 // Sichtbar bleibt nur ein Hinweis wie "eyJvcmc…4f3a" — genug zum Wiedererkennen,
@@ -30,6 +34,9 @@ const C = {
 
 /** Richtwert des ORS-Standardplans — nur für die Balkenanzeige. */
 const KONTINGENT_RICHTWERT = 2000;
+
+/** Grobe Umhüllende Deutschlands. Dient nur einem Plausibilitäts-Hinweis. */
+const DE_GRENZEN = { latMin: 47.2, latMax: 55.1, lonMin: 5.8, lonMax: 15.1 };
 
 type Standort = {
   id: string;
@@ -66,6 +73,14 @@ function datumHuebsch(iso: string | null | undefined): string {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function standortStatusText(s: string | null | undefined): string {
+  if (s === 'ok') return '✓ verortet';
+  if (s === 'manuell') return '✓ von Hand gesetzt';
+  if (s === 'ungenau') return '⚠ ungenau verortet';
+  if (s === 'fehlgeschlagen') return '✕ nicht gefunden';
+  return '';
+}
+
 function statusFarbe(s: string | null | undefined): string {
   if (s === 'ok') return C.green;
   if (s === 'kontingent') return C.warn;
@@ -92,6 +107,12 @@ export default function AnfahrtEinstellungen() {
   const [standortSpeichert, setStandortSpeichert] = useState(false);
   const [verortet, setVerortet] = useState(false);
   const [verortungsLabel, setVerortungsLabel] = useState<string | null>(null);
+
+  // --- B1-3e: Koordinaten von Hand -------------------------------------
+  const [manuellAuf, setManuellAuf] = useState(false);
+  const [latEin, setLatEin] = useState('');
+  const [lonEin, setLonEin] = useState('');
+  const [manuellLaeuft, setManuellLaeuft] = useState(false);
 
   // --- Schlüssel --------------------------------------------------------
   const [schluessel, setSchluessel] = useState<SchluesselStatus>({ vorhanden: false });
@@ -129,6 +150,8 @@ export default function AnfahrtEinstellungen() {
           plz: s.plz ?? '',
           ort: s.ort ?? '',
         });
+        if (s.geo_lat != null) setLatEin(String(s.geo_lat));
+        if (s.geo_lon != null) setLonEin(String(s.geo_lon));
       }
 
       if (keyRes.ok) setSchluessel((await keyRes.json()) as SchluesselStatus);
@@ -190,6 +213,9 @@ export default function AnfahrtEinstellungen() {
 
       if (!res.ok || !daten?.ok) {
         setFehler(daten?.error ?? 'Verortung fehlgeschlagen.');
+        // Ohne Kartendienst führt kein Weg über die Adresssuche — aber der
+        // Standort lässt sich trotzdem setzen. Also gleich anbieten.
+        if (daten?.code === 'kein_schluessel' || !schluessel.vorhanden) setManuellAuf(true);
         return;
       }
       setVerortungsLabel(daten.label ?? null);
@@ -202,6 +228,61 @@ export default function AnfahrtEinstellungen() {
     } catch {
       setFehler('Verortung fehlgeschlagen. Bitte erneut versuchen.');
     } finally { setVerortet(false); }
+  }
+
+  // --- B1-3e: Koordinaten von Hand setzen -------------------------------
+  async function koordinatenSpeichern() {
+    if (!standort) { setFehler('Bitte den Standort zuerst speichern.'); return; }
+
+    const lat = Number(latEin.trim().replace(',', '.'));
+    const lon = Number(lonEin.trim().replace(',', '.'));
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      setFehler('Bitte zwei gültige Zahlen eingeben, z. B. 48.49221 und 8.80264.');
+      return;
+    }
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      setFehler('Breitengrad muss zwischen −90 und 90 liegen, Längengrad zwischen −180 und 180.');
+      return;
+    }
+
+    // Der häufigste Fehler überhaupt: Breiten- und Längengrad vertauscht.
+    const inDeutschland =
+      lat >= DE_GRENZEN.latMin && lat <= DE_GRENZEN.latMax &&
+      lon >= DE_GRENZEN.lonMin && lon <= DE_GRENZEN.lonMax;
+    const vertauschtWaereDe =
+      lon >= DE_GRENZEN.latMin && lon <= DE_GRENZEN.latMax &&
+      lat >= DE_GRENZEN.lonMin && lat <= DE_GRENZEN.lonMax;
+
+    if (!inDeutschland) {
+      const zusatz = vertauschtWaereDe
+        ? '\n\nSind Breiten- und Längengrad vielleicht vertauscht? Für Deutschland ist der Breitengrad die größere Zahl (ca. 47–55).'
+        : '';
+      if (!window.confirm(
+        `Diese Koordinaten liegen außerhalb Deutschlands.${zusatz}\n\nTrotzdem speichern?`
+      )) return;
+    } else if (!window.confirm(`Koordinaten von Hand setzen?\n\n${lat} / ${lon}`)) {
+      return;
+    }
+
+    setManuellLaeuft(true); setFehler(null);
+    try {
+      const { error } = await supabase.from('betriebs_standort').update({
+        geo_lat: lat,
+        geo_lon: lon,
+        geocode_am: new Date().toISOString(),
+        geocode_status: 'manuell',
+        geocode_quelle: 'manuell',
+      }).eq('id', standort.id);
+      if (error) throw error;
+
+      setVerortungsLabel(null);
+      setManuellAuf(false);
+      await alesLaden();
+      melde('Koordinaten übernommen. Der Standort ist gesetzt.');
+    } catch (e: unknown) {
+      setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setManuellLaeuft(false); }
   }
 
   // --- Schlüssel ---------------------------------------------------------
@@ -262,7 +343,11 @@ export default function AnfahrtEinstellungen() {
   const ungenau = standort?.geocode_status === 'ungenau';
   const rest = schluessel.kontingent_rest;
   const restAnteil = rest != null ? Math.max(0, Math.min(1, rest / KONTINGENT_RICHTWERT)) : null;
-  const bereitFuerAnfahrt = hatKoordinaten && schluessel.vorhanden && schluessel.pruef_status !== 'ungueltig';
+
+  // Der Standort allein genügt: ohne Kartendienst rechnet ARGONAUT die
+  // Entfernung als Luftlinie und sagt das auch. Der Schlüssel macht sie exakt.
+  const bereitFuerAnfahrt = hatKoordinaten;
+  const routeExakt = schluessel.vorhanden && schluessel.pruef_status !== 'ungueltig';
 
   return (
     <section style={styles.wrap}>
@@ -276,13 +361,17 @@ export default function AnfahrtEinstellungen() {
       {/* Gesamtstatus */}
       <div style={{ ...styles.statusLeiste, borderColor: bereitFuerAnfahrt ? 'rgba(76,175,125,0.4)' : C.border }}>
         <span style={{ color: bereitFuerAnfahrt ? C.green : C.textDim, fontWeight: 700 }}>
-          {bereitFuerAnfahrt ? '✓ Anfahrtsberechnung ist einsatzbereit' : '· Anfahrtsberechnung noch nicht einsatzbereit'}
+          {bereitFuerAnfahrt
+            ? '✓ Anfahrtsberechnung ist einsatzbereit'
+            : '· Anfahrtsberechnung noch nicht einsatzbereit'}
         </span>
-        {!bereitFuerAnfahrt && (
-          <span style={{ color: C.textDim, fontSize: 12.5 }}>
-            {!hatKoordinaten ? 'Standort fehlt oder ist nicht verortet.' : 'Schlüssel fehlt oder ist ungültig.'}
-          </span>
-        )}
+        <span style={{ color: bereitFuerAnfahrt ? (routeExakt ? C.green : C.warn) : C.textDim, fontSize: 12.5 }}>
+          {!bereitFuerAnfahrt
+            ? 'Es fehlt der Betriebsstandort.'
+            : routeExakt
+              ? 'Echte Fahrstrecke über den Kartendienst.'
+              : 'Ohne Kartendienst: Entfernungen werden geschätzt (Luftlinie).'}
+        </span>
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -296,9 +385,9 @@ export default function AnfahrtEinstellungen() {
           <div style={styles.card}>
             <div style={styles.cardKopf}>
               <span style={styles.cardTitel}>📍 Betriebsstandort</span>
-              {hatKoordinaten && (
-                <span style={{ color: ungenau ? C.warn : C.green, fontSize: 12.5 }}>
-                  {ungenau ? '⚠ ungenau verortet' : '✓ verortet'}
+              {standort?.geocode_status && (
+                <span style={{ color: ungenau || standort.geocode_status === 'fehlgeschlagen' ? C.warn : C.green, fontSize: 12.5 }}>
+                  {standortStatusText(standort.geocode_status)}
                 </span>
               )}
             </div>
@@ -323,6 +412,14 @@ export default function AnfahrtEinstellungen() {
               </Feld>
             </div>
 
+            {!routeExakt && !hatKoordinaten && (
+              <div style={styles.infoBox}>
+                Noch kein Kartendienst hinterlegt — die Adresssuche steht damit nicht zur Verfügung.
+                Setz die Koordinaten so lange <strong>von Hand</strong>. Sobald der Schlüssel eingetragen ist,
+                findet ARGONAUT die Adresse selbst.
+              </div>
+            )}
+
             {hatKoordinaten && (
               <div style={ungenau ? styles.warnBox : styles.infoBox}>
                 <strong>Koordinaten:</strong>{' '}
@@ -336,9 +433,47 @@ export default function AnfahrtEinstellungen() {
               </div>
             )}
 
+            {/* ---- B1-3e: Koordinaten von Hand ---- */}
+            {manuellAuf && standort && (
+              <div style={styles.sektion}>
+                <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 4 }}>Koordinaten von Hand setzen</div>
+                <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 14px', lineHeight: 1.55 }}>
+                  Funktioniert ohne Kartendienst. In einer beliebigen Online-Karte den Punkt suchen,
+                  die beiden Zahlen ablesen und hier eintragen. Der Breitengrad ist in Deutschland
+                  die größere Zahl (etwa 47 bis 55).
+                </p>
+                <div style={styles.grid}>
+                  <Feld label="Breitengrad (Latitude)">
+                    <input style={styles.input} inputMode="decimal" placeholder="48.49221"
+                      value={latEin} onChange={(e) => setLatEin(e.target.value)} />
+                  </Feld>
+                  <Feld label="Längengrad (Longitude)">
+                    <input style={styles.input} inputMode="decimal" placeholder="8.80264"
+                      value={lonEin} onChange={(e) => setLonEin(e.target.value)} />
+                  </Feld>
+                </div>
+                <div style={styles.aktionen}>
+                  <button onClick={() => setManuellAuf(false)} disabled={manuellLaeuft} style={styles.ghostBtn}>
+                    Abbrechen
+                  </button>
+                  <button onClick={koordinatenSpeichern} disabled={manuellLaeuft}
+                    style={{ ...styles.primaerBtn, opacity: manuellLaeuft ? 0.6 : 1 }}>
+                    {manuellLaeuft ? 'Übernimmt …' : 'Koordinaten übernehmen'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={styles.aktionen}>
+              {standort && !manuellAuf && (
+                <button onClick={() => setManuellAuf(true)} disabled={standortSpeichert}
+                  style={{ ...styles.ghostBtn, color: C.textDim, marginRight: 'auto' }}>
+                  ✎ Koordinaten von Hand
+                </button>
+              )}
               <button onClick={standortVerorten} disabled={!standort || verortet || standortSpeichert}
-                style={{ ...styles.ghostBtn, opacity: !standort || verortet ? 0.5 : 1 }}>
+                style={{ ...styles.ghostBtn, opacity: !standort || verortet ? 0.5 : 1 }}
+                title={routeExakt ? 'Sucht die Adresse über den Kartendienst' : 'Braucht einen Kartendienst-Schlüssel'}>
                 {verortet ? 'Sucht …' : '🌍 Adresse verorten'}
               </button>
               <button onClick={standortSpeichern} disabled={standortSpeichert}
@@ -482,6 +617,7 @@ const styles: Record<string, CSSProperties> = {
   primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
 
+  sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
   hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 16, lineHeight: 1.5 },
   okBox: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
