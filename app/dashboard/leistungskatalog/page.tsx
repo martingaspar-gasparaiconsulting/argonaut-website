@@ -2,16 +2,30 @@
 
 // ============================================================
 // ARGONAUT OS · Modul D+ · Block D+.3 · Leistungskatalog-Verwaltung
-// Die Werkstatt legt ihre eigenen Arbeitswerte an — selbst ODER per CSV-Import.
-// Erfassungsart Minuten/Stunden/AW konfigurierbar, AW-Faktor werkstatt-eigen.
+// Der Betrieb legt seine eigenen Leistungen an — selbst ODER per CSV-Import.
+// Erfassungsart Minuten/Stunden/AW/Menge konfigurierbar, AW-Faktor betriebs-eigen.
 // Bestätigung vor jedem DB-Schreiben. Design 1:1 wie das übrige Dashboard.
 // Pfad: app/dashboard/leistungskatalog/page.tsx
+//
+// D1 — Der Katalog ist nicht mehr nur ein Werkstatt-Katalog:
+//   (1) Erfassungsart "Menge / Einheit" (intern 'stueck'): Hektar, Festmeter,
+//       Raummeter, Stück, laufende Meter. Rechnet Menge x Preis je Einheit,
+//       kostet KEINE Arbeitszeit. Damit trägt derselbe Katalog Forst, GaLaBau,
+//       Maler, Dachdecker und alles, was in Flächen und Mengen abrechnet.
+//   (2) Pauschale (`festpreis_netto`) ist kein Stundensatz mehr. Vorher wurde
+//       "HU/AU, 0,5 Std, 130 € Festpreis" als 0,5 x 130 = 65 € gerechnet.
+//   (3) Spalte "= Zeit" zeigt bei Mengen-Leistungen "—" statt einer erfundenen
+//       Stunde. Ein Hektar Kahlschlag ist keine Stunde Arbeit.
+//   (4) `mwst_satz` je Leistung (Default 19). Holz 7 %, Dienstleistung 19 %.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
-import { nachMinuten, zeitText, eur, type KatalogEintrag } from '../_components/leistungLogik';
+import {
+  nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
+  type KatalogEintrag,
+} from '../_components/leistungLogik';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -31,10 +45,13 @@ type KatalogRow = KatalogEintrag & {
   notiz: string | null;
 };
 
+// 'stueck' ist die vorhandene Rechenregel (Menge x Preis, keine Zeit).
+// Im Menü heißt sie "Menge / Einheit" — "Stück" wäre für Hektar irreführend.
 const ART_OPTIONEN = [
   { wert: 'stunden', label: 'Stunden' },
   { wert: 'minuten', label: 'Minuten' },
-  { wert: 'aw', label: 'AW / Einheiten' },
+  { wert: 'aw', label: 'AW / Arbeitswerte' },
+  { wert: 'stueck', label: 'Menge / Einheit' },
 ];
 function artLabel(a: string | null | undefined): string {
   return ART_OPTIONEN.find((o) => o.wert === a)?.label || a || '—';
@@ -45,12 +62,16 @@ type Form = {
   id: string | null;
   bezeichnung: string; kuerzel: string; kategorie: string;
   erfassungsart: string; standard_wert: string; aw_minuten: string;
-  stundensatz_netto: string; festpreis_netto: string; notiz: string;
+  einheit: string; einheitspreis_netto: string;
+  stundensatz_netto: string; festpreis_netto: string;
+  mwst_satz: string; notiz: string;
 };
 const LEER: Form = {
   id: null, bezeichnung: '', kuerzel: '', kategorie: '',
   erfassungsart: 'stunden', standard_wert: '1', aw_minuten: '6',
-  stundensatz_netto: '', festpreis_netto: '', notiz: '',
+  einheit: '', einheitspreis_netto: '',
+  stundensatz_netto: '', festpreis_netto: '',
+  mwst_satz: '19', notiz: '',
 };
 
 function num(s: string): number | null {
@@ -123,17 +144,26 @@ export default function LeistungskatalogPage() {
       id: k.id, bezeichnung: k.bezeichnung ?? '', kuerzel: k.kuerzel ?? '', kategorie: k.kategorie ?? '',
       erfassungsart: k.erfassungsart ?? 'stunden', standard_wert: String(k.standard_wert ?? 1),
       aw_minuten: String(k.aw_minuten ?? 6),
+      einheit: k.einheit ?? '',
+      einheitspreis_netto: k.einheitspreis_netto != null ? String(k.einheitspreis_netto) : '',
       stundensatz_netto: k.stundensatz_netto != null ? String(k.stundensatz_netto) : '',
       festpreis_netto: k.festpreis_netto != null ? String(k.festpreis_netto) : '',
+      mwst_satz: k.mwst_satz != null ? String(k.mwst_satz) : '19',
       notiz: k.notiz ?? '',
     });
     setModalAuf(true);
   }
   function setF<K extends keyof Form>(k: K, v: Form[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
+  const formIstMenge = istMengenLeistung(form.erfassungsart);
+
   async function speichern() {
     if (!uid) return;
     if (!form.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung eingeben.'); return; }
+    if (formIstMenge && !form.einheit.trim() && !form.festpreis_netto.trim()) {
+      setFehler('Bitte eine Einheit angeben (z. B. ha, fm, Srm, Stück) — sonst weiß niemand, wofür der Preis gilt.');
+      return;
+    }
     const istNeu = !form.id;
     if (!window.confirm(istNeu ? `Neue Leistung anlegen?\n\n• ${form.bezeichnung}` : `Änderungen an "${form.bezeichnung}" speichern?`)) return;
 
@@ -147,8 +177,14 @@ export default function LeistungskatalogPage() {
         erfassungsart: form.erfassungsart,
         standard_wert: num(form.standard_wert) ?? 1,
         aw_minuten: form.erfassungsart === 'aw' ? (num(form.aw_minuten) ?? 6) : null,
-        stundensatz_netto: num(form.stundensatz_netto),
+        // Etikett + Preis je Einheit nur bei Mengen-Leistungen
+        einheit: formIstMenge ? (form.einheit.trim() || null) : null,
+        einheitspreis_netto: formIstMenge ? num(form.einheitspreis_netto) : null,
+        // Stundensatz nur bei Zeit-Leistungen
+        stundensatz_netto: formIstMenge ? null : num(form.stundensatz_netto),
+        // Pauschale gilt immer und gewinnt gegen alles andere
         festpreis_netto: num(form.festpreis_netto),
+        mwst_satz: num(form.mwst_satz) ?? 19,
         notiz: form.notiz.trim() || null,
         aktualisiert_am: new Date().toISOString(),
       };
@@ -162,7 +198,10 @@ export default function LeistungskatalogPage() {
       setModalAuf(false); setForm(LEER);
       await laden_();
     } catch (e: unknown) {
-      setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+      const msg = e instanceof Error ? e.message : 'Fehler';
+      if (msg.includes('duplicate') || msg.includes('leistungskatalog_owner_bez_uidx')) {
+        setFehler('Eine Leistung mit dieser Bezeichnung existiert bereits.');
+      } else setFehler('Speichern fehlgeschlagen: ' + msg);
     } finally { setSpeichert(false); }
   }
   async function archivieren(k: KatalogRow) {
@@ -236,11 +275,20 @@ export default function LeistungskatalogPage() {
     r.onerror = () => setImpFehler('Datei konnte nicht gelesen werden.');
     r.readAsText(datei, 'UTF-8');
   }
-  function erkenneArt(s: string): string {
-    const t = (s || '').toLowerCase();
-    if (t.includes('aw') || t.includes('einheit')) return 'aw';
-    if (t.includes('min')) return 'minuten';
-    return 'stunden';
+  /**
+   * Rät Erfassungsart UND Einheit aus einem Freitext.
+   * "ha", "fm", "Srm", "Stk", "m²", "lfm" -> Mengen-Leistung mit passendem Etikett.
+   */
+  function erkenneArt(s: string): { art: string; einheit: string | null } {
+    const roh = (s || '').trim();
+    const t = roh.toLowerCase();
+    const treffer = EINHEITEN_MENGE.find((e) => e.toLowerCase() === t);
+    if (treffer) return { art: 'stueck', einheit: treffer };
+    if (t.includes('stk') || t.includes('stück') || t.includes('stueck')) return { art: 'stueck', einheit: 'Stück' };
+    if (t.includes('aw') || t.includes('arbeitswert')) return { art: 'aw', einheit: null };
+    if (t.includes('min')) return { art: 'minuten', einheit: null };
+    if (t.includes('std') || t.includes('stund')) return { art: 'stunden', einheit: null };
+    return { art: 'stunden', einheit: null };
   }
   async function impStart(header: string[], daten: string[][]) {
     if (!uid) return;
@@ -250,15 +298,20 @@ export default function LeistungskatalogPage() {
     for (const row of daten) {
       const bez = val(row, impMap.bezeichnung);
       if (!bez) continue;
-      const art = impMap.erfassungsart >= 0 ? erkenneArt(val(row, impMap.erfassungsart)) : 'stunden';
+      const erkannt = impMap.erfassungsart >= 0 ? erkenneArt(val(row, impMap.erfassungsart)) : { art: 'stunden', einheit: null };
+      const preis = num(val(row, impMap.stundensatz));
+      const menge = erkannt.art === 'stueck';
       neu.push({
         owner_user_id: uid,
         bezeichnung: bez,
         kategorie: val(row, impMap.kategorie) || null,
-        erfassungsart: art,
+        erfassungsart: erkannt.art,
         standard_wert: num(val(row, impMap.standard_wert)) ?? 1,
-        aw_minuten: art === 'aw' ? 6 : null,
-        stundensatz_netto: num(val(row, impMap.stundensatz)),
+        aw_minuten: erkannt.art === 'aw' ? 6 : null,
+        einheit: menge ? erkannt.einheit : null,
+        einheitspreis_netto: menge ? preis : null,
+        stundensatz_netto: menge ? null : preis,
+        mwst_satz: 19,
         aktiv: true,
       });
     }
@@ -274,26 +327,29 @@ export default function LeistungskatalogPage() {
       setImpFertig(done);
       await laden_();
     } catch (e: unknown) {
-      setImpFehler('Import fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+      const msg = e instanceof Error ? e.message : 'Fehler';
+      if (msg.includes('duplicate') || msg.includes('leistungskatalog_owner_bez_uidx')) {
+        setImpFehler('Import abgebrochen: mindestens eine Bezeichnung existiert bereits im Katalog.');
+      } else setImpFehler('Import fehlgeschlagen: ' + msg);
     } finally { setImpSpeichert(false); }
   }
 
   const impDatenHeader = impZeilen.length ? (impHeader ? impZeilen[0] : impZeilen[0].map((_, i) => 'Spalte ' + (i + 1))) : [];
   const impDaten = impZeilen.length ? (impHeader ? impZeilen.slice(1) : impZeilen) : [];
 
-  // Live-Vorschau der Zeit im Formular
-  const vorschauMin = nachMinuten(num(form.standard_wert), form.erfassungsart, num(form.aw_minuten));
+  // Live-Vorschau der Zeit im Formular (Mengen-Leistungen kosten keine Zeit)
+  const vorschauMin = formIstMenge ? 0 : nachMinuten(num(form.standard_wert), form.erfassungsart, num(form.aw_minuten));
 
   const kiKontext = liste.length === 0 ? '' :
     `${liste.length} Leistungen im Katalog, davon ${liste.filter((k) => k.aktiv).length} aktiv, in ${kategorien.length} Kategorien.`;
 
   return (
     <div style={styles.page}>
-      <div style={styles.eyebrow}>ARGONAUT OS · Service</div>
+      <div style={styles.eyebrow}>ARGONAUT OS · Stammdaten</div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={styles.h1}>Leistungskatalog</h1>
-          <p style={styles.sub}>Eure Arbeitswerte — Minuten, Stunden oder AW/Einheiten, frei konfigurierbar. Selbst anlegen oder per CSV importieren.</p>
+          <p style={styles.sub}>Ihre Leistungen — nach Zeit (Minuten, Stunden, Arbeitswerte) oder nach Menge (m², lfm, Hektar, Festmeter, Stück). Selbst anlegen oder per CSV importieren.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={impOeffnen} style={styles.ghostBtn}>📥 CSV-Import</button>
@@ -342,14 +398,18 @@ export default function LeistungskatalogPage() {
                   <th style={styles.th}>Erfassung</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Wert</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>= Zeit</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Satz/Preis</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>Satz / Preis</th>
+                  <th style={{ ...styles.th, textAlign: 'right' }}>MwSt</th>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th>
                 </tr>
               </thead>
               <tbody>
                 {gefiltert.map((k) => {
-                  const min = nachMinuten(k.standard_wert, k.erfassungsart, k.aw_minuten);
-                  const preis = k.stundensatz_netto != null ? `${eur(k.stundensatz_netto)}/h` : (k.festpreis_netto != null ? eur(k.festpreis_netto) : '—');
+                  const menge = istMengenLeistung(k.erfassungsart);
+                  const min = menge ? 0 : nachMinuten(k.standard_wert, k.erfassungsart, k.aw_minuten);
+                  const wert = menge
+                    ? `${k.standard_wert ?? 1}${k.einheit ? ' ' + k.einheit : ''}`
+                    : String(k.standard_wert ?? 1);
                   return (
                     <tr key={k.id} style={{ opacity: k.aktiv ? 1 : 0.5 }}>
                       <td style={{ ...styles.td, fontWeight: 600 }}>
@@ -357,9 +417,10 @@ export default function LeistungskatalogPage() {
                       </td>
                       <td style={styles.td}>{k.kategorie || '—'}</td>
                       <td style={styles.td}>{artLabel(k.erfassungsart)}{k.erfassungsart === 'aw' && k.aw_minuten ? ` (1 AW=${k.aw_minuten}m)` : ''}</td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>{k.standard_wert}</td>
+                      <td style={{ ...styles.td, textAlign: 'right' }}>{wert}</td>
                       <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{min > 0 ? zeitText(min) : '—'}</td>
-                      <td style={{ ...styles.td, textAlign: 'right', color: C.gold }}>{preis}</td>
+                      <td style={{ ...styles.td, textAlign: 'right', color: C.gold }}>{preisText(k)}</td>
+                      <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{k.mwst_satz != null ? `${k.mwst_satz} %` : '—'}</td>
                       <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button onClick={() => bearbeiten(k)} style={styles.miniBtnGhost}>Bearbeiten</button>
                         {k.aktiv
@@ -382,43 +443,80 @@ export default function LeistungskatalogPage() {
             <h2 style={styles.modalTitel}>{form.id ? 'Leistung bearbeiten' : 'Neue Leistung'}</h2>
             <div style={styles.formGrid}>
               <Feld label="Bezeichnung *" voll>
-                <input style={styles.input} value={form.bezeichnung} onChange={(e) => setF('bezeichnung', e.target.value)} placeholder="z. B. Kleiner Service / Reifenwechsel / Auswuchten" />
+                <input style={styles.input} value={form.bezeichnung} onChange={(e) => setF('bezeichnung', e.target.value)} placeholder="z. B. Kleiner Service / Durchforstung / Wurzelstockfräsen" />
               </Feld>
               <Feld label="Kürzel">
                 <input style={styles.input} value={form.kuerzel} onChange={(e) => setF('kuerzel', e.target.value)} placeholder="z. B. SVC-K" />
               </Feld>
               <Feld label="Kategorie">
-                <input style={styles.input} value={form.kategorie} onChange={(e) => setF('kategorie', e.target.value)} placeholder="z. B. Service, Reifen, Motor" />
+                <input style={styles.input} value={form.kategorie} onChange={(e) => setF('kategorie', e.target.value)} placeholder="z. B. Service, Reifen, Forstarbeit" />
               </Feld>
               <Feld label="Erfassungsart">
                 <select style={styles.input} value={form.erfassungsart} onChange={(e) => setF('erfassungsart', e.target.value)}>
                   {ART_OPTIONEN.map((o) => <option key={o.wert} value={o.wert}>{o.label}</option>)}
                 </select>
               </Feld>
-              <Feld label="Standardwert">
-                <input style={styles.input} value={form.standard_wert} onChange={(e) => setF('standard_wert', e.target.value)} placeholder="z. B. 1 / 12 / 20" />
+              <Feld label={formIstMenge ? 'Standardmenge' : 'Standardwert'}>
+                <input style={styles.input} value={form.standard_wert} onChange={(e) => setF('standard_wert', e.target.value)} placeholder={formIstMenge ? 'z. B. 1' : 'z. B. 1 / 12 / 20'} />
               </Feld>
+
               {form.erfassungsart === 'aw' && (
                 <Feld label="1 AW = wieviele Minuten?">
                   <input style={styles.input} value={form.aw_minuten} onChange={(e) => setF('aw_minuten', e.target.value)} placeholder="z. B. 6" />
                 </Feld>
               )}
-              <Feld label="Stundensatz netto (€/h)">
-                <input style={styles.input} value={form.stundensatz_netto} onChange={(e) => setF('stundensatz_netto', e.target.value)} placeholder="z. B. 95" />
-              </Feld>
-              <Feld label="oder Festpreis netto (€)">
+
+              {formIstMenge ? (
+                <>
+                  <Feld label="Einheit *">
+                    <input style={styles.input} list="argonaut-katalog-einheiten" value={form.einheit}
+                      onChange={(e) => setF('einheit', e.target.value)} placeholder="z. B. ha, fm, Srm, Stück, m², lfm" />
+                    <datalist id="argonaut-katalog-einheiten">
+                      {EINHEITEN_MENGE.map((e) => <option key={e} value={e} />)}
+                    </datalist>
+                  </Feld>
+                  <Feld label={`Preis netto je ${form.einheit.trim() || 'Einheit'} (€)`}>
+                    <input style={styles.input} value={form.einheitspreis_netto} onChange={(e) => setF('einheitspreis_netto', e.target.value)} placeholder="z. B. 2500" />
+                  </Feld>
+                </>
+              ) : (
+                <Feld label="Stundensatz netto (€/h)">
+                  <input style={styles.input} value={form.stundensatz_netto} onChange={(e) => setF('stundensatz_netto', e.target.value)} placeholder="z. B. 95" />
+                </Feld>
+              )}
+
+              <Feld label="oder Pauschale netto (€)">
                 <input style={styles.input} value={form.festpreis_netto} onChange={(e) => setF('festpreis_netto', e.target.value)} placeholder="alternativ" />
+              </Feld>
+              <Feld label="Umsatzsteuer (%)">
+                <input style={styles.input} value={form.mwst_satz} onChange={(e) => setF('mwst_satz', e.target.value)} placeholder="19" />
               </Feld>
               <Feld label="Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
               </Feld>
             </div>
 
+            {/* Pauschale gewinnt — das muss dastehen, sonst sucht jemand den Fehler */}
+            {form.festpreis_netto.trim() !== '' && (
+              <div style={styles.warnBox}>
+                Die <strong>Pauschale</strong> gilt und wird nicht mit der Menge multipliziert.
+                {!formIstMenge && vorschauMin > 0 && <> Die Arbeitszeit von <strong>{zeitText(vorschauMin)}</strong> bleibt erhalten und zählt weiter in die Auslastung.</>}
+              </div>
+            )}
+
             {/* Live-Vorschau */}
-            {vorschauMin > 0 && (
+            {vorschauMin > 0 && form.festpreis_netto.trim() === '' && (
               <div style={styles.vorschau}>
                 Entspricht <strong>{zeitText(vorschauMin)}</strong> Arbeitszeit
-                {form.erfassungsart === 'aw' ? ` (${form.standard_wert} AW × ${form.aw_minuten} Min)` : ''}.
+                {form.erfassungsart === 'aw' ? ` (${form.standard_wert} AW × ${form.aw_minuten} Min)` : ''}
+                {num(form.stundensatz_netto) != null ? ` · ${eur((nachMinuten(num(form.standard_wert), form.erfassungsart, num(form.aw_minuten)) / 60) * (num(form.stundensatz_netto) as number))} netto` : ''}.
+              </div>
+            )}
+            {formIstMenge && form.festpreis_netto.trim() === '' && (
+              <div style={styles.vorschau}>
+                Mengen-Leistung: <strong>{form.standard_wert || '1'} {form.einheit.trim() || 'Einheit'}</strong>
+                {num(form.einheitspreis_netto) != null ? ` × ${eur(num(form.einheitspreis_netto))} = ${eur((num(form.standard_wert) ?? 1) * (num(form.einheitspreis_netto) as number))} netto` : ''}.
+                Kostet <strong>keine</strong> Arbeitszeit.
               </div>
             )}
 
@@ -460,7 +558,7 @@ export default function LeistungskatalogPage() {
                     </label>
                     <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>Spalten zuordnen</div>
                     <div style={styles.formGrid}>
-                      {[['bezeichnung', 'Bezeichnung *'], ['kategorie', 'Kategorie'], ['erfassungsart', 'Erfassungsart'], ['standard_wert', 'Wert/Zeit'], ['stundensatz', 'Stundensatz']].map(([feld, label]) => (
+                      {[['bezeichnung', 'Bezeichnung *'], ['kategorie', 'Kategorie'], ['erfassungsart', 'Erfassungsart / Einheit'], ['standard_wert', 'Wert / Menge'], ['stundensatz', 'Preis']].map(([feld, label]) => (
                         <Feld key={feld} label={label}>
                           <select style={styles.input} value={impMap[feld]} onChange={(e) => setImpMap((m) => ({ ...m, [feld]: Number(e.target.value) }))}>
                             <option value={-1}>— ignorieren —</option>
@@ -469,8 +567,10 @@ export default function LeistungskatalogPage() {
                         </Feld>
                       ))}
                     </div>
-                    <div style={{ color: C.textDim, fontSize: 12, margin: '12px 0' }}>
-                      {impDaten.length} Datenzeile(n) erkannt. Erfassungsart wird aus Text erraten (Std/Min/AW), Standard = Stunden.
+                    <div style={{ color: C.textDim, fontSize: 12, margin: '12px 0', lineHeight: 1.5 }}>
+                      {impDaten.length} Datenzeile(n) erkannt. Die Erfassungsart wird aus dem Text erraten:
+                      <em> Std, Min, AW</em> → Zeit · <em>ha, fm, Srm, m², lfm, Stück</em> → Menge mit Einheit.
+                      Ohne Angabe: Stunden. Der Preis wird passend als Stundensatz oder Preis je Einheit abgelegt. Umsatzsteuer 19 %.
                     </div>
                     <div style={styles.modalAktionen}>
                       <button onClick={() => setImpOffen(false)} disabled={impSpeichert} style={styles.ghostBtn}>Abbrechen</button>
@@ -511,7 +611,7 @@ const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
   h1: { fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 680, lineHeight: 1.5 },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 720, lineHeight: 1.5 },
 
   primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
@@ -524,14 +624,15 @@ const styles: Record<string, CSSProperties> = {
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
   cardTitle: { fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
-  table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 820 },
   th: { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
   td: { padding: '10px', fontSize: 14, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
 
   hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
   okBox: { color: C.green, fontSize: 15, background: 'rgba(76,175,125,0.12)', border: `1px solid ${C.green}`, borderRadius: 10, padding: '16px 18px', marginBottom: 16 },
-  vorschau: { marginTop: 14, padding: '10px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text },
+  vorschau: { marginTop: 14, padding: '10px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.5 },
+  warnBox: { marginTop: 14, padding: '10px 14px', background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.5 },
 
   lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
