@@ -4,11 +4,20 @@
 // Kein API-Call, KEINE jspdf-autotable-Abhängigkeit — Tabelle manuell gezeichnet.
 // Branding: Navy #0A1628, Gold #C9A84C.
 // Pfad: app/dashboard/_components/aufmassPdf.ts
+//
+// E1 — Drei Korrekturen:
+//   (1) Der Summenblock rechnete `netto × 19 %`. Auf einem Blatt mit Brennholz
+//       (7 %) stand damit ein falscher Steuerbetrag. Jetzt: Aufschlüsselung
+//       nach Steuersätzen, § 14 Abs. 4 Nr. 7 + 8 UStG.
+//   (2) Positionen ohne Preis flossen als 0,00 € ein. Jetzt werden sie unter
+//       dem Summenblock namentlich genannt — kein stiller Nullpreis.
+//   (3) Der Rechenweg ("8,20 × 5,77") steht unter der Bezeichnung. In zwei
+//       Jahren fragt jemand, woher die 47,31 kamen.
 // ============================================================
 
 import { jsPDF } from 'jspdf';
 import {
-  aufmassSumme, positionsBetrag, mengeText, eur, mitMwSt,
+  aufmassSumme, positionsBetrag, mengeText, eur, satzText,
   type PositionBasis,
 } from './aufmassLogik';
 
@@ -25,6 +34,7 @@ const GOLD: [number, number, number] = [201, 168, 76];
 const GRAU: [number, number, number] = [143, 163, 190];
 const HELL: [number, number, number] = [243, 245, 248];
 const LINIE: [number, number, number] = [225, 225, 225];
+const WARN: [number, number, number] = [184, 134, 11];
 
 function datum(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -93,9 +103,10 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
 
   // ---- Positionstabelle (manuell) ----
   const colBetrag = seiteB - rand;
-  const colEinzel = colBetrag - 28;
+  const colSatz = colBetrag - 26;
+  const colEinzel = colSatz - 16;
   const colEinheit = colEinzel - 22;
-  const colMenge = colEinheit - 24;
+  const colMenge = colEinheit - 22;
   const colNr = rand;
   const colBez = rand + 10;
   const bezBreite = colMenge - colBez - 3;
@@ -106,9 +117,10 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
   doc.setTextColor(...GOLD); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
   doc.text('#', colNr + 1, y + 5.5);
   doc.text('Bezeichnung', colBez, y + 5.5);
-  doc.text('Menge', colMenge + 20, y + 5.5, { align: 'right' });
+  doc.text('Menge', colMenge + 18, y + 5.5, { align: 'right' });
   doc.text('Einh.', colEinheit + 18, y + 5.5, { align: 'right' });
-  doc.text('Einzel', colEinzel + 24, y + 5.5, { align: 'right' });
+  doc.text('Einzel', colEinzel + 14, y + 5.5, { align: 'right' });
+  doc.text('MwSt', colSatz + 12, y + 5.5, { align: 'right' });
   doc.text('Betrag', colBetrag, y + 5.5, { align: 'right' });
   y += kopfH;
 
@@ -116,14 +128,16 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
   let wechsel = false;
 
-  const neueSeiteWennNoetig = () => { if (y > seiteH - 45) { doc.addPage(); y = 20; } };
+  const neueSeiteWennNoetig = (platz = 45) => { if (y > seiteH - platz) { doc.addPage(); y = 20; } };
 
   if (positionen.length > 0) {
     positionen.forEach((p, i) => {
       neueSeiteWennNoetig();
       const betrag = positionsBetrag(p);
+      const pauschal = p.festpreis_netto != null;
       const bezZeilen = doc.splitTextToSize(p.bezeichnung || '(ohne Bezeichnung)', bezBreite) as string[];
-      const zeilenHoehe = Math.max(7, bezZeilen.length * 4.5 + 2.5);
+      const wegText = (p.rechenweg || '').trim();
+      const zeilenHoehe = Math.max(7, bezZeilen.length * 4.5 + 2.5) + (wegText ? 4 : 0);
 
       if (wechsel) { doc.setFillColor(...HELL); doc.rect(rand, y, seiteB - rand * 2, zeilenHoehe, 'F'); }
       wechsel = !wechsel;
@@ -131,9 +145,22 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
       const mitte = y + 5;
       doc.setTextColor(...GRAU); doc.text(String(p.position_nr ?? i + 1), colNr + 1, mitte);
       doc.setTextColor(...NAVY); doc.text(bezZeilen, colBez, mitte);
-      doc.text(mengeText(p.menge), colMenge + 20, mitte, { align: 'right' });
+
+      // Rechenweg unter der Bezeichnung — kleiner, grau
+      if (wegText) {
+        doc.setFontSize(7.5); doc.setTextColor(...GRAU);
+        doc.text(`= ${wegText}`, colBez, mitte + bezZeilen.length * 4.5 - 0.5, { maxWidth: bezBreite });
+        doc.setFontSize(9);
+      }
+
+      doc.setTextColor(...NAVY);
+      doc.text(mengeText(p.menge), colMenge + 18, mitte, { align: 'right' });
       doc.setTextColor(...GRAU); doc.text(p.einheit || '—', colEinheit + 18, mitte, { align: 'right' });
-      doc.text(p.einzelpreis_netto != null ? eur(p.einzelpreis_netto) : '—', colEinzel + 24, mitte, { align: 'right' });
+      doc.text(
+        pauschal ? 'pausch.' : (p.einzelpreis_netto != null ? eur(p.einzelpreis_netto) : '—'),
+        colEinzel + 14, mitte, { align: 'right' }
+      );
+      doc.text(`${satzText(p.mwst_satz ?? 19)} %`, colSatz + 12, mitte, { align: 'right' });
       doc.setTextColor(...NAVY); doc.text(betrag != null ? eur(betrag) : '—', colBetrag, mitte, { align: 'right' });
 
       y += zeilenHoehe;
@@ -144,7 +171,7 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
   }
 
   y += 8;
-  neueSeiteWennNoetig();
+  neueSeiteWennNoetig(60);
 
   // ---- Mengen-Zusammenfassung je Einheit ----
   if (summe.mengenJeEinheit.length > 0) {
@@ -155,32 +182,56 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
     doc.text(zusammen, rand, y); y += 8;
   }
 
-  // ---- Summen (rechts) ----
-  const mw = mitMwSt(summe.gesamtBetrag);
-  const sumX = seiteB - rand - 70;
+  // ---- Summen (rechts), aufgeschlüsselt nach Steuersätzen ----
+  const sumX = seiteB - rand - 78;
   doc.setFontSize(9);
-  const sumZeile = (label: string, wert: string, fett = false) => {
+  const sumZeile = (label: string, wert: string, fett = false, klein = false) => {
     doc.setFont('helvetica', fett ? 'bold' : 'normal');
+    doc.setFontSize(klein ? 8 : 9);
     doc.setTextColor(...(fett ? NAVY : GRAU));
     doc.text(label, sumX, y);
     doc.setTextColor(...NAVY);
     doc.text(wert, seiteB - rand, y, { align: 'right' });
-    y += 6;
+    y += klein ? 5 : 6;
+    doc.setFontSize(9);
   };
-  if (mw) {
-    sumZeile('Netto', eur(mw.netto));
-    sumZeile('zzgl. 19% MwSt', eur(mw.mwst));
+
+  if (summe.anzahlPositionen > 0 && summe.gruppen.length > 0) {
+    sumZeile('Zwischensumme (netto)', eur(summe.netto));
+
+    if (summe.gruppen.length === 1) {
+      const g = summe.gruppen[0];
+      sumZeile(`zzgl. ${satzText(g.satz)} % MwSt auf ${eur(g.netto)}`, eur(g.steuer));
+    } else {
+      // § 14 Abs. 4 Nr. 7: das nach Steuersätzen aufgeschlüsselte Entgelt
+      for (const g of summe.gruppen) {
+        sumZeile(`${satzText(g.satz)} % auf ${eur(g.netto)}`, eur(g.steuer), false, true);
+      }
+      sumZeile('Umsatzsteuer gesamt', eur(summe.steuer));
+    }
+
     doc.setDrawColor(...GOLD); doc.line(sumX, y - 2, seiteB - rand, y - 2); y += 2;
-    sumZeile('Gesamt (brutto)', eur(mw.brutto), true);
-  } else {
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAU);
-    doc.text('Betrag unvollständig — bei einzelnen Positionen fehlt der Preis.', sumX, y);
-    y += 6;
+    sumZeile('Gesamt (brutto)', eur(summe.brutto), true);
+  }
+
+  // ---- Warnung: Positionen ohne Preis ----
+  if (summe.betragUnvollstaendig) {
+    y += 3; neueSeiteWennNoetig(50);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...WARN);
+    doc.text('BETRAG UNVOLLSTÄNDIG', rand, y); y += 4.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAU);
+    const t = doc.splitTextToSize(
+      `Für ${summe.ohnePreis.length === 1 ? 'eine Position' : `${summe.ohnePreis.length} Positionen`} ist kein Preis hinterlegt: ` +
+      summe.ohnePreis.join(' · ') + '. Diese Positionen sind in der Summe NICHT enthalten.',
+      seiteB - rand * 2,
+    ) as string[];
+    doc.text(t, rand, y);
+    y += t.length * 4;
   }
 
   // ---- Notiz ----
   if (aufmass.notiz) {
-    y += 4; neueSeiteWennNoetig();
+    y += 4; neueSeiteWennNoetig(50);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAU);
     doc.text('ANMERKUNGEN', rand, y); y += 5;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...NAVY);
