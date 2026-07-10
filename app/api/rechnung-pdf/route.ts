@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R5 — Rechnungs-PDF (§14 UStG)
@@ -6,6 +7,12 @@ import { NextRequest, NextResponse } from 'next/server';
 // Rechtssichere Pflichtangaben; §19-Kleinunternehmer-Fall berücksichtigt.
 // Absenderdaten kommen als "aussteller"-Objekt vom Client (Nahtstelle zu
 // den Firmen-Einstellungen; Platzhalter, solange Felder leer sind).
+//
+// R5.1 — Steuerausweis nach Steuersätzen (§14 Abs. 4 Nr. 7 + 8 UStG):
+// Der Summenblock schlüsselt das Entgelt nach Steuersätzen auf. Die
+// Steuer wird je Gruppe auf die Gruppensumme gerechnet (steuerLogik.ts).
+// Weichen die gespeicherten Summen davon ab, wird das SICHTBAR gemacht —
+// niemals stillschweigend überschrieben.
 // ============================================================
 
 function esc(s: any): string {
@@ -50,6 +57,12 @@ function pflichtMehrzeilig(wert: any, hinweis: string): string {
   return esc(s).replace(/\n/g, '<br>');
 }
 
+/** Nettobetrag einer Position — gespeicherter Wert schlägt die Rechnung. */
+function positionNetto(p: any): number {
+  if (p?.gesamt_netto != null) return Number(p.gesamt_netto) || 0;
+  return (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0);
+}
+
 function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
@@ -64,9 +77,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
         : `<span class="warn">⚠ Steuernummer / USt-IdNr. ergänzen</span>`;
 
   const zeilenHtml = (positionen || []).map((p: any, i: number) => {
-    const menge = Number(p.menge) || 0;
-    const einzel = Number(p.einzelpreis) || 0;
-    const netto = (p.gesamt_netto != null) ? Number(p.gesamt_netto) : menge * einzel;
+    const netto = positionNetto(p);
     return `
     <tr>
       <td class="nr">${i + 1}</td>
@@ -89,21 +100,81 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     ? empfaenger.map((e) => `<div>${e}</div>`).join('')
     : '<div class="dim">— kein Empfänger zugeordnet —</div>';
 
-  // Summenblock: bei §19 ohne MwSt-Ausweis
-  const summenHtml = klein
-    ? `<div class="zeile brutto"><span>Rechnungsbetrag</span><span>${geld(rechnung?.brutto_summe ?? rechnung?.netto_summe, waehrung)}</span></div>`
-    : `
+  // ---------------------------------------------------------------
+  // Summenblock
+  // ---------------------------------------------------------------
+  // § 19 Kleinunternehmer: kein Steuerausweis, ein einziger Betrag.
+  // Sonst: Entgelt nach Steuersätzen aufgeschlüsselt (§ 14 Abs. 4 Nr. 7),
+  // Steuerbetrag je Satz (Nr. 8).
+  const posten: SteuerPosten[] = (positionen || []).map((p: any) => ({
+    netto: positionNetto(p),
+    satz: Number(p?.mwst_satz) || 0,
+  }));
+  const s = steuerGruppen(posten);
+  const hatGruppen = !klein && s.gruppen.length > 0;
+
+  let summenHtml: string;
+  let abweichungHtml = '';
+
+  if (klein) {
+    summenHtml = `<div class="zeile brutto"><span>Rechnungsbetrag</span><span>${geld(rechnung?.brutto_summe ?? rechnung?.netto_summe, waehrung)}</span></div>`;
+  } else if (!hatGruppen) {
+    // Keine Positionen mitgeliefert — wir zeigen ehrlich die gespeicherten Werte.
+    summenHtml = `
       <div class="zeile"><span class="label">Zwischensumme (netto)</span><span>${geld(rechnung?.netto_summe, waehrung)}</span></div>
       <div class="zeile"><span class="label">zzgl. Umsatzsteuer</span><span>${geld(rechnung?.mwst_summe, waehrung)}</span></div>
       <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(rechnung?.brutto_summe, waehrung)}</span></div>`;
+  } else if (s.gruppen.length === 1) {
+    // Ein einziger Steuersatz — eine Zeile genügt, sie nennt Satz und Bemessungsgrundlage.
+    const g = s.gruppen[0];
+    summenHtml = `
+      <div class="zeile"><span class="label">Zwischensumme (netto)</span><span>${geld(s.netto, waehrung)}</span></div>
+      <div class="zeile"><span class="label">zzgl. ${satzText(g.satz)} % Umsatzsteuer auf ${geld(g.netto, waehrung)}</span><span>${geld(g.steuer, waehrung)}</span></div>
+      <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(s.brutto, waehrung)}</span></div>`;
+  } else {
+    // Mehrere Steuersätze — der Fall Brennholz (7 %) + Anfahrt (19 %).
+    const gruppenZeilen = s.gruppen.map((g) => `
+      <div class="zeile gruppe">
+        <span class="label">${satzText(g.satz)} % auf ${geld(g.netto, waehrung)}</span>
+        <span>${geld(g.steuer, waehrung)}</span>
+      </div>`).join('');
+
+    summenHtml = `
+      <div class="zeile"><span class="label">Zwischensumme (netto)</span><span>${geld(s.netto, waehrung)}</span></div>
+      <div class="steuerblock">
+        <div class="steuerblock-titel">Umsatzsteuer nach Steuersätzen</div>
+        ${gruppenZeilen}
+      </div>
+      <div class="zeile"><span class="label">Umsatzsteuer gesamt</span><span>${geld(s.steuer, waehrung)}</span></div>
+      <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(s.brutto, waehrung)}</span></div>`;
+  }
+
+  // Gespeicherte Summe vs. ausgewiesene Summe — nie stillschweigend abweichen.
+  if (hatGruppen) {
+    const abw: string[] = [];
+    if (weichtAb(rechnung?.netto_summe, s.netto)) abw.push(`Netto gespeichert ${geld(rechnung?.netto_summe, waehrung)}`);
+    if (weichtAb(rechnung?.mwst_summe, s.steuer)) abw.push(`Umsatzsteuer gespeichert ${geld(rechnung?.mwst_summe, waehrung)}`);
+    if (weichtAb(rechnung?.brutto_summe, s.brutto)) abw.push(`Brutto gespeichert ${geld(rechnung?.brutto_summe, waehrung)}`);
+    if (abw.length) {
+      abweichungHtml = `<div class="abweichung">
+        <strong>⚠ Rundungsabweichung zu den gespeicherten Summen.</strong>
+        Ausgewiesen ist der nach Steuersätzen berechnete Betrag (§ 14 UStG).
+        ${esc(abw.join(' · '))}. Bitte die Rechnung einmal öffnen und speichern.
+      </div>`;
+    }
+  }
 
   const kleinHinweis = klein
     ? `<div class="hinweis">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</div>`
     : '';
 
-  // Zahlungsangaben
+  // Zahlungsangaben — der zu zahlende Betrag ist der ausgewiesene.
+  const zahlBetrag = klein
+    ? (rechnung?.brutto_summe ?? rechnung?.netto_summe)
+    : (hatGruppen ? s.brutto : rechnung?.brutto_summe);
+
   const bank = aussteller?.bank_iban
-    ? `<div>Bitte überweisen Sie den Betrag bis zum <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> auf:</div>
+    ? `<div>Bitte überweisen Sie <strong>${geld(zahlBetrag, waehrung)}</strong> bis zum <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> auf:</div>
        <div>IBAN: ${esc(aussteller.bank_iban)}${aussteller?.bank_bic ? ' &middot; BIC: ' + esc(aussteller.bank_bic) : ''}${aussteller?.bank_name ? ' (' + esc(aussteller.bank_name) + ')' : ''}</div>
        <div>Verwendungszweck: ${esc(rechnung?.rechnungsnummer) || ''}</div>`
     : `<div>Zahlbar bis <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> ohne Abzug.</div>
@@ -139,10 +210,17 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   tbody td.r { text-align: right; } tbody td.c { text-align: center; } tbody td.nr { color: #8a99ad; width: 30px; }
   tbody td.stark { font-weight: bold; }
 
-  .summen { margin-left: auto; width: 320px; margin-top: 14px; }
+  .summen { margin-left: auto; width: 340px; margin-top: 14px; }
   .summen .zeile { display: flex; justify-content: space-between; padding: 6px 4px; font-size: 13px; }
   .summen .zeile.brutto { border-top: 2px solid #C9A84C; margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: bold; color: #0A1628; }
   .summen .label { color: #5b6b80; }
+
+  .steuerblock { background: #f4f6fa; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+  .steuerblock-titel { font-size: 9.5px; letter-spacing: 0.8px; text-transform: uppercase; color: #8a99ad; font-weight: bold; padding: 2px 4px 4px; }
+  .summen .zeile.gruppe { padding: 3px 4px; font-size: 12px; }
+  .summen .zeile.gruppe .label { color: #0A1628; }
+
+  .abweichung { clear: both; margin-top: 14px; background: #fdf6e3; border-left: 4px solid #b8860b; padding: 10px 14px; border-radius: 6px; font-size: 11.5px; color: #6b5200; }
 
   .hinweis { clear: both; margin-top: 22px; background: #f4f6fa; border-left: 4px solid #C9A84C; padding: 10px 14px; border-radius: 6px; font-size: 12px; }
   .zahlung { margin-top: 22px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; font-size: 12px; }
@@ -207,6 +285,8 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   <div class="summen">
     ${summenHtml}
   </div>
+
+  ${abweichungHtml}
 
   ${kleinHinweis}
 
