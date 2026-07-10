@@ -3,12 +3,23 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
 // Positionen-Editor (Live-Summen), Zahlungsstatus-Workflow,
 // Daten (Rechnungs-/Leistungs-/Faelligkeitsdatum), §19-Kleinunternehmer.
 // Route: /dashboard/rechnungen/[id]
+//
+// R4.1 — Drei Korrekturen:
+//   (1) Neue Positionen bekommen wieder das Praefix "neu-". Ohne das lief
+//       jede neu angelegte Zeile in den UPDATE-Zweig, traf null Datensaetze
+//       und ging OHNE FEHLERMELDUNG verloren — waehrend der Rechnungskopf
+//       ihre Summe trotzdem speicherte.
+//   (2) Positionen-Schreibvorgaenge melden Fehler UND stille Nulltreffer.
+//   (3) Summen laufen ueber steuerLogik.ts: je Zeile runden, dann je
+//       Steuersatz auf die Gruppensumme rechnen (§14 Abs. 4 Nr. 7+8 UStG).
+//       Damit sind Kopf, Positionen und PDF auf denselben Cent einig.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -71,8 +82,9 @@ function ladeStr(n: number | null | undefined): string {
   if (n === null || n === undefined) return "";
   return String(n).replace(".", ",");
 }
+// Kaufmaennisch, symmetrisch um die Null — eine einzige Rundungsregel im ganzen Modul.
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return cent(n);
 }
 function geld(n: number | null | undefined, waehrung = "EUR"): string {
   const wert = typeof n === "number" ? n : 0;
@@ -260,12 +272,17 @@ export default function RechnungDetail() {
     markDirty();
   }
 
+  // ACHTUNG: Das Praefix "neu-" ist keine Kosmetik. speichernJetzt() unterscheidet
+  // daran INSERT von UPDATE. Ohne Praefix liefe eine neue Zeile in den UPDATE-Zweig,
+  // traefe null Datensaetze und ginge kommentarlos verloren.
   function neueId(): string {
+    let roh: string;
     try {
-      return crypto.randomUUID();
+      roh = crypto.randomUUID();
     } catch {
-      return "neu-" + Math.random().toString(36).slice(2) + Date.now();
+      roh = Math.random().toString(36).slice(2) + Date.now();
     }
+    return "neu-" + roh;
   }
   function zeileHinzufuegen() {
     if (gesperrt) return;
@@ -285,23 +302,25 @@ export default function RechnungDetail() {
     markDirty();
   }
 
-  const summen = useMemo(() => {
-    let netto = 0;
-    let mwst = 0;
-    for (const z of zeilen) {
-      const zn = parseZahl(z.menge) * parseZahl(z.einzelpreis);
-      netto += zn;
-      // Bei Kleinunternehmer wird keine MwSt ausgewiesen
-      mwst += kleinunternehmer ? 0 : zn * (parseZahl(z.mwst_satz) / 100);
-    }
-    netto = r2(netto);
-    mwst = r2(mwst);
-    return { netto, mwst, brutto: r2(netto + mwst) };
-  }, [zeilen, kleinunternehmer]);
-
+  // Nettobetrag einer Zeile — EINE Rundungsstelle fuer Anzeige, Speicherung und PDF.
   function zeileNetto(z: Zeile): number {
-    return r2(parseZahl(z.menge) * parseZahl(z.einzelpreis));
+    return cent(parseZahl(z.menge) * parseZahl(z.einzelpreis));
   }
+
+  // Summen nach § 14 Abs. 4 Nr. 7 + 8 UStG:
+  // je Zeile runden -> nach Steuersatz gruppieren -> Steuer auf die Gruppensumme.
+  const summen = useMemo(() => {
+    const posten: SteuerPosten[] = zeilen.map((z) => ({
+      netto: zeileNetto(z),
+      satz: kleinunternehmer ? 0 : parseZahl(z.mwst_satz),
+    }));
+    const s = steuerGruppen(posten);
+    if (kleinunternehmer) {
+      return { netto: s.netto, mwst: 0, brutto: s.netto, gruppen: [] as typeof s.gruppen };
+    }
+    return { netto: s.netto, mwst: s.steuer, brutto: s.brutto, gruppen: s.gruppen };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zeilen, kleinunternehmer]);
 
   // ---------- Speichern ----------
   async function speichernJetzt() {
@@ -328,7 +347,60 @@ export default function RechnungDetail() {
         faellig = f.toISOString().slice(0, 10);
       }
 
-      // 1) Kopf aktualisieren
+      // 1) Positionen ZUERST — der Kopf darf keine Summe tragen, deren
+      //    Positionen nicht in der Datenbank stehen.
+      const aktuelleIds = zeilen.map((z) => z.id).filter((zid) => !zid.startsWith("neu-"));
+      const zuLoeschen = geladeneIds.filter((gid) => !aktuelleIds.includes(gid));
+      if (zuLoeschen.length > 0) {
+        const { error: delErr } = await supabase.from("rechnung_positionen").delete().in("id", zuLoeschen);
+        if (delErr) {
+          setFehler("Positionen löschen fehlgeschlagen: " + delErr.message);
+          setSpeichern(false);
+          return;
+        }
+      }
+
+      const posFehler: string[] = [];
+      let pos = 1;
+      for (const z of zeilen) {
+        const datensatz: any = {
+          owner_user_id: user.id,
+          rechnung_id: id,
+          position: pos,
+          bezeichnung: z.bezeichnung || null,
+          menge: parseZahl(z.menge),
+          einheit: z.einheit || "Stk",
+          einzelpreis: parseZahl(z.einzelpreis),
+          mwst_satz: kleinunternehmer ? 0 : parseZahl(z.mwst_satz),
+          gesamt_netto: zeileNetto(z),
+        };
+        const bez = z.bezeichnung?.trim() || `Position ${pos}`;
+
+        if (z.id.startsWith("neu-")) {
+          const { error } = await supabase.from("rechnung_positionen").insert(datensatz);
+          if (error) posFehler.push(`${bez}: ${error.message}`);
+        } else {
+          // .select() zurueckfordern: ein Treffer von null Zeilen liefert KEINEN
+          // Fehler. Ohne diese Pruefung verschwaende ein Datensatz lautlos.
+          const { data: getroffen, error } = await supabase
+            .from("rechnung_positionen")
+            .update(datensatz)
+            .eq("id", z.id)
+            .select("id");
+          if (error) posFehler.push(`${bez}: ${error.message}`);
+          else if (!getroffen || getroffen.length === 0) posFehler.push(`${bez}: nicht gefunden, nicht gespeichert`);
+        }
+        pos++;
+      }
+
+      if (posFehler.length > 0) {
+        setFehler("Positionen konnten nicht vollständig gespeichert werden — der Rechnungskopf wurde NICHT verändert. " + posFehler.join(" · "));
+        setSpeichern(false);
+        await laden();
+        return;
+      }
+
+      // 2) Kopf aktualisieren — erst jetzt, wenn die Positionen sicher stehen.
       const { error: rErr } = await supabase
         .from("rechnungen")
         .update({
@@ -352,35 +424,6 @@ export default function RechnungDetail() {
         setFehler("Speichern fehlgeschlagen: " + rErr.message);
         setSpeichern(false);
         return;
-      }
-
-      // 2) Positionen: gelöschte entfernen, bestehende/neue upserten
-      const aktuelleIds = zeilen.map((z) => z.id).filter((zid) => !zid.startsWith("neu-"));
-      const zuLoeschen = geladeneIds.filter((gid) => !aktuelleIds.includes(gid));
-      if (zuLoeschen.length > 0) {
-        await supabase.from("rechnung_positionen").delete().in("id", zuLoeschen);
-      }
-
-      // Neue und bestehende schreiben
-      let pos = 1;
-      for (const z of zeilen) {
-        const datensatz: any = {
-          owner_user_id: user.id,
-          rechnung_id: id,
-          position: pos,
-          bezeichnung: z.bezeichnung || null,
-          menge: parseZahl(z.menge),
-          einheit: z.einheit || "Stk",
-          einzelpreis: parseZahl(z.einzelpreis),
-          mwst_satz: kleinunternehmer ? 0 : parseZahl(z.mwst_satz),
-          gesamt_netto: zeileNetto(z),
-        };
-        if (z.id.startsWith("neu-")) {
-          await supabase.from("rechnung_positionen").insert(datensatz);
-        } else {
-          await supabase.from("rechnung_positionen").update(datensatz).eq("id", z.id);
-        }
-        pos++;
       }
 
       // Zahlungsstatus/Bezahlt aus den Zahlungen neu berechnen (Brutto kann sich geändert haben)
@@ -1025,9 +1068,47 @@ export default function RechnungDetail() {
       <Karte titel="Summen">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           <SummeFeld label="Netto" wert={geld(summen.netto, waehrung)} farbe={C.cyan} />
-          <SummeFeld label={kleinunternehmer ? "MwSt (§19: keine)" : "MwSt"} wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
+          <SummeFeld label={kleinunternehmer ? "MwSt (§19: keine)" : "Umsatzsteuer"} wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
           <SummeFeld label="Brutto" wert={geld(summen.brutto, waehrung)} farbe={C.gold} />
         </div>
+
+        {/* Aufschluesselung nach Steuersaetzen — genau diese Aufstellung erscheint im PDF */}
+        {!kleinunternehmer && summen.gruppen.length > 0 && (
+          <div
+            style={{
+              marginTop: 16,
+              background: C.navy,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              padding: "14px 16px",
+            }}
+          >
+            <div style={{ ...sektionLabel, marginBottom: 10 }}>Umsatzsteuer nach Steuersätzen</div>
+            {summen.gruppen.map((g) => (
+              <div
+                key={g.satz}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  padding: "6px 0",
+                  fontSize: 13.5,
+                  borderBottom: `1px solid ${C.border}`,
+                }}
+              >
+                <span style={{ color: C.textDim }}>
+                  <strong style={{ color: "#fff", fontWeight: 600 }}>{satzText(g.satz)} %</strong> auf {geld(g.netto, waehrung)}
+                </span>
+                <span style={{ fontWeight: 700, color: C.cyan }}>{geld(g.steuer, waehrung)}</span>
+              </div>
+            ))}
+            <p style={{ color: C.textDim, fontSize: 11.5, margin: "12px 2px 0", lineHeight: 1.55 }}>
+              Die Steuer wird je Steuersatz auf die Gruppensumme gerechnet — so verlangt es § 14 Abs. 4 Nr. 7 und 8 UStG.
+              {summen.gruppen.length > 1 && " Diese Aufstellung erscheint unverändert auf dem Rechnungs-PDF."}
+            </p>
+          </div>
+        )}
+
         <p style={{ color: C.textDim, fontSize: 12, marginTop: 14 }}>
           Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
