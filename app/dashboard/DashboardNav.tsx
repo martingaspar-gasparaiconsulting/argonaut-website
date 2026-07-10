@@ -2,71 +2,30 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { sichtbareNavLinks } from '../../lib/rechte';
 
 // ============================================================
 // ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
-// Chef sieht alles. Mitarbeiter sieht nur freigeschaltete Module.
-// "immer" = jeder (Übersicht/Einstellungen). "nurChef" = nur der Chef.
-// modul-Schlüssel identisch mit /dashboard/rechte + middleware.
+//
+// E1.7 — Die Liste steht nicht mehr hier. Sie steht in lib/rechte.ts und wird
+// von DIESER Datei und von proxy.ts gelesen. Vorher gab es zwei Listen, die
+// sich widersprachen: der Mitarbeiter sah die Knoepfe fuer Personal, Rechnungen,
+// Mahnwesen, Finanzen, Vertraege und Analytics — und wurde beim Klick von der
+// Middleware kommentarlos zurueckgeworfen. Ausserdem standen "Mein Bereich" und
+// "Zeiterfassung" in der Middleware-Whitelist, hatten aber keinen Knopf.
+//
+// "immer" = jeder. "nurChef" = nur der Chef. "nurMitarbeiter" = nur Angestellte.
 //
 // P2-1 STARTER-MODUS: Der Chef kann Module ausblenden (profiles.sichtbare_module,
 // jsonb-Array der EINGESCHALTETEN modul-Schlüssel). NULL/leer = alles sichtbar
 // (safety-first, rückwärtskompatibel). Übersicht/Einstellungen bleiben IMMER da.
 // Greift nur beim Chef; Mitarbeiter bleiben bei der RBAC-Logik.
-//
-// Block 2 / A2-4: Modul 'holz' (Brennholz-Sortiment) ergänzt.
 // ============================================================
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-type NavLink = {
-  label: string;
-  href: string;
-  highlight?: boolean;
-  modul?: string;   // erforderliches Recht
-  immer?: boolean;  // jeder darf
-  nurChef?: boolean;// nur der Chef
-};
-
-const NAV_LINKS: NavLink[] = [
-  { label: '🏠 Übersicht', href: '/dashboard', immer: true },
-  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten' },
-  { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy' },
-  { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads' },
-  { label: '💬 Chat', href: '/dashboard/chat', modul: 'chat' },
-  { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat' },
-  { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente' },
-  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz' },
-  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal' },
-  { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan' },
-  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', nurChef: true },
-  { label: '🗂 GoBD', href: '/dashboard/gobd', nurChef: true },
-  { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte' },
-  { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing' },
-  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm' },
-  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege' },
-  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen' },
-  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen' },
-  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen' },
-  { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp' },
-  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege' },
-  { label: '🎫 Service', href: '/dashboard/service', modul: 'service' },
-  { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung' },
-  { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten' },
-  { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen' },
-  { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt' },
-  { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog' },
-  { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte' },
-  { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass' },
-  { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz' },
-  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics' },
-  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', highlight: true, modul: 'automatisierungen' },
-  { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
-  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true },
-];
 
 export default function DashboardNav() {
   const pathname = usePathname();
@@ -122,22 +81,11 @@ export default function DashboardNav() {
     return () => { aktiv = false; };
   }, []);
 
-  const sichtbar = NAV_LINKS.filter((l) => {
-    // Grundausstattung immer sichtbar - nie vom Starter-Modus versteckbar
-    if (l.immer) return true;
-    if (!geladen) return false;      // bis geladen: nur Grundausstattung (kein Aufblitzen)
-
-    if (istChef) {
-      if (l.nurChef) return true;    // Chef sieht Rechte immer
-      // Starter-Modus: nur beim Chef, nur für Module mit modul-Schlüssel
-      if (l.modul && sichtbareModule !== null && !sichtbareModule.has(l.modul)) return false;
-      return true;
-    }
-
-    // Mitarbeiter: unveränderte RBAC-Logik
-    if (l.nurChef) return false;
-    return l.modul ? erlaubt.has(l.modul) : false;
-  });
+  // Bis geladen: nur die Übersicht zeigen. Kein Aufblitzen von Knöpfen, die
+  // der Nutzer gar nicht anklicken darf.
+  const sichtbar = geladen
+    ? sichtbareNavLinks(istChef, erlaubt, sichtbareModule)
+    : sichtbareNavLinks(false, new Set(), null).filter((l) => l.href === '/dashboard');
 
   return (
     <nav style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
