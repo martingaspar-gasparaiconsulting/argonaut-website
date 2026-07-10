@@ -4,9 +4,30 @@
 // Das Rechenwerk fürs Werkstatt-Uhrwerk: Zeit-Umrechnung Minuten<->Stunden<->AW
 // (mit werkstatt-eigenem AW-Faktor), Positions- und Auftragssummen, FIN-Prüfung,
 // und die Übernahme einer Katalog-Leistung in eine (überschreibbare) Position.
+//
+// D1 — Zwei Korrekturen und eine Erweiterung:
+//
+//   (1) PAUSCHALE ≠ STUNDENSATZ.  Bis hierher wanderte `festpreis_netto` aus dem
+//       Katalog in `einzelpreis_netto` der Position — und positionsBetrag() liest
+//       den bei jeder Zeit-Leistung als Stundensatz. Aus "HU/AU, 0,5 Std, 130 €
+//       Festpreis" wurden dadurch 65 €. Ab jetzt trägt die Position ein eigenes
+//       Feld `festpreis_netto`. Ist es gesetzt, gewinnt es.
+//
+//   (2) PREIS UND ZEIT SIND ZWEI GRÖSSEN.  Eine Pauschale hat trotzdem eine Dauer.
+//       `menge` + `erfassungsart` tragen weiterhin die Arbeitszeit, auch wenn der
+//       Preis pauschal ist. Der Werkstatt-Durchlauf behält seine Auslastung.
+//
+//   (3) MENGEN-LEISTUNGEN.  `erfassungsart = 'stueck'` war im Typ vorhanden und in
+//       positionsBetrag() korrekt behandelt, aber nirgends auswählbar. Sie trägt
+//       jetzt zusätzlich ein Etikett `einheit` (ha | fm | Srm | Stück | lfm | m²).
+//       Damit rechnet Forst (Hektar, Festmeter) mit demselben Baustein wie die
+//       Werkstatt — ohne neue Erfassungsart und ohne neuen Zweig in nachMinuten().
 // ============================================================================
 
 export type Erfassungsart = 'minuten' | 'stunden' | 'aw' | 'stueck';
+
+/** Etiketten für Mengen-Leistungen. Frei erweiterbar — reine Anzeige. */
+export const EINHEITEN_MENGE = ['Stück', 'ha', 'fm', 'Srm', 'Rm', 'm³', 'm²', 'lfm', 'kg', 't'] as const;
 
 // --- Datentypen: schlank, passen auf Zeilen der DB ---------------------------
 export interface KatalogEintrag {
@@ -14,11 +35,14 @@ export interface KatalogEintrag {
   bezeichnung?: string | null;
   kuerzel?: string | null;
   kategorie?: string | null;
-  erfassungsart?: string | null;      // minuten | stunden | aw
-  standard_wert?: number | null;      // z.B. 1 (Std) / 12 (AW) / 20 (Min)
+  erfassungsart?: string | null;      // minuten | stunden | aw | stueck
+  standard_wert?: number | null;      // z.B. 1 (Std) / 12 (AW) / 20 (Min) / 2 (ha)
   aw_minuten?: number | null;         // 1 AW = wieviele Minuten
-  stundensatz_netto?: number | null;
-  festpreis_netto?: number | null;
+  stundensatz_netto?: number | null;  // €/h   — bei Zeit-Leistungen
+  festpreis_netto?: number | null;    // €     — Pauschale, gewinnt gegen alles
+  einheit?: string | null;            // Etikett bei erfassungsart='stueck'
+  einheitspreis_netto?: number | null;// €/Einheit — bei erfassungsart='stueck'
+  mwst_satz?: number | null;          // Prozent, Default 19
 }
 
 export interface PositionBasis {
@@ -26,8 +50,10 @@ export interface PositionBasis {
   bezeichnung?: string | null;
   erfassungsart?: string | null;      // minuten | stunden | aw | stueck
   menge?: number | null;
+  einheit?: string | null;            // Etikett zur Menge (nur bei 'stueck')
   aw_minuten?: number | null;         // Snapshot des Faktors (falls aw)
-  einzelpreis_netto?: number | null;  // Snapshot Preis (überschreibbar)
+  einzelpreis_netto?: number | null;  // Snapshot: Stundensatz ODER Preis je Einheit
+  festpreis_netto?: number | null;    // Snapshot: Pauschale. Gewinnt gegen einzelpreis.
   extern?: boolean | null;
 }
 
@@ -35,12 +61,22 @@ export interface PositionBasis {
 
 const STD_AW_MIN_DEFAULT = 6; // Fallback: 1 AW = 6 Minuten (branchenüblich ~ 5–6)
 
+/** Kaufmännisch auf zwei Nachkommastellen, symmetrisch um die Null. */
+function runde(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  const vz = n < 0 ? -1 : 1;
+  return (vz * Math.round((Math.abs(n) + Number.EPSILON) * 100)) / 100;
+}
+
 /**
  * Wandelt eine erfasste Menge in MINUTEN um — je nach Erfassungsart.
  *  - 'minuten' -> Menge selbst
  *  - 'stunden' -> Menge * 60
  *  - 'aw'      -> Menge * awMinuten (werkstatt-eigener Faktor)
- *  - 'stueck'  -> 0 (Stück ist keine Zeit)
+ *  - 'stueck'  -> 0 (eine Menge ist keine Zeit)
+ *
+ * Unbekannte/leere Erfassungsart wird wie 'stunden' behandelt — das ist der
+ * DB-Default und darf sich nicht ändern, sonst verlieren alte Zeilen ihre Zeit.
  */
 export function nachMinuten(
   menge: number | null | undefined,
@@ -74,34 +110,59 @@ export function minutenZuStunden(minuten: number | null | undefined): number {
   return minuten / 60;
 }
 
+/** Ist das eine Mengen-Leistung (Hektar, Festmeter, Stück …)? */
+export function istMengenLeistung(art: string | null | undefined): boolean {
+  return art === 'stueck';
+}
+
+/** "2 ha", "8 Srm", "3 Stück" — oder nur die Zahl, wenn kein Etikett da ist. */
+export function mengeText(menge: number | null | undefined, einheit?: string | null): string {
+  const m = menge ?? 0;
+  const zahl = m.toLocaleString('de-DE', { maximumFractionDigits: 3 });
+  const e = (einheit ?? '').trim();
+  return e ? `${zahl} ${e}` : zahl;
+}
+
 // --- Preis je Position -------------------------------------------------------
 
 /**
  * Betrag einer Position (netto), oder null wenn nicht kalkulierbar.
- * Regel:
- *  - Material/Stück: menge * einzelpreis
- *  - Zeit-Leistung:  wenn einzelpreis gesetzt = Stundensatz -> Stunden * Satz
- *                    (bei 'aw' zählt die umgerechnete Zeit)
- *  - Fehlt der Preis -> null (ehrlich "nicht kalkulierbar")
+ *
+ * Reihenfolge — die erste zutreffende Regel gewinnt:
+ *  1. PAUSCHALE: `festpreis_netto` gesetzt -> genau dieser Betrag.
+ *     Die `menge` wird NICHT multipliziert; sie trägt bei Zeit-Leistungen die
+ *     Dauer (HU: 0,5 Std) und würde die Pauschale sonst halbieren.
+ *     Zwei TÜV-Prüfungen sind zwei Positionen.
+ *  2. MENGE: Material oder 'stueck' -> menge * einzelpreis (= Preis je Einheit).
+ *  3. ZEIT: einzelpreis gilt als Stundensatz -> Stunden * Satz.
+ *     Bei 'aw' zählt die umgerechnete Zeit.
+ *  Fehlt der Preis -> null ("nicht kalkulierbar", ehrlich statt 0,00 €).
  */
 export function positionsBetrag(p: PositionBasis): number | null {
+  if (p.festpreis_netto != null && p.festpreis_netto >= 0) {
+    return runde(p.festpreis_netto);
+  }
+
   const preis = p.einzelpreis_netto;
   if (preis == null || preis < 0) return null;
 
-  if (p.art === 'material' || p.erfassungsart === 'stueck') {
+  if (p.art === 'material' || istMengenLeistung(p.erfassungsart)) {
     const menge = !p.menge || p.menge < 0 ? 0 : p.menge;
-    return Math.round(menge * preis * 100) / 100;
+    return runde(menge * preis);
   }
 
   // Zeit-basiert: einzelpreis gilt als Stundensatz
   const min = nachMinuten(p.menge, p.erfassungsart, p.aw_minuten);
   const stunden = minutenZuStunden(min);
-  return Math.round(stunden * preis * 100) / 100;
+  return runde(stunden * preis);
 }
 
-/** Minuten einer Position (0 bei Material/Stück). */
+/**
+ * Minuten einer Position (0 bei Material/Menge).
+ * Unabhängig vom Preis: eine Pauschale kostet trotzdem Zeit.
+ */
 export function positionsMinuten(p: PositionBasis): number {
-  if (p.art === 'material' || p.erfassungsart === 'stueck') return 0;
+  if (p.art === 'material' || istMengenLeistung(p.erfassungsart)) return 0;
   return nachMinuten(p.menge, p.erfassungsart, p.aw_minuten);
 }
 
@@ -134,7 +195,7 @@ export function auftragsSumme(positionen: PositionBasis[]): AuftragsSumme {
     }
   }
   if (s.betragUnvollstaendig) s.gesamtBetrag = null;
-  else if (s.gesamtBetrag != null) s.gesamtBetrag = Math.round(s.gesamtBetrag * 100) / 100;
+  else if (s.gesamtBetrag != null) s.gesamtBetrag = runde(s.gesamtBetrag);
   return s;
 }
 
@@ -142,26 +203,48 @@ export function auftragsSumme(positionen: PositionBasis[]): AuftragsSumme {
 
 /**
  * Macht aus einer Katalog-Leistung eine übernehmbare Position.
- * Werte werden als Snapshot kopiert (aw_minuten, Preis) — damit spätere
+ * Werte werden als Snapshot kopiert (aw_minuten, Preise, Einheit) — damit spätere
  * Katalog-Änderungen alte Aufträge NICHT rückwirkend verändern.
  * Alles bleibt danach frei überschreibbar.
+ *
+ * Preis-Snapshot, in dieser Reihenfolge:
+ *   festpreis_netto      -> als Pauschale, eigenes Feld
+ *   erfassungsart stueck -> einheitspreis_netto als Preis je Einheit
+ *   sonst                -> stundensatz_netto als Stundensatz
  */
 export function katalogNachPosition(k: KatalogEintrag): PositionBasis {
   const art = (k.erfassungsart as Erfassungsart) || 'stunden';
-  // Preis-Snapshot: Zeit -> Stundensatz; Festpreis -> als einzelpreis (bei 1 Menge)
+  const menge = istMengenLeistung(art);
+  const pauschale = k.festpreis_netto ?? null;
+
   let einzelpreis: number | null = null;
-  if (k.stundensatz_netto != null) einzelpreis = k.stundensatz_netto;
-  else if (k.festpreis_netto != null) einzelpreis = k.festpreis_netto;
+  if (pauschale == null) {
+    einzelpreis = menge
+      ? (k.einheitspreis_netto ?? null)
+      : (k.stundensatz_netto ?? null);
+  }
 
   return {
     art: 'leistung',
     bezeichnung: k.bezeichnung ?? '',
     erfassungsart: art,
     menge: k.standard_wert ?? 1,
+    einheit: menge ? (k.einheit ?? null) : null,
     aw_minuten: art === 'aw' ? (k.aw_minuten ?? STD_AW_MIN_DEFAULT) : null,
     einzelpreis_netto: einzelpreis,
+    festpreis_netto: pauschale,
     extern: false,
   };
+}
+
+/** Preisspalte im Katalog: "95,00 €/h", "45,00 €/Stück", "130,00 € pauschal", "—". */
+export function preisText(k: KatalogEintrag): string {
+  if (k.festpreis_netto != null) return `${eur(k.festpreis_netto)} pauschal`;
+  if (istMengenLeistung(k.erfassungsart) && k.einheitspreis_netto != null) {
+    return `${eur(k.einheitspreis_netto)}/${(k.einheit ?? 'Einheit').trim()}`;
+  }
+  if (k.stundensatz_netto != null) return `${eur(k.stundensatz_netto)}/h`;
+  return '—';
 }
 
 // --- FIN / VIN-Prüfung -------------------------------------------------------

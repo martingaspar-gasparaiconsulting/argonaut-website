@@ -11,6 +11,14 @@
 // Positionen werden sofort gespeichert (schnelles Arbeiten), Entfernen fragt nach.
 // Kopfdaten + Archivieren + Freigabe-Schritte bestätigungspflichtig. Design 1:1 wie das Dashboard.
 // Pfad: app/dashboard/werkstatt/page.tsx
+//
+// D1 — Drei Korrekturen an den Positionen:
+//   (1) Die Insert-Liste ließ `festpreis_netto` und `einheit` fallen. Eine Leistung
+//       mit Pauschale (z. B. HU/AU 130 €) kam ohne Preis in der Datenbank an.
+//   (2) Die Spalte hieß "Einheit", enthielt aber das Erfassungsart-Dropdown.
+//       Jetzt: "Art" (Std/Min/AW/Menge) und daneben eine echte "Einheit" (ha, Srm, Stk …).
+//   (3) Preisfeld unterscheidet Stundensatz, Preis je Einheit und Pauschale.
+//       Ein Klick auf "pauschal" schaltet um — die Arbeitszeit bleibt erhalten.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -26,6 +34,7 @@ import {
 import {
   katalogNachPosition, positionsMinuten, positionsBetrag, auftragsSumme,
   zeitText, eur, finGueltig, finNormalisieren,
+  istMengenLeistung, preisText, EINHEITEN_MENGE,
   type KatalogEintrag, type PositionBasis,
 } from '../_components/leistungLogik';
 import {
@@ -94,9 +103,11 @@ type BuchungRow = BuchungBasis & {
 const PRIO_OPTIONEN = [
   { wert: 'normal', label: 'Normal' }, { wert: 'hoch', label: 'Hoch' }, { wert: 'dringend', label: 'Dringend' },
 ];
+// "Menge" speichert intern 'stueck' — dieselbe Rechenregel wie Material:
+// Menge x Preis je Einheit, keine Arbeitszeit.
 const ART_ERFASSUNG = [
   { wert: 'stunden', label: 'Std' }, { wert: 'minuten', label: 'Min' },
-  { wert: 'aw', label: 'AW' }, { wert: 'stueck', label: 'Stück' },
+  { wert: 'aw', label: 'AW' }, { wert: 'stueck', label: 'Menge' },
 ];
 
 type Form = {
@@ -121,6 +132,10 @@ function datumHuebsch(iso: string | null): string {
 function num(s: string): number | null {
   const t = s.trim().replace(',', '.'); if (t === '') return null;
   const n = Number(t); return Number.isFinite(n) ? n : null;
+}
+/** Trägt die Position eine Pauschale? */
+function istPauschal(p: PositionBasis): boolean {
+  return p.festpreis_netto != null;
 }
 
 export default function WerkstattPage() {
@@ -360,6 +375,10 @@ export default function WerkstattPage() {
         art: pos.art ?? 'leistung', bezeichnung: pos.bezeichnung ?? '',
         erfassungsart: pos.erfassungsart ?? 'stunden', menge: pos.menge ?? 1,
         aw_minuten: pos.aw_minuten ?? null, einzelpreis_netto: pos.einzelpreis_netto ?? null,
+        // D1: Ohne diese zwei Zeilen kam eine Pauschale nie in der Datenbank an,
+        // und eine Mengen-Position verlor ihr Etikett (aus "8 Srm" wurde "8 Stk").
+        festpreis_netto: pos.festpreis_netto ?? null,
+        einheit: pos.einheit ?? null,
         extern: pos.extern ?? false, extern_firma: null,
       });
       if (error) throw error;
@@ -374,16 +393,28 @@ export default function WerkstattPage() {
     setLeiSuche(''); setLeiOffen(false);
   }
   function materialHinzufuegen() {
-    void positionEinfuegen({ art: 'material', bezeichnung: '', erfassungsart: 'stueck', menge: 1, einzelpreis_netto: null }, null);
+    void positionEinfuegen({ art: 'material', bezeichnung: '', erfassungsart: 'stueck', menge: 1, einheit: 'Stk', einzelpreis_netto: null }, null);
   }
   function fremdleistungHinzufuegen() {
-    void positionEinfuegen({ art: 'fremdleistung', bezeichnung: '', erfassungsart: 'stueck', menge: 1, einzelpreis_netto: null, extern: true }, null);
+    void positionEinfuegen({ art: 'fremdleistung', bezeichnung: '', erfassungsart: 'stueck', menge: 1, einheit: 'Stk', einzelpreis_netto: null, extern: true }, null);
   }
   async function positionAendern(id: string, patch: Partial<PositionRow>) {
     setPositionen((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
     try {
       await supabase.from('werkstatt_positionen').update({ ...patch, aktualisiert_am: new Date().toISOString() }).eq('id', id);
     } catch { /* Feld-Fehler still; UI bleibt konsistent */ }
+  }
+  /**
+   * Schaltet zwischen Pauschale und Satz/Einheitspreis um.
+   * Der bisherige Wert wird NICHT gelöscht — Zurückschalten stellt ihn wieder her.
+   * Die Arbeitszeit der Position bleibt in jedem Fall unberührt.
+   */
+  function pauschaleUmschalten(p: PositionRow) {
+    if (istPauschal(p)) {
+      void positionAendern(p.id, { festpreis_netto: null });
+    } else {
+      void positionAendern(p.id, { festpreis_netto: p.einzelpreis_netto ?? 0 });
+    }
   }
   async function positionEntfernen(p: PositionRow) {
     if (!window.confirm(`Position "${p.bezeichnung || 'ohne Bezeichnung'}" entfernen?`)) return;
@@ -556,6 +587,18 @@ export default function WerkstattPage() {
       return;
     }
 
+    // Positionen ohne Preis blockieren die Rechnung (die Route lehnt sie ohnehin ab).
+    // Hier früh und mit Klartext, statt den Nutzer erst nach dem Klick abzuweisen.
+    const ohnePreis = positionen.filter((p) => positionsBetrag(p) == null);
+    if (ohnePreis.length > 0) {
+      setFehler(
+        `Für ${ohnePreis.length === 1 ? 'eine Position' : `${ohnePreis.length} Positionen`} fehlt der Preis: ` +
+        ohnePreis.map((p) => p.bezeichnung?.trim() || 'ohne Bezeichnung').join(' · ') +
+        '. Bitte zuerst ergänzen.'
+      );
+      return;
+    }
+
     // Warnungen (nicht blockierend): offener Nachtrag / KVA nicht freigegeben
     const fStatus = a.freigabe_status ?? 'kein_kva';
     if (aktNachtrag) {
@@ -607,6 +650,8 @@ export default function WerkstattPage() {
       status: aktAuftrag.status,
       freigabe_status: aktAuftrag.freigabe_status,
       zugesagt_am: aktAuftrag.zugesagt_am,
+      // Grober Brutto-Wert für die Kundeninfo. Die verbindliche Steuer rechnet
+      // die Rechnung selbst — je Steuersatz auf die Gruppensumme (steuerLogik).
       summe_brutto: summe.gesamtBetrag != null ? Math.round(summe.gesamtBetrag * 1.19 * 100) / 100 : null,
     });
   }, [aktAuftrag, fahrzeuge, summe.gesamtBetrag]);
@@ -1013,7 +1058,7 @@ export default function WerkstattPage() {
                           <button key={k.id} onClick={() => katalogUebernehmen(k)} style={styles.dropdownItem}>
                             <span style={{ fontWeight: 600 }}>{k.bezeichnung}</span>
                             <span style={{ color: C.textDim, fontSize: 12 }}>
-                              {' · '}{k.kategorie || 'ohne Kat.'}{k.stundensatz_netto != null ? ` · ${eur(k.stundensatz_netto)}/h` : (k.festpreis_netto != null ? ` · ${eur(k.festpreis_netto)}` : '')}
+                              {' · '}{k.kategorie || 'ohne Kat.'}{' · '}{preisText(k)}
                             </span>
                           </button>
                         ))}
@@ -1032,10 +1077,11 @@ export default function WerkstattPage() {
                         <thead>
                           <tr>
                             <th style={styles.posTh}>Bezeichnung</th>
-                            <th style={{ ...styles.posTh, width: 80 }}>Menge</th>
-                            <th style={{ ...styles.posTh, width: 90 }}>Einheit</th>
-                            <th style={{ ...styles.posTh, width: 100, textAlign: 'right' }}>Satz/Preis</th>
-                            <th style={{ ...styles.posTh, width: 90, textAlign: 'right' }}>Zeit</th>
+                            <th style={{ ...styles.posTh, width: 76 }}>Menge</th>
+                            <th style={{ ...styles.posTh, width: 80 }}>Art</th>
+                            <th style={{ ...styles.posTh, width: 84 }}>Einheit</th>
+                            <th style={{ ...styles.posTh, width: 116, textAlign: 'right' }}>Preis</th>
+                            <th style={{ ...styles.posTh, width: 84, textAlign: 'right' }}>Zeit</th>
                             <th style={{ ...styles.posTh, width: 90, textAlign: 'right' }}>Betrag</th>
                             <th style={{ ...styles.posTh, width: 36 }}></th>
                           </tr>
@@ -1044,6 +1090,13 @@ export default function WerkstattPage() {
                           {positionen.map((p) => {
                             const min = positionsMinuten(p);
                             const betrag = positionsBetrag(p);
+                            const pauschal = istPauschal(p);
+                            const mengenArt = istMengenLeistung(p.erfassungsart) || p.art === 'material';
+                            const preisHinweis = pauschal
+                              ? 'pauschal'
+                              : mengenArt
+                                ? `€ / ${(p.einheit || 'Einheit').trim()}`
+                                : '€ / Std';
                             return (
                               <tr key={p.id}>
                                 <td style={styles.posTd}>
@@ -1064,7 +1117,41 @@ export default function WerkstattPage() {
                                   </select>
                                 </td>
                                 <td style={styles.posTd}>
-                                  <input style={{ ...styles.posInput, textAlign: 'right' }} defaultValue={p.einzelpreis_netto != null ? String(p.einzelpreis_netto) : ''} placeholder="—" onBlur={(e) => positionAendern(p.id, { einzelpreis_netto: num(e.target.value) })} />
+                                  {mengenArt ? (
+                                    <>
+                                      <input
+                                        style={styles.posInput}
+                                        list="argonaut-einheiten"
+                                        defaultValue={p.einheit ?? ''}
+                                        placeholder="Stk"
+                                        onBlur={(e) => positionAendern(p.id, { einheit: e.target.value.trim() || null })}
+                                      />
+                                      <datalist id="argonaut-einheiten">
+                                        {EINHEITEN_MENGE.map((e) => <option key={e} value={e} />)}
+                                      </datalist>
+                                    </>
+                                  ) : (
+                                    <span style={{ color: C.textDim, fontSize: 12.5 }}>—</span>
+                                  )}
+                                </td>
+                                <td style={styles.posTd}>
+                                  <input
+                                    style={{ ...styles.posInput, textAlign: 'right' }}
+                                    defaultValue={pauschal
+                                      ? (p.festpreis_netto != null ? String(p.festpreis_netto) : '')
+                                      : (p.einzelpreis_netto != null ? String(p.einzelpreis_netto) : '')}
+                                    placeholder="—"
+                                    onBlur={(e) => positionAendern(p.id, pauschal
+                                      ? { festpreis_netto: num(e.target.value) }
+                                      : { einzelpreis_netto: num(e.target.value) })}
+                                  />
+                                  <button
+                                    onClick={() => pauschaleUmschalten(p)}
+                                    style={{ ...styles.preisSchalter, color: pauschal ? C.gold : C.textDim }}
+                                    title={pauschal ? 'Zurück zu Satz / Preis je Einheit' : 'Als Pauschale rechnen (Arbeitszeit bleibt erhalten)'}
+                                  >
+                                    {preisHinweis}
+                                  </button>
                                 </td>
                                 <td style={{ ...styles.posTd, textAlign: 'right', color: C.textDim }}>{min > 0 ? zeitText(min) : '—'}</td>
                                 <td style={{ ...styles.posTd, textAlign: 'right', color: C.gold }}>{betrag != null ? eur(betrag) : '—'}</td>
@@ -1384,10 +1471,11 @@ const styles: Record<string, CSSProperties> = {
   dropdown: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 10, marginTop: 6, overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.4)' },
   dropdownItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5 },
 
-  posTable: { width: '100%', borderCollapse: 'collapse', minWidth: 560 },
+  posTable: { width: '100%', borderCollapse: 'collapse', minWidth: 700 },
   posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
   posTd: { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
   posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
+  preisSchalter: { display: 'block', width: '100%', textAlign: 'right', background: 'transparent', border: 'none', padding: '2px 2px 0', fontSize: 10.5, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: 2 },
   externBadge: { marginLeft: 6, fontSize: 10, color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
   xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit' },
   summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 14 },
