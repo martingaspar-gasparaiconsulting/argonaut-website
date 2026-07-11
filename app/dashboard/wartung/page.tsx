@@ -121,10 +121,12 @@ export default function WartungPage() {
     if (!uid) return;
     setLaden(true); setFehler(null);
     try {
+      // Kein owner_user_id-Filter mehr: RLS entscheidet, welche Zeilen sichtbar sind.
+    // Chef sieht seine (Policy auth.uid()=owner_user_id), Mitarbeiter die seines
+    // Chefs (Policy owner_user_id=mein_chef_id()). Genau wie ERP/Inventar.
       const { data, error } = await supabase
         .from('wartungsvertraege')
         .select('*')
-        .eq('owner_user_id', uid)
         .eq('archiviert', zeigeArchiv)
         .order('naechste_faelligkeit_am', { ascending: true, nullsFirst: false });
       if (error) throw error;
