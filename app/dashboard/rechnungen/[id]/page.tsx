@@ -50,7 +50,7 @@ const STATUS: Record<StatusKey, { label: string; farbe: string; icon: string }> 
   storniert: { label: "Storniert", farbe: C.textDim, icon: "⚪" },
 };
 
-const EINHEITEN = ["Stk", "Std", "Tag", "m", "m²", "m³", "kg", "t", "lfm", "Psch"];
+const EINHEITEN = ["Stk", "Std", "Tag", "m", "m²", "m³", "kg", "t", "lfm", "fm", "ha", "Srm", "Rm", "Psch"];
 
 type Zeile = {
   id: string;
@@ -1040,11 +1040,12 @@ export default function RechnungDetail() {
                 <div key={z.id} style={posZeile}>
                   <input value={z.bezeichnung} disabled={gesperrt} onChange={(e) => zeileAendern(z.id, "bezeichnung", e.target.value)} placeholder="Leistung / Artikel" style={zellInput} />
                   <input value={z.menge} disabled={gesperrt} onChange={(e) => zeileAendern(z.id, "menge", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
-                  <select value={z.einheit} disabled={gesperrt} onChange={(e) => zeileAendern(z.id, "einheit", e.target.value)} style={zellInput}>
+                  <input value={z.einheit} disabled={gesperrt} list="argonaut-rechnung-einheiten" onChange={(e) => zeileAendern(z.id, "einheit", e.target.value)} style={{ ...zellInput, textAlign: "center" }} />
+                  <datalist id="argonaut-rechnung-einheiten">
                     {EINHEITEN.map((e) => (
-                      <option key={e} value={e} style={{ background: C.navy2 }}>{e}</option>
+                      <option key={e} value={e} />
                     ))}
-                  </select>
+                  </datalist>
                   <input value={z.einzelpreis} disabled={gesperrt} onChange={(e) => zeileAendern(z.id, "einzelpreis", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
                   <input value={kleinunternehmer ? "0" : z.mwst_satz} disabled={gesperrt || kleinunternehmer} onChange={(e) => zeileAendern(z.id, "mwst_satz", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right", opacity: kleinunternehmer ? 0.5 : 1 }} />
                   <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600, alignSelf: "center", color: C.cyan }}>
