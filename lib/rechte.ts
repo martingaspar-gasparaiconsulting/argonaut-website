@@ -110,7 +110,7 @@ export const NUR_CHEF_PFADE: string[] = NAV_LINKS
  * '/dashboard/einstellungen' deckt also auch Unterseiten davon ab.
  */
 export const MITARBEITER_ERLAUBT: string[] = NAV_LINKS
-  .filter((l) => (l.nurMitarbeiter || l.immer) && !l.exakt)
+  .filter((l) => (l.nurMitarbeiter || l.immer || (l.modul && !l.nurChef)) && !l.exakt)
   .map((l) => l.href)
 
 /**
