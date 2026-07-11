@@ -131,12 +131,12 @@ export default function ProjektePage() {
       setOwnerId(uid);
 
       const [projRes, aufgRes, vorlRes, vAufgRes] = await Promise.all([
-        supabase.from('projekte').select('*').eq('owner_user_id', uid)
+        supabase.from('projekte').select('*')
           .order('erstellt_am', { ascending: false }),
-        supabase.from('aufgaben').select('id,projekt_id,erledigt,status').eq('owner_user_id', uid),
-        supabase.from('projekt_vorlagen').select('*').eq('owner_user_id', uid)
+        supabase.from('aufgaben').select('id,projekt_id,erledigt,status'),
+        supabase.from('projekt_vorlagen').select('*')
           .order('erstellt_am', { ascending: false }),
-        supabase.from('vorlagen_aufgaben').select('id,vorlage_id').eq('owner_user_id', uid),
+        supabase.from('vorlagen_aufgaben').select('id,vorlage_id')
       ]);
       setProjekte(projRes.data || []);
       setAufgaben(aufgRes.data || []);
