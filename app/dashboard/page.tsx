@@ -10,6 +10,16 @@ import ChefCockpit from './ChefCockpit'
 // KPI-Kacheln (Live-Zahlen, klickbar) + Live-Feed "Letzte 24h"
 // (chronologischer Ereignis-Stream quer durch alle Module).
 // Alle Abfragen laufen unter RLS -> nur eigene Daten.
+//
+// E1.8 — ROLLEN-WEICHE ganz oben:
+//   Ein Mitarbeiter sah bisher das Chef-Cockpit — mit Finanz-Kacheln,
+//   überfälligen Rechnungen, Gewinn, 24h-Feed. Die Zahlen waren zwar leer
+//   (RLS greift, kein Leck), aber die STRUKTUR gehört einem Angestellten
+//   nicht vor Augen, und begrüßt wurde er mit seiner Login-Adresse statt
+//   mit seinem Namen.
+//   Jetzt: mitarbeiter-Datensatz vorhanden -> schlanke Mitarbeiter-Übersicht
+//   (Name, Schnellzugriffe, kein Finanz-Cockpit). Kein Datensatz = Chef ->
+//   ALLES unverändert. Dieselbe Weiche wie proxy.ts, DashboardNav, Einstellungen.
 // ============================================================
 
 type Plan = 'starter' | 'professional' | 'business' | 'enterprise'
@@ -76,6 +86,21 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (!user || userError) redirect('/auth/login')
+
+  // --- ROLLEN-WEICHE (E1.8) ---------------------------------------------
+  // Kein customers-Zugriff nötig: allein die Existenz eines mitarbeiter-
+  // Datensatzes mit auth_user_id = Login entscheidet. Kein Datensatz = Chef.
+  const { data: mitarbeiterMe } = await supabase
+    .from('mitarbeiter')
+    .select('id, vorname, nachname')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (mitarbeiterMe) {
+    return <MitarbeiterUebersicht ma={mitarbeiterMe as MitarbeiterZeile} />
+  }
+  // ---------------------------------------------------------------------
+  // Ab hier: CHEF. Alles unverändert.
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -431,5 +456,82 @@ export default async function DashboardPage() {
 
       </main>
     </>
+  )
+}
+
+// ============================================================
+// MITARBEITER-ÜBERSICHT (E1.8)
+// Schlanke Startseite für Angestellte: Begrüßung mit echtem Namen,
+// Schnellzugriffe auf ihren Bereich. KEIN Finanz-Cockpit, keine
+// Betriebskennzahlen, kein 24h-Feed. Die Daten holt sich der
+// Mitarbeiter über „Mein Bereich" — hier nur die Wege dorthin.
+// ============================================================
+
+type MitarbeiterZeile = { id: string; vorname: string | null; nachname: string | null }
+
+function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
+  const name = [ma.vorname, ma.nachname].filter(Boolean).join(' ').trim() || 'willkommen'
+
+  const kacheln: { icon: string; titel: string; text: string; href: string; farbe: string }[] = [
+    { icon: '🙋', titel: 'Mein Bereich', text: 'Urlaub, Schichten, Dokumente, Arbeitszeit', href: '/dashboard/mein-bereich', farbe: '#00e5ff' },
+    { icon: '⏱', titel: 'Zeiterfassung', text: 'Kommen, Pause, Gehen stempeln', href: '/dashboard/zeiterfassung', farbe: '#4CAF7D' },
+    { icon: '🗓', titel: 'Schichtplan', text: 'Wer arbeitet wann', href: '/dashboard/schichtplan', farbe: '#C9A84C' },
+    { icon: '🗨️', titel: 'Team-Chat', text: 'Mit dem Team schreiben', href: '/dashboard/team-chat', farbe: '#A98CE0' },
+  ]
+
+  const SHELL_MAX = '1600px'
+  const SHELL_PAD = 'clamp(16px, 3vw, 48px)'
+
+  return (
+    <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
+      <section style={{ marginBottom: '36px' }}>
+        <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
+        <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
+          Willkommen, {name}
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0 }}>
+          Schön, dass Sie da sind. Hier geht es direkt zu Ihrem Bereich.
+        </p>
+      </section>
+
+      <section style={{ marginBottom: '36px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+          {kacheln.map((k) => (
+            <a key={k.href} href={k.href} style={{
+              display: 'block', textDecoration: 'none',
+              background: 'rgba(255,255,255,0.03)', border: `1px solid ${k.farbe}44`,
+              borderRadius: '16px', padding: '22px 24px',
+            }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px', marginBottom: '14px',
+                background: `${k.farbe}1e`, border: `1px solid ${k.farbe}55`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
+              }}>{k.icon}</div>
+              <p style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 800, color: '#FFFFFF' }}>{k.titel}</p>
+              <p style={{ margin: 0, fontSize: '13.5px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>{k.text}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <a href="/dashboard/mein-bereich" style={{ textDecoration: 'none', display: 'block' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(0,229,255,0.10) 0%, rgba(0,229,255,0.03) 100%)',
+            border: '1px solid rgba(0,229,255,0.3)', borderRadius: '14px', padding: '20px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', cursor: 'pointer',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <span style={{ fontSize: '28px' }}>🙋</span>
+              <div>
+                <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Zu meinem Bereich</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>Resturlaub, Schichten und Ihre Arbeitszeit auf einen Blick.</p>
+              </div>
+            </div>
+            <div style={{ padding: '8px 20px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.3)', color: '#00e5ff', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>Öffnen →</div>
+          </div>
+        </a>
+      </section>
+    </main>
   )
 }
