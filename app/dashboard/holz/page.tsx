@@ -1,4 +1,3 @@
-'use client';
 
 // ============================================================
 // ARGONAUT OS · Block 2 · Welle 1 · A2-3 + A3a-3 · Brennholz-Sortiment & Preise
@@ -134,9 +133,9 @@ export default function HolzSortimentPage() {
     setLaden(true); setFehler(null);
     try {
       const [sRes, pRes, rRes] = await Promise.all([
-        supabase.from('holz_sortiment').select('*').eq('owner_user_id', uid),
-        supabase.from('holz_preise').select('*').eq('owner_user_id', uid),
-        supabase.from('holz_mengenrabatt').select('*').eq('owner_user_id', uid),
+        supabase.from('holz_sortiment').select('*'),
+        supabase.from('holz_preise').select('*'),
+        supabase.from('holz_mengenrabatt').select('*'),
       ]);
       if (sRes.error) throw sRes.error;
       if (pRes.error) throw pRes.error;
