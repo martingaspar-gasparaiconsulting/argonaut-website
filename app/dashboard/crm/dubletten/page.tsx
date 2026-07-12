@@ -89,9 +89,9 @@ export default function DublettenPage() {
       if (!uid) { setFehler('Nicht angemeldet.'); return; }
 
       const [kRes, pRes] = await Promise.all([
-        supabase.from('kontakte').select(K_FELDER).eq('owner_user_id', uid),
+        supabase.from('kontakte').select(K_FELDER),
         supabase.from('zusammenfuehrungen').select('*')
-          .eq('owner_user_id', uid).order('erstellt_am', { ascending: false }).limit(20),
+          .order('erstellt_am', { ascending: false }).limit(20),
       ]);
 
       if (kRes.error) throw kRes.error;
