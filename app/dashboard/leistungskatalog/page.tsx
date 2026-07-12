@@ -115,7 +115,7 @@ export default function LeistungskatalogPage() {
     setLaden(true); setFehler(null);
     try {
       const { data, error } = await supabase.from('leistungskatalog')
-        .select('*').eq('owner_user_id', uid)
+        .select('*')
         .order('kategorie', { ascending: true }).order('bezeichnung', { ascending: true });
       if (error) throw error;
       setListe((data as KatalogRow[]) ?? []);
