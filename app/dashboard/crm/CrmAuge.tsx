@@ -55,8 +55,7 @@ export default function CrmAuge() {
           .from("kontakte")
           .select(
             "vorname, nachname, firma, status, letzter_kontakt_am, naechster_kontakt_am, betreuungs_intervall_tage"
-          )
-          .eq("owner_user_id", uid);
+          );
 
         const kontakte = rows || [];
         const jetzt = Date.now();
