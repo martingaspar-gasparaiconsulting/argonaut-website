@@ -61,8 +61,7 @@ export default function AuftraegeAuge() {
           .from("auftraege")
           .select(
             "auftragsnummer, titel, status, lieferdatum, brutto_summe, rechnung_id"
-          )
-          .eq("owner_user_id", uid);
+          );
 
         const auftraege = rows || [];
         const heute = ymdHeute();
