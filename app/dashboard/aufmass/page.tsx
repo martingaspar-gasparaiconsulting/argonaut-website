@@ -117,10 +117,10 @@ export default function AufmassPage() {
     try {
       const [aRes, kRes] = await Promise.all([
         supabase.from('aufmasse').select('*')
-          .eq('owner_user_id', uid).eq('archiviert', false)
+          .eq('archiviert', false)
           .order('aufmass_datum', { ascending: false }),
         supabase.from('leistungskatalog').select('*')
-          .eq('owner_user_id', uid).eq('aktiv', true)
+          .eq('aktiv', true)
           .order('bezeichnung', { ascending: true }),
       ]);
       if (aRes.error) throw aRes.error;
