@@ -113,13 +113,13 @@ export default function PreisauskunftPage() {
       setUid(id);
 
       const [sRes, pRes, rRes, kRes, stRes, kontRes, firmRes, profRes] = await Promise.all([
-        supabase.from('holz_sortiment').select('*').eq('owner_user_id', id),
-        supabase.from('holz_preise').select('*').eq('owner_user_id', id),
-        supabase.from('holz_mengenrabatt').select('*').eq('owner_user_id', id),
-        supabase.from('anfahrt_konfig').select('*').eq('owner_user_id', id).maybeSingle(),
-        supabase.from('fahrtkosten_staffel').select('*').eq('owner_user_id', id),
-        supabase.from('kontakte').select(K_FELDER).eq('owner_user_id', id),
-        supabase.from('firmen').select(F_FELDER).eq('owner_user_id', id),
+        supabase.from('holz_sortiment').select('*'),
+        supabase.from('holz_preise').select('*'),
+        supabase.from('holz_mengenrabatt').select('*'),
+        supabase.from('anfahrt_konfig').select('*').maybeSingle(),
+        supabase.from('fahrtkosten_staffel').select('*'),
+        supabase.from('kontakte').select(K_FELDER),
+        supabase.from('firmen').select(F_FELDER),
         supabase.from('profiles').select(
           'firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_website, firma_rechtsform, firma_registergericht, firma_hrb, firma_ust_id, firma_steuernummer',
         ).eq('id', id).maybeSingle(),
