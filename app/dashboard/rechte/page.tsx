@@ -380,7 +380,7 @@ export default function RechtePage() {
 
                 {/* Modul-Checkboxen, gruppiert */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
-                  {GRUPPEN.map((g) => (
+                  {ALLE_GRUPPEN.map((g) => (
                     <div key={g.titel}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: g.farbe, marginBottom: 8 }}>{g.titel}</div>
                       {g.items.map((it) => {
