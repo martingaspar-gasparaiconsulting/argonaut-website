@@ -182,10 +182,10 @@ export default function WerkstattPage() {
     setLaden(true); setFehler(null);
     try {
       const [aRes, fRes, kRes, rRes] = await Promise.all([
-        supabase.from('werkstatt_auftraege').select('*').eq('owner_user_id', uid).eq('archiviert', false).order('angenommen_am', { ascending: true }),
-        supabase.from('werkstatt_fahrzeuge').select('id, owner_user_id, fin, kennzeichen, hersteller, modell, halter_name, naechste_hu').eq('owner_user_id', uid).eq('archiviert', false),
-        supabase.from('leistungskatalog').select('*').eq('owner_user_id', uid).eq('aktiv', true).order('bezeichnung', { ascending: true }),
-        supabase.from('ressourcen').select('id, bezeichnung, typ, farbe').eq('owner_user_id', uid).eq('archiviert', false).order('bezeichnung', { ascending: true }),
+        supabase.from('werkstatt_auftraege').select('*').eq('archiviert', false).order('angenommen_am', { ascending: true }),
+        supabase.from('werkstatt_fahrzeuge').select('id, owner_user_id, fin, kennzeichen, hersteller, modell, halter_name, naechste_hu').eq('archiviert', false),
+        supabase.from('leistungskatalog').select('*').eq('aktiv', true).order('bezeichnung', { ascending: true }),
+        supabase.from('ressourcen').select('id, bezeichnung, typ, farbe').eq('archiviert', false).order('bezeichnung', { ascending: true }),
       ]);
       if (aRes.error) throw aRes.error;
       setAuftraege((aRes.data as AuftragRow[]) ?? []);
