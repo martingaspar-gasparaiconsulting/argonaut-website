@@ -99,10 +99,10 @@ export default function PaketePage() {
       setUid(id);
 
       const [pRes, ppRes, sRes, prRes] = await Promise.all([
-        supabase.from('pakete').select('*').eq('owner_user_id', id).order('bezeichnung'),
-        supabase.from('paket_positionen').select('*').eq('owner_user_id', id).order('position_nr'),
-        supabase.from('holz_sortiment').select('*').eq('owner_user_id', id),
-        supabase.from('holz_preise').select('*').eq('owner_user_id', id),
+        supabase.from('pakete').select('*').order('bezeichnung'),
+        supabase.from('paket_positionen').select('*').order('position_nr'),
+        supabase.from('holz_sortiment').select('*'),
+        supabase.from('holz_preise').select('*'),
       ]);
 
       if (pRes.error) throw pRes.error;
