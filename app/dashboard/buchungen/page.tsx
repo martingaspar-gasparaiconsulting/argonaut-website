@@ -117,7 +117,7 @@ export default function BuchungenPage() {
     try {
       const { data: res, error: e1 } = await supabase
         .from('ressourcen').select('*')
-        .eq('owner_user_id', uid).eq('archiviert', false)
+        .eq('archiviert', false)
         .order('bezeichnung', { ascending: true });
       if (e1) throw e1;
       setRessourcen((res as RessourceRow[]) ?? []);
@@ -128,7 +128,6 @@ export default function BuchungenPage() {
       // mehrtägige Buchungen einschließen: alles was den Tag berührt
       const { data: buch, error: e2 } = await supabase
         .from('buchungen').select('*')
-        .eq('owner_user_id', uid)
         .lte('beginn_am', tagEnde.toISOString())
         .gte('ende_am', tagStart.toISOString())
         .order('beginn_am', { ascending: true });
