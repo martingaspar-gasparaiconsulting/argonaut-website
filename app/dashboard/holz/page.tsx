@@ -1,4 +1,6 @@
 
+"use client";
+
 // ============================================================
 // ARGONAUT OS · Block 2 · Welle 1 · A2-3 + A3a-3 · Brennholz-Sortiment & Preise
 // Verkaufbare Varianten pflegen: Holzart × Scheitlänge × Trocknungsgrad.
