@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { ALLE_MODULE, ALLE_MODUL_KEYS } from "../../../lib/rechte";
 
 // ============================================================
 // ARGONAUT OS · RECHTE-SYSTEM · R-2 — CHEF-OBERFLÄCHE "ZUGRIFFSRECHTE"
@@ -91,7 +92,21 @@ const GRUPPEN: { titel: string; farbe: string; items: { key: string; label: stri
   },
 ];
 
-const ALLE_KEYS = GRUPPEN.flatMap((g) => g.items.map((i) => i.key));
+// Keys, die bereits in einer festen Gruppe stehen
+const GRUPPIERTE_KEYS = GRUPPEN.flatMap((g) => g.items.map((i) => i.key));
+
+// Self-filling: jedes Modul aus NAV_LINKS, das noch KEINE Gruppe hat,
+// kommt automatisch hier rein. Neues Modul = automatisch ein Schalter.
+const REST_ITEMS = ALLE_MODULE.filter((m) => !GRUPPIERTE_KEYS.includes(m.key));
+
+// Vollstaendige Gruppen-Liste inkl. Auffang-Gruppe (nur falls es Reste gibt)
+const ALLE_GRUPPEN =
+  REST_ITEMS.length > 0
+    ? [...GRUPPEN, { titel: "⚙️ Betrieb & Werkstatt", farbe: C.cyan, items: REST_ITEMS }]
+    : GRUPPEN;
+
+// Zaehlbasis = ALLE Modul-Keys aus NAV_LINKS (nicht nur die hartcodierten)
+const ALLE_KEYS = ALLE_MODUL_KEYS;
 
 // Rollen-Vorlagen (Ein-Klick-Presets)
 const VORLAGEN: { name: string; module: string[] }[] = [

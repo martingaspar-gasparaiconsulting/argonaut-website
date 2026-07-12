@@ -130,6 +130,18 @@ export const MODUL_PFAD: Record<string, string> = Object.fromEntries(
 )
 
 /**
+ * Vollstaendiger Modul-Katalog — Schluessel + Anzeige-Label. Quelle: NAV_LINKS.
+ * Ein neues Modul mit `modul`-Schluessel erscheint hier automatisch. Damit muss
+ * die Rechte-Oberflaeche nie wieder von Hand nachgepflegt werden.
+ */
+export const ALLE_MODULE: { key: string; label: string }[] = NAV_LINKS
+  .filter((l) => l.modul)
+  .map((l) => ({ key: l.modul as string, label: l.label }))
+
+/** Nur die Schluessel — fuer Mengen-Checks und die Vorlage "Alle". */
+export const ALLE_MODUL_KEYS: string[] = ALLE_MODULE.map((m) => m.key)
+
+/**
  * Gilt der Pfad als Treffer? `/dashboard/holz` deckt `/dashboard/holz/pakete` ab,
  * aber NICHT `/dashboard/holzhandel`.
  */
