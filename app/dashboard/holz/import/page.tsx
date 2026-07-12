@@ -109,8 +109,8 @@ export default function PreislisteImportPage() {
       const b = pruefeSortimentImport(csv.zeilen, zuordnung);
 
       const [sRes, pRes] = await Promise.all([
-        supabase.from('holz_sortiment').select('*').eq('owner_user_id', uid),
-        supabase.from('holz_preise').select('*').eq('owner_user_id', uid),
+        supabase.from('holz_sortiment').select('*'),
+        supabase.from('holz_preise').select('*'),
       ]);
       const sortimente = (sRes.data as Sortiment[]) ?? [];
       const preise = (pRes.data as Preis[]) ?? [];
