@@ -57,8 +57,7 @@ export default function ServiceAuge() {
           .from("tickets")
           .select(
             "ticket_nummer, betreff, kunde_name, status, prioritaet, created_at, faellig_am, geloest_am"
-          )
-          .eq("owner_user_id", uid);
+          );
 
         const tickets = rows || [];
 
