@@ -28,6 +28,15 @@ export type NavLink = {
   /** NUR der Mitarbeiter. Der Chef braucht seinen eigenen Self-Service nicht. */
   nurMitarbeiter?: boolean
   /**
+   * Ab welcher Hierarchie-Ebene ein Modul BESESSEN werden darf.
+   * 1 = nur Eigentuemer · 2 = ab Geschaeftsfuehrer (sensibel) ·
+   * 3 = ab Abteilungsleiter (operativ) · 4 = jeder Mitarbeiter.
+   * Fehlt das Feld, gilt es als operativ (3).
+   */
+  ebene?: 1 | 2 | 3 | 4
+  /** Loest beim Freigeben die doppelte Bestaetigung aus (rechtlich/kaufmaennisch heikel). */
+  sensibel?: boolean
+  /**
    * Der Pfad gilt NUR exakt, nie als Praefix.
    *
    * Zwingend fuer '/dashboard': als Praefix wuerde die Uebersicht jeden Pfad
@@ -42,55 +51,55 @@ export type NavLink = {
 // Die Quelle. Reihenfolge = Reihenfolge im Menue.
 // ---------------------------------------------------------------------------
 export const NAV_LINKS: NavLink[] = [
-  { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true },
+  { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4 },
 
   // --- Mitarbeiter-Selbstbedienung -----------------------------------------
-  // Standen in MITARBEITER_ERLAUBT, hatten aber keinen Knopf: der Mitarbeiter
-  // wurde auf eine Seite geworfen, zu der er nicht navigieren konnte.
-  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', nurMitarbeiter: true },
-  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', nurMitarbeiter: true },
+  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', nurMitarbeiter: true, ebene: 4 },
+  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', nurMitarbeiter: true, ebene: 4 },
 
-  // --- Module, freigebbar ---------------------------------------------------
-  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten' },
-  { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy' },
-  { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads' },
-  { label: '💬 Chat', href: '/dashboard/chat', modul: 'chat' },
-  { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat' },
-  { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente' },
-  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz' },
-  { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan' },
-  { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte' },
-  { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing' },
-  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm' },
-  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege' },
-  { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp' },
-  { label: '🎫 Service', href: '/dashboard/service', modul: 'service' },
-  { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung' },
-  { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten' },
-  { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen' },
-  { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt' },
-  { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog' },
-  { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte' },
-  { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass' },
-  { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz' },
-  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', highlight: true },
+  // --- Ebene 4: jeder Mitarbeiter (Grundausstattung) -----------------------
+  { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy', ebene: 4 },
+  { label: '💬 Chat', href: '/dashboard/chat', modul: 'chat', ebene: 4 },
+  { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat', ebene: 4 },
+  { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente', ebene: 4 },
+  { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz', ebene: 4 },
 
-  // --- NUR CHEF -------------------------------------------------------------
-  // Diese sechs standen in der Middleware-Sperre, aber nicht im Nav-Filter.
-  // Der Modul-Schluessel bleibt: der Chef soll sie im Starter-Modus ausblenden
-  // koennen. Die Sperre unten greift trotzdem, weil sie VOR der Rechtepruefung
-  // laeuft — selbst wenn das Recht versehentlich vergeben wurde.
-  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', nurChef: true },
-  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', nurChef: true },
-  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', nurChef: true },
-  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', nurChef: true },
-  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', nurChef: true },
-  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', nurChef: true },
-  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', nurChef: true },
-  { label: '🗂 GoBD', href: '/dashboard/gobd', nurChef: true },
-  { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true },
+  // --- Ebene 3: ab Abteilungsleiter (operativ, frei verteilbar) ------------
+  { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3 },
+  { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan', ebene: 3 },
+  { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3 },
+  { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3 },
+  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3 },
+  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3 },
+  { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3 },
+  { label: '🎫 Service', href: '/dashboard/service', modul: 'service', ebene: 3 },
+  { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung', ebene: 3 },
+  { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3 },
+  { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen', ebene: 3 },
+  { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt', ebene: 3 },
+  { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3 },
+  { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3 },
+  { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3 },
+  { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3 },
+  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', highlight: true, ebene: 3 },
 
-  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true },
+  // --- Ebene 2: ab Geschaeftsfuehrer (sensibel, 2-fach-Bestaetigung) -------
+  // nurChef bleibt vorerst gesetzt (harte Sperre), bis die Verteil-UI live
+  // getestet ist. Dann wird nurChef durch die ebene-Logik abgeloest.
+  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten', ebene: 2, sensibel: true, nurChef: true },
+  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', nurChef: true, ebene: 2, sensibel: true },
+  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', nurChef: true, ebene: 2, sensibel: true },
+  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', nurChef: true, ebene: 2, sensibel: true },
+  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', nurChef: true, ebene: 2, sensibel: true },
+  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', nurChef: true, ebene: 2, sensibel: true },
+  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', nurChef: true, ebene: 2, sensibel: true },
+  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', nurChef: true, ebene: 2, sensibel: true },
+  { label: '🗂 GoBD', href: '/dashboard/gobd', nurChef: true, ebene: 2, sensibel: true },
+
+  // --- Ebene 1: nur Eigentuemer (nie abgebbar) ----------------------------
+  { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1 },
+
+  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4 },
 ]
 
 // ---------------------------------------------------------------------------
@@ -196,4 +205,76 @@ export function sichtbareNavLinks(
     if (l.immer || l.nurMitarbeiter) return true
     return l.modul ? rechte.has(l.modul) : false
   })
+}
+// ============================================================================
+// WELLE 3 · VERTEIL-LOGIK — die Grundregel als reine, testbare Funktionen.
+// Zwei Achsen: A = Modul-Nutzung · B = Verteil-Vollmacht.
+// Keine Supabase-Aufrufe, keine Hooks — importierbar von proxy.ts + Client.
+// ============================================================================
+
+export type Rolle = 'eigentuemer' | 'administrator' | 'abteilungsleiter' | 'mitarbeiter'
+
+/** Modul-Schluessel -> Ebene (aus NAV_LINKS). Fehlt sie, gilt operativ (3). */
+export const MODUL_EBENE: Record<string, number> = Object.fromEntries(
+  NAV_LINKS.filter((l) => l.modul).map((l) => [l.modul as string, l.ebene ?? 3])
+)
+
+/** Sensible Modul-Schluessel (loesen 2-fach-Bestaetigung aus). */
+export const SENSIBLE_MODULE: string[] = NAV_LINKS
+  .filter((l) => l.modul && l.sensibel)
+  .map((l) => l.modul as string)
+
+/** Braucht dieses Modul die doppelte Bestaetigung beim Freigeben? */
+export function istSensibel(modul: string): boolean {
+  return SENSIBLE_MODULE.includes(modul)
+}
+
+/** Hoechste Ebene, die eine Rolle besitzen darf (1 = am meisten Macht). */
+export function ebeneVonRolle(rolle: Rolle): number {
+  switch (rolle) {
+    case 'eigentuemer': return 1
+    case 'administrator': return 2
+    case 'abteilungsleiter': return 3
+    default: return 4
+  }
+}
+
+/**
+ * Darf diese Person ueberhaupt Rechte verteilen (Achse B)?
+ * Eigentuemer immer. Sonst nur, wenn ausdruecklich die Vollmacht gesetzt ist.
+ */
+export function darfVerteilen(rolle: Rolle, hatVollmacht: boolean): boolean {
+  return rolle === 'eigentuemer' || hatVollmacht
+}
+
+/**
+ * WELCHE Module darf eine Person weitergeben?
+ * Grundregel: nur die eigenen Module — und davon nur die, deren Ebene sie
+ * laut Rolle besitzen DARF. 'Rechte' (ebene 1) faellt hier automatisch raus,
+ * ausser fuer den Eigentuemer, weil kein Modul-Schluessel < eigene Ebene passt.
+ *
+ * @param rolle         Rolle des Verteilenden.
+ * @param eigeneModule  Modul-Schluessel, die die Person selbst besitzt.
+ */
+export function verteilbareModule(rolle: Rolle, eigeneModule: readonly string[]): string[] {
+  const meineEbene = ebeneVonRolle(rolle)
+  return eigeneModule.filter((m) => {
+    const e = MODUL_EBENE[m]
+    // nur Module, deren Ebene >= eigene Ebene (also gleich viel oder weniger Macht)
+    return e !== undefined && e >= meineEbene
+  })
+}
+
+/**
+ * Darf `verteiler` dem Ziel das Modul `modul` freigeben?
+ * Prueft alle drei Tore: Vollmacht (B), Besitz, und Ebenen-Grenze.
+ */
+export function darfModulFreigeben(
+  rolle: Rolle,
+  hatVollmacht: boolean,
+  eigeneModule: readonly string[],
+  modul: string,
+): boolean {
+  if (!darfVerteilen(rolle, hatVollmacht)) return false
+  return verteilbareModule(rolle, eigeneModule).includes(modul)
 }
