@@ -112,7 +112,7 @@ export default function ObjektzeitenPage() {
     try {
       const { data: obj, error: e1 } = await supabase
         .from('objekte').select('*')
-        .eq('owner_user_id', uid).eq('archiviert', false)
+        .eq('archiviert', false)
         .order('bezeichnung', { ascending: true });
       if (e1) throw e1;
       const objListe = (obj as ObjektRow[]) ?? [];
@@ -122,7 +122,7 @@ export default function ObjektzeitenPage() {
       const ende = isoTag(new Date(monat.getFullYear(), monat.getMonth() + 1, 0));
       const { data: z, error: e2 } = await supabase
         .from('objekt_zeiten').select('*')
-        .eq('owner_user_id', uid).gte('datum', start).lte('datum', ende)
+        .gte('datum', start).lte('datum', ende)
         .order('datum', { ascending: false });
       if (e2) throw e2;
       setZeiten((z as ZeitRow[]) ?? []);
