@@ -118,9 +118,8 @@ export default function KontaktImportPage() {
     try {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
-      if (!uid) { setFehler('Nicht angemeldet.'); return; }
 
-      const { data, error } = await supabase.from('kontakte').select(K_FELDER).eq('owner_user_id', uid);
+      const { data, error } = await supabase.from('kontakte').select(K_FELDER);
       if (error) throw error;
 
       const liste = ((data as unknown as Array<Record<string, string | null>>) ?? []).map((k) => ({
