@@ -78,13 +78,10 @@ export default function VerortenPage() {
 
       const [kRes, fRes] = await Promise.all([
         supabase.from('kontakte')
-          .select('id, vorname, nachname, firma, strasse, plz, ort, geo_lat, geo_lon')
-          .eq('owner_user_id', uid),
+          .select('id, vorname, nachname, firma, strasse, plz, ort, geo_lat, geo_lon'),
         supabase.from('firmen')
-          .select('id, name, strasse, plz, ort, geo_lat, geo_lon')
-          .eq('owner_user_id', uid),
+          .select('id, name, strasse, plz, ort, geo_lat, geo_lon'),
       ]);
-
       if (kRes.error) throw kRes.error;
 
       const kontakte: Eintrag[] = ((kRes.data as unknown as Array<Record<string, unknown>>) ?? []).map((k) => ({
