@@ -87,7 +87,7 @@ export default function FahrzeugaktePage() {
     try {
       const { data, error } = await supabase.from('werkstatt_fahrzeuge')
         .select('id, fin, kennzeichen, hersteller, modell, erstzulassung, farbe, kraftstoff, halter_name, naechste_hu, notiz')
-        .eq('owner_user_id', uid).eq('archiviert', false)
+        .eq('archiviert', false)
         .order('hersteller', { ascending: true });
       if (error) throw error;
       setFahrzeuge((data as FahrzeugRow[]) ?? []);
