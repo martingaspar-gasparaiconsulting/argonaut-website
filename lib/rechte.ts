@@ -83,18 +83,21 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3 },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', highlight: true, ebene: 3 },
 
-  // --- Ebene 2: ab Geschaeftsfuehrer (sensibel, 2-fach-Bestaetigung) -------
-  // nurChef bleibt vorerst gesetzt (harte Sperre), bis die Verteil-UI live
-  // getestet ist. Dann wird nurChef durch die ebene-Logik abgeloest.
-  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten', ebene: 2, sensibel: true, nurChef: true },
-  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', nurChef: true, ebene: 2, sensibel: true },
-  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', nurChef: true, ebene: 2, sensibel: true },
-  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', nurChef: true, ebene: 2, sensibel: true },
-  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', nurChef: true, ebene: 2, sensibel: true },
-  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', nurChef: true, ebene: 2, sensibel: true },
-  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', nurChef: true, ebene: 2, sensibel: true },
-  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', nurChef: true, ebene: 2, sensibel: true },
-  { label: '🗂 GoBD', href: '/dashboard/gobd', nurChef: true, ebene: 2, sensibel: true },
+  // --- Ebene 2: ab Administrator/Geschaeftsfuehrer (sensibel, 2-fach-Bestaetigung) -------
+  // Delegierbar: der Eigentuemer (oder ein Administrator mit Vollmacht) darf diese
+  // Module weitergeben. KEIN nurChef mehr — die Freigabe laeuft ueber die ebene-Logik
+  // + Pro-Person-Grant. Der !sensibel-Riegel in MITARBEITER_ERLAUBT verhindert, dass
+  // sie ohne ausdrueckliche Freigabe fuer jeden offen sind. 'zeit-nachweis' + 'gobd'
+  // bekommen hier ihren modul-Schluessel, damit sie ueberhaupt freigebbar werden.
+  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten', ebene: 2, sensibel: true },
+  { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', ebene: 2, sensibel: true },
+  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true },
+  { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', ebene: 2, sensibel: true },
+  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true },
+  { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true },
+  { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', ebene: 2, sensibel: true },
+  { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true },
+  { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true },
 
   // --- Ebene 1: nur Eigentuemer (nie abgebbar) ----------------------------
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1 },
@@ -117,9 +120,14 @@ export const NUR_CHEF_PFADE: string[] = NAV_LINKS
 /**
  * Pfade, die ein eingeladener Mitarbeiter IMMER erreicht — als Praefix.
  * '/dashboard/einstellungen' deckt also auch Unterseiten davon ab.
+ *
+ * WICHTIG: sensible Module (ebene 2) sind hier bewusst AUSGESCHLOSSEN (!l.sensibel).
+ * Sie sind kein "fuer jeden offen"-Bereich, sondern nur ueber eine ausdrueckliche
+ * Pro-Person-Freigabe erreichbar (siehe mitarbeiterDarf, wo die freigeschalteten
+ * Modul-Pfade zusaetzlich erlaubt werden).
  */
 export const MITARBEITER_ERLAUBT: string[] = NAV_LINKS
-  .filter((l) => (l.nurMitarbeiter || l.immer || (l.modul && !l.nurChef)) && !l.exakt)
+  .filter((l) => (l.nurMitarbeiter || l.immer || (l.modul && !l.nurChef && !l.sensibel)) && !l.exakt)
   .map((l) => l.href)
 
 /**
