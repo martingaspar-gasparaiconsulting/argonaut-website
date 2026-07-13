@@ -28,6 +28,9 @@ import type { Rolle } from "../../../lib/rechte";
 //                    Rueckfrage beim Aktivieren UND Zusammenfassung beim Speichern.
 //  4. OWNER-FIX (2b): Rechte-Zeilen gehoeren immer dem CHEF (owner_user_id),
 //                    egal ob Chef oder Administrator sie speichert.
+//  5. VOLLMACHT (2c): NUR der Eigentuemer kann einen Mitarbeiter zum
+//                    Administrator machen (darf_verteilen setzen). Die eiserne
+//                    Grenze: ein Administrator kann keine weiteren Admins ernennen.
 //
 // Modul-Schluessel = identisch mit der Nav-Filterung.
 // ============================================================
@@ -158,13 +161,16 @@ type Mitarbeiter = {
   abteilung: string | null;
   status: string | null;
   auth_user_id: string | null;
+  rolle: string | null;
+  darf_verteilen: boolean | null;
 };
 type Recht = { rolle: string | null; module: string[] };
 
-// Bestaetigungs-Dialog: entweder sensibles Modul aktivieren, oder speichern.
+// Bestaetigungs-Dialog: sensibles Modul aktivieren, speichern, oder Vollmacht.
 type Modal =
   | { art: "sensibel-an"; mid: string; key: string }
   | { art: "speichern"; mid: string }
+  | { art: "vollmacht"; mid: string; an: boolean }
   | null;
 
 export default function RechtePage() {
@@ -188,6 +194,9 @@ export default function RechtePage() {
   // stets dem Chef, egal wer speichert (heilt den alten owner-Bug + ist
   // noetig fuer die RLS-Policy owner_user_id = mein_chef_id()).
   const [meinOwnerId, setMeinOwnerId] = useState<string | null>(null);
+
+  // 2c: laeuft gerade ein Vollmacht-Wechsel fuer diesen Mitarbeiter?
+  const [vollmachtBusyId, setVollmachtBusyId] = useState<string | null>(null);
 
   async function laden_() {
     setLaden(true);
@@ -262,7 +271,7 @@ export default function RechtePage() {
       const [mRes, rRes] = await Promise.all([
         supabase
           .from("mitarbeiter")
-          .select("id,vorname,nachname,position,abteilung,status,auth_user_id")
+          .select("id,vorname,nachname,position,abteilung,status,auth_user_id,rolle,darf_verteilen")
           .order("nachname", { ascending: true }),
         supabase.from("mitarbeiter_rechte").select("mitarbeiter_id,rolle,module"),
       ]);
@@ -371,6 +380,35 @@ export default function RechtePage() {
     setBusyId(null);
   }
 
+  // --- 2c: Verteil-Vollmacht (nur Eigentuemer) ------------------------
+  // Oeffnet die Bestaetigung. an=true -> zum Administrator machen, an=false -> entziehen.
+  function vollmachtToggle(mid: string, an: boolean) {
+    if (meineRolle !== "eigentuemer") return; // eiserne Grenze (UI-Seite)
+    setModal({ art: "vollmacht", mid, an });
+  }
+
+  // Schreibt rolle + darf_verteilen auf die mitarbeiter-Zeile.
+  // Die DB erlaubt das nur dem Owner (Chef) -> zweite Absicherung.
+  async function _vollmachtSetzen(mid: string, an: boolean) {
+    setVollmachtBusyId(mid);
+    setFehler(null);
+    try {
+      const { error } = await supabase
+        .from("mitarbeiter")
+        .update({ rolle: an ? "administrator" : "mitarbeiter", darf_verteilen: an })
+        .eq("id", mid);
+      if (error) throw error;
+      setMitarbeiter((prev) =>
+        prev.map((m) =>
+          m.id === mid ? { ...m, rolle: an ? "administrator" : "mitarbeiter", darf_verteilen: an } : m
+        )
+      );
+    } catch (e: any) {
+      setFehler("Vollmacht ändern fehlgeschlagen: " + (e?.message || "unbekannt"));
+    }
+    setVollmachtBusyId(null);
+  }
+
   const name = (m: Mitarbeiter) =>
     [m.vorname, m.nachname].filter(Boolean).join(" ").trim() || "Mitarbeiter";
 
@@ -473,6 +511,8 @@ export default function RechtePage() {
             const akt = rechte[m.id] || { rolle: null, module: [] };
             const busy = busyId === m.id;
             const ok = okId === m.id;
+            const istVerteiler = !!m.darf_verteilen;
+            const vBusy = vollmachtBusyId === m.id;
             return (
               <div
                 key={m.id}
@@ -492,6 +532,21 @@ export default function RechtePage() {
                       {[m.position, m.abteilung].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </div>
+                  {istVerteiler && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: C.gold,
+                        background: `${C.gold}22`,
+                        border: `1px solid ${C.gold}66`,
+                        borderRadius: 999,
+                        padding: "3px 10px",
+                      }}
+                    >
+                      ⚡ Administrator
+                    </span>
+                  )}
                   {!m.auth_user_id && (
                     <span
                       style={{
@@ -514,6 +569,53 @@ export default function RechtePage() {
                     </span>
                   )}
                 </div>
+
+                {/* 2c: Verteil-Vollmacht — NUR fuer den Eigentuemer sichtbar */}
+                {meineRolle === "eigentuemer" && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      background: istVerteiler ? `${C.gold}10` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${istVerteiler ? C.gold + "44" : C.border}`,
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      marginBottom: 16,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: C.textDim }}>
+                      Verteil-Vollmacht:{" "}
+                      <strong style={{ color: istVerteiler ? C.gold : "#fff" }}>
+                        {istVerteiler ? "Administrator — darf Rechte verteilen" : "Kein Verteiler"}
+                      </strong>
+                    </span>
+                    <div style={{ flex: 1 }} />
+                    <button
+                      onClick={() => vollmachtToggle(m.id, !istVerteiler)}
+                      disabled={vBusy}
+                      style={{
+                        background: istVerteiler ? "transparent" : C.gold,
+                        color: istVerteiler ? C.textDim : C.navy,
+                        border: `1px solid ${istVerteiler ? C.border : C.gold}`,
+                        borderRadius: 999,
+                        padding: "7px 14px",
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        cursor: vBusy ? "wait" : "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                        opacity: vBusy ? 0.6 : 1,
+                      }}
+                    >
+                      {vBusy
+                        ? "Ändert…"
+                        : istVerteiler
+                        ? "Vollmacht entziehen"
+                        : "⚡ Als Administrator einsetzen"}
+                    </button>
+                  </div>
+                )}
 
                 {/* Vorlagen */}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
@@ -716,6 +818,41 @@ export default function RechtePage() {
                   _toggle(modal.mid, modal.key);
                   setModal(null);
                 })}
+              </>
+            );
+          }
+
+          if (modal.art === "vollmacht") {
+            return overlay(
+              <>
+                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
+                  ⚡ Verteil-Vollmacht {modal.an ? "vergeben" : "entziehen"}
+                </div>
+                {modal.an ? (
+                  <>
+                    <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 8px" }}>
+                      <strong>{nm}</strong> wird <strong style={{ color: C.gold }}>Administrator</strong> und darf
+                      künftig selbst Rechte an andere Mitarbeiter verteilen — nur die Module, die er selbst hat.
+                    </p>
+                    <p style={{ color: C.textDim, fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+                      Diese Vollmacht kann nur der Eigentümer vergeben. Ein Administrator kann keine weiteren
+                      Administratoren ernennen.
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>
+                    <strong>{nm}</strong> verliert die Verteil-Vollmacht und wird wieder normaler Mitarbeiter.
+                    Bereits vergebene Modul-Rechte bleiben unverändert.
+                  </p>
+                )}
+                {knoepfe(
+                  modal.an ? "Ja, einsetzen" : "Ja, entziehen",
+                  () => {
+                    setModal(null);
+                    _vollmachtSetzen(modal.mid, modal.an);
+                  },
+                  true
+                )}
               </>
             );
           }
