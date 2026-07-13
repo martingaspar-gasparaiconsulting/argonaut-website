@@ -1,0 +1,295 @@
+"use client";
+
+// ============================================================
+// ARGONAUT OS · MODUL 6 (Rechnung) · P35 — E-RECHNUNG IMPORT
+// ------------------------------------------------------------
+// Lädt eine eingehende E-Rechnung hoch (XML oder ZUGFeRD-PDF),
+// liest sie über /api/erechnung-lesen aus und zeigt die Daten
+// klar lesbar an. Verwandelt "unlesbare XML" in eine saubere
+// Übersicht — das Verkaufsargument.
+//
+// GoBD-Archivierung des Originals: Andockpunkt in P36.
+// ============================================================
+
+import React, { useState, useRef } from "react";
+
+const NAVY = "#0A1628";
+const NAVY2 = "#0f1f38";
+const GOLD = "#C9A84C";
+const CYAN = "#00e5ff";
+const LINE = "rgba(201,168,76,0.18)";
+const TEXT = "#e8f0f8";
+const DIM = "rgba(232,240,248,0.55)";
+
+type Partei = {
+  name: string; strasse: string; plz: string; ort: string; land: string;
+  ust_idnr: string; steuernummer: string; email: string;
+};
+type Position = {
+  bezeichnung: string; menge: number; einheit: string;
+  einzelpreis: number; netto: number; mwst_satz: number;
+};
+type ERechnung = {
+  format: string; rechnungsnummer: string; rechnungsdatum: string;
+  faelligkeitsdatum: string; leistungsdatum: string; waehrung: string;
+  verkaeufer: Partei; kaeufer: Partei; positionen: Position[];
+  netto_summe: number; mwst_summe: number; brutto_summe: number;
+  kleinunternehmer: boolean; notizen: string; warnungen: string[];
+};
+
+function geld(n: number, w = "EUR"): string {
+  try { return new Intl.NumberFormat("de-DE", { style: "currency", currency: w || "EUR" }).format(Number(n) || 0); }
+  catch { return (Number(n) || 0).toFixed(2) + " " + w; }
+}
+function datum(s: string): string {
+  if (!s) return "—";
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
+}
+
+export default function ERechnungImport() {
+  const [laden, setLaden] = useState(false);
+  const [fehler, setFehler] = useState<string>("");
+  const [daten, setDaten] = useState<ERechnung | null>(null);
+  const [dateiName, setDateiName] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function verarbeite(file: File) {
+    setFehler("");
+    setDaten(null);
+    setDateiName(file.name);
+    setLaden(true);
+    try {
+      const fd = new FormData();
+      fd.append("datei", file);
+      const res = await fetch("/api/erechnung-lesen", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok || !j.ok) {
+        setFehler(j.error || "Konnte nicht ausgelesen werden.");
+        if (j.details && Array.isArray(j.details)) setFehler((j.error || "") + " (" + j.details.join(", ") + ")");
+        return;
+      }
+      setDaten(j.rechnung as ERechnung);
+    } catch (e: any) {
+      setFehler("Unerwarteter Fehler: " + (e?.message || String(e)));
+    } finally {
+      setLaden(false);
+    }
+  }
+
+  function onInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) verarbeite(f);
+  }
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) verarbeite(f);
+  }
+
+  return (
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px", color: TEXT }}>
+      <div style={{ marginBottom: 8, fontSize: 12, letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase" }}>
+        Modul Rechnung · E-Rechnung
+      </div>
+      <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 6px", letterSpacing: "0.02em" }}>
+        E-Rechnung einlesen
+      </h1>
+      <p style={{ color: DIM, margin: "0 0 24px", fontSize: 14, lineHeight: 1.6 }}>
+        Eingehende E-Rechnung hochladen (XML nach EN 16931 oder ZUGFeRD-PDF). ARGONAUT liest die
+        Daten automatisch aus und zeigt sie lesbar an — egal von welchem Absender oder Programm.
+      </p>
+
+      {/* Upload-Bereich */}
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        style={{
+          border: `2px dashed ${LINE}`, borderRadius: 14, padding: "38px 24px",
+          textAlign: "center", cursor: "pointer", background: NAVY2,
+          transition: "border-color .2s",
+        }}
+      >
+        <div style={{ fontSize: 40, marginBottom: 10 }}>📥</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+          E-Rechnung hierher ziehen oder klicken
+        </div>
+        <div style={{ fontSize: 13, color: DIM }}>
+          Unterstützt: .xml (XRechnung / ZUGFeRD-CII / UBL) und .pdf (ZUGFeRD)
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".xml,.pdf,application/xml,text/xml,application/pdf"
+          onChange={onInput}
+          style={{ display: "none" }}
+        />
+      </div>
+
+      {dateiName && (
+        <div style={{ marginTop: 12, fontSize: 13, color: DIM }}>
+          Datei: <span style={{ color: TEXT }}>{dateiName}</span>
+        </div>
+      )}
+
+      {laden && (
+        <div style={{ marginTop: 20, color: CYAN, fontSize: 14 }}>▸ Rechnung wird ausgelesen…</div>
+      )}
+
+      {fehler && (
+        <div style={{
+          marginTop: 20, background: "rgba(255,82,82,0.08)", border: "1px solid rgba(255,82,82,0.3)",
+          borderRadius: 10, padding: "14px 16px", color: "#ff9a9a", fontSize: 14,
+        }}>
+          ⚠ {fehler}
+        </div>
+      )}
+
+      {daten && (
+        <div style={{ marginTop: 28 }}>
+          {/* Kopfzeile */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: GOLD }}>
+                {daten.rechnungsnummer || "— ohne Nummer —"}
+              </div>
+              <div style={{ fontSize: 13, color: DIM }}>
+                Format erkannt: <span style={{ color: CYAN }}>{daten.format}</span>
+                {daten.kleinunternehmer && <span style={{ color: GOLD }}> · Kleinunternehmer §19</span>}
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: DIM, textTransform: "uppercase", letterSpacing: "0.1em" }}>Gesamtbetrag</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: TEXT }}>{geld(daten.brutto_summe, daten.waehrung)}</div>
+            </div>
+          </div>
+
+          {daten.warnungen && daten.warnungen.length > 0 && (
+            <div style={{
+              marginBottom: 18, background: "rgba(201,168,76,0.08)", border: `1px solid ${LINE}`,
+              borderRadius: 10, padding: "12px 16px", color: GOLD, fontSize: 13,
+            }}>
+              ⚠ Hinweise: {daten.warnungen.join(" · ")}
+            </div>
+          )}
+
+          {/* Parteien */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            <ParteiKarte titel="Lieferant (Rechnungssteller)" p={daten.verkaeufer} />
+            <ParteiKarte titel="Empfänger" p={daten.kaeufer} />
+          </div>
+
+          {/* Eckdaten */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+            <Eck label="Rechnungsdatum" wert={datum(daten.rechnungsdatum)} />
+            <Eck label="Leistungsdatum" wert={datum(daten.leistungsdatum)} />
+            <Eck label="Fällig bis" wert={datum(daten.faelligkeitsdatum)} />
+          </div>
+
+          {/* Positionen */}
+          <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${LINE}`, fontSize: 13, fontWeight: 700, color: CYAN, letterSpacing: "0.05em" }}>
+              POSITIONEN ({daten.positionen.length})
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: DIM, textAlign: "left" }}>
+                    <th style={thStyle}>#</th>
+                    <th style={thStyle}>Bezeichnung</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Menge</th>
+                    <th style={thStyle}>Einheit</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Einzelpreis</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>MwSt</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Netto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {daten.positionen.length === 0 ? (
+                    <tr><td colSpan={7} style={{ ...tdStyle, color: DIM, textAlign: "center", padding: 18 }}>Keine Positionen im Dokument.</td></tr>
+                  ) : daten.positionen.map((p, i) => (
+                    <tr key={i}>
+                      <td style={{ ...tdStyle, color: DIM }}>{i + 1}</td>
+                      <td style={tdStyle}>{p.bezeichnung || "—"}</td>
+                      <td style={{ ...tdStyle, textAlign: "right" }}>{p.menge}</td>
+                      <td style={tdStyle}>{p.einheit}</td>
+                      <td style={{ ...tdStyle, textAlign: "right" }}>{geld(p.einzelpreis, daten.waehrung)}</td>
+                      <td style={{ ...tdStyle, textAlign: "right" }}>{p.mwst_satz} %</td>
+                      <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700 }}>{geld(p.netto, daten.waehrung)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Summen */}
+          <div style={{ maxWidth: 360, marginLeft: "auto", background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "16px 20px" }}>
+            <SummeZeile label="Netto" wert={geld(daten.netto_summe, daten.waehrung)} />
+            <SummeZeile label="Umsatzsteuer" wert={geld(daten.mwst_summe, daten.waehrung)} />
+            <div style={{ borderTop: `2px solid ${GOLD}`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 900 }}>
+              <span>Gesamt</span><span>{geld(daten.brutto_summe, daten.waehrung)}</span>
+            </div>
+          </div>
+
+          {daten.notizen && (
+            <div style={{ marginTop: 18, color: DIM, fontSize: 13 }}>
+              Notiz: {daten.notizen}
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={() => { setDaten(null); setDateiName(""); setFehler(""); }}
+              style={{ padding: "10px 18px", background: "transparent", color: CYAN, border: `1px solid ${CYAN}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
+            >
+              Weitere Rechnung einlesen
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const thStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${LINE}`, fontWeight: 600 };
+const tdStyle: React.CSSProperties = { padding: "10px 12px", borderBottom: "1px solid rgba(201,168,76,0.06)" };
+
+function ParteiKarte({ titel, p }: { titel: string; p: Partei }) {
+  const leer = !p.name && !p.ort && !p.strasse;
+  return (
+    <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "14px 16px" }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: DIM, marginBottom: 8 }}>{titel}</div>
+      {leer ? (
+        <div style={{ color: DIM, fontSize: 13 }}>— keine Angaben —</div>
+      ) : (
+        <>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{p.name || "—"}</div>
+          {p.strasse && <div style={{ fontSize: 13, color: DIM }}>{p.strasse}</div>}
+          {(p.plz || p.ort) && <div style={{ fontSize: 13, color: DIM }}>{[p.plz, p.ort].filter(Boolean).join(" ")}{p.land ? `, ${p.land}` : ""}</div>}
+          {p.ust_idnr && <div style={{ fontSize: 12, color: DIM, marginTop: 4 }}>USt-IdNr.: {p.ust_idnr}</div>}
+          {p.steuernummer && <div style={{ fontSize: 12, color: DIM }}>Steuernr.: {p.steuernummer}</div>}
+          {p.email && <div style={{ fontSize: 12, color: DIM }}>{p.email}</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Eck({ label, wert }: { label: string; wert: string }) {
+  return (
+    <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 10, padding: "12px 14px" }}>
+      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: DIM, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 700 }}>{wert}</div>
+    </div>
+  );
+}
+
+function SummeZeile({ label, wert }: { label: string; wert: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 14 }}>
+      <span style={{ color: DIM }}>{label}</span><span>{wert}</span>
+    </div>
+  );
+}
