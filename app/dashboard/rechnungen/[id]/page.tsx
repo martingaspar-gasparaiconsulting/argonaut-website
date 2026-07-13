@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import EinsatzNachweis from "../../_components/EinsatzNachweis";
+import ERechnungDialog from "../../_components/ERechnungDialog";
 import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 
 // ============================================================
@@ -860,13 +861,7 @@ export default function RechnungDetail() {
           >
             {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Rechnung als PDF"}
           </button>
-            <button
-              onClick={eRechnungLaden}
-              style={{ padding: "10px 16px", background: "transparent", color: "#C9A84C", border: "1px solid #C9A84C", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
-              title="E-Rechnung als XRechnung-XML (EN 16931) herunterladen"
-            >
-              E-Rechnung (XML)
-            </button>
+            <ERechnungDialog rechnung={rechnung} zeilen={zeilen} kontakt={kontakt} firma={firma} supabase={supabase} zeileNetto={zeileNetto} />
           <button
             onClick={speichernJetzt}
             disabled={speichern || !dirty}
