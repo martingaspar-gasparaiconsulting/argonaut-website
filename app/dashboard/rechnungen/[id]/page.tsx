@@ -440,6 +440,98 @@ export default function RechnungDetail() {
   }
 
   // ---------- PDF erzeugen (§14-konform, Gotenberg) ----------
+  // P32: Kaeufer-Adresse feld-tolerant aus kontakt/firma
+
+  // P32: Kaeufer-Adresse feld-tolerant aus kontakt/firma ziehen
+  function feldWert(obj: any, ...namen: string[]): string {
+    if (!obj) return "";
+    for (const n of namen) {
+      const v = obj[n];
+      if (v != null && String(v).trim()) return String(v).trim();
+    }
+    return "";
+  }
+
+  function baueEmpfaenger(): any {
+    const q: any = firma || kontakt || {};
+    const name =
+      feldWert(firma, "name", "firmenname", "firma") ||
+      feldWert(kontakt, "name") ||
+      [feldWert(kontakt, "vorname"), feldWert(kontakt, "nachname")].filter(Boolean).join(" ") ||
+      (rechnung?.empfaenger_name || "");
+    const strasse = feldWert(q, "strasse", "straße", "adresse", "anschrift", "street");
+    const plz = feldWert(q, "plz", "postleitzahl", "zip");
+    const ort = feldWert(q, "ort", "stadt", "city");
+    const land = feldWert(q, "land", "country") || "DE";
+    const ust = feldWert(q, "ust_id", "ust_idnr", "ust_id_nr", "umsatzsteuer_id", "vat");
+    const email = feldWert(q, "email", "e_mail", "mail");
+    const anschrift = [strasse, [plz, ort].filter(Boolean).join(" ")].filter(Boolean).join("\n");
+    return { name, adresse: { strasse, plz, ort, land }, ust_idnr: ust, email, anschrift };
+  }
+
+  // P32: E-Rechnung (XRechnung-XML) erzeugen und herunterladen
+  async function eRechnungLaden() {
+    if (!rechnung) return;
+    try {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .single();
+      const prof: any = p || {};
+      const aussteller = {
+        name: prof.firma_name || "",
+        adresse: {
+          strasse: prof.firma_strasse || "",
+          plz: prof.firma_plz || "",
+          ort: prof.firma_ort || "",
+          land: "DE",
+        },
+        ust_idnr: prof.firma_ust_id || "",
+        steuernummer: prof.firma_steuernummer || "",
+        email: prof.firma_email || "",
+      };
+      const res = await fetch("/api/rechnung-e", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rechnung,
+          positionen: (zeilen || []).map((z: any) => ({
+            bezeichnung: z.bezeichnung,
+            menge: z.menge,
+            einheit: z.einheit,
+            einzelpreis: z.einzelpreis,
+            mwst_satz: z.mwst_satz,
+            gesamt_netto: zeileNetto(z),
+          })),
+          aussteller,
+          empfaenger: baueEmpfaenger(),
+          profil: "xrechnung",
+        }),
+      });
+      if (!res.ok) {
+        alert("E-Rechnung konnte nicht erstellt werden.");
+        return;
+      }
+      const warn = res.headers.get("x-argonaut-warnungen");
+      if (warn) {
+        const txt = decodeURIComponent(warn);
+        if (txt) console.warn("E-Rechnung Hinweise:", txt);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "XRechnung_" + ((rechnung && rechnung.rechnungsnummer) || "Rechnung") + ".xml";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("E-Rechnung Fehler:", e);
+      alert("Unerwarteter Fehler bei der E-Rechnung.");
+    }
+  }
+
   async function pdfErstellen() {
     if (pdfLaedt) return;
     if (dirty) {
@@ -768,6 +860,13 @@ export default function RechnungDetail() {
           >
             {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Rechnung als PDF"}
           </button>
+            <button
+              onClick={eRechnungLaden}
+              style={{ padding: "10px 16px", background: "transparent", color: "#C9A84C", border: "1px solid #C9A84C", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
+              title="E-Rechnung als XRechnung-XML (EN 16931) herunterladen"
+            >
+              E-Rechnung (XML)
+            </button>
           <button
             onClick={speichernJetzt}
             disabled={speichern || !dirty}
