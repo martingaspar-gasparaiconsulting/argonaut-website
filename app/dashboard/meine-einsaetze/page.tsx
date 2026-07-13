@@ -45,11 +45,22 @@ const WOCHENTAGE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', '
 function telLink(t: string) { return `tel:${t.replace(/[^\d+]/g, '')}`; }
 function mapsLink(ort: string) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ort)}`; }
 
+// Nächste Phase im Lebenszyklus: Geplant → Unterwegs → Vor Ort → Erledigt
+function naechstePhase(status: string | null): { ziel: string; label: string; farbe: string } | null {
+  switch (status ?? 'geplant') {
+    case 'geplant':   return { ziel: 'unterwegs', label: '▶  Losfahren', farbe: C.cyan };
+    case 'unterwegs': return { ziel: 'vor_ort',   label: '📍  Angekommen', farbe: C.warn };
+    case 'vor_ort':   return { ziel: 'erledigt',  label: '✅  Erledigt melden', farbe: C.green };
+    default:          return null; // erledigt / abgesagt: kein Weiter-Knopf
+  }
+}
+
 type MitarbeiterRow = { id: string; vorname: string | null; nachname: string | null };
 type EinsatzRow = {
   id: string; titel: string | null; beschreibung: string | null; einsatzort: string | null;
   beginn_am: string | null; ende_am: string | null; status: string | null;
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
+  unterwegs_am: string | null; vor_ort_am: string | null; erledigt_am: string | null;
 };
 
 export default function MeineEinsaetzePage() {
@@ -60,6 +71,7 @@ export default function MeineEinsaetzePage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [einsaetze, setEinsaetze] = useState<EinsatzRow[]>([]);
   const [tagOffset, setTagOffset] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -85,7 +97,7 @@ export default function MeineEinsaetzePage() {
       const ende = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 23, 59, 59);
       const { data, error } = await supabase
         .from('einsaetze')
-        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon')
+        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am')
         .eq('mitarbeiter_id', mitarbeiter.id)
         .gte('beginn_am', start.toISOString())
         .lte('beginn_am', ende.toISOString())
@@ -98,6 +110,20 @@ export default function MeineEinsaetzePage() {
   }, [mitarbeiter, tag]);
 
   useEffect(() => { void laden_(); }, [laden_]);
+
+  // Status eine Phase weiterschalten (über geschützte DB-Funktion)
+  async function phaseWeiter(e: EinsatzRow) {
+    const np = naechstePhase(e.status);
+    if (!np) return;
+    setBusyId(e.id); setFehler(null);
+    try {
+      const { error } = await supabase.rpc('einsatz_status_setzen', { p_einsatz_id: e.id, p_status: np.ziel });
+      if (error) throw error;
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Status konnte nicht gesetzt werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusyId(null); }
+  }
 
   const datumLang = `${WOCHENTAGE[tag.getDay()]}, ${pad(tag.getDate())}.${pad(tag.getMonth() + 1)}.${tag.getFullYear()}`;
   const tagLabel = tagOffset === 0 ? 'Heute' : tagOffset === 1 ? 'Morgen' : tagOffset === -1 ? 'Gestern' : datumLang;
@@ -186,6 +212,30 @@ export default function MeineEinsaetzePage() {
                 {e.beschreibung && (
                   <div style={styles.beschreibung}>{e.beschreibung}</div>
                 )}
+
+                {(e.unterwegs_am || e.vor_ort_am || e.erledigt_am) && (
+                  <div style={styles.stempelZeile}>
+                    {e.unterwegs_am && <span>▶ Los {uhr(new Date(e.unterwegs_am))}</span>}
+                    {e.vor_ort_am && <span>📍 Vor Ort {uhr(new Date(e.vor_ort_am))}</span>}
+                    {e.erledigt_am && <span>✅ Fertig {uhr(new Date(e.erledigt_am))}</span>}
+                  </div>
+                )}
+
+                {(() => {
+                  const np = naechstePhase(e.status);
+                  if (np) {
+                    return (
+                      <button onClick={() => phaseWeiter(e)} disabled={busyId === e.id}
+                        style={{ ...styles.phaseBtn, background: np.farbe, opacity: busyId === e.id ? 0.6 : 1 }}>
+                        {busyId === e.id ? 'Speichert …' : np.label}
+                      </button>
+                    );
+                  }
+                  if ((e.status ?? '') === 'erledigt') {
+                    return <div style={styles.erledigtHinweis}>✅ Erledigt{e.erledigt_am ? ` um ${uhr(new Date(e.erledigt_am))}` : ''}</div>;
+                  }
+                  return null;
+                })()}
               </div>
             );
           })}
@@ -218,6 +268,9 @@ const styles: Record<string, CSSProperties> = {
   aktionIcon: { fontSize: 18, flexShrink: 0 },
   aktionHinweis: { color: C.cyan, fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' },
   beschreibung: { fontSize: 14, color: C.text, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
+  phaseBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', marginTop: 10, width: '100%', minHeight: 54 },
+  stempelZeile: { display: 'flex', gap: 14, fontSize: 12.5, color: C.textDim, marginTop: 8, flexWrap: 'wrap' },
+  erledigtHinweis: { marginTop: 10, textAlign: 'center', color: C.green, fontWeight: 700, fontSize: 15, padding: '12px', background: 'rgba(76,175,125,0.1)', borderRadius: 12 },
 
   hint: { color: C.textDim, fontSize: 15, padding: '24px 0', textAlign: 'center' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
