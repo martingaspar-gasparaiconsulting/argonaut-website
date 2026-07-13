@@ -61,6 +61,7 @@ export default async function EinstellungenPage() {
         <AnfahrtEinstellungen />
         <ApiSchluesselKarte />
         <ModulFreischaltung />
+        <PasswortAendern />
       </main>
     </div>
   )
