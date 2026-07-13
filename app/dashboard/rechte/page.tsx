@@ -32,6 +32,14 @@ import type { Rolle } from "../../../lib/rechte";
 //                    Administrator machen (darf_verteilen setzen). Die eiserne
 //                    Grenze: ein Administrator kann keine weiteren Admins ernennen.
 //
+// NEU (PUNKT 8 · Schreibrechte, zweite Achse SEHEN vs. AENDERN):
+//  - Pro freigegebenem Modul kann zusaetzlich "✏️ darf ändern" gesetzt werden.
+//    Das schreibt in mitarbeiter_rechte.schreib_module (text[]).
+//  - Aendern setzt Sehen voraus: die Aendern-Checkbox erscheint nur, wenn das
+//    Modul auch gesehen werden darf. Wird Sehen abgewaehlt, faellt das
+//    Schreibrecht automatisch mit weg (kein verwaistes schreib_module).
+//  - DB-Gegenstueck: darf_ich_modul_aendern(modul) liest schreib_module.
+//
 // Modul-Schluessel = identisch mit der Nav-Filterung.
 // ============================================================
 
@@ -164,7 +172,8 @@ type Mitarbeiter = {
   rolle: string | null;
   darf_verteilen: boolean | null;
 };
-type Recht = { rolle: string | null; module: string[] };
+// PUNKT 8: schreibModule als zweite Achse ergaenzt (Sicht = module, Aendern = schreibModule).
+type Recht = { rolle: string | null; module: string[]; schreibModule: string[] };
 
 // Bestaetigungs-Dialog: sensibles Modul aktivieren, speichern, oder Vollmacht.
 type Modal =
@@ -273,7 +282,8 @@ export default function RechtePage() {
           .from("mitarbeiter")
           .select("id,vorname,nachname,position,abteilung,status,auth_user_id,rolle,darf_verteilen")
           .order("nachname", { ascending: true }),
-        supabase.from("mitarbeiter_rechte").select("mitarbeiter_id,rolle,module"),
+        // PUNKT 8: schreib_module mitladen.
+        supabase.from("mitarbeiter_rechte").select("mitarbeiter_id,rolle,module,schreib_module"),
       ]);
       if (mRes.error) throw mRes.error;
 
@@ -282,11 +292,16 @@ export default function RechtePage() {
 
       const map: Record<string, Recht> = {};
       ((rRes.data as any[]) || []).forEach((r) => {
-        map[r.mitarbeiter_id] = { rolle: r.rolle || null, module: Array.isArray(r.module) ? r.module : [] };
+        map[r.mitarbeiter_id] = {
+          rolle: r.rolle || null,
+          module: Array.isArray(r.module) ? r.module : [],
+          // PUNKT 8: Schreibrechte laden (Fallback leer).
+          schreibModule: Array.isArray(r.schreib_module) ? r.schreib_module : [],
+        };
       });
       // Für MA ohne Eintrag: leere Rechte vorbelegen
       liste.forEach((m) => {
-        if (!map[m.id]) map[m.id] = { rolle: null, module: [] };
+        if (!map[m.id]) map[m.id] = { rolle: null, module: [], schreibModule: [] };
       });
       setRechte(map);
     } catch (e: any) {
@@ -303,7 +318,7 @@ export default function RechtePage() {
   // --- Toggle ---------------------------------------------------------
   // Sensibles Modul AKTIVIEREN loest zuerst die Rueckfrage aus.
   function toggle(mid: string, key: string) {
-    const akt = rechte[mid] || { rolle: null, module: [] };
+    const akt = rechte[mid] || { rolle: null, module: [], schreibModule: [] };
     const wirdAktiviert = !akt.module.includes(key);
     if (wirdAktiviert && istSensibel(key)) {
       setModal({ art: "sensibel-an", mid, key });
@@ -313,20 +328,44 @@ export default function RechtePage() {
   }
 
   // Die eigentliche Umschaltung (nach evtl. Bestaetigung).
+  // PUNKT 8: Wird die Sicht ABGEWAEHLT, faellt das Schreibrecht automatisch mit weg.
   function _toggle(mid: string, key: string) {
     setRechte((prev) => {
-      const akt = prev[mid] || { rolle: null, module: [] };
+      const akt = prev[mid] || { rolle: null, module: [], schreibModule: [] };
       const hat = akt.module.includes(key);
-      const neu = hat ? akt.module.filter((k) => k !== key) : [...akt.module, key];
-      return { ...prev, [mid]: { rolle: "Individuell", module: neu } };
+      const neuModule = hat ? akt.module.filter((k) => k !== key) : [...akt.module, key];
+      // Sicht weg -> Schreibrecht fuer dieses Modul ebenfalls entfernen.
+      const neuSchreib = hat ? akt.schreibModule.filter((k) => k !== key) : akt.schreibModule;
+      return { ...prev, [mid]: { rolle: "Individuell", module: neuModule, schreibModule: neuSchreib } };
+    });
+    setOkId(null);
+  }
+
+  // PUNKT 8: Schreibrecht ("darf ändern") pro Modul umschalten.
+  // Nur moeglich, wenn das Modul auch gesehen werden darf (Sicht = an).
+  function toggleSchreib(mid: string, key: string) {
+    setRechte((prev) => {
+      const akt = prev[mid] || { rolle: null, module: [], schreibModule: [] };
+      // Sicherheit: ohne Sicht kein Schreibrecht.
+      if (!akt.module.includes(key)) return prev;
+      const hat = akt.schreibModule.includes(key);
+      const neuSchreib = hat
+        ? akt.schreibModule.filter((k) => k !== key)
+        : [...akt.schreibModule, key];
+      return { ...prev, [mid]: { ...akt, rolle: "Individuell", schreibModule: neuSchreib } };
     });
     setOkId(null);
   }
 
   // Vorlage: nur Module setzen, die ich auch verteilen DARF.
+  // PUNKT 8: Vorlagen setzen NUR Sicht-Rechte; Schreibrechte werden bewusst
+  // zurueckgesetzt (Aendern ist immer eine ausdrueckliche Einzelentscheidung).
   function vorlageSetzen(mid: string, v: { name: string; module: string[] }) {
     const gefiltert = v.module.filter((k) => erlaubteKeys.has(k));
-    setRechte((prev) => ({ ...prev, [mid]: { rolle: v.name, module: gefiltert } }));
+    setRechte((prev) => ({
+      ...prev,
+      [mid]: { rolle: v.name, module: gefiltert, schreibModule: [] },
+    }));
     setOkId(null);
   }
 
@@ -334,7 +373,7 @@ export default function RechtePage() {
   // Sind sensible Module dabei -> erst Zusammenfassung bestaetigen.
   async function speichern(mid: string) {
     if (busyId) return;
-    const akt = rechte[mid] || { rolle: null, module: [] };
+    const akt = rechte[mid] || { rolle: null, module: [], schreibModule: [] };
     const sensibleDrin = akt.module.filter((k) => istSensibel(k));
     if (sensibleDrin.length > 0) {
       setModal({ art: "speichern", mid });
@@ -358,7 +397,10 @@ export default function RechtePage() {
         setBusyId(null);
         return;
       }
-      const akt = rechte[mid] || { rolle: null, module: [] };
+      const akt = rechte[mid] || { rolle: null, module: [], schreibModule: [] };
+      // PUNKT 8: Schreibrechte defensiv auf die Sicht-Module begrenzen
+      // (kein Schreibrecht ohne Sicht landet je in der DB).
+      const schreibSauber = akt.schreibModule.filter((k) => akt.module.includes(k));
       const { error } = await supabase.from("mitarbeiter_rechte").upsert(
         {
           mitarbeiter_id: mid,
@@ -368,6 +410,8 @@ export default function RechtePage() {
           owner_user_id: meinOwnerId ?? user.id,
           rolle: akt.rolle,
           module: akt.module,
+          // PUNKT 8: zweite Achse mitschreiben.
+          schreib_module: schreibSauber,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "mitarbeiter_id" }
@@ -475,6 +519,9 @@ export default function RechtePage() {
           Wähle eine Vorlage und passe danach einzelne Häkchen an. Bereiche mit
           <span style={{ color: C.warn, fontWeight: 700 }}> 🔒 sensibel</span> sind rechtlich/kaufmännisch
           heikel — sie brauchen beim Freigeben und beim Speichern eine Bestätigung.
+          Mit <span style={{ color: C.cyan, fontWeight: 700 }}>✏️ darf ändern</span> gibst du zusätzlich
+          das Recht, in einem Bereich zu speichern und zu löschen — ohne dieses Häkchen darf der
+          Mitarbeiter den Bereich nur ansehen.
         </div>
 
         {laden ? (
@@ -508,7 +555,7 @@ export default function RechtePage() {
           </div>
         ) : (
           mitarbeiter.map((m) => {
-            const akt = rechte[m.id] || { rolle: null, module: [] };
+            const akt = rechte[m.id] || { rolle: null, module: [], schreibModule: [] };
             const busy = busyId === m.id;
             const ok = okId === m.id;
             const istVerteiler = !!m.darf_verteilen;
@@ -651,25 +698,37 @@ export default function RechtePage() {
                         {items.map((it) => {
                           const an = akt.module.includes(it.key);
                           const sensibel = istSensibel(it.key);
+                          // PUNKT 8: darf dieser MA das Modul aendern?
+                          const darfAendern = akt.schreibModule.includes(it.key);
                           return (
-                            <label
+                            <div
                               key={it.key}
                               style={{
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 10,
                                 padding: "6px 0",
-                                cursor: "pointer",
+                                flexWrap: "wrap",
                                 fontSize: 14,
                               }}
                             >
-                              <input
-                                type="checkbox"
-                                checked={an}
-                                onChange={() => toggle(m.id, it.key)}
-                                style={{ width: 17, height: 17, accentColor: g.farbe, cursor: "pointer" }}
-                              />
-                              <span style={{ color: an ? "#fff" : C.textDim }}>{it.label}</span>
+                              {/* Sicht-Haekchen (wie bisher) */}
+                              <label
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={an}
+                                  onChange={() => toggle(m.id, it.key)}
+                                  style={{ width: 17, height: 17, accentColor: g.farbe, cursor: "pointer" }}
+                                />
+                                <span style={{ color: an ? "#fff" : C.textDim }}>{it.label}</span>
+                              </label>
                               {sensibel && (
                                 <span
                                   style={{
@@ -686,7 +745,36 @@ export default function RechtePage() {
                                   🔒 sensibel
                                 </span>
                               )}
-                            </label>
+                              {/* PUNKT 8: "darf ändern" — nur sichtbar, wenn Sicht an ist */}
+                              {an && (
+                                <label
+                                  title="Darf in diesem Bereich speichern und löschen. Ohne Häkchen nur ansehen."
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    cursor: "pointer",
+                                    marginLeft: "auto",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: darfAendern ? C.cyan : C.textDim,
+                                    background: darfAendern ? `${C.cyan}18` : "transparent",
+                                    border: `1px solid ${darfAendern ? C.cyan + "66" : C.border}`,
+                                    borderRadius: 999,
+                                    padding: "2px 9px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={darfAendern}
+                                    onChange={() => toggleSchreib(m.id, it.key)}
+                                    style={{ width: 14, height: 14, accentColor: C.cyan, cursor: "pointer" }}
+                                  />
+                                  ✏️ darf ändern
+                                </label>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -695,7 +783,7 @@ export default function RechtePage() {
                 </div>
 
                 {/* Speichern */}
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
                   <button
                     onClick={() => speichern(m.id)}
                     disabled={busy}
@@ -716,6 +804,12 @@ export default function RechtePage() {
                   </button>
                   <span style={{ color: C.textDim, fontSize: 13 }}>
                     {akt.module.length} von {erlaubteKeys.size} Modulen freigeschaltet
+                    {akt.schreibModule.length > 0 && (
+                      <span style={{ color: C.cyan }}>
+                        {" "}
+                        · {akt.schreibModule.length} mit ✏️ Änderungsrecht
+                      </span>
+                    )}
                   </span>
                   {ok && <span style={{ color: C.green, fontSize: 13, fontWeight: 700 }}>✓ Gespeichert</span>}
                 </div>
@@ -858,8 +952,12 @@ export default function RechtePage() {
           }
 
           // art === "speichern"
-          const aktM = rechte[modal.mid] || { rolle: null, module: [] };
+          const aktM = rechte[modal.mid] || { rolle: null, module: [], schreibModule: [] };
           const sensibleListe = aktM.module.filter((k) => istSensibel(k)).map((k) => LABEL_MAP[k] || k);
+          // PUNKT 8: sensible Module MIT Aenderungsrecht gesondert ausweisen.
+          const sensibelAendern = aktM.module
+            .filter((k) => istSensibel(k) && aktM.schreibModule.includes(k))
+            .map((k) => LABEL_MAP[k] || k);
           return overlay(
             <>
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 12 }}>
@@ -899,6 +997,13 @@ export default function RechtePage() {
                   </span>
                 ))}
               </div>
+              {/* PUNKT 8: Warnhinweis, wenn sensible Bereiche AENDERN dürfen */}
+              {sensibelAendern.length > 0 && (
+                <p style={{ color: C.cyan, fontSize: 13, lineHeight: 1.6, margin: "12px 0 0" }}>
+                  ✏️ Mit <strong>Änderungsrecht</strong> (darf speichern/löschen):{" "}
+                  <strong>{sensibelAendern.join(", ")}</strong>
+                </p>
+              )}
               {knoepfe(
                 "Speichern bestätigen",
                 () => {
