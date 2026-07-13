@@ -56,6 +56,7 @@ export const NAV_LINKS: NavLink[] = [
   // --- Mitarbeiter-Selbstbedienung -----------------------------------------
   { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', nurMitarbeiter: true, ebene: 4 },
   { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', nurMitarbeiter: true, ebene: 4 },
+  { label: '🔧 Meine Einsätze', href: '/dashboard/meine-einsaetze', nurMitarbeiter: true, ebene: 4 },
 
   // --- Ebene 4: jeder Mitarbeiter (Grundausstattung) -----------------------
   { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy', ebene: 4 },
