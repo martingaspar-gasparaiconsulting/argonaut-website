@@ -19,6 +19,7 @@
 // ============================================================
 
 import React, { useState } from "react";
+import { validiereERechnung, type ValidierErgebnis } from "../../../lib/erechnung-validator";
 
 const GOLD = "#C9A84C";
 const CYAN = "#00e5ff";
@@ -51,6 +52,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
   const [leitweg, setLeitweg] = useState("");
   const [laden, setLaden] = useState(false);
   const [hinweis, setHinweis] = useState("");
+  const [pruefung, setPruefung] = useState<ValidierErgebnis | null>(null);
 
   function baueEmpfaenger(): any {
     const q: any = firma || kontakt || {};
@@ -67,6 +69,42 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     const email = feldWert(q, "email", "e_mail", "mail");
     const anschrift = [strasse, [plz, ort].filter(Boolean).join(" ")].filter(Boolean).join("\n");
     return { name, adresse: { strasse, plz, ort, land }, ust_idnr: ust, email, anschrift };
+  }
+
+  function baueAussteller(prof: any) {
+    return {
+      name: prof.firma_name || "",
+      adresse: { strasse: prof.firma_strasse || "", plz: prof.firma_plz || "", ort: prof.firma_ort || "", land: "DE" },
+      ust_idnr: prof.firma_ust_id || "",
+      steuernummer: prof.firma_steuernummer || "",
+      email: prof.firma_email || "",
+    };
+  }
+
+  async function pruefeVor() {
+    setHinweis("");
+    setPruefung(null);
+    try {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .single();
+      const aussteller = baueAussteller(p || {});
+      const erg = validiereERechnung({
+        rechnung,
+        positionen: (zeilen || []).map((z: any) => ({
+          bezeichnung: z.bezeichnung, menge: z.menge, einheit: z.einheit,
+          einzelpreis: z.einzelpreis, mwst_satz: z.mwst_satz, gesamt_netto: zeileNetto(z),
+        })),
+        aussteller,
+        empfaenger: baueEmpfaenger(),
+        profil,
+        leitweg_id: profil === "xrechnung" ? leitweg.trim() : undefined,
+      });
+      setPruefung(erg);
+    } catch (e: any) {
+      setHinweis("Prüfung fehlgeschlagen: " + (e?.message || String(e)));
+    }
   }
 
   async function erzeuge() {
@@ -133,7 +171,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
   return (
     <>
       <button
-        onClick={() => setOffen(true)}
+        onClick={() => { setOffen(true); setPruefung(null); setTimeout(() => pruefeVor(), 50); }}
         style={{ padding: "10px 16px", background: "transparent", color: GOLD, border: `1px solid ${GOLD}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
         title="E-Rechnung als XRechnung- oder ZUGFeRD-XML (EN 16931) erzeugen"
       >
@@ -156,8 +194,8 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
 
             {/* Profil-Wahl */}
             <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-              <ProfilBtn aktiv={profil === "zugferd"} onClick={() => setProfil("zugferd")} titel="ZUGFeRD" sub="Firmenkunden" />
-              <ProfilBtn aktiv={profil === "xrechnung"} onClick={() => setProfil("xrechnung")} titel="XRechnung" sub="Behörden / B2G" />
+              <ProfilBtn aktiv={profil === "zugferd"} onClick={() => { setProfil("zugferd"); setTimeout(() => pruefeVor(), 30); }} titel="ZUGFeRD" sub="Firmenkunden" />
+              <ProfilBtn aktiv={profil === "xrechnung"} onClick={() => { setProfil("xrechnung"); setTimeout(() => pruefeVor(), 30); }} titel="XRechnung" sub="Behörden / B2G" />
             </div>
 
             {/* Leitweg-ID nur bei XRechnung */}
@@ -184,6 +222,36 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               </div>
             )}
 
+            {/* P34: Validierungs-Ergebnis */}
+            {pruefung && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8, marginBottom: pruefung.punkte.length ? 8 : 0,
+                  fontSize: 14, fontWeight: 700,
+                  color: pruefung.konform ? "#00e676" : "#ff6b6b",
+                }}>
+                  {pruefung.konform
+                    ? "✓ EN 16931 – konform"
+                    : `✗ ${pruefung.fehlerAnzahl} Fehler gefunden`}
+                  {pruefung.konform && pruefung.warnungAnzahl > 0 && (
+                    <span style={{ color: GOLD, fontWeight: 500 }}>· {pruefung.warnungAnzahl} Hinweis(e)</span>
+                  )}
+                </div>
+                {pruefung.punkte.length > 0 && (
+                  <div style={{ maxHeight: 160, overflowY: "auto", border: `1px solid ${LINE}`, borderRadius: 8, padding: "8px 10px", background: "rgba(0,0,0,0.15)" }}>
+                    {pruefung.punkte.map((pt: { regel: string; stufe: string; text: string }, i: number) => (
+                      <div key={i} style={{ fontSize: 12, color: DIM, padding: "3px 0", lineHeight: 1.4 }}>
+                        <span style={{ marginRight: 6 }}>
+                          {pt.stufe === "fehler" ? "🔴" : pt.stufe === "warnung" ? "🟡" : "🔵"}
+                        </span>
+                        {pt.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => !laden && setOffen(false)}
@@ -194,9 +262,16 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               <button
                 onClick={erzeuge}
                 disabled={laden}
-                style={{ padding: "9px 18px", background: GOLD, color: "#0A1628", border: "none", borderRadius: 8, fontWeight: 700, cursor: laden ? "default" : "pointer", fontSize: 14, opacity: laden ? 0.6 : 1 }}
+                style={{
+                  padding: "9px 18px",
+                  background: pruefung && !pruefung.konform ? "transparent" : GOLD,
+                  color: pruefung && !pruefung.konform ? "#ff6b6b" : "#0A1628",
+                  border: pruefung && !pruefung.konform ? "1px solid #ff6b6b" : "none",
+                  borderRadius: 8, fontWeight: 700, cursor: laden ? "default" : "pointer",
+                  fontSize: 14, opacity: laden ? 0.6 : 1,
+                }}
               >
-                {laden ? "Erzeuge…" : "Herunterladen"}
+                {laden ? "Erzeuge…" : (pruefung && !pruefung.konform ? "Trotzdem herunterladen" : "Herunterladen")}
               </button>
             </div>
           </div>
