@@ -76,6 +76,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung', ebene: 3 },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3 },
   { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen', ebene: 3 },
+  // --- Field Service / Termine (P16-22) ------------------------------------
+  { label: '🗓 Termine', href: '/dashboard/termine', modul: 'termine', ebene: 3 },
+  { label: '🗺 Dispo-Board', href: '/dashboard/dispo', modul: 'einsaetze', ebene: 3 },
   { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt', ebene: 3 },
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3 },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3 },
