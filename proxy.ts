@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { istNurChefPfad, mitarbeiterDarf } from './lib/rechte'
+import { istNurChefPfad, mitarbeiterDarf, pfadPasst } from './lib/rechte'
 
 // ============================================================================
 // ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard
@@ -69,18 +69,34 @@ export async function proxy(req: NextRequest) {
       // KEIN Kunde -> pruefen, ob es ein eingeladener Mitarbeiter ist
       const { data: mitarbeiter } = await supabase
         .from('mitarbeiter')
-        .select('id')
+        .select('id, darf_verteilen')
         .eq('auth_user_id', session.user.id)
         .maybeSingle()
 
       if (mitarbeiter) {
         const p = req.nextUrl.pathname
 
-        // HARTE SPERRE: Chef-only Module IMMER blockieren — unabhaengig von den
-        // vergebenen Rechten. Greift vor der Whitelist. Schuetzt auch vor
-        // versehentlicher Freigabe (z. B. ueber die Vorlage "Alle").
+        // Verteil-Vollmacht dieses Mitarbeiters. Setzt NUR der Eigentuemer.
+        const darfVerteilen = mitarbeiter.darf_verteilen === true
+
+        // HARTE SPERRE: Chef-only Module IMMER blockieren — mit EINER Ausnahme:
+        // Ein Administrator MIT Verteil-Vollmacht darf die Verteil-UI
+        // (/dashboard/rechte) erreichen. Genau er soll die Rechte verteilen
+        // (Reiser-Prinzip: bei 200/500/2000 Mitarbeitern macht das nicht der Chef
+        // persoenlich, sondern eine Person unter ihm). Die Seite selbst filtert
+        // dort auf seine verteilbaren Module und wirft reine Mitarbeiter erneut
+        // zurueck — doppelt gesichert. Die Ausnahme greift NUR fuer den exakten
+        // Rechte-Pfad; jeder andere nurChef-Pfad bleibt fuer alle hart dicht.
+        //
+        // Die Vollmacht-Vergabe selbst (darf_verteilen setzen) hat hier KEINEN
+        // Schalter -> bleibt strukturell Eigentuemer-only. Die eiserne Grenze.
         if (istNurChefPfad(p)) {
-          return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+          const istVerteilTuer = pfadPasst(p, '/dashboard/rechte') && darfVerteilen
+          if (!istVerteilTuer) {
+            return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+          }
+          // Administrator auf der Verteil-UI: durchlassen. Den Rest regelt die Seite.
+          return res
         }
 
         // MITARBEITER: Basis-Bereiche + die vom Chef freigeschalteten Module

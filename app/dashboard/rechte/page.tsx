@@ -26,6 +26,8 @@ import type { Rolle } from "../../../lib/rechte";
 //                    Eigentuemer/Admin sehen sensible Module, Abteilungsleiter nicht.
 //  3. DOPPEL-BESTAETIGUNG bei sensiblen Modulen:
 //                    Rueckfrage beim Aktivieren UND Zusammenfassung beim Speichern.
+//  4. OWNER-FIX (2b): Rechte-Zeilen gehoeren immer dem CHEF (owner_user_id),
+//                    egal ob Chef oder Administrator sie speichert.
 //
 // Modul-Schluessel = identisch mit der Nav-Filterung.
 // ============================================================
@@ -180,6 +182,13 @@ export default function RechtePage() {
   const [erlaubteKeys, setErlaubteKeys] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<Modal>(null);
 
+  // owner_user_id, dem die Rechte-Zeilen gehoeren = IMMER der CHEF.
+  // Eigentuemer: seine eigene UID. Verteiler (Admin): die owner_user_id
+  // seiner mitarbeiter-Zeile (= UID seines Chefs). So gehoeren die Daten
+  // stets dem Chef, egal wer speichert (heilt den alten owner-Bug + ist
+  // noetig fuer die RLS-Policy owner_user_id = mein_chef_id()).
+  const [meinOwnerId, setMeinOwnerId] = useState<string | null>(null);
+
   async function laden_() {
     setLaden(true);
     setFehler(null);
@@ -203,7 +212,7 @@ export default function RechtePage() {
     try {
       const { data: meineZeile } = await supabase
         .from("mitarbeiter")
-        .select("id, rolle, darf_verteilen")
+        .select("id, rolle, darf_verteilen, owner_user_id")
         .eq("auth_user_id", user.id)
         .maybeSingle();
 
@@ -211,9 +220,13 @@ export default function RechtePage() {
         rolle = "eigentuemer";
         vollmacht = true;
         eigeneModule = ALLE_MODUL_KEYS;
+        // Eigentuemer besitzt seine Daten selbst.
+        setMeinOwnerId(user.id);
       } else {
         rolle = (meineZeile.rolle as Rolle) ?? "mitarbeiter";
         vollmacht = !!meineZeile.darf_verteilen;
+        // Rechte-Zeilen gehoeren dem CHEF dieses Verteilers, nicht ihm selbst.
+        setMeinOwnerId((meineZeile.owner_user_id as string) ?? user.id);
         // Eigene Module des Verteilers laden (Grundlage fuer verteilbareModule).
         const { data: meinRecht } = await supabase
           .from("mitarbeiter_rechte")
@@ -340,7 +353,10 @@ export default function RechtePage() {
       const { error } = await supabase.from("mitarbeiter_rechte").upsert(
         {
           mitarbeiter_id: mid,
-          owner_user_id: user.id,
+          // Daten gehoeren dem CHEF (meinOwnerId), nicht dem Anlegenden.
+          // Fuer den Eigentuemer ist das seine eigene UID; fuer einen
+          // Administrator die UID seines Chefs. Passt zur RLS-Policy.
+          owner_user_id: meinOwnerId ?? user.id,
           rolle: akt.rolle,
           module: akt.module,
           updated_at: new Date().toISOString(),
