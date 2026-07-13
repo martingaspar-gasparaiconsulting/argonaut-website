@@ -69,6 +69,7 @@ export interface Slot {
   kapazitaet: number;
   belegt: number;
   frei: boolean;
+  ueberbuchung: boolean;             // true = keine harte Kapazitätsgrenze
 }
 
 export interface TagInfo {
@@ -313,7 +314,7 @@ export function berechneSlots(params: SlotParams): SlotErgebnis {
           const inVergangenheit = ende.getTime() <= jetzt.getTime();
           const frei = !inVergangenheit && (ueberbuchung || belegt < kapazitaet);
 
-          const slot: Slot = { datum, beginn, ende, mitarbeiter_id: maId, kapazitaet, belegt, frei };
+          const slot: Slot = { datum, beginn, ende, mitarbeiter_id: maId, kapazitaet, belegt, frei, ueberbuchung };
           tagSlots.push(slot);
           alleSlots.push(slot);
           sMs += stepMs;
