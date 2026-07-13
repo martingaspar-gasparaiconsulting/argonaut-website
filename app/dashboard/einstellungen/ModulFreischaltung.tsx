@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { ALLE_MODULE } from '@/lib/rechte';
 
 // ============================================================
 // ARGONAUT OS · Einstellungen · Modul-Freischaltung (Starter-Modus, P2-2)
@@ -8,7 +9,11 @@ import { createBrowserClient } from '@supabase/ssr';
 // EINGESCHALTETEN modul-Schlüssel in profiles.sichtbare_module (jsonb).
 // Sind ALLE an -> wird NULL gespeichert (= kein Starter-Modus, alles sichtbar).
 // Ausblenden versteckt nur das Menü - Daten bleiben, jederzeit wieder anschaltbar.
-// Schlüssel identisch mit DashboardNav.
+//
+// P22-Housekeeping: Die Modul-Liste kommt jetzt aus lib/rechte.ts (ALLE_MODULE),
+// abgeleitet aus NAV_LINKS - der EINEN Quelle der Wahrheit. Damit erscheint jedes
+// jetzige UND künftige Modul (Termine, Dispo, Werkstatt, GoBD ...) automatisch mit
+// Schalter. Kein Nachpflegen von Hand mehr, kein "X von Y"-Verzähler.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -22,31 +27,11 @@ const GREEN = '#4CAF7D';
 
 type Modul = { key: string; label: string };
 
-// Reihenfolge & Schlüssel wie in DashboardNav (nur steuerbare Module,
-// ohne Übersicht/Rechte/Einstellungen - die bleiben immer sichtbar).
-const MODULE: Modul[] = [
-  { key: 'agenten', label: '🤖 Agenten' },
-  { key: 'academy', label: '🎓 Academy' },
-  { key: 'leads', label: '🎯 Leads' },
-  { key: 'chat', label: '💬 Chat' },
-  { key: 'team-chat', label: '🗨️ Team-Chat' },
-  { key: 'dokumente', label: '📄 Dokumente' },
-  { key: 'korrespondenz', label: '✉️ Korrespondenz' },
-  { key: 'personal', label: '👥 Personal' },
-  { key: 'schichtplan', label: '🗓 Schichtplan' },
-  { key: 'projekte', label: '📁 Projekte' },
-  { key: 'marketing', label: '📣 Marketing' },
-  { key: 'crm', label: '🤝 Vertrieb/CRM' },
-  { key: 'auftraege', label: '📋 Aufträge' },
-  { key: 'rechnungen', label: '🧾 Rechnungen' },
-  { key: 'mahnwesen', label: '⚠️ Mahnwesen' },
-  { key: 'finanzen', label: '💶 Finanzen' },
-  { key: 'erp', label: '📦 ERP/Lager' },
-  { key: 'vertraege', label: '📑 Verträge' },
-  { key: 'service', label: '🎫 Service' },
-  { key: 'analytics', label: '📊 Analytics' },
-  { key: 'automatisierungen', label: '⚙️ Automatisierungen' },
-];
+// Steuerbare Module = alle mit modul-Schlüssel aus NAV_LINKS.
+// Übersicht/Rechte/Einstellungen/Mein-Bereich/Zeiterfassung haben KEINEN
+// modul-Schlüssel (immer/nurChef/nurMitarbeiter) und sind darum korrekt
+// NICHT dabei - sie bleiben ohnehin immer sichtbar.
+const MODULE: Modul[] = ALLE_MODULE;
 
 const ALLE_KEYS = MODULE.map((m) => m.key);
 
