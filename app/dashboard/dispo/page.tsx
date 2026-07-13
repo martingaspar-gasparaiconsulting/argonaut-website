@@ -46,6 +46,25 @@ function belegend(status: string | null): boolean {
   return (status ?? '').toLowerCase() !== 'abgesagt';
 }
 
+// Dauer eines Einsatzes in Stunden (0, wenn ohne/ungültige Zeiten)
+function stundenAusEinsatz(e: { beginn_am: string | null; ende_am: string | null }): number {
+  if (!e.beginn_am || !e.ende_am) return 0;
+  const b = new Date(e.beginn_am).getTime();
+  const en = new Date(e.ende_am).getTime();
+  if (isNaN(b) || isNaN(en) || en <= b) return 0;
+  return (en - b) / 3600000;
+}
+function fmtH(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+// Kapazitäts-Ampel: 🟢 <80% · 🟡 80–100% · 🔴 >100% (Tagesziel = Wochenstunden ÷ 5)
+function ampelInfo(summe: number, ziel: number): { farbe: string; stufe: 'gruen' | 'gelb' | 'rot' } {
+  const q = ziel > 0 ? summe / ziel : 0;
+  if (q > 1.0) return { farbe: C.danger, stufe: 'rot' };
+  if (q >= 0.8) return { farbe: C.warn, stufe: 'gelb' };
+  return { farbe: C.green, stufe: 'gruen' };
+}
+
 // --- Datum/Zeit-Helfer (wie Termine-Seite) --------------------------------
 function pad(n: number) { return n < 10 ? '0' + n : String(n); }
 function isoTag(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
@@ -63,7 +82,7 @@ function baueZeitpunkt(datum: string, zeit: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-type MitarbeiterRow = { id: string; vorname: string; nachname: string; position: string | null; status: string };
+type MitarbeiterRow = { id: string; vorname: string; nachname: string; position: string | null; status: string; wochenstunden: number | null };
 type EinsatzRow = {
   id: string; mitarbeiter_id: string | null; termin_id: string | null; auftrag_id: string | null;
   titel: string | null; beschreibung: string | null; einsatzort: string | null;
@@ -112,7 +131,7 @@ export default function DispoPage() {
       const heute = isoTag(new Date());
       const [maRes, eiRes] = await Promise.all([
         supabase.from('mitarbeiter')
-          .select('id, vorname, nachname, position, status')
+          .select('id, vorname, nachname, position, status, wochenstunden')
           .or(`austrittsdatum.is.null,austrittsdatum.gt.${heute}`)
           .order('nachname', { ascending: true }),
         supabase.from('einsaetze')
@@ -312,16 +331,36 @@ export default function DispoPage() {
               {/* Monteur-Zeilen */}
               {monteure.length === 0 ? (
                 <div style={styles.hint}>Noch keine Mitarbeiter angelegt. Einsätze landen unter „Unzugeordnet", bis Monteure existieren.</div>
-              ) : monteure.map((m) => (
+              ) : monteure.map((m) => {
+                const woStd = m.wochenstunden ?? 0;
+                const tagesziel = woStd > 0 ? woStd / 5 : 8;
+                const wochenSumme = tagesDaten.reduce((s, d) => {
+                  const l = (zelleMap.get(`${m.id}__${d.datum}`) ?? []).filter((e) => belegend(e.status));
+                  return s + l.reduce((ss, e) => ss + stundenAusEinsatz(e), 0);
+                }, 0);
+                return (
                 <div key={m.id} style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 6, marginBottom: 6 }}>
                   <div style={styles.nameZelle}>
                     <span style={{ fontWeight: 700, fontSize: 13.5 }}>{m.vorname} {m.nachname}</span>
                     {m.position && <span style={{ color: C.textDim, fontSize: 11 }}>{m.position}</span>}
+                    <span style={{ color: C.textDim, fontSize: 10.5, marginTop: 2 }}>Woche: {fmtH(wochenSumme)}h · Ziel {fmtH(tagesziel)}h/Tag</span>
                   </div>
                   {tagesDaten.map((d) => {
                     const liste = zelleMap.get(`${m.id}__${d.datum}`) ?? [];
+                    const belegte = liste.filter((e) => belegend(e.status));
+                    const summe = belegte.reduce((s, e) => s + stundenAusEinsatz(e), 0);
+                    const zeigeAmpel = belegte.length > 0 && tagesziel > 0;
+                    const am = ampelInfo(summe, tagesziel);
+                    const rot = zeigeAmpel && am.stufe === 'rot';
                     return (
-                      <div key={d.datum} style={{ ...styles.tagZelle, borderColor: d.heute ? 'rgba(201,168,76,0.4)' : C.border }}>
+                      <div key={d.datum} style={{ ...styles.tagZelle, borderColor: rot ? C.danger : (d.heute ? 'rgba(201,168,76,0.4)' : C.border), background: rot ? 'rgba(224,102,102,0.07)' : C.navy }}>
+                        {zeigeAmpel && (
+                          <div style={styles.ampelZeile} title={`Auslastung: ${summe.toFixed(1)}h von ${tagesziel.toFixed(1)}h`}>
+                            <span style={{ ...styles.ampelPunkt, background: am.farbe }} />
+                            <span style={{ color: am.farbe, fontWeight: 700 }}>{fmtH(summe)}h</span>
+                            <span style={{ color: C.textDim }}>/ {fmtH(tagesziel)}h</span>
+                          </div>
+                        )}
                         {liste.map((e) => {
                           const b = e.beginn_am ? new Date(e.beginn_am) : null;
                           const si = statusInfo(e.status);
@@ -340,7 +379,8 @@ export default function DispoPage() {
                     );
                   })}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -350,6 +390,12 @@ export default function DispoPage() {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 14 }}><span style={{ ...styles.punkt, borderColor: C.warn }} /> Vor Ort</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 14 }}><span style={{ ...styles.punkt, borderColor: C.green }} /> Erledigt</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 14 }}><span style={{ ...styles.punkt, borderColor: C.danger }} /> Abgesagt</span>
+        </div>
+        <div style={{ ...styles.legende, marginTop: 6 }}>
+          Auslastung pro Tag:
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 10 }}><span style={{ ...styles.ampelPunkt, background: C.green }} /> locker (&lt;80%)</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 14 }}><span style={{ ...styles.ampelPunkt, background: C.warn }} /> voll (80–100%)</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 14 }}><span style={{ ...styles.ampelPunkt, background: C.danger }} /> überbucht (&gt;100%)</span>
         </div>
       </div>
 
@@ -419,6 +465,8 @@ const styles: Record<string, CSSProperties> = {
   kopfZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '6px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
   nameZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center' },
   tagZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: 6, minHeight: 66, display: 'flex', flexDirection: 'column', gap: 5 },
+  ampelZeile: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, padding: '1px 2px 2px' },
+  ampelPunkt: { width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0 },
   einsatzKachel: { background: 'rgba(201,168,76,0.10)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '5px 7px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
   plusBtn: { background: 'transparent', color: C.textDim, border: `1px dashed ${C.border}`, borderRadius: 8, padding: '3px 0', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 },
   punkt: { width: 10, height: 10, borderRadius: 3, background: 'transparent', borderStyle: 'solid', borderWidth: 1, display: 'inline-block' },
