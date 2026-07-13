@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
 import ModulFreischaltung from './ModulFreischaltung'
+import PasswortAendern from './PasswortAendern'
 import AnfahrtEinstellungen from './AnfahrtEinstellungen'
 import ApiSchluesselKarte from './ApiSchluesselKarte'
 
