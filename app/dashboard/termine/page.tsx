@@ -1,11 +1,13 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Modul Termine · Seite (Schritt 19b)
+// ARGONAUT OS · Modul Termine · Seite (Schritt 20a + Knopf-Feedback)
 // (1) Öffnungszeiten-Editor  (2) Freie-Slots-Kalender
 // (3) Buchen scharf (Kapazitäts-Prüfung)
 // (4) NEU: gebuchte Termine (goldene Kacheln) sind klickbar ->
 //     anschauen · verschieben (Zeit ändern) · absagen (Status).
+// (5) NEU: Bestätigungs-Mail automatisch beim Buchen (wenn E-Mail hinterlegt)
+//     + "Bestätigung senden"-Knopf im Bearbeiten-Fenster.
 // Pfad: app/dashboard/termine/page.tsx
 // ============================================================
 
@@ -113,6 +115,8 @@ export default function TerminePage() {
   // Bearbeiten-Modal (verschieben/absagen)
   const [bearbAuf, setBearbAuf] = useState(false);
   const [bearbForm, setBearbForm] = useState<BearbForm | null>(null);
+  const [sendet, setSendet] = useState(false);            // läuft der Bestätigungs-Versand?
+  const [bestGesendet, setBestGesendet] = useState(false); // grüner Knopf, bis Fenster zu
 
   useEffect(() => {
     (async () => {
@@ -273,18 +277,47 @@ export default function TerminePage() {
           setBuchAuf(false); setSpeichert(false); await laden_(); return;
         }
       }
-      const { error } = await supabase.from('termine').insert({
+      const { data: ins, error } = await supabase.from('termine').insert({
         owner_user_id: uid, termin_art_id: aktiveArt.id,
         beginn_am: buchSlot.beginn.toISOString(), ende_am: buchSlot.ende.toISOString(),
         titel: buchForm.titel.trim() || aktiveArt.name,
         kunde_name: buchForm.kundeName.trim() || null, kunde_email: buchForm.kundeEmail.trim() || null,
         notiz: buchForm.notiz.trim() || null, status: 'geplant', quelle: 'intern',
-      });
+      }).select('id').single();
       if (error) throw error;
-      setBuchAuf(false); setErfolg('Termin gebucht.'); await laden_();
+      // Bestätigungs-Mail automatisch, wenn E-Mail hinterlegt
+      let zusatz = '';
+      if (buchForm.kundeEmail.trim() && ins?.id) {
+        const ergebnis = await sendeBestaetigung(ins.id);
+        zusatz = ergebnis.ok ? ' Bestätigung per E-Mail gesendet.' : ` (Bestätigung nicht gesendet: ${ergebnis.fehler})`;
+      }
+      setBuchAuf(false); setErfolg('Termin gebucht.' + zusatz); await laden_();
     } catch (e: unknown) {
       setFehler('Buchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setSpeichert(false); }
+  }
+
+  // --- Bestätigungs-Mail (über geschützte Route) ----------------------------
+  async function sendeBestaetigung(terminId: string): Promise<{ ok: boolean; fehler?: string }> {
+    try {
+      const resp = await fetch('/api/termin-bestaetigung', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ terminId }),
+      });
+      const j = await resp.json();
+      if (j?.ok) return { ok: true };
+      return { ok: false, fehler: j?.uebersprungen ? 'keine Kunden-E-Mail hinterlegt' : (j?.fehler ?? 'Fehler') };
+    } catch {
+      return { ok: false, fehler: 'Route nicht erreichbar' };
+    }
+  }
+  async function bestaetigungKnopf() {
+    if (!bearbForm) return;
+    setSendet(true); setFehler(null); setErfolg(null);
+    const r = await sendeBestaetigung(bearbForm.id);
+    if (r.ok) { setErfolg('Bestätigung gesendet.'); setBestGesendet(true); }
+    else setFehler('Bestätigung nicht gesendet: ' + r.fehler);
+    setSendet(false);
   }
 
   // --- Bearbeiten: anschauen / verschieben / absagen ------------------------
@@ -295,6 +328,7 @@ export default function TerminePage() {
       titel: t.titel ?? '', kundeName: t.kunde_name ?? '', kundeEmail: t.kunde_email ?? '',
       notiz: t.notiz ?? '', status: t.status ?? 'geplant',
     });
+    setBestGesendet(false);
     setBearbAuf(true);
   }
   function setBearb<K extends keyof BearbForm>(k: K, v: BearbForm[K]) {
@@ -508,6 +542,10 @@ export default function TerminePage() {
             <div style={styles.hinweisZeile}>Datum/Uhrzeit ändern = Termin verschieben. „Absagen" gibt den Zeitraum wieder frei.</div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setBearbAuf(false)} disabled={speichert} style={styles.ghostBtn}>Schließen</button>
+              <button onClick={bestaetigungKnopf} disabled={speichert || sendet}
+                style={{ ...styles.ghostBtn, color: bestGesendet ? C.green : C.cyan, borderColor: bestGesendet ? C.green : C.cyan, fontWeight: bestGesendet ? 700 : 400 }}>
+                {sendet ? 'Sendet …' : (bestGesendet ? '✓ Gesendet' : 'Bestätigung senden')}
+              </button>
               <button onClick={terminAbsagen} disabled={speichert} style={{ ...styles.ghostBtn, color: C.danger, borderColor: C.danger }}>Absagen</button>
               <button onClick={terminSpeichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>{speichert ? 'Speichert …' : 'Speichern'}</button>
             </div>
