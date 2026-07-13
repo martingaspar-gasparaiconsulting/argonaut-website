@@ -10,8 +10,9 @@
 // Pfad: app/dashboard/meine-einsaetze/page.tsx
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,6 +66,8 @@ type EinsatzRow = {
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
   unterwegs_am: string | null; vor_ort_am: string | null; erledigt_am: string | null;
   owner_user_id: string | null;
+  unterschrift_pfad: string | null; unterschrift_name: string | null; unterschrift_am: string | null;
+  bericht_pfad: string | null; bericht_am: string | null;
 };
 type FotoRow = { id: string; einsatz_id: string; pfad: string; dateiname: string | null };
 type KatalogItem = { id: string; bezeichnung: string; einheit: string | null; einheitspreis_netto: number | null; festpreis_netto: number | null; stundensatz_netto: number | null; mwst_satz: number | null };
@@ -88,6 +91,13 @@ export default function MeineEinsaetzePage() {
   const [posModalId, setPosModalId] = useState<string | null>(null); // Einsatz, dessen Leistungen offen sind
   const [posForm, setPosForm] = useState<PosForm>({ katalogId: '', bezeichnung: '', menge: '1', einheit: '', einzelpreis: '', mwst: '19' });
   const [posBusy, setPosBusy] = useState(false);
+  const [sigModalId, setSigModalId] = useState<string | null>(null);
+  const [sigName, setSigName] = useState('');
+  const [sigBusy, setSigBusy] = useState(false);
+  const [berichtBusy, setBerichtBusy] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const zeichnetRef = useRef(false);
+  const hatGezeichnetRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -122,7 +132,7 @@ export default function MeineEinsaetzePage() {
       const ende = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 23, 59, 59);
       const { data, error } = await supabase
         .from('einsaetze')
-        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, owner_user_id')
+        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am')
         .eq('mitarbeiter_id', mitarbeiter.id)
         .gte('beginn_am', start.toISOString())
         .lte('beginn_am', ende.toISOString())
@@ -131,8 +141,9 @@ export default function MeineEinsaetzePage() {
       const rows = (data as EinsatzRow[]) ?? [];
       setEinsaetze(rows);
 
-      // Fotos zu diesen Einsätzen laden (+ signierte Anzeige-Links, 1h gültig)
+      // Fotos zu diesen Einsätzen laden
       const ids = rows.map((r) => r.id);
+      let fotoPfade: string[] = [];
       if (ids.length) {
         const { data: fdata } = await supabase
           .from('einsatz_fotos')
@@ -141,15 +152,18 @@ export default function MeineEinsaetzePage() {
           .order('created_at', { ascending: true });
         const frows = (fdata as FotoRow[]) ?? [];
         setFotos(frows);
-        if (frows.length) {
-          const { data: signed } = await supabase.storage
-            .from('einsatz-fotos')
-            .createSignedUrls(frows.map((f) => f.pfad), 3600);
-          const urls: Record<string, string> = {};
-          if (signed) for (const s of signed) { if (s.signedUrl && s.path) urls[s.path] = s.signedUrl; }
-          setFotoUrls(urls);
-        } else setFotoUrls({});
-      } else { setFotos([]); setFotoUrls({}); }
+        fotoPfade = frows.map((f) => f.pfad);
+      } else setFotos([]);
+
+      // Signierte Anzeige-Links für Fotos + Unterschriften (1h gültig)
+      const sigPfade = rows.flatMap((r) => [r.unterschrift_pfad, r.bericht_pfad]).filter((p): p is string => !!p);
+      const allePfade = [...fotoPfade, ...sigPfade];
+      if (allePfade.length) {
+        const { data: signed } = await supabase.storage.from('einsatz-fotos').createSignedUrls(allePfade, 3600);
+        const urls: Record<string, string> = {};
+        if (signed) for (const s of signed) { if (s.signedUrl && s.path) urls[s.path] = s.signedUrl; }
+        setFotoUrls(urls);
+      } else setFotoUrls({});
 
       // Erfasste Leistungen zu diesen Einsätzen laden
       if (ids.length) {
@@ -166,6 +180,16 @@ export default function MeineEinsaetzePage() {
   }, [mitarbeiter, tag]);
 
   useEffect(() => { void laden_(); }, [laden_]);
+
+  // Zeichenfeld vorbereiten, sobald das Unterschrift-Modal öffnet
+  useEffect(() => {
+    if (!sigModalId) return;
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.strokeStyle = '#0A1628'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    hatGezeichnetRef.current = false;
+  }, [sigModalId]);
 
   // Status eine Phase weiterschalten (über geschützte DB-Funktion)
   async function phaseWeiter(e: EinsatzRow) {
@@ -266,6 +290,113 @@ export default function MeineEinsaetzePage() {
     } catch (err: unknown) {
       setFehler('Position konnte nicht gelöscht werden: ' + (err instanceof Error ? err.message : 'Fehler'));
     }
+  }
+
+  // ----- Unterschrift (Touch-Canvas) -----
+  function sigPunkt(ev: React.PointerEvent<HTMLCanvasElement>) {
+    const c = canvasRef.current!;
+    const rect = c.getBoundingClientRect();
+    return { x: (ev.clientX - rect.left) * (c.width / rect.width), y: (ev.clientY - rect.top) * (c.height / rect.height) };
+  }
+  function sigStart(ev: React.PointerEvent<HTMLCanvasElement>) {
+    ev.preventDefault();
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    zeichnetRef.current = true;
+    const { x, y } = sigPunkt(ev);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    try { c.setPointerCapture(ev.pointerId); } catch { /* ignore */ }
+  }
+  function sigMove(ev: React.PointerEvent<HTMLCanvasElement>) {
+    if (!zeichnetRef.current) return;
+    ev.preventDefault();
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    const { x, y } = sigPunkt(ev);
+    ctx.lineTo(x, y); ctx.stroke();
+    hatGezeichnetRef.current = true;
+  }
+  function sigEnd() { zeichnetRef.current = false; }
+  function canvasLeeren() {
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+    hatGezeichnetRef.current = false;
+  }
+
+  async function unterschriftSpeichern(einsatzId: string) {
+    const c = canvasRef.current; if (!c) return;
+    if (!hatGezeichnetRef.current) { setFehler('Bitte zuerst im Feld unterschreiben.'); return; }
+    const e = einsaetze.find((x) => x.id === einsatzId);
+    if (!e?.owner_user_id) { setFehler('Einsatz ohne Betriebszuordnung.'); return; }
+    setSigBusy(true); setFehler(null);
+    try {
+      const blob: Blob | null = await new Promise((res) => c.toBlob((b) => res(b), 'image/png'));
+      if (!blob) throw new Error('Bild konnte nicht erstellt werden.');
+      const pfad = `${e.owner_user_id}/${einsatzId}/unterschrift-${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from('einsatz-fotos').upload(pfad, blob, { upsert: true, contentType: 'image/png' });
+      if (upErr) throw upErr;
+      const { error: rpcErr } = await supabase.rpc('einsatz_unterschrift_speichern', { p_einsatz_id: einsatzId, p_pfad: pfad, p_name: sigName.trim() || null });
+      if (rpcErr) throw rpcErr;
+      setSigModalId(null); setSigName('');
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Unterschrift konnte nicht gespeichert werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setSigBusy(false); }
+  }
+
+  // ----- Einsatzbericht-PDF erstellen -----
+  async function berichtErstellen(e: EinsatzRow) {
+    if (!e.owner_user_id) { setFehler('Einsatz ohne Betriebszuordnung.'); return; }
+    setBerichtBusy(e.id); setFehler(null);
+    try {
+      // Firmenkopf sicher holen (Monteur darf profiles sonst nicht lesen)
+      const { data: kopf, error: kErr } = await supabase.rpc('firmenkopf_fuer_einsatz', { p_einsatz_id: e.id });
+      if (kErr) throw kErr;
+      const aussteller = Array.isArray(kopf) ? (kopf[0] ?? {}) : (kopf ?? {});
+
+      const poss = positionenNachEinsatz.get(e.id) ?? [];
+      const efotos = fotosNachEinsatz.get(e.id) ?? [];
+      const fotoLinks = efotos.map((f) => fotoUrls[f.pfad]).filter(Boolean);
+      const sigLink = e.unterschrift_pfad ? (fotoUrls[e.unterschrift_pfad] ?? null) : null;
+
+      const resp = await fetch('/api/einsatz-bericht', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          einsatz: {
+            titel: e.titel, einsatzort: e.einsatzort, beschreibung: e.beschreibung,
+            kunde_name: e.kunde_name, kunde_email: e.kunde_email, kunde_telefon: e.kunde_telefon,
+            beginn_am: e.beginn_am, ende_am: e.ende_am, status: e.status,
+            unterwegs_am: e.unterwegs_am, vor_ort_am: e.vor_ort_am, erledigt_am: e.erledigt_am,
+          },
+          aussteller,
+          positionen: poss.map((p) => ({ bezeichnung: p.bezeichnung, menge: p.menge, einheit: p.einheit, einzelpreis_netto: p.einzelpreis_netto, mwst_satz: p.mwst_satz })),
+          fotoUrls: fotoLinks,
+          unterschriftUrl: sigLink,
+          unterschriftName: e.unterschrift_name,
+          unterschriftAm: e.unterschrift_am,
+        }),
+      });
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => null);
+        throw new Error(j?.error || 'PDF-Erstellung fehlgeschlagen');
+      }
+      const pdfBlob = await resp.blob();
+
+      // Sofort-Download anbieten
+      const durl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = durl; a.download = `Einsatzbericht_${(e.titel || 'Einsatz').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(durl);
+
+      // In Bucket ablegen + Verweis setzen (für erneutes Öffnen)
+      const pfad = `${e.owner_user_id}/${e.id}/bericht-${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage.from('einsatz-fotos').upload(pfad, pdfBlob, { upsert: true, contentType: 'application/pdf' });
+      if (!upErr) { await supabase.rpc('einsatz_bericht_speichern', { p_einsatz_id: e.id, p_pfad: pfad }); }
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Bericht konnte nicht erstellt werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBerichtBusy(null); }
   }
 
   const datumLang = `${WOCHENTAGE[tag.getDay()]}, ${pad(tag.getDate())}.${pad(tag.getMonth() + 1)}.${tag.getFullYear()}`;
@@ -392,6 +523,28 @@ export default function MeineEinsaetzePage() {
                 })()}
 
                 {(() => {
+                  const hat = !!e.unterschrift_pfad;
+                  return (
+                    <div style={styles.sigBereich}>
+                      {hat ? (
+                        <>
+                          <div style={styles.sigKopf}>
+                            <span style={{ fontWeight: 700, color: C.green }}>✅ Unterschrieben{e.unterschrift_name ? ` · ${e.unterschrift_name}` : ''}</span>
+                            <button onClick={() => { setSigName(e.unterschrift_name ?? ''); setSigModalId(e.id); }} style={styles.sigNeu}>neu</button>
+                          </div>
+                          {e.unterschrift_pfad && fotoUrls[e.unterschrift_pfad] && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={fotoUrls[e.unterschrift_pfad]} alt="Unterschrift" style={styles.sigPreview} />
+                          )}
+                        </>
+                      ) : (
+                        <button onClick={() => { setSigName(e.kunde_name ?? ''); setSigModalId(e.id); }} style={styles.sigBtn}>✍️ Unterschrift</button>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {(() => {
                   const efotos = fotosNachEinsatz.get(e.id) ?? [];
                   return (
                     <div style={styles.fotoBereich}>
@@ -420,6 +573,24 @@ export default function MeineEinsaetzePage() {
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {(() => {
+                  const hat = !!e.bericht_pfad;
+                  return (
+                    <div style={styles.berichtBereich}>
+                      <button onClick={() => berichtErstellen(e)} disabled={berichtBusy === e.id}
+                        style={{ ...styles.berichtBtn, opacity: berichtBusy === e.id ? 0.6 : 1 }}>
+                        {berichtBusy === e.id ? 'Erstellt Bericht …' : (hat ? '📄 Bericht neu erstellen' : '📄 Einsatzbericht erstellen')}
+                      </button>
+                      <EinsatzRechnungButton einsatzId={e.id} />
+                      {hat && e.bericht_pfad && fotoUrls[e.bericht_pfad] && (
+                        <a href={fotoUrls[e.bericht_pfad]} target="_blank" rel="noopener noreferrer" style={styles.berichtLink}>
+                          📄 Letzten Bericht öffnen{e.bericht_am ? ` · ${new Date(e.bericht_am).toLocaleDateString('de-DE')}` : ''}
+                        </a>
                       )}
                     </div>
                   );
@@ -502,6 +673,37 @@ export default function MeineEinsaetzePage() {
           </div>
         );
       })()}
+
+      {/* ===== Unterschrift-Modal ===== */}
+      {sigModalId && (
+        <div style={styles.overlay} onClick={() => !sigBusy && setSigModalId(null)}>
+          <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
+            <h2 style={styles.modalTitel}>Unterschrift</h2>
+            <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 12px' }}>Bitte im weißen Feld unterschreiben (Finger oder Maus).</p>
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={200}
+              style={styles.canvas}
+              onPointerDown={sigStart}
+              onPointerMove={sigMove}
+              onPointerUp={sigEnd}
+              onPointerLeave={sigEnd}
+            />
+            <div style={{ marginTop: 12 }}>
+              <label style={styles.lbl}>Name (Kunde)</label>
+              <input style={styles.input} value={sigName} onChange={(ev) => setSigName(ev.target.value)} placeholder="Name des Unterzeichners" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+              <button onClick={canvasLeeren} disabled={sigBusy} style={styles.ghostBtn}>Löschen</button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setSigModalId(null)} disabled={sigBusy} style={styles.ghostBtn}>Abbrechen</button>
+                <button onClick={() => unterschriftSpeichern(sigModalId)} disabled={sigBusy} style={{ ...styles.primaerBtn, opacity: sigBusy ? 0.6 : 1 }}>{sigBusy ? 'Speichert …' : 'Speichern'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -557,6 +759,17 @@ const styles: Record<string, CSSProperties> = {
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit' },
   primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '14px 18px', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
+
+  sigBereich: { marginTop: 10 },
+  sigBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 12, padding: '14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  sigKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 14 },
+  sigNeu: { background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 12px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' },
+  sigPreview: { width: '100%', maxWidth: 260, marginTop: 8, borderRadius: 10, border: `1px solid ${C.border}`, background: '#fff', display: 'block' },
+  canvas: { width: '100%', aspectRatio: '3 / 1', background: '#ffffff', border: `2px solid ${C.gold}`, borderRadius: 12, display: 'block', touchAction: 'none', cursor: 'crosshair' },
+
+  berichtBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
+  berichtBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 12, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  berichtLink: { textAlign: 'center', color: C.cyan, fontSize: 13.5, fontWeight: 600, textDecoration: 'none' },
 
   hint: { color: C.textDim, fontSize: 15, padding: '24px 0', textAlign: 'center' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
