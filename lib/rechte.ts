@@ -286,3 +286,45 @@ export function darfModulFreigeben(
   if (!darfVerteilen(rolle, hatVollmacht)) return false
   return verteilbareModule(rolle, eigeneModule).includes(modul)
 }
+
+// ============================================================================
+// PUNKT 7 · SCHREIBRECHTE — zweite Achse: SEHEN vs. AENDERN.
+//
+// Ein Mitarbeiter kann ein Modul SEHEN (module[]) und trotzdem nur lesend
+// darauf zugreifen. Das AENDERN-Recht liegt separat in schreib_module[].
+// DB-Gegenstueck: public.darf_ich_modul_aendern(modul) (liest schreib_module).
+//
+// Reine Funktionen, keine Supabase-Aufrufe — importierbar von proxy.ts + Client.
+// ============================================================================
+
+/**
+ * Darf der Mitarbeiter dieses Modul AENDERN (speichern/loeschen)?
+ * Reine Pruefung gegen sein schreib_module-Array.
+ *
+ * WICHTIG: Aendern setzt Sehen voraus. Ein Modul steht nur dann sinnvoll in
+ * schreib_module, wenn es auch in module steht — das stellt die Verteil-UI
+ * sicher (Punkt 8). Diese Funktion prueft bewusst NUR das Schreib-Array, damit
+ * sie 1:1 dem DB-Helfer entspricht und beide dieselbe Wahrheit liefern.
+ *
+ * @param modul          Modul-Schluessel (z. B. 'auftraege').
+ * @param schreibModule  schreib_module-Array des Mitarbeiters.
+ */
+export function darfSchreiben(modul: string, schreibModule: readonly string[]): boolean {
+  return schreibModule.includes(modul)
+}
+
+/**
+ * Bequeme Kombi-Pruefung: sieht UND darf aendern.
+ * Nuetzlich, wenn ein Speichern-Button beide Bedingungen braucht.
+ *
+ * @param modul          Modul-Schluessel.
+ * @param module         module-Array (Sicht-Rechte) des Mitarbeiters.
+ * @param schreibModule  schreib_module-Array (Schreib-Rechte) des Mitarbeiters.
+ */
+export function darfSehenUndSchreiben(
+  modul: string,
+  module: readonly string[],
+  schreibModule: readonly string[],
+): boolean {
+  return module.includes(modul) && schreibModule.includes(modul)
+}
