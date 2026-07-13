@@ -65,6 +65,23 @@ export async function POST(req: NextRequest) {
     // 1) Hash
     const hash = createHash('sha256').update(buf).digest('hex');
 
+    // 1b) Doppelschutz: gibt es diese Datei (gleicher Hash) schon im Archiv?
+    const { data: vorhanden } = await supabase
+      .from('erechnung_archiv')
+      .select('id, archiviert_am')
+      .eq('owner_user_id', ownerId)
+      .eq('datei_hash', hash)
+      .limit(1)
+      .maybeSingle();
+    if (vorhanden) {
+      return NextResponse.json({
+        ok: false,
+        bereits: vorhanden.id,
+        bereits_am: vorhanden.archiviert_am,
+        error: 'Diese Rechnung ist bereits im Archiv.',
+      }, { status: 200 });
+    }
+
     // 2) Pfad + Upload
     const jahr = (rechnungsdatum ? rechnungsdatum.slice(0, 4) : String(new Date().getFullYear()));
     const sicherName = (file.name || 'erechnung')

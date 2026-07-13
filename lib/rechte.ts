@@ -96,6 +96,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten', ebene: 2, sensibel: true },
   { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', ebene: 2, sensibel: true },
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true },
+  { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true },
   { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', ebene: 2, sensibel: true },
   { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true },
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true },

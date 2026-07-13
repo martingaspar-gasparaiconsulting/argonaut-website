@@ -1,22 +1,23 @@
 "use client";
 
 // ============================================================
-// ARGONAUT OS · MODUL 6 (Rechnung) · P35 — E-RECHNUNG IMPORT
+// ARGONAUT OS · MODUL 6 (Rechnung) · P35 + P36 — E-RECHNUNG IMPORT
 // ------------------------------------------------------------
 // Lädt eine eingehende E-Rechnung hoch (XML oder ZUGFeRD-PDF),
-// liest sie über /api/erechnung-lesen aus und zeigt die Daten
-// klar lesbar an. Verwandelt "unlesbare XML" in eine saubere
-// Übersicht — das Verkaufsargument.
-//
-// GoBD-Archivierung des Originals: Andockpunkt in P36.
+// liest sie über /api/erechnung-lesen aus, zeigt sie lesbar an
+// UND archiviert sie automatisch GoBD-konform (/api/erechnung-
+// archivieren) — die Datei bleibt unveränderbar erhalten.
+// Doppelschutz per Hash: dieselbe Datei wird nicht zweimal abgelegt.
 // ============================================================
 
 import React, { useState, useRef } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
 const NAVY = "#0A1628";
 const NAVY2 = "#0f1f38";
 const GOLD = "#C9A84C";
 const CYAN = "#00e5ff";
+const GRUEN = "#00e676";
 const LINE = "rgba(201,168,76,0.18)";
 const TEXT = "#e8f0f8";
 const DIM = "rgba(232,240,248,0.55)";
@@ -52,14 +53,24 @@ export default function ERechnungImport() {
   const [fehler, setFehler] = useState<string>("");
   const [daten, setDaten] = useState<ERechnung | null>(null);
   const [dateiName, setDateiName] = useState<string>("");
+  const [archivStatus, setArchivStatus] = useState<string>("");   // "" | "läuft" | "ok" | "schon" | "fehler"
+  const [archivInfo, setArchivInfo] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   async function verarbeite(file: File) {
     setFehler("");
     setDaten(null);
+    setArchivStatus("");
+    setArchivInfo("");
     setDateiName(file.name);
     setLaden(true);
     try {
+      // 1) Auslesen
       const fd = new FormData();
       fd.append("datei", file);
       const res = await fetch("/api/erechnung-lesen", { method: "POST", body: fd });
@@ -69,11 +80,54 @@ export default function ERechnungImport() {
         if (j.details && Array.isArray(j.details)) setFehler((j.error || "") + " (" + j.details.join(", ") + ")");
         return;
       }
-      setDaten(j.rechnung as ERechnung);
+      const rechnung = j.rechnung as ERechnung;
+      setDaten(rechnung);
+
+      // 2) Automatisch GoBD-archivieren (Eingang)
+      await archiviere(file, rechnung);
     } catch (e: any) {
       setFehler("Unerwarteter Fehler: " + (e?.message || String(e)));
     } finally {
       setLaden(false);
+    }
+  }
+
+  async function archiviere(file: File, rechnung: ERechnung) {
+    setArchivStatus("läuft");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setArchivStatus("fehler"); setArchivInfo("Nicht angemeldet."); return; }
+
+      const fd = new FormData();
+      fd.append("datei", file);
+      fd.append("owner_user_id", user.id);
+      fd.append("richtung", "eingang");
+      fd.append("rechnungsnummer", rechnung.rechnungsnummer || "");
+      fd.append("format", rechnung.format || "");
+      fd.append("lieferant_name", rechnung.verkaeufer?.name || "");
+      fd.append("empfaenger_name", rechnung.kaeufer?.name || "");
+      fd.append("brutto_summe", String(rechnung.brutto_summe || 0));
+      fd.append("waehrung", rechnung.waehrung || "EUR");
+      fd.append("rechnungsdatum", rechnung.rechnungsdatum || "");
+
+      const res = await fetch("/api/erechnung-archivieren", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok || !j.ok) {
+        // "schon archiviert" ist KEIN echter Fehler — freundlich behandeln
+        if (j.bereits) {
+          setArchivStatus("schon");
+          setArchivInfo("bereits archiviert am " + datum(j.bereits_am || ""));
+        } else {
+          setArchivStatus("fehler");
+          setArchivInfo(j.error || "Archivierung fehlgeschlagen.");
+        }
+        return;
+      }
+      setArchivStatus("ok");
+      setArchivInfo("revisionssicher archiviert" + (j.archiviert_am ? " am " + datum(String(j.archiviert_am).slice(0, 10)) : ""));
+    } catch (e: any) {
+      setArchivStatus("fehler");
+      setArchivInfo(e?.message || String(e));
     }
   }
 
@@ -97,7 +151,8 @@ export default function ERechnungImport() {
       </h1>
       <p style={{ color: DIM, margin: "0 0 24px", fontSize: 14, lineHeight: 1.6 }}>
         Eingehende E-Rechnung hochladen (XML nach EN 16931 oder ZUGFeRD-PDF). ARGONAUT liest die
-        Daten automatisch aus und zeigt sie lesbar an — egal von welchem Absender oder Programm.
+        Daten automatisch aus, zeigt sie lesbar an und archiviert das Original GoBD-konform
+        (unveränderbar, 10 Jahre) — egal von welchem Absender.
       </p>
 
       {/* Upload-Bereich */}
@@ -107,8 +162,7 @@ export default function ERechnungImport() {
         onClick={() => inputRef.current?.click()}
         style={{
           border: `2px dashed ${LINE}`, borderRadius: 14, padding: "38px 24px",
-          textAlign: "center", cursor: "pointer", background: NAVY2,
-          transition: "border-color .2s",
+          textAlign: "center", cursor: "pointer", background: NAVY2, transition: "border-color .2s",
         }}
       >
         <div style={{ fontSize: 40, marginBottom: 10 }}>📥</div>
@@ -148,6 +202,21 @@ export default function ERechnungImport() {
 
       {daten && (
         <div style={{ marginTop: 28 }}>
+          {/* Archivierungs-Status */}
+          {archivStatus && (
+            <div style={{
+              marginBottom: 18, borderRadius: 10, padding: "12px 16px", fontSize: 14,
+              background: archivStatus === "fehler" ? "rgba(255,82,82,0.08)" : "rgba(0,230,118,0.08)",
+              border: `1px solid ${archivStatus === "fehler" ? "rgba(255,82,82,0.3)" : "rgba(0,230,118,0.3)"}`,
+              color: archivStatus === "fehler" ? "#ff9a9a" : GRUEN,
+            }}>
+              {archivStatus === "läuft" && "▸ Wird revisionssicher archiviert…"}
+              {archivStatus === "ok" && `✓ GoBD-Archiv: ${archivInfo}`}
+              {archivStatus === "schon" && `✓ GoBD-Archiv: ${archivInfo}`}
+              {archivStatus === "fehler" && `⚠ Archivierung: ${archivInfo}`}
+            </div>
+          )}
+
           {/* Kopfzeile */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
             <div>
@@ -241,7 +310,7 @@ export default function ERechnungImport() {
 
           <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
             <button
-              onClick={() => { setDaten(null); setDateiName(""); setFehler(""); }}
+              onClick={() => { setDaten(null); setDateiName(""); setFehler(""); setArchivStatus(""); setArchivInfo(""); }}
               style={{ padding: "10px 18px", background: "transparent", color: CYAN, border: `1px solid ${CYAN}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
             >
               Weitere Rechnung einlesen
