@@ -61,7 +61,9 @@ type EinsatzRow = {
   beginn_am: string | null; ende_am: string | null; status: string | null;
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
   unterwegs_am: string | null; vor_ort_am: string | null; erledigt_am: string | null;
+  owner_user_id: string | null;
 };
+type FotoRow = { id: string; einsatz_id: string; pfad: string; dateiname: string | null };
 
 export default function MeineEinsaetzePage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -72,6 +74,9 @@ export default function MeineEinsaetzePage() {
   const [einsaetze, setEinsaetze] = useState<EinsatzRow[]>([]);
   const [tagOffset, setTagOffset] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<FotoRow[]>([]);
+  const [fotoUrls, setFotoUrls] = useState<Record<string, string>>({}); // Pfad -> signierte URL
+  const [fotoBusy, setFotoBusy] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -97,13 +102,34 @@ export default function MeineEinsaetzePage() {
       const ende = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 23, 59, 59);
       const { data, error } = await supabase
         .from('einsaetze')
-        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am')
+        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, owner_user_id')
         .eq('mitarbeiter_id', mitarbeiter.id)
         .gte('beginn_am', start.toISOString())
         .lte('beginn_am', ende.toISOString())
         .order('beginn_am', { ascending: true });
       if (error) throw error;
-      setEinsaetze((data as EinsatzRow[]) ?? []);
+      const rows = (data as EinsatzRow[]) ?? [];
+      setEinsaetze(rows);
+
+      // Fotos zu diesen Einsätzen laden (+ signierte Anzeige-Links, 1h gültig)
+      const ids = rows.map((r) => r.id);
+      if (ids.length) {
+        const { data: fdata } = await supabase
+          .from('einsatz_fotos')
+          .select('id, einsatz_id, pfad, dateiname')
+          .in('einsatz_id', ids)
+          .order('created_at', { ascending: true });
+        const frows = (fdata as FotoRow[]) ?? [];
+        setFotos(frows);
+        if (frows.length) {
+          const { data: signed } = await supabase.storage
+            .from('einsatz-fotos')
+            .createSignedUrls(frows.map((f) => f.pfad), 3600);
+          const urls: Record<string, string> = {};
+          if (signed) for (const s of signed) { if (s.signedUrl && s.path) urls[s.path] = s.signedUrl; }
+          setFotoUrls(urls);
+        } else setFotoUrls({});
+      } else { setFotos([]); setFotoUrls({}); }
     } catch (e: unknown) {
       setFehler('Einsätze konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -123,6 +149,46 @@ export default function MeineEinsaetzePage() {
     } catch (err: unknown) {
       setFehler('Status konnte nicht gesetzt werden: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusyId(null); }
+  }
+
+  // Fotos je Einsatz gruppiert
+  const fotosNachEinsatz = useMemo(() => {
+    const m = new Map<string, FotoRow[]>();
+    for (const f of fotos) { const a = m.get(f.einsatz_id) ?? []; a.push(f); m.set(f.einsatz_id, a); }
+    return m;
+  }, [fotos]);
+
+  // Foto hochladen: Datei -> privater Bucket, dann Verweis via geschützter Funktion
+  async function fotoHochladen(e: EinsatzRow, file: File) {
+    if (!e.owner_user_id) { setFehler('Einsatz ohne Betriebszuordnung.'); return; }
+    setFotoBusy(e.id); setFehler(null);
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const pfad = `${e.owner_user_id}/${e.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('einsatz-fotos').upload(pfad, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { error: rpcErr } = await supabase.rpc('einsatz_foto_speichern', {
+        p_einsatz_id: e.id, p_pfad: pfad, p_dateiname: file.name, p_groesse_bytes: file.size,
+      });
+      if (rpcErr) throw rpcErr;
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Foto konnte nicht hochgeladen werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setFotoBusy(null); }
+  }
+
+  // Foto löschen (Chef oder Uploader): erst DB-Verweis, dann Datei aus dem Bucket
+  async function fotoLoeschen(f: FotoRow) {
+    if (!window.confirm('Dieses Foto wirklich löschen?')) return;
+    setFehler(null);
+    try {
+      const { data: pfad, error } = await supabase.rpc('einsatz_foto_loeschen', { p_foto_id: f.id });
+      if (error) throw error;
+      if (pfad) await supabase.storage.from('einsatz-fotos').remove([pfad as string]);
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Foto konnte nicht gelöscht werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    }
   }
 
   const datumLang = `${WOCHENTAGE[tag.getDay()]}, ${pad(tag.getDate())}.${pad(tag.getMonth() + 1)}.${tag.getFullYear()}`;
@@ -236,6 +302,40 @@ export default function MeineEinsaetzePage() {
                   }
                   return null;
                 })()}
+
+                {(() => {
+                  const efotos = fotosNachEinsatz.get(e.id) ?? [];
+                  return (
+                    <div style={styles.fotoBereich}>
+                      <div style={styles.fotoKopf}>
+                        <span style={{ fontWeight: 700 }}>📷 Fotos {efotos.length > 0 ? `(${efotos.length})` : ''}</span>
+                        <label style={{ ...styles.fotoAddBtn, opacity: fotoBusy === e.id ? 0.6 : 1 }}>
+                          {fotoBusy === e.id ? 'Lädt …' : '+ Foto'}
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                            disabled={fotoBusy === e.id}
+                            onChange={(ev) => { const f = ev.target.files?.[0]; if (f) { void fotoHochladen(e, f); } ev.target.value = ''; }} />
+                        </label>
+                      </div>
+                      {efotos.length > 0 && (
+                        <div style={styles.fotoGrid}>
+                          {efotos.map((f) => (
+                            <div key={f.id} style={styles.fotoThumb}>
+                              {fotoUrls[f.pfad] ? (
+                                <a href={fotoUrls[f.pfad]} target="_blank" rel="noopener noreferrer">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={fotoUrls[f.pfad]} alt={f.dateiname ?? 'Foto'} style={styles.fotoImg} />
+                                </a>
+                              ) : (
+                                <div style={styles.fotoLaedt}>…</div>
+                              )}
+                              <button onClick={() => fotoLoeschen(f)} style={styles.fotoDel} title="Foto löschen">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -271,6 +371,15 @@ const styles: Record<string, CSSProperties> = {
   phaseBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', marginTop: 10, width: '100%', minHeight: 54 },
   stempelZeile: { display: 'flex', gap: 14, fontSize: 12.5, color: C.textDim, marginTop: 8, flexWrap: 'wrap' },
   erledigtHinweis: { marginTop: 10, textAlign: 'center', color: C.green, fontWeight: 700, fontSize: 15, padding: '12px', background: 'rgba(76,175,125,0.1)', borderRadius: 12 },
+
+  fotoBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  fotoKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 14 },
+  fotoAddBtn: { background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '8px 14px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  fotoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8, marginTop: 10 },
+  fotoThumb: { position: 'relative', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: C.navy },
+  fotoImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  fotoLaedt: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 18 },
+  fotoDel: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(10,22,40,0.8)', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit' },
 
   hint: { color: C.textDim, fontSize: 15, padding: '24px 0', textAlign: 'center' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
