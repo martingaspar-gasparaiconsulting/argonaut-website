@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { leseERechnung, extrahiereXmlAusPdf } from '../../../lib/erechnung-parser';
+import { extrahiereXmlAusPdfBytes } from '../../../lib/zugferd-pdf-extract';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · P35 — E-RECHNUNG LESEN (API)
@@ -29,11 +30,15 @@ export async function POST(req: NextRequest) {
     let xml = '';
 
     if (name.endsWith('.pdf') || buf.slice(0, 5).toString('latin1') === '%PDF-') {
-      // ZUGFeRD-PDF: eingebettetes XML aus dem PDF-Text ziehen.
-      // Latin1 bewahrt Bytes 1:1, sodass unkomprimiert eingebettete
-      // XML-Blöcke gefunden werden (Normalfall bei ZUGFeRD).
-      const pdfText = buf.toString('latin1');
-      xml = extrahiereXmlAusPdf(pdfText);
+      // ZUGFeRD-PDF: eingebettetes XML herausziehen.
+      // 1. Versuch: sauber dekomprimiert über die PDF-Struktur (pdf-lib) —
+      //    funktioniert auch bei FlateDecode-komprimierten Anhängen (Normalfall).
+      xml = await extrahiereXmlAusPdfBytes(buf);
+      // 2. Fallback: Textsuche für unkomprimiert eingebettete XML.
+      if (!xml) {
+        const pdfText = buf.toString('latin1');
+        xml = extrahiereXmlAusPdf(pdfText);
+      }
       if (!xml) {
         return NextResponse.json({
           error: 'PDF enthält keine erkennbare eingebettete E-Rechnung. Ist es ein ZUGFeRD-PDF? Sonst bitte die XML-Datei hochladen.',

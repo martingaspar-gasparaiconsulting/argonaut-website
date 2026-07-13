@@ -309,6 +309,7 @@ export async function POST(req: NextRequest) {
     const kontaktName: string = body?.kontaktName || '';
     const firmaName: string = body?.firmaName || '';
     const aussteller: any = body?.aussteller || {};
+  const wantPdfa: boolean = body?.pdfa === true;
 
     if (!rechnung?.rechnungsnummer && !rechnung?.brutto_summe) {
       return NextResponse.json({ error: 'Rechnungsdaten fehlen.' }, { status: 400 });
@@ -325,6 +326,7 @@ export async function POST(req: NextRequest) {
     form.append('files', new Blob([html], { type: 'text/html' }), 'index.html');
     form.append('marginTop', '0.5');
     form.append('marginBottom', '0.5');
+  if (wantPdfa) form.append('pdfa', 'PDF/A-3b');
 
     const authHeader = (gUser && gPass) ? 'Basic ' + Buffer.from(`${gUser}:${gPass}`).toString('base64') : '';
     const pdfResp = await fetch(`${gotenbergUrl.replace(/\/$/, '')}/forms/chromium/convert/html`, {
