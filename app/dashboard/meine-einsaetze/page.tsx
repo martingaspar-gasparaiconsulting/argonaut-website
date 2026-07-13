@@ -44,6 +44,9 @@ const WOCHENTAGE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', '
 
 function telLink(t: string) { return `tel:${t.replace(/[^\d+]/g, '')}`; }
 function mapsLink(ort: string) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ort)}`; }
+function eur(n: number) { return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+function fmtMenge(n: number) { return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE'); }
+function zahl(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
 
 // Nächste Phase im Lebenszyklus: Geplant → Unterwegs → Vor Ort → Erledigt
 function naechstePhase(status: string | null): { ziel: string; label: string; farbe: string } | null {
@@ -64,6 +67,9 @@ type EinsatzRow = {
   owner_user_id: string | null;
 };
 type FotoRow = { id: string; einsatz_id: string; pfad: string; dateiname: string | null };
+type KatalogItem = { id: string; bezeichnung: string; einheit: string | null; einheitspreis_netto: number | null; festpreis_netto: number | null; stundensatz_netto: number | null; mwst_satz: number | null };
+type PositionRow = { id: string; einsatz_id: string; bezeichnung: string; menge: number; einheit: string | null; einzelpreis_netto: number; mwst_satz: number };
+type PosForm = { katalogId: string; bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst: string };
 
 export default function MeineEinsaetzePage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -77,6 +83,11 @@ export default function MeineEinsaetzePage() {
   const [fotos, setFotos] = useState<FotoRow[]>([]);
   const [fotoUrls, setFotoUrls] = useState<Record<string, string>>({}); // Pfad -> signierte URL
   const [fotoBusy, setFotoBusy] = useState<string | null>(null);
+  const [positionen, setPositionen] = useState<PositionRow[]>([]);
+  const [katalog, setKatalog] = useState<KatalogItem[]>([]);
+  const [posModalId, setPosModalId] = useState<string | null>(null); // Einsatz, dessen Leistungen offen sind
+  const [posForm, setPosForm] = useState<PosForm>({ katalogId: '', bezeichnung: '', menge: '1', einheit: '', einzelpreis: '', mwst: '19' });
+  const [posBusy, setPosBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +104,15 @@ export default function MeineEinsaetzePage() {
   }, []);
 
   const tag = useMemo(() => addDays(new Date(), tagOffset), [tagOffset]);
+
+  // Leistungskatalog des Betriebs einmalig laden (über geschützte Funktion)
+  useEffect(() => {
+    if (!mitarbeiter) return;
+    (async () => {
+      const { data } = await supabase.rpc('mein_leistungskatalog');
+      setKatalog((data as KatalogItem[]) ?? []);
+    })();
+  }, [mitarbeiter]);
 
   const laden_ = useCallback(async () => {
     if (!mitarbeiter) return;
@@ -130,6 +150,16 @@ export default function MeineEinsaetzePage() {
           setFotoUrls(urls);
         } else setFotoUrls({});
       } else { setFotos([]); setFotoUrls({}); }
+
+      // Erfasste Leistungen zu diesen Einsätzen laden
+      if (ids.length) {
+        const { data: pdata } = await supabase
+          .from('einsatz_positionen')
+          .select('id, einsatz_id, bezeichnung, menge, einheit, einzelpreis_netto, mwst_satz')
+          .in('einsatz_id', ids)
+          .order('created_at', { ascending: true });
+        setPositionen((pdata as PositionRow[]) ?? []);
+      } else setPositionen([]);
     } catch (e: unknown) {
       setFehler('Einsätze konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -188,6 +218,53 @@ export default function MeineEinsaetzePage() {
       await laden_();
     } catch (err: unknown) {
       setFehler('Foto konnte nicht gelöscht werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    }
+  }
+
+  // ----- Leistungserfassung -----
+  const positionenNachEinsatz = useMemo(() => {
+    const m = new Map<string, PositionRow[]>();
+    for (const p of positionen) { const a = m.get(p.einsatz_id) ?? []; a.push(p); m.set(p.einsatz_id, a); }
+    return m;
+  }, [positionen]);
+
+  function katalogWahl(id: string) {
+    if (id === '') { setPosForm((f) => ({ ...f, katalogId: '', bezeichnung: '', einheit: '', einzelpreis: '', mwst: '19' })); return; }
+    if (id === 'frei') { setPosForm((f) => ({ ...f, katalogId: 'frei', bezeichnung: '', einheit: '', einzelpreis: '', mwst: '19' })); return; }
+    const k = katalog.find((x) => x.id === id);
+    if (!k) return;
+    const preis = k.einheitspreis_netto ?? k.festpreis_netto ?? k.stundensatz_netto ?? 0;
+    setPosForm((f) => ({ ...f, katalogId: id, bezeichnung: k.bezeichnung, einheit: k.einheit ?? '', einzelpreis: String(preis), mwst: String(k.mwst_satz ?? 19) }));
+  }
+
+  async function positionHinzufuegen(einsatzId: string) {
+    const bez = posForm.bezeichnung.trim();
+    if (!bez) { setFehler('Bitte eine Leistung wählen oder benennen.'); return; }
+    setPosBusy(true); setFehler(null);
+    try {
+      const katId = posForm.katalogId && posForm.katalogId !== 'frei' ? posForm.katalogId : null;
+      const { error } = await supabase.rpc('einsatz_position_speichern', {
+        p_einsatz_id: einsatzId, p_leistungskatalog_id: katId, p_bezeichnung: bez,
+        p_menge: zahl(posForm.menge), p_einheit: posForm.einheit.trim() || null,
+        p_einzelpreis_netto: zahl(posForm.einzelpreis), p_mwst_satz: zahl(posForm.mwst),
+      });
+      if (error) throw error;
+      setPosForm({ katalogId: '', bezeichnung: '', menge: '1', einheit: '', einzelpreis: '', mwst: '19' });
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Position konnte nicht gespeichert werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setPosBusy(false); }
+  }
+
+  async function positionLoeschen(p: PositionRow) {
+    if (!window.confirm('Diese Position löschen?')) return;
+    setFehler(null);
+    try {
+      const { error } = await supabase.rpc('einsatz_position_loeschen', { p_position_id: p.id });
+      if (error) throw error;
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Position konnte nicht gelöscht werden: ' + (err instanceof Error ? err.message : 'Fehler'));
     }
   }
 
@@ -304,6 +381,17 @@ export default function MeineEinsaetzePage() {
                 })()}
 
                 {(() => {
+                  const eposs = positionenNachEinsatz.get(e.id) ?? [];
+                  const netto = eposs.reduce((s, p) => s + p.menge * p.einzelpreis_netto, 0);
+                  return (
+                    <button onClick={() => { setPosForm({ katalogId: '', bezeichnung: '', menge: '1', einheit: '', einzelpreis: '', mwst: '19' }); setPosModalId(e.id); }} style={styles.leistungBtn}>
+                      <span style={{ fontWeight: 700 }}>🧾 Leistungen {eposs.length > 0 ? `(${eposs.length})` : ''}</span>
+                      <span style={{ color: C.gold, fontWeight: 700 }}>{eur(netto)} ›</span>
+                    </button>
+                  );
+                })()}
+
+                {(() => {
                   const efotos = fotosNachEinsatz.get(e.id) ?? [];
                   return (
                     <div style={styles.fotoBereich}>
@@ -341,6 +429,79 @@ export default function MeineEinsaetzePage() {
           })}
         </div>
       )}
+
+      {/* ===== Leistungen-Modal ===== */}
+      {posModalId && (() => {
+        const me = einsaetze.find((x) => x.id === posModalId) ?? null;
+        const poss = positionenNachEinsatz.get(posModalId) ?? [];
+        const netto = poss.reduce((s, p) => s + p.menge * p.einzelpreis_netto, 0);
+        const mwst = poss.reduce((s, p) => s + p.menge * p.einzelpreis_netto * (p.mwst_satz / 100), 0);
+        const frei = posForm.katalogId === 'frei';
+        const zeigeFelder = posForm.katalogId !== '';
+        return (
+          <div style={styles.overlay} onClick={() => !posBusy && setPosModalId(null)}>
+            <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
+              <h2 style={styles.modalTitel}>Leistungen erfassen</h2>
+              {me && <div style={{ color: C.textDim, fontSize: 13.5, marginBottom: 14 }}>{me.titel || 'Einsatz'}{me.kunde_name ? ` · ${me.kunde_name}` : ''}</div>}
+
+              {poss.length === 0 ? (
+                <div style={{ color: C.textDim, fontSize: 14, padding: '4px 0 12px' }}>Noch keine Leistungen erfasst.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                  {poss.map((p) => (
+                    <div key={p.id} style={styles.posZeile}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600 }}>{p.bezeichnung}</div>
+                        <div style={{ color: C.textDim, fontSize: 12 }}>{fmtMenge(p.menge)}{p.einheit ? ` ${p.einheit}` : ''} × {eur(p.einzelpreis_netto)}</div>
+                      </div>
+                      <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{eur(p.menge * p.einzelpreis_netto)}</div>
+                      <button onClick={() => positionLoeschen(p)} style={styles.posDel} title="Position löschen">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={styles.summen}>
+                <div style={styles.summenZeile}><span style={{ color: C.textDim }}>Netto</span><span>{eur(netto)}</span></div>
+                <div style={styles.summenZeile}><span style={{ color: C.textDim }}>MwSt</span><span>{eur(mwst)}</span></div>
+                <div style={{ ...styles.summenZeile, fontWeight: 800, color: C.gold }}><span>Gesamt</span><span>{eur(netto + mwst)}</span></div>
+              </div>
+
+              <div style={styles.addBox}>
+                <label style={styles.lbl}>Leistung wählen</label>
+                <select style={styles.input} value={posForm.katalogId} onChange={(ev) => katalogWahl(ev.target.value)}>
+                  <option value="">— Aus Katalog wählen —</option>
+                  {katalog.map((k) => <option key={k.id} value={k.id}>{k.bezeichnung}</option>)}
+                  <option value="frei">✏️ Freie Position</option>
+                </select>
+
+                {zeigeFelder && (
+                  <>
+                    {frei && (
+                      <div style={{ marginTop: 10 }}>
+                        <label style={styles.lbl}>Bezeichnung</label>
+                        <input style={styles.input} value={posForm.bezeichnung} onChange={(ev) => setPosForm((f) => ({ ...f, bezeichnung: ev.target.value }))} placeholder="z. B. Anfahrt / Sonderarbeit" />
+                      </div>
+                    )}
+                    <div style={styles.posGrid}>
+                      <div><label style={styles.lbl}>Menge</label><input style={styles.input} inputMode="decimal" value={posForm.menge} onChange={(ev) => setPosForm((f) => ({ ...f, menge: ev.target.value }))} /></div>
+                      <div><label style={styles.lbl}>Einheit</label><input style={styles.input} value={posForm.einheit} onChange={(ev) => setPosForm((f) => ({ ...f, einheit: ev.target.value }))} disabled={!frei} /></div>
+                      <div><label style={styles.lbl}>Einzelpreis €</label><input style={styles.input} inputMode="decimal" value={posForm.einzelpreis} onChange={(ev) => setPosForm((f) => ({ ...f, einzelpreis: ev.target.value }))} disabled={!frei} /></div>
+                    </div>
+                    <button onClick={() => positionHinzufuegen(posModalId)} disabled={posBusy} style={{ ...styles.primaerBtn, marginTop: 12, width: '100%', opacity: posBusy ? 0.6 : 1 }}>
+                      {posBusy ? 'Speichert …' : '+ Hinzufügen'}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <button onClick={() => setPosModalId(null)} disabled={posBusy} style={styles.ghostBtn}>Schließen</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -380,6 +541,22 @@ const styles: Record<string, CSSProperties> = {
   fotoImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   fotoLaedt: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 18 },
   fotoDel: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(10,22,40,0.8)', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit' },
+
+  leistungBtn: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.gold}`, borderRadius: 12, padding: '14px', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 },
+
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 12px', zIndex: 1000, overflowY: 'auto' },
+  modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 22, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
+  modalTitel: { fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 4px', color: C.text },
+  posZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' },
+  posDel: { width: 26, height: 26, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 },
+  summen: { display: 'flex', flexDirection: 'column', gap: 4, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14 },
+  summenZeile: { display: 'flex', justifyContent: 'space-between' },
+  addBox: { marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 },
+  posGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 },
+  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '14px 18px', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
 
   hint: { color: C.textDim, fontSize: 15, padding: '24px 0', textAlign: 'center' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
