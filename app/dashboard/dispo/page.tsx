@@ -88,6 +88,7 @@ type EinsatzRow = {
   titel: string | null; beschreibung: string | null; einsatzort: string | null;
   beginn_am: string | null; ende_am: string | null; status: string | null;
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
+  rechnung_id: string | null;
 };
 type Form = {
   id: string | null; // null = neuer Einsatz
@@ -95,6 +96,7 @@ type Form = {
   datum: string; von: string; bis: string;
   mitarbeiterId: string; status: string;
   kundeName: string; kundeEmail: string; kundeTelefon: string;
+  rechnungId: string | null;
 };
 
 const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -112,6 +114,8 @@ export default function DispoPage() {
 
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
+  const [rechnungBusy, setRechnungBusy] = useState(false);
+  const [rechnungErgebnis, setRechnungErgebnis] = useState<'neu' | 'bereits' | null>(null);
 
   const wochenEnde = useMemo(() => addDays(wochenStart, 6), [wochenStart]);
 
@@ -135,7 +139,7 @@ export default function DispoPage() {
           .or(`austrittsdatum.is.null,austrittsdatum.gt.${heute}`)
           .order('nachname', { ascending: true }),
         supabase.from('einsaetze')
-          .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon')
+          .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, rechnung_id')
           .order('beginn_am', { ascending: true })
           .limit(1000),
       ]);
@@ -194,8 +198,9 @@ export default function DispoPage() {
       datum: datum ?? isoTag(new Date()), von: '08:00', bis: '10:00',
       mitarbeiterId: mid ?? '', status: 'geplant',
       kundeName: '', kundeEmail: '', kundeTelefon: '',
+      rechnungId: null,
     });
-    setErfolg(null); setModalAuf(true);
+    setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
   function oeffneEinsatz(e: EinsatzRow) {
     const b = e.beginn_am ? new Date(e.beginn_am) : null;
@@ -205,8 +210,9 @@ export default function DispoPage() {
       datum: b ? isoTag(b) : isoTag(new Date()), von: b ? uhr(b) : '08:00', bis: en ? uhr(en) : '10:00',
       mitarbeiterId: e.mitarbeiter_id ?? '', status: e.status ?? 'geplant',
       kundeName: e.kunde_name ?? '', kundeEmail: e.kunde_email ?? '', kundeTelefon: e.kunde_telefon ?? '',
+      rechnungId: e.rechnung_id ?? null,
     });
-    setErfolg(null); setModalAuf(true);
+    setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
   function setF<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => (f ? { ...f, [k]: v } : f));
@@ -258,6 +264,25 @@ export default function DispoPage() {
     } catch (err: unknown) {
       setFehler('Absagen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setSpeichert(false); }
+  }
+
+  // --- Brücke: Rechnung aus Einsatz erzeugen (Chef) -------------------------
+  async function rechnungErstellen() {
+    if (!form?.id) return;
+    setRechnungBusy(true); setFehler(null); setErfolg(null);
+    try {
+      const resp = await fetch('/api/rechnung-aus-einsatz', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ einsatzId: form.id }),
+      });
+      const j = await resp.json();
+      if (!resp.ok) throw new Error(j?.error || 'Rechnung konnte nicht erstellt werden.');
+      setRechnungErgebnis(j?.bereitsVorhanden ? 'bereits' : 'neu');
+      setF('rechnungId', j?.rechnungId ?? null);
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Rechnung fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setRechnungBusy(false); }
   }
 
   const gridCols = `minmax(130px, 0.85fr) repeat(7, minmax(0, 1fr))`;
@@ -426,6 +451,27 @@ export default function DispoPage() {
               <Feld label="E-Mail" voll><input style={styles.input} value={form.kundeEmail} onChange={(e) => setF('kundeEmail', e.target.value)} /></Feld>
               <Feld label="Beschreibung" voll><textarea style={{ ...styles.input, minHeight: 54, resize: 'vertical' }} value={form.beschreibung} onChange={(e) => setF('beschreibung', e.target.value)} placeholder="Was ist zu tun? Material, Hinweise …" /></Feld>
             </div>
+
+            {form.id && (
+              <div style={styles.rechnungBox}>
+                {(form.rechnungId || rechnungErgebnis === 'bereits') ? (
+                  <div style={styles.rechnungOk}>
+                    <span>✅ Für diesen Einsatz existiert bereits eine Rechnung.</span>
+                    <a href="/dashboard/rechnungen" style={styles.rechnungLink}>Zu den Rechnungen ›</a>
+                  </div>
+                ) : rechnungErgebnis === 'neu' ? (
+                  <div style={styles.rechnungOk}>
+                    <span>✅ Rechnung erstellt — die erfassten Leistungen wurden übernommen.</span>
+                    <a href="/dashboard/rechnungen" style={styles.rechnungLink}>Zur Rechnung ›</a>
+                  </div>
+                ) : (
+                  <button onClick={rechnungErstellen} disabled={rechnungBusy} style={{ ...styles.rechnungBtn, opacity: rechnungBusy ? 0.6 : 1 }}>
+                    {rechnungBusy ? 'Erstellt Rechnung …' : '🧾 Rechnung aus Einsatz erstellen'}
+                  </button>
+                )}
+              </div>
+            )}
+
             <div style={styles.modalAktionen}>
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>Schließen</button>
               {form.id && belegend(form.status) && (
@@ -483,4 +529,8 @@ const styles: Record<string, CSSProperties> = {
   lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 14, fontFamily: 'inherit' },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, flexWrap: 'wrap' },
+  rechnungBox: { marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 },
+  rechnungBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  rechnungOk: { display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', color: C.green, fontSize: 13.5 },
+  rechnungLink: { color: C.cyan, fontWeight: 700, textDecoration: 'none' },
 };
