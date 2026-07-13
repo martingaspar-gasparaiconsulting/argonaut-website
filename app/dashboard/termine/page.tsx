@@ -1,13 +1,11 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Modul Termine · Seite (Schritt 18c-2)
-// (1) Öffnungszeiten-Editor (Betrieb, Mo–So) -> verfuegbarkeiten
-// (2) Freie-Slots-Kalender (7-Tage-Woche) über slotLogik.berechneSlots:
-//     Öffnungszeiten − Feiertage − Abwesenheit − Sperren − Kapazität.
-//     Klick auf freien Slot öffnet vorbefülltes Buch-Fenster
-//     (Speichern wird in Schritt 19 scharf geschaltet).
-// Design 1:1 wie das übrige Dashboard.
+// ARGONAUT OS · Modul Termine · Seite (Schritt 19b)
+// (1) Öffnungszeiten-Editor  (2) Freie-Slots-Kalender
+// (3) Buchen scharf (Kapazitäts-Prüfung)
+// (4) NEU: gebuchte Termine (goldene Kacheln) sind klickbar ->
+//     anschauen · verschieben (Zeit ändern) · absagen (Status).
 // Pfad: app/dashboard/termine/page.tsx
 // ============================================================
 
@@ -27,16 +25,12 @@ const C = {
 };
 
 const WOCHENTAGE: { wt: number; label: string; kurz: string }[] = [
-  { wt: 1, label: 'Montag', kurz: 'Mo' },
-  { wt: 2, label: 'Dienstag', kurz: 'Di' },
-  { wt: 3, label: 'Mittwoch', kurz: 'Mi' },
-  { wt: 4, label: 'Donnerstag', kurz: 'Do' },
-  { wt: 5, label: 'Freitag', kurz: 'Fr' },
-  { wt: 6, label: 'Samstag', kurz: 'Sa' },
+  { wt: 1, label: 'Montag', kurz: 'Mo' }, { wt: 2, label: 'Dienstag', kurz: 'Di' },
+  { wt: 3, label: 'Mittwoch', kurz: 'Mi' }, { wt: 4, label: 'Donnerstag', kurz: 'Do' },
+  { wt: 5, label: 'Freitag', kurz: 'Fr' }, { wt: 6, label: 'Samstag', kurz: 'Sa' },
   { wt: 0, label: 'Sonntag', kurz: 'So' },
 ];
 
-// --- DB-Typen ---------------------------------------------------------------
 type VerfDbRow = {
   id: string; ebene: string | null; art: string | null; mitarbeiter_id: string | null;
   wochentag: number | null; datum_von: string | null; datum_bis: string | null;
@@ -49,10 +43,12 @@ type TerminArtRow = {
   std_pro_tag: number | null; puffer_minuten: number | null; kapazitaet: number | null;
   farbe: string | null; aktiv: boolean | null; sortierung: number | null;
 };
-type TerminDbRow = { id: string; mitarbeiter_id: string | null; beginn_am: string; ende_am: string; status: string | null };
+type TerminDbRow = {
+  id: string; mitarbeiter_id: string | null; beginn_am: string; ende_am: string; status: string | null;
+  titel: string | null; kunde_name: string | null; kunde_email: string | null; notiz: string | null; termin_art_id: string | null;
+};
 type AbwDbRow = { mitarbeiter_id: string | null; von: string | null; bis: string | null; status: string | null };
 
-// --- Editor-Zustand pro Wochentag ------------------------------------------
 type TagState = { id: string | null; aktiv: boolean; von: string; bis: string; kapazitaet: number; ueberbuchung: boolean };
 function standardTag(wt: number): TagState {
   const werktag = wt >= 1 && wt <= 5;
@@ -64,19 +60,28 @@ function kuerzeZeit(z: string | null): string {
   return m ? `${m[1].padStart(2, '0')}:${m[2]}` : '';
 }
 
-// --- Datums-Helfer ----------------------------------------------------------
 function pad(n: number) { return n < 10 ? '0' + n : String(n); }
 function isoTag(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 function addDays(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 function montagVon(d: Date): Date {
-  const wd = d.getDay();                 // 0=So..6=Sa
-  const diff = wd === 0 ? -6 : 1 - wd;   // zurück zum Montag
+  const wd = d.getDay(); const diff = wd === 0 ? -6 : 1 - wd;
   return addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), diff);
 }
 function uhr(d: Date) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function baueZeitpunkt(datum: string, zeit: string): Date | null {
+  const md = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datum.trim());
+  const mz = /^(\d{1,2}):(\d{2})$/.exec(zeit.trim());
+  if (!md || !mz) return null;
+  const d = new Date(Number(md[1]), Number(md[2]) - 1, Number(md[3]), Number(mz[1]), Number(mz[2]), 0, 0);
+  return isNaN(d.getTime()) ? null : d;
+}
+function belegend(status: string | null): boolean {
+  const s = (status ?? '').toLowerCase();
+  return !(s === 'abgesagt' || s === 'storniert' || s === 'verschoben');
+}
 
-// --- Buch-Modal-Zustand (vorbefüllt; Speichern erst in P19) -----------------
-type BuchForm = { datum: string; von: string; bis: string; artName: string; titel: string; kundeName: string; kundeEmail: string; notiz: string };
+type BuchForm = { titel: string; kundeName: string; kundeEmail: string; notiz: string };
+type BearbForm = { id: string; datum: string; von: string; bis: string; titel: string; kundeName: string; kundeEmail: string; notiz: string; status: string };
 
 export default function TerminePage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -85,14 +90,12 @@ export default function TerminePage() {
   const [erfolg, setErfolg] = useState<string | null>(null);
   const [speichert, setSpeichert] = useState(false);
 
-  // Öffnungszeiten-Editor
   const [tage, setTage] = useState<Record<number, TagState>>(() => {
     const init: Record<number, TagState> = {};
     for (const w of WOCHENTAGE) init[w.wt] = standardTag(w.wt);
     return init;
   });
 
-  // Kalender-Daten
   const [verfAlle, setVerfAlle] = useState<VerfDbRow[]>([]);
   const [arten, setArten] = useState<TerminArtRow[]>([]);
   const [termine, setTermine] = useState<TerminDbRow[]>([]);
@@ -102,9 +105,14 @@ export default function TerminePage() {
   const [artId, setArtId] = useState<string>('');
   const [wochenStart, setWochenStart] = useState<Date>(() => montagVon(new Date()));
 
-  // Buch-Modal
+  // Buchen-Modal
   const [buchAuf, setBuchAuf] = useState(false);
-  const [buchForm, setBuchForm] = useState<BuchForm | null>(null);
+  const [buchSlot, setBuchSlot] = useState<Slot | null>(null);
+  const [buchForm, setBuchForm] = useState<BuchForm>({ titel: '', kundeName: '', kundeEmail: '', notiz: '' });
+
+  // Bearbeiten-Modal (verschieben/absagen)
+  const [bearbAuf, setBearbAuf] = useState(false);
+  const [bearbForm, setBearbForm] = useState<BearbForm | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -127,14 +135,14 @@ export default function TerminePage() {
       const [verfRes, artRes, termRes, abwRes, einstRes] = await Promise.all([
         supabase.from('verfuegbarkeiten').select('id, ebene, art, mitarbeiter_id, wochentag, datum_von, datum_bis, ganztags, von_uhrzeit, bis_uhrzeit, kapazitaet, ueberbuchung_erlaubt, aktiv, titel'),
         supabase.from('termin_arten').select('id, name, modus, dauer_minuten, dauer_min_minuten, dauer_max_minuten, std_pro_tag, puffer_minuten, kapazitaet, farbe, aktiv, sortierung').eq('aktiv', true).order('sortierung', { ascending: true }),
-        supabase.from('termine').select('id, mitarbeiter_id, beginn_am, ende_am, status').lte('beginn_am', wEnde.toISOString()).gte('ende_am', wStart.toISOString()),
+        supabase.from('termine').select('id, mitarbeiter_id, beginn_am, ende_am, status, titel, kunde_name, kunde_email, notiz, termin_art_id').lte('beginn_am', wEnde.toISOString()).gte('ende_am', wStart.toISOString()),
         supabase.from('hr_abwesenheiten').select('mitarbeiter_id, von, bis, status'),
         supabase.from('hr_einstellungen').select('bundesland').limit(1),
       ]);
       if (verfRes.error) throw verfRes.error;
       if (artRes.error) throw artRes.error;
       if (termRes.error) throw termRes.error;
-      // hr_abwesenheiten / hr_einstellungen dürfen leer sein -> Fehler tolerieren
+
       const verf = (verfRes.data as VerfDbRow[]) ?? [];
       setVerfAlle(verf);
       const aList = (artRes.data as TerminArtRow[]) ?? [];
@@ -143,7 +151,6 @@ export default function TerminePage() {
       setAbwesenheiten(abwRes.error ? [] : ((abwRes.data as AbwDbRow[]) ?? []));
       setBundesland(einstRes.error ? null : ((einstRes.data?.[0]?.bundesland as string) ?? null));
 
-      // Öffnungszeiten-Editor aus betrieb/regel füllen
       const next: Record<number, TagState> = {};
       for (const w of WOCHENTAGE) next[w.wt] = standardTag(w.wt);
       for (const r of verf) {
@@ -156,8 +163,6 @@ export default function TerminePage() {
         };
       }
       setTage(next);
-
-      // Standard-Termin-Art wählen (erste), falls noch keine gewählt
       setArtId((cur) => (cur && aList.some((a) => a.id === cur) ? cur : (aList[0]?.id ?? '')));
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -231,14 +236,107 @@ export default function TerminePage() {
     return m;
   }, [slotErgebnis]);
 
-  // --- Slot-Klick -> vorbefülltes Buch-Fenster ------------------------------
+  const termineNachTag = useMemo(() => {
+    const m = new Map<string, TerminDbRow[]>();
+    for (const t of termine) {
+      if (!belegend(t.status)) continue;
+      const d = new Date(t.beginn_am);
+      if (isNaN(d.getTime())) continue;
+      const key = isoTag(d);
+      const arr = m.get(key) ?? []; arr.push(t); m.set(key, arr);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => a.beginn_am.localeCompare(b.beginn_am));
+    return m;
+  }, [termine]);
+
+  // --- Buchen ----------------------------------------------------------------
   function slotKlick(slot: Slot) {
     if (!slot.frei || !aktiveArt) return;
-    setBuchForm({
-      datum: slot.datum, von: uhr(slot.beginn), bis: uhr(slot.ende),
-      artName: aktiveArt.name, titel: '', kundeName: '', kundeEmail: '', notiz: '',
-    });
+    setBuchSlot(slot);
+    setBuchForm({ titel: '', kundeName: '', kundeEmail: '', notiz: '' });
     setBuchAuf(true);
+  }
+  async function buchenScharf() {
+    if (!uid || !buchSlot || !aktiveArt) return;
+    const datumTxt = buchSlot.datum.split('-').reverse().join('.');
+    if (!window.confirm(`Termin buchen?\n\n${aktiveArt.name}\n${datumTxt} · ${uhr(buchSlot.beginn)}–${uhr(buchSlot.ende)}`)) return;
+    setSpeichert(true); setFehler(null); setErfolg(null);
+    try {
+      if (!buchSlot.ueberbuchung) {
+        const { data: konf, error: kErr } = await supabase
+          .from('termine').select('id, status')
+          .lt('beginn_am', buchSlot.ende.toISOString()).gt('ende_am', buchSlot.beginn.toISOString());
+        if (kErr) throw kErr;
+        const belegt = ((konf as { id: string; status: string | null }[]) ?? []).filter((t) => belegend(t.status)).length;
+        if (belegt >= buchSlot.kapazitaet) {
+          setFehler('Dieser Slot ist inzwischen belegt. Bitte einen anderen Zeitpunkt wählen.');
+          setBuchAuf(false); setSpeichert(false); await laden_(); return;
+        }
+      }
+      const { error } = await supabase.from('termine').insert({
+        owner_user_id: uid, termin_art_id: aktiveArt.id,
+        beginn_am: buchSlot.beginn.toISOString(), ende_am: buchSlot.ende.toISOString(),
+        titel: buchForm.titel.trim() || aktiveArt.name,
+        kunde_name: buchForm.kundeName.trim() || null, kunde_email: buchForm.kundeEmail.trim() || null,
+        notiz: buchForm.notiz.trim() || null, status: 'geplant', quelle: 'intern',
+      });
+      if (error) throw error;
+      setBuchAuf(false); setErfolg('Termin gebucht.'); await laden_();
+    } catch (e: unknown) {
+      setFehler('Buchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSpeichert(false); }
+  }
+
+  // --- Bearbeiten: anschauen / verschieben / absagen ------------------------
+  function oeffneBearbeiten(t: TerminDbRow) {
+    const b = new Date(t.beginn_am); const e = new Date(t.ende_am);
+    setBearbForm({
+      id: t.id, datum: isoTag(b), von: uhr(b), bis: uhr(e),
+      titel: t.titel ?? '', kundeName: t.kunde_name ?? '', kundeEmail: t.kunde_email ?? '',
+      notiz: t.notiz ?? '', status: t.status ?? 'geplant',
+    });
+    setBearbAuf(true);
+  }
+  function setBearb<K extends keyof BearbForm>(k: K, v: BearbForm[K]) {
+    setBearbForm((f) => (f ? { ...f, [k]: v } : f));
+  }
+  async function terminSpeichern() {
+    if (!uid || !bearbForm) return;
+    const s = baueZeitpunkt(bearbForm.datum, bearbForm.von);
+    const e = baueZeitpunkt(bearbForm.datum, bearbForm.bis);
+    if (!s || !e || e <= s) { setFehler('Bitte gültige Zeiten wählen (Ende nach Start).'); return; }
+    setSpeichert(true); setFehler(null); setErfolg(null);
+    try {
+      // Soft-Konflikt: andere aktive Termine im neuen Zeitraum (Warnung, keine harte Sperre)
+      const { data: konf } = await supabase.from('termine')
+        .select('id, status').lt('beginn_am', e.toISOString()).gt('ende_am', s.toISOString()).neq('id', bearbForm.id);
+      const konflikte = ((konf as { id: string; status: string | null }[]) ?? []).filter((x) => belegend(x.status));
+      if (konflikte.length > 0 && !window.confirm(`Im gewählten Zeitraum liegen bereits ${konflikte.length} Termin(e). Trotzdem verschieben?`)) {
+        setSpeichert(false); return;
+      }
+      const { error } = await supabase.from('termine').update({
+        beginn_am: s.toISOString(), ende_am: e.toISOString(),
+        titel: bearbForm.titel.trim() || 'Termin',
+        kunde_name: bearbForm.kundeName.trim() || null, kunde_email: bearbForm.kundeEmail.trim() || null,
+        notiz: bearbForm.notiz.trim() || null,
+      }).eq('id', bearbForm.id);
+      if (error) throw error;
+      setBearbAuf(false); setErfolg('Termin gespeichert.'); await laden_();
+    } catch (e: unknown) {
+      setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSpeichert(false); }
+  }
+  async function terminAbsagen() {
+    if (!bearbForm) return;
+    if (!window.confirm(`Termin „${bearbForm.titel || 'Termin'}" absagen?\n\nEr bleibt erhalten, gibt den Zeitraum aber wieder frei.`)) return;
+    setSpeichert(true); setFehler(null); setErfolg(null);
+    try {
+      const { error } = await supabase.from('termine').update({ status: 'abgesagt' }).eq('id', bearbForm.id);
+      if (error) throw error;
+      setBearbAuf(false); setErfolg('Termin abgesagt.'); await laden_();
+    } catch (e: unknown) {
+      setFehler('Absagen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSpeichert(false); }
   }
 
   const wochenTitel = `${isoTag(wochenStart).split('-').reverse().join('.')} – ${isoTag(wochenEnde).split('-').reverse().join('.')}`;
@@ -324,6 +422,7 @@ export default function TerminePage() {
             {tagesDaten.map((d) => {
               const info = tageMap.get(d.datum);
               const freie = (info?.slots ?? []).filter((s) => s.frei);
+              const gebucht = termineNachTag.get(d.datum) ?? [];
               const heute = d.datum === isoTag(new Date());
               return (
                 <div key={d.datum} style={{ ...styles.tagSpalte, borderColor: heute ? C.gold : C.border }}>
@@ -332,9 +431,18 @@ export default function TerminePage() {
                     <span style={{ color: C.textDim, fontSize: 12 }}>{d.label}</span>
                   </div>
                   <div style={styles.tagBody}>
+                    {gebucht.map((t) => {
+                      const b = new Date(t.beginn_am); const e = new Date(t.ende_am);
+                      return (
+                        <button key={t.id} onClick={() => oeffneBearbeiten(t)} style={styles.buchtBlock} title={`${t.titel ?? 'Termin'} · ${uhr(b)}–${uhr(e)} · zum Anschauen/Ändern klicken`}>
+                          <span style={{ fontWeight: 700 }}>{uhr(b)}</span>
+                          <span style={{ fontSize: 10.5, color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.titel ?? 'Termin'}</span>
+                        </button>
+                      );
+                    })}
                     {laden ? <span style={styles.tagLeer}>…</span>
                       : !info?.buchbar ? <span style={styles.tagBlock}>{info?.grund ?? 'geschlossen'}</span>
-                      : freie.length === 0 ? <span style={styles.tagLeer}>ausgebucht</span>
+                      : freie.length === 0 && gebucht.length === 0 ? <span style={styles.tagLeer}>ausgebucht</span>
                       : freie.map((s, i) => {
                         const zeigeKap = s.kapazitaet > 1;
                         return (
@@ -354,18 +462,19 @@ export default function TerminePage() {
 
         <div style={styles.legende2}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={styles.punktGruen} /> frei / buchbar</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 16 }}><span style={styles.punktGrau} /> geschlossen · Feiertag · gesperrt · ausgebucht</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 16 }}><span style={styles.punktGold} /> gebucht (klicken zum Ändern)</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 16 }}><span style={styles.punktGrau} /> geschlossen · Feiertag · gesperrt</span>
         </div>
       </div>
 
-      {/* ===== Buch-Modal (vorbefüllt; Speichern in P19) ===== */}
-      {buchAuf && buchForm && (
-        <div style={styles.overlay} onClick={() => setBuchAuf(false)}>
+      {/* ===== Buch-Modal ===== */}
+      {buchAuf && buchSlot && (
+        <div style={styles.overlay} onClick={() => !speichert && setBuchAuf(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitel}>Termin buchen</h2>
             <div style={styles.buchKopf}>
-              <div><b>{buchForm.artName}</b></div>
-              <div style={{ color: C.textDim, fontSize: 14 }}>{buchForm.datum.split('-').reverse().join('.')} · {buchForm.von}–{buchForm.bis}</div>
+              <div><b>{aktiveArt?.name}</b></div>
+              <div style={{ color: C.textDim, fontSize: 14 }}>{buchSlot.datum.split('-').reverse().join('.')} · {uhr(buchSlot.beginn)}–{uhr(buchSlot.ende)}</div>
             </div>
             <div style={styles.formGrid}>
               <Feld label="Titel" voll><input style={styles.input} value={buchForm.titel} onChange={(e) => setBuchForm({ ...buchForm, titel: e.target.value })} placeholder="z. B. Ölwechsel Meier / Erstberatung" /></Feld>
@@ -373,10 +482,34 @@ export default function TerminePage() {
               <Feld label="E-Mail (für Bestätigung)"><input style={styles.input} value={buchForm.kundeEmail} onChange={(e) => setBuchForm({ ...buchForm, kundeEmail: e.target.value })} /></Feld>
               <Feld label="Notiz" voll><textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={buchForm.notiz} onChange={(e) => setBuchForm({ ...buchForm, notiz: e.target.value })} /></Feld>
             </div>
-            <div style={styles.p19Hinweis}>Speichern wird im nächsten Schritt (19) scharf geschaltet — inkl. Kapazitäts-Prüfung und Bestätigungs-Mail.</div>
             <div style={styles.modalAktionen}>
-              <button onClick={() => setBuchAuf(false)} style={styles.ghostBtn}>Schließen</button>
-              <button disabled style={{ ...styles.primaerBtn, opacity: 0.5, cursor: 'not-allowed' }}>Buchen (ab P19)</button>
+              <button onClick={() => setBuchAuf(false)} disabled={speichert} style={styles.ghostBtn}>Abbrechen</button>
+              <button onClick={buchenScharf} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>{speichert ? 'Bucht …' : 'Buchen'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Bearbeiten-Modal (verschieben/absagen) ===== */}
+      {bearbAuf && bearbForm && (
+        <div style={styles.overlay} onClick={() => !speichert && setBearbAuf(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitel}>Termin bearbeiten</h2>
+            <div style={styles.formGrid}>
+              <Feld label="Titel" voll><input style={styles.input} value={bearbForm.titel} onChange={(e) => setBearb('titel', e.target.value)} /></Feld>
+              <Feld label="Datum"><input type="date" style={styles.input} value={bearbForm.datum} onChange={(e) => setBearb('datum', e.target.value)} /></Feld>
+              <Feld label="Status"><input style={{ ...styles.input, opacity: 0.7 }} value={bearbForm.status} disabled /></Feld>
+              <Feld label="Von (Uhrzeit)"><input type="time" style={styles.input} value={bearbForm.von} onChange={(e) => setBearb('von', e.target.value)} /></Feld>
+              <Feld label="Bis (Uhrzeit)"><input type="time" style={styles.input} value={bearbForm.bis} onChange={(e) => setBearb('bis', e.target.value)} /></Feld>
+              <Feld label="Kunde"><input style={styles.input} value={bearbForm.kundeName} onChange={(e) => setBearb('kundeName', e.target.value)} /></Feld>
+              <Feld label="E-Mail"><input style={styles.input} value={bearbForm.kundeEmail} onChange={(e) => setBearb('kundeEmail', e.target.value)} /></Feld>
+              <Feld label="Notiz" voll><textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={bearbForm.notiz} onChange={(e) => setBearb('notiz', e.target.value)} /></Feld>
+            </div>
+            <div style={styles.hinweisZeile}>Datum/Uhrzeit ändern = Termin verschieben. „Absagen" gibt den Zeitraum wieder frei.</div>
+            <div style={styles.modalAktionen}>
+              <button onClick={() => setBearbAuf(false)} disabled={speichert} style={styles.ghostBtn}>Schließen</button>
+              <button onClick={terminAbsagen} disabled={speichert} style={{ ...styles.ghostBtn, color: C.danger, borderColor: C.danger }}>Absagen</button>
+              <button onClick={terminSpeichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>{speichert ? 'Speichert …' : 'Speichern'}</button>
             </div>
           </div>
         </div>
@@ -407,16 +540,17 @@ const styles: Record<string, CSSProperties> = {
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 14, fontFamily: 'inherit' },
   legende: { marginTop: 16, fontSize: 12.5, color: C.textDim, lineHeight: 1.6, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px' },
 
-  // Kalender
   kalenderGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 },
   tagSpalte: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 8, minHeight: 180, display: 'flex', flexDirection: 'column' },
   tagKopf: { display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginBottom: 8 },
   tagBody: { display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' },
   slotBtn: { background: 'rgba(76,175,125,0.14)', color: C.text, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 4px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
+  buchtBlock: { background: 'rgba(201,168,76,0.16)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 8px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
   tagBlock: { color: C.textDim, fontSize: 11.5, textAlign: 'center', padding: '10px 2px', lineHeight: 1.35 },
   tagLeer: { color: C.textDim, fontSize: 12, textAlign: 'center', padding: '10px 2px' },
   legende2: { marginTop: 14, fontSize: 12, color: C.textDim },
   punktGruen: { width: 10, height: 10, borderRadius: 3, background: 'rgba(76,175,125,0.5)', border: `1px solid ${C.green}`, display: 'inline-block' },
+  punktGold: { width: 10, height: 10, borderRadius: 3, background: 'rgba(201,168,76,0.4)', border: `1px solid ${C.gold}`, display: 'inline-block' },
   punktGrau: { width: 10, height: 10, borderRadius: 3, background: C.navy, border: `1px solid ${C.border}`, display: 'inline-block' },
   mehrtag: { color: C.warn, fontSize: 14, background: 'rgba(224,162,76,0.1)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '14px 16px', lineHeight: 1.5 },
 
@@ -430,6 +564,6 @@ const styles: Record<string, CSSProperties> = {
   buchKopf: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 3 },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  p19Hinweis: { marginTop: 16, fontSize: 12.5, color: C.warn, background: 'rgba(224,162,76,0.1)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '10px 14px', lineHeight: 1.5 },
-  modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 },
+  hinweisZeile: { marginTop: 14, fontSize: 12.5, color: C.textDim, lineHeight: 1.5 },
+  modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, flexWrap: 'wrap' },
 };
