@@ -37,7 +37,7 @@ export interface ValidierEingabe {
   positionen: any[];
   aussteller: any;
   empfaenger: any;
-  profil?: 'xrechnung' | 'zugferd';
+  profil?: 'xrechnung' | 'zugferd' | 'zugferd-pdf';
   leitweg_id?: string;
 }
 

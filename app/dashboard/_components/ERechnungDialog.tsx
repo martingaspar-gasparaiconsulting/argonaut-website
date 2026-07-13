@@ -48,7 +48,7 @@ function feldWert(obj: any, ...namen: string[]): string {
 
 export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supabase, zeileNetto }: Props) {
   const [offen, setOffen] = useState(false);
-  const [profil, setProfil] = useState<"xrechnung" | "zugferd">("zugferd");
+  const [profil, setProfil] = useState<"xrechnung" | "zugferd" | "zugferd-pdf">("zugferd");
   const [leitweg, setLeitweg] = useState("");
   const [laden, setLaden] = useState(false);
   const [hinweis, setHinweis] = useState("");
@@ -137,7 +137,14 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
       };
       if (profil === "xrechnung" && leitweg.trim()) body.leitweg_id = leitweg.trim();
 
-      const res = await fetch("/api/rechnung-e", {
+      // Königsweg: ZUGFeRD-PDF nutzt eine eigene Route (PDF/A-3 + XML-Einbettung)
+      const istPdf = profil === "zugferd-pdf";
+      if (istPdf) {
+        body.firmaName = aussteller.name || "";
+      }
+      const endpoint = istPdf ? "/api/rechnung-zugferd" : "/api/rechnung-e";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -154,8 +161,12 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const endung = profil === "xrechnung" ? "XRechnung" : "ZUGFeRD";
-      a.download = endung + "_" + ((rechnung && rechnung.rechnungsnummer) || "Rechnung") + ".xml";
+      if (istPdf) {
+        a.download = "ZUGFeRD_" + ((rechnung && rechnung.rechnungsnummer) || "Rechnung") + ".pdf";
+      } else {
+        const endung = profil === "xrechnung" ? "XRechnung" : "ZUGFeRD";
+        a.download = endung + "_" + ((rechnung && rechnung.rechnungsnummer) || "Rechnung") + ".xml";
+      }
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -193,8 +204,9 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
             </div>
 
             {/* Profil-Wahl */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-              <ProfilBtn aktiv={profil === "zugferd"} onClick={() => { setProfil("zugferd"); setTimeout(() => pruefeVor(), 30); }} titel="ZUGFeRD" sub="Firmenkunden" />
+            <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+              <ProfilBtn aktiv={profil === "zugferd-pdf"} onClick={() => { setProfil("zugferd-pdf"); setTimeout(() => pruefeVor(), 30); }} titel="ZUGFeRD-PDF" sub="PDF + XML (empfohlen)" />
+              <ProfilBtn aktiv={profil === "zugferd"} onClick={() => { setProfil("zugferd"); setTimeout(() => pruefeVor(), 30); }} titel="ZUGFeRD-XML" sub="nur XML" />
               <ProfilBtn aktiv={profil === "xrechnung"} onClick={() => { setProfil("xrechnung"); setTimeout(() => pruefeVor(), 30); }} titel="XRechnung" sub="Behörden / B2G" />
             </div>
 
@@ -286,7 +298,7 @@ function ProfilBtn({ aktiv, onClick, titel, sub }: { aktiv: boolean; onClick: ()
     <button
       onClick={onClick}
       style={{
-        flex: 1, padding: "12px 10px", borderRadius: 10, cursor: "pointer", textAlign: "center",
+        flex: "1 1 30%", minWidth: 100, padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center",
         background: aktiv ? "rgba(201,168,76,0.12)" : "transparent",
         border: `1px solid ${aktiv ? GOLD : "rgba(201,168,76,0.2)"}`,
         color: aktiv ? GOLD : DIM,
