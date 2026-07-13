@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import EinsatzNachweis from "../../_components/EinsatzNachweis";
 import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 
 // ============================================================
@@ -1115,7 +1116,7 @@ export default function RechnungDetail() {
         </p>
       </Karte>
 
-      {/* NOTIZEN */}
+      <EinsatzNachweis rechnungId={id} />
       <div style={{ marginTop: 20 }}>
         <Karte titel="Notizen">
           <textarea
