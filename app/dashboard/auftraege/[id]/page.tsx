@@ -3,12 +3,17 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+A9
 // Positionen, Live-Summen, Status-Workflow, PDF, KI-Assistent (RAG + Voice)
 // A9: Andock-Nahtstelle Modul 6 "Rechnung" (Rechnung-erstellen-Stub)
 // Route: /dashboard/auftraege/[id]
+//
+// P46-A3 (14.07.26): <VerknuepfungsLeiste> unter dem Kopf ergänzt — gibt einen
+// klickbaren Sprung zu Kunde + Rechnung. Schließt die Lücke, dass das
+// „✓ Fakturiert"-Badge bisher nicht zur Rechnung verlinkte.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -716,6 +721,9 @@ export default function AuftragDetail() {
         </div>
       </div>
 
+      {/* P46: durchgängige Verknüpfung – Sprung zu Kunde/Rechnung */}
+      <VerknuepfungsLeiste kontaktId={auftrag?.kontakt_id} rechnungId={auftrag?.rechnung_id} />
+
       {/* GEFÜHRTER Status-Workflow */}
       <div
         style={{
@@ -724,6 +732,7 @@ export default function AuftragDetail() {
           borderRadius: 14,
           padding: "18px 20px",
           marginBottom: 20,
+          marginTop: 20,
         }}
       >
         <div
