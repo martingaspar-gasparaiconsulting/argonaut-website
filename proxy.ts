@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { istNurChefPfad, mitarbeiterDarf, pfadPasst } from './lib/rechte'
+import { gebuchteModulKeys, pfadGebucht, type TenantModulRow } from './lib/tenantModule'
 
 // ============================================================================
 // ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard
@@ -26,6 +27,15 @@ import { istNurChefPfad, mitarbeiterDarf, pfadPasst } from './lib/rechte'
 // Die Regeln selbst stehen in lib/rechte.ts — dieselbe Datei, aus der auch
 // DashboardNav.tsx liest. Ein Knopf, den das Menue zeigt, den die Sperre aber
 // blockiert, ist damit strukturell unmoeglich.
+//
+// P49 (14.07.26): AEUSSERSTES Gate — das Betreiber-Buchungs-Gate (tenant_module).
+// Ein nicht gebuchtes Modul ist fuer NIEMANDEN im Tenant per URL erreichbar,
+// auch nicht fuer den Chef (Buchung steht ueber den Rollen). Steht deshalb ganz
+// oben, direkt nach dem Session-Check, VOR der Rollen-Weiche. Fail-open: hat der
+// Tenant keine tenant_module-Zeile, laesst pfadGebucht() alles durch. RLS scopt
+// die Abfrage automatisch auf den eigenen Betreiber. Selbe Wahrheit wie die Nav
+// (beide lesen lib/tenantModule.ts) — Menue und Sperre koennen nicht auseinander-
+// laufen.
 // ============================================================================
 
 // Der Export MUSS `proxy` heissen. Hiess bis Next.js 15 `middleware`.
@@ -49,6 +59,25 @@ export async function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/dashboard')) {
     if (!session) {
       return NextResponse.redirect(new URL('/auth/login', req.url))
+    }
+
+    // --- P49 · BETREIBER-BUCHUNGS-GATE (aeusserste Ebene) -------------------
+    // Greift fuer JEDEN im Tenant — Chef wie Mitarbeiter. Ein Modul, das der
+    // Betreiber nicht (aktiv) gebucht hat, ist per URL nicht erreichbar.
+    // RLS liefert nur die Zeilen des eigenen Betreibers; kein Ergebnis (oder
+    // Fehler) => gebucht=null => fail-open => nichts wird blockiert.
+    // Infra-Pfade (Uebersicht, Mein Bereich, Einstellungen, Rechte, upgrade …)
+    // haben keinen Modul-Schluessel und passieren immer.
+    {
+      const { data: tmRows } = await supabase
+        .from('tenant_module')
+        .select('modul_key, aktiv')
+      const gebucht = gebuchteModulKeys((tmRows as TenantModulRow[] | null) ?? null)
+      if (!pfadGebucht(req.nextUrl.pathname, gebucht)) {
+        // Nicht gebucht -> zurueck zur Uebersicht (hat keinen Modul-Schluessel,
+        // ist also immer erreichbar -> keine Redirect-Schleife).
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
     }
 
     // --- Rollen-Weiche -------------------------------------------------------

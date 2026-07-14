@@ -20,7 +20,7 @@
 // Browser, proxy.ts in Node). Nur so bleibt sie in beiden Laufzeiten nutzbar.
 // ============================================================================
 
-import type { NavLink } from './rechte'
+import { NAV_LINKS, pfadPasst, type NavLink } from './rechte'
 
 /** Eine Zeile aus public.tenant_module (nur die fuers Gate noetigen Spalten). */
 export type TenantModulRow = { modul_key: string; aktiv: boolean }
@@ -63,4 +63,31 @@ export function nurGebuchteLinks(
 ): NavLink[] {
   if (gebucht === null) return links
   return links.filter((l) => istModulGebucht(l.modul, gebucht))
+}
+
+// ---------------------------------------------------------------------------
+// P49 Teil 2 · Pfad -> Modul. Fuer den URL-Riegel im proxy.
+// Pure (nutzt NAV_LINKS + pfadPasst aus rechte.ts), damit in Node lauffaehig.
+// ---------------------------------------------------------------------------
+
+/**
+ * Welchen Modul-Schluessel bedient dieser Pfad?
+ * undefined = Infra-/kein Modul (Uebersicht, Mein Bereich, Einstellungen,
+ * Rechte, /dashboard/upgrade …) -> vom Buchungs-Gate immer erlaubt.
+ *
+ * NAV_LINKS-Reihenfolge genuegt: Modul-Pfade ueberlappen sich nicht (jedes
+ * Modul hat seinen eigenen Slug), und pfadPasst ist slash-sicher — '/dashboard/holz'
+ * matcht NICHT '/dashboard/holzhandel'.
+ */
+export function modulKeyFuerPfad(pfad: string): string | undefined {
+  const treffer = NAV_LINKS.find((l) => l.modul && pfadPasst(pfad, l.href))
+  return treffer?.modul
+}
+
+/**
+ * Darf dieser Pfad laut Buchungslage geoeffnet werden?
+ * Infra-Pfade und fail-open -> true.
+ */
+export function pfadGebucht(pfad: string, gebucht: Set<string> | null): boolean {
+  return istModulGebucht(modulKeyFuerPfad(pfad), gebucht)
 }
