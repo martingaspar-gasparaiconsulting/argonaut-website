@@ -6,7 +6,16 @@ import { createClient as createServerClient } from '../../../../lib/supabase-ser
 // ARGONAUT OS · app/api/admin/tenants/route.ts  (P50 -> Command-Center)
 //
 // Liefert alle Tenants (Betreiber/Kunden) mit Plan, Status, Onboarding und
-// Modul-Zaehlern aus tenant_module — fuer den TENANTS-Tab im Command-Center.
+// Modul-Daten aus tenant_module — fuer den TENANTS-Tab + Modul-Freischalter.
+//
+// NEU (P50-Freischalter): pro Tenant kommt jetzt zusaetzlich `aktiveModule`
+// (Liste der aktiv gebuchten modul_key). Damit weiss die Schalter-UI, welche
+// Schalter AN stehen, ohne pro Zeile extra nachzuladen.
+//
+// `failOpen` ist jetzt auf die GATE-Wahrheit ausgerichtet (lib/tenantModule.ts,
+// gebuchteModulKeys): fail-open = KEINE aktive Zeile (vorher: keine Zeile
+// ueberhaupt). Eine reine aktiv=false-Zeile zaehlt also korrekt als fail-open —
+// genau das, was der Kunde real sieht.
 //
 // SICHERHEIT: identischer Admin-Guard wie /api/admin/stats. Nur eingeloggte
 // Nutzer mit profiles.role === 'admin' kommen durch (401/403 sonst). Der
@@ -31,13 +40,11 @@ async function adminGuard(): Promise<NextResponse | null> {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
-
   const { data: profil } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .maybeSingle();
-
   if (!profil || profil.role !== 'admin') {
     return NextResponse.json({ error: 'kein Zugriff' }, { status: 403 });
   }
@@ -69,18 +76,25 @@ export async function GET() {
   const { data: tmRows } = await admin
     .from('tenant_module')
     .select('owner_user_id, modul_key, aktiv');
-  const moduleProTenant = new Map<string, { gebucht: number; aktiv: number }>();
+
+  const moduleProTenant = new Map<
+    string,
+    { gebucht: number; aktiv: number; aktiveKeys: string[] }
+  >();
   for (const r of tmRows ?? []) {
-    const e = moduleProTenant.get(r.owner_user_id) ?? { gebucht: 0, aktiv: 0 };
+    const e = moduleProTenant.get(r.owner_user_id) ?? { gebucht: 0, aktiv: 0, aktiveKeys: [] };
     e.gebucht += 1;
-    if (r.aktiv) e.aktiv += 1;
+    if (r.aktiv) {
+      e.aktiv += 1;
+      e.aktiveKeys.push(r.modul_key);
+    }
     moduleProTenant.set(r.owner_user_id, e);
   }
 
   const tenants = (profRows ?? [])
     .filter((p) => !mitarbeiterIds.has(p.id))
     .map((p) => {
-      const m = moduleProTenant.get(p.id) ?? { gebucht: 0, aktiv: 0 };
+      const m = moduleProTenant.get(p.id) ?? { gebucht: 0, aktiv: 0, aktiveKeys: [] };
       return {
         id: p.id,
         email: p.email ?? '',
@@ -90,7 +104,9 @@ export async function GET() {
         onboarding: !!p.onboarding_completed,
         moduleGebucht: m.gebucht,
         moduleAktiv: m.aktiv,
-        failOpen: m.gebucht === 0,
+        aktiveModule: m.aktiveKeys,
+        // Gate-Wahrheit: fail-open, solange KEINE aktive Zeile existiert.
+        failOpen: m.aktiv === 0,
       };
     });
 
