@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AdressBlock from "../../_components/AdressBlock";
+import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4+C5 Kontakt-Detailseite
@@ -73,6 +74,7 @@ interface Kontakt {
   position: string | null;
   firma: string | null;
   firma_id: string | null;
+  lead_id: string | null;
   status: string | null;
   quelle: string | null;
   letzter_kontakt_am: string | null;
@@ -1148,6 +1150,9 @@ export default function CrmDetailPage() {
             )}
           </div>
         </div>
+
+        {/* P46: Sprung zum Lead dieses Kunden */}
+        <VerknuepfungsLeiste leadId={kontakt.lead_id} />
 
         {/* C8: KI-Briefing-Modal */}
         {briefingOffen && (
