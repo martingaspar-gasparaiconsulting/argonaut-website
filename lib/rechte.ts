@@ -54,8 +54,12 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4 },
 
   // --- Mitarbeiter-Selbstbedienung -----------------------------------------
-  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', nurMitarbeiter: true, ebene: 4 },
-  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', nurMitarbeiter: true, ebene: 4 },
+  // Q1 (14.07.26): Von nurMitarbeiter -> immer. Der Chef sieht seinen eigenen
+  // "Mein Bereich" + "Zeiterfassung" jetzt ebenfalls (Wunsch Martin). Fuer den
+  // Mitarbeiter aendert sich nichts — immer und nurMitarbeiter werden ueberall
+  // gleich behandelt (siehe sichtbareNavLinks + MITARBEITER_ERLAUBT).
+  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', immer: true, ebene: 4 },
+  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', immer: true, ebene: 4 },
   { label: '🔧 Meine Einsätze', href: '/dashboard/meine-einsaetze', immer: true, ebene: 4 },
 
   // --- Ebene 4: jeder Mitarbeiter (Grundausstattung) -----------------------
