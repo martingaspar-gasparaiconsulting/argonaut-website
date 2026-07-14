@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { sichtbareNavLinks } from '../../lib/rechte';
+import { sichtbareNavLinks, gruppiereNavLinks } from '../../lib/rechte';
 
 // ============================================================
 // ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
@@ -20,6 +20,10 @@ import { sichtbareNavLinks } from '../../lib/rechte';
 // jsonb-Array der EINGESCHALTETEN modul-Schlüssel). NULL/leer = alles sichtbar
 // (safety-first, rückwärtskompatibel). Übersicht/Einstellungen bleiben IMMER da.
 // Greift nur beim Chef; Mitarbeiter bleiben bei der RBAC-Logik.
+//
+// Q2 (14.07.26): Die sichtbaren Links werden ueber gruppiereNavLinks() in
+// beschriftete Bloecke (Gruppen) gerendert. Reine Anzeige — Filter/Rechte
+// unveraendert. Leere Gruppen erscheinen gar nicht erst.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -87,31 +91,57 @@ export default function DashboardNav() {
     ? sichtbareNavLinks(istChef, erlaubt, sichtbareModule)
     : sichtbareNavLinks(false, new Set(), null).filter((l) => l.href === '/dashboard');
 
+  // Q2: sichtbare Links in Gruppen-Bloecke ordnen (leere Gruppen fallen raus).
+  const gruppen = gruppiereNavLinks(sichtbar);
+
   return (
-    <nav style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-      {sichtbar.map((link) => {
-        const aktiv =
-          link.href === '/dashboard'
-            ? pathname === '/dashboard'
-            : pathname === link.href || pathname.startsWith(link.href + '/');
-        const golden = aktiv || link.highlight;
-        const stil: React.CSSProperties = {
-          padding: '6px 14px',
-          borderRadius: '8px',
-          fontSize: '13px',
-          fontWeight: 600,
-          textDecoration: 'none',
-          whiteSpace: 'nowrap',
-          color: golden ? '#C9A84C' : 'rgba(255,255,255,0.7)',
-          background: golden ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
-          border: golden ? '1px solid rgba(201,168,76,0.3)' : '1px solid transparent',
-        };
-        return (
-          <a key={link.href} href={link.href} style={stil}>
-            {link.label}
-          </a>
-        );
-      })}
+    <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {gruppen.map((gruppe) => (
+        <div
+          key={gruppe.key}
+          style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+        >
+          {gruppe.label && (
+            <div
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(201,168,76,0.55)',
+                paddingLeft: '2px',
+              }}
+            >
+              {gruppe.label}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {gruppe.links.map((link) => {
+              const aktiv =
+                link.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname === link.href || pathname.startsWith(link.href + '/');
+              const golden = aktiv || link.highlight;
+              const stil: React.CSSProperties = {
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                color: golden ? '#C9A84C' : 'rgba(255,255,255,0.7)',
+                background: golden ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
+                border: golden ? '1px solid rgba(201,168,76,0.3)' : '1px solid transparent',
+              };
+              return (
+                <a key={link.href} href={link.href} style={stil}>
+                  {link.label}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
