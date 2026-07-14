@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     // ---------- 1) Einsatz laden (RLS: owner_all schützt auf Chef) ----------
     const { data: einsatz, error: eErr } = await supabase
       .from("einsaetze")
-      .select("id, titel, kunde_name, rechnung_id, owner_user_id")
+      .select("id, titel, kunde_name, kontakt_id, auftrag_id, rechnung_id, owner_user_id")
       .eq("id", einsatzId)
       .single();
     if (eErr || !einsatz) {
@@ -112,8 +112,8 @@ export async function POST(req: Request) {
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
-        auftrag_id: null,
-        kontakt_id: null,
+        auftrag_id: einsatz.auftrag_id ?? null,
+        kontakt_id: einsatz.kontakt_id ?? null,
         firma_id: null,
         titel: einsatz.titel || "Einsatz",
         empfaenger_name: einsatz.kunde_name?.trim() || null,
