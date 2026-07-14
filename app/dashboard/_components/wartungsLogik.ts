@@ -8,6 +8,11 @@
 // Zeitzonen-Regel (ARGONAUT): Datum IMMER lokal auf Mitternacht bilden
 // (getFullYear/getMonth/getDate), NIE toISOString() — sonst Tag-Versatz.
 // Wir nutzen dafür konsequent parseDatum() aus fristLogik.
+//
+// Q4 (14.07.26): Die Ampel-Schwellen (gelb/rot) standen doppelt — hier in
+// wartungsAmpel UND inline in wartung/page.tsx. Jetzt gibt es dafür EINE
+// exportierte Quelle: ampelSchwellen(). Kopf-Kacheln und Zeilen-Ampel lesen
+// beide daraus. Verhalten unveraendert, nur keine zwei Rechenwege mehr.
 // ============================================================================
 
 import {
@@ -108,12 +113,30 @@ export function naechsteFaelligkeitString(v: WartungBasis): string | null {
 }
 
 /**
+ * EINE Quelle fuer die Ampel-Schwellen eines Wartungsvertrags (Q4).
+ *
+ * - Gelb-Schwelle = erinnerung_tage_vorher des Vertrags (Default 14).
+ * - Rot-Schwelle  = 7 Tage (bzw. kleiner, falls Erinnerung < 7).
+ *
+ * Vorher stand diese Regel doppelt: hier in wartungsAmpel UND inline in
+ * wartung/page.tsx (fuer die Zeilen-Ampel). Damit Kopf-Kacheln und Zeilen-Ampel
+ * NIE auseinanderlaufen koennen, liest ab jetzt BEIDES aus dieser Funktion.
+ */
+export function ampelSchwellen(v: WartungBasis): { gelbAb: number; rotAb: number } {
+  const gelbAb =
+    v.erinnerung_tage_vorher && v.erinnerung_tage_vorher > 0
+      ? v.erinnerung_tage_vorher
+      : 14;
+  const rotAb = Math.min(7, gelbAb);
+  return { gelbAb, rotAb };
+}
+
+/**
  * Wartungs-Ampel: dünner Wrapper um die bestehende berechneAmpel().
  *
  * - Nutzt das gespeicherte naechste_faelligkeit_am, wenn vorhanden;
  *   sonst wird es on-the-fly aus letzte Wartung/Beginn berechnet.
- * - Gelb-Schwelle = erinnerung_tage_vorher des Vertrags (Default 14).
- * - Rot-Schwelle  = 7 Tage (bzw. kleiner, falls Erinnerung < 7).
+ * - Schwellen kommen aus ampelSchwellen() (EINE Quelle, siehe oben).
  * - Pausierte/gekündigte Verträge liefern bewusst KEINE dringende Ampel
  *   (grau/neutral), damit sie die Liste nicht fälschlich rot färben.
  */
@@ -128,11 +151,7 @@ export function wartungsAmpel(v: WartungBasis): AmpelErgebnis {
     parseDatum(v.naechste_faelligkeit_am ?? null) ??
     berechneNaechsteFaelligkeit(v);
 
-  const gelbAb =
-    v.erinnerung_tage_vorher && v.erinnerung_tage_vorher > 0
-      ? v.erinnerung_tage_vorher
-      : 14;
-  const rotAb = Math.min(7, gelbAb);
+  const { gelbAb, rotAb } = ampelSchwellen(v);
 
   return berechneAmpel(faellig, { gelbAbTagen: gelbAb, rotAbTagen: rotAb });
 }

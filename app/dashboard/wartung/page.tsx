@@ -8,6 +8,10 @@
 // Nutzt bestehende Bausteine: FristAmpel, KiAuge, wartungsLogik.
 // Design 1:1 wie arbeitszeit-nachweis/page.tsx (Inline-Styles, kein Tailwind).
 // Pfad: app/dashboard/wartung/page.tsx
+//
+// Q4 (14.07.26): Die Zeilen-Ampel liest ihre Schwellen (gelb/rot) jetzt aus
+// ampelSchwellen() in wartungsLogik — dieselbe Quelle wie die Kopf-Kacheln.
+// Vorher wurden gelbAb/rotAb hier inline nochmal berechnet (Redundanz).
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
@@ -20,6 +24,7 @@ import {
   alsDatumString,
   sortierSchluessel,
   zaehleNachStatus,
+  ampelSchwellen,
   type WartungBasis,
 } from '../_components/wartungsLogik';
 
@@ -341,8 +346,8 @@ export default function WartungPage() {
                   const anzeigeDatum = aktiv
                     ? (r.naechste_faelligkeit_am ?? alsDatumString(berechneNaechsteFaelligkeit(r)))
                     : null;
-                  const gelbAb = r.erinnerung_tage_vorher > 0 ? r.erinnerung_tage_vorher : 14;
-                  const rotAb = Math.min(7, gelbAb);
+                  // Q4: Schwellen aus der EINEN Quelle (wie die Kopf-Kacheln), nicht mehr inline.
+                  const { gelbAb, rotAb } = ampelSchwellen(r);
                   return (
                     <tr key={r.id}>
                       <td style={styles.td}>
