@@ -5,18 +5,21 @@ import { createClient } from '../../lib/supabase-server';
 // ARGONAUT OS · app/admin/layout.tsx
 //
 // SERVER-SEITIGES SCHLOSS fuer ALLE /admin/* Seiten (14.07.26).
+// Nur eingeloggte Nutzer mit profiles.role === 'admin' kommen durch,
+// alle anderen -> /admin-login (liegt bewusst ausserhalb von /admin).
 //
-// Vorher: leeres Passthrough (return <>{children}</>) — der eigentliche Schutz
-// haing an einer CLIENT-Pruefung gegen NEXT_PUBLIC_ADMIN_EMAIL, also umgehbar
-// und mit oeffentlich sichtbarer Admin-Mail.
-//
-// Jetzt: Dieses Layout laeuft auf dem SERVER, liest die Session aus dem Cookie
-// und laesst nur Nutzer mit profiles.role === 'admin' durch. Alle anderen ->
-// /admin-login. Diese Login-Seite liegt BEWUSST ausserhalb von /admin, sonst
-// wuerde sie sich selbst aussperren (Redirect-Loop).
-//
-// Damit ist jede aktuelle UND jede kuenftige /admin-Seite automatisch geschuetzt.
+// WICHTIG (Haertung 14.07.26 nach Live-Gegentest):
+//   force-dynamic + revalidate=0 erzwingen, dass dieses Layout bei JEDER
+//   Anfrage serverseitig laeuft. Ohne das hat Next.js die Command-Center-
+//   Seite (eine Client-Komponente) als statisches HTML vorgebacken und am
+//   Tuersteher vorbei aus dem Cache ausgeliefert — die leere Huelle war so
+//   ohne Login erreichbar. Mit force-dynamic wird die Auth-Pruefung pro
+//   Request ausgefuehrt, ein Direkt-URL-Aufruf ohne Admin-Session landet
+//   sofort auf /admin-login.
 // ============================================================================
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -26,7 +29,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect('/admin-login');
 
-  // Die eigene profiles-Zeile darf der Nutzer per RLS lesen.
   const { data: profil } = await supabase
     .from('profiles')
     .select('role')
