@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import EinsatzNachweis from "../../_components/EinsatzNachweis";
+import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import ERechnungDialog from "../../_components/ERechnungDialog";
 import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 
@@ -22,6 +23,9 @@ import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_compone
 //   (3) Summen laufen ueber steuerLogik.ts: je Zeile runden, dann je
 //       Steuersatz auf die Gruppensumme rechnen (§14 Abs. 4 Nr. 7+8 UStG).
 //       Damit sind Kopf, Positionen und PDF auf denselben Cent einig.
+//
+// P46-A2 (14.07.26): Der frühere einzelne „zum Auftrag"-Link im Kopf ist durch
+// die einheitliche <VerknuepfungsLeiste> ersetzt (Kunde + Auftrag als Chips).
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -815,25 +819,6 @@ export default function RechnungDetail() {
           </h1>
           <p style={{ color: C.textDim, fontSize: 14, margin: "8px 0 0" }}>
             {empfaengerName}
-            {rechnung?.auftrag_id && (
-              <>
-                {" · "}
-                <button
-                  onClick={() => router.push("/dashboard/auftraege/" + rechnung.auftrag_id)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: C.cyan,
-                    cursor: "pointer",
-                    fontSize: 14,
-                    padding: 0,
-                    textDecoration: "underline",
-                  }}
-                >
-                  zum Auftrag
-                </button>
-              </>
-            )}
           </p>
           {faelligInfo && (
             <p style={{ color: faelligInfo.farbe, fontSize: 13, fontWeight: 600, margin: "6px 0 0" }}>
@@ -876,8 +861,11 @@ export default function RechnungDetail() {
         </div>
       </div>
 
+      {/* P46: durchgängige Verknüpfung – Sprung zu Kunde/Auftrag */}
+      <VerknuepfungsLeiste kontaktId={rechnung?.kontakt_id} auftragId={rechnung?.auftrag_id} />
+
       {/* ZAHLUNGSSTATUS (automatisch aus erfassten Zahlungen) */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20, marginTop: 20 }}>
         <Karte titel="Zahlungsstatus">
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
             <span
