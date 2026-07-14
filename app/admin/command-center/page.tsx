@@ -4,10 +4,34 @@ const COMMAND_CENTER_HTML = "<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n<meta 
 
 export default function CommandCenter() {
   return (
-    <iframe
-      srcDoc={COMMAND_CENTER_HTML}
-      style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', border: 'none', margin: 0, padding: 0 }}
-      title="ARGONAUT Command Center"
-    />
+    <>
+      <iframe
+        srcDoc={COMMAND_CENTER_HTML}
+        style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', border: 'none', margin: 0, padding: 0 }}
+        title="ARGONAUT Command Center"
+      />
+      <a
+        href="/admin/tenants"
+        style={{
+          position: 'fixed',
+          bottom: 18,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 99999,
+          fontFamily: "'Share Tech Mono', monospace",
+          fontSize: 13,
+          letterSpacing: '0.14em',
+          color: '#00e5ff',
+          background: 'rgba(0,20,32,0.92)',
+          border: '1px solid rgba(0,229,255,0.6)',
+          borderRadius: 8,
+          padding: '9px 20px',
+          textDecoration: 'none',
+          boxShadow: '0 0 18px rgba(0,229,255,0.35)',
+        }}
+      >
+        {'▣ TENANTS & MODULE'}
+      </a>
+    </>
   );
 }
