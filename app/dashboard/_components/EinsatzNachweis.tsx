@@ -1,13 +1,24 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Wiederverwendbarer Baustellen-Nachweis
+// ARGONAUT OS · Wiederverwendbarer Einsatz-Nachweis (branchenneutral)
 // Zeigt zu einem Einsatz: Bericht-PDF, Fotos, Unterschrift, Zeiten.
 // Wird per rechnung_id ODER einsatz_id gefüttert → einbaubar auf
 // Rechnung, Auftrag, CRM … mit EINER Zeile:
 //   <EinsatzNachweis rechnungId={rechnung.id} />
 //   <EinsatzNachweis einsatzId={...} />
 // Findet kein verknüpfter Einsatz → rendert NICHTS (unsichtbar).
+//
+// P45 (14.07.26): branchenneutral gemacht. Die Überschrift ist nicht mehr fest
+// "🔧 Baustellen-Nachweis", sondern kommt aus zwei OPTIONALEN Props mit
+// neutralen Defaults:
+//   titel  (Default 'Einsatz-Nachweis')
+//   icon   (Default '📋')
+// Beispiele je Branche:
+//   Handwerk:   <EinsatzNachweis einsatzId={..} icon="🔧" titel="Baustellen-Nachweis" />
+//   Spedition:  <EinsatzNachweis einsatzId={..} icon="🚚" titel="Liefernachweis" />
+//   Wartung:    <EinsatzNachweis einsatzId={..} titel="Wartungs-Nachweis" />
+// Kein Aufruf muss die Props setzen — ohne Angabe greift der neutrale Default.
 // Pfad: app/dashboard/_components/EinsatzNachweis.tsx
 // ============================================================
 
@@ -40,7 +51,18 @@ type EinsatzRow = {
 };
 type FotoRow = { id: string; pfad: string; dateiname: string | null };
 
-export default function EinsatzNachweis({ rechnungId, einsatzId }: { rechnungId?: string; einsatzId?: string }) {
+// P45: titel + icon optional mit neutralen Defaults. rechnungId/einsatzId wie gehabt.
+export default function EinsatzNachweis({
+  rechnungId,
+  einsatzId,
+  titel = 'Einsatz-Nachweis',
+  icon = '📋',
+}: {
+  rechnungId?: string;
+  einsatzId?: string;
+  titel?: string;
+  icon?: string;
+}) {
   const [einsatz, setEinsatz] = useState<EinsatzRow | null>(null);
   const [fotos, setFotos] = useState<FotoRow[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({}); // Pfad -> signierte URL
@@ -84,7 +106,7 @@ export default function EinsatzNachweis({ rechnungId, einsatzId }: { rechnungId?
   return (
     <div style={styles.card}>
       <div style={styles.kopf}>
-        <span style={styles.titel}>🔧 Baustellen-Nachweis</span>
+        <span style={styles.titel}>{icon} {titel}</span>
         <span style={styles.dim}>{e.titel || 'Einsatz'}{e.kunde_name ? ` · ${e.kunde_name}` : ''}</span>
       </div>
 
