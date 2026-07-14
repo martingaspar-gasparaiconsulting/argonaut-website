@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase-server';
 
 // ============================================================
 // ARGONAUT OS · MODUL · P43 — TERMIN → EINSATZ
@@ -7,32 +8,40 @@ import { createClient } from '@supabase/supabase-js';
 // Erzeugt aus einem bestehenden Termin einen Field-Service-Einsatz
 // und verknüpft beide beidseitig (termine.einsatz_id <-> einsaetze.termin_id).
 //
-// Feld-Mapping (termine -> einsaetze):
-//   titel/beschreibung/notiz -> titel/beschreibung
-//   beginn_am/ende_am        -> beginn_am/ende_am
-//   ort                      -> einsatzort
-//   kontakt_id/firma_id      -> kontakt_id/firma_id
-//   mitarbeiter_id           -> mitarbeiter_id
-//   kunde_name/email/telefon -> kunde_name/email/telefon
-//   auftrag_id               -> auftrag_id
-//   owner_user_id            -> owner_user_id
-//   quelle                   -> 'termin' (Herkunft markiert)
-//
-// DOPPELSCHUTZ: Ist der Termin schon mit einem Einsatz verknüpft,
-// wird KEIN zweiter erzeugt, sondern der bestehende zurückgegeben.
-//
-// ADDITIV: eigene Route, ändert keine bestehende Logik.
+// SICHERHEIT (14.07.26 nachgeruestet):
+//   Frueher hatte diese Route KEINEN Login-Check und nahm owner_user_id aus
+//   dem Body -> jeder haette im Namen fremder Kunden Einsaetze anlegen und
+//   fremde Termine umbiegen koennen. Jetzt:
+//     1) Login-Pflicht (getUser -> sonst 401).
+//     2) owner_user_id kommt AUS DER SESSION; der Chef-Anker ist der Owner
+//        (coalesce(mein_chef_id, auth.uid)) — Mitarbeiter erzeugen unter ihrem
+//        Chef. Der Body-Wert owner_user_id wird IGNORIERT.
+//     3) Besitzpruefung: der Termin muss dem eigenen Tenant gehoeren, sonst 403.
+//   Rest (Feld-Mapping, Doppelschutz, Rueck-Verknuepfung) unveraendert.
 // ============================================================
 
 function envClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // --- Tuersteher: eingeloggt? ---------------------------------------
+    const userClient = await createClient();
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
+    }
+
+    // Owner-Anker = eigener Chef (Mitarbeiter) ODER man selbst (Chef).
+    // mein_chef_id() liefert beim Chef NULL -> dann auth.uid().
+    let ownerId = user.id;
+    const { data: chef } = await userClient.rpc('mein_chef_id');
+    if (typeof chef === 'string' && chef) ownerId = chef;
+
     const supabase = envClient();
     if (!supabase) {
       return NextResponse.json({ error: 'Dienst nicht konfiguriert.' }, { status: 500 });
@@ -40,9 +49,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const terminId = String(body?.termin_id || '').trim();
-    const ownerId = String(body?.owner_user_id || '').trim();
     if (!terminId) return NextResponse.json({ error: 'termin_id fehlt.' }, { status: 400 });
-    if (!ownerId) return NextResponse.json({ error: 'owner_user_id fehlt.' }, { status: 400 });
 
     // 1) Termin laden
     const { data: termin, error: tErr } = await supabase
@@ -54,9 +61,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Termin nicht gefunden.' }, { status: 404 });
     }
 
+    // 1b) BESITZPRUEFUNG: Termin muss dem eigenen Tenant gehoeren.
+    if (termin.owner_user_id !== ownerId) {
+      return NextResponse.json({ error: 'Kein Zugriff auf diesen Termin.' }, { status: 403 });
+    }
+
     // 2) Doppelschutz: bereits ein Einsatz verknüpft?
     if (termin.einsatz_id) {
-      // Prüfen, ob der verknüpfte Einsatz wirklich existiert
       const { data: vorhanden } = await supabase
         .from('einsaetze')
         .select('id, titel, status')
@@ -73,7 +84,7 @@ export async function POST(req: NextRequest) {
       // verknüpfte ID zeigt ins Leere -> wir erzeugen neu (und überschreiben Verknüpfung)
     }
 
-    // 3) Einsatz anlegen (Feld-Mapping)
+    // 3) Einsatz anlegen (Feld-Mapping) — owner_user_id aus der Session!
     const neuerEinsatz: any = {
       owner_user_id: ownerId,
       termin_id: termin.id,
@@ -111,7 +122,6 @@ export async function POST(req: NextRequest) {
       .eq('id', termin.id);
     if (vErr) {
       console.error('Termin-Verknüpfung Fehler:', vErr.message);
-      // Einsatz existiert bereits; Verknüpfung fehlt -> melden, nicht verschweigen
       return NextResponse.json({
         ok: true,
         einsatz_id: einsatz.id,
