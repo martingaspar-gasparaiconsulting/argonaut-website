@@ -19,6 +19,13 @@
 // traegt ein `gruppe`-Feld. Rein additiv — keine Filter/Ableitung haengt an der
 // Reihenfolge, alle Rechte-Regeln bleiben identisch. Die Navbar rendert daraus
 // beschriftete Bloecke (siehe GRUPPEN + gruppiereNavLinks).
+//
+// 15.07.26: `highlight: true` bei "Automatisierungen" entfernt. Der Knopf war
+// dauerhaft golden — ein Ueberbleibsel aus der Agentur-Zeit, als Automatisierungen
+// das Verkaufsargument waren. Heute ist ARGONAUT ein Betriebssystem, das den
+// Grossteil der Ablaeufe nativ erledigt; der Punkt braucht keine Sonderrolle mehr.
+// Golden ist ab jetzt nur noch die AKTIVE Seite (DashboardNav: `aktiv || highlight`).
+// Das Feld `highlight` bleibt im Typ erhalten — aktuell ungenutzt, aber nutzbar.
 // ============================================================================
 
 export type NavLink = {
@@ -49,6 +56,11 @@ export type NavLink = {
    * und die gesamte Rechtepruefung aushebeln.
    */
   exakt?: boolean
+  /**
+   * Faerbt den Knopf dauerhaft golden — unabhaengig davon, ob die Seite offen ist.
+   * AKTUELL VON KEINEM EINTRAG GENUTZT (seit 15.07.26). Absicht: kein Modul soll
+   * sich ohne Grund vordraengen. Nur wieder setzen, wenn es einen echten Grund gibt.
+   */
   highlight?: boolean
   /**
    * Anzeige-Gruppe fuer die Navbar (Q2). Rein kosmetisch — steuert nur, unter
@@ -102,7 +114,7 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
-  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', highlight: true, ebene: 3, gruppe: 'lager' },
+  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', ebene: 3, gruppe: 'lager' },
 
   // --- Finanzen & Sensibles (Ebene 2, 2-fach-Bestaetigung beim Freigeben) ---
   // Delegierbar: der Eigentuemer (oder ein Administrator mit Vollmacht) darf diese
