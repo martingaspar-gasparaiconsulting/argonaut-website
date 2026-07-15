@@ -362,15 +362,15 @@ export default function DashboardChat() {
         }}>
           <div style={{ padding: '16px 20px', background: 'rgba(201,168,76,0.1)', borderBottom: '1px solid rgba(201,168,76,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(201,168,76,0.2)', border: '1px solid rgba(201,168,76,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>⚡</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(201,168,76,0.2)', border: '1px solid rgba(201,168,76,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(18px, 1.56vw, 25px)' }}>⚡</div>
               <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#FFFFFF' }}>ARGONAUT Assistent</p>
-                <p style={{ margin: 0, fontSize: '11px', color: '#22c55e' }}>● Online — antwortet sofort</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: '#FFFFFF' }}>ARGONAUT Assistent</p>
+                <p style={{ margin: 0, fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#22c55e' }}>● Online — antwortet sofort</p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-              <button onClick={() => setGross(g => !g)} title={gross ? 'Verkleinern' : 'Vergrößern'} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: '17px', lineHeight: 1, padding: '4px 6px' }}>{gross ? '🗕' : '🗖'}</button>
-              <button onClick={schliessen} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '4px' }}>×</button>
+              <button onClick={() => setGross(g => !g)} title={gross ? 'Verkleinern' : 'Vergrößern'} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', fontSize: 'clamp(17px, 1.5vw, 24px)', lineHeight: 1, padding: '4px 6px' }}>{gross ? '🗕' : '🗖'}</button>
+              <button onClick={schliessen} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 'clamp(20px, 1.75vw, 28px)', lineHeight: 1, padding: '4px' }}>×</button>
             </div>
           </div>
 
@@ -388,16 +388,16 @@ export default function DashboardChat() {
                   {msg.loading ? <span style={{ opacity: 0.6 }}>tippt…</span> : msg.content}
                 </div>
                 {msg.role === 'assistant' && !msg.loading && msg.content && ttsOk && (
-                  <button onClick={() => vorlesen(msg.content, i)} style={{ marginTop: '5px', background: 'none', border: 'none', color: sprichtIndex === i ? '#E06666' : 'rgba(201,168,76,0.85)', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }}>
+                  <button onClick={() => vorlesen(msg.content, i)} style={{ marginTop: '5px', background: 'none', border: 'none', color: sprichtIndex === i ? '#E06666' : 'rgba(201,168,76,0.85)', fontSize: 'clamp(12px, 1.06vw, 17px)', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }}>
                     {sprichtIndex === i ? '⏹ Stopp' : '🔊 Vorlesen'}
                   </button>
                 )}
                 {msg.vorschlag && (
                   <div style={{ marginTop: '8px', padding: '14px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '12px' }}>
-                    <p style={{ margin: 0, fontWeight: 700, color: '#C9A84C', fontSize: '13px' }}>📄 {msg.vorschlag.name}</p>
-                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>{msg.vorschlag.format} · {msg.vorschlag.agent}</p>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#C9A84C', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>📄 {msg.vorschlag.name}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.6)' }}>{msg.vorschlag.format} · {msg.vorschlag.agent}</p>
                     {msg.vorschlag.fehlend && msg.vorschlag.fehlend.length > 0 && (
-                      <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#FFD593' }}>Fehlende: {msg.vorschlag.fehlend.join(', ')}</p>
+                      <p style={{ margin: '8px 0 0', fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#FFD593' }}>Fehlende: {msg.vorschlag.fehlend.join(', ')}</p>
                     )}
                   </div>
                 )}
@@ -409,7 +409,7 @@ export default function DashboardChat() {
           {messages.length <= 1 && (
             <div style={{ padding: '0 16px 12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {quickQuestions.map(q => (
-                <button key={q} onClick={() => setInput(q)} style={{ padding: '6px 12px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '999px', color: '#C9A84C', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>{q}</button>
+                <button key={q} onClick={() => setInput(q)} style={{ padding: '6px 12px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '999px', color: '#C9A84C', fontSize: 'clamp(11px, 0.94vw, 15px)', cursor: 'pointer', fontWeight: 600 }}>{q}</button>
               ))}
             </div>
           )}
@@ -417,7 +417,7 @@ export default function DashboardChat() {
           {voiceStatus && (
             <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: voiceStatus.fehler ? '#E0A24C' : '#E06666', display: 'inline-block', animation: hoert ? 'argonautPulse 1s ease-in-out infinite' : 'none', flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', color: voiceStatus.fehler ? '#E0A24C' : '#E06666', fontWeight: 600, lineHeight: 1.4 }}>{voiceStatus.text}</span>
+              <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: voiceStatus.fehler ? '#E0A24C' : '#E06666', fontWeight: 600, lineHeight: 1.4 }}>{voiceStatus.text}</span>
             </div>
           )}
 
@@ -429,7 +429,7 @@ export default function DashboardChat() {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
               placeholder={hoert ? 'Sprechen Sie …' : 'Ihre Frage...'}
               rows={1}
-              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: '13px', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
+              style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', overflowY: 'auto', fontFamily: 'inherit' }}
             />
             {voiceOk && (
               <button
@@ -439,13 +439,13 @@ export default function DashboardChat() {
                   background: hoert ? '#E06666' : 'rgba(255,255,255,0.06)',
                   border: hoert ? 'none' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '10px', padding: '11px 13px', cursor: 'pointer',
-                  fontSize: '15px', lineHeight: 1,
+                  fontSize: 'clamp(15px, 1.31vw, 21px)', lineHeight: 1,
                   boxShadow: hoert ? '0 0 0 3px rgba(224,102,102,0.25)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >🎤</button>
             )}
-            <button onClick={send} disabled={loading} style={{ background: loading ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', padding: '11px 16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px' }}>→</button>
+            <button onClick={send} disabled={loading} style={{ background: loading ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', padding: '11px 16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>→</button>
           </div>
         </div>
       )}
@@ -459,10 +459,10 @@ export default function DashboardChat() {
           border: open ? '2px solid rgba(201,168,76,0.5)' : 'none',
           boxShadow: '0 4px 24px rgba(201,168,76,0.35)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '24px', transition: 'all 0.2s',
+          fontSize: 'clamp(24px, 2.13vw, 34px)', transition: 'all 0.2s',
         }}
       >
-        {open ? <span style={{ color: '#C9A84C', fontSize: '20px', fontWeight: 700 }}>×</span> : <span>⚡</span>}
+        {open ? <span style={{ color: '#C9A84C', fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700 }}>×</span> : <span>⚡</span>}
       </button>
 
       <style>{`@keyframes argonautPulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }`}</style>

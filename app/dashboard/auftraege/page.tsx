@@ -365,7 +365,7 @@ export default function AuftraegeCockpit() {
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 fontWeight: 700,
                 margin: 0,
                 letterSpacing: "-0.5px",
@@ -373,7 +373,7 @@ export default function AuftraegeCockpit() {
             >
               📄 Aufträge
             </h1>
-            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 14 }}>
+            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               Verträge & Aufträge verwalten — von der Beauftragung bis zum
               Abschluss.
             </p>
@@ -390,7 +390,7 @@ export default function AuftraegeCockpit() {
                 border: `1px solid ${C.cyan}77`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif",
@@ -406,7 +406,7 @@ export default function AuftraegeCockpit() {
                 border: "none",
                 borderRadius: 10,
                 padding: "12px 20px",
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 fontWeight: 700,
                 cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif",
@@ -451,7 +451,7 @@ export default function AuftraegeCockpit() {
               borderRadius: 10,
               padding: "11px 14px",
               color: "#fff",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontFamily: "'DM Sans', sans-serif",
               outline: "none",
             }}
@@ -473,7 +473,7 @@ export default function AuftraegeCockpit() {
               padding: "12px 16px",
               color: C.danger,
               marginBottom: 18,
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
             }}
           >
             ⚠️ {fehler}
@@ -496,7 +496,7 @@ export default function AuftraegeCockpit() {
               padding: "14px 18px",
               borderBottom: `1px solid ${C.border}`,
               color: C.textDim,
-              fontSize: 12,
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
@@ -515,8 +515,8 @@ export default function AuftraegeCockpit() {
             </div>
           ) : gefiltert.length === 0 ? (
             <div style={{ padding: 48, textAlign: "center" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
-              <div style={{ color: C.textDim, fontSize: 15 }}>
+              <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>📄</div>
+              <div style={{ color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
                 {auftraege.length === 0
                   ? "Noch keine Aufträge. Leg oben rechts deinen ersten an."
                   : "Keine Aufträge passen zu Suche/Filter."}
@@ -542,10 +542,10 @@ export default function AuftraegeCockpit() {
                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <div style={{ color: C.textDim, fontSize: 13, fontFamily: "monospace" }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: "monospace" }}>
                     {a.auftragsnummer || "—"}
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>{a.titel}</div>
+                  <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600 }}>{a.titel}</div>
                   <div>
                     <span
                       style={{
@@ -557,14 +557,14 @@ export default function AuftraegeCockpit() {
                         border: `1px solid ${s.farbe}55`,
                         borderRadius: 20,
                         padding: "4px 12px",
-                        fontSize: 12.5,
+                        fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                         fontWeight: 600,
                       }}
                     >
                       {s.icon} {s.label}
                     </span>
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600 }}>
+                  <div style={{ textAlign: "right", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>
                     {geld(a.netto_summe, a.waehrung || "EUR")}
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -579,7 +579,7 @@ export default function AuftraegeCockpit() {
                         border: "none",
                         color: C.textDim,
                         cursor: "pointer",
-                        fontSize: 16,
+                        fontSize: 'clamp(16px, 1.38vw, 22px)',
                         padding: 4,
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.color = C.danger)}
@@ -594,7 +594,7 @@ export default function AuftraegeCockpit() {
           )}
         </div>
 
-        <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 14, textAlign: "center" }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 14, textAlign: "center" }}>
           {gefiltert.length} von {auftraege.length} Aufträgen
         </p>
       </div>
@@ -625,10 +625,10 @@ export default function AuftraegeCockpit() {
               maxWidth: 460,
             }}
           >
-            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
+            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, margin: "0 0 4px" }}>
               Neuer Auftrag
             </h2>
-            <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 20px" }}>
               Kopf-Daten anlegen — Positionen fügst du danach auf der Detailseite hinzu.
             </p>
 
@@ -665,7 +665,7 @@ export default function AuftraegeCockpit() {
                   color: C.textDim,
                   borderRadius: 10,
                   padding: "11px 18px",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                   cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -682,7 +682,7 @@ export default function AuftraegeCockpit() {
                   border: "none",
                   borderRadius: 10,
                   padding: "11px 20px",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 700,
                   cursor: !neuTitel.trim() || speichern ? "not-allowed" : "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -724,10 +724,10 @@ export default function AuftraegeCockpit() {
               flexDirection: "column",
             }}
           >
-            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
+            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, margin: "0 0 4px" }}>
               Auftrag aus Verkaufschance
             </h2>
-            <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 20px" }}>
               Wähle eine Chance — Titel, Kontakt, Firma & Wert werden übernommen. Gewonnene stehen oben.
             </p>
 
@@ -737,7 +737,7 @@ export default function AuftraegeCockpit() {
                   ARGONAUT lädt die Verkaufschancen…
                 </div>
               ) : chancen.length === 0 ? (
-                <div style={{ padding: 30, textAlign: "center", color: C.textDim, fontSize: 14 }}>
+                <div style={{ padding: 30, textAlign: "center", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                   Keine offenen Verkaufschancen ohne Auftrag gefunden.
                   <br />
                   Markiere im CRM eine Chance als „gewonnen" — dann taucht sie hier auf.
@@ -767,7 +767,7 @@ export default function AuftraegeCockpit() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>{ch.titel || "Ohne Titel"}</span>
+                        <span style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600, color: "#fff" }}>{ch.titel || "Ohne Titel"}</span>
                         <span
                           style={{
                             background: `${ph.farbe}22`,
@@ -775,7 +775,7 @@ export default function AuftraegeCockpit() {
                             border: `1px solid ${ph.farbe}66`,
                             borderRadius: 20,
                             padding: "3px 10px",
-                            fontSize: 11.5,
+                            fontSize: 'clamp(11.5px, 1vw, 16px)',
                             fontWeight: 600,
                             whiteSpace: "nowrap",
                           }}
@@ -783,7 +783,7 @@ export default function AuftraegeCockpit() {
                           {ph.label}
                         </span>
                       </div>
-                      <div style={{ marginTop: 6, color: C.textDim, fontSize: 13 }}>
+                      <div style={{ marginTop: 6, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                         {busy ? "ARGONAUT erstellt den Auftrag…" : `Wert: ${geld(ch.wert, ch.waehrung || "EUR")}`}
                       </div>
                     </button>
@@ -802,7 +802,7 @@ export default function AuftraegeCockpit() {
                   color: C.textDim,
                   borderRadius: 10,
                   padding: "11px 18px",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                   cursor: erstelltVon !== null ? "not-allowed" : "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -829,11 +829,11 @@ function KpiKarte({ label, wert, hint, farbe }: { label: string; wert: string; h
         borderLeft: `3px solid ${farbe}`,
       }}
     >
-      <div style={{ color: C.textDim, fontSize: 12.5, fontWeight: 600 }}>{label}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 600 }}>{label}</div>
       <div
         style={{
           fontFamily: "var(--font-dm-sans), sans-serif",
-          fontSize: 26,
+          fontSize: 'clamp(26px, 2.25vw, 36px)',
           fontWeight: 700,
           margin: "6px 0 2px",
           color: farbe,
@@ -841,7 +841,7 @@ function KpiKarte({ label, wert, hint, farbe }: { label: string; wert: string; h
       >
         {wert}
       </div>
-      <div style={{ color: C.textDim, fontSize: 11.5 }}>{hint}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)' }}>{hint}</div>
     </div>
   );
 }
@@ -856,7 +856,7 @@ function FilterChip({ aktiv, onClick, label, farbe }: { aktiv: boolean; onClick:
         border: `1px solid ${aktiv ? `${farbe}77` : C.border}`,
         borderRadius: 20,
         padding: "7px 14px",
-        fontSize: 13,
+        fontSize: 'clamp(13px, 1.13vw, 18px)',
         fontWeight: 600,
         cursor: "pointer",
         fontFamily: "'DM Sans', sans-serif",
@@ -870,7 +870,7 @@ function FilterChip({ aktiv, onClick, label, farbe }: { aktiv: boolean; onClick:
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "14px 0 6px",
 };
@@ -882,7 +882,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "11px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",

@@ -481,10 +481,10 @@ export default function HolzSortimentPage() {
                       <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {anzeigeName(s)}
                       </div>
-                      <div style={{ fontSize: 12, color: C.textDim }}>{unterzeile || '—'}</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{unterzeile || '—'}</div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 12, color: s.aktiv ? C.green : C.textDim, flexShrink: 0 }}>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: s.aktiv ? C.green : C.textDim, flexShrink: 0 }}>
                     {warnung && s.aktiv ? '⚠ zu feucht' : s.aktiv ? 'im Verkauf' : 'inaktiv'}
                   </span>
                 </button>
@@ -500,7 +500,7 @@ export default function HolzSortimentPage() {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
               <h2 style={{ ...styles.modalTitel, margin: 0 }}>{form.id ? 'Variante bearbeiten' : 'Neue Variante'}</h2>
-              {gespeichertHinweis && <span style={{ color: C.green, fontSize: 13 }}>✓ gespeichert</span>}
+              {gespeichertHinweis && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
             </div>
 
             <div style={styles.formGrid}>
@@ -543,7 +543,7 @@ export default function HolzSortimentPage() {
                 <input style={styles.input} inputMode="decimal" placeholder="z. B. 18"
                   value={form.restfeuchte_prozent} onChange={(e) => setF('restfeuchte_prozent', e.target.value)} />
                 {rf != null && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: istBrennfertig(rf) ? C.green : C.warn }}>
+                  <div style={{ marginTop: 6, fontSize: 'clamp(12px, 1.06vw, 17px)', color: istBrennfertig(rf) ? C.green : C.warn }}>
                     {istBrennfertig(rf)
                       ? `✓ brennfertig (max. ${BRENNFERTIG_GRENZE_PROZENT} % nach 1. BImSchV)`
                       : `⚠ über ${BRENNFERTIG_GRENZE_PROZENT} % — nicht als ofenfertig anbieten`}
@@ -554,7 +554,7 @@ export default function HolzSortimentPage() {
               <Feld label="Im Verkauf">
                 <label style={styles.checkZeile}>
                   <input type="checkbox" checked={form.aktiv} onChange={(e) => setF('aktiv', e.target.checked)} />
-                  <span style={{ fontSize: 14 }}>{form.aktiv ? 'Wird angeboten' : 'Nicht im Verkauf'}</span>
+                  <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{form.aktiv ? 'Wird angeboten' : 'Nicht im Verkauf'}</span>
                 </label>
               </Feld>
 
@@ -610,9 +610,9 @@ export default function HolzSortimentPage() {
                 <div style={styles.sektion}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <span style={styles.sektionTitel}>💶 Preise je Einheit</span>
-                    {preisGespeichert && <span style={{ color: C.green, fontSize: 13 }}>✓ gespeichert</span>}
+                    {preisGespeichert && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
                   </div>
-                  <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 12, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 12, lineHeight: 1.5 }}>
                     Trag einen Preis ein — die anderen Einheiten werden daraus vorgeschlagen.
                     Der Vorschlag ist unverbindlich: mit „Übernehmen" einsetzen oder eigenen Wert tippen.
                   </div>
@@ -639,7 +639,7 @@ export default function HolzSortimentPage() {
                             <tr key={e.wert}>
                               <td style={styles.posTd}>
                                 <div style={{ fontWeight: 700 }}>{e.kurz}</div>
-                                <div style={{ fontSize: 11, color: C.textDim }}>{einheitLang(e.wert)}</div>
+                                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>{einheitLang(e.wert)}</div>
                               </td>
                               <td style={styles.posTd}>
                                 <input style={{ ...styles.posInput, textAlign: 'right' }} inputMode="decimal" placeholder="—"
@@ -652,15 +652,15 @@ export default function HolzSortimentPage() {
                               <td style={styles.posTd}>
                                 {zeigeVorschlag ? (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ color: C.textDim, fontSize: 12.5 }}>{eur(v as number)}</span>
+                                    <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{eur(v as number)}</span>
                                     <button onClick={() => setPreisZelle(e.wert, 'preis', String(v))} style={styles.miniBtn}>
                                       Übernehmen
                                     </button>
                                   </div>
                                 ) : basisEinheit === e.wert ? (
-                                  <span style={{ color: C.cyan, fontSize: 12 }}>Basis</span>
+                                  <span style={{ color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>Basis</span>
                                 ) : (
-                                  <span style={{ color: C.textDim, fontSize: 12 }}>—</span>
+                                  <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>—</span>
                                 )}
                               </td>
                               <td style={{ ...styles.posTd, textAlign: 'center' }}>
@@ -675,7 +675,7 @@ export default function HolzSortimentPage() {
                     </table>
                   </div>
 
-                  <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>⚖ {STEUER_HINWEIS}</div>
+                  <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>⚖ {STEUER_HINWEIS}</div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                     <button onClick={preiseSpeichern} disabled={preisSpeichert}
@@ -688,13 +688,13 @@ export default function HolzSortimentPage() {
                 {/* ============ A3a: MENGENRABATT ============ */}
                 <div style={styles.sektion}>
                   <span style={styles.sektionTitel}>📉 Mengenrabatt</span>
-                  <div style={{ fontSize: 12.5, color: C.textDim, margin: '6px 0 12px', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 12px', lineHeight: 1.5 }}>
                     Es gilt immer die <strong>spezifischste</strong> Staffel — Variante + Einheit schlägt Variante,
                     Variante schlägt global. Rabatte werden nicht addiert.
                   </div>
 
                   {staffel.length === 0 ? (
-                    <div style={{ color: C.textDim, fontSize: 13 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                       Keine Staffel für {einheitKurz(testEinheit)}. Leg unten die erste an.
                     </div>
                   ) : (
@@ -704,10 +704,10 @@ export default function HolzSortimentPage() {
                         return (
                           <div key={r.id} style={{ ...styles.staffelZeile, borderColor: greift ? C.cyan : C.border }}>
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                              <div style={{ fontWeight: 700, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                                 ab {formatZahl(r.ab_menge, 2)} {r.einheit ? einheitKurz(r.einheit) : 'beliebig'} → {formatZahl(r.rabatt_prozent, 0)} %
                               </div>
-                              <div style={{ fontSize: 11.5, color: C.textDim }}>
+                              <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>
                                 {r.sortiment_id ? 'nur diese Variante' : 'alle Varianten'}
                                 {r.einheit ? '' : ' · alle Einheiten'}
                                 {greift ? ' · greift bei der Testmenge' : ''}
@@ -756,7 +756,7 @@ export default function HolzSortimentPage() {
                 {/* ============ A3a: BEISPIELRECHNUNG ============ */}
                 <div style={styles.sektion}>
                   <span style={styles.sektionTitel}>🧮 Beispielrechnung</span>
-                  <div style={{ fontSize: 12.5, color: C.textDim, margin: '6px 0 12px' }}>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 12px' }}>
                     Rechnet mit den <strong>gespeicherten</strong> Preisen — genau so wie später die Preisauskunft an den Kunden.
                   </div>
 
@@ -770,7 +770,7 @@ export default function HolzSortimentPage() {
                   </div>
 
                   {!beispiel ? (
-                    <div style={{ color: C.textDim, fontSize: 13 }}>Menge eingeben.</div>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Menge eingeben.</div>
                   ) : !beispiel.ok ? (
                     <div style={styles.warnBox}>{beispiel.fehler.map((f, i) => <div key={i}>⚠ {f}</div>)}</div>
                   ) : (
@@ -779,7 +779,7 @@ export default function HolzSortimentPage() {
                         holzart: form.holzart, scheitlaenge_cm: entwurf.scheitlaenge_cm, trocknungsgrad: form.trocknungsgrad,
                       })}</div>
                       <div style={styles.summeZeile}>
-                        <span style={{ color: C.textDim, fontSize: 13 }}>
+                        <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           {formatZahl(beispiel.grundNetto, 2)} € − {formatZahl(beispiel.rabattBetrag, 2)} € Rabatt
                           {' '}+ {formatZahl(beispiel.steuerBetrag, 2)} € USt.
                         </span>
@@ -840,50 +840,50 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 680, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 680, lineHeight: 1.5 },
 
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
-  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
   miniBtnAktiv: { background: 'rgba(0,229,255,0.28)', borderColor: C.cyan, color: '#E8EDF4' },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
-  summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800 },
+  summeLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', color: C.text },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, marginTop: 16 },
-  warnBox: { color: C.warn, fontSize: 13.5, background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 12, lineHeight: 1.5 },
-  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, marginTop: 16 },
+  warnBox: { color: C.warn, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 12, lineHeight: 1.5 },
+  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.text, lineHeight: 1.6 },
 
   checkZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', cursor: 'pointer' },
 
   sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   posTable: { width: '100%', borderCollapse: 'collapse', minWidth: 560 },
-  posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  posTd: { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
-  posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
-  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit' },
+  posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  posTd: { padding: '6px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
+  posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 'clamp(15px, 1.31vw, 21px)', fontFamily: 'inherit' },
 
   staffelZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' },
   rabattGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` },
-  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 14 },
+  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 760, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, alignItems: 'center' },
 };

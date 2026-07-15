@@ -181,7 +181,7 @@ export default function FinanzKennzahlen() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -189,7 +189,7 @@ export default function FinanzKennzahlen() {
           >
             📐 Kennzahlen
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Deine Zahlen automatisch bewertet – plus Rechner für die wichtigsten kaufmännischen Formeln
           </p>
         </div>
@@ -258,7 +258,7 @@ export default function FinanzKennzahlen() {
                   borderRadius: 12,
                   padding: "12px 16px",
                   color: C.danger,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                 }}
               >
@@ -392,7 +392,7 @@ export default function FinanzKennzahlen() {
               />
             </div>
 
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 24, lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 24, lineHeight: 1.5 }}>
               Die oberen Kennzahlen kommen automatisch aus deinen echten Einnahmen und Ausgaben ({jahr},
               netto). Die Rechner sind Werkzeuge zum Durchspielen – Liquiditätsgrade und Eigenkapitalquote
               folgen später, sobald Bilanz-/Kontodaten angebunden sind.
@@ -430,9 +430,9 @@ function KpiCard({
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
-      {unter && <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>{unter}</div>}
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>{wert}</div>
+      {unter && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>{unter}</div>}
     </div>
   );
 }
@@ -583,14 +583,14 @@ function Rechner({
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 2 }}>{titel}</div>
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 16 }}>{unterzeile}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, marginBottom: 2 }}>{titel}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 16 }}>{unterzeile}</div>
 
       {/* Eingaben */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
         {felder.map((f) => (
           <div key={f.key}>
-            <label style={{ display: "block", color: C.textDim, fontSize: 12.5, marginBottom: 5 }}>{f.label}</label>
+            <label style={{ display: "block", color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginBottom: 5 }}>{f.label}</label>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
@@ -605,7 +605,7 @@ function Rechner({
                   borderRadius: 10,
                   padding: "10px 34px 10px 12px",
                   color: "#fff",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontFamily: "'DM Sans', sans-serif",
                   outline: "none",
                   boxSizing: "border-box",
@@ -619,7 +619,7 @@ function Rechner({
                     top: "50%",
                     transform: "translateY(-50%)",
                     color: C.textDim,
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                     pointerEvents: "none",
                   }}
                 >
@@ -663,7 +663,7 @@ function Rechner({
         ))}
       </div>
 
-      <p style={{ color: C.textDim, fontSize: 12.5, margin: "12px 2px 0", lineHeight: 1.5 }}>{klartext}</p>
+      <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "12px 2px 0", lineHeight: 1.5 }}>{klartext}</p>
 
       {/* #B Speichern */}
       <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 16, paddingTop: 14 }}>
@@ -681,7 +681,7 @@ function Rechner({
               borderRadius: 10,
               padding: "9px 12px",
               color: "#fff",
-              fontSize: 13.5,
+              fontSize: 'clamp(13.5px, 1.19vw, 19px)',
               fontFamily: "'DM Sans', sans-serif",
               outline: "none",
               boxSizing: "border-box",
@@ -696,7 +696,7 @@ function Rechner({
               border: "none",
               borderRadius: 10,
               padding: "9px 16px",
-              fontSize: 13.5,
+              fontSize: 'clamp(13.5px, 1.19vw, 19px)',
               fontWeight: 700,
               cursor: saveBusy ? "wait" : "pointer",
               fontFamily: "'DM Sans', sans-serif",
@@ -709,7 +709,7 @@ function Rechner({
         </div>
 
         {saveMsg && (
-          <div style={{ marginTop: 8, fontSize: 12.5, color: saveMsg.ok ? C.green : C.danger }}>
+          <div style={{ marginTop: 8, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: saveMsg.ok ? C.green : C.danger }}>
             {saveMsg.ok ? "✓ " : "⚠️ "}
             {saveMsg.text}
           </div>
@@ -735,7 +735,7 @@ function Rechner({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: 13.5,
+                        fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                         fontWeight: 600,
                         color: "#fff",
                         whiteSpace: "nowrap",
@@ -745,7 +745,7 @@ function Rechner({
                     >
                       {s.name}
                     </div>
-                    <div style={{ fontSize: 12, color: C.textDim }}>{zusammenfassung(s)}</div>
+                    <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{zusammenfassung(s)}</div>
                   </div>
                   <button
                     onClick={() => ladenIns(s)}
@@ -756,7 +756,7 @@ function Rechner({
                       border: `1px solid ${farbe}77`,
                       borderRadius: 8,
                       padding: "6px 12px",
-                      fontSize: 12.5,
+                      fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                       fontWeight: 700,
                       cursor: "pointer",
                       fontFamily: "'DM Sans', sans-serif",
@@ -774,7 +774,7 @@ function Rechner({
                       border: `1px solid ${C.border}`,
                       borderRadius: 8,
                       padding: "6px 10px",
-                      fontSize: 12.5,
+                      fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                       cursor: "pointer",
                       fontFamily: "'DM Sans', sans-serif",
                     }}
@@ -796,7 +796,7 @@ function Rechner({
                 >
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: 'clamp(12px, 1.06vw, 17px)',
                       fontWeight: 600,
                       whiteSpace: "nowrap",
                       color: s.pruef_am ? (istFaellig(s.pruef_am) ? C.danger : C.gold) : C.textDim,
@@ -818,7 +818,7 @@ function Rechner({
                       borderRadius: 8,
                       padding: "5px 8px",
                       color: "#fff",
-                      fontSize: 12.5,
+                      fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                       fontFamily: "'DM Sans', sans-serif",
                       outline: "none",
                       colorScheme: "dark",
@@ -834,7 +834,7 @@ function Rechner({
                         border: `1px solid ${C.border}`,
                         borderRadius: 8,
                         padding: "5px 9px",
-                        fontSize: 12.5,
+                        fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                         cursor: "pointer",
                         fontFamily: "'DM Sans', sans-serif",
                       }}
@@ -854,7 +854,7 @@ function Rechner({
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",

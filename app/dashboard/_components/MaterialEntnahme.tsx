@@ -171,7 +171,7 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
           return (
             <div key={b.id} style={styles.gebuchtZeile}>
               <span style={{ color: C.green }}>✓ entnommen</span>
-              {art ? <span style={{ color: C.textDim, fontSize: 11 }}> · {art.bezeichnung}</span> : null}
+              {art ? <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}> · {art.bezeichnung}</span> : null}
               <button onClick={() => zurueckbuchen(b)} disabled={busy} style={styles.zurueckBtn}>↩ zurück</button>
             </div>
           );
@@ -189,20 +189,20 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
         <div style={styles.overlay} onClick={() => setOffen(false)}>
           <div style={styles.panel} onClick={(e) => e.stopPropagation()}>
             <div style={styles.panelKopf}>
-              <span style={{ fontWeight: 700, fontSize: 13 }}>Artikel aus Lager entnehmen</span>
+              <span style={{ fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Artikel aus Lager entnehmen</span>
               <button onClick={() => setOffen(false)} style={styles.zurueckBtn}>✕</button>
             </div>
             <input style={styles.input} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Artikel suchen …" autoFocus />
             <div style={styles.liste}>
               {treffer.length === 0 ? (
-                <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 13 }}>{artikel.length === 0 ? 'Lade Lager …' : 'Kein Treffer.'}</div>
+                <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{artikel.length === 0 ? 'Lade Lager …' : 'Kein Treffer.'}</div>
               ) : treffer.map((a) => {
                 const b = a.aktueller_bestand ?? 0;
                 const knapp = b < menge;
                 return (
                   <button key={a.id} onClick={() => entnehmen(a)} disabled={busy} style={styles.artItem}>
                     <span style={{ fontWeight: 600 }}>{a.bezeichnung}</span>
-                    <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 11 }}> · Bestand {b} {a.einheit || ''}{knapp ? ' ⚠' : ''}</span>
+                    <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}> · Bestand {b} {a.einheit || ''}{knapp ? ' ⚠' : ''}</span>
                   </button>
                 );
               })}
@@ -216,16 +216,16 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
 }
 
 const styles: Record<string, CSSProperties> = {
-  lagerBtn: { background: 'rgba(0,229,255,0.1)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 7, padding: '4px 8px', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
-  zurueckBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '3px 8px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
-  gebuchtZeile: { display: 'flex', alignItems: 'center', fontSize: 12, whiteSpace: 'nowrap' },
+  lagerBtn: { background: 'rgba(0,229,255,0.1)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 7, padding: '4px 8px', fontSize: 'clamp(11.5px, 1vw, 16px)', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
+  zurueckBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '3px 8px', fontSize: 'clamp(11px, 0.94vw, 15px)', fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
+  gebuchtZeile: { display: 'flex', alignItems: 'center', fontSize: 'clamp(12px, 1.06vw, 17px)', whiteSpace: 'nowrap' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 1100 },
   panel: { width: '100%', maxWidth: 360, maxHeight: '70vh', display: 'flex', flexDirection: 'column', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', overflow: 'hidden' },
   panelKopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderBottom: `1px solid ${C.border}` },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit' },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '11px 14px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
   liste: { overflowY: 'auto', flex: 1 },
-  artItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 },
+  artItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
-  err: { color: C.danger, fontSize: 11.5, padding: '6px 10px' },
+  err: { color: C.danger, fontSize: 'clamp(11.5px, 1vw, 16px)', padding: '6px 10px' },
 };

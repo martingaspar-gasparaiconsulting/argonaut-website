@@ -101,7 +101,7 @@ function fileTypeIcon(type: string) {
       width: 40, height: 40, borderRadius: 8, background: `${colors[type] ?? '#6b7280'}22`,
       border: `1px solid ${colors[type] ?? '#6b7280'}55`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 10, fontWeight: 800, color: colors[type] ?? '#6b7280', letterSpacing: '0.05em', flexShrink: 0,
+      fontSize: 'clamp(10px, 0.88vw, 14px)', fontWeight: 800, color: colors[type] ?? '#6b7280', letterSpacing: '0.05em', flexShrink: 0,
     }}>{type}</div>
   )
 }
@@ -120,7 +120,7 @@ function statusBadge(status: string) {
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: '4px 10px', borderRadius: 999,
       background: `${s.color}1a`, border: `1px solid ${s.color}55`,
-      color: s.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+      color: s.color, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
     }}>
       <span>{s.icon}</span>{s.label}
     </span>
@@ -244,25 +244,25 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <p style={{ fontSize: 13, color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8 }}>Dokumente</p>
+          <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8 }}>Dokumente</p>
           <h1 style={{ fontSize: 'clamp(22px,4vw,32px)', fontWeight: 900, margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Meine Firmendokumente</h1>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, margin: 0 }}>Laden Sie Ihre Dokumente hoch und weisen Sie sie Ihren KI-Agenten zu.</p>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.31vw, 21px)', margin: 0 }}>Laden Sie Ihre Dokumente hoch und weisen Sie sie Ihren KI-Agenten zu.</p>
         </div>
 
         {/* Speicherbalken */}
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 14, padding: 24, marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>Speicher</span>
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{formatBytes(totalBytes)} von {STORAGE_LIMIT_GB} GB</span>
+            <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700 }}>Speicher</span>
+            <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>{formatBytes(totalBytes)} von {STORAGE_LIMIT_GB} GB</span>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 10, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${storagePercent}%`, background: barColor, borderRadius: 999, transition: 'width 0.5s ease' }} />
           </div>
           {storageWarning && !storageFull && (
-            <p style={{ margin: '10px 0 0', fontSize: 13, color: '#f59e0b' }}>⚠️ Speicher fast voll — bitte alte Dateien löschen oder Paket upgraden.</p>
+            <p style={{ margin: '10px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#f59e0b' }}>⚠️ Speicher fast voll — bitte alte Dateien löschen oder Paket upgraden.</p>
           )}
           {storageFull && (
-            <p style={{ margin: '10px 0 0', fontSize: 13, color: '#ef4444' }}>🔒 Speicherlimit erreicht — Upload gesperrt. <a href="/dashboard/upgrade" style={{ color: '#C9A84C', textDecoration: 'underline' }}>Jetzt upgraden →</a></p>
+            <p style={{ margin: '10px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#ef4444' }}>🔒 Speicherlimit erreicht — Upload gesperrt. <a href="/dashboard/upgrade" style={{ color: '#C9A84C', textDecoration: 'underline' }}>Jetzt upgraden →</a></p>
           )}
         </div>
 
@@ -282,14 +282,14 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
           >
             <input ref={fileInputRef} type="file" accept=".pdf,.docx,.xlsx,.txt" style={{ display: 'none' }}
               onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = '' }} />
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-            <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px' }}>
+            <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>📂</div>
+            <p style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, margin: '0 0 6px' }}>
               {uploading ? 'Wird hochgeladen…' : 'Datei hierher ziehen oder klicken'}
             </p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
               PDF, DOCX, XLSX, TXT · max. {maxMB} MB
             </p>
-            {uploadError && <p style={{ marginTop: 12, fontSize: 13, color: '#ef4444' }}>{uploadError}</p>}
+            {uploadError && <p style={{ marginTop: 12, fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#ef4444' }}>{uploadError}</p>}
           </div>
         )}
 
@@ -298,12 +298,12 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
 
         {/* Dateiliste */}
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
-            Hochgeladene Dateien <span style={{ fontSize: 13, color: '#C9A84C', fontWeight: 700 }}>({documents.length})</span>
+          <h2 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
+            Hochgeladene Dateien <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', fontWeight: 700 }}>({documents.length})</span>
           </h2>
 
           {documents.length === 0 ? (
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 15 }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
               Noch keine Dokumente hochgeladen.
             </div>
           ) : (
@@ -314,8 +314,8 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                   <div key={doc.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                     {fileTypeIcon(doc.file_type)}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.file_name}</p>
-                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                      <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.file_name}</p>
+                      <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
                         {formatBytes(doc.file_size)} · {new Date(doc.created_at).toLocaleDateString('de-DE')}
                         {doc.document_type && (
                           <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.55)' }}>· {DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</span>
@@ -327,10 +327,10 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                     </div>
                     {statusBadge(doc.status)}
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      <button onClick={() => openAgentModal(doc)} style={{ padding: '7px 14px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, color: '#C9A84C', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      <button onClick={() => openAgentModal(doc)} style={{ padding: '7px 14px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, cursor: 'pointer' }}>
                         🤖 Agenten
                       </button>
-                      <button onClick={() => handleDelete(doc)} style={{ padding: '7px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      <button onClick={() => handleDelete(doc)} style={{ padding: '7px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, cursor: 'pointer' }}>
                         🗑 Löschen
                       </button>
                     </div>
@@ -352,14 +352,14 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
       {agentModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: 24 }}>
           <div style={{ background: '#0D1E35', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 18, padding: 32, width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Agenten zuweisen</h3>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: '0 0 24px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agentModal.file_name}</p>
+            <h3 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Agenten zuweisen</h3>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.45)', margin: '0 0 24px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agentModal.file_name}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {availableAgents.map(agent => (
                 <div key={agent.name} onClick={() => setAgentToggles(prev => ({ ...prev, [agent.name]: !prev[agent.name] }))}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: agentToggles[agent.name] ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${agentToggles[agent.name] ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{agent.name}</span>
+                  <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>{agent.name}</span>
                   <div style={{ width: 20, height: 20, borderRadius: '50%', background: agentToggles[agent.name] ? '#C9A84C' : 'rgba(255,255,255,0.1)', border: `2px solid ${agentToggles[agent.name] ? '#C9A84C' : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {agentToggles[agent.name] && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0A1628' }} />}
                   </div>
@@ -368,10 +368,10 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setAgentModal(null)} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+              <button onClick={() => setAgentModal(null)} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                 Abbrechen
               </button>
-              <button onClick={saveAgents} disabled={savingAgents} style={{ flex: 1, padding: '12px', background: '#C9A84C', border: 'none', borderRadius: 10, color: '#0A1628', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>
+              <button onClick={saveAgents} disabled={savingAgents} style={{ flex: 1, padding: '12px', background: '#C9A84C', border: 'none', borderRadius: 10, color: '#0A1628', fontWeight: 800, cursor: 'pointer', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                 {savingAgents ? 'Speichern…' : 'Speichern ✓'}
               </button>
             </div>

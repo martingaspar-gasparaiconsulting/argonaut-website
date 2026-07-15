@@ -100,7 +100,7 @@ function statusStil(status: string): React.CSSProperties {
     border: `1px solid ${s.c}55`,
     padding: '3px 10px',
     borderRadius: '999px',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -121,7 +121,7 @@ function prioStil(prio: string): React.CSSProperties {
     border: `1px solid ${c}55`,
     padding: '3px 10px',
     borderRadius: '6px',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -330,12 +330,12 @@ export default function ServicePage() {
     background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.14)',
     color: '#fff',
-    fontSize: '14px',
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
     display: 'block',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: 'rgba(255,255,255,0.6)',
     marginBottom: '4px',
     fontWeight: 600,
@@ -348,7 +348,7 @@ export default function ServicePage() {
         <h1
           style={{
             color: GOLD,
-            fontSize: '30px',
+            fontSize: 'clamp(30px, 2.63vw, 42px)',
             fontWeight: 700,
             margin: '0 0 6px 0',
           }}
@@ -358,7 +358,7 @@ export default function ServicePage() {
         <p
           style={{
             color: 'rgba(255,255,255,0.65)',
-            fontSize: '15px',
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
             margin: 0,
             maxWidth: '760px',
           }}
@@ -388,7 +388,7 @@ export default function ServicePage() {
           <div key={k.label} style={karte}>
             <div
               style={{
-                fontSize: '28px',
+                fontSize: 'clamp(28px, 2.44vw, 39px)',
                 fontWeight: 700,
                 color: k.c,
                 lineHeight: 1.1,
@@ -398,7 +398,7 @@ export default function ServicePage() {
             </div>
             <div
               style={{
-                fontSize: '13px',
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 color: 'rgba(255,255,255,0.6)',
                 marginTop: '4px',
               }}
@@ -431,7 +431,7 @@ export default function ServicePage() {
             background: GOLD,
             color: NAVY,
             border: 'none',
-            fontSize: '14px',
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             fontWeight: 700,
             cursor: 'pointer',
           }}
@@ -493,7 +493,7 @@ export default function ServicePage() {
         </div>
       ) : gefiltert.length === 0 ? (
         <div style={{ ...karte, textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>
+          <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.6)' }}>
             {tickets.length === 0
               ? 'Noch keine Tickets. Lege das erste über „+ Neues Ticket" an.'
               : 'Keine Tickets für diese Filter.'}
@@ -536,7 +536,7 @@ export default function ServicePage() {
                       <span
                         style={{
                           color: GOLD,
-                          fontSize: '13px',
+                          fontSize: 'clamp(13px, 1.13vw, 18px)',
                           fontWeight: 700,
                           fontFamily: 'monospace',
                         }}
@@ -553,7 +553,7 @@ export default function ServicePage() {
                     <div
                       style={{
                         color: '#fff',
-                        fontSize: '15px',
+                        fontSize: 'clamp(15px, 1.31vw, 21px)',
                         fontWeight: 600,
                         marginBottom: '3px',
                       }}
@@ -563,7 +563,7 @@ export default function ServicePage() {
                     <div
                       style={{
                         color: 'rgba(255,255,255,0.55)',
-                        fontSize: '13px',
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                       }}
                     >
                       {t.kunde_name || 'Kein Kunde'} ·{' '}
@@ -585,7 +585,7 @@ export default function ServicePage() {
                         alignItems: 'center',
                         gap: '6px',
                         color: ampel.farbe,
-                        fontSize: '13px',
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         fontWeight: 600,
                       }}
                     >
@@ -603,7 +603,7 @@ export default function ServicePage() {
                     <div
                       style={{
                         color: 'rgba(255,255,255,0.4)',
-                        fontSize: '12px',
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         marginTop: '3px',
                       }}
                     >
@@ -647,7 +647,7 @@ export default function ServicePage() {
             <h2
               style={{
                 color: GOLD,
-                fontSize: '20px',
+                fontSize: 'clamp(20px, 1.75vw, 28px)',
                 fontWeight: 700,
                 margin: '0 0 18px 0',
               }}
@@ -742,7 +742,7 @@ export default function ServicePage() {
             >
               <div
                 style={{
-                  fontSize: '12px',
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   color: 'rgba(255,255,255,0.5)',
                   marginBottom: '10px',
                   fontWeight: 600,
@@ -806,7 +806,7 @@ export default function ServicePage() {
                   background: 'transparent',
                   color: 'rgba(255,255,255,0.7)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                   cursor: speichern ? 'not-allowed' : 'pointer',
                 }}
@@ -822,7 +822,7 @@ export default function ServicePage() {
                   background: GOLD,
                   color: NAVY,
                   border: 'none',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 700,
                   cursor: speichern ? 'not-allowed' : 'pointer',
                   opacity: speichern ? 0.6 : 1,

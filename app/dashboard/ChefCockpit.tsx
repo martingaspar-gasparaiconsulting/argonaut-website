@@ -334,7 +334,7 @@ export default function ChefCockpit(props: Props) {
         {/* Kopf */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: ki || laedt ? '18px' : '0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={augeKreis}><span style={{ fontSize: '22px' }}>{'\uD83D\uDC41'}</span></div>
+            <div style={augeKreis}><span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>{'\uD83D\uDC41'}</span></div>
             <div>
               <h2 style={titel}>Dein Betrieb heute</h2>
               <p style={untertitel}>Ein Klick – die KI fasst zusammen, worauf es heute ankommt, liest vor und beantwortet deine Rückfragen.</p>
@@ -346,18 +346,18 @@ export default function ChefCockpit(props: Props) {
         </div>
 
         {laedt ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', paddingTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px, 1.25vw, 20px)', paddingTop: '4px' }}>
             <span style={pulsPunkt} /> Die KI wertet deinen Betrieb aus…
           </div>
         ) : null}
 
-        {fehler ? <p style={{ color: '#ef4444', fontSize: '14px', margin: '4px 0 0' }}>{fehler}</p> : null}
+        {fehler ? <p style={{ color: '#ef4444', fontSize: 'clamp(14px, 1.25vw, 20px)', margin: '4px 0 0' }}>{fehler}</p> : null}
 
         {ki && !laedt ? (
           <div>
             {/* Stimmungs-Badge + Vorlese-Steuerung */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: akzent, background: akzent + '1e', border: '1px solid ' + akzent + '55', borderRadius: '999px', padding: '5px 12px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: akzent, background: akzent + '1e', border: '1px solid ' + akzent + '55', borderRadius: '999px', padding: '5px 12px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: akzent, display: 'inline-block' }} />
                 {stimmungLabel[stimmung] || 'Überblick'}
               </span>
@@ -371,12 +371,12 @@ export default function ChefCockpit(props: Props) {
               </div>
             </div>
 
-            {ki.klartext ? <p style={{ fontSize: '16px', lineHeight: 1.65, color: 'rgba(255,255,255,0.9)', margin: '0 0 16px' }}>{ki.klartext}</p> : null}
+            {ki.klartext ? <p style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.65, color: 'rgba(255,255,255,0.9)', margin: '0 0 16px' }}>{ki.klartext}</p> : null}
 
             {ki.punkte && ki.punkte.length > 0 ? (
               <div style={{ display: 'grid', gap: '8px' }}>
                 {ki.punkte.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '14px', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
+                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>
                     <span style={{ color: GOLD, fontWeight: 800, flexShrink: 0 }}>{'\u2192'}</span><span>{p}</span>
                   </div>
                 ))}
@@ -385,7 +385,7 @@ export default function ChefCockpit(props: Props) {
 
             {/* ---- Etappe 2: Rueckfragen + Etappe 3: Aktionen ---- */}
             <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }}>Rückfrage oder Auftrag</p>
+              <p style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }}>Rückfrage oder Auftrag</p>
 
               {chat.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
@@ -397,7 +397,7 @@ export default function ChefCockpit(props: Props) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                             <span style={aktionBadge}>{aktionLabel(m.aktion.typ)}</span>
                           </div>
-                          <p style={{ margin: '0 0 12px', fontSize: '14px', lineHeight: 1.55, color: 'rgba(255,255,255,0.92)', whiteSpace: 'pre-wrap' }}>{m.content}</p>
+                          <p style={{ margin: '0 0 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.55, color: 'rgba(255,255,255,0.92)', whiteSpace: 'pre-wrap' }}>{m.content}</p>
                           {m.status === 'offen' ? (
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                               <button onClick={() => aktionAusfuehren(i)} disabled={aktionLaeuft !== null} style={{ ...jaBtn, ...(aktionLaeuft !== null ? { opacity: 0.6, cursor: 'not-allowed' } : null) }} className="cockpit-btn">
@@ -406,7 +406,7 @@ export default function ChefCockpit(props: Props) {
                               <button onClick={() => aktionAbbrechen(i)} disabled={aktionLaeuft !== null} style={neinBtn} className="cockpit-btn">Abbrechen</button>
                             </div>
                           ) : (
-                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: m.status === 'erledigt' ? '#3ddc84' : 'rgba(255,255,255,0.45)' }}>
+                            <p style={{ margin: 0, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: m.status === 'erledigt' ? '#3ddc84' : 'rgba(255,255,255,0.45)' }}>
                               {m.status === 'erledigt' ? '✓ Ausgeführt' : 'Abgebrochen'}
                             </p>
                           )}
@@ -415,14 +415,14 @@ export default function ChefCockpit(props: Props) {
                         // ----- normale Text-Bubble -----
                         <>
                           <div style={{
-                            maxWidth: '90%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.55, whiteSpace: 'pre-wrap',
+                            maxWidth: '90%', padding: '10px 14px', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.55, whiteSpace: 'pre-wrap',
                             borderRadius: m.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
                             background: m.role === 'user' ? GOLD : 'rgba(255,255,255,0.06)',
                             color: m.role === 'user' ? '#0A1628' : 'rgba(255,255,255,0.9)',
                             fontWeight: m.role === 'user' ? 600 : 400,
                           }}>{m.content}</div>
                           {m.role === 'assistant' && ttsVerfuegbar ? (
-                            <button onClick={() => sprich(m.content, 'a' + i)} style={{ marginTop: '4px', background: 'none', border: 'none', color: sprichtKey === 'a' + i ? '#ef4444' : 'rgba(201,168,76,0.85)', fontSize: '12px', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }} className="cockpit-btn">
+                            <button onClick={() => sprich(m.content, 'a' + i)} style={{ marginTop: '4px', background: 'none', border: 'none', color: sprichtKey === 'a' + i ? '#ef4444' : 'rgba(201,168,76,0.85)', fontSize: 'clamp(12px, 1.06vw, 17px)', cursor: 'pointer', padding: '2px 4px', fontWeight: 600 }} className="cockpit-btn">
                               {sprichtKey === 'a' + i ? '⏹ Stopp' : '🔊 Vorlesen'}
                             </button>
                           ) : null}
@@ -430,14 +430,14 @@ export default function ChefCockpit(props: Props) {
                       )}
                     </div>
                   ))}
-                  {chatLaedt ? <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>ARGONAUT denkt nach…</div> : null}
+                  {chatLaedt ? <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>ARGONAUT denkt nach…</div> : null}
                 </div>
               ) : null}
 
               {voiceStatus ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: voiceStatus.fehler ? '#E0A24C' : '#E06666', display: 'inline-block' }} />
-                  <span style={{ fontSize: '12px', color: voiceStatus.fehler ? '#E0A24C' : '#E06666', fontWeight: 600, lineHeight: 1.4 }}>{voiceStatus.text}</span>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: voiceStatus.fehler ? '#E0A24C' : '#E06666', fontWeight: 600, lineHeight: 1.4 }}>{voiceStatus.text}</span>
                 </div>
               ) : null}
 
@@ -448,7 +448,7 @@ export default function ChefCockpit(props: Props) {
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); frageSenden() } }}
                   placeholder={hoert ? 'Sprich jetzt …' : 'Frage stellen oder Auftrag geben, z. B. „Leg Thomas eine Aufgabe an: Angebot Müller prüfen"'}
                   rows={1}
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: '14px', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', fontFamily: 'inherit' }}
+                  style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', fontFamily: 'inherit' }}
                 />
                 {voiceOk ? (
                   <button
@@ -457,13 +457,13 @@ export default function ChefCockpit(props: Props) {
                     style={{
                       background: hoert ? '#E06666' : 'rgba(255,255,255,0.06)',
                       border: hoert ? 'none' : '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: '10px', padding: '11px 13px', cursor: 'pointer', fontSize: '16px', lineHeight: 1,
+                      borderRadius: '10px', padding: '11px 13px', cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1,
                       boxShadow: hoert ? '0 0 0 3px rgba(224,102,102,0.25)' : 'none',
                     }}
                     className="cockpit-btn"
                   >🎤</button>
                 ) : null}
-                <button onClick={frageSenden} disabled={chatLaedt} style={{ background: chatLaedt ? 'rgba(201,168,76,0.4)' : GOLD, color: '#0A1628', border: 'none', borderRadius: '10px', padding: '11px 16px', fontWeight: 800, cursor: chatLaedt ? 'not-allowed' : 'pointer', fontSize: '16px' }} className="cockpit-btn">→</button>
+                <button onClick={frageSenden} disabled={chatLaedt} style={{ background: chatLaedt ? 'rgba(201,168,76,0.4)' : GOLD, color: '#0A1628', border: 'none', borderRadius: '10px', padding: '11px 16px', fontWeight: 800, cursor: chatLaedt ? 'not-allowed' : 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)' }} className="cockpit-btn">→</button>
               </div>
             </div>
           </div>
@@ -498,17 +498,17 @@ const augeKreis: CSSProperties = {
 }
 
 const titel: CSSProperties = { fontSize: 'clamp(18px, 2vw, 24px)', fontWeight: 900, margin: 0, color: '#FFFFFF', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }
-const untertitel: CSSProperties = { fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }
+const untertitel: CSSProperties = { fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }
 
 const hauptBtn: CSSProperties = {
   background: GOLD, color: '#0A1628', border: 'none', borderRadius: '10px',
-  padding: '12px 22px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+  padding: '12px 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
   fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif',
 }
 
 const nebenBtn: CSSProperties = {
   background: 'rgba(255,255,255,0.05)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.15)',
-  borderRadius: '9px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+  borderRadius: '9px', padding: '8px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const pulsPunkt: CSSProperties = {
@@ -523,19 +523,19 @@ const aktionKarte: CSSProperties = {
 }
 
 const aktionBadge: CSSProperties = {
-  fontSize: '10px', fontWeight: 800, letterSpacing: '0.09em', color: CYAN,
+  fontSize: 'clamp(10px, 0.88vw, 14px)', fontWeight: 800, letterSpacing: '0.09em', color: CYAN,
   background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.4)',
   borderRadius: '6px', padding: '3px 8px',
 }
 
 const jaBtn: CSSProperties = {
   background: '#3ddc84', color: '#04160c', border: 'none', borderRadius: '9px',
-  padding: '9px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+  padding: '9px 16px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const neinBtn: CSSProperties = {
   background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)',
-  borderRadius: '9px', padding: '9px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+  borderRadius: '9px', padding: '9px 16px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const cockpitCss = '.cockpit-btn:hover { filter: brightness(1.1); }'

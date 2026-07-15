@@ -188,8 +188,8 @@ export default function FahrzeugaktePage() {
               gefiltert.map((f) => (
                 <button key={f.id} onClick={() => setGewaehlt(f.id)}
                   style={{ ...styles.fzItem, ...(f.id === gewaehlt ? styles.fzItemAktiv : {}) }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{[f.hersteller, f.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</div>
-                  <div style={{ fontSize: 12, color: C.textDim }}>{f.kennzeichen || '—'} · FIN …{f.fin.slice(-6)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{[f.hersteller, f.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</div>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{f.kennzeichen || '—'} · FIN …{f.fin.slice(-6)}</div>
                 </button>
               ))
             )}
@@ -207,10 +207,10 @@ export default function FahrzeugaktePage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
                   <div>
                     <h2 style={{ ...styles.cardTitle, marginBottom: 4 }}>{[fz.hersteller, fz.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</h2>
-                    <div style={{ fontSize: 13, color: C.textDim }}>FIN {fz.fin}{fz.kennzeichen ? ` · ${fz.kennzeichen}` : ''}</div>
+                    <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>FIN {fz.fin}{fz.kennzeichen ? ` · ${fz.kennzeichen}` : ''}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1 }}>Nächste HU</div>
+                    <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1 }}>Nächste HU</div>
                     <div style={{ color: huFarbe, fontWeight: 700 }}>{datumKurz(fz.naechste_hu)} · {huText}</div>
                   </div>
                 </div>
@@ -242,10 +242,10 @@ export default function FahrzeugaktePage() {
                   <h2 style={styles.cardTitle}>Halter-Historie</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {halter.map((h) => (
-                      <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
+                      <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: h.bis_datum ? C.textDim : C.green, display: 'inline-block' }} />
                         <span style={{ fontWeight: 600, minWidth: 200 }}>{h.halter_name || '—'}</span>
-                        <span style={{ color: C.textDim, fontSize: 13 }}>
+                        <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           {datumKurz(h.von_datum)} – {h.bis_datum ? datumKurz(h.bis_datum) : 'aktuell'}
                         </span>
                       </div>
@@ -275,18 +275,18 @@ export default function FahrzeugaktePage() {
                                 <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {a.nummer ? `${a.nummer} · ` : ''}{a.titel}
                                 </div>
-                                <div style={{ fontSize: 12, color: C.textDim }}>{datumKurz(a.angenommen_am)} · {sd.label}</div>
+                                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{datumKurz(a.angenommen_am)} · {sd.label}</div>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                               <div style={{ color: C.gold, fontWeight: 700 }}>{summe.gesamtBetrag != null ? eur(summe.gesamtBetrag) : '—'}</div>
-                              <div style={{ fontSize: 11, color: C.textDim }}>{zeitText(summe.gesamtMinuten)} · {auf ? '▲' : '▼'}</div>
+                              <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>{zeitText(summe.gesamtMinuten)} · {auf ? '▲' : '▼'}</div>
                             </div>
                           </button>
                           {auf && (
                             <div style={styles.aufDetail}>
                               {pos.length === 0 ? (
-                                <div style={{ color: C.textDim, fontSize: 13 }}>Keine Positionen erfasst.</div>
+                                <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Keine Positionen erfasst.</div>
                               ) : (
                                 <table style={styles.posTable}>
                                   <tbody>
@@ -326,8 +326,8 @@ export default function FahrzeugaktePage() {
 function Info({ label, wert }: { label: string; wert: string }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>{wert}</div>
+      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>{wert}</div>
     </div>
   );
 }
@@ -342,9 +342,9 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 720, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 720, lineHeight: 1.5 },
 
   layout: { display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) 1fr', gap: 16, alignItems: 'start' },
   linksSpalte: { display: 'flex', flexDirection: 'column', gap: 10 },
@@ -355,22 +355,22 @@ const styles: Record<string, CSSProperties> = {
   fzItemAktiv: { border: `1px solid ${C.cyan}`, background: 'rgba(0,229,255,0.08)' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
   kopfGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14, marginTop: 16 },
 
   statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 12, marginBottom: 12 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px' },
-  summeLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800 },
+  summeLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 },
 
   aufKarte: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' },
   aufKopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', background: 'transparent', border: 'none', color: C.text, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit' },
   aufDetail: { padding: '0 14px 12px', borderTop: `1px solid ${C.border}` },
   posTable: { width: '100%', borderCollapse: 'collapse', marginTop: 8 },
-  posTd: { padding: '6px 4px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
-  externBadge: { marginLeft: 6, fontSize: 10, color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
+  posTd: { padding: '6px 4px', fontSize: 'clamp(13px, 1.13vw, 18px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
+  externBadge: { marginLeft: 6, fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
 
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit' },
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 4px' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 4px' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
 };

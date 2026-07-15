@@ -179,21 +179,21 @@ export default function DateiImport({
           style={{ display: "none" }}
         />
         {laden ? (
-          <div style={{ color: textHaupt, fontSize: 14.5, fontWeight: 600 }}>
+          <div style={{ color: textHaupt, fontSize: 'clamp(14.5px, 1.25vw, 20px)', fontWeight: 600 }}>
             Datei wird gelesen …
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 26, marginBottom: 6 }} aria-hidden>
+            <div style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', marginBottom: 6 }} aria-hidden>
               📄⬆️
             </div>
-            <div style={{ color: textHaupt, fontSize: 15, fontWeight: 700 }}>
+            <div style={{ color: textHaupt, fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700 }}>
               Datei hierher ziehen oder{" "}
               <span style={{ color: akzent, textDecoration: "underline" }}>
                 auswählen
               </span>
             </div>
-            <div style={{ color: textDim, fontSize: 12.5, marginTop: 6 }}>
+            <div style={{ color: textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 6 }}>
               {hinweisText}
             </div>
           </>
@@ -205,7 +205,7 @@ export default function DateiImport({
           style={{
             marginTop: 10,
             color: GREEN,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             fontWeight: 600,
             display: "flex",
             alignItems: "center",
@@ -221,7 +221,7 @@ export default function DateiImport({
           style={{
             marginTop: 10,
             color: DANGER,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             fontWeight: 600,
           }}
         >

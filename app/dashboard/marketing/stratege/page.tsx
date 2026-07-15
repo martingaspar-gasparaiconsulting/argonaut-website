@@ -53,14 +53,14 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
 function Feld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16, flex: 1 }}>
-      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -173,13 +173,13 @@ export default function KampagnenStratege() {
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1100, margin: '0 auto' }}>
-        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 14, textDecoration: 'none' }}>
+        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: 'none' }}>
           ← Zurück zu Marketing
         </a>
 
         <div style={{ margin: '16px 0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>🧠 KI-Kampagnen-Stratege</h1>
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>🧠 KI-Kampagnen-Stratege</h1>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Ein Ziel rein — ein kompletter Kampagnenplan raus. Per Klick anlegen: Kampagne, Inhalte und Termine entstehen automatisch.
           </p>
         </div>
@@ -214,12 +214,12 @@ export default function KampagnenStratege() {
           <button
             onClick={planGenerieren}
             disabled={planen}
-            style={{ marginTop: 8, background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '13px 28px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 15, cursor: planen ? 'wait' : 'pointer', opacity: planen ? 0.7 : 1 }}
+            style={{ marginTop: 8, background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '13px 28px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', cursor: planen ? 'wait' : 'pointer', opacity: planen ? 0.7 : 1 }}
           >
             {planen ? '🧠 KI plant…' : '🧠 Kampagnenplan generieren'}
           </button>
           {fehler && (
-            <div style={{ marginTop: 16, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 10, padding: 14, color: C.danger, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+            <div style={{ marginTop: 16, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 10, padding: 14, color: C.danger, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               {fehler}
             </div>
           )}
@@ -229,17 +229,17 @@ export default function KampagnenStratege() {
         {plan && (
           <div>
             {quellen.length > 0 && (
-              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, marginBottom: 16 }}>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 16 }}>
                 📚 Genutztes Firmen-Wissen: {quellen.join(', ')}
               </p>
             )}
 
             {/* Übersicht */}
             <div style={{ background: C.navy2, borderRadius: 16, padding: '24px 28px', border: `1px solid ${C.gold}`, marginBottom: 18 }}>
-              <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 24, margin: '0 0 8px' }}>{plan.name}</h2>
-              {plan.ziel && <p style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', margin: '0 0 12px', fontSize: 15 }}>🎯 {plan.ziel}</p>}
-              {plan.beschreibung && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 14, lineHeight: 1.6 }}>{plan.beschreibung}</p>}
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: C.textDim }}>
+              <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 'clamp(24px, 2.13vw, 34px)', margin: '0 0 8px' }}>{plan.name}</h2>
+              {plan.ziel && <p style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', margin: '0 0 12px', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>🎯 {plan.ziel}</p>}
+              {plan.beschreibung && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.6 }}>{plan.beschreibung}</p>}
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.textDim }}>
                 {plan.kanaele.length > 0 && <span>📡 Kanäle: <span style={{ color: '#fff' }}>{plan.kanaele.join(', ')}</span></span>}
                 {plan.empfohlenes_budget != null && <span>💶 Empf. Budget: <span style={{ color: '#fff' }}>{plan.empfohlenes_budget.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span></span>}
               </div>
@@ -248,8 +248,8 @@ export default function KampagnenStratege() {
             {/* Botschaften */}
             {plan.botschaften.length > 0 && (
               <div style={{ background: C.navy2, borderRadius: 14, padding: '20px 24px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 18 }}>
-                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 17, margin: '0 0 12px' }}>Kernbotschaften</h3>
-                <ul style={{ margin: 0, paddingLeft: 20, fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 14, lineHeight: 1.8 }}>
+                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 'clamp(17px, 1.5vw, 24px)', margin: '0 0 12px' }}>Kernbotschaften</h3>
+                <ul style={{ margin: 0, paddingLeft: 20, fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.8 }}>
                   {plan.botschaften.map((b, i) => <li key={i}>{b}</li>)}
                 </ul>
               </div>
@@ -258,13 +258,13 @@ export default function KampagnenStratege() {
             {/* Zeitplan */}
             {plan.zeitplan.length > 0 && (
               <div style={{ background: C.navy2, borderRadius: 14, padding: '20px 24px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 18 }}>
-                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 17, margin: '0 0 14px' }}>Zeitplan</h3>
+                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 'clamp(17px, 1.5vw, 24px)', margin: '0 0 14px' }}>Zeitplan</h3>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {plan.zeitplan.map((p, i) => (
                     <div key={i} style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14 }}>
-                      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontWeight: 700, fontSize: 15 }}>{p.phase}{p.fokus ? ` — ${p.fokus}` : ''}</div>
+                      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>{p.phase}{p.fokus ? ` — ${p.fokus}` : ''}</div>
                       {p.aktivitaeten.length > 0 && (
-                        <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, lineHeight: 1.6 }}>
+                        <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.6 }}>
                           {p.aktivitaeten.map((a, j) => <li key={j}>{a}</li>)}
                         </ul>
                       )}
@@ -277,15 +277,15 @@ export default function KampagnenStratege() {
             {/* Inhalte */}
             {plan.inhalte.length > 0 && (
               <div style={{ marginBottom: 18 }}>
-                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 17, margin: '0 0 14px' }}>Erste Inhalte ({plan.inhalte.length})</h3>
+                <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.cyan, fontSize: 'clamp(17px, 1.5vw, 24px)', margin: '0 0 14px' }}>Erste Inhalte ({plan.inhalte.length})</h3>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {plan.inhalte.map((i, idx) => (
                     <div key={idx} style={{ background: C.navy2, borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 15, fontWeight: 700, color: '#fff' }}>{i.titel}</span>
-                        <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal} · Tag {i.tag_offset}</span>
+                        <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, color: '#fff' }}>{i.titel}</span>
+                        <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal} · Tag {i.tag_offset}</span>
                       </div>
-                      <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{i.inhalt}</p>
+                      <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{i.inhalt}</p>
                     </div>
                   ))}
                 </div>
@@ -294,13 +294,13 @@ export default function KampagnenStratege() {
 
             {/* Anlegen */}
             <div style={{ position: 'sticky', bottom: 0, background: C.navy, padding: '16px 0', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-              <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13 }}>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                 Legt Kampagne + {plan.inhalte.length} Inhalte{start ? ' + Kalender-Termine' : ''} an.
               </span>
               <button
                 onClick={kampagneAnlegen}
                 disabled={anlegen}
-                style={{ background: C.green, color: C.navy, border: 'none', borderRadius: 10, padding: '13px 30px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16, cursor: anlegen ? 'wait' : 'pointer', opacity: anlegen ? 0.7 : 1 }}
+                style={{ background: C.green, color: C.navy, border: 'none', borderRadius: 10, padding: '13px 30px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: anlegen ? 'wait' : 'pointer', opacity: anlegen ? 0.7 : 1 }}
               >
                 {anlegen ? 'Lege an…' : '✓ Kampagne anlegen'}
               </button>

@@ -179,7 +179,7 @@ export default function ApiSchluesselKarte() {
       <div style={styles.card}>
         <div style={styles.kopf}>
           <span style={styles.titel}>🔑 API-Schlüssel</span>
-          <span style={{ color: C.textDim, fontSize: 12.5 }}>
+          <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
             {liste.length} von 5 aktiv
           </span>
         </div>
@@ -199,7 +199,7 @@ export default function ApiSchluesselKarte() {
                 Ich habe ihn sicher verwahrt
               </button>
             </div>
-            <div style={{ fontSize: 12, color: C.textDim, marginTop: 12, lineHeight: 1.55 }}>
+            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 12, lineHeight: 1.55 }}>
               Auch ARGONAUT kann ihn nicht mehr anzeigen — gespeichert ist nur ein unumkehrbarer
               Fingerabdruck. Verloren? Dann widerrufen und einen neuen erzeugen, das dauert zehn Sekunden.
             </div>
@@ -222,10 +222,10 @@ export default function ApiSchluesselKarte() {
             {liste.map((s) => (
               <div key={s.id} style={styles.zeile}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                  <div style={{ fontWeight: 700, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                     {s.bezeichnung} <code style={styles.code}>{s.hinweis}</code>
                   </div>
-                  <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 3 }}>
+                  <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 3 }}>
                     angelegt {datumHuebsch(s.erstellt_am)} · zuletzt genutzt {datumHuebsch(s.letzte_nutzung)}
                     {' · '}{s.nutzungen.toLocaleString('de-DE')} Abrufe
                   </div>
@@ -252,7 +252,7 @@ export default function ApiSchluesselKarte() {
             </button>
           </div>
           {liste.length >= 5 && (
-            <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>
+            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 8 }}>
               Mehr als fünf aktive Schlüssel sind nicht vorgesehen. Widerrufe zuerst einen alten.
             </div>
           )}
@@ -260,8 +260,8 @@ export default function ApiSchluesselKarte() {
 
         {/* --- Verbindungstest --- */}
         <div style={styles.sektion}>
-          <div style={{ ...styles.titel, fontSize: 13.5, marginBottom: 4 }}>Verbindung testen</div>
-          <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 12px', lineHeight: 1.55 }}>
+          <div style={{ ...styles.titel, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 4 }}>Verbindung testen</div>
+          <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '0 0 12px', lineHeight: 1.55 }}>
             Füge einen Schlüssel ein und schick eine Testanfrage — genau so, wie es die Automatisierung
             später tut. Der Schlüssel wird nirgends gespeichert.
           </p>
@@ -303,31 +303,31 @@ export default function ApiSchluesselKarte() {
 
 const styles: Record<string, CSSProperties> = {
   wrap: { marginTop: 40 },
-  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
-  sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
+  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800, margin: '0 0 8px', color: C.text },
+  sub: { fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 },
-  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, color: C.text },
 
   frischBox: { background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.4)`, borderRadius: 12, padding: 16, marginBottom: 18 },
-  schluesselText: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13.5, color: C.gold, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '12px 14px', wordBreak: 'break-all', lineHeight: 1.5 },
+  schluesselText: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.gold, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '12px 14px', wordBreak: 'break-all', lineHeight: 1.5 },
 
   zeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '11px 13px', flexWrap: 'wrap' },
-  code: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, color: C.cyan, background: 'rgba(0,229,255,0.08)', borderRadius: 6, padding: '2px 7px', marginLeft: 6 },
+  code: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.cyan, background: 'rgba(0,229,255,0.08)', borderRadius: 6, padding: '2px 7px', marginLeft: 6 },
 
   sektion: { marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.border}` },
-  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13.5, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer' },
-  rotBtn: { background: 'transparent', color: C.danger, border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit', cursor: 'pointer' },
+  rotBtn: { background: 'transparent', color: C.danger, border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit', cursor: 'pointer' },
 
-  hint: { color: C.textDim, fontSize: 13.5, padding: '10px 0', lineHeight: 1.55 },
-  err: { color: C.danger, fontSize: 13.5, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
-  warnBox: { color: C.text, fontSize: 13, background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 14, lineHeight: 1.6 },
-  okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
-  infoBox: { marginTop: 18, padding: '13px 15px', background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  codeBlock: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, background: C.navy, borderRadius: 8, padding: '10px 12px', margin: '10px 0', color: C.cyan, lineHeight: 1.7 },
+  hint: { color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', padding: '10px 0', lineHeight: 1.55 },
+  err: { color: C.danger, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
+  warnBox: { color: C.text, fontSize: 'clamp(13px, 1.13vw, 18px)', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 14, lineHeight: 1.6 },
+  okBox: { color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 14 },
+  infoBox: { marginTop: 18, padding: '13px 15px', background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  codeBlock: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(12.5px, 1.13vw, 18px)', background: C.navy, borderRadius: 8, padding: '10px 12px', margin: '10px 0', color: C.cyan, lineHeight: 1.7 },
 };

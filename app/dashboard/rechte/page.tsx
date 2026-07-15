@@ -474,7 +474,7 @@ export default function RechtePage() {
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 fontWeight: 800,
                 margin: 0,
                 letterSpacing: "-0.02em",
@@ -485,7 +485,7 @@ export default function RechtePage() {
             {!laden && (
               <span
                 style={{
-                  fontSize: 12,
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   fontWeight: 700,
                   color: C.cyan,
                   background: `${C.cyan}18`,
@@ -498,7 +498,7 @@ export default function RechtePage() {
               </span>
             )}
           </div>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Lege pro Mitarbeiter fest, welche Bereiche er sehen darf
           </p>
         </div>
@@ -511,7 +511,7 @@ export default function RechtePage() {
             padding: "12px 16px",
             marginBottom: 24,
             color: C.textDim,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             lineHeight: 1.6,
           }}
         >
@@ -549,9 +549,9 @@ export default function RechtePage() {
               color: C.textDim,
             }}
           >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
-            <div style={{ fontSize: 17, color: "#fff", marginBottom: 6 }}>Noch keine Mitarbeiter</div>
-            <div style={{ fontSize: 14 }}>Lege im Personal-Bereich Mitarbeiter an, dann kannst du hier Rechte vergeben.</div>
+            <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>👥</div>
+            <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>Noch keine Mitarbeiter</div>
+            <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Lege im Personal-Bereich Mitarbeiter an, dann kannst du hier Rechte vergeben.</div>
           </div>
         ) : (
           mitarbeiter.map((m) => {
@@ -574,15 +574,15 @@ export default function RechtePage() {
                 {/* Kopf */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700 }}>{name(m)}</div>
-                    <div style={{ color: C.textDim, fontSize: 13 }}>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700 }}>{name(m)}</div>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                       {[m.position, m.abteilung].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </div>
                   {istVerteiler && (
                     <span
                       style={{
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         fontWeight: 700,
                         color: C.gold,
                         background: `${C.gold}22`,
@@ -597,7 +597,7 @@ export default function RechtePage() {
                   {!m.auth_user_id && (
                     <span
                       style={{
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         fontWeight: 700,
                         color: C.warn,
                         background: `${C.warn}22`,
@@ -611,7 +611,7 @@ export default function RechtePage() {
                   )}
                   <div style={{ flex: 1 }} />
                   {akt.rolle && (
-                    <span style={{ color: C.textDim, fontSize: 12.5 }}>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                       Vorlage: <strong style={{ color: "#fff" }}>{akt.rolle}</strong>
                     </span>
                   )}
@@ -632,7 +632,7 @@ export default function RechtePage() {
                       marginBottom: 16,
                     }}
                   >
-                    <span style={{ fontSize: 13, color: C.textDim }}>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                       Verteil-Vollmacht:{" "}
                       <strong style={{ color: istVerteiler ? C.gold : "#fff" }}>
                         {istVerteiler ? "Administrator — darf Rechte verteilen" : "Kein Verteiler"}
@@ -648,7 +648,7 @@ export default function RechtePage() {
                         border: `1px solid ${istVerteiler ? C.border : C.gold}`,
                         borderRadius: 999,
                         padding: "7px 14px",
-                        fontSize: 12.5,
+                        fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                         fontWeight: 700,
                         cursor: vBusy ? "wait" : "pointer",
                         fontFamily: "'DM Sans', sans-serif",
@@ -676,7 +676,7 @@ export default function RechtePage() {
                         border: `1px solid ${akt.rolle === v.name ? C.gold : C.border}`,
                         borderRadius: 999,
                         padding: "7px 14px",
-                        fontSize: 12.5,
+                        fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                         fontWeight: 700,
                         cursor: "pointer",
                         fontFamily: "'DM Sans', sans-serif",
@@ -694,7 +694,7 @@ export default function RechtePage() {
                     if (items.length === 0) return null;
                     return (
                       <div key={g.titel}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: g.farbe, marginBottom: 8 }}>{g.titel}</div>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: g.farbe, marginBottom: 8 }}>{g.titel}</div>
                         {items.map((it) => {
                           const an = akt.module.includes(it.key);
                           const sensibel = istSensibel(it.key);
@@ -709,7 +709,7 @@ export default function RechtePage() {
                                 gap: 10,
                                 padding: "6px 0",
                                 flexWrap: "wrap",
-                                fontSize: 14,
+                                fontSize: 'clamp(14px, 1.25vw, 20px)',
                               }}
                             >
                               {/* Sicht-Haekchen (wie bisher) */}
@@ -732,7 +732,7 @@ export default function RechtePage() {
                               {sensibel && (
                                 <span
                                   style={{
-                                    fontSize: 10.5,
+                                    fontSize: 'clamp(10.5px, 0.94vw, 15px)',
                                     fontWeight: 700,
                                     color: C.warn,
                                     background: `${C.warn}1E`,
@@ -755,7 +755,7 @@ export default function RechtePage() {
                                     gap: 6,
                                     cursor: "pointer",
                                     marginLeft: "auto",
-                                    fontSize: 12,
+                                    fontSize: 'clamp(12px, 1.06vw, 17px)',
                                     fontWeight: 700,
                                     color: darfAendern ? C.cyan : C.textDim,
                                     background: darfAendern ? `${C.cyan}18` : "transparent",
@@ -793,7 +793,7 @@ export default function RechtePage() {
                       border: "none",
                       borderRadius: 10,
                       padding: "10px 20px",
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       fontWeight: 700,
                       cursor: busy ? "wait" : "pointer",
                       fontFamily: "'DM Sans', sans-serif",
@@ -802,7 +802,7 @@ export default function RechtePage() {
                   >
                     {busy ? "Speichert…" : "💾 Rechte speichern"}
                   </button>
-                  <span style={{ color: C.textDim, fontSize: 13 }}>
+                  <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                     {akt.module.length} von {erlaubteKeys.size} Modulen freigeschaltet
                     {akt.schreibModule.length > 0 && (
                       <span style={{ color: C.cyan }}>
@@ -811,7 +811,7 @@ export default function RechtePage() {
                       </span>
                     )}
                   </span>
-                  {ok && <span style={{ color: C.green, fontSize: 13, fontWeight: 700 }}>✓ Gespeichert</span>}
+                  {ok && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700 }}>✓ Gespeichert</span>}
                 </div>
               </div>
             );
@@ -868,7 +868,7 @@ export default function RechtePage() {
                   border: `1px solid ${C.border}`,
                   borderRadius: 10,
                   padding: "10px 18px",
-                  fontSize: 13.5,
+                  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                   fontWeight: 700,
                   cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -884,7 +884,7 @@ export default function RechtePage() {
                   border: "none",
                   borderRadius: 10,
                   padding: "10px 18px",
-                  fontSize: 13.5,
+                  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                   fontWeight: 800,
                   cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -899,13 +899,13 @@ export default function RechtePage() {
             const lab = LABEL_MAP[modal.key] || modal.key;
             return overlay(
               <>
-                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
+                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 800, marginBottom: 10 }}>
                   🔒 Sensiblen Bereich freigeben
                 </div>
-                <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 8px" }}>
+                <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: "0 0 8px" }}>
                   Du gibst <strong>{nm}</strong> Zugriff auf <strong style={{ color: C.warn }}>{lab}</strong>.
                 </p>
-                <p style={{ color: C.textDim, fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+                <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', lineHeight: 1.6, margin: 0 }}>
                   Dieser Bereich ist rechtlich und kaufmännisch heikel. Bitte bestätige die Freigabe bewusst.
                 </p>
                 {knoepfe("Ja, freigeben", () => {
@@ -919,22 +919,22 @@ export default function RechtePage() {
           if (modal.art === "vollmacht") {
             return overlay(
               <>
-                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
+                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 800, marginBottom: 10 }}>
                   ⚡ Verteil-Vollmacht {modal.an ? "vergeben" : "entziehen"}
                 </div>
                 {modal.an ? (
                   <>
-                    <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 8px" }}>
+                    <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: "0 0 8px" }}>
                       <strong>{nm}</strong> wird <strong style={{ color: C.gold }}>Administrator</strong> und darf
                       künftig selbst Rechte an andere Mitarbeiter verteilen — nur die Module, die er selbst hat.
                     </p>
-                    <p style={{ color: C.textDim, fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>
+                    <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', lineHeight: 1.6, margin: 0 }}>
                       Diese Vollmacht kann nur der Eigentümer vergeben. Ein Administrator kann keine weiteren
                       Administratoren ernennen.
                     </p>
                   </>
                 ) : (
-                  <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: 0 }}>
                     <strong>{nm}</strong> verliert die Verteil-Vollmacht und wird wieder normaler Mitarbeiter.
                     Bereits vergebene Modul-Rechte bleiben unverändert.
                   </p>
@@ -960,10 +960,10 @@ export default function RechtePage() {
             .map((k) => LABEL_MAP[k] || k);
           return overlay(
             <>
-              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 800, marginBottom: 12 }}>
                 💾 Rechte speichern — Zusammenfassung
               </div>
-              <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 12px" }}>
+              <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: "0 0 12px" }}>
                 <strong>{nm}</strong> erhält <strong>{aktM.module.length}</strong>{" "}
                 {aktM.module.length === 1 ? "Modul" : "Module"} — darunter{" "}
                 <strong style={{ color: C.warn }}>{sensibleListe.length}</strong> sensible
@@ -984,7 +984,7 @@ export default function RechtePage() {
                   <span
                     key={lab}
                     style={{
-                      fontSize: 12.5,
+                      fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                       fontWeight: 700,
                       color: C.warn,
                       background: `${C.warn}1E`,
@@ -999,7 +999,7 @@ export default function RechtePage() {
               </div>
               {/* PUNKT 8: Warnhinweis, wenn sensible Bereiche AENDERN dürfen */}
               {sensibelAendern.length > 0 && (
-                <p style={{ color: C.cyan, fontSize: 13, lineHeight: 1.6, margin: "12px 0 0" }}>
+                <p style={{ color: C.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.6, margin: "12px 0 0" }}>
                   ✏️ Mit <strong>Änderungsrecht</strong> (darf speichern/löschen):{" "}
                   <strong>{sensibelAendern.join(", ")}</strong>
                 </p>

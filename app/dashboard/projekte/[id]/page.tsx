@@ -621,10 +621,10 @@ export default function ProjektDetailPage() {
   };
   const inputStil: React.CSSProperties = {
     width: '100%', background: BRAND.navy, color: '#fff', border: `1px solid ${BRAND.border}`,
-    borderRadius: 8, padding: '9px 10px', fontSize: 14, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
+    borderRadius: 8, padding: '9px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
-    display: 'block', color: BRAND.textDim, fontSize: 12, fontWeight: 600, marginBottom: 5, fontFamily: 'DM Sans, sans-serif',
+    display: 'block', color: BRAND.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, marginBottom: 5, fontFamily: 'DM Sans, sans-serif',
   };
 
   if (laden) {
@@ -663,13 +663,13 @@ export default function ProjektDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-              <h1 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 26, fontWeight: 800 }}>{projekt.name}</h1>
-              <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{sm.label}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: pm.farbe, background: pm.farbe + '22', border: `1px solid ${pm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{pm.label}</span>
+              <h1 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>{projekt.name}</h1>
+              <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{sm.label}</span>
+              <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: pm.farbe, background: pm.farbe + '22', border: `1px solid ${pm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{pm.label}</span>
               {(() => {
                 const h = projektHealth(projekt, aufgaben);
                 return (
-                  <span title={`Projekt-Status: ${h.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: h.farbe, background: h.farbe + '22', border: `1px solid ${h.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>
+                  <span title={`Projekt-Status: ${h.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: h.farbe, background: h.farbe + '22', border: `1px solid ${h.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: h.farbe, display: 'inline-block' }} />
                     {h.label}
                   </span>
@@ -677,9 +677,9 @@ export default function ProjektDetailPage() {
               })()}
             </div>
             {projekt.beschreibung && (
-              <p style={{ margin: '0 0 10px', color: BRAND.textDim, fontSize: 14, lineHeight: 1.5 }}>{projekt.beschreibung}</p>
+              <p style={{ margin: '0 0 10px', color: BRAND.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.5 }}>{projekt.beschreibung}</p>
             )}
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: BRAND.textDim }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim }}>
               <span>📅 {dStr(projekt.start_datum)} – {dStr(projekt.end_datum)}</span>
               {projekt.verantwortlich && <span>👤 {projekt.verantwortlich}</span>}
               {projekt.budget != null && <span>💶 {Number(projekt.budget).toLocaleString('de-DE')} €</span>}
@@ -689,7 +689,7 @@ export default function ProjektDetailPage() {
 
         {/* Fortschritt */}
         <div style={{ marginTop: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: BRAND.textDim, marginBottom: 5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginBottom: 5 }}>
             <span>Fortschritt</span>
             <span>{erledigt}/{gesamt} Aufgaben · {pct}%</span>
           </div>
@@ -709,7 +709,7 @@ export default function ProjektDetailPage() {
               onClick={() => setReiter(r.key)}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                padding: '10px 16px', fontSize: 14, fontWeight: 700,
+                padding: '10px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700,
                 fontFamily: 'DM Sans, sans-serif',
                 color: aktiv ? BRAND.cyan : BRAND.textDim,
                 borderBottom: `2px solid ${aktiv ? BRAND.cyan : 'transparent'}`,
@@ -734,7 +734,7 @@ export default function ProjektDetailPage() {
 
           {/* Mini-Auslastung */}
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>Auslastung der Beteiligten</h3>
+            <h3 style={{ margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Auslastung der Beteiligten</h3>
             {(() => {
               const offeneAufgaben = aufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
               const personenZeilen = beteiligte.map((b) => ({
@@ -757,14 +757,14 @@ export default function ProjektDetailPage() {
               const zeilen = [...teamZeilen, ...personenZeilen, ...mitarbeiterZeilen].filter((z) => z.gesamt > 0);
               const nichtZugewiesen = offeneAufgaben.filter((a) => !a.mitarbeiter_id && !a.team_id).length;
               if (zeilen.length === 0 && nichtZugewiesen === 0) {
-                return <div style={{ color: BRAND.textDim, fontSize: 13 }}>Noch keine Aufgaben zugewiesen.</div>;
+                return <div style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Noch keine Aufgaben zugewiesen.</div>;
               }
               const maxGesamt = Math.max(1, ...zeilen.map((z) => z.gesamt));
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {zeilen.sort((a, b) => b.offen - a.offen).map((z) => (
                     <div key={(z.istTeam ? 't' : 'p') + z.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 170, flexShrink: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 170, flexShrink: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ width: 9, height: 9, borderRadius: '50%', background: z.farbe, display: 'inline-block', flexShrink: 0 }} />
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
@@ -778,13 +778,13 @@ export default function ProjektDetailPage() {
                           <div title={`${z.offen} offen`} style={{ height: '100%', width: `${(z.offen / maxGesamt) * 100}%`, background: z.offen >= 8 ? '#A855F7' : z.offen >= 4 ? '#E0A24C' : '#4CAF7D', minWidth: 4 }} />
                         )}
                       </div>
-                      <div style={{ width: 90, flexShrink: 0, fontSize: 12, color: BRAND.textDim, textAlign: 'right' }}>
+                      <div style={{ width: 90, flexShrink: 0, fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, textAlign: 'right' }}>
                         {z.offen} offen / {z.gesamt}
                       </div>
                     </div>
                   ))}
                   {nichtZugewiesen > 0 && (
-                    <div style={{ fontSize: 13, color: BRAND.warn, marginTop: 4 }}>
+                    <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.warn, marginTop: 4 }}>
                       ⚠ {nichtZugewiesen} offene Aufgabe{nichtZugewiesen === 1 ? '' : 'n'} ohne Zuständigen
                     </div>
                   )}
@@ -808,7 +808,7 @@ export default function ProjektDetailPage() {
                     background: aufgabenAnsicht === v ? BRAND.cyan : 'transparent',
                     color: aufgabenAnsicht === v ? BRAND.navy : BRAND.textDim,
                     border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 700,
-                    fontSize: 13, fontFamily: 'DM Sans, sans-serif',
+                    fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif',
                   }}
                 >
                   {v === 'kanban' ? '▦ Board' : '☰ Liste'}
@@ -817,7 +817,7 @@ export default function ProjektDetailPage() {
             </div>
             {aufgabenAnsicht === 'liste' && (
               <>
-                <span style={{ color: BRAND.textDim, fontSize: 13 }}>Sortieren:</span>
+                <span style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Sortieren:</span>
                 <select
                   value={sortFeld}
                   onChange={(e) => setSortFeld(e.target.value as any)}
@@ -839,7 +839,7 @@ export default function ProjektDetailPage() {
             <div>
               {(beteiligte.length > 0 || teams.length > 0) && (
                 <div style={{ ...card, padding: '12px 14px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: BRAND.textDim, marginBottom: 8 }}>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginBottom: 8 }}>
                     Zuweisen per Ziehen: Aufgaben-Karte auf eine Person oder ein Team ziehen.
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -854,7 +854,7 @@ export default function ProjektDetailPage() {
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
                             background: over ? t.farbe : t.farbe + '22', color: over ? BRAND.navy : '#fff',
-                            border: `1.5px solid ${t.farbe}`, fontSize: 13, fontWeight: 700,
+                            border: `1.5px solid ${t.farbe}`, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700,
                             transform: over ? 'scale(1.06)' : 'none', transition: 'transform 0.1s ease',
                           }}
                         >
@@ -873,7 +873,7 @@ export default function ProjektDetailPage() {
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
                             background: over ? b.farbe : 'transparent', color: over ? BRAND.navy : '#fff',
-                            border: `1.5px solid ${b.farbe}`, fontSize: 13, fontWeight: 600,
+                            border: `1.5px solid ${b.farbe}`, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600,
                             transform: over ? 'scale(1.06)' : 'none', transition: 'transform 0.1s ease',
                           }}
                         >
@@ -890,7 +890,7 @@ export default function ProjektDetailPage() {
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999,
                         background: zuweisOver === 'none' ? BRAND.danger : 'transparent', color: zuweisOver === 'none' ? '#fff' : BRAND.textDim,
-                        border: `1.5px dashed ${BRAND.border}`, fontSize: 13, fontWeight: 600,
+                        border: `1.5px dashed ${BRAND.border}`, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600,
                       }}
                     >
                       ✕ niemand
@@ -919,8 +919,8 @@ export default function ProjektDetailPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <span style={{ width: 9, height: 9, borderRadius: '50%', background: sp.farbe, display: 'inline-block' }} />
-                        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-dm-sans), sans-serif' }}>{sp.label}</span>
-                        <span style={{ fontSize: 12, color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
+                        <span style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'var(--font-dm-sans), sans-serif' }}>{sp.label}</span>
+                        <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
                       </div>
                     </div>
 
@@ -941,13 +941,13 @@ export default function ProjektDetailPage() {
                             opacity: draggingTaskId === a.id ? 0.4 : 1,
                           }}
                         >
-                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: a.beschreibung ? 4 : 0 }}>{a.titel}</div>
+                          <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, marginBottom: a.beschreibung ? 4 : 0 }}>{a.titel}</div>
                           {a.beschreibung && (
-                            <div style={{ fontSize: 12, color: BRAND.textDim, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                               {a.beschreibung}
                             </div>
                           )}
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 11, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', alignItems: 'center' }}>
                             <span style={{ color: pm.farbe, fontWeight: 700 }}>● {pm.label}</span>
                             {a.faellig_am && (
                               <span style={{ color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400 }}>
@@ -984,7 +984,7 @@ export default function ProjektDetailPage() {
                       style={{
                         width: '100%', background: 'transparent', border: `1px dashed ${BRAND.border}`,
                         borderRadius: 8, color: BRAND.textDim, padding: '8px 0', cursor: 'pointer',
-                        fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginTop: 2,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif', marginTop: 2,
                       }}
                     >
                       + Aufgabe
@@ -1026,8 +1026,8 @@ export default function ProjektDetailPage() {
       {reiter === 'einstellungen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>📄 KI-Statusbericht</h3>
-            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>📄 KI-Statusbericht</h3>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5 }}>
               Erstellt auf Knopfdruck einen professionellen Fortschrittsbericht als PDF — mit Kennzahlen,
               erledigten und offenen Punkten, Überfälligem und einem Ausblick. Ideal für Kunden oder die Geschäftsführung.
             </p>
@@ -1037,8 +1037,8 @@ export default function ProjektDetailPage() {
           </div>
 
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>Als Vorlage speichern</h3>
-            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Als Vorlage speichern</h3>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5 }}>
               Speichert dieses Projekt als wiederverwendbare Blaupause — mit Beschreibung, Priorität, Farbe und allen
               Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellst du später mit einem Klick neue,
               gleich strukturierte Projekte.
@@ -1048,7 +1048,7 @@ export default function ProjektDetailPage() {
             </button>
           </div>
 
-          <div style={{ ...card, color: BRAND.textDim, fontSize: 13 }}>
+          <div style={{ ...card, color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) findest du auf der Übersicht über „Bearbeiten".
           </div>
         </div>
@@ -1059,7 +1059,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100000 }}
           onClick={() => setAufgabeModal(null)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               {aufgabeModal.id ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}
             </h2>
 
@@ -1119,7 +1119,7 @@ export default function ProjektDetailPage() {
                 )}
               </select>
               {beteiligte.length === 0 && teams.length === 0 && (
-                <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 5 }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 5 }}>
                   Noch keine Beteiligten/Teams. Lege sie über „👥 Beteiligte" an.
                 </div>
               )}
@@ -1136,7 +1136,7 @@ export default function ProjektDetailPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                         <label style={{ ...labelStil, margin: 0 }}>Unteraufgaben / Checkliste</label>
                         {unterAufgaben.length > 0 && (
-                          <span style={{ fontSize: 12, color: erl === unterAufgaben.length ? BRAND.green : BRAND.textDim }}>
+                          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: erl === unterAufgaben.length ? BRAND.green : BRAND.textDim }}>
                             {erl}/{unterAufgaben.length} erledigt
                           </span>
                         )}
@@ -1154,11 +1154,11 @@ export default function ProjektDetailPage() {
                     {unterAufgaben.map((ua) => (
                       <div key={ua.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8 }}>
                         <input type="checkbox" checked={!!ua.erledigt} onChange={() => unterAufgabeToggle(ua)} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 14, color: ua.erledigt ? BRAND.textDim : '#fff', textDecoration: ua.erledigt ? 'line-through' : 'none' }}>{ua.titel}</span>
-                        <button onClick={() => unterAufgabeLoeschen(ua.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Löschen">×</button>
+                        <span style={{ flex: 1, fontSize: 'clamp(14px, 1.25vw, 20px)', color: ua.erledigt ? BRAND.textDim : '#fff', textDecoration: ua.erledigt ? 'line-through' : 'none' }}>{ua.titel}</span>
+                        <button onClick={() => unterAufgabeLoeschen(ua.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1, padding: '0 4px' }} title="Löschen">×</button>
                       </div>
                     ))}
-                    {detailLaden && unterAufgaben.length === 0 && <div style={{ fontSize: 12, color: BRAND.textDim }}>Lade…</div>}
+                    {detailLaden && unterAufgaben.length === 0 && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>Lade…</div>}
                   </div>
 
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1178,20 +1178,20 @@ export default function ProjektDetailPage() {
                   <label style={{ ...labelStil, marginBottom: 10 }}>Kommentare / Verlauf</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                     {kommentare.length === 0 && !detailLaden && (
-                      <div style={{ fontSize: 13, color: BRAND.textDim }}>Noch keine Kommentare.</div>
+                      <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim }}>Noch keine Kommentare.</div>
                     )}
                     {kommentare.map((k) => (
                       <div key={k.id} style={{ background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8, padding: '8px 10px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                          <span style={{ fontSize: 12, color: BRAND.cyan, fontWeight: 700 }}>{k.autor || 'Ich'}</span>
+                          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.cyan, fontWeight: 700 }}>{k.autor || 'Ich'}</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: BRAND.textDim }}>
+                            <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim }}>
                               {(() => { try { return new Date(k.erstellt_am).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } })()}
                             </span>
-                            <button onClick={() => kommentarLoeschen(k.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 15, lineHeight: 1 }} title="Löschen">×</button>
+                            <button onClick={() => kommentarLoeschen(k.id)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 'clamp(15px, 1.31vw, 21px)', lineHeight: 1 }} title="Löschen">×</button>
                           </span>
                         </div>
-                        <div style={{ fontSize: 14, marginTop: 4, whiteSpace: 'pre-wrap' }}>{k.text}</div>
+                        <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{k.text}</div>
                       </div>
                     ))}
                   </div>
@@ -1229,14 +1229,14 @@ export default function ProjektDetailPage() {
           onClick={() => setBeteiligteModal(false)}>
           <div style={{ ...card, width: 560, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Beteiligte</h2>
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>Beteiligte</h2>
               <button style={btn} onClick={oeffnePersonNeu}>+ Neuer Beteiligter</button>
             </div>
-            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13 }}>
+            <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Eigene Mitarbeiter (intern) und Subunternehmer (extern) — betriebsweit, in jedem Projekt zuweisbar.
             </p>
             {beteiligte.length === 0 ? (
-              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 20, textAlign: 'center' }}>
+              <div style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: 20, textAlign: 'center' }}>
                 Noch keine Beteiligten. Leg mit „+ Neuer Beteiligter" los.
               </div>
             ) : (
@@ -1248,24 +1248,24 @@ export default function ProjektDetailPage() {
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${b.farbe}`, borderRadius: 8, cursor: 'pointer' }}>
                       <span style={{ width: 10, height: 10, borderRadius: '50%', background: b.farbe, display: 'inline-block', flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>
+                        <div style={{ fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                           {b.name}
-                          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: b.typ === 'extern' ? BRAND.warn : BRAND.green, background: (b.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
+                          <span style={{ marginLeft: 8, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: b.typ === 'extern' ? BRAND.warn : BRAND.green, background: (b.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
                             {b.typ === 'extern' ? 'Subunternehmer' : 'Intern'}
                           </span>
                           {team && (
-                            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: team.farbe, background: team.farbe + '22', borderRadius: 999, padding: '2px 8px' }}>
+                            <span style={{ marginLeft: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: team.farbe, background: team.farbe + '22', borderRadius: 999, padding: '2px 8px' }}>
                               👥 {team.name}
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 2 }}>
                           {b.rolle || '—'}
                           {b.typ === 'extern' && b.firma_name ? ` · ${b.firma_name}` : ''}
                           {b.kostentyp ? ` · ${b.kostentyp === 'stundenlohn' ? 'Stundenlohn' : b.kostentyp === 'tagessatz' ? 'Tagessatz' : 'Pauschale'}${b.kostensatz != null ? ` ${Number(b.kostensatz).toLocaleString('de-DE')} €` : ''}` : ''}
                         </div>
                       </div>
-                      <span style={{ color: BRAND.textDim, fontSize: 13 }}>bearbeiten ›</span>
+                      <span style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>bearbeiten ›</span>
                     </div>
                   );
                 })}
@@ -1274,14 +1274,14 @@ export default function ProjektDetailPage() {
 
             {/* Teams-Sektion */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '22px 0 12px' }}>
-              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 18 }}>Teams</h2>
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(18px, 1.56vw, 25px)' }}>Teams</h2>
               <button style={btnGhost} onClick={oeffneTeamNeu}>+ Neues Team</button>
             </div>
-            <p style={{ margin: '0 0 12px', color: BRAND.textDim, fontSize: 13 }}>
+            <p style={{ margin: '0 0 12px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Fasse Beteiligte zu Teams zusammen (intern oder Subunternehmer-Team) und weise Aufgaben dem ganzen Team zu.
             </p>
             {teams.length === 0 ? (
-              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 16, textAlign: 'center' }}>
+              <div style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: 16, textAlign: 'center' }}>
                 Noch keine Teams. Leg mit „+ Neues Team" los.
               </div>
             ) : (
@@ -1291,21 +1291,21 @@ export default function ProjektDetailPage() {
                   return (
                     <div key={t.id} style={{ padding: '12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${t.farbe}`, borderRadius: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', display: 'flex', alignItems: 'center', gap: 7 }}>
                           <span style={{ width: 10, height: 10, borderRadius: '50%', background: t.farbe, display: 'inline-block' }} />
                           👥 {t.name}
-                          <span style={{ fontSize: 11, fontWeight: 700, color: t.typ === 'extern' ? BRAND.warn : BRAND.green, background: (t.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
+                          <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: t.typ === 'extern' ? BRAND.warn : BRAND.green, background: (t.typ === 'extern' ? BRAND.warn : BRAND.green) + '22', borderRadius: 999, padding: '2px 8px' }}>
                             {t.typ === 'extern' ? 'Subunternehmer-Team' : 'Intern'}
                           </span>
                         </div>
-                        <button style={{ ...btnGhost, padding: '5px 10px', fontSize: 12 }} onClick={() => oeffneTeamBearbeiten(t)}>bearbeiten</button>
+                        <button style={{ ...btnGhost, padding: '5px 10px', fontSize: 'clamp(12px, 1.06vw, 17px)' }} onClick={() => oeffneTeamBearbeiten(t)}>bearbeiten</button>
                       </div>
                       {t.typ === 'extern' && t.firma_name && (
-                        <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 4 }}>{t.firma_name}</div>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 4 }}>{t.firma_name}</div>
                       )}
                       {/* Mitglieder verwalten */}
                       <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: 11, color: BRAND.textDim, marginBottom: 6 }}>Mitglieder ({mitglieder.length}):</div>
+                        <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim, marginBottom: 6 }}>Mitglieder ({mitglieder.length}):</div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {beteiligte.map((b) => {
                             const drin = b.team_id === t.id;
@@ -1317,7 +1317,7 @@ export default function ProjektDetailPage() {
                                   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999,
                                   background: drin ? b.farbe + '22' : 'transparent',
                                   border: `1px solid ${drin ? b.farbe : BRAND.border}`,
-                                  color: drin ? '#fff' : BRAND.textDim, fontSize: 12, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                                  color: drin ? '#fff' : BRAND.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
                                 }}
                                 title={drin ? 'Aus Team entfernen' : 'Zum Team hinzufügen'}
                               >
@@ -1325,7 +1325,7 @@ export default function ProjektDetailPage() {
                               </button>
                             );
                           })}
-                          {beteiligte.length === 0 && <span style={{ fontSize: 12, color: BRAND.textDim }}>Erst Beteiligte anlegen.</span>}
+                          {beteiligte.length === 0 && <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>Erst Beteiligte anlegen.</span>}
                         </div>
                       </div>
                     </div>
@@ -1346,7 +1346,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100001 }}
           onClick={() => setPersonModal(null)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               {personModal.id ? 'Beteiligten bearbeiten' : 'Neuer Beteiligter'}
             </h2>
 
@@ -1356,7 +1356,7 @@ export default function ProjektDetailPage() {
               <div style={{ display: 'flex', gap: 0, border: `1px solid ${BRAND.border}`, borderRadius: 10, overflow: 'hidden' }}>
                 {([['intern', 'Eigener Mitarbeiter'], ['extern', 'Subunternehmer']] as const).map(([wert, label]) => (
                   <button key={wert} onClick={() => setPersonModal({ ...personModal, typ: wert })}
-                    style={{ flex: 1, background: personModal.typ === wert ? BRAND.cyan : 'transparent', color: personModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+                    style={{ flex: 1, background: personModal.typ === wert ? BRAND.cyan : 'transparent', color: personModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif' }}>
                     {label}
                   </button>
                 ))}
@@ -1427,7 +1427,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100001 }}
           onClick={() => setTeamModal(null)}>
           <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               {teamModal.id ? 'Team bearbeiten' : 'Neues Team'}
             </h2>
 
@@ -1436,7 +1436,7 @@ export default function ProjektDetailPage() {
               <div style={{ display: 'flex', gap: 0, border: `1px solid ${BRAND.border}`, borderRadius: 10, overflow: 'hidden' }}>
                 {([['intern', 'Internes Team'], ['extern', 'Subunternehmer-Team']] as const).map(([wert, label]) => (
                   <button key={wert} onClick={() => setTeamModal({ ...teamModal, typ: wert })}
-                    style={{ flex: 1, background: teamModal.typ === wert ? BRAND.cyan : 'transparent', color: teamModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+                    style={{ flex: 1, background: teamModal.typ === wert ? BRAND.cyan : 'transparent', color: teamModal.typ === wert ? BRAND.navy : BRAND.textDim, border: 'none', padding: '9px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif' }}>
                     {label}
                   </button>
                 ))}
@@ -1486,8 +1486,8 @@ export default function ProjektDetailPage() {
 function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: '20px 18px' }}>
-      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 800, color: farbe }}>{wert}</div>
-      <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 4 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim, marginTop: 4 }}>{label}</div>
     </div>
   );
 }
@@ -1529,14 +1529,14 @@ function ProjektKalender({
 
   const navBtn: React.CSSProperties = {
     background: 'transparent', color: '#fff', border: `1px solid ${BRAND.border}`,
-    borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13,
+    borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)',
   };
 
   return (
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 16 }}>
       {/* Kopf */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 18, textTransform: 'capitalize' }}>{monatsName}</h3>
+        <h3 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(18px, 1.56vw, 25px)', textTransform: 'capitalize' }}>{monatsName}</h3>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={navBtn} onClick={() => setMonat(new Date(jahr, mon - 1, 1))}>‹ Voriger</button>
           <button style={navBtn} onClick={() => { const d = new Date(); setMonat(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Heute</button>
@@ -1547,7 +1547,7 @@ function ProjektKalender({
       {/* Wochentage */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
         {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((w) => (
-          <div key={w} style={{ textAlign: 'center', fontSize: 12, color: BRAND.textDim, fontWeight: 700, padding: '4px 0' }}>{w}</div>
+          <div key={w} style={{ textAlign: 'center', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, fontWeight: 700, padding: '4px 0' }}>{w}</div>
         ))}
       </div>
 
@@ -1565,7 +1565,7 @@ function ProjektKalender({
               border: `1px solid ${istHeute ? BRAND.cyan : BRAND.border}`, borderRadius: 8, padding: 6,
               display: 'flex', flexDirection: 'column', gap: 4,
             }}>
-              <div style={{ fontSize: 12, fontWeight: istHeute ? 800 : 600, color: istHeute ? BRAND.cyan : BRAND.textDim }}>
+              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: istHeute ? 800 : 600, color: istHeute ? BRAND.cyan : BRAND.textDim }}>
                 {tag.getDate()}
               </div>
               {tagsAufgaben.slice(0, 4).map((a) => {
@@ -1578,7 +1578,7 @@ function ProjektKalender({
                     onClick={() => onOeffnen(a)}
                     title={a.titel}
                     style={{
-                      fontSize: 11, padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
+                      fontSize: 'clamp(11px, 0.94vw, 15px)', padding: '2px 5px', borderRadius: 4, cursor: 'pointer',
                       background: fertig ? 'rgba(76,175,125,0.15)' : pm.farbe + '22',
                       borderLeft: `2px solid ${fertig ? BRAND.green : pm.farbe}`,
                       color: fertig ? BRAND.textDim : '#fff',
@@ -1592,7 +1592,7 @@ function ProjektKalender({
                 );
               })}
               {tagsAufgaben.length > 4 && (
-                <div style={{ fontSize: 10, color: BRAND.textDim }}>+{tagsAufgaben.length - 4} weitere</div>
+                <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: BRAND.textDim }}>+{tagsAufgaben.length - 4} weitere</div>
               )}
             </div>
           );
@@ -1600,7 +1600,7 @@ function ProjektKalender({
       </div>
 
       {ohneDatum > 0 && (
-        <div style={{ marginTop: 12, fontSize: 12, color: BRAND.textDim }}>
+        <div style={{ marginTop: 12, fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
           {ohneDatum} Aufgabe{ohneDatum === 1 ? '' : 'n'} ohne Fälligkeitsdatum (nicht im Kalender sichtbar).
         </div>
       )}
@@ -1653,11 +1653,11 @@ function AufgabenListe({
   }
 
   const zellKopf: React.CSSProperties = {
-    textAlign: 'left', padding: '10px 12px', fontSize: 12, color: BRAND.textDim,
+    textAlign: 'left', padding: '10px 12px', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim,
     fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
     borderBottom: `1px solid ${BRAND.border}`,
   };
-  const zelle: React.CSSProperties = { padding: '10px 12px', fontSize: 14, borderBottom: `1px solid rgba(143,163,190,0.10)` };
+  const zelle: React.CSSProperties = { padding: '10px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: `1px solid rgba(143,163,190,0.10)` };
 
   return (
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, overflow: 'hidden' }}>
@@ -1681,15 +1681,15 @@ function AufgabenListe({
                   <td style={zelle} onClick={() => onOeffnen(a)}>
                     <div style={{ fontWeight: 600, color: a.status === 'fertig' ? BRAND.textDim : '#fff', textDecoration: a.status === 'fertig' ? 'line-through' : 'none' }}>{a.titel}</div>
                     {a.beschreibung && (
-                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 360 }}>{a.beschreibung}</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 360 }}>{a.beschreibung}</div>
                     )}
                   </td>
                   <td style={zelle} onClick={() => onOeffnen(a)}>
                     {(() => {
                       const z = zustaendig(a);
-                      if (!z) return <span style={{ color: BRAND.textDim, fontSize: 13 }}>—</span>;
+                      if (!z) return <span style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>—</span>;
                       return (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: z.farbe, fontWeight: 600, fontSize: 13 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: z.farbe, fontWeight: 600, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: z.farbe, display: 'inline-block' }} />
                           {z.istTeam ? '👥 ' : ''}{z.name}{z.istExtern ? ' (Sub)' : ''}
                         </span>
@@ -1697,9 +1697,9 @@ function AufgabenListe({
                     })()}
                   </td>
                   <td style={zelle} onClick={() => onOeffnen(a)}>
-                    <span style={{ color: pm.farbe, fontWeight: 700, fontSize: 13 }}>● {pm.label}</span>
+                    <span style={{ color: pm.farbe, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>● {pm.label}</span>
                   </td>
-                  <td style={{ ...zelle, color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400, fontSize: 13, whiteSpace: 'nowrap' }} onClick={() => onOeffnen(a)}>
+                  <td style={{ ...zelle, color: ueberfaellig ? BRAND.danger : BRAND.textDim, fontWeight: ueberfaellig ? 700 : 400, fontSize: 'clamp(13px, 1.13vw, 18px)', whiteSpace: 'nowrap' }} onClick={() => onOeffnen(a)}>
                     {a.faellig_am ? dStr(a.faellig_am) : '—'}{ueberfaellig ? ' ⚠' : ''}
                   </td>
                   <td style={zelle}>
@@ -1709,7 +1709,7 @@ function AufgabenListe({
                       onClick={(e) => e.stopPropagation()}
                       style={{
                         background: BRAND.navy, color: '#fff', border: `1px solid ${BRAND.border}`,
-                        borderRadius: 8, padding: '6px 8px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer',
+                        borderRadius: 8, padding: '6px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer',
                       }}
                     >
                       {SPALTEN.map((s) => <option key={s.key} value={s.key}>{spalteLabel(s.key)}</option>)}

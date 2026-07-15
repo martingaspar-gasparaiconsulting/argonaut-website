@@ -328,7 +328,7 @@ export default function BuchungenPage() {
       {/* Timeline-Tag-Navigation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 14px' }}>
         <button style={styles.navBtn} onClick={() => setTag(new Date(tag.getFullYear(), tag.getMonth(), tag.getDate() - 1))}>‹</button>
-        <span style={{ minWidth: 260, textAlign: 'center', fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16 }}>{tagName}</span>
+        <span style={{ minWidth: 260, textAlign: 'center', fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>{tagName}</span>
         <button style={styles.navBtn} onClick={() => setTag(new Date(tag.getFullYear(), tag.getMonth(), tag.getDate() + 1))}>›</button>
         <button style={{ ...styles.ghostBtn, marginLeft: 6 }} onClick={() => { const d = new Date(); setTag(new Date(d.getFullYear(), d.getMonth(), d.getDate())); }}>Heute</button>
       </div>
@@ -353,12 +353,12 @@ export default function BuchungenPage() {
                     <span style={{ width: 10, height: 10, borderRadius: '50%', background: ressource.farbe ?? C.cyan, display: 'inline-block', flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ressource.bezeichnung}</div>
-                      <div style={{ fontSize: 11, color: C.textDim }}>{ressource.typ}</div>
+                      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>{ressource.typ}</div>
                     </div>
                   </div>
                   <div style={styles.spurBahn}>
                     {tagesBuchungen.length === 0 ? (
-                      <span style={{ color: C.textDim, fontSize: 13, alignSelf: 'center' }}>frei</span>
+                      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', alignSelf: 'center' }}>frei</span>
                     ) : (
                       tagesBuchungen.map((b) => {
                         const a = buchungsAmpel(b as BuchungBasis);
@@ -374,7 +374,7 @@ export default function BuchungenPage() {
                             }}>
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: a.farbe, display: 'inline-block', flexShrink: 0 }} />
                             <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.titel}</span>
-                            <span style={{ color: C.textDim, fontSize: 11, whiteSpace: 'nowrap' }}>{uhrzeit(b.beginn_am)}–{uhrzeit(b.ende_am)}</span>
+                            <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', whiteSpace: 'nowrap' }}>{uhrzeit(b.beginn_am)}–{uhrzeit(b.ende_am)}</span>
                           </button>
                         );
                       })
@@ -503,7 +503,7 @@ export default function BuchungenPage() {
                 ⚠ Diese Ressource ist im gewählten Zeitraum bereits belegt:
                 <div style={{ marginTop: 6 }}>
                   {liveKonflikte.map((k) => (
-                    <div key={k.id} style={{ fontSize: 13 }}>• {k.titel || 'Buchung'} ({uhrzeit(k.beginn_am)}–{uhrzeit(k.ende_am)})</div>
+                    <div key={k.id} style={{ fontSize: 'clamp(13px, 1.13vw, 18px)' }}>• {k.titel || 'Buchung'} ({uhrzeit(k.beginn_am)}–{uhrzeit(k.ende_am)})</div>
                   ))}
                 </div>
               </div>
@@ -547,48 +547,48 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
-  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit' },
-  miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
+  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', fontFamily: 'inherit' },
+  miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
-  summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800 },
+  summeLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
 
   // Timeline
   spur: { display: 'flex', alignItems: 'stretch', gap: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 10 },
   spurKopf: { display: 'flex', alignItems: 'center', gap: 8, width: 180, flexShrink: 0 },
   spurBahn: { flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minHeight: 40, minWidth: 0 },
-  spurPlus: { background: 'transparent', color: C.textDim, border: `1px dashed ${C.border}`, borderRadius: 8, width: 34, flexShrink: 0, cursor: 'pointer', fontSize: 18, fontFamily: 'inherit' },
-  block: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 11px', borderRadius: 8, border: '1px solid', color: C.text, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', maxWidth: 240 },
+  spurPlus: { background: 'transparent', color: C.textDim, border: `1px dashed ${C.border}`, borderRadius: 8, width: 34, flexShrink: 0, cursor: 'pointer', fontSize: 'clamp(18px, 1.56vw, 25px)', fontFamily: 'inherit' },
+  block: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 11px', borderRadius: 8, border: '1px solid', color: C.text, fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit', maxWidth: 240 },
 
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 440 },
-  th: { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  td: { padding: '10px', fontSize: 14, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
+  th: { textAlign: 'left', padding: '8px 10px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '10px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  rechtHinweis: { marginTop: 16, fontSize: 12, color: C.textDim, lineHeight: 1.5, maxWidth: 720 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  rechtHinweis: { marginTop: 16, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, maxWidth: 720 },
 
   // Konflikt-Hinweise im Buchungs-Modal
-  konfliktRot: { background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, color: C.danger, borderRadius: 10, padding: '12px 14px', marginTop: 14, fontSize: 14, fontWeight: 600 },
-  konfliktGruen: { background: 'rgba(76,175,125,0.12)', border: `1px solid ${C.green}`, color: C.green, borderRadius: 10, padding: '10px 14px', marginTop: 14, fontSize: 14, fontWeight: 600 },
-  konfliktWarn: { background: 'rgba(224,162,76,0.12)', border: `1px solid ${C.warn}`, color: C.warn, borderRadius: 10, padding: '10px 14px', marginTop: 14, fontSize: 14 },
+  konfliktRot: { background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, color: C.danger, borderRadius: 10, padding: '12px 14px', marginTop: 14, fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 },
+  konfliktGruen: { background: 'rgba(76,175,125,0.12)', border: `1px solid ${C.green}`, color: C.green, borderRadius: 10, padding: '10px 14px', marginTop: 14, fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 },
+  konfliktWarn: { background: 'rgba(224,162,76,0.12)', border: `1px solid ${C.warn}`, color: C.warn, borderRadius: 10, padding: '10px 14px', marginTop: 14, fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 18px', color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 },
 };

@@ -70,7 +70,7 @@ export default function BetreiberUebersicht() {
     display: 'inline-block',
     padding: '2px 10px',
     borderRadius: '999px',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     fontWeight: 700,
     color: farbe,
     background: `${farbe}1f`,
@@ -81,7 +81,7 @@ export default function BetreiberUebersicht() {
   const th: React.CSSProperties = {
     textAlign: 'left',
     padding: '10px 14px',
-    fontSize: '11px',
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     fontWeight: 700,
     letterSpacing: '0.06em',
     textTransform: 'uppercase',
@@ -91,7 +91,7 @@ export default function BetreiberUebersicht() {
   };
   const td: React.CSSProperties = {
     padding: '12px 14px',
-    fontSize: '14px',
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: 'rgba(255,255,255,0.88)',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
     verticalAlign: 'middle',
@@ -101,10 +101,10 @@ export default function BetreiberUebersicht() {
     <div style={{ minHeight: '100%', color: '#fff' }}>
       {/* Kopf */}
       <div style={{ marginBottom: '18px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0 }}>
+        <h1 style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, margin: 0 }}>
           🛰 Betreiber-Übersicht
         </h1>
-        <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+        <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           Alle Kunden-Tenants auf einen Blick — Plan, Status und gebuchte Module.
         </p>
       </div>
@@ -115,10 +115,10 @@ export default function BetreiberUebersicht() {
 
       {!ladend && keinZugriff && (
         <div style={{ ...karte, borderColor: 'rgba(255,90,90,0.4)' }}>
-          <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>
+          <div style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, marginBottom: '6px' }}>
             🔒 Kein Zugriff
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Diese Seite ist dem Betreiber vorbehalten. Dein Konto steht nicht auf
             der Operator-Liste.
           </div>
@@ -128,7 +128,7 @@ export default function BetreiberUebersicht() {
       {!ladend && fehler && !keinZugriff && (
         <div style={{ ...karte, borderColor: 'rgba(255,90,90,0.4)' }}>
           <div style={{ fontWeight: 700, marginBottom: '4px' }}>Fehler</div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>{fehler}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{fehler}</div>
         </div>
       )}
 
@@ -142,16 +142,16 @@ export default function BetreiberUebersicht() {
               marginBottom: '14px',
             }}
           >
-            <span style={{ fontSize: '32px', fontWeight: 800, color: GOLD }}>
+            <span style={{ fontSize: 'clamp(32px, 2.81vw, 45px)', fontWeight: 800, color: GOLD }}>
               {tenants.length}
             </span>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               {tenants.length === 1 ? 'Tenant' : 'Tenants'}
             </span>
           </div>
 
           {tenants.length === 0 ? (
-            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               Noch keine Tenants vorhanden.
             </div>
           ) : (
@@ -201,7 +201,7 @@ export default function BetreiberUebersicht() {
                             alle · fail-open
                           </span>
                         ) : (
-                          <span style={{ fontSize: '13px' }}>
+                          <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                             <span style={{ color: CYAN, fontWeight: 700 }}>{t.moduleAktiv}</span>
                             <span style={{ color: 'rgba(255,255,255,0.5)' }}>
                               {' '}aktiv / {t.moduleGebucht} gebucht

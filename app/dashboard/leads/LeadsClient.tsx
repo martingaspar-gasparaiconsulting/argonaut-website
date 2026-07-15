@@ -72,7 +72,7 @@ function pillStyle(active: boolean, accent: string): CSSProperties {
   return {
     padding: '8px 16px',
     borderRadius: '999px',
-    fontSize: '13px',
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 700,
     border: active ? '1px solid ' + accent + '88' : '1px solid rgba(255,255,255,0.12)',
     background: active ? accent + '22' : 'rgba(255,255,255,0.04)',
@@ -82,9 +82,9 @@ function pillStyle(active: boolean, accent: string): CSSProperties {
   }
 }
 
-const labelStyle: CSSProperties = { fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', margin: '0 0 8px', fontWeight: 700 }
+const labelStyle: CSSProperties = { fontSize: 'clamp(12px, 1.06vw, 17px)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', margin: '0 0 8px', fontWeight: 700 }
 const cardStyle: CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '18px 20px' }
-const inputStyle: CSSProperties = { width: '100%', padding: '10px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', marginBottom: '12px', background: 'rgba(255,255,255,0.06)', color: '#FFFFFF', fontSize: '14px' }
+const inputStyle: CSSProperties = { width: '100%', padding: '10px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', marginBottom: '12px', background: 'rgba(255,255,255,0.06)', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)' }
 
 export default function LeadsClient({ leads }: { leads: Lead[] }) {
   const [status, setStatus] = useState<'alle' | StatusKey>('alle')
@@ -183,31 +183,31 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
               <a key={l.id} href={"/dashboard/leads/" + l.id} className="lead-card" style={{ ...cardStyle, display: "block", textDecoration: "none", color: "inherit" }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF' }}>{l.name || 'Ohne Namen'}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: si.color, background: si.color + '22', border: '1px solid ' + si.color + '55', borderRadius: '999px', padding: '3px 10px' }}>{si.label}</span>
+                    <span style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800, color: '#FFFFFF' }}>{l.name || 'Ohne Namen'}</span>
+                    <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: si.color, background: si.color + '22', border: '1px solid ' + si.color + '55', borderRadius: '999px', padding: '3px 10px' }}>{si.label}</span>
                     {(() => { const pi = scoreInfo(l.score); return pi ? (
-                      <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em', color: pi.color, background: pi.color + '22', border: '1px solid ' + pi.color + '66', borderRadius: '999px', padding: '3px 10px' }}>{'\u2605 ' + l.score + ' - ' + pi.label.split(' - ')[1]}</span>
+                      <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 800, letterSpacing: '0.04em', color: pi.color, background: pi.color + '22', border: '1px solid ' + pi.color + '66', borderRadius: '999px', padding: '3px 10px' }}>{'\u2605 ' + l.score + ' - ' + pi.label.split(' - ')[1]}</span>
                     ) : null })()}
                     {l.ist_bestand ? (
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#9AA7B5', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '999px', padding: '3px 10px' }}>Bestand</span>
+                      <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: '#9AA7B5', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '999px', padding: '3px 10px' }}>Bestand</span>
                     ) : (
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '3px 10px' }}>Neue Anfrage</span>
+                      <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '3px 10px' }}>Neue Anfrage</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</span>
+                    <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>{formatDate(l.created_at)}</span>
                     {l.status === 'neu' && l.ist_bestand !== true ? (
                       <FristAmpel datum={l.created_at} modus="reaktion" variante="punkt" dunkel gelbAbStunden={4} rotAbStunden={24} />
                     ) : null}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>
+                <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '10px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.75)' }}>
                   {l.telefon ? <span>Tel: {l.telefon}</span> : null}
                   {l.email ? <span>E-Mail: {l.email}</span> : null}
                 </div>
 
-                <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '8px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>
                   {l.dienstleistung ? <span>Leistung: {l.dienstleistung}</span> : null}
                   {(l.menge || l.einheit) ? <span>Menge: {(l.menge || '') + ' ' + (l.einheit || '')}</span> : null}
                   {l.wunschtermin ? <span>Wunschtermin: {l.wunschtermin}</span> : null}
@@ -215,15 +215,15 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                 </div>
 
                 {l.nachricht ? (
-                  <p style={{ margin: '12px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{l.nachricht}</p>
+                  <p style={{ margin: '12px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{l.nachricht}</p>
                 ) : null}
 
                 {l.ki_zusammenfassung ? (
                   <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.18)', borderRadius: '10px' }}>
-                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#00e5ff' }}>KI-Einschaetzung</p>
-                    <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>{l.ki_zusammenfassung}</p>
+                    <p style={{ margin: 0, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#00e5ff' }}>KI-Einschaetzung</p>
+                    <p style={{ margin: '6px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>{l.ki_zusammenfassung}</p>
                     {l.ki_naechster_schritt ? (
-                      <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}><strong style={{ color: '#C9A84C' }}>Naechster Schritt:</strong> {l.ki_naechster_schritt}</p>
+                      <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}><strong style={{ color: '#C9A84C' }}>Naechster Schritt:</strong> {l.ki_naechster_schritt}</p>
                     ) : null}
                   </div>
                 ) : null}
@@ -237,8 +237,8 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           <div style={{ width: '100%', maxWidth: '500px', borderRadius: '12px', background: '#0A1628', border: '1px solid #1C3F53', boxShadow: '0 0 20px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#FFFFFF' }}>Kontakt manuell anlegen</h3>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(255,255,255,0.6)', fontSize: '20px', lineHeight: 1 }}>&times;</button>
+              <h3 style={{ margin: 0, fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: '#FFFFFF' }}>Kontakt manuell anlegen</h3>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(20px, 1.75vw, 28px)', lineHeight: 1 }}>&times;</button>
             </div>
             <div style={{ padding: '20px' }}>
               <form onSubmit={anlegen}>
@@ -258,19 +258,19 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                 <textarea name="nachricht" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '8px 0 20px' }}>
-                  <label style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
+                  <label style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
                     <input name="ist_bestand" type="checkbox" /> Bestandskunde
                   </label>
-                  <label style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
+                  <label style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
                     <input name="werbung_einwilligung" type="checkbox" /> Einwilligung zur werblichen Ansprache liegt vor
                   </label>
                 </div>
 
                 {fehler ? (
-                  <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#ef4444' }}>{fehler}</p>
+                  <p style={{ margin: '0 0 12px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#ef4444' }}>{fehler}</p>
                 ) : null}
 
-                <button type="submit" disabled={speichert} style={{ width: '100%', padding: '12px', border: 'none', borderRadius: '6px', background: '#C9A84C', color: '#0A1628', fontSize: '14px', fontWeight: 800, cursor: speichert ? 'default' : 'pointer', opacity: speichert ? 0.6 : 1 }}>
+                <button type="submit" disabled={speichert} style={{ width: '100%', padding: '12px', border: 'none', borderRadius: '6px', background: '#C9A84C', color: '#0A1628', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, cursor: speichert ? 'default' : 'pointer', opacity: speichert ? 0.6 : 1 }}>
                   {speichert ? 'Wird angelegt...' : 'Kontakt anlegen'}
                 </button>
               </form>

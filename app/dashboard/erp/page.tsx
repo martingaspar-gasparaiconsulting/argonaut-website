@@ -327,12 +327,12 @@ export default function LagerCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -344,7 +344,7 @@ export default function LagerCockpit() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -353,13 +353,13 @@ export default function LagerCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -368,7 +368,7 @@ export default function LagerCockpit() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -388,10 +388,10 @@ export default function LagerCockpit() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             📦 Lager
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Artikel, Bestände und Mindestbestand-Ampel
           </p>
         </div>
@@ -410,20 +410,20 @@ export default function LagerCockpit() {
         }}
       >
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Artikel gesamt
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4 }}>
             {kpiGesamt}
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Unter Mindestbestand
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               marginTop: 4,
               color: kpiUnterMin > 0 ? C.danger : C.green,
@@ -433,12 +433,12 @@ export default function LagerCockpit() {
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Lagerwert (EK)
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               marginTop: 4,
               color: C.gold,
@@ -485,7 +485,7 @@ export default function LagerCockpit() {
             display: "flex",
             alignItems: "center",
             gap: 8,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: C.textDim,
             cursor: "pointer",
             userSelect: "none",
@@ -554,7 +554,7 @@ export default function LagerCockpit() {
                           <span
                             style={{
                               marginLeft: 8,
-                              fontSize: 11,
+                              fontSize: 'clamp(11px, 0.94vw, 15px)',
                               color: C.textDim,
                               border: `1px solid ${C.border}`,
                               borderRadius: 6,
@@ -566,7 +566,7 @@ export default function LagerCockpit() {
                         )}
                       </div>
                       {a.artikelnummer && (
-                        <div style={{ fontSize: 12, color: C.textDim }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                           Nr. {a.artikelnummer}
                         </div>
                       )}
@@ -653,7 +653,7 @@ export default function LagerCockpit() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               {bearbeiteId ? "Artikel bearbeiten" : "Neuer Artikel"}
             </h2>
 
@@ -789,7 +789,7 @@ export default function LagerCockpit() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -809,7 +809,7 @@ export default function LagerCockpit() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >

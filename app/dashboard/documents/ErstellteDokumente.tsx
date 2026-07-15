@@ -66,14 +66,14 @@ export default function ErstellteDokumente() {
     borderRadius: 14,
     padding: '40px 24px',
     textAlign: 'center' as const,
-    fontSize: 15,
+    fontSize: 'clamp(15px, 1.31vw, 21px)',
   }
 
   return (
     <div style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif', color: '#FFFFFF' }}>
-      <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px' }}>
+      <h2 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 16px' }}>
         Erstellt via Chat{' '}
-        <span style={{ fontSize: 13, color: '#C9A84C', fontWeight: 700 }}>({docs.length})</span>
+        <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', fontWeight: 700 }}>({docs.length})</span>
       </h2>
 
       {loading ? (
@@ -118,19 +118,19 @@ export default function ErstellteDokumente() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 12,
+                      fontSize: 'clamp(12px, 1.06vw, 17px)',
                       fontWeight: 800,
                       flexShrink: 0,
                     }}
                   >
                     {t.label}
                   </div>
-                  <span style={{ fontSize: 15, fontWeight: 600, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600, flex: 1, minWidth: 0 }}>
                     {doc.name}
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 'clamp(11px, 0.94vw, 15px)',
                       fontWeight: 600,
                       padding: '3px 10px',
                       borderRadius: 20,
@@ -144,7 +144,7 @@ export default function ErstellteDokumente() {
                     onClick={() => herunterladen(doc.id)}
                     disabled={ladeId === doc.id}
                     style={{
-                      fontSize: 12,
+                      fontSize: 'clamp(12px, 1.06vw, 17px)',
                       fontWeight: 700,
                       padding: '6px 14px',
                       borderRadius: 8,
@@ -158,7 +158,7 @@ export default function ErstellteDokumente() {
                     {ladeId === doc.id ? 'Lädt …' : 'Download'}
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
                   {doc.herkunft ? doc.herkunft + ' · ' : ''}
                   {doc.agent ?? 'Agent'} · {new Date(doc.created_at).toLocaleDateString('de-DE')}
                 </div>

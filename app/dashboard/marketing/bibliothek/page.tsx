@@ -64,14 +64,14 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
 function Feld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16, flex: 1 }}>
-      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -186,13 +186,13 @@ export default function AssetBibliothek() {
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
-        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 14, textDecoration: 'none' }}>
+        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: 'none' }}>
           ← Zurück zu Marketing
         </a>
 
         <div style={{ margin: '16px 0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📚 Asset-Bibliothek</h1>
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>📚 Asset-Bibliothek</h1>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Alle Inhalte zentral — suchen, filtern, Status pflegen, kopieren.
           </p>
         </div>
@@ -206,8 +206,8 @@ export default function AssetBibliothek() {
             { label: 'Veröffentlicht', wert: kpi.veroeffentlicht, farbe: C.green },
           ].map((k) => (
             <div key={k.label} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
-              <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>{k.label}</div>
+              <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: k.farbe }}>{k.wert}</div>
+              <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{k.label}</div>
             </div>
           ))}
         </div>
@@ -245,7 +245,7 @@ export default function AssetBibliothek() {
                 background: fStatus === f.v ? C.gold : 'transparent',
                 color: fStatus === f.v ? C.navy : C.textDim,
                 border: `1px solid ${fStatus === f.v ? C.gold : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: 20, padding: '6px 16px', fontFamily: 'DM Sans, sans-serif', fontSize: 14,
+                borderRadius: 20, padding: '6px 16px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontWeight: fStatus === f.v ? 700 : 400, cursor: 'pointer',
               }}
             >
@@ -263,7 +263,7 @@ export default function AssetBibliothek() {
           </div>
         ) : gefiltert.length === 0 ? (
           <div style={{ background: C.navy2, borderRadius: 14, padding: '48px 24px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.12)' }}>
-            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 16 }}>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
               {inhalte.length === 0 ? 'Noch keine Inhalte. Erstelle welche im KI-Content-Studio oder in einer Kampagne.' : 'Keine Inhalte für diese Filter.'}
             </p>
           </div>
@@ -275,24 +275,24 @@ export default function AssetBibliothek() {
               return (
                 <div key={i.id} style={{ background: C.navy2, borderRadius: 14, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 17, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{i.titel}</span>
-                    {i.ki_generiert && <span style={{ fontSize: 11, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>KI</span>}
+                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{i.titel}</span>
+                    {i.ki_generiert && <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>KI</span>}
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: si.farbe, border: `1px solid ${si.farbe}`, borderRadius: 10, padding: '2px 8px', fontFamily: 'DM Sans, sans-serif' }}>{si.label}</span>
-                    <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal}</span>
+                    <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: si.farbe, border: `1px solid ${si.farbe}`, borderRadius: 10, padding: '2px 8px', fontFamily: 'DM Sans, sans-serif' }}>{si.label}</span>
+                    <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal}</span>
                   </div>
 
-                  {kn && <span style={{ fontSize: 12, color: C.gold, fontFamily: 'DM Sans, sans-serif' }}>📣 {kn}</span>}
+                  {kn && <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.gold, fontFamily: 'DM Sans, sans-serif' }}>📣 {kn}</span>}
 
                   {i.inhalt && (
-                    <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, margin: 0, whiteSpace: 'pre-wrap', maxHeight: 84, overflow: 'hidden', lineHeight: 1.5 }}>
+                    <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: 0, whiteSpace: 'pre-wrap', maxHeight: 84, overflow: 'hidden', lineHeight: 1.5 }}>
                       {i.inhalt.length > 180 ? i.inhalt.slice(0, 180) + '…' : i.inhalt}
                     </p>
                   )}
 
-                  <div style={{ fontSize: 11, color: C.textDim, fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>{fmtDatum(i.created_at)}</div>
+                  <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, fontFamily: 'DM Sans, sans-serif', opacity: 0.7 }}>{fmtDatum(i.created_at)}</div>
 
                   <div style={{ display: 'flex', gap: 8, marginTop: 'auto', flexWrap: 'wrap' }}>
                     <button onClick={() => bearbeiten(i)} style={btnStyle(C.cyan)}>Bearbeiten</button>
@@ -312,7 +312,7 @@ export default function AssetBibliothek() {
       {offen && bearbeite && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setOffen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>Inhalt bearbeiten</h2>
+            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 'clamp(23px, 2vw, 32px)', margin: '0 0 20px' }}>Inhalt bearbeiten</h2>
             <Feld label="Titel *">
               <input value={dTitel} onChange={(e) => setDTitel(e.target.value)} style={inputStyle} />
             </Feld>
@@ -363,7 +363,7 @@ function btnStyle(farbe: string): React.CSSProperties {
     borderRadius: 8,
     padding: '7px 13px',
     fontFamily: 'DM Sans, sans-serif',
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: 'pointer',
   };
 }

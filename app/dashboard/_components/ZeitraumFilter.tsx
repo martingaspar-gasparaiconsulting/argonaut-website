@@ -207,7 +207,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
   const pille = (aktiv: boolean): React.CSSProperties => ({
     padding: '7px 13px',
     borderRadius: 999,
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 600,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
@@ -223,7 +223,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
     borderRadius: 8,
     padding: '7px 10px',
     color: '#fff',
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     colorScheme: 'dark',
   };
 
@@ -242,7 +242,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
     >
       {/* Zeile 1: Schnellauswahl */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <span style={{ color: C.textDim, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginRight: 4 }}>
+        <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginRight: 4 }}>
           Zeitraum
         </span>
         {SCHNELL.map((s) => (
@@ -254,7 +254,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
 
       {/* Zeile 2: Freie Datumswahl (Kalender) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-        <span style={{ color: C.textDim, fontSize: 13 }}>oder frei:</span>
+        <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>oder frei:</span>
         <input
           type="date"
           value={vonStr}
@@ -262,7 +262,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
           style={dateInput}
           aria-label="Von-Datum"
         />
-        <span style={{ color: C.textDim, fontSize: 13 }}>bis</span>
+        <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>bis</span>
         <input
           type="date"
           value={bisStr}
@@ -270,7 +270,7 @@ export default function ZeitraumFilter({ wert, onChange }: ZeitraumFilterProps) 
           style={dateInput}
           aria-label="Bis-Datum"
         />
-        <span style={{ color: C.gold, fontSize: 13, fontWeight: 700, marginLeft: 'auto' }}>
+        <span style={{ color: C.gold, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, marginLeft: 'auto' }}>
           {wert.label}
         </span>
       </div>

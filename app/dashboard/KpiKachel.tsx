@@ -68,13 +68,13 @@ export default function KpiKachel({
       <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: rand }} />
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-        <span style={{ fontSize: '22px', lineHeight: 1 }}>{icon}</span>
-        <span style={{ fontSize: '18px', color: rand, opacity: 0.5, lineHeight: 1 }}>→</span>
+        <span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)', lineHeight: 1 }}>{icon}</span>
+        <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', color: rand, opacity: 0.5, lineHeight: 1 }}>→</span>
       </div>
 
       <p style={{
         fontFamily: 'var(--font-dm-sans), sans-serif',
-        fontSize: '30px',
+        fontSize: 'clamp(30px, 2.63vw, 42px)',
         fontWeight: 800,
         margin: '0 0 4px',
         color: wertFarbe,
@@ -83,19 +83,19 @@ export default function KpiKachel({
         {wert}
       </p>
 
-      <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', margin: 0 }}>
+      <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)', margin: 0 }}>
         {label}
       </p>
 
       {sub && (
-        <p style={{ fontSize: '12px', color: C.textDim, margin: '6px 0 0' }}>{sub}</p>
+        <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 0' }}>{sub}</p>
       )}
 
       {details && details.length > 0 && (
         <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {details.map((d, i) => (
             <p key={i} style={{
-              fontSize: '12px',
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
               color: alarm ? '#F0A9A9' : C.textDim,
               margin: 0,
               whiteSpace: 'nowrap',

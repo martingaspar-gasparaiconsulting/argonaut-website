@@ -130,10 +130,10 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
             <path d="M5 12L10 17L19 7" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+        <h2 style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
           Abonnement aktiviert
         </h2>
-        <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, fontSize: '15px' }}>
+        <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
           Sie werden in Kürze zu Ihrem Dashboard weitergeleitet…
         </p>
       </div>
@@ -145,7 +145,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
       {/* ── Plan selection ─────────────────────────────────────────────────── */}
       <section style={{ marginBottom: '44px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 20px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
+        <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 20px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
           Plan wählen
         </h2>
 
@@ -174,7 +174,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
                 {p.highlight && (
                   <span style={{
                     position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)',
-                    background: '#C9A84C', color: '#0A1628', fontSize: '10px', fontWeight: 800,
+                    background: '#C9A84C', color: '#0A1628', fontSize: 'clamp(10px, 0.88vw, 14px)', fontWeight: 800,
                     padding: '3px 12px', borderRadius: '999px', letterSpacing: '0.08em', whiteSpace: 'nowrap',
                   }}>
                     BELIEBT
@@ -183,12 +183,12 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
                 {/* Header row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'var(--font-dm-sans), sans-serif', color: active ? p.color : '#fff' }}>
+                  <span style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, fontFamily: 'var(--font-dm-sans), sans-serif', color: active ? p.color : '#fff' }}>
                     {p.name}
                   </span>
                   {isCurrent && (
                     <span style={{
-                      fontSize: '9px', fontWeight: 700, color: p.color,
+                      fontSize: 'clamp(9px, 0.81vw, 13px)', fontWeight: 700, color: p.color,
                       background: `${p.color}1a`, border: `1px solid ${p.color}40`,
                       borderRadius: '999px', padding: '2px 8px', letterSpacing: '0.06em',
                     }}>
@@ -199,16 +199,16 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
                 {/* Package price */}
                 <div style={{ marginBottom: '2px' }}>
-                  <span style={{ fontSize: '26px', fontWeight: 900, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+                  <span style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 900, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
                     {fmt(p.netPrice)} €
                   </span>
-                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>/Monat (Paket)</span>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>/Monat (Paket)</span>
                 </div>
 
                 {/* Basis + total breakdown */}
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', lineHeight: 1.6 }}>
+                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', lineHeight: 1.6 }}>
                   + Basis-Automatisierungen 1.500 €
-                  <span style={{ display: 'block', fontWeight: 700, color: active ? p.color : 'rgba(255,255,255,0.55)', fontSize: '13px', marginTop: '2px' }}>
+                  <span style={{ display: 'block', fontWeight: 700, color: active ? p.color : 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: '2px' }}>
                     = {fmt(total(p.netPrice))} € gesamt netto/Monat
                   </span>
                   <span style={{ color: 'rgba(255,255,255,0.25)' }}>
@@ -216,13 +216,13 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
                   </span>
                 </div>
 
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: '0 0 14px', lineHeight: 1.55 }}>
+                <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', margin: '0 0 14px', lineHeight: 1.55 }}>
                   {p.description}
                 </p>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '7px' }}>
                   {p.features.map(f => (
-                    <li key={f} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <li key={f} style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
                         <path d="M2 6.5L5 9.5L11 3.5" stroke={p.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -241,10 +241,10 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
       {/* ── SEPA Bankdaten ─────────────────────────────────────────────────── */}
       <section style={{ marginBottom: '36px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
+        <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
           Bankverbindung (SEPA-Lastschrift)
         </h2>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0 0 24px' }}>
+        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.35)', margin: '0 0 24px' }}>
           Der Betrag wird monatlich per SEPA-Lastschrift von Ihrem Konto abgebucht.
         </p>
 
@@ -334,7 +334,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
               )}
             </div>
 
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.75 }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.75 }}>
               Ich ermächtige die <strong style={{ color: '#C9A84C', fontWeight: 700 }}>ARGONAUT AI GmbH</strong> (Gläubiger-ID: DE98ZZZ09999999999), Zahlungen
               von meinem Konto mittels SEPA-Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die auf mein
               Konto gezogenen Lastschriften einzulösen. Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum,
@@ -351,7 +351,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
           display: 'flex', gap: '10px', alignItems: 'flex-start',
           padding: '13px 16px', borderRadius: '10px', marginBottom: '24px',
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-          color: '#f87171', fontSize: '13px',
+          color: '#f87171', fontSize: 'clamp(13px, 1.13vw, 18px)',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
             <circle cx="12" cy="12" r="9" stroke="#f87171" strokeWidth="1.8"/>
@@ -372,7 +372,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
           border:         'none',
           background:     loading ? 'rgba(201,168,76,0.45)' : '#C9A84C',
           color:          '#0A1628',
-          fontSize:       '15px',
+          fontSize:       'clamp(15px, 1.31vw, 21px)',
           fontWeight:     800,
           letterSpacing:  '0.03em',
           cursor:         loading ? 'not-allowed' : 'pointer',
@@ -404,7 +404,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
         )}
       </button>
 
-      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', textAlign: 'center', margin: '14px 0 0', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.2)', textAlign: 'center', margin: '14px 0 0', lineHeight: 1.6 }}>
         Gesamtpreis inkl. Basis-Automatisierungen (1.500 €) + {plan.name}-Paket ({fmt(plan.netPrice)} €) · zzgl. 19% MwSt. · SSL-verschlüsselt · Stripe · Kündigung jederzeit möglich
       </p>
 
@@ -417,7 +417,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
 const labelStyle: React.CSSProperties = {
   display:       'block',
-  fontSize:      '11px',
+  fontSize:      'clamp(11px, 0.94vw, 15px)',
   fontWeight:    700,
   color:         'rgba(255,255,255,0.45)',
   letterSpacing: '0.07em',
@@ -432,7 +432,7 @@ const inputStyle: React.CSSProperties = {
   border:       '1px solid rgba(255,255,255,0.1)',
   background:   'rgba(255,255,255,0.05)',
   color:        '#fff',
-  fontSize:     '15px',
+  fontSize:     'clamp(15px, 1.31vw, 21px)',
   outline:      'none',
   boxSizing:    'border-box',
   fontFamily:   'var(--font-dm-sans), sans-serif',

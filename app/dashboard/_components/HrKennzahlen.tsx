@@ -258,7 +258,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
         <h3
           style={{
             margin: 0,
-            fontSize: 16,
+            fontSize: 'clamp(16px, 1.38vw, 22px)',
             fontWeight: 800,
             letterSpacing: 0.3,
             color: "#fff",
@@ -290,7 +290,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
           >
             <div
               style={{
-                fontSize: 22,
+                fontSize: 'clamp(22px, 1.94vw, 31px)',
                 fontWeight: 800,
                 color: kp.farbe,
                 fontFamily: "var(--font-dm-sans), sans-serif",
@@ -303,7 +303,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
               style={{
                 fontFamily: "'DM Sans', sans-serif",
                 color: C.textDim,
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 marginTop: 4,
               }}
             >
@@ -314,7 +314,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   color: "rgba(255,255,255,0.45)",
-                  fontSize: 11.5,
+                  fontSize: 'clamp(11.5px, 1vw, 16px)',
                   marginTop: 2,
                 }}
               >
@@ -338,7 +338,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
             background: "rgba(255,255,255,0.02)",
             border: "1px solid rgba(255,255,255,0.05)",
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: C.textDim,
           }}
         >

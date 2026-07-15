@@ -301,9 +301,9 @@ export default function PersonalPage() {
                 {benach.map((b) => (
                   <div key={b.id} style={{ ...styles.glockeItem, opacity: b.gelesen ? 0.5 : 1 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{b.titel}</div>
-                      {b.text && <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{b.text}</div>}
-                      <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>{new Date(b.created_at).toLocaleString('de-DE')}</div>
+                      <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: C.text }}>{b.titel}</div>
+                      {b.text && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 2 }}>{b.text}</div>}
+                      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, marginTop: 4 }}>{new Date(b.created_at).toLocaleString('de-DE')}</div>
                     </div>
                     {!b.gelesen && <button style={styles.glockeDot} onClick={() => alsGelesen(b.id)} title="Als gelesen markieren" />}
                   </div>
@@ -785,7 +785,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
               {zugang && (
                 <div style={styles.zugangBox}>
                   <div style={{ fontWeight: 700, color: C.cyan, marginBottom: 4 }}>Neuer Zugang bereit</div>
-                  <div style={{ fontSize: 13, color: C.textDim, marginBottom: 12 }}>Bitte sicher an den Mitarbeiter weitergeben (Mail, WhatsApp, persönlich). Das Einmal-Passwort wird nur jetzt angezeigt.</div>
+                  <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 12 }}>Bitte sicher an den Mitarbeiter weitergeben (Mail, WhatsApp, persönlich). Das Einmal-Passwort wird nur jetzt angezeigt.</div>
                   <ZugangZeile label="E-Mail" wert={zugang.email} />
                   <ZugangZeile label="Einmal-Passwort" wert={zugang.passwort} />
                   <ZugangZeile label="Login-Link" wert={zugang.loginUrl} />
@@ -795,7 +795,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
                   >
                     Alles kopieren
                   </button>
-                  <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>Der Mitarbeiter loggt sich damit ein und kann sein Passwort danach jederzeit ändern.</div>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 8 }}>Der Mitarbeiter loggt sich damit ein und kann sein Passwort danach jederzeit ändern.</div>
                 </div>
               )}
             </>
@@ -828,7 +828,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
 function DetailTabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick} style={{
-      background: 'transparent', border: 'none', cursor: 'pointer', padding: '12px 4px', marginRight: 20, fontSize: 14, fontWeight: 600,
+      background: 'transparent', border: 'none', cursor: 'pointer', padding: '12px 4px', marginRight: 20, fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600,
       fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
       color: active ? C.gold : C.textDim, borderBottom: active ? `2px solid ${C.gold}` : '2px solid transparent',
     }}>{children}</button>
@@ -985,7 +985,7 @@ function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspr
         <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={hinzufuegen} disabled={saving}>+ Hinzufügen</button>
       </div>
       {von && bis && (
-        <div style={{ fontSize: 12, color: C.textDim, marginTop: -4, marginBottom: 10 }}>
+        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: -4, marginBottom: 10 }}>
           {typ === 'urlaub'
             ? `= ${arbeitstage(von, bis, bundesland)} Arbeitstage (Wochenenden & Feiertage werden nicht als Urlaub gezählt)`
             : `= ${kalendertage(von, bis)} Kalendertage`}
@@ -1172,7 +1172,7 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
         {hinweise.map((h, i) => (
           <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: `${h.farbe}14`, border: `1px solid ${h.farbe}40`, borderRadius: 10, padding: '12px 14px' }}>
             <span style={{ color: h.farbe, fontWeight: 700, lineHeight: 1.4 }}>•</span>
-            <span style={{ fontSize: 14, color: C.text, lineHeight: 1.5 }}>{h.text}</span>
+            <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text, lineHeight: 1.5 }}>{h.text}</span>
           </div>
         ))}
       </div>
@@ -1183,11 +1183,11 @@ function AuswertungTab({ abw, schul, loading, urlaubsanspruch, stammVollstaendig
           <button style={{ ...styles.primaryBtn, opacity: kiLoading ? 0.6 : 1, cursor: kiLoading ? 'wait' : 'pointer' }} onClick={kiAuswerten} disabled={kiLoading}>
             {kiLoading ? 'KI denkt nach …' : kiText ? '🤖 Neu auswerten' : '🤖 KI-Einschätzung erstellen'}
           </button>
-          <span style={{ fontSize: 12, color: C.textDim }}>Es werden nur anonyme Eckdaten gesendet — keine Namen, keine Dokumente.</span>
+          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>Es werden nur anonyme Eckdaten gesendet — keine Namen, keine Dokumente.</span>
         </div>
         {kiError && <div style={styles.formError}>{kiError}</div>}
         {kiText && (
-          <div style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 12, padding: '16px 18px', whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.65, color: C.text }}>
+          <div style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 12, padding: '16px 18px', whiteSpace: 'pre-wrap', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.65, color: C.text }}>
             {kiText}
           </div>
         )}
@@ -1431,7 +1431,7 @@ function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload, wochenstunde
             accent={saldoH === null ? undefined : saldoH >= 0 ? C.green : C.danger}
           />
         </div>
-        {wochenstunden <= 0 && <div style={{ fontSize: 12, color: C.warn, marginTop: 8 }}>Soll nicht berechenbar: Wochenstunden in den Stammdaten hinterlegen.</div>}
+        {wochenstunden <= 0 && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.warn, marginTop: 8 }}>Soll nicht berechenbar: Wochenstunden in den Stammdaten hinterlegen.</div>}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 14px' }}>
@@ -1664,7 +1664,7 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={styles.sectionDivider}>{a.label}</div>
               {liste.length > 0 && (
-                <span style={{ fontSize: 13, fontWeight: 700, color: erledigt === liste.length ? C.green : C.gold, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: erledigt === liste.length ? C.green : C.gold, whiteSpace: 'nowrap' }}>
                   {erledigt} / {liste.length} erledigt
                 </span>
               )}
@@ -1675,7 +1675,7 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
               if (ab) {
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(76,175,125,0.10)', border: '1px solid rgba(76,175,125,0.4)' }}>
-                    <span style={{ fontSize: 14, color: C.green, fontWeight: 600, flex: 1 }}>✓ Abgeschlossen am {dStr(ab.am)}{ab.von ? ` · bestätigt: ${ab.von}` : ''}</span>
+                    <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.green, fontWeight: 600, flex: 1 }}>✓ Abgeschlossen am {dStr(ab.am)}{ab.von ? ` · bestätigt: ${ab.von}` : ''}</span>
                     <button style={{ ...styles.miniBtn, color: C.textDim }} onClick={() => abschlussAufheben(a.key)}>Aufheben</button>
                   </div>
                 );
@@ -1694,10 +1694,10 @@ function ChecklistenTab({ id, rows, loading, msg, setMsg, reload }: {
               <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 10, marginBottom: 8, background: r.erledigt ? 'rgba(76,175,125,0.06)' : C.cardBg }}>
                 <input type="checkbox" checked={r.erledigt} onChange={() => umschalten(r)} style={{ width: 18, height: 18, marginTop: 2, cursor: 'pointer', accentColor: C.green, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, textDecoration: r.erledigt ? 'line-through' : 'none', opacity: r.erledigt ? 0.7 : 1 }}>{r.aufgabe}</div>
-                  {r.erledigt && r.erledigt_am && <div style={{ fontSize: 12, color: C.green, marginTop: 2 }}>Erledigt am {dStr(r.erledigt_am)}</div>}
+                  <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, color: C.text, textDecoration: r.erledigt ? 'line-through' : 'none', opacity: r.erledigt ? 0.7 : 1 }}>{r.aufgabe}</div>
+                  {r.erledigt && r.erledigt_am && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.green, marginTop: 2 }}>Erledigt am {dStr(r.erledigt_am)}</div>}
                   <input
-                    style={{ ...styles.input, marginTop: 8, fontSize: 13, padding: '7px 10px' }}
+                    style={{ ...styles.input, marginTop: 8, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '7px 10px' }}
                     placeholder="Notiz (optional)"
                     defaultValue={r.notiz ?? ''}
                     onBlur={(e) => notizSpeichern(r, e.target.value)}
@@ -1791,7 +1791,7 @@ function VorlagenPanel({ id, rows, onAdded, setMsg }: {
   return (
     <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, marginBottom: 16, background: C.cardBg }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <strong style={{ color: C.gold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>Vorlagen &amp; Bibliothek</strong>
+        <strong style={{ color: C.gold, fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 1, textTransform: 'uppercase' }}>Vorlagen &amp; Bibliothek</strong>
         <button style={styles.closeBtn} onClick={() => setOffen(false)} aria-label="Schließen">×</button>
       </div>
 
@@ -1806,10 +1806,10 @@ function VorlagenPanel({ id, rows, onAdded, setMsg }: {
 
       {meineVorlagen.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Vorlagen</div>
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Vorlagen</div>
           {meineVorlagen.map((vrl) => (
             <div key={vrl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ flex: 1, fontSize: 14, color: C.text }}>{vrl.name} <span style={{ color: C.textDim }}>({vrl.punkte.length} Punkte)</span></span>
+              <span style={{ flex: 1, fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text }}>{vrl.name} <span style={{ color: C.textDim }}>({vrl.punkte.length} Punkte)</span></span>
               <button style={styles.miniBtn} disabled={busy} onClick={() => punkteEinfuegen(vrl.art, vrl.punkte)}>Übernehmen</button>
               <button style={{ ...styles.miniBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => vorlageLoeschen(vrl)}>Löschen</button>
             </div>
@@ -1817,16 +1817,16 @@ function VorlagenPanel({ id, rows, onAdded, setMsg }: {
         </div>
       )}
 
-      <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600, marginBottom: 10 }}>Bibliothek — Punkte antippen zum Auswählen</div>
+      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600, marginBottom: 10 }}>Bibliothek — Punkte antippen zum Auswählen</div>
       {CHECK_BIBLIOTHEK[bibArt].map((grp) => (
         <div key={grp.kategorie} style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.cyan, marginBottom: 6 }}>{grp.kategorie}</div>
+          <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: C.cyan, marginBottom: 6 }}>{grp.kategorie}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {grp.punkte.map((p) => {
               const aktiv = auswahl.has(p);
               return (
                 <button key={p} onClick={() => toggle(p)}
-                  style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                  style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
                     border: `1px solid ${aktiv ? C.gold : C.line}`, background: aktiv ? 'rgba(201,168,76,0.16)' : 'transparent', color: aktiv ? C.gold : C.text }}>
                   {aktiv ? '✓ ' : '＋ '}{p}
                 </button>
@@ -1915,13 +1915,13 @@ function NeuModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
 // ============================================================
 function StatusBadge({ status }: { status: string }) {
   const col = statusColor(status);
-  return <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: col, background: `${col}1A`, border: `1px solid ${col}40` }}>{STATUS_LABEL[status] || status}</span>;
+  return <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, color: col, background: `${col}1A`, border: `1px solid ${col}40` }}>{STATUS_LABEL[status] || status}</span>;
 }
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ background: accent ? `${accent}12` : C.cardBg, border: `1px solid ${accent ? `${accent}33` : C.line}`, borderRadius: 10, padding: '12px 14px' }}>
-      <div style={{ fontSize: 12, color: C.textDim, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: accent ?? C.text }}>{value}</div>
+      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: accent ?? C.text }}>{value}</div>
     </div>
   );
 }
@@ -1949,8 +1949,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function ZugangZeile({ label, wert }: { label: string; wert: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-      <span style={{ fontSize: 12, color: C.textDim, width: 120, flexShrink: 0 }}>{label}</span>
-      <code style={{ fontSize: 13, color: C.text, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wert}</code>
+      <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, width: 120, flexShrink: 0 }}>{label}</span>
+      <code style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 8px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wert}</code>
       <button style={styles.miniBtn} onClick={() => navigator.clipboard?.writeText(wert)}>Kopieren</button>
     </div>
   );
@@ -1965,78 +1965,78 @@ function Dim({ children }: { children: React.ReactNode }) { return <span style={
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '32px 28px 64px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 24 },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  eyebrowSmall: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 4 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 34, fontWeight: 700, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 15 },
-  primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'opacity .15s ease' },
-  hireBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  hiredHint: { color: C.green, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
-  inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  invitedHint: { color: C.cyan, fontSize: 13, fontWeight: 600, alignSelf: 'center' },
-  resetBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  eyebrowSmall: { fontSize: 'clamp(11px, 0.94vw, 15px)', letterSpacing: 1.5, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 4 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(34px, 3vw, 48px)', fontWeight: 700, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'opacity .15s ease' },
+  hireBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  hiredHint: { color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, alignSelf: 'center' },
+  inviteBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.4)`, borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  invitedHint: { color: C.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, alignSelf: 'center' },
+  resetBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   zugangBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 12, padding: 16 },
-  glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 18, cursor: 'pointer', lineHeight: 1 },
-  kalenderLink: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontWeight: 600, color: C.text, textDecoration: 'none', whiteSpace: 'nowrap' },
-  blSelect: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 12px', fontSize: 13, fontWeight: 600, color: C.text, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer', outline: 'none' },
-  glockeBadge: { position: 'absolute', top: -6, right: -6, background: C.danger, color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' },
+  glockeBtn: { position: 'relative', background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 12px', fontSize: 'clamp(18px, 1.56vw, 25px)', cursor: 'pointer', lineHeight: 1 },
+  kalenderLink: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, color: C.text, textDecoration: 'none', whiteSpace: 'nowrap' },
+  blSelect: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, color: C.text, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer', outline: 'none' },
+  glockeBadge: { position: 'absolute', top: -6, right: -6, background: C.danger, color: '#fff', fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, borderRadius: 999, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' },
   glockePanel: { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, maxHeight: 420, overflowY: 'auto', background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 50, padding: 8 },
   glockeHead: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px 10px', borderBottom: `1px solid ${C.line}` },
-  glockeMarkAll: { background: 'transparent', color: C.cyan, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' },
-  glockeEmpty: { padding: 20, textAlign: 'center', color: C.textDim, fontSize: 13 },
+  glockeMarkAll: { background: 'transparent', color: C.cyan, border: 'none', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, cursor: 'pointer' },
+  glockeEmpty: { padding: 20, textAlign: 'center', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' },
   glockeItem: { display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 10px', borderBottom: '1px solid rgba(255,255,255,0.04)' },
   glockeDot: { width: 10, height: 10, borderRadius: 999, background: C.cyan, border: 'none', cursor: 'pointer', flexShrink: 0, marginTop: 4 },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  secondaryBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 8, padding: '6px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  secondaryBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   cardInner: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16 },
-  miniFieldLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: C.textDim, fontWeight: 600 },
-  tagBadge: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.green, background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(76,175,125,0.35)', marginLeft: 4 },
-  tagBadgeCyan: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.cyan, background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.35)', marginLeft: 4 },
+  miniFieldLabel: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600 },
+  tagBadge: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: C.green, background: 'rgba(76,175,125,0.14)', border: '1px solid rgba(76,175,125,0.35)', marginLeft: 4 },
+  tagBadgeCyan: { display: 'inline-block', padding: '1px 7px', borderRadius: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: C.cyan, background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.35)', marginLeft: 4 },
   tabs: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
-  tabBtn: { border: '1px solid', borderRadius: 999, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'all .15s ease' },
-  countPill: { marginLeft: 4, fontSize: 13, color: C.textDim, background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 999, padding: '4px 12px', fontWeight: 600 },
+  tabBtn: { border: '1px solid', borderRadius: 999, padding: '8px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'all .15s ease' },
+  countPill: { marginLeft: 4, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 999, padding: '4px 12px', fontWeight: 600 },
   card: { background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 16, overflow: 'hidden' },
-  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 15 },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th: { textAlign: 'left', padding: '14px 18px', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: C.textDim, fontWeight: 600, borderBottom: `1px solid ${C.line}` },
+  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  th: { textAlign: 'left', padding: '14px 18px', fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 1, textTransform: 'uppercase', color: C.textDim, fontWeight: 600, borderBottom: `1px solid ${C.line}` },
   td: { padding: '14px 18px', color: C.text, verticalAlign: 'top' },
   name: { fontWeight: 600, color: C.text },
-  link: { color: C.cyan, textDecoration: 'none', fontSize: 13 },
+  link: { color: C.cyan, textDecoration: 'none', fontSize: 'clamp(13px, 1.13vw, 18px)' },
   empty: { padding: '56px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
-  emptyTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: C.text },
-  emptyText: { color: C.textDim, fontSize: 15, marginBottom: 10 },
+  emptyTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: C.text },
+  emptyText: { color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)', marginBottom: 10 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.66)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 },
   modal: { width: '100%', maxWidth: 540, background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
   modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  modalTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 700, margin: 0, color: C.text },
+  modalTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 700, margin: 0, color: C.text },
   modalFoot: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 },
 
   drawer: { width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 18, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', overflow: 'hidden' },
   drawerHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '22px 24px 0' },
-  drawerTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 700, margin: 0, color: C.text },
+  drawerTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 700, margin: 0, color: C.text },
   detailTabs: { display: 'flex', padding: '8px 24px 0', borderBottom: `1px solid ${C.line}`, overflowX: 'auto' },
   drawerBody: { padding: 24, overflowY: 'auto' },
   drawerActions: { display: 'flex', gap: 12, marginTop: 22, flexWrap: 'wrap' },
-  closeBtn: { background: 'transparent', border: 'none', color: C.textDim, fontSize: 26, lineHeight: 1, cursor: 'pointer' },
+  closeBtn: { background: 'transparent', border: 'none', color: C.textDim, fontSize: 'clamp(26px, 2.25vw, 36px)', lineHeight: 1, cursor: 'pointer' },
 
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
-  fieldLabel: { fontSize: 12, color: C.textDim, fontWeight: 600, letterSpacing: 0.4 },
-  input: { background: C.inputBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '100%', boxSizing: 'border-box' },
-  sectionDivider: { margin: '22px 0 12px', paddingTop: 16, borderTop: `1px solid ${C.line}`, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: C.gold, fontWeight: 700 },
+  fieldLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600, letterSpacing: 0.4 },
+  input: { background: C.inputBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '100%', boxSizing: 'border-box' },
+  sectionDivider: { margin: '22px 0 12px', paddingTop: 16, borderTop: `1px solid ${C.line}`, fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 1, textTransform: 'uppercase', color: C.gold, fontWeight: 700 },
 
-  infoMsg: { marginTop: 14, color: C.text, fontSize: 13, background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px' },
-  formError: { marginTop: 14, color: C.danger, fontSize: 13, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '10px 12px' },
-  listHint: { color: C.textDim, fontSize: 14, padding: '12px 0' },
+  infoMsg: { marginTop: 14, color: C.text, fontSize: 'clamp(13px, 1.13vw, 18px)', background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px' },
+  formError: { marginTop: 14, color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '10px 12px' },
+  listHint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '12px 0' },
 
   miniForm: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
-  checkLabel: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, color: C.textDim },
+  checkLabel: { display: 'flex', gap: 6, alignItems: 'center', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim },
   statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 18 },
 
   docRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', border: `1px solid ${C.line}`, borderRadius: 10, marginBottom: 8 },
-  docName: { fontWeight: 600, color: C.text, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  docMeta: { color: C.textDim, fontSize: 12, marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  katBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, color: C.gold, background: 'rgba(201,168,76,0.12)', border: `1px solid ${C.line}` },
+  docName: { fontWeight: 600, color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  docMeta: { color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  katBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 600, color: C.gold, background: 'rgba(201,168,76,0.12)', border: `1px solid ${C.line}` },
 };

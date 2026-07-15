@@ -148,7 +148,7 @@ export default function ModulFreischaltung() {
     background: GOLD,
     color: '#0A1628',
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: 'pointer',
   };
   const btnGhost: React.CSSProperties = {
@@ -157,18 +157,18 @@ export default function ModulFreischaltung() {
     border: '1px solid rgba(255,255,255,0.12)',
     background: 'rgba(255,255,255,0.05)',
     color: '#fff',
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: 'pointer',
   };
 
   return (
     <div style={card}>
-      <h2 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 6px' }}>
+      <h2 style={{ fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 900, margin: '0 0 6px' }}>
         🧩 Module &amp; Ansicht
       </h2>
       <p
         style={{
-          fontSize: 14,
+          fontSize: 'clamp(14px, 1.25vw, 20px)',
           color: 'rgba(255,255,255,0.55)',
           margin: '0 0 4px',
           lineHeight: 1.6,
@@ -180,12 +180,12 @@ export default function ModulFreischaltung() {
         deine Daten bleiben vollständig erhalten und du kannst jedes Modul
         jederzeit wieder einschalten.
       </p>
-      <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', margin: '0 0 18px' }}>
+      <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)', margin: '0 0 18px' }}>
         Übersicht, Rechte und Einstellungen bleiben immer sichtbar.
       </p>
 
       {!geladen ? (
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, padding: '10px 0' }}>
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '10px 0' }}>
           Lade Einstellungen…
         </div>
       ) : (
@@ -214,7 +214,7 @@ export default function ModulFreischaltung() {
                 >
                   <span
                     style={{
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       color: ein ? '#fff' : 'rgba(255,255,255,0.45)',
                       fontWeight: 600,
                     }}
@@ -247,7 +247,7 @@ export default function ModulFreischaltung() {
                 Alle einschalten
               </button>
             )}
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+            <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>
               {alleAn
                 ? 'Alle Module sichtbar (Starter-Modus aus)'
                 : `${anzahlAn} von ${MODULE.length} Modulen sichtbar`}
@@ -263,7 +263,7 @@ export default function ModulFreischaltung() {
                 background: 'rgba(76,175,125,0.12)',
                 border: '1px solid rgba(76,175,125,0.4)',
                 color: GREEN,
-                fontSize: 13.5,
+                fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
@@ -290,7 +290,7 @@ export default function ModulFreischaltung() {
               style={{
                 marginTop: 16,
                 color: '#E06666',
-                fontSize: 13.5,
+                fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                 fontWeight: 600,
               }}
             >

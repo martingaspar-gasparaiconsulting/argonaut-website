@@ -136,7 +136,7 @@ export default function KiAuge({
           background: offen ? "rgba(0,229,255,0.10)" : "rgba(0,229,255,0.05)",
           color: offen ? A.cyan : "#fff",
           fontFamily: "DM Sans, sans-serif",
-          fontSize: 14,
+          fontSize: 'clamp(14px, 1.25vw, 20px)',
           fontWeight: 700,
           cursor: "pointer",
           transition: "all 0.15s ease",
@@ -144,11 +144,11 @@ export default function KiAuge({
         }}
         title="Die KI liest die Übersicht und sagt dir, was jetzt wichtig ist"
       >
-        <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden="true">
+        <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', lineHeight: 1 }} aria-hidden="true">
           👁
         </span>
         <span>{buttonText}</span>
-        <span style={{ fontSize: 11, color: A.textDim, fontWeight: 400 }}>
+        <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: A.textDim, fontWeight: 400 }}>
           {offen ? "▲" : "▼"}
         </span>
       </button>
@@ -172,7 +172,7 @@ export default function KiAuge({
               gap: 8,
               marginBottom: 12,
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               color: A.gold,
             }}
@@ -181,7 +181,7 @@ export default function KiAuge({
           </div>
 
           {laden && (
-            <div style={{ color: A.textDim, fontSize: 14, fontFamily: "DM Sans, sans-serif" }}>
+            <div style={{ color: A.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: "DM Sans, sans-serif" }}>
               <span
                 style={{
                   display: "inline-block",
@@ -202,7 +202,7 @@ export default function KiAuge({
 
           {fehler && !laden && (
             <div style={{ fontFamily: "DM Sans, sans-serif" }}>
-              <div style={{ color: A.danger, fontSize: 14, marginBottom: 10 }}>
+              <div style={{ color: A.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', marginBottom: 10 }}>
                 {fehler}
               </div>
               <button
@@ -213,7 +213,7 @@ export default function KiAuge({
                   border: `1px solid ${A.cyan}`,
                   borderRadius: 8,
                   padding: "7px 14px",
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   cursor: "pointer",
                 }}
               >
@@ -230,7 +230,7 @@ export default function KiAuge({
                     display: "flex",
                     gap: 10,
                     alignItems: "flex-start",
-                    fontSize: 15,
+                    fontSize: 'clamp(15px, 1.31vw, 21px)',
                     fontWeight: 600,
                     color: "#fff",
                     marginBottom: ergebnis.punkte.length > 0 ? 14 : 0,
@@ -262,7 +262,7 @@ export default function KiAuge({
                         alignItems: "flex-start",
                         padding: "7px 0",
                         borderTop: i === 0 ? "none" : `1px solid ${A.border}`,
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                         color: "#fff",
                       }}
                     >
@@ -283,7 +283,7 @@ export default function KiAuge({
                     color: A.navy,
                     borderRadius: 8,
                     padding: "9px 16px",
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     fontWeight: 700,
                     textDecoration: "none",
                   }}

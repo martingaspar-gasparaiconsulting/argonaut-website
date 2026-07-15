@@ -234,7 +234,7 @@ export default function MarketingCockpit() {
           <h1
             style={{
               fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontSize: 32,
+              fontSize: 'clamp(32px, 2.81vw, 45px)',
               fontWeight: 700,
               color: C.gold,
               margin: 0,
@@ -257,7 +257,7 @@ export default function MarketingCockpit() {
               padding: '12px 20px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: 'pointer',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -276,7 +276,7 @@ export default function MarketingCockpit() {
               padding: '12px 20px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: 'pointer',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -295,7 +295,7 @@ export default function MarketingCockpit() {
               padding: '12px 20px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: 'pointer',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -314,7 +314,7 @@ export default function MarketingCockpit() {
               padding: '12px 20px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: 'pointer',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -333,7 +333,7 @@ export default function MarketingCockpit() {
               padding: '12px 22px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: 'pointer',
             }}
           >
@@ -369,14 +369,14 @@ export default function MarketingCockpit() {
             <div
               style={{
                 fontFamily: 'var(--font-dm-sans), sans-serif',
-                fontSize: 34,
+                fontSize: 'clamp(34px, 3vw, 48px)',
                 fontWeight: 700,
                 color: kp.farbe,
               }}
             >
               {kp.wert}
             </div>
-            <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               {kp.label}
             </div>
           </div>
@@ -399,7 +399,7 @@ export default function MarketingCockpit() {
               borderRadius: 20,
               padding: '6px 16px',
               fontFamily: 'DM Sans, sans-serif',
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: filter === f.v ? 700 : 400,
               cursor: 'pointer',
             }}
@@ -435,7 +435,7 @@ export default function MarketingCockpit() {
             border: '1px dashed rgba(255,255,255,0.12)',
           }}
         >
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 16 }}>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
             {filter === 'alle'
               ? 'Noch keine Kampagne angelegt. Leg deine erste an.'
               : 'Keine Kampagne in diesem Status.'}
@@ -476,7 +476,7 @@ export default function MarketingCockpit() {
                       href={`/dashboard/marketing/${k.id}`}
                       style={{
                         fontFamily: 'var(--font-dm-sans), sans-serif',
-                        fontSize: 19,
+                        fontSize: 'clamp(19px, 1.69vw, 27px)',
                         fontWeight: 700,
                         color: '#fff',
                         textDecoration: 'none',
@@ -487,7 +487,7 @@ export default function MarketingCockpit() {
                     <span
                       style={{
                         fontFamily: 'DM Sans, sans-serif',
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         color: a.farbe,
                         border: `1px solid ${a.farbe}`,
                         borderRadius: 12,
@@ -503,7 +503,7 @@ export default function MarketingCockpit() {
                         fontFamily: 'DM Sans, sans-serif',
                         color: C.textDim,
                         margin: '0 0 8px',
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                       }}
                     >
                       🎯 {k.ziel}
@@ -515,7 +515,7 @@ export default function MarketingCockpit() {
                       gap: 18,
                       flexWrap: 'wrap',
                       fontFamily: 'DM Sans, sans-serif',
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       color: C.textDim,
                     }}
                   >
@@ -539,7 +539,7 @@ export default function MarketingCockpit() {
                       borderRadius: 8,
                       padding: '8px 14px',
                       fontFamily: 'DM Sans, sans-serif',
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       cursor: 'pointer',
                     }}
                   >
@@ -555,7 +555,7 @@ export default function MarketingCockpit() {
                         borderRadius: 8,
                         padding: '8px 14px',
                         fontFamily: 'DM Sans, sans-serif',
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         cursor: 'pointer',
                       }}
                     >
@@ -601,7 +601,7 @@ export default function MarketingCockpit() {
               style={{
                 fontFamily: 'var(--font-dm-sans), sans-serif',
                 color: C.gold,
-                fontSize: 24,
+                fontSize: 'clamp(24px, 2.13vw, 34px)',
                 margin: '0 0 20px',
               }}
             >
@@ -694,7 +694,7 @@ export default function MarketingCockpit() {
                         borderRadius: 16,
                         padding: '5px 14px',
                         fontFamily: 'DM Sans, sans-serif',
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         cursor: 'pointer',
                       }}
                     >
@@ -754,7 +754,7 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
@@ -765,7 +765,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
         style={{
           display: 'block',
           fontFamily: 'DM Sans, sans-serif',
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           color: C.textDim,
           marginBottom: 6,
         }}

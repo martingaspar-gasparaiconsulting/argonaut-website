@@ -433,8 +433,8 @@ export default function MeineEinsaetzePage() {
       <div style={styles.tagNav}>
         <button style={styles.navBtn} onClick={() => setTagOffset((o) => o - 1)} aria-label="Tag zurück">‹</button>
         <div style={styles.tagMitte}>
-          <div style={{ fontWeight: 800, fontSize: 17 }}>{tagLabel}</div>
-          <div style={{ color: C.textDim, fontSize: 12.5 }}>{datumLang}</div>
+          <div style={{ fontWeight: 800, fontSize: 'clamp(17px, 1.5vw, 24px)' }}>{tagLabel}</div>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{datumLang}</div>
         </div>
         <button style={styles.navBtn} onClick={() => setTagOffset((o) => o + 1)} aria-label="Tag vor">›</button>
       </div>
@@ -448,9 +448,9 @@ export default function MeineEinsaetzePage() {
         <div style={styles.hint}>Lädt …</div>
       ) : aktive.length === 0 ? (
         <div style={{ ...styles.karte, textAlign: 'center', padding: '32px 20px' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>Keine Einsätze eingeplant</div>
-          <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 6 }}>
+          <div style={{ fontSize: 'clamp(32px, 2.81vw, 45px)', marginBottom: 8 }}>✅</div>
+          <div style={{ fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Keine Einsätze eingeplant</div>
+          <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginTop: 6 }}>
             Für {tagOffset === 0 ? 'heute' : 'diesen Tag'} ist nichts für dich eingeplant.
           </div>
         </div>
@@ -613,17 +613,17 @@ export default function MeineEinsaetzePage() {
           <div style={styles.overlay} onClick={() => !posBusy && setPosModalId(null)}>
             <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
               <h2 style={styles.modalTitel}>Leistungen erfassen</h2>
-              {me && <div style={{ color: C.textDim, fontSize: 13.5, marginBottom: 14 }}>{me.titel || 'Einsatz'}{me.kunde_name ? ` · ${me.kunde_name}` : ''}</div>}
+              {me && <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 14 }}>{me.titel || 'Einsatz'}{me.kunde_name ? ` · ${me.kunde_name}` : ''}</div>}
 
               {poss.length === 0 ? (
-                <div style={{ color: C.textDim, fontSize: 14, padding: '4px 0 12px' }}>Noch keine Leistungen erfasst.</div>
+                <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '4px 0 12px' }}>Noch keine Leistungen erfasst.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
                   {poss.map((p) => (
                     <div key={p.id} style={styles.posZeile}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600 }}>{p.bezeichnung}</div>
-                        <div style={{ color: C.textDim, fontSize: 12 }}>{fmtMenge(p.menge)}{p.einheit ? ` ${p.einheit}` : ''} × {eur(p.einzelpreis_netto)}</div>
+                        <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{fmtMenge(p.menge)}{p.einheit ? ` ${p.einheit}` : ''} × {eur(p.einzelpreis_netto)}</div>
                       </div>
                       <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{eur(p.menge * p.einzelpreis_netto)}</div>
                       <button onClick={() => positionLoeschen(p)} style={styles.posDel} title="Position löschen">✕</button>
@@ -679,7 +679,7 @@ export default function MeineEinsaetzePage() {
         <div style={styles.overlay} onClick={() => !sigBusy && setSigModalId(null)}>
           <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
             <h2 style={styles.modalTitel}>Unterschrift</h2>
-            <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 12px' }}>Bitte im weißen Feld unterschreiben (Finger oder Maus).</p>
+            <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', margin: '0 0 12px' }}>Bitte im weißen Feld unterschreiben (Finger oder Maus).</p>
             <canvas
               ref={canvasRef}
               width={600}
@@ -710,67 +710,67 @@ export default function MeineEinsaetzePage() {
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '24px 16px 64px', maxWidth: 560, margin: '0 auto' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 28, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 16px', fontSize: 14 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 16px', fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
   tagNav: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '10px 12px', marginTop: 8 },
   tagMitte: { flex: 1, textAlign: 'center' },
-  navBtn: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, width: 52, height: 48, cursor: 'pointer', fontSize: 24, fontFamily: 'inherit', flexShrink: 0 },
-  heuteBtn: { background: 'transparent', color: C.cyan, border: 'none', padding: '10px 2px', fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 },
+  navBtn: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, width: 52, height: 48, cursor: 'pointer', fontSize: 'clamp(24px, 2.13vw, 34px)', fontFamily: 'inherit', flexShrink: 0 },
+  heuteBtn: { background: 'transparent', color: C.cyan, border: 'none', padding: '10px 2px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 },
 
   karte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18 },
   einsatzKarte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 16px 16px 18px', display: 'flex', flexDirection: 'column', gap: 6 },
   karteKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  zeit: { fontSize: 22, fontWeight: 800, color: C.text, letterSpacing: 0.5 },
-  badge: { fontSize: 12, fontWeight: 700, border: '1px solid', borderRadius: 999, padding: '3px 12px', whiteSpace: 'nowrap' },
-  titel: { fontSize: 17, fontWeight: 700, color: C.text, marginTop: 2 },
-  kunde: { fontSize: 14, color: C.textDim },
+  zeit: { fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800, color: C.text, letterSpacing: 0.5 },
+  badge: { fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, border: '1px solid', borderRadius: 999, padding: '3px 12px', whiteSpace: 'nowrap' },
+  titel: { fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, color: C.text, marginTop: 2 },
+  kunde: { fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.textDim },
 
-  aktionZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, textDecoration: 'none', color: C.text, fontSize: 14.5 },
-  aktionIcon: { fontSize: 18, flexShrink: 0 },
-  aktionHinweis: { color: C.cyan, fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' },
-  beschreibung: { fontSize: 14, color: C.text, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
-  phaseBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', marginTop: 10, width: '100%', minHeight: 54 },
-  stempelZeile: { display: 'flex', gap: 14, fontSize: 12.5, color: C.textDim, marginTop: 8, flexWrap: 'wrap' },
-  erledigtHinweis: { marginTop: 10, textAlign: 'center', color: C.green, fontWeight: 700, fontSize: 15, padding: '12px', background: 'rgba(76,175,125,0.1)', borderRadius: 12 },
+  aktionZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, textDecoration: 'none', color: C.text, fontSize: 'clamp(14.5px, 1.25vw, 20px)' },
+  aktionIcon: { fontSize: 'clamp(18px, 1.56vw, 25px)', flexShrink: 0 },
+  aktionHinweis: { color: C.cyan, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', whiteSpace: 'nowrap' },
+  beschreibung: { fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
+  phaseBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '16px', fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', marginTop: 10, width: '100%', minHeight: 54 },
+  stempelZeile: { display: 'flex', gap: 14, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginTop: 8, flexWrap: 'wrap' },
+  erledigtHinweis: { marginTop: 10, textAlign: 'center', color: C.green, fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', padding: '12px', background: 'rgba(76,175,125,0.1)', borderRadius: 12 },
 
   fotoBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
-  fotoKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 14 },
-  fotoAddBtn: { background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '8px 14px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  fotoKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  fotoAddBtn: { background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '8px 14px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   fotoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8, marginTop: 10 },
   fotoThumb: { position: 'relative', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: C.navy },
   fotoImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
-  fotoLaedt: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 18 },
-  fotoDel: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(10,22,40,0.8)', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit' },
+  fotoLaedt: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 'clamp(18px, 1.56vw, 25px)' },
+  fotoDel: { position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(10,22,40,0.8)', color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit' },
 
-  leistungBtn: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.gold}`, borderRadius: 12, padding: '14px', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 },
+  leistungBtn: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.gold}`, borderRadius: 12, padding: '14px', fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 12px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 22, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 4px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 4px', color: C.text },
   posZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' },
-  posDel: { width: 26, height: 26, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 },
-  summen: { display: 'flex', flexDirection: 'column', gap: 4, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14 },
+  posDel: { width: 26, height: 26, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 },
+  summen: { display: 'flex', flexDirection: 'column', gap: 4, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 'clamp(14px, 1.25vw, 20px)' },
   summenZeile: { display: 'flex', justifyContent: 'space-between' },
   addBox: { marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 },
   posGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 },
-  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit' },
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '14px 18px', fontSize: 15, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
+  lbl: { display: 'block', fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontFamily: 'inherit' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '14px 18px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
 
   sigBereich: { marginTop: 10 },
-  sigBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 12, padding: '14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
-  sigKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 14 },
-  sigNeu: { background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 12px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' },
+  sigBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: C.navy, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 12, padding: '14px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  sigKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  sigNeu: { background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 12px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit' },
   sigPreview: { width: '100%', maxWidth: 260, marginTop: 8, borderRadius: 10, border: `1px solid ${C.border}`, background: '#fff', display: 'block' },
   canvas: { width: '100%', aspectRatio: '3 / 1', background: '#ffffff', border: `2px solid ${C.gold}`, borderRadius: 12, display: 'block', touchAction: 'none', cursor: 'crosshair' },
 
   berichtBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
-  berichtBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 12, padding: '15px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
-  berichtLink: { textAlign: 'center', color: C.cyan, fontSize: 13.5, fontWeight: 600, textDecoration: 'none' },
+  berichtBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 12, padding: '15px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  berichtLink: { textAlign: 'center', color: C.cyan, fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600, textDecoration: 'none' },
 
-  hint: { color: C.textDim, fontSize: 15, padding: '24px 0', textAlign: 'center' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
+  hint: { color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)', padding: '24px 0', textAlign: 'center' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
 };

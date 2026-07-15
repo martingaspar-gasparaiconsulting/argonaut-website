@@ -229,7 +229,7 @@ export default function FirmenListePage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 margin: 0,
                 letterSpacing: 0.5,
               }}
@@ -241,7 +241,7 @@ export default function FirmenListePage() {
                 fontFamily: "'DM Sans', sans-serif",
                 color: C.textDim,
                 margin: "6px 0 0",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
               Deine Firmen &amp; Accounts – jeder Kontakt kann einer Firma zugeordnet werden.
@@ -329,7 +329,7 @@ export default function FirmenListePage() {
                       <td style={td}>
                         <div style={{ color: "#fff", fontWeight: 600 }}>{f.name}</div>
                         {f.branche && (
-                          <div style={{ color: C.textDim, fontSize: 12 }}>
+                          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                             {f.branche}
                           </div>
                         )}
@@ -436,7 +436,7 @@ export default function FirmenListePage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 22,
+                fontSize: 'clamp(22px, 1.94vw, 31px)',
                 margin: "0 0 18px",
               }}
             >
@@ -532,7 +532,7 @@ function KpiKarte({
         style={{
           fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
-          fontSize: 30,
+          fontSize: 'clamp(30px, 2.63vw, 42px)',
           fontWeight: 800,
           lineHeight: 1,
         }}
@@ -543,7 +543,7 @@ function KpiKarte({
         style={{
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           marginTop: 6,
         }}
       >
@@ -561,7 +561,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
           display: "block",
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 5,
         }}
       >
@@ -579,7 +579,7 @@ const zurueckBtn: React.CSSProperties = {
   color: C.textDim,
   border: "none",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -592,14 +592,14 @@ const goldBtn: React.CSSProperties = {
   padding: "11px 22px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
 const goldBtnGross: React.CSSProperties = {
   ...goldBtn,
   padding: "12px 20px",
-  fontSize: 15,
+  fontSize: 'clamp(15px, 1.31vw, 21px)',
 };
 
 const grauBtn: React.CSSProperties = {
@@ -610,7 +610,7 @@ const grauBtn: React.CSSProperties = {
   padding: "11px 22px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -621,7 +621,7 @@ const miniBtn: React.CSSProperties = {
   padding: "6px 12px",
   color: C.cyan,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   cursor: "pointer",
   marginLeft: 6,
 };
@@ -629,7 +629,7 @@ const miniBtn: React.CSSProperties = {
 const linkCyan: React.CSSProperties = {
   color: C.cyan,
   textDecoration: "none",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
 };
 
 const inp: React.CSSProperties = {
@@ -639,7 +639,7 @@ const inp: React.CSSProperties = {
   padding: "11px 13px",
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   width: "100%",
   boxSizing: "border-box",
   outline: "none",
@@ -649,7 +649,7 @@ const th: React.CSSProperties = {
   textAlign: "left",
   padding: "14px 16px",
   color: C.textDim,
-  fontSize: 12,
+  fontSize: 'clamp(12px, 1.06vw, 17px)',
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: 0.5,
@@ -659,7 +659,7 @@ const td: React.CSSProperties = {
   padding: "14px 16px",
   verticalAlign: "middle",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };
 
 const leerBox: React.CSSProperties = {
@@ -667,7 +667,7 @@ const leerBox: React.CSSProperties = {
   textAlign: "center",
   color: C.textDim,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 15,
+  fontSize: 'clamp(15px, 1.31vw, 21px)',
 };
 
 const overlay: React.CSSProperties = {
@@ -705,5 +705,5 @@ const fehlerBox: React.CSSProperties = {
   padding: "12px 16px",
   marginBottom: 16,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };

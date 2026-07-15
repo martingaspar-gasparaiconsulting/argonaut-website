@@ -169,7 +169,7 @@ export default function TeamKalenderPage() {
         <Legende farbe={C.krank} text="Krank" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 16, height: 16, borderRadius: 4, display: 'inline-block', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.3)' }} />
-          <span style={{ fontSize: 13, color: C.textDim }}>Feiertag</span>
+          <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>Feiertag</span>
         </div>
       </div>
 
@@ -188,7 +188,7 @@ export default function TeamKalenderPage() {
                 <th style={{ ...styles.thName }}>Mitarbeiter</th>
                 {tage.map((t) => (
                   <th key={t} style={{ ...styles.thDay, ...(istWE(t) ? styles.weHead : {}), ...(istFeiertag(t) ? styles.feiertagHead : {}), ...(istHeute(t) ? styles.todayHead : {}) }} title={istFeiertag(t) ? 'Feiertag' : ''}>
-                    <div style={{ fontSize: 10, color: C.textDim }}>{WT[wochentag(t)]}</div>
+                    <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.textDim }}>{WT[wochentag(t)]}</div>
                     <div>{t}</div>
                   </th>
                 ))}
@@ -224,7 +224,7 @@ function Legende({ farbe, text, gestrichelt }: { farbe: string; text: string; ge
         background: gestrichelt ? 'repeating-linear-gradient(45deg, rgba(201,168,76,0.25), rgba(201,168,76,0.25) 4px, transparent 4px, transparent 8px)' : farbe,
         border: gestrichelt ? `1px dashed ${C.gold}` : 'none',
       }} />
-      <span style={{ fontSize: 13, color: C.textDim }}>{text}</span>
+      <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>{text}</span>
     </div>
   );
 }
@@ -232,24 +232,24 @@ function Legende({ farbe, text, gestrichelt }: { farbe: string; text: string; ge
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '32px 28px 64px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 20 },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 700, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 15 },
-  navBtn: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '6px 14px', color: C.text, fontSize: 18, cursor: 'pointer', lineHeight: 1 },
-  todayBtn: { background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 8, padding: '8px 14px', color: C.cyan, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  monatLabel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: C.text, marginLeft: 8, minWidth: 150 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  navBtn: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '6px 14px', color: C.text, fontSize: 'clamp(18px, 1.56vw, 25px)', cursor: 'pointer', lineHeight: 1 },
+  todayBtn: { background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 8, padding: '8px 14px', color: C.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: 'pointer' },
+  monatLabel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: C.text, marginLeft: 8, minWidth: 150 },
   legend: { display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 18 },
-  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 15 },
+  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' },
   errorBox: { padding: 16, color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, marginBottom: 16 },
   tableWrap: { overflowX: 'auto', border: `1px solid ${C.line}`, borderRadius: 12, background: C.navySoft },
   table: { borderCollapse: 'collapse', width: '100%' },
-  thName: { position: 'sticky', left: 0, background: C.navySoft, textAlign: 'left', padding: '12px 14px', fontSize: 13, color: C.textDim, fontWeight: 600, zIndex: 2, minWidth: 160, borderBottom: `1px solid ${C.line}` },
-  thDay: { padding: '6px 0', minWidth: 30, fontSize: 13, color: C.text, fontWeight: 600, textAlign: 'center', borderBottom: `1px solid ${C.line}` },
+  thName: { position: 'sticky', left: 0, background: C.navySoft, textAlign: 'left', padding: '12px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, fontWeight: 600, zIndex: 2, minWidth: 160, borderBottom: `1px solid ${C.line}` },
+  thDay: { padding: '6px 0', minWidth: 30, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, fontWeight: 600, textAlign: 'center', borderBottom: `1px solid ${C.line}` },
   weHead: { background: 'rgba(255,255,255,0.02)' },
   feiertagHead: { background: 'rgba(0,229,255,0.06)' },
   feiertagCell: { background: 'rgba(0,229,255,0.05)' },
   todayHead: { background: 'rgba(0,229,255,0.12)', color: C.cyan },
-  tdName: { position: 'sticky', left: 0, background: C.navySoft, padding: '10px 14px', fontSize: 14, color: C.text, fontWeight: 500, whiteSpace: 'nowrap', zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.04)', borderRight: `1px solid ${C.line}` },
+  tdName: { position: 'sticky', left: 0, background: C.navySoft, padding: '10px 14px', fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text, fontWeight: 500, whiteSpace: 'nowrap', zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.04)', borderRight: `1px solid ${C.line}` },
   tdDay: { padding: 3, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)' },
   weCell: { background: 'rgba(255,255,255,0.02)' },
   todayCell: { background: 'rgba(0,229,255,0.06)' },

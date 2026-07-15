@@ -411,12 +411,12 @@ export default function BestellungenListe() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -428,7 +428,7 @@ export default function BestellungenListe() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -437,13 +437,13 @@ export default function BestellungenListe() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -452,7 +452,7 @@ export default function BestellungenListe() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
   };
@@ -461,7 +461,7 @@ export default function BestellungenListe() {
     return (
       <span
         style={{
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           fontWeight: 700,
           color: s.farbe,
           background: "rgba(255,255,255,0.06)",
@@ -489,10 +489,10 @@ export default function BestellungenListe() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             🛒 Bestellungen
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Einkauf: Bestellungen an Lieferanten
           </p>
         </div>
@@ -505,7 +505,7 @@ export default function BestellungenListe() {
               background: "rgba(201,168,76,0.12)",
               color: C.gold,
               fontWeight: 700,
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               cursor: "pointer",
             }}
             onClick={oeffneKiVorschlag}
@@ -528,19 +528,19 @@ export default function BestellungenListe() {
         }}
       >
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Offene Bestellungen
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4 }}>
             {kpiOffen}
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Wert offener Bestellungen
           </div>
           <div
-            style={{ fontSize: 28, fontWeight: 800, marginTop: 4, color: C.gold }}
+            style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4, color: C.gold }}
           >
             {eur(kpiOffenWert)}
           </div>
@@ -662,7 +662,7 @@ export default function BestellungenListe() {
             style={{ ...card, width: "100%", maxWidth: 480, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               Neue Bestellung
             </h2>
 
@@ -681,7 +681,7 @@ export default function BestellungenListe() {
                 ))}
               </select>
               {lieferanten.length === 0 && (
-                <div style={{ marginTop: 6, fontSize: 12, color: C.warn }}>
+                <div style={{ marginTop: 6, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.warn }}>
                   Noch keine Lieferanten angelegt — du kannst später einen
                   zuordnen.
                 </div>
@@ -720,7 +720,7 @@ export default function BestellungenListe() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >
@@ -771,10 +771,10 @@ export default function BestellungenListe() {
             style={{ ...card, width: "100%", maxWidth: 840, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               🤖 KI-Bestellvorschlag
             </h2>
-            <p style={{ margin: "0 0 18px", color: C.textDim, fontSize: 13 }}>
+            <p style={{ margin: "0 0 18px", color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Artikel auf oder unter Mindestbestand – gruppiert nach Lieferant.
               Mengen sind anpassbar, dann per Klick als Bestellung übernehmen.
             </p>
@@ -815,14 +815,14 @@ export default function BestellungenListe() {
                           marginBottom: 10,
                         }}
                       >
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>
+                        <div style={{ fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
                           🚚 {g.lieferant_name}
                           <span
                             style={{
                               marginLeft: 10,
                               color: C.textDim,
                               fontWeight: 400,
-                              fontSize: 13,
+                              fontSize: 'clamp(13px, 1.13vw, 18px)',
                             }}
                           >
                             {g.items.length} Artikel · ~{eur(gSumme)}
@@ -833,7 +833,7 @@ export default function BestellungenListe() {
                             ...btnGold,
                             opacity: kiErstellen === key ? 0.6 : 1,
                             padding: "8px 14px",
-                            fontSize: 13,
+                            fontSize: 'clamp(13px, 1.13vw, 18px)',
                           }}
                           onClick={() => bestellungAusGruppe(g)}
                           disabled={kiErstellen === key}
@@ -900,7 +900,7 @@ export default function BestellungenListe() {
                                   style={{
                                     ...tdStil,
                                     color: C.textDim,
-                                    fontSize: 13,
+                                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                                   }}
                                 >
                                   {it.begruendung || "—"}
@@ -917,7 +917,7 @@ export default function BestellungenListe() {
                   <div
                     style={{
                       color: C.danger,
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       fontWeight: 600,
                       marginBottom: 10,
                     }}

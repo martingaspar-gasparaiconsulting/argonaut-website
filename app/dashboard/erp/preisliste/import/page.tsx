@@ -267,7 +267,7 @@ export default function PreisImport() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -276,7 +276,7 @@ export default function PreisImport() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
     textDecoration: "none",
     display: "inline-block",
@@ -288,7 +288,7 @@ export default function PreisImport() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     boxSizing: "border-box",
   };
   const zellInputDisabled: React.CSSProperties = {
@@ -299,7 +299,7 @@ export default function PreisImport() {
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 10px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -308,7 +308,7 @@ export default function PreisImport() {
   };
   const tdStil: React.CSSProperties = {
     padding: "8px 10px",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -318,15 +318,15 @@ export default function PreisImport() {
     <div style={{ color: "#fff", maxWidth: 1400, margin: "0 auto" }}>
       <a
         href="/dashboard/erp/preisliste"
-        style={{ color: C.cyan, textDecoration: "none", fontSize: 13.5 }}
+        style={{ color: C.cyan, textDecoration: "none", fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}
       >
         ← zurück zur Preisliste
       </a>
 
-      <h1 style={{ margin: "10px 0 4px", fontSize: 26, fontWeight: 800 }}>
+      <h1 style={{ margin: "10px 0 4px", fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
         🪄 KI-Import
       </h1>
-      <p style={{ margin: "0 0 20px", color: C.textDim, fontSize: 14, maxWidth: 760 }}>
+      <p style={{ margin: "0 0 20px", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 760 }}>
         Füg einfach ein, was du hast – aus Excel, einer PDF, Word oder von einem
         Zettel abgetippt. Die KI erkennt die Artikel, räumt Preise und Einheiten
         auf und zeigt dir vor dem Speichern eine Vorschau. Du bestätigst, was
@@ -336,7 +336,7 @@ export default function PreisImport() {
       {/* Ergebnis nach Übernahme */}
       {ergebnis && (
         <div style={{ ...card, borderLeft: `4px solid ${C.green}`, marginBottom: 18 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, marginBottom: 8 }}>
             ✅ {ergebnis}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -372,7 +372,7 @@ export default function PreisImport() {
               gap: 12,
               margin: "18px 0 14px",
               color: C.textDim,
-              fontSize: 12.5,
+              fontSize: 'clamp(12.5px, 1.13vw, 18px)',
             }}
           >
             <div style={{ flex: 1, height: 1, background: C.border }} />
@@ -382,7 +382,7 @@ export default function PreisImport() {
           <label
             style={{
               display: "block",
-              fontSize: 12,
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
               color: C.textDim,
               fontWeight: 600,
               marginBottom: 8,
@@ -402,7 +402,7 @@ export default function PreisImport() {
               border: `1px solid ${C.border}`,
               background: "rgba(255,255,255,0.04)",
               color: "#fff",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               lineHeight: 1.5,
               boxSizing: "border-box",
               resize: "vertical",
@@ -432,7 +432,7 @@ export default function PreisImport() {
             >
               Beispiel einfügen
             </button>
-            <span style={{ color: C.textDim, fontSize: 12.5 }}>
+            <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
               Tipp: Ruhig unordentlich – Spalten, Semikolons oder Fließtext, die
               KI sortiert das.
             </span>
@@ -448,7 +448,7 @@ export default function PreisImport() {
             marginBottom: 18,
             color: C.danger,
             fontWeight: 600,
-            fontSize: 13.5,
+            fontSize: 'clamp(13.5px, 1.19vw, 19px)',
           }}
         >
           {fehler}
@@ -470,10 +470,10 @@ export default function PreisImport() {
             }}
           >
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>
+              <div style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800 }}>
                 Vorschau – {vorschau.length} Artikel erkannt
               </div>
-              <div style={{ fontSize: 13, color: C.textDim, marginTop: 4 }}>
+              <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginTop: 4 }}>
                 <span style={{ color: C.cyan, fontWeight: 700 }}>{anzNeu} neu</span>{" "}
                 ·{" "}
                 <span style={{ color: C.green, fontWeight: 700 }}>
@@ -543,7 +543,7 @@ export default function PreisImport() {
                             display: "inline-block",
                             padding: "3px 9px",
                             borderRadius: 20,
-                            fontSize: 11,
+                            fontSize: 'clamp(11px, 0.94vw, 15px)',
                             fontWeight: 700,
                             color: istUpdate ? C.green : C.cyan,
                             background: istUpdate
@@ -561,7 +561,7 @@ export default function PreisImport() {
                         {istUpdate && x.matchBezeichnung && (
                           <div
                             style={{
-                              fontSize: 11,
+                              fontSize: 'clamp(11px, 0.94vw, 15px)',
                               color: C.textDim,
                               marginTop: 5,
                               lineHeight: 1.3,
@@ -574,7 +574,7 @@ export default function PreisImport() {
                         {nummerKollision && (
                           <div
                             style={{
-                              fontSize: 11,
+                              fontSize: 'clamp(11px, 0.94vw, 15px)',
                               color: C.warn,
                               marginTop: 5,
                               lineHeight: 1.3,
@@ -594,7 +594,7 @@ export default function PreisImport() {
                               border: "none",
                               padding: 0,
                               color: C.cyan,
-                              fontSize: 11.5,
+                              fontSize: 'clamp(11.5px, 1vw, 16px)',
                               fontWeight: 600,
                               textDecoration: "underline",
                               cursor: "pointer",
@@ -639,7 +639,7 @@ export default function PreisImport() {
                           onChange={(e) => setV(i, { ekStr: e.target.value })}
                         />
                         {istUpdate && (
-                          <div style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
+                          <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, marginTop: 3 }}>
                             vorher {x.altEk == null ? "—" : eur(x.altEk)}
                           </div>
                         )}
@@ -653,7 +653,7 @@ export default function PreisImport() {
                           onChange={(e) => setV(i, { vkStr: e.target.value })}
                         />
                         {istUpdate && (
-                          <div style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
+                          <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, marginTop: 3 }}>
                             vorher {x.altVk == null ? "—" : eur(x.altVk)}
                           </div>
                         )}
@@ -681,7 +681,7 @@ export default function PreisImport() {
               padding: "12px 20px",
               borderTop: `1px solid ${C.border}`,
               color: C.textDim,
-              fontSize: 12.5,
+              fontSize: 'clamp(12.5px, 1.13vw, 18px)',
               lineHeight: 1.5,
             }}
           >

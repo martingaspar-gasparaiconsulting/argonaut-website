@@ -143,13 +143,13 @@ export default function ERechnungImport() {
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px", color: TEXT }}>
-      <div style={{ marginBottom: 8, fontSize: 12, letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase" }}>
+      <div style={{ marginBottom: 8, fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase" }}>
         Modul Rechnung · E-Rechnung
       </div>
-      <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 6px", letterSpacing: "0.02em" }}>
+      <h1 style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 900, margin: "0 0 6px", letterSpacing: "0.02em" }}>
         E-Rechnung einlesen
       </h1>
-      <p style={{ color: DIM, margin: "0 0 24px", fontSize: 14, lineHeight: 1.6 }}>
+      <p style={{ color: DIM, margin: "0 0 24px", fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.6 }}>
         Eingehende E-Rechnung hochladen (XML nach EN 16931 oder ZUGFeRD-PDF). ARGONAUT liest die
         Daten automatisch aus, zeigt sie lesbar an und archiviert das Original GoBD-konform
         (unveränderbar, 10 Jahre) — egal von welchem Absender.
@@ -165,11 +165,11 @@ export default function ERechnungImport() {
           textAlign: "center", cursor: "pointer", background: NAVY2, transition: "border-color .2s",
         }}
       >
-        <div style={{ fontSize: 40, marginBottom: 10 }}>📥</div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+        <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 10 }}>📥</div>
+        <div style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, marginBottom: 4 }}>
           E-Rechnung hierher ziehen oder klicken
         </div>
-        <div style={{ fontSize: 13, color: DIM }}>
+        <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM }}>
           Unterstützt: .xml (XRechnung / ZUGFeRD-CII / UBL) und .pdf (ZUGFeRD)
         </div>
         <input
@@ -182,19 +182,19 @@ export default function ERechnungImport() {
       </div>
 
       {dateiName && (
-        <div style={{ marginTop: 12, fontSize: 13, color: DIM }}>
+        <div style={{ marginTop: 12, fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM }}>
           Datei: <span style={{ color: TEXT }}>{dateiName}</span>
         </div>
       )}
 
       {laden && (
-        <div style={{ marginTop: 20, color: CYAN, fontSize: 14 }}>▸ Rechnung wird ausgelesen…</div>
+        <div style={{ marginTop: 20, color: CYAN, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>▸ Rechnung wird ausgelesen…</div>
       )}
 
       {fehler && (
         <div style={{
           marginTop: 20, background: "rgba(255,82,82,0.08)", border: "1px solid rgba(255,82,82,0.3)",
-          borderRadius: 10, padding: "14px 16px", color: "#ff9a9a", fontSize: 14,
+          borderRadius: 10, padding: "14px 16px", color: "#ff9a9a", fontSize: 'clamp(14px, 1.25vw, 20px)',
         }}>
           ⚠ {fehler}
         </div>
@@ -205,7 +205,7 @@ export default function ERechnungImport() {
           {/* Archivierungs-Status */}
           {archivStatus && (
             <div style={{
-              marginBottom: 18, borderRadius: 10, padding: "12px 16px", fontSize: 14,
+              marginBottom: 18, borderRadius: 10, padding: "12px 16px", fontSize: 'clamp(14px, 1.25vw, 20px)',
               background: archivStatus === "fehler" ? "rgba(255,82,82,0.08)" : "rgba(0,230,118,0.08)",
               border: `1px solid ${archivStatus === "fehler" ? "rgba(255,82,82,0.3)" : "rgba(0,230,118,0.3)"}`,
               color: archivStatus === "fehler" ? "#ff9a9a" : GRUEN,
@@ -220,24 +220,24 @@ export default function ERechnungImport() {
           {/* Kopfzeile */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: GOLD }}>
+              <div style={{ fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 900, color: GOLD }}>
                 {daten.rechnungsnummer || "— ohne Nummer —"}
               </div>
-              <div style={{ fontSize: 13, color: DIM }}>
+              <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM }}>
                 Format erkannt: <span style={{ color: CYAN }}>{daten.format}</span>
                 {daten.kleinunternehmer && <span style={{ color: GOLD }}> · Kleinunternehmer §19</span>}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, color: DIM, textTransform: "uppercase", letterSpacing: "0.1em" }}>Gesamtbetrag</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: TEXT }}>{geld(daten.brutto_summe, daten.waehrung)}</div>
+              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, textTransform: "uppercase", letterSpacing: "0.1em" }}>Gesamtbetrag</div>
+              <div style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 900, color: TEXT }}>{geld(daten.brutto_summe, daten.waehrung)}</div>
             </div>
           </div>
 
           {daten.warnungen && daten.warnungen.length > 0 && (
             <div style={{
               marginBottom: 18, background: "rgba(201,168,76,0.08)", border: `1px solid ${LINE}`,
-              borderRadius: 10, padding: "12px 16px", color: GOLD, fontSize: 13,
+              borderRadius: 10, padding: "12px 16px", color: GOLD, fontSize: 'clamp(13px, 1.13vw, 18px)',
             }}>
               ⚠ Hinweise: {daten.warnungen.join(" · ")}
             </div>
@@ -258,11 +258,11 @@ export default function ERechnungImport() {
 
           {/* Positionen */}
           <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
-            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${LINE}`, fontSize: 13, fontWeight: 700, color: CYAN, letterSpacing: "0.05em" }}>
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${LINE}`, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: CYAN, letterSpacing: "0.05em" }}>
               POSITIONEN ({daten.positionen.length})
             </div>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                 <thead>
                   <tr style={{ color: DIM, textAlign: "left" }}>
                     <th style={thStyle}>#</th>
@@ -297,13 +297,13 @@ export default function ERechnungImport() {
           <div style={{ maxWidth: 360, marginLeft: "auto", background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "16px 20px" }}>
             <SummeZeile label="Netto" wert={geld(daten.netto_summe, daten.waehrung)} />
             <SummeZeile label="Umsatzsteuer" wert={geld(daten.mwst_summe, daten.waehrung)} />
-            <div style={{ borderTop: `2px solid ${GOLD}`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 900 }}>
+            <div style={{ borderTop: `2px solid ${GOLD}`, marginTop: 8, paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 900 }}>
               <span>Gesamt</span><span>{geld(daten.brutto_summe, daten.waehrung)}</span>
             </div>
           </div>
 
           {daten.notizen && (
-            <div style={{ marginTop: 18, color: DIM, fontSize: 13 }}>
+            <div style={{ marginTop: 18, color: DIM, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Notiz: {daten.notizen}
             </div>
           )}
@@ -311,7 +311,7 @@ export default function ERechnungImport() {
           <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
             <button
               onClick={() => { setDaten(null); setDateiName(""); setFehler(""); setArchivStatus(""); setArchivInfo(""); }}
-              style={{ padding: "10px 18px", background: "transparent", color: CYAN, border: `1px solid ${CYAN}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
+              style={{ padding: "10px 18px", background: "transparent", color: CYAN, border: `1px solid ${CYAN}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)' }}
             >
               Weitere Rechnung einlesen
             </button>
@@ -322,24 +322,24 @@ export default function ERechnungImport() {
   );
 }
 
-const thStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${LINE}`, fontWeight: 600 };
+const thStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 'clamp(11px, 0.94vw, 15px)', textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${LINE}`, fontWeight: 600 };
 const tdStyle: React.CSSProperties = { padding: "10px 12px", borderBottom: "1px solid rgba(201,168,76,0.06)" };
 
 function ParteiKarte({ titel, p }: { titel: string; p: Partei }) {
   const leer = !p.name && !p.ort && !p.strasse;
   return (
     <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 12, padding: "14px 16px" }}>
-      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: DIM, marginBottom: 8 }}>{titel}</div>
+      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', textTransform: "uppercase", letterSpacing: "0.08em", color: DIM, marginBottom: 8 }}>{titel}</div>
       {leer ? (
-        <div style={{ color: DIM, fontSize: 13 }}>— keine Angaben —</div>
+        <div style={{ color: DIM, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>— keine Angaben —</div>
       ) : (
         <>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{p.name || "—"}</div>
-          {p.strasse && <div style={{ fontSize: 13, color: DIM }}>{p.strasse}</div>}
-          {(p.plz || p.ort) && <div style={{ fontSize: 13, color: DIM }}>{[p.plz, p.ort].filter(Boolean).join(" ")}{p.land ? `, ${p.land}` : ""}</div>}
-          {p.ust_idnr && <div style={{ fontSize: 12, color: DIM, marginTop: 4 }}>USt-IdNr.: {p.ust_idnr}</div>}
-          {p.steuernummer && <div style={{ fontSize: 12, color: DIM }}>Steuernr.: {p.steuernummer}</div>}
-          {p.email && <div style={{ fontSize: 12, color: DIM }}>{p.email}</div>}
+          <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, marginBottom: 2 }}>{p.name || "—"}</div>
+          {p.strasse && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM }}>{p.strasse}</div>}
+          {(p.plz || p.ort) && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM }}>{[p.plz, p.ort].filter(Boolean).join(" ")}{p.land ? `, ${p.land}` : ""}</div>}
+          {p.ust_idnr && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, marginTop: 4 }}>USt-IdNr.: {p.ust_idnr}</div>}
+          {p.steuernummer && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM }}>Steuernr.: {p.steuernummer}</div>}
+          {p.email && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM }}>{p.email}</div>}
         </>
       )}
     </div>
@@ -349,15 +349,15 @@ function ParteiKarte({ titel, p }: { titel: string; p: Partei }) {
 function Eck({ label, wert }: { label: string; wert: string }) {
   return (
     <div style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 10, padding: "12px 14px" }}>
-      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: DIM, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 700 }}>{wert}</div>
+      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', textTransform: "uppercase", letterSpacing: "0.06em", color: DIM, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700 }}>{wert}</div>
     </div>
   );
 }
 
 function SummeZeile({ label, wert }: { label: string; wert: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 14 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
       <span style={{ color: DIM }}>{label}</span><span>{wert}</span>
     </div>
   );

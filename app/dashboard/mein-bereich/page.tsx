@@ -383,8 +383,8 @@ export default function MeinBereichPage() {
     <div style={styles.page}>
       <div style={styles.topbar}>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span style={{ fontWeight: 900, letterSpacing: '0.15em', fontSize: 16 }}>ARGONAUT</span>
-          <span style={{ fontSize: 10, color: C.gold, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>Mein Bereich</span>
+          <span style={{ fontWeight: 900, letterSpacing: '0.15em', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>ARGONAUT</span>
+          <span style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.gold, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>Mein Bereich</span>
         </div>
         <button style={styles.ghostBtn} onClick={abmelden}>Abmelden</button>
       </div>
@@ -394,7 +394,7 @@ export default function MeinBereichPage() {
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>
-            <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil verknüpft</div>
+            <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil verknüpft</div>
             <div>Dieser Zugang ist noch keinem Mitarbeiter-Profil zugeordnet. Bitte wende dich an deinen Vorgesetzten.</div>
           </div>
         )}
@@ -438,7 +438,7 @@ export default function MeinBereichPage() {
                         {!s.gehen_um && <span style={{ color: C.green, fontWeight: 700 }}>● läuft</span>}
                       </div>
                     </div>
-                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: C.cyan }}>{dauerStr(nettoMin(s, zeitStand))}</div>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: C.cyan }}>{dauerStr(nettoMin(s, zeitStand))}</div>
                   </div>
                 ))}
               </div>
@@ -463,16 +463,16 @@ export default function MeinBereichPage() {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>
+                        <div style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text }}>
                           Schichtplan KW {kalenderwoche(montag)} · {wochenRange(montag)}
                         </div>
-                        <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 2 }}>
                           {istBestaetigt ? '✓ Du hast diesen Plan bestätigt.'
                             : istEinwand ? '⚠ Du hast einen Einwand gemeldet.'
                             : 'Bitte sieh dir deinen Plan an und bestätige ihn.'}
                         </div>
                         {istEinwand && bestaetigung?.kommentar && (
-                          <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Dein Einwand: {bestaetigung.kommentar}</div>
+                          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 4 }}>Dein Einwand: {bestaetigung.kommentar}</div>
                         )}
                       </div>
                       {!istBestaetigt && (
@@ -566,7 +566,7 @@ export default function MeinBereichPage() {
 
               {tausch.length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 13, color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Tausch-Anträge</div>
+                  <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, fontWeight: 600, marginBottom: 8 }}>Meine Tausch-Anträge</div>
                   {tausch.map((t) => {
                     const s = schichten.find((x) => x.id === t.schicht_id);
                     return (
@@ -583,7 +583,7 @@ export default function MeinBereichPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                           <StatusBadge status={t.status} />
                           {t.status === 'beantragt' && (
-                            <button style={{ ...styles.ghostBtn, padding: '6px 12px', fontSize: 13 }} onClick={() => antragZurueckziehen(t.id)}>
+                            <button style={{ ...styles.ghostBtn, padding: '6px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }} onClick={() => antragZurueckziehen(t.id)}>
                               Zurückziehen
                             </button>
                           )}
@@ -602,7 +602,7 @@ export default function MeinBereichPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <Field label="Von"><input type="date" style={styles.input} value={uVon} onChange={(e) => setUVon(e.target.value)} /></Field>
                   <Field label="Bis"><input type="date" style={styles.input} value={uBis} onChange={(e) => setUBis(e.target.value)} /></Field>
-                  {uVon && uBis && <div style={{ fontSize: 12, color: C.textDim }}>= {arbeitstage(uVon, uBis, bundesland)} Arbeitstage (Wochenenden & Feiertage zählen nicht)</div>}
+                  {uVon && uBis && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>= {arbeitstage(uVon, uBis, bundesland)} Arbeitstage (Wochenenden & Feiertage zählen nicht)</div>}
                   <button style={{ ...styles.primaryBtn, opacity: uSaving ? 0.6 : 1 }} onClick={urlaubBeantragen} disabled={uSaving}>{uSaving ? 'Sendet …' : 'Antrag einreichen'}</button>
                 </div>
               </section>
@@ -676,8 +676,8 @@ export default function MeinBereichPage() {
                   return (
                     <div key={a.key} style={{ marginBottom: 18 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <div style={{ fontWeight: 700, color: C.gold, fontSize: 14 }}>{a.label}</div>
-                        <div style={{ fontSize: 12, color: C.textDim }}>{erledigtN}/{liste.length} erledigt</div>
+                        <div style={{ fontWeight: 700, color: C.gold, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{a.label}</div>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{erledigtN}/{liste.length} erledigt</div>
                       </div>
                       {liste.map((c) => (
                         <div key={c.id} style={styles.row}>
@@ -782,56 +782,56 @@ function LegendeMini({ farbe, text, gestrichelt }: { farbe?: string; text: strin
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 14, height: 14, borderRadius: 4, display: 'inline-block', background: gestrichelt ? 'repeating-linear-gradient(45deg, rgba(201,168,76,0.3), rgba(201,168,76,0.3) 4px, transparent 4px, transparent 8px)' : farbe, border: gestrichelt ? `1px dashed ${C.gold}` : 'none' }} />
-      <span style={{ fontSize: 12, color: C.textDim }}>{text}</span>
+      <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>{text}</span>
     </div>
   );
 }
 const kStyles: Record<string, CSSProperties> = {
-  nav: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '4px 12px', color: C.text, fontSize: 16, cursor: 'pointer', lineHeight: 1 },
-  today: { background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 8, padding: '6px 12px', color: C.cyan, fontSize: 12, fontWeight: 600, cursor: 'pointer' },
+  nav: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 8, padding: '4px 12px', color: C.text, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: 'pointer', lineHeight: 1 },
+  today: { background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 8, padding: '6px 12px', color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, cursor: 'pointer' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 },
-  wtHead: { textAlign: 'center', fontSize: 11, color: C.textDim, fontWeight: 600, padding: '2px 0' },
-  tag: { aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontSize: 13, color: C.textDim, background: 'rgba(255,255,255,0.03)' },
+  wtHead: { textAlign: 'center', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, fontWeight: 600, padding: '2px 0' },
+  tag: { aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, background: 'rgba(255,255,255,0.03)' },
   heute: { outline: `2px solid ${C.cyan}`, outlineOffset: -2 },
 };
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={{ background: accent ? `${accent}12` : C.cardBg, border: `1px solid ${accent ? `${accent}33` : C.line}`, borderRadius: 12, padding: '16px 18px' }}>
-      <div style={{ fontSize: 12, color: C.textDim, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: accent ?? C.text }}>{value}</div>
+      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 700, color: accent ?? C.text }}>{value}</div>
     </div>
   );
 }
 function StatusBadge({ status }: { status: string }) {
   const col = statusColor(status);
-  return <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: col, background: `${col}1A`, border: `1px solid ${col}40`, flexShrink: 0 }}>{STATUS_LABEL[status] || status}</span>;
+  return <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, color: col, background: `${col}1A`, border: `1px solid ${col}40`, flexShrink: 0 }}>{STATUS_LABEL[status] || status}</span>;
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ fontSize: 12, color: C.textDim, fontWeight: 600 }}>{label}</span>{children}</label>;
+  return <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600 }}>{label}</span>{children}</label>;
 }
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif" },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 28px', borderBottom: `1px solid ${C.line}`, background: 'rgba(10,22,40,0.95)', position: 'sticky', top: 0, zIndex: 10 },
   wrap: { maxWidth: 900, margin: '0 auto', padding: '32px 28px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 32, fontWeight: 700, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 15 },
-  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 15 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(32px, 2.81vw, 45px)', fontWeight: 700, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' },
   statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 22 },
   twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 },
   card: { background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 14, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, margin: '0 0 14px', color: C.text },
-  input: { background: C.inputBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '100%', boxSizing: 'border-box' },
-  fileInput: { color: C.textDim, fontSize: 13 },
-  primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  linkBtn: { display: 'inline-block', background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 10, padding: '8px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' },
-  infoMsg: { marginBottom: 18, color: C.text, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
-  listHint: { color: C.textDim, fontSize: 14, padding: '8px 0' },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
+  input: { background: C.inputBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '100%', boxSizing: 'border-box' },
+  fileInput: { color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' },
+  primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  linkBtn: { display: 'inline-block', background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.35)`, borderRadius: 10, padding: '8px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' },
+  infoMsg: { marginBottom: 18, color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
+  listHint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '8px 0' },
   row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' },
-  rowName: { fontWeight: 600, color: C.text, fontSize: 14 },
-  rowMeta: { color: C.textDim, fontSize: 12, marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  katBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, color: C.gold, background: 'rgba(201,168,76,0.12)', border: `1px solid ${C.line}` },
+  rowName: { fontWeight: 600, color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  rowMeta: { color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  katBadge: { display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 600, color: C.gold, background: 'rgba(201,168,76,0.12)', border: `1px solid ${C.line}` },
 };

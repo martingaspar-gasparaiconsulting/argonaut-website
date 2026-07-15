@@ -22,10 +22,10 @@ function KiCallBar({ used, limit }: { used: number; limit: number }) {
     <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '14px', padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div>
-          <p style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 4px' }}>KI-Calls diesen Monat</p>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{used.toLocaleString('de-DE')} von {limit.toLocaleString('de-DE')} verwendet</p>
+          <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, color: '#FFFFFF', margin: '0 0 4px' }}>KI-Calls diesen Monat</p>
+          <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{used.toLocaleString('de-DE')} von {limit.toLocaleString('de-DE')} verwendet</p>
         </div>
-        <span style={{ fontSize: '12px', fontWeight: 700, color: barColor, background: `${barColor}22`, border: `1px solid ${barColor}55`, borderRadius: '999px', padding: '4px 12px' }}>
+        <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: barColor, background: `${barColor}22`, border: `1px solid ${barColor}55`, borderRadius: '999px', padding: '4px 12px' }}>
           {pct}% · {label}
         </span>
       </div>
@@ -77,7 +77,7 @@ export default async function StartPage() {
     <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
 
       <section style={{ marginBottom: '32px' }}>
-        <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Einrichtung & Verwaltung</p>
+        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Einrichtung & Verwaltung</p>
         <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: '0 0 10px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>System einrichten</h1>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0 }}>Onboarding, Verbrauch und Abo — alles zum Start und zur laufenden Verwaltung an einem Ort.</p>
       </section>
@@ -102,20 +102,20 @@ export default async function StartPage() {
               <div style={{
                 width: '48px', height: '48px', borderRadius: '50%',
                 background: 'rgba(201,168,76,0.2)', border: '2px solid rgba(201,168,76,0.5)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(22px, 1.94vw, 31px)', flexShrink: 0,
               }}>⚡</div>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 800, color: '#C9A84C' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800, color: '#C9A84C' }}>
                   System einrichten — Erstgespräch in 24h
                 </p>
-                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+                <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)' }}>
                   Teilen Sie uns Ihre Tools und Zugangsdaten mit — wir richten alles automatisch ein.
                 </p>
               </div>
             </div>
             <div style={{
               padding: '12px 28px', background: '#C9A84C', color: '#0A1628',
-              borderRadius: '8px', fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap',
+              borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: 'nowrap',
             }}>
               Jetzt einrichten →
             </div>
@@ -135,10 +135,10 @@ export default async function StartPage() {
       <section>
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '14px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px 0' }}>Ihr Abonnement verwalten</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Rechnungen, Zahlungsmethode und Kündigung — alles an einem Ort.</p>
+            <h3 style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px 0' }}>Ihr Abonnement verwalten</h3>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Rechnungen, Zahlungsmethode und Kündigung — alles an einem Ort.</p>
           </div>
-          <a href="https://billing.stripe.com/p/login/bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          <a href="https://billing.stripe.com/p/login/bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             Abo verwalten →
           </a>
         </div>

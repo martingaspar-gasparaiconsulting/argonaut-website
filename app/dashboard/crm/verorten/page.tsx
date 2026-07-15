@@ -280,7 +280,7 @@ export default function VerortenPage() {
                 {/* Fortschritt */}
                 {(stand.laeuft || stand.erledigt > 0 || stand.abgebrochen) && (
                   <div style={{ marginTop: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
                       <span style={{ color: stand.abgebrochen ? C.warn : C.textDim }}>
                         {stand.wartetBis
                           ? `Kartendienst gedrosselt — weiter in ${wartesekunden} s`
@@ -329,7 +329,7 @@ export default function VerortenPage() {
                     <span style={{ flex: '1 1 180px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.name}
                     </span>
-                    <span style={{ color: C.textDim, fontSize: 12, flex: '1 1 220px' }}>{p.meldung}</span>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', flex: '1 1 220px' }}>{p.meldung}</span>
                   </div>
                 ))}
               </div>
@@ -352,29 +352,29 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 18 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
-  zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 18 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   balkenSpur: { height: 10, background: C.navy, borderRadius: 999, overflow: 'hidden', border: `1px solid ${C.border}` },
   balken: { height: '100%', borderRadius: 999, transition: 'width 0.3s ease' },
 
-  protokollZeile: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, padding: '5px 0', borderBottom: '1px solid rgba(143,163,190,0.06)', flexWrap: 'wrap' },
+  protokollZeile: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '5px 0', borderBottom: '1px solid rgba(143,163,190,0.06)', flexWrap: 'wrap' },
 
   aktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0', lineHeight: 1.6 },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  infoBox: { marginTop: 8, padding: '12px 14px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginTop: 14, marginBottom: 14, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0', lineHeight: 1.6 },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  infoBox: { marginTop: 8, padding: '12px 14px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginTop: 14, marginBottom: 14, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
 };

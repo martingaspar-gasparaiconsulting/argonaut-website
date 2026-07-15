@@ -52,8 +52,8 @@ export default async function EinstellungenPage() {
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 80px' }}>
         <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 8px' }}>Firmenprofil</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.6, maxWidth: '640px' }}>
+          <h1 style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 900, margin: '0 0 8px' }}>Firmenprofil</h1>
+          <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.6, maxWidth: '640px' }}>
             Diese Daten erscheinen im Briefkopf Ihrer Angebote, Rechnungen und weiterer Dokumente. Einmal ausfüllen – ARGONAUT verwendet sie automatisch für alle erzeugten Dokumente.
           </p>
         </div>
@@ -85,23 +85,23 @@ function MitarbeiterKonto({ email, mitarbeiter }: { email: string; mitarbeiter: 
     marginBottom: '18px',
   }
   const label: React.CSSProperties = {
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: 'rgba(255,255,255,0.45)',
     textTransform: 'uppercase',
     letterSpacing: '1px',
     marginBottom: '6px',
   }
-  const wert: React.CSSProperties = { fontSize: '15px', fontWeight: 600 }
+  const wert: React.CSSProperties = { fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600 }
 
   return (
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 80px' }}>
         <div style={{ marginBottom: '28px' }}>
-          <div style={{ fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', color: '#C9A84C', fontWeight: 600, marginBottom: '6px' }}>
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: '2px', textTransform: 'uppercase', color: '#C9A84C', fontWeight: 600, marginBottom: '6px' }}>
             ARGONAUT OS
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 8px' }}>Mein Konto</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.6, maxWidth: '640px' }}>
+          <h1 style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 900, margin: '0 0 8px' }}>Mein Konto</h1>
+          <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.6, maxWidth: '640px' }}>
             Ihre persönlichen Zugangsdaten. Firmendaten, Bankverbindung und Systemeinstellungen pflegt der Betriebsinhaber.
           </p>
         </div>
@@ -114,14 +114,14 @@ function MitarbeiterKonto({ email, mitarbeiter }: { email: string; mitarbeiter: 
             </div>
             <div>
               <div style={label}>Anmeldung</div>
-              <div style={{ ...wert, fontFamily: 'monospace', fontSize: '14px' }}>{email}</div>
+              <div style={{ ...wert, fontFamily: 'monospace', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{email}</div>
             </div>
           </div>
         </div>
 
         <div style={karte}>
           <div style={{ ...label, marginBottom: '10px' }}>Passwort</div>
-          <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.6)', margin: '0 0 14px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: 'rgba(255,255,255,0.6)', margin: '0 0 14px', lineHeight: 1.6 }}>
             Zum Ändern melden Sie sich ab und wählen auf der Anmeldeseite „Passwort vergessen". Sie erhalten eine E-Mail an {email}.
           </p>
           <a
@@ -133,7 +133,7 @@ function MitarbeiterKonto({ email, mitarbeiter }: { email: string; mitarbeiter: 
               border: '1px solid rgba(201,168,76,0.4)',
               borderRadius: '10px',
               padding: '9px 16px',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               textDecoration: 'none',
             }}
@@ -143,7 +143,7 @@ function MitarbeiterKonto({ email, mitarbeiter }: { email: string; mitarbeiter: 
         </div>
 
         <div style={{ ...karte, background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.22)' }}>
-          <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.75)', margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: 'rgba(255,255,255,0.75)', margin: 0, lineHeight: 1.6 }}>
             Ihre Arbeitszeiten, Urlaubsanträge und Dokumente finden Sie unter{' '}
             <a href="/dashboard/mein-bereich" style={{ color: '#00e5ff', fontWeight: 600 }}>Mein Bereich</a>.
           </p>

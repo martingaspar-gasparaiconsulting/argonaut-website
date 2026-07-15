@@ -60,7 +60,7 @@ function statusStil(status: string): React.CSSProperties {
     border: `1px solid ${s.c}55`,
     padding: '4px 12px',
     borderRadius: '999px',
-    fontSize: '13px',
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -336,12 +336,12 @@ export default function BriefEditorPage() {
     background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.14)',
     color: '#fff',
-    fontSize: '14px',
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
     display: 'block',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: 'rgba(255,255,255,0.6)',
     marginBottom: '4px',
     fontWeight: 600,
@@ -360,7 +360,7 @@ export default function BriefEditorPage() {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 4px' }}>
         <a
           href="/dashboard/korrespondenz"
-          style={{ color: GOLD, textDecoration: 'none', fontSize: '14px' }}
+          style={{ color: GOLD, textDecoration: 'none', fontSize: 'clamp(14px, 1.25vw, 20px)' }}
         >
           ← Zurück zur Korrespondenz
         </a>
@@ -383,7 +383,7 @@ export default function BriefEditorPage() {
         style={{
           color: GOLD,
           textDecoration: 'none',
-          fontSize: '14px',
+          fontSize: 'clamp(14px, 1.25vw, 20px)',
           display: 'inline-block',
           marginBottom: '16px',
         }}
@@ -405,7 +405,7 @@ export default function BriefEditorPage() {
           <span
             style={{
               color: GOLD,
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               fontFamily: 'monospace',
             }}
@@ -416,7 +416,7 @@ export default function BriefEditorPage() {
             {STATUS_LABEL[brief.status] || brief.status}
           </span>
         </div>
-        <h1 style={{ color: '#fff', fontSize: '26px', fontWeight: 700, margin: 0 }}>
+        <h1 style={{ color: '#fff', fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 700, margin: 0 }}>
           {betreff || 'Neuer Brief'}
         </h1>
       </div>
@@ -469,7 +469,7 @@ export default function BriefEditorPage() {
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  fontSize: '13px',
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                   cursor: aktiv || aktion ? 'default' : 'pointer',
                   border: aktiv
@@ -498,7 +498,7 @@ export default function BriefEditorPage() {
               background: GOLD,
               color: NAVY,
               border: 'none',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               cursor: pdfLaden || aktion ? 'not-allowed' : 'pointer',
               opacity: pdfLaden || aktion ? 0.6 : 1,
@@ -512,7 +512,7 @@ export default function BriefEditorPage() {
           <div
             style={{
               marginTop: '12px',
-              fontSize: '12.5px',
+              fontSize: 'clamp(12.5px, 1.13vw, 18px)',
               color: '#b8860b',
               background: 'rgba(184,134,11,0.1)',
               border: '1px solid rgba(184,134,11,0.3)',
@@ -536,7 +536,7 @@ export default function BriefEditorPage() {
       >
         {/* LINKS: Empfänger + Meta */}
         <div style={karte}>
-          <div style={{ ...labelStil, marginBottom: '12px', fontSize: '13px' }}>
+          <div style={{ ...labelStil, marginBottom: '12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             BRIEFKOPF
           </div>
 
@@ -589,7 +589,7 @@ export default function BriefEditorPage() {
             {aussteller && String(aussteller.name || '').trim() ? (
               <div
                 style={{
-                  fontSize: '13px',
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   color: 'rgba(255,255,255,0.75)',
                   lineHeight: 1.5,
                 }}
@@ -606,7 +606,7 @@ export default function BriefEditorPage() {
                 {aussteller.email && <div>{aussteller.email}</div>}
               </div>
             ) : (
-              <div style={{ fontSize: '13px', color: '#b8860b' }}>
+              <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#b8860b' }}>
                 ⚠ Noch nicht hinterlegt (Einstellungen → Firmendaten)
               </div>
             )}
@@ -615,7 +615,7 @@ export default function BriefEditorPage() {
 
         {/* RECHTS: Betreff + Brieftext */}
         <div style={karte}>
-          <div style={{ ...labelStil, marginBottom: '12px', fontSize: '13px' }}>
+          <div style={{ ...labelStil, marginBottom: '12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             INHALT
           </div>
 
@@ -649,7 +649,7 @@ export default function BriefEditorPage() {
                 style={{
                   padding: '5px 12px',
                   borderRadius: '6px',
-                  fontSize: '12px',
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   border: `1px solid ${GOLD}66`,
@@ -673,7 +673,7 @@ export default function BriefEditorPage() {
               >
                 <div
                   style={{
-                    fontSize: '12.5px',
+                    fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                     color: 'rgba(255,255,255,0.65)',
                     marginBottom: '8px',
                   }}
@@ -703,7 +703,7 @@ export default function BriefEditorPage() {
                     background: GOLD,
                     color: NAVY,
                     border: 'none',
-                    fontSize: '13px',
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                     fontWeight: 700,
                     cursor:
                       kiLaden || !kiStichworte.trim()
@@ -719,7 +719,7 @@ export default function BriefEditorPage() {
                 {brieftext.trim() && (
                   <span
                     style={{
-                      fontSize: '11.5px',
+                      fontSize: 'clamp(11.5px, 1vw, 16px)',
                       color: 'rgba(255,255,255,0.45)',
                       marginLeft: '10px',
                     }}
@@ -766,7 +766,7 @@ export default function BriefEditorPage() {
             background: 'transparent',
             color: '#ef5350',
             border: '1px solid #ef535055',
-            fontSize: '13px',
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -783,7 +783,7 @@ export default function BriefEditorPage() {
             background: GOLD,
             color: NAVY,
             border: 'none',
-            fontSize: '15px',
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
             fontWeight: 700,
             cursor: aktion ? 'not-allowed' : 'pointer',
             opacity: aktion ? 0.6 : 1,
@@ -822,7 +822,7 @@ export default function BriefEditorPage() {
             <h2
               style={{
                 color: '#ef5350',
-                fontSize: '18px',
+                fontSize: 'clamp(18px, 1.56vw, 25px)',
                 fontWeight: 700,
                 margin: '0 0 12px 0',
               }}
@@ -832,7 +832,7 @@ export default function BriefEditorPage() {
             <p
               style={{
                 color: 'rgba(255,255,255,0.7)',
-                fontSize: '14px',
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 margin: '0 0 20px 0',
                 lineHeight: 1.5,
               }}
@@ -852,7 +852,7 @@ export default function BriefEditorPage() {
                   background: 'transparent',
                   color: 'rgba(255,255,255,0.7)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                   cursor: aktion ? 'not-allowed' : 'pointer',
                 }}
@@ -868,7 +868,7 @@ export default function BriefEditorPage() {
                   background: '#ef5350',
                   color: '#fff',
                   border: 'none',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 700,
                   cursor: aktion ? 'not-allowed' : 'pointer',
                   opacity: aktion ? 0.6 : 1,

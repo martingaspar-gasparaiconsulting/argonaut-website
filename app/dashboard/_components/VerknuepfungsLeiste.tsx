@@ -89,11 +89,11 @@ const styles: Record<string, CSSProperties> = {
     background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12,
     padding: '10px 14px', marginTop: 16,
   },
-  label: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: C.textDim, fontWeight: 700, marginRight: 2 },
+  label: { fontSize: 'clamp(11px, 0.94vw, 15px)', letterSpacing: 1, textTransform: 'uppercase', color: C.textDim, fontWeight: 700, marginRight: 2 },
   chip: {
     display: 'inline-block', textDecoration: 'none',
     background: 'rgba(0,229,255,0.10)', color: C.cyan,
     border: `1px solid rgba(0,229,255,0.30)`, borderRadius: 999,
-    padding: '6px 13px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+    padding: '6px 13px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, whiteSpace: 'nowrap',
   },
 };

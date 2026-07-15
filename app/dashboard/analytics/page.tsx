@@ -95,7 +95,7 @@ export default function AnalyticsCockpit() {
         <h1
           style={{
             color: '#C9A84C',
-            fontSize: 30,
+            fontSize: 'clamp(30px, 2.63vw, 42px)',
             fontWeight: 800,
             margin: 0,
             display: 'flex',
@@ -108,7 +108,7 @@ export default function AnalyticsCockpit() {
         <p
           style={{
             color: '#94a3b8',
-            fontSize: 15,
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
             marginTop: 6,
             maxWidth: 720,
             lineHeight: 1.5,
@@ -132,14 +132,14 @@ export default function AnalyticsCockpit() {
             className="analytics-kachel"
             style={{ ...kachelStil, borderTop: `3px solid ${r.akzent}` }}
           >
-            <div style={{ fontSize: 32, lineHeight: 1 }}>{r.icon}</div>
-            <div style={{ color: '#e2e8f0', fontSize: 18, fontWeight: 700 }}>
+            <div style={{ fontSize: 'clamp(32px, 2.81vw, 45px)', lineHeight: 1 }}>{r.icon}</div>
+            <div style={{ color: '#e2e8f0', fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700 }}>
               {r.titel}
             </div>
             <div
               style={{
                 color: '#94a3b8',
-                fontSize: 13.5,
+                fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                 lineHeight: 1.5,
               }}
             >
@@ -148,7 +148,7 @@ export default function AnalyticsCockpit() {
             <div
               style={{
                 color: r.akzent,
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 fontWeight: 700,
                 marginTop: 'auto',
               }}

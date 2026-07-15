@@ -739,7 +739,7 @@ export default function RechnungDetail() {
     return (
       <Rahmen>
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🧾</div>
+          <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🧾</div>
           <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>
             Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
@@ -781,7 +781,7 @@ export default function RechnungDetail() {
               color: C.textDim,
               border: "none",
               cursor: "pointer",
-              fontSize: 13,
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               padding: 0,
               marginBottom: 8,
             }}
@@ -791,7 +791,7 @@ export default function RechnungDetail() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.5px",
@@ -805,7 +805,7 @@ export default function RechnungDetail() {
             <span
               style={{
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 fontWeight: 700,
                 background: `${stCfg.farbe}22`,
                 color: stCfg.farbe,
@@ -817,11 +817,11 @@ export default function RechnungDetail() {
               {stCfg.icon} {stCfg.label}
             </span>
           </h1>
-          <p style={{ color: C.textDim, fontSize: 14, margin: "8px 0 0" }}>
+          <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', margin: "8px 0 0" }}>
             {empfaengerName}
           </p>
           {faelligInfo && (
-            <p style={{ color: faelligInfo.farbe, fontSize: 13, fontWeight: 600, margin: "6px 0 0" }}>
+            <p style={{ color: faelligInfo.farbe, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, margin: "6px 0 0" }}>
               ⏱ {faelligInfo.text}
             </p>
           )}
@@ -837,7 +837,7 @@ export default function RechnungDetail() {
               border: `1px solid ${C.gold}77`,
               borderRadius: 10,
               padding: "11px 18px",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               cursor: pdfLaedt ? "wait" : "pointer",
               fontFamily: "'DM Sans', sans-serif",
@@ -870,7 +870,7 @@ export default function RechnungDetail() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
             <span
               style={{
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontWeight: 700,
                 background: `${stCfg.farbe}22`,
                 color: stCfg.farbe,
@@ -881,7 +881,7 @@ export default function RechnungDetail() {
             >
               {stCfg.icon} {stCfg.label}
             </span>
-            <span style={{ color: C.textDim, fontSize: 12.5 }}>
+            <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
               wird automatisch aus den erfassten Zahlungen berechnet
             </span>
             <div style={{ flex: 1 }} />
@@ -909,7 +909,7 @@ export default function RechnungDetail() {
         <Karte titel="Zahlungen">
           {/* Liste vorhandener Zahlungen */}
           {zahlungen.length === 0 ? (
-            <p style={{ color: C.textDim, fontSize: 14, margin: "0 0 16px" }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', margin: "0 0 16px" }}>
               Noch keine Zahlung erfasst.
             </p>
           ) : (
@@ -924,7 +924,7 @@ export default function RechnungDetail() {
                     alignItems: "center",
                     padding: "10px 0",
                     borderBottom: `1px solid ${C.border}`,
-                    fontSize: 13.5,
+                    fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                     minWidth: 520,
                   }}
                 >
@@ -951,7 +951,7 @@ export default function RechnungDetail() {
                       border: "none",
                       color: C.textDim,
                       cursor: "pointer",
-                      fontSize: 15,
+                      fontSize: 'clamp(15px, 1.31vw, 21px)',
                     }}
                   >
                     🗑
@@ -1009,7 +1009,7 @@ export default function RechnungDetail() {
               </button>
             </div>
             {zahlungInfo.offen > 0 && (
-              <p style={{ color: C.textDim, fontSize: 12, margin: "10px 2px 0" }}>
+              <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', margin: "10px 2px 0" }}>
                 Tipp: Für die vollständige Bezahlung {geld(zahlungInfo.offen, waehrung)} eintragen.
               </p>
             )}
@@ -1065,11 +1065,11 @@ export default function RechnungDetail() {
                 onChange={(e) => aendern(setKleinunternehmer, e.target.checked)}
                 style={{ width: 18, height: 18, accentColor: C.gold, cursor: "pointer" }}
               />
-              <span style={{ fontSize: 14, fontWeight: 600 }}>Kleinunternehmer nach §19 UStG</span>
+              <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>Kleinunternehmer nach §19 UStG</span>
             </label>
           </div>
           {kleinunternehmer && (
-            <p style={{ color: C.textDim, fontSize: 12.5, margin: "10px 2px 0", lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "10px 2px 0", lineHeight: 1.5 }}>
               Auf der Rechnung wird keine Umsatzsteuer ausgewiesen. Es erscheint der Hinweis:
               „Gemäß §19 UStG wird keine Umsatzsteuer berechnet."
             </p>
@@ -1097,7 +1097,7 @@ export default function RechnungDetail() {
           </div>
 
           {gesperrt && (
-            <p style={{ color: C.warn, fontSize: 12.5, margin: "0 0 14px" }}>
+            <p style={{ color: C.warn, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "0 0 14px" }}>
               {status === "bezahlt"
                 ? "Diese Rechnung ist als bezahlt markiert und schreibgeschützt. Für Änderungen bitte stornieren und neu erstellen."
                 : "Stornierte Rechnung – schreibgeschützt. Zum Bearbeiten reaktivieren."}
@@ -1105,7 +1105,7 @@ export default function RechnungDetail() {
           )}
 
           {zeilen.length === 0 ? (
-            <p style={{ color: C.textDim, fontSize: 14, padding: "16px 0" }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: "16px 0" }}>
               Noch keine Positionen. {!gesperrt && "Füge oben eine hinzu."}
             </p>
           ) : (
@@ -1131,11 +1131,11 @@ export default function RechnungDetail() {
                   </datalist>
                   <input value={z.einzelpreis} disabled={gesperrt} onChange={(e) => zeileAendern(z.id, "einzelpreis", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
                   <input value={kleinunternehmer ? "0" : z.mwst_satz} disabled={gesperrt || kleinunternehmer} onChange={(e) => zeileAendern(z.id, "mwst_satz", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right", opacity: kleinunternehmer ? 0.5 : 1 }} />
-                  <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600, alignSelf: "center", color: C.cyan }}>
+                  <div style={{ textAlign: "right", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, alignSelf: "center", color: C.cyan }}>
                     {geld(zeileNetto(z), waehrung)}
                   </div>
                   {!gesperrt ? (
-                    <button onClick={() => zeileLoeschen(z.id)} title="Position löschen" style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 15, alignSelf: "center" }}>
+                    <button onClick={() => zeileLoeschen(z.id)} title="Position löschen" style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 'clamp(15px, 1.31vw, 21px)', alignSelf: "center" }}>
                       🗑
                     </button>
                   ) : (
@@ -1176,7 +1176,7 @@ export default function RechnungDetail() {
                   justifyContent: "space-between",
                   alignItems: "baseline",
                   padding: "6px 0",
-                  fontSize: 13.5,
+                  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                   borderBottom: `1px solid ${C.border}`,
                 }}
               >
@@ -1186,14 +1186,14 @@ export default function RechnungDetail() {
                 <span style={{ fontWeight: 700, color: C.cyan }}>{geld(g.steuer, waehrung)}</span>
               </div>
             ))}
-            <p style={{ color: C.textDim, fontSize: 11.5, margin: "12px 2px 0", lineHeight: 1.55 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', margin: "12px 2px 0", lineHeight: 1.55 }}>
               Die Steuer wird je Steuersatz auf die Gruppensumme gerechnet — so verlangt es § 14 Abs. 4 Nr. 7 und 8 UStG.
               {summen.gruppen.length > 1 && " Diese Aufstellung erscheint unverändert auf dem Rechnungs-PDF."}
             </p>
           </div>
         )}
 
-        <p style={{ color: C.textDim, fontSize: 12, marginTop: 14 }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 14 }}>
           Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
       </Karte>
@@ -1220,7 +1220,7 @@ export default function RechnungDetail() {
             padding: "12px 16px",
             color: C.danger,
             marginTop: 20,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           ⚠️ {fehler}
@@ -1260,15 +1260,15 @@ function Karte({ titel, children }: { titel: string; children: React.ReactNode }
 function SummeFeld({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
-      <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -1278,7 +1278,7 @@ const sektionLabel: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "0 0 6px",
 };
@@ -1290,7 +1290,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "11px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",
@@ -1302,7 +1302,7 @@ const btnGold: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 20px",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1314,7 +1314,7 @@ const btnKlein: React.CSSProperties = {
   border: `1px solid ${C.gold}77`,
   borderRadius: 8,
   padding: "7px 14px",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1326,7 +1326,7 @@ const stornoBtn: React.CSSProperties = {
   border: `1px solid ${C.danger}55`,
   borderRadius: 8,
   padding: "6px 12px",
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1338,7 +1338,7 @@ const reaktivierBtn: React.CSSProperties = {
   border: `1px solid ${C.cyan}55`,
   borderRadius: 8,
   padding: "6px 12px",
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1353,7 +1353,7 @@ const posKopf: React.CSSProperties = {
   padding: "0 0 10px",
   borderBottom: `1px solid ${C.border}`,
   color: C.textDim,
-  fontSize: 11.5,
+  fontSize: 'clamp(11.5px, 1vw, 16px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.4px",
@@ -1376,7 +1376,7 @@ const zellInput: React.CSSProperties = {
   borderRadius: 8,
   padding: "9px 10px",
   color: "#fff",
-  fontSize: 13.5,
+  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",

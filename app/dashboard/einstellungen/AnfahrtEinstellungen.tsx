@@ -565,7 +565,7 @@ export default function AnfahrtEinstellungen() {
             ? '✓ Anfahrtsberechnung ist einsatzbereit'
             : '· Anfahrtsberechnung noch nicht einsatzbereit'}
         </span>
-        <span style={{ color: bereitFuerAnfahrt ? (routeExakt ? C.green : C.warn) : C.textDim, fontSize: 12.5 }}>
+        <span style={{ color: bereitFuerAnfahrt ? (routeExakt ? C.green : C.warn) : C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
           {!bereitFuerAnfahrt
             ? 'Es fehlt der Betriebsstandort.'
             : routeExakt
@@ -586,7 +586,7 @@ export default function AnfahrtEinstellungen() {
             <div style={styles.cardKopf}>
               <span style={styles.cardTitel}>📍 Betriebsstandort</span>
               {standort?.geocode_status && (
-                <span style={{ color: ungenau || standort.geocode_status === 'fehlgeschlagen' ? C.warn : C.green, fontSize: 12.5 }}>
+                <span style={{ color: ungenau || standort.geocode_status === 'fehlgeschlagen' ? C.warn : C.green, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                   {standortStatusText(standort.geocode_status)}
                 </span>
               )}
@@ -636,8 +636,8 @@ export default function AnfahrtEinstellungen() {
             {/* ---- B1-3e: Koordinaten von Hand ---- */}
             {manuellAuf && standort && (
               <div style={styles.sektion}>
-                <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 4 }}>Koordinaten von Hand setzen</div>
-                <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 14px', lineHeight: 1.55 }}>
+                <div style={{ ...styles.cardTitel, fontSize: 'clamp(14px, 1.25vw, 20px)', marginBottom: 4 }}>Koordinaten von Hand setzen</div>
+                <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '0 0 14px', lineHeight: 1.55 }}>
                   Funktioniert ohne Kartendienst. In einer beliebigen Online-Karte den Punkt suchen,
                   die beiden Zahlen ablesen und hier eintragen. Der Breitengrad ist in Deutschland
                   die größere Zahl (etwa 47 bis 55).
@@ -688,7 +688,7 @@ export default function AnfahrtEinstellungen() {
             <div style={styles.cardKopf}>
               <span style={styles.cardTitel}>🔑 OpenRouteService</span>
               {schluessel.vorhanden && (
-                <span style={{ color: statusFarbe(schluessel.pruef_status), fontSize: 12.5 }}>
+                <span style={{ color: statusFarbe(schluessel.pruef_status), fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                   {statusText(schluessel.pruef_status)}
                 </span>
               )}
@@ -702,14 +702,14 @@ export default function AnfahrtEinstellungen() {
               <>
                 <div style={styles.schluesselZeile}>
                   <code style={styles.code}>{schluessel.hinweis ?? '…'}</code>
-                  <span style={{ color: C.textDim, fontSize: 12 }}>
+                  <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                     zuletzt geprüft {datumHuebsch(schluessel.zuletzt_geprueft_am)}
                   </span>
                 </div>
 
                 {rest != null ? (
                   <div style={{ marginTop: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: C.textDim, marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>
                       <span>Kontingent heute</span>
                       <span>{rest.toLocaleString('de-DE')} von ca. {KONTINGENT_RICHTWERT.toLocaleString('de-DE')} frei</span>
                     </div>
@@ -784,7 +784,7 @@ export default function AnfahrtEinstellungen() {
               <label style={styles.schalter}>
                 <input type="checkbox" checked={kForm.aktiv} disabled={kLaeuft}
                   onChange={(e) => schalterUmlegen(e.target.checked)} />
-                <span style={{ fontSize: 13, color: kForm.aktiv ? C.green : C.textDim, fontWeight: 700 }}>
+                <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: kForm.aktiv ? C.green : C.textDim, fontWeight: 700 }}>
                   {kForm.aktiv ? 'eingeschaltet' : 'ausgeschaltet'}
                 </span>
               </label>
@@ -827,7 +827,7 @@ export default function AnfahrtEinstellungen() {
                   <span>
                     <strong>Hin- und Rückfahrt berechnen</strong>
                     <br />
-                    <span style={{ color: C.textDim, fontSize: 12.5 }}>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                       Die Entfernung wird verdoppelt. Freigrenze und Staffel gelten dann für die
                       <em> gefahrene</em> Strecke — 30 km einfach frei heißt hier 60 km eintragen.
                     </span>
@@ -841,7 +841,7 @@ export default function AnfahrtEinstellungen() {
                         value={kForm.luftlinie_aufschlag_prozent}
                         onChange={(e) => setKForm((f) => ({ ...f, luftlinie_aufschlag_prozent: e.target.value }))} />
                     </Feld>
-                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 6, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 6, lineHeight: 1.5 }}>
                       Ohne Kartendienst wird die Luftlinie gerechnet — sie liegt spürbar unter der Fahrstrecke.
                       Der Aufschlag gleicht das aus. Sobald ein Kartendienst hinterlegt ist, entfällt er.
                     </div>
@@ -850,7 +850,7 @@ export default function AnfahrtEinstellungen() {
 
                 {/* ---- Staffel ---- */}
                 <div style={styles.sektion}>
-                  <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 10 }}>Staffel</div>
+                  <div style={{ ...styles.cardTitel, fontSize: 'clamp(14px, 1.25vw, 20px)', marginBottom: 10 }}>Staffel</div>
 
                   <div style={styles.staffelZeile}>
                     <span style={{ color: C.textDim }}>bis {formatKm(freiBisKm, 0)}</span>
@@ -904,15 +904,15 @@ export default function AnfahrtEinstellungen() {
 
                 {/* ---- Testrechnung ---- */}
                 <div style={styles.sektion}>
-                  <div style={{ ...styles.cardTitel, fontSize: 14, marginBottom: 4 }}>Probe aufs Exempel</div>
-                  <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 12px' }}>
+                  <div style={{ ...styles.cardTitel, fontSize: 'clamp(14px, 1.25vw, 20px)', marginBottom: 4 }}>Probe aufs Exempel</div>
+                  <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '0 0 12px' }}>
                     Rechnet mit den <strong>gespeicherten</strong> Einstellungen — genau wie später beim Kunden.
                   </p>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13.5, color: C.textDim }}>Was kostet die Anfahrt bei</span>
+                    <span style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.textDim }}>Was kostet die Anfahrt bei</span>
                     <input style={{ ...styles.input, width: 100 }} inputMode="decimal" value={testKm}
                       onChange={(e) => setTestKm(e.target.value)} />
-                    <span style={{ fontSize: 13.5, color: C.textDim }}>km?</span>
+                    <span style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.textDim }}>km?</span>
                   </div>
 
                   {!testErgebnis ? (
@@ -925,7 +925,7 @@ export default function AnfahrtEinstellungen() {
                         {anfahrtKlartext(testErgebnis)}
                       </div>
                       {testErgebnis.hinweise.length > 0 && (
-                        <div style={{ fontSize: 12, color: C.textDim, marginTop: 8, lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 8, lineHeight: 1.5 }}>
                           {testErgebnis.hinweise.map((h, i) => <div key={i}>· {h}</div>)}
                         </div>
                       )}
@@ -963,40 +963,40 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
 
 const styles: Record<string, CSSProperties> = {
   wrap: { marginTop: 40 },
-  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
-  sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
+  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800, margin: '0 0 8px', color: C.text },
+  sub: { fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
 
-  statusLeiste: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: 13.5 },
+  statusLeiste: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, marginBottom: 18 },
   cardKopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  cardTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
-  cardSub: { fontSize: 13, color: C.textDim, margin: '6px 0 18px', lineHeight: 1.55 },
+  cardTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, color: C.text },
+  cardSub: { fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 18px', lineHeight: 1.55 },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
-  code: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 15, color: C.gold, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', letterSpacing: 1 },
+  code: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(15px, 1.31vw, 21px)', color: C.gold, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', letterSpacing: 1 },
   schluesselZeile: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
 
   balkenSpur: { height: 8, background: C.navy, borderRadius: 999, overflow: 'hidden', border: `1px solid ${C.border}` },
   balken: { height: '100%', borderRadius: 999, transition: 'width 0.3s ease' },
 
   aktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
 
   sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
   schalter: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' },
-  schalterZeile: { display: 'flex', alignItems: 'flex-start', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontSize: 13.5, lineHeight: 1.5 },
-  staffelZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '9px 12px', borderBottom: '1px solid rgba(143,163,190,0.1)', fontSize: 13.5 },
+  schalterZeile: { display: 'flex', alignItems: 'flex-start', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontSize: 'clamp(13.5px, 1.19vw, 19px)', lineHeight: 1.5 },
+  staffelZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '9px 12px', borderBottom: '1px solid rgba(143,163,190,0.1)', fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
   stufeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.border}` },
-  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '10px 14px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', width: '100%' },
-  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit', width: 24 },
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 16, lineHeight: 1.5 },
-  okBox: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.6 },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '10px 14px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', width: '100%' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 'clamp(15px, 1.31vw, 21px)', fontFamily: 'inherit', width: 24 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 16, lineHeight: 1.5 },
+  okBox: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.text, lineHeight: 1.6 },
 };

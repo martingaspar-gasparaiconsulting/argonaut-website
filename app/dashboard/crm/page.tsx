@@ -750,7 +750,7 @@ export default function CrmCockpitPage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 margin: 0,
                 letterSpacing: 0.5,
               }}
@@ -762,7 +762,7 @@ export default function CrmCockpitPage() {
                 fontFamily: "'DM Sans', sans-serif",
                 color: C.textDim,
                 margin: "6px 0 0",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
               Deine Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
@@ -779,7 +779,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 18px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -795,7 +795,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 18px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -811,7 +811,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 18px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -827,7 +827,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 18px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -843,7 +843,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 18px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -859,7 +859,7 @@ export default function CrmCockpitPage() {
                 padding: "12px 20px",
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 cursor: "pointer",
               }}
             >
@@ -958,7 +958,7 @@ export default function CrmCockpitPage() {
               padding: "12px 16px",
               marginBottom: 16,
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
             }}
           >
             {fehler}
@@ -1034,7 +1034,7 @@ export default function CrmCockpitPage() {
                               "—"}
                           </div>
                           {k.position && (
-                            <div style={{ color: C.textDim, fontSize: 12 }}>
+                            <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                               {k.position}
                             </div>
                           )}
@@ -1073,7 +1073,7 @@ export default function CrmCockpitPage() {
                                 style={{
                                   color: C.cyan,
                                   textDecoration: "none",
-                                  fontSize: 13,
+                                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                                 }}
                               >
                                 {k.email}
@@ -1086,7 +1086,7 @@ export default function CrmCockpitPage() {
                                 style={{
                                   color: C.cyan,
                                   textDecoration: "none",
-                                  fontSize: 13,
+                                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                                 }}
                               >
                                 {k.telefon}
@@ -1100,7 +1100,7 @@ export default function CrmCockpitPage() {
                         <td style={td}>
                           <StatusBadge status={k.status} />
                         </td>
-                        <td style={{ ...td, color: C.textDim, fontSize: 13 }}>
+                        <td style={{ ...td, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           {datumKurz(k.letzter_kontakt_am)}
                         </td>
                         <td style={{ ...td, whiteSpace: "nowrap" }}>
@@ -1168,7 +1168,7 @@ export default function CrmCockpitPage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 22,
+                fontSize: 'clamp(22px, 1.94vw, 31px)',
                 margin: "0 0 18px",
               }}
             >
@@ -1232,7 +1232,7 @@ export default function CrmCockpitPage() {
             </Feld>
 
             {!bearbeite && (
-              <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>
+              <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>
                 Tags kannst du nach dem Anlegen auf der Kontakt-Detailseite vergeben.
               </div>
             )}
@@ -1247,7 +1247,7 @@ export default function CrmCockpitPage() {
                   padding: "12px 14px",
                   margin: "12px 0",
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                 }}
               >
                 ⚠ {dublette}
@@ -1334,7 +1334,7 @@ export default function CrmCockpitPage() {
                 style={{
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.green,
-                  fontSize: 22,
+                  fontSize: 'clamp(22px, 1.94vw, 31px)',
                   margin: 0,
                 }}
               >
@@ -1346,7 +1346,7 @@ export default function CrmCockpitPage() {
                   background: "transparent",
                   border: "none",
                   color: C.textDim,
-                  fontSize: 20,
+                  fontSize: 'clamp(20px, 1.75vw, 28px)',
                   cursor: "pointer",
                 }}
               >
@@ -1354,7 +1354,7 @@ export default function CrmCockpitPage() {
               </button>
             </div>
 
-            <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+            <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 12 }}>
               Foto wählen oder (am Handy) direkt aufnehmen – ARGONAUT liest die Kontaktdaten aus.
             </div>
 
@@ -1366,7 +1366,7 @@ export default function CrmCockpitPage() {
               style={{
                 color: C.textDim,
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 marginBottom: 12,
                 width: "100%",
               }}
@@ -1399,7 +1399,7 @@ export default function CrmCockpitPage() {
                   padding: "11px 22px",
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: "pointer",
                   opacity: !vkBase64 ? 0.6 : 1,
                 }}
@@ -1418,7 +1418,7 @@ export default function CrmCockpitPage() {
                   padding: "12px 16px",
                   marginTop: 12,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                 }}
               >
                 {vkFehler}
@@ -1427,7 +1427,7 @@ export default function CrmCockpitPage() {
 
             {vkFelder && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ color: C.green, fontSize: 12, marginBottom: 12 }}>
+                <div style={{ color: C.green, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 12 }}>
                   Erkannt – bitte prüfen &amp; anlegen
                 </div>
                 <div style={grid2}>
@@ -1464,7 +1464,7 @@ export default function CrmCockpitPage() {
                       padding: "12px 14px",
                       margin: "8px 0",
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                     }}
                   >
                     ⚠ {vkDublette}
@@ -1498,7 +1498,7 @@ export default function CrmCockpitPage() {
                       padding: "11px 24px",
                       fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 700,
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       cursor: "pointer",
                       opacity: vkSpeichert ? 0.6 : 1,
                     }}
@@ -1519,7 +1519,7 @@ export default function CrmCockpitPage() {
                       padding: "11px 20px",
                       fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 600,
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       cursor: "pointer",
                     }}
                   >
@@ -1550,7 +1550,7 @@ export default function CrmCockpitPage() {
                 style={{
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.cyan,
-                  fontSize: 22,
+                  fontSize: 'clamp(22px, 1.94vw, 31px)',
                   margin: 0,
                 }}
               >
@@ -1562,7 +1562,7 @@ export default function CrmCockpitPage() {
                   background: "transparent",
                   border: "none",
                   color: C.textDim,
-                  fontSize: 20,
+                  fontSize: 'clamp(20px, 1.75vw, 28px)',
                   cursor: "pointer",
                 }}
               >
@@ -1580,7 +1580,7 @@ export default function CrmCockpitPage() {
                     borderRadius: 10,
                     padding: "16px 18px",
                     fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 15,
+                    fontSize: 'clamp(15px, 1.31vw, 21px)',
                     marginBottom: 16,
                   }}
                 >
@@ -1600,7 +1600,7 @@ export default function CrmCockpitPage() {
                     padding: "11px 24px",
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     fontWeight: 700,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                   }}
                 >
@@ -1609,7 +1609,7 @@ export default function CrmCockpitPage() {
               </div>
             ) : (
               <div>
-                <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+                <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 12 }}>
                   CSV-Datei wählen (z. B. Export aus Excel/Outlook). Komma und Semikolon werden erkannt.
                 </div>
 
@@ -1622,7 +1622,7 @@ export default function CrmCockpitPage() {
                   style={{
                     color: C.textDim,
                     fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                     marginBottom: 14,
                     width: "100%",
                   }}
@@ -1638,7 +1638,7 @@ export default function CrmCockpitPage() {
                       padding: "12px 16px",
                       marginBottom: 14,
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                     }}
                   >
                     {impFehler}
@@ -1653,7 +1653,7 @@ export default function CrmCockpitPage() {
                         alignItems: "center",
                         gap: 8,
                         color: C.textDim,
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         marginBottom: 16,
                         cursor: "pointer",
                       }}
@@ -1672,7 +1672,7 @@ export default function CrmCockpitPage() {
                     </label>
 
                     {/* Spalten-Zuordnung */}
-                    <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>
+                    <div style={{ color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 10 }}>
                       Spalten zuordnen
                     </div>
                     <div style={grid2}>
@@ -1707,7 +1707,7 @@ export default function CrmCockpitPage() {
                     </div>
 
                     {/* Vorschau */}
-                    <div style={{ color: C.cyan, fontSize: 12, margin: "16px 0 8px" }}>
+                    <div style={{ color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)', margin: "16px 0 8px" }}>
                       Vorschau ({impDaten.length} Datenzeile
                       {impDaten.length === 1 ? "" : "n"})
                     </div>
@@ -1717,7 +1717,7 @@ export default function CrmCockpitPage() {
                           width: "100%",
                           borderCollapse: "collapse",
                           fontFamily: "'DM Sans', sans-serif",
-                          fontSize: 12,
+                          fontSize: 'clamp(12px, 1.06vw, 17px)',
                         }}
                       >
                         <thead>
@@ -1760,7 +1760,7 @@ export default function CrmCockpitPage() {
                       </table>
                     </div>
 
-                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 14 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 14 }}>
                       Dubletten (gleiche E-Mail wie bestehende Kontakte) werden automatisch übersprungen. Quelle wird „CSV-Import".
                     </div>
 
@@ -1775,7 +1775,7 @@ export default function CrmCockpitPage() {
                         padding: "11px 24px",
                         fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                         cursor: "pointer",
                         opacity: impSpeichert || impDaten.length === 0 ? 0.6 : 1,
                       }}
@@ -1819,7 +1819,7 @@ function KpiKarte({
         style={{
           fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
-          fontSize: 30,
+          fontSize: 'clamp(30px, 2.63vw, 42px)',
           fontWeight: 800,
           lineHeight: 1,
         }}
@@ -1830,7 +1830,7 @@ function KpiKarte({
         style={{
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           marginTop: 6,
         }}
       >
@@ -1854,7 +1854,7 @@ function StatusBadge({ status }: { status: string | null }) {
         display: "inline-block",
         padding: "3px 10px",
         borderRadius: 20,
-        fontSize: 12,
+        fontSize: 'clamp(12px, 1.06vw, 17px)',
         fontWeight: 600,
         color: farbe,
         border: `1px solid ${farbe}`,
@@ -1893,7 +1893,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
           display: "block",
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 5,
         }}
       >
@@ -1913,7 +1913,7 @@ const inp: React.CSSProperties = {
   padding: "11px 13px",
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   width: "100%",
   boxSizing: "border-box",
   outline: "none",
@@ -1923,7 +1923,7 @@ const th: React.CSSProperties = {
   textAlign: "left",
   padding: "14px 16px",
   color: C.textDim,
-  fontSize: 12,
+  fontSize: 'clamp(12px, 1.06vw, 17px)',
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: 0.5,
@@ -1933,7 +1933,7 @@ const td: React.CSSProperties = {
   padding: "14px 16px",
   verticalAlign: "middle",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };
 
 const miniBtn: React.CSSProperties = {
@@ -1943,7 +1943,7 @@ const miniBtn: React.CSSProperties = {
   padding: "6px 12px",
   color: C.cyan,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   cursor: "pointer",
   marginLeft: 6,
 };
@@ -1953,7 +1953,7 @@ const leerBox: React.CSSProperties = {
   textAlign: "center",
   color: C.textDim,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 15,
+  fontSize: 'clamp(15px, 1.31vw, 21px)',
 };
 
 const overlay: React.CSSProperties = {

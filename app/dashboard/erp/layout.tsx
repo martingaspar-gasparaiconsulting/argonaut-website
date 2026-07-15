@@ -64,7 +64,7 @@ export default function ErpLayout({
         <h1
           style={{
             margin: 0,
-            fontSize: 30,
+            fontSize: 'clamp(30px, 2.63vw, 42px)',
             fontWeight: 800,
             color: C.gold,
             letterSpacing: "-0.01em",
@@ -76,7 +76,7 @@ export default function ErpLayout({
           style={{
             margin: "8px 0 22px",
             color: C.textDim,
-            fontSize: 15,
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
             maxWidth: 720,
           }}
         >
@@ -103,7 +103,7 @@ export default function ErpLayout({
               gap: 8,
               padding: "11px 20px",
               borderRadius: 10,
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               textDecoration: "none",
               whiteSpace: "nowrap",

@@ -350,7 +350,7 @@ export default function MahnwesenCockpit() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -358,7 +358,7 @@ export default function MahnwesenCockpit() {
           >
             ⚠️ Mahnwesen
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Überfällige Rechnungen im Blick – Mahnstufe verfolgen und hochstufen
           </p>
         </div>
@@ -409,7 +409,7 @@ export default function MahnwesenCockpit() {
                     border: "none",
                     borderRadius: 8,
                     padding: "9px 16px",
-                    fontSize: 13.5,
+                    fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                     fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "'DM Sans', sans-serif",
@@ -418,17 +418,17 @@ export default function MahnwesenCockpit() {
                 >
                   ⏫ Alle fälligen hochstufen ({sammelKandidaten.length})
                 </button>
-                <span style={{ color: C.textDim, fontSize: 13, flex: 1, minWidth: 200 }}>
+                <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', flex: 1, minWidth: 200 }}>
                   Setzt alle {sammelKandidaten.length} überfälligen Rechnungen um eine Mahnstufe hoch –
                   mit Historie-Nachweis, ohne PDF-Stapel.
                 </span>
                 {sammelErgebnis && (
-                  <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>✓ {sammelErgebnis}</span>
+                  <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>✓ {sammelErgebnis}</span>
                 )}
               </>
             ) : (
               <>
-                <span style={{ color: "#fff", fontSize: 14, fontWeight: 600, flex: 1, minWidth: 220 }}>
+                <span style={{ color: "#fff", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, flex: 1, minWidth: 220 }}>
                   {sammelKandidaten.length} Rechnung{sammelKandidaten.length === 1 ? "" : "en"} werden um eine
                   Mahnstufe hochgestuft und protokolliert. Fortfahren?
                 </span>
@@ -442,7 +442,7 @@ export default function MahnwesenCockpit() {
                       border: "none",
                       borderRadius: 8,
                       padding: "9px 16px",
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                       fontWeight: 700,
                       cursor: sammelBusy ? "wait" : "pointer",
                       fontFamily: "'DM Sans', sans-serif",
@@ -461,7 +461,7 @@ export default function MahnwesenCockpit() {
                       border: `1px solid ${C.border}`,
                       borderRadius: 8,
                       padding: "9px 16px",
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                       fontWeight: 700,
                       cursor: sammelBusy ? "wait" : "pointer",
                       fontFamily: "'DM Sans', sans-serif",
@@ -503,11 +503,11 @@ export default function MahnwesenCockpit() {
               color: C.textDim,
             }}
           >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-            <div style={{ fontSize: 17, color: "#fff", marginBottom: 6 }}>
+            <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🎉</div>
+            <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>
               Keine überfälligen Rechnungen
             </div>
-            <div style={{ fontSize: 14 }}>Alles im grünen Bereich – kein Mahnbedarf.</div>
+            <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Alles im grünen Bereich – kein Mahnbedarf.</div>
           </div>
         ) : (
           <div
@@ -528,7 +528,7 @@ export default function MahnwesenCockpit() {
                   padding: "14px 18px",
                   borderBottom: `1px solid ${C.border}`,
                   color: C.textDim,
-                  fontSize: 12,
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
@@ -580,7 +580,7 @@ export default function MahnwesenCockpit() {
                         fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
                         color: C.gold,
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                       }}
                     >
                       {r.rechnungsnummer || "—"}
@@ -591,7 +591,7 @@ export default function MahnwesenCockpit() {
                       <div
                         style={{
                           fontWeight: 600,
-                          fontSize: 15,
+                          fontSize: 'clamp(15px, 1.31vw, 21px)',
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -603,7 +603,7 @@ export default function MahnwesenCockpit() {
                         <div
                           style={{
                             color: C.textDim,
-                            fontSize: 13,
+                            fontSize: 'clamp(13px, 1.13vw, 18px)',
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -626,14 +626,14 @@ export default function MahnwesenCockpit() {
                           boxShadow: `0 0 8px ${verzugFarbe}66`,
                         }}
                       />
-                      <span style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>
+                      <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: "#fff", fontWeight: 600 }}>
                         {tage} {tage === 1 ? "Tag" : "Tage"}
                       </span>
-                      <span style={{ fontSize: 12, color: C.textDim }}>fällig: {datum(r.faelligkeitsdatum)}</span>
+                      <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>fällig: {datum(r.faelligkeitsdatum)}</span>
                     </div>
 
                     {/* Offener Betrag */}
-                    <div style={{ textAlign: "right", fontWeight: 700, fontSize: 15 }}>
+                    <div style={{ textAlign: "right", fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
                       {eur(offenerRest(r), r.waehrung || "EUR")}
                     </div>
 
@@ -647,14 +647,14 @@ export default function MahnwesenCockpit() {
                           border: `1px solid ${meta.farbe}55`,
                           borderRadius: 999,
                           padding: "4px 10px",
-                          fontSize: 12,
+                          fontSize: 'clamp(12px, 1.06vw, 17px)',
                           fontWeight: 700,
                         }}
                       >
                         {meta.label}
                       </span>
                       {r.letzte_mahnung_am && (
-                        <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>
+                        <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>
                           seit {datum(r.letzte_mahnung_am)}
                         </div>
                       )}
@@ -673,7 +673,7 @@ export default function MahnwesenCockpit() {
                           border: "none",
                           borderRadius: 8,
                           padding: "8px 14px",
-                          fontSize: 13,
+                          fontSize: 'clamp(13px, 1.13vw, 18px)',
                           fontWeight: 700,
                           cursor: "pointer",
                           fontFamily: "'DM Sans', sans-serif",
@@ -694,7 +694,7 @@ export default function MahnwesenCockpit() {
                             border: `1px solid ${meta.farbe}77`,
                             borderRadius: 8,
                             padding: "8px 10px",
-                            fontSize: 13,
+                            fontSize: 'clamp(13px, 1.13vw, 18px)',
                             fontWeight: 700,
                             cursor: busy ? "wait" : "pointer",
                             fontFamily: "'DM Sans', sans-serif",
@@ -716,7 +716,7 @@ export default function MahnwesenCockpit() {
                             border: `1px solid ${C.border}`,
                             borderRadius: 8,
                             padding: "8px 10px",
-                            fontSize: 13,
+                            fontSize: 'clamp(13px, 1.13vw, 18px)',
                             cursor: busy ? "wait" : "pointer",
                             fontFamily: "'DM Sans', sans-serif",
                           }}
@@ -733,7 +733,7 @@ export default function MahnwesenCockpit() {
         )}
 
         {!laden && !fehler && ueberfaellige.length > 0 && (
-          <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 14, lineHeight: 1.5 }}>
+          <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 14, lineHeight: 1.5 }}>
             Hinweis: „✉️ Mahnung erstellen" öffnet den Assistenten (Text von ARGONAUT + PDF).
             Mit „⏫" stufst du direkt hoch (ohne Schreiben), „↺" setzt die Stufe zurück.
           </p>
@@ -765,8 +765,8 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
           background: farbe,
         }}
       />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>
         {wert}
       </div>
     </div>

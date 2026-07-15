@@ -32,7 +32,7 @@ const btn: CSSProperties = {
   border: '1px solid rgba(0,229,255,0.35)',
   background: 'rgba(0,229,255,0.06)',
   color: '#FFFFFF',
-  fontSize: '15px',
+  fontSize: 'clamp(15px, 1.31vw, 21px)',
   fontWeight: 700,
   cursor: 'pointer',
   fontFamily: 'var(--font-dm-sans), sans-serif',
@@ -47,7 +47,7 @@ const panel: CSSProperties = {
   background: 'rgba(10,22,40,0.6)',
   padding: '18px',
 }
-const sektionTitel: CSSProperties = { fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }
+const sektionTitel: CSSProperties = { fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: CYAN, margin: '0 0 12px' }
 const zeileStil: CSSProperties = { display: 'flex', gap: '10px', alignItems: 'flex-start' }
 
 export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
@@ -101,12 +101,12 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
         style={{ ...btn, ...(offen ? btnOffen : null) }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '18px' }}>{'\uD83D\uDC41'}</span>
+          <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)' }}>{'\uD83D\uDC41'}</span>
           <span>Firmendaten pruefen</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: gesamtFarbe, boxShadow: '0 0 8px ' + gesamtFarbe }} />
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>{offen ? 'schliessen' : gesamtText}</span>
+          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)' }}>{offen ? 'schliessen' : gesamtText}</span>
         </span>
       </button>
 
@@ -118,8 +118,8 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
             {bericht.ergebnisse.map((r) => (
               <div key={r.feld + r.label} style={zeileStil}>
                 <span style={{ width: '9px', height: '9px', borderRadius: '999px', background: ampelFarbe[r.status], flexShrink: 0, marginTop: '5px' }} />
-                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', minWidth: '120px', fontWeight: 600 }}>{r.label}</span>
-                <span style={{ fontSize: '13px', color: r.status === 'ok' ? 'rgba(255,255,255,0.8)' : ampelFarbe[r.status], lineHeight: 1.5 }}>{r.text}</span>
+                <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', minWidth: '120px', fontWeight: 600 }}>{r.label}</span>
+                <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: r.status === 'ok' ? 'rgba(255,255,255,0.8)' : ampelFarbe[r.status], lineHeight: 1.5 }}>{r.text}</span>
               </div>
             ))}
           </div>
@@ -127,18 +127,18 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
           {/* KI-Plausibilitaet */}
           <p style={sektionTitel}>KI-Plausibilitaet</p>
           {laedt ? (
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>Die KI prueft die Daten auf inhaltliche Stimmigkeit…</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>Die KI prueft die Daten auf inhaltliche Stimmigkeit…</p>
           ) : kiFehler ? (
-            <p style={{ fontSize: '13px', color: '#ef4444' }}>{kiFehler}</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#ef4444' }}>{kiFehler}</p>
           ) : ki ? (
             <div>
               {ki.klartext ? (
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.82)', lineHeight: 1.6, margin: '0 0 10px' }}>{ki.klartext}</p>
+                <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.82)', lineHeight: 1.6, margin: '0 0 10px' }}>{ki.klartext}</p>
               ) : null}
               {ki.punkte && ki.punkte.length > 0 ? (
                 <div style={{ display: 'grid', gap: '6px' }}>
                   {ki.punkte.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                    <div key={i} style={{ display: 'flex', gap: '8px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
                       <span style={{ color: GOLD }}>{'\u2192'}</span><span>{p}</span>
                     </div>
                   ))}

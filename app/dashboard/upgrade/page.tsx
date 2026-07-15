@@ -28,7 +28,7 @@ export default async function UpgradePage() {
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '52px 24px 100px' }}>
 
         {/* Breadcrumb */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '36px', fontSize: '13px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '36px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
           <Link href="/dashboard" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none', transition: 'color 0.15s' }}
             onMouseEnter={undefined}
           >
@@ -40,13 +40,13 @@ export default async function UpgradePage() {
 
         {/* Page title */}
         <section style={{ marginBottom: '44px' }}>
-          <p style={{ fontSize: '12px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 10px' }}>
+          <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 10px' }}>
             Abonnement
           </p>
           <h1 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), sans-serif', lineHeight: 1.1 }}>
             Ihren Plan upgraden
           </h1>
-          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.4)', margin: 0, maxWidth: '560px', lineHeight: 1.65 }}>
+          <p style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.4)', margin: 0, maxWidth: '560px', lineHeight: 1.65 }}>
             Wählen Sie Ihr Paket. Alle Kunden zahlen die Basis-Automatisierungen (1.500 € netto/Monat) plus das gewählte Paket.
             Geben Sie anschließend Ihre Bankverbindung für die monatliche SEPA-Lastschrift an.
           </p>
@@ -80,7 +80,7 @@ export default async function UpgradePage() {
             { icon: '📄', text: 'Konforme Rechnung' },
             { icon: '✋', text: 'Kündigung jederzeit' },
           ].map(item => (
-            <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>
+            <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.25)' }}>
               <span>{item.icon}</span>
               {item.text}
             </div>

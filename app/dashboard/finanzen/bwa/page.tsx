@@ -179,7 +179,7 @@ export default function BwaReport() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -187,7 +187,7 @@ export default function BwaReport() {
           >
             📈 BWA – Betriebswirtschaftliche Auswertung
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Einnahmen vs. Ausgaben pro Monat (netto) und Gewinn-Verlauf
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function BwaReport() {
                   border: `1px solid ${aktiv ? C.gold : C.border}`,
                   borderRadius: 999,
                   padding: "8px 16px",
-                  fontSize: 13.5,
+                  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -257,7 +257,7 @@ export default function BwaReport() {
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px 18px 12px", marginBottom: 22 }}>
               <div style={{ ...sektionLabel, paddingLeft: 4 }}>Monatsverlauf {jahr}</div>
               {!hatDaten ? (
-                <p style={{ color: C.textDim, fontSize: 14, padding: "20px 4px" }}>
+                <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: "20px 4px" }}>
                   Keine Buchungen in {jahr}.
                 </p>
               ) : (
@@ -265,9 +265,9 @@ export default function BwaReport() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={daten} margin={{ top: 10, right: 12, left: 4, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis dataKey="monat" tick={{ fill: C.textDim, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                      <XAxis dataKey="monat" tick={{ fill: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }} axisLine={{ stroke: C.border }} tickLine={false} />
                       <YAxis
-                        tick={{ fill: C.textDim, fontSize: 12 }}
+                        tick={{ fill: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}
                         axisLine={{ stroke: C.border }}
                         tickLine={false}
                         tickFormatter={(v: any) =>
@@ -288,7 +288,7 @@ export default function BwaReport() {
                         itemStyle={{ color: "#fff" }}
                         cursor={{ fill: "rgba(255,255,255,0.04)" }}
                       />
-                      <Legend wrapperStyle={{ fontSize: 13 }} />
+                      <Legend wrapperStyle={{ fontSize: 'clamp(13px, 1.13vw, 18px)' }} />
                       <Bar dataKey="einnahmen" name="Einnahmen" fill={C.green} radius={[4, 4, 0, 0]} maxBarSize={26} />
                       <Bar dataKey="ausgaben" name="Ausgaben" fill={C.warn} radius={[4, 4, 0, 0]} maxBarSize={26} />
                       <Line type="monotone" dataKey="gewinn" name="Gewinn" stroke={C.gold} strokeWidth={2.5} dot={{ r: 3, fill: C.gold }} />
@@ -309,7 +309,7 @@ export default function BwaReport() {
                     padding: "14px 18px",
                     borderBottom: `1px solid ${C.border}`,
                     color: C.textDim,
-                    fontSize: 12,
+                    fontSize: 'clamp(12px, 1.06vw, 17px)',
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.04em",
@@ -333,7 +333,7 @@ export default function BwaReport() {
                       borderBottom: `1px solid ${C.border}`,
                       alignItems: "center",
                       minWidth: 560,
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                     }}
                   >
                     <div style={{ color: C.textDim }}>{m.monat}</div>
@@ -364,7 +364,7 @@ export default function BwaReport() {
                     padding: "14px 18px",
                     alignItems: "center",
                     minWidth: 560,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     background: "rgba(201,168,76,0.06)",
                   }}
                 >
@@ -384,7 +384,7 @@ export default function BwaReport() {
               </div>
             </div>
 
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 20, lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 20, lineHeight: 1.5 }}>
               Hinweis: Netto-Werte nach Zufluss-/Abfluss-Prinzip. Vereinfachte Auswertung, ersetzt
               keine steuerliche Beratung.
             </p>
@@ -410,15 +410,15 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",

@@ -40,7 +40,7 @@ export default function FinanzTabs() {
               border: `1px solid ${aktiv ? C.gold : C.border}`,
               borderRadius: 999,
               padding: "8px 16px",
-              fontSize: 13.5,
+              fontSize: 'clamp(13.5px, 1.19vw, 19px)',
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif",

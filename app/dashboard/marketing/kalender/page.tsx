@@ -73,14 +73,14 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
 function Feld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16, flex: 1 }}>
-      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -254,19 +254,19 @@ export default function Redaktionskalender() {
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1280, margin: '0 auto' }}>
-        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 14, textDecoration: 'none' }}>
+        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: 'none' }}>
           ← Zurück zu Marketing
         </a>
 
         {/* Kopf */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '16px 0 24px', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📅 Redaktionskalender</h1>
-            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
+            <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>📅 Redaktionskalender</h1>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               Alle geplanten Veröffentlichungen. Termine per Drag&amp;Drop verschieben.
             </p>
           </div>
-          <button onClick={() => neu()} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+          <button onClick={() => neu()} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', cursor: 'pointer' }}>
             + Termin
           </button>
         </div>
@@ -275,11 +275,11 @@ export default function Redaktionskalender() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => monatWechsel(-1)} style={navBtn}>‹</button>
-            <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 19, fontWeight: 700, color: '#fff', minWidth: 170, textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 700, color: '#fff', minWidth: 170, textAlign: 'center' }}>
               {MONATE[monat]} {jahr}
             </span>
             <button onClick={() => monatWechsel(1)} style={navBtn}>›</button>
-            <button onClick={zuHeute} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 13 }}>Heute</button>
+            <button onClick={zuHeute} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Heute</button>
           </div>
           <select value={filterKampagne} onChange={(e) => setFilterKampagne(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 200 }}>
             <option value="alle">Alle Kampagnen</option>
@@ -305,12 +305,12 @@ export default function Redaktionskalender() {
           }}
           style={{ background: C.navy2, border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 16px', marginBottom: 18, minHeight: 56 }}
         >
-          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: C.textDim, marginBottom: 8 }}>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 8 }}>
             UNTERMINIERT ({unterminiert.length}) — auf einen Tag ziehen, um zu planen
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {unterminiert.length === 0 ? (
-              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, opacity: 0.6 }}>—</span>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, opacity: 0.6 }}>—</span>
             ) : unterminiert.map((e) => (
               <Chip key={e.id} e={e} kampagne={kampagneName(e.kampagne_id)} onClick={() => bearbeiten(e)} />
             ))}
@@ -325,7 +325,7 @@ export default function Redaktionskalender() {
             {/* Wochentag-Köpfe */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 8 }}>
               {WOCHENTAGE.map((w) => (
-                <div key={w} style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: C.textDim, textAlign: 'center', fontWeight: 600 }}>{w}</div>
+                <div key={w} style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textAlign: 'center', fontWeight: 600 }}>{w}</div>
               ))}
             </div>
             {/* Tageszellen */}
@@ -353,7 +353,7 @@ export default function Redaktionskalender() {
                       cursor: 'pointer',
                     }}
                   >
-                    <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: istHeute ? C.gold : C.textDim, fontWeight: istHeute ? 700 : 400, marginBottom: 6 }}>
+                    <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: istHeute ? C.gold : C.textDim, fontWeight: istHeute ? 700 : 400, marginBottom: 6 }}>
                       {d.getDate()}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -373,7 +373,7 @@ export default function Redaktionskalender() {
       {offen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setOffen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>
+            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 'clamp(23px, 2vw, 32px)', margin: '0 0 20px' }}>
               {bearbeite ? 'Termin bearbeiten' : 'Neuer Termin'}
             </h2>
             <Feld label="Titel *">
@@ -432,7 +432,7 @@ const navBtn: React.CSSProperties = {
   background: C.navy2,
   border: '1px solid rgba(255,255,255,0.12)',
   color: '#fff',
-  fontSize: 18,
+  fontSize: 'clamp(18px, 1.56vw, 25px)',
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
@@ -457,11 +457,11 @@ function Chip({ e, kampagne, zeit, onClick }: { e: Kalender; kampagne: string; z
         fontFamily: 'DM Sans, sans-serif',
       }}
     >
-      <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {zeit && e.geplant_am ? `${uhrzeit(e.geplant_am)} ` : ''}{e.titel}
       </div>
       {kampagne && (
-        <div style={{ fontSize: 10, color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{kampagne}</div>
+        <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{kampagne}</div>
       )}
     </div>
   );

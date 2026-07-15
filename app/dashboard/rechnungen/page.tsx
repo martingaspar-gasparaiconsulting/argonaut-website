@@ -317,7 +317,7 @@ export default function RechnungenCockpit() {
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 fontWeight: 800,
                 margin: 0,
                 letterSpacing: "-0.02em",
@@ -325,7 +325,7 @@ export default function RechnungenCockpit() {
             >
               🧾 Rechnungen
             </h1>
-            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
               Alle Ausgangsrechnungen – Übersicht, Status &amp; Fälligkeiten
             </p>
           </div>
@@ -384,7 +384,7 @@ export default function RechnungenCockpit() {
               borderRadius: 12,
               padding: "12px 16px",
               color: "#fff",
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               outline: "none",
             }}
           />
@@ -408,7 +408,7 @@ export default function RechnungenCockpit() {
                     border: `1px solid ${aktiv ? C.gold : C.border}`,
                     borderRadius: 999,
                     padding: "8px 14px",
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                     fontWeight: 600,
                     cursor: "pointer",
                   }}
@@ -450,11 +450,11 @@ export default function RechnungenCockpit() {
           >
             {rechnungen.length === 0 ? (
               <>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🧾</div>
-                <div style={{ fontSize: 17, color: "#fff", marginBottom: 6 }}>
+                <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🧾</div>
+                <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>
                   Noch keine Rechnungen
                 </div>
-                <div style={{ fontSize: 14 }}>
+                <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                   Rechnungen entstehen aus einem Auftrag – öffne einen Auftrag und
                   klicke dort auf „Rechnung erstellen".
                 </div>
@@ -482,7 +482,7 @@ export default function RechnungenCockpit() {
                 padding: "14px 18px",
                 borderBottom: `1px solid ${C.border}`,
                 color: C.textDim,
-                fontSize: 12,
+                fontSize: 'clamp(12px, 1.06vw, 17px)',
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
@@ -558,7 +558,7 @@ export default function RechnungenCockpit() {
                       fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 700,
                       color: C.gold,
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                     }}
                   >
                     {r.rechnungsnummer || "—"}
@@ -568,7 +568,7 @@ export default function RechnungenCockpit() {
                     <div
                       style={{
                         fontWeight: 600,
-                        fontSize: 15,
+                        fontSize: 'clamp(15px, 1.31vw, 21px)',
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -580,7 +580,7 @@ export default function RechnungenCockpit() {
                       <div
                         style={{
                           color: C.textDim,
-                          fontSize: 13,
+                          fontSize: 'clamp(13px, 1.13vw, 18px)',
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -602,7 +602,7 @@ export default function RechnungenCockpit() {
                         boxShadow: `0 0 8px ${ampel}66`,
                       }}
                     />
-                    <span style={{ fontSize: 13, color: C.textDim }}>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                       {ampelText}
                     </span>
                   </div>
@@ -611,7 +611,7 @@ export default function RechnungenCockpit() {
                     style={{
                       textAlign: "right",
                       fontWeight: 700,
-                      fontSize: 15,
+                      fontSize: 'clamp(15px, 1.31vw, 21px)',
                     }}
                   >
                     {eur(r.brutto_summe, r.waehrung || "EUR")}
@@ -626,7 +626,7 @@ export default function RechnungenCockpit() {
                         border: `1px solid ${meta.farbe}55`,
                         borderRadius: 999,
                         padding: "4px 10px",
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         fontWeight: 700,
                       }}
                     >
@@ -638,7 +638,7 @@ export default function RechnungenCockpit() {
                     style={{
                       textAlign: "right",
                       color: C.textDim,
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                     }}
                   >
                     {datum(r.rechnungsdatum)}
@@ -654,7 +654,7 @@ export default function RechnungenCockpit() {
             style={{
               marginTop: 14,
               color: C.textDim,
-              fontSize: 13,
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               textAlign: "right",
             }}
           >
@@ -696,13 +696,13 @@ function KpiCard({
           background: farbe,
         }}
       />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>
         {label}
       </div>
       <div
         style={{
           fontFamily: "var(--font-dm-sans), sans-serif",
-          fontSize: 24,
+          fontSize: 'clamp(24px, 2.13vw, 34px)',
           fontWeight: 800,
           color: farbe,
         }}

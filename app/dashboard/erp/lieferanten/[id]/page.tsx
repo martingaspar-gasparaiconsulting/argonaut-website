@@ -178,12 +178,12 @@ export default function LieferantDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -195,7 +195,7 @@ export default function LieferantDetail() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -204,7 +204,7 @@ export default function LieferantDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const linkStil: React.CSSProperties = { color: C.cyan, textDecoration: "none" };
@@ -221,8 +221,8 @@ export default function LieferantDetail() {
         borderBottom: `1px solid ${C.border}`,
       }}
     >
-      <span style={{ color: C.textDim, fontSize: 13 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 600, textAlign: "right" }}>
+      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{label}</span>
+      <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, textAlign: "right" }}>
         {wert}
       </span>
     </div>
@@ -230,7 +230,7 @@ export default function LieferantDetail() {
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -239,7 +239,7 @@ export default function LieferantDetail() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
   };
@@ -251,7 +251,7 @@ export default function LieferantDetail() {
   if (!lieferant) {
     return (
       <div style={{ color: "#fff", maxWidth: 700, margin: "0 auto" }}>
-        <a href="/dashboard/erp/lieferanten" style={{ color: C.cyan, fontSize: 14 }}>
+        <a href="/dashboard/erp/lieferanten" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           ← Zurück zu Lieferanten
         </a>
         <div style={{ ...card, marginTop: 16, color: C.textDim }}>
@@ -263,7 +263,7 @@ export default function LieferantDetail() {
 
   return (
     <div style={{ color: "#fff", maxWidth: 1000, margin: "0 auto" }}>
-      <a href="/dashboard/erp/lieferanten" style={{ color: C.cyan, fontSize: 14 }}>
+      <a href="/dashboard/erp/lieferanten" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
         ← Zurück zu Lieferanten
       </a>
 
@@ -278,13 +278,13 @@ export default function LieferantDetail() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             {lieferant.name}
             {!lieferant.aktiv && (
               <span
                 style={{
                   marginLeft: 10,
-                  fontSize: 12,
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   color: C.textDim,
                   border: `1px solid ${C.border}`,
                   borderRadius: 6,
@@ -297,7 +297,7 @@ export default function LieferantDetail() {
             )}
           </h1>
           {lieferant.kundennummer && (
-            <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+            <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               Kundennr. {lieferant.kundennummer}
             </p>
           )}
@@ -317,7 +317,7 @@ export default function LieferantDetail() {
       >
         {/* Kontakt */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Kontakt</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Kontakt</h3>
           {infoZeile("Ansprechpartner", lieferant.ansprechpartner || "—")}
           {infoZeile(
             "Telefon",
@@ -369,10 +369,10 @@ export default function LieferantDetail() {
 
         {/* Notizen */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Notizen</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Notizen</h3>
           <div
             style={{
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               lineHeight: 1.6,
               color: lieferant.notizen ? "#fff" : C.textDim,
               whiteSpace: "pre-wrap",
@@ -385,7 +385,7 @@ export default function LieferantDetail() {
 
       {/* Artikel dieses Lieferanten */}
       <div style={{ ...card, padding: 0, overflowX: "auto" }}>
-        <h3 style={{ margin: 0, padding: "16px 20px", fontSize: 16 }}>
+        <h3 style={{ margin: 0, padding: "16px 20px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
           Artikel von diesem Lieferanten
         </h3>
         {artikel.length === 0 ? (
@@ -417,7 +417,7 @@ export default function LieferantDetail() {
                         {a.bezeichnung}
                       </a>
                       {a.artikelnummer && (
-                        <div style={{ fontSize: 12, color: C.textDim }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                           Nr. {a.artikelnummer}
                         </div>
                       )}
@@ -465,7 +465,7 @@ export default function LieferantDetail() {
             style={{ ...card, width: "100%", maxWidth: 560, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               Lieferant bearbeiten
             </h2>
             <div
@@ -550,7 +550,7 @@ export default function LieferantDetail() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -570,7 +570,7 @@ export default function LieferantDetail() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >

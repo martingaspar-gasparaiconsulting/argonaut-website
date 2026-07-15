@@ -36,15 +36,15 @@ export default function OnboardingProgress({ onboardingCompleted, hasApiKeys }: 
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
-          <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>
+          <p style={{ margin: '0 0 4px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, color: '#FFFFFF' }}>
             System-Setup Fortschritt
           </p>
-          <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
+          <p style={{ margin: 0, fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)' }}>
             {doneCount} von {items.length} Schritten abgeschlossen
           </p>
         </div>
         <span style={{
-          fontSize: '20px', fontWeight: 900, color: pct === 100 ? '#22c55e' : '#C9A84C',
+          fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 900, color: pct === 100 ? '#22c55e' : '#C9A84C',
           fontFamily: 'var(--font-dm-sans), sans-serif',
         }}>{pct}%</span>
       </div>
@@ -69,21 +69,21 @@ export default function OnboardingProgress({ onboardingCompleted, hasApiKeys }: 
               background: item.done ? '#22c55e' : 'rgba(255,255,255,0.08)',
               border: item.done ? 'none' : '1px solid rgba(255,255,255,0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '12px',
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
             }}>
               {item.done ? '\u2713' : ''}
             </div>
             {item.link && !item.done ? (
-              <a href={item.link} style={{ fontSize: '13px', color: '#C9A84C', textDecoration: 'underline', cursor: 'pointer' }}>
+              <a href={item.link} style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', textDecoration: 'underline', cursor: 'pointer' }}>
                 {item.label}
               </a>
             ) : (
-              <span style={{ fontSize: '13px', color: item.done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)', textDecoration: item.done ? 'line-through' : 'none' }}>
+              <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: item.done ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)', textDecoration: item.done ? 'line-through' : 'none' }}>
                 {item.label}
               </span>
             )}
             {!item.done && item.link && (
-              <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#C9A84C', fontWeight: 700, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '999px', padding: '2px 10px' }}>
+              <span style={{ marginLeft: 'auto', fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#C9A84C', fontWeight: 700, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '999px', padding: '2px 10px' }}>
                 Jetzt erledigen
               </span>
             )}

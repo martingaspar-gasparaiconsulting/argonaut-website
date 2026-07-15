@@ -176,7 +176,7 @@ export default function FinanzCockpit() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -184,7 +184,7 @@ export default function FinanzCockpit() {
           >
             💶 Finanzen
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Dein Überblick über Einnahmen, Ausgaben und Gewinn – {jahr}
           </p>
         </div>
@@ -264,17 +264,17 @@ export default function FinanzCockpit() {
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
                 >
                   <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: t.farbe }} />
-                  <div style={{ fontSize: 26, marginBottom: 10 }}>{t.icon}</div>
-                  <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+                  <div style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', marginBottom: 10 }}>{t.icon}</div>
+                  <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, marginBottom: 4 }}>
                     {t.titel}
                   </div>
-                  <div style={{ color: C.textDim, fontSize: 13.5 }}>{t.text}</div>
-                  <div style={{ color: t.farbe, fontSize: 13, fontWeight: 700, marginTop: 12 }}>Öffnen →</div>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>{t.text}</div>
+                  <div style={{ color: t.farbe, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, marginTop: 12 }}>Öffnen →</div>
                 </button>
               ))}
             </div>
 
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 24, lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 24, lineHeight: 1.5 }}>
               Alle Werte netto nach Zufluss-/Abfluss-Prinzip. Der Banking-Abgleich (automatischer
               Kontoimport) folgt in einer späteren Ausbaustufe.
             </p>
@@ -312,16 +312,16 @@ function KpiCard({
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
-      {unter && <div style={{ color: unterFarbe || C.textDim, fontSize: 12, marginTop: 4, fontWeight: 600 }}>{unter}</div>}
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>{wert}</div>
+      {unter && <div style={{ color: unterFarbe || C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4, fontWeight: 600 }}>{unter}</div>}
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",

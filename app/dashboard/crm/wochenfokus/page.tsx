@@ -96,7 +96,7 @@ export default function WochenfokusPage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 margin: 0,
                 letterSpacing: 0.5,
               }}
@@ -108,7 +108,7 @@ export default function WochenfokusPage() {
                 fontFamily: "'DM Sans', sans-serif",
                 color: C.textDim,
                 margin: "6px 0 0",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
               Wen du diese Woche zuerst kontaktieren solltest – von ARGONAUT priorisiert.
@@ -145,17 +145,17 @@ export default function WochenfokusPage() {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 34, marginBottom: 10 }}>✅</div>
+            <div style={{ fontSize: 'clamp(34px, 3vw, 48px)', marginBottom: 10 }}>✅</div>
             <div
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.green,
-                fontSize: 20,
+                fontSize: 'clamp(20px, 1.75vw, 28px)',
               }}
             >
               Alles im grünen Bereich
             </div>
-            <div style={{ color: C.textDim, fontSize: 14, marginTop: 8 }}>
+            <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', marginTop: 8 }}>
               Keine überfälligen Wiedervorlagen, einschlafenden Kontakte oder dringenden Chancen. Gute Arbeit!
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function WochenfokusPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.textDim,
-                    fontSize: 18,
+                    fontSize: 'clamp(18px, 1.56vw, 25px)',
                     fontWeight: 800,
                     minWidth: 26,
                   }}
@@ -202,21 +202,21 @@ export default function WochenfokusPage() {
                       style={{
                         fontFamily: "var(--font-dm-sans), sans-serif",
                         color: "#fff",
-                        fontSize: 17,
+                        fontSize: 'clamp(17px, 1.5vw, 24px)',
                         fontWeight: 700,
                       }}
                     >
                       {e.name}
                     </span>
                     {e.firma && (
-                      <span style={{ color: C.textDim, fontSize: 13 }}>· {e.firma}</span>
+                      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>· {e.firma}</span>
                     )}
                     <span
                       style={{
                         marginLeft: "auto",
                         padding: "2px 10px",
                         borderRadius: 20,
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         fontWeight: 700,
                         color: dringFarbe(e.dringlichkeit),
                         border: `1px solid ${dringFarbe(e.dringlichkeit)}`,
@@ -229,7 +229,7 @@ export default function WochenfokusPage() {
                     style={{
                       color: C.gold,
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       marginBottom: 4,
                     }}
                   >
@@ -239,7 +239,7 @@ export default function WochenfokusPage() {
                     style={{
                       color: C.textDim,
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                     }}
                   >
                     {e.warum}
@@ -250,7 +250,7 @@ export default function WochenfokusPage() {
                         <span
                           key={gi}
                           style={{
-                            fontSize: 11,
+                            fontSize: 'clamp(11px, 0.94vw, 15px)',
                             color: C.textDim,
                             border: `1px solid ${C.border}`,
                             borderRadius: 8,
@@ -279,7 +279,7 @@ const zurueckBtn: React.CSSProperties = {
   color: C.textDim,
   border: "none",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -292,7 +292,7 @@ const goldBtn: React.CSSProperties = {
   padding: "11px 20px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -304,5 +304,5 @@ const fehlerBox: React.CSSProperties = {
   padding: "12px 16px",
   marginBottom: 16,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };

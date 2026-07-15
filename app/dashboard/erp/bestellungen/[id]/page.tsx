@@ -384,12 +384,12 @@ export default function BestellungDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -400,13 +400,13 @@ export default function BestellungDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "8px 10px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -415,7 +415,7 @@ export default function BestellungDetail() {
   };
   const tdStil: React.CSSProperties = {
     padding: "8px 10px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -430,7 +430,7 @@ export default function BestellungDetail() {
       <div style={{ color: "#fff", maxWidth: 700, margin: "0 auto" }}>
         <a
           href="/dashboard/erp/bestellungen"
-          style={{ color: C.cyan, fontSize: 14 }}
+          style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}
         >
           ← Zurück zu Bestellungen
         </a>
@@ -448,7 +448,7 @@ export default function BestellungDetail() {
     <div style={{ color: "#fff", maxWidth: 1100, margin: "0 auto" }}>
       <a
         href="/dashboard/erp/bestellungen"
-        style={{ color: C.cyan, fontSize: 14 }}
+        style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}
       >
         ← Zurück zu Bestellungen
       </a>
@@ -464,10 +464,10 @@ export default function BestellungDetail() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             {bestellung.bestellnummer || "Bestellung"}
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             {lieferantName ? (
               <a
                 href={`/dashboard/erp/lieferanten/${bestellung.lieferant_id}`}
@@ -490,7 +490,7 @@ export default function BestellungDetail() {
                 background: C.gold,
                 color: C.navy,
                 fontWeight: 700,
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 cursor: "pointer",
               }}
               onClick={oeffneWareneingang}
@@ -500,7 +500,7 @@ export default function BestellungDetail() {
           )}
           <span
             style={{
-              fontSize: 13,
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               fontWeight: 700,
               color: aktuellerStatus.farbe,
               background: "rgba(255,255,255,0.06)",
@@ -600,7 +600,7 @@ export default function BestellungDetail() {
             padding: "16px 20px",
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 16 }}>Positionen</h3>
+          <h3 style={{ margin: 0, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Positionen</h3>
           <button style={btnGhost} onClick={positionHinzufuegen}>
             + Position
           </button>
@@ -676,7 +676,7 @@ export default function BestellungDetail() {
                       {(einheit || p.menge_geliefert > 0) && (
                         <div
                           style={{
-                            fontSize: 11,
+                            fontSize: 'clamp(11px, 0.94vw, 15px)',
                             textAlign: "right",
                             marginTop: 2,
                           }}
@@ -746,7 +746,7 @@ export default function BestellungDetail() {
                     ...tdStil,
                     textAlign: "right",
                     fontWeight: 800,
-                    fontSize: 16,
+                    fontSize: 'clamp(16px, 1.38vw, 22px)',
                     color: C.gold,
                     border: "none",
                   }}
@@ -760,7 +760,7 @@ export default function BestellungDetail() {
         )}
       </div>
 
-      <div style={{ marginTop: 14, fontSize: 12, color: C.textDim }}>
+      <div style={{ marginTop: 14, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
         Änderungen an Kopf und Positionen werden automatisch gespeichert.
       </div>
 
@@ -784,10 +784,10 @@ export default function BestellungDetail() {
             style={{ ...card, width: "100%", maxWidth: 680, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               📥 Wareneingang buchen
             </h2>
-            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 13 }}>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Erfasste Mengen erhöhen den Lagerbestand und werden protokolliert.
             </p>
 
@@ -849,7 +849,7 @@ export default function BestellungDetail() {
                             <span
                               style={{
                                 marginLeft: 6,
-                                fontSize: 11,
+                                fontSize: 'clamp(11px, 0.94vw, 15px)',
                                 color: C.warn,
                               }}
                               title="Kein Artikel verknüpft – bucht keinen Lagerbestand"
@@ -905,7 +905,7 @@ export default function BestellungDetail() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >
@@ -932,7 +932,7 @@ export default function BestellungDetail() {
                   background: C.gold,
                   color: C.navy,
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: "pointer",
                   opacity: weBuchen ? 0.6 : 1,
                 }}

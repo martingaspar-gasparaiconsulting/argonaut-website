@@ -64,17 +64,17 @@ export default async function AcademyPage() {
 
       {/* Kopf */}
       <section style={{ marginBottom: '40px' }}>
-        <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>ARGONAUT Academy</p>
+        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>ARGONAUT Academy</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
           <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Schulungen & Erklärvideos</h1>
-          <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '4px 12px' }}>{gesamt} KURSE</span>
+          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '4px 12px' }}>{gesamt} KURSE</span>
         </div>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0, maxWidth: '720px' }}>Lernen Sie ARGONAUT Schritt für Schritt kennen — kurze Erklärvideos zu jedem Bereich. So holen Sie das Maximum aus Ihrem KI-Betriebssystem.</p>
       </section>
 
       {gesamt === 0 ? (
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '48px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: '34px', marginBottom: '12px' }}>🎓</div>
+          <div style={{ fontSize: 'clamp(34px, 3vw, 48px)', marginBottom: '12px' }}>🎓</div>
           Kurse werden gerade vorbereitet.
         </div>
       ) : (
@@ -86,7 +86,7 @@ export default async function AcademyPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: farbe, boxShadow: `0 0 8px ${farbe}`, flexShrink: 0 }} />
                 <h2 style={{ fontSize: 'clamp(17px, 1.8vw, 24px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>{kat}</h2>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: farbe, background: `${farbe}1e`, border: `1px solid ${farbe}55`, borderRadius: '999px', padding: '2px 10px' }}>{list.length}</span>
+                <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: farbe, background: `${farbe}1e`, border: `1px solid ${farbe}55`, borderRadius: '999px', padding: '2px 10px' }}>{list.length}</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
@@ -109,10 +109,10 @@ export default async function AcademyPage() {
                         borderBottom: '1px solid rgba(255,255,255,0.06)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{ fontSize: '40px', opacity: 0.9 }}>{k.icon || '🎬'}</span>
+                        <span style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', opacity: 0.9 }}>{k.icon || '🎬'}</span>
                         <span style={{
                           position: 'absolute', top: '10px', right: '10px',
-                          fontSize: '11px', fontWeight: 700,
+                          fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700,
                           color: spielbar ? '#4CAF7D' : 'rgba(255,255,255,0.55)',
                           background: spielbar ? 'rgba(76,175,125,0.15)' : 'rgba(255,255,255,0.08)',
                           border: `1px solid ${spielbar ? 'rgba(76,175,125,0.4)' : 'rgba(255,255,255,0.15)'}`,
@@ -121,7 +121,7 @@ export default async function AcademyPage() {
                           {spielbar ? '▶ Ansehen' : 'Bald verfügbar'}
                         </span>
                         {k.dauer_minuten ? (
-                          <span style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.5)', borderRadius: '6px', padding: '2px 8px' }}>
+                          <span style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.5)', borderRadius: '6px', padding: '2px 8px' }}>
                             {k.dauer_minuten} Min
                           </span>
                         ) : null}
@@ -129,8 +129,8 @@ export default async function AcademyPage() {
 
                       {/* Text */}
                       <div style={{ padding: '16px 18px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>{k.titel}</p>
-                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6 }}>{k.beschreibung || ''}</p>
+                        <p style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>{k.titel}</p>
+                        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6 }}>{k.beschreibung || ''}</p>
                       </div>
                     </div>
                   )
@@ -144,8 +144,8 @@ export default async function AcademyPage() {
       {/* Hinweis-Streifen */}
       <section style={{ marginTop: '8px' }}>
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '18px 22px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '22px' }}>🎥</span>
-          <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+          <span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>🎥</span>
+          <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)' }}>
             Die Erklärvideos werden laufend ergänzt. {verfuegbar > 0 ? `${verfuegbar} von ${gesamt} Kursen sind bereits abrufbar.` : 'In Kürze stehen die ersten Videos bereit.'}
           </p>
         </div>

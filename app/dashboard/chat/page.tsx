@@ -176,12 +176,12 @@ export default function MitarbeiterChatSeite() {
     const hatFehlende = v.fehlend && v.fehlend.length > 0;
     return (
       <div style={{ marginTop: 12, padding: 16, borderRadius: 12, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.3)' }}>
-        <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#C9A84C', fontSize: 16, marginBottom: 4 }}>
+        <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#C9A84C', fontSize: 'clamp(16px, 1.38vw, 22px)', marginBottom: 4 }}>
           Dokument-Vorschlag: {v.name} ({v.format.toUpperCase()})
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Agent: {v.agent}</div>
+        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Agent: {v.agent}</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 16px', fontSize: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           {Object.entries(v.data).map(([key, wert]) => (
             <div key={key} style={{ display: 'contents' }}>
               <div style={{ color: 'rgba(255,255,255,0.55)' }}>{feldLabel(key)}</div>
@@ -205,21 +205,21 @@ export default function MitarbeiterChatSeite() {
             <button
               onClick={() => speichern(i)}
               disabled={m.vorschlagStatus === 'speichert'}
-              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: m.vorschlagStatus === 'speichert' ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: m.vorschlagStatus === 'speichert' ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: m.vorschlagStatus === 'speichert' ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: m.vorschlagStatus === 'speichert' ? 'not-allowed' : 'pointer' }}
             >
               {m.vorschlagStatus === 'speichert' ? 'Speichert…' : 'Speichern'}
             </button>
             <button
               onClick={() => abbrechen(i)}
               disabled={m.vorschlagStatus === 'speichert'}
-              style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer' }}
             >
               Abbrechen
             </button>
           </div>
         )}
 
-        {m.fehlerText && <div style={{ marginTop: 10, color: '#ff6b6b', fontSize: 13 }}>{m.fehlerText}</div>}
+        {m.fehlerText && <div style={{ marginTop: 10, color: '#ff6b6b', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{m.fehlerText}</div>}
       </div>
     );
   }
@@ -227,10 +227,10 @@ export default function MitarbeiterChatSeite() {
   return (
     <div style={{ minHeight: '100vh', background: '#0A1628', color: '#fff', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-        <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 700, color: '#C9A84C', margin: 0 }}>
+        <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 700, color: '#C9A84C', margin: 0 }}>
           Mitarbeiter-Chat
         </h1>
-        <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)', margin: '6px 0 0' }}>
+        <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.6)', margin: '6px 0 0' }}>
           Stellen Sie Fragen zu Ihren Dokumenten &ndash; oder lassen Sie neue Dokumente erstellen.
         </p>
       </div>
@@ -248,7 +248,7 @@ export default function MitarbeiterChatSeite() {
               padding: '14px 18px',
               borderRadius: 14,
               fontFamily: 'DM Sans, sans-serif',
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               lineHeight: 1.6,
               background: m.rolle === 'user' ? '#C9A84C' : 'rgba(255,255,255,0.06)',
               color: m.rolle === 'user' ? '#0A1628' : '#fff',
@@ -259,7 +259,7 @@ export default function MitarbeiterChatSeite() {
                 : <span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span>}
               {m.vorschlag && vorschlagKarte(m, i)}
               {m.quellen && m.quellen.length > 0 && (
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,229,255,0.2)', fontSize: 12, color: '#00e5ff' }}>
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,229,255,0.2)', fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#00e5ff' }}>
                   Quellen: {m.quellen.join(', ')}
                 </div>
               )}
@@ -268,7 +268,7 @@ export default function MitarbeiterChatSeite() {
         ))}
         {laedt && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
-            <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(0,229,255,0.2)', color: 'rgba(255,255,255,0.6)', fontFamily: 'DM Sans, sans-serif', fontSize: 15 }}>
+            <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(0,229,255,0.2)', color: 'rgba(255,255,255,0.6)', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
               Einen Moment &hellip;
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function MitarbeiterChatSeite() {
               background: 'rgba(255,255,255,0.04)',
               color: '#fff',
               fontFamily: 'DM Sans, sans-serif',
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               outline: 'none',
             }}
           />
@@ -308,7 +308,7 @@ export default function MitarbeiterChatSeite() {
               color: '#0A1628',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: laedt || !eingabe.trim() ? 'not-allowed' : 'pointer',
             }}
           >

@@ -82,9 +82,9 @@ const card: CSSProperties = {
   padding: '24px',
   marginBottom: '20px',
 }
-const gruppenTitel: CSSProperties = { fontSize: '13px', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 4px' }
-const hinweisStil: CSSProperties = { fontSize: '12px', color: 'rgba(255,255,255,0.45)', margin: '0 0 18px', lineHeight: 1.5 }
-const labelStil: CSSProperties = { display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px', fontWeight: 600 }
+const gruppenTitel: CSSProperties = { fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 4px' }
+const hinweisStil: CSSProperties = { fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.45)', margin: '0 0 18px', lineHeight: 1.5 }
+const labelStil: CSSProperties = { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)', marginBottom: '6px', fontWeight: 600 }
 const inputStil: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
@@ -92,7 +92,7 @@ const inputStil: CSSProperties = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: '8px',
   color: '#FFFFFF',
-  fontSize: '14px',
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
   fontFamily: 'var(--font-dm-sans), sans-serif',
 }
@@ -178,7 +178,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
             placeholder="#1A1A2E"
             style={{ ...inputStil, maxWidth: '160px', marginBottom: 0 }}
           />
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>z. B. Dunkelgrün für einen Gärtnerbetrieb</span>
+          <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>z. B. Dunkelgrün für einen Gärtnerbetrieb</span>
         </div>
       </section>
 
@@ -192,7 +192,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
             border: 'none',
             background: '#C9A84C',
             color: '#0A1628',
-            fontSize: '14px',
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             fontWeight: 800,
             cursor: speichernd ? 'default' : 'pointer',
             opacity: speichernd ? 0.6 : 1,
@@ -202,7 +202,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
           {speichernd ? 'Wird gespeichert…' : 'Firmenprofil speichern'}
         </button>
         {meldung ? (
-          <span style={{ fontSize: '14px', color: istFehler ? '#ef4444' : '#3ddc84', fontWeight: 600 }}>{meldung}</span>
+          <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: istFehler ? '#ef4444' : '#3ddc84', fontWeight: 600 }}>{meldung}</span>
         ) : null}
       </div>
     </form>

@@ -209,7 +209,7 @@ export default function EuerReport() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -217,7 +217,7 @@ export default function EuerReport() {
           >
             📊 EÜR – Einnahmen-Überschuss-Rechnung
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Einnahmen minus Ausgaben (netto) – Regelbesteuerung mit getrennter Umsatzsteuer
           </p>
         </div>
@@ -244,7 +244,7 @@ export default function EuerReport() {
                   border: `1px solid ${aktiv ? C.gold : C.border}`,
                   borderRadius: 999,
                   padding: "8px 14px",
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
@@ -268,7 +268,7 @@ export default function EuerReport() {
           </div>
         )}
 
-        <p style={{ color: C.textDim, fontSize: 12.5, margin: "6px 2px 22px" }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "6px 2px 22px" }}>
           Zeitraum: {new Date(bereich.von).toLocaleDateString("de-DE")} –{" "}
           {new Date(bereich.bis).toLocaleDateString("de-DE")}
         </p>
@@ -322,7 +322,7 @@ export default function EuerReport() {
                   farbe={ergebnis.ustZahllast >= 0 ? C.warn : C.green}
                 />
               </div>
-              <p style={{ color: C.textDim, fontSize: 12, margin: "14px 2px 0", lineHeight: 1.5 }}>
+              <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
                 Grobe Orientierung, keine Umsatzsteuervoranmeldung. Brutto-Kontrolle: Einnahmen{" "}
                 {eur(ergebnis.einnahmenBrutto)} · Ausgaben {eur(ergebnis.ausgabenBrutto)}.
               </p>
@@ -332,7 +332,7 @@ export default function EuerReport() {
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px 22px" }}>
               <div style={sektionLabel}>Ausgaben nach Kategorie (netto)</div>
               {ergebnis.kategorien.length === 0 ? (
-                <p style={{ color: C.textDim, fontSize: 14, margin: 0 }}>
+                <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', margin: 0 }}>
                   Keine Ausgaben im gewählten Zeitraum.
                 </p>
               ) : (
@@ -341,7 +341,7 @@ export default function EuerReport() {
                     const anteil = Math.round((k.netto / ausgabenSummeNetto) * 100);
                     return (
                       <div key={k.name} style={{ marginBottom: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, marginBottom: 5 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 5 }}>
                           <span>{k.name}</span>
                           <span style={{ color: C.textDim }}>
                             {eur(k.netto)} · {anteil}%
@@ -364,7 +364,7 @@ export default function EuerReport() {
               )}
             </div>
 
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 20, lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 20, lineHeight: 1.5 }}>
               Hinweis: Vereinfachte Übersicht nach Zufluss-/Abfluss-Prinzip. Ersetzt keine steuerliche
               Beratung – die finale EÜR erstellt dein Steuerberater.
             </p>
@@ -390,7 +390,7 @@ function GrosseKarte({ label, wert, farbe, gross }: { label: string; wert: strin
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
       <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: gross ? 30 : 26, fontWeight: 800, color: farbe }}>
         {wert}
       </div>
@@ -401,15 +401,15 @@ function GrosseKarte({ label, wert, farbe, gross }: { label: string; wert: strin
 function MiniKarte({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
-      <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -419,7 +419,7 @@ const sektionLabel: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "0 0 6px",
 };
@@ -430,7 +430,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "10px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
 };

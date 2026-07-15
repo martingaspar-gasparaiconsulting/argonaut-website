@@ -104,7 +104,7 @@ export default function Glocke() {
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <button onClick={umschalten} title="Benachrichtigungen" style={styles.knopf}>
-        <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
+        <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', lineHeight: 1 }}>🔔</span>
         {ungelesen > 0 && (
           <span style={styles.badge}>{ungelesen > 9 ? '9+' : ungelesen}</span>
         )}
@@ -148,7 +148,7 @@ const styles: Record<string, CSSProperties> = {
   },
   badge: {
     position: 'absolute', top: 0, right: 0, minWidth: 16, height: 16, padding: '0 4px',
-    background: C.danger, color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 800,
+    background: C.danger, color: '#fff', borderRadius: 999, fontSize: 'clamp(10px, 0.88vw, 14px)', fontWeight: 800,
     display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
   },
   dropdown: {
@@ -157,16 +157,16 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: '0 20px 50px rgba(0,0,0,0.5)', zIndex: 200, overflow: 'hidden',
   },
   kopf: {
-    padding: '12px 16px', fontSize: 13, fontWeight: 800, color: C.text,
+    padding: '12px 16px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, color: C.text,
     borderBottom: `1px solid ${C.border}`, letterSpacing: '0.03em',
   },
-  leer: { padding: '20px 16px', color: C.textDim, fontSize: 13.5 },
+  leer: { padding: '20px 16px', color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
   rollbereich: { maxHeight: 380, overflowY: 'auto' },
   eintrag: {
     display: 'block', padding: '12px 16px', borderBottom: '1px solid rgba(143,163,190,0.08)',
     textDecoration: 'none', color: C.text, cursor: 'pointer',
   },
-  titelZeile: { fontSize: 13.5, fontWeight: 700, color: C.text, marginBottom: 3 },
-  nachricht: { fontSize: 12.5, color: C.textDim, lineHeight: 1.45, marginBottom: 4 },
-  zeit: { fontSize: 11, color: C.cyan, fontWeight: 600 },
+  titelZeile: { fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 700, color: C.text, marginBottom: 3 },
+  nachricht: { fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, lineHeight: 1.45, marginBottom: 4 },
+  zeit: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.cyan, fontWeight: 600 },
 };

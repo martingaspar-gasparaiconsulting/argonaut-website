@@ -821,11 +821,11 @@ export default function WerkstattPage() {
             onClick={() => setHuOffen((o) => !o)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', color: C.text, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
           >
-            <span style={{ fontSize: 18 }}>🗓</span>
-            <span style={{ fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15 }}>
+            <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)' }}>🗓</span>
+            <span style={{ fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
               HU-Wiedervorlage: {huFaellig.length} {huFaellig.length === 1 ? 'Fahrzeug' : 'Fahrzeuge'} fällig
             </span>
-            <span style={{ marginLeft: 'auto', color: C.textDim, fontSize: 13 }}>{huOffen ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 'auto', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{huOffen ? '▲' : '▼'}</span>
           </button>
           {huOffen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
@@ -834,7 +834,7 @@ export default function WerkstattPage() {
                 const farbe = t < 0 ? C.danger : t <= 30 ? C.warn : C.green;
                 const text = t < 0 ? `${Math.abs(t)} Tage überfällig` : t === 0 ? 'heute fällig' : `in ${t} Tagen`;
                 return (
-                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 13.5 }}>
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                     <span style={{ width: 9, height: 9, borderRadius: '50%', background: farbe, display: 'inline-block', flexShrink: 0 }} />
                     <span style={{ fontWeight: 700 }}>{[f.hersteller, f.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</span>
                     <span style={{ color: C.textDim }}>{f.kennzeichen || `FIN …${f.fin.slice(-6)}`}{f.halter_name ? ` · ${f.halter_name}` : ''}</span>
@@ -843,7 +843,7 @@ export default function WerkstattPage() {
                   </div>
                 );
               })}
-              <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 4 }}>
+              <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 4 }}>
                 Zeigt Fahrzeuge mit HU-Fälligkeit in den nächsten 60 Tagen. HU-Datum wird beim Fahrzeug im Auftrag gepflegt.
               </div>
             </div>
@@ -864,10 +864,10 @@ export default function WerkstattPage() {
               <div style={{ ...styles.spalteKopf, borderTopColor: def.farbe }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: def.farbe, display: 'inline-block' }} />
                 <span style={{ fontWeight: 700 }}>{def.label}</span>
-                <span style={{ color: C.textDim, fontSize: 12, marginLeft: 'auto' }}>{liste.length}</span>
+                <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginLeft: 'auto' }}>{liste.length}</span>
               </div>
               <div style={styles.spalteBody}>
-                {liste.length === 0 ? <div style={{ color: C.textDim, fontSize: 12, padding: '8px 4px' }}>—</div> : (
+                {liste.length === 0 ? <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', padding: '8px 4px' }}>—</div> : (
                   liste.map((a) => {
                     const ampel = dringlichkeitsAmpel(a);
                     const fAmpel = freigabeAmpel(a);
@@ -885,19 +885,19 @@ export default function WerkstattPage() {
                                 style={{ width: 7, height: 7, borderRadius: '50%', background: fAmpel.farbe, display: 'inline-block', flexShrink: 0, boxShadow: `0 0 0 2px ${C.navy}` }}
                               />
                             )}
-                            <span style={{ fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.titel}</span>
+                            <span style={{ fontWeight: 700, fontSize: 'clamp(13.5px, 1.19vw, 19px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.titel}</span>
                           </div>
                           {(a.kunde_name || a.kennzeichen || fz) && (
-                            <div style={{ fontSize: 12, color: C.textDim, marginBottom: 4 }}>
+                            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 4 }}>
                               {[a.kunde_name, fz ? (fz.kennzeichen || fz.fin.slice(-6)) : a.kennzeichen].filter(Boolean).join(' · ')}
                             </div>
                           )}
                           {zeigeFreigabe && (
-                            <div style={{ fontSize: 10.5, color: fAmpel.farbe, marginBottom: 4, fontWeight: 600 }}>
+                            <div style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: fAmpel.farbe, marginBottom: 4, fontWeight: 600 }}>
                               {fAmpel.aktionNoetig ? '⚠ ' : ''}{fAmpel.label}
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'clamp(11px, 0.94vw, 15px)' }}>
                             <span style={{ color: ampel.farbe }}>{ampel.label}</span>
                             <span style={{ color: C.textDim }}>{durchlaufzeitText(a)}</span>
                           </div>
@@ -927,7 +927,7 @@ export default function WerkstattPage() {
           <div style={{ ...styles.modal, maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
               <h2 style={{ ...styles.modalTitel, margin: 0 }}>{form.id ? 'Auftrag bearbeiten' : 'Neuer Werkstatt-Auftrag'}</h2>
-              {gespeichertHinweis && <span style={{ color: C.green, fontSize: 13 }}>✓ gespeichert</span>}
+              {gespeichertHinweis && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
             </div>
 
             {/* Feinschliff 4 · Fehler auch im Modal sichtbar (nicht nur oben auf der Seite) */}
@@ -991,7 +991,7 @@ export default function WerkstattPage() {
                       <div style={styles.fzKarte}>
                         <div>
                           <div style={{ fontWeight: 700 }}>{[gekoppeltesFahrzeug.hersteller, gekoppeltesFahrzeug.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</div>
-                          <div style={{ fontSize: 12, color: C.textDim }}>FIN {gekoppeltesFahrzeug.fin}{gekoppeltesFahrzeug.kennzeichen ? ` · ${gekoppeltesFahrzeug.kennzeichen}` : ''}</div>
+                          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>FIN {gekoppeltesFahrzeug.fin}{gekoppeltesFahrzeug.kennzeichen ? ` · ${gekoppeltesFahrzeug.kennzeichen}` : ''}</div>
                         </div>
                         <button onClick={() => fahrzeugKoppeln(null)} style={styles.miniBtnGhost}>Entkoppeln</button>
                       </div>
@@ -1018,7 +1018,7 @@ export default function WerkstattPage() {
                           {fzTreffer.map((f) => (
                             <button key={f.id} onClick={() => fahrzeugKoppeln(f.id)} style={styles.dropdownItem}>
                               <span style={{ fontWeight: 600 }}>{[f.hersteller, f.modell].filter(Boolean).join(' ') || 'Fahrzeug'}</span>
-                              <span style={{ color: C.textDim, fontSize: 12 }}> · {f.kennzeichen || f.fin}</span>
+                              <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}> · {f.kennzeichen || f.fin}</span>
                             </button>
                           ))}
                         </div>
@@ -1053,11 +1053,11 @@ export default function WerkstattPage() {
                     {leiOffen && (
                       <div style={styles.dropdown}>
                         {leiTreffer.length === 0 ? (
-                          <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 13 }}>Keine passende Leistung. Katalog unter „Leistungskatalog" pflegen.</div>
+                          <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Keine passende Leistung. Katalog unter „Leistungskatalog" pflegen.</div>
                         ) : leiTreffer.map((k) => (
                           <button key={k.id} onClick={() => katalogUebernehmen(k)} style={styles.dropdownItem}>
                             <span style={{ fontWeight: 600 }}>{k.bezeichnung}</span>
-                            <span style={{ color: C.textDim, fontSize: 12 }}>
+                            <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                               {' · '}{k.kategorie || 'ohne Kat.'}{' · '}{preisText(k)}
                             </span>
                           </button>
@@ -1131,7 +1131,7 @@ export default function WerkstattPage() {
                                       </datalist>
                                     </>
                                   ) : (
-                                    <span style={{ color: C.textDim, fontSize: 12.5 }}>—</span>
+                                    <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>—</span>
                                   )}
                                 </td>
                                 <td style={styles.posTd}>
@@ -1189,7 +1189,7 @@ export default function WerkstattPage() {
                         <span style={{ width: 11, height: 11, borderRadius: '50%', background: aktFreigabeAmpel.farbe, display: 'inline-block', flexShrink: 0 }} />
                         <span style={{ fontWeight: 700, color: aktFreigabeAmpel.farbe }}>{aktFreigabeAmpel.label}</span>
                         {aktAuftrag.freigabe_am && (
-                          <span style={{ color: C.textDim, fontSize: 12, marginLeft: 'auto' }}>
+                          <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginLeft: 'auto' }}>
                             {freigabeDatumText(aktAuftrag.freigabe_am)}
                           </span>
                         )}
@@ -1206,10 +1206,10 @@ export default function WerkstattPage() {
 
                       {/* Hinweis / Notiz */}
                       {!aktNachtrag && (
-                        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 10 }}>{aktFreigabeAmpel.hinweis}</div>
+                        <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 10 }}>{aktFreigabeAmpel.hinweis}</div>
                       )}
                       {aktAuftrag.freigabe_notiz && (
-                        <div style={{ fontSize: 12.5, color: C.text, marginBottom: 10, fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.text, marginBottom: 10, fontStyle: 'italic' }}>
                           „{aktAuftrag.freigabe_notiz}"
                         </div>
                       )}
@@ -1233,7 +1233,7 @@ export default function WerkstattPage() {
                         )}
                       </div>
 
-                      <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 10, lineHeight: 1.5 }}>
                         Jeder Freigabe-Schritt wird protokolliert. Bei zusätzlichen Positionen über dem freigegebenen Betrag meldet das System hier automatisch einen Nachtrag — die Board-Karte zeigt nur den reinen Freigabe-Status.
                       </div>
                     </div>
@@ -1244,7 +1244,7 @@ export default function WerkstattPage() {
                 {aktAuftrag && nachrichtVorlagen.length > 0 && (
                   <div style={styles.sektion}>
                     <div style={styles.sektionTitel}>💬 Kunden-Info</div>
-                    <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 10 }}>
+                    <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 10 }}>
                       Fertige Nachricht wählen, bei Bedarf anpassen, kopieren und per WhatsApp/SMS senden.
                     </div>
 
@@ -1275,8 +1275,8 @@ export default function WerkstattPage() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                       <button onClick={nachrichtKopieren} style={styles.kvaBtn}>📋 Kopieren</button>
-                      {nachrichtKopiert && <span style={{ color: C.green, fontSize: 13 }}>✓ in Zwischenablage</span>}
-                      <span style={{ color: C.textDim, fontSize: 11.5, marginLeft: 'auto' }}>„[Ihre Werkstatt]" einmal durch Ihren Betriebsnamen ersetzen.</span>
+                      {nachrichtKopiert && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ in Zwischenablage</span>}
+                      <span style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', marginLeft: 'auto' }}>„[Ihre Werkstatt]" einmal durch Ihren Betriebsnamen ersetzen.</span>
                     </div>
                   </div>
                 )}
@@ -1287,7 +1287,7 @@ export default function WerkstattPage() {
                     <div style={styles.sektionTitel}>🔧 Bühne / Termin</div>
 
                     {ressourcen.length === 0 ? (
-                      <div style={{ fontSize: 13, color: C.textDim }}>
+                      <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                         Noch keine Ressourcen angelegt. Lege im Modul „Buchungen" z. B. „Hebebühne 1" an — danach kannst du sie hier terminieren.
                       </div>
                     ) : (
@@ -1298,7 +1298,7 @@ export default function WerkstattPage() {
                             {auftragBuchungen.filter((b) => b.status !== 'storniert').map((b) => {
                               const res = ressourcen.find((r) => r.id === b.ressource_id);
                               return (
-                                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px' }}>
+                                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(13px, 1.13vw, 18px)', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px' }}>
                                   <span style={{ width: 9, height: 9, borderRadius: '50%', background: res?.farbe || C.cyan, display: 'inline-block', flexShrink: 0 }} />
                                   <span style={{ fontWeight: 700 }}>{res?.bezeichnung || 'Ressource'}</span>
                                   <span style={{ color: C.textDim }}>{zeitraumText(b.beginn_am, b.ende_am)}</span>
@@ -1341,7 +1341,7 @@ export default function WerkstattPage() {
                           </div>
                         )}
                         {buchForm.ressource_id && buchKonflikte.length === 0 && (
-                          <div style={{ fontSize: 12.5, color: C.green, marginTop: 8 }}>✓ Zeitraum frei</div>
+                          <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.green, marginTop: 8 }}>✓ Zeitraum frei</div>
                         )}
 
                         <div style={{ marginTop: 10 }}>
@@ -1370,7 +1370,7 @@ export default function WerkstattPage() {
                       <div style={styles.sektionTitel}>⏱ Durchlauf · gesamt {durchlaufzeitText(a)}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {phasen.map((ph) => (
-                          <div key={ph.status} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                          <div key={ph.status} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: ph.farbe, display: 'inline-block' }} />
                             <span style={{ minWidth: 110 }}>{ph.label}</span>
                             <span style={{ color: C.textDim }}>{dauerTextMinuten(ph.minuten)}</span>
@@ -1429,63 +1429,63 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 680, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 680, lineHeight: 1.5 },
 
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
-  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
-  miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '6px 12px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
 
   // KVA-Freigabe-Buttons (Block 1.1)
-  kvaBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
-  freigebenBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.35)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
-  ablehnenBtn: { background: 'rgba(224,102,102,0.12)', color: C.danger, border: `1px solid rgba(224,102,102,0.32)`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
-  rechnungBtn: { background: 'rgba(201,168,76,0.14)', color: C.gold, border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
-  nachtragBox: { background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '11px 13px', fontSize: 13, color: C.text, marginBottom: 10, lineHeight: 1.5 },
+  kvaBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '8px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  freigebenBtn: { background: 'rgba(76,175,125,0.14)', color: C.green, border: `1px solid rgba(76,175,125,0.35)`, borderRadius: 8, padding: '8px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  ablehnenBtn: { background: 'rgba(224,102,102,0.12)', color: C.danger, border: `1px solid rgba(224,102,102,0.32)`, borderRadius: 8, padding: '8px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  rechnungBtn: { background: 'rgba(201,168,76,0.14)', color: C.gold, border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  nachtragBox: { background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.4)`, borderRadius: 10, padding: '11px 13px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, marginBottom: 10, lineHeight: 1.5 },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
-  summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  summeLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   board: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(190px, 1fr))', gap: 12, overflowX: 'auto', paddingBottom: 8 },
   spalte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', minHeight: 200 },
-  spalteKopf: { display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '3px solid', borderTopLeftRadius: 14, borderTopRightRadius: 14, fontSize: 14 },
+  spalteKopf: { display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderTop: '3px solid', borderTopLeftRadius: 14, borderTopRightRadius: 14, fontSize: 'clamp(14px, 1.25vw, 20px)' },
   spalteBody: { padding: '4px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8 },
   karte: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' },
   karteHaupt: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', color: C.text, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit' },
-  weiterBtn: { display: 'block', width: '100%', background: 'rgba(0,229,255,0.08)', color: C.cyan, border: 'none', borderTop: `1px solid ${C.border}`, padding: '7px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
+  weiterBtn: { display: 'block', width: '100%', background: 'rgba(0,229,255,0.08)', color: C.cyan, border: 'none', borderTop: `1px solid ${C.border}`, padding: '7px 12px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  rechtHinweis: { marginTop: 16, fontSize: 12, color: C.textDim, lineHeight: 1.5, maxWidth: 760 },
-  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  rechtHinweis: { marginTop: 16, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, maxWidth: 760 },
+  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 'clamp(13.5px, 1.19vw, 19px)', color: C.text },
 
   sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, marginBottom: 12, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   fzKarte: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px' },
 
   dropdown: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 10, marginTop: 6, overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.4)' },
-  dropdownItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5 },
+  dropdownItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
 
   posTable: { width: '100%', borderCollapse: 'collapse', minWidth: 700 },
-  posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  posTd: { padding: '5px 8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
-  posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
-  preisSchalter: { display: 'block', width: '100%', textAlign: 'right', background: 'transparent', border: 'none', padding: '2px 2px 0', fontSize: 10.5, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: 2 },
-  externBadge: { marginLeft: 6, fontSize: 10, color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
-  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 15, fontFamily: 'inherit' },
-  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 14 },
+  posTh: { textAlign: 'left', padding: '6px 8px', fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  posTd: { padding: '5px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
+  posInput: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  preisSchalter: { display: 'block', width: '100%', textAlign: 'right', background: 'transparent', border: 'none', padding: '2px 2px 0', fontSize: 'clamp(10.5px, 0.94vw, 15px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: 2 },
+  externBadge: { marginLeft: 6, fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 'clamp(15px, 1.31vw, 21px)', fontFamily: 'inherit' },
+  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 18px', color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, alignItems: 'center' },
 };

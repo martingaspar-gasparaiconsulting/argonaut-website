@@ -897,7 +897,7 @@ export default function CrmDetailPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: "#fff",
-                    fontSize: 28,
+                    fontSize: 'clamp(28px, 2.44vw, 39px)',
                     margin: 0,
                   }}
                 >
@@ -909,7 +909,7 @@ export default function CrmDetailPage() {
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   color: C.textDim,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   marginTop: 8,
                   marginLeft: 26,
                 }}
@@ -926,7 +926,7 @@ export default function CrmDetailPage() {
                     marginLeft: 26,
                     marginTop: 8,
                     fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                     color: wvFaellig ? C.warn : C.textDim,
                   }}
                 >
@@ -947,7 +947,7 @@ export default function CrmDetailPage() {
                   padding: "11px 18px",
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: "pointer",
                 }}
               >
@@ -963,7 +963,7 @@ export default function CrmDetailPage() {
                   padding: "11px 18px",
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: "pointer",
                 }}
               >
@@ -1003,13 +1003,13 @@ export default function CrmDetailPage() {
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   color: C.textDim,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                 }}
               >
                 🏷 Tags:
               </span>
               {meineTags.length === 0 && (
-                <span style={{ color: C.textDim, fontSize: 13 }}>keine</span>
+                <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>keine</span>
               )}
               {meineTags.map((t) => (
                 <span
@@ -1020,7 +1020,7 @@ export default function CrmDetailPage() {
                     gap: 6,
                     padding: "3px 8px 3px 10px",
                     borderRadius: 20,
-                    fontSize: 12,
+                    fontSize: 'clamp(12px, 1.06vw, 17px)',
                     fontWeight: 600,
                     color: t.farbe || C.gold,
                     border: `1px solid ${t.farbe || C.gold}`,
@@ -1036,7 +1036,7 @@ export default function CrmDetailPage() {
                       border: "none",
                       color: t.farbe || C.gold,
                       cursor: "pointer",
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       lineHeight: 1,
                       padding: 0,
                     }}
@@ -1054,7 +1054,7 @@ export default function CrmDetailPage() {
                   padding: "3px 12px",
                   color: C.textDim,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 12,
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   cursor: "pointer",
                 }}
               >
@@ -1074,7 +1074,7 @@ export default function CrmDetailPage() {
               >
                 {verfuegbareTags.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 8 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 8 }}>
                       Vorhandene Tags
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1089,7 +1089,7 @@ export default function CrmDetailPage() {
                             borderRadius: 20,
                             padding: "3px 12px",
                             color: t.farbe || C.gold,
-                            fontSize: 12,
+                            fontSize: 'clamp(12px, 1.06vw, 17px)',
                             fontWeight: 600,
                             cursor: "pointer",
                           }}
@@ -1101,7 +1101,7 @@ export default function CrmDetailPage() {
                   </div>
                 )}
 
-                <div style={{ color: C.textDim, fontSize: 12, marginBottom: 8 }}>
+                <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 8 }}>
                   Neuen Tag anlegen
                 </div>
                 <div
@@ -1170,7 +1170,7 @@ export default function CrmDetailPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.gold,
-                    fontSize: 22,
+                    fontSize: 'clamp(22px, 1.94vw, 31px)',
                     margin: 0,
                   }}
                 >
@@ -1182,7 +1182,7 @@ export default function CrmDetailPage() {
                     background: "transparent",
                     border: "none",
                     color: C.textDim,
-                    fontSize: 20,
+                    fontSize: 'clamp(20px, 1.75vw, 28px)',
                     cursor: "pointer",
                   }}
                 >
@@ -1207,7 +1207,7 @@ export default function CrmDetailPage() {
                         display: "inline-block",
                         padding: "3px 12px",
                         borderRadius: 20,
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         fontWeight: 700,
                         color: statusFarbe(briefing.beziehungsstatus),
                         border: `1px solid ${statusFarbe(briefing.beziehungsstatus)}`,
@@ -1220,7 +1220,7 @@ export default function CrmDetailPage() {
                         : "☀ warm"}
                     </span>
                     {briefing.status_begruendung && (
-                      <span style={{ color: C.textDim, fontSize: 13 }}>
+                      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                         {briefing.status_begruendung}
                       </span>
                     )}
@@ -1231,7 +1231,7 @@ export default function CrmDetailPage() {
                       style={{
                         color: "#fff",
                         fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 15,
+                        fontSize: 'clamp(15px, 1.31vw, 21px)',
                         lineHeight: 1.5,
                         margin: "0 0 18px",
                       }}
@@ -1250,10 +1250,10 @@ export default function CrmDetailPage() {
                         marginBottom: 18,
                       }}
                     >
-                      <div style={{ color: C.cyan, fontSize: 12, marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                      <div style={{ color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>
                         Gesprächseinstieg
                       </div>
-                      <div style={{ color: "#fff", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+                      <div style={{ color: "#fff", fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: "'DM Sans', sans-serif" }}>
                         {briefing.gespraechseinstieg}
                       </div>
                     </div>
@@ -1288,7 +1288,7 @@ export default function CrmDetailPage() {
                   )}
 
                   {briefingQuellen.length > 0 && (
-                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 14 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 14 }}>
                       Firmenwissen aus: {briefingQuellen.join(", ")}
                     </div>
                   )}
@@ -1310,7 +1310,7 @@ export default function CrmDetailPage() {
                     </button>
                   </div>
 
-                  <div style={{ color: C.textDim, fontSize: 11, marginTop: 14 }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', marginTop: 14 }}>
                     KI-generiert auf Basis der erfassten Historie – bitte vor dem Gespräch kurz prüfen.
                   </div>
                 </div>
@@ -1335,7 +1335,7 @@ export default function CrmDetailPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.lila,
-                    fontSize: 22,
+                    fontSize: 'clamp(22px, 1.94vw, 31px)',
                     margin: 0,
                   }}
                 >
@@ -1347,7 +1347,7 @@ export default function CrmDetailPage() {
                     background: "transparent",
                     border: "none",
                     color: C.textDim,
-                    fontSize: 20,
+                    fontSize: 'clamp(20px, 1.75vw, 28px)',
                     cursor: "pointer",
                   }}
                 >
@@ -1357,7 +1357,7 @@ export default function CrmDetailPage() {
 
               {/* Eingaben */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                   Worum geht's? (optional)
                 </label>
                 <input
@@ -1369,7 +1369,7 @@ export default function CrmDetailPage() {
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 16 }}>
                 <div style={{ flex: "0 0 auto" }}>
-                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                  <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                     Tonalität
                   </label>
                   <select
@@ -1405,7 +1405,7 @@ export default function CrmDetailPage() {
                     marginTop: 8,
                   }}
                 >
-                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                  <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                     Betreff
                   </label>
                   <input
@@ -1413,7 +1413,7 @@ export default function CrmDetailPage() {
                     value={fuBetreff}
                     onChange={(e) => setFuBetreff(e.target.value)}
                   />
-                  <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                  <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                     Mailtext
                   </label>
                   <textarea
@@ -1423,7 +1423,7 @@ export default function CrmDetailPage() {
                   />
 
                   {fuQuellen.length > 0 && (
-                    <div style={{ color: C.textDim, fontSize: 12, marginBottom: 12 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 12 }}>
                       Firmenwissen aus: {fuQuellen.join(", ")}
                     </div>
                   )}
@@ -1449,7 +1449,7 @@ export default function CrmDetailPage() {
                     </button>
                   </div>
 
-                  <div style={{ color: C.textDim, fontSize: 11, marginTop: 14 }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', marginTop: 14 }}>
                     KI-Entwurf – bitte prüfen. Versand erfolgt manuell über dein Mail-Programm (Auto-Versand kommt später).
                   </div>
                 </div>
@@ -1546,7 +1546,7 @@ export default function CrmDetailPage() {
                       borderRadius: 10,
                       padding: "8px 16px",
                       fontFamily: "'DM Sans', sans-serif",
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       cursor: "pointer",
                     }}
                   >
@@ -1679,7 +1679,7 @@ export default function CrmDetailPage() {
                     style={{
                       fontFamily: "var(--font-dm-sans), sans-serif",
                       color: C.cyan,
-                      fontSize: 15,
+                      fontSize: 'clamp(15px, 1.31vw, 21px)',
                     }}
                   >
                     🎙 Voice-Memo → KI-Notiz
@@ -1695,7 +1695,7 @@ export default function CrmDetailPage() {
                         padding: "8px 16px",
                         fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         cursor: "pointer",
                       }}
                     >
@@ -1706,7 +1706,7 @@ export default function CrmDetailPage() {
 
                 {voiceOffen && (
                   <div style={{ marginTop: 14 }}>
-                    <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 12 }}>
                       Nach dem Telefonat einfach reinsprechen – ARGONAUT macht eine saubere Notiz daraus und erkennt die Wiedervorlage.
                     </div>
 
@@ -1722,7 +1722,7 @@ export default function CrmDetailPage() {
                             padding: "10px 18px",
                             fontFamily: "var(--font-dm-sans), sans-serif",
                             fontWeight: 700,
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             cursor: "pointer",
                           }}
                         >
@@ -1739,7 +1739,7 @@ export default function CrmDetailPage() {
                             padding: "10px 18px",
                             fontFamily: "var(--font-dm-sans), sans-serif",
                             fontWeight: 700,
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             cursor: "pointer",
                           }}
                         >
@@ -1747,7 +1747,7 @@ export default function CrmDetailPage() {
                         </button>
                       )}
                       {aufnahme && (
-                        <span style={{ color: C.danger, fontSize: 13, alignSelf: "center" }}>
+                        <span style={{ color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', alignSelf: "center" }}>
                           ● läuft…
                         </span>
                       )}
@@ -1793,13 +1793,13 @@ export default function CrmDetailPage() {
                           padding: "16px 18px",
                         }}
                       >
-                        <div style={{ color: C.cyan, fontSize: 12, marginBottom: 10 }}>
+                        <div style={{ color: C.cyan, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 10 }}>
                           Vorschlag von ARGONAUT – bitte prüfen &amp; übernehmen
                         </div>
 
                         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
                           <div style={{ flex: "0 0 auto" }}>
-                            <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                            <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                               Typ
                             </label>
                             <select
@@ -1819,7 +1819,7 @@ export default function CrmDetailPage() {
                           </div>
                         </div>
 
-                        <label style={{ color: C.textDim, fontSize: 12, display: "block", marginBottom: 5 }}>
+                        <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', display: "block", marginBottom: 5 }}>
                           Notiz
                         </label>
                         <textarea
@@ -1839,7 +1839,7 @@ export default function CrmDetailPage() {
                               alignItems: "center",
                               gap: 8,
                               color: C.warn,
-                              fontSize: 14,
+                              fontSize: 'clamp(14px, 1.25vw, 20px)',
                               marginBottom: 14,
                               cursor: "pointer",
                             }}
@@ -1884,7 +1884,7 @@ export default function CrmDetailPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.gold,
-                    fontSize: 15,
+                    fontSize: 'clamp(15px, 1.31vw, 21px)',
                     marginBottom: 12,
                   }}
                 >
@@ -1902,7 +1902,7 @@ export default function CrmDetailPage() {
                         borderRadius: 20,
                         padding: "6px 14px",
                         fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         fontWeight: 600,
                         cursor: "pointer",
                       }}
@@ -1926,7 +1926,7 @@ export default function CrmDetailPage() {
                   }}
                 >
                   <div style={{ flex: "0 0 auto" }}>
-                    <label style={{ color: C.textDim, fontSize: 12, marginRight: 8 }}>
+                    <label style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginRight: 8 }}>
                       Wann
                     </label>
                     <input
@@ -1944,7 +1944,7 @@ export default function CrmDetailPage() {
                     {aktSpeichert ? "Trägt ein…" : "Eintragen"}
                   </button>
                 </div>
-                <div style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>
+                <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 8 }}>
                   Setzt automatisch „Letzter Kontakt" → aktualisiert die Ampel.
                 </div>
               </div>
@@ -1962,7 +1962,7 @@ export default function CrmDetailPage() {
                   style={{
                     fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.warn,
-                    fontSize: 15,
+                    fontSize: 'clamp(15px, 1.31vw, 21px)',
                     marginBottom: 10,
                   }}
                 >
@@ -1990,7 +1990,7 @@ export default function CrmDetailPage() {
                   )}
                 </div>
                 {kontakt.naechster_kontakt_am && (
-                  <div style={{ color: C.textDim, fontSize: 13, marginTop: 8 }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 8 }}>
                     Aktuell gesetzt auf {datumLang(kontakt.naechster_kontakt_am)}
                     {wvFaellig && <span style={{ color: C.warn }}> · fällig</span>}.
                   </div>
@@ -2001,7 +2001,7 @@ export default function CrmDetailPage() {
                 style={{
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.textDim,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                   marginBottom: 14,
@@ -2042,7 +2042,7 @@ export default function CrmDetailPage() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 11,
+                          fontSize: 'clamp(11px, 0.94vw, 15px)',
                         }}
                       >
                         {TYP_ICON[akt.typ || "notiz"] || "📝"}
@@ -2060,19 +2060,19 @@ export default function CrmDetailPage() {
                             style={{
                               fontFamily: "var(--font-dm-sans), sans-serif",
                               color: C.gold,
-                              fontSize: 14,
+                              fontSize: 'clamp(14px, 1.25vw, 20px)',
                               textTransform: "capitalize",
                             }}
                           >
                             {akt.typ || "Notiz"}
                           </span>
-                          <span style={{ color: C.textDim, fontSize: 12 }}>
+                          <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                             {datumZeit(akt.aktivitaet_am)}
                           </span>
                           {akt.ki_generiert && (
                             <span
                               style={{
-                                fontSize: 11,
+                                fontSize: 'clamp(11px, 0.94vw, 15px)',
                                 color: C.cyan,
                                 border: `1px solid ${C.cyan}`,
                                 borderRadius: 10,
@@ -2107,7 +2107,7 @@ export default function CrmDetailPage() {
                           style={{
                             color: "#fff",
                             fontFamily: "'DM Sans', sans-serif",
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             marginTop: 4,
                             whiteSpace: "pre-wrap",
                           }}
@@ -2146,7 +2146,7 @@ export default function CrmDetailPage() {
                   {notizSpeichert ? "Speichert…" : "Notiz speichern"}
                 </button>
                 {notizGespeichert && (
-                  <span style={{ color: C.green, fontSize: 13 }}>✓ Gespeichert</span>
+                  <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ Gespeichert</span>
                 )}
               </div>
             </div>
@@ -2179,7 +2179,7 @@ function ReiterBtn({
         padding: "9px 18px",
         fontFamily: "var(--font-dm-sans), sans-serif",
         fontWeight: 700,
-        fontSize: 14,
+        fontSize: 'clamp(14px, 1.25vw, 20px)',
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
@@ -2205,7 +2205,7 @@ function StatusBadge({ status }: { status: string | null }) {
         display: "inline-block",
         padding: "3px 10px",
         borderRadius: 20,
-        fontSize: 12,
+        fontSize: 'clamp(12px, 1.06vw, 17px)',
         fontWeight: 600,
         color: farbe,
         border: `1px solid ${farbe}`,
@@ -2231,7 +2231,7 @@ function Info({
         style={{
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 3,
         }}
       >
@@ -2244,7 +2244,7 @@ function Info({
             color: C.cyan,
             textDecoration: "none",
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 15,
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
           }}
         >
           {wert}
@@ -2254,7 +2254,7 @@ function Info({
           style={{
             color: wert ? "#fff" : C.textDim,
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 15,
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
           }}
         >
           {wert || "—"}
@@ -2272,7 +2272,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
           display: "block",
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 5,
         }}
       >
@@ -2294,7 +2294,7 @@ function aktionBtn(farbe: string): React.CSSProperties {
     padding: "11px 18px",
     fontFamily: "var(--font-dm-sans), sans-serif",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     textDecoration: "none",
     display: "inline-block",
   };
@@ -2305,7 +2305,7 @@ const zurueckBtn: React.CSSProperties = {
   color: C.textDim,
   border: "none",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -2318,7 +2318,7 @@ const goldBtn: React.CSSProperties = {
   padding: "11px 22px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -2330,7 +2330,7 @@ const grauBtn: React.CSSProperties = {
   padding: "11px 22px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -2339,7 +2339,7 @@ const linkBtn: React.CSSProperties = {
   border: "none",
   color: C.textDim,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 12,
+  fontSize: 'clamp(12px, 1.06vw, 17px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -2351,7 +2351,7 @@ const inp: React.CSSProperties = {
   padding: "11px 13px",
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   width: "100%",
   boxSizing: "border-box",
   outline: "none",
@@ -2374,7 +2374,7 @@ const badgeZahl: React.CSSProperties = {
   color: C.cyan,
   borderRadius: 10,
   padding: "0 7px",
-  fontSize: 12,
+  fontSize: 'clamp(12px, 1.06vw, 17px)',
   fontWeight: 700,
 };
 
@@ -2386,7 +2386,7 @@ const fehlerBox: React.CSSProperties = {
   padding: "12px 16px",
   marginTop: 14,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };
 
 // --------------------------- C8 Briefing ---------------------------
@@ -2421,7 +2421,7 @@ const modalB: React.CSSProperties = {
 const briefingLabel: React.CSSProperties = {
   fontFamily: "var(--font-dm-sans), sans-serif",
   color: C.cyan,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   textTransform: "uppercase",
   letterSpacing: 0.5,
   marginBottom: 8,
@@ -2438,6 +2438,6 @@ const briefingListe: React.CSSProperties = {
 const briefingItem: React.CSSProperties = {
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   lineHeight: 1.45,
 };

@@ -125,7 +125,7 @@ export default function DashboardNav() {
           {gruppe.label && (
             <div
               style={{
-                fontSize: '10px',
+                fontSize: 'clamp(10px, 0.88vw, 14px)',
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -146,7 +146,7 @@ export default function DashboardNav() {
               const stil: React.CSSProperties = {
                 padding: '6px 14px',
                 borderRadius: '8px',
-                fontSize: '13px',
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 fontWeight: 600,
                 textDecoration: 'none',
                 whiteSpace: 'nowrap',

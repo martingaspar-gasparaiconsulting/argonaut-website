@@ -45,20 +45,20 @@ export default function PasswortAendern() {
     background: '#0F1F33', border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 14, padding: '22px 24px', marginTop: 28,
   };
-  const label: CSSProperties = { display: 'block', fontSize: 12.5, color: 'rgba(255,255,255,0.55)', marginBottom: 6, fontWeight: 600 };
+  const label: CSSProperties = { display: 'block', fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', marginBottom: 6, fontWeight: 600 };
   const input: CSSProperties = {
     width: '100%', boxSizing: 'border-box', background: '#0A1628', color: '#fff',
-    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '11px 13px', fontSize: 15,
+    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '11px 13px', fontSize: 'clamp(15px, 1.31vw, 21px)',
   };
   const btnGold: CSSProperties = {
     padding: '12px 22px', borderRadius: 8, border: 'none', background: GOLD,
-    color: '#0A1628', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+    color: '#0A1628', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer',
   };
 
   return (
     <div style={card}>
-      <h2 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 6px' }}>🔑 Passwort ändern</h2>
-      <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', margin: '0 0 18px', lineHeight: 1.6, maxWidth: 560 }}>
+      <h2 style={{ fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 900, margin: '0 0 6px' }}>🔑 Passwort ändern</h2>
+      <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: '0 0 18px', lineHeight: 1.6, maxWidth: 560 }}>
         Vergib direkt hier ein neues Passwort für deinen Zugang. Du bist eingeloggt – es wird keine E-Mail benötigt.
       </p>
 
@@ -84,7 +84,7 @@ export default function PasswortAendern() {
             style={input}
           />
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
           <input type="checkbox" checked={zeigen} onChange={(e) => setZeigen(e.target.checked)} />
           Passwörter anzeigen
         </label>
@@ -94,11 +94,11 @@ export default function PasswortAendern() {
         <button style={{ ...btnGold, opacity: busy ? 0.6 : 1 }} onClick={speichern} disabled={busy}>
           {busy ? 'Ändere…' : 'Passwort ändern'}
         </button>
-        {ok && <span style={{ color: GREEN, fontSize: 13.5, fontWeight: 600 }}>✅ Passwort geändert. Es gilt ab sofort.</span>}
+        {ok && <span style={{ color: GREEN, fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600 }}>✅ Passwort geändert. Es gilt ab sofort.</span>}
       </div>
 
       {fehler && (
-        <div style={{ marginTop: 16, color: '#E06666', fontSize: 13.5, fontWeight: 600 }}>{fehler}</div>
+        <div style={{ marginTop: 16, color: '#E06666', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600 }}>{fehler}</div>
       )}
     </div>
   );

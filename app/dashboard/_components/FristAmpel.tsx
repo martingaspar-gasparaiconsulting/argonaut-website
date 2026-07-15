@@ -86,7 +86,7 @@ export default function FristAmpel({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 7,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           color: a.farbe,
           fontWeight: 600,
           fontFamily: "'DM Sans', sans-serif",
@@ -111,7 +111,7 @@ export default function FristAmpel({
         background: a.hintergrund,
         border: `1px solid ${a.rand}`,
         color: a.farbe,
-        fontSize: 13,
+        fontSize: 'clamp(13px, 1.13vw, 18px)',
         fontWeight: 600,
         fontFamily: "'DM Sans', sans-serif",
         whiteSpace: 'nowrap',
@@ -141,7 +141,7 @@ export default function FristAmpel({
       {bezeichnung && (
         <span
           style={{
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             color: dunkel ? 'rgba(255,255,255,0.85)' : '#0A1628',
             fontWeight: 600,
             fontFamily: "'DM Sans', sans-serif",

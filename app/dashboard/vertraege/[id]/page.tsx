@@ -314,12 +314,12 @@ export default function VertragDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -331,7 +331,7 @@ export default function VertragDetail() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -340,7 +340,7 @@ export default function VertragDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const infoZeile = (
@@ -356,8 +356,8 @@ export default function VertragDetail() {
         borderBottom: `1px solid ${C.border}`,
       }}
     >
-      <span style={{ color: C.textDim, fontSize: 13 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 600, textAlign: "right" }}>
+      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{label}</span>
+      <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, textAlign: "right" }}>
         {wert}
       </span>
     </div>
@@ -369,7 +369,7 @@ export default function VertragDetail() {
   if (!vertrag) {
     return (
       <div style={{ color: "#fff", maxWidth: 700, margin: "0 auto", paddingTop: 28 }}>
-        <a href="/dashboard/vertraege" style={{ color: C.cyan, fontSize: 14 }}>
+        <a href="/dashboard/vertraege" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           ← Zurück zu Verträge
         </a>
         <div style={{ ...card, marginTop: 16, color: C.textDim }}>
@@ -384,7 +384,7 @@ export default function VertragDetail() {
 
   return (
     <div style={{ color: "#fff", maxWidth: 1000, margin: "0 auto", paddingTop: 28 }}>
-      <a href="/dashboard/vertraege" style={{ color: C.cyan, fontSize: 14 }}>
+      <a href="/dashboard/vertraege" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
         ← Zurück zu Verträge
       </a>
 
@@ -402,7 +402,7 @@ export default function VertragDetail() {
           <h1
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 'clamp(26px, 2.25vw, 36px)',
               fontWeight: 800,
               display: "flex",
               alignItems: "center",
@@ -422,7 +422,7 @@ export default function VertragDetail() {
             />
             {vertrag.bezeichnung}
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             {vertrag.kategorie || "Ohne Kategorie"}
             {vertrag.vertragspartner ? ` · ${vertrag.vertragspartner}` : ""}
           </p>
@@ -436,7 +436,7 @@ export default function VertragDetail() {
               background: "rgba(201,168,76,0.12)",
               color: C.gold,
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               cursor: "pointer",
             }}
             onClick={erstelleKuendigung}
@@ -474,22 +474,22 @@ export default function VertragDetail() {
         }}
       >
         <div>
-          <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600 }}>
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600 }}>
             Spätester Kündigungstermin
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: am.farbe }}>
+          <div style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: am.farbe }}>
             {datum(st)}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600 }}>
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontWeight: 600 }}>
             Status der Frist
           </div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: am.farbe }}>
+          <div style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, color: am.farbe }}>
             {am.text}
           </div>
           {vertrag.auto_verlaengerung && (
-            <div style={{ fontSize: 12, color: C.warn, marginTop: 2 }}>
+            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.warn, marginTop: 2 }}>
               ↻ verlängert sich automatisch
               {vertrag.verlaengerung_monate
                 ? ` um ${vertrag.verlaengerung_monate} Monate`
@@ -509,7 +509,7 @@ export default function VertragDetail() {
       >
         {/* Eckdaten */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Eckdaten</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Eckdaten</h3>
           {infoZeile("Status", STATUS_LABEL[vertrag.status] ?? vertrag.status)}
           {infoZeile("Vertragspartner", vertrag.vertragspartner || "—")}
           {infoZeile("Vertragsnummer", vertrag.vertragsnummer || "—")}
@@ -523,7 +523,7 @@ export default function VertragDetail() {
 
         {/* Kosten */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Kosten</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Kosten</h3>
           {infoZeile(
             "Betrag",
             `${eur(vertrag.kosten_betrag)} ${
@@ -546,10 +546,10 @@ export default function VertragDetail() {
 
       {/* Notizen */}
       <div style={card}>
-        <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Notizen</h3>
+        <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Notizen</h3>
         <div
           style={{
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             lineHeight: 1.6,
             color: vertrag.notizen ? "#fff" : C.textDim,
             whiteSpace: "pre-wrap",
@@ -579,10 +579,10 @@ export default function VertragDetail() {
             style={{ ...card, width: "100%", maxWidth: 680, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               🤖 Kündigungsschreiben-Entwurf
             </h2>
-            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 13 }}>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Vorschlag der ARGONAUT-KI. Bitte die Platzhalter in eckigen Klammern
               [ ] ausfüllen, prüfen und selbst versenden. Kein automatischer
               Versand, keine Rechtsberatung.
@@ -594,7 +594,7 @@ export default function VertragDetail() {
               </div>
             ) : kiFehler ? (
               <div
-                style={{ color: C.danger, fontSize: 14, fontWeight: 600, padding: "12px 0" }}
+                style={{ color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, padding: "12px 0" }}
               >
                 {kiFehler}
               </div>
@@ -609,7 +609,7 @@ export default function VertragDetail() {
                     border: `1px solid ${C.border}`,
                     background: "rgba(255,255,255,0.04)",
                     color: "#fff",
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     lineHeight: 1.6,
                     resize: "vertical",
                     boxSizing: "border-box",
@@ -673,7 +673,7 @@ export default function VertragDetail() {
             style={{ ...card, width: "100%", maxWidth: 580, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               Vertrag bearbeiten
             </h2>
             <div
@@ -795,7 +795,7 @@ export default function VertragDetail() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -809,7 +809,7 @@ export default function VertragDetail() {
                 </label>
                 {form.auto_verlaengerung && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 13, color: C.textDim }}>um</span>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>um</span>
                     <input
                       style={{ ...inputStil, width: 80 }}
                       value={form.verlaengerung_monate}
@@ -819,7 +819,7 @@ export default function VertragDetail() {
                       inputMode="numeric"
                       placeholder="12"
                     />
-                    <span style={{ fontSize: 13, color: C.textDim }}>Monate</span>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>Monate</span>
                   </div>
                 )}
               </div>
@@ -838,7 +838,7 @@ export default function VertragDetail() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >

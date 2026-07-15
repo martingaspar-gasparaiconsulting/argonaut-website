@@ -577,7 +577,7 @@ export default function AuftragDetail() {
     return (
       <Rahmen>
         <div style={{ padding: 60, textAlign: "center" }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
+          <div style={{ fontSize: 'clamp(44px, 3.88vw, 62px)', marginBottom: 12 }}>🔍</div>
           <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", margin: "0 0 8px" }}>
             Auftrag nicht gefunden
           </h2>
@@ -610,7 +610,7 @@ export default function AuftragDetail() {
             border: "none",
             color: C.textDim,
             cursor: "pointer",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             padding: 0,
             marginBottom: 14,
             fontFamily: "'DM Sans', sans-serif",
@@ -629,13 +629,13 @@ export default function AuftragDetail() {
           }}
         >
           <div>
-            <div style={{ color: C.textDim, fontSize: 13, fontFamily: "monospace", marginBottom: 4 }}>
+            <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: "monospace", marginBottom: 4 }}>
               {auftrag?.auftragsnummer || "—"}
             </div>
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: 28,
+                fontSize: 'clamp(28px, 2.44vw, 39px)',
                 fontWeight: 700,
                 margin: 0,
                 letterSpacing: "-0.5px",
@@ -647,10 +647,10 @@ export default function AuftragDetail() {
 
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             {gespeichert && (
-              <span style={{ color: C.green, fontSize: 13, fontWeight: 600 }}>✓ gespeichert</span>
+              <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>✓ gespeichert</span>
             )}
             {dirty && (
-              <span style={{ color: C.warn, fontSize: 13, fontWeight: 600 }}>● ungespeichert</span>
+              <span style={{ color: C.warn, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>● ungespeichert</span>
             )}
             <button
               onClick={pdfErstellen}
@@ -661,7 +661,7 @@ export default function AuftragDetail() {
                 border: `1px solid ${C.cyan}77`,
                 borderRadius: 10,
                 padding: "11px 18px",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontWeight: 700,
                 cursor: pdfLaedt ? "not-allowed" : "pointer",
                 fontFamily: "'DM Sans', sans-serif",
@@ -674,7 +674,7 @@ export default function AuftragDetail() {
               <span
                 style={{
                   color: C.green,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 700,
                   border: `1px solid ${C.green}55`,
                   borderRadius: 10,
@@ -695,7 +695,7 @@ export default function AuftragDetail() {
                   border: `1px solid ${C.gold}77`,
                   borderRadius: 10,
                   padding: "11px 18px",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 700,
                   cursor: rechnungLaedt ? "wait" : "pointer",
                   fontFamily: "'DM Sans', sans-serif",
@@ -765,12 +765,12 @@ export default function AuftragDetail() {
                 borderRadius: 20,
                 padding: "6px 16px",
                 fontWeight: 600,
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
               ⚪ Storniert
             </span>
-            <span style={{ color: C.textDim, fontSize: 13.5 }}>
+            <span style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
               Zählt nicht zum Auftragswert. Mit „Reaktivieren" zurück in den Entwurf.
             </span>
           </div>
@@ -847,7 +847,7 @@ export default function AuftragDetail() {
                       >
                         {inhalt}
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: labelColor, textAlign: "center" }}>
+                      <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, color: labelColor, textAlign: "center" }}>
                         {info.label}
                       </span>
                     </button>
@@ -869,7 +869,7 @@ export default function AuftragDetail() {
             </div>
 
             {naechster && (
-              <div style={{ marginTop: 14, fontSize: 13, color: C.textDim }}>
+              <div style={{ marginTop: 14, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                 Nächster Schritt:{" "}
                 <span style={{ color: C.gold, fontWeight: 600 }}>
                   {STATUS[naechster].icon} {STATUS[naechster].label}
@@ -878,7 +878,7 @@ export default function AuftragDetail() {
               </div>
             )}
             {!naechster && aktIndex === FLUSS.length - 1 && (
-              <div style={{ marginTop: 14, fontSize: 13, color: C.green, fontWeight: 600 }}>
+              <div style={{ marginTop: 14, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.green, fontWeight: 600 }}>
                 ✓ Auftrag abgeschlossen.
               </div>
             )}
@@ -931,7 +931,7 @@ export default function AuftragDetail() {
               <option key={f.id} value={f.id} style={{ background: C.navy2 }}>{firmaName(f)}</option>
             ))}
           </select>
-          <p style={{ color: C.textDim, fontSize: 12, marginTop: 14, lineHeight: 1.5 }}>
+          <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 14, lineHeight: 1.5 }}>
             Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst im Vertrieb/CRM an.
           </p>
         </Karte>
@@ -948,7 +948,7 @@ export default function AuftragDetail() {
         }}
       >
         <div style={{ ...sektionLabel, color: C.gold }}>✨ Positionen mit KI</div>
-        <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 12px", lineHeight: 1.5 }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 12px", lineHeight: 1.5 }}>
           Beschreib den Auftrag in eigenen Worten — tippen oder aufs Mikrofon und reinsprechen.
           ARGONAUT nutzt deine echten Preise aus deinen Dokumenten, wo vorhanden — und schätzt nur,
           was neu ist. Alle Vorschläge kannst du vor dem Übernehmen frei anpassen.
@@ -982,7 +982,7 @@ export default function AuftragDetail() {
               background: hoert ? `${C.danger}22` : C.navy,
               color: hoert ? C.danger : C.textDim,
               cursor: "pointer",
-              fontSize: 18,
+              fontSize: 'clamp(18px, 1.56vw, 25px)',
             }}
           >
             {hoert ? "🔴" : "🎤"}
@@ -990,7 +990,7 @@ export default function AuftragDetail() {
         </div>
 
         {hoert && (
-          <div style={{ color: C.danger, fontSize: 12.5, marginTop: 6 }}>
+          <div style={{ color: C.danger, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 6 }}>
             🔴 ARGONAUT hört zu… sprich einfach los, tippe zum Stoppen aufs Mikrofon.
           </div>
         )}
@@ -1021,7 +1021,7 @@ export default function AuftragDetail() {
                 color: C.textDim,
                 borderRadius: 10,
                 padding: "11px 18px",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontWeight: 600,
                 cursor: "pointer",
                 fontFamily: "'DM Sans', sans-serif",
@@ -1043,7 +1043,7 @@ export default function AuftragDetail() {
                 marginBottom: 6,
               }}
             >
-              <span style={{ color: C.textDim, fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>
                 {kiVorschlaege.length} Vorschlag{kiVorschlaege.length === 1 ? "" : "e"} — prüfen & übernehmen
               </span>
               <button onClick={alleUebernehmen} style={btnKlein}>
@@ -1051,7 +1051,7 @@ export default function AuftragDetail() {
               </button>
             </div>
 
-            <div style={{ color: C.textDim, fontSize: 11.5, marginBottom: 12, lineHeight: 1.5 }}>
+            <div style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', marginBottom: 12, lineHeight: 1.5 }}>
               {hatDok
                 ? "📄 = Preis aus deinen Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für dich und erscheint nie beim Kunden."
                 : "Keine Preis-Dokumente gefunden — alle Preise wurden geschätzt. Nach dem Übernehmen frei anpassbar."}
@@ -1076,7 +1076,7 @@ export default function AuftragDetail() {
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{v.bezeichnung}</span>
+                      <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>{v.bezeichnung}</span>
                       <span
                         title={ausDok && v.quelle_datei ? "Quelle: " + v.quelle_datei : "Von ARGONAUT geschätzt"}
                         style={{
@@ -1085,7 +1085,7 @@ export default function AuftragDetail() {
                           border: `1px solid ${ausDok ? C.green : C.warn}55`,
                           borderRadius: 20,
                           padding: "2px 9px",
-                          fontSize: 11,
+                          fontSize: 'clamp(11px, 0.94vw, 15px)',
                           fontWeight: 600,
                           whiteSpace: "nowrap",
                         }}
@@ -1093,7 +1093,7 @@ export default function AuftragDetail() {
                         {ausDok ? "📄 aus deinen Dokumenten" : "⚠️ geschätzt"}
                       </span>
                     </div>
-                    <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 4 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 4 }}>
                       {new Intl.NumberFormat("de-DE").format(v.menge)} {v.einheit} ×{" "}
                       {geld(v.einzelpreis, waehrung)} · {v.mwst_satz}% MwSt ={" "}
                       <span style={{ color: C.cyan }}>{geld(v.menge * v.einzelpreis, waehrung)}</span>
@@ -1108,7 +1108,7 @@ export default function AuftragDetail() {
                       border: `1px solid ${C.green}66`,
                       borderRadius: 8,
                       padding: "8px 14px",
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       fontWeight: 700,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
@@ -1140,7 +1140,7 @@ export default function AuftragDetail() {
         </div>
 
         {zeilen.length === 0 ? (
-          <div style={{ padding: "28px 0", textAlign: "center", color: C.textDim, fontSize: 14 }}>
+          <div style={{ padding: "28px 0", textAlign: "center", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Noch keine Positionen. Füg oben rechts eine hinzu — oder nutz den KI-Assistenten.
           </div>
         ) : (
@@ -1166,10 +1166,10 @@ export default function AuftragDetail() {
                 </select>
                 <input value={z.einzelpreis} onChange={(e) => zeileAendern(z.id, "einzelpreis", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
                 <input value={z.mwst_satz} onChange={(e) => zeileAendern(z.id, "mwst_satz", e.target.value)} inputMode="decimal" style={{ ...zellInput, textAlign: "right" }} />
-                <div style={{ textAlign: "right", fontSize: 14, fontWeight: 600, alignSelf: "center", color: C.cyan }}>
+                <div style={{ textAlign: "right", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, alignSelf: "center", color: C.cyan }}>
                   {geld(zeileNetto(z), waehrung)}
                 </div>
-                <button onClick={() => zeileLoeschen(z.id)} title="Position löschen" style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 15, alignSelf: "center" }}>
+                <button onClick={() => zeileLoeschen(z.id)} title="Position löschen" style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 'clamp(15px, 1.31vw, 21px)', alignSelf: "center" }}>
                   🗑
                 </button>
               </div>
@@ -1185,7 +1185,7 @@ export default function AuftragDetail() {
           <SummeFeld label="MwSt" wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
           <SummeFeld label="Brutto" wert={geld(summen.brutto, waehrung)} farbe={C.gold} />
         </div>
-        <p style={{ color: C.textDim, fontSize: 12, marginTop: 14 }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 14 }}>
           Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
       </Karte>
@@ -1212,7 +1212,7 @@ export default function AuftragDetail() {
             padding: "12px 16px",
             color: C.danger,
             marginTop: 20,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           ⚠️ {fehler}
@@ -1252,15 +1252,15 @@ function Karte({ titel, children }: { titel: string; children: React.ReactNode }
 function SummeFeld({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
-      <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -1270,7 +1270,7 @@ const sektionLabel: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "12px 0 6px",
 };
@@ -1282,7 +1282,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "11px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",
@@ -1294,7 +1294,7 @@ const btnGold: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 20px",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1306,7 +1306,7 @@ const btnKlein: React.CSSProperties = {
   border: `1px solid ${C.gold}77`,
   borderRadius: 8,
   padding: "7px 14px",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1318,7 +1318,7 @@ const stornoBtn: React.CSSProperties = {
   border: `1px solid ${C.danger}55`,
   borderRadius: 8,
   padding: "6px 12px",
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1330,7 +1330,7 @@ const reaktivierBtn: React.CSSProperties = {
   border: `1px solid ${C.cyan}55`,
   borderRadius: 8,
   padding: "6px 12px",
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 600,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -1345,7 +1345,7 @@ const posKopf: React.CSSProperties = {
   padding: "0 0 10px",
   borderBottom: `1px solid ${C.border}`,
   color: C.textDim,
-  fontSize: 11.5,
+  fontSize: 'clamp(11.5px, 1vw, 16px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.4px",
@@ -1368,7 +1368,7 @@ const zellInput: React.CSSProperties = {
   borderRadius: 8,
   padding: "9px 10px",
   color: "#fff",
-  fontSize: 13.5,
+  fontSize: 'clamp(13.5px, 1.19vw, 19px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",

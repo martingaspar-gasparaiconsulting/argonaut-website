@@ -261,12 +261,12 @@ export default function FirmaDetailPage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 22 }}>🏢</span>
+            <span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>🏢</span>
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: "#fff",
-                fontSize: 28,
+                fontSize: 'clamp(28px, 2.44vw, 39px)',
                 margin: 0,
               }}
             >
@@ -277,7 +277,7 @@ export default function FirmaDetailPage() {
             style={{
               fontFamily: "'DM Sans', sans-serif",
               color: C.textDim,
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               marginTop: 8,
             }}
           >
@@ -335,10 +335,10 @@ export default function FirmaDetailPage() {
               </div>
               {firma.notizen && (
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ color: C.textDim, fontSize: 12, marginBottom: 3 }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 3 }}>
                     Notizen
                   </div>
-                  <div style={{ color: "#fff", fontSize: 14, whiteSpace: "pre-wrap" }}>
+                  <div style={{ color: "#fff", fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: "pre-wrap" }}>
                     {firma.notizen}
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export default function FirmaDetailPage() {
           >
             <div style={{ ...karteKopf, marginBottom: 0 }}>
               Kontakte dieser Firma
-              <span style={{ color: C.textDim, fontSize: 13, marginLeft: 8 }}>
+              <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginLeft: 8 }}>
                 ({zugeordnet.length})
               </span>
             </div>
@@ -440,7 +440,7 @@ export default function FirmaDetailPage() {
               }}
             >
               {verfuegbar.length === 0 ? (
-                <span style={{ color: C.textDim, fontSize: 14 }}>
+                <span style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                   Alle Kontakte sind bereits einer Firma zugeordnet. Neue Kontakte legst du im Kontakt-Cockpit an.
                 </span>
               ) : (
@@ -495,10 +495,10 @@ export default function FirmaDetailPage() {
                     style={{ cursor: "pointer", flex: 1 }}
                     onClick={() => router.push(`/dashboard/crm/${k.id}`)}
                   >
-                    <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
+                    <div style={{ color: "#fff", fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                       {kName(k)}
                     </div>
-                    <div style={{ color: C.textDim, fontSize: 12 }}>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                       {[k.position, k.email, k.telefon].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </div>
@@ -532,7 +532,7 @@ function Info({
 }) {
   return (
     <div>
-      <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textDim, fontSize: 12, marginBottom: 3 }}>
+      <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 3 }}>
         {label}
       </div>
       {link && wert ? (
@@ -540,12 +540,12 @@ function Info({
           href={link}
           target={link.startsWith("http") ? "_blank" : undefined}
           rel="noreferrer"
-          style={{ color: C.cyan, textDecoration: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 15 }}
+          style={{ color: C.cyan, textDecoration: "none", fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)' }}
         >
           {wert}
         </a>
       ) : (
-        <div style={{ color: wert ? "#fff" : C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 15 }}>
+        <div style={{ color: wert ? "#fff" : C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
           {wert || "—"}
         </div>
       )}
@@ -561,7 +561,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
           display: "block",
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 5,
         }}
       >
@@ -583,7 +583,7 @@ function aktionBtn(farbe: string): React.CSSProperties {
     padding: "10px 16px",
     fontFamily: "var(--font-dm-sans), sans-serif",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     textDecoration: "none",
     display: "inline-block",
   };
@@ -594,7 +594,7 @@ const zurueckBtn: React.CSSProperties = {
   color: C.textDim,
   border: "none",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -607,7 +607,7 @@ const goldBtn: React.CSSProperties = {
   padding: "10px 18px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -619,7 +619,7 @@ const grauBtn: React.CSSProperties = {
   padding: "10px 18px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -630,7 +630,7 @@ const miniBtn: React.CSSProperties = {
   padding: "6px 12px",
   color: C.cyan,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   cursor: "pointer",
 };
 
@@ -641,7 +641,7 @@ const inp: React.CSSProperties = {
   padding: "11px 13px",
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   width: "100%",
   boxSizing: "border-box",
   outline: "none",
@@ -658,7 +658,7 @@ const karte: React.CSSProperties = {
 const karteKopf: React.CSSProperties = {
   fontFamily: "var(--font-dm-sans), sans-serif",
   color: C.gold,
-  fontSize: 17,
+  fontSize: 'clamp(17px, 1.5vw, 24px)',
   marginBottom: 16,
 };
 
@@ -682,5 +682,5 @@ const fehlerBox: React.CSSProperties = {
   padding: "12px 16px",
   marginTop: 14,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };

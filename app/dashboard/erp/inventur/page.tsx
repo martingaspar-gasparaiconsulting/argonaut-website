@@ -472,7 +472,7 @@ export default function InventurSeite() {
         <h2
           style={{
             margin: 0,
-            fontSize: 22,
+            fontSize: 'clamp(22px, 1.94vw, 31px)',
             fontWeight: 800,
             color: C.text,
             fontFamily: "var(--font-dm-sans), sans-serif",
@@ -481,7 +481,7 @@ export default function InventurSeite() {
           Inventur · Bestandszählung
         </h2>
       </div>
-      <p style={{ margin: "0 0 20px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
+      <p style={{ margin: "0 0 20px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
         Zähle den tatsächlichen Bestand und vergleiche ihn mit dem System. Abweichungen werden farblich markiert.
       </p>
 
@@ -504,7 +504,7 @@ export default function InventurSeite() {
                 padding: "8px 18px",
                 fontWeight: 700,
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 cursor: "pointer",
               }}
             >
@@ -536,14 +536,14 @@ export default function InventurSeite() {
               padding: "14px 16px",
             }}
           >
-            <div style={{ fontSize: 22, fontWeight: 800, color: kp.farbe, fontFamily: "var(--font-dm-sans), sans-serif", lineHeight: 1.1 }}>
+            <div style={{ fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800, color: kp.farbe, fontFamily: "var(--font-dm-sans), sans-serif", lineHeight: 1.1 }}>
               {laden ? "…" : kp.wert}
             </div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textDim, fontSize: 13, marginTop: 4 }}>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 4 }}>
               {kp.label}
             </div>
             {kp.sub && (
-              <div style={{ fontFamily: "'DM Sans', sans-serif", color: "rgba(255,255,255,0.45)", fontSize: 11.5, marginTop: 2 }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", color: "rgba(255,255,255,0.45)", fontSize: 'clamp(11.5px, 1vw, 16px)', marginTop: 2 }}>
                 {kp.sub}
               </div>
             )}
@@ -571,7 +571,7 @@ export default function InventurSeite() {
             padding: "10px 12px",
             color: C.text,
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         />
         <button
@@ -585,7 +585,7 @@ export default function InventurSeite() {
             padding: "10px 18px",
             fontWeight: 700,
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             cursor: speichern || laden ? "default" : "pointer",
             opacity: speichern || laden ? 0.6 : 1,
           }}
@@ -603,7 +603,7 @@ export default function InventurSeite() {
             padding: "10px 18px",
             fontWeight: 700,
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             cursor: pdfLaedt || laden ? "default" : "pointer",
             opacity: pdfLaedt || laden ? 0.6 : 1,
           }}
@@ -622,7 +622,7 @@ export default function InventurSeite() {
             padding: "10px 18px",
             fontWeight: 700,
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             cursor: laden || zuKorrigieren.length === 0 ? "default" : "pointer",
             opacity: laden || zuKorrigieren.length === 0 ? 0.5 : 1,
           }}
@@ -630,7 +630,7 @@ export default function InventurSeite() {
           Bestand korrigieren{zuKorrigieren.length > 0 ? ` (${zuKorrigieren.length})` : ""}
         </button>
         {meldung && (
-          <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>{meldung}</span>
+          <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>{meldung}</span>
         )}
       </div>
 
@@ -663,7 +663,7 @@ export default function InventurSeite() {
                       padding: "12px 14px",
                       color: C.textDim,
                       fontFamily: "var(--font-dm-sans), sans-serif",
-                      fontSize: 12,
+                      fontSize: 'clamp(12px, 1.06vw, 17px)',
                       fontWeight: 700,
                       letterSpacing: 0.4,
                       textTransform: "uppercase",
@@ -693,20 +693,20 @@ export default function InventurSeite() {
                           style={{ width: 9, height: 9, borderRadius: "50%", background: diffFarbe, flexShrink: 0, display: "inline-block" }}
                         />
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600 }}>
+                          <div style={{ color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>
                             {a.bezeichnung}
                           </div>
-                          <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 12 }}>
+                          <div style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                             {a.artikelnummer ? `Nr. ${a.artikelnummer}` : "—"}
                             {a.kategorie ? ` · ${a.kategorie}` : ""}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                    <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                       {a.lagerort || "—"}
                     </td>
-                    <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: "nowrap" }}>
                       {fmtNum(soll)} {a.einheit || ""}
                     </td>
                     <td style={{ padding: "10px 14px", textAlign: "right" }}>
@@ -724,7 +724,7 @@ export default function InventurSeite() {
                           padding: "7px 9px",
                           color: C.text,
                           fontFamily: "'DM Sans', sans-serif",
-                          fontSize: 14,
+                          fontSize: 'clamp(14px, 1.25vw, 20px)',
                         }}
                       />
                     </td>
@@ -732,7 +732,7 @@ export default function InventurSeite() {
                       {diff === null ? (
                         <span style={{ color: C.textDim }}>—</span>
                       ) : (
-                        <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14 }}>
+                        <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                           {diff > 0 ? "+" : ""}
                           {fmtNum(diff)}
                         </span>
@@ -742,7 +742,7 @@ export default function InventurSeite() {
                       {wertDiff === null || wertDiff === 0 ? (
                         <span style={{ color: C.textDim }}>—</span>
                       ) : (
-                        <span style={{ color: wertDiff < 0 ? C.danger : C.warn, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>
+                        <span style={{ color: wertDiff < 0 ? C.danger : C.warn, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                           {wertDiff > 0 ? "+" : ""}
                           {fmtEuro(wertDiff)}
                         </span>
@@ -776,14 +776,14 @@ export default function InventurSeite() {
                 padding: "10px 18px",
                 fontWeight: 700,
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 cursor: auditPdfLaedt || auditLaden || auditGefiltert.length === 0 ? "default" : "pointer",
                 opacity: auditPdfLaedt || auditLaden || auditGefiltert.length === 0 ? 0.5 : 1,
               }}
             >
               {auditPdfLaedt ? "Erstellt …" : "📄 Als PDF herunterladen"}
             </button>
-            <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>
+            <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
               {auditLaden
                 ? "Lade Protokoll …"
                 : `${auditGefiltert.length} Korrektur${auditGefiltert.length === 1 ? "" : "en"} · Summe Wert-Differenz: ${fmtEuro(auditSummeWert)}`}
@@ -800,7 +800,7 @@ export default function InventurSeite() {
               marginBottom: 16,
               color: C.textDim,
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 13,
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               lineHeight: 1.5,
             }}
           >
@@ -840,7 +840,7 @@ export default function InventurSeite() {
                           padding: "11px 14px",
                           color: C.textDim,
                           fontFamily: "'DM Sans', sans-serif",
-                          fontSize: 12,
+                          fontSize: 'clamp(12px, 1.06vw, 17px)',
                           fontWeight: 600,
                           textTransform: "uppercase",
                           letterSpacing: 0.4,
@@ -858,23 +858,23 @@ export default function InventurSeite() {
                     const wDiff = r.wert_differenz;
                     return (
                       <tr key={idx} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)', whiteSpace: "nowrap" }}>
                           {new Date(r.korrigiert_am).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </td>
-                        <td style={{ padding: "10px 14px", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
+                        <td style={{ padding: "10px 14px", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                           <div style={{ fontWeight: 600 }}>{r.artikel_name}</div>
                           {r.artikelnummer && (
-                            <div style={{ color: C.textDim, fontSize: 12 }}>Nr. {r.artikelnummer}</div>
+                            <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>Nr. {r.artikelnummer}</div>
                           )}
                         </td>
-                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: "nowrap" }}>
                           {fmtNum(r.soll_bestand)} {r.einheit || ""}
                         </td>
-                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 14, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "10px 14px", textAlign: "right", color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: "nowrap" }}>
                           {fmtNum(r.ist_bestand)} {r.einheit || ""}
                         </td>
                         <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                          <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14 }}>
+                          <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                             {r.differenz > 0 ? "+" : ""}{fmtNum(r.differenz)}
                           </span>
                         </td>
@@ -882,12 +882,12 @@ export default function InventurSeite() {
                           {wDiff === null || wDiff === 0 ? (
                             <span style={{ color: C.textDim }}>—</span>
                           ) : (
-                            <span style={{ color: wDiff < 0 ? C.danger : C.warn, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5 }}>
+                            <span style={{ color: wDiff < 0 ? C.danger : C.warn, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                               {wDiff > 0 ? "+" : ""}{fmtEuro(wDiff)}
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                        <td style={{ padding: "10px 14px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           {r.korrigiert_von || "—"}
                         </td>
                       </tr>
@@ -928,10 +928,10 @@ export default function InventurSeite() {
               boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
             }}
           >
-            <h3 style={{ margin: "0 0 8px", color: C.text, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800 }}>
+            <h3 style={{ margin: "0 0 8px", color: C.text, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 800 }}>
               Bestand ins Lager übernehmen?
             </h3>
-            <p style={{ margin: "0 0 16px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 14, lineHeight: 1.5 }}>
+            <p style={{ margin: "0 0 16px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.5 }}>
               Der System-Bestand der folgenden <strong style={{ color: C.text }}>{zuKorrigieren.length}</strong> Artikel wird
               auf den gezählten Ist-Wert gesetzt. Diese Änderung wirkt direkt im Lager und wird nicht automatisch rückgängig gemacht.
             </p>
@@ -950,13 +950,13 @@ export default function InventurSeite() {
                     border: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  <span style={{ flex: 1, minWidth: 0, color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ flex: 1, minWidth: 0, color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {a.bezeichnung}
                   </span>
-                  <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                  <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                     {fmtNum(soll)} → {fmtNum(istVal)} {a.einheit || ""}
                   </span>
-                  <span style={{ color: C.danger, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 13, fontWeight: 800, minWidth: 44, textAlign: "right" }}>
+                  <span style={{ color: C.danger, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, minWidth: 44, textAlign: "right" }}>
                     {diff > 0 ? "+" : ""}{fmtNum(diff)}
                   </span>
                 </div>
@@ -975,7 +975,7 @@ export default function InventurSeite() {
                   padding: "10px 16px",
                   fontWeight: 600,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: korrigiert ? "default" : "pointer",
                 }}
               >
@@ -992,7 +992,7 @@ export default function InventurSeite() {
                   padding: "10px 18px",
                   fontWeight: 800,
                   fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   cursor: korrigiert ? "default" : "pointer",
                   opacity: korrigiert ? 0.6 : 1,
                 }}

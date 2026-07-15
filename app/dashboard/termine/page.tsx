@@ -400,7 +400,7 @@ export default function TerminePage() {
         <h2 style={styles.cardTitle}>Öffnungszeiten (Betrieb)</h2>
         {laden ? <div style={styles.hint}>Lädt …</div> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ ...styles.zeile, color: C.textDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <div style={{ ...styles.zeile, color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', textTransform: 'uppercase', letterSpacing: 1 }}>
               <div style={styles.zTag}>Tag</div><div style={styles.zAktiv}>Offen</div><div style={styles.zZeit}>Von</div>
               <div style={styles.zZeit}>Bis</div><div style={styles.zKap}>Parallel</div><div style={styles.zUeber}>Überbuchung</div>
             </div>
@@ -435,7 +435,7 @@ export default function TerminePage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 16 }}>
           <h2 style={{ ...styles.cardTitle, margin: 0 }}>Freie Termine</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 12, color: C.textDim }}>Termin-Art:</label>
+            <label style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>Termin-Art:</label>
             <select value={artId} onChange={(e) => setArtId(e.target.value)} style={{ ...styles.input, width: 'auto', minWidth: 190 }}>
               {arten.length === 0 && <option value="">— keine Arten —</option>}
               {arten.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -447,7 +447,7 @@ export default function TerminePage() {
             </div>
           </div>
         </div>
-        <div style={{ fontSize: 13, color: C.textDim, marginBottom: 12 }}>Woche: {wochenTitel}</div>
+        <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 12 }}>Woche: {wochenTitel}</div>
 
         {slotErgebnis?.hinweis ? (
           <div style={styles.mehrtag}>{slotErgebnis.hinweis}</div>
@@ -462,7 +462,7 @@ export default function TerminePage() {
                 <div key={d.datum} style={{ ...styles.tagSpalte, borderColor: heute ? C.gold : C.border }}>
                   <div style={styles.tagKopf}>
                     <span style={{ fontWeight: 700 }}>{d.wtLabel}</span>
-                    <span style={{ color: C.textDim, fontSize: 12 }}>{d.label}</span>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{d.label}</span>
                   </div>
                   <div style={styles.tagBody}>
                     {gebucht.map((t) => {
@@ -470,7 +470,7 @@ export default function TerminePage() {
                       return (
                         <button key={t.id} onClick={() => oeffneBearbeiten(t)} style={styles.buchtBlock} title={`${t.titel ?? 'Termin'} · ${uhr(b)}–${uhr(e)} · zum Anschauen/Ändern klicken`}>
                           <span style={{ fontWeight: 700 }}>{uhr(b)}</span>
-                          <span style={{ fontSize: 10.5, color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.titel ?? 'Termin'}</span>
+                          <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.titel ?? 'Termin'}</span>
                         </button>
                       );
                     })}
@@ -483,7 +483,7 @@ export default function TerminePage() {
                           <button key={i} onClick={() => slotKlick(s)} style={styles.slotBtn}
                             title={`${uhr(s.beginn)}–${uhr(s.ende)}${zeigeKap ? ` · ${s.belegt}/${s.kapazitaet} belegt` : ''}`}>
                             <span style={{ fontWeight: 700 }}>{uhr(s.beginn)}</span>
-                            {zeigeKap && <span style={{ fontSize: 10.5, color: C.textDim }}>{s.kapazitaet - s.belegt} frei</span>}
+                            {zeigeKap && <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim }}>{s.kapazitaet - s.belegt} frei</span>}
                           </button>
                         );
                       })}
@@ -508,7 +508,7 @@ export default function TerminePage() {
             <h2 style={styles.modalTitel}>Termin buchen</h2>
             <div style={styles.buchKopf}>
               <div><b>{aktiveArt?.name}</b></div>
-              <div style={{ color: C.textDim, fontSize: 14 }}>{buchSlot.datum.split('-').reverse().join('.')} · {uhr(buchSlot.beginn)}–{uhr(buchSlot.ende)}</div>
+              <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{buchSlot.datum.split('-').reverse().join('.')} · {uhr(buchSlot.beginn)}–{uhr(buchSlot.ende)}</div>
             </div>
             <div style={styles.formGrid}>
               <Feld label="Titel" voll><input style={styles.input} value={buchForm.titel} onChange={(e) => setBuchForm({ ...buchForm, titel: e.target.value })} placeholder="z. B. Ölwechsel Meier / Erstberatung" /></Feld>
@@ -562,46 +562,46 @@ function Feld({ label, children, voll }: { label: string; children: React.ReactN
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 680, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 680, lineHeight: 1.5 },
 
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
-  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
+  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', fontFamily: 'inherit' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 16px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 16px', color: C.text },
 
   zeile: { display: 'grid', gridTemplateColumns: '1.4fr 0.7fr 1fr 1fr 0.9fr 1fr', alignItems: 'center', gap: 10, padding: '4px 0' },
-  zTag: { fontWeight: 600, fontSize: 14 }, zAktiv: { textAlign: 'center' }, zZeit: {}, zKap: {}, zUeber: { textAlign: 'center' },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 14, fontFamily: 'inherit' },
-  legende: { marginTop: 16, fontSize: 12.5, color: C.textDim, lineHeight: 1.6, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px' },
+  zTag: { fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)' }, zAktiv: { textAlign: 'center' }, zZeit: {}, zKap: {}, zUeber: { textAlign: 'center' },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
+  legende: { marginTop: 16, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, lineHeight: 1.6, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px' },
 
   kalenderGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 },
   tagSpalte: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 8, minHeight: 180, display: 'flex', flexDirection: 'column' },
   tagKopf: { display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginBottom: 8 },
   tagBody: { display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' },
-  slotBtn: { background: 'rgba(76,175,125,0.14)', color: C.text, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 4px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
-  buchtBlock: { background: 'rgba(201,168,76,0.16)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 8px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
-  tagBlock: { color: C.textDim, fontSize: 11.5, textAlign: 'center', padding: '10px 2px', lineHeight: 1.35 },
-  tagLeer: { color: C.textDim, fontSize: 12, textAlign: 'center', padding: '10px 2px' },
-  legende2: { marginTop: 14, fontSize: 12, color: C.textDim },
+  slotBtn: { background: 'rgba(76,175,125,0.14)', color: C.text, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 4px', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
+  buchtBlock: { background: 'rgba(201,168,76,0.16)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 8px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
+  tagBlock: { color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', textAlign: 'center', padding: '10px 2px', lineHeight: 1.35 },
+  tagLeer: { color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', textAlign: 'center', padding: '10px 2px' },
+  legende2: { marginTop: 14, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim },
   punktGruen: { width: 10, height: 10, borderRadius: 3, background: 'rgba(76,175,125,0.5)', border: `1px solid ${C.green}`, display: 'inline-block' },
   punktGold: { width: 10, height: 10, borderRadius: 3, background: 'rgba(201,168,76,0.4)', border: `1px solid ${C.gold}`, display: 'inline-block' },
   punktGrau: { width: 10, height: 10, borderRadius: 3, background: C.navy, border: `1px solid ${C.border}`, display: 'inline-block' },
-  mehrtag: { color: C.warn, fontSize: 14, background: 'rgba(224,162,76,0.1)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '14px 16px', lineHeight: 1.5 },
+  mehrtag: { color: C.warn, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,162,76,0.1)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '14px 16px', lineHeight: 1.5 },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  ok: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  ok: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 560, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 14px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 14px', color: C.text },
   buchKopf: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 3 },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  hinweisZeile: { marginTop: 14, fontSize: 12.5, color: C.textDim, lineHeight: 1.5 },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  hinweisZeile: { marginTop: 14, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, lineHeight: 1.5 },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, flexWrap: 'wrap' },
 };

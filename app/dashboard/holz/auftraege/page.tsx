@@ -656,13 +656,13 @@ export default function AuftraegePage() {
                       <div style={{ fontWeight: 700 }}>
                         {a.nummer ?? '—'} · {a.empfaenger_name ?? 'ohne Kunde'}
                       </div>
-                      <div style={{ fontSize: 12, color: C.textDim }}>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                         {[a.liefer_ort, a.liefertermin ? `Termin ${datumHuebsch(a.liefertermin)}` : null, datumHuebsch(a.erstellt_am)]
                           .filter(Boolean).join(' · ')}
                       </div>
                     </div>
                   </div>
-                  <span style={{ fontSize: 12, color: STATUS_FARBE[si.farbe], flexShrink: 0 }}>{si.label}</span>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: STATUS_FARBE[si.farbe], flexShrink: 0 }}>{si.label}</span>
                 </button>
               );
             })}
@@ -676,7 +676,7 @@ export default function AuftraegePage() {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
               <h2 style={styles.modalTitel}>{nummer ?? 'Neuer Auftrag'}</h2>
-              <span style={{ color: STATUS_FARBE[statusInfo(status).farbe], fontSize: 13, fontWeight: 700 }}>
+              <span style={{ color: STATUS_FARBE[statusInfo(status).farbe], fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700 }}>
                 {statusInfo(status).label}
               </span>
             </div>
@@ -715,7 +715,7 @@ export default function AuftraegePage() {
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 8 }}>{adresseEinzeilig(kunde.empf) || 'Keine Anschrift'}</div>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginTop: 8 }}>{adresseEinzeilig(kunde.empf) || 'Keine Anschrift'}</div>
                   {verortungVeraltet(kunde.empf) ? (
                     <div style={styles.warnBox}>⚠ Anschrift geändert — bitte neu verorten. Es wird keine Anfahrt berechnet.</div>
                   ) : !hatKoordinaten(kunde.empf) ? (
@@ -763,7 +763,7 @@ export default function AuftraegePage() {
             {(pakete.length > 0 || paketBloecke.length > 0) && (
               <div style={styles.sektion}>
                 <span style={styles.sektionTitel}>3 · Pakete</span>
-                <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
                   Ein Paket klappt in seine Positionen auf. Der Festpreis wird anteilig verteilt —
                   auf dem Beleg steht, was der Kunde bekommt.
                 </div>
@@ -771,17 +771,17 @@ export default function AuftraegePage() {
                 {paketBloecke.map((b) => (
                   <div key={b.id} style={styles.paketBlock}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 13.5 }}>📦 {b.bezeichnung}</strong>
+                      <strong style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>📦 {b.bezeichnung}</strong>
                       {bearbeitbar && (
                         <button onClick={() => paketEntfernen(b.id, b.bezeichnung)} style={styles.xBtn}>✕ entfernen</button>
                       )}
                     </div>
                     {b.zeilen.map((z, i) => (
-                      <div key={i} style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>
+                      <div key={i} style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 4 }}>
                         {formatZahl(z.menge, 2)} {z.einheit} {z.bezeichnung} · {eur(z.einzelpreis_netto)} · {z.steuersatz_prozent} % USt.
                       </div>
                     ))}
-                    <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 6, fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 6, fontStyle: 'italic' }}>
                       Preise aus der Festpreis-Verteilung — nicht einzeln änderbar.
                     </div>
                   </div>
@@ -811,7 +811,7 @@ export default function AuftraegePage() {
                     style={styles.miniBtn}>+ Zeile</button>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 10px' }}>
+              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 10px' }}>
                 Schichten beim Kunden, Feuchtemessung vor Ort, alles Weitere.
               </div>
               {zusatz.map((z, i) => (
@@ -848,7 +848,7 @@ export default function AuftraegePage() {
                             <td style={{ ...styles.td, color: C.textDim, width: 24 }}>{p.position_nr}</td>
                             <td style={styles.td}>
                               {p.bezeichnung}
-                              <div style={{ fontSize: 11.5, color: C.textDim }}>
+                              <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>
                                 {formatZahl(p.menge, 2)} {p.einheit} × {eur(p.einzelpreis_netto)}
                                 {p.rabatt_prozent ? ` − ${formatZahl(p.rabatt_prozent, 0)} %` : ''}
                                 {` · ${p.steuersatz_prozent} % USt.`}
@@ -862,11 +862,11 @@ export default function AuftraegePage() {
                               <span>Summe netto</span><span>{eur(befund.summe.netto)}</span>
                             </div>
                             {steuerAusweisZeilen(befund.summe).map((z, i) => (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: C.textDim, fontSize: 12.5, marginTop: 3 }}>
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 3 }}>
                                 <span>{z.split(':')[0]}</span><span>{z.split(':')[1]}</span>
                               </div>
                             ))}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 16 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
                               <span>Gesamt brutto</span><span style={{ color: C.gold }}>{eur(befund.summe.brutto)}</span>
                             </div>
                           </td>
@@ -875,7 +875,7 @@ export default function AuftraegePage() {
                     </table>
 
                     {befund.hinweise.length > 0 && (
-                      <div style={{ fontSize: 12, color: C.textDim, marginTop: 10, lineHeight: 1.6 }}>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 10, lineHeight: 1.6 }}>
                         {befund.hinweise.map((h, i) => <div key={i}>· {h}</div>)}
                       </div>
                     )}
@@ -919,12 +919,12 @@ export default function AuftraegePage() {
                     {' '}<a href={`/dashboard/rechnungen/${rechnungId}`} style={{ color: C.cyan }}>Rechnung ansehen →</a>
                   </div>
                 ) : status !== 'geliefert' ? (
-                  <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
                     Die Rechnung entsteht aus dem Status <strong>Geliefert</strong>. Erst liefern,
                     dann abrechnen — sonst ändern sich die Positionen nach der Rechnung.
                   </div>
                 ) : (
-                  <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
+                  <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginTop: 8, lineHeight: 1.55 }}>
                     Die Positionen werden mit ihren <strong>eingefrorenen</strong> Preisen übernommen.
                     Danach ist der Auftrag gesperrt.
                   </div>
@@ -985,45 +985,45 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 600, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 600, lineHeight: 1.5 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 18 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
-  zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', color: C.text },
 
   sektion: { marginTop: 16, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 13, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   paketBlock: { background: C.navy2, border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 10, padding: '11px 13px', marginBottom: 8 },
   zusatzZeile: { display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap', alignItems: 'center' },
-  posInput: { boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, fontFamily: 'inherit' },
-  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' },
+  posInput: { boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
   tabelle: { width: '100%', borderCollapse: 'collapse' },
-  td: { padding: '6px 4px', fontSize: 13, verticalAlign: 'top' },
+  td: { padding: '6px 4px', fontSize: 'clamp(13px, 1.13vw, 18px)', verticalAlign: 'top' },
 
-  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 13.5, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit' },
 
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 15px', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '5px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 15px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '5px 11px', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
 
-  hint: { color: C.textDim, fontSize: 13.5, padding: '12px 0' },
-  err: { color: C.danger, fontSize: 13.5, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 12, lineHeight: 1.5 },
-  okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 16 },
-  infoBox: { marginTop: 10, padding: '10px 12px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 9, fontSize: 12.5, color: C.text, lineHeight: 1.55 },
-  warnBox: { marginTop: 10, marginBottom: 10, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 12.5, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', padding: '12px 0' },
+  err: { color: C.danger, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 12, lineHeight: 1.5 },
+  okBox: { color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 16 },
+  infoBox: { marginTop: 10, padding: '10px 12px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 9, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.text, lineHeight: 1.55 },
+  warnBox: { marginTop: 10, marginBottom: 10, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 720, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, color: C.text, margin: 0 },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, color: C.text, margin: 0 },
   modalAktionen: { display: 'flex', gap: 8, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
 };

@@ -210,7 +210,7 @@ export default function SortimentPage() {
   const th: CSSProperties = {
     textAlign: 'left',
     padding: '10px 12px',
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     letterSpacing: 0.4,
     color: C.dim,
     textTransform: 'uppercase',
@@ -219,7 +219,7 @@ export default function SortimentPage() {
   };
   const td: CSSProperties = {
     padding: '11px 12px',
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     borderBottom: `1px solid ${C.line}`,
     whiteSpace: 'nowrap',
   };
@@ -230,7 +230,7 @@ export default function SortimentPage() {
     border: `1px solid ${aktiv ? C.gold : C.line}`,
     background: aktiv ? 'rgba(201,168,76,0.14)' : 'transparent',
     color: aktiv ? C.gold : C.dim,
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 600,
     cursor: 'pointer',
   });
@@ -243,11 +243,11 @@ export default function SortimentPage() {
       {/* Kopf */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', marginBottom: 22 }}>
         <div>
-          <div style={{ fontSize: 12, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.2</div>
-          <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800 }}>
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.2</div>
+          <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800 }}>
             Sortiment-Analyse
           </h1>
-          <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
+          <div style={{ color: C.dim, fontSize: 'clamp(14px, 1.25vw, 20px)', marginTop: 4 }}>
             ABC · Renner/Penner · Umschlag · Reichweite · Ladenhüter · gebundenes Kapital
           </div>
         </div>
@@ -290,13 +290,13 @@ export default function SortimentPage() {
               },
             ].map((k, i) => (
               <div key={i} style={{ ...karte, flex: '1 1 200px', minWidth: 200 }}>
-                <div style={{ fontSize: 12, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.dim, textTransform: 'uppercase', letterSpacing: 0.4 }}>
                   {k.label}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: k.farbe, marginTop: 8, lineHeight: 1.2 }}>
+                <div style={{ fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800, color: k.farbe, marginTop: 8, lineHeight: 1.2 }}>
                   {k.wert}
                 </div>
-                {k.sub && <div style={{ fontSize: 12, color: C.dim, marginTop: 4 }}>{k.sub}</div>}
+                {k.sub && <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.dim, marginTop: 4 }}>{k.sub}</div>}
               </div>
             ))}
           </div>
@@ -305,11 +305,11 @@ export default function SortimentPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
             {/* ABC-Donut */}
             <div style={{ ...karte, flex: '1 1 320px', minWidth: 320 }}>
-              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, marginBottom: 12 }}>
                 Kapital nach ABC-Klasse
               </div>
               {abcAgg.length === 0 ? (
-                <div style={{ color: C.dim, fontSize: 14, padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ color: C.dim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '40px 0', textAlign: 'center' }}>
                   Noch kein Verbrauch im Zeitraum.
                 </div>
               ) : (
@@ -340,7 +340,7 @@ export default function SortimentPage() {
               {/* Legende */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 6 }}>
                 {abcAgg.map((d) => (
-                  <div key={d.klasse} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                  <div key={d.klasse} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                     <span style={{ width: 11, height: 11, borderRadius: 3, background: abcFarbe(d.klasse) }} />
                     {d.name}
                   </div>
@@ -350,23 +350,23 @@ export default function SortimentPage() {
 
             {/* Renner-Balken */}
             <div style={{ ...karte, flex: '1 1 380px', minWidth: 380 }}>
-              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, marginBottom: 12 }}>
                 Top nach Verbrauchswert
               </div>
               {topBalken.length === 0 ? (
-                <div style={{ color: C.dim, fontSize: 14, padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ color: C.dim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '40px 0', textAlign: 'center' }}>
                   Noch kein Verbrauch im Zeitraum.
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={topBalken} layout="vertical" margin={{ left: 10, right: 20 }}>
                     <CartesianGrid horizontal={false} stroke={C.line} />
-                    <XAxis type="number" tick={{ fill: C.dim, fontSize: 11 }} stroke={C.line} />
+                    <XAxis type="number" tick={{ fill: C.dim, fontSize: 'clamp(11px, 0.94vw, 15px)' }} stroke={C.line} />
                     <YAxis
                       type="category"
                       dataKey="name"
                       width={140}
-                      tick={{ fill: C.text, fontSize: 12 }}
+                      tick={{ fill: C.text, fontSize: 'clamp(12px, 1.06vw, 17px)' }}
                       stroke={C.line}
                     />
                     <Tooltip
@@ -419,7 +419,7 @@ export default function SortimentPage() {
                               minWidth: 26,
                               padding: '3px 8px',
                               borderRadius: 6,
-                              fontSize: 12,
+                              fontSize: 'clamp(12px, 1.06vw, 17px)',
                               fontWeight: 800,
                               color: C.navy,
                               background: abcFarbe(z.abc_klasse),
@@ -429,7 +429,7 @@ export default function SortimentPage() {
                           </span>
                         </td>
                         <td style={{ ...td, textAlign: 'right' }}>
-                          {zahl(z.verbrauch)} <span style={{ color: C.dim, fontSize: 12 }}>{z.einheit}</span>
+                          {zahl(z.verbrauch)} <span style={{ color: C.dim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{z.einheit}</span>
                         </td>
                         <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{euro(z.verbrauchswert)}</td>
                         <td style={{ ...td, textAlign: 'right' }}>{z.umschlag === null ? '–' : z.umschlag.toLocaleString('de-DE')}</td>
@@ -439,9 +439,9 @@ export default function SortimentPage() {
                         <td style={{ ...td, textAlign: 'right' }}>{euro(z.lagerwert_gebunden)}</td>
                         <td style={{ ...td, textAlign: 'center' }}>
                           {z.status === 'LADENHÜTER' ? (
-                            <span style={{ color: C.red, fontWeight: 700, fontSize: 12 }}>● Ladenhüter</span>
+                            <span style={{ color: C.red, fontWeight: 700, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>● Ladenhüter</span>
                           ) : (
-                            <span style={{ color: C.green, fontWeight: 700, fontSize: 12 }}>● läuft</span>
+                            <span style={{ color: C.green, fontWeight: 700, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>● läuft</span>
                           )}
                         </td>
                       </tr>
@@ -454,7 +454,7 @@ export default function SortimentPage() {
 
           {/* Hinweis Preis-Pflege */}
           {zeilen.some((z) => z.preis_pflege === 'VK fehlt') && (
-            <div style={{ ...karte, marginTop: 16, borderColor: 'rgba(216,166,87,0.4)', color: C.yellow, fontSize: 13 }}>
+            <div style={{ ...karte, marginTop: 16, borderColor: 'rgba(216,166,87,0.4)', color: C.yellow, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Hinweis: Bei einigen Artikeln fehlt der Verkaufspreis — Umsatz und Deckungsbeitrag bleiben
               daher leer. Die mengenbasierten Kennzahlen (ABC, Umschlag, Reichweite, Ladenhüter) sind davon
               nicht betroffen.

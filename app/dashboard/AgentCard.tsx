@@ -44,13 +44,13 @@ export default function AgentCard({ name, role, desc, icon }: {
       }}>
         {icon}
       </div>
-      <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+      <p style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, margin: '0 0 4px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
         {name}
       </p>
-      <p style={{ fontSize: '11px', fontWeight: 600, color: '#C9A84C', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+      <p style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 600, color: '#C9A84C', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
         {role}
       </p>
-      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', margin: '0 0 16px', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.45)', margin: '0 0 16px', lineHeight: 1.6 }}>
         {desc}
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -59,7 +59,7 @@ export default function AgentCard({ name, role, desc, icon }: {
           background: '#22c55e', display: 'inline-block',
           boxShadow: '0 0 6px rgba(34,197,94,0.6)',
         }} />
-        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>Bereit</span>
+        <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>Bereit</span>
       </div>
     </div>
   )

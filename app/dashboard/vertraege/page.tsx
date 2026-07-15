@@ -329,12 +329,12 @@ export default function VertraegeCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -346,7 +346,7 @@ export default function VertraegeCockpit() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
     whiteSpace: "nowrap",
   };
@@ -356,13 +356,13 @@ export default function VertraegeCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -371,7 +371,7 @@ export default function VertraegeCockpit() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -394,7 +394,7 @@ export default function VertraegeCockpit() {
           <h1
             style={{
               margin: 0,
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               color: C.gold,
               letterSpacing: "-0.01em",
@@ -402,7 +402,7 @@ export default function VertraegeCockpit() {
           >
             📑 Verträge &amp; Fristen
           </h1>
-          <p style={{ margin: "8px 0 0", color: C.textDim, fontSize: 15 }}>
+          <p style={{ margin: "8px 0 0", color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Alle Verträge mit Laufzeit und Kündigungsfrist an einem Ort. Die Ampel
             warnt rechtzeitig vor dem Kündigungsstichtag — damit sich nichts
             ungewollt (und teuer) automatisch verlängert.
@@ -426,20 +426,20 @@ export default function VertraegeCockpit() {
         }}
       >
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Verträge gesamt
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4 }}>
             {kpiGesamt}
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Kündigung fällig (≤ 60 T.)
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               marginTop: 4,
               color: kpiKritisch > 0 ? C.warn : C.green,
@@ -449,11 +449,11 @@ export default function VertraegeCockpit() {
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Laufende Kosten / Monat
           </div>
           <div
-            style={{ fontSize: 28, fontWeight: 800, marginTop: 4, color: C.gold }}
+            style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4, color: C.gold }}
           >
             {eur(kpiMonatskosten)}
           </div>
@@ -493,7 +493,7 @@ export default function VertraegeCockpit() {
             display: "flex",
             alignItems: "center",
             gap: 8,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: C.textDim,
             cursor: "pointer",
             userSelect: "none",
@@ -562,7 +562,7 @@ export default function VertraegeCockpit() {
                           <span
                             style={{
                               marginLeft: 8,
-                              fontSize: 11,
+                              fontSize: 'clamp(11px, 0.94vw, 15px)',
                               color: C.warn,
                               border: `1px solid ${C.warn}55`,
                               borderRadius: 6,
@@ -575,7 +575,7 @@ export default function VertraegeCockpit() {
                         )}
                       </div>
                       {v.vertragspartner && (
-                        <div style={{ fontSize: 12, color: C.textDim }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                           {v.vertragspartner}
                         </div>
                       )}
@@ -585,7 +585,7 @@ export default function VertraegeCockpit() {
                     </td>
                     <td style={{ ...tdStil, textAlign: "right", whiteSpace: "nowrap" }}>
                       {eur(v.kosten_betrag)}
-                      <div style={{ fontSize: 11, color: C.textDim }}>
+                      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>
                         {INTERVALL_LABEL[v.kosten_intervall] ?? v.kosten_intervall}
                       </div>
                     </td>
@@ -596,7 +596,7 @@ export default function VertraegeCockpit() {
                       <div style={{ color: am.farbe, fontWeight: 700 }}>
                         {datum(st)}
                       </div>
-                      <div style={{ fontSize: 11, color: am.farbe }}>{am.text}</div>
+                      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: am.farbe }}>{am.text}</div>
                     </td>
                     <td style={{ ...tdStil, textAlign: "right", whiteSpace: "nowrap" }}>
                       <button
@@ -644,7 +644,7 @@ export default function VertraegeCockpit() {
             style={{ ...card, width: "100%", maxWidth: 580, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               {bearbeiteId ? "Vertrag bearbeiten" : "Neuer Vertrag"}
             </h2>
             <div
@@ -768,7 +768,7 @@ export default function VertraegeCockpit() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -782,7 +782,7 @@ export default function VertraegeCockpit() {
                 </label>
                 {form.auto_verlaengerung && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 13, color: C.textDim }}>um</span>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>um</span>
                     <input
                       style={{ ...inputStil, width: 80 }}
                       value={form.verlaengerung_monate}
@@ -792,7 +792,7 @@ export default function VertraegeCockpit() {
                       inputMode="numeric"
                       placeholder="12"
                     />
-                    <span style={{ fontSize: 13, color: C.textDim }}>Monate</span>
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>Monate</span>
                   </div>
                 )}
               </div>
@@ -812,7 +812,7 @@ export default function VertraegeCockpit() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >

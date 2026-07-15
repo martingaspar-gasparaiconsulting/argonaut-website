@@ -76,7 +76,7 @@ export default function TerminEinsatzButton({ terminId, einsatzId, onErstellt }:
           display: "inline-flex", alignItems: "center", gap: 6,
           padding: "8px 14px", borderRadius: 8, textDecoration: "none",
           background: "rgba(0,230,118,0.10)", border: `1px solid ${GRUEN}`,
-          color: GRUEN, fontWeight: 700, fontSize: 13,
+          color: GRUEN, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)',
         }}
         title="Verknüpften Einsatz öffnen"
       >
@@ -93,13 +93,13 @@ export default function TerminEinsatzButton({ terminId, einsatzId, onErstellt }:
         style={{
           padding: "8px 14px", borderRadius: 8, cursor: laden ? "default" : "pointer",
           background: "transparent", border: `1px solid ${CYAN}`, color: CYAN,
-          fontWeight: 700, fontSize: 13, opacity: laden ? 0.6 : 1,
+          fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', opacity: laden ? 0.6 : 1,
         }}
         title="Aus diesem Termin einen Field-Service-Einsatz erstellen"
       >
         {laden ? "Erstelle…" : "→ Einsatz erstellen"}
       </button>
-      {fehler && <span style={{ fontSize: 11, color: "#ff9a9a" }}>{fehler}</span>}
+      {fehler && <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: "#ff9a9a" }}>{fehler}</span>}
     </span>
   );
 }

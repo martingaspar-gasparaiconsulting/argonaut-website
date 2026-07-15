@@ -379,7 +379,7 @@ export default function TeamChatPage() {
       <h1
         style={{
           color: GOLD,
-          fontSize: 34,
+          fontSize: 'clamp(34px, 3vw, 48px)',
           fontWeight: 700,
           margin: '0 0 6px 0',
           letterSpacing: 0.3,
@@ -387,7 +387,7 @@ export default function TeamChatPage() {
       >
         🗨️ Team-Chat
       </h1>
-      <p style={{ color: DIM, fontSize: 15, margin: '0 0 22px 0', maxWidth: 720 }}>
+      <p style={{ color: DIM, fontSize: 'clamp(15px, 1.31vw, 21px)', margin: '0 0 22px 0', maxWidth: 720 }}>
         Kommunizieren Sie in Echtzeit mit Ihrem Team. Legen Sie Kanäle an, laden
         Sie Kollegen ein und schalten Sie bei Bedarf ARGONAUT direkt in das
         Gespräch dazu.
@@ -420,7 +420,7 @@ export default function TeamChatPage() {
                 marginBottom: 6,
               }}
             >
-              <span style={{ color: TEXT, fontWeight: 600, fontSize: 14 }}>Kanäle</span>
+              <span style={{ color: TEXT, fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Kanäle</span>
               <button
                 onClick={() => setZeigeNeuerKanal((v) => !v)}
                 style={{
@@ -430,7 +430,7 @@ export default function TeamChatPage() {
                   borderRadius: 8,
                   padding: '2px 10px',
                   cursor: 'pointer',
-                  fontSize: 18,
+                  fontSize: 'clamp(18px, 1.56vw, 25px)',
                   lineHeight: 1,
                 }}
                 title="Neuer Kanal"
@@ -454,7 +454,7 @@ export default function TeamChatPage() {
                     color: TEXT,
                     borderRadius: 8,
                     padding: '6px 8px',
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                   }}
                 />
                 <button
@@ -467,7 +467,7 @@ export default function TeamChatPage() {
                     padding: '6px 10px',
                     cursor: 'pointer',
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
                   }}
                 >
                   OK
@@ -477,7 +477,7 @@ export default function TeamChatPage() {
 
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {kanaele.length === 0 && (
-                <span style={{ color: DIM, fontSize: 13, padding: '6px 4px' }}>
+                <span style={{ color: DIM, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '6px 4px' }}>
                   Noch kein Kanal. Legen Sie oben mit „+" den ersten an.
                 </span>
               )}
@@ -499,7 +499,7 @@ export default function TeamChatPage() {
                       borderRadius: 8,
                       padding: '8px 10px',
                       cursor: 'pointer',
-                      fontSize: 14,
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       fontWeight: aktiv ? 600 : 400,
                     }}
                   >
@@ -549,10 +549,10 @@ export default function TeamChatPage() {
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: TEXT, fontWeight: 600, fontSize: 16 }}>
+                    <div style={{ color: TEXT, fontWeight: 600, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
                       # {aktKanalObj?.name}
                     </div>
-                    <div style={{ color: DIM, fontSize: 12.5, marginTop: 4 }}>
+                    <div style={{ color: DIM, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 4 }}>
                       <span style={{ color: GOLD }}>
                         👑 Moderator: {moderator ? moderator.m_anzeige : '—'}
                       </span>
@@ -576,7 +576,7 @@ export default function TeamChatPage() {
                       borderRadius: 8,
                       padding: '5px 12px',
                       cursor: 'pointer',
-                      fontSize: 13,
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                     }}
                   >
                     ＋ Kollege einladen
@@ -604,13 +604,13 @@ export default function TeamChatPage() {
                         color: TEXT,
                         borderRadius: 8,
                         padding: '8px 10px',
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                         marginBottom: 8,
                       }}
                     />
                     <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {gefilterteKollegen.length === 0 && (
-                        <span style={{ color: DIM, fontSize: 13, padding: '4px 2px' }}>
+                        <span style={{ color: DIM, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '4px 2px' }}>
                           Keine Kollegen mit Login gefunden.
                         </span>
                       )}
@@ -629,13 +629,13 @@ export default function TeamChatPage() {
                           }}
                         >
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ color: TEXT, fontSize: 13.5, fontWeight: 600 }}>
+                            <div style={{ color: TEXT, fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600 }}>
                               {k.k_anzeige || k.k_email}
                             </div>
-                            <div style={{ color: DIM, fontSize: 11.5 }}>{k.k_email}</div>
+                            <div style={{ color: DIM, fontSize: 'clamp(11.5px, 1vw, 16px)' }}>{k.k_email}</div>
                           </div>
                           {k.k_ist_mitglied ? (
-                            <span style={{ color: GREEN, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
+                            <span style={{ color: GREEN, fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontWeight: 600, flexShrink: 0 }}>
                               ✓ im Kanal
                             </span>
                           ) : (
@@ -651,7 +651,7 @@ export default function TeamChatPage() {
                                 padding: '5px 12px',
                                 cursor: 'pointer',
                                 fontWeight: 700,
-                                fontSize: 12.5,
+                                fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                               }}
                             >
                               {einladenLaedt === k.k_auth_user_id ? '…' : 'Einladen'}
@@ -661,7 +661,7 @@ export default function TeamChatPage() {
                       ))}
                     </div>
                     {einladenFehler && (
-                      <div style={{ color: DIM, fontSize: 12.5, marginTop: 8 }}>{einladenFehler}</div>
+                      <div style={{ color: DIM, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 8 }}>{einladenFehler}</div>
                     )}
                   </div>
                 )}
@@ -679,7 +679,7 @@ export default function TeamChatPage() {
                   }}
                 >
                   {nachrichten.length === 0 && !kiDenkt && (
-                    <div style={{ color: DIM, fontSize: 14, textAlign: 'center', marginTop: 20 }}>
+                    <div style={{ color: DIM, fontSize: 'clamp(14px, 1.25vw, 20px)', textAlign: 'center', marginTop: 20 }}>
                       Noch keine Nachrichten. Schreiben Sie die erste.
                     </div>
                   )}
@@ -691,7 +691,7 @@ export default function TeamChatPage() {
                         key={m.id}
                         style={{ alignSelf: eigen ? 'flex-end' : 'flex-start', maxWidth: '72%' }}
                       >
-                        <div style={{ fontSize: 12, color: farbe, marginBottom: 3, fontWeight: 600 }}>
+                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: farbe, marginBottom: 3, fontWeight: 600 }}>
                           {m.ist_ki ? '⚡ ARGONAUT' : m.absender_name}
                           <span style={{ color: DIM, fontWeight: 400, marginLeft: 8 }}>
                             {zeitFormat(m.created_at)}
@@ -704,7 +704,7 @@ export default function TeamChatPage() {
                             color: TEXT,
                             borderRadius: 10,
                             padding: '9px 13px',
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             whiteSpace: 'pre-wrap',
                             wordBreak: 'break-word',
                           }}
@@ -724,7 +724,7 @@ export default function TeamChatPage() {
                                 borderRadius: 8,
                                 padding: '8px 12px',
                                 cursor: 'pointer',
-                                fontSize: 13,
+                                fontSize: 'clamp(13px, 1.13vw, 18px)',
                                 fontWeight: 600,
                                 maxWidth: '100%',
                               }}
@@ -744,7 +744,7 @@ export default function TeamChatPage() {
 
                   {kiDenkt && (
                     <div style={{ alignSelf: 'flex-start', maxWidth: '72%' }}>
-                      <div style={{ fontSize: 12, color: GOLD, marginBottom: 3, fontWeight: 600 }}>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: GOLD, marginBottom: 3, fontWeight: 600 }}>
                         ⚡ ARGONAUT
                       </div>
                       <div
@@ -754,7 +754,7 @@ export default function TeamChatPage() {
                           color: DIM,
                           borderRadius: 10,
                           padding: '9px 13px',
-                          fontSize: 14,
+                          fontSize: 'clamp(14px, 1.25vw, 20px)',
                           fontStyle: 'italic',
                         }}
                       >
@@ -774,7 +774,7 @@ export default function TeamChatPage() {
                     gap: 8,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: DIM, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                     <span>
                       Tipp: Schreiben Sie{' '}
                       <span style={{ color: GOLD, fontWeight: 600 }}>@ARGONAUT</span>{' '}
@@ -802,7 +802,7 @@ export default function TeamChatPage() {
                         borderRadius: 10,
                         padding: '11px 14px',
                         cursor: uploadLaedt ? 'default' : 'pointer',
-                        fontSize: 16,
+                        fontSize: 'clamp(16px, 1.38vw, 22px)',
                         lineHeight: 1,
                       }}
                     >
@@ -827,7 +827,7 @@ export default function TeamChatPage() {
                         color: TEXT,
                         borderRadius: 10,
                         padding: '11px 13px',
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                         fontFamily: 'inherit',
                         lineHeight: 1.4,
                         maxHeight: 120,
@@ -846,7 +846,7 @@ export default function TeamChatPage() {
                         height: 44,
                         cursor: entwurf.trim() ? 'pointer' : 'default',
                         fontWeight: 700,
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                       }}
                     >
                       Senden

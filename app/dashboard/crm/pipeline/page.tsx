@@ -331,7 +331,7 @@ export default function PipelinePage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 margin: 0,
                 letterSpacing: 0.5,
               }}
@@ -343,7 +343,7 @@ export default function PipelinePage() {
                 fontFamily: "'DM Sans', sans-serif",
                 color: C.textDim,
                 margin: "6px 0 0",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
               Zieh deine Verkaufschancen per Drag&amp;Drop durch die Phasen.
@@ -425,13 +425,13 @@ export default function PipelinePage() {
                       style={{
                         fontFamily: "var(--font-dm-sans), sans-serif",
                         color: p.farbe,
-                        fontSize: 14,
+                        fontSize: 'clamp(14px, 1.25vw, 20px)',
                         fontWeight: 700,
                       }}
                     >
                       {p.label}
                     </span>
-                    <span style={{ color: C.textDim, fontSize: 12 }}>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                       {karten.length} · {eur(summe)}
                     </span>
                   </div>
@@ -462,7 +462,7 @@ export default function PipelinePage() {
                           style={{
                             color: "#fff",
                             fontFamily: "var(--font-dm-sans), sans-serif",
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             fontWeight: 600,
                             marginBottom: 6,
                           }}
@@ -470,7 +470,7 @@ export default function PipelinePage() {
                           {c.titel}
                         </div>
                         {(c.kontakt_id || c.firma_id) && (
-                          <div style={{ color: C.textDim, fontSize: 12, marginBottom: 6 }}>
+                          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 6 }}>
                             {c.kontakt_id && kontaktName[c.kontakt_id]
                               ? kontaktName[c.kontakt_id]
                               : ""}
@@ -494,12 +494,12 @@ export default function PipelinePage() {
                               color: C.gold,
                               fontFamily: "var(--font-dm-sans), sans-serif",
                               fontWeight: 700,
-                              fontSize: 14,
+                              fontSize: 'clamp(14px, 1.25vw, 20px)',
                             }}
                           >
                             {eur(c.wert)}
                           </span>
-                          <span style={{ color: C.textDim, fontSize: 11 }}>
+                          <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}>
                             {c.wahrscheinlichkeit != null
                               ? `${c.wahrscheinlichkeit}%`
                               : ""}
@@ -514,7 +514,7 @@ export default function PipelinePage() {
                       <div
                         style={{
                           color: C.textDim,
-                          fontSize: 12,
+                          fontSize: 'clamp(12px, 1.06vw, 17px)',
                           textAlign: "center",
                           padding: "14px 0",
                           opacity: 0.6,
@@ -539,7 +539,7 @@ export default function PipelinePage() {
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
-                fontSize: 22,
+                fontSize: 'clamp(22px, 1.94vw, 31px)',
                 margin: "0 0 18px",
               }}
             >
@@ -706,7 +706,7 @@ function KpiKarte({
         style={{
           fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
-          fontSize: 24,
+          fontSize: 'clamp(24px, 2.13vw, 34px)',
           fontWeight: 800,
           lineHeight: 1.1,
         }}
@@ -717,7 +717,7 @@ function KpiKarte({
         style={{
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           marginTop: 6,
         }}
       >
@@ -735,7 +735,7 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
           display: "block",
           fontFamily: "'DM Sans', sans-serif",
           color: C.textDim,
-          fontSize: 12,
+          fontSize: 'clamp(12px, 1.06vw, 17px)',
           marginBottom: 5,
         }}
       >
@@ -753,7 +753,7 @@ const zurueckBtn: React.CSSProperties = {
   color: C.textDim,
   border: "none",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
   padding: 0,
 };
@@ -766,14 +766,14 @@ const goldBtn: React.CSSProperties = {
   padding: "11px 22px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
 const goldBtnGross: React.CSSProperties = {
   ...goldBtn,
   padding: "12px 20px",
-  fontSize: 15,
+  fontSize: 'clamp(15px, 1.31vw, 21px)',
 };
 
 const grauBtn: React.CSSProperties = {
@@ -784,7 +784,7 @@ const grauBtn: React.CSSProperties = {
   padding: "11px 20px",
   fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   cursor: "pointer",
 };
 
@@ -795,7 +795,7 @@ const inp: React.CSSProperties = {
   padding: "11px 13px",
   color: "#fff",
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   width: "100%",
   boxSizing: "border-box",
   outline: "none",
@@ -836,5 +836,5 @@ const fehlerBox: React.CSSProperties = {
   padding: "12px 16px",
   marginBottom: 16,
   fontFamily: "'DM Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
 };

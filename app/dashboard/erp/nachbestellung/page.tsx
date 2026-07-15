@@ -262,7 +262,7 @@ export default function NachbestellungPage() {
   const th: CSSProperties = {
     textAlign: 'left',
     padding: '9px 12px',
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.4,
     color: C.dim,
     textTransform: 'uppercase',
@@ -271,7 +271,7 @@ export default function NachbestellungPage() {
   };
   const td: CSSProperties = {
     padding: '10px 12px',
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     borderBottom: `1px solid ${C.line}`,
     whiteSpace: 'nowrap',
   };
@@ -284,7 +284,7 @@ export default function NachbestellungPage() {
     border: `1px solid ${farbe}`,
     background: aktiv ? 'transparent' : farbe + '24',
     color: farbe,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     fontWeight: 700,
     textDecoration: 'none',
     whiteSpace: 'nowrap',
@@ -299,11 +299,11 @@ export default function NachbestellungPage() {
     <div style={seite}>
       {/* Kopf */}
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 12, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.3</div>
-        <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800 }}>
+        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.3</div>
+        <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800 }}>
           Auto-Nachbestellung
         </h1>
-        <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
+        <div style={{ color: C.dim, fontSize: 'clamp(14px, 1.25vw, 20px)', marginTop: 4 }}>
           Was ist knapp, wie viel nachbestellen, bei wem — mit einem Klick als Bestellung anlegen.
         </div>
       </div>
@@ -326,9 +326,9 @@ export default function NachbestellungPage() {
         <div style={{ ...karte, textAlign: 'center', color: C.dim }}>Vorschlag wird berechnet …</div>
       ) : zeilen.length === 0 ? (
         <div style={{ ...karte, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Alles auf Sollbestand</div>
-          <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 8 }}>✅</div>
+          <div style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700 }}>Alles auf Sollbestand</div>
+          <div style={{ color: C.dim, fontSize: 'clamp(14px, 1.25vw, 20px)', marginTop: 4 }}>
             Aktuell liegt kein Artikel unter dem Meldebestand. Nichts nachzubestellen.
           </div>
         </div>
@@ -343,10 +343,10 @@ export default function NachbestellungPage() {
               { label: 'Kritisch (leer)', wert: String(anzahlRot), farbe: anzahlRot > 0 ? C.red : C.green },
             ].map((k, i) => (
               <div key={i} style={{ ...karte, flex: '1 1 200px', minWidth: 200 }}>
-                <div style={{ fontSize: 12, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.dim, textTransform: 'uppercase', letterSpacing: 0.4 }}>
                   {k.label}
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: k.farbe, marginTop: 8 }}>{k.wert}</div>
+                <div style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: k.farbe, marginTop: 8 }}>{k.wert}</div>
               </div>
             ))}
           </div>
@@ -375,8 +375,8 @@ export default function NachbestellungPage() {
                   }}
                 >
                   <div>
-                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700 }}>{g.name}</div>
-                    <div style={{ color: C.dim, fontSize: 13, marginTop: 2 }}>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700 }}>{g.name}</div>
+                    <div style={{ color: C.dim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 2 }}>
                       {g.zeilen.length} Position(en) · geschätzt {euro(g.summe)}
                       {g.email ? ' · ' + g.email : ''}
                     </div>
@@ -430,7 +430,7 @@ export default function NachbestellungPage() {
                           <td style={{ ...td, color: C.dim }}>{z.artikelnummer ?? '–'}</td>
                           <td style={{ ...td, fontWeight: 600 }}>{z.bezeichnung}</td>
                           <td style={{ ...td, textAlign: 'right', color: z.ampel === 'rot' ? C.red : C.text }}>
-                            {zahl(z.aktueller_bestand)} <span style={{ color: C.dim, fontSize: 12 }}>{z.einheit}</span>
+                            {zahl(z.aktueller_bestand)} <span style={{ color: C.dim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{z.einheit}</span>
                           </td>
                           <td style={{ ...td, textAlign: 'right', color: C.dim }}>{zahl(z.mindestbestand)}</td>
                           <td style={{ ...td, textAlign: 'right', fontWeight: 800, color: C.gold }}>
@@ -448,7 +448,7 @@ export default function NachbestellungPage() {
           })}
 
           {/* Fußnote */}
-          <div style={{ ...karte, borderColor: 'rgba(0,229,255,0.25)', color: C.dim, fontSize: 13 }}>
+          <div style={{ ...karte, borderColor: 'rgba(0,229,255,0.25)', color: C.dim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             <b style={{ color: C.cyan }}>So funktioniert&apos;s:</b> Empfehlung = Auffüllen auf den doppelten
             Meldebestand (Sicherheitspuffer). „Als Bestellung anlegen" erzeugt eine <b>Entwurf</b>-Bestellung mit
             allen Positionen und öffnet sie — dort prüfst du und schaltest sie auf „bestellt". „Bestell-E-Mail"

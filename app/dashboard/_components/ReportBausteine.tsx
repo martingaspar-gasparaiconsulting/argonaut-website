@@ -94,12 +94,12 @@ export function KpiKarte({
           alignItems: 'center',
           gap: 8,
           color: FARBEN.grau,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           fontWeight: 600,
           letterSpacing: 0.2,
         }}
       >
-        {icon && <span style={{ fontSize: 16 }}>{icon}</span>}
+        {icon && <span style={{ fontSize: 'clamp(16px, 1.38vw, 22px)' }}>{icon}</span>}
         <span>{titel}</span>
       </div>
 
@@ -109,14 +109,14 @@ export function KpiKarte({
           alignItems: 'baseline',
           gap: 6,
           color: FARBEN.hell,
-          fontSize: 30,
+          fontSize: 'clamp(30px, 2.63vw, 42px)',
           fontWeight: 800,
           lineHeight: 1.1,
         }}
       >
         <span>{wertText}</span>
         {einheit && (
-          <span style={{ fontSize: 16, fontWeight: 700, color: FARBEN.grau }}>
+          <span style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, color: FARBEN.grau }}>
             {einheit}
           </span>
         )}
@@ -126,7 +126,7 @@ export function KpiKarte({
         {hatTrend && (
           <span
             style={{
-              fontSize: 12,
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
               fontWeight: 700,
               color: trendPositiv ? FARBEN.gruen : FARBEN.rot,
             }}
@@ -135,7 +135,7 @@ export function KpiKarte({
           </span>
         )}
         {unterzeile && (
-          <span style={{ fontSize: 12, color: FARBEN.grau }}>{unterzeile}</span>
+          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: FARBEN.grau }}>{unterzeile}</span>
         )}
       </div>
     </div>
@@ -179,7 +179,7 @@ export function DiagrammKarte({
     border: `1px solid ${FARBEN.rand}`,
     borderRadius: 8,
     color: FARBEN.hell,
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
   };
 
   return (
@@ -197,7 +197,7 @@ export function DiagrammKarte({
       <div
         style={{
           color: FARBEN.hell,
-          fontSize: 15,
+          fontSize: 'clamp(15px, 1.31vw, 21px)',
           fontWeight: 700,
         }}
       >
@@ -212,7 +212,7 @@ export function DiagrammKarte({
             alignItems: 'center',
             justifyContent: 'center',
             color: FARBEN.grau,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           Keine Daten vorhanden
@@ -267,7 +267,7 @@ export function DiagrammKarte({
                 </Pie>
                 <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
                 <Legend
-                  wrapperStyle={{ fontSize: 12, color: FARBEN.grau }}
+                  wrapperStyle={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: FARBEN.grau }}
                 />
               </PieChart>
             )}
@@ -348,7 +348,7 @@ export function TabelleKarte({ titel, spalten, zeilen }: TabelleKarteProps) {
         gap: 12,
       }}
     >
-      <div style={{ color: FARBEN.hell, fontSize: 15, fontWeight: 700 }}>
+      <div style={{ color: FARBEN.hell, fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700 }}>
         {titel}
       </div>
 
@@ -358,7 +358,7 @@ export function TabelleKarte({ titel, spalten, zeilen }: TabelleKarteProps) {
             padding: '32px 0',
             textAlign: 'center',
             color: FARBEN.grau,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           Keine Daten vorhanden
@@ -369,7 +369,7 @@ export function TabelleKarte({ titel, spalten, zeilen }: TabelleKarteProps) {
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              fontSize: 13.5,
+              fontSize: 'clamp(13.5px, 1.19vw, 19px)',
             }}
           >
             <thead>
@@ -469,7 +469,7 @@ export function VergleichsBalken({
     border: `1px solid ${FARBEN.rand}`,
     borderRadius: 8,
     color: FARBEN.hell,
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
   };
 
   return (
@@ -484,7 +484,7 @@ export function VergleichsBalken({
         gap: 10,
       }}
     >
-      <div style={{ color: FARBEN.hell, fontSize: 15, fontWeight: 700 }}>
+      <div style={{ color: FARBEN.hell, fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700 }}>
         {titel}
       </div>
 
@@ -496,7 +496,7 @@ export function VergleichsBalken({
             alignItems: 'center',
             justifyContent: 'center',
             color: FARBEN.grau,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           Keine Daten vorhanden
@@ -513,7 +513,7 @@ export function VergleichsBalken({
                 contentStyle={tooltipStyle}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
               />
-              <Legend wrapperStyle={{ fontSize: 12, color: FARBEN.grau }} />
+              <Legend wrapperStyle={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: FARBEN.grau }} />
               {serien.map((serie) => (
                 <Bar
                   key={serie.schluessel}

@@ -285,11 +285,11 @@ export default function GobdPage() {
         <button onClick={pdfErstellen} disabled={pdfLaeuft} style={{ ...styles.pdfBtn, opacity: pdfLaeuft ? 0.6 : 1 }}>
           {pdfLaeuft ? 'Erstellt PDF …' : '📄 PDF erstellen'}
         </button>
-        {meldung && <span style={{ color: C.green, fontSize: 14 }}>✓ {meldung}</span>}
+        {meldung && <span style={{ color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>✓ {meldung}</span>}
       </div>
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>Finale Version &amp; Historie</h2>
-        <p style={{ color: C.textDim, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: '0 0 14px', lineHeight: 1.5 }}>
           Schreibe den aktuellen Stand als revisionssichere Version fest. Frühere Fassungen bleiben erhalten (GoBD verlangt die Nachvollziehbarkeit von Änderungen).
         </p>
         <button onClick={finalisieren} disabled={finalisiert} style={{ ...styles.finalBtn, opacity: finalisiert ? 0.6 : 1 }}>
@@ -300,7 +300,7 @@ export default function GobdPage() {
             {historie.map((h) => (
               <div key={h.id} style={styles.histZeile}>
                 <span style={{ fontWeight: 700 }}>Version {h.version}</span>
-                <span style={{ color: C.textDim, fontSize: 13 }}>
+                <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                   {new Date(h.aktualisiert_am).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </span>
                 <button onClick={() => historiePdf(h.id, h.version)} style={styles.histBtn}>📄 PDF</button>
@@ -308,7 +308,7 @@ export default function GobdPage() {
             ))}
           </div>
         ) : (
-          <div style={{ marginTop: 14, color: C.textDim, fontSize: 13 }}>Noch keine finale Version festgeschrieben.</div>
+          <div style={{ marginTop: 14, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Noch keine finale Version festgeschrieben.</div>
         )}
       </div>
     </div>
@@ -354,22 +354,22 @@ function Feldblock({ label, value, onChange }: { label: string; value: string; o
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 80px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0 },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 720, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0 },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 720, lineHeight: 1.5 },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px' },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5 },
-  input: { width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 14, fontFamily: 'inherit' },
-  area: { width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical' },
-  fieldHint: { fontSize: 12, color: C.textDim, marginTop: 5 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 14px' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5 },
+  input: { width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
+  area: { width: '100%', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical' },
+  fieldHint: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 5 },
   saveBar: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 },
-  saveBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
-  pdfBtn: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
-  footHint: { color: C.textDim, fontSize: 13, marginTop: 12 },
-  finalBtn: { background: C.green, color: '#04160c', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  saveBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  pdfBtn: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '12px 22px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  footHint: { color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 12 },
+  finalBtn: { background: C.green, color: '#04160c', border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   histZeile: { display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid rgba(143,163,190,0.1)' },
-  histBtn: { marginLeft: 'auto', background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
-  hint: { color: C.textDim, fontSize: 14, padding: '20px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  histBtn: { marginLeft: 'auto', background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '20px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
 };

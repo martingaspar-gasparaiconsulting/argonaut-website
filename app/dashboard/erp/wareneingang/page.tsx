@@ -72,7 +72,7 @@ export default function WareneingangListe() {
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -81,7 +81,7 @@ export default function WareneingangListe() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
   };
@@ -89,10 +89,10 @@ export default function WareneingangListe() {
   return (
     <div style={{ color: "#fff", maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+        <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
           📥 Wareneingang
         </h1>
-        <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+        <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           Alle erfassten Lieferungen. Neue Eingänge buchst du direkt in der
           jeweiligen Bestellung.
         </p>

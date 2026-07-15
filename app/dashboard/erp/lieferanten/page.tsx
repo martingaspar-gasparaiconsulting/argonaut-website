@@ -206,12 +206,12 @@ export default function LieferantenCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -223,7 +223,7 @@ export default function LieferantenCockpit() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -232,14 +232,14 @@ export default function LieferantenCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const linkStil: React.CSSProperties = { color: C.cyan, textDecoration: "none" };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -248,7 +248,7 @@ export default function LieferantenCockpit() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -267,10 +267,10 @@ export default function LieferantenCockpit() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             🚚 Lieferanten
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Kontakte, Ansprechpartner und Bezugsquellen
           </p>
         </div>
@@ -284,7 +284,7 @@ export default function LieferantenCockpit() {
               border: `1px solid ${C.border}`,
               color: "#fff",
               fontWeight: 700,
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               textDecoration: "none",
               whiteSpace: "nowrap",
             }}
@@ -321,7 +321,7 @@ export default function LieferantenCockpit() {
             display: "flex",
             alignItems: "center",
             gap: 8,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: C.textDim,
             cursor: "pointer",
             userSelect: "none",
@@ -371,7 +371,7 @@ export default function LieferantenCockpit() {
                         <span
                           style={{
                             marginLeft: 8,
-                            fontSize: 11,
+                            fontSize: 'clamp(11px, 0.94vw, 15px)',
                             color: C.textDim,
                             border: `1px solid ${C.border}`,
                             borderRadius: 6,
@@ -383,7 +383,7 @@ export default function LieferantenCockpit() {
                       )}
                     </div>
                     {l.kundennummer && (
-                      <div style={{ fontSize: 12, color: C.textDim }}>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                         Kundennr. {l.kundennummer}
                       </div>
                     )}
@@ -453,7 +453,7 @@ export default function LieferantenCockpit() {
             style={{ ...card, width: "100%", maxWidth: 560, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               {bearbeiteId ? "Lieferant bearbeiten" : "Neuer Lieferant"}
             </h2>
             <div
@@ -540,7 +540,7 @@ export default function LieferantenCockpit() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -560,7 +560,7 @@ export default function LieferantenCockpit() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >

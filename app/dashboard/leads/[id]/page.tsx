@@ -22,7 +22,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 80px' }}>
-        <a href="/dashboard/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'rgba(255,255,255,0.55)', textDecoration: 'none', marginBottom: '24px' }}>
+        <a href="/dashboard/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', textDecoration: 'none', marginBottom: '24px' }}>
           {'\u2190'} {'Zur\u00fcck zur \u00dcbersicht'}
         </a>
         <LeadDetailClient lead={lead} />

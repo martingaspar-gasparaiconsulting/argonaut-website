@@ -372,10 +372,10 @@ export default function ProjektePage() {
   };
   const inputStil: React.CSSProperties = {
     width: '100%', background: BRAND.navy, color: '#fff', border: `1px solid ${BRAND.border}`,
-    borderRadius: 8, padding: '9px 10px', fontSize: 14, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
+    borderRadius: 8, padding: '9px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
-    display: 'block', color: BRAND.textDim, fontSize: 12, fontWeight: 600, marginBottom: 5, fontFamily: 'DM Sans, sans-serif',
+    display: 'block', color: BRAND.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600, marginBottom: 5, fontFamily: 'DM Sans, sans-serif',
   };
 
   const gefiltert = projekte.filter((p) => {
@@ -389,13 +389,13 @@ export default function ProjektePage() {
       {/* Kopf */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 22 }}>
         <div>
-          <p style={{ margin: 0, fontSize: 13, color: BRAND.gold, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
+          <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.gold, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
             ARGONAUT OS · Projekte
           </p>
-          <h1 style={{ margin: '2px 0 0', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 800 }}>
+          <h1 style={{ margin: '2px 0 0', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800 }}>
             Projekte
           </h1>
-          <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 14 }}>
+          <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Alle Projekte, Status und Fortschritt an einem Ort.
           </p>
         </div>
@@ -422,8 +422,8 @@ export default function ProjektePage() {
         });
         const kachel = (zahl: number, label: string, farbe: string) => (
           <div style={{ flex: 1, minWidth: 120, background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${farbe}`, borderRadius: 12, padding: '12px 16px' }}>
-            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 26, fontWeight: 800, color: farbe }}>{zahl}</div>
-            <div style={{ fontSize: 12, color: BRAND.textDim }}>{label}</div>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800, color: farbe }}>{zahl}</div>
+            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>{label}</div>
           </div>
         );
         return (
@@ -482,29 +482,29 @@ export default function ProjektePage() {
             return (
               <div key={p.id} style={{ ...card, borderLeft: `4px solid ${p.farbe || BRAND.cyan}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <a href={`/dashboard/projekte/${p.id}`} style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 17, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+                  <a href={`/dashboard/projekte/${p.id}`} style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 'clamp(17px, 1.5vw, 24px)', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
                     {p.name}
                   </a>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                    <span title={`Status: ${health.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: health.farbe, background: health.farbe + '22', border: `1px solid ${health.farbe}55`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap' }}>
+                    <span title={`Status: ${health.label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: health.farbe, background: health.farbe + '22', border: `1px solid ${health.farbe}55`, borderRadius: 999, padding: '3px 9px', whiteSpace: 'nowrap' }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: health.farbe, display: 'inline-block' }} />
                       {health.label}
                     </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>
                       {sm.label}
                     </span>
                   </div>
                 </div>
 
                 {p.beschreibung && (
-                  <p style={{ margin: 0, color: BRAND.textDim, fontSize: 13, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ margin: 0, color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {p.beschreibung}
                   </p>
                 )}
 
                 {/* Fortschritt */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: BRAND.textDim, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginBottom: 4 }}>
                     <span>Fortschritt</span>
                     <span>{fp.erledigt}/{fp.gesamt} Aufgaben · {fp.pct}%</span>
                   </div>
@@ -513,7 +513,7 @@ export default function ProjektePage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: BRAND.textDim }}>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
                   <span>📅 {dStr(p.start_datum)} – {dStr(p.end_datum)}</span>
                   <span style={{ color: pm.farbe }}>● {pm.label}</span>
                   {p.verantwortlich && <span>👤 {p.verantwortlich}</span>}
@@ -521,11 +521,11 @@ export default function ProjektePage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  <a href={`/dashboard/projekte/${p.id}`} style={{ ...btn, padding: '7px 14px', fontSize: 13, textDecoration: 'none', display: 'inline-block' }}>
+                  <a href={`/dashboard/projekte/${p.id}`} style={{ ...btn, padding: '7px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', textDecoration: 'none', display: 'inline-block' }}>
                     Öffnen
                   </a>
-                  <button style={{ ...btnGhost, padding: '7px 12px', fontSize: 13 }} onClick={() => oeffneBearbeiten(p)}>Bearbeiten</button>
-                  <button style={{ ...btnGhost, padding: '7px 12px', fontSize: 13 }} onClick={() => archivWechsel(p)}>
+                  <button style={{ ...btnGhost, padding: '7px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }} onClick={() => oeffneBearbeiten(p)}>Bearbeiten</button>
+                  <button style={{ ...btnGhost, padding: '7px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }} onClick={() => archivWechsel(p)}>
                     {p.archiviert ? 'Wiederherstellen' : 'Archivieren'}
                   </button>
                 </div>
@@ -540,7 +540,7 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => setModal(null)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               {modal.id ? 'Projekt bearbeiten' : 'Neues Projekt'}
             </h2>
 
@@ -614,12 +614,12 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => setVorlagenModal(false)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Aus Vorlage erstellen</h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>Aus Vorlage erstellen</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Wähle eine Vorlage — daraus entsteht ein neues Projekt mit allen Standard-Aufgaben.
             </p>
             {vorlagen.length === 0 ? (
-              <div style={{ color: BRAND.textDim, fontSize: 13, padding: 20, textAlign: 'center' }}>
+              <div style={{ color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: 20, textAlign: 'center' }}>
                 Noch keine Vorlagen. Öffne ein Projekt → Reiter „Einstellungen" → „Als Vorlage speichern".
               </div>
             ) : (
@@ -627,8 +627,8 @@ export default function ProjektePage() {
                 {vorlagen.map((v) => (
                   <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${v.farbe}`, borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{v.name}</div>
-                      <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>
+                      <div style={{ fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>{v.name}</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 2 }}>
                         {v.anzahlAufgaben} Standard-Aufgabe{v.anzahlAufgaben === 1 ? '' : 'n'}
                         {v.beschreibung ? ` · ${v.beschreibung.slice(0, 60)}${v.beschreibung.length > 60 ? '…' : ''}` : ''}
                       </div>
@@ -651,8 +651,8 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60 }}
           onClick={() => !erstellen && setAusVorlage(null)}>
           <div style={{ ...card, width: 440, maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Neues Projekt aus Vorlage</h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>Neues Projekt aus Vorlage</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Vorlage „{ausVorlage.vorlage.name}" → {ausVorlage.vorlage.anzahlAufgaben} Aufgabe{ausVorlage.vorlage.anzahlAufgaben === 1 ? '' : 'n'} werden übernommen.
             </p>
             <div style={{ marginBottom: 18 }}>
@@ -675,8 +675,8 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => !kiLaeuft && !kiErstellen && setKiModal(false)}>
           <div style={{ ...card, width: 600, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>✨ KI-Projekt-Setup</h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>✨ KI-Projekt-Setup</h2>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Beschreibe kurz, worum es geht — die KI erstellt dir einen Projektnamen und eine sinnvolle Aufgabenliste als Vorschlag. Du prüfst alles, bevor das Projekt angelegt wird.
             </p>
 
@@ -692,7 +692,7 @@ export default function ProjektePage() {
                     autoFocus
                   />
                 </div>
-                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 13, marginBottom: 14 }}>{kiFehler}</div>}
+                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 14 }}>{kiFehler}</div>}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button style={btnGhost} onClick={() => setKiModal(false)} disabled={kiLaeuft}>Abbrechen</button>
                   <button style={{ ...btn, background: BRAND.cyan }} onClick={kiVorschlagErzeugen} disabled={kiLaeuft}>
@@ -725,16 +725,16 @@ export default function ProjektePage() {
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: BRAND.navy, border: `1px solid ${BRAND.border}`, borderRadius: 8 }}>
                         <input style={{ ...inputStil, flex: 1, padding: '6px 8px' }} value={a.titel} onChange={(e) => kiAufgabeTitel(i, e.target.value)} />
-                        <span style={{ fontSize: 11, color: pm.farbe, fontWeight: 700, whiteSpace: 'nowrap' }}>● {pm.label}</span>
-                        <span style={{ fontSize: 11, color: BRAND.textDim, whiteSpace: 'nowrap' }}>{sm.label}</span>
-                        <button onClick={() => kiAufgabeEntfernen(i)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 16, padding: '0 4px' }} title="Entfernen">×</button>
+                        <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: pm.farbe, fontWeight: 700, whiteSpace: 'nowrap' }}>● {pm.label}</span>
+                        <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim, whiteSpace: 'nowrap' }}>{sm.label}</span>
+                        <button onClick={() => kiAufgabeEntfernen(i)} style={{ background: 'transparent', border: 'none', color: BRAND.textDim, cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', padding: '0 4px' }} title="Entfernen">×</button>
                       </div>
                     );
                   })}
-                  {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 13, color: BRAND.textDim }}>Keine Aufgaben — du kannst sie später im Projekt anlegen.</div>}
+                  {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim }}>Keine Aufgaben — du kannst sie später im Projekt anlegen.</div>}
                 </div>
 
-                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 13, marginBottom: 14 }}>{kiFehler}</div>}
+                {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 14 }}>{kiFehler}</div>}
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
                   <button style={btnGhost} onClick={() => setKiVorschlag(null)} disabled={kiErstellen}>← Neu beschreiben</button>

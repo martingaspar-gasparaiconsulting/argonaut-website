@@ -107,7 +107,7 @@ function statusStil(status: string): React.CSSProperties {
     border: `1px solid ${s.c}55`,
     padding: '4px 12px',
     borderRadius: '999px',
-    fontSize: '13px',
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -127,7 +127,7 @@ function prioStil(prio: string): React.CSSProperties {
     border: `1px solid ${c}55`,
     padding: '4px 12px',
     borderRadius: '6px',
-    fontSize: '13px',
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
@@ -416,12 +416,12 @@ export default function TicketDetailPage() {
     background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.14)',
     color: '#fff',
-    fontSize: '14px',
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
     display: 'block',
-    fontSize: '12px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: 'rgba(255,255,255,0.6)',
     marginBottom: '4px',
     fontWeight: 600,
@@ -432,7 +432,7 @@ export default function TicketDetailPage() {
     gap: '12px',
     padding: '8px 0',
     borderBottom: '1px solid rgba(255,255,255,0.06)',
-    fontSize: '14px',
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
   };
 
   // ---- Render ----
@@ -449,7 +449,7 @@ export default function TicketDetailPage() {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 4px' }}>
         <a
           href="/dashboard/service"
-          style={{ color: GOLD, textDecoration: 'none', fontSize: '14px' }}
+          style={{ color: GOLD, textDecoration: 'none', fontSize: 'clamp(14px, 1.25vw, 20px)' }}
         >
           ← Zurück zum Cockpit
         </a>
@@ -470,7 +470,7 @@ export default function TicketDetailPage() {
         style={{
           color: GOLD,
           textDecoration: 'none',
-          fontSize: '14px',
+          fontSize: 'clamp(14px, 1.25vw, 20px)',
           display: 'inline-block',
           marginBottom: '16px',
         }}
@@ -492,7 +492,7 @@ export default function TicketDetailPage() {
           <span
             style={{
               color: GOLD,
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               fontFamily: 'monospace',
             }}
@@ -511,7 +511,7 @@ export default function TicketDetailPage() {
               alignItems: 'center',
               gap: '6px',
               color: ampel.farbe,
-              fontSize: '13px',
+              fontSize: 'clamp(13px, 1.13vw, 18px)',
               fontWeight: 600,
             }}
           >
@@ -530,7 +530,7 @@ export default function TicketDetailPage() {
         <h1
           style={{
             color: '#fff',
-            fontSize: '26px',
+            fontSize: 'clamp(26px, 2.25vw, 36px)',
             fontWeight: 700,
             margin: 0,
           }}
@@ -566,7 +566,7 @@ export default function TicketDetailPage() {
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  fontSize: '13px',
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                   cursor: aktiv || aktion ? 'default' : 'pointer',
                   border: aktiv
@@ -599,7 +599,7 @@ export default function TicketDetailPage() {
             <div
               style={{
                 color: GOLD,
-                fontSize: '15px',
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 fontWeight: 700,
                 marginBottom: '2px',
               }}
@@ -607,7 +607,7 @@ export default function TicketDetailPage() {
               ✨ Antwort-Entwurf
             </div>
             <div
-              style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}
+              style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)' }}
             >
               ARGONAUT formuliert einen Antwortvorschlag an den Kunden —
               editierbar, kein automatischer Versand.
@@ -622,7 +622,7 @@ export default function TicketDetailPage() {
               background: GOLD,
               color: NAVY,
               border: 'none',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               cursor: kiLaden ? 'not-allowed' : 'pointer',
               opacity: kiLaden ? 0.6 : 1,
@@ -643,7 +643,7 @@ export default function TicketDetailPage() {
               <div
                 style={{
                   color: 'rgba(255,255,255,0.6)',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   padding: '12px 0',
                 }}
               >
@@ -679,7 +679,7 @@ export default function TicketDetailPage() {
                       background: kopiert ? '#66bb6a' : 'rgba(255,255,255,0.08)',
                       color: kopiert ? '#fff' : 'rgba(255,255,255,0.85)',
                       border: '1px solid rgba(255,255,255,0.18)',
-                      fontSize: '13px',
+                      fontSize: 'clamp(13px, 1.13vw, 18px)',
                       fontWeight: 600,
                       cursor: 'pointer',
                     }}
@@ -688,7 +688,7 @@ export default function TicketDetailPage() {
                   </button>
                   <span
                     style={{
-                      fontSize: '12px',
+                      fontSize: 'clamp(12px, 1.06vw, 17px)',
                       color: 'rgba(255,255,255,0.45)',
                     }}
                   >
@@ -720,7 +720,7 @@ export default function TicketDetailPage() {
               marginBottom: '12px',
             }}
           >
-            <div style={{ ...labelStil, margin: 0, fontSize: '13px' }}>
+            <div style={{ ...labelStil, margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               TICKET-DETAILS
             </div>
             <button
@@ -728,7 +728,7 @@ export default function TicketDetailPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: '6px',
-                fontSize: '12px',
+                fontSize: 'clamp(12px, 1.06vw, 17px)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 border: '1px solid rgba(255,255,255,0.15)',
@@ -777,7 +777,7 @@ export default function TicketDetailPage() {
                   background: GOLD,
                   color: NAVY,
                   border: 'none',
-                  fontSize: '13px',
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 700,
                   cursor: aktion ? 'not-allowed' : 'pointer',
                   opacity: aktion ? 0.6 : 1,
@@ -787,7 +787,7 @@ export default function TicketDetailPage() {
               </button>
               <div
                 style={{
-                  fontSize: '12px',
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   color: 'rgba(255,255,255,0.45)',
                   marginTop: '8px',
                 }}
@@ -871,7 +871,7 @@ export default function TicketDetailPage() {
                   <div
                     style={{
                       color: 'rgba(255,255,255,0.85)',
-                      fontSize: '14px',
+                      fontSize: 'clamp(14px, 1.25vw, 20px)',
                       lineHeight: 1.5,
                       whiteSpace: 'pre-wrap',
                     }}
@@ -886,7 +886,7 @@ export default function TicketDetailPage() {
 
         {/* TIMELINE */}
         <div style={karte}>
-          <div style={{ ...labelStil, marginBottom: '12px', fontSize: '13px' }}>
+          <div style={{ ...labelStil, marginBottom: '12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             VERLAUF
           </div>
 
@@ -926,7 +926,7 @@ export default function TicketDetailPage() {
                   background: GOLD,
                   color: NAVY,
                   border: 'none',
-                  fontSize: '13px',
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 700,
                   cursor:
                     aktion || !neuerText.trim() ? 'not-allowed' : 'pointer',
@@ -943,7 +943,7 @@ export default function TicketDetailPage() {
             <div
               style={{
                 color: 'rgba(255,255,255,0.5)',
-                fontSize: '14px',
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 padding: '8px 0',
               }}
             >
@@ -961,12 +961,12 @@ export default function TicketDetailPage() {
                     borderBottom: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
-                  <div style={{ fontSize: '16px', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.4 }}>
                     {verlaufIcon(v)}
                   </div>
                   <div style={{ flex: 1 }}>
                     {v.typ === 'statuswechsel' ? (
-                      <div style={{ fontSize: '14px', color: '#fff' }}>
+                      <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: '#fff' }}>
                         Status:{' '}
                         <span style={{ color: 'rgba(255,255,255,0.6)' }}>
                           {STATUS_LABEL[v.alt_status || ''] || v.alt_status}
@@ -979,7 +979,7 @@ export default function TicketDetailPage() {
                     ) : (
                       <div
                         style={{
-                          fontSize: '14px',
+                          fontSize: 'clamp(14px, 1.25vw, 20px)',
                           color: '#fff',
                           whiteSpace: 'pre-wrap',
                         }}
@@ -988,7 +988,7 @@ export default function TicketDetailPage() {
                           <span
                             style={{
                               color: GOLD,
-                              fontSize: '11px',
+                              fontSize: 'clamp(11px, 0.94vw, 15px)',
                               fontWeight: 700,
                               marginRight: '6px',
                             }}
@@ -1001,7 +1001,7 @@ export default function TicketDetailPage() {
                     )}
                     <div
                       style={{
-                        fontSize: '12px',
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         color: 'rgba(255,255,255,0.4)',
                         marginTop: '3px',
                       }}
@@ -1032,7 +1032,7 @@ export default function TicketDetailPage() {
             background: 'transparent',
             color: '#ef5350',
             border: '1px solid #ef535055',
-            fontSize: '13px',
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -1070,7 +1070,7 @@ export default function TicketDetailPage() {
             <h2
               style={{
                 color: '#ef5350',
-                fontSize: '18px',
+                fontSize: 'clamp(18px, 1.56vw, 25px)',
                 fontWeight: 700,
                 margin: '0 0 12px 0',
               }}
@@ -1080,7 +1080,7 @@ export default function TicketDetailPage() {
             <p
               style={{
                 color: 'rgba(255,255,255,0.7)',
-                fontSize: '14px',
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 margin: '0 0 20px 0',
                 lineHeight: 1.5,
               }}
@@ -1100,7 +1100,7 @@ export default function TicketDetailPage() {
                   background: 'transparent',
                   color: 'rgba(255,255,255,0.7)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 600,
                   cursor: aktion ? 'not-allowed' : 'pointer',
                 }}
@@ -1116,7 +1116,7 @@ export default function TicketDetailPage() {
                   background: '#ef5350',
                   color: '#fff',
                   border: 'none',
-                  fontSize: '14px',
+                  fontSize: 'clamp(14px, 1.25vw, 20px)',
                   fontWeight: 700,
                   cursor: aktion ? 'not-allowed' : 'pointer',
                   opacity: aktion ? 0.6 : 1,

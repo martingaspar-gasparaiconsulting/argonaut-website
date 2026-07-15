@@ -85,17 +85,17 @@ export default async function AgentenPage() {
 
       {/* Kopf */}
       <section style={{ marginBottom: '40px' }}>
-        <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>KI-Belegschaft</p>
+        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>KI-Belegschaft</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
           <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Ihre KI-Agenten</h1>
-          <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '4px 12px' }}>{aktivCount} VON {gesamt} AKTIV</span>
+          <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.1em', color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '999px', padding: '4px 12px' }}>{aktivCount} VON {gesamt} AKTIV</span>
         </div>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.1vw, 18px)', margin: 0, maxWidth: '720px' }}>Ihr digitales Team — jeder Agent übernimmt einen Aufgabenbereich automatisch. Hier sehen Sie Ihre gesamte KI-Belegschaft, nach Einsatzfeldern gruppiert.</p>
       </section>
 
       {gesamt === 0 ? (
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '48px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: '34px', marginBottom: '12px' }}>🤖</div>
+          <div style={{ fontSize: 'clamp(34px, 3vw, 48px)', marginBottom: '12px' }}>🤖</div>
           Noch keine Agenten hinterlegt.
         </div>
       ) : (
@@ -107,7 +107,7 @@ export default async function AgentenPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: meta.farbe, boxShadow: `0 0 8px ${meta.farbe}`, flexShrink: 0 }} />
                 <h2 style={{ fontSize: 'clamp(17px, 1.8vw, 24px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>{meta.titel}</h2>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: meta.farbe, background: `${meta.farbe}1e`, border: `1px solid ${meta.farbe}55`, borderRadius: '999px', padding: '2px 10px' }}>{serie} · {list.length}</span>
+                <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: meta.farbe, background: `${meta.farbe}1e`, border: `1px solid ${meta.farbe}55`, borderRadius: '999px', padding: '2px 10px' }}>{serie} · {list.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
                 {list.map((a) => (
@@ -116,7 +116,7 @@ export default async function AgentenPage() {
                     name={a.name}
                     role={`${a.code} · ${a.kategorie || ''}`}
                     desc={a.beschreibung || 'Einsatzbereit für seinen Aufgabenbereich.'}
-                    icon={<span style={{ fontSize: '24px' }}>{a.icon || KAT_ICON[a.kategorie || ''] || '🤖'}</span>}
+                    icon={<span style={{ fontSize: 'clamp(24px, 2.13vw, 34px)' }}>{a.icon || KAT_ICON[a.kategorie || ''] || '🤖'}</span>}
                   />
                 ))}
               </div>

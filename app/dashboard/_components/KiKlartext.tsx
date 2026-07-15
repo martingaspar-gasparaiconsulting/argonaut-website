@@ -148,7 +148,7 @@ export default function KiKlartext({
           />
           <span
             style={{
-              fontSize: 12,
+              fontSize: 'clamp(12px, 1.06vw, 17px)',
               fontWeight: 700,
               letterSpacing: 0.5,
               textTransform: "uppercase",
@@ -181,7 +181,7 @@ export default function KiKlartext({
 
         {/* Fehler-Zustand (dezent, mit Wiederholen) */}
         {!laden && fehler && (
-          <div style={{ fontSize: 14, color: textFehler, fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: textFehler, fontFamily: "'DM Sans', sans-serif" }}>
             Einschätzung gerade nicht verfügbar.{" "}
             <button
               onClick={laden_}
@@ -193,7 +193,7 @@ export default function KiKlartext({
                 fontWeight: 600,
                 textDecoration: "underline",
                 cursor: "pointer",
-                fontSize: 14,
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
@@ -208,7 +208,7 @@ export default function KiKlartext({
             <p
               style={{
                 margin: 0,
-                fontSize: 14.5,
+                fontSize: 'clamp(14.5px, 1.25vw, 20px)',
                 lineHeight: 1.55,
                 color: textHaupt,
                 fontFamily: "'DM Sans', sans-serif",
@@ -230,7 +230,7 @@ export default function KiKlartext({
                       borderRadius: 8,
                       background: aktionBtnBg,
                       color: aktionBtnText,
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                       fontWeight: 700,
                       textDecoration: "none",
                       fontFamily: "'DM Sans', sans-serif",
@@ -245,7 +245,7 @@ export default function KiKlartext({
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 6,
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                       fontWeight: 700,
                       color: textHaupt,
                       fontFamily: "'DM Sans', sans-serif",

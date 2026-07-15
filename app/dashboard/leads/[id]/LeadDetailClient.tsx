@@ -33,9 +33,9 @@ const card = {
   padding: '24px',
 }
 
-const labelStil = { fontSize: '11px', color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase' as const, fontWeight: 700, marginBottom: '4px' }
-const wertStil = { fontSize: '15px', color: '#FFFFFF', margin: 0, wordBreak: 'break-word' as const }
-const leerStil = { fontSize: '15px', color: 'rgba(255,255,255,0.3)', margin: 0, fontStyle: 'italic' as const }
+const labelStil = { fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase' as const, fontWeight: 700, marginBottom: '4px' }
+const wertStil = { fontSize: 'clamp(15px, 1.31vw, 21px)', color: '#FFFFFF', margin: 0, wordBreak: 'break-word' as const }
+const leerStil = { fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.3)', margin: 0, fontStyle: 'italic' as const }
 
 function Feld({ label, wert }: { label: string; wert: string | null }) {
   return (
@@ -179,13 +179,13 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         <section style={card}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '20px' }}>
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 4px' }}>{lead.name || 'Ohne Namen'}</h1>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+              <h1 style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 900, margin: '0 0 4px' }}>{lead.name || 'Ohne Namen'}</h1>
+              <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
                 Eingegangen am {formatDatum(lead.created_at)}
               </p>
             </div>
             {lead.status && (
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#00e5ff', background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '8px', padding: '5px 12px', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: '#00e5ff', background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '8px', padding: '5px 12px', whiteSpace: 'nowrap' }}>
                 {lead.status}
               </span>
             )}
@@ -208,9 +208,9 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         {(lead.score != null || lead.ki_intent || lead.ki_zusammenfassung || lead.ki_naechster_schritt) && (
           <section style={{ ...card, border: '1px solid rgba(201,168,76,0.25)', background: 'rgba(201,168,76,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>KI-Einsch\u00e4tzung</span>
+              <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>KI-Einsch\u00e4tzung</span>
               {lead.score != null && (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#0A1628', background: '#C9A84C', borderRadius: '6px', padding: '3px 10px' }}>
+                <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: '#0A1628', background: '#C9A84C', borderRadius: '6px', padding: '3px 10px' }}>
                   Score {lead.score}/5
                 </span>
               )}
@@ -227,16 +227,16 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
       {/* Rechte Spalte: KI-Angebotsentwurf */}
       <section style={{ ...card, position: 'sticky', top: '92px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: 800, margin: 0 }}>KI-Angebotsentwurf</h2>
+          <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 800, margin: 0 }}>KI-Angebotsentwurf</h2>
           {angebotStatus && (
-            <span style={{ fontSize: '12px', fontWeight: 700, color: angebotStatus === 'Freigegeben' ? '#3ddc84' : '#C9A84C', background: angebotStatus === 'Freigegeben' ? 'rgba(61,220,132,0.12)' : 'rgba(201,168,76,0.12)', border: `1px solid ${angebotStatus === 'Freigegeben' ? 'rgba(61,220,132,0.3)' : 'rgba(201,168,76,0.3)'}`, borderRadius: '8px', padding: '4px 12px' }}>
+            <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: angebotStatus === 'Freigegeben' ? '#3ddc84' : '#C9A84C', background: angebotStatus === 'Freigegeben' ? 'rgba(61,220,132,0.12)' : 'rgba(201,168,76,0.12)', border: `1px solid ${angebotStatus === 'Freigegeben' ? 'rgba(61,220,132,0.3)' : 'rgba(201,168,76,0.3)'}`, borderRadius: '8px', padding: '4px 12px' }}>
               {angebotStatus}
             </span>
           )}
         </div>
 
         {erstelltAm && (
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', margin: '0 0 14px' }}>
+          <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', margin: '0 0 14px' }}>
             Erstellt am {formatDatum(erstelltAm)}
           </p>
         )}
@@ -254,7 +254,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
             borderRadius: '10px',
             padding: '14px',
             color: '#FFFFFF',
-            fontSize: '14px',
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             lineHeight: 1.6,
             fontFamily: 'var(--font-dm-sans), sans-serif',
             boxSizing: 'border-box',
@@ -262,7 +262,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         />
 
         {meldung && (
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '12px 0 0' }}>{meldung}</p>
+          <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.7)', margin: '12px 0 0' }}>{meldung}</p>
         )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '18px' }}>
@@ -276,7 +276,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               border: '1px solid rgba(0,229,255,0.4)',
               background: ladend ? 'rgba(0,229,255,0.15)' : 'rgba(0,229,255,0.12)',
               color: '#00e5ff',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               cursor: ladend ? 'default' : 'pointer',
               fontFamily: 'var(--font-dm-sans), sans-serif',
@@ -295,7 +295,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               border: '1px solid rgba(255,255,255,0.15)',
               background: 'rgba(255,255,255,0.06)',
               color: '#FFFFFF',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 600,
               cursor: (speichernd || !entwurf) ? 'default' : 'pointer',
               opacity: (!entwurf) ? 0.5 : 1,
@@ -315,7 +315,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               border: '1px solid rgba(61,220,132,0.4)',
               background: 'rgba(61,220,132,0.12)',
               color: '#3ddc84',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 700,
               cursor: (speichernd || !entwurf) ? 'default' : 'pointer',
               opacity: (!entwurf) ? 0.5 : 1,
@@ -326,7 +326,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
           </button>
         </div>
 
-        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '14px 0 0', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', margin: '14px 0 0', lineHeight: 1.5 }}>
           Der Entwurf wird nicht automatisch versendet. Pr\u00fcfen, bei Bedarf bearbeiten und erst dann freigeben.
         </p>
 
@@ -342,7 +342,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               border: 'none',
               background: istFreigegeben ? '#C9A84C' : 'rgba(255,255,255,0.06)',
               color: istFreigegeben ? '#0A1628' : 'rgba(255,255,255,0.4)',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 800,
               cursor: (pdfLadend || !istFreigegeben) ? 'default' : 'pointer',
               opacity: pdfLadend ? 0.6 : 1,
@@ -352,12 +352,12 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
             {pdfLadend ? 'PDF wird erzeugt\u2026' : 'Als PDF erzeugen'}
           </button>
           {!istFreigegeben && (
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
               Erst nach Freigabe des Angebots verf\u00fcgbar \u2013 so geht kein Entwurf mit Platzhaltern raus.
             </p>
           )}
           {pdfMeldung && (
-            <p style={{ fontSize: '13px', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>{pdfMeldung}</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>{pdfMeldung}</p>
           )}
         </div>
 
@@ -373,7 +373,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
               border: '1px solid rgba(0,229,255,0.4)',
               background: (istFreigegeben && hatEmail) ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.06)',
               color: (istFreigegeben && hatEmail) ? '#00e5ff' : 'rgba(255,255,255,0.4)',
-              fontSize: '14px',
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontWeight: 800,
               cursor: (sendLadend || !istFreigegeben || !hatEmail) ? 'default' : 'pointer',
               opacity: sendLadend ? 0.6 : 1,
@@ -384,23 +384,23 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
           </button>
 
           {versendetAm && (
-            <p style={{ fontSize: '12px', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#3ddc84', fontWeight: 600, margin: '10px 0 0' }}>
               Bereits versendet am {formatDatum(versendetAm)}
             </p>
           )}
 
           {istFreigegeben && !hatEmail && (
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
               Kein Versand m\u00f6glich \u2013 f\u00fcr diesen Lead ist keine E-Mail-Adresse hinterlegt.
             </p>
           )}
           {!istFreigegeben && (
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', margin: '10px 0 0', lineHeight: 1.5 }}>
               Erst nach Freigabe des Angebots verf\u00fcgbar.
             </p>
           )}
           {sendMeldung && (
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '10px 0 0' }}>{sendMeldung}</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.7)', margin: '10px 0 0' }}>{sendMeldung}</p>
           )}
         </div>
       </section>

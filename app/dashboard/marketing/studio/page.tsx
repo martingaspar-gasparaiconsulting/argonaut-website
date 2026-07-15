@@ -50,14 +50,14 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
 function Feld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16, flex: 1 }}>
-      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   );
@@ -135,13 +135,13 @@ export default function ContentStudio() {
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1100, margin: '0 auto' }}>
-        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 14, textDecoration: 'none' }}>
+        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: 'none' }}>
           ← Zurück zu Marketing
         </a>
 
         <div style={{ margin: '16px 0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>✨ KI-Content-Studio</h1>
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>✨ KI-Content-Studio</h1>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Briefing eingeben — die KI schreibt im Markenton aus eurem Firmen-Wissen. Du gibst frei.
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function ContentStudio() {
               padding: '13px 28px',
               fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               cursor: generiere ? 'wait' : 'pointer',
               opacity: generiere ? 0.7 : 1,
             }}
@@ -219,7 +219,7 @@ export default function ContentStudio() {
           </button>
 
           {fehler && (
-            <div style={{ marginTop: 16, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 10, padding: 14, color: C.danger, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+            <div style={{ marginTop: 16, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 10, padding: 14, color: C.danger, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               {fehler}
             </div>
           )}
@@ -227,7 +227,7 @@ export default function ContentStudio() {
 
         {/* Quellen-Hinweis */}
         {quellen.length > 0 && (
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, marginBottom: 16 }}>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 16 }}>
             📚 Genutztes Firmen-Wissen: {quellen.join(', ')}
           </p>
         )}
@@ -238,12 +238,12 @@ export default function ContentStudio() {
             {vorschlaege.map((v, idx) => (
               <div key={idx} style={{ background: C.navy2, borderRadius: 14, padding: '20px 24px', border: `1px solid ${v.uebernommen ? C.green : 'rgba(255,255,255,0.06)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '2px 8px', fontFamily: 'DM Sans, sans-serif' }}>KI · Variante {idx + 1}</span>
+                  <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '2px 8px', fontFamily: 'DM Sans, sans-serif' }}>KI · Variante {idx + 1}</span>
                   <input
                     value={v.titel}
                     onChange={(e) => aendere(idx, 'titel', e.target.value)}
                     placeholder="Interner Titel"
-                    style={{ ...inputStyle, fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16 }}
+                    style={{ ...inputStyle, fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)' }}
                   />
                 </div>
                 <textarea
@@ -254,11 +254,11 @@ export default function ContentStudio() {
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                   {v.uebernommen ? (
-                    <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.green, fontSize: 14, fontWeight: 600 }}>✓ In Inhalte übernommen</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>✓ In Inhalte übernommen</span>
                   ) : (
                     <button
                       onClick={() => uebernehmen(idx)}
-                      style={{ background: 'transparent', color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                      style={{ background: 'transparent', color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer' }}
                     >
                       ✓ In Inhalte übernehmen
                     </button>

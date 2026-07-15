@@ -340,7 +340,7 @@ export default function ExportSeite() {
           <h1
             style={{
               fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(30px, 2.63vw, 42px)',
               fontWeight: 800,
               margin: 0,
               letterSpacing: "-0.02em",
@@ -348,7 +348,7 @@ export default function ExportSeite() {
           >
             📤 Export für den Steuerberater
           </h1>
-          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+          <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             Einnahmen und Ausgaben als CSV – einlesbar in DATEV, Lexware oder Excel
           </p>
         </div>
@@ -375,7 +375,7 @@ export default function ExportSeite() {
                   border: `1px solid ${aktiv ? C.gold : C.border}`,
                   borderRadius: 999,
                   padding: "8px 14px",
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
@@ -399,7 +399,7 @@ export default function ExportSeite() {
           </div>
         )}
 
-        <p style={{ color: C.textDim, fontSize: 12.5, margin: "6px 2px 22px" }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "6px 2px 22px" }}>
           Zeitraum: {datumDeIso(bereich.von)} – {datumDeIso(bereich.bis)}
         </p>
 
@@ -434,7 +434,7 @@ export default function ExportSeite() {
 
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "22px 22px" }}>
               <div style={sektionLabel}>CSV herunterladen</div>
-              <p style={{ color: C.textDim, fontSize: 13.5, margin: "0 0 16px", lineHeight: 1.6 }}>
+              <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', margin: "0 0 16px", lineHeight: 1.6 }}>
                 Enthält je Buchung: Belegdatum, Typ, Beleg-Nr., Text, Kategorie, Geschäftspartner, Brutto,
                 MwSt-Satz, MwSt-Betrag, Netto und Zahlungsart. Semikolon-getrennt, deutsche Zahlen,
                 UTF-8 – so öffnet es sich auch in Excel korrekt mit Umlauten.
@@ -451,7 +451,7 @@ export default function ExportSeite() {
                 ⬇ CSV herunterladen ({zeilen.length} Zeilen)
               </button>
               {!hatZeilen && (
-                <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 12 }}>
+                <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 12 }}>
                   Keine Buchungen im gewählten Zeitraum.
                 </p>
               )}
@@ -470,7 +470,7 @@ export default function ExportSeite() {
                       padding: "10px 18px",
                       borderBottom: `1px solid ${C.border}`,
                       color: C.textDim,
-                      fontSize: 11.5,
+                      fontSize: 'clamp(11.5px, 1vw, 16px)',
                       fontWeight: 700,
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
@@ -495,7 +495,7 @@ export default function ExportSeite() {
                         borderBottom: `1px solid ${C.border}`,
                         alignItems: "center",
                         minWidth: 720,
-                        fontSize: 13,
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
                       }}
                     >
                       <div style={{ color: C.textDim }}>{z.datum}</div>
@@ -512,7 +512,7 @@ export default function ExportSeite() {
               </div>
             )}
 
-            <p style={{ color: C.textDim, fontSize: 12, marginTop: 20, lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 20, lineHeight: 1.5 }}>
               Hinweis: Universelles Buchungs-CSV nach Zufluss-/Abfluss-Prinzip. Ein striktes
               DATEV-Buchungsstapel-Format (mit Kontenrahmen SKR03/SKR04) folgt in einer späteren Phase.
             </p>
@@ -546,16 +546,16 @@ function KpiCard({ label, wert, unter, farbe }: { label: string; wert: string; u
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
-      {unter && <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>{unter}</div>}
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>{wert}</div>
+      {unter && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>{unter}</div>}
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -565,7 +565,7 @@ const sektionLabel: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "0 0 6px",
 };
@@ -576,7 +576,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "10px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
 };
@@ -587,7 +587,7 @@ const btnGold: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "12px 22px",
-  fontSize: 14.5,
+  fontSize: 'clamp(14.5px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",

@@ -183,7 +183,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     <>
       <button
         onClick={() => { setOffen(true); setPruefung(null); setTimeout(() => pruefeVor(), 50); }}
-        style={{ padding: "10px 16px", background: "transparent", color: GOLD, border: `1px solid ${GOLD}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 14 }}
+        style={{ padding: "10px 16px", background: "transparent", color: GOLD, border: `1px solid ${GOLD}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)' }}
         title="E-Rechnung als XRechnung- oder ZUGFeRD-XML (EN 16931) erzeugen"
       >
         E-Rechnung (XML)
@@ -198,8 +198,8 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
             style={{ background: NAVY2, border: `1px solid ${LINE}`, borderRadius: 14, padding: "24px 26px", maxWidth: 460, width: "100%", color: TEXT }}
           >
-            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4, color: GOLD }}>E-Rechnung erzeugen</div>
-            <div style={{ fontSize: 13, color: DIM, marginBottom: 20 }}>
+            <div style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 900, marginBottom: 4, color: GOLD }}>E-Rechnung erzeugen</div>
+            <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM, marginBottom: 20 }}>
               Wähle das Format. XRechnung für Behörden, ZUGFeRD für Firmenkunden.
             </div>
 
@@ -213,23 +213,23 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
             {/* Leitweg-ID nur bei XRechnung */}
             {profil === "xrechnung" && (
               <div style={{ marginBottom: 18 }}>
-                <label style={{ fontSize: 12, color: DIM, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <label style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Leitweg-ID (von der Behörde) — optional
                 </label>
                 <input
                   value={leitweg}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLeitweg(e.target.value)}
                   placeholder="z. B. 04011000-1234512345-06"
-                  style={{ width: "100%", background: "rgba(0,229,255,0.04)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "10px 12px", color: TEXT, fontSize: 14, outline: "none" }}
+                  style={{ width: "100%", background: "rgba(0,229,255,0.04)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "10px 12px", color: TEXT, fontSize: 'clamp(14px, 1.25vw, 20px)', outline: "none" }}
                 />
-                <div style={{ fontSize: 11, color: DIM, marginTop: 6 }}>
+                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: DIM, marginTop: 6 }}>
                   Leer lassen, wenn keine Behörden-Rechnung. Die ID gibt dir die jeweilige Behörde.
                 </div>
               </div>
             )}
 
             {hinweis && (
-              <div style={{ marginBottom: 16, fontSize: 12, color: GOLD, background: "rgba(201,168,76,0.08)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "8px 12px" }}>
+              <div style={{ marginBottom: 16, fontSize: 'clamp(12px, 1.06vw, 17px)', color: GOLD, background: "rgba(201,168,76,0.08)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "8px 12px" }}>
                 {hinweis}
               </div>
             )}
@@ -239,7 +239,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               <div style={{ marginBottom: 18 }}>
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8, marginBottom: pruefung.punkte.length ? 8 : 0,
-                  fontSize: 14, fontWeight: 700,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700,
                   color: pruefung.konform ? "#00e676" : "#ff6b6b",
                 }}>
                   {pruefung.konform
@@ -252,7 +252,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
                 {pruefung.punkte.length > 0 && (
                   <div style={{ maxHeight: 160, overflowY: "auto", border: `1px solid ${LINE}`, borderRadius: 8, padding: "8px 10px", background: "rgba(0,0,0,0.15)" }}>
                     {pruefung.punkte.map((pt: { regel: string; stufe: string; text: string }, i: number) => (
-                      <div key={i} style={{ fontSize: 12, color: DIM, padding: "3px 0", lineHeight: 1.4 }}>
+                      <div key={i} style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, padding: "3px 0", lineHeight: 1.4 }}>
                         <span style={{ marginRight: 6 }}>
                           {pt.stufe === "fehler" ? "🔴" : pt.stufe === "warnung" ? "🟡" : "🔵"}
                         </span>
@@ -267,7 +267,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => !laden && setOffen(false)}
-                style={{ padding: "9px 16px", background: "transparent", color: DIM, border: `1px solid ${LINE}`, borderRadius: 8, cursor: "pointer", fontSize: 14 }}
+                style={{ padding: "9px 16px", background: "transparent", color: DIM, border: `1px solid ${LINE}`, borderRadius: 8, cursor: "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)' }}
               >
                 Abbrechen
               </button>
@@ -280,7 +280,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
                   color: pruefung && !pruefung.konform ? "#ff6b6b" : "#0A1628",
                   border: pruefung && !pruefung.konform ? "1px solid #ff6b6b" : "none",
                   borderRadius: 8, fontWeight: 700, cursor: laden ? "default" : "pointer",
-                  fontSize: 14, opacity: laden ? 0.6 : 1,
+                  fontSize: 'clamp(14px, 1.25vw, 20px)', opacity: laden ? 0.6 : 1,
                 }}
               >
                 {laden ? "Erzeuge…" : (pruefung && !pruefung.konform ? "Trotzdem herunterladen" : "Herunterladen")}
@@ -304,8 +304,8 @@ function ProfilBtn({ aktiv, onClick, titel, sub }: { aktiv: boolean; onClick: ()
         color: aktiv ? GOLD : DIM,
       }}
     >
-      <div style={{ fontSize: 15, fontWeight: 800 }}>{titel}</div>
-      <div style={{ fontSize: 11, marginTop: 2 }}>{sub}</div>
+      <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800 }}>{titel}</div>
+      <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', marginTop: 2 }}>{sub}</div>
     </button>
   );
 }

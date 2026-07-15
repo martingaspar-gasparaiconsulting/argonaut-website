@@ -22,7 +22,7 @@ export default function LogoutButton() {
         border: '1px solid rgba(201,168,76,0.4)',
         borderRadius: '8px',
         color: '#C9A84C',
-        fontSize: '13px',
+        fontSize: 'clamp(13px, 1.13vw, 18px)',
         fontWeight: 600,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',

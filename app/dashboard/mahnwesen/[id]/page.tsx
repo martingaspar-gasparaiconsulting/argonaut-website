@@ -419,7 +419,7 @@ export default function MahnungErstellen() {
     return (
       <Rahmen>
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>⚠️</div>
           <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>
             Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
@@ -446,7 +446,7 @@ export default function MahnungErstellen() {
             color: C.textDim,
             border: "none",
             cursor: "pointer",
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             padding: 0,
             marginBottom: 8,
           }}
@@ -456,7 +456,7 @@ export default function MahnungErstellen() {
         <h1
           style={{
             fontFamily: "var(--font-dm-sans), sans-serif",
-            fontSize: 28,
+            fontSize: 'clamp(28px, 2.44vw, 39px)',
             fontWeight: 800,
             margin: 0,
             letterSpacing: "-0.5px",
@@ -469,7 +469,7 @@ export default function MahnungErstellen() {
           <span>⚠️ Mahnung</span>
           <span style={{ color: C.gold }}>{rechnung?.rechnungsnummer || "Rechnung"}</span>
         </h1>
-        <p style={{ color: C.textDim, fontSize: 14, margin: "8px 0 0" }}>
+        <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', margin: "8px 0 0" }}>
           {empfaengerName}
           {"  ·  "}
           <button
@@ -479,7 +479,7 @@ export default function MahnungErstellen() {
               border: "none",
               color: C.cyan,
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               padding: 0,
               textDecoration: "underline",
             }}
@@ -526,7 +526,7 @@ export default function MahnungErstellen() {
                     border: `1px solid ${farbe}${aktiv ? "" : "77"}`,
                     borderRadius: 10,
                     padding: "9px 16px",
-                    fontSize: 13.5,
+                    fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                     fontWeight: 700,
                     cursor: "pointer",
                     fontFamily: "'DM Sans', sans-serif",
@@ -537,7 +537,7 @@ export default function MahnungErstellen() {
               );
             })}
           </div>
-          <p style={{ color: C.textDim, fontSize: 12.5, margin: "12px 2px 0", lineHeight: 1.5 }}>
+          <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "12px 2px 0", lineHeight: 1.5 }}>
             Vorgeschlagen ist die nächste sinnvolle Stufe. ARGONAUT passt den Ton automatisch an:
             höflich bei der Zahlungserinnerung, bestimmter bei den Mahnungen.
           </p>
@@ -564,12 +564,12 @@ export default function MahnungErstellen() {
             <ZeileForderung label="Gesamtforderung" wert={geld(gesamtforderung, waehrung)} gross />
           </div>
           {mahngebuehr === 0 && verzugszinsen === 0 ? (
-            <p style={{ color: C.textDim, fontSize: 12.5, margin: "14px 2px 0", lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
               Bei einer Zahlungserinnerung berechnen wir bewusst noch keine Gebühren oder Zinsen –
               ab der 1. Mahnung kommen Mahngebühr und Verzugszinsen (§ 288 BGB) automatisch dazu.
             </p>
           ) : (
-            <p style={{ color: C.textDim, fontSize: 12.5, margin: "14px 2px 0", lineHeight: 1.5 }}>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
               Verzugszinsen nach § 288 BGB ({VERZUGSZINS_PROZENT.toLocaleString("de-DE")} % p.a. =
               Basiszinssatz {BASISZINS_PROZENT.toLocaleString("de-DE")} % + {VERZUGSZINS_AUFSCHLAG}{" "}
               Prozentpunkte, Stand 01.07.2026). Mahngebühr und Zinssatz sind in den Einstellungen
@@ -600,7 +600,7 @@ export default function MahnungErstellen() {
                 border: `1px solid ${C.lila}77`,
                 borderRadius: 10,
                 padding: "9px 16px",
-                fontSize: 13.5,
+                fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                 fontWeight: 700,
                 cursor: kiBusy ? "wait" : "pointer",
                 fontFamily: "'DM Sans', sans-serif",
@@ -623,7 +623,7 @@ export default function MahnungErstellen() {
               borderRadius: 10,
               padding: "14px 16px",
               color: "#fff",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               fontFamily: "'DM Sans', sans-serif",
               outline: "none",
               boxSizing: "border-box",
@@ -646,7 +646,7 @@ export default function MahnungErstellen() {
             border: `1px solid ${C.gold}77`,
             borderRadius: 10,
             padding: "11px 18px",
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             fontWeight: 700,
             cursor: pdfBusy ? "wait" : "pointer",
             fontFamily: "'DM Sans', sans-serif",
@@ -673,7 +673,7 @@ export default function MahnungErstellen() {
             padding: "12px 16px",
             color: C.green,
             marginTop: 20,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           ✓ {erfolg}
@@ -689,7 +689,7 @@ export default function MahnungErstellen() {
             padding: "12px 16px",
             color: C.danger,
             marginTop: 20,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           ⚠️ {fehler}
@@ -700,7 +700,7 @@ export default function MahnungErstellen() {
       <div style={{ marginTop: 24 }}>
         <Karte titel="Mahn-Verlauf">
           {historie.length === 0 ? (
-            <div style={{ color: C.textDim, fontSize: 14 }}>
+            <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
               Noch keine Mahnung protokolliert. Sobald du oben „gesendet markierst",
               erscheint hier der Nachweis.
             </div>
@@ -731,27 +731,27 @@ export default function MahnungErstellen() {
                         border: `1px solid ${farbe}55`,
                         borderRadius: 999,
                         padding: "3px 10px",
-                        fontSize: 12,
+                        fontSize: 'clamp(12px, 1.06vw, 17px)',
                         fontWeight: 700,
                         whiteSpace: "nowrap",
                       }}
                     >
                       {h.stufe_label}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
+                    <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, color: "#fff" }}>
                       {geld(Number(h.betrag_offen) || 0)}
                     </span>
                     {zusatz > 0 && (
-                      <span style={{ fontSize: 12.5, color: C.textDim }}>
+                      <span style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim }}>
                         + {geld(zusatz)} Gebühr/Zinsen
                       </span>
                     )}
                     {typeof h.tage_ueberfaellig === "number" && h.tage_ueberfaellig > 0 && (
-                      <span style={{ fontSize: 12.5, color: C.textDim }}>
+                      <span style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim }}>
                         {h.tage_ueberfaellig} Tage überfällig
                       </span>
                     )}
-                    <span style={{ fontSize: 12.5, color: C.textDim, marginLeft: "auto" }}>
+                    <span style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginLeft: "auto" }}>
                       {h.kanal === "email" ? "✉️ E-Mail" : "📄 PDF"} · {datumZeitDe(h.erstellt_am)}
                     </span>
                   </div>
@@ -762,7 +762,7 @@ export default function MahnungErstellen() {
         </Karte>
       </div>
 
-      <p style={{ color: C.textDim, fontSize: 12, marginTop: 20, lineHeight: 1.5 }}>
+      <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 20, lineHeight: 1.5 }}>
         Hinweis: „Als gesendet markieren" setzt die Mahnstufe und das Datum und legt einen
         Nachweis im Mahn-Verlauf ab – der eigentliche Versand per E-Mail folgt im Finale
         (verifizierte Absender-Domain).
@@ -801,8 +801,8 @@ function Karte({ titel, children }: { titel: string; children: React.ReactNode }
 function Feld({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
-      <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
@@ -836,7 +836,7 @@ function ZeileForderung({ label, wert, gross }: { label: string; wert: string; g
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -849,7 +849,7 @@ const btnGold: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 20px",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",

@@ -332,7 +332,7 @@ export default function AusgabenCockpit() {
             <h1
               style={{
                 fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: 30,
+                fontSize: 'clamp(30px, 2.63vw, 42px)',
                 fontWeight: 800,
                 margin: 0,
                 letterSpacing: "-0.02em",
@@ -340,7 +340,7 @@ export default function AusgabenCockpit() {
             >
               💶 Ausgaben
             </h1>
-            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 15 }}>
+            <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
               Betriebsausgaben erfassen, kategorisieren und Belege ablegen
             </p>
           </div>
@@ -436,11 +436,11 @@ export default function AusgabenCockpit() {
                   style={{ ...inputStyle, padding: "9px 12px" }}
                 />
                 {belegVorhanden && !belegFile && (
-                  <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 6 }}>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 6 }}>
                     Aktueller Beleg vorhanden.{" "}
                     <button
                       onClick={() => belegOeffnen(belegVorhanden)}
-                      style={{ background: "none", border: "none", color: C.cyan, cursor: "pointer", padding: 0, textDecoration: "underline", fontSize: 12.5 }}
+                      style={{ background: "none", border: "none", color: C.cyan, cursor: "pointer", padding: 0, textDecoration: "underline", fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}
                     >
                       ansehen
                     </button>{" "}
@@ -510,7 +510,7 @@ export default function AusgabenCockpit() {
               borderRadius: 12,
               padding: "12px 16px",
               color: "#fff",
-              fontSize: 15,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
               outline: "none",
             }}
           />
@@ -523,7 +523,7 @@ export default function AusgabenCockpit() {
               borderRadius: 12,
               padding: "12px 16px",
               color: "#fff",
-              fontSize: 14,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
               outline: "none",
             }}
           >
@@ -568,9 +568,9 @@ export default function AusgabenCockpit() {
           >
             {ausgaben.length === 0 ? (
               <>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>💶</div>
-                <div style={{ fontSize: 17, color: "#fff", marginBottom: 6 }}>Noch keine Ausgaben</div>
-                <div style={{ fontSize: 14 }}>Klicke oben rechts auf „+ Neue Ausgabe".</div>
+                <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>💶</div>
+                <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>Noch keine Ausgaben</div>
+                <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Klicke oben rechts auf „+ Neue Ausgabe".</div>
               </>
             ) : (
               "Keine Ausgaben passen zu Suche/Filter."
@@ -588,7 +588,7 @@ export default function AusgabenCockpit() {
                   padding: "14px 18px",
                   borderBottom: `1px solid ${C.border}`,
                   color: C.textDim,
-                  fontSize: 12,
+                  fontSize: 'clamp(12px, 1.06vw, 17px)',
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
@@ -616,12 +616,12 @@ export default function AusgabenCockpit() {
                     minWidth: 760,
                   }}
                 >
-                  <div style={{ color: C.textDim, fontSize: 13.5 }}>{datumDe(a.ausgabedatum)}</div>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>{datumDe(a.ausgabedatum)}</div>
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
                         fontWeight: 600,
-                        fontSize: 14.5,
+                        fontSize: 'clamp(14.5px, 1.25vw, 20px)',
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -629,12 +629,12 @@ export default function AusgabenCockpit() {
                     >
                       {a.bezeichnung || "—"}
                     </div>
-                    <div style={{ color: C.textDim, fontSize: 12.5 }}>{a.kategorie}</div>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{a.kategorie}</div>
                   </div>
                   <div
                     style={{
                       color: C.textDim,
-                      fontSize: 13.5,
+                      fontSize: 'clamp(13.5px, 1.19vw, 19px)',
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -642,32 +642,32 @@ export default function AusgabenCockpit() {
                   >
                     {a.lieferant || "—"}
                   </div>
-                  <div style={{ textAlign: "right", fontWeight: 700, fontSize: 14.5 }}>{eur(a.betrag_brutto)}</div>
+                  <div style={{ textAlign: "right", fontWeight: 700, fontSize: 'clamp(14.5px, 1.25vw, 20px)' }}>{eur(a.betrag_brutto)}</div>
                   <div style={{ textAlign: "center" }}>
                     {a.beleg_pfad ? (
                       <button
                         onClick={() => belegOeffnen(a.beleg_pfad as string)}
                         title="Beleg ansehen"
-                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 16 }}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 'clamp(16px, 1.38vw, 22px)' }}
                       >
                         📎
                       </button>
                     ) : (
-                      <span style={{ color: C.textDim, fontSize: 13 }}>—</span>
+                      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>—</span>
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button
                       onClick={() => bearbeiten(a)}
                       title="Bearbeiten"
-                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 9px", color: C.textDim, cursor: "pointer", fontSize: 13 }}
+                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 9px", color: C.textDim, cursor: "pointer", fontSize: 'clamp(13px, 1.13vw, 18px)' }}
                     >
                       ✎
                     </button>
                     <button
                       onClick={() => loeschen(a)}
                       title="Löschen"
-                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 9px", color: C.textDim, cursor: "pointer", fontSize: 13 }}
+                      style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 9px", color: C.textDim, cursor: "pointer", fontSize: 'clamp(13px, 1.13vw, 18px)' }}
                     >
                       🗑
                     </button>
@@ -679,7 +679,7 @@ export default function AusgabenCockpit() {
         )}
 
         {!laden && !fehler && gefiltert.length > 0 && (
-          <div style={{ marginTop: 14, color: C.textDim, fontSize: 13, textAlign: "right" }}>
+          <div style={{ marginTop: 14, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', textAlign: "right" }}>
             {gefiltert.length} von {ausgaben.length} Ausgaben
           </div>
         )}
@@ -701,15 +701,15 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800, color: farbe }}>{wert}</div>
     </div>
   );
 }
 
 const sektionLabel: React.CSSProperties = {
   color: C.textDim,
-  fontSize: 12.5,
+  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.5px",
@@ -719,7 +719,7 @@ const sektionLabel: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   color: C.textDim,
-  fontSize: 13,
+  fontSize: 'clamp(13px, 1.13vw, 18px)',
   fontWeight: 600,
   margin: "0 0 6px",
 };
@@ -731,7 +731,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   padding: "11px 14px",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontFamily: "'DM Sans', sans-serif",
   outline: "none",
   boxSizing: "border-box",
@@ -743,7 +743,7 @@ const btnGold: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 20px",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",
@@ -755,7 +755,7 @@ const btnGhost: React.CSSProperties = {
   border: `1px solid ${C.border}`,
   borderRadius: 10,
   padding: "11px 18px",
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "'DM Sans', sans-serif",

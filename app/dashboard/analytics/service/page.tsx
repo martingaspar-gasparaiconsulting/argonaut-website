@@ -174,7 +174,7 @@ export default function ServiceReport() {
         <h1
           style={{
             color: '#C9A84C',
-            fontSize: 30,
+            fontSize: 'clamp(30px, 2.63vw, 42px)',
             fontWeight: 800,
             margin: 0,
             display: 'flex',
@@ -187,7 +187,7 @@ export default function ServiceReport() {
         <p
           style={{
             color: '#94a3b8',
-            fontSize: 15,
+            fontSize: 'clamp(15px, 1.31vw, 21px)',
             marginTop: 6,
             maxWidth: 720,
             lineHeight: 1.5,
@@ -206,7 +206,7 @@ export default function ServiceReport() {
             color: '#fca5a5',
             borderRadius: 10,
             padding: '14px 18px',
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
           }}
         >
           Daten konnten nicht geladen werden: {fehler}
@@ -214,7 +214,7 @@ export default function ServiceReport() {
       )}
 
       {laden ? (
-        <div style={{ color: '#64748b', fontSize: 15, padding: '40px 0' }}>
+        <div style={{ color: '#64748b', fontSize: 'clamp(15px, 1.31vw, 21px)', padding: '40px 0' }}>
           Lade Service-Daten …
         </div>
       ) : (

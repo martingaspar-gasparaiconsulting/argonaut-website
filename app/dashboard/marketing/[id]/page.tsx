@@ -127,14 +127,14 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   color: '#fff',
   fontFamily: 'DM Sans, sans-serif',
-  fontSize: 14,
+  fontSize: 'clamp(14px, 1.25vw, 20px)',
   boxSizing: 'border-box',
 };
 
 function Feld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16, flex: 1 }}>
-      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim, marginBottom: 6 }}>
+      <label style={{ display: 'block', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>
         {label}
       </label>
       {children}
@@ -207,22 +207,22 @@ export default function KampagneDetail() {
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1100, margin: '0 auto' }}>
         {/* Zurück */}
-        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 14, textDecoration: 'none' }}>
+        <a href="/dashboard/marketing" style={{ color: C.cyan, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: 'none' }}>
           ← Zurück zu Marketing
         </a>
 
         {/* Kopf */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '16px 0 6px', flexWrap: 'wrap' }}>
           <span style={{ width: 14, height: 14, borderRadius: '50%', background: a.farbe, flexShrink: 0 }} title={a.text} />
-          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>
             {kampagne.name}
           </h1>
-          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: a.farbe, border: `1px solid ${a.farbe}`, borderRadius: 12, padding: '3px 12px' }}>
+          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: a.farbe, border: `1px solid ${a.farbe}`, borderRadius: 12, padding: '3px 12px' }}>
             {a.text}
           </span>
         </div>
         {kampagne.ziel && (
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 24px', fontSize: 15 }}>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 24px', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
             🎯 {kampagne.ziel}
           </p>
         )}
@@ -245,7 +245,7 @@ export default function KampagneDetail() {
                 borderBottom: tab === t.v ? `2px solid ${C.gold}` : '2px solid transparent',
                 padding: '10px 16px',
                 fontFamily: 'var(--font-dm-sans), sans-serif',
-                fontSize: 15,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
                 fontWeight: tab === t.v ? 700 : 400,
                 cursor: 'pointer',
                 marginBottom: -1,
@@ -284,8 +284,8 @@ function TabUebersicht({ kampagne, inhalte, kalender }: { kampagne: Kampagne; in
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, marginBottom: 24 }}>
         {kacheln.map((k) => (
           <div key={k.label} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
-            <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>{k.label}</div>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: k.farbe }}>{k.wert}</div>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{k.label}</div>
           </div>
         ))}
       </div>
@@ -305,8 +305,8 @@ function TabUebersicht({ kampagne, inhalte, kalender }: { kampagne: Kampagne; in
 function ZeileInfo({ label, wert }: { label: string; wert: string }) {
   return (
     <div style={{ display: 'flex', gap: 16, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ width: 140, flexShrink: 0, fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>{label}</div>
-      <div style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 14, whiteSpace: 'pre-wrap' }}>{wert}</div>
+      <div style={{ width: 140, flexShrink: 0, fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{label}</div>
+      <div style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(14px, 1.25vw, 20px)', whiteSpace: 'pre-wrap' }}>{wert}</div>
     </div>
   );
 }
@@ -363,10 +363,10 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
-        <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
+        <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           Inhalte dieser Kampagne. KI-generierte Inhalte erstellst du im Content-Studio.
         </p>
-        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer' }}>
           + Inhalt
         </button>
       </div>
@@ -381,15 +381,15 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
             <div key={i.id} style={{ background: C.navy2, borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{i.titel}</span>
-                  {i.ki_generiert && <span style={{ fontSize: 11, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif' }}>KI</span>}
-                  <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal} · {inhaltStatusLabel(i.status)}</span>
+                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, color: '#fff' }}>{i.titel}</span>
+                  {i.ki_generiert && <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif' }}>KI</span>}
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal} · {inhaltStatusLabel(i.status)}</span>
                 </div>
-                {i.inhalt && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 13, margin: 0, whiteSpace: 'pre-wrap', maxHeight: 60, overflow: 'hidden' }}>{i.inhalt}</p>}
+                {i.inhalt && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: 0, whiteSpace: 'pre-wrap', maxHeight: 60, overflow: 'hidden' }}>{i.inhalt}</p>}
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => bearbeiten(i)} style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer' }}>Bearbeiten</button>
-                <button onClick={() => loeschen(i)} style={{ background: 'transparent', color: C.danger, border: `1px solid ${C.danger}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer' }}>Löschen</button>
+                <button onClick={() => bearbeiten(i)} style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' }}>Bearbeiten</button>
+                <button onClick={() => loeschen(i)} style={{ background: 'transparent', color: C.danger, border: `1px solid ${C.danger}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' }}>Löschen</button>
               </div>
             </div>
           ))}
@@ -488,10 +488,10 @@ function TabKalender({ kampagneId, kalender, reload }: { kampagneId: string; kal
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
-        <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
+        <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           Geplante Veröffentlichungen dieser Kampagne im Überblick.
         </p>
-        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer' }}>
           + Termin
         </button>
       </div>
@@ -507,16 +507,16 @@ function TabKalender({ kampagneId, kalender, reload }: { kampagneId: string; kal
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: statusFarbe(k.status), flexShrink: 0 }} />
-                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{k.titel}</span>
-                  <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{k.kanal}</span>
+                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, color: '#fff' }}>{k.titel}</span>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{k.kanal}</span>
                 </div>
-                <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim }}>
+                <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                   🕒 {fmtDatumZeit(k.geplant_am)}{k.notiz ? ` · ${k.notiz}` : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => bearbeiten(k)} style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer' }}>Bearbeiten</button>
-                <button onClick={() => loeschen(k)} style={{ background: 'transparent', color: C.danger, border: `1px solid ${C.danger}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer' }}>Löschen</button>
+                <button onClick={() => bearbeiten(k)} style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' }}>Bearbeiten</button>
+                <button onClick={() => loeschen(k)} style={{ background: 'transparent', color: C.danger, border: `1px solid ${C.danger}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' }}>Löschen</button>
               </div>
             </div>
           ))}
@@ -628,7 +628,7 @@ function TabEinstellungen({ kampagne, reload }: { kampagne: Kampagne; reload: ()
           {KANAL_OPTS.map((kanal) => {
             const an = fKanaele.includes(kanal);
             return (
-              <button key={kanal} onClick={() => toggleKanal(kanal)} style={{ background: an ? C.cyan : 'transparent', color: an ? C.navy : C.textDim, border: `1px solid ${an ? C.cyan : 'rgba(255,255,255,0.15)'}`, borderRadius: 16, padding: '5px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer' }}>
+              <button key={kanal} onClick={() => toggleKanal(kanal)} style={{ background: an ? C.cyan : 'transparent', color: an ? C.navy : C.textDim, border: `1px solid ${an ? C.cyan : 'rgba(255,255,255,0.15)'}`, borderRadius: 16, padding: '5px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' }}>
                 {kanal}
               </button>
             );
@@ -657,7 +657,7 @@ function DialogRahmen({ titel, onClose, children }: { titel: string; onClose: ()
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-        <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>{titel}</h2>
+        <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 'clamp(23px, 2vw, 32px)', margin: '0 0 20px' }}>{titel}</h2>
         {children}
       </div>
     </div>

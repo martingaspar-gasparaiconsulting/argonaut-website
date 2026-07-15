@@ -846,14 +846,14 @@ export default function SchichtplanPage() {
     border: `1px solid ${BRAND.border}`,
     borderRadius: 8,
     padding: '9px 10px',
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     fontFamily: 'DM Sans, sans-serif',
     boxSizing: 'border-box',
   };
   const labelStil: React.CSSProperties = {
     display: 'block',
     color: BRAND.textDim,
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     fontWeight: 600,
     marginBottom: 5,
     fontFamily: 'DM Sans, sans-serif',
@@ -878,7 +878,7 @@ export default function SchichtplanPage() {
             border: `3px solid ${BRAND.border}`, borderTopColor: BRAND.cyan,
             borderRadius: '50%', animation: 'argoSpin 0.8s linear infinite',
           }} />
-          <div style={{ fontSize: 14 }}>
+          <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             {rolle === 'mitarbeiter' ? 'Weiterleitung zu deinem Bereich …' : 'Wird geladen …'}
           </div>
         </div>
@@ -899,12 +899,12 @@ export default function SchichtplanPage() {
       }}>
         <div>
           <h1 style={{
-            margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 800,
+            margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800,
             color: '#fff',
           }}>
             Schichtplanung
           </h1>
-          <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 14 }}>
+          <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Wochenplan &middot; Schichten anlegen, ziehen zum Verschieben, klicken zum Bearbeiten
           </p>
         </div>
@@ -930,7 +930,7 @@ export default function SchichtplanPage() {
           &#9664; Vorige
         </button>
         <div style={{
-          fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 18,
+          fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(18px, 1.56vw, 25px)',
           minWidth: 240, textAlign: 'center',
         }}>
           KW {kalenderwoche(wochenStart)} &middot; {tagMonat(wochenStart)} &ndash; {tagMonat(addTage(wochenStart, 6))}
@@ -960,10 +960,10 @@ export default function SchichtplanPage() {
           gap: 12, flexWrap: 'wrap',
         }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16, color: BRAND.cyan }}>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', color: BRAND.cyan }}>
               ✨ {vorschlaege.length} Schicht-Vorschläge in dieser Woche
             </div>
-            <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 2 }}>
+            <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim, marginTop: 2 }}>
               Du kannst sie vorher per Ziehen anpassen. Freigeben macht sie zu festen Schichten.
             </div>
           </div>
@@ -993,7 +993,7 @@ export default function SchichtplanPage() {
           background: 'rgba(224,162,76,0.06)',
         }}>
           <div style={{
-            fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16,
+            fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)',
             color: BRAND.warn, marginBottom: 12,
           }}>
             🔔 Offene Tausch-Anfragen ({tauschAntraege.length})
@@ -1005,14 +1005,14 @@ export default function SchichtplanPage() {
               padding: '10px 0', borderTop: `1px solid ${BRAND.border}`,
             }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                   {a.ma_name} möchte abgeben:{' '}
                   {a.datum
                     ? `${a.datum.split('-').reverse().join('.')} · ${hhmm(a.beginn_um)}–${hhmm(a.ende_um)}`
                     : '(Schicht nicht mehr vorhanden)'}
                 </div>
                 {a.grund && (
-                  <div style={{ fontSize: 12, color: BRAND.textDim, marginTop: 2 }}>Grund: {a.grund}</div>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginTop: 2 }}>Grund: {a.grund}</div>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -1044,7 +1044,7 @@ export default function SchichtplanPage() {
                 <th style={{
                   position: 'sticky', left: 0, zIndex: 2, background: BRAND.navy2,
                   textAlign: 'left', padding: '14px 16px', color: BRAND.textDim,
-                  fontSize: 13, fontWeight: 700, borderBottom: `1px solid ${BRAND.border}`,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, borderBottom: `1px solid ${BRAND.border}`,
                   minWidth: 170,
                 }}>
                   Mitarbeiter
@@ -1060,18 +1060,18 @@ export default function SchichtplanPage() {
                       background: istRuhe ? 'rgba(143,163,190,0.10)' : istHeute ? 'rgba(0,229,255,0.08)' : 'transparent',
                       minWidth: 100,
                     }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: istRuhe ? BRAND.textDim : istHeute ? BRAND.cyan : '#fff' }}>
+                      <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: istRuhe ? BRAND.textDim : istHeute ? BRAND.cyan : '#fff' }}>
                         {WOCHENTAGE[i]}
                       </div>
-                      <div style={{ fontSize: 12, color: BRAND.textDim }}>{tagMonat(d)}</div>
-                      {istRuhe && <div style={{ fontSize: 10, color: BRAND.textDim, marginTop: 2 }}>geschlossen</div>}
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>{tagMonat(d)}</div>
+                      {istRuhe && <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: BRAND.textDim, marginTop: 2 }}>geschlossen</div>}
                     </th>
                   );
                 })}
                 <th style={{
                   position: 'sticky', right: 0, zIndex: 2, background: BRAND.navy2,
                   textAlign: 'center', padding: '12px 12px', color: BRAND.gold,
-                  fontSize: 13, fontWeight: 700, borderBottom: `1px solid ${BRAND.border}`,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, borderBottom: `1px solid ${BRAND.border}`,
                   borderLeft: `1px solid ${BRAND.border}`, minWidth: 90,
                 }}>
                   &sum; Woche
@@ -1088,12 +1088,12 @@ export default function SchichtplanPage() {
                     <td style={{
                       position: 'sticky', left: 0, zIndex: 1, background: BRAND.navy2,
                       padding: '12px 16px', borderBottom: `1px solid ${BRAND.border}`,
-                      fontWeight: 600, fontSize: 14,
+                      fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)',
                       color: istUnbesetzt ? BRAND.warn : '#fff',
                     }}>
                       {istUnbesetzt ? '\u26A0 Unbesetzt' : maName(m)}
                       {!istUnbesetzt && m.arbeitszeit_modell && m.arbeitszeit_modell !== 'minijob' && (
-                        <div style={{ fontSize: 11, color: BRAND.textDim, fontWeight: 500, marginTop: 2 }}>
+                        <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim, fontWeight: 500, marginTop: 2 }}>
                           {m.arbeitszeit_modell}
                         </div>
                       )}
@@ -1104,7 +1104,7 @@ export default function SchichtplanPage() {
                         const icon = w?.status === 'ueber' ? '\u26A0 ' : w?.status === 'knapp' ? '\u26A0 ' : '';
                         return (
                           <div
-                            style={{ fontSize: 11, color: farbe, fontWeight: w?.status === 'ok' ? 500 : 700, marginTop: 2 }}
+                            style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: farbe, fontWeight: w?.status === 'ok' ? 500 : 700, marginTop: 2 }}
                             title={`Minijob-Grenze 2026: max. ~${MINIJOB_STD_MONAT.toFixed(1)} h/Monat (${MINIJOB_EUR} € ÷ ${MINDESTLOHN.toFixed(2).replace('.', ',')} €). Geplant ${monatLabel(w?.monat || '')}: ${std.toFixed(1)} h.`}
                           >
                             {icon}Minijob · {std.toFixed(1)}/{MINIJOB_STD_MONAT.toFixed(0)} h
@@ -1114,12 +1114,12 @@ export default function SchichtplanPage() {
                       })()}
                       {!istUnbesetzt && bestaetigungen[m.id] && (
                         bestaetigungen[m.id].status === 'bestaetigt' ? (
-                          <div style={{ fontSize: 11, color: BRAND.green, fontWeight: 700, marginTop: 3 }}>
+                          <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.green, fontWeight: 700, marginTop: 3 }}>
                             ✓ Plan bestätigt
                           </div>
                         ) : (
                           <div
-                            style={{ fontSize: 11, color: BRAND.danger, fontWeight: 700, marginTop: 3 }}
+                            style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.danger, fontWeight: 700, marginTop: 3 }}
                             title={bestaetigungen[m.id].kommentar || ''}
                           >
                             ⚠ Einwand{bestaetigungen[m.id].kommentar ? ': ' + bestaetigungen[m.id].kommentar : ''}
@@ -1180,17 +1180,17 @@ export default function SchichtplanPage() {
                               title={s.notiz || 'Zum Verschieben ziehen, zum Bearbeiten klicken'}
                             >
                               {istVorschlag && (
-                                <div style={{ fontSize: 9, fontWeight: 700, color: BRAND.cyan, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>
+                                <div style={{ fontSize: 'clamp(9px, 0.81vw, 13px)', fontWeight: 700, color: BRAND.cyan, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 1 }}>
                                   Vorschlag
                                 </div>
                               )}
-                              <div style={{ fontSize: 12, fontWeight: 700 }}>
+                              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700 }}>
                                 {hhmm(s.beginn_um)}&ndash;{hhmm(s.ende_um)}
                               </div>
                               {s.rolle && (
-                                <div style={{ fontSize: 11, color: BRAND.textDim }}>{s.rolle}</div>
+                                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim }}>{s.rolle}</div>
                               )}
-                              <div style={{ fontSize: 10, color: BRAND.textDim }}>
+                              <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: BRAND.textDim }}>
                                 {dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0).toFixed(1)} h
                                 {s.pause_minuten > 0 ? ` · ${s.pause_minuten} Min Pause` : ''}
                               </div>
@@ -1199,7 +1199,7 @@ export default function SchichtplanPage() {
                           })}
                           {istRuhe ? (
                             zellSchichten.length === 0 && (
-                              <div style={{ textAlign: 'center', color: BRAND.textDim, fontSize: 11, padding: '6px 0' }}>
+                              <div style={{ textAlign: 'center', color: BRAND.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', padding: '6px 0' }}>
                                 &ndash;
                               </div>
                             )
@@ -1210,7 +1210,7 @@ export default function SchichtplanPage() {
                                 width: '100%', background: 'transparent',
                                 border: `1px dashed ${BRAND.border}`, borderRadius: 6,
                                 color: BRAND.textDim, padding: '4px 0', cursor: 'pointer',
-                                fontSize: 16, lineHeight: 1, fontFamily: 'DM Sans, sans-serif',
+                                fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1, fontFamily: 'DM Sans, sans-serif',
                               }}
                               title="Schicht hinzufuegen"
                             >
@@ -1225,7 +1225,7 @@ export default function SchichtplanPage() {
                       textAlign: 'center', padding: '12px',
                       borderBottom: `1px solid ${BRAND.border}`,
                       borderLeft: `1px solid ${BRAND.border}`,
-                      fontWeight: 700, fontSize: 14, color: BRAND.gold,
+                      fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: BRAND.gold,
                     }}>
                       {wochenStundenFuer(maId).toFixed(1)} h
                     </td>
@@ -1246,7 +1246,7 @@ export default function SchichtplanPage() {
       )}
 
       {!laden && mitarbeiter.some((m) => (m.arbeitszeit_modell || '') === 'minijob') && (
-        <div style={{ marginTop: 10, fontSize: 12, color: BRAND.textDim }}>
+        <div style={{ marginTop: 10, fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
           Minijob-Grenze 2026: max. ~{MINIJOB_STD_MONAT.toFixed(1)} h/Monat ({MINIJOB_EUR} € ÷ {MINDESTLOHN.toFixed(2).replace('.', ',')} € Mindestlohn).
           Angezeigt werden die geplanten Schichtstunden im jeweiligen Kalendermonat.
         </div>
@@ -1261,7 +1261,7 @@ export default function SchichtplanPage() {
         }} onClick={() => setSchichtModal(null)}>
           <div style={{ ...card, width: 460, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               {schichtModal.id ? 'Schicht bearbeiten' : 'Neue Schicht'}
             </h2>
 
@@ -1272,7 +1272,7 @@ export default function SchichtplanPage() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {vorlagen.map((v) => (
                     <button key={v.id} onClick={() => wendeVorlageAn(v)} style={{
-                      ...btnGhost, padding: '6px 10px', fontSize: 12,
+                      ...btnGhost, padding: '6px 10px', fontSize: 'clamp(12px, 1.06vw, 17px)',
                       borderLeft: `3px solid ${v.farbe || '#00e5ff'}`,
                     }}>
                       {v.name} ({hhmm(v.beginn_um)}&ndash;{hhmm(v.ende_um)})
@@ -1333,7 +1333,7 @@ export default function SchichtplanPage() {
             </div>
 
             {schichtModal.beginn_um && schichtModal.ende_um && (
-              <div style={{ marginBottom: 12, color: BRAND.cyan, fontSize: 13, fontWeight: 600 }}>
+              <div style={{ marginBottom: 12, color: BRAND.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>
                 Netto-Arbeitszeit: {dauerStunden(schichtModal.beginn_um, schichtModal.ende_um, Number(schichtModal.pause_minuten) || 0).toFixed(2)} h
               </div>
             )}
@@ -1433,17 +1433,17 @@ export default function SchichtplanPage() {
         }} onClick={() => setGeneratorModal(false)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               ✨ KI-Schichtplan vorschlagen
             </h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Verteilt die gewählte Schichtart auf die geöffneten Wochentage — bis zu den
               Soll-Wochenstunden je Mitarbeiter. Ruhetage, Feiertage, Abwesenheiten und
               bestehende Schichten werden ausgelassen. Du prüfst alles als Vorschlag, bevor es gilt.
             </p>
 
             {vorlagen.length === 0 ? (
-              <div style={{ ...card, borderColor: BRAND.warn, color: BRAND.warn, fontSize: 13 }}>
+              <div style={{ ...card, borderColor: BRAND.warn, color: BRAND.warn, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                 Du hast noch keine Schichtarten angelegt. Lege zuerst unter „Schichtarten verwalten"
                 mindestens eine an (z.B. Frühschicht 06:00–14:00).
               </div>
@@ -1481,11 +1481,11 @@ export default function SchichtplanPage() {
                             padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
                             background: aktiv ? 'rgba(0,229,255,0.10)' : BRAND.navy,
                             border: `1px solid ${aktiv ? 'rgba(0,229,255,0.4)' : BRAND.border}`,
-                            color: '#fff', fontSize: 13, fontFamily: 'DM Sans, sans-serif', textAlign: 'left',
+                            color: '#fff', fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'DM Sans, sans-serif', textAlign: 'left',
                           }}
                         >
                           <span>{aktiv ? '☑ ' : '☐ '}{maName(m)}</span>
-                          <span style={{ color: BRAND.textDim, fontSize: 12 }}>
+                          <span style={{ color: BRAND.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                             {soll > 0 ? `Soll ${soll} h/Wo` : 'kein Soll → alle Tage'}
                           </span>
                         </button>
@@ -1494,7 +1494,7 @@ export default function SchichtplanPage() {
                   </div>
                 </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, cursor: 'pointer', fontSize: 13 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, cursor: 'pointer', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                   <input type="checkbox" checked={genNurOhne} onChange={(e) => setGenNurOhne(e.target.checked)} />
                   Nur Mitarbeiter ohne bestehende Schichten in dieser Woche
                 </label>
@@ -1522,10 +1522,10 @@ export default function SchichtplanPage() {
         }} onClick={() => setRuhetageModal(false)}>
           <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               Betriebs-Ruhetage
             </h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               An welchen Wochentagen hat der Betrieb regelmäßig geschlossen? An diesen Tagen
               werden keine Schichten geplant und der KI-Generator lässt sie aus.
             </p>
@@ -1547,7 +1547,7 @@ export default function SchichtplanPage() {
                       padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
                       background: aktiv ? 'rgba(224,162,76,0.12)' : BRAND.navy,
                       border: `1px solid ${aktiv ? 'rgba(224,162,76,0.5)' : BRAND.border}`,
-                      color: aktiv ? BRAND.warn : '#fff', fontWeight: 600, fontSize: 14,
+                      color: aktiv ? BRAND.warn : '#fff', fontWeight: 600, fontSize: 'clamp(14px, 1.25vw, 20px)',
                       fontFamily: 'DM Sans, sans-serif', textAlign: 'left',
                     }}
                   >
@@ -1574,10 +1574,10 @@ export default function SchichtplanPage() {
         }} onClick={() => setVorlagenModal(false)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
               Schichtarten verwalten
             </h2>
-            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
+            <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Lege deine wiederkehrenden Schichten einmalig an &ndash; danach beim Planen mit einem Klick &uuml;bernehmen.
             </p>
 
@@ -1591,8 +1591,8 @@ export default function SchichtplanPage() {
                     background: BRAND.navy, borderLeft: `3px solid ${v.farbe || '#00e5ff'}`,
                   }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{v.name}</div>
-                      <div style={{ fontSize: 12, color: BRAND.textDim }}>
+                      <div style={{ fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{v.name}</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
                         {hhmm(v.beginn_um)}&ndash;{hhmm(v.ende_um)} &middot; {v.pause_minuten || 0} Min Pause
                       </div>
                     </div>

@@ -281,7 +281,7 @@ export default function AdressBlock({
       <div style={styles.kopf}>
         <span style={styles.titel}>📍 Anschrift & Anfahrt</span>
         {empf && (
-          <span style={{ color: (verortungAlt || koordinatenWerdenEntfernt) ? C.warn : statusFarbe(empf.geocodeStatus), fontSize: 12.5 }}>
+          <span style={{ color: (verortungAlt || koordinatenWerdenEntfernt) ? C.warn : statusFarbe(empf.geocodeStatus), fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
             {(verortungAlt || koordinatenWerdenEntfernt) ? '⚠ Adresse geändert' : statusText(empf.geocodeStatus)}
           </span>
         )}
@@ -356,8 +356,8 @@ export default function AdressBlock({
 
           {manuellAuf && (
             <div style={styles.sektion}>
-              <div style={{ ...styles.titel, fontSize: 13.5, marginBottom: 4 }}>Koordinaten von Hand</div>
-              <p style={{ fontSize: 12.5, color: C.textDim, margin: '0 0 12px', lineHeight: 1.5 }}>
+              <div style={{ ...styles.titel, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 4 }}>Koordinaten von Hand</div>
+              <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '0 0 12px', lineHeight: 1.5 }}>
                 Funktioniert ohne Kartendienst. Punkt in einer Online-Karte suchen, beide Zahlen ablesen.
                 Der Breitengrad ist in Deutschland die größere Zahl (etwa 47 bis 55).
               </p>
@@ -412,23 +412,23 @@ export default function AdressBlock({
 const styles: Record<string, CSSProperties> = {
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginTop: 20 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, color: C.text },
-  sub: { fontSize: 12.5, color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, color: C.text },
+  sub: { fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 },
-  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: "'DM Sans', sans-serif" },
+  lbl: { display: 'block', fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: "'DM Sans', sans-serif" },
 
   sektion: { marginTop: 16, padding: 14, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
   aktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, alignItems: 'center', flexWrap: 'wrap' },
 
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 13.5, fontWeight: 800, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 800, fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' },
 
-  hint: { color: C.textDim, fontSize: 13.5, padding: '12px 0' },
-  hinweisBox: { color: C.textDim, fontSize: 12.5, marginTop: 12, lineHeight: 1.6 },
-  err: { color: C.danger, fontSize: 13.5, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 14, lineHeight: 1.5 },
-  okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 14 },
-  infoBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', padding: '12px 0' },
+  hinweisBox: { color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 12, lineHeight: 1.6 },
+  err: { color: C.danger, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 14, lineHeight: 1.5 },
+  okBox: { color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 14 },
+  infoBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
 };

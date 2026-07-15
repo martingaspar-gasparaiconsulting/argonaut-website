@@ -248,16 +248,16 @@ export default function DublettenPage() {
                       : p.vergleich.zone === 'sicher' ? 'rgba(224,162,76,0.4)' : C.border,
                   }}>
                     <div style={{ minWidth: 0, flex: '1 1 340px' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{kandidatKurz(p.a)}</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: C.textDim }}>{kandidatKurz(p.b)}</div>
-                      <div style={{ fontSize: 12, marginTop: 6, color: p.vergleich.emailKonflikt ? C.danger : C.textDim }}>
+                      <div style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600 }}>{kandidatKurz(p.a)}</div>
+                      <div style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600, color: C.textDim }}>{kandidatKurz(p.b)}</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 6, color: p.vergleich.emailKonflikt ? C.danger : C.textDim }}>
                         <strong style={{ color: p.vergleich.punkte >= SCHWELLE_SICHER ? C.warn : C.textDim }}>
                           {p.vergleich.punkte} Punkte
                         </strong>
                         {' · '}{zonenText(p.vergleich.zone)}
                         {p.vergleich.emailKonflikt && ' · ⚠ verschiedene E-Mail-Adressen'}
                       </div>
-                      <div style={{ fontSize: 11.5, color: C.textDim, marginTop: 4 }}>
+                      <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginTop: 4 }}>
                         {p.vergleich.signale.map((s) => s.erklaerung).join(' · ')}
                       </div>
                     </div>
@@ -272,7 +272,7 @@ export default function DublettenPage() {
           {protokoll.length > 0 && (
             <div style={styles.card}>
               <h2 style={styles.cardTitle}>Zuletzt zusammengeführt</h2>
-              <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 12 }}>
+              <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 12 }}>
                 30 Tage lang rückgängig zu machen. Danach bleibt nur das Protokoll.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -285,10 +285,10 @@ export default function DublettenPage() {
                   return (
                     <div key={p.id} style={styles.protokollZeile}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5 }}>
+                        <div style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
                           <strong>{name}</strong> wurde entfernt
                         </div>
-                        <div style={{ fontSize: 11.5, color: C.textDim }}>
+                        <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>
                           {datumHuebsch(p.erstellt_am)}
                           {erledigt ? ' · bereits rückgängig gemacht'
                             : abgelaufen ? ' · Frist abgelaufen'
@@ -314,7 +314,7 @@ export default function DublettenPage() {
         <div style={styles.overlay} onClick={() => !laeuft && setOffenesPaar(null)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitel}>Zusammenführen</h2>
-            <p style={{ fontSize: 13, color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 }}>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 }}>
               Links bleibt bestehen, rechts verschwindet. Für jedes Feld entscheidest du,
               welcher Wert gewinnt. Abweichendes wandert in eine Notiz — <strong>nichts geht verloren</strong>.
             </p>
@@ -342,9 +342,9 @@ export default function DublettenPage() {
                     if (beideLeer) return null;
                     return (
                       <tr key={v.feld}>
-                        <td style={{ ...styles.td, color: C.textDim, fontSize: 12 }}>
+                        <td style={{ ...styles.td, color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>
                           {FELD_LABEL[v.feld]}
-                          {v.konflikt && <div style={{ color: C.warn, fontSize: 11 }}>⚠ abweichend</div>}
+                          {v.konflikt && <div style={{ color: C.warn, fontSize: 'clamp(11px, 0.94vw, 15px)' }}>⚠ abweichend</div>}
                         </td>
                         {(['a', 'b'] as const).map((seite) => {
                           const wert = seite === 'a' ? v.wertA : v.wertB;
@@ -369,7 +369,7 @@ export default function DublettenPage() {
             {verworfen.length > 0 && (
               <div style={styles.infoBox}>
                 <strong>Wandert in die Notiz</strong>
-                {verworfen.map((v, i) => <div key={i} style={{ color: C.textDim, fontSize: 12.5 }}>· {v}</div>)}
+                {verworfen.map((v, i) => <div key={i} style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>· {v}</div>)}
               </div>
             )}
 
@@ -403,39 +403,39 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 18 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
-  zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 18 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   paarZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 15px', flexWrap: 'wrap' },
   protokollZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 13px', flexWrap: 'wrap' },
 
   tabelle: { width: '100%', borderCollapse: 'collapse', minWidth: 520 },
-  th: { textAlign: 'left', padding: '7px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  td: { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
+  th: { textAlign: 'left', padding: '7px 8px', fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '6px 8px', fontSize: 'clamp(13px, 1.13vw, 18px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
 
-  wahlBox: { display: 'flex', alignItems: 'center', gap: 8, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 13 },
+  wahlBox: { display: 'flex', alignItems: 'center', gap: 8, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 'clamp(13px, 1.13vw, 18px)' },
   wahlAktiv: { borderColor: 'rgba(201,168,76,0.5)', background: 'rgba(201,168,76,0.08)' },
 
   aktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 13.5, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0', lineHeight: 1.6 },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, lineHeight: 1.5 },
-  okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, lineHeight: 1.55 },
-  infoBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginBottom: 14, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.35)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0', lineHeight: 1.6 },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, lineHeight: 1.5 },
+  okBox: { color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, lineHeight: 1.55 },
+  infoBox: { marginTop: 14, padding: '11px 13px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginBottom: 14, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.35)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid rgba(201,168,76,0.18)`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 720, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, color: C.text, margin: 0 },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, color: C.text, margin: 0 },
 };

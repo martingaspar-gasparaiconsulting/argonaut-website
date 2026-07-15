@@ -74,7 +74,7 @@ export default function EinsatzRechnungButton({ einsatzId, rechnungId, onErstell
           display: "inline-flex", alignItems: "center", gap: 6,
           padding: "8px 14px", borderRadius: 8, textDecoration: "none",
           background: "rgba(0,230,118,0.10)", border: `1px solid ${GRUEN}`,
-          color: GRUEN, fontWeight: 700, fontSize: 13,
+          color: GRUEN, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)',
         }}
         title="Verknüpfte Rechnung öffnen"
       >
@@ -91,13 +91,13 @@ export default function EinsatzRechnungButton({ einsatzId, rechnungId, onErstell
         style={{
           padding: "8px 14px", borderRadius: 8, cursor: laden ? "default" : "pointer",
           background: "transparent", border: `1px solid ${CYAN}`, color: CYAN,
-          fontWeight: 700, fontSize: 13, opacity: laden ? 0.6 : 1,
+          fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', opacity: laden ? 0.6 : 1,
         }}
         title="Aus diesem Einsatz eine Rechnung mit den erfassten Leistungen erstellen"
       >
         {laden ? "Erstelle…" : "→ Rechnung erstellen"}
       </button>
-      {fehler && <span style={{ fontSize: 11, color: "#ff9a9a", maxWidth: 220 }}>{fehler}</span>}
+      {fehler && <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: "#ff9a9a", maxWidth: 220 }}>{fehler}</span>}
     </span>
   );
 }

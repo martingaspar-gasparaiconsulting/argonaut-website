@@ -306,7 +306,7 @@ export default function PreislisteImportPage() {
       {schritt === 2 && csv && (
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>2 · Spalten zuordnen</h2>
-          <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 14 }}>
+          <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 14 }}>
             <strong>{dateiname}</strong> · {csv.zeilen.length} Zeilen · Kodierung {csv.kodierung.kodierung} ·
             Trennzeichen „{csv.trennzeichen === '\t' ? 'Tabulator' : csv.trennzeichen}"
           </div>
@@ -376,7 +376,7 @@ export default function PreislisteImportPage() {
               <span>
                 <strong>Vorhandene Preise überschreiben</strong>
                 <br />
-                <span style={{ color: C.textDim, fontSize: 12.5 }}>
+                <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                   Standardmäßig aus. Preise, die du von Hand gepflegt hast, bleiben unangetastet —
                   nur fehlende werden ergänzt.
                 </span>
@@ -404,7 +404,7 @@ export default function PreislisteImportPage() {
             </div>
 
             <div style={styles.summeZeile}>
-              <span style={{ color: C.textDim, fontSize: 13 }}>
+              <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                 {vorschau.variantenNeu} Variante(n) neu ·{' '}
                 {vorschau.preiseNeu} Preis(e) neu
                 {ueberschreiben
@@ -416,7 +416,7 @@ export default function PreislisteImportPage() {
 
             {schreibt && (
               <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 12.5, color: C.textDim, marginBottom: 6 }}>
+                <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 6 }}>
                   {fortschritt} von {zuUebernehmen.length} …
                 </div>
                 <div style={styles.balkenSpur}>
@@ -488,17 +488,17 @@ function ZeilenReihe({
       <td style={styles.td}>
         <div style={{ fontWeight: 600 }}>{name}</div>
         {z.restfeuchte_prozent !== null && (
-          <div style={{ fontSize: 11.5, color: C.textDim }}>{formatZahl(z.restfeuchte_prozent, 1)} % Restfeuchte</div>
+          <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>{formatZahl(z.restfeuchte_prozent, 1)} % Restfeuchte</div>
         )}
-        {z.fehler.map((f, i) => <div key={i} style={{ fontSize: 11.5, color: C.danger }}>✕ {f}</div>)}
-        {z.hinweise.map((h, i) => <div key={i} style={{ fontSize: 11.5, color: C.textDim }}>· {h}</div>)}
+        {z.fehler.map((f, i) => <div key={i} style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.danger }}>✕ {f}</div>)}
+        {z.hinweise.map((h, i) => <div key={i} style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>· {h}</div>)}
       </td>
       <td style={styles.td}>
         {z.preise.length === 0 ? <span style={{ color: C.textDim }}>—</span> : z.preise.map((p) => {
           const alt = a?.vorhandene.get(p.einheit);
           const ersetzt = alt && ueberschreiben;
           return (
-            <div key={p.einheit} style={{ fontSize: 12.5 }}>
+            <div key={p.einheit} style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
               <strong>{einheitKurz(p.einheit)}</strong> {eur(p.preis_netto)}
               {alt && (
                 <span style={{ color: ersetzt ? C.warn : C.textDim, marginLeft: 6 }}>
@@ -509,7 +509,7 @@ function ZeilenReihe({
           );
         })}
       </td>
-      <td style={{ ...styles.td, fontSize: 12.5, color: C.textDim }}>
+      <td style={{ ...styles.td, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim }}>
         {z.doppeltZu !== null
           ? `= Zeile ${z.doppeltZu}`
           : a?.variante ? 'Variante existiert' : kaputt ? '—' : 'neu'}
@@ -532,39 +532,39 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
   schritte: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 },
-  schrittBox: { display: 'flex', alignItems: 'center', gap: 8, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', fontSize: 13 },
+  schrittBox: { display: 'flex', alignItems: 'center', gap: 8, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)' },
   schrittAktiv: { borderColor: 'rgba(201,168,76,0.4)' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 18 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 16 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
-  zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   tabelle: { width: '100%', borderCollapse: 'collapse', minWidth: 700 },
-  th: { textAlign: 'left', padding: '7px 8px', fontSize: 10.5, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  td: { padding: '8px', fontSize: 13, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
+  th: { textAlign: 'left', padding: '7px 8px', fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '8px', fontSize: 'clamp(13px, 1.13vw, 18px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
 
-  select: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, fontFamily: 'inherit' },
-  schalterZeile: { display: 'flex', alignItems: 'flex-start', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontSize: 13.5, lineHeight: 1.5 },
+  select: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  schalterZeile: { display: 'flex', alignItems: 'flex-start', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontSize: 'clamp(13.5px, 1.19vw, 19px)', lineHeight: 1.5 },
 
-  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, fontSize: 14 },
+  summeZeile: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, fontSize: 'clamp(14px, 1.25vw, 20px)' },
   balkenSpur: { height: 8, background: C.navy, borderRadius: 999, overflow: 'hidden', border: `1px solid ${C.border}` },
   balken: { height: '100%', background: C.green, borderRadius: 999, transition: 'width 0.2s ease' },
 
   aktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
 
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginTop: 12, marginBottom: 12, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 },
-  codeBlock: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11.5, background: C.navy, borderRadius: 8, padding: '10px 12px', margin: '10px 0', color: C.cyan, lineHeight: 1.7, overflowX: 'auto' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginTop: 12, marginBottom: 12, padding: '12px 14px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  codeBlock: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(11.5px, 1vw, 16px)', background: C.navy, borderRadius: 8, padding: '10px 12px', margin: '10px 0', color: C.cyan, lineHeight: 1.7, overflowX: 'auto' },
 };

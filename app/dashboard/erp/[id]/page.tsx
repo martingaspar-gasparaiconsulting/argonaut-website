@@ -315,12 +315,12 @@ export default function ArtikelDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const labelStil: React.CSSProperties = {
     display: "block",
-    fontSize: 12,
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
     color: C.textDim,
     marginBottom: 6,
     fontWeight: 600,
@@ -332,7 +332,7 @@ export default function ArtikelDetail() {
     background: C.gold,
     color: C.navy,
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     cursor: "pointer",
   };
   const btnGhost: React.CSSProperties = {
@@ -341,7 +341,7 @@ export default function ArtikelDetail() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.05)",
     color: "#fff",
-    fontSize: 13,
+    fontSize: 'clamp(13px, 1.13vw, 18px)',
     cursor: "pointer",
   };
   const infoZeile = (label: string, wert: React.ReactNode): React.ReactElement => (
@@ -354,8 +354,8 @@ export default function ArtikelDetail() {
         borderBottom: `1px solid ${C.border}`,
       }}
     >
-      <span style={{ color: C.textDim, fontSize: 13 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 600, textAlign: "right" }}>
+      <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{label}</span>
+      <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, textAlign: "right" }}>
         {wert}
       </span>
     </div>
@@ -363,7 +363,7 @@ export default function ArtikelDetail() {
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -372,7 +372,7 @@ export default function ArtikelDetail() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
   };
@@ -390,7 +390,7 @@ export default function ArtikelDetail() {
           background: aktiv ? "rgba(201,168,76,0.15)" : "rgba(255,255,255,0.04)",
           color: aktiv ? C.gold : "#fff",
           fontWeight: 700,
-          fontSize: 13,
+          fontSize: 'clamp(13px, 1.13vw, 18px)',
           cursor: "pointer",
         }}
       >
@@ -408,7 +408,7 @@ export default function ArtikelDetail() {
   if (!artikel) {
     return (
       <div style={{ color: "#fff", maxWidth: 700, margin: "0 auto" }}>
-        <a href="/dashboard/erp" style={{ color: C.cyan, fontSize: 14 }}>
+        <a href="/dashboard/erp" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           ← Zurück zum Lager
         </a>
         <div style={{ ...card, marginTop: 16, color: C.textDim }}>
@@ -420,7 +420,7 @@ export default function ArtikelDetail() {
 
   return (
     <div style={{ color: "#fff", maxWidth: 1100, margin: "0 auto" }}>
-      <a href="/dashboard/erp" style={{ color: C.cyan, fontSize: 14 }}>
+      <a href="/dashboard/erp" style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
         ← Zurück zum Lager
       </a>
 
@@ -439,7 +439,7 @@ export default function ArtikelDetail() {
           <h1
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 'clamp(26px, 2.25vw, 36px)',
               fontWeight: 800,
               display: "flex",
               alignItems: "center",
@@ -459,7 +459,7 @@ export default function ArtikelDetail() {
             />
             {artikel.bezeichnung}
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             {artikel.artikelnummer ? `Nr. ${artikel.artikelnummer} · ` : ""}
             {artikel.kategorie || "Ohne Kategorie"}
           </p>
@@ -479,7 +479,7 @@ export default function ArtikelDetail() {
       >
         {/* Stammdaten */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>Stammdaten</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Stammdaten</h3>
           {infoZeile(
             "Aktueller Bestand",
             <span style={{ color: am.farbe }}>
@@ -513,10 +513,10 @@ export default function ArtikelDetail() {
           {infoZeile("Status", artikel.aktiv ? "Aktiv" : "Inaktiv")}
           {artikel.beschreibung && (
             <div style={{ marginTop: 12 }}>
-              <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>
+              <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginBottom: 4 }}>
                 Beschreibung
               </div>
-              <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.5 }}>
                 {artikel.beschreibung}
               </div>
             </div>
@@ -525,7 +525,7 @@ export default function ArtikelDetail() {
 
         {/* Bestand buchen */}
         <div style={card}>
-          <h3 style={{ margin: "0 0 12px", fontSize: 16 }}>Bestand buchen</h3>
+          <h3 style={{ margin: "0 0 12px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Bestand buchen</h3>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             {modusBtn("eingang", "Zugang")}
             {modusBtn("ausgang", "Abgang")}
@@ -565,7 +565,7 @@ export default function ArtikelDetail() {
             <div
               style={{
                 marginTop: 12,
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 color: C.textDim,
               }}
             >
@@ -587,7 +587,7 @@ export default function ArtikelDetail() {
               style={{
                 marginTop: 12,
                 color: C.danger,
-                fontSize: 13,
+                fontSize: 'clamp(13px, 1.13vw, 18px)',
                 fontWeight: 600,
               }}
             >
@@ -617,7 +617,7 @@ export default function ArtikelDetail() {
 
       {/* Historie */}
       <div style={{ ...card, padding: 0, overflowX: "auto" }}>
-        <h3 style={{ margin: 0, padding: "16px 20px", fontSize: 16 }}>
+        <h3 style={{ margin: 0, padding: "16px 20px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
           Bestandshistorie
         </h3>
         {bewegungen.length === 0 ? (
@@ -685,7 +685,7 @@ export default function ArtikelDetail() {
             style={{ ...card, width: "100%", maxWidth: 560, background: C.navy }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px", fontSize: 20, fontWeight: 800 }}>
+            <h2 style={{ margin: "0 0 16px", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800 }}>
               Stammdaten bearbeiten
             </h2>
             <div
@@ -793,7 +793,7 @@ export default function ArtikelDetail() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 'clamp(14px, 1.25vw, 20px)',
                     cursor: "pointer",
                     userSelect: "none",
                   }}
@@ -813,7 +813,7 @@ export default function ArtikelDetail() {
                 style={{
                   marginTop: 14,
                   color: C.danger,
-                  fontSize: 13,
+                  fontSize: 'clamp(13px, 1.13vw, 18px)',
                   fontWeight: 600,
                 }}
               >
@@ -927,8 +927,8 @@ function EoqKarte({
 
   return (
     <div style={card}>
-      <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>📦 Optimale Bestellmenge</h3>
-      <p style={{ margin: "0 0 14px", color: CE.textDim, fontSize: 12, lineHeight: 1.5 }}>
+      <h3 style={{ margin: "0 0 4px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>📦 Optimale Bestellmenge</h3>
+      <p style={{ margin: "0 0 14px", color: CE.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', lineHeight: 1.5 }}>
         Wie viel du pro Bestellung ordern solltest, damit Bestell- und Lagerkosten
         zusammen am geringsten sind (Andler-Formel).
       </p>
@@ -987,13 +987,13 @@ function EoqKarte({
             border: `1px solid rgba(0,229,255,0.3)`,
           }}
         >
-          <div style={{ fontSize: 13, color: CE.textDim }}>
+          <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: CE.textDim }}>
             Optimale Bestellmenge
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: CE.cyan }}>
+          <div style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800, color: CE.cyan }}>
             {fmt(eoq)} {einheit}
           </div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "#fff" }}>
+          <div style={{ marginTop: 6, fontSize: 'clamp(13px, 1.13vw, 18px)', color: "#fff" }}>
             ca. <b>{fmt(bestellungenProJahr)}</b> Bestellungen pro Jahr
           </div>
         </div>
@@ -1005,7 +1005,7 @@ function EoqKarte({
             borderRadius: 10,
             background: "rgba(224,162,76,0.10)",
             border: `1px solid rgba(224,162,76,0.3)`,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: CE.warn,
             lineHeight: 1.5,
           }}

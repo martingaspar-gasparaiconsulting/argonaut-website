@@ -306,14 +306,14 @@ export default function DispoPage() {
         <button style={styles.navBtn} onClick={() => setWochenStart(addDays(wochenStart, -7))}>‹</button>
         <button style={styles.ghostBtn} onClick={() => setWochenStart(montagVon(new Date()))}>Diese Woche</button>
         <button style={styles.navBtn} onClick={() => setWochenStart(addDays(wochenStart, 7))}>›</button>
-        <span style={{ fontSize: 13, color: C.textDim, marginLeft: 6 }}>Woche: {wochenTitel}</span>
+        <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginLeft: 6 }}>Woche: {wochenTitel}</span>
       </div>
 
       {/* ===== Unzugeordnet-Panel ===== */}
       <div style={styles.unzuCard}>
         <div style={styles.unzuKopf}>
           <span style={{ fontWeight: 700 }}>Unzugeordnet</span>
-          <span style={{ color: C.textDim, fontSize: 12 }}>{unzugeordnet.length} Einsatz(e) ohne Monteur</span>
+          <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{unzugeordnet.length} Einsatz(e) ohne Monteur</span>
         </div>
         {unzugeordnet.length === 0 ? (
           <div style={styles.unzuLeer}>Alles verteilt. Neue Einsätze ohne Monteur erscheinen hier.</div>
@@ -326,7 +326,7 @@ export default function DispoPage() {
                 <button key={e.id} onClick={() => oeffneEinsatz(e)} style={{ ...styles.chip, borderColor: si.farbe }}
                   title="Klicken zum Zuweisen / Bearbeiten">
                   <span style={{ fontWeight: 700 }}>{e.titel || 'Einsatz'}</span>
-                  <span style={{ fontSize: 11, color: C.textDim }}>
+                  <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>
                     {b ? `${WT_KURZ[b.getDay()]} ${pad(b.getDate())}.${pad(b.getMonth() + 1)}. · ${uhr(b)}` : 'ohne Datum'}
                     {e.kunde_name ? ` · ${e.kunde_name}` : ''}
                   </span>
@@ -348,7 +348,7 @@ export default function DispoPage() {
                 {tagesDaten.map((d) => (
                   <div key={d.datum} style={{ ...styles.kopfZelle, borderColor: d.heute ? C.gold : C.border }}>
                     <span style={{ fontWeight: 700 }}>{d.wt}</span>
-                    <span style={{ color: C.textDim, fontSize: 11 }}>{d.label}</span>
+                    <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}>{d.label}</span>
                   </div>
                 ))}
               </div>
@@ -366,9 +366,9 @@ export default function DispoPage() {
                 return (
                 <div key={m.id} style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 6, marginBottom: 6 }}>
                   <div style={styles.nameZelle}>
-                    <span style={{ fontWeight: 700, fontSize: 13.5 }}>{m.vorname} {m.nachname}</span>
-                    {m.position && <span style={{ color: C.textDim, fontSize: 11 }}>{m.position}</span>}
-                    <span style={{ color: C.textDim, fontSize: 10.5, marginTop: 2 }}>Woche: {fmtH(wochenSumme)}h · Ziel {fmtH(tagesziel)}h/Tag</span>
+                    <span style={{ fontWeight: 700, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>{m.vorname} {m.nachname}</span>
+                    {m.position && <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}>{m.position}</span>}
+                    <span style={{ color: C.textDim, fontSize: 'clamp(10.5px, 0.94vw, 15px)', marginTop: 2 }}>Woche: {fmtH(wochenSumme)}h · Ziel {fmtH(tagesziel)}h/Tag</span>
                   </div>
                   {tagesDaten.map((d) => {
                     const liste = zelleMap.get(`${m.id}__${d.datum}`) ?? [];
@@ -395,7 +395,7 @@ export default function DispoPage() {
                               style={{ ...styles.einsatzKachel, borderColor: si.farbe, opacity: abg ? 0.5 : 1, textDecoration: abg ? 'line-through' : 'none' }}
                               title={`${e.titel ?? 'Einsatz'} · ${b ? uhr(b) : ''} · ${si.label}`}>
                               <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}</span>
-                              <span style={{ fontSize: 10.5, color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.titel ?? 'Einsatz'}</span>
+                              <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.titel ?? 'Einsatz'}</span>
                             </button>
                           );
                         })}
@@ -492,45 +492,45 @@ function Feld({ label, children, voll }: { label: string; children: React.ReactN
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 10px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
-  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
-  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit' },
+  primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' },
+  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', fontFamily: 'inherit' },
 
   unzuCard: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 14, padding: 14, marginBottom: 14 },
   unzuKopf: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 },
-  unzuLeer: { color: C.textDim, fontSize: 13 },
+  unzuLeer: { color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' },
   unzuListe: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   chip: { background: C.navy, color: C.text, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 140 },
 
   boardCard: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 },
-  eckZelle: { color: C.textDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', paddingLeft: 4 },
+  eckZelle: { color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', paddingLeft: 4 },
   kopfZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '6px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
   nameZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center' },
   tagZelle: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: 6, minHeight: 66, display: 'flex', flexDirection: 'column', gap: 5 },
-  ampelZeile: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, padding: '1px 2px 2px' },
+  ampelZeile: { display: 'flex', alignItems: 'center', gap: 5, fontSize: 'clamp(10.5px, 0.94vw, 15px)', padding: '1px 2px 2px' },
   ampelPunkt: { width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0 },
-  einsatzKachel: { background: 'rgba(201,168,76,0.10)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '5px 7px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
-  plusBtn: { background: 'transparent', color: C.textDim, border: `1px dashed ${C.border}`, borderRadius: 8, padding: '3px 0', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 },
+  einsatzKachel: { background: 'rgba(201,168,76,0.10)', color: C.text, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '5px 7px', fontSize: 'clamp(12px, 1.06vw, 17px)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' },
+  plusBtn: { background: 'transparent', color: C.textDim, border: `1px dashed ${C.border}`, borderRadius: 8, padding: '3px 0', fontSize: 'clamp(15px, 1.31vw, 21px)', cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 },
   punkt: { width: 10, height: 10, borderRadius: 3, background: 'transparent', borderStyle: 'solid', borderWidth: 1, display: 'inline-block' },
-  legende: { marginTop: 14, fontSize: 12, color: C.textDim },
+  legende: { marginTop: 14, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
-  ok: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
+  ok: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 580, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 16px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 16px', color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 14, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20, flexWrap: 'wrap' },
   rechnungBox: { marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 },
-  rechnungBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
-  rechnungOk: { display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', color: C.green, fontSize: 13.5 },
+  rechnungBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '13px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  rechnungOk: { display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
   rechnungLink: { color: C.cyan, fontWeight: 700, textDecoration: 'none' },
 };

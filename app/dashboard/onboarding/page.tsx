@@ -188,10 +188,10 @@ Deine Aufgaben:
       boxShadow: '0 8px 48px rgba(0,0,0,0.5)', overflow: 'hidden',
     }}>
       <div style={{ padding: '16px 20px', background: 'rgba(201,168,76,0.1)', borderBottom: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>⚡</div>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>⚡</div>
         <div>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#FFFFFF' }}>ARGONAUT Assistent</p>
-          <p style={{ margin: 0, fontSize: '11px', color: '#22c55e' }}>● Online — antwortet in Sekunden</p>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: '#FFFFFF' }}>ARGONAUT Assistent</p>
+          <p style={{ margin: 0, fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#22c55e' }}>● Online — antwortet in Sekunden</p>
         </div>
       </div>
 
@@ -202,7 +202,7 @@ Deine Aufgaben:
               maxWidth: '85%', padding: '10px 14px', borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
               background: msg.role === 'user' ? '#C9A84C' : 'rgba(255,255,255,0.06)',
               color: msg.role === 'user' ? '#0A1628' : '#FFFFFF',
-              fontSize: '13px', lineHeight: 1.5, fontWeight: msg.role === 'user' ? 600 : 400,
+              fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5, fontWeight: msg.role === 'user' ? 600 : 400,
             }}>
               {msg.loading ? (
                 <span style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -225,12 +225,12 @@ Deine Aufgaben:
           placeholder="z.B. Wo finde ich meinen API-Key?"
           style={{
             flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '8px', padding: '10px 14px', color: '#FFFFFF', fontSize: '13px', outline: 'none',
+            borderRadius: '8px', padding: '10px 14px', color: '#FFFFFF', fontSize: 'clamp(13px, 1.13vw, 18px)', outline: 'none',
           }}
         />
         <button onClick={sendMessage} disabled={loading} style={{
           background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '8px',
-          padding: '10px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '16px',
+          padding: '10px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)',
         }}>→</button>
       </div>
     </div>
@@ -324,10 +324,10 @@ export default function OnboardingPage() {
       {/* HEADER */}
       <header style={{ borderBottom: '1px solid rgba(201,168,76,0.15)', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'rgba(10,22,40,0.97)', backdropFilter: 'blur(12px)', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), sans-serif' }}>ARGONAUT</span>
-          <span style={{ fontSize: '11px', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Setup</span>
+          <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), sans-serif' }}>ARGONAUT</span>
+          <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Setup</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)' }}>
           <span>Schritt {step} von {totalSteps}</span>
         </div>
       </header>
@@ -343,9 +343,9 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div>
             <div style={{ marginBottom: '48px' }}>
-              <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 1 von 5</p>
+              <p style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 1 von 5</p>
               <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Herzlich willkommen! 👋</h1>
-              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.7 }}>
                 Wir richten jetzt gemeinsam Ihr ARGONAUT System ein. Das dauert ca. <strong style={{ color: '#C9A84C' }}>10–15 Minuten</strong>. Sie können jederzeit pausieren — alles wird automatisch gespeichert.
               </p>
             </div>
@@ -357,7 +357,7 @@ export default function OnboardingPage() {
                 { label: 'Website (optional)', value: website, setter: setWebsite, placeholder: 'z.B. www.mueller-gmbh.de', required: false },
               ].map(field => (
                 <div key={field.label}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                  <label style={{ display: 'block', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px', letterSpacing: '0.05em' }}>
                     {field.label} {field.required && <span style={{ color: '#C9A84C' }}>*</span>}
                   </label>
                   <input
@@ -367,14 +367,14 @@ export default function OnboardingPage() {
                     style={{
                       width: '100%', padding: '14px 16px', background: 'rgba(255,255,255,0.05)',
                       border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
-                      color: '#FFFFFF', fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                      color: '#FFFFFF', fontSize: 'clamp(15px, 1.31vw, 21px)', outline: 'none', boxSizing: 'border-box',
                     }}
                   />
                 </div>
               ))}
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
                   Branche <span style={{ color: '#C9A84C' }}>*</span>
                 </label>
                 <select
@@ -383,7 +383,7 @@ export default function OnboardingPage() {
                   style={{
                     width: '100%', padding: '14px 16px', background: '#0D1F3C',
                     border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
-                    color: branche ? '#FFFFFF' : 'rgba(255,255,255,0.35)', fontSize: '15px', outline: 'none', boxSizing: 'border-box',
+                    color: branche ? '#FFFFFF' : 'rgba(255,255,255,0.35)', fontSize: 'clamp(15px, 1.31vw, 21px)', outline: 'none', boxSizing: 'border-box',
                   }}
                 >
                   <option value="">Bitte wählen...</option>
@@ -393,14 +393,14 @@ export default function OnboardingPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Anzahl Standorte</label>
-                  <select value={standorte} onChange={e => setStandorte(e.target.value)} style={{ width: '100%', padding: '14px 16px', background: '#0D1F3C', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#FFFFFF', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}>
+                  <label style={{ display: 'block', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Anzahl Standorte</label>
+                  <select value={standorte} onChange={e => setStandorte(e.target.value)} style={{ width: '100%', padding: '14px 16px', background: '#0D1F3C', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#FFFFFF', fontSize: 'clamp(15px, 1.31vw, 21px)', outline: 'none', boxSizing: 'border-box' }}>
                     {['1','2','3','4','5','6-10','11-20','20+'].map(n => <option key={n} value={n} style={{ background: '#0D1F3C' }}>{n}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Mitarbeiter</label>
-                  <select value={mitarbeiter} onChange={e => setMitarbeiter(e.target.value)} style={{ width: '100%', padding: '14px 16px', background: '#0D1F3C', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#FFFFFF', fontSize: '15px', outline: 'none', boxSizing: 'border-box' }}>
+                  <label style={{ display: 'block', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>Mitarbeiter</label>
+                  <select value={mitarbeiter} onChange={e => setMitarbeiter(e.target.value)} style={{ width: '100%', padding: '14px 16px', background: '#0D1F3C', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#FFFFFF', fontSize: 'clamp(15px, 1.31vw, 21px)', outline: 'none', boxSizing: 'border-box' }}>
                     <option value="" style={{ background: '#0D1F3C' }}>Bitte wählen</option>
                     {['1–5','6–10','11–25','26–50','51–100','100+'].map(n => <option key={n} value={n} style={{ background: '#0D1F3C' }}>{n}</option>)}
                   </select>
@@ -414,7 +414,7 @@ export default function OnboardingPage() {
               style={{
                 marginTop: '40px', width: '100%', padding: '18px', background: firmenname && branche ? '#C9A84C' : 'rgba(255,255,255,0.08)',
                 color: firmenname && branche ? '#0A1628' : 'rgba(255,255,255,0.3)',
-                border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: firmenname && branche ? 'pointer' : 'not-allowed',
+                border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: firmenname && branche ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s', letterSpacing: '0.05em',
               }}
             >
@@ -427,9 +427,9 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div>
             <div style={{ marginBottom: '48px' }}>
-              <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 2 von 5</p>
+              <p style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 2 von 5</p>
               <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Wie digital sind Sie heute?</h1>
-              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.7 }}>
                 Keine richtige oder falsche Antwort — wir richten uns nach Ihrem aktuellen Stand.
               </p>
             </div>
@@ -447,14 +447,14 @@ export default function OnboardingPage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ fontSize: '32px' }}>{grad.emoji}</span>
+                    <span style={{ fontSize: 'clamp(32px, 2.81vw, 45px)' }}>{grad.emoji}</span>
                     <div>
-                      <p style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800, color: digitalisierung === grad.id ? grad.farbe : '#FFFFFF' }}>{grad.titel}</p>
-                      <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{grad.beschreibung}</p>
+                      <p style={{ margin: '0 0 6px', fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, color: digitalisierung === grad.id ? grad.farbe : '#FFFFFF' }}>{grad.titel}</p>
+                      <p style={{ margin: 0, fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{grad.beschreibung}</p>
                     </div>
                     {digitalisierung === grad.id && (
                       <div style={{ marginLeft: 'auto', width: '24px', height: '24px', borderRadius: '50%', background: grad.farbe, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>✓</span>
+                        <span style={{ color: '#fff', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700 }}>✓</span>
                       </div>
                     )}
                   </div>
@@ -463,11 +463,11 @@ export default function OnboardingPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setStep(1)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: '15px' }}>← Zurück</button>
+              <button onClick={() => setStep(1)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>← Zurück</button>
               <button
                 onClick={() => digitalisierung && setStep(3)}
                 disabled={!digitalisierung}
-                style={{ flex: 1, padding: '16px', background: digitalisierung ? '#C9A84C' : 'rgba(255,255,255,0.08)', color: digitalisierung ? '#0A1628' : 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: digitalisierung ? 'pointer' : 'not-allowed' }}
+                style={{ flex: 1, padding: '16px', background: digitalisierung ? '#C9A84C' : 'rgba(255,255,255,0.08)', color: digitalisierung ? '#0A1628' : 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: digitalisierung ? 'pointer' : 'not-allowed' }}
               >
                 Weiter → Ihre Tools
               </button>
@@ -479,9 +479,9 @@ export default function OnboardingPage() {
         {step === 3 && (
           <div>
             <div style={{ marginBottom: '40px' }}>
-              <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 3 von 5</p>
+              <p style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 3 von 5</p>
               <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Welche Tools nutzen Sie?</h1>
-              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.7 }}>
                 Klicken Sie alles an, was Sie kennen oder nutzen. Kein Tool dabei? Kein Problem — tragen Sie es einfach ein.
               </p>
             </div>
@@ -489,7 +489,7 @@ export default function OnboardingPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginBottom: '40px' }}>
               {Object.entries(TOOL_KATEGORIEN).map(([key, kat]) => (
                 <div key={key}>
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>{kat.label}</p>
+                  <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>{kat.label}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {kat.tools.map(tool => {
                       const isSelected = (selectedTools[key] || []).includes(tool)
@@ -503,7 +503,7 @@ export default function OnboardingPage() {
                             border: isSelected ? '2px solid #C9A84C' : '1px solid rgba(255,255,255,0.12)',
                             background: isSelected ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.03)',
                             color: isSelected ? '#C9A84C' : isAnderes ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.7)',
-                            cursor: 'pointer', fontSize: '13px', fontWeight: isSelected ? 700 : 400,
+                            cursor: 'pointer', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: isSelected ? 700 : 400,
                             transition: 'all 0.15s',
                           }}
                         >
@@ -520,7 +520,7 @@ export default function OnboardingPage() {
                       style={{
                         marginTop: '10px', width: '100%', padding: '12px 16px',
                         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.3)',
-                        borderRadius: '8px', color: '#FFFFFF', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                        borderRadius: '8px', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', outline: 'none', boxSizing: 'border-box',
                       }}
                     />
                   )}
@@ -530,13 +530,13 @@ export default function OnboardingPage() {
 
             {/* Excel Upload Hinweis */}
             <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '12px', padding: '20px 24px', marginBottom: '32px' }}>
-              <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: '14px', color: '#C9A84C' }}>📊 Sie arbeiten mit Excel oder CSV-Dateien?</p>
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>Kein Problem! ARGONAUT kann Excel und CSV-Dateien direkt verarbeiten. Sie können Ihre Dateien nach dem Setup hochladen — unsere Agenten lesen, analysieren und verarbeiten diese automatisch.</p>
+              <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: '#C9A84C' }}>📊 Sie arbeiten mit Excel oder CSV-Dateien?</p>
+              <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>Kein Problem! ARGONAUT kann Excel und CSV-Dateien direkt verarbeiten. Sie können Ihre Dateien nach dem Setup hochladen — unsere Agenten lesen, analysieren und verarbeiten diese automatisch.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setStep(2)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: '15px' }}>← Zurück</button>
-              <button onClick={() => setStep(4)} style={{ flex: 1, padding: '16px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }}>
+              <button onClick={() => setStep(2)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>← Zurück</button>
+              <button onClick={() => setStep(4)} style={{ flex: 1, padding: '16px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: 'pointer' }}>
                 Weiter → Zugangsdaten
               </button>
             </div>
@@ -547,36 +547,36 @@ export default function OnboardingPage() {
         {step === 4 && (
           <div>
             <div style={{ marginBottom: '40px' }}>
-              <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 4 von 5</p>
+              <p style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 4 von 5</p>
               <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Zugangsdaten (optional)</h1>
-              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1.7 }}>
                 Alle Felder sind <strong style={{ color: '#C9A84C' }}>freiwillig</strong>. Was Sie nicht ausfüllen, vervollständigen wir gemeinsam mit Ihnen nach dem Go-Live. Alle Daten werden verschlüsselt gespeichert.
               </p>
             </div>
 
             <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '32px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '20px', flexShrink: 0 }}>🔒</span>
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+              <span style={{ fontSize: 'clamp(20px, 1.75vw, 28px)', flexShrink: 0 }}>🔒</span>
+              <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
                 Ihre Daten werden verschlüsselt übertragen und gespeichert. Kein Mitarbeiter hat Zugriff auf Ihre API-Keys — nur Ihr ARGONAUT System verwendet diese zur Automatisierung.
               </p>
             </div>
 
             {/* Hilfehinweis für Chat */}
             <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '32px' }}>
-              <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: '14px', color: '#C9A84C' }}>⚡ Wissen Sie nicht wo Ihr API-Key ist?</p>
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Fragen Sie einfach den <strong style={{ color: '#C9A84C' }}>ARGONAUT Assistenten</strong> unten rechts — er zeigt Ihnen in Sekunden wo Sie ihn finden.</p>
+              <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: '#C9A84C' }}>⚡ Wissen Sie nicht wo Ihr API-Key ist?</p>
+              <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>Fragen Sie einfach den <strong style={{ color: '#C9A84C' }}>ARGONAUT Assistenten</strong> unten rechts — er zeigt Ihnen in Sekunden wo Sie ihn finden.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
               {getSelectedToolsList().length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.4)', fontSize: '15px' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.4)', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
                   <p style={{ marginBottom: '8px' }}>Sie haben in Schritt 3 keine Tools ausgewählt.</p>
                   <p>Kein Problem — wir klären das nach dem Go-Live gemeinsam.</p>
                 </div>
               ) : (
                 getSelectedToolsList().map(tool => (
                   <div key={tool} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px' }}>
-                    <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: '15px', color: '#FFFFFF' }}>{tool}</p>
+                    <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', color: '#FFFFFF' }}>{tool}</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <input
                         placeholder="API-Key (optional) — oder leer lassen"
@@ -588,7 +588,7 @@ export default function OnboardingPage() {
                             return [...prev, { category: '', tool, apiKey: val }]
                           })
                         }}
-                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#FFFFFF', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', outline: 'none', boxSizing: 'border-box' }}
                       />
                       <input
                         placeholder="Anmerkungen (z.B. Login-URL, Benutzername) — optional"
@@ -600,7 +600,7 @@ export default function OnboardingPage() {
                             return [...prev, { category: '', tool, notes: val }]
                           })
                         }}
-                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#FFFFFF', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '12px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', outline: 'none', boxSizing: 'border-box' }}
                       />
                     </div>
                   </div>
@@ -609,8 +609,8 @@ export default function OnboardingPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setStep(3)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: '15px' }}>← Zurück</button>
-              <button onClick={saveAndFinish} disabled={saving} style={{ flex: 1, padding: '16px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }}>
+              <button onClick={() => setStep(3)} style={{ padding: '16px 28px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontWeight: 600, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>← Zurück</button>
+              <button onClick={saveAndFinish} disabled={saving} style={{ flex: 1, padding: '16px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: 'pointer' }}>
                 {saving ? 'Wird gespeichert...' : 'Jetzt Go-Live starten 🚀'}
               </button>
             </div>
@@ -620,12 +620,12 @@ export default function OnboardingPage() {
         {/* ── SCHRITT 5: FERTIG ── */}
         {step === 5 && (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: '80px', marginBottom: '32px' }}>🎉</div>
-            <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Setup abgeschlossen</p>
+            <div style={{ fontSize: 'clamp(80px, 7vw, 112px)', marginBottom: '32px' }}>🎉</div>
+            <p style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Setup abgeschlossen</p>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, marginBottom: '20px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
               Ihr ARGONAUT System<br />wird eingerichtet!
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '17px', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 48px' }}>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(17px, 1.5vw, 24px)', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 48px' }}>
               Wir haben alles erhalten. Innerhalb von <strong style={{ color: '#C9A84C' }}>24 Stunden</strong> melden wir uns für Erstgespräch + Live-Demo. Sie erhalten eine E-Mail sobald alles bereit ist.
             </p>
 
@@ -637,15 +637,15 @@ export default function OnboardingPage() {
                 { icon: '⏳', text: 'Erstgespräch + Demo: innerhalb 24h' },
               ].map((item, i) => (
                 <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{item.text}</span>
+                  <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)' }}>{item.icon}</span>
+                  <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.7)' }}>{item.text}</span>
                 </div>
               ))}
             </div>
 
             <button
               onClick={() => { window.location.href = '/dashboard' }}
-              style={{ padding: '18px 48px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', letterSpacing: '0.05em' }}
+              style={{ padding: '18px 48px', background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)', cursor: 'pointer', letterSpacing: '0.05em' }}
             >
               Zum Dashboard →
             </button>
@@ -659,7 +659,7 @@ export default function OnboardingPage() {
         <>
           {chatOpen ? (
             <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 999 }}>
-              <button onClick={() => setChatOpen(false)} style={{ position: 'absolute', top: '-12px', right: '-12px', zIndex: 1000, width: '28px', height: '28px', borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '14px' }}>×</button>
+              <button onClick={() => setChatOpen(false)} style={{ position: 'absolute', top: '-12px', right: '-12px', zIndex: 1000, width: '28px', height: '28px', borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>×</button>
               <OnboardingChat />
             </div>
           ) : (
@@ -668,7 +668,7 @@ export default function OnboardingPage() {
               style={{
                 position: 'fixed', bottom: '24px', right: '24px', zIndex: 999,
                 background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: '999px',
-                padding: '14px 24px', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                padding: '14px 24px', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer',
                 boxShadow: '0 4px 24px rgba(201,168,76,0.4)', display: 'flex', alignItems: 'center', gap: '8px',
               }}
             >

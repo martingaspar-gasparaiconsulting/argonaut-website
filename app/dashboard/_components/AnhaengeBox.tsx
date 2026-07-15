@@ -169,11 +169,11 @@ export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
           {liste.map((a) => (
             <div key={a.id} style={styles.karte}>
               <button onClick={() => oeffnen(a)} style={styles.vorschau} title="Öffnen">
-                {istBild(a.mime_typ) ? <span style={{ fontSize: 22 }}>🖼️</span> : <span style={{ fontSize: 22 }}>📄</span>}
+                {istBild(a.mime_typ) ? <span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>🖼️</span> : <span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>📄</span>}
               </button>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.dateiname}</div>
-                <div style={{ fontSize: 11, color: C.textDim }}>{a.kategorie}{a.groesse_bytes ? ` · ${bytesText(a.groesse_bytes)}` : ''}</div>
+                <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.dateiname}</div>
+                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>{a.kategorie}{a.groesse_bytes ? ` · ${bytesText(a.groesse_bytes)}` : ''}</div>
               </div>
               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                 <button onClick={() => oeffnen(a)} style={styles.miniBtn}>Öffnen</button>
@@ -190,17 +190,17 @@ export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
 const styles: Record<string, CSSProperties> = {
   box: { marginTop: 4 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
-  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
-  select: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 13, fontFamily: 'inherit' },
-  uploadBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  select: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  uploadBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 },
   karte: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px' },
   vorschau: { width: 40, height: 40, borderRadius: 8, background: C.navy2, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 },
 
-  miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 7, padding: '5px 9px', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' },
-  miniBtnDanger: { background: 'transparent', color: C.danger, border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 7, padding: '5px 9px', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' },
+  miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 7, padding: '5px 9px', fontSize: 'clamp(12px, 1.06vw, 17px)', fontFamily: 'inherit', cursor: 'pointer' },
+  miniBtnDanger: { background: 'transparent', color: C.danger, border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 7, padding: '5px 9px', fontSize: 'clamp(12px, 1.06vw, 17px)', fontFamily: 'inherit', cursor: 'pointer' },
 
-  hint: { color: C.textDim, fontSize: 13, padding: '8px 0' },
-  err: { color: C.danger, fontSize: 13, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 8, padding: '9px 12px', marginBottom: 10 },
+  hint: { color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', padding: '8px 0' },
+  err: { color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 8, padding: '9px 12px', marginBottom: 10 },
 };

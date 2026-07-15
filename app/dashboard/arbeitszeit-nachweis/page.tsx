@@ -174,7 +174,7 @@ export default function ArbeitszeitNachweisPage() {
 
       {/* Betriebs-Toggles */}
       <div style={styles.toggles}>
-        <span style={{ fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginRight: 4 }}>Betrieb:</span>
+        <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginRight: 4 }}>Betrieb:</span>
         <Toggle an={sonntagErlaubt} setAn={setSonntagErlaubt} label="Sonntagsarbeit erlaubt (z. B. Gastro/Tankstelle)" />
         <Toggle an={ruhezeit10} setAn={setRuhezeit10} label="Ruhezeit 10 h (erlaubte Branchen)" />
         <Toggle an={warn8h} setAn={setWarn8h} label="Hinweis über 8 h" />
@@ -238,8 +238,8 @@ function TagZeile({ t, spanne }: { t: TagesNachweis; spanne: string }) {
       <tr>
         <td style={styles.td}>
           <span style={{ fontWeight: 600 }}>{formatTag(t.datum)}</span>
-          <span style={{ color: C.textDim, marginLeft: 6, fontSize: 12 }}>{t.wochentag.slice(0, 2)}</span>
-          {t.offen && <span style={{ color: C.green, fontSize: 11, marginLeft: 6 }}>● läuft</span>}
+          <span style={{ color: C.textDim, marginLeft: 6, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{t.wochentag.slice(0, 2)}</span>
+          {t.offen && <span style={{ color: C.green, fontSize: 'clamp(11px, 0.94vw, 15px)', marginLeft: 6 }}>● läuft</span>}
         </td>
         <td style={styles.td}>{spanne}</td>
         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{stundenText(t.arbeitsminuten)}</td>
@@ -253,7 +253,7 @@ function TagZeile({ t, spanne }: { t: TagesNachweis; spanne: string }) {
           <td colSpan={5} style={{ ...styles.td, paddingTop: 0 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {t.verstoesse.map((v, i) => (
-                <span key={i} style={{ fontSize: 12, color: ampelFarbe(v.schwere) }}>
+                <span key={i} style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: ampelFarbe(v.schwere) }}>
                   ▸ {v.text}
                 </span>
               ))}
@@ -270,7 +270,7 @@ function Toggle({ an, setAn, label }: { an: boolean; setAn: (v: boolean) => void
     <button onClick={() => setAn(!an)} style={{
       display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 999,
       border: `1px solid ${an ? C.cyan : C.border}`, background: an ? 'rgba(0,229,255,0.1)' : 'transparent',
-      color: an ? C.text : C.textDim, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+      color: an ? C.text : C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit',
     }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', background: an ? C.cyan : C.textDim }} />
       {label}
@@ -297,30 +297,30 @@ function formatTag(iso: string): string {
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 640, lineHeight: 1.5 },
 
   controls: { display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 14 },
-  lbl: { display: 'block', fontSize: 12, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit', minWidth: 220 },
-  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 16, fontFamily: 'inherit' },
-  pdfBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', minWidth: 220 },
+  navBtn: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 'clamp(16px, 1.38vw, 22px)', fontFamily: 'inherit' },
+  pdfBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit' },
 
   toggles: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 },
 
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
-  summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800 },
+  summeLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 520 },
-  th: { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
-  td: { padding: '9px 10px', fontSize: 14, borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
+  th: { textAlign: 'left', padding: '8px 10px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '9px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'top' },
 
-  hint: { color: C.textDim, fontSize: 14, padding: '14px 0' },
-  err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
-  rechtHinweis: { marginTop: 16, fontSize: 12, color: C.textDim, lineHeight: 1.5, maxWidth: 720 },
+  hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
+  err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
+  rechtHinweis: { marginTop: 16, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, maxWidth: 720 },
 };

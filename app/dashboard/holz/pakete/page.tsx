@@ -336,13 +336,13 @@ export default function PaketePage() {
                 <button key={p.id} onClick={() => oeffne(p)} style={{ ...styles.listItem, opacity: p.aktiv ? 1 : 0.55 }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{b ? paketKurz(p, b) : p.bezeichnung}</div>
-                    <div style={{ fontSize: 12, color: C.textDim }}>
+                    <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                       {inhalt.length} Position(en)
                       {b?.gemischteSteuer ? ' · zwei Steuersätze' : ''}
                       {p.pflichtangaben ? ' · Pflichtangaben hinterlegt' : ''}
                     </div>
                   </div>
-                  <span style={{ fontSize: 12, color: p.aktiv ? C.green : C.textDim, flexShrink: 0 }}>
+                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: p.aktiv ? C.green : C.textDim, flexShrink: 0 }}>
                     {p.aktiv ? 'im Verkauf' : 'inaktiv'}
                   </span>
                 </button>
@@ -380,7 +380,7 @@ export default function PaketePage() {
               </div>
               <label style={{ ...styles.checkZeile, marginTop: 12 }}>
                 <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} />
-                <span style={{ fontSize: 13.5 }}>{aktiv ? 'Wird angeboten' : 'Nicht im Verkauf'}</span>
+                <span style={{ fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>{aktiv ? 'Wird angeboten' : 'Nicht im Verkauf'}</span>
               </label>
             </div>
 
@@ -390,7 +390,7 @@ export default function PaketePage() {
                 <span style={styles.sektionTitel}>2 · Was ist drin?</span>
                 <button onClick={() => setPosten((p) => [...p, leerePos()])} style={styles.miniBtn}>+ Zeile</button>
               </div>
-              <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
                 Der <strong>Einzelpreis</strong> ist der Preis ohne Paket. Er bestimmt, welchen Anteil
                 am Festpreis die Zeile bekommt.
               </div>
@@ -430,7 +430,7 @@ export default function PaketePage() {
                       onChange={(e) => setPosten((l) => l.map((y, j) => (j === i ? { ...y, preis: e.target.value } : y)))} />
                     <input style={{ ...styles.posInput, flex: '0 1 62px', textAlign: 'right' }} value={z.steuer}
                       onChange={(e) => setPosten((l) => l.map((y, j) => (j === i ? { ...y, steuer: e.target.value } : y)))} />
-                    <span style={{ fontSize: 11.5, color: C.textDim, alignSelf: 'center' }}>% USt.</span>
+                    <span style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, alignSelf: 'center' }}>% USt.</span>
                   </div>
                 </div>
               ))}
@@ -443,7 +443,7 @@ export default function PaketePage() {
             {/* --- Pflichtangaben --- */}
             <div style={styles.sektion}>
               <span style={styles.sektionTitel}>3 · Pflichtangaben</span>
-              <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 10px', lineHeight: 1.5 }}>
                 Enthält das Paket Lebensmittel, Gefahrgut oder altersbeschränkte Ware? Dann müssen
                 Zutaten, Allergene und Haltbarkeit <strong>vor der Bestellung</strong> sichtbar sein.
               </div>
@@ -456,7 +456,7 @@ export default function PaketePage() {
             {befund && befund.ok && (
               <div style={styles.sektion}>
                 <span style={styles.sektionTitel}>4 · So wird abgerechnet</span>
-                <div style={{ fontSize: 12, color: C.textDim, margin: '6px 0 12px' }}>
+                <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, margin: '6px 0 12px' }}>
                   Der Festpreis wird nach dem Verhältnis der Einzelpreise verteilt.
                 </div>
 
@@ -466,7 +466,7 @@ export default function PaketePage() {
                       <tr key={i}>
                         <td style={styles.td}>
                           {p.bezeichnung}
-                          <div style={{ fontSize: 11.5, color: C.textDim }}>
+                          <div style={{ fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim }}>
                             {formatZahl(p.menge, 2)} {p.einheit} × {eur(p.einzelpreis_netto)} · {p.steuersatz_prozent} % USt.
                           </div>
                         </td>
@@ -483,15 +483,15 @@ export default function PaketePage() {
                     </tr>
                     {befund.summe.gruppen.map((g) => (
                       <tr key={g.steuersatzProzent}>
-                        <td style={{ ...styles.td, color: C.textDim, fontSize: 12.5 }}>
+                        <td style={{ ...styles.td, color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
                           zzgl. {formatZahl(g.steuersatzProzent, 0)} % USt. auf {eur(g.netto)}
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right', color: C.textDim, fontSize: 12.5 }}>{eur(g.steuerBetrag)}</td>
+                        <td style={{ ...styles.td, textAlign: 'right', color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{eur(g.steuerBetrag)}</td>
                       </tr>
                     ))}
                     <tr>
-                      <td style={{ ...styles.td, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 15 }}>Gesamt brutto</td>
-                      <td style={{ ...styles.td, textAlign: 'right', fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 15, color: C.gold }}>
+                      <td style={{ ...styles.td, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>Gesamt brutto</td>
+                      <td style={{ ...styles.td, textAlign: 'right', fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 'clamp(15px, 1.31vw, 21px)', color: C.gold }}>
                         {eur(befund.summe.brutto)}
                       </td>
                     </tr>
@@ -553,45 +553,45 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 620, lineHeight: 1.5 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 800, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 620, lineHeight: 1.5 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 18 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
-  zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', color: C.text },
 
   sektion: { marginTop: 16, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 13, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   posBlock: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, marginBottom: 8 },
-  posInput: { boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 12.5, fontFamily: 'inherit' },
-  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' },
+  posInput: { boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 8px', fontSize: 'clamp(12.5px, 1.13vw, 18px)', fontFamily: 'inherit' },
+  xBtn: { background: 'transparent', color: C.textDim, border: 'none', cursor: 'pointer', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
 
   tabelle: { width: '100%', borderCollapse: 'collapse' },
-  td: { padding: '6px 4px', fontSize: 13, verticalAlign: 'top' },
+  td: { padding: '6px 4px', fontSize: 'clamp(13px, 1.13vw, 18px)', verticalAlign: 'top' },
 
-  lbl: { display: 'block', fontSize: 11.5, color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
-  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 13.5, fontFamily: 'inherit' },
+  lbl: { display: 'block', fontSize: 'clamp(11.5px, 1vw, 16px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
+  input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit' },
   checkZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', cursor: 'pointer' },
 
-  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 15px', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
-  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '5px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
+  goldBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 15px', fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontFamily: 'inherit', cursor: 'pointer', textDecoration: 'none' },
+  miniBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid rgba(0,229,255,0.3)`, borderRadius: 8, padding: '5px 11px', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
 
-  hint: { color: C.textDim, fontSize: 13.5, padding: '12px 0', lineHeight: 1.6 },
-  err: { color: C.danger, fontSize: 13, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 12, lineHeight: 1.5 },
-  okBox: { color: C.green, fontSize: 13.5, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 16 },
-  infoBox: { marginTop: 12, padding: '11px 13px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 12.5, color: C.text, lineHeight: 1.6 },
-  warnBox: { marginTop: 12, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 12.5, color: C.text, lineHeight: 1.6 },
+  hint: { color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', padding: '12px 0', lineHeight: 1.6 },
+  err: { color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '11px 13px', marginTop: 12, lineHeight: 1.5 },
+  okBox: { color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '11px 13px', marginBottom: 16 },
+  infoBox: { marginTop: 12, padding: '11px 13px', background: 'rgba(0,229,255,0.07)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 10, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
+  warnBox: { marginTop: 12, padding: '11px 13px', background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.3)`, borderRadius: 10, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.text, lineHeight: 1.6 },
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 700, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, color: C.text, margin: 0 },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, color: C.text, margin: 0 },
   modalAktionen: { display: 'flex', gap: 8, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
 };

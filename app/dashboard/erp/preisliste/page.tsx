@@ -346,13 +346,13 @@ export default function PreislisteCockpit() {
     border: `1px solid ${C.border}`,
     background: "rgba(255,255,255,0.04)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     boxSizing: "border-box",
   };
   const thStil: React.CSSProperties = {
     textAlign: "left",
     padding: "10px 12px",
-    fontSize: 11,
+    fontSize: 'clamp(11px, 0.94vw, 15px)',
     letterSpacing: 0.5,
     textTransform: "uppercase",
     color: C.textDim,
@@ -361,7 +361,7 @@ export default function PreislisteCockpit() {
   };
   const tdStil: React.CSSProperties = {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     color: "#fff",
     borderBottom: `1px solid ${C.border}`,
     verticalAlign: "middle",
@@ -380,7 +380,7 @@ export default function PreislisteCockpit() {
     border: `1px solid ${C.cyan}`,
     background: "rgba(0,229,255,0.06)",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 'clamp(14px, 1.25vw, 20px)',
     textAlign: "right",
     boxSizing: "border-box",
   };
@@ -452,10 +452,10 @@ export default function PreislisteCockpit() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+          <h1 style={{ margin: 0, fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 800 }}>
             🏷️ Preisliste
           </h1>
-          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 14 }}>
+          <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
             Deine lebende Preistabelle – Einkauf, Verkauf und Marge auf einen Blick.
             Preise direkt in der Zelle anklicken und ändern.
           </p>
@@ -468,7 +468,7 @@ export default function PreislisteCockpit() {
             background: C.gold,
             color: C.navy,
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 'clamp(14px, 1.25vw, 20px)',
             textDecoration: "none",
             whiteSpace: "nowrap",
           }}
@@ -487,20 +487,20 @@ export default function PreislisteCockpit() {
         }}
       >
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Aktive Artikel
           </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4 }}>
             {kpiGesamt}
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Ohne Verkaufspreis
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               marginTop: 4,
               color: kpiOhnePreis > 0 ? C.warn : C.green,
@@ -510,12 +510,12 @@ export default function PreislisteCockpit() {
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Mit Verlust
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: 'clamp(28px, 2.44vw, 39px)',
               fontWeight: 800,
               marginTop: 4,
               color: kpiVerlust > 0 ? C.danger : C.green,
@@ -525,11 +525,11 @@ export default function PreislisteCockpit() {
           </div>
         </div>
         <div style={card}>
-          <div style={{ color: C.textDim, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 600 }}>
             Ø Handelsspanne
           </div>
           <div
-            style={{ fontSize: 28, fontWeight: 800, marginTop: 4, color: C.gold }}
+            style={{ fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800, marginTop: 4, color: C.gold }}
           >
             {kpiSchnitt == null ? "—" : prozent(kpiSchnitt)}
           </div>
@@ -580,7 +580,7 @@ export default function PreislisteCockpit() {
             display: "flex",
             alignItems: "center",
             gap: 8,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             color: C.textDim,
             cursor: "pointer",
             userSelect: "none",
@@ -604,7 +604,7 @@ export default function PreislisteCockpit() {
             background: "rgba(0,229,255,0.08)",
             border: `1px solid ${C.border}`,
             color: C.cyan,
-            fontSize: 13,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
             fontWeight: 600,
           }}
           onClick={() => setHinweis(null)}
@@ -652,7 +652,7 @@ export default function PreislisteCockpit() {
                             border: "none",
                             color: istOffen ? C.cyan : C.textDim,
                             cursor: "pointer",
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.25vw, 20px)',
                             lineHeight: 1,
                             transform: istOffen ? "rotate(90deg)" : "none",
                             transition: "transform 0.15s",
@@ -664,7 +664,7 @@ export default function PreislisteCockpit() {
                       <td style={tdStil}>
                         <div style={{ fontWeight: 600 }}>{a.bezeichnung}</div>
                         {a.artikelnummer && (
-                          <div style={{ fontSize: 12, color: C.textDim }}>
+                          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                             Art.-Nr. {a.artikelnummer}
                           </div>
                         )}
@@ -695,7 +695,7 @@ export default function PreislisteCockpit() {
                           >
                             <div
                               style={{
-                                fontSize: 11,
+                                fontSize: 'clamp(11px, 0.94vw, 15px)',
                                 fontWeight: 700,
                                 letterSpacing: 0.5,
                                 textTransform: "uppercase",
@@ -706,11 +706,11 @@ export default function PreislisteCockpit() {
                               Preis-Verlauf
                             </div>
                             {histLaden.has(a.id) ? (
-                              <div style={{ color: C.textDim, fontSize: 13 }}>
+                              <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                                 Lade Verlauf…
                               </div>
                             ) : hist.length === 0 ? (
-                              <div style={{ color: C.textDim, fontSize: 13 }}>
+                              <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                                 Noch keine Preisänderung protokolliert. Ab jetzt
                                 wird jede Änderung automatisch festgehalten.
                               </div>
@@ -727,7 +727,7 @@ export default function PreislisteCockpit() {
                                       <td
                                         style={{
                                           padding: "6px 8px",
-                                          fontSize: 12.5,
+                                          fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                                           color: C.textDim,
                                           whiteSpace: "nowrap",
                                         }}
@@ -737,7 +737,7 @@ export default function PreislisteCockpit() {
                                       <td
                                         style={{
                                           padding: "6px 8px",
-                                          fontSize: 12.5,
+                                          fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                                           color: "#fff",
                                         }}
                                       >
@@ -748,7 +748,7 @@ export default function PreislisteCockpit() {
                                       <td
                                         style={{
                                           padding: "6px 8px",
-                                          fontSize: 12.5,
+                                          fontSize: 'clamp(12.5px, 1.13vw, 18px)',
                                           color: C.textDim,
                                           textAlign: "right",
                                           whiteSpace: "nowrap",
@@ -783,7 +783,7 @@ export default function PreislisteCockpit() {
         )}
       </div>
 
-      <p style={{ marginTop: 14, color: C.textDim, fontSize: 12.5 }}>
+      <p style={{ marginTop: 14, color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
         Tipp: Preis anklicken, Wert eintippen, <b>Enter</b> zum Speichern oder{" "}
         <b>Esc</b> zum Abbrechen. Leeres Feld = kein Preis. Die Handelsspanne wird
         auf den Verkaufspreis bezogen berechnet.

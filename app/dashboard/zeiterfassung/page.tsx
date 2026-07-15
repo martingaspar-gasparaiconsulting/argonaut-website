@@ -186,8 +186,8 @@ export default function ZeiterfassungPage() {
     <div style={styles.page}>
       <div style={styles.topbar}>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span style={{ fontWeight: 900, letterSpacing: '0.15em', fontSize: 16 }}>ARGONAUT</span>
-          <span style={{ fontSize: 10, color: C.gold, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>Zeiterfassung</span>
+          <span style={{ fontWeight: 900, letterSpacing: '0.15em', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>ARGONAUT</span>
+          <span style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.gold, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>Zeiterfassung</span>
         </div>
         <button style={styles.ghostBtn} onClick={abmelden}>Abmelden</button>
       </div>
@@ -197,7 +197,7 @@ export default function ZeiterfassungPage() {
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>
-            <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil für Zeiterfassung</div>
+            <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil für Zeiterfassung</div>
             <div>Dieser Zugang ist keinem Mitarbeiter-Profil zugeordnet. Zum Stempeln wird ein Mitarbeiter-Profil benötigt.</div>
           </div>
         )}
@@ -305,39 +305,39 @@ const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif" },
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 28px', borderBottom: `1px solid ${C.line}`, background: 'rgba(10,22,40,0.95)', position: 'sticky', top: 0, zIndex: 10 },
   wrap: { maxWidth: 760, margin: '0 auto', padding: '32px 28px 64px' },
-  eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 32, fontWeight: 700, margin: 0, color: C.text },
-  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 15 },
-  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 15 },
+  eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(32px, 2.81vw, 45px)', fontWeight: 700, margin: 0, color: C.text },
+  sub: { color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' },
 
   clockCard: { background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 16, padding: '28px 24px', textAlign: 'center', marginBottom: 22 },
-  liveClock: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 52, fontWeight: 800, letterSpacing: '0.04em', color: C.text, lineHeight: 1 },
-  statusZeile: { marginTop: 10, fontSize: 15 },
+  liveClock: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(52px, 4.56vw, 73px)', fontWeight: 800, letterSpacing: '0.04em', color: C.text, lineHeight: 1 },
+  statusZeile: { marginTop: 10, fontSize: 'clamp(15px, 1.31vw, 21px)' },
   liveGrid: { display: 'flex', justifyContent: 'center', gap: 36, margin: '20px 0 6px' },
   liveStat: { textAlign: 'center' },
-  liveStatLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  liveStatValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 700, color: C.cyan },
+  liveStatLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  liveStatValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 700, color: C.cyan },
 
   btnRow: { display: 'flex', gap: 12, justifyContent: 'center', marginTop: 22, flexWrap: 'wrap' },
-  bigBtn: { border: 'none', borderRadius: 12, padding: '16px 28px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", minWidth: 150 },
+  bigBtn: { border: 'none', borderRadius: 12, padding: '16px 28px', fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 800, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", minWidth: 150 },
   btnKommen: { background: C.green, color: '#04130b' },
   btnPause: { background: C.warn, color: '#1a1304' },
   btnGehen: { background: C.danger, color: '#1a0606' },
 
   statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 22 },
   statBox: { background: C.cardBg, border: `1px solid ${C.line}`, borderRadius: 12, padding: '14px 16px' },
-  statLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  statValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 700 },
+  statLabel: { fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+  statValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(22px, 1.94vw, 31px)', fontWeight: 700 },
 
   card: { background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 14, padding: 20 },
-  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, margin: '0 0 14px', color: C.text },
-  listHint: { color: C.textDim, fontSize: 14, padding: '8px 0' },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, margin: '0 0 14px', color: C.text },
+  listHint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '8px 0' },
   row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' },
-  rowName: { fontWeight: 600, color: C.text, fontSize: 15 },
-  rowMeta: { color: C.textDim, fontSize: 12, marginTop: 2, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  rowDauer: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: C.cyan },
+  rowName: { fontWeight: 600, color: C.text, fontSize: 'clamp(15px, 1.31vw, 21px)' },
+  rowMeta: { color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  rowDauer: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: C.cyan },
 
-  infoMsg: { marginBottom: 18, color: C.text, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
-  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
-  hinweis: { marginTop: 18, fontSize: 12, color: C.textDim, lineHeight: 1.5, padding: '0 4px' },
+  infoMsg: { marginBottom: 18, color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
+  ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
+  hinweis: { marginTop: 18, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, padding: '0 4px' },
 };
