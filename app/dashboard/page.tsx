@@ -278,11 +278,11 @@ export default async function DashboardPage() {
 
         {/* Begruessung */}
         <section style={{ marginBottom: '32px' }}>
-          <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
+          <p style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
             <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Willkommen zurück, {displayName}</h1>
-            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: planColor, background: `${planColor}22`, border: `1px solid ${planColor}55` }}>{planLabel}</span>
-            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: statusCfg.color, background: statusCfg.bg, border: `1px solid ${statusCfg.color}55`, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: planColor, background: `${planColor}22`, border: `1px solid ${planColor}55` }}>{planLabel}</span>
+            <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: statusCfg.color, background: statusCfg.bg, border: `1px solid ${statusCfg.color}55`, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statusCfg.color, display: 'inline-block', flexShrink: 0 }} />
               {statusCfg.label}
             </span>
@@ -300,13 +300,13 @@ export default async function DashboardPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', cursor: 'pointer',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '22px' }}>⚡</span>
+                  <span style={{ fontSize: 'clamp(22px, 1.75vw, 28px)' }}>⚡</span>
                   <div>
-                    <p style={{ margin: '0 0 2px', fontSize: '15px', fontWeight: 800, color: '#C9A84C' }}>Einrichtung abschließen</p>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>Onboarding & Zugangsdaten vervollständigen — dann ist Ihr System startklar.</p>
+                    <p style={{ margin: '0 0 2px', fontSize: 'clamp(15px, 1.19vw, 19px)', fontWeight: 800, color: '#C9A84C' }}>Einrichtung abschließen</p>
+                    <p style={{ margin: 0, fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.55)' }}>Onboarding & Zugangsdaten vervollständigen — dann ist Ihr System startklar.</p>
                   </div>
                 </div>
-                <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>Zur Einrichtung →</div>
+                <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1vw, 16px)', whiteSpace: 'nowrap' }}>Zur Einrichtung →</div>
               </div>
             </a>
           </section>
@@ -337,15 +337,15 @@ export default async function DashboardPage() {
         <section style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
             <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Heute im Blick</h2>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Was Aufmerksamkeit braucht</span>
+            <span style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.4)' }}>Was Aufmerksamkeit braucht</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {radar.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(76,175,125,0.12)', border: '1px solid rgba(76,175,125,0.4)', borderRadius: '12px', padding: '12px 18px', fontSize: '14px', fontWeight: 600, color: '#4CAF7D' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(76,175,125,0.12)', border: '1px solid rgba(76,175,125,0.4)', borderRadius: '12px', padding: '12px 18px', fontSize: 'clamp(14px, 1.13vw, 18px)', fontWeight: 600, color: '#4CAF7D' }}>
                 <span>✅</span><span>Alles im grünen Bereich – nichts Dringendes.</span>
               </div>
             ) : radar.map((r, i) => (
-              <a key={i} href={r.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: `${r.farbe}1e`, border: `1px solid ${r.farbe}55`, borderRadius: '12px', padding: '12px 18px', fontSize: '14px', fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
+              <a key={i} href={r.href} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: `${r.farbe}1e`, border: `1px solid ${r.farbe}55`, borderRadius: '12px', padding: '12px 18px', fontSize: 'clamp(14px, 1.13vw, 18px)', fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
                 <span>{r.icon}</span><span>{r.text}</span>
               </a>
             ))}
@@ -356,12 +356,12 @@ export default async function DashboardPage() {
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
             <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Live-Cockpit</h2>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Echtzeit-Kennzahlen</span>
+            <span style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.4)' }}>Echtzeit-Kennzahlen</span>
           </div>
 
           {/* 💶 Finanzen */}
           <div style={{ marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>💶 Finanzen</div>
+            <div style={{ fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>💶 Finanzen</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/finanzen" icon="📈" label={`Einnahmen ${jahrNow}`} wert={geld(einnahmenNetto)} sub="netto, laufendes Jahr" akzent="#4CAF7D" />
               <KpiKachel href="/dashboard/finanzen/euer" icon="💰" label={`Gewinn ${jahrNow}`} wert={geld(gewinn)} sub="Einnahmen − Ausgaben" akzent="#C9A84C" alarm={gewinn < 0} />
@@ -372,7 +372,7 @@ export default async function DashboardPage() {
 
           {/* 🤝 Vertrieb */}
           <div style={{ marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🤝 Vertrieb</div>
+            <div style={{ fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🤝 Vertrieb</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/leads" icon="🎯" label="Offene Leads" wert={leadsOffen} sub={`${leads.length} gesamt`} akzent="#00e5ff" />
               <KpiKachel href="/dashboard/crm/pipeline" icon="💼" label="Aktive Verkaufschancen" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
@@ -382,7 +382,7 @@ export default async function DashboardPage() {
 
           {/* 🏭 Betrieb */}
           <div style={{ marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🏭 Betrieb</div>
+            <div style={{ fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🏭 Betrieb</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
               <KpiKachel href="/dashboard/automatisierungen" icon="⚙️" label="Aktive Automatisierungen" wert={automationsCount} sub="Bibliothek öffnen" akzent="#C9A84C" />
@@ -392,7 +392,7 @@ export default async function DashboardPage() {
 
           {/* 👥 Personal */}
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>👥 Personal</div>
+            <div style={{ fontSize: 'clamp(12px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>👥 Personal</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/personal" icon="🤒" label="Krankmeldungen" wert={kranke.length} sub={kranke.length === 0 ? 'alle an Bord' : 'aktuell krank'} details={krankeDetails} akzent="#4CAF7D" alarm={kranke.length > 0} />
               <KpiKachel href="/dashboard/personal" icon="🌴" label="Offene Genehmigungen" wert={offeneGenehmigungen} sub={offeneGenehmigungen > 0 ? 'warten auf Freigabe' : 'nichts offen'} akzent="#A98CE0" alarm={offeneGenehmigungen > 0} />
@@ -405,14 +405,14 @@ export default async function DashboardPage() {
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
             <h2 style={{ fontSize: 'clamp(18px, 2vw, 26px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Letzte 24 Stunden</h2>
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>{feed.length > 0 ? `${feed.length} Ereignisse` : 'Aktivitäts-Stream'}</span>
+            <span style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.4)' }}>{feed.length > 0 ? `${feed.length} Ereignisse` : 'Aktivitäts-Stream'}</span>
           </div>
 
           {feed.length === 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '40px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '10px' }}>🌙</div>
-              <p style={{ margin: 0, fontSize: '15px', color: 'rgba(255,255,255,0.6)' }}>In den letzten 24 Stunden war es ruhig.</p>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>Neue Leads, Aufträge, Rechnungen und Team-Aktivitäten erscheinen hier automatisch.</p>
+              <div style={{ fontSize: 'clamp(32px, 2.5vw, 40px)', marginBottom: '10px' }}>🌙</div>
+              <p style={{ margin: 0, fontSize: 'clamp(15px, 1.19vw, 19px)', color: 'rgba(255,255,255,0.6)' }}>In den letzten 24 Stunden war es ruhig.</p>
+              <p style={{ margin: '4px 0 0', fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.35)' }}>Neue Leads, Aufträge, Rechnungen und Team-Aktivitäten erscheinen hier automatisch.</p>
             </div>
           ) : (
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', overflow: 'hidden' }}>
@@ -425,10 +425,10 @@ export default async function DashboardPage() {
                   <span style={{
                     width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
                     background: `${e.farbe}1e`, border: `1px solid ${e.farbe}55`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(16px, 1.25vw, 20px)',
                   }}>{e.icon}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: '14px', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.text}</span>
-                  <span style={{ flexShrink: 0, fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{vorZeit(e.zeit)}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 'clamp(14px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.text}</span>
+                  <span style={{ flexShrink: 0, fontSize: 'clamp(12px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.4)' }}>{vorZeit(e.zeit)}</span>
                 </a>
               ))}
             </div>
@@ -443,13 +443,13 @@ export default async function DashboardPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', cursor: 'pointer',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <span style={{ fontSize: '28px' }}>⚡</span>
+                <span style={{ fontSize: 'clamp(28px, 2.19vw, 35px)' }}>⚡</span>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Automatisierungs-Bibliothek</p>
-                  <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>128 Workflows in 15 Clustern — sehen Sie wie viele Stunden Sie sparen.</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 'clamp(15px, 1.19vw, 19px)', fontWeight: 700, color: '#FFFFFF' }}>Automatisierungs-Bibliothek</p>
+                  <p style={{ margin: 0, fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.45)' }}>128 Workflows in 15 Clustern — sehen Sie wie viele Stunden Sie sparen.</p>
                 </div>
               </div>
-              <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>Bibliothek öffnen →</div>
+              <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1vw, 16px)', whiteSpace: 'nowrap' }}>Bibliothek öffnen →</div>
             </div>
           </a>
         </section>
@@ -485,7 +485,7 @@ function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
   return (
     <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
       <section style={{ marginBottom: '36px' }}>
-        <p style={{ fontSize: '13px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
+        <p style={{ fontSize: 'clamp(13px, 1vw, 16px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
         <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
           Willkommen, {name}
         </h1>
@@ -505,10 +505,10 @@ function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
               <div style={{
                 width: '44px', height: '44px', borderRadius: '12px', marginBottom: '14px',
                 background: `${k.farbe}1e`, border: `1px solid ${k.farbe}55`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(22px, 1.75vw, 28px)',
               }}>{k.icon}</div>
-              <p style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 800, color: '#FFFFFF' }}>{k.titel}</p>
-              <p style={{ margin: 0, fontSize: '13.5px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>{k.text}</p>
+              <p style={{ margin: '0 0 4px', fontSize: 'clamp(17px, 1.31vw, 21px)', fontWeight: 800, color: '#FFFFFF' }}>{k.titel}</p>
+              <p style={{ margin: 0, fontSize: 'clamp(13.5px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>{k.text}</p>
             </a>
           ))}
         </div>
@@ -522,13 +522,13 @@ function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', cursor: 'pointer',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <span style={{ fontSize: '28px' }}>🙋</span>
+              <span style={{ fontSize: 'clamp(28px, 2.19vw, 35px)' }}>🙋</span>
               <div>
-                <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Zu meinem Bereich</p>
-                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>Resturlaub, Schichten und Ihre Arbeitszeit auf einen Blick.</p>
+                <p style={{ margin: '0 0 4px', fontSize: 'clamp(15px, 1.19vw, 19px)', fontWeight: 700, color: '#FFFFFF' }}>Zu meinem Bereich</p>
+                <p style={{ margin: 0, fontSize: 'clamp(13px, 1vw, 16px)', color: 'rgba(255,255,255,0.5)' }}>Resturlaub, Schichten und Ihre Arbeitszeit auf einen Blick.</p>
               </div>
             </div>
-            <div style={{ padding: '8px 20px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.3)', color: '#00e5ff', borderRadius: '8px', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>Öffnen →</div>
+            <div style={{ padding: '8px 20px', background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.3)', color: '#00e5ff', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1vw, 16px)', whiteSpace: 'nowrap' }}>Öffnen →</div>
           </div>
         </a>
       </section>
