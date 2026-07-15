@@ -118,6 +118,9 @@ export default function BaustellePage() {
         <a href="/datenschutz" style={{ color: '#7aa3b3', textDecoration: 'none' }}>
           Datenschutz
         </a>
+        <a href="/agb" style={{ color: '#7aa3b3', textDecoration: 'none' }}>
+          AGB
+        </a>
       </div>
     </main>
   )
