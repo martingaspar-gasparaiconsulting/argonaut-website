@@ -191,7 +191,7 @@ export default function AssetBibliothek() {
         </a>
 
         <div style={{ margin: '16px 0 24px' }}>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📚 Asset-Bibliothek</h1>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📚 Asset-Bibliothek</h1>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
             Alle Inhalte zentral — suchen, filtern, Status pflegen, kopieren.
           </p>
@@ -206,7 +206,7 @@ export default function AssetBibliothek() {
             { label: 'Veröffentlicht', wert: kpi.veroeffentlicht, farbe: C.green },
           ].map((k) => (
             <div key={k.label} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
+              <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
               <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>{k.label}</div>
             </div>
           ))}
@@ -275,7 +275,7 @@ export default function AssetBibliothek() {
               return (
                 <div key={i.id} style={{ background: C.navy2, borderRadius: 14, padding: '18px 20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{i.titel}</span>
+                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 17, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{i.titel}</span>
                     {i.ki_generiert && <span style={{ fontSize: 11, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif', flexShrink: 0 }}>KI</span>}
                   </div>
 
@@ -312,7 +312,7 @@ export default function AssetBibliothek() {
       {offen && bearbeite && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setOffen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-            <h2 style={{ fontFamily: 'Syne, sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>Inhalt bearbeiten</h2>
+            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>Inhalt bearbeiten</h2>
             <Feld label="Titel *">
               <input value={dTitel} onChange={(e) => setDTitel(e.target.value)} style={inputStyle} />
             </Feld>
@@ -344,7 +344,7 @@ export default function AssetBibliothek() {
             </Feld>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
               <button onClick={() => setOffen(false)} style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '11px 20px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>Abbrechen</button>
-              <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'Syne, sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
+              <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
                 {speichern ? 'Speichere…' : 'Speichern'}
               </button>
             </div>

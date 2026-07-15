@@ -963,14 +963,14 @@ function Feld({ label, children }: { label: string; children: React.ReactNode })
 
 const styles: Record<string, CSSProperties> = {
   wrap: { marginTop: 40 },
-  h2: { fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
+  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
 
   statusLeiste: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: 13.5 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, marginBottom: 18 },
   cardKopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  cardTitel: { fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
+  cardTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
   cardSub: { fontSize: 13, color: C.textDim, margin: '6px 0 18px', lineHeight: 1.55 },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 },

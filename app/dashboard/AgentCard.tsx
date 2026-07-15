@@ -44,7 +44,7 @@ export default function AgentCard({ name, role, desc, icon }: {
       }}>
         {icon}
       </div>
-      <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px', fontFamily: 'var(--font-syne), sans-serif' }}>
+      <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
         {name}
       </p>
       <p style={{ fontSize: '11px', fontWeight: 600, color: '#C9A84C', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>

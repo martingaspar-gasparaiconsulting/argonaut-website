@@ -175,7 +175,7 @@ export default function FinanzCockpit() {
         <div style={{ marginBottom: 24 }}>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 30,
               fontWeight: 800,
               margin: 0,
@@ -265,7 +265,7 @@ export default function FinanzCockpit() {
                 >
                   <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: t.farbe }} />
                   <div style={{ fontSize: 26, marginBottom: 10 }}>{t.icon}</div>
-                  <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+                  <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
                     {t.titel}
                   </div>
                   <div style={{ color: C.textDim, fontSize: 13.5 }}>{t.text}</div>
@@ -313,7 +313,7 @@ function KpiCard({
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
       {unter && <div style={{ color: unterFarbe || C.textDim, fontSize: 12, marginTop: 4, fontWeight: 600 }}>{unter}</div>}
     </div>
   );

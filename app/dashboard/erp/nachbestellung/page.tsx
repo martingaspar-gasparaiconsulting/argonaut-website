@@ -300,7 +300,7 @@ export default function NachbestellungPage() {
       {/* Kopf */}
       <div style={{ marginBottom: 22 }}>
         <div style={{ fontSize: 12, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.3</div>
-        <h1 style={{ margin: '4px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800 }}>
+        <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800 }}>
           Auto-Nachbestellung
         </h1>
         <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
@@ -375,7 +375,7 @@ export default function NachbestellungPage() {
                   }}
                 >
                   <div>
-                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700 }}>{g.name}</div>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700 }}>{g.name}</div>
                     <div style={{ color: C.dim, fontSize: 13, marginTop: 2 }}>
                       {g.zeilen.length} Position(en) · geschätzt {euro(g.summe)}
                       {g.email ? ' · ' + g.email : ''}

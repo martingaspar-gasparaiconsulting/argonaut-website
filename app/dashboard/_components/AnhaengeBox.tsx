@@ -190,7 +190,7 @@ export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
 const styles: Record<string, CSSProperties> = {
   box: { marginTop: 4 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
-  titel: { fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   select: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', fontSize: 13, fontFamily: 'inherit' },
   uploadBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' },
 

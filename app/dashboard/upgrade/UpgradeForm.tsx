@@ -130,7 +130,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
             <path d="M5 12L10 17L19 7" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0, fontFamily: 'var(--font-syne), sans-serif' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
           Abonnement aktiviert
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, fontSize: '15px' }}>
@@ -145,7 +145,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
       {/* ── Plan selection ─────────────────────────────────────────────────── */}
       <section style={{ marginBottom: '44px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 20px', fontFamily: 'var(--font-syne), sans-serif', color: '#fff' }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 20px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
           Plan wählen
         </h2>
 
@@ -183,7 +183,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
                 {/* Header row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'var(--font-syne), sans-serif', color: active ? p.color : '#fff' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'var(--font-dm-sans), sans-serif', color: active ? p.color : '#fff' }}>
                     {p.name}
                   </span>
                   {isCurrent && (
@@ -199,7 +199,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
                 {/* Package price */}
                 <div style={{ marginBottom: '2px' }}>
-                  <span style={{ fontSize: '26px', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
+                  <span style={{ fontSize: '26px', fontWeight: 900, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
                     {fmt(p.netPrice)} €
                   </span>
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>/Monat (Paket)</span>
@@ -241,7 +241,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
 
       {/* ── SEPA Bankdaten ─────────────────────────────────────────────────── */}
       <section style={{ marginBottom: '36px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 6px', fontFamily: 'var(--font-syne), sans-serif', color: '#fff' }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
           Bankverbindung (SEPA-Lastschrift)
         </h2>
         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0 0 24px' }}>
@@ -376,7 +376,7 @@ export default function UpgradeForm({ userEmail, userName, currentPlan }: Props)
           fontWeight:     800,
           letterSpacing:  '0.03em',
           cursor:         loading ? 'not-allowed' : 'pointer',
-          fontFamily:     'var(--font-syne), sans-serif',
+          fontFamily:     'var(--font-dm-sans), sans-serif',
           transition:     'opacity 0.2s',
           display:        'flex',
           alignItems:     'center',

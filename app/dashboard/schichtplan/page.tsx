@@ -899,7 +899,7 @@ export default function SchichtplanPage() {
       }}>
         <div>
           <h1 style={{
-            margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 28, fontWeight: 800,
+            margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 800,
             color: '#fff',
           }}>
             Schichtplanung
@@ -930,7 +930,7 @@ export default function SchichtplanPage() {
           &#9664; Vorige
         </button>
         <div style={{
-          fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18,
+          fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 18,
           minWidth: 240, textAlign: 'center',
         }}>
           KW {kalenderwoche(wochenStart)} &middot; {tagMonat(wochenStart)} &ndash; {tagMonat(addTage(wochenStart, 6))}
@@ -960,7 +960,7 @@ export default function SchichtplanPage() {
           gap: 12, flexWrap: 'wrap',
         }}>
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, color: BRAND.cyan }}>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16, color: BRAND.cyan }}>
               ✨ {vorschlaege.length} Schicht-Vorschläge in dieser Woche
             </div>
             <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 2 }}>
@@ -993,7 +993,7 @@ export default function SchichtplanPage() {
           background: 'rgba(224,162,76,0.06)',
         }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16,
+            fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16,
             color: BRAND.warn, marginBottom: 12,
           }}>
             🔔 Offene Tausch-Anfragen ({tauschAntraege.length})
@@ -1261,7 +1261,7 @@ export default function SchichtplanPage() {
         }} onClick={() => setSchichtModal(null)}>
           <div style={{ ...card, width: 460, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               {schichtModal.id ? 'Schicht bearbeiten' : 'Neue Schicht'}
             </h2>
 
@@ -1433,7 +1433,7 @@ export default function SchichtplanPage() {
         }} onClick={() => setGeneratorModal(false)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               ✨ KI-Schichtplan vorschlagen
             </h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
@@ -1522,7 +1522,7 @@ export default function SchichtplanPage() {
         }} onClick={() => setRuhetageModal(false)}>
           <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               Betriebs-Ruhetage
             </h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
@@ -1574,7 +1574,7 @@ export default function SchichtplanPage() {
         }} onClick={() => setVorlagenModal(false)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               Schichtarten verwalten
             </h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>

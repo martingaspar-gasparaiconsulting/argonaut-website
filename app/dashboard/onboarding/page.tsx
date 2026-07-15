@@ -324,7 +324,7 @@ export default function OnboardingPage() {
       {/* HEADER */}
       <header style={{ borderBottom: '1px solid rgba(201,168,76,0.15)', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'rgba(10,22,40,0.97)', backdropFilter: 'blur(12px)', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-syne), sans-serif' }}>ARGONAUT</span>
+          <span style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-dm-sans), sans-serif' }}>ARGONAUT</span>
           <span style={{ fontSize: '11px', color: '#C9A84C', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Setup</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
@@ -344,7 +344,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '48px' }}>
               <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 1 von 5</p>
-              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-syne), sans-serif' }}>Herzlich willkommen! 👋</h1>
+              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Herzlich willkommen! 👋</h1>
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
                 Wir richten jetzt gemeinsam Ihr ARGONAUT System ein. Das dauert ca. <strong style={{ color: '#C9A84C' }}>10–15 Minuten</strong>. Sie können jederzeit pausieren — alles wird automatisch gespeichert.
               </p>
@@ -428,7 +428,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '48px' }}>
               <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 2 von 5</p>
-              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-syne), sans-serif' }}>Wie digital sind Sie heute?</h1>
+              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Wie digital sind Sie heute?</h1>
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
                 Keine richtige oder falsche Antwort — wir richten uns nach Ihrem aktuellen Stand.
               </p>
@@ -480,7 +480,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '40px' }}>
               <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 3 von 5</p>
-              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-syne), sans-serif' }}>Welche Tools nutzen Sie?</h1>
+              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Welche Tools nutzen Sie?</h1>
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
                 Klicken Sie alles an, was Sie kennen oder nutzen. Kein Tool dabei? Kein Problem — tragen Sie es einfach ein.
               </p>
@@ -548,7 +548,7 @@ export default function OnboardingPage() {
           <div>
             <div style={{ marginBottom: '40px' }}>
               <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schritt 4 von 5</p>
-              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-syne), sans-serif' }}>Zugangsdaten (optional)</h1>
+              <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 900, marginBottom: '16px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>Zugangsdaten (optional)</h1>
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '16px', lineHeight: 1.7 }}>
                 Alle Felder sind <strong style={{ color: '#C9A84C' }}>freiwillig</strong>. Was Sie nicht ausfüllen, vervollständigen wir gemeinsam mit Ihnen nach dem Go-Live. Alle Daten werden verschlüsselt gespeichert.
               </p>
@@ -622,7 +622,7 @@ export default function OnboardingPage() {
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: '80px', marginBottom: '32px' }}>🎉</div>
             <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Setup abgeschlossen</p>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, marginBottom: '20px', fontFamily: 'var(--font-syne), sans-serif' }}>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, marginBottom: '20px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
               Ihr ARGONAUT System<br />wird eingerichtet!
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '17px', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 48px' }}>

@@ -261,12 +261,12 @@ export default function Redaktionskalender() {
         {/* Kopf */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '16px 0 24px', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📅 Redaktionskalender</h1>
+            <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>📅 Redaktionskalender</h1>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
               Alle geplanten Veröffentlichungen. Termine per Drag&amp;Drop verschieben.
             </p>
           </div>
-          <button onClick={() => neu()} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+          <button onClick={() => neu()} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
             + Termin
           </button>
         </div>
@@ -275,7 +275,7 @@ export default function Redaktionskalender() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => monatWechsel(-1)} style={navBtn}>‹</button>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 19, fontWeight: 700, color: '#fff', minWidth: 170, textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 19, fontWeight: 700, color: '#fff', minWidth: 170, textAlign: 'center' }}>
               {MONATE[monat]} {jahr}
             </span>
             <button onClick={() => monatWechsel(1)} style={navBtn}>›</button>
@@ -373,7 +373,7 @@ export default function Redaktionskalender() {
       {offen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={() => setOffen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-            <h2 style={{ fontFamily: 'Syne, sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>
+            <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>
               {bearbeite ? 'Termin bearbeiten' : 'Neuer Termin'}
             </h2>
             <Feld label="Titel *">
@@ -413,7 +413,7 @@ export default function Redaktionskalender() {
                 <button onClick={() => setOffen(false)} style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '11px 20px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
                   Abbrechen
                 </button>
-                <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'Syne, sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
+                <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
                   {speichern ? 'Speichere…' : 'Speichern'}
                 </button>
               </div>

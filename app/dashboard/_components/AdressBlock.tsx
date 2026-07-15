@@ -412,7 +412,7 @@ export default function AdressBlock({
 const styles: Record<string, CSSProperties> = {
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginTop: 20 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  titel: { fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700, color: C.text },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, color: C.text },
   sub: { fontSize: 12.5, color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 },
 
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 },

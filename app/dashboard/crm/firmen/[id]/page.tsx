@@ -264,7 +264,7 @@ export default function FirmaDetailPage() {
             <span style={{ fontSize: 22 }}>🏢</span>
             <h1
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: "#fff",
                 fontSize: 28,
                 margin: 0,
@@ -581,7 +581,7 @@ function aktionBtn(farbe: string): React.CSSProperties {
     border: `1px solid ${farbe}`,
     borderRadius: 10,
     padding: "10px 16px",
-    fontFamily: "Syne, sans-serif",
+    fontFamily: "var(--font-dm-sans), sans-serif",
     fontWeight: 700,
     fontSize: 14,
     textDecoration: "none",
@@ -605,7 +605,7 @@ const goldBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "10px 18px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
   fontSize: 14,
   cursor: "pointer",
@@ -617,7 +617,7 @@ const grauBtn: React.CSSProperties = {
   border: `1px solid ${C.border}`,
   borderRadius: 10,
   padding: "10px 18px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
   fontSize: 14,
   cursor: "pointer",
@@ -656,7 +656,7 @@ const karte: React.CSSProperties = {
 };
 
 const karteKopf: React.CSSProperties = {
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   color: C.gold,
   fontSize: 17,
   marginBottom: 16,

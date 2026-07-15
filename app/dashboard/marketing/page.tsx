@@ -233,7 +233,7 @@ export default function MarketingCockpit() {
         <div>
           <h1
             style={{
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontSize: 32,
               fontWeight: 700,
               color: C.gold,
@@ -255,7 +255,7 @@ export default function MarketingCockpit() {
               border: `1px solid ${C.gold}`,
               borderRadius: 10,
               padding: '12px 20px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -274,7 +274,7 @@ export default function MarketingCockpit() {
               border: `1px solid ${C.gold}`,
               borderRadius: 10,
               padding: '12px 20px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -293,7 +293,7 @@ export default function MarketingCockpit() {
               border: `1px solid ${C.cyan}`,
               borderRadius: 10,
               padding: '12px 20px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -312,7 +312,7 @@ export default function MarketingCockpit() {
               border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: 10,
               padding: '12px 20px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -331,7 +331,7 @@ export default function MarketingCockpit() {
               border: 'none',
               borderRadius: 10,
               padding: '12px 22px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -368,7 +368,7 @@ export default function MarketingCockpit() {
           >
             <div
               style={{
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: 'var(--font-dm-sans), sans-serif',
                 fontSize: 34,
                 fontWeight: 700,
                 color: kp.farbe,
@@ -475,7 +475,7 @@ export default function MarketingCockpit() {
                     <a
                       href={`/dashboard/marketing/${k.id}`}
                       style={{
-                        fontFamily: 'Syne, sans-serif',
+                        fontFamily: 'var(--font-dm-sans), sans-serif',
                         fontSize: 19,
                         fontWeight: 700,
                         color: '#fff',
@@ -599,7 +599,7 @@ export default function MarketingCockpit() {
           >
             <h2
               style={{
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: 'var(--font-dm-sans), sans-serif',
                 color: C.gold,
                 fontSize: 24,
                 margin: '0 0 20px',
@@ -729,7 +729,7 @@ export default function MarketingCockpit() {
                   border: 'none',
                   borderRadius: 10,
                   padding: '11px 24px',
-                  fontFamily: 'Syne, sans-serif',
+                  fontFamily: 'var(--font-dm-sans), sans-serif',
                   fontWeight: 700,
                   cursor: speichern ? 'wait' : 'pointer',
                   opacity: speichern ? 0.7 : 1,

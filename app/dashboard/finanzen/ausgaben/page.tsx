@@ -331,7 +331,7 @@ export default function AusgabenCockpit() {
           <div>
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontSize: 30,
                 fontWeight: 800,
                 margin: 0,
@@ -702,7 +702,7 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
     </div>
   );
 }

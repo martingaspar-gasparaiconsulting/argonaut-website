@@ -316,7 +316,7 @@ export default function ObjektzeitenPage() {
       {/* Zeitraum + Auswertung */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 14px' }}>
         <button style={styles.navBtn} onClick={() => setMonat(new Date(monat.getFullYear(), monat.getMonth() - 1, 1))}>‹</button>
-        <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 16 }}>{monatsName}</span>
+        <span style={{ minWidth: 150, textAlign: 'center', fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16 }}>{monatsName}</span>
         <button style={styles.navBtn} onClick={() => setMonat(new Date(monat.getFullYear(), monat.getMonth() + 1, 1))}>›</button>
       </div>
 
@@ -520,7 +520,7 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 640, lineHeight: 1.5 },
 
   primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
@@ -529,13 +529,13 @@ const styles: Record<string, CSSProperties> = {
   miniBtnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 6 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, margin: '0 0 14px', color: C.text },
 
   erfassGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 },
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
   summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
 
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 560 },
   th: { textAlign: 'left', padding: '8px 10px', fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
@@ -548,7 +548,7 @@ const styles: Record<string, CSSProperties> = {
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 },
 };

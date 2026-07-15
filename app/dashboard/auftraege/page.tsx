@@ -364,7 +364,7 @@ export default function AuftraegeCockpit() {
           <div>
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontSize: 30,
                 fontWeight: 700,
                 margin: 0,
@@ -625,7 +625,7 @@ export default function AuftraegeCockpit() {
               maxWidth: 460,
             }}
           >
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
+            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
               Neuer Auftrag
             </h2>
             <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
@@ -724,7 +724,7 @@ export default function AuftraegeCockpit() {
               flexDirection: "column",
             }}
           >
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
+            <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
               Auftrag aus Verkaufschance
             </h2>
             <p style={{ color: C.textDim, fontSize: 13, margin: "0 0 20px" }}>
@@ -832,7 +832,7 @@ function KpiKarte({ label, wert, hint, farbe }: { label: string; wert: string; h
       <div style={{ color: C.textDim, fontSize: 12.5, fontWeight: 600 }}>{label}</div>
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           fontSize: 26,
           fontWeight: 700,
           margin: "6px 0 2px",

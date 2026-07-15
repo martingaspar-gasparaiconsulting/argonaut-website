@@ -475,7 +475,7 @@ export default function InventurSeite() {
             fontSize: 22,
             fontWeight: 800,
             color: C.text,
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-dm-sans), sans-serif",
           }}
         >
           Inventur · Bestandszählung
@@ -536,7 +536,7 @@ export default function InventurSeite() {
               padding: "14px 16px",
             }}
           >
-            <div style={{ fontSize: 22, fontWeight: 800, color: kp.farbe, fontFamily: "'Syne', sans-serif", lineHeight: 1.1 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: kp.farbe, fontFamily: "var(--font-dm-sans), sans-serif", lineHeight: 1.1 }}>
               {laden ? "…" : kp.wert}
             </div>
             <div style={{ fontFamily: "'DM Sans', sans-serif", color: C.textDim, fontSize: 13, marginTop: 4 }}>
@@ -662,7 +662,7 @@ export default function InventurSeite() {
                       textAlign: h === "Soll" || h === "Ist (gezählt)" || h === "Differenz" || h === "Wert-Diff." ? "right" : "left",
                       padding: "12px 14px",
                       color: C.textDim,
-                      fontFamily: "'Syne', sans-serif",
+                      fontFamily: "var(--font-dm-sans), sans-serif",
                       fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: 0.4,
@@ -732,7 +732,7 @@ export default function InventurSeite() {
                       {diff === null ? (
                         <span style={{ color: C.textDim }}>—</span>
                       ) : (
-                        <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 14 }}>
+                        <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14 }}>
                           {diff > 0 ? "+" : ""}
                           {fmtNum(diff)}
                         </span>
@@ -874,7 +874,7 @@ export default function InventurSeite() {
                           {fmtNum(r.ist_bestand)} {r.einheit || ""}
                         </td>
                         <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
-                          <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 14 }}>
+                          <span style={{ color: diffFarbe, fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14 }}>
                             {r.differenz > 0 ? "+" : ""}{fmtNum(r.differenz)}
                           </span>
                         </td>
@@ -928,7 +928,7 @@ export default function InventurSeite() {
               boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
             }}
           >
-            <h3 style={{ margin: "0 0 8px", color: C.text, fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800 }}>
+            <h3 style={{ margin: "0 0 8px", color: C.text, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800 }}>
               Bestand ins Lager übernehmen?
             </h3>
             <p style={{ margin: "0 0 16px", color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 14, lineHeight: 1.5 }}>
@@ -956,7 +956,7 @@ export default function InventurSeite() {
                   <span style={{ color: C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
                     {fmtNum(soll)} → {fmtNum(istVal)} {a.einheit || ""}
                   </span>
-                  <span style={{ color: C.danger, fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, minWidth: 44, textAlign: "right" }}>
+                  <span style={{ color: C.danger, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 13, fontWeight: 800, minWidth: 44, textAlign: "right" }}>
                     {diff > 0 ? "+" : ""}{fmtNum(diff)}
                   </span>
                 </div>

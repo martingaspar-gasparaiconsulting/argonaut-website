@@ -748,7 +748,7 @@ export default function CrmCockpitPage() {
           <div>
             <h1
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 30,
                 margin: 0,
@@ -777,7 +777,7 @@ export default function CrmCockpitPage() {
                 border: `1px solid ${C.green}`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -793,7 +793,7 @@ export default function CrmCockpitPage() {
                 border: `1px solid ${C.cyan}`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -809,7 +809,7 @@ export default function CrmCockpitPage() {
                 border: `1px solid ${C.warn}`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -825,7 +825,7 @@ export default function CrmCockpitPage() {
                 border: `1px solid ${C.cyan}`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -841,7 +841,7 @@ export default function CrmCockpitPage() {
                 border: `1px solid ${C.gold}`,
                 borderRadius: 10,
                 padding: "12px 18px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -857,7 +857,7 @@ export default function CrmCockpitPage() {
                 border: "none",
                 borderRadius: 10,
                 padding: "12px 20px",
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
                 cursor: "pointer",
@@ -1166,7 +1166,7 @@ export default function CrmCockpitPage() {
           <div style={modal} onClick={(e) => e.stopPropagation()}>
             <h2
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 22,
                 margin: "0 0 18px",
@@ -1286,7 +1286,7 @@ export default function CrmCockpitPage() {
                   border: `1px solid ${C.border}`,
                   borderRadius: 10,
                   padding: "11px 20px",
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
@@ -1302,7 +1302,7 @@ export default function CrmCockpitPage() {
                   border: "none",
                   borderRadius: 10,
                   padding: "11px 24px",
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
                   cursor: "pointer",
                   opacity: speichert ? 0.6 : 1,
@@ -1332,7 +1332,7 @@ export default function CrmCockpitPage() {
             >
               <h2
                 style={{
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.green,
                   fontSize: 22,
                   margin: 0,
@@ -1397,7 +1397,7 @@ export default function CrmCockpitPage() {
                   border: "none",
                   borderRadius: 10,
                   padding: "11px 22px",
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: "pointer",
@@ -1496,7 +1496,7 @@ export default function CrmCockpitPage() {
                       border: "none",
                       borderRadius: 10,
                       padding: "11px 24px",
-                      fontFamily: "Syne, sans-serif",
+                      fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 700,
                       fontSize: 14,
                       cursor: "pointer",
@@ -1517,7 +1517,7 @@ export default function CrmCockpitPage() {
                       border: `1px solid ${C.border}`,
                       borderRadius: 10,
                       padding: "11px 20px",
-                      fontFamily: "Syne, sans-serif",
+                      fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 600,
                       fontSize: 14,
                       cursor: "pointer",
@@ -1548,7 +1548,7 @@ export default function CrmCockpitPage() {
             >
               <h2
                 style={{
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.cyan,
                   fontSize: 22,
                   margin: 0,
@@ -1598,7 +1598,7 @@ export default function CrmCockpitPage() {
                     border: "none",
                     borderRadius: 10,
                     padding: "11px 24px",
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     fontWeight: 700,
                     fontSize: 14,
                     cursor: "pointer",
@@ -1773,7 +1773,7 @@ export default function CrmCockpitPage() {
                         border: "none",
                         borderRadius: 10,
                         padding: "11px 24px",
-                        fontFamily: "Syne, sans-serif",
+                        fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
                         fontSize: 14,
                         cursor: "pointer",
@@ -1817,7 +1817,7 @@ function KpiKarte({
     >
       <div
         style={{
-          fontFamily: "Syne, sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
           fontSize: 30,
           fontWeight: 800,

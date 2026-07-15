@@ -129,7 +129,7 @@ export default async function AcademyPage() {
 
                       {/* Text */}
                       <div style={{ padding: '16px 18px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-syne), Syne, sans-serif' }}>{k.titel}</p>
+                        <p style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif' }}>{k.titel}</p>
                         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6 }}>{k.beschreibung || ''}</p>
                       </div>
                     </div>

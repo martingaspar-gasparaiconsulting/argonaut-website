@@ -153,7 +153,7 @@ export default function KiKlartext({
               letterSpacing: 0.5,
               textTransform: "uppercase",
               color: textKopf,
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
             }}
           >
             ARGONAUT · Was heißt das für mich?

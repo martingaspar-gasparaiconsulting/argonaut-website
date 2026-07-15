@@ -663,7 +663,7 @@ export default function ProjektDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-              <h1 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800 }}>{projekt.name}</h1>
+              <h1 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 26, fontWeight: 800 }}>{projekt.name}</h1>
               <span style={{ fontSize: 11, fontWeight: 700, color: sm.farbe, background: sm.farbe + '22', border: `1px solid ${sm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{sm.label}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: pm.farbe, background: pm.farbe + '22', border: `1px solid ${pm.farbe}55`, borderRadius: 999, padding: '3px 10px' }}>{pm.label}</span>
               {(() => {
@@ -734,7 +734,7 @@ export default function ProjektDetailPage() {
 
           {/* Mini-Auslastung */}
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 12px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Auslastung der Beteiligten</h3>
+            <h3 style={{ margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>Auslastung der Beteiligten</h3>
             {(() => {
               const offeneAufgaben = aufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
               const personenZeilen = beteiligte.map((b) => ({
@@ -919,7 +919,7 @@ export default function ProjektDetailPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <span style={{ width: 9, height: 9, borderRadius: '50%', background: sp.farbe, display: 'inline-block' }} />
-                        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Syne, sans-serif' }}>{sp.label}</span>
+                        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-dm-sans), sans-serif' }}>{sp.label}</span>
                         <span style={{ fontSize: 12, color: BRAND.textDim }}>{spaltenAufgaben.length}</span>
                       </div>
                     </div>
@@ -1026,7 +1026,7 @@ export default function ProjektDetailPage() {
       {reiter === 'einstellungen' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 8px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>📄 KI-Statusbericht</h3>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>📄 KI-Statusbericht</h3>
             <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
               Erstellt auf Knopfdruck einen professionellen Fortschrittsbericht als PDF — mit Kennzahlen,
               erledigten und offenen Punkten, Überfälligem und einem Ausblick. Ideal für Kunden oder die Geschäftsführung.
@@ -1037,7 +1037,7 @@ export default function ProjektDetailPage() {
           </div>
 
           <div style={{ ...card }}>
-            <h3 style={{ margin: '0 0 8px', fontFamily: 'Syne, sans-serif', fontSize: 16 }}>Als Vorlage speichern</h3>
+            <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16 }}>Als Vorlage speichern</h3>
             <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13, lineHeight: 1.5 }}>
               Speichert dieses Projekt als wiederverwendbare Blaupause — mit Beschreibung, Priorität, Farbe und allen
               Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellst du später mit einem Klick neue,
@@ -1059,7 +1059,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100000 }}
           onClick={() => setAufgabeModal(null)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               {aufgabeModal.id ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}
             </h2>
 
@@ -1229,7 +1229,7 @@ export default function ProjektDetailPage() {
           onClick={() => setBeteiligteModal(false)}>
           <div style={{ ...card, width: 560, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h2 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Beteiligte</h2>
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Beteiligte</h2>
               <button style={btn} onClick={oeffnePersonNeu}>+ Neuer Beteiligter</button>
             </div>
             <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 13 }}>
@@ -1274,7 +1274,7 @@ export default function ProjektDetailPage() {
 
             {/* Teams-Sektion */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '22px 0 12px' }}>
-              <h2 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18 }}>Teams</h2>
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 18 }}>Teams</h2>
               <button style={btnGhost} onClick={oeffneTeamNeu}>+ Neues Team</button>
             </div>
             <p style={{ margin: '0 0 12px', color: BRAND.textDim, fontSize: 13 }}>
@@ -1346,7 +1346,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100001 }}
           onClick={() => setPersonModal(null)}>
           <div style={{ ...card, width: 480, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               {personModal.id ? 'Beteiligten bearbeiten' : 'Neuer Beteiligter'}
             </h2>
 
@@ -1427,7 +1427,7 @@ export default function ProjektDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflowY: 'auto', zIndex: 100001 }}
           onClick={() => setTeamModal(null)}>
           <div style={{ ...card, width: 440, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               {teamModal.id ? 'Team bearbeiten' : 'Neues Team'}
             </h2>
 
@@ -1486,7 +1486,7 @@ export default function ProjektDetailPage() {
 function StatKachel({ label, wert, farbe }: { label: string; wert: string; farbe: string }) {
   return (
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: '20px 18px' }}>
-      <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 800, color: farbe }}>{wert}</div>
       <div style={{ fontSize: 13, color: BRAND.textDim, marginTop: 4 }}>{label}</div>
     </div>
   );
@@ -1536,7 +1536,7 @@ function ProjektKalender({
     <div style={{ background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderRadius: 14, padding: 16 }}>
       {/* Kopf */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: 18, textTransform: 'capitalize' }}>{monatsName}</h3>
+        <h3 style={{ margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 18, textTransform: 'capitalize' }}>{monatsName}</h3>
         <div style={{ display: 'flex', gap: 6 }}>
           <button style={navBtn} onClick={() => setMonat(new Date(jahr, mon - 1, 1))}>‹ Voriger</button>
           <button style={navBtn} onClick={() => { const d = new Date(); setMonat(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Heute</button>

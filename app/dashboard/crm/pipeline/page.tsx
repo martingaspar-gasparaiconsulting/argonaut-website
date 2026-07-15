@@ -329,7 +329,7 @@ export default function PipelinePage() {
           <div>
             <h1
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 30,
                 margin: 0,
@@ -423,7 +423,7 @@ export default function PipelinePage() {
                   >
                     <span
                       style={{
-                        fontFamily: "Syne, sans-serif",
+                        fontFamily: "var(--font-dm-sans), sans-serif",
                         color: p.farbe,
                         fontSize: 14,
                         fontWeight: 700,
@@ -461,7 +461,7 @@ export default function PipelinePage() {
                         <div
                           style={{
                             color: "#fff",
-                            fontFamily: "Syne, sans-serif",
+                            fontFamily: "var(--font-dm-sans), sans-serif",
                             fontSize: 14,
                             fontWeight: 600,
                             marginBottom: 6,
@@ -492,7 +492,7 @@ export default function PipelinePage() {
                           <span
                             style={{
                               color: C.gold,
-                              fontFamily: "Syne, sans-serif",
+                              fontFamily: "var(--font-dm-sans), sans-serif",
                               fontWeight: 700,
                               fontSize: 14,
                             }}
@@ -537,7 +537,7 @@ export default function PipelinePage() {
           <div style={modal} onClick={(e) => e.stopPropagation()}>
             <h2
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 22,
                 margin: "0 0 18px",
@@ -704,7 +704,7 @@ function KpiKarte({
     >
       <div
         style={{
-          fontFamily: "Syne, sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
           fontSize: 24,
           fontWeight: 800,
@@ -764,7 +764,7 @@ const goldBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 22px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
   fontSize: 14,
   cursor: "pointer",
@@ -782,7 +782,7 @@ const grauBtn: React.CSSProperties = {
   border: `1px solid ${C.border}`,
   borderRadius: 10,
   padding: "11px 20px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
   fontSize: 14,
   cursor: "pointer",

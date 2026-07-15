@@ -473,7 +473,7 @@ export default function RechtePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontSize: 30,
                 fontWeight: 800,
                 margin: 0,
@@ -574,7 +574,7 @@ export default function RechtePage() {
                 {/* Kopf */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700 }}>{name(m)}</div>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700 }}>{name(m)}</div>
                     <div style={{ color: C.textDim, fontSize: 13 }}>
                       {[m.position, m.abteilung].filter(Boolean).join(" · ") || "—"}
                     </div>
@@ -899,7 +899,7 @@ export default function RechtePage() {
             const lab = LABEL_MAP[modal.key] || modal.key;
             return overlay(
               <>
-                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
+                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
                   🔒 Sensiblen Bereich freigeben
                 </div>
                 <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 8px" }}>
@@ -919,7 +919,7 @@ export default function RechtePage() {
           if (modal.art === "vollmacht") {
             return overlay(
               <>
-                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
+                <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 10 }}>
                   ⚡ Verteil-Vollmacht {modal.an ? "vergeben" : "entziehen"}
                 </div>
                 {modal.an ? (
@@ -960,7 +960,7 @@ export default function RechtePage() {
             .map((k) => LABEL_MAP[k] || k);
           return overlay(
             <>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 19, fontWeight: 800, marginBottom: 12 }}>
                 💾 Rechte speichern — Zusammenfassung
               </div>
               <p style={{ color: "#fff", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 12px" }}>

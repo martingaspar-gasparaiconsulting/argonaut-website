@@ -866,7 +866,7 @@ export default function AuftraegePage() {
                                 <span>{z.split(':')[0]}</span><span>{z.split(':')[1]}</span>
                               </div>
                             ))}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 16 }}>
                               <span>Gesamt brutto</span><span style={{ color: C.gold }}>{eur(befund.summe.brutto)}</span>
                             </div>
                           </td>
@@ -986,20 +986,20 @@ function Zahl({ label, wert, farbe }: { label: string; wert: number; farbe: stri
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 600, lineHeight: 1.5 },
 
   zahlenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 18 },
   zahlBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px' },
   zahlLabel: { fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  zahlWert: { fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800 },
+  zahlWert: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', color: C.text },
 
   sektion: { marginTop: 16, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 13, fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   paketBlock: { background: C.navy2, border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 10, padding: '11px 13px', marginBottom: 8 },
   zusatzZeile: { display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap', alignItems: 'center' },
@@ -1024,6 +1024,6 @@ const styles: Record<string, CSSProperties> = {
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 720, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, color: C.text, margin: 0 },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, color: C.text, margin: 0 },
   modalAktionen: { display: 'flex', gap: 8, marginTop: 20, alignItems: 'center', flexWrap: 'wrap' },
 };

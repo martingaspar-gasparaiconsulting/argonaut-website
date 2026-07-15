@@ -578,7 +578,7 @@ export default function AuftragDetail() {
       <Rahmen>
         <div style={{ padding: 60, textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", margin: "0 0 8px" }}>
+          <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", margin: "0 0 8px" }}>
             Auftrag nicht gefunden
           </h2>
           <p style={{ color: C.textDim, marginBottom: 20 }}>
@@ -634,7 +634,7 @@ export default function AuftragDetail() {
             </div>
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontSize: 28,
                 fontWeight: 700,
                 margin: 0,
@@ -1253,7 +1253,7 @@ function SummeFeld({ label, wert, farbe }: { label: string; wert: string; farbe:
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
       <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }

@@ -262,7 +262,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
             fontWeight: 800,
             letterSpacing: 0.3,
             color: "#fff",
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-dm-sans), sans-serif",
           }}
         >
           HR-Kennzahlen &middot; Krankenquote &amp; Fluktuation
@@ -293,7 +293,7 @@ export default function HrKennzahlen({ style }: { style?: React.CSSProperties })
                 fontSize: 22,
                 fontWeight: 800,
                 color: kp.farbe,
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 lineHeight: 1.1,
               }}
             >

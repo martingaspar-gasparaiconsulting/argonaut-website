@@ -303,12 +303,12 @@ export default function ApiSchluesselKarte() {
 
 const styles: Record<string, CSSProperties> = {
   wrap: { marginTop: 40 },
-  h2: { fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
+  h2: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800, margin: '0 0 8px', color: C.text },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', margin: '0 0 20px', lineHeight: 1.6, maxWidth: 640 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22 },
   kopf: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 },
-  titel: { fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
+  titel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 17, fontWeight: 700, color: C.text },
 
   frischBox: { background: 'rgba(224,162,76,0.09)', border: `1px solid rgba(224,162,76,0.4)`, borderRadius: 12, padding: 16, marginBottom: 18 },
   schluesselText: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13.5, color: C.gold, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 8, padding: '12px 14px', wordBreak: 'break-all', lineHeight: 1.5 },

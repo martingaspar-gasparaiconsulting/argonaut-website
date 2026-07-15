@@ -895,7 +895,7 @@ export default function CrmDetailPage() {
                 />
                 <h1
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: "#fff",
                     fontSize: 28,
                     margin: 0,
@@ -945,7 +945,7 @@ export default function CrmDetailPage() {
                   border: `1px solid ${C.gold}`,
                   borderRadius: 10,
                   padding: "11px 18px",
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: "pointer",
@@ -961,7 +961,7 @@ export default function CrmDetailPage() {
                   border: `1px solid ${C.lila}`,
                   borderRadius: 10,
                   padding: "11px 18px",
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: "pointer",
@@ -1168,7 +1168,7 @@ export default function CrmDetailPage() {
               >
                 <h2
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.gold,
                     fontSize: 22,
                     margin: 0,
@@ -1333,7 +1333,7 @@ export default function CrmDetailPage() {
               >
                 <h2
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.lila,
                     fontSize: 22,
                     margin: 0,
@@ -1677,7 +1677,7 @@ export default function CrmDetailPage() {
                 >
                   <div
                     style={{
-                      fontFamily: "Syne, sans-serif",
+                      fontFamily: "var(--font-dm-sans), sans-serif",
                       color: C.cyan,
                       fontSize: 15,
                     }}
@@ -1693,7 +1693,7 @@ export default function CrmDetailPage() {
                         border: `1px solid ${C.cyan}`,
                         borderRadius: 10,
                         padding: "8px 16px",
-                        fontFamily: "Syne, sans-serif",
+                        fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
                         fontSize: 13,
                         cursor: "pointer",
@@ -1720,7 +1720,7 @@ export default function CrmDetailPage() {
                             border: "none",
                             borderRadius: 10,
                             padding: "10px 18px",
-                            fontFamily: "Syne, sans-serif",
+                            fontFamily: "var(--font-dm-sans), sans-serif",
                             fontWeight: 700,
                             fontSize: 14,
                             cursor: "pointer",
@@ -1737,7 +1737,7 @@ export default function CrmDetailPage() {
                             border: "none",
                             borderRadius: 10,
                             padding: "10px 18px",
-                            fontFamily: "Syne, sans-serif",
+                            fontFamily: "var(--font-dm-sans), sans-serif",
                             fontWeight: 700,
                             fontSize: 14,
                             cursor: "pointer",
@@ -1882,7 +1882,7 @@ export default function CrmDetailPage() {
               >
                 <div
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.gold,
                     fontSize: 15,
                     marginBottom: 12,
@@ -1960,7 +1960,7 @@ export default function CrmDetailPage() {
               >
                 <div
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.warn,
                     fontSize: 15,
                     marginBottom: 10,
@@ -1999,7 +1999,7 @@ export default function CrmDetailPage() {
 
               <div
                 style={{
-                  fontFamily: "Syne, sans-serif",
+                  fontFamily: "var(--font-dm-sans), sans-serif",
                   color: C.textDim,
                   fontSize: 13,
                   textTransform: "uppercase",
@@ -2058,7 +2058,7 @@ export default function CrmDetailPage() {
                         >
                           <span
                             style={{
-                              fontFamily: "Syne, sans-serif",
+                              fontFamily: "var(--font-dm-sans), sans-serif",
                               color: C.gold,
                               fontSize: 14,
                               textTransform: "capitalize",
@@ -2177,7 +2177,7 @@ function ReiterBtn({
         border: `1px solid ${aktiv ? C.gold : C.border}`,
         borderRadius: 10,
         padding: "9px 18px",
-        fontFamily: "Syne, sans-serif",
+        fontFamily: "var(--font-dm-sans), sans-serif",
         fontWeight: 700,
         fontSize: 14,
         cursor: "pointer",
@@ -2292,7 +2292,7 @@ function aktionBtn(farbe: string): React.CSSProperties {
     border: `1px solid ${farbe}`,
     borderRadius: 10,
     padding: "11px 18px",
-    fontFamily: "Syne, sans-serif",
+    fontFamily: "var(--font-dm-sans), sans-serif",
     fontWeight: 700,
     fontSize: 14,
     textDecoration: "none",
@@ -2316,7 +2316,7 @@ const goldBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 22px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
   fontSize: 14,
   cursor: "pointer",
@@ -2328,7 +2328,7 @@ const grauBtn: React.CSSProperties = {
   border: `1px solid ${C.border}`,
   borderRadius: 10,
   padding: "11px 22px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
   fontSize: 14,
   cursor: "pointer",
@@ -2419,7 +2419,7 @@ const modalB: React.CSSProperties = {
 };
 
 const briefingLabel: React.CSSProperties = {
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   color: C.cyan,
   fontSize: 13,
   textTransform: "uppercase",

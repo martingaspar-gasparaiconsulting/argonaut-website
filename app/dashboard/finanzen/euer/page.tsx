@@ -208,7 +208,7 @@ export default function EuerReport() {
         <div style={{ marginBottom: 20 }}>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 30,
               fontWeight: 800,
               margin: 0,
@@ -391,7 +391,7 @@ function GrosseKarte({ label, wert, farbe, gross }: { label: string; wert: strin
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: gross ? 30 : 26, fontWeight: 800, color: farbe }}>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: gross ? 30 : 26, fontWeight: 800, color: farbe }}>
         {wert}
       </div>
     </div>
@@ -402,7 +402,7 @@ function MiniKarte({ label, wert, farbe }: { label: string; wert: string; farbe:
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
       <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }

@@ -52,7 +52,7 @@ function renderMarkdown(text: string): string {
       const level = h[1].length;
       const size = level === 1 ? 20 : level === 2 ? 17 : 15;
       const mt = level === 1 ? 18 : 14;
-      html += `<div style="font-family:Syne,sans-serif;font-weight:700;color:#C9A84C;font-size:${size}px;margin:${mt}px 0 8px">${inline(h[2])}</div>`;
+      html += `<div style="font-family:var(--font-dm-sans),sans-serif;font-weight:700;color:#C9A84C;font-size:${size}px;margin:${mt}px 0 8px">${inline(h[2])}</div>`;
       continue;
     }
     const ol = line.match(/^\s*\d+\.\s+(.*)$/);
@@ -176,7 +176,7 @@ export default function MitarbeiterChatSeite() {
     const hatFehlende = v.fehlend && v.fehlend.length > 0;
     return (
       <div style={{ marginTop: 12, padding: 16, borderRadius: 12, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.3)' }}>
-        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#C9A84C', fontSize: 16, marginBottom: 4 }}>
+        <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#C9A84C', fontSize: 16, marginBottom: 4 }}>
           Dokument-Vorschlag: {v.name} ({v.format.toUpperCase()})
         </div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Agent: {v.agent}</div>
@@ -205,14 +205,14 @@ export default function MitarbeiterChatSeite() {
             <button
               onClick={() => speichern(i)}
               disabled={m.vorschlagStatus === 'speichert'}
-              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: m.vorschlagStatus === 'speichert' ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: m.vorschlagStatus === 'speichert' ? 'not-allowed' : 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: m.vorschlagStatus === 'speichert' ? 'rgba(201,168,76,0.4)' : '#C9A84C', color: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: m.vorschlagStatus === 'speichert' ? 'not-allowed' : 'pointer' }}
             >
               {m.vorschlagStatus === 'speichert' ? 'Speichert…' : 'Speichern'}
             </button>
             <button
               onClick={() => abbrechen(i)}
               disabled={m.vorschlagStatus === 'speichert'}
-              style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
             >
               Abbrechen
             </button>
@@ -227,7 +227,7 @@ export default function MitarbeiterChatSeite() {
   return (
     <div style={{ minHeight: '100vh', background: '#0A1628', color: '#fff', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-        <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 28, fontWeight: 700, color: '#C9A84C', margin: 0 }}>
+        <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 700, color: '#C9A84C', margin: 0 }}>
           Mitarbeiter-Chat
         </h1>
         <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)', margin: '6px 0 0' }}>
@@ -306,7 +306,7 @@ export default function MitarbeiterChatSeite() {
               border: 'none',
               background: laedt || !eingabe.trim() ? 'rgba(201,168,76,0.4)' : '#C9A84C',
               color: '#0A1628',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: laedt || !eingabe.trim() ? 'not-allowed' : 'pointer',

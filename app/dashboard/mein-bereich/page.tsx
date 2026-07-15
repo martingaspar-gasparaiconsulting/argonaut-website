@@ -394,7 +394,7 @@ export default function MeinBereichPage() {
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil verknüpft</div>
+            <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil verknüpft</div>
             <div>Dieser Zugang ist noch keinem Mitarbeiter-Profil zugeordnet. Bitte wende dich an deinen Vorgesetzten.</div>
           </div>
         )}
@@ -438,7 +438,7 @@ export default function MeinBereichPage() {
                         {!s.gehen_um && <span style={{ color: C.green, fontWeight: 700 }}>● läuft</span>}
                       </div>
                     </div>
-                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: C.cyan }}>{dauerStr(nettoMin(s, zeitStand))}</div>
+                    <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: C.cyan }}>{dauerStr(nettoMin(s, zeitStand))}</div>
                   </div>
                 ))}
               </div>
@@ -754,7 +754,7 @@ function MeinKalender({ abw }: { abw: Abwesenheit[] }) {
           <button style={kStyles.nav} onClick={vor}>‹</button>
           <button style={kStyles.today} onClick={heuteSetzen}>Heute</button>
           <button style={kStyles.nav} onClick={nach}>›</button>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, minWidth: 130 }}>{MONATE[monat]} {jahr}</span>
+          <span style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 700, minWidth: 130 }}>{MONATE[monat]} {jahr}</span>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -816,13 +816,13 @@ const styles: Record<string, CSSProperties> = {
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 28px', borderBottom: `1px solid ${C.line}`, background: 'rgba(10,22,40,0.95)', position: 'sticky', top: 0, zIndex: 10 },
   wrap: { maxWidth: 900, margin: '0 auto', padding: '32px 28px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 700, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 32, fontWeight: 700, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 0', fontSize: 15 },
   stateBox: { padding: 40, textAlign: 'center', color: C.textDim, fontSize: 15 },
   statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 22 },
   twoCol: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 },
   card: { background: C.navySoft, border: `1px solid ${C.line}`, borderRadius: 14, padding: 20 },
-  cardTitle: { fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, margin: '0 0 14px', color: C.text },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, margin: '0 0 14px', color: C.text },
   input: { background: C.inputBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '100%', boxSizing: 'border-box' },
   fileInput: { color: C.textDim, fontSize: 13 },
   primaryBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 4 },

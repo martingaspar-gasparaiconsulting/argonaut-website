@@ -316,7 +316,7 @@ export default function RechnungenCockpit() {
           <div>
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontSize: 30,
                 fontWeight: 800,
                 margin: 0,
@@ -555,7 +555,7 @@ export default function RechnungenCockpit() {
                 >
                   <div
                     style={{
-                      fontFamily: "'Syne', sans-serif",
+                      fontFamily: "var(--font-dm-sans), sans-serif",
                       fontWeight: 700,
                       color: C.gold,
                       fontSize: 14,
@@ -701,7 +701,7 @@ function KpiCard({
       </div>
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           fontSize: 24,
           fontWeight: 800,
           color: farbe,

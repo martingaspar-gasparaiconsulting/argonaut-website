@@ -711,7 +711,7 @@ export default function MeineEinsaetzePage() {
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '24px 16px 64px', maxWidth: 560, margin: '0 auto' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 28, fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 16px', fontSize: 14 },
 
   tagNav: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '10px 12px', marginTop: 8 },
@@ -748,7 +748,7 @@ const styles: Record<string, CSSProperties> = {
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 12px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 22, width: '100%', maxWidth: 520, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 4px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 4px', color: C.text },
   posZeile: { display: 'flex', alignItems: 'center', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' },
   posDel: { width: 26, height: 26, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.danger, fontSize: 13, cursor: 'pointer', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 },
   summen: { display: 'flex', flexDirection: 'column', gap: 4, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14 },

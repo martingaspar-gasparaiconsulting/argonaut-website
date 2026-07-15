@@ -392,7 +392,7 @@ export default function ProjektePage() {
           <p style={{ margin: 0, fontSize: 13, color: BRAND.gold, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
             ARGONAUT OS · Projekte
           </p>
-          <h1 style={{ margin: '2px 0 0', fontFamily: 'Syne, sans-serif', fontSize: 28, fontWeight: 800 }}>
+          <h1 style={{ margin: '2px 0 0', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 28, fontWeight: 800 }}>
             Projekte
           </h1>
           <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 14 }}>
@@ -422,7 +422,7 @@ export default function ProjektePage() {
         });
         const kachel = (zahl: number, label: string, farbe: string) => (
           <div style={{ flex: 1, minWidth: 120, background: BRAND.navy2, border: `1px solid ${BRAND.border}`, borderLeft: `3px solid ${farbe}`, borderRadius: 12, padding: '12px 16px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800, color: farbe }}>{zahl}</div>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 26, fontWeight: 800, color: farbe }}>{zahl}</div>
             <div style={{ fontSize: 12, color: BRAND.textDim }}>{label}</div>
           </div>
         );
@@ -482,7 +482,7 @@ export default function ProjektePage() {
             return (
               <div key={p.id} style={{ ...card, borderLeft: `4px solid ${p.farbe || BRAND.cyan}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <a href={`/dashboard/projekte/${p.id}`} style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 17, fontFamily: 'Syne, sans-serif' }}>
+                  <a href={`/dashboard/projekte/${p.id}`} style={{ color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 17, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
                     {p.name}
                   </a>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
@@ -540,7 +540,7 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => setModal(null)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 16px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>
+            <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>
               {modal.id ? 'Projekt bearbeiten' : 'Neues Projekt'}
             </h2>
 
@@ -614,7 +614,7 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => setVorlagenModal(false)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Aus Vorlage erstellen</h2>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Aus Vorlage erstellen</h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
               Wähle eine Vorlage — daraus entsteht ein neues Projekt mit allen Standard-Aufgaben.
             </p>
@@ -651,7 +651,7 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60 }}
           onClick={() => !erstellen && setAusVorlage(null)}>
           <div style={{ ...card, width: 440, maxWidth: '100%' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>Neues Projekt aus Vorlage</h2>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>Neues Projekt aus Vorlage</h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
               Vorlage „{ausVorlage.vorlage.name}" → {ausVorlage.vorlage.anzahlAufgaben} Aufgabe{ausVorlage.vorlage.anzahlAufgaben === 1 ? '' : 'n'} werden übernommen.
             </p>
@@ -675,7 +675,7 @@ export default function ProjektePage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
           onClick={() => !kiLaeuft && !kiErstellen && setKiModal(false)}>
           <div style={{ ...card, width: 600, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 6px', fontFamily: 'Syne, sans-serif', fontSize: 20 }}>✨ KI-Projekt-Setup</h2>
+            <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 20 }}>✨ KI-Projekt-Setup</h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 13 }}>
               Beschreibe kurz, worum es geht — die KI erstellt dir einen Projektnamen und eine sinnvolle Aufgabenliste als Vorschlag. Du prüfst alles, bevor das Projekt angelegt wird.
             </p>

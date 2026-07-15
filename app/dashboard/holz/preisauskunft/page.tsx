@@ -459,8 +459,8 @@ export default function PreisauskunftPage() {
                       </tr>
                     ))}
                     <tr>
-                      <td style={{ ...styles.td, fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16 }}>Gesamt brutto</td>
-                      <td style={{ ...styles.td, textAlign: 'right', fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, color: C.gold }}>
+                      <td style={{ ...styles.td, fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 16 }}>Gesamt brutto</td>
+                      <td style={{ ...styles.td, textAlign: 'right', fontFamily: "var(--font-dm-sans), sans-serif", fontWeight: 800, fontSize: 16, color: C.gold }}>
                         {eur(auskunft.gesamt.brutto)}
                       </td>
                     </tr>
@@ -520,13 +520,13 @@ export default function PreisauskunftPage() {
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 620, lineHeight: 1.5 },
 
   spalten: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 18, alignItems: 'start' },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitle: { fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
 
   lbl: { display: 'block', fontSize: 11.5, color: C.textDim, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 },
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit' },

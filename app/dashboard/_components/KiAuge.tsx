@@ -171,7 +171,7 @@ export default function KiAuge({
               alignItems: "center",
               gap: 8,
               marginBottom: 12,
-              fontFamily: "Syne, sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 14,
               fontWeight: 700,
               color: A.gold,

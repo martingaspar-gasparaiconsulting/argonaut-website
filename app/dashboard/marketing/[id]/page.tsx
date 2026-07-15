@@ -214,7 +214,7 @@ export default function KampagneDetail() {
         {/* Kopf */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '16px 0 6px', flexWrap: 'wrap' }}>
           <span style={{ width: 14, height: 14, borderRadius: '50%', background: a.farbe, flexShrink: 0 }} title={a.text} />
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>
             {kampagne.name}
           </h1>
           <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: a.farbe, border: `1px solid ${a.farbe}`, borderRadius: 12, padding: '3px 12px' }}>
@@ -244,7 +244,7 @@ export default function KampagneDetail() {
                 border: 'none',
                 borderBottom: tab === t.v ? `2px solid ${C.gold}` : '2px solid transparent',
                 padding: '10px 16px',
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: 'var(--font-dm-sans), sans-serif',
                 fontSize: 15,
                 fontWeight: tab === t.v ? 700 : 400,
                 cursor: 'pointer',
@@ -284,7 +284,7 @@ function TabUebersicht({ kampagne, inhalte, kalender }: { kampagne: Kampagne; in
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, marginBottom: 24 }}>
         {kacheln.map((k) => (
           <div key={k.label} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: k.farbe }}>{k.wert}</div>
             <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 14 }}>{k.label}</div>
           </div>
         ))}
@@ -366,7 +366,7 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
         <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
           Inhalte dieser Kampagne. KI-generierte Inhalte erstellst du im Content-Studio.
         </p>
-        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           + Inhalt
         </button>
       </div>
@@ -381,7 +381,7 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
             <div key={i.id} style={{ background: C.navy2, borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{i.titel}</span>
+                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{i.titel}</span>
                   {i.ki_generiert && <span style={{ fontSize: 11, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px', fontFamily: 'DM Sans, sans-serif' }}>KI</span>}
                   <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{typLabel(i.typ)} · {i.kanal} · {inhaltStatusLabel(i.status)}</span>
                 </div>
@@ -491,7 +491,7 @@ function TabKalender({ kampagneId, kalender, reload }: { kampagneId: string; kal
         <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 14 }}>
           Geplante Veröffentlichungen dieser Kampagne im Überblick.
         </p>
-        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           + Termin
         </button>
       </div>
@@ -507,7 +507,7 @@ function TabKalender({ kampagneId, kalender, reload }: { kampagneId: string; kal
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: statusFarbe(k.status), flexShrink: 0 }} />
-                  <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{k.titel}</span>
+                  <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 16, fontWeight: 700, color: '#fff' }}>{k.titel}</span>
                   <span style={{ fontSize: 12, color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>{k.kanal}</span>
                 </div>
                 <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: C.textDim }}>
@@ -642,7 +642,7 @@ function TabEinstellungen({ kampagne, reload }: { kampagne: Kampagne; reload: ()
             Kampagne abschließen
           </button>
         ) : <span />}
-        <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 28px', fontFamily: 'Syne, sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
+        <button onClick={speichernKlick} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 28px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
           {speichern ? 'Speichere…' : 'Speichern'}
         </button>
       </div>
@@ -657,7 +657,7 @@ function DialogRahmen({ titel, onClose, children }: { titel: string; onClose: ()
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: C.navy, borderRadius: 18, padding: 32, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.gold}` }}>
-        <h2 style={{ fontFamily: 'Syne, sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>{titel}</h2>
+        <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontSize: 23, margin: '0 0 20px' }}>{titel}</h2>
         {children}
       </div>
     </div>
@@ -670,7 +670,7 @@ function DialogButtons({ onClose, onSave, speichern }: { onClose: () => void; on
       <button onClick={onClose} style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '11px 20px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}>
         Abbrechen
       </button>
-      <button onClick={onSave} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'Syne, sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
+      <button onClick={onSave} disabled={speichern} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1 }}>
         {speichern ? 'Speichere…' : 'Speichern'}
       </button>
     </div>

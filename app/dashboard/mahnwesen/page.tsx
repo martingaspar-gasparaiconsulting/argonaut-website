@@ -349,7 +349,7 @@ export default function MahnwesenCockpit() {
         <div style={{ marginBottom: 24 }}>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 30,
               fontWeight: 800,
               margin: 0,
@@ -577,7 +577,7 @@ export default function MahnwesenCockpit() {
                     {/* Nummer */}
                     <div
                       style={{
-                        fontFamily: "'Syne', sans-serif",
+                        fontFamily: "var(--font-dm-sans), sans-serif",
                         fontWeight: 700,
                         color: C.gold,
                         fontSize: 14,
@@ -766,7 +766,7 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
         }}
       />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>
         {wert}
       </div>
     </div>

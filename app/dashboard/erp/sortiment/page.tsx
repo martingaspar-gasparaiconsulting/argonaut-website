@@ -244,7 +244,7 @@ export default function SortimentPage() {
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16, alignItems: 'flex-end', marginBottom: 22 }}>
         <div>
           <div style={{ fontSize: 12, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>ERP · BLOCK 2.2</div>
-          <h1 style={{ margin: '4px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800 }}>
+          <h1 style={{ margin: '4px 0 0', fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800 }}>
             Sortiment-Analyse
           </h1>
           <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
@@ -305,7 +305,7 @@ export default function SortimentPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
             {/* ABC-Donut */}
             <div style={{ ...karte, flex: '1 1 320px', minWidth: 320 }}>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
                 Kapital nach ABC-Klasse
               </div>
               {abcAgg.length === 0 ? (
@@ -350,7 +350,7 @@ export default function SortimentPage() {
 
             {/* Renner-Balken */}
             <div style={{ ...karte, flex: '1 1 380px', minWidth: 380 }}>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
                 Top nach Verbrauchswert
               </div>
               {topBalken.length === 0 ? (

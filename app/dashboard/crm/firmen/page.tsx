@@ -227,7 +227,7 @@ export default function FirmenListePage() {
           <div>
             <h1
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 30,
                 margin: 0,
@@ -434,7 +434,7 @@ export default function FirmenListePage() {
           <div style={modal} onClick={(e) => e.stopPropagation()}>
             <h2
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 22,
                 margin: "0 0 18px",
@@ -530,7 +530,7 @@ function KpiKarte({
     >
       <div
         style={{
-          fontFamily: "Syne, sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           color: farbe,
           fontSize: 30,
           fontWeight: 800,
@@ -590,7 +590,7 @@ const goldBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 22px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
   fontSize: 14,
   cursor: "pointer",
@@ -608,7 +608,7 @@ const grauBtn: React.CSSProperties = {
   border: `1px solid ${C.border}`,
   borderRadius: 10,
   padding: "11px 22px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 600,
   fontSize: 14,
   cursor: "pointer",

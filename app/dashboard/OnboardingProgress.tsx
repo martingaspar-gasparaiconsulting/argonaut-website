@@ -45,7 +45,7 @@ export default function OnboardingProgress({ onboardingCompleted, hasApiKeys }: 
         </div>
         <span style={{
           fontSize: '20px', fontWeight: 900, color: pct === 100 ? '#22c55e' : '#C9A84C',
-          fontFamily: 'var(--font-syne), sans-serif',
+          fontFamily: 'var(--font-dm-sans), sans-serif',
         }}>{pct}%</span>
       </div>
 

@@ -420,7 +420,7 @@ export default function MahnungErstellen() {
       <Rahmen>
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
+          <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>
             Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
           </p>
@@ -455,7 +455,7 @@ export default function MahnungErstellen() {
         </button>
         <h1
           style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-dm-sans), sans-serif",
             fontSize: 28,
             fontWeight: 800,
             margin: 0,
@@ -802,7 +802,7 @@ function Feld({ label, wert, farbe }: { label: string; wert: string; farbe: stri
   return (
     <div style={{ background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px" }}>
       <div style={{ color: C.textDim, fontSize: 12, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, color: farbe }}>{wert}</div>
     </div>
   );
 }
@@ -821,7 +821,7 @@ function ZeileForderung({ label, wert, gross }: { label: string; wert: string; g
       </span>
       <span
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-dm-sans), sans-serif",
           color: gross ? C.gold : "#fff",
           fontSize: gross ? 20 : 15,
           fontWeight: 700,

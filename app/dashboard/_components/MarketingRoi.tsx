@@ -244,7 +244,7 @@ export default function MarketingRoi({ style }: { style?: React.CSSProperties })
             fontWeight: 800,
             letterSpacing: 0.3,
             color: "#fff",
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "var(--font-dm-sans), sans-serif",
           }}
         >
           Marketing-ROI &amp; Budget-Effizienz
@@ -275,7 +275,7 @@ export default function MarketingRoi({ style }: { style?: React.CSSProperties })
                 fontSize: 22,
                 fontWeight: 800,
                 color: kp.farbe,
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 lineHeight: 1.1,
               }}
             >
@@ -376,7 +376,7 @@ export default function MarketingRoi({ style }: { style?: React.CSSProperties })
                 <span
                   style={{
                     color: amp.farbe,
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     fontSize: 13.5,
                     fontWeight: 800,
                     flexShrink: 0,

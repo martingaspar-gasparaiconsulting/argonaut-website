@@ -180,7 +180,7 @@ export default function FinanzKennzahlen() {
         <div style={{ marginBottom: 24 }}>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 30,
               fontWeight: 800,
               margin: 0,
@@ -431,7 +431,7 @@ function KpiCard({
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
       {unter && <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>{unter}</div>}
     </div>
   );
@@ -583,7 +583,7 @@ function Rechner({
       }}
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 2 }}>{titel}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 2 }}>{titel}</div>
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 16 }}>{unterzeile}</div>
 
       {/* Eingaben */}
@@ -650,7 +650,7 @@ function Rechner({
             </span>
             <span
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: e.gross ? farbe : "#fff",
                 fontSize: e.gross ? 20 : 15,
                 fontWeight: 700,

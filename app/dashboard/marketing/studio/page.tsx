@@ -140,7 +140,7 @@ export default function ContentStudio() {
         </a>
 
         <div style={{ margin: '16px 0 24px' }}>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>✨ KI-Content-Studio</h1>
+          <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 30, fontWeight: 700, color: C.gold, margin: 0 }}>✨ KI-Content-Studio</h1>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 14 }}>
             Briefing eingeben — die KI schreibt im Markenton aus eurem Firmen-Wissen. Du gibst frei.
           </p>
@@ -208,7 +208,7 @@ export default function ContentStudio() {
               border: 'none',
               borderRadius: 10,
               padding: '13px 28px',
-              fontFamily: 'Syne, sans-serif',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
               fontWeight: 700,
               fontSize: 15,
               cursor: generiere ? 'wait' : 'pointer',
@@ -243,7 +243,7 @@ export default function ContentStudio() {
                     value={v.titel}
                     onChange={(e) => aendere(idx, 'titel', e.target.value)}
                     placeholder="Interner Titel"
-                    style={{ ...inputStyle, fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16 }}
+                    style={{ ...inputStyle, fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 16 }}
                   />
                 </div>
                 <textarea
@@ -258,7 +258,7 @@ export default function ContentStudio() {
                   ) : (
                     <button
                       onClick={() => uebernehmen(idx)}
-                      style={{ background: 'transparent', color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, padding: '9px 18px', fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                      style={{ background: 'transparent', color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
                     >
                       ✓ In Inhalte übernehmen
                     </button>

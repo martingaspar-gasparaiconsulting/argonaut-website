@@ -178,7 +178,7 @@ export default function BwaReport() {
         <div style={{ marginBottom: 20 }}>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "var(--font-dm-sans), sans-serif",
               fontSize: 30,
               fontWeight: 800,
               margin: 0,
@@ -368,7 +368,7 @@ export default function BwaReport() {
                     background: "rgba(201,168,76,0.06)",
                   }}
                 >
-                  <div style={{ fontWeight: 800, fontFamily: "'Syne', sans-serif" }}>Gesamt</div>
+                  <div style={{ fontWeight: 800, fontFamily: "var(--font-dm-sans), sans-serif" }}>Gesamt</div>
                   <div style={{ textAlign: "right", fontWeight: 700, color: C.green }}>{eur(summen.einnahmen)}</div>
                   <div style={{ textAlign: "right", fontWeight: 700, color: C.warn }}>{eur(summen.ausgaben)}</div>
                   <div
@@ -411,7 +411,7 @@ function KpiCard({ label, wert, farbe }: { label: string; wert: string; farbe: s
     >
       <div style={{ position: "absolute", top: 0, left: 0, width: 4, height: "100%", background: farbe }} />
       <div style={{ color: C.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
+      <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 24, fontWeight: 800, color: farbe }}>{wert}</div>
     </div>
   );
 }

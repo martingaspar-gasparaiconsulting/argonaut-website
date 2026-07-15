@@ -43,7 +43,7 @@ export default async function UpgradePage() {
           <p style={{ fontSize: '12px', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 10px' }}>
             Abonnement
           </p>
-          <h1 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-syne), sans-serif', lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), sans-serif', lineHeight: 1.1 }}>
             Ihren Plan upgraden
           </h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.4)', margin: 0, maxWidth: '560px', lineHeight: 1.65 }}>

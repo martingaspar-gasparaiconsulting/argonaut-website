@@ -822,7 +822,7 @@ export default function WerkstattPage() {
             style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', color: C.text, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
           >
             <span style={{ fontSize: 18 }}>🗓</span>
-            <span style={{ fontWeight: 700, fontFamily: "'Syne', sans-serif", fontSize: 15 }}>
+            <span style={{ fontWeight: 700, fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 15 }}>
               HU-Wiedervorlage: {huFaellig.length} {huFaellig.length === 1 ? 'Fahrzeug' : 'Fahrzeuge'} fällig
             </span>
             <span style={{ marginLeft: 'auto', color: C.textDim, fontSize: 13 }}>{huOffen ? '▲' : '▼'}</span>
@@ -1430,7 +1430,7 @@ function SummeKarte({ label, value, accent }: { label: string; value: string; ac
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
   eyebrow: { fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
-  h1: { fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
+  h1: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 30, fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '6px 0 22px', fontSize: 14, maxWidth: 680, lineHeight: 1.5 },
 
   primaerBtn: { background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' },
@@ -1448,7 +1448,7 @@ const styles: Record<string, CSSProperties> = {
   summenGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 },
   summeBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
   summeLabel: { fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  summeValue: { fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800 },
+  summeValue: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 22, fontWeight: 800 },
 
   board: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(190px, 1fr))', gap: 12, overflowX: 'auto', paddingBottom: 8 },
   spalte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', minHeight: 200 },
@@ -1465,7 +1465,7 @@ const styles: Record<string, CSSProperties> = {
   infoBox: { marginTop: 16, padding: '12px 14px', background: 'rgba(0,229,255,0.08)', border: `1px solid rgba(0,229,255,0.25)`, borderRadius: 10, fontSize: 13.5, color: C.text },
 
   sektion: { marginTop: 18, padding: 16, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12 },
-  sektionTitel: { fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
+  sektionTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text, textTransform: 'uppercase', letterSpacing: 1 },
   fzKarte: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px' },
 
   dropdown: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 10, marginTop: 6, overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.4)' },
@@ -1485,7 +1485,7 @@ const styles: Record<string, CSSProperties> = {
 
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
-  modalTitel: { fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
+  modalTitel: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 20, fontWeight: 800, margin: '0 0 18px', color: C.text },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, alignItems: 'center' },
 };

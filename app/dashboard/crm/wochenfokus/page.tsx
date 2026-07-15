@@ -94,7 +94,7 @@ export default function WochenfokusPage() {
           <div>
             <h1
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.gold,
                 fontSize: 30,
                 margin: 0,
@@ -148,7 +148,7 @@ export default function WochenfokusPage() {
             <div style={{ fontSize: 34, marginBottom: 10 }}>✅</div>
             <div
               style={{
-                fontFamily: "Syne, sans-serif",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 color: C.green,
                 fontSize: 20,
               }}
@@ -179,7 +179,7 @@ export default function WochenfokusPage() {
               >
                 <div
                   style={{
-                    fontFamily: "Syne, sans-serif",
+                    fontFamily: "var(--font-dm-sans), sans-serif",
                     color: C.textDim,
                     fontSize: 18,
                     fontWeight: 800,
@@ -200,7 +200,7 @@ export default function WochenfokusPage() {
                   >
                     <span
                       style={{
-                        fontFamily: "Syne, sans-serif",
+                        fontFamily: "var(--font-dm-sans), sans-serif",
                         color: "#fff",
                         fontSize: 17,
                         fontWeight: 700,
@@ -290,7 +290,7 @@ const goldBtn: React.CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "11px 20px",
-  fontFamily: "Syne, sans-serif",
+  fontFamily: "var(--font-dm-sans), sans-serif",
   fontWeight: 700,
   fontSize: 14,
   cursor: "pointer",

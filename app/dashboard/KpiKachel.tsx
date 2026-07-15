@@ -73,7 +73,7 @@ export default function KpiKachel({
       </div>
 
       <p style={{
-        fontFamily: 'var(--font-syne), Syne, sans-serif',
+        fontFamily: 'var(--font-dm-sans), sans-serif',
         fontSize: '30px',
         fontWeight: 800,
         margin: '0 0 4px',
