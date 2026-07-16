@@ -23,19 +23,31 @@ import { createAdminClient } from '@/lib/supabase-admin'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
-// --- Preise in USD pro 1 Mio Tokens -----------------------------------------
-// Bei Modell-/Preis-Aenderung NUR hier anpassen. USD, keine EUR-Umrechnung
-// (die macht spaeter der "Waechter" live). Unbekanntes Modell -> 'default'.
-// Standard-Sonnet-Preise; bei bestaetigtem Sonnet-5-Preis hier eintragen.
-const PREISE_USD_PRO_MTOK: Record<
-  string,
-  { rein: number; raus: number; cacheWrite: number; cacheRead: number }
-> = {
-  default: { rein: 3.0, raus: 15.0, cacheWrite: 3.75, cacheRead: 0.3 },
-}
+// --- Preise in USD pro 1 Mio Tokens (nach Modell-Familie) -------------------
+// Haiku 4.5:  $1 / $5
+// Sonnet 5 :  Einfuehrungspreis $2 / $10 bis 31.08.2026, danach $3 / $15
+//             -> die Umschaltung passiert AUTOMATISCH nach Datum, kein Handanlegen.
+// Cache: Schreiben = 1,25x Input, Lesen = 0,1x Input. USD, keine EUR-Umrechnung.
+type Preis = { rein: number; raus: number; cacheWrite: number; cacheRead: number }
 
-function preisFuer(modell: string) {
-  return PREISE_USD_PRO_MTOK[modell] ?? PREISE_USD_PRO_MTOK.default
+function preisFuer(modell: string): Preis {
+  const m = (modell || '').toLowerCase()
+
+  // Haiku 4.5 — guenstig
+  if (m.includes('haiku')) {
+    return { rein: 1.0, raus: 5.0, cacheWrite: 1.25, cacheRead: 0.1 }
+  }
+
+  // Sonnet — Einfuehrungspreis bis 31.08.2026, danach Standard (automatisch)
+  if (m.includes('sonnet')) {
+    const einfuehrung = new Date() < new Date('2026-09-01T00:00:00Z')
+    return einfuehrung
+      ? { rein: 2.0, raus: 10.0, cacheWrite: 2.5, cacheRead: 0.2 }
+      : { rein: 3.0, raus: 15.0, cacheWrite: 3.75, cacheRead: 0.3 }
+  }
+
+  // Unbekannt / Opus -> konservativ Sonnet-Standard
+  return { rein: 3.0, raus: 15.0, cacheWrite: 3.75, cacheRead: 0.3 }
 }
 
 /** Kunde aus dem Login-Cookie. Kein Login (oeffentlicher Chat) -> null. */
