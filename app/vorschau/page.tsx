@@ -129,6 +129,18 @@ export default function VorschauPage() {
         .arg-pillar h3 { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.08rem; line-height: 1.35; color: #EAF1F6; margin: 12px 0 8px; }
         .arg-pillar p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.55; }
         @media (max-width: 760px) { .arg-pillars { grid-template-columns: 1fr; } }
+
+        /* --- Schritt 6: So einfach der Start --- */
+        .arg-steps { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 52px; }
+        .arg-steps-line { position: absolute; top: 26px; left: 13%; right: 13%; height: 2px; background: linear-gradient(90deg, transparent, rgba(201,168,76,0.45), transparent); z-index: 0; }
+        .arg-step { position: relative; z-index: 1; text-align: center; padding: 0 6px; }
+        .arg-step-num { width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(201,168,76,0.55); background: #0A1628; color: #c9a84c; display: flex; align-items: center; justify-content: center; font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: 1.2rem; margin: 0 auto 16px; }
+        .arg-step h3 { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.05rem; line-height: 1.3; color: #EAF1F6; margin: 0 0 6px; }
+        .arg-step p { font-size: .88rem; color: #90a6b2; line-height: 1.5; margin: 0; }
+        @media (max-width: 760px) {
+          .arg-steps { grid-template-columns: 1fr; gap: 26px; }
+          .arg-steps-line { display: none; }
+        }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -506,9 +518,36 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 6 · SO EINFACH IST DER START ============== */}
+      <section style={{ padding: '20px 0 100px', textAlign: 'center' }}>
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            So einfach ist der <span style={{ color: GOLD }}>Start</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto', lineHeight: 1.55 }}>
+            In Minuten startklar — und ARGONAUT nimmt Sie an die Hand. Kein IT-Projekt, kein Handbuch.
+          </p>
+
+          <div className="arg-steps">
+            <div className="arg-steps-line" aria-hidden="true" />
+            {[
+              { title: 'Konto erstellen', desc: 'In wenigen Minuten startklar. Keine Installation, kein IT-Projekt.' },
+              { title: 'Das Auge begrüßt Sie', desc: 'ARGONAUT meldet sich mit Namen: „Sollen wir loslegen?" Sie entscheiden.' },
+              { title: '10 Minuten am Tag', desc: 'In kleinen Etappen durchs System — pausierbar, ganz in Ihrem Tempo.' },
+              { title: 'Vom Matrosen zum Kapitän', desc: 'Zertifikate zeigen Ihren Fortschritt. Nach einem Jahr können Sie mehr als die meisten Profis.' },
+            ].map((s, i) => (
+              <div key={s.title} className="arg-step">
+                <div className="arg-step-num">{i + 1}</div>
+                <h3>{s.title}</h3>
+                <p>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          6) So einfach der Start  7) Ergebnisse  8) Branchen
-          9) Preise  10) Vertrauen  11) Abschluss */}
+          7) Ergebnisse  8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
