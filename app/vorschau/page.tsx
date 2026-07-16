@@ -117,6 +117,8 @@ export default function VorschauPage() {
         .arg-mod p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.5; }
         @media (max-width: 860px) { .arg-mod-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .arg-mod-grid { grid-template-columns: 1fr; } }
+        .arg-more { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+        .arg-more-chip { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.22); color: #d8c88a; border-radius: 999px; padding: 7px 14px; font-size: .82rem; }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -359,7 +361,7 @@ export default function VorschauPage() {
             Alles, was Ihr Betrieb braucht. <span style={{ color: GOLD }}>In einem System.</span>
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '46ch', margin: '0 auto', lineHeight: 1.55 }}>
-            Sechs Module, eine Oberfläche — keine Schnittstellen, die reißen, keine Insellösungen mehr.
+            Sechs Kern-Bereiche als Anker — und dutzende Werkzeuge darunter. Alles in einer Oberfläche, keine Schnittstellen, die reißen.
           </p>
 
           <div className="arg-mod-grid">
@@ -419,6 +421,16 @@ export default function VorschauPage() {
                 <p>{m.desc}</p>
               </div>
             ))}
+          </div>
+
+          <p style={{ marginTop: '40px', fontSize: '.92rem', color: '#8fa9b6' }}>
+            Und vieles mehr — alles im selben System:
+          </p>
+          <div className="arg-more">
+            {['Marketing', 'Projekte', 'Dokumente', 'Termine & Kalender', 'Verträge', 'Service & Tickets', 'Leads', 'Zeiterfassung', 'Schichtplan', 'Dispo', 'Werkstatt', 'Wartung', 'Korrespondenz', 'Academy', 'GoBD & Kasse'].map((t) => (
+              <span key={t} className="arg-more-chip">{t}</span>
+            ))}
+            <span className="arg-more-chip" style={{ color: '#c9a84c', borderColor: 'rgba(201,168,76,0.40)' }}>… und mehr</span>
           </div>
         </div>
       </section>
