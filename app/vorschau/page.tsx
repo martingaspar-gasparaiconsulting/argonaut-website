@@ -89,7 +89,7 @@ export default function VorschauPage() {
         .arg-h2 {
           font-family: var(--font-syne), var(--font-dm-sans), sans-serif;
           font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.9rem);
-          line-height: 1.1; margin: 0 0 .9rem;
+          line-height: 1.18; padding-bottom: 2px; margin: 0 0 .9rem;
         }
         .arg-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 30px; margin-top: 50px; }
         .arg-chaos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -114,7 +114,7 @@ export default function VorschauPage() {
         }
         .arg-mod:hover { transform: translateY(-4px); border-color: rgba(201,168,76,0.50); box-shadow: 0 18px 40px rgba(0,0,0,0.40); }
         .arg-mod-icon { color: #c9a84c; margin-bottom: 15px; }
-        .arg-mod h3 { font-family: var(--font-syne), sans-serif; font-weight: 600; font-size: 1.2rem; color: #EAF1F6; margin: 0 0 6px; }
+        .arg-mod h3 { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.2rem; line-height: 1.3; color: #EAF1F6; margin: 0 0 6px; }
         .arg-mod p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.5; }
         @media (max-width: 860px) { .arg-mod-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .arg-mod-grid { grid-template-columns: 1fr; } }
@@ -126,7 +126,7 @@ export default function VorschauPage() {
         .arg-bigeye { position: relative; width: 130px; height: 130px; margin: 0 auto 34px; }
         .arg-pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 54px; text-align: left; }
         .arg-pillar { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.12); border-radius: 14px; padding: 24px 22px; }
-        .arg-pillar h3 { font-family: var(--font-syne), sans-serif; font-weight: 600; font-size: 1.08rem; color: #EAF1F6; margin: 12px 0 8px; }
+        .arg-pillar h3 { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.08rem; line-height: 1.35; color: #EAF1F6; margin: 12px 0 8px; }
         .arg-pillar p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.55; }
         @media (max-width: 760px) { .arg-pillars { grid-template-columns: 1fr; } }
       `}</style>

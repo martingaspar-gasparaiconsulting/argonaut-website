@@ -28,7 +28,8 @@ export default function ErsparnisRechner() {
             fontFamily: 'var(--font-syne), sans-serif',
             fontWeight: 700,
             fontSize: 'clamp(1.8rem, 4vw, 2.9rem)',
-            lineHeight: 1.1,
+            lineHeight: 1.18,
+            paddingBottom: 2,
             margin: '0 0 .9rem',
             color: '#EAF1F6',
           }}
