@@ -149,6 +149,19 @@ export default function VorschauPage() {
         .arg-fact .lab { font-size: .86rem; color: #90a6b2; line-height: 1.45; margin: 0; }
         @media (max-width: 760px) { .arg-facts { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 440px) { .arg-facts { grid-template-columns: 1fr; } }
+
+        /* --- Schritt 9: Preise --- */
+        .arg-price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 44px; text-align: left; }
+        .arg-price-card { background: linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6)); border: 1px solid rgba(122,163,179,0.14); border-radius: 16px; padding: 24px 22px; }
+        .arg-price-card.hot { border-color: rgba(201,168,76,0.55); box-shadow: 0 0 40px rgba(201,168,76,0.12); }
+        .arg-price-card .nm { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #c9a84c; margin: 0 0 4px; }
+        .arg-price-card .ma { font-size: .84rem; color: #8fa9b6; margin: 0 0 14px; }
+        .arg-price-card .pr { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.9rem; color: #EAF1F6; margin: 0; line-height: 1; }
+        .arg-price-card .pr span { font-size: .9rem; color: #8fa9b6; font-weight: 400; }
+        .arg-price-card .nt { font-size: .82rem; color: #90a6b2; margin: 8px 0 0; }
+        .arg-incl { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; margin-top: 36px; font-size: .9rem; color: #c4d3db; }
+        @media (max-width: 860px) { .arg-price-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 560px) { .arg-price-grid { grid-template-columns: 1fr; } }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -567,7 +580,7 @@ export default function VorschauPage() {
 
           <div className="arg-facts">
             {[
-              { val: '205', lab: 'Branchen vorkonfiguriert — vom Handwerk bis zur Industrie' },
+              { val: '24/7', lab: 'Ihre KI-Crew ist immer an Bord' },
               { val: 'Unbegrenzt', lab: 'KI inklusive — keine Nachzahlung pro Aktion' },
               { val: '100 %', lab: 'DSGVO-konform · EU-Hosting · Audit-Trails' },
               { val: '1 statt 12', lab: 'Ein System, ein Login, ein Preis' },
@@ -650,8 +663,59 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 9 · PREISE (nur Anzeige) ============== */}
+      <section style={{ padding: '8px 0 100px', textAlign: 'center' }}>
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Ein System. Ein Preis nach Ihrer <span style={{ color: GOLD }}>Größe</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '54ch', margin: '0 auto', lineHeight: 1.55 }}>
+            Vom Einzelunternehmer bis zum Konzern — transparent, mit KI unbegrenzt inklusive. Kein Baukasten, keine versteckten Add-ons.
+          </p>
+
+          <div className="arg-price-grid">
+            {[
+              { nm: 'SOLO', ma: '1 Mitarbeiter', pr: '499 €', nt: 'All-in · inkl. 1 Nutzer + KI unbegrenzt', hot: true },
+              { nm: 'Mini', ma: '2–9 Mitarbeiter', pr: '490 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Klein', ma: '10–24 Mitarbeiter', pr: '990 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Mittel', ma: '25–99 Mitarbeiter', pr: '1.990 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Groß', ma: '100–499 Mitarbeiter', pr: '3.490 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Enterprise', ma: '500+ Mitarbeiter', pr: 'ab 5.990 €', nt: 'Individuell erweiterbar' },
+            ].map((t) => (
+              <div key={t.nm} className={'arg-price-card' + (t.hot ? ' hot' : '')}>
+                <p className="nm">{t.nm}</p>
+                <p className="ma">{t.ma}</p>
+                <p className="pr">{t.pr}<span> / Monat</span></p>
+                <p className="nt">{t.nt}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="arg-incl">
+            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikate', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
+              <span key={x} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <span aria-hidden="true" style={{ color: GOLD }}>✓</span> {x}
+              </span>
+            ))}
+          </div>
+
+          <p style={{ fontSize: '.82rem', color: '#7f97a4', margin: '22px auto 0', maxWidth: '60ch', lineHeight: 1.5 }}>
+            Alle Preise netto, zzgl. 19 % MwSt. · ab „Mini" Grundgebühr + Nutzer-Sitze · Ihr individuelles Angebot in Minuten.
+          </p>
+
+          <div style={{ marginTop: '28px', display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '.98rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.22)' }}>
+              Individuelles Angebot anfragen <span aria-hidden="true">→</span>
+            </a>
+            <a href="/vorschau/vergleich" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '.98rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(201,168,76,0.45)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              Warum sich das rechnet <span aria-hidden="true" style={{ color: GOLD }}>→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          9) Preise  10) Vertrauen  11) Abschluss  (Vergleichsseite ✓ live) */}
+          10) Vertrauen  11) Abschluss  (Vergleichsseite ✓ live) */}
     </main>
   )
 }
