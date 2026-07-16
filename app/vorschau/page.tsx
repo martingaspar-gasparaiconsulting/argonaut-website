@@ -580,7 +580,7 @@ export default function VorschauPage() {
           </div>
 
           <a
-            href="#vergleich"
+            href="/vorschau/vergleich"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '10px',
               background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '0.98rem',
