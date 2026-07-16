@@ -141,6 +141,14 @@ export default function VorschauPage() {
           .arg-steps { grid-template-columns: 1fr; gap: 26px; }
           .arg-steps-line { display: none; }
         }
+
+        /* --- Schritt 7: Ausschnitt vs. Ganzes (Fakten-Beweis) --- */
+        .arg-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 50px 0 36px; }
+        .arg-fact { background: linear-gradient(160deg, rgba(18,32,54,0.6), rgba(10,22,40,0.5)); border: 1px solid rgba(201,168,76,0.18); border-radius: 14px; padding: 26px 18px; text-align: center; }
+        .arg-fact .val { font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: clamp(1.5rem, 3.2vw, 2.1rem); color: #c9a84c; line-height: 1.15; margin: 0 0 8px; }
+        .arg-fact .lab { font-size: .86rem; color: #90a6b2; line-height: 1.45; margin: 0; }
+        @media (max-width: 760px) { .arg-facts { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 440px) { .arg-facts { grid-template-columns: 1fr; } }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -546,8 +554,47 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 7 · AUSSCHNITT VS. GANZES (BEWEIS) ============== */}
+      <section style={{ padding: '20px 0 100px', textAlign: 'center' }}>
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Ein Ausschnitt kostet oft mehr als <span style={{ color: GOLD }}>das Ganze</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '54ch', margin: '0 auto', lineHeight: 1.6 }}>
+            Andere verkaufen nur CRM. Oder nur ERP. Oder nur HR — jedes mit eigenem Vertrag, eigener Rechnung, eigenem Login.
+            ARGONAUT verzahnt alles in einem System.
+          </p>
+
+          <div className="arg-facts">
+            {[
+              { val: '205', lab: 'Branchen vorkonfiguriert — vom Handwerk bis zur Industrie' },
+              { val: 'Unbegrenzt', lab: 'KI inklusive — keine Nachzahlung pro Aktion' },
+              { val: '100 %', lab: 'DSGVO-konform · EU-Hosting · Audit-Trails' },
+              { val: '1 statt 12', lab: 'Ein System, ein Login, ein Preis' },
+            ].map((f) => (
+              <div key={f.lab} className="arg-fact">
+                <p className="val">{f.val}</p>
+                <p className="lab">{f.lab}</p>
+              </div>
+            ))}
+          </div>
+
+          <a
+            href="#vergleich"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '0.98rem',
+              padding: '14px 28px', borderRadius: '10px', textDecoration: 'none',
+              border: '1px solid rgba(201,168,76,0.45)',
+            }}
+          >
+            Vollständiger Preis- &amp; Leistungsvergleich <span aria-hidden="true" style={{ color: GOLD }}>→</span>
+          </a>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          7) Ergebnisse  8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
+          8) Branchen  9) Preise (+ eigene Vergleichsseite)  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
