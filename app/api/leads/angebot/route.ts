@@ -12,6 +12,7 @@
 //
 // Muster uebernommen aus /api/mitarbeiter-chat (Anthropic-Call, RAG, Supabase).
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
         "\n\nErstelle daraus einen Angebotsentwurf.";
 
     // Claude aufrufen (gleiches Muster wie Mitarbeiter-Chat)
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("leads/angebot", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

@@ -5,6 +5,7 @@
 // Vorschlags-Prinzip: KI plant, Nutzer legt per Klick an.
 // RAG-Muster 1:1 aus mitarbeiter-chat/route.ts.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
       (eingabe.budget != null ? "- Budget-Rahmen: " + eingabe.budget + " EUR\n" : "- Budget: nicht festgelegt (empfiehl einen sinnvollen Rahmen)\n") +
       "\nGib nur das JSON zurueck.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("marketing-stratege", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

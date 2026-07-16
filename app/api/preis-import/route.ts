@@ -9,6 +9,7 @@
 // model claude-sonnet-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Schreibt NICHTS in die DB - das macht die Vorschau im Client (2a-2).
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -96,7 +97,7 @@ Regeln:
 - Wenn unklar ist, ob eine Zahl Einkauf oder Verkauf ist und nur ein Preis dasteht, ordne ihn dem Verkaufspreis zu.
 - Gib das Array auch dann zurück, wenn nur ein einziger Artikel erkennbar ist. Ist gar kein Artikel erkennbar, gib [] zurück.`;
 
-    const kiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const kiRes = await kiFetch("preis-import", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V4 KI-Kündigungsschreiben (API-Route)
 // Erzeugt einen fristgerechten Kündigungsschreiben-ENTWURF (kein Versand).
@@ -60,7 +61,7 @@ Anforderungen:
 - Gib NUR den fertigen Brieftext aus (keine Erklärungen davor/danach).`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await kiFetch("vertrag-kuendigung", {
       method: "POST",
       headers: {
         "content-type": "application/json",

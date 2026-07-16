@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E9 KI-Bestellvorschlag (API-Route)
 // Nimmt Artikel unter Mindestbestand entgegen, lässt die ARGONAUT-KI
@@ -65,7 +66,7 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Array, ohne Erklärtext, ohne Markdown. 
 {"id": "<id>", "vorschlag_menge": <ganze Zahl > 0>, "begruendung": "<kurze deutsche Begründung, max. 12 Wörter>"}`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await kiFetch("erp-bestellvorschlag", {
       method: "POST",
       headers: {
         "content-type": "application/json",

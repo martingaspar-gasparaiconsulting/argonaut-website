@@ -5,6 +5,7 @@
 // Kein Supabase-/Service-Key-Zugriff nötig → minimale Angriffsfläche.
 // Pfad: app/api/hr/ki-auswertung/route.ts
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -67,7 +68,7 @@ Gib eine kurze, sachliche Einschätzung auf Deutsch:
 - Wenn alles in Ordnung ist, sage das klar und kurz.
 - Keine Einleitung, keine Anrede, keine Schlussfloskel. Beginne direkt mit den Punkten und nutze "•" als Aufzählungszeichen.`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await kiFetch("hr/ki-auswertung", {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,

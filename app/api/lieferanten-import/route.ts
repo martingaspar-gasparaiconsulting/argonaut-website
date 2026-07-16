@@ -9,6 +9,7 @@
 // model claude-sonnet-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Schreibt NICHTS in die DB - das macht die Vorschau im Client (L-2).
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -74,7 +75,7 @@ Regeln:
 - Trenne Firmenname und Ansprechpartner sauber: Der Firmenname gehört in "name", die Person in "ansprechpartner".
 - Gib das Array auch dann zurück, wenn nur ein einziger Lieferant erkennbar ist. Ist gar kein Lieferant erkennbar, gib [] zurück.`;
 
-    const kiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const kiRes = await kiFetch("lieferanten-import", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

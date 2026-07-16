@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
         : "Es liegen keine Preis-Dokumente vor — bitte alle Preise schätzen und mit \"geschaetzt\" markieren.\n\n") +
       "Auftragswährung: " + waehrung + "\n\nBeschreibung des Auftrags (ggf. diktiert):\n" + text;
 
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeResp = await kiFetch("auftrag-ki-positionen", {
       method: "POST",
       headers: {
         "x-api-key": apiKey,

@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
 // ============================================================
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'KI-Dienst nicht konfiguriert (kein API-Key).' }, { status: 500 });
     }
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await kiFetch("projekt-ki-setup", {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,

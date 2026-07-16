@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
 // ============================================================
@@ -134,7 +135,7 @@ ${auslastungText}`;
     if (!apiKey) return NextResponse.json({ error: 'KI-Dienst nicht konfiguriert.' }, { status: 500 });
 
     // 1) Claude: Berichtstext erzeugen
-    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+    const claudeResp = await kiFetch("projekt-statusbericht", {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({

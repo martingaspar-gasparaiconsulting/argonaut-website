@@ -4,6 +4,7 @@
 // -> Text-Varianten als JSON. Vorschlags-Prinzip: KI schlaegt vor, Nutzer gibt frei.
 // RAG-Muster 1:1 aus mitarbeiter-chat/route.ts uebernommen.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
       "- Laenge je Variante: " + laengenHinweis(b.typ, b.laenge) + "\n\n" +
       "Jede Variante soll eigenstaendig und sofort verwendbar sein. Gib nur das JSON zurueck.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("marketing-content", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,
