@@ -593,8 +593,65 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 8 · BRANCHEN ============== */}
+      <section className="arg-modules">
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>205 Branchen.</span>
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
+            Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
+          </p>
+
+          <div className="arg-mod-grid">
+            {[
+              {
+                name: 'Handwerk', desc: 'Angebote, Aufmaß, Einsätze & Rechnung — mobil von der Baustelle.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5 5L4 17v3h3l5.7-5.7a4 4 0 0 0 5-5l-2.5 2.5-2-2 2.5-2.5z" /></svg>),
+              },
+              {
+                name: 'Produktion', desc: 'Aufträge, Lager, Fertigung & Kennzahlen in Echtzeit.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></svg>),
+              },
+              {
+                name: 'Handel & E-Commerce', desc: 'Warenwirtschaft, Bestellungen & Rechnungen verzahnt.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M3 4h2l2.4 12h10l2-8H6" /></svg>),
+              },
+              {
+                name: 'Gesundheit', desc: 'Termine, Dokumente & Abrechnung — DSGVO-sicher.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z" /></svg>),
+              },
+              {
+                name: 'Dienstleistung', desc: 'Projekte, Zeiterfassung & Abrechnung aus einer Hand.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3" /><path d="M15 8a3 3 0 0 1 0 6" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M17 15c2.4.3 4 2.3 4 5" /></svg>),
+              },
+              {
+                name: 'IT & Software', desc: 'Kunden, Tickets, Verträge & wiederkehrender Umsatz im Blick.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12" /></svg>),
+              },
+            ].map((b) => (
+              <div key={b.name} className="arg-mod">
+                <div className="arg-mod-icon">{b.icon}</div>
+                <h3>{b.name}</h3>
+                <p>{b.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ marginTop: '40px', fontSize: '.92rem', color: '#8fa9b6' }}>
+            Und über 200 weitere Branchen:
+          </p>
+          <div className="arg-more">
+            {['Gastronomie', 'Bau & Immobilien', 'Logistik', 'Landwirtschaft', 'Steuerberatung', 'Ärzte & Praxen', 'Fitness & Wellness', 'Kfz & Werkstatt', 'Reinigung', 'Beratung', 'Bildung', 'Sicherheit'].map((t) => (
+              <span key={t} className="arg-more-chip">{t}</span>
+            ))}
+            <span className="arg-more-chip" style={{ color: '#c9a84c', borderColor: 'rgba(201,168,76,0.40)' }}>… und mehr</span>
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          8) Branchen  9) Preise (+ eigene Vergleichsseite)  10) Vertrauen  11) Abschluss */}
+          9) Preise  10) Vertrauen  11) Abschluss  (Vergleichsseite ✓ live) */}
     </main>
   )
 }
