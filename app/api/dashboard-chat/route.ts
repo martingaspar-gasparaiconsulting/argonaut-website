@@ -8,6 +8,7 @@
 // Erwartet Body: { messages: [{ role:'user'|'assistant', content }] }
 // Antwort: { antwort: string }
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -143,7 +144,7 @@ ${liveDaten}`;
     }
 
     // --- KI aufrufen ---
-    const kiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const kiRes = await kiFetch("dashboard-chat", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

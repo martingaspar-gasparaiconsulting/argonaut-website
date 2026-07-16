@@ -5,6 +5,7 @@
 // Vorschlags-Prinzip: KI briefed, Nutzer entscheidet.
 // RAG-Muster 1:1 aus marketing-stratege/route.ts.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -227,7 +228,7 @@ export async function POST(req: Request) {
         : "FIRMEN-AUSZÜGE: keine vorhanden.\n\n") +
       "Erstelle jetzt das Briefing als JSON.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("crm-briefing", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

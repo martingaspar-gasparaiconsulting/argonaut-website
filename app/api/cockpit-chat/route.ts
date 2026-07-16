@@ -11,6 +11,7 @@
 // Antwort: { antwort: string }                 -> Rueckfrage (wird vorgelesen)
 //     oder { aktion: {...}, klartext: string }  -> Befehl erkannt, Bestaetigung noetig
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -113,7 +114,7 @@ ${kontext}`;
       return NextResponse.json({ error: "Keine Nachricht uebergeben." }, { status: 400 });
     }
 
-    const kiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const kiRes = await kiFetch("cockpit-chat", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

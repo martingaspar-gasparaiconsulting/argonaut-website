@@ -4,6 +4,7 @@
 // -> priorisierte Wochenliste als JSON (wer, warum jetzt, empfohlene Aktion).
 // Kein RAG nötig - arbeitet auf den CRM-Daten des Nutzers.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -167,7 +168,7 @@ export async function POST(_req: Request) {
       kandidatenText +
       "\n\nGib die priorisierte Wochen-Fokusliste als JSON zurück.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("crm-nba", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,
