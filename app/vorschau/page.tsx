@@ -87,9 +87,9 @@ export default function VorschauPage() {
         /* --- Schritt 2: Ein System statt zwoelf --- */
         .arg-consolidate { padding: 76px 0 88px; text-align: center; }
         .arg-h2 {
-          font-family: var(--font-syne), var(--font-dm-sans), sans-serif;
+          font-family: var(--font-dm-sans), sans-serif;
           font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.9rem);
-          line-height: 1.18; padding-bottom: 2px; margin: 0 0 .9rem;
+          line-height: 1.25; padding-bottom: 2px; margin: 0 0 .9rem;
         }
         .arg-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 30px; margin-top: 50px; }
         .arg-chaos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

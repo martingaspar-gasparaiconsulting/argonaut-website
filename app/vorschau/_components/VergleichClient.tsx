@@ -67,8 +67,8 @@ export default function VergleichClient() {
     >
       <style>{`
         .vg-wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-        .vg-h1 { font-family: var(--font-syne), sans-serif; font-weight:700; font-size: clamp(2rem,5vw,3.4rem); line-height:1.12; padding-bottom:2px; margin:0 0 1rem; }
-        .vg-h2 { font-family: var(--font-syne), sans-serif; font-weight:700; font-size: clamp(1.6rem,3.6vw,2.4rem); line-height:1.18; padding-bottom:2px; margin:0 0 .8rem; }
+        .vg-h1 { font-family: var(--font-dm-sans), sans-serif; font-weight:700; font-size: clamp(2rem,5vw,3.4rem); line-height:1.2; padding-bottom:2px; margin:0 0 1rem; }
+        .vg-h2 { font-family: var(--font-dm-sans), sans-serif; font-weight:700; font-size: clamp(1.6rem,3.6vw,2.4rem); line-height:1.25; padding-bottom:2px; margin:0 0 .8rem; }
         .vg-sub { font-size: clamp(1rem,1.7vw,1.15rem); color:#b9cdd6; line-height:1.6; margin:0; }
         .vg-tablewrap { overflow-x:auto; margin-top:30px; border-radius:14px; border:1px solid rgba(122,163,179,0.16); }
         table.vg { border-collapse:collapse; width:100%; min-width:720px; font-size:.9rem; }

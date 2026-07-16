@@ -25,7 +25,7 @@ export default function ErsparnisRechner() {
       <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 24px', textAlign: 'center' }}>
         <h2
           style={{
-            fontFamily: 'var(--font-syne), sans-serif',
+            fontFamily: 'var(--font-dm-sans), sans-serif',
             fontWeight: 700,
             fontSize: 'clamp(1.8rem, 4vw, 2.9rem)',
             lineHeight: 1.18,
