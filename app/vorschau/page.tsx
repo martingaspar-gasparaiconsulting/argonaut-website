@@ -120,6 +120,15 @@ export default function VorschauPage() {
         @media (max-width: 560px) { .arg-mod-grid { grid-template-columns: 1fr; } }
         .arg-more { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
         .arg-more-chip { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.22); color: #d8c88a; border-radius: 999px; padding: 7px 14px; font-size: .82rem; }
+
+        /* --- Schritt 5: Das Auge / Crew --- */
+        .arg-crew { padding: 40px 0 104px; text-align: center; }
+        .arg-bigeye { position: relative; width: 130px; height: 130px; margin: 0 auto 34px; }
+        .arg-pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 54px; text-align: left; }
+        .arg-pillar { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.12); border-radius: 14px; padding: 24px 22px; }
+        .arg-pillar h3 { font-family: var(--font-syne), sans-serif; font-weight: 600; font-size: 1.08rem; color: #EAF1F6; margin: 12px 0 8px; }
+        .arg-pillar p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.55; }
+        @media (max-width: 760px) { .arg-pillars { grid-template-columns: 1fr; } }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -439,9 +448,67 @@ export default function VorschauPage() {
       {/* ============== SCHRITT 4 · ERSPARNIS-RECHNER ============== */}
       <ErsparnisRechner />
 
+      {/* ============== SCHRITT 5 · DAS AUGE / IHRE CREW ============== */}
+      <section className="arg-crew">
+        <div className="arg-wrap">
+          <div className="arg-bigeye arg-eye">
+            <span className="ring" />
+            <span className="ring ring2" />
+            <span style={{ position: 'absolute', inset: '34px', borderRadius: '50%', background: `radial-gradient(circle at 50% 45%, #d7eef7, ${TEAL} 58%, transparent 74%)`, boxShadow: '0 0 42px rgba(122,163,179,0.70)' }} />
+            <span style={{ position: 'absolute', inset: '54px', borderRadius: '50%', background: NAVY }} />
+          </div>
+
+          <h2 className="arg-h2">
+            Ihre Crew, die <span style={{ color: GOLD }}>niemals schläft</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.6 }}>
+            ARGONAUT ist mehr als Software. Es begrüßt Sie mit Namen, führt Sie durch jedes Modul, denkt mit —
+            und wächst mit Ihnen. Ein Partner, der nie Feierabend macht.
+          </p>
+
+          <div className="arg-pillars">
+            {[
+              {
+                title: 'Begrüßt Sie persönlich',
+                desc: 'Kein kaltes Dashboard. ARGONAUT kennt Ihren Namen, Ihren Tag und was gerade wichtig ist.',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 5h16v10H9l-5 4z" /><path d="M8 9h8M8 12h5" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'Führt Sie Schritt für Schritt',
+                desc: 'Zehn Minuten am Tag reichen. Sie bestimmen das Tempo, pausieren jederzeit — ARGONAUT passt sich an.',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="6" cy="6" r="2" /><circle cx="18" cy="18" r="2" /><path d="M6 8v3a4 4 0 0 0 4 4h4" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'Wächst mit Ihnen',
+                desc: 'Vom Matrosen zum Kapitän — mit Zertifikaten, die zeigen, wie sicher Sie Ihr System beherrschen.',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 14l5-5 4 4 6-7" /><path d="M15 6h5v5" />
+                  </svg>
+                ),
+              },
+            ].map((p) => (
+              <div key={p.title} className="arg-pillar">
+                <div style={{ color: GOLD }}>{p.icon}</div>
+                <h3>{p.title}</h3>
+                <p>{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          5) Das Auge/Crew  6) So einfach der Start  7) Ergebnisse
-          8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
+          6) So einfach der Start  7) Ergebnisse  8) Branchen
+          9) Preise  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
