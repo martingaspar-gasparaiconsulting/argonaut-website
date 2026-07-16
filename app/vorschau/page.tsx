@@ -102,6 +102,21 @@ export default function VorschauPage() {
           .arg-vs { grid-template-columns: 1fr; gap: 22px; }
           .arg-arrow { transform: rotate(90deg); }
         }
+
+        /* --- Schritt 3: Module-Kacheln --- */
+        .arg-modules { padding: 8px 0 96px; text-align: center; }
+        .arg-mod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px; text-align: left; }
+        .arg-mod {
+          background: linear-gradient(160deg, rgba(18,32,54,0.70), rgba(10,22,40,0.60));
+          border: 1px solid rgba(122,163,179,0.14); border-radius: 16px; padding: 26px 22px;
+          transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+        }
+        .arg-mod:hover { transform: translateY(-4px); border-color: rgba(201,168,76,0.50); box-shadow: 0 18px 40px rgba(0,0,0,0.40); }
+        .arg-mod-icon { color: #c9a84c; margin-bottom: 15px; }
+        .arg-mod h3 { font-family: var(--font-syne), sans-serif; font-weight: 600; font-size: 1.2rem; color: #EAF1F6; margin: 0 0 6px; }
+        .arg-mod p { font-size: .9rem; color: #90a6b2; margin: 0; line-height: 1.5; }
+        @media (max-width: 860px) { .arg-mod-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 560px) { .arg-mod-grid { grid-template-columns: 1fr; } }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -337,10 +352,80 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 3 · MODULE-KACHELN ============== */}
+      <section className="arg-modules">
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Alles, was Ihr Betrieb braucht. <span style={{ color: GOLD }}>In einem System.</span>
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '46ch', margin: '0 auto', lineHeight: 1.55 }}>
+            Sechs Module, eine Oberfläche — keine Schnittstellen, die reißen, keine Insellösungen mehr.
+          </p>
+
+          <div className="arg-mod-grid">
+            {[
+              {
+                name: 'HR', desc: 'Mitarbeiter, Recruiting & Entwicklung',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="8" r="3" /><path d="M15 8a3 3 0 0 1 0 6" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M17 15c2.4.3 4 2.3 4 5" />
+                  </svg>
+                ),
+              },
+              {
+                name: 'CRM', desc: 'Kunden, Leads & Opportunities',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="3.4" /><path d="M5.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+                  </svg>
+                ),
+              },
+              {
+                name: 'Rechnungen', desc: 'Angebote, Rechnungen & Mahnwesen',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6M9 8h2" />
+                  </svg>
+                ),
+              },
+              {
+                name: 'ERP', desc: 'Wareneingang, Lager & Produktion',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 8l9-5 9 5-9 5z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" />
+                  </svg>
+                ),
+              },
+              {
+                name: 'Finanzen', desc: 'Buchhaltung, Kosten & Controlling',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M15 9.2a4 4 0 1 0 0 5.6" /><path d="M7.5 11h6M7.5 13h5" />
+                  </svg>
+                ),
+              },
+              {
+                name: 'Analytics', desc: 'Dashboards, KPIs & Prognosen',
+                icon: (
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4v16h16" /><path d="M8 16v-4" /><path d="M13 16V8" /><path d="M18 16v-7" />
+                  </svg>
+                ),
+              },
+            ].map((m) => (
+              <div key={m.name} className="arg-mod">
+                <div className="arg-mod-icon">{m.icon}</div>
+                <h3>{m.name}</h3>
+                <p>{m.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          3) Module  4) Ersparnis-Rechner  5) Das Auge/Crew
-          6) So einfach der Start  7) Ergebnisse  8) Branchen
-          9) Preise  10) Vertrauen  11) Abschluss */}
+          4) Ersparnis-Rechner  5) Das Auge/Crew  6) So einfach der Start
+          7) Ergebnisse  8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
