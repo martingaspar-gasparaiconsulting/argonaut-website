@@ -1,6 +1,6 @@
 // app/api/crm-voice/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C9 Voice-Memo -> KI-Notiz
-// Roh-Transkript -> Claude (claude-sonnet-4-5) -> saubere Aktivität als JSON
+// Roh-Transkript -> Claude (claude-haiku-4-5) -> saubere Aktivität als JSON
 // + erkannte Wiedervorlage (relative Angaben in konkretes Datum umgerechnet).
 // Vorschlags-Prinzip: KI schlägt vor, Nutzer übernimmt.
 // -----------------------------------------------------------------------------
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 900,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

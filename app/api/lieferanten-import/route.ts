@@ -6,7 +6,7 @@
 //   { lieferanten: [ { name, ansprechpartner, email, telefon,
 //                      adresse, website, kundennummer } ] }
 // Gleiches Muster wie /api/preis-import: direkter fetch, kein SDK,
-// model claude-sonnet-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
+// model claude-sonnet-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Schreibt NICHTS in die DB - das macht die Vorschau im Client (L-2).
 // ============================================================
 import { kiFetch } from '@/lib/ki'
@@ -83,7 +83,7 @@ Regeln:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-sonnet-5",
         max_tokens: 4096,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: `Hier ist die Liste:\n\n${rohtext}` }],

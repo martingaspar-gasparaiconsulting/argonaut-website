@@ -1,7 +1,7 @@
 // app/api/crm-followup/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C10 KI-Follow-up-Texter
 // Kontakt + Timeline + Firma -> RAG (Voyage + match_document_chunks)
-// -> Claude (claude-sonnet-4-5) -> Follow-up-Mail (Betreff + Text) als JSON.
+// -> Claude (claude-haiku-4-5) -> Follow-up-Mail (Betreff + Text) als JSON.
 // Vorschlags-Prinzip: KI entwirft, Nutzer sendet manuell (kein Auto-Versand).
 // RAG-Muster 1:1 aus marketing-content/route.ts.
 // -----------------------------------------------------------------------------
@@ -199,7 +199,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 1200,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

@@ -1,6 +1,6 @@
 // app/api/marketing-stratege/route.ts
 // ARGONAUT OS · MODUL 3 MARKETING · M7 KI-Kampagnen-Stratege
-// Ziel -> RAG (Voyage + match_document_chunks) -> Claude (claude-sonnet-4-5)
+// Ziel -> RAG (Voyage + match_document_chunks) -> Claude (claude-sonnet-5)
 // -> kompletter Kampagnenplan als JSON (Kampagne, Botschaften, Zeitplan, Inhalte).
 // Vorschlags-Prinzip: KI plant, Nutzer legt per Klick an.
 // RAG-Muster 1:1 aus mitarbeiter-chat/route.ts.
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-sonnet-5",
         max_tokens: 3500,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

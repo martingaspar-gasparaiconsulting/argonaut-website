@@ -1,7 +1,7 @@
 // app/api/crm-briefing/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C8 KI-Kontakt-Briefing
 // Kontakt + Timeline + Tags + Firma -> RAG (Voyage + match_document_chunks)
-// -> Claude (claude-sonnet-4-5) -> Kurz-Dossier als JSON.
+// -> Claude (claude-haiku-4-5) -> Kurz-Dossier als JSON.
 // Vorschlags-Prinzip: KI briefed, Nutzer entscheidet.
 // RAG-Muster 1:1 aus marketing-stratege/route.ts.
 // -----------------------------------------------------------------------------
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 1800,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

@@ -1,6 +1,6 @@
 // app/api/crm-nba/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C11 KI-Next-Best-Action (Wochenfokus)
-// Vorgefilterte Kandidaten (Server, RLS) -> Claude (claude-sonnet-4-5)
+// Vorgefilterte Kandidaten (Server, RLS) -> Claude (claude-haiku-4-5)
 // -> priorisierte Wochenliste als JSON (wer, warum jetzt, empfohlene Aktion).
 // Kein RAG nötig - arbeitet auf den CRM-Daten des Nutzers.
 // -----------------------------------------------------------------------------
@@ -176,7 +176,7 @@ export async function POST(_req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

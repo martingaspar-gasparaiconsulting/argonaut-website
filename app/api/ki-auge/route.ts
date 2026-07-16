@@ -7,7 +7,7 @@ import { kiFetch } from '@/lib/ki'
 //
 // Muster identisch zu den übrigen KI-Routen im System:
 //  - direkter fetch an Anthropic (kein SDK)
-//  - Modell claude-sonnet-4-5, runtime nodejs
+//  - Modell claude-haiku-4-5, runtime nodejs
 //  - robuste JSON-Extraktion (Text vor/nach dem JSON wird toleriert)
 // ---------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 600,
         system,
         messages: [{ role: "user", content: userInhalt }],

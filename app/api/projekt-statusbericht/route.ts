@@ -139,7 +139,7 @@ ${auslastungText}`;
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-5',
         max_tokens: 1800,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userInhalt }],

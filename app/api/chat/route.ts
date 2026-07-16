@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5',
         max_tokens: 1000,
         system: systemPrompt || 'Du bist der ARGONAUT KI-Assistent. Antworte auf Deutsch, freundlich und pr\u00e4gnant.',
         messages,

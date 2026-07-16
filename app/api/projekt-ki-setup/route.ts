@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-5',
         max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: [

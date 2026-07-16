@@ -5,7 +5,7 @@
 //   klartext -> ein bis zwei Sätze "Was heißt das für mich?"
 //   aktion   -> ein kurzer, konkreter Handlungs-Vorschlag (Imperativ)
 // Gleiches Muster wie /api/dashboard-chat: direkter fetch, kein SDK,
-// model claude-sonnet-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
+// model claude-haiku-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Body:   { kontext: string, modul?: string }
 // Antwort:{ klartext: string, aktion: string }
 // ============================================================
@@ -55,7 +55,7 @@ Regeln:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 300,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userInhalt }],
