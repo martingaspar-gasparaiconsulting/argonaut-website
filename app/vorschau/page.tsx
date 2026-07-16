@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import ErsparnisRechner from './_components/ErsparnisRechner'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/page.tsx — NEUE WEBSITE (Parallel-Bau / Vorschau)
@@ -435,9 +436,12 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 4 · ERSPARNIS-RECHNER ============== */}
+      <ErsparnisRechner />
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          4) Ersparnis-Rechner  5) Das Auge/Crew  6) So einfach der Start
-          7) Ergebnisse  8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
+          5) Das Auge/Crew  6) So einfach der Start  7) Ergebnisse
+          8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
