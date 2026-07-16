@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import ErsparnisRechner from './_components/ErsparnisRechner'
+import AngebotRechner from './_components/AngebotRechner'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/page.tsx — NEUE WEBSITE (Parallel-Bau / Vorschau)
@@ -730,6 +731,8 @@ export default function VorschauPage() {
               Flexibel zahlbar: sofort (−10 %), 50/50 bei Start &amp; Go-Live, oder auf 12 Monate verteilt — starten Sie ohne große Einstiegssumme. Enthält Ihr komplettes Hologramm-Onboarding samt Zertifikat.
             </p>
           </div>
+
+          <AngebotRechner />
 
           <div className="arg-incl">
             {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikate', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
