@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 12 · K4 KI-Brief-Assistent (API-Route)
 // Formuliert aus Stichworten einen Geschäftsbrief-ENTWURF (kein Versand).
@@ -71,7 +72,7 @@ Anforderungen:
 - Gib NUR den Brief-Fließtext aus (KEINE Betreffzeile, KEINE Absender-/Empfängeradresse, KEINE Erklärungen davor oder danach).`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await kiFetch("korrespondenz-ki", {
       method: "POST",
       headers: {
         "content-type": "application/json",

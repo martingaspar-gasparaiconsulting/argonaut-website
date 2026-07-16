@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 11 · T4 KI-Antwortentwurf (API-Route)
 // Erzeugt einen höflichen Antwort-ENTWURF auf ein Kundenservice-Ticket.
@@ -87,7 +88,7 @@ Anforderungen an die Antwort:
 - Gib NUR den fertigen Antworttext aus (keine Erklärungen oder Kommentare davor/danach).`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await kiFetch("ticket-antwort", {
       method: "POST",
       headers: {
         "content-type": "application/json",

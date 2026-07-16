@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // app/api/ki-auge/route.ts
 // ---------------------------------------------------------------------
 // ARGONAUT OS · KI-AUGE · eigene Route (unabhängig von /api/ki-klartext)
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
       `Aktuelle Lage (echte Kennzahlen):\n${kontext}\n\n` +
       `Sag mir als wachendes Auge: Was heißt das gerade für mich?`;
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await kiFetch("ki-auge", {
       method: "POST",
       headers: {
         "content-type": "application/json",

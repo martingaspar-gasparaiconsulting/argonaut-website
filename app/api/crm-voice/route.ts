@@ -4,6 +4,7 @@
 // + erkannte Wiedervorlage (relative Angaben in konkretes Datum umgerechnet).
 // Vorschlags-Prinzip: KI schlägt vor, Nutzer übernimmt.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
       "Roh-Notiz (gesprochen/transkribiert):\n\"" + roh.trim() + "\"\n\n" +
       "Gib nur das JSON zurück.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("crm-voice", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

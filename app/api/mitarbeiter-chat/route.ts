@@ -5,6 +5,7 @@
 //   (Backend FUEHRT NICHT aus; Bestaetigung + Erzeugung passiert in der UI ueber
 //    die bereits getestete Route /api/chat/generate-document)
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { DOCUMENT_TEMPLATES, getTemplate } from "@/lib/document-templates";
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
     messages.push({ role: "user", content: aktuelleFrage });
 
     // Claude mit Tool-Use
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("mitarbeiter-chat", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

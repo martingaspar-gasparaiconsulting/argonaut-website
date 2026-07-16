@@ -3,6 +3,7 @@
 // Bild (Base64) -> Claude Vision (claude-sonnet-4-5) -> Kontaktfelder als JSON.
 // Vorschlags-Prinzip: KI liest aus, Nutzer bestätigt & legt an.
 // -----------------------------------------------------------------------------
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       '{"vorname":"","nachname":"","email":"","telefon":"","position":"","firma":"","website":""}. ' +
       "Wenn das Bild keine Visitenkarte ist oder nichts lesbar ist, gib alle Felder leer zurück.";
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const claudeRes = await kiFetch("crm-visitenkarte", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,

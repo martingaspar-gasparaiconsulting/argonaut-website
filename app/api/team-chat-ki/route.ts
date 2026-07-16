@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
       (verlaufText ? 'Bisheriger Chat-Verlauf:\n' + verlaufText + '\n\n' : '') +
       'Frage an dich (ARGONAUT):\n' + echteFrage;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await kiFetch("team-chat-ki", {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,

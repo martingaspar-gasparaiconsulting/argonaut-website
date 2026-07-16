@@ -1,3 +1,4 @@
+import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4 — KI-Mahnschreiben-Assistent
 // Formuliert aus den echten Rechnungsdaten einen Mahntext-ENTWURF (kein Versand).
@@ -131,7 +132,7 @@ Anforderungen:
 - Gib NUR den Brief-Fließtext aus (KEINE Betreffzeile, KEINE Absender-/Empfängeradresse, KEINE Erklärungen davor oder danach).`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await kiFetch("mahnung-ki", {
       method: "POST",
       headers: {
         "content-type": "application/json",

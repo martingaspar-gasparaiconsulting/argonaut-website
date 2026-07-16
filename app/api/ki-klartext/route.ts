@@ -9,6 +9,7 @@
 // Body:   { kontext: string, modul?: string }
 // Antwort:{ klartext: string, aktion: string }
 // ============================================================
+import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -46,7 +47,7 @@ Regeln:
 
     const userInhalt = `${modul ? "Bereich: " + modul + "\n" : ""}Aktuelle Lage:\n${kontext}`;
 
-    const kiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const kiRes = await kiFetch("ki-klartext", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,
