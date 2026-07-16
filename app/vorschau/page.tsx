@@ -162,6 +162,13 @@ export default function VorschauPage() {
         .arg-incl { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; margin-top: 36px; font-size: .9rem; color: #c4d3db; }
         @media (max-width: 860px) { .arg-price-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .arg-price-grid { grid-template-columns: 1fr; } }
+        .arg-seats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; text-align: left; }
+        .arg-seat { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.12); border-radius: 14px; padding: 20px; }
+        .arg-seat .st-nm { font-weight: 700; color: #EAF1F6; margin: 0 0 4px; }
+        .arg-seat .st-who { font-size: .82rem; color: #8fa9b6; margin: 0 0 12px; line-height: 1.5; }
+        .arg-seat .st-pr { color: #c9a84c; font-weight: 700; font-size: 1.1rem; margin: 0; }
+        .arg-setup { background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.20); border-radius: 14px; padding: 22px 24px; margin-top: 26px; text-align: left; }
+        @media (max-width: 760px) { .arg-seats { grid-template-columns: 1fr; } }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -689,6 +696,39 @@ export default function VorschauPage() {
                 <p className="nt">{t.nt}</p>
               </div>
             ))}
+          </div>
+
+          {/* Sitz-Typen */}
+          <h3 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.2rem', color: '#EAF1F6', margin: '46px 0 0' }}>
+            So setzen sich die Sitze zusammen
+          </h3>
+          <div className="arg-seats">
+            {[
+              { nm: 'Voll-Nutzer', who: 'Chef, GF, Büro, Dispo — alle Module, volle Bearbeitung', pr: 'ab 380 €/Nutzer·Mon' },
+              { nm: 'Standard-Nutzer', who: 'Sachbearbeiter, Monteur mit Doku — operative Module', pr: 'ab 170 €/Nutzer·Mon' },
+              { nm: 'Self-Service', who: 'Zeiterfassung, Lohnzettel, Mein Bereich — Basis-Zugang', pr: 'ab 19 €/Nutzer·Mon' },
+            ].map((s) => (
+              <div key={s.nm} className="arg-seat">
+                <p className="st-nm">{s.nm}</p>
+                <p className="st-who">{s.who}</p>
+                <p className="st-pr">{s.pr}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: '14px auto 0', maxWidth: '66ch', lineHeight: 1.55 }}>
+            Gestaffelt nach Menge — je mehr Sitze, desto günstiger. SOLO ist all-in, ohne Sitz-Aufpreis.
+            Typischer Mittelstands-Mix: ~16 % Voll · ~32 % Standard · ~52 % Self-Service — so bleibt das Ganze bezahlbar.
+          </p>
+
+          {/* Einmalige Einrichtung */}
+          <div className="arg-setup">
+            <p style={{ fontWeight: 700, color: '#EAF1F6', margin: '0 0 6px' }}>Einmalige Einrichtung — einmal, dann läuft's</p>
+            <p style={{ fontSize: '.9rem', color: '#c4d3db', margin: '0 0 8px', lineHeight: 1.6 }}>
+              SOLO 1.500 € · Mini 2.500 € · Klein 5.000 € · Mittel 12.000 € · Groß/Enterprise: Projekt auf Anfrage
+            </p>
+            <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
+              Flexibel zahlbar: sofort (−10 %), 50/50 bei Start &amp; Go-Live, oder auf 12 Monate verteilt — starten Sie ohne große Einstiegssumme. Enthält Ihr komplettes Hologramm-Onboarding samt Zertifikat.
+            </p>
           </div>
 
           <div className="arg-incl">
