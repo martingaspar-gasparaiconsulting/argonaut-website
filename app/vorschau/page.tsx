@@ -82,6 +82,26 @@ export default function VorschauPage() {
           .arg-hero { grid-template-columns: 1fr; gap: 40px; padding: 116px 0 72px; }
           .arg-card { order: 2; }
         }
+
+        /* --- Schritt 2: Ein System statt zwoelf --- */
+        .arg-consolidate { padding: 76px 0 88px; text-align: center; }
+        .arg-h2 {
+          font-family: var(--font-syne), var(--font-dm-sans), sans-serif;
+          font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.9rem);
+          line-height: 1.1; margin: 0 0 .9rem;
+        }
+        .arg-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 30px; margin-top: 50px; }
+        .arg-chaos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .arg-chip {
+          background: rgba(122,163,179,0.06); border: 1px solid rgba(122,163,179,0.14);
+          border-radius: 9px; padding: 12px 8px; font-size: .8rem; color: #90a6b2;
+          animation: argShimmer 3.2s ease-in-out infinite;
+        }
+        .arg-arrow { font-size: 2.1rem; color: #c9a84c; }
+        @media (max-width: 760px) {
+          .arg-vs { grid-template-columns: 1fr; gap: 22px; }
+          .arg-arrow { transform: rotate(90deg); }
+        }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -267,10 +287,60 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SCHRITT 2 · EIN SYSTEM STATT ZWOELF ============== */}
+      <section className="arg-consolidate">
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Ein System statt <span style={{ color: GOLD }}>zwölf</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '44ch', margin: '0 auto', lineHeight: 1.55 }}>
+            Zwölf Werkzeuge, zwölf Passwörter, zwölf Rechnungen. ARGONAUT ersetzt sie alle —
+            und alles spricht endlich dieselbe Sprache.
+          </p>
+
+          <div className="arg-vs">
+            {/* Links: das Chaos */}
+            <div className="arg-chaos">
+              {['E-Mail', 'Kalender', 'CRM', 'Buchhaltung', 'Lohn & HR', 'Lager / ERP', 'Angebote', 'Rechnungen', 'Projekte', 'Zeiterfassung', 'Dokumente', 'Analytics'].map((t, i) => (
+                <div key={t} className="arg-chip" style={{ animationDelay: `${(i % 6) * 0.35}s` }}>{t}</div>
+              ))}
+            </div>
+
+            {/* Mitte: Pfeil */}
+            <div className="arg-arrow" aria-hidden="true">→</div>
+
+            {/* Rechts: das eine System */}
+            <div
+              style={{
+                background: 'linear-gradient(160deg, rgba(18,32,54,0.95), rgba(10,22,40,0.92))',
+                border: '1px solid rgba(201,168,76,0.30)',
+                borderRadius: '16px',
+                padding: '34px 22px',
+                boxShadow: '0 0 55px rgba(201,168,76,0.12)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+              }}
+            >
+              <div className="arg-eye" style={{ position: 'relative', width: '58px', height: '58px' }}>
+                <span className="ring" />
+                <span className="ring ring2" />
+                <span style={{ position: 'absolute', inset: '15px', borderRadius: '50%', background: `radial-gradient(circle at 50% 45%, #d7eef7, ${TEAL} 58%, transparent 74%)`, boxShadow: '0 0 22px rgba(122,163,179,0.75)' }} />
+                <span style={{ position: 'absolute', inset: '24px', borderRadius: '50%', background: NAVY }} />
+              </div>
+              <p style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#EAF1F6', margin: 0, letterSpacing: '0.12em' }}>
+                ARGONAUT&nbsp;OS
+              </p>
+              <p style={{ fontSize: '0.85rem', color: TEAL, margin: 0 }}>
+                Ein Login. Ein System. Alles verbunden.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          2) Ein System statt zwoelf  3) Module  4) Ersparnis-Rechner
-          5) Das Auge/Crew  6) So einfach der Start  7) Ergebnisse
-          8) Branchen  9) Preise  10) Vertrauen  11) Abschluss */}
+          3) Module  4) Ersparnis-Rechner  5) Das Auge/Crew
+          6) So einfach der Start  7) Ergebnisse  8) Branchen
+          9) Preise  10) Vertrauen  11) Abschluss */}
     </main>
   )
 }
