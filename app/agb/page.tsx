@@ -22,7 +22,7 @@ const sections = [
   { id: 'nutzungsrechte', label: '§ 7 Nutzungsrechte' },
   { id: 'ki-training', label: '§ 8 KI-Training & Daten' },
   { id: 'faire-nutzung', label: '§ 9 Faire Nutzung' },
-  { id: 'speicher', label: '§ 9a Speicher-Upgrade' },
+  { id: 'speicher', label: '§ 9a Speicherplatz' },
   { id: 'haftung', label: '§ 10 Haftungsbeschränkung' },
   { id: 'datenschutz', label: '§ 11 Datenschutz' },
   { id: 'schluss', label: '§ 12 Schlussbestimmungen' },
@@ -208,31 +208,16 @@ export default function AGB() {
             </section>
 
             <section id="speicher" style={{ marginBottom: '44px' }}>
-              <h2 className="lp-h2">§ 9a Speicher-Upgrade & Zusatz-Speicher</h2>
+              <h2 className="lp-h2">§ 9a Speicherplatz</h2>
               <div className="lp-note">
-                <p style={{ color: '#EAF1F6', fontSize: '.9rem', fontWeight: 600, margin: '0 0 4px' }}>Flexibler Speicher für dokumentenintensive Betriebe</p>
-                <p style={{ color: '#b9cdd6', fontSize: '.9rem', lineHeight: 1.7, margin: 0 }}>Kunden mit hohem Dokumentenaufkommen (z. B. Kanzleien, Logistik) können ihren verfügbaren Speicher flexibel erweitern. Alle Speicher-Add-ons gelten pro Kalendermonat und verlängern sich automatisch.</p>
+                <p style={{ color: '#EAF1F6', fontSize: '.9rem', fontWeight: 600, margin: '0 0 4px' }}>100 GB pro Mitarbeiter inklusive</p>
+                <p style={{ color: '#b9cdd6', fontSize: '.9rem', lineHeight: 1.7, margin: 0 }}>Der Speicher wächst mit Ihrem Team: Jeder Mitarbeiter bringt 100 GB mit, gepoolt für das ganze Unternehmen. Zusätzlicher Speicher ist bei Bedarf günstig buchbar.</p>
               </div>
-              <p className="lp-p">9a.1 Jedes Paket enthält ein inkludiertes Speicherkontingent von 5 GB pro Monat für hochgeladene Dokumente und Dateien. Bei Bedarf können folgende Speicher-Upgrades gebucht werden (netto, zzgl. 19 % MwSt.):</p>
-              <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
-                <table className="lp-table">
-                  <thead>
-                    <tr><th>Speicher-Paket</th><th>Zusätzlicher Speicher</th><th>Preis/Monat (netto)</th></tr>
-                  </thead>
-                  <tbody>
-                    {[['Starter', '+10 GB', '9 €'], ['Pro', '+50 GB', '29 €'], ['Business', '+100 GB', '49 €'], ['Enterprise', '+500 GB', '149 €']].map(([paket, speicher, preis], i) => (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 600, color: '#EAF1F6' }}>{paket}</td>
-                        <td>{speicher}</td>
-                        <td style={{ color: GOLD, fontWeight: 600 }}>{preis}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="lp-p">9a.2 Speicher-Upgrades können jederzeit über das Dashboard oder per E-Mail an info@argonaut-os.com gebucht werden. Die Aktivierung erfolgt werktags innerhalb von 24 Stunden.</p>
-              <p className="lp-p">9a.3 Die Kündigung eines Speicher-Upgrades ist monatlich zum Monatsende möglich. Hochgeladene Dateien, die das Grundkontingent überschreiten, müssen vor Kündigung des Add-ons gelöscht oder exportiert werden.</p>
-              <p className="lp-p">9a.4 Bei dauerhafter Überschreitung des gebuchten Speicherkontingents ist der Anbieter berechtigt, neue Uploads vorübergehend zu sperren und den Kunden per E-Mail zu informieren.</p>
+              <p className="lp-p">9a.1 Im Grundpreis sind 100 GB Speicher pro Mitarbeiter für hochgeladene Dokumente und Dateien enthalten. Der Speicher wird für das gesamte Unternehmen gepoolt (Beispiel: 10 Mitarbeiter = 1.000 GB Gesamtspeicher).</p>
+              <p className="lp-p">9a.2 Bei Mehrbedarf kann zusätzlicher Speicher in Blöcken von je 100 GB zum Preis von 5 € pro Monat (netto, zzgl. 19 % MwSt.) gebucht werden — flexibel und beliebig oft.</p>
+              <p className="lp-p">9a.3 Zusätzlicher Speicher kann jederzeit über das Dashboard oder per E-Mail an info@argonaut-os.com gebucht werden. Die Aktivierung erfolgt werktags innerhalb von 24 Stunden.</p>
+              <p className="lp-p">9a.4 Die Kündigung eines Speicher-Zusatzes ist monatlich zum Monatsende möglich. Hochgeladene Dateien, die das dann verfügbare Kontingent überschreiten, müssen vor Kündigung des Zusatzes gelöscht oder exportiert werden.</p>
+              <p className="lp-p">9a.5 Bei dauerhafter Überschreitung des verfügbaren Speicherkontingents ist der Anbieter berechtigt, neue Uploads vorübergehend zu sperren und den Kunden per E-Mail zu informieren.</p>
             </section>
 
             <section id="haftung" style={{ marginBottom: '44px' }}>
