@@ -2,20 +2,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
+import AngebotRechner from '../../_components/AngebotRechner'
+import AnfrageFormular from '../../_components/AnfrageFormular'
 import { websiteBranchen, websiteBrancheBySlug } from '../../_lib/branchen-web'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
-// Aufbau: Hero · Schmerzpunkte · Ergebnisse · "Das ist Ihr System" (Basis-Stack)
-// · Reassurance/CTA. Der Basis-Stack ist bewusst allgemein (bekommt jede Branche);
-// später pro Branche durch spezifische Tools ersetzbar. OS-Sprache. noindex.
+// Kompletter Vertriebsweg auf einer Seite: Hero · Schmerzpunkte · Ergebnisse ·
+// "Das ist Ihr System" (Basis-Stack) · Preis-Rechner · Anfrage-Formular (→ CRM).
+// Basis-Stack allgemein (jede Branche); später pro Branche spezifisch ersetzbar.
+// OS-Sprache. noindex (Vorschau).
 // ============================================================================
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
 
 // Basis-Stack — das bekommt JEDE Branche ab Tag 1.
-// tag = bekannte Abkürzung (nur wo es 1:1 sitzt).
 const BASIS_STACK: { icon: string; name: string; tag?: string; sub: string }[] = [
   { icon: '📇', name: 'Kunden & Kontakte', tag: 'CRM', sub: 'Alle Kunden & Historie an einem Ort' },
   { icon: '📋', name: 'Angebote & Aufträge', sub: 'Vom Angebot bis zum erledigten Auftrag' },
@@ -89,7 +91,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             Ihr ganzer Betrieb in <span style={{ color: GOLD }}>einem System</span> — für {b.name} fertig eingerichtet. Kein Flickenteppich, keine Insellösungen.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/vorschau#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo für {b.name} buchen →</a>
+            <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo für {b.name} buchen →</a>
             <Link href="/vorschau/branchen" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>Alle Branchen</Link>
           </div>
         </div>
@@ -148,22 +150,34 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         </div>
       </section>
 
-      {/* Reassurance + CTA */}
-      <section style={{ padding: '40px 0 100px' }}>
+      {/* Reassurance */}
+      <section style={{ padding: '30px 0 10px' }}>
         <div className="bd-wrap">
-          <div style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.22)', borderRadius: '18px', padding: '40px 28px', textAlign: 'center' }}>
+          <div style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.22)', borderRadius: '18px', padding: '36px 28px', textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(1.4rem, 3vw, 2rem)', color: '#EAF1F6', margin: '0 0 12px', lineHeight: 1.2 }}>
               Ein System statt zwölf — auch für {b.name}.
             </p>
-            <p style={{ color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto 24px', lineHeight: 1.6 }}>
-              CRM, Aufträge, Rechnungen, Personal, Auswertungen — alles verzahnt, DSGVO-konform, mit KI-Crew an Bord. Wir richten es persönlich mit Ihnen ein.
+            <p style={{ color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto', lineHeight: 1.6 }}>
+              Alles verzahnt, DSGVO-konform, mit KI-Crew an Bord. Wir richten es persönlich mit Ihnen ein.
             </p>
-            <a href="/vorschau#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
-              Demo buchen <span aria-hidden="true">→</span>
-            </a>
           </div>
         </div>
       </section>
+
+      {/* Preis-Rechner */}
+      <section style={{ padding: '20px 0 10px' }}>
+        <div className="bd-wrap">
+          <h2 className="bd-h2" style={{ textAlign: 'center', marginBottom: '0.4rem' }}>
+            Was kostet mich das <span style={{ color: GOLD }}>für {b.name}</span>?
+          </h2>
+          <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+            <AngebotRechner />
+          </div>
+        </div>
+      </section>
+
+      {/* Anfrage → eigenes CRM */}
+      <AnfrageFormular branche={b.name} />
     </main>
   )
 }

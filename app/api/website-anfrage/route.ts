@@ -4,7 +4,8 @@
 // EIGENE, saubere Route für ARGONAUT-Verkaufs-Leads. Bewusst NICHT /api/leads
 // (die ist fest auf Kunde Schäfer + Forst-Felder verdrahtet). Leitet die Anfrage
 // serverseitig an den eigenen n8n-Kontakt-Webhook weiter (kein Fremd-CRM, kein
-// CORS-Problem, kein Lead landet beim Kunden).
+// CORS-Problem, kein Lead landet beim Kunden). n8n legt in eigenes CRM ab und
+// verschickt die Eingangsbestätigung an den Interessenten.
 // -----------------------------------------------------------------------------
 import { NextResponse } from 'next/server'
 
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
     if ((body as any).privacy !== true) {
       return NextResponse.json({ error: 'Zustimmung zur Datenschutzerklärung erforderlich.' }, { status: 400 })
     }
+    if ((body as any).agb !== true) {
+      return NextResponse.json({ error: 'Zustimmung zu den AGB erforderlich.' }, { status: 400 })
+    }
 
     const payload = {
       name,
@@ -42,6 +46,9 @@ export async function POST(req: Request) {
       telefon,
       unternehmen: clean((body as any).unternehmen, 200),
       mitarbeiter: clean((body as any).mitarbeiter, 40),
+      branche: clean((body as any).branche, 120),
+      kontaktwunsch: clean((body as any).kontaktwunsch, 20),
+      wunschtermin: clean((body as any).wunschtermin, 120),
       nachricht: clean((body as any).nachricht, 5000),
       source: 'argonaut-website-vorschau',
       timestamp: new Date().toISOString(),

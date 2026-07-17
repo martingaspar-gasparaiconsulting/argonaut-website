@@ -2,8 +2,10 @@
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/_components/AnfrageFormular.tsx
-// Demo-/Anfrage-Formular der Website (Abschnitt id="demo"). Sendet an die
-// eigene Route /api/website-anfrage (die an n8n weiterleitet). Kein Fremd-CRM.
+// Demo-/Anfrage-Formular (Abschnitt id="demo"). Sendet an die eigene Route
+// /api/website-anfrage (die an n8n weiterleitet → eigenes CRM + Bestätigungsmail).
+// Neu: Kontaktwunsch (Anruf/E-Mail), Wunschtermin, AGB, Branchen-Kontext.
+// Self-contained (unabhängig von den Start-Seiten-Klassen), auf jeder Seite nutzbar.
 // ============================================================================
 
 import { useState } from 'react'
@@ -20,8 +22,11 @@ const inputStyle: React.CSSProperties = {
 }
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', color: '#8fa9b6', margin: '0 0 6px' }
 
-export default function AnfrageFormular() {
-  const [f, setF] = useState({ name: '', unternehmen: '', email: '', telefon: '', mitarbeiter: '', nachricht: '', privacy: false })
+export default function AnfrageFormular({ branche }: { branche?: string }) {
+  const [f, setF] = useState({
+    name: '', unternehmen: '', email: '', telefon: '', mitarbeiter: '',
+    kontaktwunsch: 'egal', wunschtermin: '', nachricht: '', privacy: false, agb: false,
+  })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
@@ -32,10 +37,12 @@ export default function AnfrageFormular() {
     if (!f.name.trim()) { setError('Bitte Ihren Namen angeben.'); return }
     if (!f.email.trim() && !f.telefon.trim()) { setError('Bitte E-Mail oder Telefon angeben.'); return }
     if (!f.privacy) { setError('Bitte der Datenschutzerklärung zustimmen.'); return }
+    if (!f.agb) { setError('Bitte den AGB zustimmen.'); return }
     setStatus('sending')
     try {
       const res = await fetch('/api/website-anfrage', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...f, branche: branche ?? null }),
       })
       if (!res.ok) throw new Error()
       setStatus('success')
@@ -45,10 +52,24 @@ export default function AnfrageFormular() {
     }
   }
 
+  const kontaktLabel = f.kontaktwunsch === 'Anruf' ? 'telefonisch' : f.kontaktwunsch === 'E-Mail' ? 'per E-Mail' : 'bei Ihnen'
+
+  const pill = (val: string, label: string) => (
+    <button type="button" onClick={() => set('kontaktwunsch', val)}
+      style={{
+        flex: 1, padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: '.9rem', fontWeight: 600,
+        border: `1px solid ${f.kontaktwunsch === val ? 'rgba(201,168,76,0.7)' : 'rgba(122,163,179,0.22)'}`,
+        background: f.kontaktwunsch === val ? 'rgba(201,168,76,0.12)' : 'rgba(234,241,246,0.04)',
+        color: f.kontaktwunsch === val ? GOLD : '#c4d3db',
+      }}>{label}</button>
+  )
+
   return (
     <section id="demo" style={{ padding: '30px 0 60px', textAlign: 'center' }}>
-      <div className="arg-wrap" style={{ maxWidth: '760px' }}>
-        <h2 className="arg-h2">Sehen Sie ARGONAUT <span style={{ color: GOLD }}>in Aktion</span>.</h2>
+      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px' }}>
+        <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.5rem, 3.2vw, 2.1rem)', lineHeight: 1.25, margin: '0 0 1rem' }}>
+          {branche ? <>Jetzt <span style={{ color: GOLD }}>{branche}</span> mit ARGONAUT starten.</> : <>Sehen Sie ARGONAUT <span style={{ color: GOLD }}>in Aktion</span>.</>}
+        </h2>
         <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto', lineHeight: 1.55 }}>
           Kostenlose, unverbindliche Demo — persönlich an Ihrem Betrieb. Wir melden uns innerhalb von 24 Stunden.
         </p>
@@ -57,24 +78,26 @@ export default function AnfrageFormular() {
           <div style={{ marginTop: '32px', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '16px', padding: '40px 24px' }}>
             <div style={{ fontSize: '2rem', marginBottom: '.6rem' }} aria-hidden="true">🔱</div>
             <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.4rem', color: '#EAF1F6', margin: '0 0 8px' }}>Anfrage erhalten!</p>
-            <p style={{ color: '#b9cdd6', margin: 0 }}>Danke, {f.name.split(' ')[0] || 'und bis gleich'}. Ihre Crew meldet sich in Kürze bei Ihnen.</p>
+            <p style={{ color: '#b9cdd6', margin: 0 }}>
+              Danke, {f.name.split(' ')[0] || 'und bis gleich'}. Wir melden uns persönlich {kontaktLabel} — wie gewünscht. Eine Bestätigung ist unterwegs in Ihr Postfach.
+            </p>
           </div>
         ) : (
           <form onSubmit={submit} style={{ marginTop: '32px', background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '18px', padding: '28px', textAlign: 'left' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-              <div style={{ gridColumn: 'span 1' }}>
+              <div>
                 <label style={labelStyle}>Name *</label>
                 <input style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Vor- und Nachname" />
               </div>
-              <div style={{ gridColumn: 'span 1' }}>
+              <div>
                 <label style={labelStyle}>Unternehmen</label>
                 <input style={inputStyle} value={f.unternehmen} onChange={(e) => set('unternehmen', e.target.value)} placeholder="Firmenname" />
               </div>
-              <div style={{ gridColumn: 'span 1' }}>
+              <div>
                 <label style={labelStyle}>E-Mail</label>
                 <input type="email" style={inputStyle} value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="name@firma.de" />
               </div>
-              <div style={{ gridColumn: 'span 1' }}>
+              <div>
                 <label style={labelStyle}>Telefon</label>
                 <input style={inputStyle} value={f.telefon} onChange={(e) => set('telefon', e.target.value)} placeholder="+49 …" />
               </div>
@@ -91,6 +114,18 @@ export default function AnfrageFormular() {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Wie sollen wir Sie kontaktieren?</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {pill('Anruf', '📞 Anruf')}
+                  {pill('E-Mail', '✉️ E-Mail')}
+                  {pill('egal', 'Egal')}
+                </div>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Wunschtermin (optional)</label>
+                <input style={inputStyle} value={f.wunschtermin} onChange={(e) => set('wunschtermin', e.target.value)} placeholder="z. B. nächste Woche vormittags" />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Nachricht</label>
                 <textarea style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} value={f.nachricht} onChange={(e) => set('nachricht', e.target.value)} placeholder="Worum geht's? (optional)" />
               </div>
@@ -103,11 +138,17 @@ export default function AnfrageFormular() {
                 <a href="/datenschutz" style={{ color: TEAL }}>Datenschutzerklärung</a>. *
               </span>
             </label>
+            <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', margin: '10px 0 0', cursor: 'pointer' }}>
+              <input type="checkbox" checked={f.agb} onChange={(e) => set('agb', e.target.checked)} style={{ marginTop: '3px', accentColor: GOLD }} />
+              <span style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5 }}>
+                Ich akzeptiere die <a href="/agb" style={{ color: TEAL }}>AGB</a>. *
+              </span>
+            </label>
 
             {error && <p style={{ color: '#f0a3a3', fontSize: '.85rem', margin: '14px 0 0' }}>{error}</p>}
 
             <button type="submit" disabled={status === 'sending'} style={{ width: '100%', marginTop: '18px', background: GOLD, color: NAVY, fontWeight: 700, fontSize: '1rem', padding: '15px', borderRadius: '10px', border: 'none', cursor: status === 'sending' ? 'default' : 'pointer', opacity: status === 'sending' ? 0.7 : 1 }}>
-              {status === 'sending' ? 'Wird gesendet …' : 'Demo anfragen →'}
+              {status === 'sending' ? 'Wird gesendet …' : 'Anfrage senden →'}
             </button>
             <p style={{ fontSize: '.78rem', color: '#7f97a4', textAlign: 'center', margin: '12px 0 0' }}>
               Kostenlos & unverbindlich · Antwort in 24 Stunden
