@@ -6,15 +6,30 @@ import { websiteBranchen, websiteBrancheBySlug } from '../../_lib/branchen-web'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
-// Eine Vorlage, gespeist aus lib/branchen (Schmerzpunkte + Ergebnisse je Branche).
-// Bewusst in OS-Sprache (kein "Automatisierungen/Agenten"). Alle Seiten statisch
-// vorgerendert. Hintergrundbild folgt später (Stock + Navy-Schleier) — Slot ist da.
-// robots: noindex (Vorschau).
+// Aufbau: Hero · Schmerzpunkte · Ergebnisse · "Das ist Ihr System" (Basis-Stack)
+// · Reassurance/CTA. Der Basis-Stack ist bewusst allgemein (bekommt jede Branche);
+// später pro Branche durch spezifische Tools ersetzbar. OS-Sprache. noindex.
 // ============================================================================
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
-const TEAL = '#7aa3b3'
+
+// Basis-Stack — das bekommt JEDE Branche ab Tag 1.
+// tag = bekannte Abkürzung (nur wo es 1:1 sitzt).
+const BASIS_STACK: { icon: string; name: string; tag?: string; sub: string }[] = [
+  { icon: '📇', name: 'Kunden & Kontakte', tag: 'CRM', sub: 'Alle Kunden & Historie an einem Ort' },
+  { icon: '📋', name: 'Angebote & Aufträge', sub: 'Vom Angebot bis zum erledigten Auftrag' },
+  { icon: '🧾', name: 'Rechnungen & Mahnwesen', tag: 'Faktura', sub: 'Zahlungen im Blick, E-Rechnung' },
+  { icon: '📅', name: 'Termine & Kalender', sub: 'Planung & Erinnerungen, nichts vergessen' },
+  { icon: '✅', name: 'Aufgaben & Projekte', sub: 'Jeder weiß, was zu tun ist' },
+  { icon: '👥', name: 'Personal & Zeiten', sub: 'Stunden, Urlaub, Lohn-Brücke' },
+  { icon: '📄', name: 'Dokumente & Verträge', tag: 'DMS', sub: 'Alles digital, DSGVO-konform' },
+  { icon: '📦', name: 'Lager & Material', tag: 'Warenwirtschaft', sub: 'Bestand & Bestellungen immer aktuell' },
+  { icon: '💳', name: 'Kasse & Zahlungen', tag: 'POS', sub: 'Verkauf sauber erfasst' },
+  { icon: '📊', name: 'Auswertungen & Dashboard', tag: 'BI', sub: 'Ihre Zahlen in Echtzeit' },
+  { icon: '🧭', name: 'Ihre KI-Crew', sub: 'Nimmt Routine ab und denkt mit' },
+  { icon: '🔒', name: 'Deutscher Server & DSGVO', sub: 'Sicher und rechtskonform' },
+]
 
 export function generateStaticParams() {
   return websiteBranchen().map((b) => ({ slug: b.slug }))
@@ -45,7 +60,17 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         .bd-card { border-radius: 14px; padding: 20px 22px; line-height: 1.5; }
         .bd-pain { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.14); color: #c4d3db; }
         .bd-win { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.22); color: #EAF1F6; }
-        @media (max-width: 640px) { .bd-grid { grid-template-columns: 1fr; } }
+        .bd-stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .bd-tile { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.14); border-radius: 14px; padding: 18px 18px; transition: border-color .2s, background .2s; }
+        .bd-tile:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.05); }
+        .bd-tile-top { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; flex-wrap: wrap; }
+        .bd-tile-icon { font-size: 1.2rem; line-height: 1; }
+        .bd-tile-name { font-weight: 700; font-size: .98rem; color: #EAF1F6; }
+        .bd-tile-tag { font-size: .68rem; font-weight: 700; letter-spacing: .04em; color: ${GOLD}; background: rgba(201,168,76,0.12); border-radius: 999px; padding: 2px 8px; }
+        .bd-tile-sub { font-size: .85rem; color: #9fb3bd; line-height: 1.4; }
+        .bd-summary { margin-top: 20px; background: linear-gradient(160deg, rgba(201,168,76,0.08), rgba(122,163,179,0.05)); border: 1px solid rgba(201,168,76,0.28); border-radius: 14px; padding: 20px 24px; font-size: 1.05rem; color: #EAF1F6; line-height: 1.55; }
+        @media (max-width: 860px) { .bd-stack { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .bd-grid { grid-template-columns: 1fr; } .bd-stack { grid-template-columns: 1fr; } }
       `}</style>
 
       <Navbar />
@@ -95,6 +120,31 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Das ist Ihr System — Basis-Stack */}
+      <section style={{ padding: '40px 0 20px' }}>
+        <div className="bd-wrap">
+          <h2 className="bd-h2">Das ist <span style={{ color: GOLD }}>Ihr System</span> — ARGONAUT für {b.name}.</h2>
+          <p style={{ color: '#b9cdd6', maxWidth: '58ch', margin: '-0.6rem 0 1.8rem', lineHeight: 1.6 }}>
+            Diese Programme bekommen Sie ab Tag 1 — alles verzahnt, ein Login.
+          </p>
+          <div className="bd-stack">
+            {BASIS_STACK.map((t) => (
+              <div key={t.name} className="bd-tile">
+                <div className="bd-tile-top">
+                  <span className="bd-tile-icon" aria-hidden="true">{t.icon}</span>
+                  <span className="bd-tile-name">{t.name}</span>
+                  {t.tag && <span className="bd-tile-tag">{t.tag}</span>}
+                </div>
+                <div className="bd-tile-sub">{t.sub}</div>
+              </div>
+            ))}
+          </div>
+          <p className="bd-summary">
+            Kurz gesagt: Ihr komplettes <strong style={{ color: GOLD }}>CRM, ERP, Warenwirtschaft und DMS</strong> — in einem System, ein Login. Statt fünf Programme, die nicht miteinander reden.
+          </p>
         </div>
       </section>
 
