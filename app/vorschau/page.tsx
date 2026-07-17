@@ -170,6 +170,21 @@ export default function VorschauPage() {
         .arg-seat .st-pr { color: #c9a84c; font-weight: 700; font-size: 1.1rem; margin: 0; }
         .arg-setup { background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.20); border-radius: 14px; padding: 22px 24px; margin-top: 26px; text-align: left; }
         @media (max-width: 760px) { .arg-seats { grid-template-columns: 1fr; } }
+
+        /* --- Schritt 10: Vertrauen --- */
+        .arg-trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 44px; text-align: left; }
+        .arg-trust { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.12); border-radius: 14px; padding: 24px 20px; }
+        .arg-trust-icon { color: #c9a84c; margin-bottom: 14px; }
+        .arg-trust h3 { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.05rem; line-height: 1.3; color: #EAF1F6; margin: 0 0 6px; }
+        .arg-trust p { font-size: .86rem; color: #90a6b2; margin: 0; line-height: 1.5; }
+        @media (max-width: 860px) { .arg-trust-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .arg-trust-grid { grid-template-columns: 1fr; } }
+
+        /* --- Schritt 11: Abschluss / Footer --- */
+        .arg-footer { border-top: 1px solid rgba(122,163,179,0.14); margin-top: 40px; padding: 40px 0; }
+        .arg-footer-links { display: flex; flex-wrap: wrap; gap: 10px 22px; justify-content: center; }
+        .arg-footer-links a { color: #7aa3b3; text-decoration: none; font-size: .9rem; }
+        .arg-footer-links a:hover { color: #c9a84c; }
       `}</style>
 
       {/* ===================== HERO ===================== */}
@@ -757,8 +772,84 @@ export default function VorschauPage() {
         </div>
       </section>
 
-      {/* Weitere Abschnitte folgen in den naechsten Schritten:
-          10) Vertrauen  11) Abschluss  (Vergleichsseite ✓ live) */}
+      {/* ============== SCHRITT 10 · VERTRAUEN & SICHERHEIT ============== */}
+      <section style={{ padding: '20px 0 50px', textAlign: 'center' }}>
+        <div className="arg-wrap">
+          <h2 className="arg-h2">
+            Ihre Daten. Ihre Sicherheit. <span style={{ color: GOLD }}>In Deutschland.</span>
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
+            ARGONAUT ist von Grund auf für den deutschen Mittelstand gebaut — sicher, konform und lückenlos nachvollziehbar.
+          </p>
+          <div className="arg-trust-grid">
+            {[
+              {
+                t: 'DSGVO-konform', d: 'Höchste Datenschutzstandards — nach deutscher und EU-Norm.',
+                icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" /></svg>),
+              },
+              {
+                t: 'EU-Hosting', d: 'Ihre Daten bleiben in Europa. Serverstandort Deutschland/EU.',
+                icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>),
+              },
+              {
+                t: 'Rollen & Rechte', d: 'Granulare Zugriffskontrolle — jeder sieht nur, was er darf.',
+                icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>),
+              },
+              {
+                t: 'Audit-Trails', d: 'Lückenlos nachvollziehbar — wer hat wann was getan.',
+                icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 9h6M9 13h6M9 17h4" /></svg>),
+              },
+            ].map((x) => (
+              <div key={x.t} className="arg-trust">
+                <div className="arg-trust-icon">{x.icon}</div>
+                <h3>{x.t}</h3>
+                <p>{x.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============== SCHRITT 11 · ABSCHLUSS + FOOTER ============== */}
+      <section style={{ padding: '60px 0 0', textAlign: 'center', background: 'radial-gradient(900px 460px at 50% 130%, rgba(201,168,76,0.14), transparent 60%)' }}>
+        <div className="arg-wrap">
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }} aria-hidden="true">🔱</div>
+          <h2 className="arg-h2" style={{ fontSize: 'clamp(2rem, 5.2vw, 3.2rem)' }}>
+            Werden Sie Teil der <span style={{ color: GOLD }}>Crew</span>.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.9vw, 1.22rem)', color: '#b9cdd6', maxWidth: '50ch', margin: '0 auto 2rem', lineHeight: 1.6 }}>
+            Das Betriebssystem, das jedes Unternehmen haben wird. Steigen Sie ein, bevor es Ihre Wettbewerber tun.
+          </p>
+          <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '16px 34px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
+              Demo buchen <span aria-hidden="true">→</span>
+            </a>
+            <a href="#plattform" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '16px 30px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              <span aria-hidden="true" style={{ color: GOLD }}>▶</span> Plattform ansehen
+            </a>
+          </div>
+        </div>
+
+        <footer className="arg-footer">
+          <div className="arg-wrap">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
+              <span aria-hidden="true">🔱</span>
+              <span style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, letterSpacing: '.2em', color: '#EAF1F6' }}>ARGONAUT&nbsp;OS</span>
+            </div>
+            <div className="arg-footer-links">
+              <a href="/impressum">Impressum</a>
+              <a href="/datenschutz">Datenschutz</a>
+              <a href="/agb">AGB</a>
+              <a href="mailto:martingaspar@gasparaiconsulting.de">Kontakt</a>
+            </div>
+            <p style={{ textAlign: 'center', color: '#5f7683', fontSize: '.8rem', margin: '18px 0 0' }}>
+              © 2026 ARGONAUT OS · Gaspar AI Consulting · Böblingen
+            </p>
+          </div>
+        </footer>
+      </section>
+
+      {/* ==== STARTSEITE KOMPLETT (11 Abschnitte) — naechster Schritt: Freischaltung (proxy.ts lockern) ==== */}
     </main>
   )
 }
