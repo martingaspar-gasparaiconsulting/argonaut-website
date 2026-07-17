@@ -2,8 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
-import AngebotRechner from '../../_components/AngebotRechner'
-import AnfrageFormular from '../../_components/AnfrageFormular'
+import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug } from '../../_lib/branchen-web'
 
 // ============================================================================
@@ -164,20 +163,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         </div>
       </section>
 
-      {/* Preis-Rechner */}
-      <section style={{ padding: '20px 0 10px' }}>
-        <div className="bd-wrap">
-          <h2 className="bd-h2" style={{ textAlign: 'center', marginBottom: '0.4rem' }}>
-            Was kostet mich das <span style={{ color: GOLD }}>für {b.name}</span>?
-          </h2>
-          <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-            <AngebotRechner />
-          </div>
-        </div>
-      </section>
-
-      {/* Anfrage → eigenes CRM */}
-      <AnfrageFormular branche={b.name} />
+      {/* Angebot + Anfrage in einem Guss → eigenes CRM */}
+      <AngebotAnfrage branche={b.name} />
     </main>
   )
 }

@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { useState } from 'react'
+import TerminPicker from './TerminPicker'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
@@ -25,7 +26,7 @@ const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', 
 export default function AnfrageFormular({ branche }: { branche?: string }) {
   const [f, setF] = useState({
     name: '', unternehmen: '', email: '', telefon: '', mitarbeiter: '',
-    kontaktwunsch: 'egal', wunschtermin: '', nachricht: '', privacy: false, agb: false,
+    kontaktwunsch: '', wunschtermin: '', nachricht: '', privacy: false, agb: false,
   })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -36,6 +37,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
     setError('')
     if (!f.name.trim()) { setError('Bitte Ihren Namen angeben.'); return }
     if (!f.email.trim() && !f.telefon.trim()) { setError('Bitte E-Mail oder Telefon angeben.'); return }
+    if (!f.kontaktwunsch) { setError('Bitte wählen: Anruf oder E-Mail.'); return }
     if (!f.privacy) { setError('Bitte der Datenschutzerklärung zustimmen.'); return }
     if (!f.agb) { setError('Bitte den AGB zustimmen.'); return }
     setStatus('sending')
@@ -52,7 +54,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
     }
   }
 
-  const kontaktLabel = f.kontaktwunsch === 'Anruf' ? 'telefonisch' : f.kontaktwunsch === 'E-Mail' ? 'per E-Mail' : 'bei Ihnen'
+  const kontaktLabel = f.kontaktwunsch === 'Anruf' ? 'telefonisch' : 'per E-Mail'
 
   const pill = (val: string, label: string) => (
     <button type="button" onClick={() => set('kontaktwunsch', val)}
@@ -103,7 +105,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Mitarbeiterzahl</label>
-                <select style={{ ...inputStyle, appearance: 'none' }} value={f.mitarbeiter} onChange={(e) => set('mitarbeiter', e.target.value)}>
+                <select style={{ ...inputStyle, appearance: 'none', colorScheme: 'dark' }} value={f.mitarbeiter} onChange={(e) => set('mitarbeiter', e.target.value)}>
                   <option value="">Bitte wählen …</option>
                   <option>1 (Einzelunternehmer)</option>
                   <option>2–9</option>
@@ -114,16 +116,15 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Wie sollen wir Sie kontaktieren?</label>
+                <label style={labelStyle}>Wie sollen wir Sie kontaktieren? *</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {pill('Anruf', '📞 Anruf')}
                   {pill('E-Mail', '✉️ E-Mail')}
-                  {pill('egal', 'Egal')}
                 </div>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Wunschtermin (optional)</label>
-                <input style={inputStyle} value={f.wunschtermin} onChange={(e) => set('wunschtermin', e.target.value)} placeholder="z. B. nächste Woche vormittags" />
+                <TerminPicker value={f.wunschtermin} onChange={(v) => set('wunschtermin', v)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Nachricht</label>

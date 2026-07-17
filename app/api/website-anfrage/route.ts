@@ -49,6 +49,8 @@ export async function POST(req: Request) {
       branche: clean((body as any).branche, 120),
       kontaktwunsch: clean((body as any).kontaktwunsch, 20),
       wunschtermin: clean((body as any).wunschtermin, 120),
+      angebot: clean((body as any).angebot, 300),
+      preis: clean((body as any).preis, 40),
       nachricht: clean((body as any).nachricht, 5000),
       source: 'argonaut-website-vorschau',
       timestamp: new Date().toISOString(),
