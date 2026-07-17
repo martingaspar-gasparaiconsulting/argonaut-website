@@ -3,11 +3,13 @@
 // -----------------------------------------------------------------------------
 // EIGENE, saubere Route für ARGONAUT-Verkaufs-Leads. Bewusst NICHT /api/leads
 // (die ist fest auf Kunde Schäfer + Forst-Felder verdrahtet). Leitet die Anfrage
-// serverseitig an den eigenen n8n-Kontakt-Webhook weiter (kein Fremd-CRM, kein
-// CORS-Problem, kein Lead landet beim Kunden). n8n legt in eigenes CRM ab und
-// verschickt die Eingangsbestätigung an den Interessenten.
+// serverseitig an den eigenen n8n-Kontakt-Webhook weiter (kein Fremd-CRM). n8n
+// legt in eigenes CRM ab und verschickt die Eingangsbestätigung.
+// Zusätzlich: reserviert (falls Wunschtermin gewählt) den Slot in website_termine.
+// Die UNIQUE-Sperre (slot_date, slot_time) verhindert Doppelbuchung -> 409.
 // -----------------------------------------------------------------------------
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
@@ -17,6 +19,28 @@ function clean(v: unknown, max = 2000): string | null {
   if (typeof v !== 'string') return null
   const t = v.trim()
   return t === '' ? null : t.slice(0, max)
+}
+
+// Reserviert den Slot. Rückgabe: 'ok' | 'taken' | 'skip' (kein Termin) | 'error'.
+async function reserviereSlot(key: string | null, ref: { name: string | null; email: string | null; telefon: string | null; unternehmen: string | null; branche: string | null }) {
+  if (!key || key.length < 12) return 'skip' as const
+  const slot_date = key.slice(0, 10)
+  const slot_time = key.slice(11).trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(slot_date) || !/^\d{2}:\d{2}$/.test(slot_time)) return 'skip' as const
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) return 'skip' as const // ohne DB einfach ohne Sperre weiter
+
+  const supabase = createClient(url, serviceKey)
+  const { error } = await supabase.from('website_termine').insert({
+    slot_date, slot_time,
+    name: ref.name, email: ref.email, telefon: ref.telefon, unternehmen: ref.unternehmen, branche: ref.branche,
+  })
+  if (!error) return 'ok' as const
+  if ((error as { code?: string }).code === '23505') return 'taken' as const // UNIQUE-Verletzung = schon vergeben
+  console.error('Slot-Reservierung fehlgeschlagen:', error)
+  return 'error' as const
 }
 
 export async function POST(req: Request) {
@@ -29,6 +53,8 @@ export async function POST(req: Request) {
     const name = clean((body as any).name, 200)
     const email = clean((body as any).email, 200)
     const telefon = clean((body as any).telefon, 60)
+    const unternehmen = clean((body as any).unternehmen, 200)
+    const branche = clean((body as any).branche, 120)
 
     if (!name || (!email && !telefon)) {
       return NextResponse.json({ error: 'Name und E-Mail oder Telefon erforderlich.' }, { status: 400 })
@@ -40,13 +66,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Zustimmung zu den AGB erforderlich.' }, { status: 400 })
     }
 
+    // Zuerst den Wunschtermin reservieren (falls gewählt). Doppelbuchung -> 409.
+    const slotKey = clean((body as any).wunschterminKey, 30)
+    const reserv = await reserviereSlot(slotKey, { name, email, telefon, unternehmen, branche })
+    if (reserv === 'taken') {
+      return NextResponse.json({ error: 'Der gewählte Termin ist gerade vergeben. Bitte einen anderen Termin wählen.', code: 'slot_taken' }, { status: 409 })
+    }
+
     const payload = {
       name,
       email,
       telefon,
-      unternehmen: clean((body as any).unternehmen, 200),
+      unternehmen,
       mitarbeiter: clean((body as any).mitarbeiter, 40),
-      branche: clean((body as any).branche, 120),
+      branche,
       kontaktwunsch: clean((body as any).kontaktwunsch, 20),
       wunschtermin: clean((body as any).wunschtermin, 120),
       angebot: clean((body as any).angebot, 300),

@@ -26,11 +26,15 @@ const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', 
 export default function AnfrageFormular({ branche }: { branche?: string }) {
   const [f, setF] = useState({
     name: '', unternehmen: '', email: '', telefon: '', mitarbeiter: '',
-    kontaktwunsch: '', wunschtermin: '', nachricht: '', privacy: false, agb: false,
+    kontaktwunsch: '', wunschtermin: '', wunschterminKey: '', nachricht: '', privacy: false, agb: false,
   })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
+  const [reload, setReload] = useState(0)
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
+
+  const maMap: Record<string, number> = { '1 (Einzelunternehmer)': 1, '2–9': 9, '10–24': 24, '25–99': 99, '100–499': 499, '500+': 500 }
+  const maNum = maMap[f.mitarbeiter]
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,6 +50,14 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...f, branche: branche ?? null }),
       })
+      if (res.status === 409) {
+        const j = await res.json().catch(() => ({}))
+        setStatus('idle')
+        setError(j.error || 'Der gewählte Termin ist gerade vergeben. Bitte einen anderen wählen.')
+        setF((p) => ({ ...p, wunschtermin: '', wunschterminKey: '' }))
+        setReload((n) => n + 1)
+        return
+      }
       if (!res.ok) throw new Error()
       setStatus('success')
     } catch {
@@ -124,7 +136,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Wunschtermin (optional)</label>
-                <TerminPicker value={f.wunschtermin} onChange={(v) => set('wunschtermin', v)} />
+                <TerminPicker key={reload} ma={maNum} value={f.wunschtermin} onChange={(v, k) => setF((p) => ({ ...p, wunschtermin: v, wunschterminKey: k }))} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Nachricht</label>

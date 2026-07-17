@@ -56,9 +56,10 @@ export default function AngebotAnfrage({ branche }: { branche?: string }) {
   const [std, setStd] = useState(4)
   const [self, setSelf] = useState(6)
   // Anfrage
-  const [f, setF] = useState({ name: '', unternehmen: '', email: '', telefon: '', kontaktwunsch: '', wunschtermin: '', nachricht: '', privacy: false, agb: false })
+  const [f, setF] = useState({ name: '', unternehmen: '', email: '', telefon: '', kontaktwunsch: '', wunschtermin: '', wunschterminKey: '', nachricht: '', privacy: false, agb: false })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
+  const [reload, setReload] = useState(0)
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
 
   const g = grundgebuehr(ma)
@@ -100,6 +101,14 @@ export default function AngebotAnfrage({ branche }: { branche?: string }) {
           preis: `${fmt(total)} €/Monat`,
         }),
       })
+      if (res.status === 409) {
+        const j = await res.json().catch(() => ({}))
+        setStatus('idle')
+        setError(j.error || 'Der gewählte Termin ist gerade vergeben. Bitte einen anderen wählen.')
+        setF((p) => ({ ...p, wunschtermin: '', wunschterminKey: '' }))
+        setReload((n) => n + 1)
+        return
+      }
       if (!res.ok) throw new Error()
       setStatus('success')
     } catch {
@@ -240,7 +249,7 @@ export default function AngebotAnfrage({ branche }: { branche?: string }) {
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Wunschtermin (optional)</label>
-              <TerminPicker value={f.wunschtermin} onChange={(v) => set('wunschtermin', v)} />
+              <TerminPicker key={reload} ma={ma} value={f.wunschtermin} onChange={(v, k) => setF((p) => ({ ...p, wunschtermin: v, wunschterminKey: k }))} />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Nachricht</label>
