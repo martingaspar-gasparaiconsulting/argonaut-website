@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import ErsparnisRechner from './_components/ErsparnisRechner'
 import AngebotRechner from './_components/AngebotRechner'
+import Navbar from './_components/Navbar'
+import AnfrageFormular from './_components/AnfrageFormular'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/page.tsx — NEUE WEBSITE (Parallel-Bau / Vorschau)
@@ -32,6 +34,7 @@ const TEAL = '#7aa3b3'
 export default function VorschauPage() {
   return (
     <main
+      id="top"
       style={{
         background: NAVY,
         color: '#EAF1F6',
@@ -186,6 +189,8 @@ export default function VorschauPage() {
         .arg-footer-links a { color: #7aa3b3; text-decoration: none; font-size: .9rem; }
         .arg-footer-links a:hover { color: #c9a84c; }
       `}</style>
+
+      <Navbar />
 
       {/* ===================== HERO ===================== */}
       <section
@@ -421,7 +426,7 @@ export default function VorschauPage() {
       </section>
 
       {/* ============== SCHRITT 3 · MODULE-KACHELN ============== */}
-      <section className="arg-modules">
+      <section id="module" className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
             Alles, was Ihr Betrieb braucht. <span style={{ color: GOLD }}>In einem System.</span>
@@ -687,7 +692,7 @@ export default function VorschauPage() {
       </section>
 
       {/* ============== SCHRITT 9 · PREISE (nur Anzeige) ============== */}
-      <section style={{ padding: '8px 0 100px', textAlign: 'center' }}>
+      <section id="preise" style={{ padding: '8px 0 100px', textAlign: 'center' }}>
         <div className="arg-wrap">
           <h2 className="arg-h2">
             Ein System. Ein Preis nach Ihrer <span style={{ color: GOLD }}>Größe</span>.
@@ -773,7 +778,7 @@ export default function VorschauPage() {
       </section>
 
       {/* ============== SCHRITT 10 · VERTRAUEN & SICHERHEIT ============== */}
-      <section style={{ padding: '20px 0 50px', textAlign: 'center' }}>
+      <section id="sicherheit" style={{ padding: '20px 0 50px', textAlign: 'center' }}>
         <div className="arg-wrap">
           <h2 className="arg-h2">
             Ihre Daten. Ihre Sicherheit. <span style={{ color: GOLD }}>In Deutschland.</span>
@@ -809,6 +814,9 @@ export default function VorschauPage() {
           </div>
         </div>
       </section>
+
+      {/* ============== DEMO-/ANFRAGE-FORMULAR (id="demo") ============== */}
+      <AnfrageFormular />
 
       {/* ============== SCHRITT 11 · ABSCHLUSS + FOOTER ============== */}
       <section style={{ padding: '60px 0 0', textAlign: 'center', background: 'radial-gradient(900px 460px at 50% 130%, rgba(201,168,76,0.14), transparent 60%)' }}>
