@@ -574,13 +574,13 @@ export default function VorschauPage() {
             So einfach ist der <span style={{ color: GOLD }}>Start</span>.
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto', lineHeight: 1.55 }}>
-            In Minuten startklar — und ARGONAUT nimmt Sie an die Hand. Kein IT-Projekt, kein Handbuch.
+            Kein IT-Projekt, kein Handbuch — ein echter Ansprechpartner bringt Sie an Bord, dann führt Sie Ihre Crew.
           </p>
 
           <div className="arg-steps">
             <div className="arg-steps-line" aria-hidden="true" />
             {[
-              { title: 'Konto erstellen', desc: 'In wenigen Minuten startklar. Keine Installation, kein IT-Projekt.' },
+              { title: 'Persönlicher Start', desc: 'Erstgespräch, Video-Call oder Vor-Ort — wir richten ARGONAUT mit Ihnen ein. Keine Installation, kein IT-Projekt.' },
               { title: 'Das Auge begrüßt Sie', desc: 'ARGONAUT meldet sich mit Namen: „Sollen wir loslegen?" Sie entscheiden.' },
               { title: '10 Minuten am Tag', desc: 'In kleinen Etappen durchs System — pausierbar, ganz in Ihrem Tempo.' },
               { title: 'Vom Matrosen zum Kapitän', desc: 'Zertifikate zeigen Ihren Fortschritt. Nach einem Jahr können Sie mehr als die meisten Profis.' },
