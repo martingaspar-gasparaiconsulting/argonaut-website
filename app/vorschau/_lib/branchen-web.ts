@@ -5,6 +5,16 @@
 // lib/branchen.ts (vom Kundensystem genutzt) bleibt unangetastet.
 
 import { getAllBranchen, getBrancheBySlug, type Branche } from '@/lib/branchen'
+import { EXTRA_BRANCHEN } from './branchen-web-extra'
+
+// Einheitlicher Website-Typ (Bestand + neue Nischen).
+export interface WebBranche {
+  slug: string
+  name: string
+  kategorie: string
+  schmerzen: string[]
+  ergebnisse: string[]
+}
 
 // --- Ausschluss: von Anfang an raus (reguliert) + medizinisch/heilkundlich ---
 export const AUSSCHLUSS = new Set<string>([
@@ -228,27 +238,30 @@ export const REMAP: Record<string, string> = {
   'Stadtverwaltungen & Behörden': 'Kultur, Soziales & Öffentliches',
 }
 
-// Website-Kategorie einer Branche (REMAP, sonst Original-Kategorie).
+// Website-Kategorie einer Bestands-Branche (REMAP, sonst Original-Kategorie).
 export function websiteKategorieOf(b: Branche): string {
   return REMAP[b.name] ?? b.kategorie
 }
 
-export function websiteBranchen(): Branche[] {
-  return getAllBranchen().filter((b) => !AUSSCHLUSS.has(b.name))
+function libToWeb(b: Branche): WebBranche {
+  return { slug: b.slug, name: b.name, kategorie: websiteKategorieOf(b), schmerzen: b.schmerzen, ergebnisse: b.ergebnisse }
 }
 
-export function websiteBrancheBySlug(slug: string): Branche | undefined {
-  const b = getBrancheBySlug(slug)
-  if (!b || AUSSCHLUSS.has(b.name)) return undefined
-  return b
+// Alle Website-Branchen: Bestand (gefiltert + umsortiert) + neue Nischen.
+export function websiteBranchen(): WebBranche[] {
+  const bestand = getAllBranchen().filter((b) => !AUSSCHLUSS.has(b.name)).map(libToWeb)
+  return [...bestand, ...EXTRA_BRANCHEN]
 }
 
-export function websiteKategorien(): { kategorie: string; branchen: Branche[] }[] {
-  const map = new Map<string, Branche[]>()
+export function websiteBrancheBySlug(slug: string): WebBranche | undefined {
+  return websiteBranchen().find((b) => b.slug === slug)
+}
+
+export function websiteKategorien(): { kategorie: string; branchen: WebBranche[] }[] {
+  const map = new Map<string, WebBranche[]>()
   for (const b of websiteBranchen()) {
-    const k = websiteKategorieOf(b)
-    if (!map.has(k)) map.set(k, [])
-    map.get(k)!.push(b)
+    if (!map.has(b.kategorie)) map.set(b.kategorie, [])
+    map.get(b.kategorie)!.push(b)
   }
   const known = KATEGORIE_ORDER.filter((k) => map.has(k)).map((k) => ({ kategorie: k, branchen: map.get(k)! }))
   const rest = [...map.keys()].filter((k) => !KATEGORIE_ORDER.includes(k)).map((k) => ({ kategorie: k, branchen: map.get(k)! }))
