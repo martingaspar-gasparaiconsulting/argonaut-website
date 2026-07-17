@@ -58,7 +58,7 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
     return rows
   }, [])
 
-  const smallBiz = ma != null && ma <= 5
+  const smallBiz = ma != null && ma <= 9
   const flat = useMemo(() => weeks.flat(), [weeks])
 
   const dayDisabled = (d: Day) => !d.bookable || (d.isFri && !smallBiz)
@@ -112,7 +112,7 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
       </div>
 
       <p style={{ fontSize: '.75rem', color: '#7f97a4', margin: '10px 0 0', lineHeight: 1.5 }}>
-        <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 5 Mitarbeiter.
+        <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 9 Mitarbeiter.
       </p>
 
       {selDay && (
