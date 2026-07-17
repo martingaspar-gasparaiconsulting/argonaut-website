@@ -310,7 +310,7 @@ export default function VorschauPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
                 {[
                   { k: 'Offene Aufgaben', v: '24' },
-                  { k: 'Automatisierungen', v: '17' },
+                  { k: 'Erledigte Aufgaben', v: '17' },
                   { k: 'Einsparpotenzial', v: '€ 38.420' },
                 ].map((kpi) => (
                   <div
