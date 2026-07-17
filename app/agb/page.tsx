@@ -218,6 +218,7 @@ export default function AGB() {
               <p className="lp-p">9a.3 Zusätzlicher Speicher kann jederzeit über das Dashboard oder per E-Mail an info@argonaut-os.com gebucht werden. Die Aktivierung erfolgt werktags innerhalb von 24 Stunden.</p>
               <p className="lp-p">9a.4 Die Kündigung eines Speicher-Zusatzes ist monatlich zum Monatsende möglich. Hochgeladene Dateien, die das dann verfügbare Kontingent überschreiten, müssen vor Kündigung des Zusatzes gelöscht oder exportiert werden.</p>
               <p className="lp-p">9a.5 Bei dauerhafter Überschreitung des verfügbaren Speicherkontingents ist der Anbieter berechtigt, neue Uploads vorübergehend zu sperren und den Kunden per E-Mail zu informieren.</p>
+              <p className="lp-p">9a.6 Für die einmalige Datenübernahme (Onboarding) ist ein Migrationsvolumen von bis zu 1 TB im Preis inbegriffen. Für den laufenden Betrieb danach gilt das Speicherkontingent gemäß 9a.1 (100 GB pro Mitarbeiter); Mehrbedarf wird gemäß 9a.2 berechnet. Für Migrationen über 1 TB erstellt der Anbieter ein individuelles Angebot, das Speicher und Verarbeitungsaufwand abdeckt.</p>
             </section>
 
             <section id="haftung" style={{ marginBottom: '44px' }}>
