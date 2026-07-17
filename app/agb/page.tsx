@@ -28,12 +28,19 @@ const sections = [
   { id: 'schluss', label: '§ 12 Schlussbestimmungen' },
 ]
 
-const tarife = [
-  { name: 'SOLO Beta', preis: '499', laufzeit: '3 Monate (danach AUTO-Upgrade auf START)', agenten: '2 KI-Agenten', automatisierungen: '25 Universal-Automatisierungen (frei wählbar)', kontingent: 'KI unbegrenzt inklusive', highlight: false },
-  { name: 'START', preis: '1.500', laufzeit: '12 Monate', agenten: '8 KI-Agenten', automatisierungen: '40 (frei wählbar)', kontingent: 'KI unbegrenzt inklusive', highlight: false },
-  { name: 'PRO', preis: '3.000', laufzeit: '12 Monate', agenten: '16 KI-Agenten', automatisierungen: '70 (frei wählbar)', kontingent: 'KI unbegrenzt inklusive', highlight: true },
-  { name: 'BUSINESS', preis: '6.000', laufzeit: '12 Monate', agenten: '20 KI-Agenten', automatisierungen: '110 (frei wählbar)', kontingent: 'KI unbegrenzt inklusive', highlight: false },
-  { name: 'ENTERPRISE', preis: '9.000', laufzeit: '12 Monate', agenten: '24 KI-Agenten', automatisierungen: '128 (frei wählbar)', kontingent: 'KI unbegrenzt inklusive', highlight: false },
+const groessen = [
+  { name: 'SOLO', ma: '1 (Einzelunternehmer)', fee: '499 €', setup: '1.500 €', highlight: false },
+  { name: 'Mini', ma: '2–9', fee: '490 €', setup: '2.500 €', highlight: false },
+  { name: 'Klein', ma: '10–24', fee: '990 €', setup: '5.000 €', highlight: false },
+  { name: 'Mittel', ma: '25–99', fee: '1.990 €', setup: '12.000 €', highlight: true },
+  { name: 'Groß', ma: '100–499', fee: '3.490 €', setup: 'auf Anfrage', highlight: false },
+  { name: 'Enterprise', ma: 'ab 500', fee: '5.990 €', setup: 'auf Anfrage', highlight: false },
+]
+
+const sitze = [
+  { typ: 'Voll-Nutzer', wer: 'Chef, GF, Büro, Dispo', preis: '380 € · ab 21 Sitzen 320 € · ab 101: 260 € · ab 501: 190 €' },
+  { typ: 'Standard-Nutzer', wer: 'Sachbearbeiter mit Doku', preis: '170 € · ab 21: 145 € · ab 101: 120 € · ab 501: 90 €' },
+  { typ: 'Self-Service', wer: 'Zeiterfassung, Lohnzettel, „Mein Bereich"', preis: '19 € · ab 500 Sitzen 14 €' },
 ]
 
 export default function AGB() {
@@ -91,7 +98,7 @@ export default function AGB() {
               <h2 className="lp-h2">§ 1 Gegenstand & Leistungen</h2>
               <p className="lp-p">1.1 Die Gaspar AI Consulting, vertreten durch Martin Gaspar, Böblingen (nachfolgend „Anbieter") betreibt die KI-gestützte Unternehmensplattform ARGONAUT OS, zugänglich unter argonaut-os.com (nachfolgend „Plattform").</p>
               <p className="lp-p">1.2 ARGONAUT OS bietet Unternehmen des deutschen Mittelstands (nachfolgend „Kunde") KI-Agenten, Automatisierungsworkflows, Analyse- und Verwaltungsfunktionen als Software-as-a-Service (SaaS) an.</p>
-              <p className="lp-p">1.3 Die konkret gebuchten Leistungen richten sich nach dem jeweiligen Paket (SOLO Beta, START, PRO, BUSINESS, ENTERPRISE). Der Leistungsumfang ist in § 6 und der aktuellen Leistungsbeschreibung auf argonaut-os.com definiert.</p>
+              <p className="lp-p">1.3 Die konkret gebuchten Leistungen richten sich nach der Betriebsgröße (monatliche Grundgebühr) und den gebuchten Nutzer-Sitzen (§ 3). Der Leistungsumfang ist in § 6 und der aktuellen Leistungsbeschreibung auf argonaut-os.com definiert.</p>
             </section>
 
             <section id="vertragsschluss" style={{ marginBottom: '44px' }}>
@@ -103,34 +110,52 @@ export default function AGB() {
 
             <section id="preise" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 3 Preise & Tarife</h2>
-              <p className="lp-p" style={{ marginBottom: '20px' }}>3.1 Alle Preise verstehen sich in Euro, netto, zuzüglich der gesetzlichen Mehrwertsteuer (derzeit 19 %). Die aktuellen Preise sind:</p>
-              <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+              <p className="lp-p" style={{ marginBottom: '20px' }}>3.1 Alle Preise verstehen sich in Euro, netto, zuzüglich der gesetzlichen Mehrwertsteuer (derzeit 19 %). ARGONAUT OS wird nach tatsächlichem Bedarf abgerechnet: eine monatliche Grundgebühr nach Betriebsgröße zzgl. der gebuchten Nutzer-Sitze. Die KI-Nutzung ist in allen Tarifen unbegrenzt inklusive.</p>
+
+              <p className="lp-p" style={{ fontWeight: 600, color: '#EAF1F6', margin: '0 0 12px' }}>Grundgebühr nach Betriebsgröße (zzgl. einmaliger Einrichtung):</p>
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
                 <table className="lp-table">
                   <thead>
-                    <tr>
-                      <th>Paket</th><th>Preis/Monat (netto)</th><th>Laufzeit</th><th>Automatisierungen</th><th>KI-Agenten</th><th>KI-Nutzung</th>
-                    </tr>
+                    <tr><th>Betriebsgröße</th><th>Mitarbeiter</th><th>Grundgebühr/Monat</th><th>Einmalige Einrichtung</th></tr>
                   </thead>
                   <tbody>
-                    {tarife.map((t, i) => (
-                      <tr key={i} style={{ background: t.highlight ? 'rgba(201,168,76,0.06)' : 'transparent' }}>
+                    {groessen.map((g, i) => (
+                      <tr key={i} style={{ background: g.highlight ? 'rgba(201,168,76,0.06)' : 'transparent' }}>
                         <td style={{ fontWeight: 700, color: '#EAF1F6' }}>
-                          {t.highlight && <span style={{ background: GOLD, color: NAVY, fontSize: '.62rem', padding: '2px 6px', borderRadius: '4px', marginRight: '8px', fontWeight: 700 }}>BELIEBT</span>}
-                          {t.name}
+                          {g.highlight && <span style={{ background: GOLD, color: NAVY, fontSize: '.62rem', padding: '2px 6px', borderRadius: '4px', marginRight: '8px', fontWeight: 700 }}>BELIEBT</span>}
+                          {g.name}
                         </td>
-                        <td>{t.preis} €</td>
-                        <td style={{ fontSize: '.8rem' }}>{t.laufzeit}</td>
-                        <td>{t.automatisierungen}</td>
-                        <td>{t.agenten}</td>
-                        <td style={{ color: GOLD, fontWeight: 600 }}>{t.kontingent}</td>
+                        <td>{g.ma}</td>
+                        <td style={{ color: GOLD, fontWeight: 600 }}>{g.fee}</td>
+                        <td>{g.setup}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="lp-p">3.2 Das Paket SOLO Beta ist auf 3 Monate befristet. Nach Ablauf wird der Vertrag automatisch auf START (1.500 €/Monat, netto) umgestellt, sofern der Kunde nicht spätestens bis zum Ende von Monat 2 schriftlich per E-Mail an info@argonaut-os.com kündigt. Der Kunde wird spätestens 30 Tage vor Umstellung per E-Mail informiert.</p>
-              <p className="lp-p">3.3 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
-              <p className="lp-p">3.4 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
+
+              <p className="lp-p" style={{ fontWeight: 600, color: '#EAF1F6', margin: '0 0 12px' }}>Nutzer-Sitze (Preis je Sitz/Monat, gestaffelt nach Menge):</p>
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+                <table className="lp-table">
+                  <thead>
+                    <tr><th>Sitz-Typ</th><th>Für wen</th><th>Preis je Sitz/Monat (netto)</th></tr>
+                  </thead>
+                  <tbody>
+                    {sitze.map((s, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 700, color: '#EAF1F6' }}>{s.typ}</td>
+                        <td>{s.wer}</td>
+                        <td style={{ fontSize: '.82rem' }}>{s.preis}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="lp-p">3.2 SOLO (Einzelunternehmer) ist all-in: 499 €/Monat inkl. 1 Voll-Nutzer und unbegrenzter KI-Nutzung — zusätzliche Sitze sind nicht erforderlich.</p>
+              <p className="lp-p">3.3 Die einmalige Einrichtungsgebühr wird bei Vertragsschluss fällig und deckt Einrichtung, Datenübernahme und Einweisung ab.</p>
+              <p className="lp-p">3.4 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
+              <p className="lp-p">3.5 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
             </section>
 
             <section id="zahlung" style={{ marginBottom: '44px' }}>
@@ -143,10 +168,9 @@ export default function AGB() {
 
             <section id="laufzeit" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 5 Laufzeit & Kündigung</h2>
-              <p className="lp-p">5.1 Alle Pakete (außer SOLO Beta) haben eine Mindestlaufzeit von 12 Monaten. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
-              <p className="lp-p">5.2 SOLO Beta hat eine feste Laufzeit von 3 Monaten. Danach erfolgt das automatische Upgrade auf START gemäß § 3.2, sofern keine Kündigung vorliegt.</p>
-              <p className="lp-p">5.3 Kündigungen sind ausschließlich in Textform (E-Mail) an info@argonaut-os.com zu richten.</p>
-              <p className="lp-p">5.4 Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.</p>
+              <p className="lp-p">5.1 Verträge haben eine Mindestlaufzeit von 12 Monaten. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
+              <p className="lp-p">5.2 Kündigungen sind ausschließlich in Textform (E-Mail) an info@argonaut-os.com zu richten.</p>
+              <p className="lp-p">5.3 Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.</p>
             </section>
 
             <section id="leistungsumfang" style={{ marginBottom: '44px' }}>
