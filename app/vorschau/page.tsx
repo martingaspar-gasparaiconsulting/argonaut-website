@@ -659,8 +659,8 @@ export default function VorschauPage() {
                 icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M3 4h2l2.4 12h10l2-8H6" /></svg>),
               },
               {
-                name: 'Gesundheit', desc: 'Termine, Dokumente & Abrechnung — DSGVO-sicher.',
-                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z" /></svg>),
+                name: 'Gastronomie & Hotels', desc: 'Tische, Buchungen, Personal & Abrechnung — alles an einem Ort.',
+                icon: (<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8h11v4a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" /><path d="M16 9h2a2 2 0 1 1 0 4h-2" /><path d="M7 3v2M10 3v2M13 3v2" /></svg>),
               },
               {
                 name: 'Dienstleistung', desc: 'Projekte, Zeiterfassung & Abrechnung aus einer Hand.',
@@ -683,7 +683,7 @@ export default function VorschauPage() {
             Und über 200 weitere Branchen:
           </p>
           <div className="arg-more">
-            {['Gastronomie', 'Bau & Immobilien', 'Logistik', 'Landwirtschaft', 'Steuerberatung', 'Ärzte & Praxen', 'Fitness & Wellness', 'Kfz & Werkstatt', 'Reinigung', 'Beratung', 'Bildung', 'Sicherheit'].map((t) => (
+            {['Gastronomie', 'Bau & Immobilien', 'Logistik', 'Landwirtschaft', 'Steuerberatung', 'Friseure & Beauty', 'Fitness & Wellness', 'Kfz & Werkstatt', 'Reinigung', 'Beratung', 'Bildung', 'Sicherheit'].map((t) => (
               <span key={t} className="arg-more-chip">{t}</span>
             ))}
             <span className="arg-more-chip" style={{ color: '#c9a84c', borderColor: 'rgba(201,168,76,0.40)' }}>… und mehr</span>
