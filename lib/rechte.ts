@@ -117,6 +117,7 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
+  { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
   { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', ebene: 3, gruppe: 'lager' },
 
   // --- Finanzen & Sensibles (Ebene 2, 2-fach-Bestaetigung beim Freigeben) ---

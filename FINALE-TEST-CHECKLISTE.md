@@ -102,3 +102,15 @@
       unterschriebene **Mandate** vor dem ersten Einzug. Manche Banken verlangen
       bei der ersten Einreichung eines Mandats Sequenz **FRST** statt **RCUR** —
       bei Bedarf ergänzen wir das je Posten.
+
+## Bündel 9 · Lager-Scanner (WMS) — offene Punkte fürs Finale
+
+- [ ] **EAN hinterlegen**: bei ein paar Artikeln im Sortiment die **EAN** eintragen
+      (neues Feld) — sonst findet der Scanner sie nur über die Artikelnummer.
+- [ ] **Buchen**: Menü **📷 Lager-Scanner** → Modus wählen (Eingang/Ausgang/Inventur)
+      → Code ins Feld tippen/scannen + Enter → Artikel erscheint → Menge → buchen.
+- [ ] **Rückkontrolle**: im ERP/Sortiment stimmt der neue **Bestand**; in den
+      Lagerbewegungen steht der Vorgang als Nachweis.
+- [ ] **Hardware-Scanner**: ein USB-/Bluetooth-Handscanner tippt den Code ins Feld
+      (wie Tastatur) — das ist der Profi-Weg. Kamera-Scan ist der Handy-Bonus
+      (Android-Chrome; auf iPhone ggf. nur Eingabefeld).
