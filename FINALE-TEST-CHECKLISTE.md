@@ -88,3 +88,17 @@
       abgegebener Link lässt sich **nicht** zweimal bewerten.
 - [ ] **Optional (später)**: veröffentlichte Bewertungen auf der Website anzeigen
       (Widget/Sektion).
+
+## Bündel 8 · Mitglieder & Abos (SEPA) — offene Punkte fürs Finale
+
+- [ ] **Gläubigerdaten**: Menü **👥 Mitglieder & Abos** → Gläubiger-ID, Kontoinhaber,
+      IBAN (+ BIC) speichern.
+- [ ] **Mitglied anlegen**: Name, Beitrag, Intervall + **SEPA-Mandat** (IBAN,
+      Mandatsreferenz, Mandatsdatum). „✓ Mandat" erscheint in der Liste.
+- [ ] **SEPA-Datei**: Fälligkeitstag wählen → „⭱ SEPA-Datei erzeugen" → eine
+      **.xml (pain.008.001.02)** wird geladen. Testweise ins Bankprogramm/Prüftool
+      einlesen und die Beträge/IBANs kontrollieren.
+- [ ] **Wichtig (rechtlich/Bank)**: gültige **Gläubiger-ID** (Bundesbank),
+      unterschriebene **Mandate** vor dem ersten Einzug. Manche Banken verlangen
+      bei der ersten Einreichung eines Mandats Sequenz **FRST** statt **RCUR** —
+      bei Bedarf ergänzen wir das je Posten.

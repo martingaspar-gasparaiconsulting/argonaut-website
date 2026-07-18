@@ -47,7 +47,7 @@ const ITEMS: Item[] = [
 
   // ---------- GEPLANT (weitere Quer-Bausteine + Fachpakete) ----------
   { status: 'geplant', tag: 'POS', name: 'Kasse mit TSE', nutzen: 'Fiskalkonforme Kasse, Bon, DSFinV-K-Export' },
-  { status: 'geplant', name: 'Mitglieds- & Abo-Verwaltung', nutzen: 'Laufzeitverträge, Beiträge, SEPA-Lastschrift' },
+  { status: 'verfuegbar', name: 'Mitglieds- & Abo-Verwaltung', nutzen: 'Beiträge & Laufzeitverträge verwalten, SEPA-Lastschrift-Datei fürs Bankprogramm erzeugen' },
   { status: 'geplant', name: 'Lager mit Scanner (WMS)', nutzen: 'Kommissionierung, Chargen/MHD, EAN-Etiketten' },
   { status: 'geplant', name: 'Projekt-Abrechnung', nutzen: 'Zeiten auf Projekt/Ticket, Retainer, wiederkehrende Rechnung' },
   { status: 'geplant', name: 'Fördermittel-Assistent', nutzen: 'Passende Programme finden, Antrag, Fristen, Nachweis' },
