@@ -16,7 +16,7 @@ const spalten: { titel: string; links: { label: string; href: string }[] }[] = [
       { label: 'System', href: '/vorschau#module' },
       { label: 'Preise', href: '/vorschau#preise' },
       { label: 'Branchen', href: '/vorschau/branchen' },
-      { label: 'Vergleich', href: '/vorschau/vergleich' },
+      { label: 'Funktionen', href: '/vorschau/vergleich' },
       { label: 'Sicherheit', href: '/vorschau#sicherheit' },
     ],
   },
