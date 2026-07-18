@@ -17,6 +17,7 @@ const LINKS = [
   { label: 'Preise', href: '/vorschau#preise' },
   { label: 'Branchen', href: '/vorschau/branchen' },
   { label: 'Vergleich', href: '/vorschau/vergleich' },
+  { label: 'Ressourcen', href: '/vorschau/ressourcen' },
   { label: 'Sicherheit', href: '/vorschau#sicherheit' },
 ]
 
