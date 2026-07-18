@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
+import { seoBySlug } from '../../_lib/branchen-seo'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
@@ -61,7 +62,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
   if (!b) notFound()
 
   const verwandte = websiteVerwandte(slug)
-  const jsonLd = [
+  const seo = seoBySlug(slug)
+  const jsonLd: any[] = [
     {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
@@ -81,6 +83,13 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       ],
     },
   ]
+  if (seo?.faq?.length) {
+    jsonLd.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: seo.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    })
+  }
 
   return (
     <main id="top" style={{ background: NAVY, color: '#EAF1F6', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 300, minHeight: '100dvh', overflowX: 'hidden' }}>
@@ -127,6 +136,15 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </div>
         </div>
       </section>
+
+      {/* SEO-Intro (einzigartig je Branche) */}
+      {seo?.intro && (
+        <section style={{ padding: '4px 0 16px' }}>
+          <div className="bd-wrap">
+            <p style={{ color: '#c4d3db', fontSize: '1.05rem', lineHeight: 1.75, maxWidth: '72ch' }}>{seo.intro}</p>
+          </div>
+        </section>
+      )}
 
       {/* Schmerzpunkte */}
       <section style={{ padding: '30px 0' }}>
@@ -194,6 +212,23 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </div>
         </div>
       </section>
+
+      {/* FAQ (einzigartig je Branche) + FAQ-Schema */}
+      {seo?.faq && seo.faq.length > 0 && (
+        <section style={{ padding: '30px 0 10px' }}>
+          <div className="bd-wrap">
+            <h2 className="bd-h2">Häufige Fragen — ARGONAUT für {b.name}</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {seo.faq.map((f, i) => (
+                <div key={i} style={{ background: 'rgba(122,163,179,0.05)', border: '1px solid rgba(122,163,179,0.14)', borderRadius: '12px', padding: '18px 22px' }}>
+                  <p style={{ fontWeight: 700, color: '#EAF1F6', margin: '0 0 6px', fontSize: '1rem' }}>{f.q}</p>
+                  <p style={{ color: '#b9cdd6', margin: 0, lineHeight: 1.65, fontSize: '.95rem' }}>{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Ähnliche Branchen — interne Verlinkung (SEO) */}
       {verwandte.length > 0 && (
