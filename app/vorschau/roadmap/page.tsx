@@ -51,7 +51,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Lager mit Scanner (WMS)', nutzen: 'Wareneingang, -ausgang & Inventur per Barcode-Scanner (Hardware oder Kamera)' },
   { status: 'verfuegbar', name: 'Projekt-Abrechnung', nutzen: 'Abrechenbare Zeiten & Leistungen je Projekt erfassen und mit einem Klick in eine echte Rechnung verwandeln' },
   { status: 'geplant', name: 'Fördermittel-Assistent', nutzen: 'Passende Programme finden, Antrag, Fristen, Nachweis' },
-  { status: 'geplant', name: 'Self-Service-Portal', nutzen: 'Kunden-, Mieter-, Mandanten- & Mitglieder-Portal' },
+  { status: 'verfuegbar', name: 'Self-Service-Portal', nutzen: 'Kunden bekommen einen eigenen, login-freien Link und sehen dort ihre eigenen Rechnungen & Termine' },
   { status: 'geplant', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Shopware/Shopify, Amazon/eBay, Versand & Retouren' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
   { status: 'geplant', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'DAT/Audatex, HU/AU, Reifenhotel, Teilekatalog, Leihwagen' },

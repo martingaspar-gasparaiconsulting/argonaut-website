@@ -132,3 +132,22 @@
       mehr auf — kein Posten kann versehentlich zweimal fakturiert werden.
 - [ ] **Löschen**: eine noch **offene** (nicht abgerechnete) Leistung lässt sich
       wieder entfernen; abgerechnete bleiben als Nachweis stehen.
+
+## Bündel 11 · Kunden-Portal (Self-Service) — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel11-kundenportal.sql` im Supabase
+      SQL-Editor ausführen (legt `portal_zugaenge` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **👤 Kunden-Portal** sichtbar schalten.
+- [ ] **Link erstellen**: Menü **👤 Kunden-Portal** → einen Kunden suchen →
+      „🔗 Link erstellen" → der Portal-Link erscheint unter dem Namen.
+- [ ] **Kundensicht prüfen**: Link „📋 Kopieren" und in einem **privaten Fenster**
+      öffnen → der Kunde sieht **nur seine eigenen** Rechnungen (ohne stornierte)
+      und seine kommenden Termine. Kein Login nötig.
+- [ ] **Termine-Match**: ein Termin erscheint nur, wenn beim Termin dieselbe
+      **E-Mail** wie beim Kontakt hinterlegt ist (termine hat kein kontakt_id).
+      Zum Test einen Termin mit der Kunden-E-Mail anlegen.
+- [ ] **Deaktivieren**: „⏸ Deaktivieren" → der Link zeigt sofort „ungültig oder
+      deaktiviert" und **keine** Daten mehr. „▶ Aktivieren" macht ihn wieder gültig.
+- [ ] **Fremddaten-Gegenprobe**: Der Link eines Kunden A zeigt **niemals** Daten
+      von Kunde B oder eines anderen Betriebs (fail-closed über den Token).
