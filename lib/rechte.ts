@@ -98,6 +98,7 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Termine & Einsätze (Ebene 3, operativ) -------------------------------
   { label: '🗓 Termine', href: '/dashboard/termine', modul: 'termine', ebene: 3, gruppe: 'termine' },
+  { label: '🌐 Online-Buchung', href: '/dashboard/online-buchung', modul: 'online-buchung', ebene: 3, gruppe: 'termine' },
   { label: '🗺 Dispo-Board', href: '/dashboard/dispo', modul: 'einsaetze', ebene: 3, gruppe: 'termine' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan', ebene: 3, gruppe: 'termine' },
   { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen', ebene: 3, gruppe: 'termine' },

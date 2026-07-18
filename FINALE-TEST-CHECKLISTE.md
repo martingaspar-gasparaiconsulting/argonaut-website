@@ -60,3 +60,19 @@
       Kontenrahmen SKR03/04, Soll/Haben, BU-Schlüssel) — vorher Konten mit dem
       Steuerberater klären, damit die Buchungen stimmen. ELSTER/USt-Voranmeldung
       (braucht Zertifikat) ebenfalls hier.
+
+## Bündel 6 · Online-Terminbuchung — offene Punkte fürs Finale
+
+- [ ] **Voraussetzung**: in **Termine** Öffnungszeiten hinterlegen + mindestens
+      eine **Terminart** aktiv.
+- [ ] **Einrichten**: Menü **🌐 Online-Buchung** → Kürzel (Slug) setzen → auf
+      „online" schalten → Speichern → Link kopieren.
+- [ ] **Kundensicht**: den Link `…/buchen/<slug>` in einem **privaten Fenster
+      (ohne Login)** öffnen → freie Slots erscheinen → Slot wählen → Name + E-Mail
+      → „Verbindlich buchen" → Bestätigung + E-Mail.
+- [ ] **Rückkontrolle**: im Dashboard unter **Termine** taucht der gebuchte Termin
+      auf (Quelle „online"). No-Show-/Erinnerungsmail deckt der bestehende
+      `termin-erinnerung`-Cron ab.
+- [ ] **Sicherheit** (einmal bewusst prüfen): fremder/falscher Slug zeigt nichts;
+      offline geschaltete Seite ist nicht buchbar; ein bereits vergebener Slot
+      lässt sich nicht doppelt buchen.

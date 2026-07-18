@@ -43,7 +43,7 @@ const ITEMS: Item[] = [
   // ---------- IN ENTWICKLUNG (Handwerk zuerst + Top-Quer-Bausteine) ----------
   { status: 'entwicklung', name: 'Bau & Handwerk komplett', nutzen: 'GAEB/LV-Kalkulation, Aufmaß nach VOB, Nachträge, Bautagebuch, Abnahme', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'E-Rechnung & DATEV-Brücke', nutzen: 'XRechnung/ZUGFeRD versenden, DATEV-Export, ELSTER/USt' },
-  { status: 'entwicklung', name: 'Online-Terminbuchung', nutzen: 'Kunden buchen selbst — mit Ressourcen & No-Show-Erinnerung' },
+  { status: 'verfuegbar', name: 'Online-Terminbuchung', nutzen: 'Kunden buchen selbst über einen eigenen Link — inkl. Bestätigungs- & No-Show-Mail' },
 
   // ---------- GEPLANT (weitere Quer-Bausteine + Fachpakete) ----------
   { status: 'geplant', tag: 'POS', name: 'Kasse mit TSE', nutzen: 'Fiskalkonforme Kasse, Bon, DSFinV-K-Export' },
