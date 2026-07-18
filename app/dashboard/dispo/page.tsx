@@ -88,8 +88,12 @@ type EinsatzRow = {
   titel: string | null; beschreibung: string | null; einsatzort: string | null;
   beginn_am: string | null; ende_am: string | null; status: string | null;
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
-  rechnung_id: string | null;
+  rechnung_id: string | null; inhaber_einsatz: boolean | null;
 };
+
+// Sentinel für die "Ich (Chef)"-Zeile im Board. In der DB steht dafür
+// mitarbeiter_id = null UND inhaber_einsatz = true (klar getrennt von "Unzugeordnet").
+const CHEF = '__chef__';
 type Form = {
   id: string | null; // null = neuer Einsatz
   titel: string; beschreibung: string; einsatzort: string;
@@ -103,6 +107,7 @@ const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 export default function DispoPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [chefName, setChefName] = useState('Ich (Chef)');
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [erfolg, setErfolg] = useState<string | null>(null);
@@ -125,6 +130,10 @@ export default function DispoPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // Name des Inhabers für die "Ich (Chef)"-Zeile.
+      const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', id).maybeSingle();
+      const name = (prof?.full_name ?? '').trim();
+      if (name) setChefName(name);
     })();
   }, []);
 
@@ -139,7 +148,7 @@ export default function DispoPage() {
           .or(`austrittsdatum.is.null,austrittsdatum.gt.${heute}`)
           .order('nachname', { ascending: true }),
         supabase.from('einsaetze')
-          .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, rechnung_id')
+          .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, rechnung_id, inhaber_einsatz')
           .order('beginn_am', { ascending: true })
           .limit(1000),
       ]);
@@ -159,12 +168,14 @@ export default function DispoPage() {
     const m = new Map<string, EinsatzRow[]>();
     const von = isoTag(wochenStart); const bis = isoTag(wochenEnde);
     for (const e of einsaetze) {
-      if (!e.mitarbeiter_id || !e.beginn_am) continue;
+      // Zeilen-Zuordnung: echter Monteur, sonst die "Ich (Chef)"-Zeile (inhaber_einsatz).
+      const who = e.mitarbeiter_id ?? (e.inhaber_einsatz ? CHEF : null);
+      if (!who || !e.beginn_am) continue;
       const d = new Date(e.beginn_am);
       if (isNaN(d.getTime())) continue;
       const tag = isoTag(d);
       if (tag < von || tag > bis) continue;
-      const key = `${e.mitarbeiter_id}__${tag}`;
+      const key = `${who}__${tag}`;
       const arr = m.get(key) ?? []; arr.push(e); m.set(key, arr);
     }
     for (const arr of m.values()) arr.sort((a, b) => (a.beginn_am ?? '').localeCompare(b.beginn_am ?? ''));
@@ -174,9 +185,15 @@ export default function DispoPage() {
   // Unzugeordnet: Einsätze ohne Monteur (alle, nicht abgesagt), nach Datum
   const unzugeordnet = useMemo(() => {
     return einsaetze
-      .filter((e) => !e.mitarbeiter_id && belegend(e.status))
+      .filter((e) => !e.mitarbeiter_id && !e.inhaber_einsatz && belegend(e.status))
       .sort((a, b) => (a.beginn_am ?? '').localeCompare(b.beginn_am ?? ''));
   }, [einsaetze]);
+
+  // Board-Zeilen: zuerst der Chef (eigene Einsätze), dann die echten Monteure.
+  const zeilen = useMemo<MitarbeiterRow[]>(
+    () => [{ id: CHEF, vorname: chefName, nachname: '', position: 'Inhaber (ich)', status: 'aktiv', wochenstunden: null }, ...monteure],
+    [chefName, monteure],
+  );
 
   const tagesDaten = useMemo(() => {
     const arr: { datum: string; wt: string; label: string; heute: boolean }[] = [];
@@ -208,7 +225,7 @@ export default function DispoPage() {
     setForm({
       id: e.id, titel: e.titel ?? '', beschreibung: e.beschreibung ?? '', einsatzort: e.einsatzort ?? '',
       datum: b ? isoTag(b) : isoTag(new Date()), von: b ? uhr(b) : '08:00', bis: en ? uhr(en) : '10:00',
-      mitarbeiterId: e.mitarbeiter_id ?? '', status: e.status ?? 'geplant',
+      mitarbeiterId: e.mitarbeiter_id ?? (e.inhaber_einsatz ? CHEF : ''), status: e.status ?? 'geplant',
       kundeName: e.kunde_name ?? '', kundeEmail: e.kunde_email ?? '', kundeTelefon: e.kunde_telefon ?? '',
       rechnungId: e.rechnung_id ?? null,
     });
@@ -226,8 +243,10 @@ export default function DispoPage() {
     if (!s || !e || e <= s) { setFehler('Bitte gültige Zeiten wählen (Ende nach Start).'); return; }
     setSpeichert(true); setFehler(null); setErfolg(null);
     try {
+      const istChefEinsatz = form.mitarbeiterId === CHEF;
       const daten = {
-        mitarbeiter_id: form.mitarbeiterId || null,
+        mitarbeiter_id: istChefEinsatz ? null : (form.mitarbeiterId || null),
+        inhaber_einsatz: istChefEinsatz,
         titel: form.titel.trim() || 'Einsatz',
         beschreibung: form.beschreibung.trim() || null,
         einsatzort: form.einsatzort.trim() || null,
@@ -354,9 +373,9 @@ export default function DispoPage() {
               </div>
 
               {/* Monteur-Zeilen */}
-              {monteure.length === 0 ? (
+              {zeilen.length === 0 ? (
                 <div style={styles.hint}>Noch keine Mitarbeiter angelegt. Einsätze landen unter „Unzugeordnet", bis Monteure existieren.</div>
-              ) : monteure.map((m) => {
+              ) : zeilen.map((m) => {
                 const woStd = m.wochenstunden ?? 0;
                 const tagesziel = woStd > 0 ? woStd / 5 : 8;
                 const wochenSumme = tagesDaten.reduce((s, d) => {
@@ -433,6 +452,7 @@ export default function DispoPage() {
               <Feld label="Titel" voll><input style={styles.input} value={form.titel} onChange={(e) => setF('titel', e.target.value)} placeholder="z. B. Wartung Heizung Meier / Baumfällung" /></Feld>
               <Feld label="Monteur">
                 <select style={styles.input} value={form.mitarbeiterId} onChange={(e) => setF('mitarbeiterId', e.target.value)}>
+                  <option value={CHEF}>👤 {chefName} (ich)</option>
                   <option value="">— Unzugeordnet —</option>
                   {monteure.map((m) => <option key={m.id} value={m.id}>{m.vorname} {m.nachname}</option>)}
                 </select>

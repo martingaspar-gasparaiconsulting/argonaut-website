@@ -164,7 +164,7 @@ export default function MeineEinsaetzePage() {
         .lte('beginn_am', ende.toISOString());
       const gefiltert = mitarbeiter
         ? basis.eq('mitarbeiter_id', mitarbeiter.id)
-        : basis.eq('owner_user_id', uid as string).is('mitarbeiter_id', null);
+        : basis.eq('owner_user_id', uid as string).is('mitarbeiter_id', null).eq('inhaber_einsatz', true);
       const { data, error } = await gefiltert.order('beginn_am', { ascending: true });
       if (error) throw error;
       const rows = (data as EinsatzRow[]) ?? [];
@@ -478,8 +478,9 @@ export default function MeineEinsaetzePage() {
       )}
       {istChef && (
         <p style={styles.sub}>
-          Deine eigenen Einsätze (die du nicht an Mitarbeiter verteilt hast). Team-Einsätze planst du im{' '}
-          <a href="/dashboard/dispo" style={{ color: C.cyan, fontWeight: 700 }}>Dispo-Board</a>.
+          Deine eigenen Einsätze – im{' '}
+          <a href="/dashboard/dispo" style={{ color: C.cyan, fontWeight: 700 }}>Dispo-Board</a>{' '}
+          der Zeile „Ich (Chef)" zugewiesen. Team-Einsätze planst du dort für deine Monteure.
         </p>
       )}
 

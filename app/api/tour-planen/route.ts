@@ -103,7 +103,7 @@ export async function POST(req: Request) {
       .lte("beginn_am", ende.toISOString());
     const gefiltert = mitarbeiterId
       ? basis.eq("mitarbeiter_id", mitarbeiterId)
-      : basis.eq("owner_user_id", user.id).is("mitarbeiter_id", null);
+      : basis.eq("owner_user_id", user.id).is("mitarbeiter_id", null).eq("inhaber_einsatz", true);
     const { data: eRows, error: eErr } = await gefiltert.order("beginn_am", { ascending: true });
     if (eErr) throw eErr;
 
