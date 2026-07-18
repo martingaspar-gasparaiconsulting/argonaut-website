@@ -114,3 +114,21 @@
 - [ ] **Hardware-Scanner**: ein USB-/Bluetooth-Handscanner tippt den Code ins Feld
       (wie Tastatur) — das ist der Profi-Weg. Kamera-Scan ist der Handy-Bonus
       (Android-Chrome; auf iPhone ggf. nur Eingabefeld).
+
+## Bündel 10 · Projekt-Abrechnung — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel10-projekt-abrechnung.sql` im Supabase
+      SQL-Editor ausführen (legt die Tabelle `projektleistungen` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **💼 Projekt-Abrechnung** sichtbar schalten.
+- [ ] **Zeit/Leistung erfassen**: Menü **💼 Projekt-Abrechnung** → Projekt wählen →
+      Datum, Kunde, Beschreibung, Stunden, Stundensatz → „Erfassen". Der Eintrag
+      erscheint unter „Offene Leistungen"; Stundensatz + Kunde werden gemerkt.
+- [ ] **Rechnung erstellen**: „🧾 Rechnung erstellen" → aus allen offenen Leistungen
+      des Projekts entsteht **eine echte Rechnung** (Menü **🧾 Rechnungen**). MwSt
+      wird je Steuersatz auf die Gruppensumme gerechnet.
+- [ ] **Rückkontrolle**: die abgerechneten Leistungen wandern in die Tabelle
+      „Abgerechnet" (mit Rechnungsbezug) und tauchen bei „Offene Leistungen" nicht
+      mehr auf — kein Posten kann versehentlich zweimal fakturiert werden.
+- [ ] **Löschen**: eine noch **offene** (nicht abgerechnete) Leistung lässt sich
+      wieder entfernen; abgerechnete bleiben als Nachweis stehen.
