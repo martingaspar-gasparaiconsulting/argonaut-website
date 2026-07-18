@@ -13,8 +13,12 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
 })
 export const metadata: Metadata = {
-  title: 'ARGONAUT — KI-Agentur für den deutschen Mittelstand',
-  description: 'ARGONAUT automatisiert Prozesse, die heute noch Ihre besten Leute binden – messbar, sicher und auf Ihren Betrieb zugeschnitten.',
+  metadataBase: new URL('https://argonaut-os.com'),
+  title: {
+    default: 'ARGONAUT OS — Das KI-Betriebssystem für den deutschen Mittelstand',
+    template: '%s',
+  },
+  description: 'Ein System statt zwölf: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem — für den deutschen Mittelstand, DSGVO-konform, deutscher Server.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
