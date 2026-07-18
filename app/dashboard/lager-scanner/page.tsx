@@ -82,7 +82,8 @@ export default function LagerScannerPage() {
   }, [modus]);
 
   function onInputKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') { e.preventDefault(); void suche(code); setCode(''); }
+    // Scanner schließen den Code meist mit Enter (CR) ab — manche mit Tab.
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); void suche(code); setCode(''); }
   }
 
   async function buchen() {
@@ -207,6 +208,21 @@ export default function LagerScannerPage() {
         )}
       </div>
 
+      {/* Hilfe: Scanner verbinden */}
+      <details style={styles.hilfe}>
+        <summary style={styles.hilfeKopf}>❓ Wie verbinde ich meinen Scanner?</summary>
+        <div style={styles.hilfeInhalt}>
+          <p style={{ margin: '0 0 8px' }}><b>Handscanner (USB oder Bluetooth)</b> sind fast immer „Tastatur-Scanner" (HID) — sie tippen den Code einfach ins Feld. Kein Treiber, keine App nötig.</p>
+          <ol style={{ margin: '0 0 8px', paddingLeft: 20, lineHeight: 1.7 }}>
+            <li><b>USB:</b> Scanner einstecken → oben ins Scan-Feld tippen (Cursor blinkt) → scannen. Fertig.</li>
+            <li><b>Bluetooth:</b> Scanner einmal in den <b>Bluetooth-Einstellungen</b> von Handy/PC koppeln → dann wie USB nutzen.</li>
+            <li><b>Kamera:</b> kein Gerät nötig — „📷 Kamera" antippen (am Handy).</li>
+          </ol>
+          <p style={{ margin: '0 0 8px', color: C.textDim }}>Springt es nach dem Scan nicht automatisch weiter? Im <b>Scanner-Handbuch</b> den Code für <b>„Enter/CR-Suffix"</b> einscannen. Steht der Scanner auf „SPP/seriell", mit dem Handbuch-Code auf <b>„HID/Keyboard"</b> umstellen.</p>
+          <p style={{ margin: 0, color: C.textDim }}>Laser, CCD oder 2D-Imager ist nur die Lese-Technik (welche Codes) — für die Verbindung zählt nur der <b>HID/Tastatur-Modus</b>. Fast alle Scanner können das.</p>
+        </div>
+      </details>
+
       {/* Session-Log */}
       {log.length > 0 && (
         <div style={{ ...styles.card, marginTop: 16 }}>
@@ -242,4 +258,8 @@ const styles: Record<string, CSSProperties> = {
   trefferBox: { marginTop: 14, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 },
   buchenBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '14px 20px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', minHeight: 52 },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginTop: 12 },
+  hilfe: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', marginTop: 14 },
+  hilfeKopf: { cursor: 'pointer', fontWeight: 700, color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  hilfeInhalt: { marginTop: 10, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text, lineHeight: 1.5 },
 };
+
