@@ -3,8 +3,6 @@
 // ============================================================================
 // ARGONAUT OS · app/vorschau/_components/Navbar.tsx
 // Globale Navigation für die neue Website. Fixiert oben, dunkel/transluzent.
-// Menü scrollt zu Abschnitts-Ankern (#module, #preise, #sicherheit, #demo),
-// Funktionen/Branchen/Ressourcen -> eigene Seiten, Login -> /auth/login.
 // ============================================================================
 
 import { useState } from 'react'
@@ -17,6 +15,7 @@ const LINKS = [
   { label: 'Preise', href: '/vorschau#preise' },
   { label: 'Branchen', href: '/vorschau/branchen' },
   { label: 'Funktionen', href: '/vorschau/vergleich' },
+  { label: 'Roadmap', href: '/vorschau/roadmap' },
   { label: 'Ressourcen', href: '/vorschau/ressourcen' },
   { label: 'Sicherheit', href: '/vorschau#sicherheit' },
 ]
@@ -35,7 +34,7 @@ export default function Navbar() {
         {/* Desktop-Menü */}
         <div className="argnav-desk" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {LINKS.map((l) => (
-            <a key={l.label} href={l.href} style={{ color: '#c4d3db', textDecoration: 'none', fontSize: '.9rem', padding: '8px 14px' }}>{l.label}</a>
+            <a key={l.label} href={l.href} style={{ color: '#c4d3db', textDecoration: 'none', fontSize: '.9rem', padding: '8px 12px' }}>{l.label}</a>
           ))}
         </div>
 
@@ -65,7 +64,7 @@ export default function Navbar() {
       )}
 
       <style>{`
-        @media (max-width: 820px) {
+        @media (max-width: 900px) {
           .argnav-desk { display: none !important; }
           .argnav-burger { display: flex !important; }
         }
