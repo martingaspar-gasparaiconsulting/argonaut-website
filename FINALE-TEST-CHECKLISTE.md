@@ -164,3 +164,21 @@
       an. **„Google"** öffnet den Termin direkt im Google Kalender.
 - [ ] **Gotenberg-Check**: läuft der PDF-Dienst nicht, zeigt der „⬇ PDF"-Link
       als Fallback die druckbare HTML-Rechnung (Browser → „Als PDF speichern").
+
+## Bündel 12 · Fördermittel-Assistent — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel12-foerdermittel.sql` im Supabase
+      SQL-Editor ausführen (legt `foerder_vorhaben` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **💰 Fördermittel** sichtbar schalten.
+- [ ] **Matching**: Menü **💰 Fördermittel** → Kategorien wählen (z. B. „Digitalisierung",
+      „Beratung"), Phase + optional Förderart → die Trefferliste passt sich an.
+- [ ] **Verfolgen**: bei einem Programm „＋ Verfolgen" → es erscheint unter
+      „📌 Meine Vorhaben"; das Programm zeigt dort „✓ auf Merkliste".
+- [ ] **Frist & Status**: im Vorhaben Status setzen (interessiert → beantragt …),
+      eine Frist wählen → die **Fristen-Ampel** (grün/gelb/rot) reagiert; Notiz
+      wird beim Verlassen des Feldes gespeichert.
+- [ ] **Aktualität**: Katalog enthält nur aktive Programme (Stand Juli 2026);
+      ausgelaufene wie „go-digital"/„Digital Jetzt" sind bewusst NICHT drin.
+      Landesprogramme verweisen auf die Förderdatenbank (je Bundesland verschieden).
+- [ ] **Entfernen**: „🗑 Entfernen" nimmt ein Vorhaben wieder von der Merkliste.

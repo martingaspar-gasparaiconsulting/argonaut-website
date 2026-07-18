@@ -50,7 +50,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Mitglieds- & Abo-Verwaltung', nutzen: 'Beiträge & Laufzeitverträge verwalten, SEPA-Lastschrift-Datei fürs Bankprogramm erzeugen' },
   { status: 'verfuegbar', name: 'Lager mit Scanner (WMS)', nutzen: 'Wareneingang, -ausgang & Inventur per Barcode-Scanner (Hardware oder Kamera)' },
   { status: 'verfuegbar', name: 'Projekt-Abrechnung', nutzen: 'Abrechenbare Zeiten & Leistungen je Projekt erfassen und mit einem Klick in eine echte Rechnung verwandeln' },
-  { status: 'geplant', name: 'Fördermittel-Assistent', nutzen: 'Passende Programme finden, Antrag, Fristen, Nachweis' },
+  { status: 'verfuegbar', name: 'Fördermittel-Assistent', nutzen: 'Fragebogen findet passende, aktuell aktive Förderprogramme (Bund & Land) — mit Merkliste, Status & Fristen-Ampel' },
   { status: 'verfuegbar', name: 'Self-Service-Portal', nutzen: 'Kunden bekommen einen eigenen, login-freien Link und sehen dort ihre eigenen Rechnungen & Termine' },
   { status: 'geplant', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Shopware/Shopify, Amazon/eBay, Versand & Retouren' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
