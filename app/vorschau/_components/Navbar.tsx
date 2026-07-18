@@ -4,7 +4,7 @@
 // ARGONAUT OS · app/vorschau/_components/Navbar.tsx
 // Globale Navigation für die neue Website. Fixiert oben, dunkel/transluzent.
 // Menü scrollt zu Abschnitts-Ankern (#module, #preise, #sicherheit, #demo),
-// Vergleich -> eigene Seite, Login -> /auth/login.
+// Funktionen/Branchen/Ressourcen -> eigene Seiten, Login -> /auth/login.
 // ============================================================================
 
 import { useState } from 'react'
@@ -16,7 +16,7 @@ const LINKS = [
   { label: 'System', href: '/vorschau#module' },
   { label: 'Preise', href: '/vorschau#preise' },
   { label: 'Branchen', href: '/vorschau/branchen' },
-  { label: 'Vergleich', href: '/vorschau/vergleich' },
+  { label: 'Funktionen', href: '/vorschau/vergleich' },
   { label: 'Ressourcen', href: '/vorschau/ressourcen' },
   { label: 'Sicherheit', href: '/vorschau#sicherheit' },
 ]
