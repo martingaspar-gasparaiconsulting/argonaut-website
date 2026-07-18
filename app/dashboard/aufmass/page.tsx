@@ -32,6 +32,7 @@ import {
 } from '../_components/aufmassLogik';
 import { preisText, type KatalogEintrag } from '../_components/leistungLogik';
 import { aufmassPdf } from '../_components/aufmassPdf';
+import { parseGaeb, baueGaeb, type GaebLV } from '@/lib/gaeb';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -101,6 +102,9 @@ export default function AufmassPage() {
   const [mengeFehler, setMengeFehler] = useState<Record<string, string>>({});
 
   const [rechnungBusy, setRechnungBusy] = useState(false);
+  const [gaebBusy, setGaebBusy] = useState(false);
+
+  const ghostInline: CSSProperties = { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' };
 
   useEffect(() => {
     (async () => {
@@ -197,6 +201,69 @@ export default function AufmassPage() {
     } catch (e: unknown) {
       setFehler('Archivieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     }
+  }
+
+  // --- GAEB-Import: Ausschreibung/LV einlesen -> neues Aufmaß mit Positionen
+  async function gaebImportieren(file: File) {
+    if (!uid) return;
+    setGaebBusy(true); setFehler(null);
+    try {
+      const text = await file.text();
+      const lv = parseGaeb(text);
+      if (!lv.positionen.length) { setFehler('In der GAEB-Datei wurden keine Positionen gefunden.'); return; }
+      const titel = (lv.projekt || file.name.replace(/\.[^.]+$/, '') || 'GAEB-Import').slice(0, 200);
+      const { data, error } = await supabase.from('aufmasse').insert({
+        owner_user_id: uid, titel, status: 'entwurf',
+        aufmass_datum: new Date().toISOString().slice(0, 10), notiz: 'Aus GAEB importiert',
+      }).select('*').single();
+      if (error) throw error;
+      const neuAufmass = data as AufmassRow;
+      const rows = lv.positionen.map((p, i) => ({
+        owner_user_id: uid, aufmass_id: neuAufmass.id, position_nr: i + 1,
+        bezeichnung: p.kurztext || `Position ${i + 1}`,
+        menge: p.menge ?? 0, einheit: p.einheit || 'St',
+        einzelpreis_netto: p.einzelpreis, festpreis_netto: null, mwst_satz: 19,
+        rechenweg: p.oz ? `OZ ${p.oz}` : null, notiz: p.langtext || null,
+      }));
+      const { error: pErr } = await supabase.from('aufmass_positionen').insert(rows);
+      if (pErr) throw pErr;
+      await laden_();
+      await bearbeiten(neuAufmass);
+    } catch (e: unknown) {
+      setFehler('GAEB-Import fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setGaebBusy(false); }
+  }
+
+  // --- GAEB-Export: Aufmaß/LV als GAEB DA XML (Angebot, Phase 84) ---------
+  async function gaebExportieren(a: AufmassRow) {
+    setGaebBusy(true); setFehler(null);
+    try {
+      const { data, error } = await supabase.from('aufmass_positionen').select('*')
+        .eq('aufmass_id', a.id).order('position_nr', { ascending: true });
+      if (error) throw error;
+      const pos = (data as PositionRow[]) ?? [];
+      if (!pos.length) { setFehler('Dieses Aufmaß hat noch keine Positionen zum Exportieren.'); return; }
+      const lv: GaebLV = {
+        projekt: a.projekt || a.titel || 'ARGONAUT-LV',
+        waehrung: 'EUR',
+        positionen: pos.map((p, i) => ({
+          oz: p.position_nr != null ? String(p.position_nr * 10).padStart(4, '0') : String((i + 1) * 10).padStart(4, '0'),
+          kurztext: p.bezeichnung || `Position ${i + 1}`,
+          langtext: p.notiz || undefined,
+          menge: p.menge ?? 0,
+          einheit: p.einheit || '',
+          einzelpreis: p.einzelpreis_netto ?? p.festpreis_netto ?? null,
+        })),
+      };
+      const xml = baueGaeb(lv);
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const el = document.createElement('a');
+      el.href = url; el.download = `${(a.nummer || a.titel || 'LV').replace(/[^a-zA-Z0-9_-]/g, '_')}.x84`;
+      document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setFehler('GAEB-Export fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setGaebBusy(false); }
   }
 
   // --- Positionen -------------------------------------------------------
@@ -336,7 +403,16 @@ export default function AufmassPage() {
           <h1 style={styles.h1}>Aufmaß</h1>
           <p style={styles.sub}>Mengen vor Ort erfassen — Flächen, Längen, Volumen, Stück, Hektar, Festmeter. Rechnen Sie direkt im Mengenfeld: <code style={styles.code}>8,20 × 5,77</code> oder <code style={styles.code}>4,2 × 2,6 − 0,9 × 2,1</code>.</p>
         </div>
-        <button onClick={neu} style={styles.primaerBtn}>+ Neues Aufmaß</button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <label style={{ ...ghostInline, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: gaebBusy ? 0.6 : 1 }}
+            title="Ausschreibung / LV im GAEB-Format einlesen">
+            {gaebBusy ? 'GAEB …' : '⭳ GAEB importieren'}
+            <input type="file" accept=".xml,.x83,.x84,.x81,.x86,.d83,.d84,.p83,.p84,.gaeb" style={{ display: 'none' }}
+              disabled={gaebBusy}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void gaebImportieren(f); e.target.value = ''; }} />
+          </label>
+          <button onClick={neu} style={styles.primaerBtn}>+ Neues Aufmaß</button>
+        </div>
       </div>
 
       {!laden && (
@@ -392,9 +468,18 @@ export default function AufmassPage() {
       {modalAuf && (
         <div style={styles.overlay} onClick={() => !speichert && setModalAuf(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
               <h2 style={{ ...styles.modalTitel, margin: 0 }}>{form.id ? 'Aufmaß bearbeiten' : 'Neues Aufmaß'}</h2>
-              {gespeichertHinweis && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {gespeichertHinweis && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
+                {aktAufmass && (
+                  <button onClick={() => gaebExportieren(aktAufmass)} disabled={gaebBusy}
+                    style={{ ...ghostInline, opacity: gaebBusy ? 0.6 : 1 }}
+                    title="Dieses Aufmaß als GAEB DA XML (Angebot) exportieren">
+                    {gaebBusy ? 'GAEB …' : '⭱ GAEB exportieren'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {fehler && <div style={{ ...styles.err, marginBottom: 16 }}>{fehler}</div>}

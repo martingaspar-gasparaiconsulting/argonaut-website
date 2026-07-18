@@ -29,3 +29,13 @@
       Betrieb, wenn eine Wartung fällig ist.
 - [ ] **Prüfprotokoll-PDF** (noch nicht gebaut) — druckbares DGUV/E-Check-Protokoll,
       falls gewünscht.
+
+## Bündel 3 · GAEB (Aufmaß / LV-Austausch) — offene Punkte fürs Finale
+
+- [ ] **GAEB-Export**: ein Aufmaß mit Positionen öffnen → „⭱ GAEB exportieren" →
+      .x84-Datei wird geladen.
+- [ ] **GAEB-Rundlauf**: die eben exportierte Datei über „⭳ GAEB importieren"
+      wieder einlesen → es entsteht ein Aufmaß mit denselben Positionen.
+- [ ] **Echte GAEB-Datei gegenprüfen**: sobald eine echte Ausschreibung (.x83/.x84
+      eines Architekten/GU) vorliegt, importieren und Feld-Zuordnung
+      (OZ, Kurztext, Menge, Einheit, EP) kontrollieren — GAEB-Varianten prüfen.
