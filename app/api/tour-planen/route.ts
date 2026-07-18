@@ -36,6 +36,7 @@ type StandortRow = {
 type EinsatzRow = {
   id: string; titel: string | null; einsatzort: string | null;
   beginn_am: string | null; status: string | null; kunde_name: string | null;
+  owner_user_id: string | null;
 };
 
 /** Adresse eines Standorts als Text — bevorzugt die verortete Schreibweise. */
@@ -85,33 +86,25 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+    // mitarbeiterId gesetzt = Tour eines Monteurs. Leer/null = Chef-Modus:
+    // die EIGENEN, nicht an Mitarbeiter verteilten Einsätze des Inhabers.
     const mitarbeiterId = typeof body?.mitarbeiterId === "string" ? body.mitarbeiterId.trim() : "";
     const datum = typeof body?.datum === "string" ? body.datum.trim() : "";
-    if (!mitarbeiterId) return NextResponse.json({ error: "Kein Monteur übergeben." }, { status: 400 });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return NextResponse.json({ error: "Kein gültiges Datum übergeben." }, { status: 400 });
 
-    // --- 1. Betriebsstandort (Start der Tour) -----------------------------
-    const { data: stRows, error: stErr } = await supabase
-      .from("betriebs_standort")
-      .select("strasse, plz, ort, land, geo_lat, geo_lon, geocode_adresse, ist_standard, aktiv")
-      .eq("owner_user_id", user.id);
-    if (stErr) throw stErr;
-    const standorte = (stRows as StandortRow[]) ?? [];
-    const std = standorte.find((s) => s.ist_standard && s.aktiv !== false) ?? standorte.find((s) => s.aktiv !== false) ?? standorte[0];
-    if (!std) {
-      return NextResponse.json({ error: "Kein Betriebsstandort hinterlegt. Bitte in den Einstellungen eintragen.", code: "kein_standort" }, { status: 400 });
-    }
-
-    // --- 2. Einsätze des Tages (nur mit Adresse, nicht abgesagt) -----------
+    // --- 1. Einsätze des Tages (nur mit Adresse, nicht abgesagt) ----------
+    // Über den Nutzer-Client (RLS): Monteur sieht seine, Chef sieht seine.
     const start = new Date(`${datum}T00:00:00`);
     const ende = new Date(`${datum}T23:59:59`);
-    const { data: eRows, error: eErr } = await supabase
+    const basis = supabase
       .from("einsaetze")
-      .select("id, titel, einsatzort, beginn_am, status, kunde_name")
-      .eq("mitarbeiter_id", mitarbeiterId)
+      .select("id, titel, einsatzort, beginn_am, status, kunde_name, owner_user_id")
       .gte("beginn_am", start.toISOString())
-      .lte("beginn_am", ende.toISOString())
-      .order("beginn_am", { ascending: true });
+      .lte("beginn_am", ende.toISOString());
+    const gefiltert = mitarbeiterId
+      ? basis.eq("mitarbeiter_id", mitarbeiterId)
+      : basis.eq("owner_user_id", user.id).is("mitarbeiter_id", null);
+    const { data: eRows, error: eErr } = await gefiltert.order("beginn_am", { ascending: true });
     if (eErr) throw eErr;
 
     const einsaetze = ((eRows as EinsatzRow[]) ?? [])
@@ -121,14 +114,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "An diesem Tag sind keine Einsätze mit Adresse eingeplant.", code: "keine_stopps" }, { status: 400 });
     }
 
+    // Betriebs-Inhaber aus den Einsätzen ableiten (beim Monteur ist das NICHT
+    // seine eigene ID) — damit finden wir Standort & Schlüssel des Betriebs.
+    const betriebOwner: string = einsaetze[0].owner_user_id ?? user.id;
+    const admin = createAdminClient();
+
+    // --- 2. Betriebsstandort (Start der Tour) — über Admin, nach Inhaber ---
+    const { data: stRows, error: stErr } = await admin
+      .from("betriebs_standort")
+      .select("strasse, plz, ort, land, geo_lat, geo_lon, geocode_adresse, ist_standard, aktiv")
+      .eq("owner_user_id", betriebOwner);
+    if (stErr) throw stErr;
+    const standorte = (stRows as StandortRow[]) ?? [];
+    const std = standorte.find((s) => s.ist_standard && s.aktiv !== false) ?? standorte.find((s) => s.aktiv !== false) ?? standorte[0];
+    if (!std) {
+      return NextResponse.json({ error: "Kein Betriebsstandort hinterlegt. Bitte in den Einstellungen eintragen.", code: "kein_standort" }, { status: 400 });
+    }
     const originText = standortText(std);
 
     // --- 3. Schlüssel bestimmen (eigener Betriebs-Schlüssel bevorzugt) -----
-    const admin = createAdminClient();
     const { data: geheim } = await admin
       .from("betriebs_geheimnisse")
       .select("geheimnis")
-      .eq("owner_user_id", user.id).eq("art", "ors").eq("aktiv", true)
+      .eq("owner_user_id", betriebOwner).eq("art", "ors").eq("aktiv", true)
       .maybeSingle();
     const orsKey: string | null = geheim ? (geheim.geheimnis as string) : zentralerSchluessel();
 

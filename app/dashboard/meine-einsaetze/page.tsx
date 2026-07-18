@@ -134,7 +134,7 @@ export default function MeineEinsaetzePage() {
         .from('mitarbeiter').select('id, vorname, nachname')
         .eq('auth_user_id', id).maybeSingle();
       if (ma) setMitarbeiter(ma as MitarbeiterRow);
-      else { setIstChef(true); setLaden(false); }
+      else setIstChef(true); // Chef/Inhaber: sieht seine EIGENEN (nicht verteilten) Einsätze
     })();
   }, []);
 
@@ -142,26 +142,30 @@ export default function MeineEinsaetzePage() {
 
   // Leistungskatalog des Betriebs einmalig laden (über geschützte Funktion)
   useEffect(() => {
-    if (!mitarbeiter) return;
+    if (!mitarbeiter && !istChef) return;
     (async () => {
       const { data } = await supabase.rpc('mein_leistungskatalog');
       setKatalog((data as KatalogItem[]) ?? []);
     })();
-  }, [mitarbeiter]);
+  }, [mitarbeiter, istChef]);
 
   const laden_ = useCallback(async () => {
-    if (!mitarbeiter) return;
+    if (!mitarbeiter && !(istChef && uid)) return;
     setLaden(true); setFehler(null);
     try {
       const start = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 0, 0, 0);
       const ende = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 23, 59, 59);
-      const { data, error } = await supabase
+      // Monteur: seine zugewiesenen Einsätze. Chef: seine eigenen, NICHT verteilten
+      // (mitarbeiter_id ist null) — Team-Einsätze plant er im Dispo-Board.
+      const basis = supabase
         .from('einsaetze')
         .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, unterwegs_lat, unterwegs_lon, vor_ort_lat, vor_ort_lon, erledigt_lat, erledigt_lon, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am')
-        .eq('mitarbeiter_id', mitarbeiter.id)
         .gte('beginn_am', start.toISOString())
-        .lte('beginn_am', ende.toISOString())
-        .order('beginn_am', { ascending: true });
+        .lte('beginn_am', ende.toISOString());
+      const gefiltert = mitarbeiter
+        ? basis.eq('mitarbeiter_id', mitarbeiter.id)
+        : basis.eq('owner_user_id', uid as string).is('mitarbeiter_id', null);
+      const { data, error } = await gefiltert.order('beginn_am', { ascending: true });
       if (error) throw error;
       const rows = (data as EinsatzRow[]) ?? [];
       setEinsaetze(rows);
@@ -219,7 +223,7 @@ export default function MeineEinsaetzePage() {
       } catch { /* kein Cache vorhanden */ }
       if (!wiederhergestellt) setFehler('Einsätze konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
-  }, [mitarbeiter, tag]);
+  }, [mitarbeiter, istChef, uid, tag]);
 
   useEffect(() => { void laden_(); }, [laden_]);
 
@@ -251,12 +255,12 @@ export default function MeineEinsaetzePage() {
 
   // Tagestour planen: Einsätze des angezeigten Tages als eine Route bündeln.
   async function tourPlanen() {
-    if (!mitarbeiter) return;
+    if (!mitarbeiter && !istChef) return;
     setTourBusy(true); setFehler(null);
     try {
       const resp = await fetch('/api/tour-planen', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mitarbeiterId: mitarbeiter.id, datum: isoTag(tag) }),
+        body: JSON.stringify({ mitarbeiterId: mitarbeiter ? mitarbeiter.id : null, datum: isoTag(tag) }),
       });
       const j = await resp.json();
       if (!resp.ok) throw new Error(j?.error || 'Tour konnte nicht geplant werden.');
@@ -465,29 +469,18 @@ export default function MeineEinsaetzePage() {
 
   const aktive = useMemo(() => einsaetze.filter((e) => belegend(e.status)), [einsaetze]);
 
-  // ---- Chef-Hinweis ----
-  if (istChef) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.eyebrow}>ARGONAUT OS · Field Service</div>
-        <h1 style={styles.h1}>Meine Einsätze</h1>
-        <div style={{ ...styles.karte, marginTop: 16 }}>
-          <p style={{ margin: 0, lineHeight: 1.6, color: C.text }}>
-            Diese Ansicht ist für <b>Monteure</b> gedacht – sie zeigt die eigenen Einsätze des Tages.
-            Als Betriebsinhaber planst und siehst du alle Einsätze im{' '}
-            <a href="/dashboard/dispo" style={{ color: C.cyan, fontWeight: 700 }}>Dispo-Board</a>.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Field Service</div>
       <h1 style={styles.h1}>Meine Einsätze</h1>
       {mitarbeiter && (
         <p style={styles.sub}>Hallo {mitarbeiter.vorname ?? ''} – hier sind deine Einsätze.</p>
+      )}
+      {istChef && (
+        <p style={styles.sub}>
+          Deine eigenen Einsätze (die du nicht an Mitarbeiter verteilt hast). Team-Einsätze planst du im{' '}
+          <a href="/dashboard/dispo" style={{ color: C.cyan, fontWeight: 700 }}>Dispo-Board</a>.
+        </p>
       )}
 
       {/* Tag-Navigation */}
