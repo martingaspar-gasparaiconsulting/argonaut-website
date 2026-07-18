@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
       .order('rechnungsdatum', { ascending: false })
       .limit(200);
     const rechnungen = (rRaw || []).map((r) => ({
+      id: r.id,
       nummer: r.rechnungsnummer || '—',
       titel: r.titel || 'Rechnung',
       datum: r.rechnungsdatum || null,

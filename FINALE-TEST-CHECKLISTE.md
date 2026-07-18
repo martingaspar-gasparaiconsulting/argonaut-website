@@ -151,3 +151,16 @@
       deaktiviert" und **keine** Daten mehr. „▶ Aktivieren" macht ihn wieder gültig.
 - [ ] **Fremddaten-Gegenprobe**: Der Link eines Kunden A zeigt **niemals** Daten
       von Kunde B oder eines anderen Betriebs (fail-closed über den Token).
+
+### Bündel 11+ · Erweiterung: PDF-Download & Kalender
+
+- [ ] **Rechnung als PDF**: im Kundenportal bei einer Rechnung auf **„⬇ PDF"** →
+      es öffnet sich ein echtes PDF (über Gotenberg) zum Speichern/Drucken.
+      Kopf zeigt Firma/Absender, Positionen, Netto/MwSt/Brutto korrekt.
+- [ ] **Fremd-Gegenprobe PDF**: eine Rechnungs-ID eines anderen Kunden lässt sich
+      über den Link **nicht** laden (fail-closed über Token + kontakt_id).
+- [ ] **Termin in Kalender**: bei einem Termin auf **„📅 Zum Kalender"** → eine
+      **.ics**-Datei wird geladen; ein Doppelklick legt den Termin in Apple/Outlook
+      an. **„Google"** öffnet den Termin direkt im Google Kalender.
+- [ ] **Gotenberg-Check**: läuft der PDF-Dienst nicht, zeigt der „⬇ PDF"-Link
+      als Fallback die druckbare HTML-Rechnung (Browser → „Als PDF speichern").

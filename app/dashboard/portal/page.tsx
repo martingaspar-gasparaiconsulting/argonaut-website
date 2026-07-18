@@ -143,7 +143,9 @@ export default function PortalVerwaltung() {
         wird er sofort ungültig — ideal, wenn ein Link nicht mehr gebraucht wird.
         <br />
         <span style={{ color: C.textDim }}>
-          Hinweis: Termine erscheinen im Portal, wenn beim Termin dieselbe E-Mail-Adresse wie beim Kontakt hinterlegt ist.
+          Der Kunde kann im Portal jede Rechnung als <strong>PDF herunterladen</strong> und jeden Termin per
+          <strong> „📅 Zum Kalender"</strong> in Google, Apple oder Outlook übernehmen (.ics).
+          Termine erscheinen, wenn beim Termin dieselbe E-Mail-Adresse wie beim Kontakt hinterlegt ist.
         </span>
       </div>
 
