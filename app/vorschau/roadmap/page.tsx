@@ -51,6 +51,8 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Lager mit Scanner (WMS)', nutzen: 'Wareneingang, -ausgang & Inventur per Barcode-Scanner (Hardware oder Kamera)' },
   { status: 'verfuegbar', name: 'Projekt-Abrechnung', nutzen: 'Abrechenbare Zeiten & Leistungen je Projekt erfassen und mit einem Klick in eine echte Rechnung verwandeln' },
   { status: 'verfuegbar', name: 'Fördermittel-Assistent', nutzen: 'Fragebogen findet passende, aktuell aktive Förderprogramme (Bund & Land) — mit Merkliste, Status & Fristen-Ampel' },
+  { status: 'verfuegbar', name: 'Förder-Angebot-Generator', nutzen: 'Förder-taugliches Angebot (PDF) mit Leistungsbeschreibung & Zuschuss-Schätzung als Kostenvoranschlag für den Digitalbonus-Antrag' },
+  { status: 'verfuegbar', name: 'Angebote mit Online-Zusage', nutzen: 'Angebot als PDF, Kunde nimmt per Link online an oder ab — angenommenes Angebot wird mit einem Klick zur Rechnung' },
   { status: 'verfuegbar', name: 'Self-Service-Portal', nutzen: 'Kunden bekommen einen eigenen, login-freien Link und sehen dort ihre eigenen Rechnungen & Termine' },
   { status: 'geplant', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Shopware/Shopify, Amazon/eBay, Versand & Retouren' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },

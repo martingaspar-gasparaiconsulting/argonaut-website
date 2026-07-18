@@ -182,3 +182,38 @@
       ausgelaufene wie „go-digital"/„Digital Jetzt" sind bewusst NICHT drin.
       Landesprogramme verweisen auf die Förderdatenbank (je Bundesland verschieden).
 - [ ] **Entfernen**: „🗑 Entfernen" nimmt ein Vorhaben wieder von der Merkliste.
+
+## Bündel 13 · Förder-Angebot-Generator — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel13-foerder-angebot.sql` im Supabase
+      SQL-Editor ausführen (legt `foerder_angebote` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **📝 Förder-Angebot** sichtbar schalten.
+- [ ] **Angebot bauen**: Menü **📝 Förder-Angebot** → Kunde eingeben → ein
+      fertiges Paket laden (Starter/Betrieb/Komplett) oder Positionen selbst
+      erfassen → Förderquote wählen → die **Live-Schätzung** (Netto/Zuschuss/
+      Eigenanteil) reagiert sofort → „💾 Angebot speichern".
+- [ ] **PDF prüfen**: bei einem gespeicherten Angebot „⬇ PDF" → das PDF (über
+      Gotenberg) zeigt Positionen, USt-Hinweis, **Förder-Schätzung**,
+      **Leistungsbeschreibung** und den **Reihenfolge-Hinweis** (Antrag vor Kauf).
+- [ ] **Fallback**: läuft Gotenberg nicht, kommt die druckbare HTML-Version
+      (Browser → „Als PDF speichern").
+- [ ] **Löschen**: „🗑" entfernt ein gespeichertes Angebot wieder.
+
+## Bündel 14 · Angebote mit Online-Zusage — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel14-angebote.sql` ausführen (legt
+      `angebote` + `angebot_positionen` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **🧾 Angebote** sichtbar schalten.
+- [ ] **Angebot erstellen**: Menü **🧾 Angebote** → Kunde, Titel, Gültig-bis →
+      Positionen (Menge, Einheit, Einzelpreis, MwSt) → die **Live-Summe** stimmt →
+      „💾 Angebot erstellen".
+- [ ] **PDF prüfen**: „⬇ PDF" erzeugt ein sauberes Angebots-PDF (über Gotenberg).
+- [ ] **Online-Zusage**: „🔗 Link" kopieren, in einem **privaten Fenster** öffnen →
+      der Kunde sieht Positionen + Summen → „✅ Angebot annehmen".
+- [ ] **Rückkontrolle**: im Dashboard springt der Status auf **angenommen**;
+      ein bereits entschiedenes Angebot lässt sich **nicht** erneut annehmen;
+      ein abgelaufenes (Gültig-bis in der Vergangenheit) kann nicht angenommen werden.
+- [ ] **→ Rechnung**: bei einem angenommenen Angebot „→ Rechnung" → es entsteht
+      eine echte Rechnung unter **🧾 Rechnungen** (kein Doppel bei erneutem Klick).

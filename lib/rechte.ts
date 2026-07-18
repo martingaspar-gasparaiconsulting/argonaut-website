@@ -94,6 +94,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb' },
+  { label: '🧾 Angebote', href: '/dashboard/angebote', modul: 'angebote', ebene: 3, gruppe: 'vertrieb' },
   { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb' },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3, gruppe: 'vertrieb' },
   { label: '💼 Projekt-Abrechnung', href: '/dashboard/projekt-abrechnung', modul: 'projekt-abrechnung', ebene: 3, gruppe: 'vertrieb' },
@@ -139,6 +140,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💰 Fördermittel', href: '/dashboard/foerdermittel', modul: 'foerdermittel', ebene: 3, gruppe: 'finanzen' },
+  { label: '📝 Förder-Angebot', href: '/dashboard/foerder-angebot', modul: 'foerder-angebot', ebene: 3, gruppe: 'finanzen' },
 
   // --- Verwaltung -----------------------------------------------------------
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
