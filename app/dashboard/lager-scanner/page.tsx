@@ -45,6 +45,9 @@ export default function LagerScannerPage() {
   const [log, setLog] = useState<{ t: string; text: string; farbe: string }[]>([]);
   const [kameraAuf, setKameraAuf] = useState(false);
   const [kameraGeht, setKameraGeht] = useState(false);
+  const [anlegenCode, setAnlegenCode] = useState<string | null>(null);
+  const [neuForm, setNeuForm] = useState({ bez: '', einheit: 'Stk', nr: '' });
+  const [anlegenBusy, setAnlegenBusy] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -64,7 +67,7 @@ export default function LagerScannerPage() {
   const suche = useCallback(async (roh: string) => {
     const c = clean(roh);
     if (!c) return;
-    setFehler(null); setArtikel(null);
+    setFehler(null); setArtikel(null); setAnlegenCode(null);
     try {
       const { data, error } = await supabase
         .from('artikel')
@@ -73,7 +76,12 @@ export default function LagerScannerPage() {
         .eq('aktiv', true).limit(1);
       if (error) throw error;
       const a = (data as Artikel[])?.[0];
-      if (!a) { setFehler(`Kein Artikel zu „${c}" gefunden. (EAN im Sortiment hinterlegen?)`); return; }
+      if (!a) {
+        // Unbekannt -> gleich anlegen anbieten (Erstaufnahme im leeren Lager).
+        setAnlegenCode(c);
+        setNeuForm({ bez: '', einheit: 'Stk', nr: '' });
+        return;
+      }
       setArtikel(a);
       setMenge(modus === 'inventur' ? String(a.aktueller_bestand) : '1');
     } catch (e: unknown) {
@@ -108,6 +116,26 @@ export default function LagerScannerPage() {
     } catch (e: unknown) {
       setFehler('Buchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setBusy(false); }
+  }
+
+  // Unbekannten Code als neuen Artikel anlegen (Erstaufnahme), dann direkt buchen.
+  async function artikelAnlegen() {
+    if (!anlegenCode) return;
+    if (!neuForm.bez.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
+    setAnlegenBusy(true); setFehler(null);
+    try {
+      const { data, error } = await supabase.from('artikel').insert({
+        owner_user_id: uid, bezeichnung: neuForm.bez.trim(), einheit: neuForm.einheit.trim() || 'Stk',
+        ean: anlegenCode, artikelnummer: neuForm.nr.trim() || null, aktueller_bestand: 0, aktiv: true,
+      }).select('id, artikelnummer, bezeichnung, einheit, aktueller_bestand, ean, lagerort').single();
+      if (error) throw error;
+      const a = data as Artikel;
+      setAnlegenCode(null);
+      setArtikel(a);
+      setMenge(modus === 'inventur' ? '0' : '1');
+    } catch (e: unknown) {
+      setFehler('Anlegen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setAnlegenBusy(false); }
   }
 
   // ---- Kamera-Scan (optional) ----
@@ -203,6 +231,24 @@ export default function LagerScannerPage() {
                 {busy ? 'Bucht …' : `${mi.zeichen} ${mi.label} buchen`}
               </button>
               <button onClick={() => { setArtikel(null); setCode(''); inputRef.current?.focus(); }} style={styles.ghostBtn}>Abbrechen</button>
+            </div>
+          </div>
+        )}
+
+        {anlegenCode && !artikel && (
+          <div style={styles.trefferBox}>
+            <div style={{ fontWeight: 800, color: C.warn, marginBottom: 4 }}>Neuer Artikel · Code „{anlegenCode}"</div>
+            <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', margin: '0 0 12px' }}>
+              Diese Nummer kennt das System noch nicht. Leg den Artikel jetzt an (die gescannte Nummer wird als EAN gespeichert) — danach buchst du direkt.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Bezeichnung *</label><input style={styles.input} value={neuForm.bez} onChange={(e) => setNeuForm((f) => ({ ...f, bez: e.target.value }))} placeholder="z. B. Schraube M8 verzinkt" autoFocus /></div>
+              <div><label style={styles.lbl}>Einheit</label><input style={styles.input} value={neuForm.einheit} onChange={(e) => setNeuForm((f) => ({ ...f, einheit: e.target.value }))} /></div>
+              <div><label style={styles.lbl}>Artikelnr. (optional)</label><input style={styles.input} value={neuForm.nr} onChange={(e) => setNeuForm((f) => ({ ...f, nr: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+              <button onClick={artikelAnlegen} disabled={anlegenBusy} style={{ ...styles.primaer, opacity: anlegenBusy ? 0.6 : 1 }}>{anlegenBusy ? 'Legt an …' : '+ Artikel anlegen & weiter'}</button>
+              <button onClick={() => { setAnlegenCode(null); setCode(''); inputRef.current?.focus(); }} style={styles.ghostBtn}>Abbrechen</button>
             </div>
           </div>
         )}
