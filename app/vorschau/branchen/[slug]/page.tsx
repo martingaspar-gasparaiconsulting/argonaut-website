@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
-import { websiteBranchen, websiteBrancheBySlug } from '../../_lib/branchen-web'
+import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
@@ -15,6 +15,7 @@ import { websiteBranchen, websiteBrancheBySlug } from '../../_lib/branchen-web'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
+const SITE = 'https://argonaut-os.com'
 
 // Basis-Stack — das bekommt JEDE Branche ab Tag 1.
 const BASIS_STACK: { icon: string; name: string; tag?: string; sub: string }[] = [
@@ -39,9 +40,17 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const b = websiteBrancheBySlug(slug)
+  if (!b) return { title: 'ARGONAUT — Branche' }
+  const title = `Software für ${b.name} — ARGONAUT OS`
+  const description = `Die Branchensoftware für ${b.name}: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem System. Für ${b.name} vorkonfiguriert, DSGVO-konform, deutscher Server.`
+  const url = `${SITE}/vorschau/branchen/${b.slug}`
   return {
-    title: b ? `ARGONAUT für ${b.name} — Ihr Betrieb in einem System` : 'ARGONAUT — Branche',
-    description: b ? `ARGONAUT für ${b.name}: alle Abläufe in einem System, für Ihren Betrieb vorkonfiguriert.` : undefined,
+    title,
+    description,
+    keywords: [`Software ${b.name}`, `${b.name} Software`, `CRM ${b.name}`, `ERP ${b.name}`, `Digitalisierung ${b.name}`, 'ARGONAUT OS'],
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: 'website', siteName: 'ARGONAUT OS', locale: 'de_DE' },
+    twitter: { card: 'summary_large_image', title, description },
     robots: { index: false, follow: false },
   }
 }
@@ -51,8 +60,31 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
   const b = websiteBrancheBySlug(slug)
   if (!b) notFound()
 
+  const verwandte = websiteVerwandte(slug)
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: `ARGONAUT OS für ${b.name}`,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web, iOS, Android',
+      offers: { '@type': 'Offer', price: '499', priceCurrency: 'EUR' },
+      description: `Die Branchensoftware für ${b.name}: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem System.`,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Start', item: `${SITE}/vorschau` },
+        { '@type': 'ListItem', position: 2, name: 'Branchen', item: `${SITE}/vorschau/branchen` },
+        { '@type': 'ListItem', position: 3, name: b.name, item: `${SITE}/vorschau/branchen/${b.slug}` },
+      ],
+    },
+  ]
+
   return (
     <main id="top" style={{ background: NAVY, color: '#EAF1F6', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 300, minHeight: '100dvh', overflowX: 'hidden' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <style>{`
         .bd-wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
         .bd-h1 { font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: clamp(2.2rem, 5.6vw, 3.8rem); line-height: 1.06; padding-bottom: 2px; margin: 0 0 1.1rem; }
@@ -162,6 +194,20 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </div>
         </div>
       </section>
+
+      {/* Ähnliche Branchen — interne Verlinkung (SEO) */}
+      {verwandte.length > 0 && (
+        <section style={{ padding: '20px 0 6px' }}>
+          <div className="bd-wrap">
+            <h2 className="bd-h2" style={{ fontSize: 'clamp(1.2rem, 2.6vw, 1.6rem)' }}>Ähnliche Branchen</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {verwandte.map((v) => (
+                <Link key={v.slug} href={`/vorschau/branchen/${v.slug}`} style={{ background: 'rgba(122,163,179,0.06)', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '999px', padding: '9px 16px', fontSize: '.9rem', color: '#c4d3db', textDecoration: 'none' }}>{v.name}</Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Angebot + Anfrage in einem Guss → eigenes CRM */}
       <AngebotAnfrage branche={b.name} />

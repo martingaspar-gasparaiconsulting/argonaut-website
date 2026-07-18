@@ -268,4 +268,11 @@ export function websiteKategorien(): { kategorie: string; branchen: WebBranche[]
   return [...known, ...rest]
 }
 
+// Verwandte Branchen (gleiche Kategorie) für interne Verlinkung / SEO.
+export function websiteVerwandte(slug: string, n = 6): WebBranche[] {
+  const b = websiteBrancheBySlug(slug)
+  if (!b) return []
+  return websiteBranchen().filter((x) => x.kategorie === b.kategorie && x.slug !== b.slug).slice(0, n)
+}
+
 export type { Branche }

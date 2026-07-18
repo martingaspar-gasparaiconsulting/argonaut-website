@@ -25,10 +25,35 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: '#0A1628',
 }
+
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      name: 'ARGONAUT OS',
+      legalName: 'Gaspar AI Consulting',
+      url: 'https://argonaut-os.com',
+      email: 'info@argonaut-os.com',
+      slogan: 'Ein System statt zwölf — das KI-Betriebssystem für den deutschen Mittelstand.',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Tübinger Straße 50',
+        postalCode: '71032',
+        addressLocality: 'Böblingen',
+        addressRegion: 'Baden-Württemberg',
+        addressCountry: 'DE',
+      },
+    },
+    { '@type': 'WebSite', name: 'ARGONAUT OS', url: 'https://argonaut-os.com', inLanguage: 'de-DE' },
+  ],
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className={`${syne.variable} ${dmSans.variable}`}>
       <body className="antialiased">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         {children}
       </body>
     </html>
