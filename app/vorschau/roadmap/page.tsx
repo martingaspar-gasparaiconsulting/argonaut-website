@@ -55,7 +55,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Förder-Angebot-Generator', nutzen: 'Förder-taugliches Angebot (PDF) mit Leistungsbeschreibung & Zuschuss-Schätzung als Kostenvoranschlag für den Digitalbonus-Antrag' },
   { status: 'verfuegbar', name: 'Angebote mit Online-Zusage', nutzen: 'Angebot als PDF, Kunde nimmt per Link online an oder ab — angenommenes Angebot wird mit einem Klick zur Rechnung' },
   { status: 'verfuegbar', name: 'Self-Service-Portal', nutzen: 'Kunden bekommen einen eigenen, login-freien Link und sehen dort ihre eigenen Rechnungen & Termine' },
-  { status: 'geplant', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Shopware/Shopify, Amazon/eBay, Versand & Retouren' },
+  { status: 'verfuegbar', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Bestellungen sammeln & Status verfolgen — CSV-Import im Manuell-Modus, Shopware/Shopify/Woo per Schnittstelle anbindbar' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
   { status: 'geplant', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'DAT/Audatex, HU/AU, Reifenhotel, Teilekatalog, Leihwagen' },
   { status: 'geplant', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tischplan, Rezepturkalkulation, PMS, HACCP, Lieferdienst' },

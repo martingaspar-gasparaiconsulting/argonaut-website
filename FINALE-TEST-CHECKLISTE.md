@@ -251,3 +251,20 @@
       Signatur-Anbindung wird beim Anbieter freigeschaltet.)
 - [ ] **Kassierer**: ein Mitarbeiter mit Kassen-Recht kann verkaufen; die
       Zugangsdaten der Schnittstellen sieht er dabei NICHT.
+
+## Bündel 17 · Shop-/Marktplatz-Anbindung — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel17-shop.sql` ausführen (legt
+      `shop_bestellungen` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **🛒 Shop / Marktplatz** sichtbar schalten.
+- [ ] **CSV-Import**: Menü **🛒 Shop / Marktplatz** → Zeilen einfügen
+      (`extern_id;besteller;email;bezeichnung;menge;einzelpreis`) → „⬆ Importieren"
+      → Bestellungen erscheinen; gleiche extern_id = eine Bestellung.
+- [ ] **Doppel-Schutz**: dieselbe CSV erneut importieren → die Bestellungen
+      werden übersprungen (unique je Quelle + extern_id).
+- [ ] **Status-Board**: Status je Bestellung ändern (neu → in Bearbeitung →
+      versendet) → die Zähler oben aktualisieren sich.
+- [ ] **Live-Anbieter**: unter **🔌 Schnittstellen** Shopware/Shopify/Woo
+      hinterlegen → Badge wechselt von „Manuell-Modus" auf „Live". (Der
+      automatische API-Abgleich wird beim Anbieter freigeschaltet.)
