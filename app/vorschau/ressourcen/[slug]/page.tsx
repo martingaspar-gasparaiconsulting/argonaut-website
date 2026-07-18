@@ -7,12 +7,18 @@ import { alleArtikel, artikelBySlug } from '../../_lib/ressourcen'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/ressourcen/[slug]/page.tsx — Artikel-Vorlage.
-// Rendert die Blöcke, Article-JSON-LD, Metadaten. robots: noindex (Vorschau).
+// Rendert die Blöcke, Article-JSON-LD, Metadaten, Lesezeit + "Erstellt am".
+// robots: noindex (Vorschau).
 // ============================================================================
 
 const GOLD = '#c9a84c'
 const NAVY = '#0A1628'
 const SITE = 'https://argonaut-os.com'
+
+function fmtDatum(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
+}
 
 export function generateStaticParams() {
   return alleArtikel().map((a) => ({ slug: a.slug }))
@@ -69,7 +75,7 @@ export default async function Artikel({ params }: { params: Promise<{ slug: stri
           <Link href="/vorschau/ressourcen" style={{ color: GOLD, textDecoration: 'none', fontSize: '.9rem' }}>← Alle Ressourcen</Link>
           <div style={{ margin: '20px 0 10px' }}>
             <span style={{ fontSize: '.72rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: GOLD, background: 'rgba(201,168,76,0.12)', borderRadius: '999px', padding: '3px 11px' }}>{a.tag}</span>
-            <span style={{ color: '#7f97a4', fontSize: '.85rem', marginLeft: '12px' }}>{a.lesezeit} Lesezeit</span>
+            <span style={{ color: '#7f97a4', fontSize: '.85rem', marginLeft: '12px' }}>{a.lesezeit} Lesezeit · Erstellt am {fmtDatum(a.datum)}</span>
           </div>
           <h1 className="art-h1">{a.title}</h1>
 

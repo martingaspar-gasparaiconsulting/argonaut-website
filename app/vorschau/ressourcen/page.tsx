@@ -6,11 +6,16 @@ import { alleArtikel } from '../_lib/ressourcen'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/ressourcen/page.tsx — Blog-/Ressourcen-Übersicht.
-// robots: noindex (Vorschau).
+// Zeigt Lesezeit + "Erstellt am" (fester Rhythmus Mo/Mi/Fr). noindex (Vorschau).
 // ============================================================================
 
 const GOLD = '#c9a84c'
 const NAVY = '#0A1628'
+
+function fmtDatum(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
+}
 
 export const metadata: Metadata = {
   title: 'Ressourcen — Wissen für den Mittelstand | ARGONAUT OS',
@@ -31,7 +36,7 @@ export default function Ressourcen() {
             Wissen für den <span style={{ color: GOLD }}>Mittelstand</span>.
           </h1>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.2rem)', color: '#b9cdd6', maxWidth: '54ch', margin: '0 auto', lineHeight: 1.6 }}>
-            Praxisnah, ehrlich, ohne Tech-Kauderwelsch — Digitalisierung, Software und Pflichten, verständlich erklärt.
+            Praxisnah, ehrlich, ohne Tech-Kauderwelsch — Digitalisierung, Software und Pflichten, verständlich erklärt. Neuer Beitrag jeden Montag, Mittwoch und Freitag.
           </p>
         </div>
       </section>
@@ -43,7 +48,10 @@ export default function Ressourcen() {
               <span style={{ display: 'inline-block', fontSize: '.72rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: GOLD, background: 'rgba(201,168,76,0.12)', borderRadius: '999px', padding: '3px 11px', marginBottom: '14px' }}>{a.tag}</span>
               <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#EAF1F6', margin: '0 0 10px', lineHeight: 1.3 }}>{a.title}</h2>
               <p style={{ color: '#9fb3bd', fontSize: '.92rem', lineHeight: 1.55, margin: '0 0 14px' }}>{a.description}</p>
-              <span style={{ color: '#7f97a4', fontSize: '.8rem' }}>{a.lesezeit} Lesezeit</span>
+              <div style={{ color: '#7f97a4', fontSize: '.8rem', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span>{a.lesezeit} Lesezeit</span>
+                <span>Erstellt am {fmtDatum(a.datum)}</span>
+              </div>
             </Link>
           ))}
         </div>
