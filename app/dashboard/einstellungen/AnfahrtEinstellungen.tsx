@@ -750,13 +750,23 @@ export default function AnfahrtEinstellungen() {
                 </Feld>
 
                 <div style={styles.infoBox}>
-                  Kostenlos unter <strong>openrouteservice.org</strong> registrieren und dort einen Schlüssel
-                  erzeugen. Der Schlüssel wird <strong>sofort getestet</strong> — ein falscher wird gar nicht
-                  erst gespeichert.
-                  <br /><br />
-                  <span style={{ color: C.textDim }}>
-                    ⚠ Nach dem Speichern lässt er sich nicht mehr anzeigen — auch nicht von ARGONAUT.
-                    Bewahr ihn dort auf, wo du ihn erzeugt hast. Verloren? Dann erzeugst du in drei Minuten einen neuen.
+                  <strong>In 3 Minuten zum eigenen Schlüssel:</strong>
+                  <ol style={{ margin: '10px 0 0', paddingLeft: 22, lineHeight: 1.7 }}>
+                    <li>
+                      Auf{' '}
+                      <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#00e5ff', fontWeight: 700 }}>openrouteservice.org</a>{' '}
+                      kostenlos registrieren (nur E-Mail + Passwort, keine Kreditkarte).
+                    </li>
+                    <li>Die Bestätigungs-E-Mail öffnen und den Link darin anklicken.</li>
+                    <li>Einloggen und oben im Menü auf <strong>„Dashboard"</strong> gehen.</li>
+                    <li>Reiter <strong>„Tokens"</strong> (bzw. „Request a token") → einen Namen vergeben (z.&nbsp;B. „ARGONAUT") → <strong>Create Token</strong>.</li>
+                    <li>Den erzeugten <strong>API-Key kopieren</strong>, oben in das Feld einfügen und auf „Prüfen und speichern" tippen.</li>
+                  </ol>
+                  <span style={{ display: 'block', marginTop: 12, color: C.textDim }}>
+                    Der Schlüssel wird <strong>sofort getestet</strong> — ein falscher wird gar nicht erst gespeichert.
+                    ⚠ Nach dem Speichern lässt er sich nicht mehr anzeigen (auch nicht für ARGONAUT). Bewahr ihn dort
+                    auf, wo du ihn erzeugt hast. Verloren? Dann erzeugst du in drei Minuten einen neuen.
                   </span>
                   {schluessel.vorhanden && (
                     <><br /><br />Der bisherige Schlüssel bleibt aktiv, bis der neue geprüft ist.</>

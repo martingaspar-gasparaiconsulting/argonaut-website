@@ -37,9 +37,9 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Aufmaß & Leistungskatalog', nutzen: 'Vor Ort messen, Leistungen kalkulieren' },
   { status: 'verfuegbar', name: 'Werkstatt & Fahrzeugakte', nutzen: 'Werkstattauftrag & Fahrzeughistorie' },
   { status: 'verfuegbar', name: 'Service & Wartung', nutzen: 'Serviceaufträge und Wartungsvorgänge' },
+  { status: 'verfuegbar', name: 'Monteur- & Außendienst-App', nutzen: 'Tagestour, GPS-Nachweis, mobile Rapporterfassung mit Unterschrift – auch offline nutzbar', tag: 'Handwerk' },
 
   // ---------- IN ENTWICKLUNG (Handwerk zuerst + Top-Quer-Bausteine) ----------
-  { status: 'entwicklung', name: 'Monteur- & Außendienst-App', nutzen: 'Tourenplanung, mobile Zeit- & Rapporterfassung mit Unterschrift', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'Wartung & Prüfung', nutzen: 'Wartungsverträge, Intervalle, Prüfprotokolle (DGUV/E-Check)', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'Bau & Handwerk komplett', nutzen: 'GAEB/LV-Kalkulation, Aufmaß nach VOB, Nachträge, Bautagebuch, Abnahme', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'E-Rechnung & DATEV-Brücke', nutzen: 'XRechnung/ZUGFeRD versenden, DATEV-Export, ELSTER/USt' },

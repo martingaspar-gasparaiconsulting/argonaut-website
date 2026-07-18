@@ -41,10 +41,26 @@ function belegend(status: string | null): boolean {
 function pad(n: number) { return n < 10 ? '0' + n : String(n); }
 function addDays(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 function uhr(d: Date) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function isoTag(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 const WOCHENTAGE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
 function telLink(t: string) { return `tel:${t.replace(/[^\d+]/g, '')}`; }
 function mapsLink(ort: string) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ort)}`; }
+function mapsKoord(lat: number, lon: number) { return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`; }
+
+// Aktuellen Standort holen. Nicht-blockierend: bei Ablehnung, fehlender Ortung
+// oder Zeitüberschreitung liefert es sauber { lat:null, lon:null } zurück,
+// damit der Statuswechsel IMMER durchgeht (GPS ist eine Zugabe, kein Muss).
+function holeStandort(): Promise<{ lat: number | null; lon: number | null }> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) { resolve({ lat: null, lon: null }); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve({ lat: null, lon: null }),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  });
+}
 function eur(n: number) { return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 function fmtMenge(n: number) { return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE'); }
 function zahl(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
@@ -65,6 +81,9 @@ type EinsatzRow = {
   beginn_am: string | null; ende_am: string | null; status: string | null;
   kunde_name: string | null; kunde_email: string | null; kunde_telefon: string | null;
   unterwegs_am: string | null; vor_ort_am: string | null; erledigt_am: string | null;
+  unterwegs_lat: number | null; unterwegs_lon: number | null;
+  vor_ort_lat: number | null; vor_ort_lon: number | null;
+  erledigt_lat: number | null; erledigt_lon: number | null;
   owner_user_id: string | null;
   unterschrift_pfad: string | null; unterschrift_name: string | null; unterschrift_am: string | null;
   bericht_pfad: string | null; bericht_am: string | null;
@@ -95,6 +114,12 @@ export default function MeineEinsaetzePage() {
   const [sigName, setSigName] = useState('');
   const [sigBusy, setSigBusy] = useState(false);
   const [berichtBusy, setBerichtBusy] = useState<string | null>(null);
+  const [tourBusy, setTourBusy] = useState(false);
+  const [tour, setTour] = useState<{
+    stops: { reihenfolge: number; titel: string; adresse: string; kunde: string | null }[];
+    mapsUrl: string | null; quelle: string; hinweis: string | null;
+  } | null>(null);
+  const [offlineStand, setOfflineStand] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const zeichnetRef = useRef(false);
   const hatGezeichnetRef = useRef(false);
@@ -132,7 +157,7 @@ export default function MeineEinsaetzePage() {
       const ende = new Date(tag.getFullYear(), tag.getMonth(), tag.getDate(), 23, 59, 59);
       const { data, error } = await supabase
         .from('einsaetze')
-        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am')
+        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, unterwegs_lat, unterwegs_lon, vor_ort_lat, vor_ort_lon, erledigt_lat, erledigt_lon, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am')
         .eq('mitarbeiter_id', mitarbeiter.id)
         .gte('beginn_am', start.toISOString())
         .lte('beginn_am', ende.toISOString())
@@ -140,6 +165,9 @@ export default function MeineEinsaetzePage() {
       if (error) throw error;
       const rows = (data as EinsatzRow[]) ?? [];
       setEinsaetze(rows);
+      setOfflineStand(null);
+      // Für den Offline-Rückfall: Einsatzliste dieses Tages lokal sichern.
+      try { localStorage.setItem('argonaut_einsaetze_' + isoTag(tag), JSON.stringify({ rows, stand: new Date().toISOString() })); } catch { /* Speicher voll / privater Modus */ }
 
       // Fotos zu diesen Einsätzen laden
       const ids = rows.map((r) => r.id);
@@ -175,7 +203,21 @@ export default function MeineEinsaetzePage() {
         setPositionen((pdata as PositionRow[]) ?? []);
       } else setPositionen([]);
     } catch (e: unknown) {
-      setFehler('Einsätze konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+      // Offline-Rückfall: zuletzt gesehene Einsätze dieses Tages aus dem lokalen Speicher.
+      let wiederhergestellt = false;
+      try {
+        const roh = localStorage.getItem('argonaut_einsaetze_' + isoTag(tag));
+        if (roh) {
+          const cache = JSON.parse(roh) as { rows: EinsatzRow[]; stand: string };
+          if (Array.isArray(cache.rows)) {
+            setEinsaetze(cache.rows);
+            setFotos([]); setPositionen([]); setFotoUrls({});
+            setOfflineStand(cache.stand);
+            wiederhergestellt = true;
+          }
+        }
+      } catch { /* kein Cache vorhanden */ }
+      if (!wiederhergestellt) setFehler('Einsätze konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
   }, [mitarbeiter, tag]);
 
@@ -197,12 +239,31 @@ export default function MeineEinsaetzePage() {
     if (!np) return;
     setBusyId(e.id); setFehler(null);
     try {
-      const { error } = await supabase.rpc('einsatz_status_setzen', { p_einsatz_id: e.id, p_status: np.ziel });
+      // Standort zum Zeitpunkt der Aktion erfassen (Zugabe – blockiert nie).
+      const ort = await holeStandort();
+      const { error } = await supabase.rpc('einsatz_status_setzen', { p_einsatz_id: e.id, p_status: np.ziel, p_lat: ort.lat, p_lon: ort.lon });
       if (error) throw error;
       await laden_();
     } catch (err: unknown) {
       setFehler('Status konnte nicht gesetzt werden: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusyId(null); }
+  }
+
+  // Tagestour planen: Einsätze des angezeigten Tages als eine Route bündeln.
+  async function tourPlanen() {
+    if (!mitarbeiter) return;
+    setTourBusy(true); setFehler(null);
+    try {
+      const resp = await fetch('/api/tour-planen', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mitarbeiterId: mitarbeiter.id, datum: isoTag(tag) }),
+      });
+      const j = await resp.json();
+      if (!resp.ok) throw new Error(j?.error || 'Tour konnte nicht geplant werden.');
+      setTour({ stops: j.stops ?? [], mapsUrl: j.mapsUrl ?? null, quelle: j.quelle ?? '', hinweis: j.hinweis ?? null });
+    } catch (err: unknown) {
+      setFehler('Tour: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setTourBusy(false); }
   }
 
   // Fotos je Einsatz gruppiert
@@ -442,7 +503,19 @@ export default function MeineEinsaetzePage() {
         <button style={styles.heuteBtn} onClick={() => setTagOffset(0)}>← Zurück zu heute</button>
       )}
 
+      {aktive.length > 0 && (
+        <button onClick={tourPlanen} disabled={tourBusy} style={{ ...styles.tourBtn, opacity: tourBusy ? 0.6 : 1 }}>
+          {tourBusy ? 'Plant Tour …' : `🗺 Meine Tour${aktive.length > 1 ? ` · ${aktive.length} Stopps` : ''}`}
+        </button>
+      )}
+
       {fehler && <div style={styles.err}>{fehler}</div>}
+
+      {offlineStand && (
+        <div style={{ ...styles.err, color: C.warn, background: 'rgba(224,162,76,0.1)', borderColor: 'rgba(224,162,76,0.3)' }}>
+          📴 Offline – gezeigt wird der zuletzt geladene Stand von {new Date(offlineStand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr. Fotos, Unterschrift & Status brauchen Verbindung.
+        </div>
+      )}
 
       {laden ? (
         <div style={styles.hint}>Lädt …</div>
@@ -489,9 +562,27 @@ export default function MeineEinsaetzePage() {
 
                 {(e.unterwegs_am || e.vor_ort_am || e.erledigt_am) && (
                   <div style={styles.stempelZeile}>
-                    {e.unterwegs_am && <span>▶ Los {uhr(new Date(e.unterwegs_am))}</span>}
-                    {e.vor_ort_am && <span>📍 Vor Ort {uhr(new Date(e.vor_ort_am))}</span>}
-                    {e.erledigt_am && <span>✅ Fertig {uhr(new Date(e.erledigt_am))}</span>}
+                    {e.unterwegs_am && (
+                      <span>▶ Los {uhr(new Date(e.unterwegs_am))}
+                        {e.unterwegs_lat != null && e.unterwegs_lon != null && (
+                          <a href={mapsKoord(e.unterwegs_lat, e.unterwegs_lon)} target="_blank" rel="noopener noreferrer" style={styles.gpsPin} title="Standort beim Losfahren">📍</a>
+                        )}
+                      </span>
+                    )}
+                    {e.vor_ort_am && (
+                      <span>📍 Vor Ort {uhr(new Date(e.vor_ort_am))}
+                        {e.vor_ort_lat != null && e.vor_ort_lon != null && (
+                          <a href={mapsKoord(e.vor_ort_lat, e.vor_ort_lon)} target="_blank" rel="noopener noreferrer" style={styles.gpsPin} title="Standort vor Ort">📍</a>
+                        )}
+                      </span>
+                    )}
+                    {e.erledigt_am && (
+                      <span>✅ Fertig {uhr(new Date(e.erledigt_am))}
+                        {e.erledigt_lat != null && e.erledigt_lon != null && (
+                          <a href={mapsKoord(e.erledigt_lat, e.erledigt_lon)} target="_blank" rel="noopener noreferrer" style={styles.gpsPin} title="Standort bei Fertigmeldung">📍</a>
+                        )}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -704,6 +795,41 @@ export default function MeineEinsaetzePage() {
           </div>
         </div>
       )}
+
+      {/* ===== Tour-Modal ===== */}
+      {tour && (
+        <div style={styles.overlay} onClick={() => setTour(null)}>
+          <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
+            <h2 style={styles.modalTitel}>🗺 Deine Tour</h2>
+            <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', margin: '0 0 12px' }}>
+              {tour.quelle === 'optimiert' ? 'Reihenfolge nach kürzestem Weg ab Betrieb.' : 'Reihenfolge nach geplanter Uhrzeit.'}
+            </p>
+            {tour.hinweis && (
+              <div style={{ ...styles.err, color: C.warn, background: 'rgba(224,162,76,0.1)', borderColor: 'rgba(224,162,76,0.3)' }}>{tour.hinweis}</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '4px 0 16px' }}>
+              {tour.stops.map((s) => (
+                <div key={s.reihenfolge} style={styles.posZeile}>
+                  <span style={styles.tourNr}>{s.reihenfolge}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{s.titel}{s.kunde ? ` · ${s.kunde}` : ''}</div>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{s.adresse}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={() => setTour(null)} style={styles.ghostBtn}>Schließen</button>
+              {tour.mapsUrl && (
+                <a href={tour.mapsUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ ...styles.primaerBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+                  ▶ In Google Maps öffnen
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -733,6 +859,7 @@ const styles: Record<string, CSSProperties> = {
   beschreibung: { fontSize: 'clamp(14px, 1.25vw, 20px)', color: C.text, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 6, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
   phaseBtn: { color: '#0A1628', border: 'none', borderRadius: 12, padding: '16px', fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', marginTop: 10, width: '100%', minHeight: 54 },
   stempelZeile: { display: 'flex', gap: 14, fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginTop: 8, flexWrap: 'wrap' },
+  gpsPin: { marginLeft: 5, textDecoration: 'none', color: C.cyan },
   erledigtHinweis: { marginTop: 10, textAlign: 'center', color: C.green, fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', padding: '12px', background: 'rgba(76,175,125,0.1)', borderRadius: 12 },
 
   fotoBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
@@ -770,6 +897,8 @@ const styles: Record<string, CSSProperties> = {
   berichtBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
   berichtBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 12, padding: '15px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   berichtLink: { textAlign: 'center', color: C.cyan, fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600, textDecoration: 'none' },
+  tourBtn: { width: '100%', background: C.navy2, color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 12, padding: '13px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 },
+  tourNr: { flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: C.gold, color: '#0A1628', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px, 1.13vw, 18px)' },
 
   hint: { color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)', padding: '24px 0', textAlign: 'center' },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '12px 0' },

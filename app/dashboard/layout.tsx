@@ -5,6 +5,7 @@ import LogoutButton from './LogoutButton'
 import DashboardNav from './DashboardNav'
 import DashboardChat from './DashboardChat'
 import Glocke from './Glocke'
+import SwRegister from './_components/SwRegister'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -113,6 +114,9 @@ export default async function DashboardLayout({
 
       {/* PULS · KI-Assistent — zentral, schwebt auf allen Seiten unten rechts */}
       <DashboardChat />
+
+      {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
+      <SwRegister />
     </div>
   )
 }
