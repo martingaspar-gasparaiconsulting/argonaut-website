@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { baueSepaXml, type SepaLastschrift } from '@/lib/sepa';
+import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -26,7 +26,7 @@ type Mitglied = {
   betrag: number | null; intervall: string; status: string;
   beginn_am: string | null; kuendigung_zum: string | null;
   iban: string | null; bic: string | null; mandatsreferenz: string | null; mandat_datum: string | null;
-  notiz: string | null;
+  notiz: string | null; erst_einzug?: boolean | null; letzte_einziehung?: string | null;
 };
 type MForm = {
   id: string | null; name: string; email: string; telefon: string; betrag: string;
@@ -157,18 +157,25 @@ export default function MitgliederPage() {
     return s + b / teiler;
   }, 0), [aktive]);
 
-  function sepaErzeugen() {
+  async function sepaErzeugen() {
     setFehler(null); setOk(null);
     if (!cred.glaeubiger.trim() || !cred.iban.trim() || !cred.inhaber.trim()) {
       setFehler('Bitte zuerst die Gläubigerdaten (Gläubiger-ID, Kontoinhaber, IBAN) oben speichern.'); return;
     }
+    if (!ibanGueltig(cred.iban)) { setFehler('Deine Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht). Bitte oben korrigieren.'); return; }
     if (!einziehbar.length) {
       setFehler('Keine einziehbaren Mitglieder: es braucht Status „aktiv", IBAN, Mandatsreferenz, Mandatsdatum und einen Betrag > 0.'); return;
     }
-    const posten: SepaLastschrift[] = einziehbar.map((m) => ({
+    // Nur Mitglieder mit gültiger IBAN-Prüfsumme aufnehmen.
+    const gueltige = einziehbar.filter((m) => ibanGueltig(m.iban as string));
+    const ungueltige = einziehbar.length - gueltige.length;
+    if (!gueltige.length) { setFehler('Keine gültige IBAN gefunden — bitte die IBANs prüfen (Prüfsumme falsch).'); return; }
+
+    const posten: SepaLastschrift[] = gueltige.map((m) => ({
       name: m.name, iban: m.iban as string, bic: m.bic || undefined, betrag: m.betrag as number,
       mandatsreferenz: m.mandatsreferenz as string, mandatDatum: m.mandat_datum as string,
       verwendungszweck: `Beitrag ${firma || ''}`.trim() || 'Beitrag',
+      seqTp: (m.erst_einzug !== false) ? 'FRST' : 'RCUR',  // erster Einzug = FRST, sonst RCUR
     }));
     const msgId = 'ARGO' + Date.now();
     const creDtTm = new Date().toISOString().slice(0, 19);
@@ -181,7 +188,15 @@ export default function MitgliederPage() {
     const a = document.createElement('a');
     a.href = url; a.download = `SEPA-Lastschrift_${ausfuehrung}.xml`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    setOk(`SEPA-Datei mit ${posten.length} Lastschrift(en) über ${eur(posten.reduce((s, p) => s + p.betrag, 0))} erzeugt.`);
+
+    // Nach dem Erzeugen fortschreiben: nächster Einzug ist Folge-Lastschrift (RCUR).
+    try {
+      await supabase.from('mitglieder').update({ erst_einzug: false, letzte_einziehung: ausfuehrung }).in('id', gueltige.map((m) => m.id));
+      await laden_();
+    } catch { /* Datei ist erzeugt; Fortschreiben ist Zugabe */ }
+
+    const summe = posten.reduce((s, p) => s + p.betrag, 0);
+    setOk(`SEPA-Datei mit ${posten.length} Lastschrift(en) über ${eur(summe)} erzeugt.` + (ungueltige > 0 ? ` ${ungueltige} mit ungültiger IBAN wurden ausgelassen.` : ''));
   }
 
   return (
@@ -223,10 +238,19 @@ export default function MitgliederPage() {
           <div><label style={styles.lbl}>Fälligkeitstag (Ausführung)</label><input type="date" style={{ ...styles.input, maxWidth: 200 }} value={ausfuehrung} onChange={(e) => setAusfuehrung(e.target.value)} /></div>
           <button onClick={sepaErzeugen} style={styles.primaer}>⭱ SEPA-Datei erzeugen ({einziehbar.length})</button>
         </div>
-        <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1vw, 16px)', margin: '10px 0 0', lineHeight: 1.5 }}>
-          Enthält alle aktiven Mitglieder mit IBAN, Mandat und Betrag. Sequenz „RCUR" (wiederkehrend) — bei der allerersten
-          Einreichung eines Mandats verlangen manche Banken „FRST"; das ergänzen wir bei Bedarf.
-        </p>
+        <div style={styles.infoBox}>
+          <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>So funktioniert's:</div>
+          <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
+            <li>ARGONAUT erzeugt die <b>SEPA-Datei</b> (Download) — es überweist selbst kein Geld.</li>
+            <li>Du lädst die Datei in dein <b>Online-Banking</b> hoch („SEPA-Datei / Sammellastschrift importieren") oder in ein Banking-Programm (SFirm, StarMoney, ProfiCash …).</li>
+            <li>Die <b>Bank zieht</b> am Fälligkeitstag von den Mitglieder-Konten ein → das Geld landet auf deinem Konto.</li>
+          </ol>
+          <div style={{ marginTop: 8 }}>
+            Voraussetzungen: <b>Gläubiger-ID</b> (kostenlos bei der Deutschen Bundesbank), ein <b>unterschriebenes Mandat</b> je
+            Mitglied und eine <b>Vorabinformation</b> vor dem Einzug. Der erste Einzug eines Mandats läuft als „FRST",
+            Folge-Einzüge automatisch als „RCUR" — IBANs werden per Prüfsumme kontrolliert.
+          </div>
+        </div>
       </div>
 
       {/* Liste */}
@@ -323,6 +347,7 @@ const styles: Record<string, CSSProperties> = {
   hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 14 },
   ok: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 14 },
+  infoBox: { marginTop: 12, background: 'rgba(0,229,255,0.05)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 12, padding: '14px 16px', color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', lineHeight: 1.5 },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
   modalTitel: { fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 800, margin: '0 0 18px', color: C.text },
