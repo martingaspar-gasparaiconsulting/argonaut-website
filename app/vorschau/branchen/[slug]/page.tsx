@@ -5,35 +5,19 @@ import Navbar from '../../_components/Navbar'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
-import { zusatzBausteineFor, nutzerRollenFor } from '../../_lib/branchen-bausteine'
+import { baukastenFor } from '../../_lib/branchen-bausteine'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
 // Kompletter Vertriebsweg auf einer Seite: Hero · Schmerzpunkte · Ergebnisse ·
-// "Das ist Ihr System" (Basis-Stack + branchenspezifische Zusatz-Bausteine) ·
-// Preis-Rechner (branchengerechte Rollen) · Anfrage-Formular (→ CRM).
-// OS-Sprache. noindex (Vorschau).
+// "Das ist Ihr System" (kategoriespezifischer Baukasten: Kern + Basis) ·
+// "Speziell für ..." (kuratierte Spezial-Module) · Preis-Rechner (branchen-
+// gerechte Rollen) · Anfrage-Formular (→ CRM). OS-Sprache. noindex (Vorschau).
 // ============================================================================
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
 const SITE = 'https://argonaut-os.com'
-
-// Basis-Stack — das bekommt JEDE Branche ab Tag 1.
-const BASIS_STACK: { icon: string; name: string; tag?: string; sub: string }[] = [
-  { icon: '📇', name: 'Kunden & Kontakte', tag: 'CRM', sub: 'Alle Kunden & Historie an einem Ort' },
-  { icon: '📋', name: 'Angebote & Aufträge', sub: 'Vom Angebot bis zum erledigten Auftrag' },
-  { icon: '🧾', name: 'Rechnungen & Mahnwesen', tag: 'Faktura', sub: 'Zahlungen im Blick, E-Rechnung' },
-  { icon: '📅', name: 'Termine & Kalender', sub: 'Planung & Erinnerungen, nichts vergessen' },
-  { icon: '✅', name: 'Aufgaben & Projekte', sub: 'Jeder weiß, was zu tun ist' },
-  { icon: '👥', name: 'Personal & Zeiten', sub: 'Stunden, Urlaub, Lohn-Brücke' },
-  { icon: '📄', name: 'Dokumente & Verträge', tag: 'DMS', sub: 'Alles digital, DSGVO-konform' },
-  { icon: '📦', name: 'Lager & Material', tag: 'Warenwirtschaft', sub: 'Bestand & Bestellungen immer aktuell' },
-  { icon: '💳', name: 'Kasse & Zahlungen', tag: 'POS', sub: 'Verkauf sauber erfasst' },
-  { icon: '📊', name: 'Auswertungen & Dashboard', tag: 'BI', sub: 'Ihre Zahlen in Echtzeit' },
-  { icon: '🧭', name: 'Ihre KI-Crew', sub: 'Nimmt Routine ab und denkt mit' },
-  { icon: '🔒', name: 'Deutscher Server & DSGVO', sub: 'Sicher und rechtskonform' },
-]
 
 export function generateStaticParams() {
   return websiteBranchen().map((b) => ({ slug: b.slug }))
@@ -64,8 +48,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
 
   const verwandte = websiteVerwandte(slug)
   const seo = seoBySlug(slug)
-  const zusatz = zusatzBausteineFor(b.kategorie)
-  const rollen = nutzerRollenFor(b.kategorie)
+  const { stack, spezial, rollen } = baukastenFor(b.kategorie)
   const jsonLd: any[] = [
     {
       '@context': 'https://schema.org',
@@ -181,7 +164,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         </div>
       </section>
 
-      {/* Das ist Ihr System — Basis-Stack + branchenspezifische Zusatz-Bausteine */}
+      {/* Das ist Ihr System — Baukasten (Kern + Basis) + kuratierte Spezial-Module */}
       <section style={{ padding: '40px 0 20px' }}>
         <div className="bd-wrap">
           <h2 className="bd-h2">Das ist <span style={{ color: GOLD }}>Ihr System</span> — ARGONAUT für {b.name}.</h2>
@@ -189,7 +172,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             Diese Programme bekommen Sie ab Tag 1 — alles verzahnt, ein Login.
           </p>
           <div className="bd-stack">
-            {BASIS_STACK.map((t) => (
+            {stack.map((t) => (
               <div key={t.name} className="bd-tile">
                 <div className="bd-tile-top">
                   <span className="bd-tile-icon" aria-hidden="true">{t.icon}</span>
@@ -201,8 +184,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             ))}
           </div>
 
-          {/* Branchenspezifische Zusatz-Bausteine */}
-          {zusatz.length > 0 && (
+          {/* Kuratierte Spezial-Module */}
+          {spezial.length > 0 && (
             <>
               <div className="bd-subhead">
                 <span className="bd-subhead-txt">Speziell für {b.kategorie}</span>
@@ -212,7 +195,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
                 Dazu kommen die Funktionen, die {b.name} wirklich brauchen — von Anfang an mit dabei.
               </p>
               <div className="bd-stack">
-                {zusatz.map((t) => (
+                {spezial.map((t) => (
                   <div key={t.name} className="bd-tile bd-tile-extra">
                     <div className="bd-tile-top">
                       <span className="bd-tile-icon" aria-hidden="true">{t.icon}</span>
