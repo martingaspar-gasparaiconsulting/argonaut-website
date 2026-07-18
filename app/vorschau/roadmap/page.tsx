@@ -53,7 +53,7 @@ const ITEMS: Item[] = [
   { status: 'geplant', name: 'Fördermittel-Assistent', nutzen: 'Passende Programme finden, Antrag, Fristen, Nachweis' },
   { status: 'geplant', name: 'Self-Service-Portal', nutzen: 'Kunden-, Mieter-, Mandanten- & Mitglieder-Portal' },
   { status: 'geplant', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Shopware/Shopify, Amazon/eBay, Versand & Retouren' },
-  { status: 'geplant', name: 'Bewertungsmanagement', nutzen: 'Bewertungen automatisch einholen und veröffentlichen' },
+  { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
   { status: 'geplant', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'DAT/Audatex, HU/AU, Reifenhotel, Teilekatalog, Leihwagen' },
   { status: 'geplant', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tischplan, Rezepturkalkulation, PMS, HACCP, Lieferdienst' },
   { status: 'geplant', tag: 'Industrie', name: 'Fertigung & PPS', nutzen: 'Stückliste, Fertigungsaufträge, BDE/MDE, QS' },

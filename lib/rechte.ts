@@ -92,6 +92,7 @@ export const NAV_LINKS: NavLink[] = [
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
+  { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb' },
   { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb' },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3, gruppe: 'vertrieb' },

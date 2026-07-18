@@ -76,3 +76,15 @@
 - [ ] **Sicherheit** (einmal bewusst prüfen): fremder/falscher Slug zeigt nichts;
       offline geschaltete Seite ist nicht buchbar; ein bereits vergebener Slot
       lässt sich nicht doppelt buchen.
+
+## Bündel 7 · Bewertungsmanagement — offene Punkte fürs Finale
+
+- [ ] **Einladen**: Menü **⭐ Bewertungen** → Name + eigene E-Mail → „✉️ Einladung
+      senden" → E-Mail mit Bewertungs-Link kommt an.
+- [ ] **Abgeben**: Link in einem **privaten Fenster** öffnen → Sterne + Text →
+      „Bewertung abgeben".
+- [ ] **Rückkontrolle**: die Bewertung erscheint im Dashboard unter „Abgegebene
+      Bewertungen"; Ø-Sterne stimmen; „Veröffentlichen" schaltet um; ein bereits
+      abgegebener Link lässt sich **nicht** zweimal bewerten.
+- [ ] **Optional (später)**: veröffentlichte Bewertungen auf der Website anzeigen
+      (Widget/Sektion).
