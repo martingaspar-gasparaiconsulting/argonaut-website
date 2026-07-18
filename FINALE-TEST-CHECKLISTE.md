@@ -268,3 +268,17 @@
 - [ ] **Live-Anbieter**: unter **🔌 Schnittstellen** Shopware/Shopify/Woo
       hinterlegen → Badge wechselt von „Manuell-Modus" auf „Live". (Der
       automatische API-Abgleich wird beim Anbieter freigeschaltet.)
+
+## Bündel 18 · KFZ-Fachpaket — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel18-kfz.sql` ausführen (legt
+      `kfz_fahrzeuge` + `kfz_reifeneinlagerung` + RLS an).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **🚗 KFZ-Fachpaket** sichtbar schalten.
+- [ ] **Fahrzeug + HU/AU-Ampel**: Menü **🚗 KFZ-Fachpaket** → Reiter „Fahrzeuge"
+      → Kennzeichen, Marke, HU-/AU-Datum → speichern. Die **Ampel** zeigt grün
+      (fern), gelb (≤ 60 Tage) oder rot (überfällig); der Zähler im Reiter zeigt
+      die fälligen/überfälligen Fahrzeuge.
+- [ ] **Reifenhotel**: Reiter „Reifenhotel" → Kunde/Kennzeichen, Saison, Größe,
+      Anzahl, Lagerplatz → „Einlagern" → erscheint in der Liste; „⇧ Auslagern"
+      setzt das Auslagerdatum und nimmt es aus der aktiven Liste.

@@ -57,7 +57,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Self-Service-Portal', nutzen: 'Kunden bekommen einen eigenen, login-freien Link und sehen dort ihre eigenen Rechnungen & Termine' },
   { status: 'verfuegbar', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Bestellungen sammeln & Status verfolgen — CSV-Import im Manuell-Modus, Shopware/Shopify/Woo per Schnittstelle anbindbar' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
-  { status: 'geplant', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'DAT/Audatex, HU/AU, Reifenhotel, Teilekatalog, Leihwagen' },
+  { status: 'verfuegbar', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'Fahrzeuge mit HU/AU-Fristen-Ampel und Reifenhotel (Einlagerung mit Lagerplatz & Saison)' },
   { status: 'geplant', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tischplan, Rezepturkalkulation, PMS, HACCP, Lieferdienst' },
   { status: 'geplant', tag: 'Industrie', name: 'Fertigung & PPS', nutzen: 'Stückliste, Fertigungsaufträge, BDE/MDE, QS' },
   { status: 'geplant', tag: 'Energie', name: 'Energie-Fachpaket', nutzen: 'PV-Planung, Heizlast, MaStR, Wallbox, ESG-Reporting' },
