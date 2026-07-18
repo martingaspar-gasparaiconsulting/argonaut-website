@@ -50,3 +50,13 @@
       durchschalten; offene Mängel im Tab-Zähler.
 - [ ] **Noch offen (Bündel 4b)**: Nachtragsmanagement + Abschlags-/Kumulativ­abrechnung
       (docken an Rechnungen/LV an) + Bautagebuch-/Abnahme-PDF.
+
+## Bündel 5 · E-Rechnung senden — offene Punkte fürs Finale
+
+- [ ] **E-Rechnung per Mail**: Rechnung öffnen → „E-Rechnung (XML)" → Format wählen
+      → Empfänger-E-Mail eintragen → „📧 Per E-Mail senden" → Kunde erhält die Mail
+      mit XRechnung-/ZUGFeRD-Anhang. Einmal an eigene Adresse testen.
+- [ ] **Noch offen (Bündel 5b)**: echter **DATEV-Buchungsstapel** (EXTF-Format mit
+      Kontenrahmen SKR03/04, Soll/Haben, BU-Schlüssel) — vorher Konten mit dem
+      Steuerberater klären, damit die Buchungen stimmen. ELSTER/USt-Voranmeldung
+      (braucht Zertifikat) ebenfalls hier.

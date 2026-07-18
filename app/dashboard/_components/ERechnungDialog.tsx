@@ -46,6 +46,16 @@ function feldWert(obj: any, ...namen: string[]): string {
   return "";
 }
 
+// Blob -> reiner base64-String (ohne data:-Präfix) für den Mail-Anhang.
+function blobBase64(blob: Blob): Promise<string> {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onloadend = () => { const s = String(r.result || ""); const i = s.indexOf(","); res(i >= 0 ? s.slice(i + 1) : s); };
+    r.onerror = () => rej(new Error("Datei konnte nicht gelesen werden."));
+    r.readAsDataURL(blob);
+  });
+}
+
 export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supabase, zeileNetto }: Props) {
   const [offen, setOffen] = useState(false);
   const [profil, setProfil] = useState<"xrechnung" | "zugferd" | "zugferd-pdf">("zugferd");
@@ -53,6 +63,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
   const [laden, setLaden] = useState(false);
   const [hinweis, setHinweis] = useState("");
   const [pruefung, setPruefung] = useState<ValidierErgebnis | null>(null);
+  const [empfaengerMail, setEmpfaengerMail] = useState("");
 
   function baueEmpfaenger(): any {
     const q: any = firma || kontakt || {};
@@ -179,10 +190,71 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     }
   }
 
+  // Dieselbe Erzeugung wie erzeuge(), aber statt Download -> per E-Mail an den Kunden.
+  async function senden() {
+    if (!rechnung) return;
+    const an = (empfaengerMail || baueEmpfaenger().email || "").trim();
+    if (!an) { setHinweis("Keine Empfänger-E-Mail. Bitte oben eintragen."); return; }
+    setLaden(true);
+    setHinweis("");
+    try {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .single();
+      const prof: any = p || {};
+      const aussteller = {
+        name: prof.firma_name || "",
+        adresse: { strasse: prof.firma_strasse || "", plz: prof.firma_plz || "", ort: prof.firma_ort || "", land: "DE" },
+        ust_idnr: prof.firma_ust_id || "",
+        steuernummer: prof.firma_steuernummer || "",
+        email: prof.firma_email || "",
+      };
+      const body: any = {
+        rechnung,
+        positionen: (zeilen || []).map((z: any) => ({
+          bezeichnung: z.bezeichnung, menge: z.menge, einheit: z.einheit,
+          einzelpreis: z.einzelpreis, mwst_satz: z.mwst_satz, gesamt_netto: zeileNetto(z),
+        })),
+        aussteller,
+        empfaenger: baueEmpfaenger(),
+        profil,
+      };
+      if (profil === "xrechnung" && leitweg.trim()) body.leitweg_id = leitweg.trim();
+      const istPdf = profil === "zugferd-pdf";
+      if (istPdf) body.firmaName = aussteller.name || "";
+      const endpoint = istPdf ? "/api/rechnung-zugferd" : "/api/rechnung-e";
+
+      const res = await fetch(endpoint, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!res.ok) { setHinweis("E-Rechnung konnte nicht erstellt werden."); return; }
+      const blob = await res.blob();
+      const b64 = await blobBase64(blob);
+      const nummer = (rechnung && rechnung.rechnungsnummer) || "Rechnung";
+      const dateiname = istPdf
+        ? `ZUGFeRD_${nummer}.pdf`
+        : `${profil === "xrechnung" ? "XRechnung" : "ZUGFeRD"}_${nummer}.xml`;
+      const typ = istPdf ? "application/pdf" : "application/xml";
+
+      const sres = await fetch("/api/rechnung-senden", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ an, betreff: `Ihre Rechnung ${nummer}`, rechnungsnummer: nummer, dateiname, inhaltBase64: b64, typ }),
+      });
+      const sj = await sres.json().catch(() => null);
+      if (!sres.ok) { setHinweis("Versand fehlgeschlagen: " + (sj?.error || "")); return; }
+      setHinweis("✓ E-Rechnung an " + an + " gesendet.");
+    } catch (e: any) {
+      setHinweis("Unerwarteter Fehler beim Senden: " + (e?.message || String(e)));
+    } finally {
+      setLaden(false);
+    }
+  }
+
   return (
     <>
       <button
-        onClick={() => { setOffen(true); setPruefung(null); setTimeout(() => pruefeVor(), 50); }}
+        onClick={() => { setOffen(true); setPruefung(null); setEmpfaengerMail(baueEmpfaenger().email || ""); setTimeout(() => pruefeVor(), 50); }}
         style={{ padding: "10px 16px", background: "transparent", color: GOLD, border: `1px solid ${GOLD}`, borderRadius: 8, fontWeight: 700, cursor: "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)' }}
         title="E-Rechnung als XRechnung- oder ZUGFeRD-XML (EN 16931) erzeugen"
       >
@@ -264,12 +336,32 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: DIM, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Empfänger-E-Mail (für den Versand)
+              </label>
+              <input
+                value={empfaengerMail}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmpfaengerMail(e.target.value)}
+                placeholder="kunde@example.com"
+                style={{ width: "100%", background: "rgba(0,229,255,0.04)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "10px 12px", color: TEXT, fontSize: 'clamp(14px, 1.25vw, 20px)', outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
               <button
                 onClick={() => !laden && setOffen(false)}
                 style={{ padding: "9px 16px", background: "transparent", color: DIM, border: `1px solid ${LINE}`, borderRadius: 8, cursor: "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)' }}
               >
                 Abbrechen
+              </button>
+              <button
+                onClick={senden}
+                disabled={laden}
+                title="E-Rechnung erzeugen und per E-Mail an den Kunden senden"
+                style={{ padding: "9px 18px", background: "transparent", color: CYAN, border: `1px solid ${CYAN}`, borderRadius: 8, fontWeight: 700, cursor: laden ? "default" : "pointer", fontSize: 'clamp(14px, 1.25vw, 20px)', opacity: laden ? 0.6 : 1 }}
+              >
+                {laden ? "…" : "📧 Per E-Mail senden"}
               </button>
               <button
                 onClick={erzeuge}
