@@ -31,7 +31,22 @@ const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
 
+const FAQ: { q: string; a: string }[] = [
+  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für über 690 Branchen vorkonfiguriert.' },
+  { q: 'Was kostet ARGONAUT?', a: 'Eine monatliche Grundgebühr nach Betriebsgröße plus die Nutzer-Sitze, die Sie brauchen — ab 499 € im Monat für Einzelunternehmer. Die KI-Nutzung ist unbegrenzt inklusive.' },
+  { q: 'Ist die KI wirklich unbegrenzt inklusive?', a: 'Ja. Kein Kontingent, keine nutzungsabhängigen Zusatzkosten. Sie arbeiten so viel Sie wollen.' },
+  { q: 'Wo liegen meine Daten?', a: 'Auf deutschen Servern, DSGVO-konform. Ihre Daten bleiben in Deutschland.' },
+  { q: 'Wie läuft die Einführung?', a: 'Persönlich mit Ihnen — Erstgespräch, Einrichtung, Datenübernahme und Einweisung. Keine Installation, kein IT-Projekt. Bis 1 TB Datenübernahme ist inklusive.' },
+  { q: 'Brauche ich IT-Kenntnisse?', a: 'Nein. Wir richten ARGONAUT mit Ihnen ein und begleiten den Start. Die Bedienung ist für jeden gedacht, nicht nur für IT-Profis.' },
+  { q: 'Kann ich später erweitern?', a: 'Jederzeit. Sitze, Speicher und Funktionen lassen sich flexibel dazubuchen — das System wächst mit Ihrem Betrieb.' },
+]
+
 export default function VorschauPage() {
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+  }
   return (
     <main
       id="top"
@@ -691,6 +706,33 @@ export default function VorschauPage() {
         </div>
       </section>
 
+      {/* ============== SOCIAL PROOF · AUS DER PRAXIS ============== */}
+      <section style={{ padding: '30px 0 70px', textAlign: 'center' }}>
+        <div className="arg-wrap">
+          <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1rem' }}>Aus der Praxis</div>
+          <h2 className="arg-h2">Für den Mittelstand gebaut — <span style={{ color: GOLD }}>mit dem Mittelstand</span>.</h2>
+          <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '56ch', margin: '0 auto 2.4rem', lineHeight: 1.55 }}>
+            ARGONAUT wird gerade mit echten Betrieben in der Pilotphase erprobt — vom Forstbetrieb bis zur Werkstatt. Die Fakten sprechen für sich:
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
+            {[
+              { k: '690+', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
+              { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
+              { k: '🇩🇪', t: 'Deutscher Server, DSGVO', d: 'Ihre Daten bleiben in Deutschland — sicher und rechtskonform.' },
+            ].map((x) => (
+              <div key={x.t} style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '26px 24px' }}>
+                <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '2.2rem', color: GOLD, lineHeight: 1, marginBottom: '10px' }}>{x.k}</div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#EAF1F6', margin: '0 0 8px' }}>{x.t}</h3>
+                <p style={{ fontSize: '.92rem', color: '#9fb3bd', lineHeight: 1.55, margin: 0 }}>{x.d}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: '#8fa9b6', fontSize: '.9rem', marginTop: '1.8rem' }}>
+            Echte Kundenstimmen folgen nach der Pilotphase — sichern Sie sich einen Pilotplatz und sind Sie von Anfang an dabei.
+          </p>
+        </div>
+      </section>
+
       {/* ============== SCHRITT 9 · PREISE (nur Anzeige) ============== */}
       <section id="preise" style={{ padding: '8px 0 100px', textAlign: 'center' }}>
         <div className="arg-wrap">
@@ -813,6 +855,22 @@ export default function VorschauPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* ============== FAQ ============== */}
+      <section style={{ padding: '30px 0 30px' }}>
+        <div className="arg-wrap" style={{ maxWidth: '820px' }}>
+          <h2 className="arg-h2" style={{ textAlign: 'center' }}>Häufige Fragen</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '2rem', textAlign: 'left' }}>
+            {FAQ.map((f, i) => (
+              <div key={i} style={{ background: 'rgba(122,163,179,0.05)', border: '1px solid rgba(122,163,179,0.14)', borderRadius: '12px', padding: '20px 24px' }}>
+                <p style={{ fontWeight: 700, color: '#EAF1F6', margin: '0 0 6px', fontSize: '1.02rem' }}>{f.q}</p>
+                <p style={{ color: '#b9cdd6', margin: 0, lineHeight: 1.65, fontSize: '.96rem' }}>{f.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       </section>
 
       {/* ============== DEMO-/ANFRAGE-FORMULAR (id="demo") ============== */}
