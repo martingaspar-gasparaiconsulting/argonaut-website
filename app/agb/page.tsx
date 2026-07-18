@@ -156,6 +156,7 @@ export default function AGB() {
               <p className="lp-p">3.3 Die einmalige Einrichtungsgebühr wird bei Vertragsschluss fällig und deckt Einrichtung, Datenübernahme und Einweisung ab.</p>
               <p className="lp-p">3.4 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
               <p className="lp-p">3.5 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
+              <p className="lp-p">3.6 Laufzeit-Rabatte: Bei einer Vertragslaufzeit von 24 Monaten gewährt der Anbieter 5 %, bei 36 Monaten 10 % Rabatt auf die monatlichen Gebühren (Grundgebühr und Nutzer-Sitze). Die einmalige Einrichtungsgebühr ist vom Rabatt ausgenommen.</p>
             </section>
 
             <section id="zahlung" style={{ marginBottom: '44px' }}>
@@ -168,7 +169,7 @@ export default function AGB() {
 
             <section id="laufzeit" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 5 Laufzeit & Kündigung</h2>
-              <p className="lp-p">5.1 Verträge haben eine Mindestlaufzeit von 12 Monaten. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
+              <p className="lp-p">5.1 Verträge haben eine Mindestlaufzeit von 12 Monaten; wahlweise sind 24 oder 36 Monate mit Laufzeit-Rabatt (§ 3.6) buchbar. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
               <p className="lp-p">5.2 Kündigungen sind ausschließlich in Textform (E-Mail) an info@argonaut-os.com zu richten.</p>
               <p className="lp-p">5.3 Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.</p>
             </section>
