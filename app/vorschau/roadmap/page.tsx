@@ -46,6 +46,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Online-Terminbuchung', nutzen: 'Kunden buchen selbst über einen eigenen Link — inkl. Bestätigungs- & No-Show-Mail' },
 
   // ---------- GEPLANT (weitere Quer-Bausteine + Fachpakete) ----------
+  { status: 'verfuegbar', name: 'Schnittstellen & Konnektoren', nutzen: 'Externe Dienste (TSE, Shop) zentral verbinden — bis dahin Demo-/Manuell-Modus, Live-Schalten per Zugangsdaten' },
   { status: 'geplant', tag: 'POS', name: 'Kasse mit TSE', nutzen: 'Fiskalkonforme Kasse, Bon, DSFinV-K-Export' },
   { status: 'verfuegbar', name: 'Mitglieds- & Abo-Verwaltung', nutzen: 'Beiträge & Laufzeitverträge verwalten, SEPA-Lastschrift-Datei fürs Bankprogramm erzeugen' },
   { status: 'verfuegbar', name: 'Lager mit Scanner (WMS)', nutzen: 'Wareneingang, -ausgang & Inventur per Barcode-Scanner (Hardware oder Kamera)' },

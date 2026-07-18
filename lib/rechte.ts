@@ -144,6 +144,7 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Verwaltung -----------------------------------------------------------
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
+  { label: '🔌 Schnittstellen', href: '/dashboard/schnittstellen', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4, gruppe: 'verwaltung' },
 ]
 

@@ -217,3 +217,17 @@
       ein abgelaufenes (Gültig-bis in der Vergangenheit) kann nicht angenommen werden.
 - [ ] **→ Rechnung**: bei einem angenommenen Angebot „→ Rechnung" → es entsteht
       eine echte Rechnung unter **🧾 Rechnungen** (kein Doppel bei erneutem Klick).
+
+## Bündel 15 · Schnittstellen-Basis (Konnektoren) — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel15-schnittstellen.sql` ausführen
+      (legt `betrieb_integrationen` + RLS an, nur Inhaber-Zugriff).
+- [ ] **Sichtbarkeit**: Menü **🔌 Schnittstellen** erscheint nur beim Chef
+      (nicht bei Mitarbeitern).
+- [ ] **Demo-Modus**: ohne Eintrag zeigt jeder Bereich „○ Demo-Modus".
+- [ ] **Anbieter wählen**: bei „Kasse / TSE" bzw. „Shop / Marktplatz" einen
+      echten Anbieter wählen → die passenden Felder erscheinen → speichern.
+- [ ] **Live-Schalten**: bei echtem Anbieter „aktiv schalten" nur möglich, wenn
+      alle Pflichtfelder ausgefüllt sind → Badge wechselt auf „● Live".
+- [ ] **Sicherheit**: ein Mitarbeiter kann die Schnittstellen-Seite weder sehen
+      noch die Zugangsdaten auslesen (RLS nur Inhaber).
