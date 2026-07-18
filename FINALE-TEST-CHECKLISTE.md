@@ -39,3 +39,14 @@
 - [ ] **Echte GAEB-Datei gegenprüfen**: sobald eine echte Ausschreibung (.x83/.x84
       eines Architekten/GU) vorliegt, importieren und Feld-Zuordnung
       (OZ, Kurztext, Menge, Einheit, EP) kontrollieren — GAEB-Varianten prüfen.
+
+## Bündel 4 · Baustellen-Doku (Bautagebuch + Mängel) — offene Punkte fürs Finale
+
+- [ ] **Bautagebuch**: „📒 Bautagebuch" → Projekt wählen → „+ Neuer Eintrag"
+      (Wetter, Mannschaft, Arbeiten …) → Foto hochladen → erscheint als Vorschau.
+- [ ] **Fotos**: Upload lädt in den neuen Bucket `baustellen-fotos`; Vorschau &
+      Löschen funktionieren (Owner-Ordner-Storage-Policy einmal live prüfen).
+- [ ] **Mängel**: Mangel anlegen → Status offen → in Arbeit → behoben → abgenommen
+      durchschalten; offene Mängel im Tab-Zähler.
+- [ ] **Noch offen (Bündel 4b)**: Nachtragsmanagement + Abschlags-/Kumulativ­abrechnung
+      (docken an Rechnungen/LV an) + Bautagebuch-/Abnahme-PDF.

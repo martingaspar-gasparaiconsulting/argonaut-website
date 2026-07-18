@@ -109,6 +109,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
+  { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },
   { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
 
