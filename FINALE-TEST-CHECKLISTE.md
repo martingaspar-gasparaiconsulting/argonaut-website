@@ -231,3 +231,23 @@
       alle Pflichtfelder ausgefüllt sind → Badge wechselt auf „● Live".
 - [ ] **Sicherheit**: ein Mitarbeiter kann die Schnittstellen-Seite weder sehen
       noch die Zugangsdaten auslesen (RLS nur Inhaber).
+
+## Bündel 16 · Kasse mit TSE — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel16-kasse.sql` ausführen (legt
+      `kassen_belege` + `kassen_positionen` + RLS an; Chef & Kassierer).
+- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
+      das Modul **🧾 Kasse** sichtbar schalten.
+- [ ] **Verkauf**: Menü **🧾 Kasse** → Artikel antippen (aus dem ERP) → Warenkorb
+      → Zahlart „Bar" + gegebenen Betrag → Rückgeld wird berechnet → „Kassieren".
+- [ ] **Bon**: „🖨 Bon anzeigen / drucken" → 80-mm-Bon als PDF mit MwSt-Ausweis
+      und TSE-Signatur (im Demo-Modus klar als „DEMO – keine gültige TSE" markiert).
+- [ ] **Bestand**: der verkaufte Artikel hat im ERP weniger Bestand; in den
+      Lagerbewegungen steht ein „ausgang" mit der Beleg-Nummer.
+- [ ] **Tagesabschluss / Export**: Zeitraum wählen → „⬇ Export" lädt eine CSV
+      (DSFinV-K-naher Aufbau) mit allen Belegen/Positionen und TSE-Angaben.
+- [ ] **Live-TSE**: unter **🔌 Schnittstellen** einen echten Anbieter (fiskaly
+      etc.) hinterlegen → Bon zeigt dann den Anbieter statt „DEMO". (Die echte
+      Signatur-Anbindung wird beim Anbieter freigeschaltet.)
+- [ ] **Kassierer**: ein Mitarbeiter mit Kassen-Recht kann verkaufen; die
+      Zugangsdaten der Schnittstellen sieht er dabei NICHT.

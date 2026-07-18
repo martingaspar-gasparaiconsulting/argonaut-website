@@ -47,7 +47,7 @@ const ITEMS: Item[] = [
 
   // ---------- GEPLANT (weitere Quer-Bausteine + Fachpakete) ----------
   { status: 'verfuegbar', name: 'Schnittstellen & Konnektoren', nutzen: 'Externe Dienste (TSE, Shop) zentral verbinden — bis dahin Demo-/Manuell-Modus, Live-Schalten per Zugangsdaten' },
-  { status: 'geplant', tag: 'POS', name: 'Kasse mit TSE', nutzen: 'Fiskalkonforme Kasse, Bon, DSFinV-K-Export' },
+  { status: 'verfuegbar', tag: 'POS', name: 'Kasse mit TSE', nutzen: 'Kasse mit Warenkorb, Bon-PDF, Bestandsabbuchung & CSV-Export; TSE über zertifizierten Anbieter anbindbar (Demo-Modus vorhanden)' },
   { status: 'verfuegbar', name: 'Mitglieds- & Abo-Verwaltung', nutzen: 'Beiträge & Laufzeitverträge verwalten, SEPA-Lastschrift-Datei fürs Bankprogramm erzeugen' },
   { status: 'verfuegbar', name: 'Lager mit Scanner (WMS)', nutzen: 'Wareneingang, -ausgang & Inventur per Barcode-Scanner (Hardware oder Kamera)' },
   { status: 'verfuegbar', name: 'Projekt-Abrechnung', nutzen: 'Abrechenbare Zeiten & Leistungen je Projekt erfassen und mit einem Klick in eine echte Rechnung verwandeln' },
