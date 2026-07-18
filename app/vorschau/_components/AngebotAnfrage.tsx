@@ -6,6 +6,7 @@
 // Der Chef stellt Mitarbeiter/Sitze ein, sieht den Live-Preis und trägt direkt
 // darunter seine Daten ein. Config + Preis wandern automatisch in die Anfrage.
 // Kontaktwunsch (Anruf/E-Mail, Pflicht), eigener Termin-Picker, Datenschutz+AGB.
+// Rollen (Voll/Standard/Self) sind branchengerecht setzbar (optional, mit Fallback).
 // Sendet an /api/website-anfrage → n8n → eigenes CRM + Bestätigungsmail.
 // ============================================================================
 
@@ -15,6 +16,12 @@ import TerminPicker from './TerminPicker'
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
+
+const DEFAULT_ROLLEN = {
+  voll: 'Chef, GF, Büro, Dispo',
+  std: 'Sachbearbeiter mit Doku',
+  self: 'Zeiterfassung, Lohnzettel, Mein Bereich',
+}
 
 function grundgebuehr(ma: number) {
   if (ma <= 1) return { name: 'SOLO', fee: 499, solo: true }
@@ -49,7 +56,8 @@ const inputStyle: React.CSSProperties = {
 }
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', color: '#8fa9b6', margin: '0 0 6px' }
 
-export default function AngebotAnfrage({ branche }: { branche?: string }) {
+export default function AngebotAnfrage({ branche, rollen }: { branche?: string; rollen?: { voll: string; std: string; self: string } }) {
+  const R = rollen ?? DEFAULT_ROLLEN
   // Konfigurator
   const [ma, setMa] = useState(12)
   const [voll, setVoll] = useState(2)
@@ -198,9 +206,9 @@ export default function AngebotAnfrage({ branche }: { branche?: string }) {
                   Mit typischem Mix füllen
                 </button>
               </div>
-              <Row label="Voll-Nutzer" who="Chef, GF, Büro, Dispo" unit={vollPrice(voll)} val={voll} setV={setVoll} min={1} />
-              <Row label="Standard-Nutzer" who="Sachbearbeiter mit Doku" unit={stdPrice(std)} val={std} setV={setStd} min={0} />
-              <Row label="Self-Service" who="Zeiterfassung, Lohnzettel, Mein Bereich" unit={selfPrice(self)} val={self} setV={setSelf} min={0} />
+              <Row label="Voll-Nutzer" who={R.voll} unit={vollPrice(voll)} val={voll} setV={setVoll} min={1} />
+              <Row label="Standard-Nutzer" who={R.std} unit={stdPrice(std)} val={std} setV={setStd} min={0} />
+              <Row label="Self-Service" who={R.self} unit={selfPrice(self)} val={self} setV={setSelf} min={0} />
             </>
           )}
 

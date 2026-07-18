@@ -5,12 +5,13 @@ import Navbar from '../../_components/Navbar'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
+import { zusatzBausteineFor, nutzerRollenFor } from '../../_lib/branchen-bausteine'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
 // Kompletter Vertriebsweg auf einer Seite: Hero · Schmerzpunkte · Ergebnisse ·
-// "Das ist Ihr System" (Basis-Stack) · Preis-Rechner · Anfrage-Formular (→ CRM).
-// Basis-Stack allgemein (jede Branche); später pro Branche spezifisch ersetzbar.
+// "Das ist Ihr System" (Basis-Stack + branchenspezifische Zusatz-Bausteine) ·
+// Preis-Rechner (branchengerechte Rollen) · Anfrage-Formular (→ CRM).
 // OS-Sprache. noindex (Vorschau).
 // ============================================================================
 
@@ -63,6 +64,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
 
   const verwandte = websiteVerwandte(slug)
   const seo = seoBySlug(slug)
+  const zusatz = zusatzBausteineFor(b.kategorie)
+  const rollen = nutzerRollenFor(b.kategorie)
   const jsonLd: any[] = [
     {
       '@context': 'https://schema.org',
@@ -105,11 +108,15 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         .bd-stack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         .bd-tile { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.14); border-radius: 14px; padding: 18px 18px; transition: border-color .2s, background .2s; }
         .bd-tile:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.05); }
+        .bd-tile-extra { background: rgba(201,168,76,0.06); border-color: rgba(201,168,76,0.28); }
         .bd-tile-top { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; flex-wrap: wrap; }
         .bd-tile-icon { font-size: 1.2rem; line-height: 1; }
         .bd-tile-name { font-weight: 700; font-size: .98rem; color: #EAF1F6; }
         .bd-tile-tag { font-size: .68rem; font-weight: 700; letter-spacing: .04em; color: ${GOLD}; background: rgba(201,168,76,0.12); border-radius: 999px; padding: 2px 8px; }
         .bd-tile-sub { font-size: .85rem; color: #9fb3bd; line-height: 1.4; }
+        .bd-subhead { display: flex; align-items: center; gap: 10px; margin: 30px 0 14px; }
+        .bd-subhead-line { flex: 1; height: 1px; background: rgba(201,168,76,0.2); }
+        .bd-subhead-txt { font-size: .82rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: ${GOLD}; }
         .bd-summary { margin-top: 20px; background: linear-gradient(160deg, rgba(201,168,76,0.08), rgba(122,163,179,0.05)); border: 1px solid rgba(201,168,76,0.28); border-radius: 14px; padding: 20px 24px; font-size: 1.05rem; color: #EAF1F6; line-height: 1.55; }
         @media (max-width: 860px) { .bd-stack { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 640px) { .bd-grid { grid-template-columns: 1fr; } .bd-stack { grid-template-columns: 1fr; } }
@@ -174,7 +181,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         </div>
       </section>
 
-      {/* Das ist Ihr System — Basis-Stack */}
+      {/* Das ist Ihr System — Basis-Stack + branchenspezifische Zusatz-Bausteine */}
       <section style={{ padding: '40px 0 20px' }}>
         <div className="bd-wrap">
           <h2 className="bd-h2">Das ist <span style={{ color: GOLD }}>Ihr System</span> — ARGONAUT für {b.name}.</h2>
@@ -193,6 +200,32 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
               </div>
             ))}
           </div>
+
+          {/* Branchenspezifische Zusatz-Bausteine */}
+          {zusatz.length > 0 && (
+            <>
+              <div className="bd-subhead">
+                <span className="bd-subhead-txt">Speziell für {b.kategorie}</span>
+                <span className="bd-subhead-line" />
+              </div>
+              <p style={{ color: '#b9cdd6', maxWidth: '58ch', margin: '-4px 0 16px', lineHeight: 1.6 }}>
+                Dazu kommen die Funktionen, die {b.name} wirklich brauchen — von Anfang an mit dabei.
+              </p>
+              <div className="bd-stack">
+                {zusatz.map((t) => (
+                  <div key={t.name} className="bd-tile bd-tile-extra">
+                    <div className="bd-tile-top">
+                      <span className="bd-tile-icon" aria-hidden="true">{t.icon}</span>
+                      <span className="bd-tile-name">{t.name}</span>
+                      {t.tag && <span className="bd-tile-tag">{t.tag}</span>}
+                    </div>
+                    <div className="bd-tile-sub">{t.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           <p className="bd-summary">
             Kurz gesagt: Ihr komplettes <strong style={{ color: GOLD }}>CRM, ERP, Warenwirtschaft und DMS</strong> — in einem System, ein Login. Statt fünf Programme, die nicht miteinander reden.
           </p>
@@ -245,7 +278,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       )}
 
       {/* Angebot + Anfrage in einem Guss → eigenes CRM */}
-      <AngebotAnfrage branche={b.name} />
+      <AngebotAnfrage branche={b.name} rollen={rollen} />
     </main>
   )
 }
