@@ -38,9 +38,9 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Werkstatt & Fahrzeugakte', nutzen: 'Werkstattauftrag & Fahrzeughistorie' },
   { status: 'verfuegbar', name: 'Service & Wartung', nutzen: 'Serviceaufträge und Wartungsvorgänge' },
   { status: 'verfuegbar', name: 'Monteur- & Außendienst-App', nutzen: 'Tagestour, GPS-Nachweis, mobile Rapporterfassung mit Unterschrift – auch offline nutzbar', tag: 'Handwerk' },
+  { status: 'verfuegbar', name: 'Wartung & Prüfung', nutzen: 'Wartungsverträge mit Fälligkeits-Ampel, Prüfprotokolle (DGUV/E-Check), Anlagen-Historie & automatische Erinnerungen', tag: 'Handwerk' },
 
   // ---------- IN ENTWICKLUNG (Handwerk zuerst + Top-Quer-Bausteine) ----------
-  { status: 'entwicklung', name: 'Wartung & Prüfung', nutzen: 'Wartungsverträge, Intervalle, Prüfprotokolle (DGUV/E-Check)', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'Bau & Handwerk komplett', nutzen: 'GAEB/LV-Kalkulation, Aufmaß nach VOB, Nachträge, Bautagebuch, Abnahme', tag: 'Handwerk' },
   { status: 'entwicklung', name: 'E-Rechnung & DATEV-Brücke', nutzen: 'XRechnung/ZUGFeRD versenden, DATEV-Export, ELSTER/USt' },
   { status: 'entwicklung', name: 'Online-Terminbuchung', nutzen: 'Kunden buchen selbst — mit Ressourcen & No-Show-Erinnerung' },

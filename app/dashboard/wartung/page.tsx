@@ -100,6 +100,40 @@ function datumHuebsch(iso: string | null): string {
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
 }
 
+// --- Prüfprotokoll ---------------------------------------------------------
+type Pruefpunkt = { punkt: string; ok: boolean; bemerkung: string };
+type HistorieRow = {
+  id: string; wartungsvertrag_id: string; durchgefuehrt_am: string;
+  pruefer: string | null; ergebnis: string; pruefpunkte: Pruefpunkt[] | null;
+  bemerkung: string | null; naechste_faelligkeit_am: string | null; erstellt_am: string;
+};
+
+// Fertige Vorlagen — der Handwerker wählt eine und hat sofort die Punkte.
+const PRUEF_VORLAGEN: { key: string; label: string; punkte: string[] }[] = [
+  { key: 'dguv', label: 'DGUV V3 · Elektrische Geräte (E-Check)', punkte: [
+    'Sichtprüfung Gehäuse & Leitungen', 'Schutzleiterwiderstand', 'Isolationswiderstand', 'Ersatzableitstrom / Schutzleiterstrom', 'Funktionsprüfung',
+  ] },
+  { key: 'heizung', label: 'Heizung / Anlage', punkte: [
+    'Sichtprüfung Anlage', 'Dichtheit geprüft', 'Funktionstest', 'Verschleiß-/Filterteile geprüft', 'Einstellwerte kontrolliert',
+  ] },
+  { key: 'allgemein', label: 'Allgemeine Wartung', punkte: [
+    'Sichtprüfung', 'Funktionsprüfung', 'Verschleißteile geprüft',
+  ] },
+];
+const ERGEBNIS_OPTIONEN = [
+  { wert: 'bestanden', label: '✅ Bestanden', farbe: '#4CAF7D' },
+  { wert: 'mangel', label: '⚠️ Mangel festgestellt', farbe: '#E0A24C' },
+  { wert: 'nachpruefung', label: '🔁 Nachprüfung nötig', farbe: '#E06666' },
+];
+function ergebnisInfo(w: string) {
+  return ERGEBNIS_OPTIONEN.find((o) => o.wert === w) ?? { wert: w, label: w, farbe: '#8FA3BE' };
+}
+
+type ProtokollForm = {
+  durchgefuehrt_am: string; pruefer: string; ergebnis: string;
+  punkte: Pruefpunkt[]; bemerkung: string;
+};
+
 export default function WartungPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [liste, setListe] = useState<WartungRow[]>([]);
@@ -111,6 +145,16 @@ export default function WartungPage() {
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<FormState>(LEER);
   const [speichert, setSpeichert] = useState(false);
+
+  // Prüfprotokoll-Modal
+  const [protokollFor, setProtokollFor] = useState<WartungRow | null>(null);
+  const [protokollForm, setProtokollForm] = useState<ProtokollForm>({ durchgefuehrt_am: '', pruefer: '', ergebnis: 'bestanden', punkte: [], bemerkung: '' });
+  const [protokollBusy, setProtokollBusy] = useState(false);
+
+  // Historie-Modal
+  const [historieFor, setHistorieFor] = useState<WartungRow | null>(null);
+  const [historieRows, setHistorieRows] = useState<HistorieRow[]>([]);
+  const [historieBusy, setHistorieBusy] = useState(false);
 
   // Angemeldeten Chef ermitteln
   useEffect(() => {
@@ -230,24 +274,71 @@ export default function WartungPage() {
     } finally { setSpeichert(false); }
   }
 
-  // --- "Als gewartet markieren": letzte Wartung = heute, rollt Fälligkeit --
-  async function alsGewartet(r: WartungRow) {
-    if (!uid) return;
-    const heute = alsDatumString(new Date());
-    const basis: WartungBasis = { ...r, letzte_wartung_am: heute };
+  // --- Prüfprotokoll: Modal öffnen ---------------------------------------
+  function protokollOeffnen(r: WartungRow) {
+    setProtokollFor(r);
+    setProtokollForm({ durchgefuehrt_am: alsDatumString(new Date()) ?? '', pruefer: '', ergebnis: 'bestanden', punkte: [], bemerkung: '' });
+  }
+  function vorlageWaehlen(key: string) {
+    const v = PRUEF_VORLAGEN.find((x) => x.key === key);
+    setProtokollForm((f) => ({ ...f, punkte: v ? v.punkte.map((p) => ({ punkt: p, ok: true, bemerkung: '' })) : [] }));
+  }
+  function punktSetzen(i: number, teil: Partial<Pruefpunkt>) {
+    setProtokollForm((f) => ({ ...f, punkte: f.punkte.map((p, idx) => (idx === i ? { ...p, ...teil } : p)) }));
+  }
+  function punktEntfernen(i: number) {
+    setProtokollForm((f) => ({ ...f, punkte: f.punkte.filter((_, idx) => idx !== i) }));
+  }
+  function punktHinzu() {
+    setProtokollForm((f) => ({ ...f, punkte: [...f.punkte, { punkt: '', ok: true, bemerkung: '' }] }));
+  }
+
+  // --- Prüfprotokoll speichern: Historie-Eintrag + Fälligkeit fortschreiben
+  async function protokollSpeichern() {
+    if (!uid || !protokollFor) return;
+    const r = protokollFor;
+    const durchgefuehrt = protokollForm.durchgefuehrt_am || alsDatumString(new Date()) || '';
+    const basis: WartungBasis = { ...r, letzte_wartung_am: durchgefuehrt };
     const naechste = naechsteFaelligkeitString(basis);
-    if (!window.confirm(
-      `Wartung als heute erledigt eintragen?\n\n• ${r.titel}\n• Letzte Wartung: ${datumHuebsch(heute)}\n• Neue nächste Fälligkeit: ${naechste ? datumHuebsch(naechste) : '—'}`
-    )) return;
+    const punkte = protokollForm.punkte.filter((p) => p.punkt.trim() !== '');
+    setProtokollBusy(true); setFehler(null);
     try {
-      const { error } = await supabase.from('wartungsvertraege')
-        .update({ letzte_wartung_am: heute, naechste_faelligkeit_am: naechste, aktualisiert_am: new Date().toISOString() })
+      const { error: hErr } = await supabase.from('wartungshistorie').insert({
+        owner_user_id: uid,
+        wartungsvertrag_id: r.id,
+        durchgefuehrt_am: durchgefuehrt,
+        pruefer: protokollForm.pruefer.trim() || null,
+        ergebnis: protokollForm.ergebnis,
+        pruefpunkte: punkte,
+        bemerkung: protokollForm.bemerkung.trim() || null,
+        naechste_faelligkeit_am: naechste,
+        erstellt_von: uid,
+      });
+      if (hErr) throw hErr;
+      const { error: vErr } = await supabase.from('wartungsvertraege')
+        .update({ letzte_wartung_am: durchgefuehrt, naechste_faelligkeit_am: naechste, erinnerung_gesendet_am: null, aktualisiert_am: new Date().toISOString() })
         .eq('id', r.id);
-      if (error) throw error;
+      if (vErr) throw vErr;
+      setProtokollFor(null);
       await laden_();
     } catch (e: unknown) {
-      setFehler('Konnte nicht speichern: ' + (e instanceof Error ? e.message : 'Fehler'));
-    }
+      setFehler('Protokoll konnte nicht gespeichert werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setProtokollBusy(false); }
+  }
+
+  // --- Historie eines Vertrags laden -------------------------------------
+  async function historieOeffnen(r: WartungRow) {
+    setHistorieFor(r); setHistorieRows([]); setHistorieBusy(true); setFehler(null);
+    try {
+      const { data, error } = await supabase.from('wartungshistorie')
+        .select('id, wartungsvertrag_id, durchgefuehrt_am, pruefer, ergebnis, pruefpunkte, bemerkung, naechste_faelligkeit_am, erstellt_am')
+        .eq('wartungsvertrag_id', r.id)
+        .order('durchgefuehrt_am', { ascending: false });
+      if (error) throw error;
+      setHistorieRows((data as HistorieRow[]) ?? []);
+    } catch (e: unknown) {
+      setFehler('Historie konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setHistorieBusy(false); }
   }
 
   // --- Archivieren (kein hartes Löschen) ----------------------------------
@@ -365,8 +456,9 @@ export default function WartungPage() {
                       <td style={{ ...styles.td, textAlign: 'right' }}>{eur(r.betrag_netto)}</td>
                       <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {!zeigeArchiv && aktiv && (
-                          <button onClick={() => alsGewartet(r)} style={styles.miniBtn} title="Wartung als heute erledigt eintragen">✓ Gewartet</button>
+                          <button onClick={() => protokollOeffnen(r)} style={styles.miniBtn} title="Wartung durchführen & Prüfprotokoll erfassen">✓ Wartung + Protokoll</button>
                         )}
+                        <button onClick={() => historieOeffnen(r)} style={styles.miniBtnGhost} title="Bisherige Wartungen & Protokolle">Historie</button>
                         <button onClick={() => bearbeiten(r)} style={styles.miniBtnGhost}>Bearbeiten</button>
                         {zeigeArchiv ? (
                           <button onClick={() => reaktivieren(r)} style={styles.miniBtnGhost}>Reaktivieren</button>
@@ -440,6 +532,120 @@ export default function WartungPage() {
           </div>
         </div>
       )}
+
+      {/* --- Modal: Wartung durchführen + Prüfprotokoll ---------------- */}
+      {protokollFor && (
+        <div style={styles.overlay} onClick={() => !protokollBusy && setProtokollFor(null)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitel}>Wartung + Prüfprotokoll</h2>
+            <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', margin: '0 0 16px' }}>
+              {protokollFor.titel}{protokollFor.kunde_name ? ` · ${protokollFor.kunde_name}` : ''}
+            </p>
+
+            <div style={styles.formGrid}>
+              <Feld label="Durchgeführt am">
+                <input type="date" style={styles.input} value={protokollForm.durchgefuehrt_am} onChange={(e) => setProtokollForm((f) => ({ ...f, durchgefuehrt_am: e.target.value }))} />
+              </Feld>
+              <Feld label="Prüfer / Monteur">
+                <input style={styles.input} value={protokollForm.pruefer} onChange={(e) => setProtokollForm((f) => ({ ...f, pruefer: e.target.value }))} placeholder="Name" />
+              </Feld>
+              <Feld label="Prüf-Vorlage (füllt die Punkte)" voll>
+                <select style={styles.input} onChange={(e) => vorlageWaehlen(e.target.value)} defaultValue="">
+                  <option value="">— Vorlage wählen —</option>
+                  {PRUEF_VORLAGEN.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+                </select>
+              </Feld>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <label style={styles.lbl}>Prüfpunkte</label>
+                <button onClick={punktHinzu} style={styles.miniBtnGhost}>+ Punkt</button>
+              </div>
+              {protokollForm.punkte.length === 0 ? (
+                <div style={{ ...styles.hint, padding: '6px 0' }}>Wähle oben eine Vorlage oder füge einzelne Punkte hinzu.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {protokollForm.punkte.map((p, i) => (
+                    <div key={i} style={styles.punktZeile}>
+                      <button onClick={() => punktSetzen(i, { ok: !p.ok })} title={p.ok ? 'in Ordnung' : 'Mangel'}
+                        style={{ ...styles.okBtn, background: p.ok ? 'rgba(76,175,125,0.15)' : 'rgba(224,102,102,0.15)', color: p.ok ? C.green : C.danger, borderColor: p.ok ? C.green : C.danger }}>
+                        {p.ok ? '✓' : '✗'}
+                      </button>
+                      <input style={{ ...styles.input, flex: 2, minWidth: 0 }} value={p.punkt} onChange={(e) => punktSetzen(i, { punkt: e.target.value })} placeholder="Prüfpunkt" />
+                      <input style={{ ...styles.input, flex: 2, minWidth: 0 }} value={p.bemerkung} onChange={(e) => punktSetzen(i, { bemerkung: e.target.value })} placeholder="Bemerkung (optional)" />
+                      <button onClick={() => punktEntfernen(i)} style={styles.punktDel} title="Entfernen">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ ...styles.formGrid, marginTop: 16 }}>
+              <Feld label="Gesamtergebnis">
+                <select style={styles.input} value={protokollForm.ergebnis} onChange={(e) => setProtokollForm((f) => ({ ...f, ergebnis: e.target.value }))}>
+                  {ERGEBNIS_OPTIONEN.map((o) => <option key={o.wert} value={o.wert}>{o.label}</option>)}
+                </select>
+              </Feld>
+              <Feld label="Bemerkung" voll>
+                <textarea style={{ ...styles.input, minHeight: 54, resize: 'vertical' }} value={protokollForm.bemerkung} onChange={(e) => setProtokollForm((f) => ({ ...f, bemerkung: e.target.value }))} placeholder="Festgestellte Mängel, empfohlene Maßnahmen …" />
+              </Feld>
+            </div>
+
+            <div style={styles.modalAktionen}>
+              <button onClick={() => setProtokollFor(null)} disabled={protokollBusy} style={styles.ghostBtn}>Abbrechen</button>
+              <button onClick={protokollSpeichern} disabled={protokollBusy} style={{ ...styles.primaerBtn, opacity: protokollBusy ? 0.6 : 1 }}>
+                {protokollBusy ? 'Speichert …' : 'Protokoll speichern & Fälligkeit fortschreiben'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Modal: Historie ------------------------------------------- */}
+      {historieFor && (
+        <div style={styles.overlay} onClick={() => setHistorieFor(null)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitel}>Historie · {historieFor.titel}</h2>
+            {historieBusy ? (
+              <div style={styles.hint}>Lädt …</div>
+            ) : historieRows.length === 0 ? (
+              <div style={styles.hint}>Noch keine Wartung dokumentiert. Über „✓ Wartung + Protokoll" den ersten Eintrag anlegen.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {historieRows.map((h) => {
+                  const ei = ergebnisInfo(h.ergebnis);
+                  return (
+                    <div key={h.id} style={styles.histBox}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        <div style={{ fontWeight: 700 }}>{datumHuebsch(h.durchgefuehrt_am)}{h.pruefer ? ` · ${h.pruefer}` : ''}</div>
+                        <span style={{ ...styles.ergebnisBadge, color: ei.farbe, borderColor: ei.farbe }}>{ei.label}</span>
+                      </div>
+                      {Array.isArray(h.pruefpunkte) && h.pruefpunkte.length > 0 && (
+                        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {h.pruefpunkte.map((p, i) => (
+                            <div key={i} style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.text }}>
+                              <span style={{ color: p.ok ? C.green : C.danger, fontWeight: 700 }}>{p.ok ? '✓' : '✗'}</span> {p.punkt}
+                              {p.bemerkung ? <span style={{ color: C.textDim }}> — {p.bemerkung}</span> : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {h.bemerkung && <div style={{ marginTop: 8, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5 }}>{h.bemerkung}</div>}
+                      <div style={{ marginTop: 8, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
+                        Nächste Fälligkeit danach: {datumHuebsch(h.naechste_faelligkeit_am)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={styles.modalAktionen}>
+              <button onClick={() => setHistorieFor(null)} style={styles.ghostBtn}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -496,4 +702,10 @@ const styles: Record<string, CSSProperties> = {
   lbl: { display: 'block', fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 },
   input: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
   modalAktionen: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 },
+
+  punktZeile: { display: 'flex', alignItems: 'center', gap: 8 },
+  okBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 10, border: '1px solid', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  punktDel: { flexShrink: 0, width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer', fontFamily: 'inherit' },
+  histBox: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' },
+  ergebnisBadge: { fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, border: '1px solid', borderRadius: 999, padding: '3px 12px', whiteSpace: 'nowrap' },
 };
