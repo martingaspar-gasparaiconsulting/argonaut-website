@@ -32,6 +32,27 @@ export default function CommandCenter() {
       >
         {'▣ TENANTS & MODULE'}
       </a>
+      <a
+        href="/admin/verbrauch"
+        style={{
+          position: 'fixed',
+          bottom: 18,
+          right: 18,
+          zIndex: 99999,
+          fontFamily: "'Share Tech Mono', monospace",
+          fontSize: 13,
+          letterSpacing: '0.14em',
+          color: '#C9A84C',
+          background: 'rgba(0,20,32,0.92)',
+          border: '1px solid rgba(201,168,76,0.6)',
+          borderRadius: 8,
+          padding: '9px 20px',
+          textDecoration: 'none',
+          boxShadow: '0 0 18px rgba(201,168,76,0.3)',
+        }}
+      >
+        {'⚡ KI-VERBRAUCH'}
+      </a>
     </>
   );
 }
