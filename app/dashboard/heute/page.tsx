@@ -62,6 +62,7 @@ export default function HeutePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [signaturen, setSignaturen] = useState<Array<{ id: string; titel: string; empf: string; seit: number }>>([]);
 
   useEffect(() => {
     (async () => {
@@ -87,6 +88,19 @@ export default function HeutePage() {
 
       alle.sort((a, b) => a.tage - b.tage);
       setItems(alle);
+
+      // Offene Unterschriften (eigene Quelle, ohne Fristen-Logik).
+      try {
+        const { data: sig } = await supabase.from('signatur_anfragen')
+          .select('id, titel, empfaenger_name, created_at, status, storniert')
+          .in('status', ['gesendet', 'angesehen']).order('created_at', { ascending: true }).limit(50);
+        const offeneSig = ((sig as Record<string, unknown>[]) || []).filter((s) => !s.storniert).map((s) => ({
+          id: String(s.id), titel: String(s.titel || 'Dokument'), empf: String(s.empfaenger_name || '—'),
+          seit: -inTagen(String(s.created_at).slice(0, 10)),
+        }));
+        setSignaturen(offeneSig);
+      } catch { /* Modul evtl. nicht eingespielt */ }
+
       setLaden(false);
     })();
   }, []);
@@ -112,6 +126,21 @@ export default function HeutePage() {
           <div style={{ ...styles.kWert, color: C.green }}>{spaeter.length}</div><div style={styles.kLabel}>in Sicht</div>
         </div>
       </div>
+
+      {signaturen.length > 0 && (
+        <div style={styles.block}>
+          <div style={{ ...styles.blockTitel, color: C.gold }}>✍️ Offene Unterschriften <span style={{ color: C.textDim, fontWeight: 400 }}>({signaturen.length})</span></div>
+          <div style={styles.liste}>
+            {signaturen.map((s) => (
+              <a key={s.id} href="/dashboard/signaturen" style={styles.item}>
+                <span style={{ fontSize: 18 }}>✍️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{s.titel} · {s.empf}</span>
+                <span style={{ color: C.textDim, fontSize: 13 }}>{s.seit <= 0 ? 'heute' : `seit ${s.seit} T`}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {laden ? <p style={styles.dim}>Sammle alle Ampeln …</p> : items.length === 0 ? (
         <div style={styles.leer}>✅ Nichts Dringendes. Alles im grünen Bereich.</div>

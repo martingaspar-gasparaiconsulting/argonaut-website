@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { signaturStarten } from '@/lib/signaturStart';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,6 +26,7 @@ type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: s
 type Angebot = {
   id: string; angebotsnummer: string | null; titel: string; kunde_name: string | null;
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
+  kunde_email: string | null; kontakt_id: string | null;
 };
 
 const STATUS_FARBE: Record<string, string> = {
@@ -67,7 +69,7 @@ export default function AngebotePage() {
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id')
+      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id')
       .order('erstellt_am', { ascending: false });
     setListe((data as Angebot[]) ?? []);
   }, []);
@@ -155,6 +157,22 @@ export default function AngebotePage() {
       setListe((l) => l.filter((x) => x.id !== a.id));
     } finally { setBusy(null); }
   }
+  async function zurUnterschrift(a: Angebot) {
+    if (!uid) return;
+    setBusy(a.id); setFehler(null); setOk(null);
+    try {
+      const { data: pos } = await supabase.from('angebot_positionen').select('position, bezeichnung, menge, einheit, einzelpreis').eq('angebot_id', a.id).order('position', { ascending: true });
+      const zeilen = ((pos as Record<string, unknown>[]) || []).map((p) => `- ${Number(p.menge) || 0} ${String(p.einheit || '')} ${String(p.bezeichnung || '')} — ${eur(Number(p.einzelpreis) || 0)}`).join('\n');
+      const dok = `ANGEBOT ${a.angebotsnummer || ''}\n${a.titel}\nKunde: ${a.kunde_name || ''}\n\nPositionen:\n${zeilen}\n\nGesamtbetrag (brutto): ${eur(a.brutto_summe)}\n\nMit meiner Unterschrift nehme ich dieses Angebot verbindlich an.`;
+      const r = await signaturStarten(supabase, uid, {
+        titel: `Angebot ${a.angebotsnummer || a.titel}`, empfaenger_name: a.kunde_name,
+        empfaenger_email: a.kunde_email, kontakt_id: a.kontakt_id, dokument: dok,
+      });
+      if (!r.ok) { setFehler(r.error || 'Signatur-Anfrage fehlgeschlagen.'); return; }
+      try { await navigator.clipboard.writeText(r.link || ''); } catch { /* egal */ }
+      setOk(`Unterschrifts-Link erstellt & kopiert: ${r.link}`);
+    } finally { setBusy(null); }
+  }
 
   return (
     <div style={styles.page}>
@@ -232,6 +250,7 @@ export default function AngebotePage() {
               <div style={styles.itemBtns}>
                 <button style={styles.mini} onClick={() => kopieren(a)}>🔗 Link</button>
                 <a href={`/api/angebot-pdf?id=${encodeURIComponent(a.id)}`} target="_blank" rel="noreferrer" style={styles.miniLink}>⬇ PDF</a>
+                <button style={styles.mini} disabled={busy === a.id} onClick={() => zurUnterschrift(a)}>✍️ Unterschrift</button>
                 {a.status === 'entwurf' && <button style={styles.mini} disabled={busy === a.id} onClick={() => statusSetzen(a, 'gesendet')}>✓ gesendet</button>}
                 {a.status === 'angenommen' && (a.rechnung_id
                   ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ Rechnung</span>

@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
+import { signaturStarten } from '@/lib/signaturStart';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -160,6 +161,20 @@ export default function SepaEinzugPage() {
     } finally { setMbusy(false); }
   }
 
+  async function mandatUnterschrift(m: Mandat) {
+    if (!uid) return;
+    setFehler(null); setOk(null);
+    const k = kontakte.find((x) => x.id === m.kontakt_id);
+    const dok = `SEPA-LASTSCHRIFTMANDAT\n\nGläubiger: ${cred.inhaber || '—'}\nGläubiger-ID: ${cred.glaeubiger || '—'}\nZahlungspflichtiger: ${kontaktMap[m.kontakt_id] || '—'}\nIBAN: ${ibanKurz(m.iban)}\nMandatsreferenz: ${m.mandatsreferenz || '—'}\n\nIch ermächtige den oben genannten Gläubiger, Zahlungen von meinem Konto mittels SEPA-Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die vom Gläubiger auf mein Konto gezogenen Lastschriften einzulösen. Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen.`;
+    const r = await signaturStarten(supabase, uid, {
+      titel: `SEPA-Mandat ${m.mandatsreferenz || ''}`.trim(), empfaenger_name: kontaktMap[m.kontakt_id],
+      empfaenger_email: k?.email || null, kontakt_id: m.kontakt_id, dokument: dok,
+    });
+    if (!r.ok) { setFehler(r.error || 'Signatur-Anfrage fehlgeschlagen.'); return; }
+    try { await navigator.clipboard.writeText(r.link || ''); } catch { /* egal */ }
+    setOk(`Unterschrifts-Link erstellt & kopiert: ${r.link}`);
+  }
+
   // Einziehbar: offene Rechnung + Kontakt hat ein aktives, gültiges Mandat.
   const einziehbar = useMemo(() => rechnungen.filter((r) => {
     const m = r.kontakt_id ? mandate[r.kontakt_id] : undefined;
@@ -287,6 +302,7 @@ export default function SepaEinzugPage() {
                 <span style={{ color: C.textDim }}>{ibanKurz(m.iban)}</span>
                 <span style={{ color: C.textDim, fontSize: 12.5 }}>Ref: {m.mandatsreferenz || '—'}</span>
                 <span style={{ ...styles.badge, color: m.erst_einzug === false ? C.cyan : C.gold, borderColor: m.erst_einzug === false ? C.cyan : C.gold }}>{m.erst_einzug === false ? 'RCUR' : 'FRST'}</span>
+                <button style={styles.mini} onClick={() => mandatUnterschrift(m)}>✍️ unterschreiben</button>
                 <button style={styles.mini} onClick={() => mandatWaehlen(m.kontakt_id)}>Bearbeiten</button>
               </div>
             ))}
