@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
 import { girocodeVonDaten } from '../../../lib/girocode';
+import { createClient } from '@/lib/supabase-server';
+import { baueBezahllink } from '@/lib/bezahllink';
+import type { IntegrationDatensatz } from '@/lib/konnektoren';
+
+export const runtime = 'nodejs';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R5 — Rechnungs-PDF (§14 UStG)
@@ -64,7 +69,7 @@ function positionNetto(p: any): number {
   return (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0);
 }
 
-function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any): string {
+function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const klein = !!rechnung?.kleinunternehmer;
@@ -244,6 +249,8 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .giro .qr svg { display: block; width: 100%; height: 100%; }
   .giro .cap { font-size: 9.5px; color: #5b6b80; margin-top: 4px; line-height: 1.3; }
   .giro .cap b { color: #0A1628; }
+  .zahlung .pay { margin-top: 12px; }
+  .paybtn { display: inline-block; background: #0A1628; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 12.5px; }
   .notizen { margin-top: 18px; color: #5b6b80; font-size: 11.5px; }
 
   .fuss { margin-top: 40px; border-top: 1px solid #e1e6ee; padding-top: 12px; color: #8a99ad; font-size: 10.5px; text-align: center; }
@@ -315,6 +322,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
       <div class="ztext">${bank}</div>
       ${giroSvg ? `<div class="giro"><div class="qr">${giroSvg}</div><div class="cap"><b>GiroCode</b><br>mit Banking-App scannen</div></div>` : ''}
     </div>
+    ${bezahllink ? `<div class="pay"><a href="${esc(bezahllink.url)}" class="paybtn">💳 Jetzt online bezahlen${bezahllink.anbieter ? ` · ${esc(bezahllink.anbieter)}` : ''}</a></div>` : ''}
   </div>
 
   ${rechnung?.notizen ? `<div class="notizen">${esc(rechnung.notizen)}</div>` : ''}
@@ -337,7 +345,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rechnungsdaten fehlen.' }, { status: 400 });
     }
 
-    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller);
+    // Online-Bezahllink (eigener Anbieter des Betriebs, serverseitig gelesen).
+    let bezahllink: { url: string; anbieter: string } | null = null;
+    try {
+      if (!rechnung?.bezahlt_am && rechnung?.zahlungsstatus !== 'bezahlt') {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: zi } = await supabase.from('betrieb_integrationen')
+            .select('typ, anbieter, config, aktiv').eq('owner_user_id', user.id).eq('typ', 'zahlung').maybeSingle();
+          bezahllink = baueBezahllink(zi as IntegrationDatensatz | null, Number(rechnung?.brutto_summe) || 0);
+        }
+      }
+    } catch { /* Bezahllink optional */ }
+
+    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller, bezahllink);
 
     const gotenbergUrl = process.env.GOTENBERG_URL;
     const gUser = process.env.GOTENBERG_USER;

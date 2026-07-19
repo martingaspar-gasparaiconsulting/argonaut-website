@@ -12,7 +12,7 @@
 // von Client-Komponenten UND von Server-Routen importierbar.
 // ============================================================
 
-export type IntegrationTyp = 'tse' | 'shop' | 'datev';
+export type IntegrationTyp = 'tse' | 'shop' | 'datev' | 'zahlung';
 
 export type KonnektorFeld = { key: string; label: string; typ?: 'text' | 'password' | 'url'; hinweis?: string };
 export type KonnektorAnbieter = {
@@ -98,6 +98,34 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
         { key: 'berater_nr', label: 'Beraternummer', typ: 'text' },
         { key: 'mandant_nr', label: 'Mandantennummer', typ: 'text' },
       ] },
+    ],
+  },
+  {
+    typ: 'zahlung',
+    name: 'Zahlungsanbieter / Bezahllink',
+    icon: '💳',
+    beschreibung: 'Ihr eigener Zahlungsanbieter für einen „Jetzt online bezahlen"-Knopf auf Rechnungen. ARGONAUT wickelt KEIN Geld ab — Sie verbinden Ihren eigenen Account, das Geld fließt direkt zu Ihnen. Wählen Sie frei, was Sie ohnehin schon nutzen. Ohne Eintrag steht auf der Rechnung weiterhin Ihre Bankverbindung + der GiroCode zum Scannen.',
+    anbieter: [
+      { key: 'kein', name: 'Kein Online-Bezahllink (nur Überweisung + GiroCode)', demo: true, felder: [], hinweis: 'Auf der Rechnung stehen Ihre Bankverbindung und der GiroCode zum Scannen — kein externer Anbieter nötig. Für viele Betriebe reicht das völlig.' },
+      { key: 'paypalme', name: 'PayPal.Me', felder: [
+        { key: 'handle', label: 'PayPal.Me-Name', typ: 'text', hinweis: 'Nur der Teil nach dem Schrägstrich: paypal.me/IhrName → hier „IhrName" eintragen. Der Rechnungsbetrag wird automatisch vorausgefüllt.' },
+      ], hinweis: '① Kostenloses PayPal-Konto anlegen (oder vorhandenes nutzen) → ② auf paypal.me Ihren persönlichen Link einrichten → ③ den Namen hier eintragen. Das Geld geht direkt auf Ihr PayPal-Konto.' },
+      { key: 'stripe', name: 'Stripe (Payment Link)', felder: [
+        { key: 'link', label: 'Stripe Payment-Link (URL)', typ: 'url', hinweis: 'z. B. https://buy.stripe.com/…' },
+      ], hinweis: '① Bei stripe.com anmelden → ② im Dashboard unter „Zahlungen → Payment Links" einen Link erstellen → ③ die URL hier einfügen. Kartenzahlung, Apple/Google Pay u. v. m.; Auszahlung direkt auf Ihr Stripe-Konto.' },
+      { key: 'mollie', name: 'Mollie (Payment-Link)', felder: [
+        { key: 'link', label: 'Mollie Payment-Link (URL)', typ: 'url', hinweis: 'z. B. https://paymentlink.mollie.com/…' },
+      ], hinweis: '① Bei mollie.com anmelden → ② im Dashboard einen „Payment Link" erzeugen → ③ die URL hier einfügen. Beliebt für EU-Zahlarten (iDEAL, SEPA, Karte).' },
+      { key: 'sumup', name: 'SumUp (Bezahllink)', felder: [
+        { key: 'link', label: 'SumUp Bezahllink (URL)', typ: 'url' },
+      ], hinweis: '① In der SumUp-App bzw. im Dashboard einen „Payment Link / Bezahllink" erstellen → ② die URL hier einfügen. Gut für Handwerk & Vor-Ort-Geschäft.' },
+      { key: 'gocardless', name: 'GoCardless (Lastschrift-Link)', felder: [
+        { key: 'link', label: 'GoCardless-Link (URL)', typ: 'url' },
+      ], hinweis: '① Im GoCardless-Dashboard einen Zahlungslink erstellen → ② die URL hier einfügen. Ideal für wiederkehrende SEPA-Lastschriften.' },
+      { key: 'eigener', name: 'Eigener Bezahllink (beliebiger Anbieter)', felder: [
+        { key: 'link', label: 'Bezahllink (URL)', typ: 'url', hinweis: 'Beliebiger „Jetzt bezahlen"-Link Ihres Anbieters.' },
+        { key: 'name', label: 'Anzeigename (optional)', typ: 'text', hinweis: 'Wie der Knopf heißen soll, z. B. „Klarna" oder „Kreditkarte".' },
+      ], hinweis: 'Für jeden anderen Anbieter: Fügen Sie einfach den „Jetzt bezahlen"-Link ein, den Ihr Dienst Ihnen gibt — fertig.' },
     ],
   },
 ];

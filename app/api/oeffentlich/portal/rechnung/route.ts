@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { girocodeVonDaten } from '@/lib/girocode';
+import { baueBezahllink } from '@/lib/bezahllink';
+import type { IntegrationDatensatz } from '@/lib/konnektoren';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,6 +103,16 @@ export async function GET(req: NextRequest) {
       verwendungszweck: String(r.rechnungsnummer || '').trim(),
     }, { groesse: 128 });
 
+    // Online-Bezahllink (eigener Zahlungsanbieter des Betriebs), nur bei offener Rechnung.
+    let bezahllink: { url: string; anbieter: string } | null = null;
+    if (!r.bezahlt_am) {
+      try {
+        const { data: zi } = await db.from('betrieb_integrationen')
+          .select('typ, anbieter, config, aktiv').eq('owner_user_id', ownerId).eq('typ', 'zahlung').maybeSingle();
+        bezahllink = baueBezahllink(zi as IntegrationDatensatz | null, Number(r.brutto_summe) || 0);
+      } catch { /* optional */ }
+    }
+
     // MwSt-Aufschlüsselung je Satz (rein zur Anzeige)
     const proSatz = new Map<number, number>();
     for (const x of positionen) {
@@ -151,6 +163,8 @@ export async function GET(req: NextRequest) {
   .giro-qr svg { display: block; width: 100%; height: 100%; }
   .giro-cap { font-size: 11.5px; color: #55606b; line-height: 1.45; }
   .giro-cap b { color: #14202e; font-size: 12.5px; }
+  .paybox { margin-top: 14px; }
+  .paybtn { display: inline-block; background: #0A1628; color: #fff; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 700; font-size: 13.5px; }
 </style></head><body>
   <div class="kopf">
     <div>
@@ -192,6 +206,7 @@ export async function GET(req: NextRequest) {
   ${r.bezahlt_am ? '<div class="hinweis">✓ Diese Rechnung ist bezahlt. Vielen Dank!</div>'
     : `<div class="hinweis">Bitte begleichen Sie den Betrag${r.faelligkeitsdatum ? ` bis zum ${datum(r.faelligkeitsdatum)}` : ''}${iban ? ` auf folgendes Konto: ${esc(iban)}${bic ? ` (${esc(bic)})` : ''}` : ''}.</div>`}
   ${giroSvg ? `<div class="giro"><div class="giro-qr">${giroSvg}</div><div class="giro-cap"><b>GiroCode — bequem zahlen</b><br>Öffnen Sie Ihre Banking-App, scannen Sie den Code — Empfänger, IBAN, Betrag und Verwendungszweck sind bereits ausgefüllt.</div></div>` : ''}
+  ${bezahllink ? `<div class="paybox"><a href="${esc(bezahllink.url)}" class="paybtn">💳 Jetzt online bezahlen${bezahllink.anbieter ? ` · ${esc(bezahllink.anbieter)}` : ''}</a></div>` : ''}
 
   <div class="fuss">
     <div>${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''}</div>
