@@ -282,3 +282,47 @@
 - [ ] **Reifenhotel**: Reiter „Reifenhotel" → Kunde/Kennzeichen, Saison, Größe,
       Anzahl, Lagerplatz → „Einlagern" → erscheint in der Liste; „⇧ Auslagern"
       setzt das Auslagerdatum und nimmt es aus der aktiven Liste.
+
+## Bündel 19 · Bau & Handwerk komplett — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel19-bau-lv.sql` ausführen (legt
+      `bau_lv` + `bau_lv_positionen` + `bau_abnahmen` + RLS an).
+- [ ] **Modul freischalten**: unter **🔧 Einstellungen** das Modul **🏗 Bau & LV** sichtbar schalten.
+- [ ] **LV & Positionen**: Menü **🏗 Bau & LV** → Reiter „LV / Kalkulation" → LV
+      anlegen → Positionen mit OZ, Kurztext, Menge, Einheit, EP erfassen → die
+      Netto-Summe stimmt. Eine Position als **Nachtrag** markieren (mit Grund).
+- [ ] **Rechnung aus LV**: „🧾 Aus LV eine Rechnung erstellen" → Rechnung unter
+      **🧾 Rechnungen**; erneuter Klick erzeugt keine zweite (Doppel-Schutz).
+- [ ] **Abnahme**: Reiter „Abnahme" → Protokoll mit Ort, Teilnehmer, Art
+      (ohne/unter Vorbehalt/verweigert) und **Mängelliste** (mit Frist) speichern.
+- [ ] **Scope-Hinweis (Ausbaustufe)**: GAEB-XML-Import/-Export und VOB-Aufmaß-
+      Verknüpfung sind als spätere Ausbaustufe vorgesehen; der LV-Kern
+      (Kalkulation, Nachträge, Abnahme, Rechnung) ist vollständig.
+
+## Bündel 20 · E-Rechnung & DATEV-Brücke — offene Punkte fürs Finale
+
+- [ ] **Kein neues SQL** nötig (nutzt vorhandene `rechnungen` + `betrieb_integrationen`).
+- [ ] **Modul freischalten**: unter **🔧 Einstellungen** das Modul
+      **📊 DATEV & E-Rechnung** sichtbar schalten (nur Chef, sensibel).
+- [ ] **DATEV-Export**: Menü **📊 DATEV & E-Rechnung** → Zeitraum wählen →
+      „⬇ DATEV-Buchungsstapel (CSV)" → CSV mit Umsatz, Konto/Gegenkonto,
+      BU-Schlüssel je Steuersatz, Belegfeld1 = Rechnungsnummer.
+- [ ] **Konten hinterlegen**: unter **🔌 Schnittstellen → DATEV** Erlös-/Debitor-
+      konten + Berater-/Mandantennummer eintragen → Export nutzt diese Werte.
+- [ ] **USt-Vorschau**: die Kacheln zeigen Netto-Umsatz, Umsatzsteuer (Zahllast)
+      und Brutto für den Zeitraum (klar als Vorschau gekennzeichnet).
+- [ ] **Scope-Hinweis (Brücke)**: Die automatische DATEVconnect-/ELSTER-
+      Übermittlung braucht ein Zertifikat und wird über die Schnittstelle
+      freigeschaltet; Versand von XRechnung/ZUGFeRD läuft weiter im Rechnungsmodul.
+
+## Bündel 21 · Gastro & Hotel — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel21-gastro-hotel.sql` ausführen.
+- [ ] **Modul freischalten**: **🍽 Gastro & Hotel** unter Einstellungen sichtbar schalten.
+- [ ] **Reservierung**: Reiter „Reservierungen" → Datum, Zeit, Personen, Gast, Tisch
+      → „Reservieren" → erscheint in der Tagesliste; Status (eingetroffen/No-Show) änderbar.
+- [ ] **Hotel**: Reiter „Hotel" → Zimmer anlegen (Nr., Typ, max. Pers., €/Nacht) →
+      Belegung buchen (Zimmer, Gast, An-/Abreise). **Überschneidung** wird geblockt.
+- [ ] **Check-in/out**: Belegungsstatus auf eingecheckt/ausgecheckt setzen.
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Rezepturkalkulation, HACCP, Lieferdienst
+      und OTA-/Kanal-Anbindung (Booking/HRS) sind spätere Ausbaustufen bzw. Brücken.

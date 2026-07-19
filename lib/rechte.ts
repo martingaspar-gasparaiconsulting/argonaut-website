@@ -114,7 +114,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
+  { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
+  { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },
   { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
@@ -142,6 +144,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '📊 DATEV & E-Rechnung', href: '/dashboard/datev', modul: 'datev', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💰 Fördermittel', href: '/dashboard/foerdermittel', modul: 'foerdermittel', ebene: 3, gruppe: 'finanzen' },
   { label: '📝 Förder-Angebot', href: '/dashboard/foerder-angebot', modul: 'foerder-angebot', ebene: 3, gruppe: 'finanzen' },
 

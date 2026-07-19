@@ -41,8 +41,8 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Wartung & Prüfung', nutzen: 'Wartungsverträge mit Fälligkeits-Ampel, Prüfprotokolle (DGUV/E-Check), Anlagen-Historie & automatische Erinnerungen', tag: 'Handwerk' },
 
   // ---------- IN ENTWICKLUNG (Handwerk zuerst + Top-Quer-Bausteine) ----------
-  { status: 'entwicklung', name: 'Bau & Handwerk komplett', nutzen: 'GAEB/LV-Kalkulation, Aufmaß nach VOB, Nachträge, Bautagebuch, Abnahme', tag: 'Handwerk' },
-  { status: 'entwicklung', name: 'E-Rechnung & DATEV-Brücke', nutzen: 'XRechnung/ZUGFeRD versenden, DATEV-Export, ELSTER/USt' },
+  { status: 'verfuegbar', name: 'Bau & Handwerk komplett', nutzen: 'LV-Kalkulation mit Positionen & Nachträgen, Abnahmeprotokoll mit Mängelliste, Rechnung direkt aus dem LV', tag: 'Handwerk' },
+  { status: 'verfuegbar', name: 'E-Rechnung & DATEV-Brücke', nutzen: 'XRechnung/ZUGFeRD versenden, DATEV-Buchungsstapel-Export & USt-Vorschau; DATEV-Online/ELSTER als Brücke anbindbar' },
   { status: 'verfuegbar', name: 'Online-Terminbuchung', nutzen: 'Kunden buchen selbst über einen eigenen Link — inkl. Bestätigungs- & No-Show-Mail' },
 
   // ---------- GEPLANT (weitere Quer-Bausteine + Fachpakete) ----------
@@ -58,7 +58,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', name: 'Shop- & Marktplatz-Anbindung', nutzen: 'Bestellungen sammeln & Status verfolgen — CSV-Import im Manuell-Modus, Shopware/Shopify/Woo per Schnittstelle anbindbar' },
   { status: 'verfuegbar', name: 'Bewertungsmanagement', nutzen: 'Kunden per E-Mail um Sterne-Bewertungen bitten, sammeln und freigeben' },
   { status: 'verfuegbar', tag: 'Fahrzeuge', name: 'KFZ-Fachpaket', nutzen: 'Fahrzeuge mit HU/AU-Fristen-Ampel und Reifenhotel (Einlagerung mit Lagerplatz & Saison)' },
-  { status: 'geplant', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tischplan, Rezepturkalkulation, PMS, HACCP, Lieferdienst' },
+  { status: 'verfuegbar', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tisch-Reservierungen mit Status + Zimmerverwaltung & Belegung mit Überschneidungs-Prüfung (PMS-Kern)' },
   { status: 'geplant', tag: 'Industrie', name: 'Fertigung & PPS', nutzen: 'Stückliste, Fertigungsaufträge, BDE/MDE, QS' },
   { status: 'geplant', tag: 'Energie', name: 'Energie-Fachpaket', nutzen: 'PV-Planung, Heizlast, MaStR, Wallbox, ESG-Reporting' },
   { status: 'geplant', tag: 'Lebensmittel', name: 'Lebensmittel-Fachpaket', nutzen: 'Waagen-Anbindung, MHD/Chargen, Rückverfolgbarkeit, Pfand' },
