@@ -126,6 +126,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🥫 Lebensmittel', href: '/dashboard/lebensmittel', modul: 'lebensmittel', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Landwirtschaft', href: '/dashboard/landwirtschaft', modul: 'landwirtschaft', ebene: 3, gruppe: 'betrieb' },
   { label: '🐾 Tier-Fachpaket', href: '/dashboard/tier', modul: 'tier', ebene: 3, gruppe: 'betrieb' },
+  { label: '🤝 Verein & Sozial', href: '/dashboard/verein', modul: 'verein', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },

@@ -452,3 +452,16 @@
       (rot überfällig, gelb ≤30 Tage, grün fern).
 - [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: HIT-Meldung, Herden-/Zuchtbuch und
       Pensionsstall-Abrechnung sind spätere Ausbaustufen.
+
+## Bündel 33 · Verein, Kultur & Sozial — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel33-verein.sql` ausführen.
+- [ ] **Modul freischalten**: **🤝 Verein & Sozial** unter Einstellungen sichtbar schalten.
+- [ ] **Mitglied**: Reiter „Mitglieder" → Name, E-Mail, Beitrag, Intervall, Rolle
+      → „Mitglied". Kacheln: aktive Mitglieder + Beitragsvolumen/Jahr.
+- [ ] **Veranstaltung**: Reiter „Veranstaltungen" → Titel, Datum, Ort, Teilnehmer,
+      Ehrenamt-Stunden → „Veranstaltung". Kacheln: Anzahl + Ehrenamt-Summe.
+- [ ] **Verknüpfung**: Der SEPA-Beitragseinzug läuft über „👥 Mitglieder & Abos"
+      (Bündel 8) — hier liegt die Vereinsverwaltung.
+- [ ] **Scope-Hinweis (Ausbaustufe)**: Spendenquittungen/§10b, Ticketing und
+      Fallakte (Sozial) sind spätere Ausbaustufen.

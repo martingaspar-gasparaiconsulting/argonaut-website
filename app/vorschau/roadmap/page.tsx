@@ -70,7 +70,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', tag: 'Kanzlei', name: 'Kanzlei & Steuer', nutzen: 'Mandate + Fristenkalender mit Ampel (überfällig/kritisch) und Erledigt-Haken' },
   { status: 'verfuegbar', tag: 'Bildung', name: 'Bildung & Kurse', nutzen: 'Kurse mit Plätzen/Belegung + Teilnehmer-Anmeldungen (mit Ausbuchungs-Schutz)' },
   { status: 'verfuegbar', tag: 'Gesundheit', name: 'Gesundheit & Wellness', nutzen: 'Kundenkartei mit Hinweisen + Behandlungshistorie (Dauer & Preis)' },
-  { status: 'geplant', tag: 'Verein', name: 'Verein, Kultur & Sozial', nutzen: 'Spenden & Zuwendung, Ehrenamt, Ticketing, Fallakte' },
+  { status: 'verfuegbar', tag: 'Verein', name: 'Verein, Kultur & Sozial', nutzen: 'Mitglieder mit Beitrags-Jahresvolumen + Veranstaltungen mit Teilnehmern & Ehrenamt-Stunden' },
   { status: 'geplant', tag: 'Logistik', name: 'Logistik-Fachpaket', nutzen: 'Telematik, Frachtbrief/CMR, ADR, Lenkzeiten, Track & Trace' },
 ]
 
