@@ -410,3 +410,18 @@
       zugestellt/fehlgeschlagen); Kopf zeigt „x/y zugestellt".
 - [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Telematik-Anbindung, CMR/Frachtbrief,
       ADR und Lenkzeiten sind spätere Ausbaustufen bzw. Konnektor-Brücken.
+
+## Control Room · Paket-Freigabe (Admin) — offene Punkte fürs Finale
+
+- [ ] **Kein neues SQL** — nutzt vorhandene `tenant_module` + `/api/admin/tenant-module`.
+- [ ] **Katalog prüfen**: `lib/pakete.ts` — KERN_MODULE (12 Kern) + BRANCHEN_PAKETE.
+      Hier passt DU an, was ein Kunde bekommt.
+- [ ] **Paket anwenden**: Admin → **TENANTS & MODULE** → Kunde aufklappen →
+      oben „⚡ Pakete": „🧩 Kern setzen" schaltet die 12 Kern; ein Branchen-Chip
+      (z. B. „🚗 KFZ-Betrieb") schaltet Kern + Branchenmodule auf einmal.
+- [ ] **Extras zuklicken**: danach unten im Raster einzelne Module dazuschalten
+      (z. B. KFZ + „🧾 Kasse" + „📷 Lager-Scanner" für den ATU-Fall).
+- [ ] **Rückkontrolle**: der Zähler „x aktiv" steigt; der Kunde sieht nach Login
+      genau diese Module. Alles wieder aus → fail-open (sieht wieder alles).
+- [ ] **Nächster Schritt (separat)**: Vertrags-/Signatur-Modul (Bündel-Angebot +
+      E-Sign + Kundendaten wie SEPA) + Kunden-Onboarding-Checkliste.

@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { ALLE_MODULE } from '../../../lib/rechte';
+import { KERN_MODULE, BRANCHEN_PAKETE, paketModule } from '../../../lib/pakete';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/tenants/page.tsx  (P50 · Modul-Freischalter)
@@ -51,6 +52,8 @@ export default function AdminTenants() {
   // Welche einzelnen Schalter gerade speichern? Key = `${tenantId}::${modulKey}`.
   const [speichernd, setSpeichernd] = useState<Set<string>>(new Set());
   const [schaltFehler, setSchaltFehler] = useState<string | null>(null);
+  // Welcher Tenant bekommt gerade ein ganzes Paket geschaltet? (= tenant.id)
+  const [paketLaeuft, setPaketLaeuft] = useState<string | null>(null);
 
   const mono = "'Share Tech Mono', 'DM Mono', ui-monospace, monospace";
 
@@ -108,6 +111,36 @@ export default function AdminTenants() {
           n.delete(spKey);
           return n;
         });
+      }
+    },
+    [laden],
+  );
+
+  // --- Ein ganzes PAKET (mehrere Module) auf einmal AN schalten --------------
+  // Reihenfolge: erst alle Module per API scharfschalten, dann EINMAL nachladen.
+  // Nutzt denselben Endpunkt wie der Einzelschalter (aktiv: true je Modul).
+  const paketAnwenden = useCallback(
+    async (tenant: Tenant, modulKeys: string[]) => {
+      setSchaltFehler(null);
+      setPaketLaeuft(tenant.id);
+      try {
+        for (const modulKey of modulKeys) {
+          const res = await fetch('/api/admin/tenant-module', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ownerUserId: tenant.id, modulKey, aktiv: true }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || !json.ok) {
+            setSchaltFehler(json.error || `Paket-Schalten fehlgeschlagen bei „${modulKey}".`);
+            break;
+          }
+        }
+        await laden(false);
+      } catch {
+        setSchaltFehler('Netzwerkfehler beim Paket-Schalten.');
+      } finally {
+        setPaketLaeuft(null);
       }
     },
     [laden],
@@ -285,6 +318,8 @@ export default function AdminTenants() {
                                 mono={mono}
                                 speichernd={speichernd}
                                 onSchalten={schalten}
+                                onPaket={paketAnwenden}
+                                paketLaeuft={paketLaeuft === t.id}
                               />
                             </td>
                           </tr>
@@ -315,11 +350,15 @@ function ModulPanel({
   mono,
   speichernd,
   onSchalten,
+  onPaket,
+  paketLaeuft,
 }: {
   tenant: Tenant;
   mono: string;
   speichernd: Set<string>;
   onSchalten: (tenant: Tenant, modulKey: string, neuerWert: boolean) => void;
+  onPaket: (tenant: Tenant, modulKeys: string[]) => void;
+  paketLaeuft: boolean;
 }) {
   const aktivSet = new Set(tenant.aktiveModule);
   const anzahlAktiv = aktivSet.size;
@@ -357,7 +396,70 @@ function ModulPanel({
         </div>
       )}
 
-      {/* Modul-Raster */}
+      {/* ---- PAKET-LEISTE: ein Klick = Kern + Branche scharfschalten ---- */}
+      <div
+        style={{
+          border: `1px solid ${GOLD}44`,
+          background: `${GOLD}0c`,
+          borderRadius: 10,
+          padding: '14px 16px',
+          marginBottom: 18,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${GOLD}dd`, textTransform: 'uppercase' }}>
+            ⚡ Pakete — 1 Klick
+          </div>
+          {paketLaeuft && <span style={{ fontFamily: mono, fontSize: 12, color: CYAN }}>‣ schalte Paket …</span>}
+        </div>
+
+        {/* Kern-Knopf */}
+        <button
+          onClick={() => onPaket(tenant, KERN_MODULE)}
+          disabled={paketLaeuft}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '9px 16px', borderRadius: 8, marginBottom: 12,
+            border: `1px solid ${GRUEN}88`, background: `${GRUEN}18`, color: '#eafff2',
+            fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, fontWeight: 800,
+            cursor: paketLaeuft ? 'wait' : 'pointer', opacity: paketLaeuft ? 0.55 : 1,
+          }}
+        >
+          🧩 Kern setzen <span style={{ fontFamily: mono, fontSize: 11, opacity: 0.8 }}>(12 Bausteine)</span>
+        </button>
+
+        {/* Branchen-Pakete (Kern + Branche) */}
+        <div style={{ fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: '4px 0 8px', letterSpacing: '0.1em' }}>
+          BRANCHE (= KERN + BRANCHEN-MODULE):
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {BRANCHEN_PAKETE.map((b) => (
+            <button
+              key={b.key}
+              onClick={() => onPaket(tenant, paketModule(b.key))}
+              disabled={paketLaeuft}
+              title={`Kern + ${b.module.length} Branchenmodule`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '8px 13px', borderRadius: 999,
+                border: `1px solid ${CYAN}55`, background: `${CYAN}10`, color: 'rgba(255,255,255,0.92)',
+                fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700,
+                cursor: paketLaeuft ? 'wait' : 'pointer', opacity: paketLaeuft ? 0.55 : 1,
+              }}
+            >
+              <span>{b.icon}</span>{b.name}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(255,255,255,0.5)', marginTop: 12, lineHeight: 1.55 }}>
+          ‣ Paket wählen → Kern + Branche werden scharfgeschaltet. Extras danach unten
+          einzeln zuklicken (z. B. KFZ + „Kasse" + „Lager-Scanner"). Paket-Klicks
+          schalten nur AN — Ausschalten läuft weiter über die Einzel-Schalter.
+        </div>
+      </div>
+
+      {/* Modul-Raster (Einzel-Schalter / à la carte) */}
       <div
         style={{
           display: 'grid',
