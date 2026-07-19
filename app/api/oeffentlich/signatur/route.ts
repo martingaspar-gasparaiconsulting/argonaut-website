@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
+import { baueSignaturHtml } from '@/lib/signaturHtml';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     const db = admin();
     const { data: a } = await db.from('signatur_anfragen')
-      .select('id, dokument, status').eq('token', token).maybeSingle();
+      .select('id, owner_user_id, titel, dokument, empfaenger_email, status, aufbewahrung_jahre, protokoll').eq('token', token).maybeSingle();
     if (!a) return NextResponse.json({ error: 'Signatur-Link ungültig.' }, { status: 404 });
     if (a.status === 'signiert') return NextResponse.json({ error: 'Dieses Dokument wurde bereits signiert.' }, { status: 409 });
 
@@ -89,13 +90,32 @@ export async function POST(req: NextRequest) {
     const hash = createHash('sha256')
       .update(`${a.dokument}|${unterzeichner}|${jetzt}|${token}`, 'utf8').digest('hex');
 
-    const { data: aVoll } = await db.from('signatur_anfragen').select('protokoll').eq('id', a.id).maybeSingle();
-    const prot = Array.isArray(aVoll?.protokoll) ? aVoll!.protokoll : [];
+    const prot = Array.isArray(a.protokoll) ? a.protokoll : [];
     prot.push({ ereignis: 'signiert', zeit: jetzt, ip, ua, unterzeichner, einwilligung: true });
+
+    // GoBD-Aufbewahrung: löschbar ab signiert + Frist + 1 Tag (Standard 10 Jahre).
+    const jahre = Number(a.aufbewahrung_jahre) || 10;
+    const ld = new Date(jetzt);
+    ld.setFullYear(ld.getFullYear() + jahre);
+    ld.setDate(ld.getDate() + 1);
+    const loeschbarAb = ld.toISOString().slice(0, 10);
+
+    // Eingefrorenes Original bauen (revisionssicher).
+    const { data: pRaw } = await db.from('profiles').select('*').eq('id', a.owner_user_id).maybeSingle();
+    const p = (pRaw || {}) as Record<string, unknown>;
+    const archivHtml = baueSignaturHtml({
+      titel: a.titel, dokument: a.dokument, firma: pick(p, ['firma_name', 'full_name']) || 'Absender',
+      strasse: pick(p, ['strasse', 'adresse', 'anschrift']),
+      plzOrt: [pick(p, ['plz', 'postleitzahl']), pick(p, ['ort', 'stadt'])].filter(Boolean).join(' '),
+      empfaenger_email: a.empfaenger_email, status: 'signiert', unterzeichner_name: unterzeichner, ort: ort || null,
+      signatur_bild: signaturBild, dokument_hash: hash, signiert_am: jetzt, loeschbar_ab: loeschbarAb,
+      aufbewahrung_jahre: jahre, protokoll: prot,
+    });
 
     const { error: uErr } = await db.from('signatur_anfragen').update({
       status: 'signiert', signiert_am: jetzt, unterzeichner_name: unterzeichner, ort: ort || null,
-      signatur_bild: signaturBild, dokument_hash: hash, protokoll: prot, updated_at: jetzt,
+      signatur_bild: signaturBild, dokument_hash: hash, protokoll: prot,
+      loeschbar_ab: loeschbarAb, archiv_html: archivHtml, updated_at: jetzt,
     }).eq('id', a.id);
     if (uErr) return NextResponse.json({ error: 'Speichern der Unterschrift fehlgeschlagen.' }, { status: 500 });
 

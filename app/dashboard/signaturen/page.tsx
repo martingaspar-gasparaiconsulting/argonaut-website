@@ -23,7 +23,10 @@ type Kontakt = { id: string; name: string; email: string | null };
 type Anfrage = {
   id: string; token: string; titel: string; empfaenger_name: string | null; empfaenger_email: string | null;
   status: string; signiert_am: string | null; created_at: string;
+  aufbewahrung_jahre: number | null; loeschbar_ab: string | null; storniert: boolean | null;
 };
+function heuteIso() { return new Date().toISOString().slice(0, 10); }
+function loeschreif(a: Anfrage) { return a.status === 'signiert' && !!a.loeschbar_ab && a.loeschbar_ab.slice(0, 10) <= heuteIso(); }
 
 const STATUS: Record<string, { l: string; f: string }> = {
   entwurf: { l: 'Entwurf', f: C.textDim }, gesendet: { l: 'Gesendet', f: C.cyan },
@@ -43,13 +46,13 @@ export default function SignaturenPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ titel: '', kontakt_id: '', empfaenger_name: '', empfaenger_email: '', dokument: '' });
+  const [form, setForm] = useState({ titel: '', kontakt_id: '', empfaenger_name: '', empfaenger_email: '', dokument: '', aufbewahrung_jahre: '10' });
   const [letzterLink, setLetzterLink] = useState<string | null>(null);
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
-      const { data: aData } = await supabase.from('signatur_anfragen').select('id, token, titel, empfaenger_name, empfaenger_email, status, signiert_am, created_at').order('created_at', { ascending: false });
+      const { data: aData } = await supabase.from('signatur_anfragen').select('id, token, titel, empfaenger_name, empfaenger_email, status, signiert_am, created_at, aufbewahrung_jahre, loeschbar_ab, storniert').order('created_at', { ascending: false });
       setListe((aData as Anfrage[]) ?? []);
       const { data: kData } = await supabase.from('kontakte').select('*');
       setKontakte(((kData as Record<string, unknown>[]) || []).map((k) => ({ id: String(k.id), name: kontaktName(k), email: (typeof k.email === 'string' ? k.email : null) })).sort((a, b) => a.name.localeCompare(b.name)));
@@ -84,13 +87,13 @@ export default function SignaturenPage() {
       const { error } = await supabase.from('signatur_anfragen').insert({
         owner_user_id: uid, token, titel: form.titel.trim(), kontakt_id: form.kontakt_id || null,
         empfaenger_name: form.empfaenger_name.trim() || null, empfaenger_email: form.empfaenger_email.trim() || null,
-        dokument: form.dokument, status: 'gesendet',
+        dokument: form.dokument, status: 'gesendet', aufbewahrung_jahre: parseInt(form.aufbewahrung_jahre, 10) || 10,
       });
       if (error) throw error;
       const link = linkVon(token);
       setLetzterLink(link);
       setOk('Signatur-Anfrage angelegt. Link kopieren und dem Empfänger schicken.');
-      setForm({ titel: '', kontakt_id: '', empfaenger_name: '', empfaenger_email: '', dokument: '' });
+      setForm({ titel: '', kontakt_id: '', empfaenger_name: '', empfaenger_email: '', dokument: '', aufbewahrung_jahre: '10' });
       await laden_();
     } catch (e: unknown) {
       setFehler('Anlegen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -101,9 +104,14 @@ export default function SignaturenPage() {
     try { await navigator.clipboard.writeText(text); setOk('Link kopiert.'); setTimeout(() => setOk(null), 2000); }
     catch { setFehler('Konnte nicht kopieren — Link bitte manuell markieren.'); }
   }
-  async function loeschen(a: Anfrage) {
-    if (typeof window !== 'undefined' && !window.confirm(`Anfrage „${a.titel}" löschen?`)) return;
+  async function entfernen(a: Anfrage) {
+    if (typeof window !== 'undefined' && !window.confirm(`Anfrage „${a.titel}" endgültig löschen?`)) return;
     try { await supabase.from('signatur_anfragen').delete().eq('id', a.id); await laden_(); } catch { /* ignore */ }
+  }
+  async function stornieren(a: Anfrage) {
+    const grund = typeof window !== 'undefined' ? window.prompt(`Signiertes Dokument „${a.titel}" stornieren. Grund (wird protokolliert):`, '') : '';
+    if (grund === null) return;
+    try { await supabase.from('signatur_anfragen').update({ storniert: true, storniert_grund: grund || 'ohne Angabe', updated_at: new Date().toISOString() }).eq('id', a.id); await laden_(); } catch { /* ignore */ }
   }
 
   return (
@@ -119,6 +127,11 @@ export default function SignaturenPage() {
           <button style={styles.primaer} onClick={() => kopieren(letzterLink)}>📋 Link kopieren</button>
         </div>
       )}
+      {liste.some(loeschreif) && (
+        <div style={styles.reminder}>
+          🔔 <b>{liste.filter(loeschreif).length} Dokument(e)</b> haben die Aufbewahrungsfrist erreicht (10 Jahre + 1 Tag) und dürfen jetzt gelöscht werden — unten in der Liste per „Endgültig löschen".
+        </div>
+      )}
 
       <div style={styles.card}>
         <div style={styles.cardTitel}>➕ Neue Signatur-Anfrage</div>
@@ -132,6 +145,13 @@ export default function SignaturenPage() {
           </label>
           <label style={styles.lab}>Empfänger-Name<input style={styles.inp} value={form.empfaenger_name} onChange={(e) => setForm((f) => ({ ...f, empfaenger_name: e.target.value }))} /></label>
           <label style={styles.lab}>Empfänger-E-Mail<input style={styles.inp} value={form.empfaenger_email} onChange={(e) => setForm((f) => ({ ...f, empfaenger_email: e.target.value }))} placeholder="für den Nachweis" /></label>
+          <label style={styles.lab}>Aufbewahrung (GoBD)
+            <select style={styles.inp} value={form.aufbewahrung_jahre} onChange={(e) => setForm((f) => ({ ...f, aufbewahrung_jahre: e.target.value }))}>
+              <option value="10">10 Jahre (Standard)</option>
+              <option value="8">8 Jahre (Buchungsbelege)</option>
+              <option value="6">6 Jahre (Geschäftsbriefe)</option>
+            </select>
+          </label>
         </div>
         <label style={{ ...styles.lab, marginTop: 12 }}>Dokumenttext *
           <textarea style={{ ...styles.inp, minHeight: 160, resize: 'vertical', lineHeight: 1.6 }} value={form.dokument} onChange={(e) => setForm((f) => ({ ...f, dokument: e.target.value }))} placeholder="Der vollständige Text des Vertrags / der Vereinbarung. Zeilenumbrüche bleiben erhalten." />
@@ -145,16 +165,25 @@ export default function SignaturenPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {liste.map((a) => {
               const st = STATUS[a.status] || { l: a.status, f: C.textDim };
+              const lr = loeschreif(a);
               return (
-                <div key={a.id} style={styles.zeile}>
+                <div key={a.id} style={{ ...styles.zeile, opacity: a.storniert ? 0.55 : 1 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700 }}>{a.titel}</div>
-                    <div style={{ color: C.textDim, fontSize: 13 }}>{a.empfaenger_name || '—'} · angelegt {d(a.created_at)}{a.signiert_am ? ` · signiert ${d(a.signiert_am)}` : ''}</div>
+                    <div style={{ fontWeight: 700 }}>{a.titel}{a.storniert ? <span style={{ color: C.danger, fontWeight: 400, fontSize: 12 }}> · storniert</span> : null}</div>
+                    <div style={{ color: C.textDim, fontSize: 13 }}>
+                      {a.empfaenger_name || '—'} · angelegt {d(a.created_at)}{a.signiert_am ? ` · signiert ${d(a.signiert_am)}` : ''}
+                      {a.status === 'signiert' && a.loeschbar_ab ? ` · aufbewahren bis ${d(a.loeschbar_ab)} (${a.aufbewahrung_jahre || 10} J.)` : ''}
+                    </div>
                   </div>
+                  {lr && <span style={{ ...styles.badge, color: C.warn, borderColor: C.warn }}>löschreif</span>}
                   <span style={{ ...styles.badge, color: st.f, borderColor: st.f }}>{st.l}</span>
                   {a.status !== 'signiert' && <button style={styles.mini} onClick={() => kopieren(linkVon(a.token))}>🔗 Link</button>}
                   <a style={styles.mini} href={`/api/signatur-pdf?token=${encodeURIComponent(a.token)}`} target="_blank" rel="noreferrer">⬇ PDF</a>
-                  <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(a)}>Löschen</button>
+                  {a.status !== 'signiert'
+                    ? <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => entfernen(a)}>Löschen</button>
+                    : lr
+                      ? <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => entfernen(a)}>Endgültig löschen</button>
+                      : (!a.storniert ? <button style={styles.mini} onClick={() => stornieren(a)}>Stornieren</button> : null)}
                 </div>
               );
             })}
@@ -176,6 +205,7 @@ const styles: Record<string, CSSProperties> = {
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit', minWidth: 0 },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   linkBox: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', marginTop: 12 },
+  reminder: { background: 'rgba(224,162,76,0.1)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '11px 14px', marginTop: 12, fontSize: 13.5, color: C.text, lineHeight: 1.5 },
   zeile: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 14 },
   badge: { border: '1px solid', borderRadius: 999, padding: '2px 10px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' },
   mini: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 11px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', textDecoration: 'none', display: 'inline-block' },
