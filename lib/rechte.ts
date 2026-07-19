@@ -156,6 +156,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '👥 Mitglieder & Abos', href: '/dashboard/mitglieder', modul: 'mitglieder', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '💶 SEPA-Lastschrift', href: '/dashboard/sepa-einzug', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true, gruppe: 'finanzen' },
