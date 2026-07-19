@@ -478,3 +478,14 @@
       beim Kontakt hinterlegt ist.
 - [ ] **Ausbau (später)**: direkter Absprung aus der CRM-Liste in die Akte;
       Fachpaket-Daten (KFZ-Fahrzeuge, Verträge …) mit in die Akte ziehen.
+
+## Welle 2 · „Heute"-Zentrale — offene Punkte fürs Finale
+
+- [ ] **Kein neues SQL** — aggregiert vorhandene Tabellen; fehlt eine, wird sie still übersprungen.
+- [ ] Menü **📌 Heute** (immer sichtbar, direkt neben Übersicht) → drei Kacheln
+      (überfällig / diese Woche / in Sicht) + Blöcke 🔴🟡🟢 mit allen Fristen.
+- [ ] **Quellen**: überfällige/fällige Rechnungen, ablaufende Angebote, IT-/Energie-
+      Wartungen, KFZ HU/AU, Kanzlei-Fristen, Förder-Fristen, Tier-Wiedervorlagen, MHD.
+- [ ] **Klick** auf einen Eintrag springt ins jeweilige Modul.
+- [ ] **Ausbau (später)**: in `ChefCockpit`/`Glocke` einbetten; weitere Quellen
+      (Wartungsverträge, Termine, Wiedervorlagen aus CRM) ergänzen; `KiAuge` dazu.
