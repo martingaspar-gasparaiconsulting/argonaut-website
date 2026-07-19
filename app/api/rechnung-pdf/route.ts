@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
+import { girocodeVonDaten } from '../../../lib/girocode';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R5 — Rechnungs-PDF (§14 UStG)
@@ -180,6 +181,17 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     : `<div>Zahlbar bis <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> ohne Abzug.</div>
        <div class="warn">⚠ Bankverbindung in den Einstellungen ergänzen</div>`;
 
+  // GiroCode / EPC-QR: Kunde scannt mit Banking-App -> Überweisung vorausgefüllt.
+  // Nur wenn IBAN + Betrag vorhanden UND die Rechnung noch nicht bezahlt ist.
+  const bereitsBezahlt = !!rechnung?.bezahlt_am || rechnung?.zahlungsstatus === 'bezahlt';
+  const giroSvg = bereitsBezahlt ? null : girocodeVonDaten({
+    empfaenger: String(aussteller?.name || '').trim(),
+    iban: String(aussteller?.bank_iban || ''),
+    bic: aussteller?.bank_bic ? String(aussteller.bank_bic) : undefined,
+    betrag: Number(zahlBetrag) || 0,
+    verwendungszweck: String(rechnung?.rechnungsnummer || '').trim(),
+  }, { groesse: 132 });
+
   return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="utf-8"><style>
   * { box-sizing: border-box; }
@@ -225,6 +237,13 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .hinweis { clear: both; margin-top: 22px; background: #f4f6fa; border-left: 4px solid #C9A84C; padding: 10px 14px; border-radius: 6px; font-size: 12px; }
   .zahlung { margin-top: 22px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; font-size: 12px; }
   .zahlung .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #5b6b80; font-weight: bold; margin-bottom: 4px; }
+  .zahlung .inhalt { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+  .zahlung .ztext { flex: 1; }
+  .giro { text-align: center; flex-shrink: 0; }
+  .giro .qr { width: 132px; height: 132px; background: #fff; border: 1px solid #e1e6ee; border-radius: 8px; padding: 5px; }
+  .giro .qr svg { display: block; width: 100%; height: 100%; }
+  .giro .cap { font-size: 9.5px; color: #5b6b80; margin-top: 4px; line-height: 1.3; }
+  .giro .cap b { color: #0A1628; }
   .notizen { margin-top: 18px; color: #5b6b80; font-size: 11.5px; }
 
   .fuss { margin-top: 40px; border-top: 1px solid #e1e6ee; padding-top: 12px; color: #8a99ad; font-size: 10.5px; text-align: center; }
@@ -292,7 +311,10 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   <div class="zahlung">
     <div class="titel">Zahlungsangaben</div>
-    ${bank}
+    <div class="inhalt">
+      <div class="ztext">${bank}</div>
+      ${giroSvg ? `<div class="giro"><div class="qr">${giroSvg}</div><div class="cap"><b>GiroCode</b><br>mit Banking-App scannen</div></div>` : ''}
+    </div>
   </div>
 
   ${rechnung?.notizen ? `<div class="notizen">${esc(rechnung.notizen)}</div>` : ''}

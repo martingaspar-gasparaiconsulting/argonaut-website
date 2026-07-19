@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { girocodeVonDaten } from '@/lib/girocode';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,6 +92,15 @@ export async function GET(req: NextRequest) {
     const iban = pick(p, ['iban', 'sepa_iban']);
     const bic = pick(p, ['bic', 'sepa_bic']);
 
+    // GiroCode / EPC-QR — nur bei offener Rechnung mit gültiger IBAN.
+    const giroSvg = r.bezahlt_am ? null : girocodeVonDaten({
+      empfaenger: firma,
+      iban,
+      bic: bic || undefined,
+      betrag: Number(r.brutto_summe) || 0,
+      verwendungszweck: String(r.rechnungsnummer || '').trim(),
+    }, { groesse: 128 });
+
     // MwSt-Aufschlüsselung je Satz (rein zur Anzeige)
     const proSatz = new Map<number, number>();
     for (const x of positionen) {
@@ -136,6 +146,11 @@ export async function GET(req: NextRequest) {
   .summe .brutto td { font-size: 15px; font-weight: 800; color: #0A1628; border-top: 2px solid #0A1628; padding-top: 8px; }
   .fuss { margin-top: 34px; padding-top: 14px; border-top: 1px solid #cdd5dd; color: #55606b; font-size: 10.5px; display: flex; justify-content: space-between; gap: 20px; }
   .hinweis { margin-top: 16px; color: #55606b; font-size: 11px; }
+  .giro { margin-top: 18px; display: flex; align-items: center; gap: 14px; background: #f7f9fc; border: 1px solid #e3e8ef; border-radius: 10px; padding: 12px 16px; }
+  .giro-qr { width: 128px; height: 128px; background: #fff; border: 1px solid #e1e6ee; border-radius: 8px; padding: 5px; flex-shrink: 0; }
+  .giro-qr svg { display: block; width: 100%; height: 100%; }
+  .giro-cap { font-size: 11.5px; color: #55606b; line-height: 1.45; }
+  .giro-cap b { color: #14202e; font-size: 12.5px; }
 </style></head><body>
   <div class="kopf">
     <div>
@@ -176,6 +191,7 @@ export async function GET(req: NextRequest) {
   ${kleinunternehmer ? '<div class="hinweis">Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).</div>' : ''}
   ${r.bezahlt_am ? '<div class="hinweis">✓ Diese Rechnung ist bezahlt. Vielen Dank!</div>'
     : `<div class="hinweis">Bitte begleichen Sie den Betrag${r.faelligkeitsdatum ? ` bis zum ${datum(r.faelligkeitsdatum)}` : ''}${iban ? ` auf folgendes Konto: ${esc(iban)}${bic ? ` (${esc(bic)})` : ''}` : ''}.</div>`}
+  ${giroSvg ? `<div class="giro"><div class="giro-qr">${giroSvg}</div><div class="giro-cap"><b>GiroCode — bequem zahlen</b><br>Öffnen Sie Ihre Banking-App, scannen Sie den Code — Empfänger, IBAN, Betrag und Verwendungszweck sind bereits ausgefüllt.</div></div>` : ''}
 
   <div class="fuss">
     <div>${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''}</div>
