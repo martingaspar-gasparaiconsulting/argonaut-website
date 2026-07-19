@@ -425,3 +425,56 @@
       genau diese Module. Alles wieder aus → fail-open (sieht wieder alles).
 - [ ] **Nächster Schritt (separat)**: Vertrags-/Signatur-Modul (Bündel-Angebot +
       E-Sign + Kundendaten wie SEPA) + Kunden-Onboarding-Checkliste.
+
+## 🧠 Brainstorming · Offene Arbeitspakete (gemerkt)
+
+**Grundsatz-Entscheidung fürs Finale**
+- [ ] Endgültige **Kern-Zusammenstellung** festlegen (`lib/pakete.ts` · KERN_MODULE).
+      Frei konfigurierbar — Martin prüft im Finale, ob ERP/Personal in den harten Kern sollen.
+
+**Verzahnung (Martin wählte B — alle drei gemerkt)**
+- [ ] 1) **Fachpaket → Rechnung**: jedem neuen Fachpaket (KFZ, Gastro, Wellness,
+      Bildung, IT-MSP, Immobilien, Tier …) den „→ Rechnung"-Knopf + feste
+      Kontakt-Verknüpfung geben (Muster wie rechnung-aus-angebot/-lv steht schon).
+- [ ] 2) **Bezahllink / Zahlungsanbieter**: Konnektor „Zahlungsanbieter" (Stripe/
+      Mollie/PayPal) → „Jetzt bezahlen"-Link auf Rechnungen → Webhook markiert
+      „bezahlt". (Hinweis: bestehendes stripe/ ist NUR fürs ARGONAUT-Abo-Billing.)
+- [ ] 3) **Gemeinsames Kunden-SEPA-Mandat**: einmal erfasst → in Rechnungen &
+      überall nutzbar (heute nur im Mitglieder-Modul).
+
+**Design-Einheitlichkeit (systemisch)**
+- [ ] Ursache gefunden: `app/globals.css` hat ein HELLES Grund-Theme (body #fff,
+      helle Variablen) — dunkle Dashboard-Seiten überschreiben nur lokal, native/
+      unstilisierte Elemente fallen auf Weiß zurück (aufklappen = weiß, Hover =
+      grau/weiß, am Handy am schlimmsten). Fix: dunkles Baseline + Styling für
+      native Controls (select/option/details/input), **begrenzt auf Dashboard/Admin**
+      (öffentliche Website bleibt hell).
+
+**„Wachendes Auge" überall ausrollen**
+- [ ] Bauteil existiert schon: `KiAuge.tsx` (+ `KiKlartext.tsx`, API ki-auge/
+      ki-klartext) und „Kunden-Daten prüfen" (stammdatenPruefung.ts / dublettenLogik.ts).
+      To-do: `<KiAuge>` generisch mit Modul-Kontext auf alle sinnvollen Reiter setzen.
+
+**Betreiber-Rundumblick (Command Center · Verbrauch)**
+- [ ] Command Center trackt heute nur Geld (MRR/Umsatz/Kunden via /api/admin/stats).
+      KI-Kosten & Speicher = 0 (die „GB" im Cockpit sind Deko). To-do:
+- [ ] 1) `ki_nutzung`-Tabelle + `logKiNutzung()`-Helfer in alle ~20 KI-Routen
+      (Kunde, Endpunkt, Modell, Tokens, Kosten) → KI-Marge je Kunde.
+- [ ] 2) Speicher je Kunde summieren (Dateiablage prüfen) → belegt vs. Paket-Limit
+      → Upgrade-Signal, wenn voll.
+- [ ] 3) /api/admin/verbrauch + Panel im Command Center & Tenants-Ansicht:
+      KI-Kosten (Monat), Speicher (belegt/Limit), aktive Module — visuell.
+      Verzahnt: Paket → Limit → Verbrauch → Upgrade.
+
+## Welle 2 · Kunde-360°-Akte — offene Punkte fürs Finale
+
+- [ ] **Kein neues SQL** — liest kontakte/rechnungen/angebote/termine zusammen.
+- [ ] Menü **🧭 Kunden-Akte** → links Kunde suchen/wählen → rechts öffnet sich die
+      360°-Akte: KPI-Kacheln (Umsatz, offener Betrag, Anzahl Rechnungen/Angebote,
+      nächster Termin) + Sektionen „Offene Posten", „Rechnungen", „Angebote", „Termine".
+- [ ] **Offene Posten**: unbezahlte, nicht stornierte Rechnungen stehen oben mit
+      Ampel „offen/überfällig".
+- [ ] **Termine-Match**: Termine erscheinen, wenn beim Termin dieselbe E-Mail wie
+      beim Kontakt hinterlegt ist.
+- [ ] **Ausbau (später)**: direkter Absprung aus der CRM-Liste in die Akte;
+      Fachpaket-Daten (KFZ-Fahrzeuge, Verträge …) mit in die Akte ziehen.
