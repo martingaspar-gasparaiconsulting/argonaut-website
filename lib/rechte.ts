@@ -118,6 +118,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '⚡ Energie', href: '/dashboard/energie', modul: 'energie', ebene: 3, gruppe: 'betrieb' },
   { label: '🏢 Immobilien', href: '/dashboard/immobilien', modul: 'immobilien', ebene: 3, gruppe: 'betrieb' },
+  { label: '💻 IT & MSP', href: '/dashboard/it-msp', modul: 'it-msp', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },

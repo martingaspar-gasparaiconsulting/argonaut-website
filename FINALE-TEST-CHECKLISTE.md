@@ -364,3 +364,16 @@
       Erfassen im selben Monat ist geblockt („Monat bezahlt").
 - [ ] **Scope-Hinweis (Ausbaustufe)**: Nebenkostenabrechnung, WEG-Verwaltung und
       Portal-Anbindung (ImmoScout) sind spätere Ausbaustufen/Brücken.
+
+## Bündel 25 · IT & MSP — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel25-it-msp.sql` ausführen.
+- [ ] **Modul freischalten**: **💻 IT & MSP** unter Einstellungen sichtbar schalten.
+- [ ] **Vertrag**: Reiter „Verträge" → Kunde, Leistung, €/Monat, Intervall, nächste
+      Wartung → „Vertrag". Oben erscheint der **MRR** (Summe der Monatspauschalen).
+      Wartungs-Ampel je Fälligkeit; „✓ Wartung erledigt" setzt den nächsten Termin
+      automatisch (heute + Intervall).
+- [ ] **Assets**: Reiter „Assets" → Kunde, Bezeichnung, Typ, Hersteller, Seriennr.,
+      Garantie → „Asset".
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Helpdesk mit SLA, RMM/Monitoring und
+      CMDB-Automatik sind spätere Ausbaustufen bzw. Konnektor-Brücken.
