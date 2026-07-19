@@ -326,3 +326,27 @@
 - [ ] **Check-in/out**: Belegungsstatus auf eingecheckt/ausgecheckt setzen.
 - [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Rezepturkalkulation, HACCP, Lieferdienst
       und OTA-/Kanal-Anbindung (Booking/HRS) sind spätere Ausbaustufen bzw. Brücken.
+
+## Bündel 22 · Fertigung & PPS — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel22-fertigung.sql` ausführen.
+- [ ] **Modul freischalten**: **🏭 Fertigung & PPS** unter Einstellungen sichtbar schalten.
+- [ ] **Stückliste**: Reiter „Stücklisten" → anlegen → Komponenten mit Menge/Einheit
+      hinzufügen; links auswählen zeigt die Komponenten.
+- [ ] **Fertigungsauftrag**: Reiter „Fertigungsaufträge" → Produkt, optional
+      Stückliste, Menge, Start → „Auftrag" → Status wechseln (geplant → in Arbeit
+      → fertig; „fertig" setzt das Fertig-Datum).
+- [ ] **Scope-Hinweis (Ausbaustufe)**: BDE/MDE-Rückmeldungen, QS-Prüfpläne und
+      automatische Materialentnahme aus dem ERP sind spätere Ausbaustufen.
+
+## Bündel 23 · Energie-Fachpaket — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel23-energie.sql` ausführen.
+- [ ] **Modul freischalten**: **⚡ Energie** unter Einstellungen sichtbar schalten.
+- [ ] **Anlage**: Menü **⚡ Energie** → Bezeichnung, Typ (PV/Wärmepumpe/BHKW),
+      Standort, kW, Inbetriebnahme, Wartung fällig → „Anlage". Wartungs-Ampel
+      (grün/gelb/rot) je nach Fälligkeit.
+- [ ] **Ablesungen**: Anlage links wählen → Datum, Zählerstand, Ertrag (kWh)
+      erfassen → Summe der Erträge oben rechts.
+- [ ] **Scope-Hinweis (Ausbaustufe)**: PV-Planung/Heizlast, MaStR-Meldung und
+      ESG-Reporting sind spätere Ausbaustufen bzw. Brücken.
