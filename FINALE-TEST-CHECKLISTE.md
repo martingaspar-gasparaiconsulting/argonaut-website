@@ -117,10 +117,6 @@
 
 ## Bündel 10 · Projekt-Abrechnung — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel10-projekt-abrechnung.sql` im Supabase
-      SQL-Editor ausführen (legt die Tabelle `projektleistungen` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **💼 Projekt-Abrechnung** sichtbar schalten.
 - [ ] **Zeit/Leistung erfassen**: Menü **💼 Projekt-Abrechnung** → Projekt wählen →
       Datum, Kunde, Beschreibung, Stunden, Stundensatz → „Erfassen". Der Eintrag
       erscheint unter „Offene Leistungen"; Stundensatz + Kunde werden gemerkt.
@@ -135,10 +131,6 @@
 
 ## Bündel 11 · Kunden-Portal (Self-Service) — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel11-kundenportal.sql` im Supabase
-      SQL-Editor ausführen (legt `portal_zugaenge` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **👤 Kunden-Portal** sichtbar schalten.
 - [ ] **Link erstellen**: Menü **👤 Kunden-Portal** → einen Kunden suchen →
       „🔗 Link erstellen" → der Portal-Link erscheint unter dem Namen.
 - [ ] **Kundensicht prüfen**: Link „📋 Kopieren" und in einem **privaten Fenster**
@@ -167,10 +159,6 @@
 
 ## Bündel 12 · Fördermittel-Assistent — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel12-foerdermittel.sql` im Supabase
-      SQL-Editor ausführen (legt `foerder_vorhaben` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **💰 Fördermittel** sichtbar schalten.
 - [ ] **Matching**: Menü **💰 Fördermittel** → Kategorien wählen (z. B. „Digitalisierung",
       „Beratung"), Phase + optional Förderart → die Trefferliste passt sich an.
 - [ ] **Verfolgen**: bei einem Programm „＋ Verfolgen" → es erscheint unter
@@ -185,10 +173,6 @@
 
 ## Bündel 13 · Förder-Angebot-Generator — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel13-foerder-angebot.sql` im Supabase
-      SQL-Editor ausführen (legt `foerder_angebote` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **📝 Förder-Angebot** sichtbar schalten.
 - [ ] **Angebot bauen**: Menü **📝 Förder-Angebot** → Kunde eingeben → ein
       fertiges Paket laden (Starter/Betrieb/Komplett) oder Positionen selbst
       erfassen → Förderquote wählen → die **Live-Schätzung** (Netto/Zuschuss/
@@ -202,10 +186,6 @@
 
 ## Bündel 14 · Angebote mit Online-Zusage — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel14-angebote.sql` ausführen (legt
-      `angebote` + `angebot_positionen` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **🧾 Angebote** sichtbar schalten.
 - [ ] **Angebot erstellen**: Menü **🧾 Angebote** → Kunde, Titel, Gültig-bis →
       Positionen (Menge, Einheit, Einzelpreis, MwSt) → die **Live-Summe** stimmt →
       „💾 Angebot erstellen".
@@ -220,8 +200,6 @@
 
 ## Bündel 15 · Schnittstellen-Basis (Konnektoren) — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel15-schnittstellen.sql` ausführen
-      (legt `betrieb_integrationen` + RLS an, nur Inhaber-Zugriff).
 - [ ] **Sichtbarkeit**: Menü **🔌 Schnittstellen** erscheint nur beim Chef
       (nicht bei Mitarbeitern).
 - [ ] **Demo-Modus**: ohne Eintrag zeigt jeder Bereich „○ Demo-Modus".
@@ -234,10 +212,6 @@
 
 ## Bündel 16 · Kasse mit TSE — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel16-kasse.sql` ausführen (legt
-      `kassen_belege` + `kassen_positionen` + RLS an; Chef & Kassierer).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **🧾 Kasse** sichtbar schalten.
 - [ ] **Verkauf**: Menü **🧾 Kasse** → Artikel antippen (aus dem ERP) → Warenkorb
       → Zahlart „Bar" + gegebenen Betrag → Rückgeld wird berechnet → „Kassieren".
 - [ ] **Bon**: „🖨 Bon anzeigen / drucken" → 80-mm-Bon als PDF mit MwSt-Ausweis
@@ -254,10 +228,6 @@
 
 ## Bündel 17 · Shop-/Marktplatz-Anbindung — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel17-shop.sql` ausführen (legt
-      `shop_bestellungen` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **🛒 Shop / Marktplatz** sichtbar schalten.
 - [ ] **CSV-Import**: Menü **🛒 Shop / Marktplatz** → Zeilen einfügen
       (`extern_id;besteller;email;bezeichnung;menge;einzelpreis`) → „⬆ Importieren"
       → Bestellungen erscheinen; gleiche extern_id = eine Bestellung.
@@ -271,10 +241,6 @@
 
 ## Bündel 18 · KFZ-Fachpaket — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel18-kfz.sql` ausführen (legt
-      `kfz_fahrzeuge` + `kfz_reifeneinlagerung` + RLS an).
-- [ ] **Modul freischalten**: falls Starter-Modus aktiv, unter **🔧 Einstellungen**
-      das Modul **🚗 KFZ-Fachpaket** sichtbar schalten.
 - [ ] **Fahrzeug + HU/AU-Ampel**: Menü **🚗 KFZ-Fachpaket** → Reiter „Fahrzeuge"
       → Kennzeichen, Marke, HU-/AU-Datum → speichern. Die **Ampel** zeigt grün
       (fern), gelb (≤ 60 Tage) oder rot (überfällig); der Zähler im Reiter zeigt
@@ -285,9 +251,6 @@
 
 ## Bündel 19 · Bau & Handwerk komplett — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel19-bau-lv.sql` ausführen (legt
-      `bau_lv` + `bau_lv_positionen` + `bau_abnahmen` + RLS an).
-- [ ] **Modul freischalten**: unter **🔧 Einstellungen** das Modul **🏗 Bau & LV** sichtbar schalten.
 - [ ] **LV & Positionen**: Menü **🏗 Bau & LV** → Reiter „LV / Kalkulation" → LV
       anlegen → Positionen mit OZ, Kurztext, Menge, Einheit, EP erfassen → die
       Netto-Summe stimmt. Eine Position als **Nachtrag** markieren (mit Grund).
@@ -302,8 +265,6 @@
 ## Bündel 20 · E-Rechnung & DATEV-Brücke — offene Punkte fürs Finale
 
 - [ ] **Kein neues SQL** nötig (nutzt vorhandene `rechnungen` + `betrieb_integrationen`).
-- [ ] **Modul freischalten**: unter **🔧 Einstellungen** das Modul
-      **📊 DATEV & E-Rechnung** sichtbar schalten (nur Chef, sensibel).
 - [ ] **DATEV-Export**: Menü **📊 DATEV & E-Rechnung** → Zeitraum wählen →
       „⬇ DATEV-Buchungsstapel (CSV)" → CSV mit Umsatz, Konto/Gegenkonto,
       BU-Schlüssel je Steuersatz, Belegfeld1 = Rechnungsnummer.
@@ -317,8 +278,6 @@
 
 ## Bündel 21 · Gastro & Hotel — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel21-gastro-hotel.sql` ausführen.
-- [ ] **Modul freischalten**: **🍽 Gastro & Hotel** unter Einstellungen sichtbar schalten.
 - [ ] **Reservierung**: Reiter „Reservierungen" → Datum, Zeit, Personen, Gast, Tisch
       → „Reservieren" → erscheint in der Tagesliste; Status (eingetroffen/No-Show) änderbar.
 - [ ] **Hotel**: Reiter „Hotel" → Zimmer anlegen (Nr., Typ, max. Pers., €/Nacht) →
@@ -329,8 +288,6 @@
 
 ## Bündel 22 · Fertigung & PPS — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel22-fertigung.sql` ausführen.
-- [ ] **Modul freischalten**: **🏭 Fertigung & PPS** unter Einstellungen sichtbar schalten.
 - [ ] **Stückliste**: Reiter „Stücklisten" → anlegen → Komponenten mit Menge/Einheit
       hinzufügen; links auswählen zeigt die Komponenten.
 - [ ] **Fertigungsauftrag**: Reiter „Fertigungsaufträge" → Produkt, optional
@@ -341,8 +298,6 @@
 
 ## Bündel 23 · Energie-Fachpaket — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel23-energie.sql` ausführen.
-- [ ] **Modul freischalten**: **⚡ Energie** unter Einstellungen sichtbar schalten.
 - [ ] **Anlage**: Menü **⚡ Energie** → Bezeichnung, Typ (PV/Wärmepumpe/BHKW),
       Standort, kW, Inbetriebnahme, Wartung fällig → „Anlage". Wartungs-Ampel
       (grün/gelb/rot) je nach Fälligkeit.
@@ -353,8 +308,6 @@
 
 ## Bündel 24 · Immobilienverwaltung — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel24-immobilien.sql` ausführen.
-- [ ] **Modul freischalten**: **🏢 Immobilien** unter Einstellungen sichtbar schalten.
 - [ ] **Einheit**: Reiter „Einheiten" → Objekt/Adresse, Einheit, m², Zi., Kalt+NK
       → „Einheit". Status startet „frei".
 - [ ] **Mietvertrag**: Reiter „Verträge & Miete" → Einheit wählen (Miete wird
@@ -367,8 +320,6 @@
 
 ## Bündel 25 · IT & MSP — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel25-it-msp.sql` ausführen.
-- [ ] **Modul freischalten**: **💻 IT & MSP** unter Einstellungen sichtbar schalten.
 - [ ] **Vertrag**: Reiter „Verträge" → Kunde, Leistung, €/Monat, Intervall, nächste
       Wartung → „Vertrag". Oben erscheint der **MRR** (Summe der Monatspauschalen).
       Wartungs-Ampel je Fälligkeit; „✓ Wartung erledigt" setzt den nächsten Termin
@@ -380,8 +331,6 @@
 
 ## Bündel 26 · Agentur & Kreativ — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel26-agentur.sql` ausführen.
-- [ ] **Modul freischalten**: **🎨 Agentur & Kreativ** unter Einstellungen sichtbar schalten.
 - [ ] **Retainer**: Menü **🎨 Agentur & Kreativ** → Kunde, Std/Monat, €/Std → „Retainer".
       In der Liste erscheint ein Auslastungs-Balken (grün <80 %, gelb ≥80 %, rot ≥100 %).
 - [ ] **Zeit buchen**: Retainer wählen → Datum, Stunden, Tätigkeit → „Buchen" →
@@ -391,8 +340,6 @@
 
 ## Bündel 27 · Gesundheit & Wellness — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel27-gesundheit.sql` ausführen.
-- [ ] **Modul freischalten**: **💆 Gesundheit & Wellness** unter Einstellungen sichtbar schalten.
 - [ ] **Kunde**: Name, Telefon, E-Mail, Geburtstag, Hinweise → „Kunde".
 - [ ] **Behandlung**: Kunde links wählen → Datum, Behandlung, Dauer, Preis → „＋".
       Hinweise (z. B. Allergien) werden oben deutlich angezeigt.
@@ -401,8 +348,6 @@
 
 ## Bündel 28 · Kanzlei & Steuer — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel28-kanzlei.sql` ausführen.
-- [ ] **Modul freischalten**: **⚖️ Kanzlei & Steuer** unter Einstellungen sichtbar schalten.
 - [ ] **Mandat**: Reiter „Mandate" → Mandant, Art, Aktenzeichen → „Mandat".
 - [ ] **Frist**: Reiter „Fristen" → optional Mandat, Bezeichnung, Frist → „Frist".
       Ampel (rot überfällig, gelb ≤7 Tage, grün fern); der Reiter zeigt die Zahl
@@ -412,8 +357,6 @@
 
 ## Bündel 29 · Bildung & Kurse — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel29-bildung.sql` ausführen.
-- [ ] **Modul freischalten**: **🎓 Bildung & Kurse** unter Einstellungen sichtbar schalten.
 - [ ] **Kurs**: Titel, Start, Ort, Plätze, Preis → „Kurs". Liste zeigt Belegung (x/y).
 - [ ] **Anmeldung**: Kurs wählen → Name, E-Mail → „Anmelden". Bei vollem Kurs wird
       geblockt („ausgebucht"). Status je Teilnehmer (angemeldet → bestätigt →
@@ -423,8 +366,6 @@
 
 ## Bündel 30 · Lebensmittel-Fachpaket — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel30-lebensmittel.sql` ausführen.
-- [ ] **Modul freischalten**: **🥫 Lebensmittel** unter Einstellungen sichtbar schalten.
 - [ ] **Charge/MHD**: Reiter „Chargen/MHD" → Produkt, Charge-Nr., MHD, Menge,
       Lieferant → „Charge". MHD-Ampel (rot abgelaufen, gelb ≤3 Tage, grün fern).
 - [ ] **HACCP**: Reiter „HACCP" → Datum, Kontrollpunkt, Messwert, i.O.-Haken,
@@ -434,8 +375,6 @@
 
 ## Bündel 31 · Landwirtschaft & Forst — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel31-landwirtschaft.sql` ausführen.
-- [ ] **Modul freischalten**: **🌾 Landwirtschaft** unter Einstellungen sichtbar schalten.
 - [ ] **Schlag**: Name, ha, Kultur, Standort → „Schlag". Oben Summe der Hektar.
 - [ ] **Maßnahme**: Schlag wählen → Datum, Art (Aussaat/Düngung/Pflanzenschutz/
       Ernte), Mittel, Menge/Einheit → „＋". Historie chronologisch.
@@ -444,8 +383,6 @@
 
 ## Bündel 32 · Tier-Fachpaket — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel32-tier.sql` ausführen.
-- [ ] **Modul freischalten**: **🐾 Tier-Fachpaket** unter Einstellungen sichtbar schalten.
 - [ ] **Tier**: Name, Art, Rasse, Halter, Chip-Nr. → „Tier".
 - [ ] **Behandlung/Impfung**: Tier wählen → Datum, Art (Behandlung/Impfung/
       Untersuchung), Bezeichnung, Wdh.-Fälligkeit, Preis → „＋". Fälligkeits-Ampel
@@ -455,8 +392,6 @@
 
 ## Bündel 33 · Verein, Kultur & Sozial — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel33-verein.sql` ausführen.
-- [ ] **Modul freischalten**: **🤝 Verein & Sozial** unter Einstellungen sichtbar schalten.
 - [ ] **Mitglied**: Reiter „Mitglieder" → Name, E-Mail, Beitrag, Intervall, Rolle
       → „Mitglied". Kacheln: aktive Mitglieder + Beitragsvolumen/Jahr.
 - [ ] **Veranstaltung**: Reiter „Veranstaltungen" → Titel, Datum, Ort, Teilnehmer,
@@ -468,8 +403,6 @@
 
 ## Bündel 34 · Logistik-Fachpaket — offene Punkte fürs Finale
 
-- [ ] **SQL zuerst**: `supabase-sql/buendel34-logistik.sql` ausführen.
-- [ ] **Modul freischalten**: **🚚 Logistik** unter Einstellungen sichtbar schalten.
 - [ ] **Tour**: Datum, Fahrer, Fahrzeug → „Tour". Status (geplant/unterwegs/
       abgeschlossen) änderbar; Liste zeigt Anzahl Stopps.
 - [ ] **Sendung/Stopp**: Tour wählen → Sendungs-Nr., Empfänger, Adresse → „Stopp"
