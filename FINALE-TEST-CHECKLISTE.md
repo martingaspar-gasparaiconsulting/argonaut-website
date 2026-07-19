@@ -420,3 +420,14 @@
       teilgenommen/storniert). Umsatz = belegte Plätze × Preis.
 - [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Zertifikate, AZAV-Nachweise und
       Fahrschul-Meldungen sind spätere Ausbaustufen.
+
+## Bündel 30 · Lebensmittel-Fachpaket — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel30-lebensmittel.sql` ausführen.
+- [ ] **Modul freischalten**: **🥫 Lebensmittel** unter Einstellungen sichtbar schalten.
+- [ ] **Charge/MHD**: Reiter „Chargen/MHD" → Produkt, Charge-Nr., MHD, Menge,
+      Lieferant → „Charge". MHD-Ampel (rot abgelaufen, gelb ≤3 Tage, grün fern).
+- [ ] **HACCP**: Reiter „HACCP" → Datum, Kontrollpunkt, Messwert, i.O.-Haken,
+      Prüfer → „Kontrolle". Bei nicht i.O. Feld für Korrekturmaßnahme.
+- [ ] **Rechtlich**: Klar als Dokumentationswerkzeug gekennzeichnet — ersetzt
+      keine amtliche HACCP-Beratung. Waagen-Anbindung wäre eine Konnektor-Brücke.

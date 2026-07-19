@@ -61,7 +61,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', tag: 'Gastro', name: 'Gastro & Hotel', nutzen: 'Tisch-Reservierungen mit Status + Zimmerverwaltung & Belegung mit Überschneidungs-Prüfung (PMS-Kern)' },
   { status: 'verfuegbar', tag: 'Industrie', name: 'Fertigung & PPS', nutzen: 'Stücklisten (BOM) mit Komponenten + Fertigungsaufträge mit Status (geplant → in Arbeit → fertig)' },
   { status: 'verfuegbar', tag: 'Energie', name: 'Energie-Fachpaket', nutzen: 'Energie-Anlagen (PV/Wärmepumpe/BHKW) mit Wartungs-Ampel und Zählerständen/Erträgen' },
-  { status: 'geplant', tag: 'Lebensmittel', name: 'Lebensmittel-Fachpaket', nutzen: 'Waagen-Anbindung, MHD/Chargen, Rückverfolgbarkeit, Pfand' },
+  { status: 'verfuegbar', tag: 'Lebensmittel', name: 'Lebensmittel-Fachpaket', nutzen: 'Chargen mit MHD-Ampel + HACCP-Eigenkontrollen (Messwert, i.O./Abweichung, Maßnahme)' },
   { status: 'geplant', tag: 'Landwirtschaft', name: 'Landwirtschaft & Forst', nutzen: 'Schlagkartei, GAP-Antrag, Pflanzenschutz-Doku, Baumkataster' },
   { status: 'geplant', tag: 'Tiere', name: 'Tier-Fachpaket', nutzen: 'Tierbestand & HIT, Herden-/Zuchtbuch, Pensionsstall' },
   { status: 'verfuegbar', tag: 'Immobilien', name: 'Immobilienverwaltung', nutzen: 'Einheiten, Mietverträge und Mieteingänge mit Monats-Soll/Ist-Übersicht' },
