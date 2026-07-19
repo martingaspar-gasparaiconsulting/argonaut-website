@@ -71,7 +71,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', tag: 'Bildung', name: 'Bildung & Kurse', nutzen: 'Kurse mit Plätzen/Belegung + Teilnehmer-Anmeldungen (mit Ausbuchungs-Schutz)' },
   { status: 'verfuegbar', tag: 'Gesundheit', name: 'Gesundheit & Wellness', nutzen: 'Kundenkartei mit Hinweisen + Behandlungshistorie (Dauer & Preis)' },
   { status: 'verfuegbar', tag: 'Verein', name: 'Verein, Kultur & Sozial', nutzen: 'Mitglieder mit Beitrags-Jahresvolumen + Veranstaltungen mit Teilnehmern & Ehrenamt-Stunden' },
-  { status: 'geplant', tag: 'Logistik', name: 'Logistik-Fachpaket', nutzen: 'Telematik, Frachtbrief/CMR, ADR, Lenkzeiten, Track & Trace' },
+  { status: 'verfuegbar', tag: 'Logistik', name: 'Logistik-Fachpaket', nutzen: 'Touren mit Fahrer/Fahrzeug + Sendungen mit Reihenfolge und Zustell-Status-Tracking' },
 ]
 
 const GRUPPEN: { status: Status; kicker: string; titel: string; sub: string }[] = [

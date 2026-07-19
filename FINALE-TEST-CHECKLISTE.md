@@ -465,3 +465,15 @@
       (Bündel 8) — hier liegt die Vereinsverwaltung.
 - [ ] **Scope-Hinweis (Ausbaustufe)**: Spendenquittungen/§10b, Ticketing und
       Fallakte (Sozial) sind spätere Ausbaustufen.
+
+## Bündel 34 · Logistik-Fachpaket — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel34-logistik.sql` ausführen.
+- [ ] **Modul freischalten**: **🚚 Logistik** unter Einstellungen sichtbar schalten.
+- [ ] **Tour**: Datum, Fahrer, Fahrzeug → „Tour". Status (geplant/unterwegs/
+      abgeschlossen) änderbar; Liste zeigt Anzahl Stopps.
+- [ ] **Sendung/Stopp**: Tour wählen → Sendungs-Nr., Empfänger, Adresse → „Stopp"
+      (fortlaufende Reihenfolge). Zustell-Status je Stopp (offen → unterwegs →
+      zugestellt/fehlgeschlagen); Kopf zeigt „x/y zugestellt".
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Telematik-Anbindung, CMR/Frachtbrief,
+      ADR und Lenkzeiten sind spätere Ausbaustufen bzw. Konnektor-Brücken.
