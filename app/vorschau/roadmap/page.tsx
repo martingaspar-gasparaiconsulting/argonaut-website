@@ -64,7 +64,7 @@ const ITEMS: Item[] = [
   { status: 'geplant', tag: 'Lebensmittel', name: 'Lebensmittel-Fachpaket', nutzen: 'Waagen-Anbindung, MHD/Chargen, Rückverfolgbarkeit, Pfand' },
   { status: 'geplant', tag: 'Landwirtschaft', name: 'Landwirtschaft & Forst', nutzen: 'Schlagkartei, GAP-Antrag, Pflanzenschutz-Doku, Baumkataster' },
   { status: 'geplant', tag: 'Tiere', name: 'Tier-Fachpaket', nutzen: 'Tierbestand & HIT, Herden-/Zuchtbuch, Pensionsstall' },
-  { status: 'geplant', tag: 'Immobilien', name: 'Immobilienverwaltung', nutzen: 'Objekte, Mietverträge, Nebenkosten, WEG, ImmoScout' },
+  { status: 'verfuegbar', tag: 'Immobilien', name: 'Immobilienverwaltung', nutzen: 'Einheiten, Mietverträge und Mieteingänge mit Monats-Soll/Ist-Übersicht' },
   { status: 'geplant', tag: 'IT', name: 'IT & MSP', nutzen: 'Helpdesk mit SLA, RMM, CMDB, Lizenz-/Asset-Verwaltung' },
   { status: 'geplant', tag: 'Agentur', name: 'Agentur & Kreativ', nutzen: 'Media-Asset-Management, Freigaben, Redaktions- & Mediaplan' },
   { status: 'geplant', tag: 'Kanzlei', name: 'Kanzlei & Steuer', nutzen: 'Akten, Fristen, beA/beSt, RVG-/Zeithonorar, FiBu' },

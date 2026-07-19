@@ -350,3 +350,17 @@
       erfassen → Summe der Erträge oben rechts.
 - [ ] **Scope-Hinweis (Ausbaustufe)**: PV-Planung/Heizlast, MaStR-Meldung und
       ESG-Reporting sind spätere Ausbaustufen bzw. Brücken.
+
+## Bündel 24 · Immobilienverwaltung — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel24-immobilien.sql` ausführen.
+- [ ] **Modul freischalten**: **🏢 Immobilien** unter Einstellungen sichtbar schalten.
+- [ ] **Einheit**: Reiter „Einheiten" → Objekt/Adresse, Einheit, m², Zi., Kalt+NK
+      → „Einheit". Status startet „frei".
+- [ ] **Mietvertrag**: Reiter „Verträge & Miete" → Einheit wählen (Miete wird
+      vorbefüllt), Mieter, Beginn → „Vertrag". Die Einheit springt auf „vermietet".
+- [ ] **Mieteingang**: bei einem Vertrag „＋ Miete erfassen" → Zahlung für den
+      aktuellen Monat; die Kacheln Soll/Ist/Offen aktualisieren sich; ein zweites
+      Erfassen im selben Monat ist geblockt („Monat bezahlt").
+- [ ] **Scope-Hinweis (Ausbaustufe)**: Nebenkostenabrechnung, WEG-Verwaltung und
+      Portal-Anbindung (ImmoScout) sind spätere Ausbaustufen/Brücken.
