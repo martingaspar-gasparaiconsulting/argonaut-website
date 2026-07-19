@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
-import RechnungenAuge from "./RechnungenAuge";
+import KiAuge from "../_components/KiAuge";
+import { augeRechnungen } from "@/lib/auge";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -359,8 +360,19 @@ export default function RechnungenCockpit() {
           />
         </div>
 
-        {/* KI-Auge: was heißt die Rechnungs-Lage gerade für mich? */}
-      <RechnungenAuge />
+        {/* KI-Auge (Regel-Ebene): lokal berechnet — 0 €, sofort. Pulst & klappt wie gewohnt auf. */}
+      <KiAuge
+        modul="Rechnungen"
+        regel={augeRechnungen({
+          offenBetrag: kpis.offen,
+          ueberfaelligBetrag: kpis.ueberfaellig,
+          ueberfaelligAnzahl: zahlungsAnalyse.ueberfaellig.length,
+          dso: zahlungsAnalyse.dso,
+          topUeberfaellig: zahlungsAnalyse.ueberfaellig,
+        })}
+        aktionHref="/dashboard/mahnwesen"
+        aktionText="Zum Mahnwesen"
+      />
 
         {/* Suche + Filter */}
         <div

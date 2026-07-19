@@ -45,8 +45,14 @@ type AugeErgebnis = {
 export type KiAugeProps = {
   /** Anzeigename des Moduls, z.B. "Personal", "Lager", "Mahnwesen". */
   modul: string;
-  /** Die Lage in Zahlen als kurzer Text — das füttert die KI. */
-  kontext: string;
+  /** Die Lage in Zahlen als kurzer Text — das füttert die KI (KI-Modus). */
+  kontext?: string;
+  /**
+   * REGEL-EBENE: fertig berechnete Antwort. Ist sie gesetzt, zeigt das Auge
+   * sie beim Aufklappen SOFORT an — ohne KI-Aufruf (0 €). Pulsieren & Aufklappen
+   * bleiben identisch; der Nutzer merkt nur, dass es schneller ist.
+   */
+  regel?: AugeErgebnis;
   /** Optional: Ziel-Link des Handlungs-Buttons unter der KI-Antwort. */
   aktionHref?: string;
   /** Optional: Beschriftung des Handlungs-Buttons. */
@@ -64,6 +70,7 @@ function stimmungsFarbe(s: Stimmung): string {
 export default function KiAuge({
   modul,
   kontext,
+  regel,
   aktionHref,
   aktionText,
   label,
@@ -76,6 +83,8 @@ export default function KiAuge({
   const buttonText = label || "Was heißt das gerade für mich?";
 
   async function starten() {
+    // Regel-Ebene: liegt eine lokal berechnete Antwort vor, KEIN KI-Aufruf.
+    if (regel) { setErgebnis(regel); setFehler(null); setLaden(false); return; }
     setLaden(true);
     setFehler(null);
     try {
