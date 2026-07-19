@@ -21,7 +21,7 @@ const C = {
 };
 
 type Kunde = { id: string; name: string; telefon: string | null; email: string | null; hinweise: string | null };
-type Behandlung = { id: string; datum: string; behandlung: string; dauer_min: number | null; preis: number; notiz: string | null };
+type Behandlung = { id: string; datum: string; behandlung: string; dauer_min: number | null; preis: number; notiz: string | null; abgerechnet?: boolean };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
@@ -44,7 +44,7 @@ export default function WellnessPage() {
     setKunden((data as Kunde[]) ?? []);
   }, []);
   const ladeBeh = useCallback(async (kid: string) => {
-    const { data } = await supabase.from('wellness_behandlungen').select('id, datum, behandlung, dauer_min, preis, notiz').eq('kunde_id', kid).order('datum', { ascending: false });
+    const { data } = await supabase.from('wellness_behandlungen').select('id, datum, behandlung, dauer_min, preis, notiz, abgerechnet').eq('kunde_id', kid).order('datum', { ascending: false });
     setBeh((data as Behandlung[]) ?? []);
   }, []);
 
@@ -80,6 +80,31 @@ export default function WellnessPage() {
     setNb({ datum: heute(), behandlung: '', dauer_min: '', preis: '', notiz: '' }); await ladeBeh(aktiv.id);
   }
 
+  async function rechnungErstellen() {
+    if (!aktiv) return;
+    const offen = beh.filter((b) => !b.abgerechnet && Number(b.preis) > 0);
+    if (!offen.length) { setFehler('Keine offenen, bepreisten Behandlungen zum Abrechnen.'); return; }
+    setFehler(null); setOk(null);
+    const positionen = offen.map((b) => ({
+      bezeichnung: `${d(b.datum)} · ${b.behandlung}`, menge: 1, einheit: 'Leistung',
+      einzelpreis: Number(b.preis) || 0, mwst_satz: 19,
+    }));
+    try {
+      const res = await fetch('/api/rechnung-aus-fachpaket', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titel: `Wellness · ${aktiv.name}`, empfaenger_name: aktiv.name,
+          empfaenger_email: aktiv.email || undefined, positionen,
+          quelle_tabelle: 'wellness_behandlungen', quelle_ids: offen.map((b) => b.id),
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
+      setOk(`Rechnung über ${offen.length} Position(en) erstellt${j?.kontaktVerknuepft ? ' und mit dem Kontakt verknüpft' : ''}. Sie liegt unter „🧾 Rechnungen".`);
+      await ladeBeh(aktiv.id);
+    } catch { setFehler('Netzwerkfehler bei der Rechnungserstellung.'); }
+  }
+
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>💆 Gesundheit & Wellness</h1>
@@ -113,7 +138,10 @@ export default function WellnessPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links einen Kunden wählen.</p> : (
               <div style={styles.card}>
-                <div style={{ fontWeight: 800 }}>{aktiv.name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ fontWeight: 800 }}>{aktiv.name}</div>
+                  <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung aus offenen Behandlungen</button>
+                </div>
                 {aktiv.hinweise && <div style={styles.hinweis}>⚠️ {aktiv.hinweise}</div>}
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
@@ -126,6 +154,7 @@ export default function WellnessPage() {
                   <div key={b.id} style={styles.posZeile}>
                     <span style={{ minWidth: 84 }}>{d(b.datum)}</span>
                     <span style={{ flex: 1 }}>{b.behandlung}{b.notiz ? ` · ${b.notiz}` : ''}</span>
+                    {b.abgerechnet && <span style={styles.badgeOk}>✓ berechnet</span>}
                     <span style={{ color: C.textDim }}>{b.dauer_min ? `${b.dauer_min}′ · ` : ''}{eur(b.preis)}</span>
                   </div>
                 ))}
@@ -155,6 +184,8 @@ const styles: Record<string, CSSProperties> = {
   hinweis: { background: 'rgba(224,162,76,0.1)', border: `1px solid ${C.warn}`, borderRadius: 9, padding: '8px 12px', fontSize: 13.5 },
   posZeile: { display: 'flex', gap: 10, alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 6, fontSize: 14 },
   dazuBtn: { background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '9px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  rechnungBtn: { background: 'rgba(76,175,125,0.12)', color: C.green, border: `1px solid ${C.green}`, borderRadius: 10, padding: '9px 14px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  badgeOk: { display: 'inline-block', border: `1px solid ${C.green}`, color: C.green, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' },
   dim: { color: C.textDim, fontSize: 14, marginTop: 12 },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },

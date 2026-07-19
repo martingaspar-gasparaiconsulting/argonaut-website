@@ -20,7 +20,7 @@ const C = {
 };
 
 type Kurs = { id: string; titel: string; start_am: string | null; ort: string | null; plaetze: number; preis: number; status: string };
-type Anmeldung = { id: string; kurs_id: string; name: string; email: string | null; status: string };
+type Anmeldung = { id: string; kurs_id: string; name: string; email: string | null; status: string; abgerechnet?: boolean };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
@@ -42,7 +42,7 @@ export default function BildungPage() {
   const laden_ = useCallback(async () => {
     const { data: k } = await supabase.from('bildung_kurse').select('id, titel, start_am, ort, plaetze, preis, status').order('start_am', { ascending: true });
     setKurse((k as Kurs[]) ?? []);
-    const { data: a } = await supabase.from('bildung_anmeldungen').select('id, kurs_id, name, email, status');
+    const { data: a } = await supabase.from('bildung_anmeldungen').select('id, kurs_id, name, email, status, abgerechnet');
     setAnm((a as Anmeldung[]) ?? []);
   }, []);
 
@@ -78,6 +78,30 @@ export default function BildungPage() {
   async function anmStatus(a: Anmeldung, status: string) {
     const { error } = await supabase.from('bildung_anmeldungen').update({ status }).eq('id', a.id);
     if (!error) setAnm((l) => l.map((x) => (x.id === a.id ? { ...x, status } : x)));
+  }
+  async function rechnungErstellen(a: Anmeldung) {
+    if (!aktiv) return;
+    if (a.abgerechnet) { setFehler('Diese Anmeldung ist bereits berechnet.'); return; }
+    if (!(Number(aktiv.preis) > 0)) { setFehler('Der Kurs hat keinen Preis hinterlegt.'); return; }
+    setFehler(null); setOk(null);
+    const positionen = [{
+      bezeichnung: `Kursgebühr: ${aktiv.titel}`, menge: 1, einheit: 'Teilnahme',
+      einzelpreis: Number(aktiv.preis) || 0, mwst_satz: 19,
+    }];
+    try {
+      const res = await fetch('/api/rechnung-aus-fachpaket', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titel: `Kurs: ${aktiv.titel}`, empfaenger_name: a.name,
+          empfaenger_email: a.email || undefined, positionen,
+          quelle_tabelle: 'bildung_anmeldungen', quelle_ids: [a.id],
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
+      setOk(`Rechnung für ${a.name} erstellt${j?.kontaktVerknuepft ? ' und mit dem Kontakt verknüpft' : ''}. Sie liegt unter „🧾 Rechnungen".`);
+      await laden_();
+    } catch { setFehler('Netzwerkfehler bei der Rechnungserstellung.'); }
   }
 
   const aktivAnm = useMemo(() => (aktiv ? anm.filter((a) => a.kurs_id === aktiv.id) : []), [aktiv, anm]);
@@ -133,6 +157,9 @@ export default function BildungPage() {
                     <select style={styles.statusSelect} value={a.status} onChange={(e) => anmStatus(a, e.target.value)}>
                       {AN_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
+                    {a.abgerechnet
+                      ? <span style={styles.badgeOk}>✓ berechnet</span>
+                      : <button style={styles.rechnungBtnSmall} onClick={() => rechnungErstellen(a)}>→ Rechnung</button>}
                   </div>
                 ))}
                 {!aktivAnm.length && <p style={styles.dim}>Noch keine Anmeldungen.</p>}
@@ -159,6 +186,8 @@ const styles: Record<string, CSSProperties> = {
   lvAktiv: { borderColor: C.gold },
   posZeile: { display: 'flex', gap: 10, alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 6, fontSize: 14 },
   statusSelect: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
+  rechnungBtnSmall: { background: 'rgba(76,175,125,0.12)', color: C.green, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  badgeOk: { display: 'inline-block', border: `1px solid ${C.green}`, color: C.green, borderRadius: 999, padding: '3px 10px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' },
   dazuBtn: { background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '9px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   dim: { color: C.textDim, fontSize: 14, marginTop: 12 },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },

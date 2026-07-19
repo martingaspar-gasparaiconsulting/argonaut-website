@@ -20,7 +20,7 @@ const C = {
 };
 
 type Tier = { id: string; halter: string | null; name: string; art: string | null; rasse: string | null; chip_nr: string | null };
-type Beh = { id: string; datum: string; art: string; bezeichnung: string; naechste_faellig: string | null; preis: number; notiz: string | null };
+type Beh = { id: string; datum: string; art: string; bezeichnung: string; naechste_faellig: string | null; preis: number; notiz: string | null; abgerechnet?: boolean };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
@@ -51,7 +51,7 @@ export default function TierPage() {
     setTiere((data as Tier[]) ?? []);
   }, []);
   const ladeBeh = useCallback(async (tid: string) => {
-    const { data } = await supabase.from('tier_behandlungen').select('id, datum, art, bezeichnung, naechste_faellig, preis, notiz').eq('tier_id', tid).order('datum', { ascending: false });
+    const { data } = await supabase.from('tier_behandlungen').select('id, datum, art, bezeichnung, naechste_faellig, preis, notiz, abgerechnet').eq('tier_id', tid).order('datum', { ascending: false });
     setBeh((data as Beh[]) ?? []);
   }, []);
 
@@ -83,6 +83,31 @@ export default function TierPage() {
     });
     if (error) { setFehler('Eintrag konnte nicht gespeichert werden.'); return; }
     setNb({ datum: heute(), art: 'impfung', bezeichnung: '', naechste_faellig: '', preis: '', notiz: '' }); await ladeBeh(aktiv.id);
+  }
+
+  async function rechnungErstellen() {
+    if (!aktiv) return;
+    const offen = beh.filter((b) => !b.abgerechnet && Number(b.preis) > 0);
+    if (!offen.length) { setFehler('Keine offenen, bepreisten Einträge zum Abrechnen.'); return; }
+    setFehler(null); setOk(null);
+    const positionen = offen.map((b) => ({
+      bezeichnung: `${d(b.datum)} · ${ART_LABEL[b.art] || b.art}: ${b.bezeichnung}`, menge: 1, einheit: 'Leistung',
+      einzelpreis: Number(b.preis) || 0, mwst_satz: 19,
+    }));
+    try {
+      const res = await fetch('/api/rechnung-aus-fachpaket', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titel: `Tier · ${aktiv.name}${aktiv.halter ? ` (${aktiv.halter})` : ''}`,
+          empfaenger_name: aktiv.halter || aktiv.name, positionen,
+          quelle_tabelle: 'tier_behandlungen', quelle_ids: offen.map((b) => b.id),
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
+      setOk(`Rechnung über ${offen.length} Position(en) erstellt. Sie liegt unter „🧾 Rechnungen".`);
+      await ladeBeh(aktiv.id);
+    } catch { setFehler('Netzwerkfehler bei der Rechnungserstellung.'); }
   }
 
   return (
@@ -118,7 +143,10 @@ export default function TierPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links ein Tier wählen.</p> : (
               <div style={styles.card}>
-                <div style={{ fontWeight: 800 }}>{aktiv.name} · Historie{aktiv.chip_nr ? ` · Chip ${aktiv.chip_nr}` : ''}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ fontWeight: 800 }}>{aktiv.name} · Historie{aktiv.chip_nr ? ` · Chip ${aktiv.chip_nr}` : ''}</div>
+                  <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung an Halter</button>
+                </div>
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
                   <select style={styles.inp} value={nb.art} onChange={(e) => setNb({ ...nb, art: e.target.value })}>
@@ -136,6 +164,7 @@ export default function TierPage() {
                       <span style={{ minWidth: 84 }}>{d(b.datum)}</span>
                       <span style={{ minWidth: 120 }}>{ART_LABEL[b.art] || b.art}</span>
                       <span style={{ flex: 1 }}>{b.bezeichnung}{b.preis ? ` · ${eur(b.preis)}` : ''}</span>
+                      {b.abgerechnet && <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ berechnet</span>}
                       {amp && <span style={{ ...styles.badge, color: amp.farbe, borderColor: amp.farbe }}>⏰ {amp.txt}</span>}
                     </div>
                   );
@@ -166,6 +195,7 @@ const styles: Record<string, CSSProperties> = {
   posZeile: { display: 'flex', gap: 10, alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 6, fontSize: 14, flexWrap: 'wrap' },
   badge: { display: 'inline-block', border: '1px solid', borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' },
   dazuBtn: { background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '9px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  rechnungBtn: { background: 'rgba(76,175,125,0.12)', color: C.green, border: `1px solid ${C.green}`, borderRadius: 10, padding: '9px 14px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   dim: { color: C.textDim, fontSize: 14, marginTop: 12 },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
