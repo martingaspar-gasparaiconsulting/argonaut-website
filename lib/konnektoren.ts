@@ -12,7 +12,7 @@
 // von Client-Komponenten UND von Server-Routen importierbar.
 // ============================================================
 
-export type IntegrationTyp = 'tse' | 'shop';
+export type IntegrationTyp = 'tse' | 'shop' | 'datev';
 
 export type KonnektorFeld = { key: string; label: string; typ?: 'text' | 'password' | 'url'; hinweis?: string };
 export type KonnektorAnbieter = {
@@ -76,6 +76,27 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
         { key: 'shop_url', label: 'Shop-URL', typ: 'url' },
         { key: 'consumer_key', label: 'Consumer Key', typ: 'password' },
         { key: 'consumer_secret', label: 'Consumer Secret', typ: 'password' },
+      ] },
+    ],
+  },
+  {
+    typ: 'datev',
+    name: 'DATEV / Steuerberater',
+    icon: '📊',
+    beschreibung: 'Betriebs- und beraterindividuelle Werte für den DATEV-Buchungsstapel-Export (Kontenrahmen, Berater-/Mandantennummer). Die echte DATEV-Online-Übermittlung braucht ein Zertifikat und ist als Brücke vorgesehen.',
+    anbieter: [
+      { key: 'manuell', name: 'Nur Export (ohne Übermittlung)', demo: true, felder: [
+        { key: 'erloeskonto', label: 'Erlöskonto 19 %', typ: 'text', hinweis: 'z. B. 8400 (SKR03) / 4400 (SKR04)' },
+        { key: 'erloeskonto_7', label: 'Erlöskonto 7 %', typ: 'text', hinweis: 'z. B. 8300 / 4300' },
+        { key: 'debitor_sammel', label: 'Debitor-Sammelkonto', typ: 'text', hinweis: 'z. B. 10000' },
+        { key: 'berater_nr', label: 'Beraternummer', typ: 'text' },
+        { key: 'mandant_nr', label: 'Mandantennummer', typ: 'text' },
+      ], hinweis: 'Erzeugt eine importierbare Buchungsstapel-CSV für Ihren Steuerberater — ohne automatische Übermittlung.' },
+      { key: 'datev-connect', name: 'DATEVconnect / Online (Brücke)', felder: [
+        { key: 'client_id', label: 'Client-ID', typ: 'text' },
+        { key: 'client_secret', label: 'Client-Secret', typ: 'password' },
+        { key: 'berater_nr', label: 'Beraternummer', typ: 'text' },
+        { key: 'mandant_nr', label: 'Mandantennummer', typ: 'text' },
       ] },
     ],
   },
