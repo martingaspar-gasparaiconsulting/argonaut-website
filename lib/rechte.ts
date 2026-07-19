@@ -77,6 +77,7 @@ export const NAV_LINKS: NavLink[] = [
   // --- Start ----------------------------------------------------------------
   { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4, gruppe: 'start' },
   { label: '📌 Heute', href: '/dashboard/heute', immer: true, ebene: 4, gruppe: 'start' },
+  { label: '🚀 Erste Schritte', href: '/dashboard/onboarding', immer: true, ebene: 4, gruppe: 'start' },
 
   // --- Mein Bereich (Selbstbedienung, seit Q1 auch fuer den Chef) -----------
   { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', immer: true, ebene: 4, gruppe: 'mein' },
