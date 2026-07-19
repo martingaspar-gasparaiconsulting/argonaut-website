@@ -431,3 +431,24 @@
       Prüfer → „Kontrolle". Bei nicht i.O. Feld für Korrekturmaßnahme.
 - [ ] **Rechtlich**: Klar als Dokumentationswerkzeug gekennzeichnet — ersetzt
       keine amtliche HACCP-Beratung. Waagen-Anbindung wäre eine Konnektor-Brücke.
+
+## Bündel 31 · Landwirtschaft & Forst — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel31-landwirtschaft.sql` ausführen.
+- [ ] **Modul freischalten**: **🌾 Landwirtschaft** unter Einstellungen sichtbar schalten.
+- [ ] **Schlag**: Name, ha, Kultur, Standort → „Schlag". Oben Summe der Hektar.
+- [ ] **Maßnahme**: Schlag wählen → Datum, Art (Aussaat/Düngung/Pflanzenschutz/
+      Ernte), Mittel, Menge/Einheit → „＋". Historie chronologisch.
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: GAP-Antrag, amtliche Pflanzenschutz-
+      Meldung und Baumkataster/GIS sind spätere Ausbaustufen.
+
+## Bündel 32 · Tier-Fachpaket — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel32-tier.sql` ausführen.
+- [ ] **Modul freischalten**: **🐾 Tier-Fachpaket** unter Einstellungen sichtbar schalten.
+- [ ] **Tier**: Name, Art, Rasse, Halter, Chip-Nr. → „Tier".
+- [ ] **Behandlung/Impfung**: Tier wählen → Datum, Art (Behandlung/Impfung/
+      Untersuchung), Bezeichnung, Wdh.-Fälligkeit, Preis → „＋". Fälligkeits-Ampel
+      (rot überfällig, gelb ≤30 Tage, grün fern).
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: HIT-Meldung, Herden-/Zuchtbuch und
+      Pensionsstall-Abrechnung sind spätere Ausbaustufen.
