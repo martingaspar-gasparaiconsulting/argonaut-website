@@ -68,7 +68,7 @@ const ITEMS: Item[] = [
   { status: 'verfuegbar', tag: 'IT', name: 'IT & MSP', nutzen: 'Asset-Verwaltung (Kunden-IT) + Managed-Service-Verträge mit MRR und Wartungs-Ampel/-Intervall' },
   { status: 'verfuegbar', tag: 'Agentur', name: 'Agentur & Kreativ', nutzen: 'Retainer je Kunde mit monatlichem Stundenbudget und Auslastungs-Balken' },
   { status: 'verfuegbar', tag: 'Kanzlei', name: 'Kanzlei & Steuer', nutzen: 'Mandate + Fristenkalender mit Ampel (überfällig/kritisch) und Erledigt-Haken' },
-  { status: 'geplant', tag: 'Bildung', name: 'Bildung & Kurse', nutzen: 'Kursverwaltung, Zertifikate, AZAV, Fahrschul-Nachweis' },
+  { status: 'verfuegbar', tag: 'Bildung', name: 'Bildung & Kurse', nutzen: 'Kurse mit Plätzen/Belegung + Teilnehmer-Anmeldungen (mit Ausbuchungs-Schutz)' },
   { status: 'verfuegbar', tag: 'Gesundheit', name: 'Gesundheit & Wellness', nutzen: 'Kundenkartei mit Hinweisen + Behandlungshistorie (Dauer & Preis)' },
   { status: 'geplant', tag: 'Verein', name: 'Verein, Kultur & Sozial', nutzen: 'Spenden & Zuwendung, Ehrenamt, Ticketing, Fallakte' },
   { status: 'geplant', tag: 'Logistik', name: 'Logistik-Fachpaket', nutzen: 'Telematik, Frachtbrief/CMR, ADR, Lenkzeiten, Track & Trace' },

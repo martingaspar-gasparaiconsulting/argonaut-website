@@ -409,3 +409,14 @@
       kritischer offener Fristen. Haken setzt „erledigt".
 - [ ] **Rechtlich**: Klar als Verwaltungswerkzeug gekennzeichnet — keine Steuer-/
       Rechtsberatung. beA/beSt und RVG-Abrechnung wären Brücken (Ausbaustufe).
+
+## Bündel 29 · Bildung & Kurse — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel29-bildung.sql` ausführen.
+- [ ] **Modul freischalten**: **🎓 Bildung & Kurse** unter Einstellungen sichtbar schalten.
+- [ ] **Kurs**: Titel, Start, Ort, Plätze, Preis → „Kurs". Liste zeigt Belegung (x/y).
+- [ ] **Anmeldung**: Kurs wählen → Name, E-Mail → „Anmelden". Bei vollem Kurs wird
+      geblockt („ausgebucht"). Status je Teilnehmer (angemeldet → bestätigt →
+      teilgenommen/storniert). Umsatz = belegte Plätze × Preis.
+- [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Zertifikate, AZAV-Nachweise und
+      Fahrschul-Meldungen sind spätere Ausbaustufen.
