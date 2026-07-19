@@ -377,3 +377,35 @@
       Garantie → „Asset".
 - [ ] **Scope-Hinweis (Ausbaustufe/Brücke)**: Helpdesk mit SLA, RMM/Monitoring und
       CMDB-Automatik sind spätere Ausbaustufen bzw. Konnektor-Brücken.
+
+## Bündel 26 · Agentur & Kreativ — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel26-agentur.sql` ausführen.
+- [ ] **Modul freischalten**: **🎨 Agentur & Kreativ** unter Einstellungen sichtbar schalten.
+- [ ] **Retainer**: Menü **🎨 Agentur & Kreativ** → Kunde, Std/Monat, €/Std → „Retainer".
+      In der Liste erscheint ein Auslastungs-Balken (grün <80 %, gelb ≥80 %, rot ≥100 %).
+- [ ] **Zeit buchen**: Retainer wählen → Datum, Stunden, Tätigkeit → „Buchen" →
+      verbrauchte Stunden + Wert (Std × Satz) aktualisieren sich.
+- [ ] **Scope-Hinweis (Ausbaustufe)**: Media-Asset-Management, Freigabe-Workflows
+      und Redaktionsplan sind spätere Ausbaustufen.
+
+## Bündel 27 · Gesundheit & Wellness — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel27-gesundheit.sql` ausführen.
+- [ ] **Modul freischalten**: **💆 Gesundheit & Wellness** unter Einstellungen sichtbar schalten.
+- [ ] **Kunde**: Name, Telefon, E-Mail, Geburtstag, Hinweise → „Kunde".
+- [ ] **Behandlung**: Kunde links wählen → Datum, Behandlung, Dauer, Preis → „＋".
+      Hinweise (z. B. Allergien) werden oben deutlich angezeigt.
+- [ ] **Rechtlich**: Klar gekennzeichnet als reines Verwaltungswerkzeug — keine
+      Medizinberatung. GKV-Abrechnung (§302)/eKV wären Brücken (Ausbaustufe).
+
+## Bündel 28 · Kanzlei & Steuer — offene Punkte fürs Finale
+
+- [ ] **SQL zuerst**: `supabase-sql/buendel28-kanzlei.sql` ausführen.
+- [ ] **Modul freischalten**: **⚖️ Kanzlei & Steuer** unter Einstellungen sichtbar schalten.
+- [ ] **Mandat**: Reiter „Mandate" → Mandant, Art, Aktenzeichen → „Mandat".
+- [ ] **Frist**: Reiter „Fristen" → optional Mandat, Bezeichnung, Frist → „Frist".
+      Ampel (rot überfällig, gelb ≤7 Tage, grün fern); der Reiter zeigt die Zahl
+      kritischer offener Fristen. Haken setzt „erledigt".
+- [ ] **Rechtlich**: Klar als Verwaltungswerkzeug gekennzeichnet — keine Steuer-/
+      Rechtsberatung. beA/beSt und RVG-Abrechnung wären Brücken (Ausbaustufe).

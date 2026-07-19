@@ -66,10 +66,10 @@ const ITEMS: Item[] = [
   { status: 'geplant', tag: 'Tiere', name: 'Tier-Fachpaket', nutzen: 'Tierbestand & HIT, Herden-/Zuchtbuch, Pensionsstall' },
   { status: 'verfuegbar', tag: 'Immobilien', name: 'Immobilienverwaltung', nutzen: 'Einheiten, Mietverträge und Mieteingänge mit Monats-Soll/Ist-Übersicht' },
   { status: 'verfuegbar', tag: 'IT', name: 'IT & MSP', nutzen: 'Asset-Verwaltung (Kunden-IT) + Managed-Service-Verträge mit MRR und Wartungs-Ampel/-Intervall' },
-  { status: 'geplant', tag: 'Agentur', name: 'Agentur & Kreativ', nutzen: 'Media-Asset-Management, Freigaben, Redaktions- & Mediaplan' },
-  { status: 'geplant', tag: 'Kanzlei', name: 'Kanzlei & Steuer', nutzen: 'Akten, Fristen, beA/beSt, RVG-/Zeithonorar, FiBu' },
+  { status: 'verfuegbar', tag: 'Agentur', name: 'Agentur & Kreativ', nutzen: 'Retainer je Kunde mit monatlichem Stundenbudget und Auslastungs-Balken' },
+  { status: 'verfuegbar', tag: 'Kanzlei', name: 'Kanzlei & Steuer', nutzen: 'Mandate + Fristenkalender mit Ampel (überfällig/kritisch) und Erledigt-Haken' },
   { status: 'geplant', tag: 'Bildung', name: 'Bildung & Kurse', nutzen: 'Kursverwaltung, Zertifikate, AZAV, Fahrschul-Nachweis' },
-  { status: 'geplant', tag: 'Gesundheit', name: 'Gesundheit & Wellness', nutzen: 'Hilfsmittel-eKV, GKV-Abrechnung (§302), Kundenkartei' },
+  { status: 'verfuegbar', tag: 'Gesundheit', name: 'Gesundheit & Wellness', nutzen: 'Kundenkartei mit Hinweisen + Behandlungshistorie (Dauer & Preis)' },
   { status: 'geplant', tag: 'Verein', name: 'Verein, Kultur & Sozial', nutzen: 'Spenden & Zuwendung, Ehrenamt, Ticketing, Fallakte' },
   { status: 'geplant', tag: 'Logistik', name: 'Logistik-Fachpaket', nutzen: 'Telematik, Frachtbrief/CMR, ADR, Lenkzeiten, Track & Trace' },
 ]
