@@ -1,20 +1,32 @@
 @import "tailwindcss";
 
+/* ============================================================
+   ARGONAUT · Globales Design-Baseline (Welle 1, korrigiert)
+   Das GESAMTE Produkt ist dunkel (Website + Dashboard). Deshalb ist
+   das dunkle Baseline jetzt GLOBAL — nicht mehr nur aufs Dashboard begrenzt.
+   Früher stand body auf Weiß und --surface auf Fast-Weiß; dadurch blitzte
+   überall dort Weiß durch, wo ein Element keinen eigenen Hintergrund setzt
+   (Dropdowns, Aufklapp-Boxen, Felder) — genau die weißen Flächen.
+   ============================================================ */
+
 :root {
   --gold: #c9a84c;
   --gold-hover: #e0b85a;
-  --navy: #1a1a2e;
-  --border: #e8e4dc;
-  --surface: #faf9f6;
-  --muted: #6b6b72;
+  --navy: #0A1628;
+  --navy-panel: #0F2036;
+  --border: rgba(143, 163, 190, 0.28);
+  --surface: #0F2036;   /* war #faf9f6 (fast weiß) -> Ursache weißer Flächen */
+  --text: #E8EDF4;
+  --muted: #8FA3BE;
+  color-scheme: dark;   /* Browser rendert Dropdowns/Datepicker/Scrollbars dunkel */
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; color-scheme: dark; }
 
 body {
-  background: #ffffff;
-  color: #1a1a2e;
+  background: #0A1628;
+  color: #E8EDF4;
   font-family: var(--font-dm-sans), sans-serif;
   font-weight: 300;
   overflow-x: hidden;
@@ -23,5 +35,44 @@ body {
 
 ::selection {
   background: #c9a84c;
-  color: #fff;
+  color: #0A1628;
+}
+
+/* Native Formular-Elemente konsequent dunkel & lesbar (app-weit) */
+select,
+input,
+textarea {
+  background-color: #0A1628;
+  color: #E8EDF4;
+  border: 1px solid rgba(143, 163, 190, 0.28);
+  border-radius: 9px;
+}
+/* Optionen im Dropdown dunkel statt weiß */
+option,
+optgroup {
+  background-color: #0F2036;
+  color: #E8EDF4;
+}
+/* Platzhalter gedämpft */
+::placeholder {
+  color: #8FA3BE;
+  opacity: 1;
+}
+/* Aufklappbares erbt den dunklen Grund */
+details,
+summary {
+  background: transparent;
+  color: inherit;
+}
+/* Fokus-Ring in Markenfarbe statt Browser-Blau */
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #C9A84C;
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.25);
+}
+/* Dunkle Scrollbars überall */
+* {
+  scrollbar-color: rgba(143, 163, 190, 0.4) transparent;
 }
