@@ -164,6 +164,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '⚖️ Compliance', href: '/dashboard/compliance', modul: 'compliance', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📊 DATEV & E-Rechnung', href: '/dashboard/datev', modul: 'datev', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💰 Fördermittel', href: '/dashboard/foerdermittel', modul: 'foerdermittel', ebene: 3, gruppe: 'finanzen' },
   { label: '📝 Förder-Angebot', href: '/dashboard/foerder-angebot', modul: 'foerder-angebot', ebene: 3, gruppe: 'finanzen' },

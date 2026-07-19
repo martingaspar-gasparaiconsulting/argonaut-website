@@ -56,6 +56,10 @@ const QUELLEN: Quelle[] = [
     offen: () => true, titel: (r) => `Tier-Wiedervorlage: ${r.bezeichnung || ''}` },
   { icon: '🥫', table: 'lm_chargen', select: 'bezeichnung, charge_nr, mhd', dateField: 'mhd', href: '/dashboard/lebensmittel',
     offen: () => true, titel: (r) => `MHD: ${r.bezeichnung || ''} ${r.charge_nr ? '(' + r.charge_nr + ')' : ''}`.trim() },
+  { icon: '🏗', table: 'freistellungen', select: 'inhaber, gueltig_bis, art', dateField: 'gueltig_bis', href: '/dashboard/compliance',
+    offen: () => true, titel: (r) => `§48b läuft ab: ${r.inhaber || ''} (${r.art === 'eigen' ? 'eigen' : 'Sub'})` },
+  { icon: '🧑‍🏭', table: 'sofortmeldungen', select: 'mitarbeiter_name, beschaeftigung_ab, gemeldet', dateField: 'beschaeftigung_ab', href: '/dashboard/compliance',
+    offen: (r) => !r.gemeldet, titel: (r) => `Sofortmeldung offen: ${r.mitarbeiter_name || ''}` },
 ];
 
 export default function HeutePage() {
