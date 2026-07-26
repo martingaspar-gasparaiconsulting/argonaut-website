@@ -156,6 +156,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '🧳 Reisekosten', href: '/dashboard/reisekosten', modul: 'reisekosten', ebene: 3, gruppe: 'finanzen' },
   { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
