@@ -15,7 +15,7 @@ const C = {
   textDim: '#9fb3bd', border: 'rgba(122,163,179,0.18)', green: '#4CAF7D', danger: '#E06666', warn: '#E0A24C',
 };
 
-type Rechnung = { id: string; nummer: string; titel: string; datum: string | null; faellig: string | null; betrag: number; status: string; bezahlt: boolean };
+type Rechnung = { id: string; nummer: string; titel: string; datum: string | null; faellig: string | null; betrag: number; status: string; bezahlt: boolean; gemeldet?: boolean };
 type Termin = { titel: string; beginn: string | null; ende: string | null; status: string };
 
 // --- Kalender-Helfer: aus einem Termin eine .ics-Datei (Google/Apple/Outlook) ---
@@ -83,6 +83,20 @@ export default function PortalSeite() {
   const [kunde, setKunde] = useState('');
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [termine, setTermine] = useState<Termin[]>([]);
+  const [meldeStatus, setMeldeStatus] = useState<Record<string, 'busy' | 'ok' | 'err'>>({});
+
+  async function bezahltMelden(id: string) {
+    setMeldeStatus((m) => ({ ...m, [id]: 'busy' }));
+    try {
+      const res = await fetch('/api/oeffentlich/portal/bezahlt-melden', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, id }),
+      });
+      if (!res.ok) throw new Error('fehler');
+      setMeldeStatus((m) => ({ ...m, [id]: 'ok' }));
+      setRechnungen((rs) => rs.map((r) => (r.id === id ? { ...r, gemeldet: true } : r)));
+    } catch { setMeldeStatus((m) => ({ ...m, [id]: 'err' })); }
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -157,8 +171,23 @@ export default function PortalSeite() {
                               <span style={{ ...styles.badge, color: st.farbe, borderColor: st.farbe }}>{st.label}</span>
                             </td>
                             <td style={{ ...styles.td, textAlign: 'right' }}>
-                              <a href={`/api/oeffentlich/portal/rechnung?token=${encodeURIComponent(token)}&id=${encodeURIComponent(r.id)}`}
-                                target="_blank" rel="noreferrer" style={styles.dl}>⬇ PDF</a>
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                                <a href={`/api/oeffentlich/portal/rechnung?token=${encodeURIComponent(token)}&id=${encodeURIComponent(r.id)}`}
+                                  target="_blank" rel="noreferrer" style={styles.dl}>⬇ PDF</a>
+                                {!(r.bezahlt || r.status === 'bezahlt') && (
+                                  (r.gemeldet || meldeStatus[r.id] === 'ok') ? (
+                                    <span style={{ color: C.green, fontSize: 12.5, fontWeight: 700 }}>✓ Zahlung gemeldet</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => bezahltMelden(r.id)}
+                                      disabled={meldeStatus[r.id] === 'busy'}
+                                      style={styles.melden}
+                                    >
+                                      {meldeStatus[r.id] === 'busy' ? '…' : meldeStatus[r.id] === 'err' ? 'Nochmal versuchen' : 'Ich habe bezahlt'}
+                                    </button>
+                                  )
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -224,5 +253,6 @@ const styles: Record<string, CSSProperties> = {
   kalBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   kalBtnGhost: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', fontSize: 13, fontWeight: 700, textDecoration: 'none' },
   dl: { color: C.gold, textDecoration: 'none', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' },
+  melden: { background: 'transparent', color: C.green, border: `1px solid ${C.green}66`, borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   footer: { marginTop: 12, textAlign: 'center', color: C.textDim, fontSize: 12, opacity: 0.7 },
 };

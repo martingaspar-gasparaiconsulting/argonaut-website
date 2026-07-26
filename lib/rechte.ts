@@ -161,6 +161,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📈 Controlling', href: '/dashboard/controlling', modul: 'controlling', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📗 EÜR', href: '/dashboard/euer', modul: 'euer', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '💸 Zahlungen', href: '/dashboard/zahlungen', modul: 'zahlungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '👥 Mitglieder & Abos', href: '/dashboard/mitglieder', modul: 'mitglieder', ebene: 2, sensibel: true, gruppe: 'finanzen' },

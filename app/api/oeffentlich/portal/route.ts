@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 
     // 3) Rechnungen dieses Kunden (hart: Betrieb + kontakt_id). Stornierte raus.
     const { data: rRaw } = await db.from('rechnungen')
-      .select('id, rechnungsnummer, titel, rechnungsdatum, faelligkeitsdatum, brutto_summe, zahlungsstatus, bezahlt_am')
+      .select('id, rechnungsnummer, titel, rechnungsdatum, faelligkeitsdatum, brutto_summe, zahlungsstatus, bezahlt_am, zahlung_gemeldet_am')
       .eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
       .neq('zahlungsstatus', 'storniert')
       .order('rechnungsdatum', { ascending: false })
@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
       betrag: Number(r.brutto_summe) || 0,
       status: r.zahlungsstatus || 'offen',
       bezahlt: !!r.bezahlt_am,
+      gemeldet: !!r.zahlung_gemeldet_am,
     }));
 
     // 4) Termine dieses Kunden. termine hat KEIN kontakt_id -> ueber die
