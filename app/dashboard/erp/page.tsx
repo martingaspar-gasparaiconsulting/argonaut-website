@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
-import LagerAuge from "./LagerAuge";
+import KiAuge from "../_components/KiAuge";
+import { augeLager } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E2 Lager-Cockpit
@@ -186,6 +187,12 @@ export default function LagerCockpit() {
       sum + (Number(a.aktueller_bestand) || 0) * (Number(a.einkaufspreis) || 0),
     0
   );
+  // Nur "knapp" (gelb) — über Mindestbestand, aber schon nah dran.
+  const kpiKnapp = artikel.filter((a) => {
+    const bestand = Number(a.aktueller_bestand) || 0;
+    const min = Number(a.mindestbestand) || 0;
+    return min > 0 && bestand > min && bestand <= min * 1.5;
+  }).length;
 
   // Lieferant-Name je ID (für die KI-Empfehlung "bei wem nachbestellen")
   const lieferantNameById = useMemo(() => {
@@ -449,8 +456,8 @@ export default function LagerCockpit() {
         </div>
       </div>
 
-      {/* KI-Auge: was heißt die Lager-Lage gerade für mich? */}
-      <LagerAuge />
+      {/* KI-Auge (Regel-Ebene, 0 €): was heißt die Lager-Lage gerade für mich? */}
+      <KiAuge modul="ERP/Lager" regel={augeLager({ kritisch: kpiUnterMin, niedrig: kpiKnapp, gesamt: kpiGesamt })} />
 
       {/* Toolbar */}
       <div

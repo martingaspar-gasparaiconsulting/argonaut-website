@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
-import CrmAuge from "./CrmAuge";
+import KiAuge from "../_components/KiAuge";
+import { augeCrm } from "@/lib/auge";
 import KundenAuge from "./KundenAuge";
 
 // ---------------------------------------------------------------------
@@ -891,8 +892,8 @@ export default function CrmCockpitPage() {
           />
         </div>
 
-        {/* KI-Auge: was heißt die CRM-Lage gerade für mich? */}
-      <CrmAuge />
+        {/* KI-Auge (Regel-Ebene, 0 €): was heißt die CRM-Lage gerade für mich? */}
+      <KiAuge modul="Vertrieb/CRM" regel={augeCrm({ ueberfaellig: kpi.einschlafend, wiedervorlage: kpi.wiedervorlage, gesamt: kpi.gesamt })} />
       <KundenAuge kontakte={kontakte} />
 
         {/* Filterleiste */}
