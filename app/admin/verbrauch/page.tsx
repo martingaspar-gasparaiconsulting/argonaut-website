@@ -22,6 +22,8 @@ type Daten = {
   monat: { kostenUsd: number; calls: number; proKunde: KundeZeile[]; proRoute: RouteZeile[] };
   gesamt: { kostenUsd: number; calls: number };
   speicher?: Speicher;
+  alarm?: Array<{ name: string; kostenUsd: number }>;
+  alarmSchwelleUsd?: number;
   error?: string; detail?: string;
 };
 
@@ -64,6 +66,11 @@ export default function VerbrauchPage() {
       {fehler && <div style={styles.err}>{fehler}</div>}
       {laden ? <p style={styles.dim}>Lädt …</p> : daten && (
         <>
+          {daten.alarm && daten.alarm.length > 0 && (
+            <div style={styles.alarm}>
+              🚨 <b>Kosten-Alarm:</b> {daten.alarm.length} Kunde(n) über {usd(daten.alarmSchwelleUsd || 5)} KI-Kosten heute — {daten.alarm.slice(0, 3).map((a) => `${a.name} (${usd(a.kostenUsd)})`).join(', ')}{daten.alarm.length > 3 ? ' …' : ''}.
+            </div>
+          )}
           <div style={styles.kpis}>
             <div style={styles.kpi}><div style={styles.kLabel}>KI-Kosten diesen Monat</div><div style={{ ...styles.kWert, color: C.gold }}>{usd(daten.monat.kostenUsd)}</div><div style={styles.kSub}>≈ {eur(daten.monat.kostenUsd)}</div></div>
             <div style={styles.kpi}><div style={styles.kLabel}>Aufrufe diesen Monat</div><div style={{ ...styles.kWert, color: C.cyan }}>{daten.monat.calls.toLocaleString('de-DE')}</div></div>
@@ -167,4 +174,5 @@ const styles: Record<string, CSSProperties> = {
   dim: { color: C.textDim, fontSize: 14, marginTop: 6 },
   info: { marginTop: 18, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.22)', borderRadius: 12, padding: '13px 16px', color: C.textDim, fontSize: 12.5, lineHeight: 1.55 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 14 },
+  alarm: { color: C.danger, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 14, fontWeight: 600 },
 };

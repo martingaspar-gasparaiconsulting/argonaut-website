@@ -19,4 +19,8 @@ export const SCHWELLEN = {
     dieseWocheTage: 7,     // fällig in <= 7 Tagen = "diese Woche"
     baldTage: 3,           // <= 3 Tage = besonders dringend
   },
+  ki: {
+    rateLimitProMinute: 20,   // max. KI-Aufrufe je Nutzer/Minute (Bot-/Endlosschleifen-Schutz)
+    kostenAlarmTagUsd: 5,     // Tages-KI-Kosten je Kunde über diesem Wert -> Alarm im Command Center
+  },
 } as const;

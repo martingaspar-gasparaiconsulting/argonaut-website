@@ -23,6 +23,9 @@ const C = {
 
 type Sofort = { id: string; mitarbeiter_name: string; sv_nummer: string | null; geburtsdatum: string | null; betriebsnummer: string | null; beschaeftigung_ab: string | null; gemeldet: boolean; gemeldet_am: string | null; notiz: string | null };
 type Frei = { id: string; art: string; inhaber: string | null; finanzamt: string | null; sicherheitsnummer: string | null; gueltig_von: string | null; gueltig_bis: string | null; notiz: string | null };
+type Pruef = { id: string; art: string; bezeichnung: string; verantwortlich: string | null; letzte_pruefung: string | null; intervall_monate: number; naechste_pruefung: string | null; notiz: string | null };
+const ART_PRUEF: Record<string, string> = { fuehrerschein: '🪪 Führerschein', uvv: '🛠 UVV/DGUV V3', tuev: '🚗 TÜV/HU', sonstige: '📋 Sonstige' };
+function nMonate(iso: string | null, monate: number) { const dd = new Date((iso || new Date().toISOString().slice(0, 10)) + 'T00:00:00'); if (isNaN(dd.getTime())) return null; dd.setMonth(dd.getMonth() + (Number(monate) || 12)); return dd.toISOString().slice(0, 10); }
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function inTagen(iso: string | null) { if (!iso) return null; return Math.ceil((new Date(iso.slice(0, 10) + 'T00:00:00').getTime() - new Date(heute() + 'T00:00:00').getTime()) / 86400000); }
@@ -37,6 +40,8 @@ export default function CompliancePage() {
   const [ok, setOk] = useState<string | null>(null);
   const [sf, setSf] = useState({ mitarbeiter_name: '', sv_nummer: '', geburtsdatum: '', betriebsnummer: '', beschaeftigung_ab: heute(), notiz: '' });
   const [ff, setFf] = useState({ art: 'eigen', inhaber: '', finanzamt: '', sicherheitsnummer: '', gueltig_von: '', gueltig_bis: '', notiz: '' });
+  const [pruef, setPruef] = useState<Pruef[]>([]);
+  const [pf, setPf] = useState({ art: 'fuehrerschein', bezeichnung: '', verantwortlich: '', letzte_pruefung: heute(), intervall_monate: '6', notiz: '' });
 
   const laden_ = useCallback(async () => {
     setLaden(true);
@@ -45,6 +50,8 @@ export default function CompliancePage() {
       setSofort((s as Sofort[]) ?? []);
       const { data: f } = await supabase.from('freistellungen').select('*').order('gueltig_bis', { ascending: true });
       setFrei((f as Frei[]) ?? []);
+      const { data: pp } = await supabase.from('pruefpflichten').select('*').order('naechste_pruefung', { ascending: true });
+      setPruef((pp as Pruef[]) ?? []);
     } catch (e: unknown) { setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setLaden(false); }
   }, []);
@@ -109,6 +116,31 @@ export default function CompliancePage() {
     if (t < 0) return { txt: `abgelaufen seit ${-t} T`, farbe: C.danger };
     if (t <= 30) return { txt: `läuft in ${t} T ab`, farbe: C.warn };
     return { txt: `gültig bis ${d(f.gueltig_bis)}`, farbe: C.green };
+  }
+
+  // --- Prüffristen ---
+  async function pruefAnlegen() {
+    if (!uid || !pf.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
+    setFehler(null); setOk(null);
+    const monate = parseInt(pf.intervall_monate, 10) || 12;
+    const naechste = nMonate(pf.letzte_pruefung || heute(), monate);
+    try {
+      const { error } = await supabase.from('pruefpflichten').insert({
+        owner_user_id: uid, art: pf.art, bezeichnung: pf.bezeichnung.trim(), verantwortlich: pf.verantwortlich.trim() || null,
+        letzte_pruefung: pf.letzte_pruefung || null, intervall_monate: monate, naechste_pruefung: naechste, notiz: pf.notiz.trim() || null,
+      });
+      if (error) throw error;
+      setPf({ art: 'fuehrerschein', bezeichnung: '', verantwortlich: '', letzte_pruefung: heute(), intervall_monate: '6', notiz: '' });
+      setOk('Prüffrist gespeichert.'); await laden_();
+    } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+  }
+  async function pruefErledigt(p: Pruef) {
+    const naechste = nMonate(heute(), p.intervall_monate);
+    try { await supabase.from('pruefpflichten').update({ letzte_pruefung: heute(), naechste_pruefung: naechste, updated_at: new Date().toISOString() }).eq('id', p.id); await laden_(); } catch { /* ignore */ }
+  }
+  async function pruefLoeschen(p: Pruef) {
+    if (typeof window !== 'undefined' && !window.confirm('Eintrag löschen?')) return;
+    try { await supabase.from('pruefpflichten').delete().eq('id', p.id); await laden_(); } catch { /* ignore */ }
   }
 
   const inp = styles.inp;
@@ -199,6 +231,46 @@ export default function CompliancePage() {
             );
           })}
           {!frei.length && <p style={styles.dim}>Noch keine Bescheinigungen hinterlegt.</p>}
+        </div>
+      </div>
+
+      {/* ---------- Prüffristen ---------- */}
+      <div style={{ ...styles.card, marginTop: 16 }}>
+        <div style={styles.cardTitel}>🪪 Prüffristen (Führerschein, UVV/DGUV V3, TÜV …)</div>
+        <div style={styles.info}>
+          Wiederkehrende Pflicht-Prüfungen mit Erinnerung: <b>Führerscheinkontrolle</b> (2×/Jahr = alle 6 Monate),
+          <b> UVV/DGUV V3</b> (meist jährlich), HU/TÜV. ARGONAUT rechnet die nächste Fälligkeit und warnt rechtzeitig — auch in „Heute".
+        </div>
+        <div style={styles.grid}>
+          <label style={styles.lab}>Art
+            <select style={inp} value={pf.art} onChange={(e) => setPf((x) => ({ ...x, art: e.target.value }))}>
+              {Object.entries(ART_PRUEF).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          <label style={styles.lab}>Bezeichnung *<input style={inp} value={pf.bezeichnung} onChange={(e) => setPf((x) => ({ ...x, bezeichnung: e.target.value }))} placeholder="z. B. Führerschein Max Mustermann" /></label>
+          <label style={styles.lab}>Verantwortlich / Fahrzeug<input style={inp} value={pf.verantwortlich} onChange={(e) => setPf((x) => ({ ...x, verantwortlich: e.target.value }))} /></label>
+          <label style={styles.lab}>Letzte Prüfung<input type="date" style={inp} value={pf.letzte_pruefung} onChange={(e) => setPf((x) => ({ ...x, letzte_pruefung: e.target.value }))} /></label>
+          <label style={styles.lab}>Intervall (Monate)<input style={inp} value={pf.intervall_monate} onChange={(e) => setPf((x) => ({ ...x, intervall_monate: e.target.value }))} inputMode="numeric" /></label>
+        </div>
+        <button style={{ ...styles.primaer, marginTop: 10 }} onClick={pruefAnlegen}>＋ Prüffrist</button>
+
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {pruef.map((p) => {
+            const t = inTagen(p.naechste_pruefung);
+            const farbe = t === null ? C.textDim : t < 0 ? C.danger : t <= 30 ? C.warn : C.green;
+            return (
+              <div key={p.id} style={{ ...styles.zeile, borderColor: t !== null && t < 0 ? C.danger : C.border }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700 }}>{ART_PRUEF[p.art] || p.art} · {p.bezeichnung}</div>
+                  <div style={{ color: C.textDim, fontSize: 12.5 }}>{p.verantwortlich || '—'} · alle {p.intervall_monate} Mon. · zuletzt {d(p.letzte_pruefung)}</div>
+                </div>
+                <span style={{ ...styles.badge, color: farbe, borderColor: farbe }}>{t === null ? '—' : t < 0 ? `überfällig ${-t} T` : t <= 30 ? `in ${t} T` : `ok bis ${d(p.naechste_pruefung)}`}</span>
+                <button style={styles.mini} onClick={() => pruefErledigt(p)}>✓ geprüft</button>
+                <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => pruefLoeschen(p)}>🗑</button>
+              </div>
+            );
+          })}
+          {!pruef.length && <p style={styles.dim}>Noch keine Prüffristen hinterlegt.</p>}
         </div>
       </div>
 

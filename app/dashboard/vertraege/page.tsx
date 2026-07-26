@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import VertraegeAuge from "./VertraegeAuge";
+import { signaturStarten } from "@/lib/signaturStart";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V2 Verträge-Cockpit
@@ -163,6 +164,8 @@ export default function VertraegeCockpit() {
   const [nurKritisch, setNurKritisch] = useState(false);
 
   const [modalOffen, setModalOffen] = useState(false);
+  const [signaturLink, setSignaturLink] = useState<string | null>(null);
+  const [signaturBusy, setSignaturBusy] = useState<string | null>(null);
   const [bearbeiteId, setBearbeiteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(LEER_FORM);
   const [speichern, setSpeichern] = useState(false);
@@ -305,6 +308,27 @@ export default function VertraegeCockpit() {
     await lade();
   }
 
+  async function zurUnterschrift(v: Vertrag) {
+    if (!userId) return;
+    setSignaturBusy(v.id);
+    const dok =
+      `Vertrag: ${v.bezeichnung}` +
+      (v.vertragsnummer ? ` (Nr. ${v.vertragsnummer})` : "") +
+      `\nPartner: ${v.vertragspartner || "—"}` +
+      `\nKosten: ${eur(v.kosten_betrag)} (${INTERVALL_LABEL[v.kosten_intervall] ?? v.kosten_intervall})` +
+      `\nLaufzeit: ${datum(v.beginn)} – ${datum(v.ende)}` +
+      (v.notizen ? `\n\n${v.notizen}` : "");
+    const res = await signaturStarten(supabase, userId, {
+      titel: v.bezeichnung,
+      empfaenger_name: v.vertragspartner,
+      dokument: dok,
+      aufbewahrung_jahre: 10,
+    });
+    setSignaturBusy(null);
+    if (res.ok && res.link) setSignaturLink(res.link);
+    else window.alert("Signatur-Anfrage fehlgeschlagen: " + (res.error || "Unbekannt"));
+  }
+
   async function loesche(v: Vertrag) {
     if (!window.confirm(`Vertrag „${v.bezeichnung}" wirklich löschen?`)) return;
     const { error } = await supabase.from("vertraege").delete().eq("id", v.id);
@@ -415,6 +439,45 @@ export default function VertraegeCockpit() {
 
       {/* KI-Auge: was heißt die Vertrags-Lage gerade für mich? */}
       <VertraegeAuge />
+
+      {/* Signatur-Link nach „→ Unterschrift" */}
+      {signaturLink && (
+        <div
+          style={{
+            ...card,
+            marginBottom: 16,
+            borderColor: `${C.gold}66`,
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, color: C.gold }}>
+            ✍️ Unterschrifts-Link erstellt
+          </span>
+          <input
+            readOnly
+            value={signaturLink}
+            onFocus={(e) => e.currentTarget.select()}
+            style={{ ...inputStil, flex: 1, minWidth: 220 }}
+          />
+          <button
+            style={btnGold}
+            onClick={() => {
+              if (navigator?.clipboard) navigator.clipboard.writeText(signaturLink);
+            }}
+          >
+            Link kopieren
+          </button>
+          <a href={signaturLink} target="_blank" rel="noopener noreferrer" style={btnGhost}>
+            Öffnen
+          </a>
+          <button style={btnGhost} onClick={() => setSignaturLink(null)}>
+            Schließen
+          </button>
+        </div>
+      )}
 
       {/* KPIs */}
       <div
@@ -599,6 +662,20 @@ export default function VertraegeCockpit() {
                       <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: am.farbe }}>{am.text}</div>
                     </td>
                     <td style={{ ...tdStil, textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button
+                        style={{
+                          ...btnGhost,
+                          marginRight: 6,
+                          color: C.gold,
+                          borderColor: `${C.gold}55`,
+                          opacity: signaturBusy === v.id ? 0.6 : 1,
+                        }}
+                        onClick={() => zurUnterschrift(v)}
+                        disabled={signaturBusy === v.id}
+                        title="Signatur-Anfrage für diesen Vertrag erstellen"
+                      >
+                        {signaturBusy === v.id ? "…" : "✍️ Unterschrift"}
+                      </button>
                       <button
                         style={{ ...btnGhost, marginRight: 6 }}
                         onClick={() => oeffneBearbeiten(v)}

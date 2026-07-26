@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { SCHWELLEN } from '@/lib/schwellen';
 
 // ============================================================================
 // ARGONAUT OS · Welle 4 · app/api/admin/verbrauch/route.ts
@@ -39,12 +40,14 @@ export async function GET() {
   const admin = createAdminClient();
   const jetzt = new Date();
   const monatStart = new Date(Date.UTC(jetzt.getUTCFullYear(), jetzt.getUTCMonth(), 1)).toISOString();
+  const heuteStart = new Date(Date.UTC(jetzt.getUTCFullYear(), jetzt.getUTCMonth(), jetzt.getUTCDate())).toISOString();
   const epoch = '1970-01-01T00:00:00Z';
 
-  const [rk, rr, rkAll] = await Promise.all([
+  const [rk, rr, rkAll, rkHeute] = await Promise.all([
     admin.rpc('ki_verbrauch_pro_kunde', { seit: monatStart }),
     admin.rpc('ki_verbrauch_pro_route', { seit: monatStart }),
     admin.rpc('ki_verbrauch_pro_kunde', { seit: epoch }),
+    admin.rpc('ki_verbrauch_pro_kunde', { seit: heuteStart }),
   ]);
 
   if (rk.error || rr.error || rkAll.error) {
@@ -53,6 +56,7 @@ export async function GET() {
 
   const kundeM = (rk.data ?? []) as KundeRow[];
   const kundeAll = (rkAll.data ?? []) as KundeRow[];
+  const kundeHeute = (rkHeute.data ?? []) as KundeRow[];
   const routeM = (rr.data ?? []) as RouteRow[];
 
   // Speicher (best effort — RPC evtl. noch nicht eingespielt).
@@ -67,7 +71,7 @@ export async function GET() {
 
   // Namen für alle beteiligten IDs (KI + Speicher) einmalig laden.
   const idSet = new Set<string>();
-  [...kundeM, ...kundeAll].forEach((r) => { if (r.user_id) idSet.add(r.user_id); });
+  [...kundeM, ...kundeAll, ...kundeHeute].forEach((r) => { if (r.user_id) idSet.add(r.user_id); });
   speicherRows.forEach((r) => { if (istUuid(r.owner_key)) idSet.add(r.owner_key); });
   const ids = [...idSet];
   const namen: Record<string, string> = {};
@@ -82,7 +86,13 @@ export async function GET() {
   const summe = (arr: KundeRow[]) => arr.reduce((s, r) => s + Number(r.kosten_usd || 0), 0);
   const calls = (arr: KundeRow[]) => arr.reduce((s, r) => s + Number(r.anzahl || 0), 0);
 
+  const alarm = kundeHeute
+    .filter((r) => Number(r.kosten_usd || 0) > SCHWELLEN.ki.kostenAlarmTagUsd)
+    .map((r) => ({ name: nameFuer(r.user_id), kostenUsd: Number(r.kosten_usd || 0) }))
+    .sort((a, b) => b.kostenUsd - a.kostenUsd);
+
   return NextResponse.json({
+    alarm, alarmSchwelleUsd: SCHWELLEN.ki.kostenAlarmTagUsd,
     monat: {
       kostenUsd: summe(kundeM),
       calls: calls(kundeM),

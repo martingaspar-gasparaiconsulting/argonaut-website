@@ -20,6 +20,7 @@
 // ============================================================================
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { SCHWELLEN } from '@/lib/schwellen'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -102,8 +103,31 @@ async function protokolliere(userId: string | null, route: string, data: any) {
  * @param options Exakt dieselben fetch-Optionen wie bisher (method/headers/body).
  */
 export async function kiFetch(route: string, options: RequestInit): Promise<Response> {
-  // Nutzer-Ermittlung laeuft PARALLEL zum KI-Aufruf -> praktisch keine Extra-Latenz.
-  const [userId, res] = await Promise.all([ermittleUserId(), fetch(ANTHROPIC_URL, options)])
+  const userId = await ermittleUserId()
+
+  // --- Rate-Limit (Bot-/Endlosschleifen-Schutz, "Horror-Faktor") ---
+  // Nutzt die bestehende ki_nutzung-Tabelle: zu viele Aufrufe je Minute -> 429,
+  // OHNE den teuren KI-Aufruf auszulösen. Best effort — schlägt die Prüfung
+  // fehl, läuft der Aufruf normal weiter (nie blockieren wegen eines DB-Fehlers).
+  if (userId) {
+    try {
+      const admin = createAdminClient()
+      const seit = new Date(Date.now() - 60_000).toISOString()
+      const { count } = await admin.from('ki_nutzung')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId).gte('created_at', seit)
+      if ((count || 0) >= SCHWELLEN.ki.rateLimitProMinute) {
+        return new Response(
+          JSON.stringify({ error: 'Zu viele KI-Anfragen in kurzer Zeit. Bitte einen Moment warten und erneut versuchen.' }),
+          { status: 429, headers: { 'content-type': 'application/json' } },
+        )
+      }
+    } catch (e) {
+      console.error('[rate-limit] Prüfung fehlgeschlagen (fahre fort):', e)
+    }
+  }
+
+  const res = await fetch(ANTHROPIC_URL, options)
 
   // Nur erfolgreiche Antworten protokollieren. Klon lesen -> Original unberuehrt.
   try {

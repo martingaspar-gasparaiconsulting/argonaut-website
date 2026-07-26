@@ -11,6 +11,8 @@
 
 import { useState, useEffect, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeHeute } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,6 +62,8 @@ const QUELLEN: Quelle[] = [
     offen: () => true, titel: (r) => `§48b läuft ab: ${r.inhaber || ''} (${r.art === 'eigen' ? 'eigen' : 'Sub'})` },
   { icon: '🧑‍🏭', table: 'sofortmeldungen', select: 'mitarbeiter_name, beschaeftigung_ab, gemeldet', dateField: 'beschaeftigung_ab', href: '/dashboard/compliance',
     offen: (r) => !r.gemeldet, titel: (r) => `Sofortmeldung offen: ${r.mitarbeiter_name || ''}` },
+  { icon: '🪪', table: 'pruefpflichten', select: 'bezeichnung, naechste_pruefung, art', dateField: 'naechste_pruefung', href: '/dashboard/compliance',
+    offen: () => true, titel: (r) => `Prüffrist: ${r.bezeichnung || ''}` },
 ];
 
 export default function HeutePage() {
@@ -130,6 +134,8 @@ export default function HeutePage() {
           <div style={{ ...styles.kWert, color: C.green }}>{spaeter.length}</div><div style={styles.kLabel}>in Sicht</div>
         </div>
       </div>
+
+      <KiAuge modul="Heute" regel={augeHeute({ ueberfaellig: ueberfaellig.length, dieseWoche: dieseWoche.length, spaeter: spaeter.length })} />
 
       {signaturen.length > 0 && (
         <div style={styles.block}>
