@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { datevVorschlag, datevKontenListe, type DatevVorschlag } from '@/lib/datevKonten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -24,8 +25,9 @@ type Beleg = {
   id: string; lieferant: string | null; belegnummer: string | null; belegdatum: string | null;
   netto: number | null; ust_betrag: number | null; ust_satz: number | null; brutto: number | null;
   kategorie: string | null; notiz: string | null; datei_pfad: string | null; status: string;
+  datev_konto: string | null; datev_rahmen: string | null;
 };
-const LEER = { lieferant: '', belegnummer: '', belegdatum: '', netto: '', ust_satz: '19', ust_betrag: '', brutto: '', kategorie: '', notiz: '' };
+const LEER = { lieferant: '', belegnummer: '', belegdatum: '', netto: '', ust_satz: '19', ust_betrag: '', brutto: '', kategorie: '', notiz: '', datev_konto: '', datev_rahmen: 'skr03' };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string): number | null { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; }
@@ -45,7 +47,7 @@ export default function EingangsbelegePage() {
   const laden_ = useCallback(async () => {
     setLaden(true);
     try {
-      const { data } = await supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, netto, ust_betrag, ust_satz, brutto, kategorie, notiz, datei_pfad, status').order('belegdatum', { ascending: false }).order('created_at', { ascending: false });
+      const { data } = await supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, netto, ust_betrag, ust_satz, brutto, kategorie, notiz, datei_pfad, status, datev_konto, datev_rahmen').order('belegdatum', { ascending: false }).order('created_at', { ascending: false });
       setBelege((data as Beleg[]) ?? []);
     } catch (e: unknown) { setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setLaden(false); }
@@ -62,6 +64,11 @@ export default function EingangsbelegePage() {
 
   function setF<K extends keyof typeof LEER>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
   function reset() { setForm({ ...LEER }); setDateiPfad(null); setEditId(null); }
+
+  // Regel-Ebene: Konto-Vorschlag aus Kategorie + Lieferant — kostenlos, sofort.
+  const vorschlag: DatevVorschlag = useMemo(() => datevVorschlag(form.kategorie, form.lieferant), [form.kategorie, form.lieferant]);
+  const vorschlagKonto = form.datev_rahmen === 'skr04' ? vorschlag.skr04 : vorschlag.skr03;
+  function vorschlagUebernehmen() { setForm((f) => ({ ...f, datev_konto: f.datev_rahmen === 'skr04' ? vorschlag.skr04 : vorschlag.skr03 })); }
 
   async function dateiGewaehlt(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -86,11 +93,12 @@ export default function EingangsbelegePage() {
       const j = await res.json();
       if (!res.ok) { setFehler(j?.error || 'Beleg konnte nicht gelesen werden.'); }
       else {
+        const vs = datevVorschlag(j.kategorie, j.lieferant);
         setForm({
           lieferant: j.lieferant || '', belegnummer: j.belegnummer || '', belegdatum: j.belegdatum || '',
           netto: j.netto != null ? String(j.netto) : '', ust_satz: j.ust_satz != null ? String(j.ust_satz) : '19',
           ust_betrag: j.ust_betrag != null ? String(j.ust_betrag) : '', brutto: j.brutto != null ? String(j.brutto) : '',
-          kategorie: j.kategorie || '', notiz: '',
+          kategorie: j.kategorie || '', notiz: '', datev_rahmen: 'skr03', datev_konto: vs.skr03,
         });
         setOk('Beleg gelesen — bitte kurz prüfen und speichern.' + (pfad ? '' : ' (Datei-Ablage übersprungen.)'));
       }
@@ -105,6 +113,7 @@ export default function EingangsbelegePage() {
       owner_user_id: uid, lieferant: form.lieferant.trim() || null, belegnummer: form.belegnummer.trim() || null,
       belegdatum: form.belegdatum || null, netto: num(form.netto), ust_satz: num(form.ust_satz), ust_betrag: num(form.ust_betrag),
       brutto: num(form.brutto), kategorie: form.kategorie.trim() || null, notiz: form.notiz.trim() || null,
+      datev_konto: form.datev_konto.trim() || null, datev_rahmen: form.datev_rahmen || null,
       datei_pfad: dateiPfad, updated_at: new Date().toISOString(),
     };
     try {
@@ -120,7 +129,7 @@ export default function EingangsbelegePage() {
       lieferant: b.lieferant || '', belegnummer: b.belegnummer || '', belegdatum: (b.belegdatum || '').slice(0, 10),
       netto: b.netto != null ? String(b.netto) : '', ust_satz: b.ust_satz != null ? String(b.ust_satz) : '19',
       ust_betrag: b.ust_betrag != null ? String(b.ust_betrag) : '', brutto: b.brutto != null ? String(b.brutto) : '',
-      kategorie: b.kategorie || '', notiz: b.notiz || '',
+      kategorie: b.kategorie || '', notiz: b.notiz || '', datev_konto: b.datev_konto || '', datev_rahmen: b.datev_rahmen || 'skr03',
     });
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -130,8 +139,8 @@ export default function EingangsbelegePage() {
   }
 
   function csvExport() {
-    const head = 'Datum;Lieferant;Belegnummer;Netto;USt-Satz;USt-Betrag;Brutto;Kategorie';
-    const zeilen = belege.map((b) => [d(b.belegdatum), b.lieferant || '', b.belegnummer || '', b.netto ?? '', b.ust_satz ?? '', b.ust_betrag ?? '', b.brutto ?? '', b.kategorie || ''].map((x) => String(x).replace(/;/g, ',')).join(';'));
+    const head = 'Datum;Lieferant;Belegnummer;Netto;USt-Satz;USt-Betrag;Brutto;Kategorie;DATEV-Konto;Kontenrahmen';
+    const zeilen = belege.map((b) => [d(b.belegdatum), b.lieferant || '', b.belegnummer || '', b.netto ?? '', b.ust_satz ?? '', b.ust_betrag ?? '', b.brutto ?? '', b.kategorie || '', b.datev_konto || '', (b.datev_rahmen || '').toUpperCase()].map((x) => String(x).replace(/;/g, ',')).join(';'));
     const blob = new Blob(['﻿' + head + '\n' + zeilen.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `Eingangsbelege_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -176,6 +185,31 @@ export default function EingangsbelegePage() {
           <label style={styles.lab}>USt-Betrag €<input style={styles.inp} value={form.ust_betrag} onChange={(e) => setF('ust_betrag', e.target.value)} inputMode="decimal" /></label>
           <label style={styles.lab}>Brutto €<input style={styles.inp} value={form.brutto} onChange={(e) => setF('brutto', e.target.value)} inputMode="decimal" /></label>
         </div>
+
+        <div style={styles.datevBox}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>📊 DATEV-Konto</span>
+            <div style={styles.rahmenToggle}>
+              <button type="button" onClick={() => setF('datev_rahmen', 'skr03')} style={{ ...styles.rahmenBtn, ...(form.datev_rahmen !== 'skr04' ? styles.rahmenAktiv : {}) }}>SKR03</button>
+              <button type="button" onClick={() => setF('datev_rahmen', 'skr04')} style={{ ...styles.rahmenBtn, ...(form.datev_rahmen === 'skr04' ? styles.rahmenAktiv : {}) }}>SKR04</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+            <input style={{ ...styles.inp, maxWidth: 140 }} value={form.datev_konto} onChange={(e) => setF('datev_konto', e.target.value)} placeholder="Konto-Nr." inputMode="numeric" />
+            <select style={{ ...styles.inp, maxWidth: 300 }} value="" onChange={(e) => { if (e.target.value) setF('datev_konto', e.target.value); }}>
+              <option value="">— aus Liste wählen —</option>
+              {datevKontenListe(form.datev_rahmen === 'skr04' ? 'skr04' : 'skr03').map((k) => <option key={k.konto} value={k.konto}>{k.konto} · {k.bezeichnung}</option>)}
+            </select>
+          </div>
+          <div style={styles.vorschlagChip}>
+            <span style={{ color: C.textDim }}>Vorschlag:</span>
+            <b style={{ color: C.gold }}>{vorschlagKonto}</b>
+            <span style={{ color: C.textDim }}>· {vorschlag.bezeichnung}{vorschlag.treffer ? '' : ' (keine klare Regel — bitte prüfen)'}</span>
+            {form.datev_konto !== vorschlagKonto && <button type="button" style={styles.uebernehmen} onClick={vorschlagUebernehmen}>übernehmen</button>}
+          </div>
+          <div style={{ color: C.textDim, fontSize: 11.5, marginTop: 6 }}>Vorschlag der Regel-Ebene — keine KI, kostenlos. Endgültige Kontierung bitte mit dem Steuerberater bestätigen.</div>
+        </div>
+
         <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
         {dateiPfad && <div style={styles.pfad}>📎 Datei abgelegt: {dateiPfad}</div>}
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
@@ -193,7 +227,7 @@ export default function EingangsbelegePage() {
           <div style={{ overflowX: 'auto', marginTop: 8 }}>
             <table style={styles.table}>
               <thead><tr>
-                <th style={styles.th}>Datum</th><th style={styles.th}>Lieferant</th><th style={styles.thR}>Netto</th><th style={styles.thR}>USt</th><th style={styles.thR}>Brutto</th><th style={styles.th}>Kategorie</th><th style={styles.thR}></th>
+                <th style={styles.th}>Datum</th><th style={styles.th}>Lieferant</th><th style={styles.thR}>Netto</th><th style={styles.thR}>USt</th><th style={styles.thR}>Brutto</th><th style={styles.th}>Kategorie</th><th style={styles.th}>DATEV</th><th style={styles.thR}></th>
               </tr></thead>
               <tbody>
                 {belege.map((b) => (
@@ -204,6 +238,7 @@ export default function EingangsbelegePage() {
                     <td style={styles.tdR}>{eur(b.ust_betrag)}{b.ust_satz ? <span style={{ color: C.textDim, fontSize: 12 }}> ({b.ust_satz}%)</span> : null}</td>
                     <td style={{ ...styles.tdR, fontWeight: 700 }}>{eur(b.brutto)}</td>
                     <td style={styles.td}>{b.kategorie || '—'}</td>
+                    <td style={styles.td}>{b.datev_konto ? <span style={{ fontWeight: 700 }}>{b.datev_konto}{b.datev_rahmen ? <span style={{ color: C.textDim, fontSize: 11, fontWeight: 400 }}> {b.datev_rahmen.toUpperCase()}</span> : null}</span> : <span style={{ color: C.textDim }}>—</span>}</td>
                     <td style={styles.tdR}>
                       <button style={styles.mini} onClick={() => bearbeiten(b)}>Bearbeiten</button>
                       <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(b)}>🗑</button>
@@ -234,6 +269,12 @@ const styles: Record<string, CSSProperties> = {
   lab: { display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12.5, color: C.textDim },
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit', minWidth: 0 },
   pfad: { color: C.textDim, fontSize: 12, marginTop: 8 },
+  datevBox: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', marginTop: 12 },
+  rahmenToggle: { display: 'inline-flex', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' },
+  rahmenBtn: { background: 'transparent', color: C.textDim, border: 'none', padding: '5px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  rahmenAktiv: { background: C.gold, color: C.navy },
+  vorschlagChip: { display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap', marginTop: 10, fontSize: 13.5 },
+  uebernehmen: { background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: '3px 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   ghost: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 640 },
