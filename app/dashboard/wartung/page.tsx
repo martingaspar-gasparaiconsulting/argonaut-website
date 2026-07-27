@@ -56,6 +56,7 @@ type WartungRow = WartungBasis & {
   betrag_netto: number | null;
   mwst_satz: number | null;
   letzte_abrechnung_am: string | null;
+  kontakt_id: string | null;
   notiz: string | null;
   archiviert: boolean;
 };
@@ -65,6 +66,7 @@ type FormState = {
   id: string | null;
   titel: string;
   kunde_name: string;
+  kontakt_id: string;
   vertragsnummer: string;
   status: string;
   beginn_am: string;
@@ -77,7 +79,7 @@ type FormState = {
 };
 
 const LEER: FormState = {
-  id: null, titel: '', kunde_name: '', vertragsnummer: '', status: 'aktiv',
+  id: null, titel: '', kunde_name: '', kontakt_id: '', vertragsnummer: '', status: 'aktiv',
   beginn_am: '', intervall_monate: '12', letzte_wartung_am: '',
   erinnerung_tage_vorher: '14', betrag_netto: '', beschreibung: '', notiz: '',
 };
@@ -91,6 +93,13 @@ const STATUS_OPTIONEN = [
 
 function statusLabel(s: string): string {
   return STATUS_OPTIONEN.find((o) => o.wert === s)?.label || s;
+}
+
+// --- Kontakt-Verknüpfung (D1) ---
+type KontaktMini = { id: string; name: string };
+function kontaktName(k: Record<string, unknown>): string {
+  const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  return s(k.anzeigename) || [s(k.vorname), s(k.nachname)].filter(Boolean).join(' ') || s(k.name) || s(k.firmenname) || s(k.firma) || s(k.email) || 'Kontakt';
 }
 function eur(n: number | null): string {
   if (n == null) return '—';
@@ -162,6 +171,9 @@ export default function WartungPage() {
   const [rechnungBusy, setRechnungBusy] = useState<string | null>(null);
   const [rechnungMsg, setRechnungMsg] = useState<string | null>(null);
 
+  // Kontakte für die Verknüpfung (D1)
+  const [kontakte, setKontakte] = useState<KontaktMini[]>([]);
+
   // Angemeldeten Chef ermitteln
   useEffect(() => {
     (async () => {
@@ -169,6 +181,17 @@ export default function WartungPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+    })();
+  }, []);
+
+  // Kontakte einmalig laden (für die Verknüpfung im Formular)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('kontakte').select('*');
+      const ks: KontaktMini[] = ((data as Record<string, unknown>[]) || [])
+        .map((k) => ({ id: String(k.id), name: kontaktName(k) }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setKontakte(ks);
     })();
   }, []);
 
@@ -204,6 +227,7 @@ export default function WartungPage() {
       id: r.id,
       titel: r.titel ?? '',
       kunde_name: r.kunde_name ?? '',
+      kontakt_id: r.kontakt_id ?? '',
       vertragsnummer: r.vertragsnummer ?? '',
       status: r.status ?? 'aktiv',
       beginn_am: r.beginn_am ?? '',
@@ -219,6 +243,12 @@ export default function WartungPage() {
 
   function setF<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  // Kontakt wählen: setzt kontakt_id und füllt den Kundennamen aus dem Kontakt.
+  function waehleKontakt(id: string) {
+    const k = kontakte.find((x) => x.id === id);
+    setForm((f) => ({ ...f, kontakt_id: id, kunde_name: k ? k.name : f.kunde_name }));
   }
 
   // --- Speichern (mit Bestätigung vor DB-Schreiben) -----------------------
@@ -252,6 +282,7 @@ export default function WartungPage() {
         owner_user_id: uid,
         titel: form.titel.trim(),
         kunde_name: form.kunde_name.trim() || null,
+        kontakt_id: form.kontakt_id || null,
         vertragsnummer: form.vertragsnummer.trim() || null,
         status: form.status,
         beginn_am: form.beginn_am || null,
@@ -540,7 +571,13 @@ export default function WartungPage() {
               <Feld label="Titel *" voll>
                 <input style={styles.input} value={form.titel} onChange={(e) => setF('titel', e.target.value)} placeholder="z. B. Wartung Heizungsanlage Halle 2" />
               </Feld>
-              <Feld label="Kunde">
+              <Feld label="Kunde (Kontakt verknüpfen)">
+                <select style={styles.input} value={form.kontakt_id} onChange={(e) => waehleKontakt(e.target.value)}>
+                  <option value="">— kein Kontakt (Freitext) —</option>
+                  {kontakte.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select>
+              </Feld>
+              <Feld label="Kundenname (Freitext)">
                 <input style={styles.input} value={form.kunde_name} onChange={(e) => setF('kunde_name', e.target.value)} placeholder="Name (frei)" />
               </Feld>
               <Feld label="Vertragsnummer">
