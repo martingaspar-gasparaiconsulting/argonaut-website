@@ -194,6 +194,22 @@ export function augeHaccp(d: { abgelaufen: number; bald: number; gesperrt: numbe
   return { klartext: 'Chargen frisch, Kontrollen im Plan — sauber.', punkte, stimmung: 'gut' };
 }
 
+/** Fördermittel: bewilligte Summe, offene Antrags-/Nachweisfristen, offene Nachweise. */
+export function augeFoerder(d: { bewilligt: number; summeBewilligt: number; fristenOffen: number; nachweiseOffen: number }): AugeErgebnis {
+  const punkte: string[] = [];
+  if (d.bewilligt > 0) punkte.push(`${d.bewilligt} bewilligte(s) Vorhaben (${eur(d.summeBewilligt)} Fördersumme).`);
+  if (d.fristenOffen > 0) {
+    return {
+      klartext: `${d.fristenOffen} Frist(en) laufen ab oder sind überfällig — Antrag oder Verwendungsnachweis nicht verpassen, sonst droht Rückforderung.`,
+      punkte: [...punkte, ...(d.nachweiseOffen > 0 ? [`${d.nachweiseOffen} Verwendungsnachweis(e) noch offen.`] : [])],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.nachweiseOffen > 0) return { klartext: `Keine Frist akut, aber ${d.nachweiseOffen} Verwendungsnachweis(e) noch offen — rechtzeitig einreichen.`, punkte, stimmung: 'neutral' };
+  if (d.bewilligt > 0) return { klartext: `${d.bewilligt} bewilligte(s) Vorhaben, alle Nachweise erbracht — sauber.`, punkte, stimmung: 'gut' };
+  return { klartext: 'Noch keine bewilligten Vorhaben — verfolge oben passende Programme und setz dir die Fristen.', punkte, stimmung: 'neutral' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };

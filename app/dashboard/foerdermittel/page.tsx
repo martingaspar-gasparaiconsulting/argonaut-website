@@ -13,6 +13,9 @@ import {
   FOERDER_PROGRAMME, FOERDER_STAND, ART_LABEL, KATEGORIE_LABEL, BUNDESLAENDER,
   type FoerderProgramm, type FoerderKategorie, type Foerderart, type FoerderPhase,
 } from './programme';
+import { fristBucket, restVerwendung, verwendungsQuote, zaehleFoerder } from '@/lib/foerder';
+import { augeFoerder } from '@/lib/auge';
+import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -27,6 +30,8 @@ const C = {
 type Vorhaben = {
   id: string; programm_key: string; programm_name: string;
   status: string; frist: string | null; notiz: string | null;
+  bewilligt_betrag?: number | null; verwendet_betrag?: number | null;
+  nachweis_frist?: string | null; nachweis_status?: string | null;
 };
 
 const STATUS: { key: string; label: string; farbe: string }[] = [
@@ -38,6 +43,7 @@ const STATUS: { key: string; label: string; farbe: string }[] = [
 ];
 function statusInfo(k: string) { return STATUS.find((s) => s.key === k) || STATUS[0]; }
 function heute() { return new Date().toISOString().slice(0, 10); }
+function eur(n: number | null): string { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function datumHuebsch(iso: string | null): string {
   if (!iso) return '—';
   const p = iso.split('T')[0].split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
@@ -69,7 +75,7 @@ export default function FoerdermittelPage() {
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('foerder_vorhaben')
-      .select('id, programm_key, programm_name, status, frist, notiz');
+      .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status');
     const map: Record<string, Vorhaben> = {};
     ((data as Vorhaben[]) ?? []).forEach((v) => { map[v.programm_key] = v; });
     setVorhaben(map);
@@ -112,7 +118,7 @@ export default function FoerdermittelPage() {
     try {
       const { data, error } = await supabase.from('foerder_vorhaben')
         .insert({ owner_user_id: uid, programm_key: p.key, programm_name: p.name, status: 'interessiert' })
-        .select('id, programm_key, programm_name, status, frist, notiz').single();
+        .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status').single();
       if (error) { await laden_(); setFehler('Steht bereits auf Ihrer Merkliste.'); return; }
       setVorhaben((m) => ({ ...m, [p.key]: data as Vorhaben }));
       setOk(`„${p.name}" auf die Merkliste gesetzt.`);
@@ -139,6 +145,7 @@ export default function FoerdermittelPage() {
   }
 
   const meineListe = Object.values(vorhaben);
+  const kFoerder = zaehleFoerder(meineListe, heute());
   const landHinweis = bundesland && treffer.some((p) => p.ebene === 'land');
 
   return (
@@ -153,6 +160,21 @@ export default function FoerdermittelPage() {
         </div>
         <div style={styles.stand}>Katalog-Stand<br /><strong style={{ color: C.gold }}>{FOERDER_STAND}</strong></div>
       </div>
+
+      {/* KPI + Regel-Auge (nur wenn schon Vorhaben verfolgt werden) */}
+      {!laden && meineListe.length > 0 && (
+        <>
+          <div style={styles.kpis}>
+            <div style={styles.kpi}><div style={{ ...styles.kWert, color: C.cyan }}>{kFoerder.bewilligt}</div><div style={styles.kLabel}>bewilligt</div></div>
+            <div style={styles.kpi}><div style={{ ...styles.kWert, color: C.gold }}>{eur(kFoerder.summeBewilligt)}</div><div style={styles.kLabel}>Fördersumme</div></div>
+            <div style={styles.kpi}><div style={{ ...styles.kWert, color: kFoerder.fristenOffen > 0 ? C.warn : C.green }}>{kFoerder.fristenOffen}</div><div style={styles.kLabel}>Fristen offen</div></div>
+            <div style={styles.kpi}><div style={{ ...styles.kWert, color: kFoerder.nachweiseOffen > 0 ? C.warn : C.green }}>{kFoerder.nachweiseOffen}</div><div style={styles.kLabel}>Nachweise offen</div></div>
+          </div>
+          <div style={{ marginBottom: 4 }}>
+            <KiAuge modul="Fördermittel" regel={augeFoerder({ bewilligt: kFoerder.bewilligt, summeBewilligt: kFoerder.summeBewilligt, fristenOffen: kFoerder.fristenOffen, nachweiseOffen: kFoerder.nachweiseOffen })} />
+          </div>
+        </>
+      )}
 
       {/* --- Fragebogen --- */}
       <div style={styles.card}>
@@ -267,6 +289,40 @@ export default function FoerdermittelPage() {
                   </label>
                   <span style={{ ...styles.tag, color: si.farbe, borderColor: si.farbe, alignSelf: 'flex-end' }}>{si.label}</span>
                 </div>
+
+                {(v.status === 'bewilligt' || v.status === 'abgeschlossen') && (() => {
+                  const nb = fristBucket(v.nachweis_frist, heute());
+                  const nfarbe = nb === 'ueberfaellig' ? C.danger : nb === 'bald' ? C.warn : C.textDim;
+                  const quote = verwendungsQuote(v.bewilligt_betrag, v.verwendet_betrag);
+                  return (
+                    <div style={styles.nachweisBox}>
+                      <div style={{ fontWeight: 700, fontSize: 12.5, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Verwendungsnachweis</div>
+                      <div style={styles.vhRow}>
+                        <label style={styles.miniLabel}>Bewilligt (€)
+                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.bewilligt_betrag ?? ''} onBlur={(e) => aktualisieren(v, { bewilligt_betrag: e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.')) })} />
+                        </label>
+                        <label style={styles.miniLabel}>Verwendet (€)
+                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.verwendet_betrag ?? ''} onBlur={(e) => aktualisieren(v, { verwendet_betrag: e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.')) })} />
+                        </label>
+                        <label style={styles.miniLabel}>Nachweis-Frist
+                          <input type="date" style={styles.miniSelect} value={v.nachweis_frist ?? ''} onChange={(e) => aktualisieren(v, { nachweis_frist: e.target.value || null })} />
+                        </label>
+                        <label style={styles.miniLabel}>Nachweis
+                          <select style={styles.miniSelect} value={v.nachweis_status ?? 'offen'} onChange={(e) => aktualisieren(v, { nachweis_status: e.target.value })}>
+                            <option value="offen">offen</option>
+                            <option value="eingereicht">eingereicht</option>
+                            <option value="anerkannt">anerkannt</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div style={{ fontSize: 12.5, color: C.textDim, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {v.bewilligt_betrag != null && <span>Rest zu verwenden: <b style={{ color: C.text }}>{eur(restVerwendung(v.bewilligt_betrag, v.verwendet_betrag))}</b>{quote != null ? ` · ${quote}% verwendet` : ''}</span>}
+                        {v.nachweis_frist && <span style={{ color: nfarbe, fontWeight: 600 }}>Nachweis bis {datumHuebsch(v.nachweis_frist)}{nb === 'ueberfaellig' ? ' — überfällig!' : nb === 'bald' ? ' — bald fällig' : ''}</span>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <textarea style={styles.notiz} placeholder="Notiz (z. B. Ansprechpartner, Aktenzeichen, nächster Schritt) …"
                   defaultValue={v.notiz ?? ''} onBlur={(e) => { if ((e.target.value || '') !== (v.notiz || '')) aktualisieren(v, { notiz: e.target.value || null }); }} />
                 <div style={{ textAlign: 'right' }}>
@@ -294,6 +350,11 @@ const styles: Record<string, CSSProperties> = {
   h2: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 20, fontWeight: 700, margin: '26px 0 12px' },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 720 },
   stand: { textAlign: 'center', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '10px 18px', fontSize: 12, color: C.textDim, whiteSpace: 'nowrap' },
+  kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, margin: '16px 0 10px' },
+  kpi: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px', textAlign: 'center' },
+  kWert: { fontSize: 22, fontWeight: 800, lineHeight: 1 },
+  kLabel: { color: C.textDim, fontSize: 11.5, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  nachweisBox: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginTop: 18 },
   frageTitel: { fontWeight: 700, fontSize: 15, margin: '14px 0 10px' },
   chips: { display: 'flex', flexWrap: 'wrap', gap: 8 },
