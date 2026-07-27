@@ -17,6 +17,8 @@ import {
   alterInJahren,
   normZustand,
   ZUSTAND_LABEL,
+  OBJEKT_TYPEN,
+  objektTypByLabel,
   type Zustand,
   type AssetBasis,
 } from '@/lib/assets';
@@ -33,10 +35,7 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', warn: '#E0A24C', danger: '#E06666',
 };
 
-const TYP_OPTIONEN = [
-  'Maschine', 'Fahrzeug', 'Anlage / PV', 'Aufzug', 'Werkzeug / Gerät',
-  'Immobilie / Einheit', 'Baum', 'Feuerlöscher', 'Sonstiges',
-];
+const TYP_OPTIONEN = OBJEKT_TYPEN.map((t) => t.label);
 
 type Gruppe = { id: string; bezeichnung: string; adresse: string | null };
 type Asset = AssetBasis & {
@@ -146,6 +145,11 @@ export default function ObjekteRegister() {
     setFehler(null); setModalAuf(true);
   }
   function setF<K extends keyof FormState>(k: K, v: FormState[K]) { setForm((f) => ({ ...f, [k]: v })); }
+  // Typ wählen: setzt zugleich die Standard-Prüffrist des Typs (Block I).
+  function typWaehlen(label: string) {
+    const t = objektTypByLabel(label);
+    setForm((f) => ({ ...f, typ: label, kontrollintervall_monate: t ? String(t.kontrollintervallMonate) : f.kontrollintervall_monate }));
+  }
 
   async function speichern() {
     if (!uid) return;
@@ -333,7 +337,7 @@ export default function ObjekteRegister() {
       </div>
 
       <div style={styles.rechtHinweis}>
-        Die nächste Kontrolle wird automatisch aus letzter Kontrolle + Intervall berechnet. Der Objekt-Typ bestimmt später die Standard-Prüffrist (Block I).
+        Die nächste Kontrolle wird automatisch aus letzter Kontrolle + Intervall berechnet; der Objekt-Typ setzt die Standard-Prüffrist. Für Abschreibung/AfA nutze das Anlagen-Modul, für die Fahrzeug-Historie die Fahrzeugakte — das Register dupliziert diese Tiefe bewusst nicht, sondern verknüpft.
       </div>
 
       {/* Modal */}
@@ -343,7 +347,10 @@ export default function ObjekteRegister() {
             <h2 style={styles.modalTitel}>{form.id ? 'Objekt bearbeiten' : 'Neues Objekt'}</h2>
             <div style={styles.formGrid}>
               <Feld label="Bezeichnung *" voll><input style={styles.input} value={form.bezeichnung} onChange={(e) => setF('bezeichnung', e.target.value)} placeholder="z. B. Bagger CAT 320 / Aufzug Haus A" /></Feld>
-              <Feld label="Typ"><select style={styles.input} value={form.typ} onChange={(e) => setF('typ', e.target.value)}>{TYP_OPTIONEN.map((t) => <option key={t} value={t}>{t}</option>)}</select></Feld>
+              <Feld label="Typ (setzt Standard-Prüffrist)">
+                <select style={styles.input} value={form.typ} onChange={(e) => typWaehlen(e.target.value)}>{TYP_OPTIONEN.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                {objektTypByLabel(form.typ)?.hinweis && <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, marginTop: 4 }}>{objektTypByLabel(form.typ)!.hinweis}</div>}
+              </Feld>
               <Feld label="Zustand"><select style={styles.input} value={form.zustand} onChange={(e) => setF('zustand', e.target.value as Zustand)}><option value="gut">🟢 Gut</option><option value="beobachten">🟠 Beobachten</option><option value="kritisch">🔴 Kritisch</option></select></Feld>
               <Feld label="Gruppe / Standort"><select style={styles.input} value={form.gruppe_id} onChange={(e) => setF('gruppe_id', e.target.value)}><option value="">— keine —</option>{gruppen.map((g) => <option key={g.id} value={g.id}>{g.bezeichnung}</option>)}</select></Feld>
               <Feld label="… oder neue Gruppe anlegen"><input style={styles.input} value={form.neueGruppe} onChange={(e) => setF('neueGruppe', e.target.value)} placeholder="Name (optional)" /></Feld>

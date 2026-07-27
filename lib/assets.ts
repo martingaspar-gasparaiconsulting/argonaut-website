@@ -96,3 +96,43 @@ export function zaehleRegister(
   }
   return s;
 }
+
+// ============================================================================
+// BLOCK I · Objekt-Typen mit Standard-Prüffristen (Reichweiten-Hebel).
+// Wählt der Nutzer einen Typ, wird das passende Kontrollintervall vorbelegt.
+//
+// Fristen web-verifiziert (27.07.2026) — es sind ANPASSBARE Standardwerte,
+// da viele Prüffristen gefährdungs-/betriebsabhängig sind:
+//  - Feuerlöscher: alle 2 Jahre (24 Mon.), DIN 14406-4.
+//  - Aufzug: BetrSichV Haupt-/Zwischenprüfung im jährlichen Wechsel (≈ 12 Mon.).
+//  - Elektro ortsfest: DGUV V3 Richtwert 4 Jahre; ortsveränderlich gefährdungs-
+//    abhängig (Richtwert). Hier als praxisnahe Wartungs-Kadenz 12 Mon. gesetzt.
+// ============================================================================
+
+export interface ObjektTyp {
+  key: string;
+  label: string;
+  icon: string;
+  kontrollintervallMonate: number;
+  hinweis: string;
+}
+
+export const OBJEKT_TYPEN: ObjektTyp[] = [
+  { key: 'maschine',      label: 'Maschine',              icon: '⚙️', kontrollintervallMonate: 12, hinweis: 'Arbeitsmittel-Prüfung i. d. R. jährlich (BetrSichV/UVV).' },
+  { key: 'fahrzeug',      label: 'Fahrzeug',              icon: '🚗', kontrollintervallMonate: 12, hinweis: 'UVV-Fahrzeugprüfung jährlich; HU je nach Fahrzeugart 12–24 Mon.' },
+  { key: 'pv',            label: 'Anlage / PV',           icon: '☀️', kontrollintervallMonate: 12, hinweis: 'Wartung meist jährlich; DGUV V3 ortsfest Richtwert 4 Jahre.' },
+  { key: 'aufzug',        label: 'Aufzug',                icon: '🛗', kontrollintervallMonate: 12, hinweis: 'BetrSichV: Haupt-/Zwischenprüfung im Wechsel — effektiv jährlich.' },
+  { key: 'werkzeug',      label: 'Werkzeug / Gerät',      icon: '🔌', kontrollintervallMonate: 12, hinweis: 'Ortsveränderliche elektr. Betriebsmittel DGUV V3, gefährdungsabhängig.' },
+  { key: 'klima',         label: 'Klima / Kälte',         icon: '❄️', kontrollintervallMonate: 12, hinweis: 'F-Gas-Dichtheitsprüfung je nach CO₂-Äquivalent (mind. jährlich).' },
+  { key: 'immobilie',     label: 'Immobilie / Einheit',   icon: '🏠', kontrollintervallMonate: 12, hinweis: 'Kein einheitliches Intervall — je nach Gewerk (Heizung, Rauchmelder …).' },
+  { key: 'baum',          label: 'Baum',                  icon: '🌳', kontrollintervallMonate: 12, hinweis: 'FLL-Baumkontrolle regelmäßig (1–2×/Jahr).' },
+  { key: 'feuerloescher', label: 'Feuerlöscher',          icon: '🧯', kontrollintervallMonate: 24, hinweis: 'Prüfung alle 2 Jahre (DIN 14406-4).' },
+  { key: 'sonstiges',     label: 'Sonstiges',             icon: '📦', kontrollintervallMonate: 12, hinweis: 'Individuelles Intervall setzen.' },
+];
+
+export function objektTyp(key: string): ObjektTyp | undefined {
+  return OBJEKT_TYPEN.find((t) => t.key === key);
+}
+export function objektTypByLabel(label: string): ObjektTyp | undefined {
+  return OBJEKT_TYPEN.find((t) => t.label === label);
+}
