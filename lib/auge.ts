@@ -263,6 +263,25 @@ export function augeSchlagkartei(d: { anzahlSchlaege: number; flaecheGesamt: num
   return { klartext: `Dokumentation vollständig und fristgerecht — ${d.flaecheGesamt} ha sauber erfasst.`, punkte, stimmung: 'gut' };
 }
 
+/** Tierbestand: offene und überfällige HIT-Meldungen. */
+export function augeTierbestand(d: { anzahlGruppen: number; tiereGesamt: number; offeneMeldungen: number; ueberfaellig: number }): AugeErgebnis {
+  if (d.anzahlGruppen === 0) {
+    return { klartext: 'Noch kein Bestand — leg deine erste Tiergruppe mit VVVO-Nummer an und dokumentiere Zu- und Abgänge.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.tiereGesamt} Tiere in ${d.anzahlGruppen} Gruppe(n).`];
+  if (d.ueberfaellig > 0) {
+    return {
+      klartext: `${d.ueberfaellig} HIT-Meldung(en) überfällig (älter als die 7-Tage-Frist) — umgehend an HI-Tier melden, sonst drohen Sanktionen.`,
+      punkte: [...punkte, `${d.offeneMeldungen} offene Meldung(en) gesamt.`],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.offeneMeldungen > 0) {
+    return { klartext: `${d.offeneMeldungen} Bewegung(en) noch nicht an HIT gemeldet — innerhalb der 7-Tage-Frist erledigen.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: 'Alle Bewegungen gemeldet — Bestand HIT-konform.', punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
