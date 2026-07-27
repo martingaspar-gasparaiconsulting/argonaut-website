@@ -147,6 +147,7 @@ export default function ForstNachweisePage() {
         <Link href="/dashboard/forst/einsatzmittel" style={styles.subnavLink}>Einsatzmittel &amp; Sätze</Link>
         <Link href="/dashboard/forst/auftraege" style={styles.subnavLink}>Aufträge</Link>
         <span style={styles.subnavAktiv}>Nachweise</span>
+        <Link href="/dashboard/forst/verkehrssicherung" style={styles.subnavLink}>Verkehrssicherung</Link>
       </div>
       <p style={styles.sub}>
         Qualifikationen &amp; Pflicht-Nachweise je Mitarbeiter — Motorsägenschein, Erste-Hilfe, PSA, SVLFG. Ampel warnt vor Ablauf.

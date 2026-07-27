@@ -142,6 +142,7 @@ export default function ForstPage() {
         <Link href="/dashboard/forst/einsatzmittel" style={styles.subnavLink}>Einsatzmittel &amp; Sätze</Link>
         <Link href="/dashboard/forst/auftraege" style={styles.subnavLink}>Aufträge</Link>
         <Link href="/dashboard/forst/nachweise" style={styles.subnavLink}>Nachweise</Link>
+        <Link href="/dashboard/forst/verkehrssicherung" style={styles.subnavLink}>Verkehrssicherung</Link>
       </div>
       <p style={styles.sub}>
         Bäume je Kunde/Objekt mit Zustand und Kontrollintervall — die Grundlage für Verkehrssicherung und Fällaufträge.
