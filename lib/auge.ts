@@ -176,6 +176,24 @@ export function augeRezeptur(d: { we: number; kostenPortion: number | null; food
   return { klartext: 'Wareneinsatz steht — hinterlege Portionen + Ziel-Food-Cost, dann bekommst du einen Verkaufspreis-Vorschlag.', punkte, stimmung: 'neutral' };
 }
 
+/** Chargen/HACCP: abgelaufene/bald ablaufende Chargen, gesperrte, fällige Kontrollen. */
+export function augeHaccp(d: { abgelaufen: number; bald: number; gesperrt: number; kontrollenFaellig: number }): AugeErgebnis {
+  const punkte: string[] = [];
+  if (d.gesperrt > 0) punkte.push(`${d.gesperrt} Charge(n) gesperrt.`);
+  if (d.abgelaufen > 0 || d.kontrollenFaellig > 0) {
+    const teile: string[] = [];
+    if (d.abgelaufen > 0) teile.push(`${d.abgelaufen} Charge(n) über MHD`);
+    if (d.kontrollenFaellig > 0) teile.push(`${d.kontrollenFaellig} HACCP-Kontrolle(n) fällig`);
+    return {
+      klartext: `${teile.join(' und ')} — jetzt handeln, bevor es teuer oder unsicher wird.`,
+      punkte: [...punkte, ...(d.bald > 0 ? [`${d.bald} Charge(n) laufen in Kürze ab.`] : [])],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.bald > 0) return { klartext: `Nichts überfällig, aber ${d.bald} Charge(n) laufen bald ab — einplanen oder verbrauchen.`, punkte, stimmung: 'neutral' };
+  return { klartext: 'Chargen frisch, Kontrollen im Plan — sauber.', punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };
