@@ -140,6 +140,7 @@ export default function ForstPage() {
       <div style={styles.subnav}>
         <span style={styles.subnavAktiv}>Baumkataster</span>
         <Link href="/dashboard/forst/einsatzmittel" style={styles.subnavLink}>Einsatzmittel &amp; Sätze</Link>
+        <Link href="/dashboard/forst/auftraege" style={styles.subnavLink}>Aufträge</Link>
       </div>
       <p style={styles.sub}>
         Bäume je Kunde/Objekt mit Zustand und Kontrollintervall — die Grundlage für Verkehrssicherung und Fällaufträge.
