@@ -163,6 +163,19 @@ export function augeAufwand(d: { betragOffen: number; anzahlOffen: number; stund
   return { klartext: 'Kein offener Aufwand — alles fakturiert. Sauber.', punkte, stimmung: 'gut' };
 }
 
+/** Rezeptur: Wareneinsatz, Kosten je Portion, fairer Verkaufspreis (Food-Cost). */
+export function augeRezeptur(d: { we: number; kostenPortion: number | null; foodcostZiel: number | null; vk: number | null; hatZutaten: boolean }): AugeErgebnis {
+  if (!d.hatZutaten || d.we <= 0) {
+    return { klartext: 'Erfasse Zutaten mit Preisen — dann rechne ich dir Wareneinsatz, Kosten je Portion und einen fairen Verkaufspreis aus.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`Wareneinsatz gesamt: ${eur(d.we)}.`];
+  if (d.kostenPortion != null) punkte.push(`Kosten je Portion: ${eur(d.kostenPortion)}.`);
+  if (d.vk != null && d.foodcostZiel != null) {
+    return { klartext: `Für ${d.foodcostZiel}% Food-Cost solltest du je Portion mindestens ${eur(d.vk)} netto verlangen.`, punkte, stimmung: 'gut' };
+  }
+  return { klartext: 'Wareneinsatz steht — hinterlege Portionen + Ziel-Food-Cost, dann bekommst du einen Verkaufspreis-Vorschlag.', punkte, stimmung: 'neutral' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };

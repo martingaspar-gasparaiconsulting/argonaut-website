@@ -130,6 +130,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '⚖️ Kanzlei & Steuer', href: '/dashboard/kanzlei', modul: 'kanzlei', ebene: 3, gruppe: 'betrieb' },
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
   { label: '🥫 Lebensmittel', href: '/dashboard/lebensmittel', modul: 'lebensmittel', ebene: 3, gruppe: 'betrieb' },
+  { label: '🧮 Rezeptur & Ausbeute', href: '/dashboard/rezeptur', modul: 'rezeptur', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Landwirtschaft', href: '/dashboard/landwirtschaft', modul: 'landwirtschaft', ebene: 3, gruppe: 'betrieb' },
   { label: '🐾 Tier-Fachpaket', href: '/dashboard/tier', modul: 'tier', ebene: 3, gruppe: 'betrieb' },
   { label: '🤝 Verein & Sozial', href: '/dashboard/verein', modul: 'verein', ebene: 3, gruppe: 'betrieb' },
