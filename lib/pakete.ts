@@ -33,6 +33,7 @@ export const KERN_MODULE: string[] = [
   'finanzen',     // 💶 Finanzen
   'gobd',         // 🗂 GoBD
   'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
+  'objekte',      // 🏛 Objekt-/Asset-Register (universelles Objekt-Register)
 ];
 
 export type BranchenPaket = {

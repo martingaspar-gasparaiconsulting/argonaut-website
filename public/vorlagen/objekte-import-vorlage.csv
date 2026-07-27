@@ -1,0 +1,4 @@
+typ;bezeichnung;gruppe;standort;hersteller;kennung;zustand;kontrollintervall_monate;letzte_kontrolle;anschaffungsdatum;anschaffungswert;notiz
+Maschine;Bagger CAT 320;Fuhrpark;Halle 2;Caterpillar;CAT-320-2019;gut;12;2026-02-01;2019-05-10;145000;Jaehrliche UVV-Pruefung
+Feuerloescher;Feuerloescher Halle 1;Standort Nord;Eingang Halle 1;Gloria;FL-001;gut;24;2025-05-01;2020-01-01;80;
+Aufzug;Personenaufzug Haus A;Objekt Musterstr. 5;;ThyssenKrupp;TK-AZ-77;beobachten;12;2026-01-15;2015-03-01;42000;Zwischenpruefung faellig
