@@ -91,6 +91,7 @@ export default function ObjekteRegister() {
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<FormState>(LEER);
   const [speichert, setSpeichert] = useState(false);
+  const [wartungBusy, setWartungBusy] = useState<string | null>(null);
   const heute = heuteLokal();
 
   const laden_ = useCallback(async () => {
@@ -193,6 +194,35 @@ export default function ObjekteRegister() {
     } catch (e: unknown) { setFehler('Archivieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
 
+  // --- Wartungsvertrag aus einem Objekt anlegen (Block H · Baustein-1-Andock) ---
+  async function wartungAusObjekt(a: Asset) {
+    if (!uid) return;
+    if (a.wartungsvertrag_id) { setOk('Dieses Objekt hat bereits einen Wartungsvertrag — zu finden unter 🔧 Wartung.'); return; }
+    const kunde = gruppeName(a.gruppe_id) || a.standort || null;
+    if (!window.confirm(
+      `Für „${a.bezeichnung}" einen Wartungsvertrag anlegen?\n\n` +
+      `• Intervall: alle ${a.kontrollintervall_monate || 12} Monate\n` +
+      `• Nächste Fälligkeit: ${a.naechste_kontrolle ? d(a.naechste_kontrolle) : 'offen'}\n\n` +
+      `Er erscheint unter 🔧 Wartung und fließt in Rechnung + Wiederkehr-Cockpit.`
+    )) return;
+    setWartungBusy(a.id); setFehler(null); setOk(null);
+    try {
+      const { data: w, error: wErr } = await supabase.from('wartungsvertraege').insert({
+        owner_user_id: uid, titel: a.bezeichnung, kunde_name: kunde, kontakt_id: a.kontakt_id,
+        status: 'aktiv', beginn_am: a.letzte_kontrolle || null, intervall_monate: a.kontrollintervall_monate || 12,
+        letzte_wartung_am: a.letzte_kontrolle || null, naechste_faelligkeit_am: a.naechste_kontrolle || null,
+        erinnerung_tage_vorher: 30, aktualisiert_am: new Date().toISOString(),
+      }).select('id').single();
+      if (wErr || !w) throw wErr ?? new Error('Wartung fehlgeschlagen');
+      const { error: uErr } = await supabase.from('assets').update({ wartungsvertrag_id: w.id, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
+      if (uErr) throw uErr;
+      setOk(`Wartungsvertrag für „${a.bezeichnung}" angelegt — unter 🔧 Wartung. Betrag netto dort ergänzen, dann läuft die Auto-Abrechnung.`);
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Wartung anlegen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setWartungBusy(null); }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Register</div>
@@ -285,6 +315,11 @@ export default function ObjekteRegister() {
                       </td>
                       <td style={{ ...styles.td, color: C.textDim }}>{alter != null ? `${alter} J.` : '—'}{a.anschaffungswert != null ? <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)' }}>{eur(a.anschaffungswert)}</div> : null}</td>
                       <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {a.wartungsvertrag_id ? (
+                          <a href="/dashboard/wartung" style={{ ...styles.miniBtn, display: 'inline-block', color: C.green, borderColor: `${C.green}55`, textDecoration: 'none' }} title="Wartungsvertrag verknüpft">🔧 Wartung ✓</a>
+                        ) : (
+                          <button onClick={() => wartungAusObjekt(a)} disabled={wartungBusy === a.id} style={{ ...styles.miniBtn, color: C.gold, borderColor: `${C.gold}55` }} title="Wartungsvertrag aus diesem Objekt anlegen">{wartungBusy === a.id ? '…' : '🔧 Wartung'}</button>
+                        )}
                         <button onClick={() => bearbeiten(a)} style={styles.miniBtn}>Bearbeiten</button>
                         <button onClick={() => archivToggle(a)} style={styles.miniBtn}>{a.archiviert ? 'Reaktivieren' : 'Archiv'}</button>
                       </td>
