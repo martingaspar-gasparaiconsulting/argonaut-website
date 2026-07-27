@@ -243,22 +243,40 @@ export default function AdminTenants() {
             TENANTS &amp; MODULE
           </h1>
         </div>
-        <a
-          href="/admin/command-center"
-          style={{
-            fontFamily: mono,
-            fontSize: 12,
-            letterSpacing: '0.1em',
-            color: GOLD,
-            border: `1px solid ${GOLD}66`,
-            borderRadius: 6,
-            padding: '8px 16px',
-            textDecoration: 'none',
-            background: `${GOLD}12`,
-          }}
-        >
-          ‹ COMMAND CENTER
-        </a>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href="/admin/abo-einzug"
+            style={{
+              fontFamily: mono,
+              fontSize: 12,
+              letterSpacing: '0.1em',
+              color: CYAN,
+              border: `1px solid ${CYAN}66`,
+              borderRadius: 6,
+              padding: '8px 16px',
+              textDecoration: 'none',
+              background: `${CYAN}12`,
+            }}
+          >
+            💶 ABO-EINZUG
+          </a>
+          <a
+            href="/admin/command-center"
+            style={{
+              fontFamily: mono,
+              fontSize: 12,
+              letterSpacing: '0.1em',
+              color: GOLD,
+              border: `1px solid ${GOLD}66`,
+              borderRadius: 6,
+              padding: '8px 16px',
+              textDecoration: 'none',
+              background: `${GOLD}12`,
+            }}
+          >
+            ‹ COMMAND CENTER
+          </a>
+        </div>
       </div>
 
       {/* ---- Neuer Kunde: einladen & Branche freischalten (Baustein 2) ---- */}
