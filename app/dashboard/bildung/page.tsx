@@ -15,6 +15,7 @@ import {
   zaehleKurse, zertifikatBerechtigt,
 } from '@/lib/kurse';
 import { augeKurse } from '@/lib/auge';
+import { teilnahmebescheinigungPdf } from '@/lib/zertifikat';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -40,6 +41,7 @@ const AN_STATUS = ['angemeldet', 'bestaetigt', 'teilgenommen', 'storniert', 'war
 
 export default function BildungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [kurse, setKurse] = useState<Kurs[]>([]);
   const [anm, setAnm] = useState<Anmeldung[]>([]);
   const [termine, setTermine] = useState<Termin[]>([]);
@@ -70,6 +72,9 @@ export default function BildungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const name = [m.firmenname, m.firma, m.company, m.full_name, m.name].find((x) => typeof x === 'string' && x.trim());
+      setAussteller(typeof name === 'string' ? name : null);
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -146,6 +151,28 @@ export default function BildungPage() {
       { onConflict: 'termin_id,anmeldung_id' },
     );
     if (!error) await laden_();
+  }
+
+  async function zertifikatErstellen(a: Anmeldung) {
+    if (!aktiv) return;
+    setFehler(null); setOk(null);
+    teilnahmebescheinigungPdf({
+      teilnehmer: a.name,
+      kurstitel: aktiv.titel,
+      start: aktiv.start_am,
+      ende: aktiv.ende_am,
+      ort: aktiv.ort,
+      dozent: aktiv.dozent,
+      termineGesamt: aktivTermine.length,
+      termineAnwesend: anwesendCount(a.id),
+      ausstellungsdatum: heute(),
+      aussteller,
+    });
+    if (!a.zertifikat_am) {
+      const { error } = await supabase.from('bildung_anmeldungen').update({ zertifikat_am: heute() }).eq('id', a.id);
+      if (!error) await laden_();
+    }
+    setOk(`Teilnahmebescheinigung für ${a.name} erstellt (PDF-Download).`);
   }
 
   async function rechnungErstellen(a: Anmeldung) {
@@ -250,6 +277,8 @@ export default function BildungPage() {
                           <select style={styles.statusSelect} value={a.status} onChange={(e) => anmStatus(a, e.target.value)}>
                             {AN_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
+                          {aktiv.zertifikat_aktiv && (a.status === 'teilgenommen' || zert) &&
+                            <button style={styles.zertBtn} onClick={() => zertifikatErstellen(a)}>🎓 Bescheinigung</button>}
                           {a.abgerechnet
                             ? <span style={styles.badgeOk}>✓ berechnet</span>
                             : <button style={styles.rechnungBtnSmall} onClick={() => rechnungErstellen(a)}>→ Rechnung</button>}
@@ -348,6 +377,7 @@ const styles: Record<string, CSSProperties> = {
   statusSelect: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, fontFamily: 'inherit' },
   rechnungBtnSmall: { background: 'rgba(76,175,125,0.12)', color: C.green, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   nachrueckBtn: { background: 'rgba(201,168,76,0.14)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '6px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  zertBtn: { background: 'rgba(0,229,255,0.1)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 8, padding: '6px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   zertTag: { display: 'inline-block', border: `1px solid ${C.cyan}`, color: C.cyan, borderRadius: 999, padding: '2px 9px', fontSize: 11, fontWeight: 700, marginLeft: 6 },
   badgeOk: { display: 'inline-block', border: `1px solid ${C.green}`, color: C.green, borderRadius: 999, padding: '3px 10px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 6 },
   dazuBtn: { background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '9px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
