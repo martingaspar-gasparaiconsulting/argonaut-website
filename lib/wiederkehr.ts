@@ -279,3 +279,44 @@ export function zaehleFaelligkeiten(
   }
   return summe;
 }
+
+// ============================================================================
+// BLOCK E · Branchen-Vorlagen — Wiederkehr-Typen als Startpunkt.
+//
+// Jede Vorlage fuellt einen NEUEN Wartungsvertrag mit branchentypischen
+// Standardwerten (Titel, Intervall, Erinnerung, ggf. passendes Pruefprotokoll).
+// Der eigentliche Reichweiten-Hebel: ein Klick, und der Betrieb hat den
+// richtigen Wiederkehr-Typ. Rein Daten — die UI wendet sie an. Erweiterbar.
+//
+// Rechtlich verifizierte Fristen (WebSearch 27.07.2026):
+//  - Feuerloescher: Pruefung alle 2 Jahre (24 Mon.) nach DIN 14406-4.
+//  - DGUV V3, Heizung, Aufzug: Standard = jaehrlich, aber betriebs-/
+//    gefaehrdungsabhaengig — daher als anpassbarer Default (12 Mon.) gesetzt.
+// ============================================================================
+
+export interface WartungVorlage {
+  key: string;
+  branche: string;
+  icon: string;
+  titel: string;
+  intervallMonate: number;
+  erinnerungTage: number;
+  /** Passt zu den PRUEF_VORLAGEN im Wartungs-Protokoll (dguv | heizung | allgemein). */
+  pruefVorlage?: 'dguv' | 'heizung' | 'allgemein';
+  hinweis: string;
+}
+
+export const WARTUNG_VORLAGEN: WartungVorlage[] = [
+  { key: 'galabau_pflege', branche: 'GaLaBau / Grünpflege', icon: '🌿', titel: 'Grünpflege-Turnus', intervallMonate: 1, erinnerungTage: 7, hinweis: 'Monatlich wiederkehrende Pflege (mähen, schneiden, pflegen) — v. a. in der Saison.' },
+  { key: 'dguv_echeck', branche: 'Elektro / DGUV V3', icon: '⚡', titel: 'DGUV V3 Prüfung (E-Check)', intervallMonate: 12, erinnerungTage: 30, pruefVorlage: 'dguv', hinweis: 'Wiederkehrende Prüfung elektrischer Betriebsmittel. Intervall gefährdungsabhängig anpassen (Baustelle kürzer, Büro länger).' },
+  { key: 'shk_heizung', branche: 'SHK / Heizung', icon: '🔥', titel: 'Heizungs-Wartungsvertrag', intervallMonate: 12, erinnerungTage: 30, pruefVorlage: 'heizung', hinweis: 'Jährliche Heizungswartung mit Dichtheits- und Funktionsprüfung.' },
+  { key: 'retainer', branche: 'Agentur / IT / MSP', icon: '🔁', titel: 'Monats-Retainer', intervallMonate: 1, erinnerungTage: 7, hinweis: 'Monatlich wiederkehrende Betreuungspauschale (Support, Wartung, Leistungskontingent).' },
+  { key: 'miete_leasing', branche: 'Vermietung / Leasing', icon: '📄', titel: 'Miet-/Leasingrate', intervallMonate: 1, erinnerungTage: 14, hinweis: 'Wiederkehrende Miet- oder Leasingrate.' },
+  { key: 'saison', branche: 'Landwirt / Winterdienst', icon: '🌾', titel: 'Saison-Vertrag', intervallMonate: 12, erinnerungTage: 30, hinweis: 'Saisonale wiederkehrende Leistung (z. B. Winterdienst, Lohnarbeit).' },
+  { key: 'aufzug', branche: 'Aufzug / techn. Anlage', icon: '🛗', titel: 'Aufzug-/Anlagenprüfung', intervallMonate: 12, erinnerungTage: 30, pruefVorlage: 'allgemein', hinweis: 'Wiederkehrende Prüfung/Wartung technischer Anlagen (Aufzug i. d. R. jährlich, BetrSichV).' },
+  { key: 'brandschutz', branche: 'Brandschutz', icon: '🧯', titel: 'Feuerlöscher-Prüfung', intervallMonate: 24, erinnerungTage: 30, pruefVorlage: 'allgemein', hinweis: 'Feuerlöscher-Prüfung alle 2 Jahre (DIN 14406-4).' },
+];
+
+export function wartungVorlage(key: string): WartungVorlage | undefined {
+  return WARTUNG_VORLAGEN.find((v) => v.key === key);
+}

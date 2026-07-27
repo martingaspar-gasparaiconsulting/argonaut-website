@@ -27,6 +27,7 @@ import {
   ampelSchwellen,
   type WartungBasis,
 } from '../_components/wartungsLogik';
+import { WARTUNG_VORLAGEN, wartungVorlage } from '@/lib/wiederkehr';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -249,6 +250,18 @@ export default function WartungPage() {
   function waehleKontakt(id: string) {
     const k = kontakte.find((x) => x.id === id);
     setForm((f) => ({ ...f, kontakt_id: id, kunde_name: k ? k.name : f.kunde_name }));
+  }
+
+  // Branchen-Vorlage anwenden: belegt Intervall + Erinnerung (und Titel, falls leer).
+  function vorlageAnwenden(key: string) {
+    const v = wartungVorlage(key);
+    if (!v) return;
+    setForm((f) => ({
+      ...f,
+      titel: f.titel.trim() ? f.titel : v.titel,
+      intervall_monate: String(v.intervallMonate),
+      erinnerung_tage_vorher: String(v.erinnerungTage),
+    }));
   }
 
   // --- Speichern (mit Bestätigung vor DB-Schreiben) -----------------------
@@ -568,6 +581,14 @@ export default function WartungPage() {
             <h2 style={styles.modalTitel}>{form.id ? 'Vertrag bearbeiten' : 'Neuer Wartungsvertrag'}</h2>
 
             <div style={styles.formGrid}>
+              {!form.id && (
+                <Feld label="🏭 Aus Branchen-Vorlage starten (optional)" voll>
+                  <select style={styles.input} defaultValue="" onChange={(e) => { vorlageAnwenden(e.target.value); e.currentTarget.value = ''; }}>
+                    <option value="">— Vorlage wählen (füllt Intervall & Erinnerung) —</option>
+                    {WARTUNG_VORLAGEN.map((v) => <option key={v.key} value={v.key}>{v.icon} {v.branche} — {v.titel}</option>)}
+                  </select>
+                </Feld>
+              )}
               <Feld label="Titel *" voll>
                 <input style={styles.input} value={form.titel} onChange={(e) => setF('titel', e.target.value)} placeholder="z. B. Wartung Heizungsanlage Halle 2" />
               </Feld>
