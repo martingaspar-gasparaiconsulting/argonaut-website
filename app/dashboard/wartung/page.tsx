@@ -54,6 +54,8 @@ type WartungRow = WartungBasis & {
   naechste_faelligkeit_am: string | null;
   erinnerung_tage_vorher: number;
   betrag_netto: number | null;
+  mwst_satz: number | null;
+  letzte_abrechnung_am: string | null;
   notiz: string | null;
   archiviert: boolean;
 };
@@ -155,6 +157,10 @@ export default function WartungPage() {
   const [historieFor, setHistorieFor] = useState<WartungRow | null>(null);
   const [historieRows, setHistorieRows] = useState<HistorieRow[]>([]);
   const [historieBusy, setHistorieBusy] = useState(false);
+
+  // Rechnung aus Wartungsvertrag (Block A)
+  const [rechnungBusy, setRechnungBusy] = useState<string | null>(null);
+  const [rechnungMsg, setRechnungMsg] = useState<string | null>(null);
 
   // Angemeldeten Chef ermitteln
   useEffect(() => {
@@ -364,6 +370,36 @@ export default function WartungPage() {
     }
   }
 
+  // --- Rechnung aus Wartungsvertrag erzeugen (Block A) --------------------
+  async function rechnungErzeugen(r: WartungRow, erzwingen = false) {
+    if (!r.betrag_netto || r.betrag_netto <= 0) {
+      setFehler('Kein Betrag hinterlegt — bitte erst „Betrag netto" im Vertrag eintragen.');
+      return;
+    }
+    setRechnungBusy(r.id); setFehler(null); setRechnungMsg(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-wartung', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wartungId: r.id, erzwingen }),
+      });
+      const j = await res.json();
+      if (res.status === 409 && j?.sperre) {
+        // Doppel-Abrechnungs-Schutz: nachfragen und ggf. erzwingen.
+        setRechnungBusy(null);
+        if (window.confirm(`${j.error}\n\nTrotzdem jetzt eine weitere Rechnung erzeugen?`)) {
+          await rechnungErzeugen(r, true);
+        }
+        return;
+      }
+      if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
+      setRechnungMsg(`Rechnung aus „${r.titel}" erstellt — liegt unter 🧾 Rechnungen.`);
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Rechnung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setRechnungBusy(null); }
+  }
+
   const summe = zaehleNachStatus(liste);
   const kiKontext = liste.length === 0
     ? ''
@@ -408,6 +444,11 @@ export default function WartungPage() {
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {rechnungMsg && (
+        <div style={{ color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
+          {rechnungMsg}
+        </div>
+      )}
 
       {/* Liste */}
       <div style={styles.card}>
@@ -453,10 +494,20 @@ export default function WartungPage() {
                         <div style={{ marginBottom: 4 }}>{datumHuebsch(anzeigeDatum)}</div>
                         <FristAmpel datum={anzeigeDatum} gelbAbTagen={gelbAb} rotAbTagen={rotAb} dunkel variante="punkt" />
                       </td>
-                      <td style={{ ...styles.td, textAlign: 'right' }}>{eur(r.betrag_netto)}</td>
+                      <td style={{ ...styles.td, textAlign: 'right' }}>
+                        {eur(r.betrag_netto)}
+                        {r.letzte_abrechnung_am && (
+                          <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, marginTop: 2 }}>
+                            zuletzt abger.: {datumHuebsch(r.letzte_abrechnung_am)}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {!zeigeArchiv && aktiv && (
                           <button onClick={() => protokollOeffnen(r)} style={styles.miniBtn} title="Wartung durchführen & Prüfprotokoll erfassen">✓ Wartung + Protokoll</button>
+                        )}
+                        {!zeigeArchiv && aktiv && (r.betrag_netto ?? 0) > 0 && (
+                          <button onClick={() => rechnungErzeugen(r)} disabled={rechnungBusy === r.id} style={{ ...styles.miniBtn, background: 'rgba(201,168,76,0.14)', color: C.gold, borderColor: 'rgba(201,168,76,0.4)' }} title="Aus diesem Wartungsvertrag eine Rechnung erzeugen">{rechnungBusy === r.id ? '…' : '→ Rechnung'}</button>
                         )}
                         <button onClick={() => historieOeffnen(r)} style={styles.miniBtnGhost} title="Bisherige Wartungen & Protokolle">Historie</button>
                         <button onClick={() => bearbeiten(r)} style={styles.miniBtnGhost}>Bearbeiten</button>
