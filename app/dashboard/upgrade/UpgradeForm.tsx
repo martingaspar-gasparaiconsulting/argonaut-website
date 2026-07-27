@@ -1,440 +1,196 @@
 'use client'
 
+// ============================================================================
+// ARGONAUT OS · app/dashboard/upgrade/UpgradeForm.tsx  (Schritt 5 · Teil 1)
+// INTERNES Upgrade — KEIN Stripe. Mitarbeiterzahl -> Stufe (lib/tarif.ts),
+// Sitze dazubuchen, Live-Preis, SEPA-Mandat erteilen -> /api/kunde-abo.
+// Der Einzug läuft über die Betreiber-Sammellastschrift (Teil 2); hier wird
+// nichts abgebucht, sondern das Abo gemeldet.
+// ============================================================================
+
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { stufeFuerMitarbeiter, sitzPreis, monatspreis, euro } from '@/lib/tarif'
+import { ibanGueltig } from '@/lib/sepa'
 
-// ─── Types & config ───────────────────────────────────────────────────────────
-
-type PlanId = 'starter' | 'professional' | 'business' | 'enterprise'
-
-interface PlanConfig {
-  id:          PlanId
-  name:        string
-  netPrice:    number          // EUR net
-  description: string
-  features:    string[]
-  color:       string
-  highlight?:  boolean
+const C = {
+  navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
+  text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666',
 }
 
-const VAT      = 0.19
-const BASIS_FEE = 1500   // mandatory for all customers
+export default function UpgradeForm({ userEmail, userName }: { userEmail: string; userName: string; currentPlan?: string }) {
+  const [ma, setMa] = useState(1)
+  const [voll, setVoll] = useState(1)
+  const [std, setStd] = useState(0)
+  const [self, setSelf] = useState(0)
+  const [kontoinhaber, setKontoinhaber] = useState(userName || '')
+  const [iban, setIban] = useState('')
+  const [bic, setBic] = useState('')
+  const [mandat, setMandat] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<null | { stufe: string; brutto: number; onboarding: number; bestand: boolean }>(null)
 
-const PLANS: PlanConfig[] = [
-  {
-    id:         'starter',
-    name:       'Starter',
-    netPrice:   1500,
-    description: 'Einstieg in die KI-Automatisierung',
-    features:   ['Bis zu 5 Automatisierungen', '2 KI-Agenten', 'E-Mail-Support', 'Basis-Reporting'],
-    color:      '#6b7280',
-  },
-  {
-    id:         'professional',
-    name:       'Professional',
-    netPrice:   2500,
-    description: 'Für wachsende Unternehmen',
-    features:   ['Bis zu 20 Automatisierungen', '5 KI-Agenten', 'Priority-Support', 'Erweitertes Reporting'],
-    color:      '#C9A84C',
-    highlight:  true,
-  },
-  {
-    id:         'business',
-    name:       'Business',
-    netPrice:   4500,
-    description: 'Für etablierte Betriebe',
-    features:   ['Bis zu 50 Automatisierungen', '8 KI-Agenten', 'Dedizierter Ansprechpartner', 'Custom Integrations'],
-    color:      '#4f94e8',
-  },
-  {
-    id:         'enterprise',
-    name:       'Enterprise',
-    netPrice:   7500,
-    description: 'Für höchste Anforderungen',
-    features:   ['Unbegrenzte Automatisierungen', 'Alle KI-Agenten', 'SLA-Garantie', 'On-Premise möglich'],
-    color:      '#a855f7',
-  },
-]
+  const stufe = stufeFuerMitarbeiter(ma)
+  const solo = !!stufe.allIn
+  const sitze = { voll, standard: std, self_service: self }
+  const preis = monatspreis(stufe.key, sitze)
+  const vp = sitzPreis('voll', stufe.key), sp = sitzPreis('standard', stufe.key), sfp = sitzPreis('self_service', stufe.key)
 
-function gross(net: number) { return Math.round(net * (1 + VAT)) }
-function fmt(n: number)     { return n.toLocaleString('de-DE') }
-function total(planNet: number) { return BASIS_FEE + planNet }
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
-interface Props {
-  userEmail:   string
-  userName:    string
-  currentPlan: string
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
-export default function UpgradeForm({ userEmail, userName, currentPlan }: Props) {
-  const router = useRouter()
-
-  const [selectedPlan,    setSelectedPlan]    = useState<PlanId>('professional')
-  const [iban,            setIban]            = useState('')
-  const [accountHolder,   setAccountHolder]   = useState(userName)
-  const [mandateAccepted, setMandateAccepted] = useState(false)
-  const [loading,         setLoading]         = useState(false)
-  const [error,           setError]           = useState<string | null>(null)
-  const [success,         setSuccess]         = useState(false)
-
-  const plan = PLANS.find(p => p.id === selectedPlan)!
-
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-
-    if (!mandateAccepted) {
-      setError('Bitte akzeptieren Sie das SEPA-Lastschriftmandat.')
-      return
-    }
-
-    const cleanIban = iban.replace(/\s/g, '').toUpperCase()
-    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(cleanIban)) {
-      setError('Bitte geben Sie eine gültige IBAN ein (z. B. DE89 3704 0044 0532 0130 00).')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const res = await fetch('/api/stripe/create-subscription', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ iban: cleanIban, accountHolderName: accountHolder, plan: selectedPlan }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Ein unbekannter Fehler ist aufgetreten.')
-      setSuccess(true)
-      setTimeout(() => router.push('/dashboard'), 2500)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten.')
-    } finally {
-      setLoading(false)
-    }
+  function fillMix() {
+    const v = Math.max(1, Math.round(ma * 0.16))
+    const s = Math.round(ma * 0.32)
+    const se = Math.max(0, ma - v - s)
+    setVoll(v); setStd(s); setSelf(se)
   }
 
-  // ── Success screen ─────────────────────────────────────────────────────────
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!kontoinhaber.trim()) { setError('Bitte den Kontoinhaber angeben.'); return }
+    if (!ibanGueltig(iban)) { setError('Bitte eine gültige IBAN angeben.'); return }
+    if (!mandat) { setError('Bitte das SEPA-Lastschriftmandat bestätigen.'); return }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/kunde-abo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stufe: stufe.key, mitarbeiterAnzahl: ma, sitze,
+          kontoinhaber: kontoinhaber.trim(), iban: iban.replace(/\s+/g, '').toUpperCase(), bic: bic.trim(),
+          mandatAkzeptiert: mandat,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) { setError(json.error || 'Konnte nicht gespeichert werden.'); return }
+      setSuccess({ stufe: json.stufe, brutto: json.monatspreisBrutto, onboarding: json.onboarding, bestand: json.istBestandskunde })
+    } catch {
+      setError('Netzwerkfehler. Bitte später erneut versuchen.')
+    } finally { setLoading(false) }
+  }
+
+  const step: React.CSSProperties = { width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gold}66`, background: 'transparent', color: C.gold, fontSize: 18, cursor: 'pointer', lineHeight: 1 }
+  const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.04)', color: C.text, fontSize: 15, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }
+  const lbl: React.CSSProperties = { display: 'block', fontSize: 12, color: C.textDim, letterSpacing: '.06em', textTransform: 'uppercase', margin: '0 0 6px' }
+
   if (success) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{
-          width: '72px', height: '72px', borderRadius: '50%',
-          background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12L10 17L19 7" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-        <h2 style={{ fontSize: 'clamp(24px, 2.13vw, 34px)', fontWeight: 900, margin: 0, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-          Abonnement aktiviert
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-          Sie werden in Kürze zu Ihrem Dashboard weitergeleitet…
+      <div style={{ textAlign: 'center', padding: '60px 24px', color: C.text, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🔱</div>
+        <h2 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 10px' }}>Abo bestätigt — {success.stufe}</h2>
+        <p style={{ color: C.textDim, maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>
+          Vielen Dank. Ihr Abo über <b style={{ color: C.gold }}>{euro(success.brutto)} brutto / Monat</b> ist hinterlegt und Ihr SEPA-Mandat erteilt.
+          {success.onboarding > 0 ? ` Zzgl. einmaliger Einrichtung ${euro(success.onboarding)}.` : ' Als Bestandskunde fällt kein erneutes Onboarding an.'}
+          {' '}Es wurde noch <b>nichts abgebucht</b> — wir prüfen die Freigabe und melden uns.
         </p>
       </div>
     )
   }
 
+  const Row = ({ label, who, unit, val, set, min = 0 }: { label: string; who: string; unit: number; val: number; set: (n: number) => void; min?: number }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 0', borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontWeight: 700, margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 13, color: C.textDim, margin: '2px 0 0' }}>{who} · je {unit} €</p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <button type="button" onClick={() => set(Math.max(min, val - 1))} style={step} aria-label="weniger">−</button>
+        <span style={{ minWidth: 30, textAlign: 'center', fontWeight: 700 }}>{val}</span>
+        <button type="button" onClick={() => set(val + 1)} style={step} aria-label="mehr">+</button>
+        <span style={{ minWidth: 90, textAlign: 'right', color: C.gold, fontWeight: 700 }}>{(val * unit).toLocaleString('de-DE')} €</span>
+      </div>
+    </div>
+  )
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={submit} style={{ color: C.text, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
 
-      {/* ── Plan selection ─────────────────────────────────────────────────── */}
-      <section style={{ marginBottom: '44px' }}>
-        <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 20px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
-          Plan wählen
-        </h2>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
-          {PLANS.map(p => {
-            const active   = p.id === selectedPlan
-            const isCurrent = p.id === currentPlan
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedPlan(p.id)}
-                style={{
-                  position:     'relative',
-                  padding:      '22px 18px 20px',
-                  borderRadius: '14px',
-                  border:       active ? `2px solid ${p.color}` : '2px solid rgba(255,255,255,0.08)',
-                  background:   active ? `${p.color}11` : 'rgba(255,255,255,0.03)',
-                  cursor:       'pointer',
-                  textAlign:    'left',
-                  color:        '#fff',
-                  transition:   'border-color 0.18s, background 0.18s',
-                }}
-              >
-                {/* "Beliebt" badge */}
-                {p.highlight && (
-                  <span style={{
-                    position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)',
-                    background: '#C9A84C', color: '#0A1628', fontSize: 'clamp(10px, 0.88vw, 14px)', fontWeight: 800,
-                    padding: '3px 12px', borderRadius: '999px', letterSpacing: '0.08em', whiteSpace: 'nowrap',
-                  }}>
-                    BELIEBT
-                  </span>
-                )}
-
-                {/* Header row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, fontFamily: 'var(--font-dm-sans), sans-serif', color: active ? p.color : '#fff' }}>
-                    {p.name}
-                  </span>
-                  {isCurrent && (
-                    <span style={{
-                      fontSize: 'clamp(9px, 0.81vw, 13px)', fontWeight: 700, color: p.color,
-                      background: `${p.color}1a`, border: `1px solid ${p.color}40`,
-                      borderRadius: '999px', padding: '2px 8px', letterSpacing: '0.06em',
-                    }}>
-                      AKTUELL
-                    </span>
-                  )}
-                </div>
-
-                {/* Package price */}
-                <div style={{ marginBottom: '2px' }}>
-                  <span style={{ fontSize: 'clamp(26px, 2.25vw, 36px)', fontWeight: 900, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-                    {fmt(p.netPrice)} €
-                  </span>
-                  <span style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.35)', marginLeft: '4px' }}>/Monat (Paket)</span>
-                </div>
-
-                {/* Basis + total breakdown */}
-                <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', lineHeight: 1.6 }}>
-                  + Basis-Automatisierungen 1.500 €
-                  <span style={{ display: 'block', fontWeight: 700, color: active ? p.color : 'rgba(255,255,255,0.55)', fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: '2px' }}>
-                    = {fmt(total(p.netPrice))} € gesamt netto/Monat
-                  </span>
-                  <span style={{ color: 'rgba(255,255,255,0.25)' }}>
-                    zzgl. 19% MwSt. = {fmt(gross(total(p.netPrice)))} € brutto
-                  </span>
-                </div>
-
-                <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', margin: '0 0 14px', lineHeight: 1.55 }}>
-                  {p.description}
-                </p>
-
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  {p.features.map(f => (
-                    <li key={f} style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
-                        <path d="M2 6.5L5 9.5L11 3.5" stroke={p.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ── Divider ────────────────────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(201,168,76,0.1)', marginBottom: '40px' }} />
-
-      {/* ── SEPA Bankdaten ─────────────────────────────────────────────────── */}
-      <section style={{ marginBottom: '36px' }}>
-        <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 700, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff' }}>
-          Bankverbindung (SEPA-Lastschrift)
-        </h2>
-        <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.35)', margin: '0 0 24px' }}>
-          Der Betrag wird monatlich per SEPA-Lastschrift von Ihrem Konto abgebucht.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Account holder */}
-          <div>
-            <label style={labelStyle}>Kontoinhaber</label>
-            <input
-              type="text"
-              value={accountHolder}
-              onChange={e => setAccountHolder(e.target.value)}
-              placeholder="Vor- und Nachname"
-              required
-              style={inputStyle}
-              onFocus={e  => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)' }}
-              onBlur={e   => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
-            />
+      {/* Betriebsgröße */}
+      <section style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ color: C.textDim }}>Mitarbeiter im Betrieb:</span>
+            <button type="button" onClick={() => setMa(Math.max(1, ma - 1))} style={step} aria-label="weniger">−</button>
+            <span style={{ minWidth: 40, textAlign: 'center', fontWeight: 800, fontSize: 18 }}>{ma}</span>
+            <button type="button" onClick={() => setMa(ma + 1)} style={step} aria-label="mehr">+</button>
           </div>
-
-          {/* IBAN */}
-          <div>
-            <label style={labelStyle}>IBAN</label>
-            <input
-              type="text"
-              value={iban}
-              onChange={e => setIban(e.target.value.toUpperCase())}
-              placeholder="DE89 3704 0044 0532 0130 00"
-              required
-              maxLength={42}
-              style={{ ...inputStyle, letterSpacing: '0.06em', fontFamily: 'ui-monospace, monospace' }}
-              onFocus={e  => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)' }}
-              onBlur={e   => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
-            />
-          </div>
-
-          {/* Email (read-only) */}
-          <div>
-            <label style={labelStyle}>E-Mail (Rechnungsempfänger)</label>
-            <input
-              type="email"
-              value={userEmail}
-              readOnly
-              style={{
-                ...inputStyle,
-                background:  'rgba(255,255,255,0.02)',
-                borderColor: 'rgba(255,255,255,0.06)',
-                color:       'rgba(255,255,255,0.3)',
-                cursor:      'default',
-              }}
-            />
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ margin: 0, fontSize: 12, color: C.cyan, textTransform: 'uppercase', letterSpacing: '.06em' }}>Stufe {stufe.name} · Grundgebühr</p>
+            <p style={{ margin: '2px 0 0', color: C.gold, fontWeight: 800, fontSize: 22 }}>{stufe.grundgebuehr.toLocaleString('de-DE')} €<span style={{ fontSize: 13, color: C.textDim, fontWeight: 400 }}> / Monat</span></p>
           </div>
         </div>
-      </section>
 
-      {/* ── SEPA Mandat ────────────────────────────────────────────────────── */}
-      <section style={{ marginBottom: '32px' }}>
-        <div style={{
-          background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.18)',
-          borderRadius: '12px', padding: '18px 20px',
-        }}>
-          <label style={{ display: 'flex', gap: '14px', cursor: 'pointer', alignItems: 'flex-start' }}>
-            {/* Checkbox */}
-            <div
-              role="checkbox"
-              aria-checked={mandateAccepted}
-              tabIndex={0}
-              onClick={() => setMandateAccepted(v => !v)}
-              onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') setMandateAccepted(v => !v) }}
-              style={{
-                flexShrink:     0,
-                width:          '20px',
-                height:         '20px',
-                borderRadius:   '5px',
-                border:         mandateAccepted ? '2px solid #C9A84C' : '2px solid rgba(255,255,255,0.2)',
-                background:     mandateAccepted ? '#C9A84C' : 'transparent',
-                display:        'flex',
-                alignItems:     'center',
-                justifyContent: 'center',
-                marginTop:      '2px',
-                transition:     'all 0.15s',
-              }}
-            >
-              {mandateAccepted && (
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M1.5 5.5L4.5 8.5L9.5 2.5" stroke="#0A1628" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </div>
-
-            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.75 }}>
-              Ich ermächtige die <strong style={{ color: '#C9A84C', fontWeight: 700 }}>ARGONAUT AI GmbH</strong> (Gläubiger-ID: DE98ZZZ09999999999), Zahlungen
-              von meinem Konto mittels SEPA-Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die auf mein
-              Konto gezogenen Lastschriften einzulösen. Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum,
-              die Erstattung des belasteten Betrages verlangen. Es gelten die Bedingungen meines Kreditinstituts.
-              Die Mandatsreferenz wird separat per E-Mail mitgeteilt.
-            </p>
-          </label>
-        </div>
-      </section>
-
-      {/* ── Error ──────────────────────────────────────────────────────────── */}
-      {error && (
-        <div style={{
-          display: 'flex', gap: '10px', alignItems: 'flex-start',
-          padding: '13px 16px', borderRadius: '10px', marginBottom: '24px',
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-          color: '#f87171', fontSize: 'clamp(13px, 1.13vw, 18px)',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
-            <circle cx="12" cy="12" r="9" stroke="#f87171" strokeWidth="1.8"/>
-            <path d="M12 8v4M12 16v.01" stroke="#f87171" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          {error}
-        </div>
-      )}
-
-      {/* ── Submit ─────────────────────────────────────────────────────────── */}
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          width:          '100%',
-          padding:        '15px 28px',
-          borderRadius:   '10px',
-          border:         'none',
-          background:     loading ? 'rgba(201,168,76,0.45)' : '#C9A84C',
-          color:          '#0A1628',
-          fontSize:       'clamp(15px, 1.31vw, 21px)',
-          fontWeight:     800,
-          letterSpacing:  '0.03em',
-          cursor:         loading ? 'not-allowed' : 'pointer',
-          fontFamily:     'var(--font-dm-sans), sans-serif',
-          transition:     'opacity 0.2s',
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          gap:            '10px',
-        }}
-        onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.9' }}
-        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-      >
-        {loading ? (
-          <>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ animation: 'argSpin 0.9s linear infinite' }}>
-              <circle cx="12" cy="12" r="9" stroke="rgba(10,22,40,0.3)" strokeWidth="2.5"/>
-              <path d="M3 12C3 7.03 7.03 3 12 3" stroke="#0A1628" strokeWidth="2.5" strokeLinecap="round"/>
-            </svg>
-            Abonnement wird erstellt…
-          </>
+        {solo ? (
+          <p style={{ color: C.textDim, margin: '16px 0 0', lineHeight: 1.6 }}>
+            <b style={{ color: C.text }}>SOLO ist all-in:</b> {stufe.grundgebuehr} €/Monat inkl. 1 Voll-Nutzer und KI unbegrenzt — keine zusätzlichen Sitze nötig.
+          </p>
         ) : (
           <>
-            {plan.name} abonnieren — {fmt(total(plan.netPrice))} € netto/Monat
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12H19M13 6l6 6-6 6" stroke="#0A1628" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0 2px' }}>
+              <span style={{ fontSize: 13, color: C.textDim, textTransform: 'uppercase', letterSpacing: '.06em' }}>Sitze dazubuchen</span>
+              <button type="button" onClick={fillMix} style={{ background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 999, padding: '5px 12px', color: C.cyan, fontSize: 13, cursor: 'pointer' }}>Mit typischem Mix füllen</button>
+            </div>
+            <Row label="Voll-Nutzer" who="Chef, GF, Büro, Dispo" unit={vp} val={voll} set={setVoll} min={1} />
+            <Row label="Standard-Nutzer" who="operative Nutzung" unit={sp} val={std} set={setStd} min={0} />
+            <Row label="Self-Service" who="Zeiterfassung & eigene Daten" unit={sfp} val={self} set={setSelf} min={0} />
           </>
         )}
+
+        {/* Preis */}
+        <div style={{ background: 'rgba(201,168,76,0.08)', border: `1px solid ${C.gold}44`, borderRadius: 14, padding: '18px 20px', marginTop: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 12, color: C.cyan, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis</p>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: C.textDim }}>
+              {euro(preis.netto)} netto · zzgl. {euro(preis.mwst)} USt.
+              {' · '}+ einmalige Einrichtung {stufe.abPreis ? 'auf Anfrage' : euro(stufe.onboarding)} (entfällt beim Upgrade als Bestandskunde)
+            </p>
+          </div>
+          <p style={{ fontWeight: 800, fontSize: 'clamp(1.6rem,4vw,2.2rem)', color: C.gold, margin: 0, lineHeight: 1 }}>
+            {euro(preis.brutto)}<span style={{ fontSize: 14, color: C.textDim, fontWeight: 400 }}> brutto / Mon.</span>
+          </p>
+        </div>
+      </section>
+
+      {/* SEPA-Mandat */}
+      <section style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, marginBottom: 20 }}>
+        <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 4px' }}>Bankverbindung (SEPA-Lastschrift)</h3>
+        <p style={{ fontSize: 13, color: C.textDim, margin: '0 0 18px' }}>Der Monatsbeitrag wird per SEPA-Lastschrift von diesem Konto eingezogen.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>Kontoinhaber</label>
+            <input style={inp} value={kontoinhaber} onChange={(e) => setKontoinhaber(e.target.value)} placeholder="Vor- und Nachname / Firma" />
+          </div>
+          <div>
+            <label style={lbl}>IBAN</label>
+            <input style={{ ...inp, fontFamily: 'ui-monospace, monospace', letterSpacing: '.04em' }} value={iban} onChange={(e) => setIban(e.target.value.toUpperCase())} placeholder="DE89 3704 0044 0532 0130 00" maxLength={42} />
+          </div>
+          <div>
+            <label style={lbl}>BIC (optional)</label>
+            <input style={inp} value={bic} onChange={(e) => setBic(e.target.value.toUpperCase())} placeholder="z. B. COBADEFFXXX" />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>E-Mail (Rechnungsempfänger)</label>
+            <input style={{ ...inp, color: C.textDim }} value={userEmail} readOnly />
+          </div>
+        </div>
+
+        <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', margin: '16px 0 0', cursor: 'pointer' }}>
+          <input type="checkbox" checked={mandat} onChange={(e) => setMandat(e.target.checked)} style={{ marginTop: 3, accentColor: C.gold }} />
+          <span style={{ fontSize: 13, color: C.textDim, lineHeight: 1.6 }}>
+            Ich ermächtige die <b style={{ color: C.gold }}>Gaspar AI Consulting</b>, den monatlichen Beitrag mittels SEPA-Lastschrift von meinem Konto einzuziehen, und weise mein Kreditinstitut an, die Lastschriften einzulösen. Ich kann innerhalb von 8 Wochen ab Belastung die Erstattung verlangen. Die Mandatsreferenz wird separat mitgeteilt.
+          </span>
+        </label>
+      </section>
+
+      {error && (
+        <div style={{ padding: '13px 16px', borderRadius: 10, marginBottom: 18, background: 'rgba(224,102,102,0.1)', border: `1px solid ${C.danger}55`, color: '#f0a3a3', fontSize: 14 }}>{error}</div>
+      )}
+
+      <button type="submit" disabled={loading} style={{ width: '100%', padding: '15px 28px', borderRadius: 10, border: 'none', background: loading ? `${C.gold}88` : C.gold, color: C.navy, fontSize: 16, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+        {loading ? 'Wird gespeichert …' : `Abo bestätigen — ${euro(preis.brutto)} brutto / Monat`}
       </button>
-
-      <p style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: 'rgba(255,255,255,0.2)', textAlign: 'center', margin: '14px 0 0', lineHeight: 1.6 }}>
-        Gesamtpreis inkl. Basis-Automatisierungen (1.500 €) + {plan.name}-Paket ({fmt(plan.netPrice)} €) · zzgl. 19% MwSt. · SSL-verschlüsselt · Stripe · Kündigung jederzeit möglich
+      <p style={{ fontSize: 12, color: C.textDim, textAlign: 'center', margin: '12px 0 0', lineHeight: 1.6 }}>
+        Kein Stripe · interner SEPA-Einzug · Es wird jetzt nichts abgebucht — Ihr Abo wird gemeldet und geprüft. Kündigung jederzeit möglich.
       </p>
-
-      <style>{`@keyframes argSpin { to { transform: rotate(360deg); } }`}</style>
     </form>
   )
-}
-
-// ─── Shared input styles ──────────────────────────────────────────────────────
-
-const labelStyle: React.CSSProperties = {
-  display:       'block',
-  fontSize:      'clamp(11px, 0.94vw, 15px)',
-  fontWeight:    700,
-  color:         'rgba(255,255,255,0.45)',
-  letterSpacing: '0.07em',
-  textTransform: 'uppercase',
-  marginBottom:  '8px',
-}
-
-const inputStyle: React.CSSProperties = {
-  width:        '100%',
-  padding:      '13px 15px',
-  borderRadius: '10px',
-  border:       '1px solid rgba(255,255,255,0.1)',
-  background:   'rgba(255,255,255,0.05)',
-  color:        '#fff',
-  fontSize:     'clamp(15px, 1.31vw, 21px)',
-  outline:      'none',
-  boxSizing:    'border-box',
-  fontFamily:   'var(--font-dm-sans), sans-serif',
-  transition:   'border-color 0.15s',
 }
