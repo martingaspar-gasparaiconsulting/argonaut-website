@@ -8,6 +8,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 
@@ -135,7 +136,11 @@ export default function ForstPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.h1}>🌲 Baumkataster</h1>
+      <h1 style={styles.h1}>🌲 Forst & Baumpflege</h1>
+      <div style={styles.subnav}>
+        <span style={styles.subnavAktiv}>Baumkataster</span>
+        <Link href="/dashboard/forst/einsatzmittel" style={styles.subnavLink}>Einsatzmittel &amp; Sätze</Link>
+      </div>
       <p style={styles.sub}>
         Bäume je Kunde/Objekt mit Zustand und Kontrollintervall — die Grundlage für Verkehrssicherung und Fällaufträge.
       </p>
@@ -246,6 +251,9 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
 const styles: Record<string, CSSProperties> = {
   page: { maxWidth: 1020, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
+  subnav: { display: 'flex', gap: 8, margin: '12px 0 4px', flexWrap: 'wrap' },
+  subnavAktiv: { background: C.gold, color: C.navy, borderRadius: 9, padding: '7px 14px', fontSize: 14, fontWeight: 800 },
+  subnavLink: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '7px 14px', fontSize: 14, fontWeight: 700, textDecoration: 'none' },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0' },
 
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 16 },
