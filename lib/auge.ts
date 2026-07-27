@@ -330,6 +330,18 @@ export function augeTour(d: { touren: number; offeneTouren: number; offeneStopps
   return { klartext: 'Alle Stopps bearbeitet — Touren sauber quittiert.', punkte, stimmung: 'gut' };
 }
 
+/** Gutachten: Entwürfe vs. fertige Gutachten. */
+export function augeGutachten(d: { gesamt: number; entwurf: number; fertig: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Gutachten — leg dein erstes an, gliedere es in Befund und Bewertung und rechne das Honorar nach JVEG.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.fertig} fertig · ${d.entwurf} in Arbeit.`];
+  if (d.entwurf > 0) {
+    return { klartext: `${d.entwurf} Gutachten noch im Entwurf — fertigstellen und als PDF ausgeben.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `Alle ${d.gesamt} Gutachten fertiggestellt.`, punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
