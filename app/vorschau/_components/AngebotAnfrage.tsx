@@ -12,6 +12,7 @@
 
 import { useState } from 'react'
 import TerminPicker from './TerminPicker'
+import { stufeFuerMitarbeiter, sitzPreis } from '@/lib/tarif'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
@@ -24,23 +25,13 @@ const DEFAULT_ROLLEN = {
 }
 
 function grundgebuehr(ma: number) {
-  if (ma <= 1) return { name: 'SOLO', fee: 499, solo: true }
-  if (ma <= 9) return { name: 'Mini', fee: 490, solo: false }
-  if (ma <= 24) return { name: 'Klein', fee: 990, solo: false }
-  if (ma <= 99) return { name: 'Mittel', fee: 1990, solo: false }
-  if (ma <= 499) return { name: 'Groß', fee: 3490, solo: false }
-  return { name: 'Enterprise', fee: 5990, solo: false }
+  const s = stufeFuerMitarbeiter(ma)
+  return { name: s.name, fee: s.grundgebuehr, solo: !!s.allIn, key: s.key }
 }
 function setupFee(ma: number) {
-  if (ma <= 1) return '1.500 €'
-  if (ma <= 9) return '2.500 €'
-  if (ma <= 24) return '5.000 €'
-  if (ma <= 99) return '12.000 €'
-  return 'auf Anfrage'
+  const s = stufeFuerMitarbeiter(ma)
+  return s.abPreis ? 'auf Anfrage' : `${fmt(s.onboarding)} €`
 }
-function vollPrice(n: number) { return n <= 20 ? 380 : n <= 100 ? 320 : n <= 500 ? 260 : 190 }
-function stdPrice(n: number) { return n <= 20 ? 170 : n <= 100 ? 145 : n <= 500 ? 120 : 90 }
-function selfPrice(n: number) { return n >= 500 ? 14 : 19 }
 function fmt(n: number) { return n.toLocaleString('de-DE') }
 
 const stepBtn: React.CSSProperties = {
@@ -72,10 +63,13 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
 
   const g = grundgebuehr(ma)
   const solo = g.solo
-  const vollSum = solo ? 0 : voll * vollPrice(voll)
-  const stdSum = solo ? 0 : std * stdPrice(std)
-  const selfSum = solo ? 0 : self * selfPrice(self)
-  const total = solo ? 499 : g.fee + vollSum + stdSum + selfSum
+  const vp = sitzPreis('voll', g.key)
+  const sp = sitzPreis('standard', g.key)
+  const sfp = sitzPreis('self_service', g.key)
+  const vollSum = solo ? 0 : voll * vp
+  const stdSum = solo ? 0 : std * sp
+  const selfSum = solo ? 0 : self * sfp
+  const total = solo ? g.fee : g.fee + vollSum + stdSum + selfSum
 
   function fillMix() {
     const v = Math.max(1, Math.round(ma * 0.16))
@@ -206,9 +200,9 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
                   Mit typischem Mix füllen
                 </button>
               </div>
-              <Row label="Voll-Nutzer" who={R.voll} unit={vollPrice(voll)} val={voll} setV={setVoll} min={1} />
-              <Row label="Standard-Nutzer" who={R.std} unit={stdPrice(std)} val={std} setV={setStd} min={0} />
-              <Row label="Self-Service" who={R.self} unit={selfPrice(self)} val={self} setV={setSelf} min={0} />
+              <Row label="Voll-Nutzer" who={R.voll} unit={vp} val={voll} setV={setVoll} min={1} />
+              <Row label="Standard-Nutzer" who={R.std} unit={sp} val={std} setV={setStd} min={0} />
+              <Row label="Self-Service" who={R.self} unit={sfp} val={self} setV={setSelf} min={0} />
             </>
           )}
 
