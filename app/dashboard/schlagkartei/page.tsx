@@ -16,6 +16,7 @@ import {
   dokuStatus, summeN, nSaldo, zaehleSchlagkartei,
 } from '@/lib/schlagkartei';
 import { augeSchlagkartei } from '@/lib/auge';
+import { schlagNachweisPdf } from '@/lib/schlagNachweisPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -40,6 +41,7 @@ function ha(n: number | null) { return `${(Number(n) || 0).toLocaleString('de-DE
 
 export default function SchlagkarteiPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'schlaege' | 'duengung' | 'psm' | 'bedarf'>('schlaege');
   const [schlaege, setSchlaege] = useState<Schlag[]>([]);
   const [bedarfe, setBedarfe] = useState<Bedarf[]>([]);
@@ -80,6 +82,9 @@ export default function SchlagkarteiPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAussteller(s(m.firmenname) || s(m.firma) || s(m.name) || s(m.betrieb) || null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -169,6 +174,18 @@ export default function SchlagkarteiPage() {
     finally { setBusy(null); }
   }
 
+  function nachweisErstellen(s: Schlag) {
+    const imJahr = (dat: string) => Number(String(dat).slice(0, 4)) === JAHR;
+    schlagNachweisPdf({
+      schlag: { bezeichnung: s.bezeichnung, flurstueck: s.flurstueck, flaeche_ha: s.flaeche_ha, kultur: s.kultur, standort: s.standort },
+      jahr: JAHR,
+      bedarfe: bedarfe.filter((b) => b.schlag_id === s.id && b.jahr === JAHR),
+      duengungen: duengungen.filter((d) => d.schlag_id === s.id && imJahr(d.datum)),
+      psm: psm.filter((p) => p.schlag_id === s.id && imJahr(p.datum)),
+      aussteller,
+    });
+  }
+
   function FristBadge({ datum, erfasstAm, frist }: { datum: string; erfasstAm: string; frist: number }) {
     const st = dokuStatus(datum, erfasstAm, frist);
     const spaet = st === 'spaet';
@@ -225,7 +242,7 @@ export default function SchlagkarteiPage() {
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {schlaege.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Schläge.</div> : (
                 <table style={styles.table}>
-                  <thead><tr><th style={styles.th}>Schlag</th><th style={styles.th}>Flurstück</th><th style={{ ...styles.th, textAlign: 'right' }}>Fläche</th><th style={styles.th}>Kultur</th><th style={styles.th}>Aussaat–Ernte</th></tr></thead>
+                  <thead><tr><th style={styles.th}>Schlag</th><th style={styles.th}>Flurstück</th><th style={{ ...styles.th, textAlign: 'right' }}>Fläche</th><th style={styles.th}>Kultur</th><th style={styles.th}>Aussaat–Ernte</th><th style={{ ...styles.th, textAlign: 'right' }}>Nachweis</th></tr></thead>
                   <tbody>
                     {schlaege.map((s) => (
                       <tr key={s.id} style={{ opacity: s.status !== 'aktiv' ? 0.5 : 1 }}>
@@ -234,6 +251,7 @@ export default function SchlagkarteiPage() {
                         <td style={{ ...styles.td, textAlign: 'right' }}>{ha(s.flaeche_ha)}</td>
                         <td style={{ ...styles.td, color: C.textDim }}>{s.kultur || '—'}</td>
                         <td style={{ ...styles.td, color: C.textDim }}>{fmtDatum(s.aussaat_am)} – {fmtDatum(s.ernte_am)}</td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}><button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => nachweisErstellen(s)}>📄 {JAHR}</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -450,6 +468,7 @@ const styles: Record<string, CSSProperties> = {
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(14px, 1.2vw, 19px)', fontFamily: 'inherit', minWidth: 0, boxSizing: 'border-box' },
   vorschau: { marginTop: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 'clamp(13.5px, 1.2vw, 19px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  mini: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 11px', fontSize: 'clamp(12px, 1.1vw, 17px)', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 720 },
   th: { textAlign: 'left', padding: '10px 12px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
   td: { padding: '11px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
