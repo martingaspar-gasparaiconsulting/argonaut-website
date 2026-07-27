@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden } from '@/lib/spenden';
 import { augeSpenden } from '@/lib/auge';
+import { zuwendungPdf } from '@/lib/zuwendungPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -110,6 +111,22 @@ export default function SpendenPage() {
 
   const setE = (k: keyof Einstellung, v: string) => setEForm((f) => ({ ...f, [k]: v }));
 
+  async function bestaetigungErstellen(s: Spende) {
+    if (!eForm.org_name) { setFehler('Bitte zuerst unter „Vereinsdaten" mindestens den Namen der Körperschaft hinterlegen.'); setTab('einstellungen'); return; }
+    setBusy(s.id); setFehler(null); setOk(null);
+    try {
+      const nr = s.bestaetigung_nr || `ZB-${JAHR}-${String(spenden.filter((x) => x.bestaetigung_nr).length + 1).padStart(3, '0')}`;
+      zuwendungPdf(eForm, { ...s, bestaetigung_nr: nr });
+      if (!s.bestaetigt) {
+        const { error } = await supabase.from('spende').update({ bestaetigt: true, bestaetigt_am: H, bestaetigung_nr: nr }).eq('id', s.id);
+        if (error) throw error;
+        await laden_();
+      }
+      setOk('Zuwendungsbestätigung erstellt.');
+    } catch (err: unknown) { setFehler('Erstellen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Spenden</div>
@@ -165,7 +182,7 @@ export default function SpendenPage() {
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {spenden.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Zuwendungen.</div> : (
                 <table style={styles.table}>
-                  <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Spender</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>Betrag</th><th style={styles.th}>Bestätigung</th></tr></thead>
+                  <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Spender</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>Betrag</th><th style={styles.th}>Bestätigung</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>
                     {spenden.map((s) => (
                       <tr key={s.id}>
@@ -176,6 +193,9 @@ export default function SpendenPage() {
                         <td style={styles.td}>{s.bestaetigt
                           ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>bestätigt {s.bestaetigt_am ? fmtDatum(s.bestaetigt_am) : ''}</span>
                           : <span style={{ ...styles.badge, color: kleinbetrag(s.betrag) ? C.textDim : C.warn, borderColor: kleinbetrag(s.betrag) ? C.border : C.warn }}>{kleinbetrag(s.betrag) ? 'einfacher Nachweis' : 'offen'}</span>}</td>
+                        <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === s.id} onClick={() => bestaetigungErstellen(s)}>📄 {s.bestaetigt ? 'erneut' : 'Bestätigung'}</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -231,6 +251,7 @@ const styles: Record<string, CSSProperties> = {
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(14px, 1.2vw, 19px)', fontFamily: 'inherit', minWidth: 0, boxSizing: 'border-box' },
   vorschau: { display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 'clamp(13.5px, 1.2vw, 19px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  mini: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 11px', fontSize: 'clamp(12px, 1.1vw, 17px)', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 640 },
   th: { textAlign: 'left', padding: '10px 12px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
   td: { padding: '11px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
