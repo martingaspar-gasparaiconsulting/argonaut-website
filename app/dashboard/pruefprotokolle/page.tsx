@@ -14,6 +14,7 @@ import {
   PRUEF_NORMEN, pruefNorm, naechsteFaelligkeit, gesamtErgebnis, faelligBucket, zaehlePruef,
 } from '@/lib/pruefungen';
 import { augePruef } from '@/lib/auge';
+import { pruefprotokollPdf } from '@/lib/pruefPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -48,6 +49,7 @@ function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 
 
 export default function PruefprotokollePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [protokolle, setProtokolle] = useState<Protokoll[]>([]);
   const [punkte, setPunkte] = useState<Punkt[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -82,6 +84,9 @@ export default function PruefprotokollePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const nm = [m.firmenname, m.firma, m.company, m.full_name, m.name].find((x) => typeof x === 'string' && x.trim());
+      setAussteller(typeof nm === 'string' ? nm : null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -130,10 +135,24 @@ export default function PruefprotokollePage() {
         const { error: pe } = await supabase.from('pruef_punkt').insert(reihen);
         if (pe) throw new Error(pe.message);
       }
+      // Andockung ans Objekt-Register: Ergebnis -> Zustand-Ampel, nächste Prüfung übernehmen.
+      if (nk.asset_id) {
+        const zustand = ergebnisLive === 'durchgefallen' ? 'kritisch' : ergebnisLive === 'maengel' ? 'beobachten' : 'gut';
+        await supabase.from('assets').update({ letzte_kontrolle: nk.datum, naechste_kontrolle: naechste || null, zustand }).eq('id', nk.asset_id);
+      }
       setNk({ pruef_key: '', asset_id: '', objekt_bezeichnung: '', datum: H, pruefer: '', bemerkung: '', pruef_art_custom: '', norm_custom: '', intervall_custom: '12', durchgefallen: false });
       setDraft([]); setOk('Prüfprotokoll gespeichert.'); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(false); }
+  }
+
+  function pdfErstellen(p: Protokoll) {
+    const pkte = punkte.filter((x) => x.protokoll_id === p.id).map((x) => ({ punkt: x.punkt, status: x.status, hinweis: x.hinweis }));
+    pruefprotokollPdf({
+      pruef_art: p.pruef_art, norm: p.norm, objekt: p.objekt_bezeichnung, datum: p.datum, pruefer: p.pruefer,
+      intervall_monate: p.intervall_monate, naechste_pruefung: p.naechste_pruefung, ergebnis: p.ergebnis,
+      bemerkung: p.bemerkung, punkte: pkte, aussteller,
+    });
   }
 
   return (
@@ -237,6 +256,7 @@ export default function PruefprotokollePage() {
                         <td style={styles.td}><span style={{ color: AMPEL[bucket] }}>● </span>{d(p.naechste_pruefung)}</td>
                         <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                           {pkte.length > 0 && <button style={styles.mini} onClick={() => setOffen(offen === p.id ? null : p.id)}>{offen === p.id ? 'Punkte ▲' : `Punkte (${pkte.length}) ▼`}</button>}
+                          <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 6 }} onClick={() => pdfErstellen(p)}>📄 PDF</button>
                         </td>
                       </tr>
                       {offen === p.id && (
