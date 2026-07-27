@@ -1,0 +1,4 @@
+bezeichnung;charge_nr;mhd;menge;einheit;lieferant;herkunft;verwendung;status
+Rinderhack;CH-2026-0712;2026-07-30;12;kg;Metzgerei Huber;Wareneingang 12.07.;Lyoner-Produktion;aktiv
+Sauerteig;CH-2026-0715;2026-08-05;3;kg;Eigenproduktion;Anstellgut;Bauernbrot;aktiv
+Frischmilch;CH-2026-0710;2026-07-26;20;l;Molkerei Nord;Wareneingang 10.07.;;gesperrt
