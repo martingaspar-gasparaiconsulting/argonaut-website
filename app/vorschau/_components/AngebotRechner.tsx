@@ -4,35 +4,23 @@
 // ARGONAUT OS · app/vorschau/_components/AngebotRechner.tsx
 // Interaktiver Angebots-Konfigurator (Preise selbst zusammenstellen).
 // Mitarbeiterzahl -> Grundgebühr nach Größe. Sitze dazubuchen (Voll/Standard/
-// Self-Service, gestaffelt nach Menge). Live-Gesamtpreis + einmalige Einrichtung.
-// Zahlen 1:1 aus der ARGONAUT-Preisliste 2026. Nur Anzeige, unverbindlich.
+// Self-Service, Staffel an die Betriebsgröße gekoppelt). Live-Gesamtpreis +
+// einmalige Einrichtung.
+// Zahlen kommen 1:1 aus lib/tarif.ts (EINE Quelle der Wahrheit). Nur Anzeige.
 // ============================================================================
 
 import { useState } from 'react'
+import { stufeFuerMitarbeiter, sitzPreis } from '@/lib/tarif'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
 
-function grundgebuehr(ma: number) {
-  if (ma <= 1) return { name: 'SOLO', fee: 499, solo: true }
-  if (ma <= 9) return { name: 'Mini', fee: 490, solo: false }
-  if (ma <= 24) return { name: 'Klein', fee: 990, solo: false }
-  if (ma <= 99) return { name: 'Mittel', fee: 1990, solo: false }
-  if (ma <= 499) return { name: 'Groß', fee: 3490, solo: false }
-  return { name: 'Enterprise', fee: 5990, solo: false }
-}
-function setupFee(ma: number) {
-  if (ma <= 1) return '1.500 €'
-  if (ma <= 9) return '2.500 €'
-  if (ma <= 24) return '5.000 €'
-  if (ma <= 99) return '12.000 €'
-  return 'auf Anfrage'
-}
-function vollPrice(n: number) { return n <= 20 ? 380 : n <= 100 ? 320 : n <= 500 ? 260 : 190 }
-function stdPrice(n: number) { return n <= 20 ? 170 : n <= 100 ? 145 : n <= 500 ? 120 : 90 }
-function selfPrice(n: number) { return n >= 500 ? 14 : 19 }
 function fmt(n: number) { return n.toLocaleString('de-DE') }
+function setupText(ma: number) {
+  const s = stufeFuerMitarbeiter(ma)
+  return s.abPreis ? 'auf Anfrage' : `${fmt(s.onboarding)} €`
+}
 
 const stepBtn: React.CSSProperties = {
   width: '30px', height: '30px', borderRadius: '8px',
@@ -46,18 +34,22 @@ export default function AngebotRechner() {
   const [std, setStd] = useState(4)
   const [self, setSelf] = useState(6)
 
-  const g = grundgebuehr(ma)
-  const solo = g.solo
-  const vollSum = solo ? 0 : voll * vollPrice(voll)
-  const stdSum = solo ? 0 : std * stdPrice(std)
-  const selfSum = solo ? 0 : self * selfPrice(self)
-  const total = solo ? 499 : g.fee + vollSum + stdSum + selfSum
+  const s = stufeFuerMitarbeiter(ma)
+  const solo = !!s.allIn
+  const vp = sitzPreis('voll', s.key)
+  const sp = sitzPreis('standard', s.key)
+  const sfp = sitzPreis('self_service', s.key)
+
+  const vollSum = solo ? 0 : voll * vp
+  const stdSum = solo ? 0 : std * sp
+  const selfSum = solo ? 0 : self * sfp
+  const total = solo ? s.grundgebuehr : s.grundgebuehr + vollSum + stdSum + selfSum
 
   function fillMix() {
     const v = Math.max(1, Math.round(ma * 0.16))
-    const s = Math.round(ma * 0.32)
-    const se = Math.max(0, ma - v - s)
-    setVoll(v); setStd(s); setSelf(se)
+    const st = Math.round(ma * 0.32)
+    const se = Math.max(0, ma - v - st)
+    setVoll(v); setStd(st); setSelf(se)
   }
 
   const Row = ({ label, who, unit, val, set, min = 0 }: { label: string; who: string; unit: number; val: number; set: (n: number) => void; min?: number }) => (
@@ -95,14 +87,14 @@ export default function AngebotRechner() {
             <button type="button" onClick={() => setMa(ma + 1)} style={stepBtn} aria-label="mehr">+</button>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ margin: 0, fontSize: '.78rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Größe: {g.name} · Grundgebühr</p>
-            <p style={{ margin: '2px 0 0', color: GOLD, fontWeight: 700, fontSize: '1.25rem' }}>{fmt(g.fee)} €<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
+            <p style={{ margin: 0, fontSize: '.78rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Größe: {s.name} · Grundgebühr</p>
+            <p style={{ margin: '2px 0 0', color: GOLD, fontWeight: 700, fontSize: '1.25rem' }}>{fmt(s.grundgebuehr)} €<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
           </div>
         </div>
 
         {solo ? (
           <p style={{ color: '#c4d3db', margin: '18px 0 0', lineHeight: 1.6 }}>
-            <strong style={{ color: '#EAF1F6' }}>SOLO ist all-in:</strong> 499 €/Monat inkl. 1 Voll-Nutzer und KI unbegrenzt — keine zusätzlichen Sitze nötig.
+            <strong style={{ color: '#EAF1F6' }}>SOLO ist all-in:</strong> {fmt(s.grundgebuehr)} €/Monat inkl. 1 Voll-Nutzer und KI unbegrenzt — keine zusätzlichen Sitze nötig.
           </p>
         ) : (
           <>
@@ -112,9 +104,9 @@ export default function AngebotRechner() {
                 Mit typischem Mix füllen
               </button>
             </div>
-            <Row label="Voll-Nutzer" who="Chef, GF, Büro, Dispo" unit={vollPrice(voll)} val={voll} set={setVoll} min={1} />
-            <Row label="Standard-Nutzer" who="Sachbearbeiter, Monteur mit Doku" unit={stdPrice(std)} val={std} set={setStd} min={0} />
-            <Row label="Self-Service" who="Zeiterfassung, Lohnzettel, Mein Bereich" unit={selfPrice(self)} val={self} set={setSelf} min={0} />
+            <Row label="Voll-Nutzer" who="Chef, GF, Büro, Dispo" unit={vp} val={voll} set={setVoll} min={1} />
+            <Row label="Standard-Nutzer" who="Sachbearbeiter, Monteur mit Doku" unit={sp} val={std} set={setStd} min={0} />
+            <Row label="Self-Service" who="Zeiterfassung, Lohnzettel, Mein Bereich" unit={sfp} val={self} set={setSelf} min={0} />
           </>
         )}
 
@@ -122,7 +114,7 @@ export default function AngebotRechner() {
         <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '14px', padding: '20px 22px', marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis</p>
-            <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>+ einmalige Einrichtung: {setupFee(ma)}</p>
+            <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>+ einmalige Einrichtung: {setupText(ma)}</p>
           </div>
           <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
             {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
@@ -136,7 +128,7 @@ export default function AngebotRechner() {
         </div>
 
         <p style={{ fontSize: '.78rem', color: '#7f97a4', textAlign: 'center', margin: '16px 0 0', lineHeight: 1.5 }}>
-          Unverbindliche Beispielrechnung · Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt nach Menge · Laufzeit-Rabatte (24/36 Mon.) noch nicht eingerechnet.
+          Unverbindliche Beispielrechnung · Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt nach Betriebsgröße · Laufzeit-Rabatte (24/36 Mon.) noch nicht eingerechnet.
         </p>
       </div>
     </div>
