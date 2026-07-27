@@ -282,6 +282,21 @@ export function augeTierbestand(d: { anzahlGruppen: number; tiereGesamt: number;
   return { klartext: 'Alle Bewegungen gemeldet — Bestand HIT-konform.', punkte, stimmung: 'gut' };
 }
 
+/** Kanzlei: offene, überfällige und in der Vorfrist stehende Fristen. */
+export function augeKanzlei(d: { akten: number; offen: number; ueberfaellig: number; vorfrist: number }): AugeErgebnis {
+  if (d.akten === 0) {
+    return { klartext: 'Noch keine Akten — leg dein erstes Mandat an und trag die Fristen mit Vorfrist ein.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.akten} Akte(n) · ${d.offen} offene Frist(en).`];
+  if (d.ueberfaellig > 0) {
+    return { klartext: `${d.ueberfaellig} Frist(en) ÜBERFÄLLIG — sofort prüfen, ein Fristversäumnis kann Haftung auslösen.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.vorfrist > 0) {
+    return { klartext: `${d.vorfrist} Frist(en) in der Vorfrist — jetzt bearbeiten, damit es nicht knapp wird.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: 'Alle Fristen im grünen Bereich — keine Vorfrist erreicht.', punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
