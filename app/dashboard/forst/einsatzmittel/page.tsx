@@ -129,6 +129,7 @@ export default function ForstEinsatzmittelPage() {
         <Link href="/dashboard/forst" style={styles.subnavLink}>Baumkataster</Link>
         <span style={styles.subnavAktiv}>Einsatzmittel &amp; Sätze</span>
         <Link href="/dashboard/forst/auftraege" style={styles.subnavLink}>Aufträge</Link>
+        <Link href="/dashboard/forst/nachweise" style={styles.subnavLink}>Nachweise</Link>
       </div>
       <p style={styles.sub}>
         Deine Maschinen und Fahrzeuge mit Stundensatz und Wegepauschale — die Preis-Grundlage für Fäll- und Pflegeaufträge.

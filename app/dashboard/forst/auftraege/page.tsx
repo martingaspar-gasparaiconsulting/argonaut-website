@@ -179,6 +179,7 @@ export default function ForstAuftraegePage() {
         <Link href="/dashboard/forst" style={styles.subnavLink}>Baumkataster</Link>
         <Link href="/dashboard/forst/einsatzmittel" style={styles.subnavLink}>Einsatzmittel &amp; Sätze</Link>
         <span style={styles.subnavAktiv}>Aufträge</span>
+        <Link href="/dashboard/forst/nachweise" style={styles.subnavLink}>Nachweise</Link>
       </div>
       <p style={styles.sub}>
         Fäll- und Pflegeaufträge mit Positionen aus deinen Einsatzmitteln oder freien Leistungen. Notdienst-Zuschlag inklusive.
