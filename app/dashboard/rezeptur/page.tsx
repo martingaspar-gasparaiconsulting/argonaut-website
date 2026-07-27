@@ -59,6 +59,7 @@ export default function RezepturRechner() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [chargeBusy, setChargeBusy] = useState(false);
   const [neuName, setNeuName] = useState('');
   const [neuTyp, setNeuTyp] = useState('teig');
   const [zielMenge, setZielMenge] = useState('');
@@ -140,6 +141,27 @@ export default function RezepturRechner() {
       await ladeZutaten(eck.id); setOk('Zutaten gespeichert.');
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(false); }
+  }
+
+  // --- Rezeptur → Charge (Block O · Andock ans Lebensmittel-Fachpaket) ---
+  async function chargeErzeugen() {
+    if (!eck || !uid) return;
+    const menge = Number(eck.basis_menge) || 0;
+    if (menge <= 0) { setFehler('Bitte zuerst eine Ausbeute-Menge in den Eckdaten setzen und speichern.'); return; }
+    if (!window.confirm(`Charge aus „${eck.name}" erzeugen?\n\n• ${z1(menge)} ${eck.basis_einheit || ''}\n\nSie erscheint im 🥫 Lebensmittel-Modul (Chargen/MHD).`)) return;
+    setChargeBusy(true); setFehler(null); setOk(null);
+    try {
+      const d = new Date();
+      const nr = `RZ-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+      const { error } = await supabase.from('lm_chargen').insert({
+        owner_user_id: uid, bezeichnung: eck.name, charge_nr: nr, menge, einheit: eck.basis_einheit || 'kg',
+        notiz: `Aus Rezeptur „${eck.name}" erzeugt.`,
+      });
+      if (error) throw error;
+      setOk(`Charge ${nr} erzeugt — im 🥫 Lebensmittel-Modul unter Chargen.`);
+    } catch (e: unknown) {
+      setFehler('Charge fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setChargeBusy(false); }
   }
 
   function setZ(i: number, patch: Partial<ZutatRow>) { setZutaten((r) => r.map((x, k) => (k === i ? { ...x, ...patch } : x))); }
@@ -225,7 +247,10 @@ export default function RezepturRechner() {
               <label style={styles.lab}>Backverlust %<input style={styles.inp} inputMode="decimal" value={eck.backverlust_prozent ?? ''} onChange={(e) => setEckF('backverlust_prozent', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 12" /></label>
               <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eck.foodcost_ziel ?? ''} onChange={(e) => setEckF('foodcost_ziel', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 30" /></label>
             </div>
-            <button onClick={eckSpeichern} disabled={busy} style={{ ...styles.primaer, marginTop: 12 }}>💾 Eckdaten speichern</button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+              <button onClick={eckSpeichern} disabled={busy} style={styles.primaer}>💾 Eckdaten speichern</button>
+              <button onClick={chargeErzeugen} disabled={chargeBusy} style={{ ...styles.mini, borderColor: `${C.cyan}55`, color: C.cyan }} title="Aus diesem Rezept eine Charge fürs Lebensmittel-Modul erzeugen">{chargeBusy ? '…' : '🏷 Charge erzeugen'}</button>
+            </div>
           </div>
 
           {/* Zutaten */}
