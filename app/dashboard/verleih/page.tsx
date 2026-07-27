@@ -153,6 +153,25 @@ export default function VerleihPage() {
     finally { setBusy(null); }
   }
 
+  async function rechnungErstellen(v: Vorgang) {
+    if (v.rechnung_id) { window.location.href = `/dashboard/rechnungen?id=${v.rechnung_id}`; return; }
+    setBusy(v.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-verleih', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vorgangId: v.id }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        if (res.status === 409 && j.rechnungId) { await laden_(); setOk('Für diese Ausleihe gibt es bereits eine Rechnung.'); return; }
+        throw new Error(j.error || 'Fehler');
+      }
+      await laden_();
+      setOk('Rechnung erstellt.');
+    } catch (e: unknown) { setFehler('Rechnung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
   function kontaktWahl(id: string) {
     const k = kontakte.find((x) => x.id === id);
     setNv((f) => ({ ...f, kontakt_id: id, mieter_name: k ? k.name : f.mieter_name }));
@@ -249,6 +268,8 @@ export default function VerleihPage() {
                             {v.status === 'reserviert' && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'ausgegeben')}>📤 Ausgeben</button>}
                             {v.status === 'ausgegeben' && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'zurueck')}>✓ Zurück</button>}
                             {(v.status === 'reserviert' || v.status === 'ausgegeben') && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'storniert')}>Stornieren</button>}
+                            {(v.status === 'ausgegeben' || v.status === 'zurueck') && !v.rechnung_id && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
+                            {v.rechnung_id && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => rechnungErstellen(v)}>Rechnung ›</button>}
                           </td>
                         </tr>
                       );
