@@ -60,7 +60,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'kanzlei', name: 'Kanzlei & Steuer', icon: '⚖️', module: ['kanzlei', 'vertraege', 'datev'] },
   { key: 'bildung', name: 'Bildung & Kurse', icon: '🎓', module: ['bildung', 'online-buchung', 'buchungen'] },
   { key: 'lebensmittel', name: 'Lebensmittel', icon: '🥫', module: ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur'] },
-  { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp', 'verleih', 'belegung'] },
+  { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei'] },
   { key: 'tier', name: 'Tier / Praxis', icon: '🐾', module: ['tier', 'online-buchung', 'buchungen', 'bildung'] },
   { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung'] },
   { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle'] },
