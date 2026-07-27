@@ -227,6 +227,23 @@ export function augeVerleih(d: { ausgegeben: number; reserviert: number; ueberfa
   return { klartext: `${d.ausgegeben} Gegenstand/Gegenstände ausgegeben, alles im Zeitplan.`, punkte, stimmung: 'gut' };
 }
 
+/** Belegung: Auslastung, An-/Abreisen heute und offene Reservierungen. */
+export function augeBelegung(d: { aktiveEinheiten: number; belegtJetzt: number; freiJetzt: number; anreisenHeute: number; abreisenHeute: number; reservierungenOffen: number }): AugeErgebnis {
+  if (d.aktiveEinheiten === 0) {
+    return { klartext: 'Noch keine Einheiten — leg deine erste buchbare Einheit an (Ferienwohnung, Stellplatz, Halle …) und erfasse die erste Belegung.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.belegtJetzt} von ${d.aktiveEinheiten} Einheiten aktuell belegt.`];
+  if (d.reservierungenOffen > 0) punkte.push(`${d.reservierungenOffen} Reservierung(en) noch unbestätigt.`);
+  if (d.anreisenHeute > 0 || d.abreisenHeute > 0) {
+    return {
+      klartext: `Heute stehen ${d.anreisenHeute} An- und ${d.abreisenHeute} Abreise(n) an — Check-in/Check-out vorbereiten.`,
+      punkte,
+      stimmung: 'achtung',
+    };
+  }
+  return { klartext: `${d.belegtJetzt} von ${d.aktiveEinheiten} Einheiten belegt, ${d.freiJetzt} frei — alles im Griff.`, punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {

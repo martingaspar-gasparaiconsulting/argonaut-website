@@ -1,0 +1,6 @@
+bezeichnung;kategorie;einheit_nr;abrechnungsart;preis_pro_einheit;grundgebuehr;kaution;max_belegung;mwst_satz
+Ferienwohnung Seeblick;Ferienwohnung;FeWo-01;nacht;90;40;100;4;7
+Stellplatz A12;Stellplatz;SP-A12;nacht;25;0;0;2;7
+Serviced Apartment 3;Apartment;APT-03;nacht;110;60;200;2;7
+Sporthalle 1;Sporthalle;HALLE-1;stunde;35;0;0;;19
+Kegelbahn Nord;Kegelbahn;BAHN-N;stunde;18;0;0;;19

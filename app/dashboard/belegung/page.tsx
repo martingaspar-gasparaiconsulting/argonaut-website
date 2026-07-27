@@ -15,6 +15,8 @@ import {
   ABRECHNUNGSARTEN, berechneVorgang, konflikte, zaehleBelegung, istAktuellBelegt,
   type Abrechnungsart,
 } from '@/lib/belegung';
+import { augeBelegung } from '@/lib/auge';
+import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -223,6 +225,11 @@ export default function BelegungPage() {
         <Kpi label="Abreisen heute" value={String(kennzahlen.abreisenHeute)} accent={C.text} />
         <Kpi label="Einheiten" value={String(kennzahlen.aktiveEinheiten)} accent={C.text} />
       </div>
+      {!laden && (
+        <div style={{ marginBottom: 14 }}>
+          <KiAuge modul="Belegung" regel={augeBelegung(kennzahlen)} />
+        </div>
+      )}
 
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'belegungen' ? styles.tabAn : {}) }} onClick={() => setTab('belegungen')}>📋 Belegungen</button>
