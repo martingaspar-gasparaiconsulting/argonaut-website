@@ -146,6 +146,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔑 Verleih & Vermietung', href: '/dashboard/verleih', modul: 'verleih', ebene: 3, gruppe: 'betrieb' },
   { label: '🗓 Belegung', href: '/dashboard/belegung', modul: 'belegung', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Schlagkartei', href: '/dashboard/schlagkartei', modul: 'schlagkartei', ebene: 3, gruppe: 'betrieb' },
+  { label: '🐄 Tierbestand', href: '/dashboard/tierbestand', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },

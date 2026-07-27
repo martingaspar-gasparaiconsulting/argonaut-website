@@ -1,0 +1,5 @@
+tierart;bezeichnung;betriebsnummer;standort;meldefrist_tage;aktueller_bestand
+rind;Milchvieh Stall 1;276012345678901;Hauptbetrieb;7;62
+schwein;Mastschweine Halle A;276012345678902;Aussenstelle;7;180
+schaf;Mutterschafe Herde;276012345678903;Weide Sued;7;95
+ziege;Ziegen Bestand;276012345678904;Hofstelle;7;24
