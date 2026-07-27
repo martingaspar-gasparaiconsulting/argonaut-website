@@ -1,0 +1,4 @@
+objekt_bezeichnung;pruef_art;norm;datum;pruefer;intervall_monate;naechste_pruefung;ergebnis;bemerkung
+Handbohrmaschine Werkstatt;Ortsveränderliche Elektrogeräte (E-Check);DGUV V3 / DIN VDE 0701-0702;2026-07-15;M. Weber;24;2028-07-15;bestanden;
+Leiter Nr. 3 Lager;Leitern & Tritte;DGUV Information 208-016;2026-07-15;M. Weber;12;2027-07-15;maengel;Fuß nachziehen
+Regalzeile A Hochregallager;Regalanlage;DIN EN 15635;2026-07-10;Externer Prüfdienst;12;2027-07-10;bestanden;

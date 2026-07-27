@@ -47,13 +47,13 @@ export type BranchenPaket = {
 
 // --- Die Branchen-Pakete. Frei anpassbar — hier bestimmst du das Angebot. ---
 export const BRANCHEN_PAKETE: BranchenPaket[] = [
-  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih'] },
+  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih'] },
   { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur'] },
-  { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih'] },
-  { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte'] },
-  { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'wartung', 'service', 'projekte', 'aufmass'] },
-  { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih'] },
+  { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih', 'pruefprotokolle'] },
+  { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte', 'pruefprotokolle'] },
+  { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },
+  { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle'] },
   { key: 'it-msp', name: 'IT & MSP', icon: '💻', module: ['it-msp', 'vertraege', 'service', 'projekte'] },
   { key: 'agentur', name: 'Agentur & Kreativ', icon: '🎨', module: ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads'] },
   { key: 'wellness', name: 'Gesundheit & Wellness', icon: '💆', module: ['wellness', 'online-buchung', 'buchungen', 'bildung'] },
@@ -63,7 +63,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp', 'verleih'] },
   { key: 'tier', name: 'Tier / Praxis', icon: '🐾', module: ['tier', 'online-buchung', 'buchungen', 'bildung'] },
   { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung', 'bildung'] },
-  { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan'] },
+  { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle'] },
 ];
 
 export function branchenPaket(key: string): BranchenPaket | undefined {
