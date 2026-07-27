@@ -15,6 +15,7 @@ import {
   type FristStatus,
 } from '@/lib/fristen';
 import { augeKanzlei } from '@/lib/auge';
+import { fristenlistePdf } from '@/lib/fristenlistePdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -46,6 +47,7 @@ function eur(n: number | null) { return n == null ? '—' : (Number(n) || 0).toL
 
 export default function KanzleiPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'akten' | 'fristen'>('fristen');
   const [akten, setAkten] = useState<Akte[]>([]);
   const [fristen, setFristen] = useState<Frist[]>([]);
@@ -78,6 +80,9 @@ export default function KanzleiPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || str(meta.kanzlei) || null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -137,6 +142,21 @@ export default function KanzleiPage() {
     setOk('Verjährungsende ins Fristformular übernommen — jetzt Akte wählen und speichern.');
   }
 
+  function fristenlisteErstellen() {
+    const heute = new Date();
+    const offen = fristen.filter((f) => !f.erledigt).map((f) => {
+      const a = akteById(f.akte_id);
+      return {
+        frist_datum: f.frist_datum,
+        akte: a ? (a.aktenzeichen || a.mandant) : '—',
+        bezeichnung: f.bezeichnung, art: ART_LABEL[f.art] ?? f.art,
+        verantwortlich: f.verantwortlich, restTage: restTage(f.frist_datum, heute),
+      };
+    }).sort((x, z) => x.restTage - z.restTage);
+    if (!offen.length) { setOk('Keine offenen Fristen — nichts zu drucken.'); return; }
+    fristenlistePdf({ stand: H, aussteller, eintraege: offen });
+  }
+
   function FristBadge({ f }: { f: Frist }) {
     const st = fristStatus(f.frist_datum, f.vorfrist_tage, f.erledigt, new Date());
     const m = STATUS_META[st];
@@ -173,7 +193,9 @@ export default function KanzleiPage() {
       {tab === 'fristen' && (
         <>
           <div style={styles.card}>
-            <div style={styles.cardTitel}>Frist eintragen <span style={styles.frist}>Vorfrist = Vorwarnfenster in Tagen</span></div>
+            <div style={styles.cardTitel}>Frist eintragen <span style={styles.frist}>Vorfrist = Vorwarnfenster in Tagen</span>
+              <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 'auto' }} onClick={fristenlisteErstellen}>📄 Fristenliste</button>
+            </div>
             {offeneAkten.length === 0 ? <div style={styles.hint}>Lege zuerst im Reiter „Akten" ein Mandat an.</div> : (
               <>
                 <div style={styles.grid}>
