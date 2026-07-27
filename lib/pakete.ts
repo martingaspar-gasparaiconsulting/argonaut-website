@@ -47,11 +47,11 @@ export type BranchenPaket = {
 
 // --- Die Branchen-Pakete. Frei anpassbar — hier bestimmst du das Angebot. ---
 export const BRANCHEN_PAKETE: BranchenPaket[] = [
-  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle'] },
+  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih'] },
   { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'belegung'] },
   { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih', 'pruefprotokolle'] },
-  { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte', 'pruefprotokolle'] },
+  { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte', 'pruefprotokolle', 'zuschnitt'] },
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },
   { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung'] },
   { key: 'it-msp', name: 'IT & MSP', icon: '💻', module: ['it-msp', 'vertraege', 'service', 'projekte'] },
