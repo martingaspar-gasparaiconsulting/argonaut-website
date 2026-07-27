@@ -103,6 +103,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb' },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3, gruppe: 'vertrieb' },
   { label: '💼 Projekt-Abrechnung', href: '/dashboard/projekt-abrechnung', modul: 'projekt-abrechnung', ebene: 3, gruppe: 'vertrieb' },
+  { label: '⏱ Aufwand-Cockpit', href: '/dashboard/aufwand', modul: 'aufwand', ebene: 3, gruppe: 'vertrieb' },
   { label: '👤 Kunden-Portal', href: '/dashboard/portal', modul: 'kundenportal', ebene: 3, gruppe: 'vertrieb' },
 
   // --- Termine & Einsätze (Ebene 3, operativ) -------------------------------

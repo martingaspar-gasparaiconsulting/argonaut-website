@@ -147,6 +147,22 @@ export function augeObjekte(d: {
   return { klartext: `${d.gesamt} Objekt(e) im Register — Kontrollen im Plan, Zustand unauffällig.`, punkte, stimmung: 'gut' };
 }
 
+/** Aufwand-Cockpit: offener abrechenbarer Aufwand (Projekte + Objektzeiten). */
+export function augeAufwand(d: { betragOffen: number; anzahlOffen: number; stundenOffen: number; betragAbg: number }): AugeErgebnis {
+  if (d.anzahlOffen === 0 && d.betragAbg === 0) {
+    return { klartext: 'Noch kein abrechenbarer Aufwand erfasst — buch Zeiten auf Projekte oder Objekte, dann siehst du hier, was zu fakturieren ist.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.betragAbg > 0) punkte.push(`${eur(d.betragAbg)} sind bereits abgerechnet.`);
+  if (d.betragOffen > 0) {
+    return {
+      klartext: `${eur(d.betragOffen)} abrechenbarer Aufwand ist noch offen (${d.anzahlOffen} Posten) — hier wartet bereits verdientes Geld auf die Rechnung.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  return { klartext: 'Kein offener Aufwand — alles fakturiert. Sauber.', punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };
