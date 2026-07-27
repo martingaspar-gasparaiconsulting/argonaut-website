@@ -55,6 +55,10 @@ export default function ProjektAbrechnungPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // Standard-Stundensatz laden und vorbelegen (M1) — nicht-brechend, prefill nur.
+      const { data: prof } = await supabase.from('profiles').select('standard_stundensatz').eq('id', id).maybeSingle();
+      const stdSatz = prof?.standard_stundensatz;
+      if (stdSatz != null && Number(stdSatz) > 0) setForm((f) => ({ ...f, stundensatz: String(stdSatz) }));
       const { data: pr } = await supabase.from('projekte').select('id, name').eq('archiviert', false).order('name', { ascending: true });
       const l = (pr as Projekt[]) ?? [];
       setProjekte(l);
@@ -88,6 +92,9 @@ export default function ProjektAbrechnungPage() {
         stunden: num(form.stunden), stundensatz: num(form.stundensatz), mwst_satz: 19,
       });
       if (error) throw error;
+      // Standard-Stundensatz für künftige Erfassungen merken (M1).
+      const satz = num(form.stundensatz);
+      if (satz > 0 && uid) { await supabase.from('profiles').update({ standard_stundensatz: satz }).eq('id', uid); }
       setForm((f) => ({ ...LEER, stundensatz: f.stundensatz, kunde_name: f.kunde_name })); // Satz/Kunde merken
       await laden_();
     } catch (e: unknown) {
