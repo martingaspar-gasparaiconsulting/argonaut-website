@@ -12,6 +12,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, CSSProperties
 import { createBrowserClient } from '@supabase/ssr';
 import { zaehleStopps, fortschrittProzent, zustellquote, zaehleTour } from '@/lib/tour';
 import { augeTour } from '@/lib/auge';
+import { ablieferPdf } from '@/lib/ablieferPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -83,6 +84,7 @@ function SignaturPad({ onSave, onCancel }: { onSave: (name: string, dataUrl: str
 
 export default function TourPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'touren' | 'stopps'>('touren');
   const [touren, setTouren] = useState<Tour[]>([]);
   const [stopps, setStopps] = useState<Stopp[]>([]);
@@ -116,6 +118,9 @@ export default function TourPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -165,6 +170,15 @@ export default function TourPage() {
       await laden_();
     } catch (err: unknown) { setFehler('Aktualisieren fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
+  }
+
+  function nachweisErstellen(s: Stopp) {
+    const t = tourById(s.tour_id);
+    ablieferPdf({
+      tour: t?.bezeichnung || 'Tour', datum: t?.datum || s.zugestellt_am || '', fahrer: t?.fahrer, fahrzeug: t?.fahrzeug,
+      empfaenger: s.empfaenger, adresse: s.adresse, kolli: s.kolli, status: s.status,
+      zugestellt_am: s.zugestellt_am, empfaenger_name: s.empfaenger_name, unterschrift_data: s.unterschrift_data, aussteller,
+    });
   }
 
   async function zustellenMitUnterschrift(name: string, dataUrl: string) {
@@ -294,7 +308,7 @@ export default function TourPage() {
                                 <button style={{ ...styles.mini, marginLeft: 6 }} disabled={busy === s.id} onClick={() => statusSetzen(s, 'nicht_angetroffen')}>nicht da</button>
                                 <button style={{ ...styles.mini, marginLeft: 6 }} disabled={busy === s.id} onClick={() => statusSetzen(s, 'verweigert')}>verweigert</button>
                               </>}
-                              {s.unterschrift_data && <span style={{ color: C.textDim, marginLeft: 6 }}>✎ signiert</span>}
+                              {s.status !== 'offen' && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 6 }} onClick={() => nachweisErstellen(s)}>📄 Nachweis</button>}
                             </td>
                           </tr>
                         );
