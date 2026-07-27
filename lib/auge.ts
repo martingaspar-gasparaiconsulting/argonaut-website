@@ -227,6 +227,22 @@ export function augeVerleih(d: { ausgegeben: number; reserviert: number; ueberfa
   return { klartext: `${d.ausgegeben} Gegenstand/Gegenstände ausgegeben, alles im Zeitplan.`, punkte, stimmung: 'gut' };
 }
 
+/** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
+export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
+  if (d.kurse === 0) {
+    return { klartext: 'Noch keine Kurse — leg deinen ersten Kurs an und trag die Teilnehmer ein.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.teilnehmer} Teilnehmer in ${d.kurse} Kurs(en).`];
+  if (d.warteliste > 0) {
+    return {
+      klartext: `${d.warteliste} Interessent(en) auf der Warteliste — prüfe, ob du nachrücken lassen oder einen Zusatztermin öffnen kannst.`,
+      punkte: [...punkte, `${d.freiePlaetze} Platz/Plätze aktuell frei.`],
+      stimmung: 'achtung',
+    };
+  }
+  return { klartext: `${d.teilnehmer} Teilnehmer, ${d.freiePlaetze} Platz/Plätze frei — alles im grünen Bereich.`, punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };
