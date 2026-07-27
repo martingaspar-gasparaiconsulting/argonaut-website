@@ -113,3 +113,48 @@ export function zaehleVerleih(vorgaenge: VorgangBasis[], heuteIso: string): { au
   }
   return { ausgegeben, reserviert, ueberfaellig };
 }
+
+// ============================================================================
+// Vorlagen-Katalog — typische Mietgegenstände zum Ein-Klick-Anlegen.
+// Bewusst OHNE Preise (Tages-/Wochensatz/Kaution sind pro Betrieb + Region
+// verschieden — die trägt der Kunde selbst ein). Nur Bezeichnung + Kategorie,
+// nach Branche gruppiert. Erweiterbar wie WARTUNG_VORLAGEN.
+// ============================================================================
+
+export interface VerleihVorlage {
+  key: string;
+  bezeichnung: string;
+  kategorie: string;
+  /** grobe Branche, nur zur Gruppierung im Dropdown */
+  branche: string;
+}
+
+export const VERLEIH_VORLAGEN: VerleihVorlage[] = [
+  // Handwerk / Baumaschinen
+  { key: 'minibagger', bezeichnung: 'Minibagger 1,8 t', kategorie: 'Baumaschine', branche: 'Handwerk & Bau' },
+  { key: 'ruettelplatte', bezeichnung: 'Rüttelplatte', kategorie: 'Baumaschine', branche: 'Handwerk & Bau' },
+  { key: 'bautrockner', bezeichnung: 'Bautrockner', kategorie: 'Bautechnik', branche: 'Handwerk & Bau' },
+  { key: 'stromerzeuger', bezeichnung: 'Stromerzeuger', kategorie: 'Bautechnik', branche: 'Handwerk & Bau' },
+  { key: 'geruest', bezeichnung: 'Gerüst (pro m²)', kategorie: 'Gerüst', branche: 'Handwerk & Bau' },
+  { key: 'bauaufzug', bezeichnung: 'Bauaufzug', kategorie: 'Baumaschine', branche: 'Handwerk & Bau' },
+  // Fahrzeuge
+  { key: 'transporter', bezeichnung: 'Transporter / Sprinter', kategorie: 'Fahrzeug', branche: 'Fahrzeuge' },
+  { key: 'ersatzwagen', bezeichnung: 'Ersatz-/Mietwagen', kategorie: 'Fahrzeug', branche: 'Fahrzeuge' },
+  { key: 'wohnmobil', bezeichnung: 'Wohnmobil', kategorie: 'Fahrzeug', branche: 'Fahrzeuge' },
+  { key: 'pkw-anhaenger', bezeichnung: 'Pkw-Anhänger', kategorie: 'Anhänger', branche: 'Fahrzeuge' },
+  // Handel / Event
+  { key: 'partyzelt', bezeichnung: 'Partyzelt', kategorie: 'Event', branche: 'Handel & Event' },
+  { key: 'garnitur', bezeichnung: 'Bierzeltgarnitur', kategorie: 'Event', branche: 'Handel & Event' },
+  { key: 'pa-anlage', bezeichnung: 'PA-/Tontechnik', kategorie: 'Eventtechnik', branche: 'Handel & Event' },
+  // Immobilien
+  { key: 'lagerbox', bezeichnung: 'Lagerbox / Self-Storage', kategorie: 'Lagerfläche', branche: 'Immobilien' },
+  { key: 'stellplatz', bezeichnung: 'Stellplatz', kategorie: 'Fläche', branche: 'Immobilien' },
+  // Landwirtschaft / Garten
+  { key: 'holzspalter', bezeichnung: 'Holzspalter', kategorie: 'Gartengerät', branche: 'Landwirtschaft & Garten' },
+  { key: 'haecksler', bezeichnung: 'Häcksler', kategorie: 'Gartengerät', branche: 'Landwirtschaft & Garten' },
+  { key: 'kehrmaschine', bezeichnung: 'Kehrmaschine', kategorie: 'Gartengerät', branche: 'Landwirtschaft & Garten' },
+];
+
+export function verleihVorlage(key: string): VerleihVorlage | undefined {
+  return VERLEIH_VORLAGEN.find((v) => v.key === key);
+}

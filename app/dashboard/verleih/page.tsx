@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import {
   mietTage, mietPreis, freieAnzahl, istUeberfaellig, zaehleVerleih,
-  type VorgangBasis,
+  VERLEIH_VORLAGEN, verleihVorlage, type VorgangBasis,
 } from '@/lib/verleih';
 import { augeVerleih } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
@@ -177,6 +177,12 @@ export default function VerleihPage() {
     setNv((f) => ({ ...f, kontakt_id: id, mieter_name: k ? k.name : f.mieter_name }));
   }
 
+  function vorlageWahl(key: string) {
+    const vl = verleihVorlage(key);
+    if (!vl) return;
+    setNa((f) => ({ ...f, bezeichnung: vl.bezeichnung, kategorie: vl.kategorie }));
+  }
+
   const kontaktName_ = (id: string | null) => kontakte.find((k) => k.id === id)?.name ?? null;
 
   return (
@@ -287,6 +293,16 @@ export default function VerleihPage() {
         <>
           <div style={styles.card}>
             <div style={styles.cardTitel}>Mietgegenstand anlegen</div>
+            <label style={{ ...styles.lab, marginBottom: 12 }}>🔧 Aus Vorlage starten (optional – füllt Bezeichnung & Kategorie)
+              <select style={styles.inp} value="" onChange={(e) => { vorlageWahl(e.target.value); e.target.value = ''; }}>
+                <option value="">— Vorlage wählen —</option>
+                {[...new Set(VERLEIH_VORLAGEN.map((v) => v.branche))].map((br) => (
+                  <optgroup key={br} label={br}>
+                    {VERLEIH_VORLAGEN.filter((v) => v.branche === br).map((v) => <option key={v.key} value={v.key}>{v.bezeichnung}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
             <div style={styles.grid}>
               <label style={styles.lab}>Bezeichnung<input style={styles.inp} value={na.bezeichnung} onChange={(e) => setNa({ ...na, bezeichnung: e.target.value })} placeholder="z. B. Minibagger 1,8 t" /></label>
               <label style={styles.lab}>Kategorie<input style={styles.inp} value={na.kategorie} onChange={(e) => setNa({ ...na, kategorie: e.target.value })} placeholder="z. B. Baumaschine" /></label>
