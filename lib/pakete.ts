@@ -49,7 +49,7 @@ export type BranchenPaket = {
 export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp'] },
-  { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan'] },
+  { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur'] },
   { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen'] },
   { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte'] },
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'wartung', 'service', 'projekte', 'aufmass'] },
@@ -59,7 +59,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'wellness', name: 'Gesundheit & Wellness', icon: '💆', module: ['wellness', 'online-buchung', 'buchungen'] },
   { key: 'kanzlei', name: 'Kanzlei & Steuer', icon: '⚖️', module: ['kanzlei', 'vertraege', 'datev'] },
   { key: 'bildung', name: 'Bildung & Kurse', icon: '🎓', module: ['bildung', 'online-buchung', 'buchungen'] },
-  { key: 'lebensmittel', name: 'Lebensmittel', icon: '🥫', module: ['lebensmittel', 'erp', 'lager-scanner', 'kasse'] },
+  { key: 'lebensmittel', name: 'Lebensmittel', icon: '🥫', module: ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur'] },
   { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp'] },
   { key: 'tier', name: 'Tier / Praxis', icon: '🐾', module: ['tier', 'online-buchung', 'buchungen'] },
   { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung'] },

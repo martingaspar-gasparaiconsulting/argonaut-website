@@ -1,0 +1,8 @@
+rezept;typ;zutat;menge;einheit;preis_pro_einheit;rolle
+Bauernbrot;teig;Weizenmehl 550;10;kg;0,80;mehl
+Bauernbrot;teig;Wasser;6;kg;0,00;wasser
+Bauernbrot;teig;Salz;0,2;kg;0,50;sonstige
+Bauernbrot;teig;Sauerteig;1;kg;1,20;sonstige
+Lyoner;wurst;Schweinefleisch;8;kg;4,50;sonstige
+Lyoner;wurst;Speck;2;kg;3,00;sonstige
+Lyoner;wurst;Gewuerzmischung;0,3;kg;12,00;sonstige
