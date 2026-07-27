@@ -745,12 +745,12 @@ export default function VorschauPage() {
 
           <div className="arg-price-grid">
             {[
-              { nm: 'SOLO', ma: '1 Mitarbeiter', pr: '499 €', nt: 'All-in · inkl. 1 Nutzer + KI unbegrenzt', hot: true },
-              { nm: 'Mini', ma: '2–9 Mitarbeiter', pr: '490 €', nt: 'Grundgebühr + Nutzer-Sitze' },
-              { nm: 'Klein', ma: '10–24 Mitarbeiter', pr: '990 €', nt: 'Grundgebühr + Nutzer-Sitze' },
-              { nm: 'Mittel', ma: '25–99 Mitarbeiter', pr: '1.990 €', nt: 'Grundgebühr + Nutzer-Sitze' },
-              { nm: 'Groß', ma: '100–499 Mitarbeiter', pr: '3.490 €', nt: 'Grundgebühr + Nutzer-Sitze' },
-              { nm: 'Enterprise', ma: '500+ Mitarbeiter', pr: 'ab 5.990 €', nt: 'Individuell erweiterbar' },
+              { nm: 'SOLO', ma: '1–2 Mitarbeiter', pr: '499 €', nt: 'All-in · inkl. 1 Nutzer + KI unbegrenzt', hot: true },
+              { nm: 'Mini', ma: '3–9 Mitarbeiter', pr: '790 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Klein', ma: '10–24 Mitarbeiter', pr: '1.290 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Mittel', ma: '25–99 Mitarbeiter', pr: '2.690 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Groß', ma: '100–499 Mitarbeiter', pr: '4.900 €', nt: 'Grundgebühr + Nutzer-Sitze' },
+              { nm: 'Enterprise', ma: '500+ Mitarbeiter', pr: 'ab 7.900 €', nt: 'Individuell erweiterbar' },
             ].map((t) => (
               <div key={t.nm} className={'arg-price-card' + (t.hot ? ' hot' : '')}>
                 <p className="nm">{t.nm}</p>
@@ -787,7 +787,7 @@ export default function VorschauPage() {
           <div className="arg-setup">
             <p style={{ fontWeight: 700, color: '#EAF1F6', margin: '0 0 6px' }}>Einmalige Einrichtung — einmal, dann läuft's</p>
             <p style={{ fontSize: '.9rem', color: '#c4d3db', margin: '0 0 8px', lineHeight: 1.6 }}>
-              SOLO 1.500 € · Mini 2.500 € · Klein 5.000 € · Mittel 12.000 € · Groß/Enterprise: Projekt auf Anfrage
+              SOLO 990 € · Mini 1.500 € · Klein 2.900 € · Mittel 4.900 € · Groß 9.900 € · Enterprise: Projekt auf Anfrage
             </p>
             <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
               Flexibel zahlbar: sofort (−10 %), 50/50 bei Start &amp; Go-Live, oder auf 12 Monate verteilt — starten Sie ohne große Einstiegssumme. Enthält Ihr komplettes Hologramm-Onboarding samt Zertifikat.
