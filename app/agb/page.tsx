@@ -29,18 +29,18 @@ const sections = [
 ]
 
 const groessen = [
-  { name: 'SOLO', ma: '1 (Einzelunternehmer)', fee: '499 €', setup: '1.500 €', highlight: false },
-  { name: 'Mini', ma: '2–9', fee: '490 €', setup: '2.500 €', highlight: false },
-  { name: 'Klein', ma: '10–24', fee: '990 €', setup: '5.000 €', highlight: false },
-  { name: 'Mittel', ma: '25–99', fee: '1.990 €', setup: '12.000 €', highlight: true },
-  { name: 'Groß', ma: '100–499', fee: '3.490 €', setup: 'auf Anfrage', highlight: false },
-  { name: 'Enterprise', ma: 'ab 500', fee: '5.990 €', setup: 'auf Anfrage', highlight: false },
+  { name: 'SOLO', ma: '1–2 (Einzelunternehmer)', fee: '499 €', setup: '990 €', highlight: false },
+  { name: 'Mini', ma: '3–9', fee: '790 €', setup: '1.500 €', highlight: false },
+  { name: 'Klein', ma: '10–24', fee: '1.290 €', setup: '2.900 €', highlight: false },
+  { name: 'Mittel', ma: '25–99', fee: '2.690 €', setup: '4.900 €', highlight: true },
+  { name: 'Groß', ma: '100–499', fee: '4.900 €', setup: '9.900 €', highlight: false },
+  { name: 'Enterprise', ma: 'ab 500', fee: 'ab 7.900 €', setup: 'auf Anfrage', highlight: false },
 ]
 
 const sitze = [
-  { typ: 'Voll-Nutzer', wer: 'Chef, GF, Büro, Dispo', preis: '380 € · ab 21 Sitzen 320 € · ab 101: 260 € · ab 501: 190 €' },
-  { typ: 'Standard-Nutzer', wer: 'Sachbearbeiter mit Doku', preis: '170 € · ab 21: 145 € · ab 101: 120 € · ab 501: 90 €' },
-  { typ: 'Self-Service', wer: 'Zeiterfassung, Lohnzettel, „Mein Bereich"', preis: '19 € · ab 500 Sitzen 14 €' },
+  { typ: 'Voll-Nutzer', wer: 'Chef, GF, Büro, Dispo', preis: '380 € (Mini/Klein) · 320 € (Mittel) · 260 € (Groß) · 190 € (Enterprise)' },
+  { typ: 'Standard-Nutzer', wer: 'Sachbearbeiter mit Doku', preis: '170 € (Mini/Klein) · 145 € (Mittel) · 120 € (Groß) · 90 € (Enterprise)' },
+  { typ: 'Self-Service', wer: 'Zeiterfassung, Lohnzettel, „Mein Bereich"', preis: '19 € · 14 € (Enterprise)' },
 ]
 
 export default function AGB() {
@@ -134,7 +134,7 @@ export default function AGB() {
                 </table>
               </div>
 
-              <p className="lp-p" style={{ fontWeight: 600, color: '#EAF1F6', margin: '0 0 12px' }}>Nutzer-Sitze (Preis je Sitz/Monat, gestaffelt nach Menge):</p>
+              <p className="lp-p" style={{ fontWeight: 600, color: '#EAF1F6', margin: '0 0 12px' }}>Nutzer-Sitze (Preis je Sitz/Monat, gestaffelt nach Betriebsgröße):</p>
               <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
                 <table className="lp-table">
                   <thead>
