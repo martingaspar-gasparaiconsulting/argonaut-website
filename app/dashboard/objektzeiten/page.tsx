@@ -44,6 +44,8 @@ type ZeitRow = ObjektZeitBasis & {
   mitarbeiter_id: string | null;
   taetigkeit: string | null;
   notiz: string | null;
+  abgerechnet?: boolean | null;
+  rechnung_id?: string | null;
 };
 
 // --- Formular-Zustände --------------------------------------------------
@@ -95,6 +97,9 @@ export default function ObjektzeitenPage() {
   const [objForm, setObjForm] = useState<ObjForm>(OBJ_LEER);
   const [zeitForm, setZeitForm] = useState<ZeitForm>(zeitLeer(''));
   const [speichert, setSpeichert] = useState(false);
+  // Rechnung aus Objektzeiten (Block K)
+  const [rechnungBusy, setRechnungBusy] = useState<string | null>(null);
+  const [rechnungMsg, setRechnungMsg] = useState<string | null>(null);
 
   // Chef ermitteln
   useEffect(() => {
@@ -223,6 +228,7 @@ export default function ObjektzeitenPage() {
     } finally { setSpeichert(false); }
   }
   async function zeitLoeschen(z: ZeitRow) {
+    if (z.abgerechnet) { setFehler('Abgerechnete Zeiten können nicht gelöscht werden.'); return; }
     if (!window.confirm('Diese Zeitbuchung wirklich entfernen?')) return;
     try {
       const { error } = await supabase.from('objekt_zeiten').delete().eq('id', z.id);
@@ -231,6 +237,23 @@ export default function ObjektzeitenPage() {
     } catch (e: unknown) {
       setFehler('Löschen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     }
+  }
+
+  // --- Rechnung aus abrechenbaren Objektzeiten (Block K) ----------------
+  async function rechnungAusObjekt(objektId: string, bezeichnung: string) {
+    if (!window.confirm(`Rechnung aus allen offenen, abrechenbaren Zeiten von „${bezeichnung}" erstellen?`)) return;
+    setRechnungBusy(objektId); setFehler(null); setRechnungMsg(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-objektzeit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ objektId }),
+      });
+      const j = await res.json();
+      if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
+      setRechnungMsg(`Rechnung aus ${j.anzahl} Zeitbuchung(en) für „${bezeichnung}" erstellt — unter 🧾 Rechnungen.`);
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Rechnung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setRechnungBusy(null); }
   }
 
   // --- Auswertung -------------------------------------------------------
@@ -256,6 +279,7 @@ export default function ObjektzeitenPage() {
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {rechnungMsg && <div style={{ color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '12px 14px', margin: '0 0 14px', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{rechnungMsg}</div>}
 
       {/* Zeit erfassen */}
       <div style={styles.card}>
@@ -354,6 +378,7 @@ export default function ObjektzeitenPage() {
                       <th style={{ ...styles.th, textAlign: 'right' }}>Zeit gesamt</th>
                       <th style={{ ...styles.th, textAlign: 'right' }}>Abrechenbar</th>
                       <th style={{ ...styles.th, textAlign: 'right' }}>Kosten netto</th>
+                      <th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,6 +390,11 @@ export default function ObjektzeitenPage() {
                         <td style={{ ...styles.td, textAlign: 'right', color: C.green }}>{stundenText(s.minutenAbrechenbar)}</td>
                         <td style={{ ...styles.td, textAlign: 'right', color: C.gold }}>
                           {s.kostenAbrechenbar != null ? eur(s.kostenAbrechenbar) : '— (kein Satz)'}
+                        </td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          {s.objektId && s.minutenAbrechenbar > 0 ? (
+                            <button onClick={() => rechnungAusObjekt(s.objektId as string, s.bezeichnung)} disabled={rechnungBusy === s.objektId} style={{ ...styles.miniBtnGhost, color: C.gold, borderColor: `${C.gold}55`, whiteSpace: 'nowrap' }} title="Offene abrechenbare Zeiten dieses Objekts abrechnen">{rechnungBusy === s.objektId ? '…' : '🧾 Rechnung'}</button>
+                          ) : null}
                         </td>
                       </tr>
                     ))}
@@ -400,10 +430,12 @@ export default function ObjektzeitenPage() {
                         <td style={{ ...styles.td, color: C.textDim }}>{z.taetigkeit || '—'}</td>
                         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{stundenText(z.dauer_minuten)}</td>
                         <td style={{ ...styles.td, textAlign: 'center' }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', display: 'inline-block', background: z.abrechenbar !== false ? C.green : C.textDim }} />
+                          {z.abgerechnet
+                            ? <span title="abgerechnet" style={{ color: C.gold, fontWeight: 700 }}>🧾</span>
+                            : <span title={z.abrechenbar !== false ? 'abrechenbar' : 'nicht abrechenbar'} style={{ width: 10, height: 10, borderRadius: '50%', display: 'inline-block', background: z.abrechenbar !== false ? C.green : C.textDim }} />}
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          <button onClick={() => zeitLoeschen(z)} style={styles.miniBtnGhost}>Entfernen</button>
+                          {!z.abgerechnet && <button onClick={() => zeitLoeschen(z)} style={styles.miniBtnGhost}>Entfernen</button>}
                         </td>
                       </tr>
                     ))}
