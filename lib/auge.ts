@@ -318,6 +318,18 @@ export function augeSpenden(d: { anzahlJahr: number; summeJahr: number; offeneBe
   return { klartext: 'Alle erfassten Zuwendungen sind bestätigt.', punkte, stimmung: 'gut' };
 }
 
+/** Tour/Dispo: offene Stopps und Zustellfortschritt. */
+export function augeTour(d: { touren: number; offeneTouren: number; offeneStopps: number; zugestelltGesamt: number }): AugeErgebnis {
+  if (d.touren === 0) {
+    return { klartext: 'Noch keine Touren — leg eine Tour an, füge die Stopps hinzu und quittiere jede Zustellung mit Unterschrift.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.offeneTouren} offene Tour(en) · ${d.zugestelltGesamt} zugestellt gesamt.`];
+  if (d.offeneStopps > 0) {
+    return { klartext: `${d.offeneStopps} Stopp(s) noch offen — abarbeiten und den Abliefernachweis je Stopp erfassen.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: 'Alle Stopps bearbeitet — Touren sauber quittiert.', punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
