@@ -116,3 +116,166 @@ export function darfAbrechnen(v: WartungAbrechenbar, heuteIso: string): Abrechnu
 export function positionenNetto(pos: WiederkehrPosition[]): number {
   return pos.reduce((s, p) => s + (Number(p.menge) || 0) * (Number(p.einzelpreis) || 0), 0);
 }
+
+// ============================================================================
+// BLOCK B · Cockpit-Kennzahlen — die vier Wiederkehr-Quellen auf EINEN Nenner.
+//
+// Wartung (wartungsvertraege), Abo-Rechnungen (abo_rechnungen), Mitglieder
+// (mitglieder) und eigene Vertraege (vertraege) haben je eigene Felder. Hier
+// werden sie in einen gemeinsamen WiederkehrEintrag normalisiert, damit das
+// Cockpit MRR (wiederkehrender Umsatz/Monat), Ausgaben/Monat und die
+// Faelligkeits-Buckets ueber alles hinweg rechnen kann. Rein rechnerisch.
+// ============================================================================
+
+export type WiederkehrQuelle = 'wartung' | 'abo' | 'mitglied' | 'vertrag';
+export type WiederkehrRichtung = 'einnahme' | 'ausgabe';
+
+export interface WiederkehrEintrag {
+  id: string;
+  quelle: WiederkehrQuelle;
+  titel: string;
+  partner: string | null;
+  betragNetto: number;        // pro Intervall
+  intervallMonate: number;    // 0 = einmalig / kein Turnus
+  monatswert: number;         // Betrag normalisiert auf 1 Monat (0 bei einmalig)
+  naechsteFaelligkeit: string | null; // "YYYY-MM-DD" oder null
+  richtung: WiederkehrRichtung;
+  aktiv: boolean;
+}
+
+/** Tage additionssicher auf ein "YYYY-MM-DD" addieren (lokal, kein UTC-Versatz). */
+export function datumPlusTage(iso: string, tage: number): string {
+  const teile = (iso || '').slice(0, 10).split('-');
+  const j = parseInt(teile[0], 10);
+  const m = parseInt(teile[1], 10);
+  const t = parseInt(teile[2], 10);
+  if (!j || !m || !t) return (iso || '').slice(0, 10);
+  const d = new Date(j, m - 1, t);
+  d.setDate(d.getDate() + tage);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const tt = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${tt}`;
+}
+
+/**
+ * Intervall-Text (in allen Schreibweisen der vier Tabellen) -> Monate.
+ * monat/monatlich=1 · quartal/quartalsweise=3 · jahr/jaehrlich=12 · einmalig=0.
+ */
+export function intervallZuMonate(text?: string | null): number {
+  const t = (text || '').toLowerCase().trim();
+  if (t === 'monat' || t === 'monatlich') return 1;
+  if (t === 'quartal' || t === 'quartalsweise' || t === 'vierteljaehrlich' || t === 'vierteljährlich') return 3;
+  if (t === 'jahr' || t === 'jaehrlich' || t === 'jährlich') return 12;
+  if (t === 'einmalig') return 0;
+  return 1; // sinnvoller Default: monatlich
+}
+
+/** Monatswert = Betrag / Intervall-Monate. Einmalig (0) zaehlt nicht wiederkehrend. */
+export function monatswertBerechnen(betragNetto: number, intervallMonate: number): number {
+  return intervallMonate > 0 ? (Number(betragNetto) || 0) / intervallMonate : 0;
+}
+
+// --- Normalisierer je Quelle ------------------------------------------------
+
+export function normalisiereWartung(r: Record<string, unknown>): WiederkehrEintrag {
+  const betragNetto = Number(r.betrag_netto) || 0;
+  const intervallMonate = Number(r.intervall_monate) > 0 ? Number(r.intervall_monate) : 12;
+  const status = typeof r.status === 'string' ? r.status : 'aktiv';
+  const aktiv = (status === 'aktiv') && r.archiviert !== true;
+  return {
+    id: String(r.id ?? ''), quelle: 'wartung',
+    titel: (typeof r.titel === 'string' && r.titel) || 'Wartungsvertrag',
+    partner: typeof r.kunde_name === 'string' ? r.kunde_name : null,
+    betragNetto, intervallMonate, monatswert: monatswertBerechnen(betragNetto, intervallMonate),
+    naechsteFaelligkeit: typeof r.naechste_faelligkeit_am === 'string' ? r.naechste_faelligkeit_am : null,
+    richtung: 'einnahme', aktiv,
+  };
+}
+
+export function normalisiereAbo(r: Record<string, unknown>): WiederkehrEintrag {
+  const pos = Array.isArray(r.positionen) ? (r.positionen as Record<string, unknown>[]) : [];
+  const betragNetto = pos.reduce((s, p) => s + (Number(p.menge) || 1) * (Number(p.einzelpreis) || 0), 0);
+  const intervallMonate = intervallZuMonate(typeof r.intervall === 'string' ? r.intervall : 'monat');
+  return {
+    id: String(r.id ?? ''), quelle: 'abo',
+    titel: (typeof r.titel === 'string' && r.titel) || 'Wiederkehrende Rechnung',
+    partner: typeof r.empfaenger_name === 'string' ? r.empfaenger_name : null,
+    betragNetto, intervallMonate, monatswert: monatswertBerechnen(betragNetto, intervallMonate),
+    naechsteFaelligkeit: typeof r.naechste_faellig === 'string' ? r.naechste_faellig : null,
+    richtung: 'einnahme', aktiv: r.aktiv !== false,
+  };
+}
+
+export function normalisiereMitglied(r: Record<string, unknown>): WiederkehrEintrag {
+  const betragNetto = Number(r.betrag) || 0;
+  const intervallMonate = intervallZuMonate(typeof r.intervall === 'string' ? r.intervall : 'monat');
+  const status = typeof r.status === 'string' ? r.status : 'aktiv';
+  return {
+    id: String(r.id ?? ''), quelle: 'mitglied',
+    titel: (typeof r.name === 'string' && r.name) || 'Mitglied / Abo',
+    partner: typeof r.name === 'string' ? r.name : null,
+    betragNetto, intervallMonate, monatswert: monatswertBerechnen(betragNetto, intervallMonate),
+    naechsteFaelligkeit: null, // Mitglieder-Tabelle fuehrt keine explizite naechste Faelligkeit
+    richtung: 'einnahme', aktiv: status === 'aktiv',
+  };
+}
+
+export function normalisiereVertrag(r: Record<string, unknown>): WiederkehrEintrag {
+  const betragNetto = Number(r.kosten_betrag) || 0;
+  const intervallMonate = intervallZuMonate(typeof r.kosten_intervall === 'string' ? r.kosten_intervall : 'monatlich');
+  const status = typeof r.status === 'string' ? r.status : 'aktiv';
+  return {
+    id: String(r.id ?? ''), quelle: 'vertrag',
+    titel: (typeof r.bezeichnung === 'string' && r.bezeichnung) || 'Vertrag',
+    partner: typeof r.vertragspartner === 'string' ? r.vertragspartner : null,
+    betragNetto, intervallMonate, monatswert: monatswertBerechnen(betragNetto, intervallMonate),
+    naechsteFaelligkeit: null, // Vertraege rechnen auf Kuendigungsfrist, nicht auf Faelligkeit
+    richtung: 'ausgabe', aktiv: status === 'aktiv',
+  };
+}
+
+// --- Aggregation ------------------------------------------------------------
+
+/** MRR: wiederkehrender Netto-Umsatz pro Monat (aktive Einnahmen). */
+export function mrr(eintraege: WiederkehrEintrag[]): number {
+  return eintraege
+    .filter((e) => e.aktiv && e.richtung === 'einnahme')
+    .reduce((s, e) => s + e.monatswert, 0);
+}
+
+/** Wiederkehrende Ausgaben pro Monat (aktive eigene Vertraege). */
+export function ausgabenProMonat(eintraege: WiederkehrEintrag[]): number {
+  return eintraege
+    .filter((e) => e.aktiv && e.richtung === 'ausgabe')
+    .reduce((s, e) => s + e.monatswert, 0);
+}
+
+export type FaelligBucket = 'faellig' | 'bald' | 'ok' | 'kein';
+
+/**
+ * Faelligkeits-Einordnung eines Eintrags relativ zu heute.
+ * faellig = heute oder ueberfaellig · bald = in <= `baldTage` Tagen ·
+ * ok = spaeter · kein = keine Faelligkeit hinterlegt.
+ */
+export function faelligBucket(e: WiederkehrEintrag, heuteIso: string, baldTage = 14): FaelligBucket {
+  if (!e.naechsteFaelligkeit) return 'kein';
+  const n = e.naechsteFaelligkeit.slice(0, 10);
+  const heute = heuteIso.slice(0, 10);
+  if (n <= heute) return 'faellig';
+  if (n <= datumPlusTage(heute, baldTage)) return 'bald';
+  return 'ok';
+}
+
+/** Zaehlt aktive Einnahme-Eintraege nach Faelligkeits-Bucket. */
+export function zaehleFaelligkeiten(
+  eintraege: WiederkehrEintrag[],
+  heuteIso: string,
+  baldTage = 14,
+): { faellig: number; bald: number; ok: number; kein: number } {
+  const summe = { faellig: 0, bald: 0, ok: 0, kein: 0 };
+  for (const e of eintraege) {
+    if (!e.aktiv || e.richtung !== 'einnahme') continue;
+    summe[faelligBucket(e, heuteIso, baldTage)]++;
+  }
+  return summe;
+}

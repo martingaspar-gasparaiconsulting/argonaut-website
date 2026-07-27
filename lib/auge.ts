@@ -96,6 +96,37 @@ export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt
   return { klartext: `Alle Kontakte sind frisch betreut — nichts liegt liegen.`, punkte: [`${d.gesamt} Kontakte gesamt`], stimmung: 'gut' };
 }
 
+/** Wiederkehr-Cockpit: MRR, fällige/bald fällige Wiederkehr, laufende Ausgaben. */
+export function augeWiederkehr(d: {
+  mrr: number;
+  faellig: number;
+  bald: number;
+  ausgaben: number;
+  aktiveEinnahmen: number;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+  if (d.mrr > 0) punkte.push(`${eur(d.mrr)} wiederkehrender Umsatz pro Monat (MRR) aus ${d.aktiveEinnahmen} aktiven Quelle${d.aktiveEinnahmen === 1 ? '' : 'n'}.`);
+  if (d.ausgaben > 0) punkte.push(`${eur(d.ausgaben)} laufende Vertragskosten pro Monat stehen dem gegenüber.`);
+
+  if (d.faellig > 0) {
+    return {
+      klartext: `${d.faellig} Wiederkehr${d.faellig === 1 ? '' : 'en'} ${d.faellig === 1 ? 'ist' : 'sind'} jetzt fällig — daraus solltest du zeitnah Rechnungen erzeugen, bevor Umsatz liegen bleibt.`,
+      punkte: [...punkte, ...(d.bald > 0 ? [`${d.bald} weitere werden in den nächsten 14 Tagen fällig.`] : [])],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.bald > 0) {
+    return {
+      klartext: `Nichts überfällig, aber ${d.bald} Wiederkehr${d.bald === 1 ? '' : 'en'} ${d.bald === 1 ? 'wird' : 'werden'} in den nächsten 14 Tagen fällig — plan sie rechtzeitig ein.`,
+      punkte, stimmung: 'neutral',
+    };
+  }
+  if (d.aktiveEinnahmen === 0) {
+    return { klartext: 'Noch keine wiederkehrenden Einnahmen erfasst — Wartungsverträge, Abos oder Retainer bringen planbaren Monatsumsatz.', punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `Alles im Takt — ${eur(d.mrr)} planbarer Monatsumsatz, nichts überfällig.`, punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };
