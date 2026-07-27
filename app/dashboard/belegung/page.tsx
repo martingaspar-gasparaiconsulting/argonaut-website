@@ -185,6 +185,25 @@ export default function BelegungPage() {
     finally { setBusy(null); }
   }
 
+  async function rechnungErstellen(v: Vorgang) {
+    if (v.rechnung_id) { window.location.href = `/dashboard/rechnungen?id=${v.rechnung_id}`; return; }
+    setBusy(v.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-belegung', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vorgangId: v.id }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        if (res.status === 409 && j.rechnungId) { await laden_(); setOk('Für diese Belegung gibt es bereits eine Rechnung.'); return; }
+        throw new Error(j.error || 'Fehler');
+      }
+      await laden_();
+      setOk('Rechnung erstellt.');
+    } catch (err: unknown) { setFehler('Rechnung fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
   const kontaktName_ = (id: string | null) => kontakte.find((k) => k.id === id)?.name ?? null;
   const einheitBelegtJetzt = (id: string) => vorgaenge.some((v) => v.einheit_id === id && istAktuellBelegt(v, new Date()));
 
@@ -280,6 +299,8 @@ export default function BelegungPage() {
                             {v.status === 'bestaetigt' && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'eingecheckt')}>🔑 Check-in</button>}
                             {v.status === 'eingecheckt' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'ausgecheckt')}>📤 Check-out</button>}
                             {(v.status === 'reserviert' || v.status === 'bestaetigt') && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'storniert')}>Stornieren</button>}
+                            {(v.status === 'bestaetigt' || v.status === 'eingecheckt' || v.status === 'ausgecheckt') && !v.rechnung_id && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
+                            {v.rechnung_id && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => rechnungErstellen(v)}>Rechnung ›</button>}
                           </td>
                         </tr>
                       );
