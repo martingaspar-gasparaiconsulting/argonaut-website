@@ -42,6 +42,8 @@ type Tenant = {
   moduleAktiv: number;
   aktiveModule: string[];
   failOpen: boolean;
+  nutzerGesamt: number;
+  nutzerMitZugang: number;
 };
 
 export default function AdminTenants() {
@@ -351,6 +353,7 @@ export default function AdminTenants() {
                     <th style={th}>Plan</th>
                     <th style={th}>Status</th>
                     <th style={th}>Onboarding</th>
+                    <th style={th}>Nutzer</th>
                     <th style={th}>Module</th>
                   </tr>
                 </thead>
@@ -379,6 +382,12 @@ export default function AdminTenants() {
                               : <span style={badge('offen', 'rgba(255,255,255,0.55)')}>offen</span>}
                           </td>
                           <td style={td}>
+                            <span style={{ fontFamily: mono, fontSize: 13 }}>
+                              <span style={{ color: CYAN, fontWeight: 700 }}>{t.nutzerGesamt}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.5)' }}> ({t.nutzerMitZugang} aktiv)</span>
+                            </span>
+                          </td>
+                          <td style={td}>
                             {t.failOpen ? (
                               <span style={badge('alle · fail-open', GOLD)} title="Kein Modul aktiv geschaltet — der Kunde sieht alle Module.">
                                 alle · fail-open
@@ -394,7 +403,7 @@ export default function AdminTenants() {
 
                         {istOffen && (
                           <tr key={`${t.id}-panel`}>
-                            <td colSpan={7} style={{ padding: 0, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                               <ModulPanel
                                 tenant={t}
                                 mono={mono}

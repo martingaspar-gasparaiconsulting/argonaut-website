@@ -60,10 +60,22 @@ export async function GET() {
   // Angestellte identifizieren -> aus der Tenant-Liste ausschliessen
   const { data: maRows } = await admin
     .from('mitarbeiter')
-    .select('auth_user_id');
+    .select('auth_user_id, owner_user_id');
   const mitarbeiterIds = new Set(
     (maRows ?? []).map((r) => r.auth_user_id).filter(Boolean) as string[],
   );
+
+  // Nutzer je Chef zaehlen: gesamt angelegte Mitarbeiter + wie viele davon
+  // schon einen Login-Zugang haben (auth_user_id gesetzt). Der Chef selbst wird
+  // spaeter mit +1 dazugerechnet.
+  const nutzerProChef = new Map<string, { gesamt: number; mitZugang: number }>();
+  for (const r of maRows ?? []) {
+    if (!r.owner_user_id) continue;
+    const e = nutzerProChef.get(r.owner_user_id) ?? { gesamt: 0, mitZugang: 0 };
+    e.gesamt += 1;
+    if (r.auth_user_id) e.mitZugang += 1;
+    nutzerProChef.set(r.owner_user_id, e);
+  }
 
   const { data: profRows, error: profErr } = await admin
     .from('profiles')
@@ -95,6 +107,7 @@ export async function GET() {
     .filter((p) => !mitarbeiterIds.has(p.id))
     .map((p) => {
       const m = moduleProTenant.get(p.id) ?? { gebucht: 0, aktiv: 0, aktiveKeys: [] };
+      const n = nutzerProChef.get(p.id) ?? { gesamt: 0, mitZugang: 0 };
       return {
         id: p.id,
         email: p.email ?? '',
@@ -107,6 +120,9 @@ export async function GET() {
         aktiveModule: m.aktiveKeys,
         // Gate-Wahrheit: fail-open, solange KEINE aktive Zeile existiert.
         failOpen: m.aktiv === 0,
+        // Nutzer: Chef (+1, hat immer Login) + angelegte Mitarbeiter.
+        nutzerGesamt: n.gesamt + 1,
+        nutzerMitZugang: n.mitZugang + 1,
       };
     });
 
