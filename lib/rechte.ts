@@ -152,6 +152,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '❤️ Spenden', href: '/dashboard/spenden', modul: 'spenden', ebene: 3, gruppe: 'finanzen' },
   { label: '🚚 Tour & ePOD', href: '/dashboard/tour', modul: 'tour', ebene: 3, gruppe: 'betrieb' },
   { label: '📑 Gutachten', href: '/dashboard/gutachten', modul: 'gutachten', ebene: 3, gruppe: 'betrieb' },
+  { label: '🦽 Hilfsmittel', href: '/dashboard/hilfsmittel', modul: 'hilfsmittel', ebene: 3, gruppe: 'betrieb' },
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
