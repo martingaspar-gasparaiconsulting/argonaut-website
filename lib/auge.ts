@@ -210,6 +210,23 @@ export function augeFoerder(d: { bewilligt: number; summeBewilligt: number; fris
   return { klartext: 'Noch keine bewilligten Vorhaben — verfolge oben passende Programme und setz dir die Fristen.', punkte, stimmung: 'neutral' };
 }
 
+/** Verleih: ausgegebene/reservierte Gegenstände + überfällige Rückgaben. */
+export function augeVerleih(d: { ausgegeben: number; reserviert: number; ueberfaellig: number }): AugeErgebnis {
+  if (d.ausgegeben === 0 && d.reserviert === 0) {
+    return { klartext: 'Aktuell ist nichts verliehen — leg Mietgegenstände an und erfasse die erste Ausleihe.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.reserviert > 0) punkte.push(`${d.reserviert} Reservierung(en) offen.`);
+  if (d.ueberfaellig > 0) {
+    return {
+      klartext: `${d.ueberfaellig} Ausleihe(n) überfällig — Rückgabe anmahnen, sonst blockieren die Geräte und Umsatz geht verloren.`,
+      punkte: [`${d.ausgegeben} aktuell ausgegeben.`, ...punkte],
+      stimmung: 'achtung',
+    };
+  }
+  return { klartext: `${d.ausgegeben} Gegenstand/Gegenstände ausgegeben, alles im Zeitplan.`, punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };
