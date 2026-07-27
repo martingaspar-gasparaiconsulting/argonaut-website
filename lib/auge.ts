@@ -342,6 +342,18 @@ export function augeGutachten(d: { gesamt: number; entwurf: number; fertig: numb
   return { klartext: `Alle ${d.gesamt} Gutachten fertiggestellt.`, punkte, stimmung: 'gut' };
 }
 
+/** Hilfsmittel-Versorgung: offene Fälle und Genehmigungsstatus. */
+export function augeHilfsmittel(d: { gesamt: number; offen: number; wartetGenehmigung: number; abgerechnet: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Versorgungen — erfasse die erste Verordnung und die Hilfsmittel-Positionen mit HMV-Nummer.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.offen} offene Versorgung(en) · ${d.abgerechnet} abgerechnet.`];
+  if (d.wartetGenehmigung > 0) {
+    return { klartext: `${d.wartetGenehmigung} Kostenvoranschlag/-schläge warten auf Genehmigung der Krankenkasse — dranbleiben.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `${d.offen} Versorgung(en) in Bearbeitung — alles im Fluss.`, punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
