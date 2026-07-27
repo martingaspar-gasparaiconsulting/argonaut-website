@@ -14,6 +14,12 @@ export const ABRECHNUNGSARTEN: { key: Abrechnungsart; label: string; einheitLabe
   { key: 'stunde', label: 'pro Stunde', einheitLabel: 'Stunden' },
 ];
 
+// WICHTIG: von/bis sind IMMER das Belegungs-Intervall [von, bis) mit EXKLUSIVEM Ende.
+//  · nacht:  von = Anreise, bis = Abreise  → Nächte = Tagesdifferenz
+//  · tag:    von = erster Tag, bis = Tag NACH dem letzten (exklusiv) → Tage = Tagesdifferenz
+//  · stunde: von = Beginn, bis = Ende      → Stunden = Zeitdifferenz
+// So deckt sich die berechnete Menge exakt mit dem DB-Doppelbelegungs-Schutz.
+
 export const BELEGUNG_STATUS = ['reserviert', 'bestaetigt', 'eingecheckt', 'ausgecheckt', 'storniert'] as const;
 export type BelegungStatus = typeof BELEGUNG_STATUS[number];
 
@@ -52,10 +58,10 @@ export function naechte(von: string | Date, bis: string | Date): number {
   return n > 0 ? n : 0;
 }
 
-/** Tage inklusive (Tages-Abrechnung). Mo→Mo = 1, Mo→Di = 2. */
+/** Tage (Tages-Abrechnung, exklusives Ende — identisch zur Nächte-Zählung).
+ *  Mo→Di = 1 Tag, Mo→Do = 3 Tage. Für 1 Tag ist bis = Folgetag. */
 export function tage(von: string | Date, bis: string | Date): number {
-  const n = Math.round((tagUTC(bis) - tagUTC(von)) / MS_TAG);
-  return n >= 0 ? n + 1 : 0;
+  return naechte(von, bis);
 }
 
 /** Stunden exakt (2 Nachkommastellen), auf realer Zeitdifferenz. */
