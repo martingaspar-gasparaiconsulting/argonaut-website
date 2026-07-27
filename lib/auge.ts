@@ -305,6 +305,19 @@ export function augeZuschnitt(d: { projekte: number; teile: number }): AugeErgeb
   return { klartext: `${d.projekte} Projekt(e) · ${d.teile} Teileposition(en) — die Optimierung minimiert den Verschnitt automatisch.`, punkte: [], stimmung: 'gut' };
 }
 
+/** Spenden: Summe des Jahres und noch offene Zuwendungsbestätigungen. */
+export function augeSpenden(d: { anzahlJahr: number; summeJahr: number; offeneBestaetigungen: number }): AugeErgebnis {
+  if (d.anzahlJahr === 0 && d.offeneBestaetigungen === 0) {
+    return { klartext: 'Noch keine Zuwendungen erfasst — trag die erste Spende ein und hinterlege einmal die Vereinsdaten für die Bestätigungen.', punkte: [], stimmung: 'neutral' };
+  }
+  const summe = d.summeJahr.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  const punkte: string[] = [`${d.anzahlJahr} Zuwendung(en) dieses Jahr · ${summe}.`];
+  if (d.offeneBestaetigungen > 0) {
+    return { klartext: `${d.offeneBestaetigungen} Zuwendung(en) ohne erstellte Bestätigung — ab 300 € ist die Zuwendungsbestätigung nach amtlichem Muster nötig.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: 'Alle erfassten Zuwendungen sind bestätigt.', punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
