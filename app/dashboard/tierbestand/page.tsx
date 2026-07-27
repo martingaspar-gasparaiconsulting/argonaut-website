@@ -11,10 +11,11 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
-  TIERARTEN, BEWEGUNG_ARTEN, MELDEFRIST_TAGE_STD, meldeStatus, zaehleTierbestand,
+  TIERARTEN, BEWEGUNG_ARTEN, MELDEFRIST_TAGE_STD, meldeStatus, fristRest, zaehleTierbestand,
   type MeldeStatus,
 } from '@/lib/tierbestand';
 import { augeTierbestand } from '@/lib/auge';
+import { hitMeldelistePdf } from '@/lib/hitMeldelistePdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -46,6 +47,7 @@ function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.sl
 
 export default function TierbestandPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'bestand' | 'bewegungen' | 'stichtag'>('bestand');
   const [gruppen, setGruppen] = useState<Gruppe[]>([]);
   const [bewegungen, setBewegungen] = useState<Bewegung[]>([]);
@@ -82,6 +84,9 @@ export default function TierbestandPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || str(meta.betrieb) || null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -145,6 +150,22 @@ export default function TierbestandPage() {
       setOk('Stichtagsmeldung erfasst.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
+  }
+
+  function meldelisteErstellen() {
+    const heute = new Date();
+    const offen = bewegungen.filter((b) => !b.gemeldet).map((b) => {
+      const g = gruppeById(b.gruppe_id);
+      const frist = g?.meldefrist_tage ?? MELDEFRIST_TAGE_STD;
+      const st = meldeStatus(b.datum, false, null, frist, heute);
+      return {
+        datum: b.datum, gruppe: g?.bezeichnung ?? '—', tierart: TIERART_LABEL[g?.tierart ?? ''] ?? (g?.tierart ?? ''),
+        vvvo: g?.betriebsnummer ?? null, art: ART_LABEL[b.art] ?? b.art, anzahl: b.anzahl, ohrmarke: b.ohrmarke,
+        status: st === 'ueberfaellig' ? 'überfällig' : 'offen', fristRest: fristRest(b.datum, frist, heute),
+      };
+    }).sort((a, z) => a.fristRest - z.fristRest);
+    if (!offen.length) { setOk('Keine offenen Meldungen — alles an HIT gemeldet.'); return; }
+    hitMeldelistePdf({ stand: H, aussteller, eintraege: offen });
   }
 
   function MeldeBadge({ b }: { b: Bewegung }) {
@@ -227,7 +248,9 @@ export default function TierbestandPage() {
       {tab === 'bewegungen' && (
         <>
           <div style={styles.card}>
-            <div style={styles.cardTitel}>Bewegung erfassen <span style={styles.frist}>Meldefrist an HIT: 7 Tage</span></div>
+            <div style={styles.cardTitel}>Bewegung erfassen <span style={styles.frist}>Meldefrist an HIT: 7 Tage</span>
+              <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 'auto' }} onClick={meldelisteErstellen}>📄 HIT-Meldeliste</button>
+            </div>
             {aktiveGruppen.length === 0 ? <div style={styles.hint}>Lege zuerst im Reiter „Bestände" eine Tiergruppe an.</div> : (
               <>
                 <div style={styles.grid}>
