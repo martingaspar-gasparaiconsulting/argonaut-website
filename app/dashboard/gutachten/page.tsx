@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { HONORARGRUPPEN, KATEGORIEN, honorar, honorarsatz, summePositionen, zaehleGutachten } from '@/lib/gutachten';
 import { augeGutachten } from '@/lib/auge';
+import { gutachtenPdf } from '@/lib/gutachtenPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -36,6 +37,7 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 
 export default function GutachtenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [ausstellerOrt, setAusstellerOrt] = useState<string | null>(null);
   const [tab, setTab] = useState<'liste' | 'bearbeiten'>('liste');
   const [gutachten, setGutachten] = useState<Gutachten[]>([]);
   const [positionen, setPositionen] = useState<Position[]>([]);
@@ -68,6 +70,9 @@ export default function GutachtenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAusstellerOrt(str(meta.ort) || str(meta.stadt) || str(meta.firmenort) || null);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -117,6 +122,15 @@ export default function GutachtenPage() {
     try { const { error } = await supabase.from('gutachten_position').delete().eq('id', p.id); if (error) throw error; await laden_(); }
     catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
+  }
+
+  function pdfErstellen(g: Gutachten) {
+    const pos = positionen.filter((p) => p.gutachten_id === g.id);
+    gutachtenPdf({
+      titel: g.titel, auftraggeber: g.auftraggeber, objekt: g.objekt, art: g.art, aktenzeichen: g.aktenzeichen,
+      datum: g.datum, gutachter: g.gutachter, honorargruppe: g.honorargruppe, stunden: g.stunden,
+      zusammenfassung: g.zusammenfassung, aussteller_ort: ausstellerOrt,
+    }, pos);
   }
 
   async function statusToggle(g: Gutachten) {
@@ -214,7 +228,8 @@ export default function GutachtenPage() {
             {aktiv && (
               <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ color: C.textDim, fontSize: 'clamp(13px,1.1vw,17px)' }}>{aktiv.objekt || ''}{aktiv.art ? ` · ${aktiv.art}` : ''}{aktivHonorar != null ? ` · Honorar ${eur(aktivHonorar)}` : ''} · Positionen-Summe {eur(summePositionen(aktivPos))}</span>
-                <button style={{ ...styles.mini, color: aktiv.status === 'fertig' ? C.warn : C.green, borderColor: `${aktiv.status === 'fertig' ? C.warn : C.green}55`, marginLeft: 'auto' }} disabled={busy === aktiv.id} onClick={() => statusToggle(aktiv)}>{aktiv.status === 'fertig' ? '↩ auf Entwurf' : '✓ fertigstellen'}</button>
+                <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 'auto' }} onClick={() => pdfErstellen(aktiv)}>📄 Gutachten-PDF</button>
+                <button style={{ ...styles.mini, color: aktiv.status === 'fertig' ? C.warn : C.green, borderColor: `${aktiv.status === 'fertig' ? C.warn : C.green}55` }} disabled={busy === aktiv.id} onClick={() => statusToggle(aktiv)}>{aktiv.status === 'fertig' ? '↩ auf Entwurf' : '✓ fertigstellen'}</button>
               </div>
             )}
           </div>
