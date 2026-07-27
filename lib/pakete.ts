@@ -50,7 +50,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih'] },
   { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'belegung'] },
-  { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih', 'pruefprotokolle'] },
+  { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour'] },
   { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'erp', 'lager-scanner', 'projekte', 'pruefprotokolle', 'zuschnitt'] },
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },
   { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung'] },
@@ -63,7 +63,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'tierbestand'] },
   { key: 'tier', name: 'Tier / Praxis', icon: '🐾', module: ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand'] },
   { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden'] },
-  { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle'] },
+  { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour'] },
 ];
 
 export function branchenPaket(key: string): BranchenPaket | undefined {
