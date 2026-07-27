@@ -127,6 +127,26 @@ export function augeWiederkehr(d: {
   return { klartext: `Alles im Takt — ${eur(d.mrr)} planbarer Monatsumsatz, nichts überfällig.`, punkte, stimmung: 'gut' };
 }
 
+/** Objekt-/Asset-Register: fällige Kontrollen + Zustand (kritisch/beobachten). */
+export function augeObjekte(d: {
+  gesamt: number; faellig: number; bald: number; kritisch: number; beobachten: number;
+}): AugeErgebnis {
+  if (d.gesamt === 0) return { klartext: 'Noch keine Objekte erfasst — leg dein Register an, dann behältst du Kontrollen und Zustand automatisch im Blick.', punkte: [], stimmung: 'neutral' };
+  const punkte: string[] = [];
+  if (d.kritisch > 0) punkte.push(`${d.kritisch} Objekt(e) im Zustand „kritisch" — instand setzen oder ersetzen.`);
+  if (d.beobachten > 0) punkte.push(`${d.beobachten} Objekt(e) unter Beobachtung.`);
+  if (d.faellig > 0) {
+    return {
+      klartext: `${d.faellig} Kontrolle${d.faellig === 1 ? '' : 'n'} überfällig — die zuerst, sonst drohen Ausfall oder Haftung.`,
+      punkte: [...punkte, ...(d.bald > 0 ? [`${d.bald} weitere in den nächsten 30 Tagen fällig.`] : [])],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.kritisch > 0) return { klartext: `Kontrollen im Plan, aber ${d.kritisch} Objekt(e) im Zustand „kritisch" — hier zuerst ran.`, punkte, stimmung: 'achtung' };
+  if (d.bald > 0) return { klartext: `Nichts überfällig, aber ${d.bald} Kontrolle${d.bald === 1 ? '' : 'n'} in den nächsten 30 Tagen fällig — einplanen.`, punkte, stimmung: 'neutral' };
+  return { klartext: `${d.gesamt} Objekt(e) im Register — Kontrollen im Plan, Zustand unauffällig.`, punkte, stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };

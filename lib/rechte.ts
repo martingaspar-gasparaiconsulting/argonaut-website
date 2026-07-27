@@ -138,6 +138,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },
   { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3, gruppe: 'betrieb' },
   { label: '🌲 Baumkataster', href: '/dashboard/forst', modul: 'forst', ebene: 3, gruppe: 'betrieb' },
+  { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
