@@ -244,6 +244,25 @@ export function augeBelegung(d: { aktiveEinheiten: number; belegtJetzt: number; 
   return { klartext: `${d.belegtJetzt} von ${d.aktiveEinheiten} Einheiten belegt, ${d.freiJetzt} frei — alles im Griff.`, punkte, stimmung: 'gut' };
 }
 
+/** Schlagkartei: Nachweispflicht Düngung/Pflanzenschutz + fehlende Bedarfsermittlung. */
+export function augeSchlagkartei(d: { anzahlSchlaege: number; flaecheGesamt: number; duengungenJahr: number; psmJahr: number; spaetDoku: number; schlaegeOhneBedarf: number }): AugeErgebnis {
+  if (d.anzahlSchlaege === 0) {
+    return { klartext: 'Noch keine Schläge — leg dein erstes Feldstück an und dokumentiere Düngung und Pflanzenschutz gesetzeskonform.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [`${d.anzahlSchlaege} Schläge · ${d.flaecheGesamt} ha · ${d.duengungenJahr} Düngungen / ${d.psmJahr} PSM-Anwendungen dieses Jahr.`];
+  if (d.spaetDoku > 0 || d.schlaegeOhneBedarf > 0) {
+    const probleme: string[] = [];
+    if (d.schlaegeOhneBedarf > 0) probleme.push(`${d.schlaegeOhneBedarf} gedüngte(r) Schlag/Schläge ohne Düngebedarfsermittlung`);
+    if (d.spaetDoku > 0) probleme.push(`${d.spaetDoku} Eintrag/Einträge außerhalb der Doku-Frist`);
+    return {
+      klartext: `Achtung bei der Nachweispflicht: ${probleme.join(' und ')} — bei einer Kontrolle drohen sonst Beanstandungen.`,
+      punkte,
+      stimmung: 'achtung',
+    };
+  }
+  return { klartext: `Dokumentation vollständig und fristgerecht — ${d.flaecheGesamt} ha sauber erfasst.`, punkte, stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
