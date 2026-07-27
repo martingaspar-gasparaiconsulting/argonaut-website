@@ -1,0 +1,4 @@
+titel;kunde_name;vertragsnummer;status;beginn_am;intervall_monate;letzte_wartung_am;erinnerung_tage_vorher;betrag_netto;mwst_satz;beschreibung;notiz
+Heizungswartung Halle 2;Mustermann GmbH;WV-2024-001;aktiv;2024-01-15;12;2025-01-15;30;1200;19;Jaehrliche Heizungswartung mit Dichtheitspruefung;
+DGUV V3 Pruefung Buero;Beispiel AG;WV-2024-002;aktiv;2024-03-01;12;2025-03-01;30;450;19;E-Check ortsveraenderliche Geraete;
+Gruenpflege-Turnus;Hausverwaltung Weber;WV-2024-003;aktiv;2025-04-01;1;2026-06-01;7;250;19;Monatliche Gruenpflege in der Saison;Nur Maerz bis Oktober

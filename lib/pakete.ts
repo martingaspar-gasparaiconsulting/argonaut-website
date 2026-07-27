@@ -32,6 +32,7 @@ export const KERN_MODULE: string[] = [
   'kundenportal', // 👤 Kunden-Portal
   'finanzen',     // 💶 Finanzen
   'gobd',         // 🗂 GoBD
+  'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
 ];
 
 export type BranchenPaket = {
