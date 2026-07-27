@@ -243,6 +243,26 @@ export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: nu
   return { klartext: `${d.teilnehmer} Teilnehmer, ${d.freiePlaetze} Platz/Plätze frei — alles im grünen Bereich.`, punkte, stimmung: 'gut' };
 }
 
+/** Prüfprotokolle: Fälligkeit + Mängel über alle dokumentierten Prüfungen. */
+export function augePruef(d: { gesamt: number; maengel: number; ueberfaellig: number; bald: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Prüfungen dokumentiert — leg das erste Prüfprotokoll an.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.ueberfaellig > 0) {
+    const punkte: string[] = [];
+    if (d.maengel > 0) punkte.push(`${d.maengel} Protokoll(e) mit Mängeln.`);
+    if (d.bald > 0) punkte.push(`${d.bald} weitere werden bald fällig.`);
+    return { klartext: `${d.ueberfaellig} Prüfung(en) überfällig — Termin einplanen, sonst drohen Haftungs- und Versicherungsrisiken.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.maengel > 0) {
+    return { klartext: `${d.maengel} Prüfung(en) mit festgestellten Mängeln — Nachbesserung veranlassen und nachprüfen.`, punkte: d.bald > 0 ? [`${d.bald} werden bald fällig.`] : [], stimmung: 'achtung' };
+  }
+  if (d.bald > 0) {
+    return { klartext: `Nichts überfällig, aber ${d.bald} Prüfung(en) werden in den nächsten 30 Tagen fällig.`, punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: 'Alle dokumentierten Prüfungen sind gültig und ohne offene Mängel.', punkte: [], stimmung: 'gut' };
+}
+
 /** Generisch: Bestände/Fristen mit Ampel-Zählern (überfällig/bald/ok). */
 export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number }): AugeErgebnis {
   if (d.rot > 0) return { klartext: `${d.rot} ${bezeichnung} überfällig — die brauchen jetzt Aufmerksamkeit.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere werden bald fällig`] : [], stimmung: 'achtung' };

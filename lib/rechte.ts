@@ -116,6 +116,7 @@ export const NAV_LINKS: NavLink[] = [
   // --- Betrieb & Handwerk (Ebene 3, operativ) -------------------------------
   { label: '🎫 Service', href: '/dashboard/service', modul: 'service', ebene: 3, gruppe: 'betrieb' },
   { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung', ebene: 3, gruppe: 'betrieb' },
+  { label: '📋 Prüfprotokolle', href: '/dashboard/pruefprotokolle', modul: 'pruefprotokolle', ebene: 3, gruppe: 'betrieb' },
   { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt', ebene: 3, gruppe: 'betrieb' },
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
