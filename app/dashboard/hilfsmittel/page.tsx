@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { VERSORGUNG_STATUS, kvSumme, mehrkostenSumme, gesamtSumme, hmvGueltig, zaehleVersorgung } from '@/lib/hilfsmittel';
 import { augeHilfsmittel } from '@/lib/auge';
+import { kvPdf } from '@/lib/kvPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -37,6 +38,7 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 
 export default function HilfsmittelPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState<{ name: string | null; anschrift: string | null; ort: string | null }>({ name: null, anschrift: null, ort: null });
   const [tab, setTab] = useState<'liste' | 'bearbeiten'>('liste');
   const [versorgungen, setVersorgungen] = useState<Versorgung[]>([]);
   const [positionen, setPositionen] = useState<Position[]>([]);
@@ -69,6 +71,9 @@ export default function HilfsmittelPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+      setAussteller({ name: str(meta.firmenname) || str(meta.firma) || str(meta.name) || null, anschrift: str(meta.anschrift) || null, ort: str(meta.ort) || str(meta.stadt) || null });
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -123,6 +128,24 @@ export default function HilfsmittelPage() {
     if (status === 'genehmigt') patch.genehmigt_am = H;
     try { const { error } = await supabase.from('hilfsmittel_versorgung').update(patch).eq('id', v.id); if (error) throw error; await laden_(); }
     catch (err: unknown) { setFehler('Status fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  async function kvErstellen(v: Versorgung) {
+    const pos = positionen.filter((p) => p.versorgung_id === v.id);
+    const nr = v.kv_nummer || `KV-${new Date().getFullYear()}-${String(versorgungen.filter((x) => x.kv_nummer).length + 1).padStart(3, '0')}`;
+    kvPdf(aussteller, { versicherter: v.versicherter, versicherten_nr: v.versicherten_nr, krankenkasse: v.krankenkasse, arzt: v.arzt, verordnung_datum: v.verordnung_datum, diagnose: v.diagnose, kv_nummer: nr }, pos);
+    setBusy(v.id); setFehler(null); setOk(null);
+    try {
+      if (!v.kv_nummer || v.status === 'verordnet') {
+        const patch: Record<string, unknown> = { kv_nummer: nr };
+        if (v.status === 'verordnet') patch.status = 'kv_gesendet';
+        const { error } = await supabase.from('hilfsmittel_versorgung').update(patch).eq('id', v.id);
+        if (error) throw error;
+        await laden_();
+      }
+      setOk('Kostenvoranschlag erstellt.');
+    } catch (err: unknown) { setFehler('Aktualisieren fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
 
@@ -204,7 +227,8 @@ export default function HilfsmittelPage() {
             {aktiv && (
               <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ color: C.textDim, fontSize: 'clamp(13px,1.1vw,17px)' }}>Kassenanteil {eur(kvSumme(aktivPos))} · Mehrkosten {eur(mehrkostenSumme(aktivPos))} · Gesamt {eur(gesamtSumme(aktivPos))}</span>
-                <label style={{ ...styles.lab, marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 8 }}>Status
+                <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55`, marginLeft: 'auto' }} disabled={busy === aktiv.id} onClick={() => kvErstellen(aktiv)}>📄 Kostenvoranschlag</button>
+                <label style={{ ...styles.lab, flexDirection: 'row', alignItems: 'center', gap: 8 }}>Status
                   <select style={{ ...styles.inp, width: 'auto' }} value={aktiv.status} onChange={(e) => statusSetzen(aktiv, e.target.value)} disabled={busy === aktiv.id}>
                     {VERSORGUNG_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
