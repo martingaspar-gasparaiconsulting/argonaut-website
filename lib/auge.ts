@@ -297,6 +297,14 @@ export function augeKanzlei(d: { akten: number; offen: number; ueberfaellig: num
   return { klartext: 'Alle Fristen im grünen Bereich — keine Vorfrist erreicht.', punkte, stimmung: 'gut' };
 }
 
+/** Zuschnitt: Anzahl Projekte und Teilepositionen. */
+export function augeZuschnitt(d: { projekte: number; teile: number }): AugeErgebnis {
+  if (d.projekte === 0) {
+    return { klartext: 'Noch keine Zuschnitt-Projekte — leg eins an, trag die Teile ein, und die Optimierung zeigt dir Stangenbedarf und Verschnitt in Prozent.', punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: `${d.projekte} Projekt(e) · ${d.teile} Teileposition(en) — die Optimierung minimiert den Verschnitt automatisch.`, punkte: [], stimmung: 'gut' };
+}
+
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
