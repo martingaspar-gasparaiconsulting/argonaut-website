@@ -57,6 +57,16 @@ export default function AdminTenants() {
 
   const mono = "'Share Tech Mono', 'DM Mono', ui-monospace, monospace";
 
+  // --- Neuer Kunde: einladen & (optional) Branche freischalten (Baustein 2) ---
+  const [einlEmail, setEinlEmail] = useState('');
+  const [einlFirma, setEinlFirma] = useState('');
+  const [einlBranche, setEinlBranche] = useState('');
+  const [einlLaeuft, setEinlLaeuft] = useState(false);
+  const [einlMeldung, setEinlMeldung] = useState<string | null>(null);
+  const [einlFehler, setEinlFehler] = useState<string | null>(null);
+  const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', border: `1px solid ${CYAN}33`, borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
+  const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: `${CYAN}aa` };
+
   // --- Laden (mit optionalem Spinner) ---------------------------------------
   const laden = useCallback(async (zeigeSpinner = true) => {
     if (zeigeSpinner) setLadend(true);
@@ -146,6 +156,37 @@ export default function AdminTenants() {
     [laden],
   );
 
+  // --- Kunde einladen (POST /api/admin/kunde-einladen) ----------------------
+  const einladen = useCallback(async () => {
+    setEinlFehler(null);
+    setEinlMeldung(null);
+    if (!einlEmail.trim()) { setEinlFehler('Bitte eine E-Mail angeben.'); return; }
+    setEinlLaeuft(true);
+    try {
+      const res = await fetch('/api/admin/kunde-einladen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: einlEmail.trim(), firma: einlFirma.trim(), branchKey: einlBranche }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        setEinlFehler(json.error || 'Einladung fehlgeschlagen.');
+      } else {
+        const bran = json.branche ? ` · Branche „${json.branche}" (${json.freigeschaltet} Module)` : '';
+        const mailHinweis = json.mailVersandt
+          ? 'Einladungs-Mail verschickt.'
+          : `Kunde angelegt, aber Mail-Fehler: ${json.mailFehler || 'unbekannt'}`;
+        setEinlMeldung(`✓ ${einlEmail.trim()} eingeladen${bran}. ${mailHinweis}`);
+        setEinlEmail(''); setEinlFirma(''); setEinlBranche('');
+        await laden(false);
+      }
+    } catch {
+      setEinlFehler('Netzwerkfehler bei der Einladung.');
+    } finally {
+      setEinlLaeuft(false);
+    }
+  }, [einlEmail, einlFirma, einlBranche, laden]);
+
   const badge = (text: string, farbe: string): React.CSSProperties => ({
     display: 'inline-block',
     padding: '2px 10px',
@@ -217,6 +258,47 @@ export default function AdminTenants() {
           ‹ COMMAND CENTER
         </a>
       </div>
+
+      {/* ---- Neuer Kunde: einladen & Branche freischalten (Baustein 2) ---- */}
+      <section style={{ border: `1px solid ${GOLD}44`, background: `${GOLD}0c`, borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
+        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${GOLD}dd`, textTransform: 'uppercase', marginBottom: 12 }}>
+          ＋ Neuer Kunde — einladen &amp; freischalten
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 230px' }}>
+            <label style={feldLabel}>E-Mail *</label>
+            <input style={feldInput} type="email" value={einlEmail} onChange={(e) => setEinlEmail(e.target.value)} placeholder="kunde@firma.de" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 190px' }}>
+            <label style={feldLabel}>Firma</label>
+            <input style={feldInput} value={einlFirma} onChange={(e) => setEinlFirma(e.target.value)} placeholder="Musterbetrieb GmbH" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 210px' }}>
+            <label style={feldLabel}>Branche (optional)</label>
+            <select style={feldInput} value={einlBranche} onChange={(e) => setEinlBranche(e.target.value)}>
+              <option value="">— ohne (Kern später) —</option>
+              {BRANCHEN_PAKETE.map((b) => <option key={b.key} value={b.key}>{b.icon} {b.name}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={einladen}
+            disabled={einlLaeuft}
+            style={{
+              border: `1px solid ${GRUEN}88`, background: `${GRUEN}18`, color: '#eafff2',
+              fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 800,
+              padding: '11px 20px', borderRadius: 8,
+              cursor: einlLaeuft ? 'wait' : 'pointer', opacity: einlLaeuft ? 0.55 : 1,
+            }}
+          >
+            {einlLaeuft ? '‣ lädt …' : 'Einladen & freischalten'}
+          </button>
+        </div>
+        {einlMeldung && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: GRUEN, lineHeight: 1.5 }}>{einlMeldung}</div>}
+        {einlFehler && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: '#ff8a8a' }}>⚠ {einlFehler}</div>}
+        <div style={{ marginTop: 12, fontFamily: mono, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.55 }}>
+          ‣ Der Kunde bekommt sofort eine ARGONAUT-Mail und setzt sein Passwort selbst. Branche wählen = Kern + Branchenmodule direkt scharf. Feinheiten danach unten je Kunde.
+        </div>
+      </section>
 
       {ladend && (
         <div style={{ fontFamily: mono, color: `${CYAN}cc` }}>‣ Lade Tenant-Matrix …</div>
