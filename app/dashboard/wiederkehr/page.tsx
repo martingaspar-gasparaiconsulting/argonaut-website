@@ -71,6 +71,8 @@ export default function WiederkehrCockpit() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [quelleFilter, setQuelleFilter] = useState<string>('');
+  const [laufBusy, setLaufBusy] = useState(false);
+  const [laufMsg, setLaufMsg] = useState<string | null>(null);
   const heute = heuteLokal();
 
   const laden_ = useCallback(async () => {
@@ -125,6 +127,45 @@ export default function WiederkehrCockpit() {
     });
   }, [eintraege, quelleFilter, heute]);
 
+  // --- Auto-Trigger: erst Vorschau, dann (nach Nachfrage) echter Lauf ---
+  async function laufStarten() {
+    setLaufBusy(true); setFehler(null); setLaufMsg(null);
+    try {
+      // 1) Vorschau: was ist faellig?
+      const vRes = await fetch('/api/wiederkehr-lauf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vorschau: true }),
+      });
+      const v = await vRes.json();
+      if (!vRes.ok) { setFehler(v?.error || 'Vorschau fehlgeschlagen.'); return; }
+      const gesamt = (v.anzahl_wartung || 0) + (v.anzahl_abo || 0);
+      if (gesamt === 0) { setLaufMsg('Aktuell ist nichts fällig — es gibt nichts abzurechnen.'); return; }
+      const frage =
+        `${gesamt} fällige Position(en) abrechnen?\n\n` +
+        `• ${v.anzahl_wartung} Wartungsvertrag/-verträge\n` +
+        `• ${v.anzahl_abo} Abo-Rechnung(en)\n` +
+        `• Summe netto: ${eur(v.summe_netto)}\n\n` +
+        `Daraus werden jetzt echte Rechnungen erzeugt.`;
+      if (!window.confirm(frage)) return;
+
+      // 2) Echter Lauf
+      const rRes = await fetch('/api/wiederkehr-lauf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const r = await rRes.json();
+      if (!rRes.ok) { setFehler(r?.error || 'Lauf fehlgeschlagen.'); return; }
+      const erzeugt = (r.anzahl_wartung || 0) + (r.anzahl_abo || 0);
+      setLaufMsg(
+        `${erzeugt} Rechnung(en) erzeugt (${eur(r.summe_netto)} netto) — sie liegen unter 🧾 Rechnungen.` +
+        (r.anzahl_fehler ? ` ${r.anzahl_fehler} mit Fehler übersprungen.` : '')
+      );
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Lauf fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setLaufBusy(false); }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Wiederkehr</div>
@@ -136,10 +177,20 @@ export default function WiederkehrCockpit() {
             eigene Verträge — mit monatlich wiederkehrendem Umsatz (MRR) und Fälligkeiten auf einen Blick.
           </p>
         </div>
-        <button onClick={() => void laden_()} style={styles.ghostBtn}>↻ Aktualisieren</button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={() => void laufStarten()} disabled={laufBusy} style={{ ...styles.primaerBtn, opacity: laufBusy ? 0.6 : 1 }}>
+            {laufBusy ? 'Rechnet …' : '⚡ Alle fälligen abrechnen'}
+          </button>
+          <button onClick={() => void laden_()} style={styles.ghostBtn}>↻ Aktualisieren</button>
+        </div>
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {laufMsg && (
+        <div style={{ color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '12px 14px', margin: '16px 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
+          {laufMsg}
+        </div>
+      )}
 
       {/* KPI-Kacheln */}
       <div style={styles.kpiGrid}>
@@ -279,6 +330,7 @@ const styles: Record<string, CSSProperties> = {
   sub: { color: C.textDim, margin: '8px 0 22px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 760, lineHeight: 1.5 },
 
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
+  primaerBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
 
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 },
   kpiBox: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
