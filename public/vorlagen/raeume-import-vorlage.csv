@@ -1,0 +1,6 @@
+bezeichnung;typ;kapazitaet;standort;ausstattung;buchbar
+Seminarraum A;raum;24;1. OG;Beamer, Whiteboard, WLAN;ja
+EDV-Labor;labor;16;EG;16 PCs, Beamer;ja
+Werkstatt Holz;werkstatt;12;Halle 2;Hobelbank, Absaugung;ja
+Beamer mobil;ausstattung;;Technikraum;Full-HD, HDMI;ja
+Aula;raum;120;EG;Bühne, Tontechnik;ja

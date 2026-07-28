@@ -198,6 +198,20 @@ export function augeErnte(d: { gelagert: number; umsatzBrutto: number; markttage
   return { klartext: `${d.produkte} Produkte im Marktstand-Katalog — bereit für den ersten Markttag.`, punkte: [], stimmung: 'neutral' };
 }
 
+/** Räume & Ressourcen: Belegungen heute + kommende Buchungen. */
+export function augeRaeume(d: { belegungenHeute: number; belegungenKommend: number; ressourcen: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Räume/Ressourcen — Räume und Ausstattung anlegen, dann im Belegungsplan buchen (mit Doppelbuchungs-Schutz).', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.belegungenHeute > 0) {
+    return { klartext: `${d.belegungenHeute} Belegung${d.belegungenHeute === 1 ? '' : 'en'} heute — der Tagesplan steht.`, punkte: d.belegungenKommend > d.belegungenHeute ? [`${d.belegungenKommend} Belegungen ab heute insgesamt`] : [], stimmung: 'neutral' };
+  }
+  if (d.belegungenKommend > 0) {
+    return { klartext: `Heute nichts gebucht, aber ${d.belegungenKommend} kommende Belegung${d.belegungenKommend === 1 ? '' : 'en'} im Plan.`, punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: `${d.ressourcen} Räume/Ressourcen frei — nichts gebucht.`, punkte: [], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

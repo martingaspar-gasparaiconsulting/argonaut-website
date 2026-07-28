@@ -30,7 +30,7 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Immobilien & Verwaltung': ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung', 'gutachten', 'expose', 'betriebskosten', 'wartung'],
   'Marketing, Medien & Kreativ': ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'],
   'Recht, Steuern & Finanzen': ['kanzlei', 'vertraege', 'datev', 'fristen'],
-  'Bildung & Wissenschaft': ['bildung', 'online-buchung', 'buchungen', 'gutscheine', 'veranstaltungen', 'mitglieder'],
+  'Bildung & Wissenschaft': ['bildung', 'raeume', 'online-buchung', 'buchungen', 'gutscheine', 'veranstaltungen', 'mitglieder'],
   'Gesundheit & Wellness': ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'],
   'Sport, Beauty & Lifestyle': ['wellness', 'online-buchung', 'buchungen', 'mitglieder', 'gutscheine', 'erinnerungen', 'kasse'],
   'Tiere': ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen', 'mitglieder'],
