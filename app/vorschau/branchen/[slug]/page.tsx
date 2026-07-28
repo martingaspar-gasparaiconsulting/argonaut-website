@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
+import Footer from '../../_components/Footer'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
@@ -296,6 +297,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
 
       {/* Angebot + Anfrage in einem Guss → eigenes CRM */}
       <AngebotAnfrage branche={b.name} rollen={rollen} />
+
+      <Footer />
     </main>
   )
 }

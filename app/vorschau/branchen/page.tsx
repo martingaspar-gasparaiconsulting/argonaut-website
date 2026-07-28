@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
+import Footer from '../_components/Footer'
 import BranchenAccordion from '../_components/BranchenAccordion'
 import { websiteKategorien, websiteBranchen } from '../_lib/branchen-web'
 
@@ -61,6 +62,8 @@ export default function BranchenPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </main>
   )
 }
