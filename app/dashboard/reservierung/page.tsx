@@ -42,7 +42,7 @@ type Vorgang = {
   von: string | null; bis: string | null; anzahl: number | null;
   gegenstand: string | null; kennzeichen: string | null;
   betrag: number; mwst_satz: number; status: string;
-  erledigt_am: string | null; notiz: string | null;
+  erledigt_am: string | null; notiz: string | null; rechnung_id: string | null;
 };
 type Kontakt = { id: string; name: string };
 
@@ -184,6 +184,19 @@ export default function ReservierungPage() {
       if (error) throw error;
       await laden_();
     } catch (err: unknown) { setFehler('Status fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  async function rechnungErstellen(v: Vorgang) {
+    setBusy(v.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-reservierung', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vorgangId: v.id }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setFehler(j?.error || 'Rechnung konnte nicht erstellt werden.'); return; }
+      setOk('Rechnung erstellt.'); await laden_();
+    } catch (err: unknown) { setFehler('Fehler: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
 
@@ -353,6 +366,10 @@ export default function ReservierungPage() {
                             {v.art === 'vorbestellung' && v.status === 'offen' && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'bereit')}>🔔 Bereit</button>}
                             {v.art === 'vorbestellung' && (v.status === 'offen' || v.status === 'bereit') && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'abgeholt')}>✓ Abgeholt</button>}
                             {v.art === 'vorbestellung' && (v.status === 'offen' || v.status === 'bereit') && <button style={styles.mini} disabled={busy === v.id} onClick={() => setzeStatus(v, 'storniert')}>Stornieren</button>}
+                            {/* Rechnung aus Vorgang (Einlagerung/Vorbestellung mit Betrag) */}
+                            {ai.hatBetrag && v.betrag > 0 && v.status !== 'storniert' && (v.rechnung_id
+                              ? <a href="/dashboard/rechnungen" style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55`, textDecoration: 'none', display: 'inline-block' }}>Rechnung ›</a>
+                              : <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>)}
                           </td>
                         </tr>
                       );
