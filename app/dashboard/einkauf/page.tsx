@@ -15,6 +15,7 @@ import {
   type PositionLite,
 } from '@/lib/einkauf';
 import { augeEinkauf } from '@/lib/auge';
+import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -30,7 +31,8 @@ const FARBE: Record<string, string> = { gold: C.gold, cyan: C.cyan, green: C.gre
 
 type Lieferant = { id: string; name: string; kundennummer: string | null; ansprechpartner: string | null; email: string | null; telefon: string | null; zahlungsziel_tage: number | null; status: string; notiz: string | null };
 type Bestellung = { id: string; lieferant_id: string | null; bestell_nr: string | null; datum: string; status: string; liefer_datum: string | null; notiz: string | null };
-type Position = { id: string; bestellung_id: string; artikel: string; menge: number; einheit: string | null; ek_preis: number; mwst_satz: number; menge_erhalten: number; retoure_menge: number; retoure_grund: string | null };
+type Position = { id: string; bestellung_id: string; artikel: string; menge: number; einheit: string | null; ek_preis: number; mwst_satz: number; menge_erhalten: number; retoure_menge: number; retoure_grund: string | null; artikel_id: string | null; lager_gebucht: number | null };
+type LagerArtikel = { id: string; bezeichnung: string; artikelnummer: string | null; einheit: string | null; aktueller_bestand: number | null };
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
@@ -43,10 +45,12 @@ const LEER_NP: NeuePos = { artikel: '', menge: '', einheit: 'Stk', ek_preis: '',
 
 export default function EinkaufPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [aussteller, setAussteller] = useState('');
   const [tab, setTab] = useState<'bestellungen' | 'lieferanten' | 'kalkulation'>('bestellungen');
   const [lieferanten, setLieferanten] = useState<Lieferant[]>([]);
   const [bestellungen, setBestellungen] = useState<Bestellung[]>([]);
   const [positionen, setPositionen] = useState<Position[]>([]);
+  const [artikel, setArtikel] = useState<LagerArtikel[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -57,7 +61,7 @@ export default function EinkaufPage() {
   const [np, setNp] = useState<NeuePos>({ ...LEER_NP });
   const [posEntwurf, setPosEntwurf] = useState<NeuePos[]>([]);
   const [selBest, setSelBest] = useState<string | null>(null);
-  const [weEdit, setWeEdit] = useState<Record<string, { erhalten: string; retoure: string; grund: string }>>({});
+  const [weEdit, setWeEdit] = useState<Record<string, { erhalten: string; retoure: string; grund: string; artikel_id: string }>>({});
 
   // Kalkulation
   const [vk, setVk] = useState({ ek: '', gk: '10', gewinn: '30' });
@@ -66,14 +70,16 @@ export default function EinkaufPage() {
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
-      const [l, b, p] = await Promise.all([
+      const [l, b, p, a] = await Promise.all([
         supabase.from('lieferant').select('*').order('name', { ascending: true }),
         supabase.from('bestellung').select('*').order('datum', { ascending: false }),
         supabase.from('bestellung_position').select('*'),
+        supabase.from('artikel').select('id, bezeichnung, artikelnummer, einheit, aktueller_bestand').eq('aktiv', true).order('bezeichnung', { ascending: true }),
       ]);
       setLieferanten((l.data as Lieferant[]) ?? []);
       setBestellungen((b.data as Bestellung[]) ?? []);
       setPositionen((p.data as Position[]) ?? []);
+      setArtikel((a.data as LagerArtikel[]) ?? []);
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -84,7 +90,11 @@ export default function EinkaufPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
+      setAussteller(typeof firma === 'string' ? firma : '');
+      await laden_();
     })();
   }, [laden_]);
 
@@ -161,8 +171,8 @@ export default function EinkaufPage() {
   function weOeffnen(b: Bestellung) {
     if (selBest === b.id) { setSelBest(null); return; }
     setSelBest(b.id);
-    const init: Record<string, { erhalten: string; retoure: string; grund: string }> = {};
-    posByBest(b.id).forEach((p) => { init[p.id] = { erhalten: String(p.menge_erhalten ?? 0), retoure: String(p.retoure_menge ?? 0), grund: p.retoure_grund ?? '' }; });
+    const init: Record<string, { erhalten: string; retoure: string; grund: string; artikel_id: string }> = {};
+    posByBest(b.id).forEach((p) => { init[p.id] = { erhalten: String(p.menge_erhalten ?? 0), retoure: String(p.retoure_menge ?? 0), grund: p.retoure_grund ?? '', artikel_id: p.artikel_id ?? '' }; });
     setWeEdit(init);
   }
 
@@ -171,11 +181,32 @@ export default function EinkaufPage() {
     setBusy('we'); setFehler(null); setOk(null);
     try {
       const ps = posByBest(b.id);
+      let lagerDelta = 0;
       for (const p of ps) {
         const e = weEdit[p.id]; if (!e) continue;
+        const erhalten = Math.max(num(e.erhalten), 0);
+        const artikelId = e.artikel_id || null;
         await supabase.from('bestellung_position').update({
-          menge_erhalten: Math.max(num(e.erhalten), 0), retoure_menge: Math.max(num(e.retoure), 0), retoure_grund: e.grund.trim() || null,
+          menge_erhalten: erhalten, retoure_menge: Math.max(num(e.retoure), 0), retoure_grund: e.grund.trim() || null, artikel_id: artikelId,
         }).eq('id', p.id);
+
+        // Wareneingang ins Lager: nur die NEU erhaltene Menge als 'Zugang' buchen
+        // (Delta gegen lager_gebucht verhindert Doppelbuchung bei erneutem Speichern).
+        const schonGebucht = Number(p.lager_gebucht) || 0;
+        const delta = Math.round((erhalten - schonGebucht) * 100) / 100;
+        if (artikelId && delta > 0) {
+          const { data: aData } = await supabase.from('artikel').select('aktueller_bestand').eq('id', artikelId).single();
+          const bestand = (aData as { aktueller_bestand: number | null } | null)?.aktueller_bestand ?? 0;
+          const { error: eb } = await supabase.from('lagerbewegungen').insert({
+            owner_user_id: uid, artikel_id: artikelId, typ: 'Zugang', menge: delta,
+            grund: 'Wareneingang', referenz: `BE:${b.bestell_nr || b.id}`,
+          });
+          if (!eb) {
+            await supabase.from('artikel').update({ aktueller_bestand: Math.round((bestand + delta) * 100) / 100, updated_at: new Date().toISOString() }).eq('id', artikelId);
+            await supabase.from('bestellung_position').update({ lager_gebucht: erhalten }).eq('id', p.id);
+            lagerDelta += delta;
+          }
+        }
       }
       // Status aus Liefergrad ableiten (nur wenn nicht storniert)
       const neu = ps.map((p) => ({ menge: p.menge, menge_erhalten: Math.max(num(weEdit[p.id]?.erhalten ?? String(p.menge_erhalten)), 0) }));
@@ -184,9 +215,27 @@ export default function EinkaufPage() {
         const st = grad === 'geliefert' ? 'geliefert' : grad === 'teilgeliefert' ? 'teilgeliefert' : 'bestellt';
         await supabase.from('bestellung').update({ status: st, liefer_datum: st === 'geliefert' ? heuteLokal() : null }).eq('id', b.id);
       }
-      setOk('Wareneingang gespeichert.'); await laden_();
+      setOk(lagerDelta > 0 ? `Wareneingang gespeichert · ${lagerDelta} ins Lager gebucht.` : 'Wareneingang gespeichert.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
+  }
+
+  function druckeBestellung(b: Bestellung) {
+    const ps = posByBest(b.id);
+    const l = lieferanten.find((x) => x.id === b.lieferant_id);
+    const brutto = ps.reduce((s, p) => s + bruttoAusNetto(Number(p.menge) * Number(p.ek_preis), Number(p.mwst_satz) || 19).brutto, 0);
+    bestellPdf({
+      aussteller: aussteller || 'Mein Betrieb',
+      bestellNr: b.bestell_nr || '',
+      datum: fmtDatum(b.datum),
+      lieferant: l?.name || '—',
+      ansprechpartner: l?.ansprechpartner || '',
+      kundennummer: l?.kundennummer || '',
+      notiz: b.notiz || '',
+      positionen: ps.map((p) => ({ artikel: p.artikel, menge: String(p.menge), einheit: p.einheit || '', ekPreis: eur(p.ek_preis), netto: eur(Number(p.menge) * Number(p.ek_preis)) })),
+      summeNetto: eur(bestellNetto(ps)),
+      summeBrutto: eur(Math.round(brutto * 100) / 100),
+    });
   }
 
   const liefName = (id: string | null) => lieferanten.find((l) => l.id === id)?.name ?? '—';
@@ -284,6 +333,7 @@ export default function EinkaufPage() {
                             <td style={styles.td}><span style={{ ...styles.badge, color: FARBE[sm.farbe], borderColor: FARBE[sm.farbe] }}>{sm.label}</span></td>
                             <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {b.status !== 'storniert' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => weOeffnen(b)}>{selBest === b.id ? 'Schließen' : '🚚 Wareneingang'}</button>}
+                              <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => druckeBestellung(b)}>📄 Bestellung</button>
                               {(b.status === 'bestellt' || b.status === 'teilgeliefert' || b.status === 'entwurf') && <button style={styles.mini} disabled={busy === b.id} onClick={() => bestellungStatus(b, 'storniert')}>Stornieren</button>}
                             </td>
                           </tr>
@@ -294,9 +344,16 @@ export default function EinkaufPage() {
                                 {ps.map((p) => (
                                   <div key={p.id} style={styles.wePos}>
                                     <span style={{ minWidth: 160 }}>{p.artikel} <span style={{ color: C.textDim }}>({p.menge} {p.einheit})</span></span>
-                                    <label style={styles.weLab}>erhalten<input style={styles.weInp} inputMode="decimal" value={weEdit[p.id]?.erhalten ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '' }), erhalten: e.target.value } }))} /></label>
-                                    <label style={styles.weLab}>Retoure<input style={styles.weInp} inputMode="decimal" value={weEdit[p.id]?.retoure ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '' }), retoure: e.target.value } }))} /></label>
-                                    <label style={{ ...styles.weLab, flex: 1 }}>Reklamationsgrund<input style={{ ...styles.weInp, width: '100%' }} value={weEdit[p.id]?.grund ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '' }), grund: e.target.value } }))} placeholder="optional" /></label>
+                                    <label style={styles.weLab}>erhalten<input style={styles.weInp} inputMode="decimal" value={weEdit[p.id]?.erhalten ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '', artikel_id: '' }), erhalten: e.target.value } }))} /></label>
+                                    <label style={styles.weLab}>Retoure<input style={styles.weInp} inputMode="decimal" value={weEdit[p.id]?.retoure ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '', artikel_id: '' }), retoure: e.target.value } }))} /></label>
+                                    <label style={{ ...styles.weLab, flex: 1 }}>Reklamationsgrund<input style={{ ...styles.weInp, width: '100%' }} value={weEdit[p.id]?.grund ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '', artikel_id: '' }), grund: e.target.value } }))} placeholder="optional" /></label>
+                                    <label style={styles.weLab}>Lager-Artikel (Zugang)
+                                      <select style={{ ...styles.weInp, width: 200 }} value={weEdit[p.id]?.artikel_id ?? ''} onChange={(e) => setWeEdit((w) => ({ ...w, [p.id]: { ...(w[p.id] ?? { erhalten: '', retoure: '', grund: '', artikel_id: '' }), artikel_id: e.target.value } }))}>
+                                        <option value="">— nicht ins Lager —</option>
+                                        {artikel.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}{a.aktueller_bestand != null ? ` (Best. ${a.aktueller_bestand})` : ''}</option>)}
+                                      </select>
+                                    </label>
+                                    {(p.lager_gebucht ?? 0) > 0 && <span style={{ color: C.green, fontSize: 12, alignSelf: 'center' }}>✓ {p.lager_gebucht} im Lager gebucht</span>}
                                   </div>
                                 ))}
                                 <button style={{ ...styles.primaer, marginTop: 8, opacity: busy === 'we' ? 0.6 : 1 }} disabled={busy === 'we'} onClick={() => wareneingangSpeichern(b)}>Wareneingang speichern</button>
