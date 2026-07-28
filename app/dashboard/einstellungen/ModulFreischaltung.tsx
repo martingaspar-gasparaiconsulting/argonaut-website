@@ -31,7 +31,14 @@ type Modul = { key: string; label: string };
 // Übersicht/Rechte/Einstellungen/Mein-Bereich/Zeiterfassung haben KEINEN
 // modul-Schlüssel (immer/nurChef/nurMitarbeiter) und sind darum korrekt
 // NICHT dabei - sie bleiben ohnehin immer sichtbar.
-const MODULE: Modul[] = ALLE_MODULE;
+// Dedupe nach Modul-Schluessel: mehrere Menue-Buttons teilen sich EINEN Schluessel
+// (Rechnungen, E-Rechnung, Beleg-Inbox, SEPA, Abo-Rechnungen = alle 'rechnungen').
+// Ohne Dedup zaehlt der Nenner 92 Zeilen, der Set aber nur 88 Schluessel -> "88/92"
+// klemmt und "Alle an" wird nie erreicht. Der explizite [string, Modul]-Tupeltyp
+// ist noetig, sonst liest tsc [m.key, m] als (string|Modul)[] und new Map() bricht.
+const MODULE: Modul[] = Array.from(
+  new Map(ALLE_MODULE.map((m): [string, Modul] => [m.key, m])).values()
+);
 
 const ALLE_KEYS = MODULE.map((m) => m.key);
 
