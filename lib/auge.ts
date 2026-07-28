@@ -431,3 +431,28 @@ export function augeReservierung(k: {
   if (k.noShowGesamt > 0) punkte.push(`${k.noShowGesamt} No-Show(s) insgesamt erfasst.`);
   return { klartext: 'Alles im Griff — nichts ist überfällig.', punkte, stimmung: 'gut' };
 }
+
+/** Gutscheine & Pakete: offener Restwert (Verbindlichkeit), Verfall, Karten. */
+export function augeGutscheine(k: {
+  aktive: number;
+  offenerRestwert: number;
+  kartenOffen: number;
+  baldVerfallend: number;
+  verfallen: number;
+  eingeloestBetrag: number;
+}): AugeErgebnis {
+  if (k.aktive === 0 && k.kartenOffen === 0) {
+    return { klartext: 'Noch keine aktiven Gutscheine — stell deinen ersten aus (Wertgutschein, Mehrfachkarte oder Leistungsgutschein).', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (k.offenerRestwert > 0) punkte.push(`${eur(k.offenerRestwert)} offener Restwert — als Verbindlichkeit im Blick behalten.`);
+  if (k.kartenOffen > 0) punkte.push(`${k.kartenOffen} Mehrfachkarte(n) mit offenen Nutzungen.`);
+  if (k.verfallen > 0) punkte.push(`${k.verfallen} verfallen (Anspruch erloschen).`);
+  if (k.baldVerfallend > 0) {
+    return {
+      klartext: `${k.baldVerfallend} Gutschein(e) laufen in den nächsten 90 Tagen ab — eine kurze Erinnerung an die Kunden erhöht die Einlösung (und den Zusatzumsatz).`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  return { klartext: `${k.aktive} aktive Gutschein(e) im Umlauf${k.offenerRestwert > 0 ? `, ${eur(k.offenerRestwert)} offener Restwert` : ''}.`, punkte, stimmung: 'gut' };
+}

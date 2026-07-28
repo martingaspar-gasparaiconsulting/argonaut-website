@@ -1,0 +1,4 @@
+code;art;empfaenger_name;wert;nutzungen_gesamt;leistung_text;mwst_typ;mwst_satz;anlass;ausgestellt_am;gueltig_bis
+GS-2026-A1B2C;wert;Max Mustermann;50;;;mehrzweck;19;Geburtstag;2026-07-28;2029-12-31
+GS-2026-D3E4F;mehrfachkarte;Erika Beispiel;120;10;1 Waschgang je Nutzung;einzweck;19;;2026-07-28;2029-12-31
+GS-2026-G5H6I;leistung;Firma Schmidt;;;Menü für 2 Personen;mehrzweck;19;Jubiläum;2026-07-28;2029-12-31
