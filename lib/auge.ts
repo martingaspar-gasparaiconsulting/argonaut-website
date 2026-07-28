@@ -591,3 +591,37 @@ export function augeBde(k: {
   }
   return { klartext: `OEE ${p(k.oee)} — Weltklasse-Niveau (≥ 85 %). Sauber.`, punkte, stimmung: 'gut' };
 }
+
+/** Erträge/Monitoring (Energie): Soll-Erreichung, Anlagen unter Soll, Verfügbarkeit, Erlös. */
+export function augeErtraege(k: {
+  anlagenAktiv: number;
+  ablesungen: number;
+  ertragKwh: number;
+  sollErreichung: number;
+  verfuegbarkeit: number;
+  eigenverbrauchsquote: number;
+  erloesGesamt: number;
+  schwacheAnlagen: number;
+  schwaechsteAnlage: string | null;
+}): AugeErgebnis {
+  const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
+  if (k.ablesungen === 0) {
+    return { klartext: 'Noch keine Ablesungen — leg eine Anlage an und erfasse die erste Ablesung, dann rechne ich Soll/Ist, Verfügbarkeit und Erlös.', punkte: [], stimmung: 'neutral' };
+  }
+  if (k.schwacheAnlagen > 0) {
+    return {
+      klartext: `${k.schwacheAnlagen} Anlage(n) unter 90 % Soll-Erreichung${k.schwaechsteAnlage ? ` (schwächste: ${k.schwaechsteAnlage})` : ''} — Ertrag prüfen: Verschattung, Verschmutzung, Wechselrichter-Ausfall oder Defekt.`,
+      punkte: [`Verfügbarkeit gesamt ${p(k.verfuegbarkeit)}, Erlös ${eur(k.erloesGesamt)}.`], stimmung: 'achtung',
+    };
+  }
+  if (k.verfuegbarkeit < 0.95) {
+    return {
+      klartext: `Soll erreicht (${p(k.sollErreichung)}), aber Verfügbarkeit nur ${p(k.verfuegbarkeit)} — Ausfallzeiten prüfen.`,
+      punkte: [`${k.ertragKwh.toLocaleString('de-DE', { maximumFractionDigits: 0 })} kWh Ertrag, Erlös ${eur(k.erloesGesamt)}.`], stimmung: 'neutral',
+    };
+  }
+  return {
+    klartext: `Soll-Erreichung ${p(k.sollErreichung)} bei ${p(k.verfuegbarkeit)} Verfügbarkeit — läuft rund.`,
+    punkte: [`${k.ertragKwh.toLocaleString('de-DE', { maximumFractionDigits: 0 })} kWh Ertrag, Eigenverbrauch ${p(k.eigenverbrauchsquote)}, Erlös ${eur(k.erloesGesamt)}.`], stimmung: 'gut',
+  };
+}

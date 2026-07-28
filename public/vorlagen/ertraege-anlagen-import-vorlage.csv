@@ -1,0 +1,4 @@
+bezeichnung;typ;standort;nennleistung_kwp;soll_spezifisch;verguetung_ct;strompreis_ct;status
+PV Dach Süd;pv;Halle A;29.9;1000;8.0;35.0;aktiv
+PV Dach Nord;pv;Halle B;15.0;850;8.0;35.0;aktiv
+BHKW 1;bhkw;Technikraum;20;7000;12.0;35.0;aktiv
