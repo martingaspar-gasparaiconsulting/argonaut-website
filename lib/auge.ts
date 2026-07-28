@@ -182,6 +182,22 @@ export function augeItAssets(d: { lizenzenAbgelaufen: number; ueberbucht: number
   return { klartext: 'Assets, Lizenzen und SLA sind aktuell — nichts abgelaufen, nichts überbucht.', punkte: d.ohneGarantie > 0 ? punkte : [], stimmung: 'gut' };
 }
 
+/** Ernte & Direktvermarktung: gelagerte Ernte (verkaufsbereit) + Markttag-Umsatz. */
+export function augeErnte(d: { gelagert: number; umsatzBrutto: number; markttage: number; erntePosten: number; produkte: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch nichts erfasst — Ernte anlegen, Produkte für den Marktstand pflegen und Verkäufe je Markttag buchen.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.umsatzBrutto > 0) punkte.push(`${eur(d.umsatzBrutto)} Umsatz aus ${d.markttage} Markttag${d.markttage === 1 ? '' : 'en'}`);
+  if (d.gelagert > 0) {
+    return { klartext: `${d.gelagert} Ernte-Posten ${d.gelagert === 1 ? 'liegt' : 'liegen'} auf Lager — bereit für Verkauf/Markt, bevor die Ware an Frische verliert.`, punkte, stimmung: 'neutral' };
+  }
+  if (d.umsatzBrutto > 0) {
+    return { klartext: `${eur(d.umsatzBrutto)} Umsatz aus der Direktvermarktung erfasst — läuft.`, punkte: [`${d.markttage} Markttag${d.markttage === 1 ? '' : 'e'} · ${d.produkte} Produkte im Katalog`], stimmung: 'gut' };
+  }
+  return { klartext: `${d.produkte} Produkte im Marktstand-Katalog — bereit für den ersten Markttag.`, punkte: [], stimmung: 'neutral' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

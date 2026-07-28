@@ -34,7 +34,7 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Gesundheit & Wellness': ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'],
   'Sport, Beauty & Lifestyle': ['wellness', 'online-buchung', 'buchungen', 'mitglieder', 'gutscheine', 'erinnerungen', 'kasse'],
   'Tiere': ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen', 'mitglieder'],
-  'Landwirtschaft, Garten & Forst': ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'tierbestand', 'ertraege', 'holz', 'forst'],
+  'Landwirtschaft, Garten & Forst': ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'ernte', 'tierbestand', 'ertraege', 'holz', 'forst'],
   'Dienstleistungen': ['einsaetze', 'objektzeiten', 'wartung', 'wiederkehr', 'schichtplan', 'tour', 'service'],
   'Kultur, Soziales & Öffentliches': ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden', 'veranstaltungen', 'foerdermittel', 'projekte'],
 };

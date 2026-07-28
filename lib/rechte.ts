@@ -159,6 +159,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🪑 Reservierung & Platz', href: '/dashboard/reservierung', modul: 'reservierung', ebene: 3, gruppe: 'betrieb' },
   { label: '🎁 Gutscheine & Pakete', href: '/dashboard/gutscheine', modul: 'gutscheine', ebene: 3, gruppe: 'vertrieb' },
   { label: '🌾 Schlagkartei', href: '/dashboard/schlagkartei', modul: 'schlagkartei', ebene: 3, gruppe: 'betrieb' },
+  { label: '🧺 Ernte & Direktvermarktung', href: '/dashboard/ernte', modul: 'ernte', ebene: 3, gruppe: 'betrieb' },
   { label: '🐄 Tierbestand', href: '/dashboard/tierbestand', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Akten & Fristen', href: '/dashboard/fristen', modul: 'fristen', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Zuschnitt', href: '/dashboard/zuschnitt', modul: 'zuschnitt', ebene: 3, gruppe: 'betrieb' },
