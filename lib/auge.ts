@@ -531,3 +531,30 @@ export function augeExpose(k: {
   if (k.abgeschlossen > 0) punkte.push(`${k.abgeschlossen} abgeschlossen.`);
   return { klartext: `${k.aktiv} Objekt(e) aktiv vermarktet${k.volumenAktiv > 0 ? `, Volumen ${eur(k.volumenAktiv)}` : ''} — GEG-Angaben vollständig.`, punkte, stimmung: 'gut' };
 }
+
+/** Betriebskostenabrechnung: HeizkostenV-Fehler, Einheiten, Nachzahler. */
+export function augeBk(k: {
+  einheiten: number;
+  kostenGesamt: number;
+  vorauszahlungGesamt: number;
+  saldoGesamt: number;
+  nachzahler: number;
+  heizLuecken: number;
+}): AugeErgebnis {
+  if (k.heizLuecken > 0) {
+    return {
+      klartext: `${k.heizLuecken} Heizkosten-Position(en) mit Verbrauchsanteil außerhalb 50–70 % — das verstößt gegen die HeizkostenV; der Mieter darf dann um 15 % kürzen (§ 12 HeizkostenV).`,
+      punkte: [], stimmung: 'achtung',
+    };
+  }
+  if (k.einheiten === 0) {
+    return { klartext: 'Leg die Einheiten/Mieter an — dann verteilt sich die Abrechnung automatisch nach Schlüssel.', punkte: [], stimmung: 'neutral' };
+  }
+  if (k.kostenGesamt === 0) {
+    return { klartext: `${k.einheiten} Einheit(en) erfasst — jetzt die Kostenarten nach § 2 BetrKV eintragen.`, punkte: [], stimmung: 'neutral' };
+  }
+  return {
+    klartext: `${k.einheiten} Einheit(en), ${eur(k.kostenGesamt)} Kosten verteilt${k.nachzahler > 0 ? ` — ${k.nachzahler} Nachzahler` : ' — alles im Guthaben'}.`,
+    punkte: [`Saldo gesamt ${eur(k.saldoGesamt)} (Nachforderung minus Guthaben).`], stimmung: 'gut',
+  };
+}
