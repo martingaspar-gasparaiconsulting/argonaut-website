@@ -146,3 +146,39 @@ export function zaehleExpose(exposes: ExposeLite[]): ExposeKennzahlen {
   }
   return { aktiv, reserviert, abgeschlossen, volumenAktiv: r2(volumenAktiv), pflichtLuecken };
 }
+
+// ---------------------------------------------------------------------------
+// Interessenten / Leads je Objekt (Andockpunkt B-IV, Mini-Paket 1)
+// ---------------------------------------------------------------------------
+export type InteressentStatus = 'neu' | 'besichtigung' | 'angebot' | 'zusage' | 'abgesagt';
+
+export const INTERESSENT_STATUS: { key: InteressentStatus; label: string }[] = [
+  { key: 'neu',          label: 'Neu' },
+  { key: 'besichtigung', label: 'Besichtigung' },
+  { key: 'angebot',      label: 'Angebot' },
+  { key: 'zusage',       label: 'Zusage' },
+  { key: 'abgesagt',     label: 'Abgesagt' },
+];
+export function interessentStatusLabel(k: string): string {
+  return INTERESSENT_STATUS.find((s) => s.key === k)?.label ?? k;
+}
+/** Offener Lead = noch in Bearbeitung (weder zugesagt noch abgesagt). */
+export function istOffenerLead(status: string): boolean {
+  return status !== 'abgesagt' && status !== 'zusage';
+}
+
+export interface InteressentLite { expose_id?: string; status?: string }
+export interface InteressentKennzahlen { gesamt: number; offen: number; besichtigungen: number; angebote: number; zusagen: number; }
+
+export function zaehleInteressenten(list: InteressentLite[]): InteressentKennzahlen {
+  let gesamt = 0, offen = 0, besichtigungen = 0, angebote = 0, zusagen = 0;
+  for (const i of list || []) {
+    gesamt++;
+    const s = i.status ?? 'neu';
+    if (istOffenerLead(s)) offen++;
+    if (s === 'besichtigung') besichtigungen++;
+    if (s === 'angebot') angebote++;
+    if (s === 'zusage') zusagen++;
+  }
+  return { gesamt, offen, besichtigungen, angebote, zusagen };
+}

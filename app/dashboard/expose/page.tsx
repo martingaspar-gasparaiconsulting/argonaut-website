@@ -13,7 +13,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import {
   OBJEKT_ARTEN, VERMARKTUNG_ARTEN, AUSWEIS_TYPEN, STATUS_INFO,
   energieKlasse, preisProM2, provision, pflichtangabenVollstaendig, fehlendePflichtangaben,
-  zaehleExpose, type ObjektArt, type VermarktungArt, type AusweisTyp, type ExposeStatus,
+  zaehleExpose, INTERESSENT_STATUS, zaehleInteressenten,
+  type ObjektArt, type VermarktungArt, type AusweisTyp, type ExposeStatus, type InteressentLite,
 } from '@/lib/expose';
 import { augeExpose } from '@/lib/auge';
 import { exposePdf } from '@/lib/exposePdf';
@@ -40,6 +41,8 @@ type Expose = {
   objekt_text: string | null; status: string;
 };
 
+type Interessent = { id: string; expose_id: string; name: string; email: string | null; telefon: string | null; status: string; notiz: string | null; created_at: string };
+
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
 function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
@@ -61,12 +64,21 @@ export default function ExposePage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ ...LEER });
   const [ausweisVorhanden, setAusweisVorhanden] = useState(true);
+  const [interessenten, setInteressenten] = useState<Interessent[]>([]);
+  const [selInter, setSelInter] = useState<string>('');
+  const [nInter, setNInter] = useState({ name: '', email: '', telefon: '', status: 'neu', notiz: '' });
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
-      const { data } = await supabase.from('expose').select('*').order('created_at', { ascending: false });
-      setExposes((data as Expose[]) ?? []);
+      const [ex, it] = await Promise.all([
+        supabase.from('expose').select('*').order('created_at', { ascending: false }),
+        supabase.from('expose_interessent').select('*').order('created_at', { ascending: false }),
+      ]);
+      const liste = (ex.data as Expose[]) ?? [];
+      setExposes(liste);
+      setInteressenten((it.data as Interessent[]) ?? []);
+      setSelInter((cur) => cur || (liste[0]?.id ?? ''));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -86,6 +98,8 @@ export default function ExposePage() {
   }, [laden_]);
 
   const kennzahlen = useMemo(() => zaehleExpose(exposes), [exposes]);
+  const interDesObjekts = useMemo(() => interessenten.filter((i) => i.expose_id === selInter), [interessenten, selInter]);
+  const interKennzahlen = useMemo(() => zaehleInteressenten(interessenten as InteressentLite[]), [interessenten]);
   const vermarktung = VERMARKTUNG_ARTEN.find((v) => v.key === f.vermarktung_art) ?? VERMARKTUNG_ARTEN[0];
   const klasse = energieKlasse(num(f.energiekennwert));
   const m2Preis = preisProM2(num(f.preis), num(f.wohnflaeche));
@@ -130,6 +144,37 @@ export default function ExposePage() {
     finally { setBusy(null); }
   }
 
+  async function interessentAnlegen() {
+    if (!uid || !selInter) { setFehler('Bitte zuerst ein Exposé wählen.'); return; }
+    if (!nInter.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
+    setBusy('inter'); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.from('expose_interessent').insert({
+        owner_user_id: uid, expose_id: selInter, name: nInter.name.trim(),
+        email: nInter.email.trim() || null, telefon: nInter.telefon.trim() || null,
+        status: nInter.status, notiz: nInter.notiz.trim() || null,
+      });
+      if (error) throw error;
+      setNInter({ name: '', email: '', telefon: '', status: 'neu', notiz: '' });
+      setOk('Interessent hinzugefügt.'); await laden_();
+    } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  async function interStatus(i: Interessent, status: string) {
+    setBusy(i.id); setFehler(null);
+    try { await supabase.from('expose_interessent').update({ status }).eq('id', i.id); await laden_(); }
+    catch (err: unknown) { setFehler('Fehler: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  async function interLoeschen(id: string) {
+    setBusy(id); setFehler(null);
+    try { await supabase.from('expose_interessent').delete().eq('id', id); await laden_(); }
+    catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
   function druckePdf(e: Expose) {
     const va = VERMARKTUNG_ARTEN.find((v) => v.key === e.vermarktung_art) ?? VERMARKTUNG_ARTEN[0];
     const oa = OBJEKT_ARTEN.find((o) => o.key === e.objekt_art)?.label ?? e.objekt_art;
@@ -166,6 +211,7 @@ export default function ExposePage() {
         <Kpi label="Abgeschlossen" value={String(kennzahlen.abgeschlossen)} accent={C.green} />
         <Kpi label="Volumen aktiv (Kauf)" value={eur(kennzahlen.volumenAktiv)} accent={C.text} />
         <Kpi label="GEG-Lücken" value={String(kennzahlen.pflichtLuecken)} accent={kennzahlen.pflichtLuecken ? C.danger : C.green} />
+        <Kpi label="Interessenten offen" value={String(interKennzahlen.offen)} accent={interKennzahlen.offen ? C.gold : C.textDim} />
       </div>
       {!laden && (
         <div style={{ marginBottom: 14 }}>
@@ -283,6 +329,63 @@ export default function ExposePage() {
           )}
         </div>
       )}
+
+      {/* ---------- INTERESSENTEN / LEADS ---------- */}
+      <div style={{ ...styles.card, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={styles.cardTitel}>Interessenten &amp; Leads</div>
+          <label style={{ ...styles.lab, minWidth: 240 }}>Objekt
+            <select style={styles.inp} value={selInter} onChange={(e) => setSelInter(e.target.value)}>
+              <option value="">— Exposé wählen —</option>
+              {exposes.map((e) => <option key={e.id} value={e.id}>{e.bezeichnung}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {!selInter ? <div style={styles.hint}>Wähle oben ein Exposé, um Interessenten zu erfassen.</div> : (
+          <>
+            <div style={{ ...styles.grid, marginTop: 10 }}>
+              <label style={styles.lab}>Name<input style={styles.inp} value={nInter.name} onChange={(e) => setNInter({ ...nInter, name: e.target.value })} /></label>
+              <label style={styles.lab}>E-Mail<input style={styles.inp} value={nInter.email} onChange={(e) => setNInter({ ...nInter, email: e.target.value })} /></label>
+              <label style={styles.lab}>Telefon<input style={styles.inp} value={nInter.telefon} onChange={(e) => setNInter({ ...nInter, telefon: e.target.value })} /></label>
+              <label style={styles.lab}>Status
+                <select style={styles.inp} value={nInter.status} onChange={(e) => setNInter({ ...nInter, status: e.target.value })}>
+                  {INTERESSENT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              </label>
+              <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz<input style={styles.inp} value={nInter.notiz} onChange={(e) => setNInter({ ...nInter, notiz: e.target.value })} placeholder="z. B. Wunschtermin Besichtigung" /></label>
+            </div>
+            <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'inter' ? 0.6 : 1 }} disabled={busy === 'inter'} onClick={interessentAnlegen}>＋ Interessent</button>
+
+            {interDesObjekts.length === 0 ? <div style={{ ...styles.hint, marginTop: 8 }}>Noch keine Interessenten für dieses Objekt.</div> : (
+              <div style={{ marginTop: 12, overflowX: 'auto' }}>
+                <table style={styles.table}>
+                  <thead><tr>
+                    <th style={styles.th}>Name</th><th style={styles.th}>Kontakt</th>
+                    <th style={styles.th}>Status</th><th style={styles.th}>Notiz</th><th style={{ ...styles.th, textAlign: 'right' }}></th>
+                  </tr></thead>
+                  <tbody>
+                    {interDesObjekts.map((i) => (
+                      <tr key={i.id}>
+                        <td style={styles.td}>{i.name}</td>
+                        <td style={{ ...styles.td, color: C.textDim, fontSize: 14 }}>{[i.email, i.telefon].filter(Boolean).join(' · ') || '—'}</td>
+                        <td style={styles.td}>
+                          <select style={styles.selMini} value={i.status} onChange={(e) => interStatus(i, e.target.value)} disabled={busy === i.id}>
+                            {INTERESSENT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, color: C.textDim, fontSize: 14 }}>{i.notiz || '—'}</td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}><button style={styles.miniX} disabled={busy === i.id} onClick={() => interLoeschen(i.id)}>✕</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 8, color: C.textDim, fontSize: 13 }}>Besichtigungen: {interDesObjekts.filter((i) => i.status === 'besichtigung').length} · Angebote: {interDesObjekts.filter((i) => i.status === 'angebot').length} · offen: {interDesObjekts.filter((i) => i.status !== 'zusage' && i.status !== 'abgesagt').length}</div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -310,6 +413,8 @@ const styles: Record<string, CSSProperties> = {
   hintBox: { marginTop: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', fontSize: 'clamp(12.5px, 1.06vw, 17px)', color: C.textDim },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 'clamp(13.5px, 1.2vw, 19px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   mini: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 11px', fontSize: 'clamp(12px, 1.1vw, 17px)', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 6, marginBottom: 4, whiteSpace: 'nowrap' },
+  selMini: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 8px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' },
+  miniX: { background: 'transparent', color: C.danger, border: `1px solid ${C.danger}55`, borderRadius: 8, padding: '4px 9px', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 760 },
   th: { textAlign: 'left', padding: '10px 12px', fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' },
   td: { padding: '11px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
