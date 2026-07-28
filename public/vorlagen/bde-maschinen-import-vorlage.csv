@@ -1,0 +1,4 @@
+bezeichnung;maschinen_nr;standort;ideal_takt_sek;status
+CNC-Fräse 1;M-001;Halle A / Linie 1;60;aktiv
+Spritzgussmaschine 2;M-002;Halle B;12;aktiv
+Drehmaschine 3;M-003;Halle A / Linie 2;45;wartung

@@ -558,3 +558,36 @@ export function augeBk(k: {
     punkte: [`Saldo gesamt ${eur(k.saldoGesamt)} (Nachforderung minus Guthaben).`], stimmung: 'gut',
   };
 }
+
+/** BDE/MDE: OEE-Ampel + schwächster Hebel (Verfügbarkeit/Leistung/Qualität) + Top-Störgrund. */
+export function augeBde(k: {
+  maschinenAktiv: number;
+  buchungen: number;
+  offene: number;
+  oee: number; verfuegbarkeit: number; leistung: number; qualitaet: number;
+  laufzeitStd: number; stoerzeitStd: number;
+  mengeGesamt: number; ausschuss: number;
+  topStoerLabel: string | null; topStoerMin: number;
+}): AugeErgebnis {
+  const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
+  if (k.buchungen === 0) {
+    return { klartext: 'Noch keine BDE-Buchungen — leg eine Maschine an und buche die erste Schicht, dann rechne ich die OEE aus.', punkte: [], stimmung: 'neutral' };
+  }
+  // Schwächster der drei Faktoren = größter Hebel.
+  const faktoren = [
+    { name: 'Verfügbarkeit', wert: k.verfuegbarkeit, tipp: k.topStoerLabel ? `größter Störblock: ${k.topStoerLabel} (${Math.round(k.topStoerMin)} min)` : 'Störzeiten senken' },
+    { name: 'Leistung', wert: k.leistung, tipp: 'Taktverluste/Leerlauf reduzieren' },
+    { name: 'Qualität', wert: k.qualitaet, tipp: `Ausschuss senken${k.ausschuss ? ` (${k.ausschuss} Stk)` : ''}` },
+  ].sort((a, b) => a.wert - b.wert);
+  const schwach = faktoren[0];
+  const punkte: string[] = [`Schwächster Hebel: ${schwach.name} ${p(schwach.wert)} — ${schwach.tipp}.`];
+  if (k.stoerzeitStd > 0) punkte.push(`${k.stoerzeitStd.toLocaleString('de-DE')} h Störzeit gegenüber ${k.laufzeitStd.toLocaleString('de-DE')} h Laufzeit.`);
+
+  if (k.oee < 0.6) {
+    return { klartext: `OEE ${p(k.oee)} — deutlich Luft nach oben. Setz zuerst bei der ${schwach.name} an.`, punkte, stimmung: 'achtung' };
+  }
+  if (k.oee < 0.85) {
+    return { klartext: `OEE ${p(k.oee)} — solide, aber noch nicht Weltklasse (85 %). Größter Hebel: ${schwach.name}.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `OEE ${p(k.oee)} — Weltklasse-Niveau (≥ 85 %). Sauber.`, punkte, stimmung: 'gut' };
+}
