@@ -82,6 +82,28 @@ export function augeLager(d: { kritisch: number; niedrig: number; gesamt?: numbe
   return { klartext: `Alle Bestände im grünen Bereich — nichts droht auszugehen.`, punkte: [], stimmung: 'gut' };
 }
 
+/** Varianten & Matrix: fehlende Matrix-Zellen (Lücken) + Varianten unter Mindestbestand. */
+export function augeVarianten(d: { luecken: number; unterMindest: number; varianten: number; gruppen: number }): AugeErgebnis {
+  if (d.gruppen === 0 && d.varianten === 0) {
+    return { klartext: 'Noch keine Varianten-Matrix angelegt — Größen und Farben als Achsen definieren, dann alle Varianten auf einen Schlag erzeugen.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.luecken > 0) {
+    return {
+      klartext: `${d.luecken} Matrix-Kombination${d.luecken === 1 ? '' : 'en'} ${d.luecken === 1 ? 'fehlt' : 'fehlen'} noch — mit „Matrix erzeugen" bekommt jede Größe/Farbe ihre eigene SKU mit Bestand.`,
+      punkte: d.unterMindest > 0 ? [`${d.unterMindest} Variante${d.unterMindest === 1 ? '' : 'n'} zusätzlich leer oder unter Mindestbestand`] : [],
+      stimmung: 'achtung',
+    };
+  }
+  if (d.unterMindest > 0) {
+    return {
+      klartext: `${d.unterMindest} Variante${d.unterMindest === 1 ? '' : 'n'} ${d.unterMindest === 1 ? 'ist' : 'sind'} leer oder unter Mindestbestand — hier gezielt nachbestellen.`,
+      punkte: [`${d.varianten} Varianten in ${d.gruppen} Matri${d.gruppen === 1 ? 'x' : 'zen'} gepflegt`],
+      stimmung: d.unterMindest >= 5 ? 'achtung' : 'neutral',
+    };
+  }
+  return { klartext: `Alle Varianten angelegt und bevorratet — die Matrix ist vollständig.`, punkte: [`${d.varianten} Varianten in ${d.gruppen} Matri${d.gruppen === 1 ? 'x' : 'zen'}`], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

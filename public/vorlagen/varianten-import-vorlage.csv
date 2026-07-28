@@ -1,0 +1,5 @@
+bezeichnung;sku_basis;achse1_name;achse1_werte;achse2_name;achse2_werte;basis_vk;mwst_satz
+T-Shirt Basic;TSH;Größe;S,M,L,XL;Farbe;Schwarz,Weiß,Rot;19,90;19
+Sneaker Runner;SNK;Größe;38,39,40,41,42,43;Farbe;Schwarz,Weiß;79,00;19
+Kaffeebohnen;KAF;Sorte;Espresso,Filter;Gewicht;250g,500g,1kg;8,50;7
+Arbeitshose;AHO;Größe;46,48,50,52,54;Ausführung;kurz,normal,lang;54,90;19

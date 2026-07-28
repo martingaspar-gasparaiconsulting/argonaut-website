@@ -20,7 +20,7 @@ export const STANDARD_AUTOMATION = 'automatisierungen';
 export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Handwerk & Bau': ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'],
   'Industrie & Produktion': ['fertigung', 'bde', 'erp', 'lager-scanner', 'projekte', 'pruefprotokolle', 'zuschnitt', 'einkauf', 'wartung'],
-  'Handel & E-Commerce': ['shop', 'kasse', 'erp', 'lager-scanner', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'],
+  'Handel & E-Commerce': ['shop', 'kasse', 'erp', 'lager-scanner', 'varianten', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'],
   'Fahrzeuge & Mobilität': ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen', 'einkauf'],
   'Gastronomie, Hotellerie & Tourismus': ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'],
   'Lebensmittel & Nahversorgung': ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur', 'reservierung', 'einkauf', 'tour'],
