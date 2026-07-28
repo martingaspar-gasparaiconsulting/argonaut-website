@@ -143,6 +143,25 @@ export function augeChargen(d: { gesperrt: number; abgelaufen: number; nio: numb
   return { klartext: `Alle ${d.gesamt} Chargen freigegeben, geprüft und rückverfolgbar — sauber.`, punkte: [], stimmung: 'gut' };
 }
 
+/** Housekeeping: offene Abreise-Zimmer (zuerst reinigen) + Zimmer noch nicht sauber. */
+export function augeHousekeeping(d: { schmutzig: number; inReinigung: number; abreisenOffen: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Zimmer/Einheiten angelegt — anlegen und den Reinigungsstatus je Zimmer pflegen.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.abreisenOffen > 0) {
+    return {
+      klartext: `${d.abreisenOffen} Abreise-Zimmer ${d.abreisenOffen === 1 ? 'ist' : 'sind'} noch nicht sauber — die zuerst, bevor die nächsten Gäste anreisen.`,
+      punkte: (d.schmutzig + d.inReinigung) > 0 ? [`${d.schmutzig + d.inReinigung} Zimmer insgesamt offen`] : [],
+      stimmung: 'achtung',
+    };
+  }
+  const offen = d.schmutzig + d.inReinigung;
+  if (offen > 0) {
+    return { klartext: `${offen} Zimmer noch in Reinigung — keine dringenden Abreisen, aber dranbleiben.`, punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: 'Alle Zimmer sauber — nichts Dringendes im Housekeeping.', punkte: [], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

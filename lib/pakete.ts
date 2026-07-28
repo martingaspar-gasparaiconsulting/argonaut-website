@@ -49,7 +49,7 @@ export type BranchenPaket = {
 export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen'] },
-  { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'] },
+  { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'housekeeping', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'] },
   { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'varianten', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'] },
   { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'bde', 'erp', 'lager-scanner', 'chargen', 'projekte', 'pruefprotokolle', 'zuschnitt', 'einkauf'] },
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'ertraege', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },

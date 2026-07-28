@@ -125,6 +125,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
+  { label: '🛎️ Housekeeping & Karte', href: '/dashboard/housekeeping', modul: 'housekeeping', ebene: 3, gruppe: 'betrieb' },
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '📟 BDE / MDE', href: '/dashboard/bde', modul: 'bde', ebene: 3, gruppe: 'betrieb' },
   { label: '🔬 Chargen & Prüfplan', href: '/dashboard/chargen', modul: 'chargen', ebene: 3, gruppe: 'betrieb' },

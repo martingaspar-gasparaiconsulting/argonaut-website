@@ -22,7 +22,7 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Industrie & Produktion': ['fertigung', 'bde', 'erp', 'lager-scanner', 'chargen', 'projekte', 'pruefprotokolle', 'zuschnitt', 'einkauf', 'wartung'],
   'Handel & E-Commerce': ['shop', 'kasse', 'erp', 'lager-scanner', 'varianten', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'],
   'Fahrzeuge & Mobilität': ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen', 'einkauf'],
-  'Gastronomie, Hotellerie & Tourismus': ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'],
+  'Gastronomie, Hotellerie & Tourismus': ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'housekeeping', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'],
   'Lebensmittel & Nahversorgung': ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur', 'etiketten', 'reservierung', 'einkauf', 'tour'],
   'Logistik & Transport': ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour', 'einsaetze'],
   'IT & Technologie': ['it-msp', 'vertraege', 'service', 'projekte', 'projekt-abrechnung', 'wiederkehr'],

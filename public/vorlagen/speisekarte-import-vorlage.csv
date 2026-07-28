@@ -1,0 +1,6 @@
+name;kategorie;preis;beschreibung;allergene;zusatzstoffe;verfuegbar;hervorgehoben;reihenfolge
+Tomatensuppe;Suppe;5,90;mit Sahnehaube und Croûtons;gluten,milch;;ja;nein;10
+Wiener Schnitzel;Hauptgericht;18,90;vom Kalb mit Pommes und Preiselbeeren;gluten,eier;;ja;ja;20
+Caesar Salad;Salat;12,50;mit Hähnchenbrust, Parmesan und Dressing;gluten,eier,milch,fische;;ja;nein;15
+Cola;Getränk;3,80;0,33 l;;farbstoff,koffein;ja;nein;90
+Tiramisu;Dessert;6,50;hausgemacht;gluten,eier,milch;koffein;nein;nein;80
