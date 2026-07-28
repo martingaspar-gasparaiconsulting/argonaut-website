@@ -1,4 +1,4 @@
-bezeichnung;charge_nr;mhd;menge;einheit;lieferant;herkunft;verwendung;status
-Rinderhack;CH-2026-0712;2026-07-30;12;kg;Metzgerei Huber;Wareneingang 12.07.;Lyoner-Produktion;aktiv
-Sauerteig;CH-2026-0715;2026-08-05;3;kg;Eigenproduktion;Anstellgut;Bauernbrot;aktiv
-Frischmilch;CH-2026-0710;2026-07-26;20;l;Molkerei Nord;Wareneingang 10.07.;;gesperrt
+charge_nr;typ;bezeichnung;menge;einheit;herstell_datum;mhd;herkunft;auftrag;status
+2026-0428-A;charge;Getriebewelle 40x120;250;Stk;2026-04-28;;Stahl-Lieferung L-2231;AB-2026-0087;freigegeben
+2026-0429-S001;serie;Prüfstand Typ P3;1;Stk;2026-04-29;;Baugruppe intern;AB-2026-0090;quarantaene
+CH-2026-0051;charge;Dichtmasse grau;80;kg;2026-04-20;2027-04-20;Rohstoff RM-778;;freigegeben

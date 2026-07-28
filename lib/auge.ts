@@ -119,6 +119,30 @@ export function augeEtiketten(d: { unvollstaendig: number; ohneNaehrwert: number
   return { klartext: `Alle ${d.gesamt} Etiketten sind LMIV-vollständig — Zutaten, Allergene und Nährwerte sauber gepflegt.`, punkte: [], stimmung: 'gut' };
 }
 
+/** Chargen & Prüfplan: gesperrte/n.i.O. Chargen (Auslieferstopp), MHD-Ablauf, ungeprüfte Chargen. */
+export function augeChargen(d: { gesperrt: number; abgelaufen: number; nio: number; ungeprueft: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Chargen erfasst — Charge/Serie anlegen, Rückverfolgbarkeit (Ein-/Ausgänge) pflegen und den Prüfplan mit Soll/Toleranz abhaken.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.abgelaufen > 0) punkte.push(`${d.abgelaufen} Charge${d.abgelaufen === 1 ? '' : 'n'} über MHD/Verfall`);
+  if (d.ungeprueft > 0) punkte.push(`${d.ungeprueft} Charge${d.ungeprueft === 1 ? '' : 'n'} noch ungeprüft`);
+  const sperrig = d.gesperrt + d.nio;
+  if (sperrig > 0) {
+    return {
+      klartext: `${sperrig} Charge${sperrig === 1 ? '' : 'n'} ${sperrig === 1 ? 'ist' : 'sind'} gesperrt oder n.i.O. — nicht ausliefern, bis Freigabe oder Nacharbeit steht.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  if (d.abgelaufen > 0) {
+    return { klartext: `${d.abgelaufen} Charge${d.abgelaufen === 1 ? '' : 'n'} ${d.abgelaufen === 1 ? 'hat' : 'haben'} das MHD überschritten — prüfen und sperren.`, punkte: d.ungeprueft > 0 ? [`${d.ungeprueft} noch ungeprüft`] : [], stimmung: 'achtung' };
+  }
+  if (d.ungeprueft > 0) {
+    return { klartext: `${d.ungeprueft} Charge${d.ungeprueft === 1 ? '' : 'n'} ${d.ungeprueft === 1 ? 'ist' : 'sind'} noch ungeprüft — Prüfplan abarbeiten, bevor freigegeben wird.`, punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: `Alle ${d.gesamt} Chargen freigegeben, geprüft und rückverfolgbar — sauber.`, punkte: [], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

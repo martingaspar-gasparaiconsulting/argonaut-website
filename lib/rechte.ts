@@ -127,6 +127,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '📟 BDE / MDE', href: '/dashboard/bde', modul: 'bde', ebene: 3, gruppe: 'betrieb' },
+  { label: '🔬 Chargen & Prüfplan', href: '/dashboard/chargen', modul: 'chargen', ebene: 3, gruppe: 'betrieb' },
   { label: '⚡ Energie', href: '/dashboard/energie', modul: 'energie', ebene: 3, gruppe: 'betrieb' },
   { label: '☀️ Erträge & Monitoring', href: '/dashboard/ertraege', modul: 'ertraege', ebene: 3, gruppe: 'betrieb' },
   { label: '🏢 Immobilien', href: '/dashboard/immobilien', modul: 'immobilien', ebene: 3, gruppe: 'betrieb' },
