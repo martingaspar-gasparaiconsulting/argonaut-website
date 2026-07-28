@@ -2,9 +2,10 @@
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/_components/TerminPicker.tsx
-// Termin-Kalender: Mo–Fr in Reihen über ~4 Wochen, aufklappbar.
-// Mo–Do: stündliche Slots (09–17). Freitag (gold umrandet): 20-Minuten-Slots
-// 08:00–12:00 — NUR für Betriebe mit 1–5 Mitarbeitern (Quickwins).
+// Termin-Kalender: Mo–Fr in Reihen, aufklappbar. Fester Buchungsblock bis
+// einschließlich 15.08.2026 (letzter buchbarer Tag; danach Urlaub, neue Termine
+// ab September separat). Mo–Do: stündliche Slots (09–17). Freitag (gold umrandet):
+// 20-Minuten-Slots 08:00–12:00 — NUR für Betriebe mit 1–9 Mitarbeitern (Quickwins).
 // Belegte Slots werden ausgegraut (aus /api/termine). Blockiert wird erst beim
 // Absenden (Reservierung in der DB). Gibt (Anzeige, Schlüssel) zurück.
 // ============================================================================
@@ -12,6 +13,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const GOLD = '#c9a84c'
+// Letzter buchbarer Tag (Monat 0-basiert → 7 = August).
+const MAX_JAHR = 2026, MAX_MONAT = 7, MAX_TAG = 15
 const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const WEEKDAY_TIMES = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
@@ -42,14 +45,18 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
   const weeks = useMemo<Day[][]>(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
+    const maxTag = new Date(MAX_JAHR, MAX_MONAT, MAX_TAG); maxTag.setHours(0, 0, 0, 0) // letzter buchbarer Tag
     const monday = new Date(today); const dow = (monday.getDay() + 6) % 7; monday.setDate(monday.getDate() - dow)
     const rows: Day[][] = []
-    for (let w = 0; w < 6 && rows.length < 4; w++) {
+    // Bis zur Woche des letzten buchbaren Tages (Deckel 30 Wochen als Sicherheitsnetz).
+    for (let w = 0; w < 30; w++) {
+      const wMonday = new Date(monday); wMonday.setDate(monday.getDate() + w * 7)
+      if (wMonday > maxTag) break // ganze Woche liegt nach dem Enddatum
       const days: Day[] = []
       let hasFuture = false
       for (let i = 0; i < 5; i++) {
         const c = new Date(monday); c.setDate(monday.getDate() + w * 7 + i)
-        const bookable = c >= tomorrow
+        const bookable = c >= tomorrow && c <= maxTag
         if (bookable) hasFuture = true
         days.push({ key: ymd(c), wd: WD[c.getDay()], label: pad(c.getDate()) + '.' + pad(c.getMonth() + 1) + '.', year: c.getFullYear(), isFri: c.getDay() === 5, bookable })
       }
@@ -98,22 +105,30 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
 
   return (
     <div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {weeks.map((row, wi) => (
-          <div key={wi} style={{ display: 'flex', gap: '8px' }}>
-            {row.map((d) => (
-              <button key={d.key} type="button" onClick={() => pickDay(d)} disabled={dayDisabled(d)} style={dayChip(d)}>
-                <span style={{ display: 'block', fontSize: '.7rem', opacity: 0.8 }}>{d.wd}</span>
-                <span style={{ display: 'block', fontSize: '.85rem', fontWeight: 600 }}>{d.label}</span>
-              </button>
+      {weeks.length === 0 ? (
+        <p style={{ fontSize: '.9rem', color: '#c4d3db', margin: 0, lineHeight: 1.55, border: '1px solid rgba(122,163,179,0.22)', borderRadius: '10px', padding: '14px 16px' }}>
+          Aktuell sind keine Termine buchbar — die nächsten Termine folgen <span style={{ color: GOLD }}>ab September</span>. Schreiben Sie uns gern eine Nachricht, wir melden uns mit einem Vorschlag.
+        </p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {weeks.map((row, wi) => (
+              <div key={wi} style={{ display: 'flex', gap: '8px' }}>
+                {row.map((d) => (
+                  <button key={d.key} type="button" onClick={() => pickDay(d)} disabled={dayDisabled(d)} style={dayChip(d)}>
+                    <span style={{ display: 'block', fontSize: '.7rem', opacity: 0.8 }}>{d.wd}</span>
+                    <span style={{ display: 'block', fontSize: '.85rem', fontWeight: 600 }}>{d.label}</span>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
-        ))}
-      </div>
 
-      <p style={{ fontSize: '.75rem', color: '#7f97a4', margin: '10px 0 0', lineHeight: 1.5 }}>
-        <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 9 Mitarbeiter.
-      </p>
+          <p style={{ fontSize: '.75rem', color: '#7f97a4', margin: '10px 0 0', lineHeight: 1.5 }}>
+            <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 9 Mitarbeiter. · Buchbar bis <span style={{ color: GOLD }}>15.08.2026</span>.
+          </p>
+        </>
+      )}
 
       {selDay && (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
