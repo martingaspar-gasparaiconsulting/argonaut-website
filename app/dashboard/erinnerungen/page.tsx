@@ -34,7 +34,7 @@ type Erinnerung = {
   id: string; titel: string | null; bezug_typ: BezugTyp; bezug_id: string | null;
   kontakt_id: string | null; kunde_name: string | null; kanal: Kanal;
   faellig_am: string | null; termin_am: string | null; status: string;
-  erledigt_am: string | null; notiz: string | null;
+  erledigt_am: string | null; notiz: string | null; email: string | null; gesendet_am: string | null;
 };
 type ResVorgang = { id: string; art: string; kunde_name: string | null; kontakt_id: string | null; von: string | null; status: string; kennzeichen: string | null };
 type Kontakt = { id: string; name: string };
@@ -49,7 +49,7 @@ const RES_ART_LABEL: Record<string, string> = { tischreservierung: 'Tischreservi
 
 const LEER_NE = {
   bezug_typ: 'frei' as BezugTyp, bezug_id: '', kanal: 'telefon' as Kanal, kontakt_id: '',
-  kunde_name: '', titel: '', faellig_am: jetztLokal(), termin_am: '', notiz: '',
+  kunde_name: '', titel: '', faellig_am: jetztLokal(), termin_am: '', notiz: '', email: '',
 };
 
 export default function ErinnerungenPage() {
@@ -131,7 +131,7 @@ export default function ErinnerungenPage() {
         bezug_id: ne.bezug_id || null, kontakt_id: ne.kontakt_id || null,
         kunde_name: ne.kunde_name.trim() || null, kanal: ne.kanal,
         faellig_am: ne.faellig_am, termin_am: ne.termin_am || null, status: 'offen',
-        notiz: ne.notiz.trim() || null,
+        notiz: ne.notiz.trim() || null, email: ne.email.trim() || null,
       });
       if (error) throw error;
       setNe({ ...LEER_NE, faellig_am: jetztLokal() });
@@ -149,6 +149,20 @@ export default function ErinnerungenPage() {
       if (error) throw error;
       await laden_();
     } catch (err: unknown) { setFehler('Status fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  async function senden(e: Erinnerung) {
+    if (!e.email || !e.email.includes('@')) { setFehler('Für den E-Mail-Versand fehlt eine gültige Empfänger-E-Mail (Erinnerung bearbeiten).'); return; }
+    setBusy(e.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/erinnerung-senden', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ erinnerungId: e.id }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setFehler(j?.error || 'Versand fehlgeschlagen.'); return; }
+      setOk('E-Mail versendet.'); await laden_();
+    } catch (err: unknown) { setFehler('Fehler: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
 
@@ -202,6 +216,7 @@ export default function ErinnerungenPage() {
             </select>
           </label>
           <label style={styles.lab}>Kunde (Freitext)<input style={styles.inp} value={ne.kunde_name} onChange={(e) => setNe({ ...ne, kunde_name: e.target.value })} /></label>
+          <label style={styles.lab}>E-Mail (für Versand)<input style={styles.inp} type="email" value={ne.email} onChange={(e) => setNe({ ...ne, email: e.target.value })} placeholder="kunde@example.com" /></label>
           <label style={styles.lab}>Fällig am (erinnern)<input type="datetime-local" style={styles.inp} value={ne.faellig_am} onChange={(e) => setNe({ ...ne, faellig_am: e.target.value })} /></label>
           <label style={styles.lab}>Termin am (optional)<input type="datetime-local" style={styles.inp} value={ne.termin_am} onChange={(e) => setNe({ ...ne, termin_am: e.target.value })} /></label>
           <label style={styles.lab}>Bezug
@@ -248,9 +263,11 @@ export default function ErinnerungenPage() {
                       <td style={styles.td}>{ki.icon} <span style={{ color: C.textDim, fontSize: 13 }}>{ki.label}</span></td>
                       <td style={styles.td}><span style={{ ...styles.badge, color: FARBE[si.farbe], borderColor: FARBE[si.farbe] }}>{si.label}</span></td>
                       <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {st === 'offen' && e.kanal === 'email' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} disabled={busy === e.id} onClick={() => senden(e)}>✉ Senden</button>}
                         {st === 'offen' && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === e.id} onClick={() => setzeStatus(e, 'erledigt')}>✓ Erinnert</button>}
                         {st === 'offen' && <button style={styles.mini} disabled={busy === e.id} onClick={() => setzeStatus(e, 'entfallen')}>Entfällt</button>}
                         {st !== 'offen' && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === e.id} onClick={() => setzeStatus(e, 'offen')}>↺ Offen</button>}
+                        {e.gesendet_am && <div style={{ color: C.green, fontSize: 12 }}>✓ gesendet {fmtZeit(e.gesendet_am)}</div>}
                       </td>
                     </tr>
                   );
