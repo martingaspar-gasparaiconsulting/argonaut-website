@@ -58,11 +58,11 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'agentur', name: 'Agentur & Kreativ', icon: '🎨', module: ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'] },
   { key: 'wellness', name: 'Gesundheit & Wellness', icon: '💆', module: ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'] },
   { key: 'kanzlei', name: 'Kanzlei & Steuer', icon: '⚖️', module: ['kanzlei', 'vertraege', 'datev', 'fristen'] },
-  { key: 'bildung', name: 'Bildung & Kurse', icon: '🎓', module: ['bildung', 'online-buchung', 'buchungen', 'gutscheine'] },
+  { key: 'bildung', name: 'Bildung & Kurse', icon: '🎓', module: ['bildung', 'online-buchung', 'buchungen', 'gutscheine', 'veranstaltungen'] },
   { key: 'lebensmittel', name: 'Lebensmittel', icon: '🥫', module: ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur', 'reservierung', 'einkauf'] },
   { key: 'landwirtschaft', name: 'Landwirtschaft & Forst', icon: '🌾', module: ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'tierbestand', 'ertraege'] },
   { key: 'tier', name: 'Tier / Praxis', icon: '🐾', module: ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen'] },
-  { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden'] },
+  { key: 'verein', name: 'Verein & Sozial', icon: '🤝', module: ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden', 'veranstaltungen'] },
   { key: 'logistik', name: 'Logistik / Spedition', icon: '🚚', module: ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour'] },
 ];
 

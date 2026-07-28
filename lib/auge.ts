@@ -662,3 +662,37 @@ export function augeProofing(k: {
   }
   return { klartext: `${k.assets} Asset(s) in Arbeit — reiche eine Version zur Freigabe ein.`, punkte: [], stimmung: 'neutral' };
 }
+
+/** Veranstaltungen: Auslastung, ausverkauft + Warteliste, offene Einnahmen. */
+export function augeEvents(k: {
+  veranstaltungen: number;
+  aktive: number;
+  gesamtPlaetze: number;
+  belegtePlaetze: number;
+  auslastung: number;
+  wartelisteGesamt: number;
+  ausverkaufte: number;
+  einnahmenBezahlt: number;
+  einnahmenOffen: number;
+}): AugeErgebnis {
+  const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
+  if (k.veranstaltungen === 0) {
+    return { klartext: 'Noch keine Veranstaltungen — leg die erste an, dann rechne ich Auslastung, freie Plätze und Einnahmen.', punkte: [], stimmung: 'neutral' };
+  }
+  if (k.ausverkaufte > 0 && k.wartelisteGesamt > 0) {
+    return {
+      klartext: `${k.ausverkaufte} Veranstaltung(en) ausverkauft, ${k.wartelisteGesamt} Platz/Plätze auf der Warteliste — Kapazität erhöhen oder Nachrücker bestätigen.`,
+      punkte: k.einnahmenOffen > 0 ? [`${eur(k.einnahmenOffen)} noch nicht bezahlt.`] : [], stimmung: 'achtung',
+    };
+  }
+  if (k.einnahmenOffen > 0) {
+    return {
+      klartext: `Auslastung ${p(k.auslastung)} (${k.belegtePlaetze}/${k.gesamtPlaetze} Plätze) — aber ${eur(k.einnahmenOffen)} sind noch offen.`,
+      punkte: [`${eur(k.einnahmenBezahlt)} bereits bezahlt.`], stimmung: 'neutral',
+    };
+  }
+  return {
+    klartext: `Auslastung ${p(k.auslastung)} über ${k.aktive} aktive Veranstaltung(en) — Einnahmen ${eur(k.einnahmenBezahlt)}, alles bezahlt.`,
+    punkte: k.wartelisteGesamt > 0 ? [`${k.wartelisteGesamt} auf der Warteliste.`] : [], stimmung: 'gut',
+  };
+}
