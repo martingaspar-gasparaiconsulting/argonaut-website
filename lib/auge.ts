@@ -162,6 +162,26 @@ export function augeHousekeeping(d: { schmutzig: number; inReinigung: number; ab
   return { klartext: 'Alle Zimmer sauber — nichts Dringendes im Housekeeping.', punkte: [], stimmung: 'gut' };
 }
 
+/** IT-Assets/Lizenzen/SLA: abgelaufene oder überbuchte Lizenzen, gerissene SLA, bald fällige. */
+export function augeItAssets(d: { lizenzenAbgelaufen: number; ueberbucht: number; slaAbgelaufen: number; lizenzenBald: number; ohneGarantie: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch nichts erfasst — Assets, Lizenzen (mit Plätzen & Ablauf) und SLA je Kunde anlegen, dann behältst du Ablauf und Compliance im Blick.', punkte: [], stimmung: 'neutral' };
+  }
+  const kritisch = d.lizenzenAbgelaufen + d.ueberbucht + d.slaAbgelaufen;
+  const punkte: string[] = [];
+  if (d.lizenzenAbgelaufen > 0) punkte.push(`${d.lizenzenAbgelaufen} Lizenz${d.lizenzenAbgelaufen === 1 ? '' : 'en'} abgelaufen`);
+  if (d.ueberbucht > 0) punkte.push(`${d.ueberbucht} Lizenz${d.ueberbucht === 1 ? '' : 'en'} überbucht (mehr belegt als lizenziert)`);
+  if (d.slaAbgelaufen > 0) punkte.push(`${d.slaAbgelaufen} SLA abgelaufen`);
+  if (d.ohneGarantie > 0) punkte.push(`${d.ohneGarantie} Asset${d.ohneGarantie === 1 ? '' : 's'} ohne Garantie`);
+  if (kritisch > 0) {
+    return { klartext: `${kritisch} Compliance-Punkt${kritisch === 1 ? '' : 'e'} offen — abgelaufene oder überbuchte Lizenzen bzw. gerissene SLA. Das jetzt bereinigen (Kosten- und Vertragsrisiko).`, punkte, stimmung: 'achtung' };
+  }
+  if (d.lizenzenBald > 0) {
+    return { klartext: `${d.lizenzenBald} Lizenz${d.lizenzenBald === 1 ? '' : 'en'} ${d.lizenzenBald === 1 ? 'läuft' : 'laufen'} in den nächsten 60 Tagen aus — rechtzeitig verlängern.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: 'Assets, Lizenzen und SLA sind aktuell — nichts abgelaufen, nichts überbucht.', punkte: d.ohneGarantie > 0 ? punkte : [], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };

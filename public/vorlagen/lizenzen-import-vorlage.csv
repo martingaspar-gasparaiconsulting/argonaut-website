@@ -1,0 +1,5 @@
+kunde;bezeichnung;hersteller;lizenztyp;plaetze;belegt;start;ablauf;kosten_jahr;schluessel
+Muster GmbH;Microsoft 365 Business Standard;Microsoft;abo;25;22;2026-01-01;2027-01-01;3750;
+Muster GmbH;Adobe Creative Cloud;Adobe;abo;5;5;2025-11-15;2026-11-15;3600;
+Beispiel AG;Windows Server 2022;Microsoft;kauf;2;2;2024-03-01;;1050;WIN-XXXXX
+Beispiel AG;TeamViewer Corporate;TeamViewer;abo;10;7;2026-02-01;2026-09-30;2400;

@@ -25,7 +25,7 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Gastronomie, Hotellerie & Tourismus': ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'housekeeping', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'],
   'Lebensmittel & Nahversorgung': ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur', 'etiketten', 'reservierung', 'einkauf', 'tour'],
   'Logistik & Transport': ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour', 'einsaetze'],
-  'IT & Technologie': ['it-msp', 'vertraege', 'service', 'projekte', 'projekt-abrechnung', 'wiederkehr'],
+  'IT & Technologie': ['it-msp', 'itassets', 'vertraege', 'service', 'projekte', 'projekt-abrechnung', 'wiederkehr'],
   'Energie & Umwelt': ['energie', 'ertraege', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle', 'tour', 'foerdermittel'],
   'Immobilien & Verwaltung': ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung', 'gutachten', 'expose', 'betriebskosten', 'wartung'],
   'Marketing, Medien & Kreativ': ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'],

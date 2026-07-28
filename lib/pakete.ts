@@ -54,7 +54,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'fertigung', name: 'Fertigung / Industrie', icon: '🏭', module: ['fertigung', 'bde', 'erp', 'lager-scanner', 'chargen', 'projekte', 'pruefprotokolle', 'zuschnitt', 'einkauf'] },
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'ertraege', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },
   { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung', 'gutachten', 'expose', 'betriebskosten'] },
-  { key: 'it-msp', name: 'IT & MSP', icon: '💻', module: ['it-msp', 'vertraege', 'service', 'projekte'] },
+  { key: 'it-msp', name: 'IT & MSP', icon: '💻', module: ['it-msp', 'itassets', 'vertraege', 'service', 'projekte'] },
   { key: 'agentur', name: 'Agentur & Kreativ', icon: '🎨', module: ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'] },
   { key: 'wellness', name: 'Gesundheit & Wellness', icon: '💆', module: ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'] },
   { key: 'kanzlei', name: 'Kanzlei & Steuer', icon: '⚖️', module: ['kanzlei', 'vertraege', 'datev', 'fristen'] },
