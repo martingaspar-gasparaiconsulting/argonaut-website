@@ -456,3 +456,30 @@ export function augeGutscheine(k: {
   }
   return { klartext: `${k.aktive} aktive Gutschein(e) im Umlauf${k.offenerRestwert > 0 ? `, ${eur(k.offenerRestwert)} offener Restwert` : ''}.`, punkte, stimmung: 'gut' };
 }
+
+/** Erinnerungen: was jetzt fällig ist + No-Show-Prävention. */
+export function augeErinnerungen(k: {
+  offen: number;
+  faelligJetzt: number;
+  heute: number;
+  dieseWoche: number;
+  erledigt: number;
+  entfallen: number;
+}): AugeErgebnis {
+  if (k.faelligJetzt > 0) {
+    const punkte: string[] = [];
+    if (k.heute > 0) punkte.push(`${k.heute} weitere heute fällig.`);
+    if (k.dieseWoche > 0) punkte.push(`${k.dieseWoche} diese Woche.`);
+    return {
+      klartext: `${k.faelligJetzt} Erinnerung(en) sind jetzt fällig — kurz abarbeiten hält die No-Show-Quote niedrig.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  if (k.offen === 0) {
+    return { klartext: 'Keine offenen Erinnerungen — alles erledigt.', punkte: [], stimmung: 'gut' };
+  }
+  if (k.heute > 0) {
+    return { klartext: `${k.heute} Erinnerung(en) heute fällig, aber noch nichts überfällig.`, punkte: k.dieseWoche > 0 ? [`${k.dieseWoche} weitere diese Woche.`] : [], stimmung: 'neutral' };
+  }
+  return { klartext: `${k.offen} Erinnerung(en) geplant, nichts jetzt fällig.`, punkte: k.dieseWoche > 0 ? [`${k.dieseWoche} diese Woche fällig.`] : [], stimmung: 'gut' };
+}

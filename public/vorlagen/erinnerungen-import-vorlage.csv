@@ -1,0 +1,4 @@
+titel;kanal;kunde_name;faellig_am;termin_am;bezug_typ;notiz
+Reservierung bestätigen;telefon;Max Mustermann;2026-08-04T18:00;2026-08-05T19:00;reservierung;Fenstertisch
+Termin erinnern;email;Erika Beispiel;2026-08-06T09:00;2026-08-07T10:30;termin;
+Reifen abholen;sms;Firma Schmidt;2026-08-10T08:00;;frei;Winterreifen eingelagert
