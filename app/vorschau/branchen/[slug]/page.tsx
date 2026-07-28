@@ -6,6 +6,7 @@ import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
 import { baukastenFor } from '../../_lib/branchen-bausteine'
+import { verkaufPack, fuelleText } from '../../_lib/branchen-verkauf'
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
@@ -49,6 +50,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
   const verwandte = websiteVerwandte(slug)
   const seo = seoBySlug(slug)
   const { stack, spezial, rollen } = baukastenFor(b.kategorie)
+  const vk = verkaufPack(b.kategorie)
   const jsonLd: any[] = [
     {
       '@context': 'https://schema.org',
@@ -117,8 +119,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             🔱 ARGONAUT für {b.kategorie}
           </div>
           <h1 className="bd-h1">{b.name}</h1>
-          <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.28rem)', color: '#b9cdd6', maxWidth: '46ch', margin: '0 auto 2rem', lineHeight: 1.55 }}>
-            Ihr ganzer Betrieb in <span style={{ color: GOLD }}>einem System</span> — für {b.name} fertig eingerichtet. Kein Flickenteppich, keine Insellösungen.
+          <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.28rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto 2rem', lineHeight: 1.55 }}>
+            {fuelleText(vk.heroSub, b.name, b.kategorie)}
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo für {b.name} buchen →</a>
@@ -140,6 +142,9 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       <section style={{ padding: '30px 0' }}>
         <div className="bd-wrap">
           <h2 className="bd-h2">Kennen Sie das?</h2>
+          <p style={{ color: '#b9cdd6', maxWidth: '58ch', margin: '-0.8rem 0 1.6rem', lineHeight: 1.6 }}>
+            {fuelleText(vk.schmerzHint, b.name, b.kategorie)}
+          </p>
           <div className="bd-grid">
             {b.schmerzen.map((s) => (
               <div key={s} className="bd-card bd-pain">
@@ -154,6 +159,9 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       <section style={{ padding: '30px 0' }}>
         <div className="bd-wrap">
           <h2 className="bd-h2">Mit ARGONAUT läuft das <span style={{ color: GOLD }}>von selbst</span>.</h2>
+          <p style={{ color: '#b9cdd6', maxWidth: '58ch', margin: '-0.8rem 0 1.6rem', lineHeight: 1.6 }}>
+            {fuelleText(vk.nutzenHint, b.name, b.kategorie)}
+          </p>
           <div className="bd-grid">
             {b.ergebnisse.map((e) => (
               <div key={e} className="bd-card bd-win">
@@ -229,6 +237,23 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
         </div>
       </section>
 
+      {/* Warum ARGONAUT — 3 Vertrauens-/Nutzen-Punkte (kategoriespezifisch, Fallback: Standard) */}
+      <section style={{ padding: '30px 0 10px' }}>
+        <div className="bd-wrap">
+          <div className="bd-stack">
+            {vk.beweis.map((bw) => (
+              <div key={bw.titel} className="bd-tile bd-tile-extra">
+                <div className="bd-tile-top">
+                  <span className="bd-tile-icon" aria-hidden="true">{bw.icon}</span>
+                  <span className="bd-tile-name">{fuelleText(bw.titel, b.name, b.kategorie)}</span>
+                </div>
+                <div className="bd-tile-sub">{fuelleText(bw.text, b.name, b.kategorie)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FAQ (einzigartig je Branche) + FAQ-Schema */}
       {seo?.faq && seo.faq.length > 0 && (
         <section style={{ padding: '30px 0 10px' }}>
@@ -259,6 +284,15 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </div>
         </section>
       )}
+
+      {/* Verkaufs-Claim direkt über dem Angebot/Anfrage-Block */}
+      <section style={{ padding: '24px 0 0' }}>
+        <div className="bd-wrap">
+          <p style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(1.25rem, 2.8vw, 1.8rem)', color: GOLD, textAlign: 'center', maxWidth: '30ch', margin: '0 auto', lineHeight: 1.3 }}>
+            {fuelleText(vk.ctaClaim, b.name, b.kategorie)}
+          </p>
+        </div>
+      </section>
 
       {/* Angebot + Anfrage in einem Guss → eigenes CRM */}
       <AngebotAnfrage branche={b.name} rollen={rollen} />
