@@ -104,6 +104,21 @@ export function augeVarianten(d: { luecken: number; unterMindest: number; varian
   return { klartext: `Alle Varianten angelegt und bevorratet — die Matrix ist vollständig.`, punkte: [`${d.varianten} Varianten in ${d.gruppen} Matri${d.gruppen === 1 ? 'x' : 'zen'}`], stimmung: 'gut' };
 }
 
+/** Etiketten & LMIV: unvollständige Pflichtangaben (abmahnfähig) + fehlende Nährwerttabellen. */
+export function augeEtiketten(d: { unvollstaendig: number; ohneNaehrwert: number; gesamt: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Etiketten erfasst — Produkt anlegen, Allergene ankreuzen und Nährwerte je 100 g eintragen, dann das LMIV-Etikett drucken.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.unvollstaendig > 0) {
+    return {
+      klartext: `${d.unvollstaendig} Etikett${d.unvollstaendig === 1 ? '' : 'en'} ${d.unvollstaendig === 1 ? 'ist' : 'sind'} unvollständig — LMIV-Pflichtangaben fehlen, das ist abmahnfähig. Vor dem Verkauf schließen.`,
+      punkte: d.ohneNaehrwert > 0 ? [`${d.ohneNaehrwert} davon ohne vollständige Nährwertdeklaration`] : [],
+      stimmung: 'achtung',
+    };
+  }
+  return { klartext: `Alle ${d.gesamt} Etiketten sind LMIV-vollständig — Zutaten, Allergene und Nährwerte sauber gepflegt.`, punkte: [], stimmung: 'gut' };
+}
+
 /** CRM: Kontakte über ihrem Betreuungs-Takt (Nachfass-Bedarf) + fällige Wiedervorlagen. */
 export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) return { klartext: 'Noch keine Kontakte erfasst — Zeit, die Pipeline zu füllen.', punkte: [], stimmung: 'neutral' };
