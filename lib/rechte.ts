@@ -145,6 +145,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
   { label: '🔑 Verleih & Vermietung', href: '/dashboard/verleih', modul: 'verleih', ebene: 3, gruppe: 'betrieb' },
   { label: '🗓 Belegung', href: '/dashboard/belegung', modul: 'belegung', ebene: 3, gruppe: 'betrieb' },
+  { label: '🪑 Reservierung & Platz', href: '/dashboard/reservierung', modul: 'reservierung', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Schlagkartei', href: '/dashboard/schlagkartei', modul: 'schlagkartei', ebene: 3, gruppe: 'betrieb' },
   { label: '🐄 Tierbestand', href: '/dashboard/tierbestand', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Akten & Fristen', href: '/dashboard/fristen', modul: 'fristen', ebene: 3, gruppe: 'betrieb' },

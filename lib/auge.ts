@@ -396,3 +396,38 @@ export function augeAmpel(bezeichnung: string, d: { rot: number; gelb: number })
   if (d.gelb > 0) return { klartext: `Nichts überfällig, aber ${d.gelb} ${bezeichnung} werden bald fällig.`, punkte: [], stimmung: 'neutral' };
   return { klartext: `Alles im grünen Bereich — nichts ${bezeichnung} überfällig.`, punkte: [], stimmung: 'gut' };
 }
+
+/** Reservierung & Platz: Verwertungsfristen, Abholungen, No-Shows, Tische heute. */
+export function augeReservierung(k: {
+  aktivePlaetze: number;
+  tischHeute: number;
+  noShowGesamt: number;
+  eingelagertAktiv: number;
+  verwertungFaellig: number;
+  vorbestellungOffen: number;
+  abholUeberfaellig: number;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+  if (k.verwertungFaellig > 0) {
+    if (k.abholUeberfaellig > 0) punkte.push(`${k.abholUeberfaellig} Vorbestellung(en) zur Abholung überfällig.`);
+    return {
+      klartext: `${k.verwertungFaellig} Einlagerung(en) über die Laufzeit + 14-Tage-Frist hinaus — erst nach schriftlicher Ankündigung darfst du verwerten. Kunden anschreiben.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  if (k.abholUeberfaellig > 0) {
+    return {
+      klartext: `${k.abholUeberfaellig} Vorbestellung(en) sind zur Abholung überfällig — kurz beim Kunden nachfassen.`,
+      punkte: k.eingelagertAktiv > 0 ? [`${k.eingelagertAktiv} laufende Einlagerung(en).`] : [],
+      stimmung: 'achtung',
+    };
+  }
+  if (k.tischHeute === 0 && k.eingelagertAktiv === 0 && k.vorbestellungOffen === 0) {
+    return { klartext: 'Noch nichts offen — leg deinen ersten Vorgang an (Tischreservierung, Einlagerung oder Vorbestellung).', punkte: [], stimmung: 'neutral' };
+  }
+  if (k.tischHeute > 0) punkte.push(`${k.tischHeute} Tischreservierung(en) für heute.`);
+  if (k.eingelagertAktiv > 0) punkte.push(`${k.eingelagertAktiv} laufende Einlagerung(en).`);
+  if (k.vorbestellungOffen > 0) punkte.push(`${k.vorbestellungOffen} offene Vorbestellung(en).`);
+  if (k.noShowGesamt > 0) punkte.push(`${k.noShowGesamt} No-Show(s) insgesamt erfasst.`);
+  return { klartext: 'Alles im Griff — nichts ist überfällig.', punkte, stimmung: 'gut' };
+}
