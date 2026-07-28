@@ -245,6 +245,22 @@ export default function AdminTenants() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
+            href="/admin/branchen"
+            style={{
+              fontFamily: mono,
+              fontSize: 12,
+              letterSpacing: '0.1em',
+              color: GRUEN,
+              border: `1px solid ${GRUEN}66`,
+              borderRadius: 6,
+              padding: '8px 16px',
+              textDecoration: 'none',
+              background: `${GRUEN}12`,
+            }}
+          >
+            🗂 BRANCHEN-KATALOG
+          </a>
+          <a
             href="/admin/abo-einzug"
             style={{
               fontFamily: mono,

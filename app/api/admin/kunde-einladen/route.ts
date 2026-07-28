@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '../../../../lib/supabase-server';
-import { paketModule, branchenPaket } from '../../../../lib/pakete';
+import { paketModule, branchenPaket, KERN_MODULE } from '../../../../lib/pakete';
+import { ALLE_MODUL_KEYS } from '../../../../lib/rechte';
 import { sendeMail, mailLayout } from '../../../../lib/mail';
 
 // ============================================================================
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
   if (gesperrt) return gesperrt;
 
   // --- Eingabe ---------------------------------------------------------------
-  let body: { email?: string; firma?: string; branchKey?: string; plan?: string };
+  let body: { email?: string; firma?: string; branchKey?: string; plan?: string; module?: unknown; branche?: string; kategorie?: string };
   try {
     body = await req.json();
   } catch {
@@ -63,15 +64,26 @@ export async function POST(req: Request) {
   const firma = (body.firma || '').trim();
   const branchKey = (body.branchKey || '').trim();
   const plan = (body.plan || '').trim();
+  const brancheName = (body.branche || '').trim();
+  const kategorie = (body.kategorie || '').trim();
+  const explizitModule = Array.isArray(body.module) ? body.module.map((m) => String(m)) : [];
 
   if (!istEmail(email)) {
     return NextResponse.json({ ok: false, error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, { status: 400 });
   }
-  // Branche (falls angegeben) muss echt sein.
-  const branche = branchKey ? branchenPaket(branchKey) : undefined;
-  if (branchKey && !branche) {
+
+  // Modul-Set bestimmen: explizites Set (Branchen-Katalog) hat Vorrang,
+  // sonst der klassische Branchen-Paket-Key (abwärtskompatibel).
+  const gueltigeKeys = new Set<string>([...ALLE_MODUL_KEYS, ...KERN_MODULE, 'automatisierungen']);
+  const branchePaket = branchKey ? branchenPaket(branchKey) : undefined;
+  if (branchKey && !branchePaket) {
     return NextResponse.json({ ok: false, error: `Unbekannte Branche: ${branchKey}` }, { status: 400 });
   }
+  let modulSet: string[] = [];
+  if (explizitModule.length) modulSet = [...new Set(explizitModule.filter((m) => gueltigeKeys.has(m)))];
+  else if (branchePaket) modulSet = paketModule(branchePaket.key);
+  const anzeigeBranche = brancheName || branchePaket?.name || '';
+  const brancheIcon = branchePaket?.icon ? `${branchePaket.icon} ` : '';
 
   const admin = getClient();
   const origin = new URL(req.url).origin;
@@ -101,6 +113,8 @@ export async function POST(req: Request) {
     email,
     firma_name: firma || null,
     plan: plan || null,
+    branche: anzeigeBranche || null,
+    kategorie: kategorie || null,
     status: 'active',
     onboarding_completed: false,
   };
@@ -115,8 +129,8 @@ export async function POST(req: Request) {
 
   // --- 3. Optional: Branchen-Paket sofort scharfschalten ---------------------
   let freigeschaltet = 0;
-  if (branche) {
-    const rows = paketModule(branche.key).map((modulKey) => ({
+  if (modulSet.length) {
+    const rows = modulSet.map((modulKey) => ({
       owner_user_id: userId, modul_key: modulKey, aktiv: true,
     }));
     const { error: tmErr } = await admin
@@ -132,7 +146,7 @@ export async function POST(req: Request) {
   }
 
   // --- 4. Einladungs-Mail on-brand verschicken -------------------------------
-  const brancheText = branche ? `<p>Freigeschaltet: <b>${branche.icon} ${branche.name}</b> (${freigeschaltet} Module).</p>` : '';
+  const brancheText = anzeigeBranche ? `<p>Freigeschaltet: <b>${brancheIcon}${anzeigeBranche}</b> (${freigeschaltet} Module).</p>` : '';
   const html = mailLayout(
     'Ihr Zugang steht bereit',
     `<p>Herzlich willkommen bei ARGONAUT OS${firma ? `, ${firma}` : ''}!</p>
@@ -149,7 +163,7 @@ export async function POST(req: Request) {
     ok: true,
     userId,
     email,
-    branche: branche ? branche.name : null,
+    branche: anzeigeBranche || null,
     freigeschaltet,
     mailVersandt: mail.ok,
     mailFehler: mail.ok ? null : mail.fehler,
