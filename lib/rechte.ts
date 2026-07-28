@@ -126,6 +126,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '⚡ Energie', href: '/dashboard/energie', modul: 'energie', ebene: 3, gruppe: 'betrieb' },
   { label: '🏢 Immobilien', href: '/dashboard/immobilien', modul: 'immobilien', ebene: 3, gruppe: 'betrieb' },
+  { label: '🏠 Exposé & Vermarktung', href: '/dashboard/expose', modul: 'expose', ebene: 3, gruppe: 'betrieb' },
   { label: '💻 IT & MSP', href: '/dashboard/it-msp', modul: 'it-msp', ebene: 3, gruppe: 'betrieb' },
   { label: '🎨 Agentur & Kreativ', href: '/dashboard/agentur', modul: 'agentur-kreativ', ebene: 3, gruppe: 'betrieb' },
   { label: '💆 Gesundheit & Wellness', href: '/dashboard/wellness', modul: 'wellness', ebene: 3, gruppe: 'betrieb' },

@@ -1,0 +1,4 @@
+bezeichnung;objekt_art;vermarktung_art;ort;adresse;wohnflaeche;grundstuecksflaeche;zimmer;baujahr;etage;preis;nebenkosten;provision_prozent;energie_typ;energiekennwert;energietraeger
+3-Zi-Wohnung Zentrum;wohnung;kauf;München;Musterstr. 1;78;;3;1998;2. OG;420000;250;3.57;verbrauch;95;Gas
+Einfamilienhaus am Park;haus;kauf;Augsburg;Parkweg 7;145;520;5;2015;;650000;;3.57;bedarf;55;Wärmepumpe
+Ladenfläche City;gewerbe;miete;Nürnberg;Marktplatz 3;120;;;1975;EG;2400;400;;verbrauch;140;Fernwärme

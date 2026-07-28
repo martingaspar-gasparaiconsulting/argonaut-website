@@ -508,3 +508,26 @@ export function augeEinkauf(k: {
     stimmung: 'neutral',
   };
 }
+
+/** Exposé & Vermarktung: GEG-Pflichtlücken, aktive Objekte, Volumen. */
+export function augeExpose(k: {
+  aktiv: number;
+  reserviert: number;
+  abgeschlossen: number;
+  volumenAktiv: number;
+  pflichtLuecken: number;
+}): AugeErgebnis {
+  if (k.pflichtLuecken > 0) {
+    return {
+      klartext: `${k.pflichtLuecken} aktive(s) Exposé(s) ohne vollständige GEG-§87-Pflichtangaben (Ausweis-Art, Kennwert, Energieträger, Baujahr) — das ist abmahnfähig, bitte ergänzen.`,
+      punkte: [], stimmung: 'achtung',
+    };
+  }
+  if (k.aktiv === 0 && k.reserviert === 0) {
+    return { klartext: 'Nichts aktiv in der Vermarktung — leg ein Exposé an und schalte es aktiv.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (k.reserviert > 0) punkte.push(`${k.reserviert} reserviert.`);
+  if (k.abgeschlossen > 0) punkte.push(`${k.abgeschlossen} abgeschlossen.`);
+  return { klartext: `${k.aktiv} Objekt(e) aktiv vermarktet${k.volumenAktiv > 0 ? `, Volumen ${eur(k.volumenAktiv)}` : ''} — GEG-Angaben vollständig.`, punkte, stimmung: 'gut' };
+}
