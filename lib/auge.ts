@@ -625,3 +625,40 @@ export function augeErtraege(k: {
     punkte: [`${k.ertragKwh.toLocaleString('de-DE', { maximumFractionDigits: 0 })} kWh Ertrag, Eigenverbrauch ${p(k.eigenverbrauchsquote)}, Erlös ${eur(k.erloesGesamt)}.`], stimmung: 'gut',
   };
 }
+
+/** Freigaben/Proofing: offene Änderungen, laufende Prüfungen, Freigabequote. */
+export function augeProofing(k: {
+  assets: number;
+  inPruefung: number;
+  offeneAenderungen: number;
+  freigegeben: number;
+  abgelehnt: number;
+  inArbeit: number;
+  freigabeQuote: number;
+  schnittSchleifen: number;
+  versionenGesamt: number;
+}): AugeErgebnis {
+  const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
+  if (k.assets === 0) {
+    return { klartext: 'Noch keine Assets — leg das erste an und reiche eine Version zur Freigabe ein.', punkte: [], stimmung: 'neutral' };
+  }
+  if (k.offeneAenderungen > 0) {
+    return {
+      klartext: `${k.offeneAenderungen} Asset(s) mit Änderungswunsch — nacharbeiten und die nächste Version einreichen.`,
+      punkte: k.inPruefung > 0 ? [`${k.inPruefung} weitere(s) in Prüfung beim Kunden.`] : [], stimmung: 'achtung',
+    };
+  }
+  if (k.inPruefung > 0) {
+    return {
+      klartext: `${k.inPruefung} Asset(s) in Prüfung — warten auf Kundenfreigabe.`,
+      punkte: k.freigegeben > 0 ? [`${k.freigegeben} bereits freigegeben (Quote ${p(k.freigabeQuote)}).`] : [], stimmung: 'neutral',
+    };
+  }
+  if (k.freigegeben > 0) {
+    return {
+      klartext: `${k.freigegeben} Asset(s) freigegeben — Freigabequote ${p(k.freigabeQuote)}.`,
+      punkte: [`Ø ${k.schnittSchleifen.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Versionsschleifen bis zur Freigabe.`], stimmung: 'gut',
+    };
+  }
+  return { klartext: `${k.assets} Asset(s) in Arbeit — reiche eine Version zur Freigabe ein.`, punkte: [], stimmung: 'neutral' };
+}

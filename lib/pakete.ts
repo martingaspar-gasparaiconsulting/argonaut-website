@@ -55,7 +55,7 @@ export const BRANCHEN_PAKETE: BranchenPaket[] = [
   { key: 'energie', name: 'Energie / Anlagenbau', icon: '⚡', module: ['energie', 'ertraege', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle'] },
   { key: 'immobilien', name: 'Immobilienverwaltung', icon: '🏢', module: ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung', 'gutachten', 'expose', 'betriebskosten'] },
   { key: 'it-msp', name: 'IT & MSP', icon: '💻', module: ['it-msp', 'vertraege', 'service', 'projekte'] },
-  { key: 'agentur', name: 'Agentur & Kreativ', icon: '🎨', module: ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads'] },
+  { key: 'agentur', name: 'Agentur & Kreativ', icon: '🎨', module: ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'] },
   { key: 'wellness', name: 'Gesundheit & Wellness', icon: '💆', module: ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'] },
   { key: 'kanzlei', name: 'Kanzlei & Steuer', icon: '⚖️', module: ['kanzlei', 'vertraege', 'datev', 'fristen'] },
   { key: 'bildung', name: 'Bildung & Kurse', icon: '🎓', module: ['bildung', 'online-buchung', 'buchungen', 'gutscheine'] },
