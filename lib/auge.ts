@@ -483,3 +483,28 @@ export function augeErinnerungen(k: {
   }
   return { klartext: `${k.offen} Erinnerung(en) geplant, nichts jetzt fällig.`, punkte: k.dieseWoche > 0 ? [`${k.dieseWoche} diese Woche fällig.`] : [], stimmung: 'gut' };
 }
+
+/** Einkauf & Beschaffung: Retouren, offener Wareneingang, gebundener Bestellwert. */
+export function augeEinkauf(k: {
+  offeneBestellungen: number;
+  wareneingangOffen: number;
+  retourenOffen: number;
+  bestellwertOffen: number;
+  lieferantenAktiv: number;
+}): AugeErgebnis {
+  if (k.retourenOffen > 0) {
+    return {
+      klartext: `${k.retourenOffen} Position(en) mit Retoure/Reklamation — mit dem Lieferanten klären und Gutschrift/Ersatz nachhalten.`,
+      punkte: k.wareneingangOffen > 0 ? [`${k.wareneingangOffen} Bestellung(en) warten noch auf Wareneingang.`] : [],
+      stimmung: 'achtung',
+    };
+  }
+  if (k.offeneBestellungen === 0) {
+    return { klartext: k.lieferantenAktiv === 0 ? 'Noch keine Lieferanten/Bestellungen — leg deinen ersten Lieferanten an.' : 'Keine offenen Bestellungen — alles geliefert.', punkte: [], stimmung: k.lieferantenAktiv === 0 ? 'neutral' : 'gut' };
+  }
+  return {
+    klartext: `${k.offeneBestellungen} offene Bestellung(en), ${eur(k.bestellwertOffen)} noch nicht geliefert.`,
+    punkte: k.wareneingangOffen > 0 ? [`${k.wareneingangOffen} davon mit offenem Wareneingang.`] : [],
+    stimmung: 'neutral',
+  };
+}

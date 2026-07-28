@@ -158,6 +158,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🦽 Hilfsmittel', href: '/dashboard/hilfsmittel', modul: 'hilfsmittel', ebene: 3, gruppe: 'betrieb' },
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
+  { label: '📥 Einkauf', href: '/dashboard/einkauf', modul: 'einkauf', ebene: 3, gruppe: 'lager' },
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
   { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, gruppe: 'lager' },
