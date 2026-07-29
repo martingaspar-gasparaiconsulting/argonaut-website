@@ -1,14 +1,17 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Welle 5 · Schritt 3 — Onboarding-Checkliste
-// Geführte Startstrecke für Neukunden. Die meisten Schritte werden automatisch
-// erkannt (Firmendaten, IBAN, erste Rechnung …); der Rest ist manuell abhakbar.
+// ARGONAUT OS · Onboarding · Geführte Startstrecke (branchenaware)
+// Universelle Grundschritte + branchenspezifische Schritte (aus
+// lib/onboardingBranchen.ts, gelesen aus profiles.kategorie).
+// Jeder Schritt hat eine anfängerfreundliche „So geht's"-Anleitung.
+// Auto-Erkennung: Firmendaten/IBAN/erste Rechnung + Zeilenzahl je Modul-Tabelle.
 // Pfad: app/dashboard/onboarding/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -21,27 +24,34 @@ const C = {
 };
 
 type Lage = { firma: boolean; iban: boolean; kontakte: number; rechnungen: number; angebote: number; zahlungAktiv: boolean };
-type Schritt = { key: string; icon: string; titel: string; text: string; link: string; auto: (l: Lage) => boolean; optional?: boolean };
+type UniSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; auto: (l: Lage) => boolean; optional?: boolean };
+type RenderSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; optional?: boolean; autoDone: boolean };
 
-const SCHRITTE: Schritt[] = [
-  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
-  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', link: '/dashboard/einstellungen', auto: () => false },
-  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
-  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
-  { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', link: '/dashboard/angebote', auto: (l) => l.angebote > 0 },
-  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
-  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', link: '/dashboard/schnittstellen', auto: (l) => l.zahlungAktiv, optional: true },
-  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', link: '/dashboard/einstellungen', auto: () => false },
+const SCHRITTE: UniSchritt[] = [
+  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Geh in Einstellungen und trag deine Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
+  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Lade dein Logo hoch und wähle deine Farbe. Damit sehen deine PDFs und dein Kundenportal nach dir aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', auto: () => false },
+  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Trag deine IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
+  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Leg deinen ersten Kunden im CRM an — oder importiere gleich deine ganze Kundenliste über das Import-Center. Danach kannst du Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
+  { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', tipp: 'Erstelle ein Angebot und schick es raus. Der Kunde kann online zusagen und unterschreiben — aus dem Angebot wird per Klick ein Auftrag oder eine Rechnung.', link: '/dashboard/angebote', auto: (l) => l.angebote > 0 },
+  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreib deine erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
+  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', tipp: 'Optional: Verbinde einen Bezahldienst, damit Kunden per Klick online zahlen können. Kannst du auch später machen.', link: '/dashboard/schnittstellen', auto: (l) => l.zahlungAktiv, optional: true },
+  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', tipp: 'Lade deine Mitarbeiter ein und gib ihnen nur die Bereiche frei, die sie brauchen. Jeder sieht dann genau seinen Ausschnitt.', link: '/dashboard/einstellungen', auto: () => false },
 ];
 
 export default function OnboardingPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [lage, setLage] = useState<Lage>({ firma: false, iban: false, kontakte: 0, rechnungen: 0, angebote: 0, zahlungAktiv: false });
+  const [kategorie, setKategorie] = useState<string | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [manuell, setManuell] = useState<Set<string>>(new Set());
+  const [offeneTipps, setOffeneTipps] = useState<Set<string>>(new Set());
   const [laden, setLaden] = useState(true);
 
   const laden_ = useCallback(async (id: string) => {
-    const { data: p } = await supabase.from('profiles').select('firma_name, sepa_iban').eq('id', id).maybeSingle();
+    const { data: p } = await supabase.from('profiles').select('firma_name, sepa_iban, kategorie').eq('id', id).maybeSingle();
+    const kat = (p?.kategorie && String(p.kategorie).trim()) ? String(p.kategorie).trim() : null;
+    setKategorie(kat);
+
     const zaehle = async (tab: string) => {
       try { const { count } = await supabase.from(tab).select('*', { count: 'exact', head: true }); return count || 0; } catch { return 0; }
     };
@@ -52,6 +62,15 @@ export default function OnboardingPage() {
       zahlungAktiv = !!zi && zi.aktiv === true && zi.anbieter !== 'kein';
     } catch { /* optional */ }
     setLage({ firma: !!(p?.firma_name && String(p.firma_name).trim()), iban: !!(p?.sepa_iban && String(p.sepa_iban).trim()), kontakte, rechnungen, angebote, zahlungAktiv });
+
+    // Branchenschritte: Zeilenzahl je hinterlegter Tabelle (fehlertolerant)
+    const tabellen = Array.from(new Set(branchenSchritte(kat).map((s) => s.tabelle).filter((t): t is string => !!t)));
+    if (tabellen.length > 0) {
+      const werte = await Promise.all(tabellen.map((t) => zaehle(t)));
+      const map: Record<string, number> = {};
+      tabellen.forEach((t, i) => { map[t] = werte[i]; });
+      setCounts(map);
+    }
 
     try {
       const { data: os } = await supabase.from('onboarding_schritte').select('schritt_key, erledigt');
@@ -68,14 +87,20 @@ export default function OnboardingPage() {
     })();
   }, [laden_]);
 
-  function erledigt(s: Schritt) { return s.auto(lage) || manuell.has(s.key); }
-  const fertig = SCHRITTE.filter(erledigt).length;
-  const prozent = Math.round((fertig / SCHRITTE.length) * 100);
+  const uniRender: RenderSchritt[] = SCHRITTE.map((s) => ({ key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, optional: s.optional, autoDone: s.auto(lage) }));
+  const branchRender: RenderSchritt[] = branchenSchritte(kategorie).map((s: BranchenSchritt) => ({
+    key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, optional: s.optional,
+    autoDone: s.tabelle ? (counts[s.tabelle] || 0) > 0 : false,
+  }));
+  const alle = [...uniRender, ...branchRender];
 
-  async function toggle(s: Schritt) {
+  function erledigt(s: RenderSchritt) { return s.autoDone || manuell.has(s.key); }
+  const fertig = alle.filter(erledigt).length;
+  const prozent = alle.length > 0 ? Math.round((fertig / alle.length) * 100) : 0;
+
+  async function toggle(s: RenderSchritt) {
     if (!uid) return;
-    const istManuell = manuell.has(s.key);
-    if (istManuell) {
+    if (manuell.has(s.key)) {
       await supabase.from('onboarding_schritte').delete().eq('owner_user_id', uid).eq('schritt_key', s.key);
       setManuell((m) => { const n = new Set(m); n.delete(s.key); return n; });
     } else {
@@ -83,39 +108,69 @@ export default function OnboardingPage() {
       setManuell((m) => new Set(m).add(s.key));
     }
   }
+  function tippToggle(key: string) {
+    setOffeneTipps((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  }
+
+  function zeile(s: RenderSchritt) {
+    const done = erledigt(s);
+    const tippOffen = offeneTipps.has(s.key);
+    return (
+      <div key={s.key} style={{ ...styles.zeile, borderColor: done ? 'rgba(76,175,125,0.5)' : C.border }}>
+        <div style={styles.zeileKopf}>
+          <div style={{ ...styles.check, background: done ? C.green : 'transparent', borderColor: done ? C.green : C.textDim }}>{done ? '✓' : ''}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700 }}>{s.icon} {s.titel} {s.optional && <span style={styles.opt}>optional</span>}</div>
+            <div style={{ color: C.textDim, fontSize: 13 }}>{s.text}</div>
+            <button style={styles.tippBtn} onClick={() => tippToggle(s.key)}>{tippOffen ? '▾ So geht’s' : '▸ So geht’s'}</button>
+          </div>
+          <a href={s.link} style={styles.oeffnen}>Öffnen ›</a>
+          {s.autoDone
+            ? <span style={styles.autoBadge}>automatisch erkannt</span>
+            : <button style={styles.hakBtn} onClick={() => toggle(s)}>{manuell.has(s.key) ? 'Haken entfernen' : 'Als erledigt'}</button>}
+        </div>
+        {tippOffen && <div style={styles.tippBox}>💡 {s.tipp}</div>}
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🚀 Erste Schritte mit ARGONAUT</h1>
       <p style={styles.sub}>Deine geführte Startstrecke. Vieles erkennt ARGONAUT automatisch — den Rest hakst du selbst ab.</p>
 
-      <div style={styles.fortschritt}>
-        <div style={styles.balken}><div style={{ ...styles.balkenFill, width: `${prozent}%` }} /></div>
-        <div style={styles.fortText}>{fertig} von {SCHRITTE.length} erledigt · <b style={{ color: prozent === 100 ? C.green : C.gold }}>{prozent}%</b></div>
+      <div style={styles.anleitung}>
+        <b>So nutzt du diese Seite:</b> Arbeite dich von oben nach unten durch. Was ARGONAUT schon erkennt, ist grün abgehakt.
+        Bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
       </div>
 
-      {prozent === 100 && <div style={styles.fertigBox}>🎉 Stark — dein ARGONAUT ist startklar! Alle Grundschritte sind erledigt.</div>}
+      <div style={styles.fortschritt}>
+        <div style={styles.balken}><div style={{ ...styles.balkenFill, width: `${prozent}%` }} /></div>
+        <div style={styles.fortText}>{fertig} von {alle.length} erledigt · <b style={{ color: prozent === 100 ? C.green : C.gold }}>{prozent}%</b></div>
+      </div>
+
+      {prozent === 100 && <div style={styles.fertigBox}>🎉 Stark — dein ARGONAUT ist startklar! Alle Schritte sind erledigt.</div>}
 
       {laden ? <p style={styles.dim}>Lädt …</p> : (
-        <div style={styles.liste}>
-          {SCHRITTE.map((s) => {
-            const done = erledigt(s);
-            const autoDone = s.auto(lage);
-            return (
-              <div key={s.key} style={{ ...styles.zeile, borderColor: done ? 'rgba(76,175,125,0.5)' : C.border }}>
-                <div style={{ ...styles.check, background: done ? C.green : 'transparent', borderColor: done ? C.green : C.textDim }}>{done ? '✓' : ''}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700 }}>{s.icon} {s.titel} {s.optional && <span style={styles.opt}>optional</span>}</div>
-                  <div style={{ color: C.textDim, fontSize: 13 }}>{s.text}</div>
-                </div>
-                <a href={s.link} style={styles.oeffnen}>Öffnen ›</a>
-                {autoDone
-                  ? <span style={styles.autoBadge}>automatisch erkannt</span>
-                  : <button style={styles.hakBtn} onClick={() => toggle(s)}>{manuell.has(s.key) ? 'Haken entfernen' : 'Als erledigt'}</button>}
+        <>
+          <div style={styles.liste}>{uniRender.map(zeile)}</div>
+
+          {branchRender.length > 0 && (
+            <>
+              <div style={styles.branchenTitel}>
+                <span style={{ color: C.gold }}>Speziell für deine Branche</span>
+                {kategorie && <span style={styles.branchenChip}>{kategorie}</span>}
               </div>
-            );
-          })}
-        </div>
+              <div style={styles.liste}>{branchRender.map(zeile)}</div>
+            </>
+          )}
+
+          {branchRender.length === 0 && !laden && (
+            <div style={styles.branchHinweis}>
+              Für noch mehr Starthilfe hinterlege deine Branche in den Einstellungen — dann zeigt ARGONAUT dir hier zusätzliche, passgenaue Schritte.
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -125,17 +180,24 @@ const styles: Record<string, CSSProperties> = {
   page: { maxWidth: 900, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
+  anleitung: { marginTop: 14, background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', color: C.textDim, fontSize: 13.5, lineHeight: 1.55 },
   fortschritt: { marginTop: 18 },
   balken: { height: 12, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden' },
   balkenFill: { height: '100%', background: `linear-gradient(90deg, ${C.gold}, ${C.green})`, borderRadius: 999, transition: 'width .3s' },
   fortText: { color: C.textDim, fontSize: 13, marginTop: 7 },
   fertigBox: { marginTop: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid ${C.green}`, borderRadius: 12, padding: '13px 16px', color: C.text, fontSize: 15, fontWeight: 600 },
   liste: { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 },
-  zeile: { display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', background: C.navy2, border: '1px solid', borderRadius: 14, padding: '14px 16px' },
+  zeile: { background: C.navy2, border: '1px solid', borderRadius: 14, padding: '14px 16px' },
+  zeileKopf: { display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' },
   check: { width: 26, height: 26, borderRadius: '50%', border: '2px solid', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.navy, fontWeight: 800, flexShrink: 0 },
   opt: { fontSize: 11, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 999, padding: '1px 8px', fontWeight: 600, marginLeft: 4 },
+  tippBtn: { marginTop: 6, background: 'transparent', color: C.cyan, border: 'none', padding: 0, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 },
+  tippBox: { marginTop: 10, background: 'rgba(201,168,76,0.08)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '11px 14px', color: C.text, fontSize: 13.5, lineHeight: 1.6 },
   oeffnen: { color: C.cyan, textDecoration: 'none', fontWeight: 700, fontSize: 13.5, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 13px', whiteSpace: 'nowrap' },
   autoBadge: { color: C.green, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' },
   hakBtn: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 13px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  branchenTitel: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 28, fontFamily: 'var(--font-syne), sans-serif', fontSize: 18, fontWeight: 800 },
+  branchenChip: { fontSize: 12, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 999, padding: '2px 10px', fontWeight: 600, fontFamily: 'var(--font-dm-sans), sans-serif' },
+  branchHinweis: { marginTop: 20, background: C.navy2, border: `1px dashed ${C.border}`, borderRadius: 12, padding: '14px 16px', color: C.textDim, fontSize: 13.5, lineHeight: 1.55 },
   dim: { color: C.textDim, fontSize: 14, marginTop: 12 },
 };
