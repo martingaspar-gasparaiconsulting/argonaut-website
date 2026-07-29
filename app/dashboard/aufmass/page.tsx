@@ -25,6 +25,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeAufmass } from '@/lib/auge';
 import {
   EINHEITEN, STATUS_LISTE, statusDef, istGesperrt, aufmassSumme, positionsBetrag,
   rechneMenge, mengeText, eur, satzText, katalogNachAufmassPosition,
@@ -424,7 +425,7 @@ export default function AufmassPage() {
       )}
 
       {!laden && kiKontext && (
-        <KiAuge modul="Aufmaß" kontext={kiKontext} aktionHref="/dashboard/aufmass" aktionText="Zu den Aufmaßen" />
+        <KiAuge modul="Aufmaß" regel={augeAufmass({ gesamt: aufmasse.length, entwuerfe, offenTitel: form.titel, positionen: positionen.length })} aktionHref="/dashboard/aufmass" aktionText="Zu den Aufmaßen" />
       )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}

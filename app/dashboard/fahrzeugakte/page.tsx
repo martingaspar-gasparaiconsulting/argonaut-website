@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeFahrzeugakte } from '@/lib/auge';
 import {
   positionsMinuten, positionsBetrag, auftragsSumme, zeitText, eur,
   type PositionBasis,
@@ -229,7 +230,7 @@ export default function FahrzeugaktePage() {
                 <SummeKarte label="Letzter Besuch" value={auftraege[0] ? datumKurz(auftraege[0].angenommen_am) : '—'} accent={C.green} />
               </div>
 
-              {kiKontext && <KiAuge modul="Fahrzeugakte" kontext={kiKontext} aktionHref="/dashboard/fahrzeugakte" aktionText="Zur Fahrzeugakte" />}
+              {kiKontext && <KiAuge modul="Fahrzeugakte" regel={augeFahrzeugakte({ huTage, besuche: auftraege.length, fahrzeugName: [fz.hersteller, fz.modell].filter(Boolean).join(' ') })} aktionHref="/dashboard/fahrzeugakte" aktionText="Zur Fahrzeugakte" />}
 
               {/* Anhänge am Fahrzeug (HU-Bericht, Papiere …) */}
               <div style={{ ...styles.card, marginTop: 12 }}>

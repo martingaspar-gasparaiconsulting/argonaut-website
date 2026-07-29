@@ -826,3 +826,64 @@ export function augeEvents(k: {
     punkte: k.wartelisteGesamt > 0 ? [`${k.wartelisteGesamt} auf der Warteliste.`] : [], stimmung: 'gut',
   };
 }
+
+// ===================================================================
+// Punkt 17 · KI-Augen → Regel (kostenlos, gleiche Aussage aus vorhandenen Zahlen)
+// ===================================================================
+
+/** Aufmaß: Anzahl + Entwürfe + aktuell geöffnetes Aufmaß. */
+export function augeAufmass(d: { gesamt: number; entwuerfe: number; offenTitel?: string | null; positionen: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch kein Aufmaß erfasst — Aufmaß anlegen, Positionen aufnehmen und daraus Angebot oder Rechnung erzeugen.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.offenTitel && d.offenTitel.trim()) punkte.push(`Geöffnet: „${d.offenTitel.trim()}" mit ${d.positionen} Position${d.positionen === 1 ? '' : 'en'}.`);
+  if (d.entwuerfe > 0) {
+    return { klartext: `${d.entwuerfe} von ${d.gesamt} Aufmaß${d.gesamt === 1 ? '' : 'en'} noch im Entwurf — fertigstellen und ins Angebot/die Rechnung überführen.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `${d.gesamt} Aufmaß${d.gesamt === 1 ? '' : 'e'} erfasst — bereit zur Weiterverarbeitung.`, punkte, stimmung: 'gut' };
+}
+
+/** Wartungsverträge: Fälligkeits-Ampel (rot/gelb/grün). */
+export function augeWartung(d: { gesamt: number; rot: number; gelb: number; gruen: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Wartungsverträge — Vertrag anlegen; Fälligkeiten und Erinnerungs-Ampel rechnet die Anlage automatisch.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.rot > 0) {
+    return { klartext: `${d.rot} Wartung${d.rot === 1 ? '' : 'en'} überfällig oder in ≤7 Tagen fällig — jetzt terminieren.`, punkte: d.gelb > 0 ? [`${d.gelb} weitere im Erinnerungsfenster.`] : [], stimmung: 'achtung' };
+  }
+  if (d.gelb > 0) {
+    return { klartext: `${d.gelb} Wartung${d.gelb === 1 ? '' : 'en'} bald fällig — im Blick behalten und rechtzeitig planen.`, punkte: [`${d.gesamt} aktive Verträge gesamt.`], stimmung: 'neutral' };
+  }
+  return { klartext: `Alle ${d.gesamt} Wartungsverträge unkritisch — nichts fällig, alles im grünen Bereich.`, punkte: [], stimmung: 'gut' };
+}
+
+/** Werkstatt-Durchlauf: offen / in Arbeit + Ø Durchlaufzeit. */
+export function augeWerkstatt(d: { gesamt: number; offen: number; inArbeit: number; oDurchlauf?: string | null }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Werkstatt-Aufträge — Auftrag annehmen, Positionen erfassen und den Durchlauf verfolgen.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  const od = (d.oDurchlauf ?? '').toString().trim();
+  if (od && od !== '—') punkte.push(`Ø Durchlaufzeit: ${od}.`);
+  if (d.offen > 0) {
+    return { klartext: `${d.offen} Auftrag${d.offen === 1 ? '' : 'e'} offen und ${d.inArbeit} in Arbeit — offene zuerst einplanen, damit nichts liegen bleibt.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.inArbeit > 0) {
+    return { klartext: `${d.inArbeit} Auftrag${d.inArbeit === 1 ? '' : 'e'} in Arbeit, nichts Unbearbeitetes offen — sauberer Durchlauf.`, punkte, stimmung: 'gut' };
+  }
+  return { klartext: `${d.gesamt} Werkstatt-Auftrag${d.gesamt === 1 ? '' : 'e'} — nichts offen, nichts in Arbeit.`, punkte, stimmung: 'gut' };
+}
+
+/** Fahrzeugakte: HU-Fälligkeit + Werkstattbesuche. */
+export function augeFahrzeugakte(d: { huTage: number | null; besuche: number; fahrzeugName?: string | null }): AugeErgebnis {
+  const name = (d.fahrzeugName && d.fahrzeugName.trim()) || 'das Fahrzeug';
+  const besuchText = `${d.besuche} Werkstattbesuch${d.besuche === 1 ? '' : 'e'} dokumentiert.`;
+  if (d.huTage != null && d.huTage < 0) {
+    return { klartext: `HU von ${name} ist ${Math.abs(d.huTage)} Tag${Math.abs(d.huTage) === 1 ? '' : 'e'} überfällig — sofort einen TÜV-Termin vereinbaren.`, punkte: [besuchText], stimmung: 'achtung' };
+  }
+  if (d.huTage != null && d.huTage <= 30) {
+    return { klartext: `HU von ${name} in ${d.huTage} Tag${d.huTage === 1 ? '' : 'en'} fällig — Termin rechtzeitig einplanen.`, punkte: [besuchText], stimmung: 'neutral' };
+  }
+  return { klartext: `Lebensakte von ${name} gepflegt${d.huTage != null ? ` — HU in ${d.huTage} Tagen unkritisch` : ''}.`, punkte: [besuchText], stimmung: 'gut' };
+}

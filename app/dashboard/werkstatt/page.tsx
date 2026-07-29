@@ -25,6 +25,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeWerkstatt } from '@/lib/auge';
 import {
   STATUS_PHASEN, statusDef, gruppiereBoard, naechsterStatus, istAbgeschlossen,
   durchlaufzeitText, durchlaufzeitMinuten, dauerTextMinuten, dringlichkeitsAmpel,
@@ -811,7 +812,7 @@ export default function WerkstattPage() {
       )}
 
       {!laden && kiKontext && (
-        <KiAuge modul="Werkstatt-Durchlauf" kontext={kiKontext} aktionHref="/dashboard/werkstatt" aktionText="Zum Werkstatt-Board" />
+        <KiAuge modul="Werkstatt-Durchlauf" regel={augeWerkstatt({ gesamt: auftraege.length, offen, inArbeit, oDurchlauf })} aktionHref="/dashboard/werkstatt" aktionText="Zum Werkstatt-Board" />
       )}
 
       {/* Block 1.5 · HU-Wiedervorlage-Kachel */}

@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import FristAmpel from '../_components/FristAmpel';
 import KiAuge from '../_components/KiAuge';
+import { augeWartung } from '@/lib/auge';
 import {
   naechsteFaelligkeitString,
   berechneNaechsteFaelligkeit,
@@ -474,7 +475,7 @@ export default function WartungPage() {
       {!laden && !zeigeArchiv && kiKontext && (
         <KiAuge
           modul="Wartungsverträge"
-          kontext={kiKontext}
+          regel={augeWartung({ gesamt: liste.length, rot: summe.rot, gelb: summe.gelb, gruen: summe.gruen })}
           aktionHref="/dashboard/wartung"
           aktionText="Zu den Wartungsverträgen"
         />
