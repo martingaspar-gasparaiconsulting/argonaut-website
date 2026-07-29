@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import KiKlartext from "../_components/KiKlartext";
 import KiAuge from "../_components/KiAuge";
 import { augeLager } from "@/lib/auge";
+import Leerzustand from "../_components/Leerzustand";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E2 Lager-Cockpit
@@ -512,11 +512,16 @@ export default function LagerCockpit() {
         {laden ? (
           <div style={{ padding: 30, color: C.textDim }}>Lade Artikel…</div>
         ) : gefiltert.length === 0 ? (
-          <div style={{ padding: 30, color: C.textDim }}>
-            {artikel.length === 0
-              ? "Noch keine Artikel angelegt. Lege oben rechts deinen ersten Artikel an."
-              : "Keine Artikel für diese Filter gefunden."}
-          </div>
+          artikel.length === 0 ? (
+            <Leerzustand
+              icon="📦"
+              titel="Noch keine Artikel"
+              text="Lege dein Sortiment an — mit Preisen, Beständen und Mindestbestand. ARGONAUT warnt automatisch bei knapper Ware."
+              schritte={["Artikel mit Preis und Bestand anlegen", "Mindestbestand setzen", "Bestand wächst aus Wareneingang / Kasse mit"]}
+            />
+          ) : (
+            <div style={{ padding: 30, color: C.textDim }}>Keine Artikel für diese Filter gefunden.</div>
+          )
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

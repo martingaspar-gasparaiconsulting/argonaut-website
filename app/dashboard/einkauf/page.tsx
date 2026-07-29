@@ -17,6 +17,7 @@ import {
 import { augeEinkauf } from '@/lib/auge';
 import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -312,7 +313,14 @@ export default function EinkaufPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {bestellungen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Bestellungen.</div> : (
+              {bestellungen.length === 0 ? (
+                <Leerzustand
+                  icon="🛒"
+                  titel="Noch keine Bestellungen"
+                  text="Erfasse deine Einkäufe bei Lieferanten — so behältst du Kosten und offene Lieferungen im Blick."
+                  schritte={["Lieferant anlegen", "Bestellung mit Positionen erfassen", "Wareneingang buchen — Bestand wächst automatisch"]}
+                />
+              ) : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Bestell-Nr.</th><th style={styles.th}>Lieferant</th><th style={styles.th}>Datum</th>

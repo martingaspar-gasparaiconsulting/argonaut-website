@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import KiKlartext from "../_components/KiKlartext";
 import KiAuge from "../_components/KiAuge";
 import { augeCrm } from "@/lib/auge";
 import KundenAuge from "./KundenAuge";
+import Leerzustand from "../_components/Leerzustand";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
@@ -978,11 +978,16 @@ export default function CrmCockpitPage() {
           {laden ? (
             <div style={leerBox}>Lade Kontakte…</div>
           ) : gefiltert.length === 0 ? (
-            <div style={leerBox}>
-              {kontakte.length === 0
-                ? "Noch keine Kontakte. Leg deinen ersten Kontakt an."
-                : "Keine Treffer für diese Filter."}
-            </div>
+            kontakte.length === 0 ? (
+              <Leerzustand
+                icon="👥"
+                titel="Noch keine Kontakte"
+                text="Dein CRM sammelt Kunden und Interessenten an einem Ort — mit Betreuungs-Intervallen und Tags."
+                schritte={["Kontakt manuell anlegen oder aus einem Lead übernehmen", "Firma, Rolle und Tags ergänzen", "Betreuung im Blick behalten"]}
+              />
+            ) : (
+              <div style={leerBox}>Keine Treffer für diese Filter.</div>
+            )
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table

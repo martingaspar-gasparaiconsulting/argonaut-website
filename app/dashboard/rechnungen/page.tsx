@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import KiKlartext from "../_components/KiKlartext";
 import KiAuge from "../_components/KiAuge";
 import { augeRechnungen } from "@/lib/auge";
+import Leerzustand from "../_components/Leerzustand";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -450,31 +450,27 @@ export default function RechnungenCockpit() {
             {fehler}
           </div>
         ) : gefiltert.length === 0 ? (
-          <div
-            style={{
-              background: C.navy2,
-              border: `1px solid ${C.border}`,
-              borderRadius: 14,
-              padding: "48px 24px",
-              textAlign: "center",
-              color: C.textDim,
-            }}
-          >
-            {rechnungen.length === 0 ? (
-              <>
-                <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🧾</div>
-                <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>
-                  Noch keine Rechnungen
-                </div>
-                <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-                  Rechnungen entstehen aus einem Auftrag – öffne einen Auftrag und
-                  klicke dort auf „Rechnung erstellen".
-                </div>
-              </>
-            ) : (
-              "Keine Rechnungen passen zu Suche/Filter."
-            )}
-          </div>
+          rechnungen.length === 0 ? (
+            <Leerzustand
+              icon="🧾"
+              titel="Noch keine Rechnungen"
+              text="Rechnungen entstehen aus einem Auftrag — mit einem Klick als PDF, danach behältst du den Zahlungsstatus im Blick."
+              schritte={["Auftrag öffnen", "Auf 'Rechnung erstellen' klicken", "Als PDF versenden und Zahlungseingang verfolgen"]}
+            />
+          ) : (
+            <div
+              style={{
+                background: C.navy2,
+                border: `1px solid ${C.border}`,
+                borderRadius: 14,
+                padding: "48px 24px",
+                textAlign: "center",
+                color: C.textDim,
+              }}
+            >
+              Keine Rechnungen passen zu Suche/Filter.
+            </div>
+          )
         ) : (
           <div
             style={{

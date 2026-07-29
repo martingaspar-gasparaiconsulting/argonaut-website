@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import ProjekteAuge from "./ProjekteAuge";
+import Leerzustand from "../_components/Leerzustand";
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P2 — Projekt-Liste + Anlegen
@@ -469,9 +470,16 @@ export default function ProjektePage() {
       {laden ? (
         <div style={{ ...card, color: BRAND.textDim }}>Lade Projekte…</div>
       ) : gefiltert.length === 0 ? (
-        <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>
-          {zeigeArchiv ? 'Keine archivierten Projekte.' : 'Noch keine Projekte. Leg mit „+ Neues Projekt" los.'}
-        </div>
+        zeigeArchiv ? (
+          <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>Keine archivierten Projekte.</div>
+        ) : (
+          <Leerzustand
+            icon="📁"
+            titel="Noch keine Projekte"
+            text="Plane deine Vorhaben als Projekte — mit Aufgaben, Terminen und Verantwortlichen an einem Ort."
+            schritte={["Projekt mit Enddatum anlegen", "Aufgaben und Verantwortliche zuweisen", "Fortschritt und Fristen im Blick behalten"]}
+          />
+        )
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {gefiltert.map((p) => {
