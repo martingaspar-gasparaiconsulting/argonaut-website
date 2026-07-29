@@ -61,6 +61,8 @@ export const LOESCH_ORDER: string[] = [
   'zahlungen',
   'angebot_positionen',
   'angebote',
+  'assets',
+  'wartungsvertraege',
   'artikel',
   'lieferanten',
   'kontakte',

@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE } from "@/lib/uebungswelt";
 import { BEISPIEL_QUELLE } from "@/lib/beispielKatalog";
 import { baueAngebotKopf, baueAngebotPositionen, baueBeispielZahlungen, type KontaktRef } from "@/lib/beispielBelege";
+import { baueAssets, baueWartungAusAsset } from "@/lib/beispielModule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,6 +104,28 @@ export async function POST(req: Request) {
         }
       } catch (e) {
         console.error("Übungswelt: Belege fehlgeschlagen:", e instanceof Error ? e.message : e);
+      }
+
+      // ---- Modulgruppe Objekte + Wartung (verzahnt, Kern-Modul) ----
+      try {
+        const heuteM = new Date().toISOString().slice(0, 10);
+        const assetRows = baueAssets(uid, heuteM);
+        const { data: aIns } = await supabase.from("assets").insert(assetRows).select("id");
+        const assetIds = ((aIns as Array<{ id: string }> | null) || []).map((r) => r.id).filter(Boolean);
+        if (assetIds.length) {
+          await supabase.from(REGISTER_TABELLE).insert(registerZeilen("assets", assetIds, uid));
+          angelegt += assetIds.length;
+          // Erstes Objekt mit einem Wartungsvertrag verzahnen.
+          const wartung = { ...baueWartungAusAsset(assetRows[0], uid), aktualisiert_am: new Date().toISOString() };
+          const { data: wIns } = await supabase.from("wartungsvertraege").insert(wartung).select("id").single();
+          if (wIns?.id) {
+            await supabase.from(REGISTER_TABELLE).insert(registerZeilen("wartungsvertraege", [wIns.id as string], uid));
+            angelegt += 1;
+            await supabase.from("assets").update({ wartungsvertrag_id: wIns.id }).eq("id", assetIds[0]);
+          }
+        }
+      } catch (e) {
+        console.error("Übungswelt: Modulgruppe Objekte/Wartung fehlgeschlagen:", e instanceof Error ? e.message : e);
       }
 
       return NextResponse.json({ angelegt });
