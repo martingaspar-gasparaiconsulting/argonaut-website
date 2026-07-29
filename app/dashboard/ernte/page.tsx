@@ -12,6 +12,7 @@ import {
   zaehleErnte,
 } from "@/lib/ernte";
 import { markttagPdf } from "@/lib/markttagPdf";
+import { offeneBuchungen } from "@/lib/umsatzBuchung";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-6 · Ernte, Direktvermarktung & Marktstände
@@ -64,6 +65,7 @@ export default function ErnteSeite() {
   const [pForm, setPForm] = useState<PForm>(LEER_P);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [finanzMeldung, setFinanzMeldung] = useState<string | null>(null);
 
   // Verkauf-Buchung
   const [vk, setVk] = useState({ datum: heute(), ort: "", produkt_id: "", menge: "", einzelpreis: "", mwst_satz: "7" });
@@ -90,6 +92,29 @@ export default function ErnteSeite() {
     if (!v.error && v.data) setVerkaeufe(v.data as Verkauf[]);
     if (!s.error && s.data) setSchlaege(s.data as SchlagKurz[]); // Schlagkartei optional
     setLaden(false);
+  }
+
+  // Marktverkäufe als Einnahmen in die Finanzen (zahlungen) buchen — idempotent
+  async function bucheInFinanzen() {
+    setBusy(true); setFinanzMeldung(null); setFehler(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id ?? userId;
+      if (!uid) { setFehler("Nicht eingeloggt."); setBusy(false); return; }
+      const { data: vorhanden } = await supabase.from("zahlungen").select("referenz");
+      const refs = (vorhanden ?? []).map((z: { referenz: string | null }) => z.referenz || "").filter(Boolean);
+      const roh = verkaeufe.map((v) => ({ id: v.id, betrag: verkaufsWerte(v.menge, v.einzelpreis, v.mwst_satz).brutto, datum: v.datum }));
+      const payloads = offeneBuchungen(roh, "markt", refs, heute(), "Bar (Markt)");
+      if (payloads.length === 0) { setFinanzMeldung("Alle Marktverkäufe sind bereits in den Finanzen gebucht."); setBusy(false); return; }
+      const uidLocal = uid;
+      const zeilen = payloads.map((p) => ({ ...p, owner_user_id: uidLocal }));
+      const { error } = await supabase.from("zahlungen").insert(zeilen);
+      if (error) { setFehler("Buchen fehlgeschlagen: " + error.message); setBusy(false); return; }
+      setFinanzMeldung(`${payloads.length} Verkauf${payloads.length === 1 ? "" : "e"} in die Finanzen gebucht — sichtbar in EÜR & Finanz-Cockpit.`);
+    } catch (e: any) {
+      setFehler("Fehler: " + (e?.message || "unbekannt"));
+    }
+    setBusy(false);
   }
 
   const kpi = useMemo(() => zaehleErnte(ernten, produkte, verkaeufe), [ernten, produkte, verkaeufe]);
@@ -313,6 +338,14 @@ export default function ErnteSeite() {
       ) : (
         // ============ MARKTTAGE ============
         <div>
+          <div style={{ ...card, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontWeight: 800 }}>💶 Umsatz in die Finanzen buchen</div>
+              <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 3 }}>Überträgt deine Marktverkäufe als Einnahmen in EÜR &amp; Finanz-Cockpit. Mehrfaches Klicken bucht nichts doppelt.</div>
+              {finanzMeldung && <div style={{ color: C.cyan, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 6 }}>{finanzMeldung}</div>}
+            </div>
+            <button style={{ ...btnGold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={bucheInFinanzen}>{busy ? "…" : "In Finanzen buchen"}</button>
+          </div>
           <div style={{ ...card, marginBottom: 16 }}>
             <div style={{ fontWeight: 800, marginBottom: 10 }}>Verkauf buchen</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>

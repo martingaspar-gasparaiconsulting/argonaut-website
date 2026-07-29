@@ -16,6 +16,7 @@ import {
 } from '@/lib/event';
 import { augeEvents } from '@/lib/auge';
 import { eventPdf } from '@/lib/eventPdf';
+import { offeneBuchungen } from '@/lib/umsatzBuchung';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -53,6 +54,7 @@ export default function VeranstaltungenPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [finanzMeldung, setFinanzMeldung] = useState<string | null>(null);
 
   const [nEvent, setNEvent] = useState({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' });
   const [nAnm, setNAnm] = useState<{ veranstaltung_id: string; name: string; email: string; plaetze: string } | null>(null);
@@ -90,6 +92,27 @@ export default function VeranstaltungenPage() {
     return map;
   }, [anmeldungen]);
   const kennzahlen = useMemo(() => zaehleEvents(events as EventLite[], anmeldungen as (AnmeldungLite & { veranstaltung_id?: string })[]), [events, anmeldungen]);
+
+  // Bezahlte Anmeldungen als Einnahmen in die Finanzen (zahlungen) buchen — idempotent
+  async function bucheInFinanzen() {
+    if (!uid) { setFehler('Nicht angemeldet.'); return; }
+    setBusy('finanzen'); setFinanzMeldung(null); setFehler(null); setOk(null);
+    try {
+      const { data: vorhanden } = await supabase.from('zahlungen').select('referenz');
+      const refs = (vorhanden ?? []).map((z: { referenz: string | null }) => z.referenz || '').filter(Boolean);
+      const roh = anmeldungen.filter((a) => a.bezahlt).map((a) => ({ id: a.id, betrag: Number(a.betrag) || 0, datum: a.angemeldet_am }));
+      const heute = new Date().toISOString().slice(0, 10);
+      const payloads = offeneBuchungen(roh, 'event', refs, heute, 'Veranstaltung');
+      if (payloads.length === 0) { setFinanzMeldung('Alle bezahlten Anmeldungen sind bereits in den Finanzen gebucht.'); setBusy(null); return; }
+      const uidLocal = uid;
+      const zeilen = payloads.map((p) => ({ ...p, owner_user_id: uidLocal }));
+      const { error } = await supabase.from('zahlungen').insert(zeilen);
+      if (error) throw error;
+      setFinanzMeldung(`${payloads.length} Anmeldung${payloads.length === 1 ? '' : 'en'} in die Finanzen gebucht — sichtbar in EÜR & Finanz-Cockpit.`);
+    } catch (err: unknown) {
+      setFehler('Buchen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
 
   async function eventAnlegen() {
     if (!uid || !nEvent.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
@@ -177,6 +200,17 @@ export default function VeranstaltungenPage() {
         <Kpi label="Einnahmen offen" value={eur(kennzahlen.einnahmenOffen)} accent={kennzahlen.einnahmenOffen ? C.warn : C.green} />
       </div>
       {!laden && <div style={{ marginBottom: 14 }}><KiAuge modul="Veranstaltungen" regel={augeEvents(kennzahlen)} /></div>}
+
+      {!laden && (
+        <div style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={styles.cardTitel}>💶 Einnahmen in die Finanzen buchen</div>
+            <div style={{ color: C.textDim, fontSize: 13, marginTop: 3 }}>Überträgt bezahlte Anmeldungen als Einnahmen in EÜR &amp; Finanz-Cockpit. Mehrfaches Klicken bucht nichts doppelt.</div>
+            {finanzMeldung && <div style={{ color: C.cyan, fontSize: 13, marginTop: 6 }}>{finanzMeldung}</div>}
+          </div>
+          <button onClick={bucheInFinanzen} disabled={busy === 'finanzen'} style={{ background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 800, cursor: busy === 'finanzen' ? 'default' : 'pointer', opacity: busy === 'finanzen' ? 0.6 : 1, fontFamily: 'inherit' }}>{busy === 'finanzen' ? '…' : 'In Finanzen buchen'}</button>
+        </div>
+      )}
 
       {/* Neue Veranstaltung */}
       <div style={styles.card}>
