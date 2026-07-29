@@ -18,6 +18,7 @@ const spalten: { titel: string; links: { label: string; href: string }[] }[] = [
       { label: 'Branchen', href: '/vorschau/branchen' },
       { label: 'Funktionen', href: '/vorschau/vergleich' },
       { label: 'Roadmap', href: '/vorschau/roadmap' },
+      { label: 'Ressourcen', href: '/vorschau/ressourcen' },
       { label: 'Sicherheit', href: '/vorschau#sicherheit' },
     ],
   },

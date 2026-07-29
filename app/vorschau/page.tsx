@@ -256,7 +256,7 @@ export default function VorschauPage() {
                   Demo buchen <span aria-hidden="true">→</span>
                 </a>
                 <a
-                  href="#plattform"
+                  href="#module"
                   style={{
                     background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '0.98rem',
                     padding: '15px 26px', borderRadius: '10px', textDecoration: 'none',
@@ -890,7 +890,7 @@ export default function VorschauPage() {
             <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '16px 34px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
               Demo buchen <span aria-hidden="true">→</span>
             </a>
-            <a href="#plattform" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '16px 30px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+            <a href="#module" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '16px 30px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
               <span aria-hidden="true" style={{ color: GOLD }}>▶</span> Plattform ansehen
             </a>
           </div>
@@ -906,7 +906,7 @@ export default function VorschauPage() {
               <a href="/impressum">Impressum</a>
               <a href="/datenschutz">Datenschutz</a>
               <a href="/agb">AGB</a>
-              <a href="mailto:martingaspar@gasparaiconsulting.de">Kontakt</a>
+              <a href="mailto:info@argonaut-os.com">Kontakt</a>
             </div>
             <p style={{ textAlign: 'center', color: '#5f7683', fontSize: '.8rem', margin: '18px 0 0' }}>
               © 2026 ARGONAUT OS · Gaspar AI Consulting · Böblingen

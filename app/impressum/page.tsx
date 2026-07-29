@@ -62,8 +62,8 @@ export default function Impressum() {
           <section style={{ marginBottom: '40px' }}>
             <h2 className="im-h2">Kontakt</h2>
             <div className="im-card">
-              <div className="im-row"><span className="k">E-Mail</span><span className="v">martin@gasparaiconsulting.de</span></div>
-              <div className="im-row"><span className="k">Website</span><span className="v">www.argonaut-os.de</span></div>
+              <div className="im-row"><span className="k">E-Mail</span><span className="v">info@argonaut-os.com</span></div>
+              <div className="im-row"><span className="k">Website</span><span className="v">www.argonaut-os.com</span></div>
             </div>
           </section>
 
