@@ -6,14 +6,13 @@
 // lib/onboardingBranchen.ts, gelesen aus profiles.kategorie).
 // Jeder Schritt hat eine anfängerfreundliche „So geht's"-Anleitung.
 // Auto-Erkennung: Firmendaten/IBAN/erste Rechnung + Zeilenzahl je Modul-Tabelle.
-// „Beispiel laden": branchentypische Beispiel-Kontakte ins CRM (reversibel).
+// Übungswelt: zentraler Schalter (lädt/entfernt Beispieldaten via /api/uebungswelt).
 // Pfad: app/dashboard/onboarding/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
-import { beispielZeilen, BEISPIEL_QUELLE } from '@/lib/beispielKatalog';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -48,8 +47,9 @@ export default function OnboardingPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [manuell, setManuell] = useState<Set<string>>(new Set());
   const [offeneTipps, setOffeneTipps] = useState<Set<string>>(new Set());
-  const [beispielCount, setBeispielCount] = useState(0);
-  const [beispielBusy, setBeispielBusy] = useState(false);
+  const [weltGeladen, setWeltGeladen] = useState(false);
+  const [weltAnzahl, setWeltAnzahl] = useState(0);
+  const [weltBusy, setWeltBusy] = useState(false);
   const [laden, setLaden] = useState(true);
 
   const laden_ = useCallback(async (id: string) => {
@@ -81,11 +81,14 @@ export default function OnboardingPage() {
       const { data: os } = await supabase.from('onboarding_schritte').select('schritt_key, erledigt');
       setManuell(new Set(((os as Array<{ schritt_key: string; erledigt: boolean }>) || []).filter((x) => x.erledigt).map((x) => x.schritt_key)));
     } catch { /* Tabelle evtl. noch nicht eingespielt */ }
+  }, []);
 
-    // Beispiel-Kontakte: wie viele sind aktuell geladen? (fehlertolerant)
+  const weltStatus = useCallback(async () => {
     try {
-      const { count } = await supabase.from('kontakte').select('*', { count: 'exact', head: true }).eq('quelle', BEISPIEL_QUELLE);
-      setBeispielCount(count || 0);
+      const r = await fetch('/api/uebungswelt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aktion: 'status' }) });
+      const j = await r.json();
+      setWeltGeladen(!!j?.geladen);
+      setWeltAnzahl(Number(j?.anzahl) || 0);
     } catch { /* egal */ }
   }, []);
 
@@ -94,9 +97,12 @@ export default function OnboardingPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setLaden(false); return; }
-      setUid(id); await laden_(id); setLaden(false);
+      setUid(id);
+      await laden_(id);
+      await weltStatus();
+      setLaden(false);
     })();
-  }, [laden_]);
+  }, [laden_, weltStatus]);
 
   const uniRender: RenderSchritt[] = SCHRITTE.map((s) => ({ key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, optional: s.optional, autoDone: s.auto(lage) }));
   const branchRender: RenderSchritt[] = branchenSchritte(kategorie).map((s: BranchenSchritt) => ({
@@ -123,25 +129,26 @@ export default function OnboardingPage() {
     setOffeneTipps((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   }
 
-  async function beispieleLaden() {
-    if (!uid || beispielBusy || beispielCount > 0) return;
-    setBeispielBusy(true);
+  async function weltLaden() {
+    if (weltBusy || weltGeladen) return;
+    setWeltBusy(true);
     try {
-      const zeilen = beispielZeilen(kategorie, uid);
-      const { error } = await supabase.from('kontakte').insert(zeilen);
-      if (!error) await laden_(uid);
+      await fetch('/api/uebungswelt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aktion: 'laden' }) });
+      await weltStatus();
+      if (uid) await laden_(uid);
     } finally {
-      setBeispielBusy(false);
+      setWeltBusy(false);
     }
   }
-  async function beispieleEntfernen() {
-    if (!uid || beispielBusy) return;
-    setBeispielBusy(true);
+  async function weltEntfernen() {
+    if (weltBusy) return;
+    setWeltBusy(true);
     try {
-      const { error } = await supabase.from('kontakte').delete().eq('owner_user_id', uid).eq('quelle', BEISPIEL_QUELLE);
-      if (!error) await laden_(uid);
+      await fetch('/api/uebungswelt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aktion: 'entfernen' }) });
+      await weltStatus();
+      if (uid) await laden_(uid);
     } finally {
-      setBeispielBusy(false);
+      setWeltBusy(false);
     }
   }
 
@@ -190,25 +197,25 @@ export default function OnboardingPage() {
           <div style={styles.beispielKopf}>
             <span style={styles.beispielIcon}>🎁</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700 }}>Zum Ausprobieren: Beispiel-Kunden laden</div>
+              <div style={{ fontWeight: 700 }}>Übungswelt · Beispieldaten zum Ausprobieren</div>
               <div style={{ color: C.textDim, fontSize: 13, lineHeight: 1.5 }}>
-                {beispielCount > 0
-                  ? `${beispielCount} Beispiel-Kontakte sind geladen. Schau sie dir im CRM an — oder entferne sie wieder, wenn du mit deinen echten Daten startest.`
-                  : 'Lade dir ein paar typische Beispiel-Kunden deiner Branche ins CRM und probiere ARGONAUT sofort aus — Angebot, Rechnung, alles dran. Du kannst die Beispiele jederzeit wieder entfernen.'}
+                {weltGeladen
+                  ? `Deine Übungswelt ist geladen (${weltAnzahl} Beispiel-Datensätze). Probier alles gefahrlos aus — und entferne sie mit einem Klick, wenn du mit deinen echten Daten startest.`
+                  : 'Lade dir eine Übungswelt mit branchentypischen Beispieldaten und probiere ARGONAUT völlig gefahrlos aus. Nichts davon vermischt sich mit echten Daten — ein Klick lädt alles, ein Klick entfernt es restlos.'}
               </div>
             </div>
           </div>
           <div style={styles.beispielAktionen}>
-            {beispielCount > 0 ? (
+            {weltGeladen ? (
               <>
                 <a href="/dashboard/crm" style={styles.beispielCta}>Im CRM ansehen ›</a>
-                <button onClick={beispieleEntfernen} disabled={beispielBusy} style={styles.beispielEntfernen}>
-                  {beispielBusy ? 'Bitte warten …' : 'Beispiele wieder entfernen'}
+                <button onClick={weltEntfernen} disabled={weltBusy} style={styles.beispielEntfernen}>
+                  {weltBusy ? 'Bitte warten …' : 'Übungswelt entfernen'}
                 </button>
               </>
             ) : (
-              <button onClick={beispieleLaden} disabled={beispielBusy} style={styles.beispielBtn}>
-                {beispielBusy ? 'Lädt …' : '🎁 Beispiele laden'}
+              <button onClick={weltLaden} disabled={weltBusy} style={styles.beispielBtn}>
+                {weltBusy ? 'Lädt …' : '🎁 Übungswelt laden'}
               </button>
             )}
           </div>
