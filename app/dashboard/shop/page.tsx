@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { nameSplit } from '@/lib/leadKontakt';
+import { planeLagerabzug } from '@/lib/lagerAbzug';
 import { createBrowserClient } from '@supabase/ssr';
 import { anbieterVon, type IntegrationTyp } from '@/lib/konnektoren';
 
@@ -26,7 +27,7 @@ const C = {
 type Position = { bezeichnung: string; menge: number; einzelpreis: number; mwst?: number };
 type Bestellung = {
   id: string; quelle: string; extern_id: string | null; besteller: string | null; email: string | null;
-  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null; kontakt_id: string | null;
+  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null; kontakt_id: string | null; lager_gebucht: boolean;
 };
 
 const STATUS: { key: string; label: string; farbe: string }[] = [
@@ -76,10 +77,11 @@ export default function ShopPage() {
   const [busy, setBusy] = useState(false);
   const [rechBusy, setRechBusy] = useState<string | null>(null);
   const [crmBusy, setCrmBusy] = useState<string | null>(null);
+  const [lagerBusy, setLagerBusy] = useState<string | null>(null);
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('shop_bestellungen')
-      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id')
+      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id, lager_gebucht')
       .order('erstellt_am', { ascending: false });
     setListe((data as Bestellung[]) ?? []);
   }, []);
@@ -179,6 +181,29 @@ export default function ShopPage() {
     } finally { setCrmBusy(null); }
   }
 
+  // Bestell-Positionen vom Lagerbestand abziehen (Zuordnung per Artikelname) — idempotent
+  async function lagerBuchen(b: Bestellung) {
+    if (b.lager_gebucht) return;
+    setLagerBusy(b.id); setFehler(null); setOk(null);
+    try {
+      const { data: artikelD } = await supabase.from('artikel').select('id, bezeichnung, aktueller_bestand');
+      const artikel = (artikelD ?? []) as { id: string; bezeichnung: string | null; aktueller_bestand: number | null }[];
+      const plan = planeLagerabzug(b.positionen || [], artikel);
+      for (const ab of plan.abzuege) {
+        const a = artikel.find((x) => x.id === ab.artikel_id);
+        const neu = (Number(a?.aktueller_bestand) || 0) - ab.menge;
+        const { error } = await supabase.from('artikel').update({ aktueller_bestand: neu }).eq('id', ab.artikel_id);
+        if (error) throw error;
+      }
+      const { error: updErr } = await supabase.from('shop_bestellungen').update({ lager_gebucht: true }).eq('id', b.id);
+      if (updErr) throw updErr;
+      setListe((l) => l.map((x) => (x.id === b.id ? { ...x, lager_gebucht: true } : x)));
+      setOk(`Lager gebucht: ${plan.zugeordnet} Position(en) abgezogen${plan.offen ? `, ${plan.offen} ohne passenden Artikel übersprungen` : ''}.`);
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Lager-Buchung fehlgeschlagen.');
+    } finally { setLagerBusy(null); }
+  }
+
   const proStatus = (k: string) => liste.filter((b) => b.status === k).length;
 
   return (
@@ -268,6 +293,18 @@ export default function ShopPage() {
                     {crmBusy === b.id ? '…' : '👤 CRM'}
                   </button>
                 )}
+                {b.lager_gebucht ? (
+                  <span style={{ ...styles.lagerBtn, opacity: 0.7 }}>✓ Lager</span>
+                ) : (
+                  <button
+                    style={{ ...styles.lagerBtn, opacity: lagerBusy === b.id ? 0.6 : 1, cursor: lagerBusy === b.id ? 'default' : 'pointer' }}
+                    disabled={lagerBusy === b.id}
+                    onClick={() => lagerBuchen(b)}
+                    title="Positionen vom Lagerbestand abziehen"
+                  >
+                    {lagerBusy === b.id ? '…' : '📦 Lager'}
+                  </button>
+                )}
                 <select style={styles.statusSelect} value={b.status} onChange={(e) => statusSetzen(b, e.target.value)}>
                   {STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
@@ -298,6 +335,7 @@ const styles: Record<string, CSSProperties> = {
   statusSelect: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontFamily: 'inherit' },
   rechBtn: { background: 'rgba(201,168,76,0.12)', color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
   crmBtn: { background: 'rgba(0,229,255,0.10)', color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
+  lagerBtn: { background: 'rgba(76,175,125,0.10)', color: C.green, border: `1px solid ${C.green}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
   punkt: { width: 12, height: 12, borderRadius: 999, display: 'inline-block' },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
