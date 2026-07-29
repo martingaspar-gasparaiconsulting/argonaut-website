@@ -25,7 +25,7 @@ const C = {
 type Position = { bezeichnung: string; menge: number; einzelpreis: number };
 type Bestellung = {
   id: string; quelle: string; extern_id: string | null; besteller: string | null; email: string | null;
-  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string;
+  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null;
 };
 
 const STATUS: { key: string; label: string; farbe: string }[] = [
@@ -72,10 +72,11 @@ export default function ShopPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [csv, setCsv] = useState('');
   const [busy, setBusy] = useState(false);
+  const [rechBusy, setRechBusy] = useState<string | null>(null);
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('shop_bestellungen')
-      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am')
+      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id')
       .order('erstellt_am', { ascending: false });
     setListe((data as Bestellung[]) ?? []);
   }, []);
@@ -127,6 +128,22 @@ export default function ShopPage() {
       if (error) { setFehler('Änderung fehlgeschlagen.'); return; }
       setListe((l) => l.map((x) => (x.id === b.id ? { ...x, status } : x)));
     } finally { setBusy(false); }
+  }
+
+  // Bestellung -> echte Rechnung (fließt danach automatisch in Rechnungen & Finanzen)
+  async function rechnungErstellen(b: Bestellung) {
+    setRechBusy(b.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-shop', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bestellungId: b.id }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(j?.error || 'Rechnung konnte nicht erstellt werden.');
+      setOk(j?.bereitsVorhanden ? 'Für diese Bestellung gibt es bereits eine Rechnung.' : 'Rechnung erstellt — jetzt in Rechnungen & Finanzen sichtbar.');
+      await laden_();
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Fehler bei der Rechnungserstellung.');
+    } finally { setRechBusy(null); }
   }
 
   const proStatus = (k: string) => liste.filter((b) => b.status === k).length;
@@ -192,6 +209,18 @@ export default function ShopPage() {
                   </div>
                 </div>
                 <div style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{eur(b.brutto_summe)}</div>
+                {b.rechnung_id ? (
+                  <a href={`/dashboard/rechnungen/${b.rechnung_id}`} style={styles.rechBtn}>🧾 Rechnung</a>
+                ) : (
+                  <button
+                    style={{ ...styles.rechBtn, opacity: rechBusy === b.id ? 0.6 : 1, cursor: rechBusy === b.id ? 'default' : 'pointer' }}
+                    disabled={rechBusy === b.id || b.status === 'storniert'}
+                    onClick={() => rechnungErstellen(b)}
+                    title={b.status === 'storniert' ? 'Stornierte Bestellung wird nicht abgerechnet' : 'Rechnung aus dieser Bestellung erstellen'}
+                  >
+                    {rechBusy === b.id ? '…' : '🧾 Rechnung'}
+                  </button>
+                )}
                 <select style={styles.statusSelect} value={b.status} onChange={(e) => statusSetzen(b, e.target.value)}>
                   {STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
@@ -220,6 +249,7 @@ const styles: Record<string, CSSProperties> = {
   liste: { display: 'flex', flexDirection: 'column', gap: 10 },
   item: { display: 'flex', gap: 12, alignItems: 'center', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 16px', flexWrap: 'wrap' },
   statusSelect: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontFamily: 'inherit' },
+  rechBtn: { background: 'rgba(201,168,76,0.12)', color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
   punkt: { width: 12, height: 12, borderRadius: 999, display: 'inline-block' },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
