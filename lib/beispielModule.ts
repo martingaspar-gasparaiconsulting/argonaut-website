@@ -73,3 +73,60 @@ export function baueWartungAusAsset(asset: SeedZeile, ownerId: string): SeedZeil
     erinnerung_tage_vorher: 30,
   };
 }
+
+// ---- Punkt 25b: branchenspezifische Modul-Seeder (unabhaengige Zeilen) ----
+
+const HINWEIS_ALLG = 'Beispiel-Datensatz der Uebungswelt — jederzeit ueber den Schalter im Onboarding entfernbar.';
+
+/** Beispiel-Mietgegenstaende fuer verleih_artikel (Modul-Gate 'verleih'). */
+export function baueVerleihArtikel(_kategorie: string | null | undefined, ownerId: string): SeedZeile[] {
+  const V = [
+    { bezeichnung: 'Beispiel-Bohrhammer', kategorie: 'Werkzeug', tagessatz: 19.9, wochensatz: 89, kaution: 100, anzahl: 3 },
+    { bezeichnung: 'Beispiel-Anhaenger', kategorie: 'Fahrzeug', tagessatz: 29, wochensatz: 149, kaution: 200, anzahl: 2 },
+  ];
+  return V.map((a) => ({
+    owner_user_id: ownerId,
+    bezeichnung: a.bezeichnung,
+    kategorie: a.kategorie,
+    tagessatz: a.tagessatz,
+    wochensatz: a.wochensatz,
+    kaution: a.kaution,
+    anzahl: a.anzahl,
+    status: 'aktiv',
+  }));
+}
+
+/** Beispiel-Projekt fuer projekte (Modul-Gate 'projekte'). */
+export function baueProjekte(_kategorie: string | null | undefined, ownerId: string, heute: string): SeedZeile[] {
+  return [{
+    owner_user_id: ownerId,
+    name: 'Beispiel-Projekt (Uebungswelt)',
+    beschreibung: HINWEIS_ALLG,
+    status: 'aktiv',
+    prioritaet: 'normal',
+    start_datum: heute,
+    end_datum: addMonate(heute, 2),
+    budget: 5000,
+    verantwortlich: 'Team',
+    farbe: '#C9A84C',
+  }];
+}
+
+/** Beispiel-Mitglieder fuer mitglieder (Modul-Gate 'mitglieder'). */
+export function baueMitglieder(_kategorie: string | null | undefined, ownerId: string, heute: string): SeedZeile[] {
+  const M = [
+    { name: 'Beispiel-Mitglied (Monatsbeitrag)', betrag: 29 },
+    { name: 'Beispiel-Mitglied (Foerderer)', betrag: 10 },
+  ];
+  return M.map((m) => ({
+    owner_user_id: ownerId,
+    name: m.name,
+    email: null,
+    telefon: null,
+    betrag: m.betrag,
+    intervall: 'monat',
+    status: 'aktiv',
+    beginn_am: heute,
+    notiz: HINWEIS_ALLG,
+  }));
+}

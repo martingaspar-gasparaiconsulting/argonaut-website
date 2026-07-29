@@ -57,8 +57,9 @@ export async function POST(req: Request) {
       const kategorie = (prof?.kategorie && String(prof.kategorie).trim()) ? String(prof.kategorie).trim() : null;
 
       let angelegt = 0;
+      const heuteLaden = new Date().toISOString().slice(0, 10);
       for (const s of aktiveSeeder(kategorie)) {
-        const zeilen = s.baue(kategorie, uid);
+        const zeilen = s.baue(kategorie, uid, heuteLaden);
         if (!zeilen.length) continue;
         const { data, error } = await supabase.from(s.tabelle).insert(zeilen).select("id");
         if (error || !data) {

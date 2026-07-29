@@ -18,6 +18,7 @@
 
 import { beispielZeilen } from './beispielKatalog';
 import { beispielArtikelZeilen, beispielLieferantenZeilen } from './beispielStammdaten';
+import { baueVerleihArtikel, baueProjekte, baueMitglieder } from './beispielModule';
 import { kategorieModule } from './branchenkatalog';
 
 /** Name der Register-Tabelle (Sicherheitsnetz für sauberes Entfernen). */
@@ -32,16 +33,20 @@ export type Seeder = {
   tabelle: string;
   /** Optionales Modul-Gate (tenant_module-Key): laeuft nur, wenn die Branche es hat. */
   modul?: string;
-  /** Baut die anzulegenden Zeilen (leer = fuer diese Branche nichts anzulegen). */
-  baue: (kategorie: string | null | undefined, ownerId: string) => SeedZeile[];
+  /** Baut die anzulegenden Zeilen (leer = fuer diese Branche nichts anzulegen). heute = ISO-Datum. */
+  baue: (kategorie: string | null | undefined, ownerId: string, heute: string) => SeedZeile[];
 };
 
 // Reihenfolge = Anlege-Reihenfolge. Stammdaten zuerst; abhaengige Schichten spaeter.
-// Schicht 1 (Punkt 22): Kontakte. Schicht Stammdaten (Punkt 23): Lieferanten, Artikel.
+// Schicht 1 (Punkt 22): Kontakte. Stammdaten (23): Lieferanten, Artikel.
+// Modulgruppen (25b): Verleih, Projekte, Mitglieder — je Modul-Gate.
 export const SEEDER: Seeder[] = [
   { key: 'kontakte', tabelle: 'kontakte', baue: (kat, uid) => beispielZeilen(kat, uid) },
   { key: 'lieferanten', tabelle: 'lieferanten', modul: 'erp', baue: (kat, uid) => beispielLieferantenZeilen(kat, uid) },
   { key: 'artikel', tabelle: 'artikel', modul: 'erp', baue: (kat, uid) => beispielArtikelZeilen(kat, uid) },
+  { key: 'verleih', tabelle: 'verleih_artikel', modul: 'verleih', baue: (kat, uid) => baueVerleihArtikel(kat, uid) },
+  { key: 'projekte', tabelle: 'projekte', modul: 'projekte', baue: (kat, uid, heute) => baueProjekte(kat, uid, heute) },
+  { key: 'mitglieder', tabelle: 'mitglieder', modul: 'mitglieder', baue: (kat, uid, heute) => baueMitglieder(kat, uid, heute) },
 ];
 
 /** Kopie der Seeder-Liste (Aufrufer mutieren nicht die Konstante). */
@@ -63,6 +68,9 @@ export const LOESCH_ORDER: string[] = [
   'angebote',
   'assets',
   'wartungsvertraege',
+  'verleih_artikel',
+  'projekte',
+  'mitglieder',
   'artikel',
   'lieferanten',
   'kontakte',
