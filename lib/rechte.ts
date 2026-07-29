@@ -176,14 +176,16 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
   { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, gruppe: 'lager' },
   { label: '🛒 Shop / Marktplatz', href: '/dashboard/shop', modul: 'shop', ebene: 3, gruppe: 'lager' },
-  { label: '⚙️ Automatisierungen', href: '/dashboard/automatisierungen', modul: 'automatisierungen', ebene: 3, gruppe: 'lager' },
+  // Automatisierungen: aus der Navigation genommen (Punkt „Agenten/Automatisierungen").
+  // Die Automatisierung steckt im integrierten Ökosystem (Module reichen Daten selbst weiter),
+  // nicht in einem Extra-Layer. Seite bleibt als Code geparkt. Echte Kunden-E-Mail-Workflows -> Marketing.
 
   // --- Finanzen & Sensibles (Ebene 2, 2-fach-Bestaetigung beim Freigeben) ---
   // Delegierbar: der Eigentuemer (oder ein Administrator mit Vollmacht) darf diese
   // Module weitergeben. KEIN nurChef mehr — die Freigabe laeuft ueber die ebene-Logik
   // + Pro-Person-Grant. Der !sensibel-Riegel in MITARBEITER_ERLAUBT verhindert, dass
   // sie ohne ausdrueckliche Freigabe fuer jeden offen sind.
-  { label: '🤖 Agenten', href: '/dashboard/agenten', modul: 'agenten', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  // Agenten: aus der Navigation genommen (Schaufenster ohne echte Funktion). Code bleibt geparkt.
   { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
