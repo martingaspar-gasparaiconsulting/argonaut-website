@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { signaturStarten } from '@/lib/signaturStart';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -235,7 +236,12 @@ export default function AngebotePage() {
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : liste.length === 0 ? (
-        <p style={styles.sub}>Noch keine Angebote.</p>
+        <Leerzustand
+          icon="📄"
+          titel="Noch keine Angebote"
+          text="Hier entstehen deine Angebote — vom Entwurf bis zum versendeten PDF."
+          schritte={["Kunde und Positionen wählen", "Preise und Text prüfen", "Als PDF speichern oder direkt an den Kunden senden"]}
+        />
       ) : (
         <div style={styles.liste}>
           {liste.map((a) => (

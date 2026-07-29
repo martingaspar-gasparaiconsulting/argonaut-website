@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import AgentCard from '../AgentCard'
+import Leerzustand from '../_components/Leerzustand'
 
 // ============================================================
 // ARGONAUT OS · KI-AGENTEN (/dashboard/agenten)
@@ -94,10 +95,11 @@ export default async function AgentenPage() {
       </section>
 
       {gesamt === 0 ? (
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '48px 24px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-          <div style={{ fontSize: 'clamp(34px, 3vw, 48px)', marginBottom: '12px' }}>🤖</div>
-          Noch keine Agenten hinterlegt.
-        </div>
+        <Leerzustand
+          icon="🤖"
+          titel="Noch keine Agenten"
+          text="Automatisierungs-Agenten übernehmen wiederkehrende Aufgaben für dich — sobald welche eingerichtet sind, erscheinen sie hier gruppiert nach Serie."
+        />
       ) : (
         alleSerien.map((serie) => {
           const meta = SERIE_META[serie] || { titel: serie, farbe: '#C9A84C' }

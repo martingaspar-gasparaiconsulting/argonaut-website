@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan, GWG_GRENZE } from '@/lib/afa';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -215,7 +216,14 @@ export default function AnlagenPage() {
           <div style={styles.cardTitel}>Anlagenverzeichnis</div>
           {anlagen.length > 0 && <button style={styles.ghost} onClick={csvExport}>⬇ CSV-Export</button>}
         </div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : anlagen.length === 0 ? <p style={styles.dim}>Noch keine Anlagegüter erfasst.</p> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : anlagen.length === 0 ? (
+          <Leerzustand
+            icon="🏗️"
+            titel="Noch keine Anlagegüter"
+            text="Erfasse dein Anlagevermögen (Maschinen, Fahrzeuge, Ausstattung) — ARGONAUT rechnet die AfA automatisch je Jahr."
+            schritte={["Anlagegut mit Anschaffungswert anlegen", "Nutzungsdauer und Methode wählen", "AfA und Restbuchwert erscheinen automatisch"]}
+          />
+        ) : (
           <div style={{ overflowX: 'auto', marginTop: 8 }}>
             <table style={styles.table}>
               <thead><tr>
