@@ -31,6 +31,7 @@ const SCHRITTE: UniSchritt[] = [
   { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Geh in Einstellungen und trag deine Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
   { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Lade dein Logo hoch und wähle deine Farbe. Damit sehen deine PDFs und dein Kundenportal nach dir aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', auto: () => false },
   { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Trag deine IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
+  { key: 'import', icon: '📥', titel: 'Bestehende Daten importieren', text: 'Kunden, Lieferanten, Artikel & Co. aus deinem alten System übernehmen.', tipp: 'Hast du schon Daten in Excel oder einem alten Programm? Im Import-Center lädst du je Bereich eine fertige CSV-Vorlage, füllst sie mit deinen Daten und spielst sie ein — so ist dein ARGONAUT in Minuten gefüllt, statt alles einzeln abzutippen.', link: '/dashboard/import', auto: () => false, optional: true },
   { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Leg deinen ersten Kunden im CRM an — oder importiere gleich deine ganze Kundenliste über das Import-Center. Danach kannst du Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
   { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', tipp: 'Erstelle ein Angebot und schick es raus. Der Kunde kann online zusagen und unterschreiben — aus dem Angebot wird per Klick ein Auftrag oder eine Rechnung.', link: '/dashboard/angebote', auto: (l) => l.angebote > 0 },
   { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreib deine erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
@@ -144,6 +145,14 @@ export default function OnboardingPage() {
         Bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
       </div>
 
+      <a href="/dashboard/import" style={styles.importBanner}>
+        <span style={styles.importBannerIcon}>📥</span>
+        <span style={styles.importBannerText}>
+          <b>Schon Daten aus deinem alten System?</b> Kunden, Artikel, Lieferanten & Co. per fertiger CSV-Vorlage in Minuten übernehmen — statt alles einzeln abzutippen.
+        </span>
+        <span style={styles.importBannerCta}>Zum Import-Center ›</span>
+      </a>
+
       <div style={styles.fortschritt}>
         <div style={styles.balken}><div style={{ ...styles.balkenFill, width: `${prozent}%` }} /></div>
         <div style={styles.fortText}>{fertig} von {alle.length} erledigt · <b style={{ color: prozent === 100 ? C.green : C.gold }}>{prozent}%</b></div>
@@ -181,6 +190,10 @@ const styles: Record<string, CSSProperties> = {
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
   anleitung: { marginTop: 14, background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', color: C.textDim, fontSize: 13.5, lineHeight: 1.55 },
+  importBanner: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 14, background: 'linear-gradient(90deg, rgba(201,168,76,0.12), rgba(0,229,255,0.06))', border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: 12, padding: '13px 16px', textDecoration: 'none', color: C.text },
+  importBannerIcon: { fontSize: 24, lineHeight: 1, flexShrink: 0 },
+  importBannerText: { flex: 1, fontSize: 13.5, lineHeight: 1.5, color: C.text },
+  importBannerCta: { color: C.cyan, fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', flexShrink: 0 },
   fortschritt: { marginTop: 18 },
   balken: { height: 12, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden' },
   balkenFill: { height: '100%', background: `linear-gradient(90deg, ${C.gold}, ${C.green})`, borderRadius: 999, transition: 'width .3s' },
