@@ -55,10 +55,20 @@ export function aktiveSeeder(kategorie: string | null | undefined): Seeder[] {
   return seederListe().filter((s) => !s.modul || module.has(s.modul));
 }
 
-/** Loesch-Reihenfolge der Tabellen = umgekehrte Anlege-Reihenfolge (dedupliziert). */
+// Explizite Loesch-Reihenfolge: abhaengige Belege (Kinder) zuerst, Kontakte
+// zuletzt. Register-Tabellen, die hier fehlen, haengt die Route hinten an.
+export const LOESCH_ORDER: string[] = [
+  'zahlungen',
+  'angebot_positionen',
+  'angebote',
+  'artikel',
+  'lieferanten',
+  'kontakte',
+];
+
+/** Loesch-Reihenfolge der Tabellen (Kinder vor Eltern). */
 export function loeschReihenfolge(): string[] {
-  const tabellen = seederListe().map((s) => s.tabelle).reverse();
-  return [...new Set(tabellen)];
+  return [...LOESCH_ORDER];
 }
 
 /** Register-Zeilen aus frisch eingefuegten IDs bauen. */

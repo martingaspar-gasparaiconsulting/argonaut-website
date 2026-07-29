@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE } from "@/lib/uebungswelt";
 import { BEISPIEL_QUELLE } from "@/lib/beispielKatalog";
+import { baueAngebotKopf, baueAngebotPositionen, baueBeispielZahlungen, type KontaktRef } from "@/lib/beispielBelege";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,6 +72,39 @@ export async function POST(req: Request) {
           angelegt += ids.length;
         }
       }
+
+      // ---- Verzahnte Belege: Angebot + Zahlungen (ohne echte Rechnungsnummer) ----
+      try {
+        const { data: kdata } = await supabase
+          .from("kontakte")
+          .select("id, firma, vorname, nachname, email")
+          .eq("owner_user_id", uid).eq("quelle", BEISPIEL_QUELLE).limit(1);
+        const kontakt = (kdata && kdata[0]) as KontaktRef | undefined;
+        if (kontakt?.id) {
+          const heute = new Date().toISOString().slice(0, 10);
+          const gueltig = new Date(); gueltig.setDate(gueltig.getDate() + 30);
+          const gueltigBis = gueltig.toISOString().slice(0, 10);
+
+          const { data: ang } = await supabase.from("angebote").insert(baueAngebotKopf(kontakt, uid, gueltigBis)).select("id").single();
+          if (ang?.id) {
+            await supabase.from(REGISTER_TABELLE).insert(registerZeilen("angebote", [ang.id as string], uid));
+            angelegt += 1;
+            const { data: pos } = await supabase.from("angebot_positionen").insert(baueAngebotPositionen(ang.id as string, uid)).select("id");
+            const posIds = ((pos as Array<{ id: string }> | null) || []).map((r) => r.id).filter(Boolean);
+            if (posIds.length) await supabase.from(REGISTER_TABELLE).insert(registerZeilen("angebot_positionen", posIds, uid));
+          }
+
+          const { data: zah } = await supabase.from("zahlungen").insert(baueBeispielZahlungen(uid, heute)).select("id");
+          const zIds = ((zah as Array<{ id: string }> | null) || []).map((r) => r.id).filter(Boolean);
+          if (zIds.length) {
+            await supabase.from(REGISTER_TABELLE).insert(registerZeilen("zahlungen", zIds, uid));
+            angelegt += zIds.length;
+          }
+        }
+      } catch (e) {
+        console.error("Übungswelt: Belege fehlgeschlagen:", e instanceof Error ? e.message : e);
+      }
+
       return NextResponse.json({ angelegt });
     }
 
