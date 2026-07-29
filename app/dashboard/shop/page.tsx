@@ -9,6 +9,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { nameSplit } from '@/lib/leadKontakt';
 import { createBrowserClient } from '@supabase/ssr';
 import { anbieterVon, type IntegrationTyp } from '@/lib/konnektoren';
 
@@ -25,7 +26,7 @@ const C = {
 type Position = { bezeichnung: string; menge: number; einzelpreis: number; mwst?: number };
 type Bestellung = {
   id: string; quelle: string; extern_id: string | null; besteller: string | null; email: string | null;
-  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null;
+  status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null; kontakt_id: string | null;
 };
 
 const STATUS: { key: string; label: string; farbe: string }[] = [
@@ -74,10 +75,11 @@ export default function ShopPage() {
   const [csv, setCsv] = useState('');
   const [busy, setBusy] = useState(false);
   const [rechBusy, setRechBusy] = useState<string | null>(null);
+  const [crmBusy, setCrmBusy] = useState<string | null>(null);
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('shop_bestellungen')
-      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id')
+      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id')
       .order('erstellt_am', { ascending: false });
     setListe((data as Bestellung[]) ?? []);
   }, []);
@@ -145,6 +147,36 @@ export default function ShopPage() {
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Fehler bei der Rechnungserstellung.');
     } finally { setRechBusy(null); }
+  }
+
+  // Besteller -> CRM-Kontakt (mit E-Mail-Dedup: Stammkunde wird verknüpft statt doppelt angelegt)
+  async function inCrm(b: Bestellung) {
+    if (b.kontakt_id) return;
+    setCrmBusy(b.id); setFehler(null); setOk(null);
+    try {
+      let kontaktId: string | null = null;
+      const email = (b.email || '').trim();
+      if (email) {
+        const { data: vorhanden } = await supabase.from('kontakte').select('id').eq('email', email).limit(1);
+        if (vorhanden && vorhanden.length) kontaktId = (vorhanden[0] as { id: string }).id;
+      }
+      if (!kontaktId) {
+        const { vorname, nachname } = nameSplit(b.besteller);
+        const { data: neu, error } = await supabase.from('kontakte').insert({
+          vorname, nachname, email: email || null, telefon: null, position: null, firma: null,
+          status: 'kunde', quelle: 'Online-Shop', betreuungs_intervall_tage: 30,
+          notizen: `Aus Online-Bestellung${b.extern_id ? ' ' + b.extern_id : ''} übernommen.`,
+        }).select('id').single();
+        if (error) throw error;
+        kontaktId = (neu as { id: string }).id;
+      }
+      const { error: updErr } = await supabase.from('shop_bestellungen').update({ kontakt_id: kontaktId }).eq('id', b.id);
+      if (updErr) throw updErr;
+      setListe((l) => l.map((x) => (x.id === b.id ? { ...x, kontakt_id: kontaktId } : x)));
+      setOk('Kunde ins CRM übernommen.');
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'CRM-Übernahme fehlgeschlagen.');
+    } finally { setCrmBusy(null); }
   }
 
   const proStatus = (k: string) => liste.filter((b) => b.status === k).length;
@@ -224,6 +256,18 @@ export default function ShopPage() {
                     {rechBusy === b.id ? '…' : '🧾 Rechnung'}
                   </button>
                 )}
+                {b.kontakt_id ? (
+                  <a href={`/dashboard/crm/${b.kontakt_id}`} style={styles.crmBtn}>👤 Im CRM</a>
+                ) : (
+                  <button
+                    style={{ ...styles.crmBtn, opacity: crmBusy === b.id ? 0.6 : 1, cursor: crmBusy === b.id ? 'default' : 'pointer' }}
+                    disabled={crmBusy === b.id}
+                    onClick={() => inCrm(b)}
+                    title="Kunde ins CRM übernehmen"
+                  >
+                    {crmBusy === b.id ? '…' : '👤 CRM'}
+                  </button>
+                )}
                 <select style={styles.statusSelect} value={b.status} onChange={(e) => statusSetzen(b, e.target.value)}>
                   {STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
@@ -253,6 +297,7 @@ const styles: Record<string, CSSProperties> = {
   item: { display: 'flex', gap: 12, alignItems: 'center', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 16px', flexWrap: 'wrap' },
   statusSelect: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontFamily: 'inherit' },
   rechBtn: { background: 'rgba(201,168,76,0.12)', color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
+  crmBtn: { background: 'rgba(0,229,255,0.10)', color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: 'inherit', display: 'inline-block' },
   punkt: { width: 12, height: 12, borderRadius: 999, display: 'inline-block' },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
