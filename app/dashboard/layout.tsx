@@ -6,6 +6,8 @@ import DashboardNav from './DashboardNav'
 import DashboardChat from './DashboardChat'
 import Glocke from './Glocke'
 import SwRegister from './_components/SwRegister'
+import { demoStatus, demoRestText } from '@/lib/demo'
+import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -46,7 +48,7 @@ export default async function DashboardLayout({
   // maybeSingle() wirft nicht, wenn nichts da ist -> Fehler koennen den Header
   // nie kaputt machen (Notnagel greift dann).
   const [profilRes, mitarbeiterRes] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('full_name, demo, demo_ablauf').eq('id', user.id).maybeSingle(),
     supabase.from('mitarbeiter').select('vorname, nachname').eq('auth_user_id', user.id).maybeSingle(),
   ])
 
@@ -57,6 +59,14 @@ export default async function DashboardLayout({
 
   const anzeigeName =
     maName || profilRes.data?.full_name || user.email?.split('@')[0] || 'Nutzer'
+
+  // Demo-Konto-Status (Punkt 26): steuert das Banner. profilRes kann demo-Felder
+  // erst nach dem SQL-Rollout liefern — vorher ist demo schlicht false.
+  const demoInfo = demoStatus(
+    (profilRes.data as { demo?: boolean } | null)?.demo,
+    (profilRes.data as { demo_ablauf?: string | null } | null)?.demo_ablauf,
+    new Date().toISOString(),
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
@@ -109,6 +119,34 @@ export default async function DashboardLayout({
         </div>
       </header>
 
+      {/* Demo-Modus-Banner (Punkt 26): Countdown bzw. Read-only-Hinweis */}
+      {demoInfo.istDemo && (
+        <div
+          style={{
+            background: demoInfo.abgelaufen ? 'rgba(224,102,102,0.14)' : 'rgba(201,168,76,0.14)',
+            borderBottom: `1px solid ${demoInfo.abgelaufen ? 'rgba(224,102,102,0.5)' : 'rgba(201,168,76,0.5)'}`,
+          }}
+        >
+          <div style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `10px ${SHELL_PAD}`, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: 'clamp(13px, 1vw, 15px)' }}>
+            <span style={{ fontWeight: 800, color: demoInfo.abgelaufen ? '#E0A24C' : '#C9A84C', whiteSpace: 'nowrap' }}>
+              {demoInfo.abgelaufen ? '🔒 Demo abgelaufen' : `🧪 ${demoRestText(demoInfo)}`}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+              {demoInfo.abgelaufen
+                ? 'Du kannst alles ansehen, aber nichts mehr ändern. Sichere dir deinen ARGONAUT mit einem Termin.'
+                : 'Du testest ARGONAUT im Demo-Modus — danach bleibt alles sichtbar, zum Weiterarbeiten vereinbare einen Termin.'}
+            </span>
+            <span style={{ flex: 1 }} />
+            <a
+              href="mailto:info@argonaut-os.com?subject=Termin%20ARGONAUT%20OS"
+              style={{ color: '#00e5ff', fontWeight: 700, textDecoration: 'none', border: '1px solid rgba(0,229,255,0.4)', borderRadius: '8px', padding: '6px 12px', whiteSpace: 'nowrap' }}
+            >
+              Termin vereinbaren ›
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Inhalt der jeweiligen Unterseite */}
       {children}
 
@@ -117,6 +155,9 @@ export default async function DashboardLayout({
 
       {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
       <SwRegister />
+
+      {/* Read-only-Sperre fuer abgelaufene Demo-Konten (Punkt 26b) */}
+      <DemoReadonlyGuard readonly={demoInfo.abgelaufen} />
     </div>
   )
 }

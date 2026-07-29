@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ALLE_MODULE } from '../../../lib/rechte';
 import { KERN_MODULE, BRANCHEN_PAKETE, paketModule } from '../../../lib/pakete';
+import { demoStatus } from '../../../lib/demo';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/tenants/page.tsx  (P50 · Modul-Freischalter)
@@ -44,6 +45,8 @@ type Tenant = {
   failOpen: boolean;
   nutzerGesamt: number;
   nutzerMitZugang: number;
+  demo: boolean;
+  demo_ablauf: string | null;
 };
 
 export default function AdminTenants() {
@@ -404,7 +407,14 @@ export default function AdminTenants() {
                           <td style={{ ...td, width: 40, textAlign: 'center', color: CYAN, fontFamily: mono }}>
                             {istOffen ? '▾' : '▸'}
                           </td>
-                          <td style={{ ...td, fontWeight: 700, color: GOLD }}>{t.firma}</td>
+                          <td style={{ ...td, fontWeight: 700, color: GOLD }}>
+                            {t.firma}
+                            {t.demo && (
+                              <span style={{ marginLeft: 8, fontFamily: mono, fontSize: 10, letterSpacing: '0.1em', color: CYAN, border: `1px solid ${CYAN}55`, borderRadius: 4, padding: '1px 5px' }}>
+                                DEMO
+                              </span>
+                            )}
+                          </td>
                           <td style={{ ...td, color: 'rgba(255,255,255,0.65)', fontFamily: mono, fontSize: 13 }}>{t.email}</td>
                           <td style={td}><span style={badge(t.plan, GOLD)}>{t.plan}</span></td>
                           <td style={td}>
@@ -438,6 +448,7 @@ export default function AdminTenants() {
                         {istOffen && (
                           <tr key={`${t.id}-panel`}>
                             <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <DemoPanel tenant={t} mono={mono} onGesetzt={() => laden(false)} />
                               <ModulPanel
                                 tenant={t}
                                 mono={mono}
@@ -464,6 +475,85 @@ export default function AdminTenants() {
         Ab dem <b style={{ color: GRUEN }}>ersten</b> aktivierten Modul sieht er <b style={{ color: CYAN }}>nur noch</b> die aktivierten.
       </p>
     </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Demo-Zugang: Konto als Demo starten/verlaengern/beenden (Punkt 26a).
+// Dauer frei in Tagen. Setzt profiles.demo + demo_ablauf via /api/admin/demo-setzen.
+// ---------------------------------------------------------------------------
+function DemoPanel({ tenant, mono, onGesetzt }: { tenant: Tenant; mono: string; onGesetzt: () => void }) {
+  const [tage, setTage] = useState('7');
+  const [busy, setBusy] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const status = demoStatus(tenant.demo, tenant.demo_ablauf, new Date().toISOString());
+
+  async function setzen(beenden: boolean) {
+    setBusy(true);
+    setFehler(null);
+    try {
+      const res = await fetch('/api/admin/demo-setzen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          beenden
+            ? { tenantId: tenant.id, beenden: true }
+            : { tenantId: tenant.id, tage: Math.max(1, Math.round(Number(tage) || 7)) },
+        ),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        setFehler(json.error || 'Fehler.');
+        return;
+      }
+      onGesetzt();
+    } catch {
+      setFehler('Netzwerkfehler.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '16px 24px', background: 'rgba(5,12,22,0.35)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${CYAN}aa`, textTransform: 'uppercase', marginBottom: 10 }}>
+        Demo-Zugang
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+          {status.istDemo
+            ? status.abgelaufen
+              ? '● Demo abgelaufen (nur Ansehen)'
+              : `● Demo aktiv · noch ${status.restTage} Tage${tenant.demo_ablauf ? ` (bis ${new Date(tenant.demo_ablauf).toLocaleDateString('de-DE')})` : ''}`
+            : '○ Kein Demo-Konto'}
+        </span>
+        <span style={{ flex: 1 }} />
+        <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Dauer (Tage)</label>
+        <input
+          value={tage}
+          onChange={(e) => setTage(e.target.value.replace(/[^0-9]/g, ''))}
+          inputMode="numeric"
+          style={{ width: 64, padding: '6px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', fontFamily: mono }}
+        />
+        <button
+          onClick={() => setzen(false)}
+          disabled={busy}
+          style={{ padding: '7px 14px', background: GRUEN, color: '#04121f', border: 'none', borderRadius: 6, fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}
+        >
+          {busy ? '…' : status.istDemo ? 'Verlängern' : 'Demo starten'}
+        </button>
+        {status.istDemo && (
+          <button
+            onClick={() => setzen(true)}
+            disabled={busy}
+            style={{ padding: '7px 14px', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, cursor: busy ? 'default' : 'pointer' }}
+          >
+            Demo beenden
+          </button>
+        )}
+      </div>
+      {fehler && <div style={{ marginTop: 8, color: '#E06666', fontSize: 12 }}>{fehler}</div>}
+    </div>
   );
 }
 

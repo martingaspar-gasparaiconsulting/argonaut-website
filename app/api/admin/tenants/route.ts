@@ -79,7 +79,7 @@ export async function GET() {
 
   const { data: profRows, error: profErr } = await admin
     .from('profiles')
-    .select('id, email, firma_name, company_name, company, plan, status, onboarding_completed, created_at')
+    .select('id, email, firma_name, company_name, company, plan, status, onboarding_completed, created_at, demo, demo_ablauf')
     .order('created_at', { ascending: true, nullsFirst: false });
   if (profErr) {
     return NextResponse.json({ error: profErr.message }, { status: 500 });
@@ -123,6 +123,9 @@ export async function GET() {
         // Nutzer: Chef (+1, hat immer Login) + angelegte Mitarbeiter.
         nutzerGesamt: n.gesamt + 1,
         nutzerMitZugang: n.mitZugang + 1,
+        // Demo-Konto-Status (Punkt 26).
+        demo: !!p.demo,
+        demo_ablauf: p.demo_ablauf ?? null,
       };
     });
 
