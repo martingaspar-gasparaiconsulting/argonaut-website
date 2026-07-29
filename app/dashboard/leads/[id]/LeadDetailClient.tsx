@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { kontaktAusLead } from '@/lib/leadKontakt'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -26,6 +27,7 @@ export type LeadDetail = {
   ki_naechster_schritt: string | null
   quelle: string | null
   kampagne_id: string | null
+  kontakt_id: string | null
   ist_bestand: boolean | null
   angebot_entwurf: string | null
   angebot_status: string | null
@@ -81,6 +83,10 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [kampagneId, setKampagneId] = useState<string>(lead.kampagne_id ?? '')
   const [kampMeldung, setKampMeldung] = useState<string | null>(null)
 
+  const [kontaktId, setKontaktId] = useState<string | null>(lead.kontakt_id ?? null)
+  const [crmBusy, setCrmBusy] = useState(false)
+  const [crmMeldung, setCrmMeldung] = useState<string | null>(null)
+
   useEffect(() => {
     supabase
       .from('marketing_kampagnen')
@@ -94,6 +100,26 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
     setKampMeldung(null)
     const { error } = await supabase.from('leads').update({ kampagne_id: id || null }).eq('id', lead.id)
     setKampMeldung(error ? 'Konnte nicht gespeichert werden.' : 'Quelle gespeichert.')
+  }
+
+  async function uebernehmeInCrm() {
+    if (kontaktId) return
+    setCrmBusy(true)
+    setCrmMeldung(null)
+    try {
+      const nutzlast = kontaktAusLead(lead)
+      const { data, error } = await supabase.from('kontakte').insert(nutzlast).select('id').single()
+      if (error) throw error
+      const neueId = (data as { id: string }).id
+      const { error: updError } = await supabase.from('leads').update({ kontakt_id: neueId }).eq('id', lead.id)
+      if (updError) throw updError
+      setKontaktId(neueId)
+      setCrmMeldung('Als CRM-Kontakt übernommen.')
+    } catch (e) {
+      setCrmMeldung(e instanceof Error ? e.message : 'Übernahme fehlgeschlagen.')
+    } finally {
+      setCrmBusy(false)
+    }
   }
 
   async function entwurfErzeugen() {
@@ -242,6 +268,28 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
             {kampagnen.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
           </select>
           {kampMeldung && <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)', margin: '8px 0 0' }}>{kampMeldung}</p>}
+        </section>
+
+        <section style={card}>
+          <div style={labelStil}>CRM</div>
+          {kontaktId ? (
+            <div style={{ marginTop: '8px' }}>
+              <p style={{ ...wertStil, color: '#3ddc84', margin: 0 }}>{'✓'} Im CRM angelegt</p>
+              <a href={`/dashboard/crm/${kontaktId}`} style={{ display: 'inline-block', marginTop: '10px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#00e5ff', textDecoration: 'none', fontWeight: 700 }}>Kontakt im CRM {'ö'}ffnen {'→'}</a>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', margin: '6px 0 12px' }}>{'Ü'}bernimm diesen Lead als dauerhaften Kontakt ins CRM {'–'} z.{' '}B. wenn er gewonnen ist.</p>
+              <button
+                onClick={uebernehmeInCrm}
+                disabled={crmBusy}
+                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(201,168,76,0.4)', background: crmBusy ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.12)', color: '#C9A84C', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, cursor: crmBusy ? 'default' : 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif' }}
+              >
+                {crmBusy ? 'Wird übernommen…' : '➕ In CRM übernehmen'}
+              </button>
+            </>
+          )}
+          {crmMeldung && <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)', margin: '8px 0 0' }}>{crmMeldung}</p>}
         </section>
 
         {(lead.score != null || lead.ki_intent || lead.ki_zusammenfassung || lead.ki_naechster_schritt) && (
