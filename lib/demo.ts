@@ -44,6 +44,16 @@ export function ablaufAusTagen(jetztIso: string, tage: number): string {
   return new Date(new Date(jetztIso).getTime() + t * 86_400_000).toISOString();
 }
 
+/**
+ * Aufraeum-Grenze (ISO) = jetzt - graceTage. Demos, deren demo_ablauf VOR diesem
+ * Zeitpunkt liegt, sind abgelaufen + ueber die Kulanzfrist hinaus -> werden geleert.
+ * (Waehrend der Kulanzfrist bleibt die Demo read-only als Verkaufsköder sichtbar.)
+ */
+export function aufraeumGrenze(jetztIso: string, graceTage: number): string {
+  const g = Math.max(0, Math.round(Number(graceTage) || 0));
+  return new Date(new Date(jetztIso).getTime() - g * 86_400_000).toISOString();
+}
+
 /** Kurzer Anzeige-Text fuer das Banner. */
 export function demoRestText(s: DemoStatus): string {
   if (!s.istDemo) return '';
