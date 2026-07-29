@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeBuchungen } from '@/lib/auge';
 import {
   findeKonflikte, buchungsAmpel, zeitraumText, dauerText, uhrzeit,
   baueZeitpunkt, gruppiereNachRessource, zaehleHeute, istGleicherTag, parseZeit,
@@ -320,7 +321,7 @@ export default function BuchungenPage() {
 
       {/* KI-Auge (on-demand) */}
       {!laden && kiKontext && (
-        <KiAuge modul="Termin- & Ressourcenbuchung" kontext={kiKontext} aktionHref="/dashboard/buchungen" aktionText="Zu den Buchungen" />
+        <KiAuge modul="Termin- & Ressourcenbuchung" regel={augeBuchungen({ gesamt: buchungen.length, ressourcen: ressourcen.length, heuteAktiv: buchungen.filter((b) => b.status !== 'storniert').length, laufen: zaehl.laufen, tagName })} aktionHref="/dashboard/buchungen" aktionText="Zu den Buchungen" />
       )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}

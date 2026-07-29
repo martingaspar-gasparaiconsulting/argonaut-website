@@ -887,3 +887,59 @@ export function augeFahrzeugakte(d: { huTage: number | null; besuche: number; fa
   }
   return { klartext: `Lebensakte von ${name} gepflegt${d.huTage != null ? ` — HU in ${d.huTage} Tagen unkritisch` : ''}.`, punkte: [besuchText], stimmung: 'gut' };
 }
+
+/** Brennholz-Sortiment: Varianten, Trocknung, Preise. */
+export function augeHolz(d: { gesamt: number; aktive: number; nichtBrennfertig: number; feuchteGrenze: number; ohnePreis: number; rabatte: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch kein Brennholz-Sortiment — Varianten (Holzart, Länge, Feuchte) anlegen und Preise setzen.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  if (d.rabatte > 0) punkte.push(`${d.rabatte} Rabattstaffel${d.rabatte === 1 ? '' : 'n'} hinterlegt.`);
+  if (d.ohnePreis > 0) {
+    return { klartext: `${d.ohnePreis} aktive Variante${d.ohnePreis === 1 ? '' : 'n'} ohne Preis — Preise ergänzen, sonst nicht verkaufsfertig.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.nichtBrennfertig > 0) {
+    return { klartext: `${d.nichtBrennfertig} Variante${d.nichtBrennfertig === 1 ? '' : 'n'} über ${d.feuchteGrenze} % Restfeuchte — noch nicht brennfertig, weiter trocknen.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `${d.aktive} von ${d.gesamt} Variante${d.gesamt === 1 ? '' : 'n'} im Verkauf — brennfertig und bepreist.`, punkte, stimmung: 'gut' };
+}
+
+/** Leistungskatalog: aktive Leistungen je Kategorie. */
+export function augeLeistungskatalog(d: { gesamt: number; aktiv: number; kategorien: number }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch kein Leistungskatalog — Leistungen mit Preisen anlegen; sie stehen dann in Angeboten und Rechnungen zur Auswahl.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.aktiv < d.gesamt) {
+    return { klartext: `${d.aktiv} von ${d.gesamt} Leistung${d.gesamt === 1 ? '' : 'en'} aktiv in ${d.kategorien} Kategorie${d.kategorien === 1 ? '' : 'n'} — inaktive prüfen und bei Bedarf reaktivieren.`, punkte: [], stimmung: 'neutral' };
+  }
+  return { klartext: `${d.gesamt} Leistung${d.gesamt === 1 ? '' : 'en'} in ${d.kategorien} Kategorie${d.kategorien === 1 ? '' : 'n'} — vollständig aktiv, bereit für Angebote.`, punkte: [], stimmung: 'gut' };
+}
+
+/** Termin-/Ressourcenbuchung: heutige Buchungen + laufende. */
+export function augeBuchungen(d: { gesamt: number; ressourcen: number; heuteAktiv: number; laufen: number; tagName?: string | null }): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Buchungen — Ressourcen anlegen und Termine buchen; Doppelbuchungen werden automatisch verhindert.', punkte: [], stimmung: 'neutral' };
+  }
+  const tag = (d.tagName && d.tagName.trim()) || 'heute';
+  const punkte: string[] = [`${d.ressourcen} Ressource${d.ressourcen === 1 ? '' : 'n'} im Plan.`];
+  if (d.laufen > 0) {
+    return { klartext: `Am ${tag}: ${d.laufen} Buchung${d.laufen === 1 ? '' : 'en'} ${d.laufen === 1 ? 'läuft' : 'laufen'} gerade — Ressourcen aktuell im Einsatz.`, punkte, stimmung: 'gut' };
+  }
+  if (d.heuteAktiv > 0) {
+    return { klartext: `Am ${tag}: ${d.heuteAktiv} Buchung${d.heuteAktiv === 1 ? '' : 'en'} geplant — nichts läuft gerade.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `Am ${tag} keine aktive Buchung — Ressourcen frei.`, punkte, stimmung: 'neutral' };
+}
+
+/** Objektzeiten: gebuchte Stunden je Monat, abrechenbarer Anteil. */
+export function augeObjektzeiten(d: { objekte: number; minutenGesamt: number; minutenAbrechenbar: number; kostenAbrechenbar?: number | null; monatsName?: string | null }): AugeErgebnis {
+  const h = (m: number) => (Math.round(((Number(m) || 0) / 60) * 10) / 10).toLocaleString('de-DE') + ' h';
+  if (d.objekte === 0 || (Number(d.minutenGesamt) || 0) === 0) {
+    return { klartext: 'Noch keine Objektzeiten erfasst — Zeiten auf Objekte buchen; abrechenbare Stunden fließen in die Abrechnung.', punkte: [], stimmung: 'neutral' };
+  }
+  const monat = (d.monatsName && d.monatsName.trim()) || 'diesen Monat';
+  const punkte: string[] = [];
+  if (d.kostenAbrechenbar != null) punkte.push(`${eur(d.kostenAbrechenbar)} netto abrechenbar.`);
+  if ((Number(d.minutenAbrechenbar) || 0) < (Number(d.minutenGesamt) || 0)) punkte.push('Ein Teil ist nicht abrechenbar — Stundensätze/Kennzeichnung prüfen.');
+  return { klartext: `Im ${monat}: ${h(d.minutenGesamt)} auf ${d.objekte} Objekt${d.objekte === 1 ? '' : 'e'} gebucht, davon ${h(d.minutenAbrechenbar)} abrechenbar.`, punkte, stimmung: 'gut' };
+}

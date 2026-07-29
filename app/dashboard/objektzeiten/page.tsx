@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeObjektzeiten } from '@/lib/auge';
 import {
   summiereJeObjekt, summiereGesamt, stundenText, eur,
   type ObjektBasis, type ObjektZeitBasis,
@@ -357,7 +358,7 @@ export default function ObjektzeitenPage() {
           {kiKontext && (
             <KiAuge
               modul="Objekt-Zeiterfassung"
-              kontext={kiKontext}
+              regel={augeObjektzeiten({ objekte: summen.length, minutenGesamt: gesamt.minutenGesamt, minutenAbrechenbar: gesamt.minutenAbrechenbar, kostenAbrechenbar: gesamt.kostenAbrechenbar, monatsName })}
               aktionHref="/dashboard/objektzeiten"
               aktionText="Zur Objekt-Zeiterfassung"
             />

@@ -22,6 +22,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeLeistungskatalog } from '@/lib/auge';
 import {
   nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
   type KatalogEintrag,
@@ -366,7 +367,7 @@ export default function LeistungskatalogPage() {
       )}
 
       {!laden && kiKontext && (
-        <KiAuge modul="Leistungskatalog" kontext={kiKontext} aktionHref="/dashboard/leistungskatalog" aktionText="Zum Katalog" />
+        <KiAuge modul="Leistungskatalog" regel={augeLeistungskatalog({ gesamt: liste.length, aktiv: liste.filter((k) => k.aktiv).length, kategorien: kategorien.length })} aktionHref="/dashboard/leistungskatalog" aktionText="Zum Katalog" />
       )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}

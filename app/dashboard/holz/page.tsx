@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { augeHolz } from '@/lib/auge';
 import {
   HOLZARTEN, SCHEITLAENGEN, EINHEITEN, holzartName, umrechnungsHinweis, formatZahl,
   einheitKurz, einheitLang,
@@ -446,7 +447,7 @@ export default function HolzSortimentPage() {
       )}
 
       {!laden && kiKontext && (
-        <KiAuge modul="Brennholz-Sortiment" kontext={kiKontext} aktionHref="/dashboard/holz" aktionText="Zum Sortiment" />
+        <KiAuge modul="Brennholz-Sortiment" regel={augeHolz({ gesamt: liste.length, aktive, nichtBrennfertig, feuchteGrenze: BRENNFERTIG_GRENZE_PROZENT, ohnePreis, rabatte: rabatte.filter((r) => r.aktiv).length })} aktionHref="/dashboard/holz" aktionText="Zum Sortiment" />
       )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}
