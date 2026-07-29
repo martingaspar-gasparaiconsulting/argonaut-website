@@ -6,12 +6,14 @@
 // lib/onboardingBranchen.ts, gelesen aus profiles.kategorie).
 // Jeder Schritt hat eine anfängerfreundliche „So geht's"-Anleitung.
 // Auto-Erkennung: Firmendaten/IBAN/erste Rechnung + Zeilenzahl je Modul-Tabelle.
+// „Beispiel laden": branchentypische Beispiel-Kontakte ins CRM (reversibel).
 // Pfad: app/dashboard/onboarding/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
+import { beispielZeilen, BEISPIEL_QUELLE } from '@/lib/beispielKatalog';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,6 +48,8 @@ export default function OnboardingPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [manuell, setManuell] = useState<Set<string>>(new Set());
   const [offeneTipps, setOffeneTipps] = useState<Set<string>>(new Set());
+  const [beispielCount, setBeispielCount] = useState(0);
+  const [beispielBusy, setBeispielBusy] = useState(false);
   const [laden, setLaden] = useState(true);
 
   const laden_ = useCallback(async (id: string) => {
@@ -77,6 +81,12 @@ export default function OnboardingPage() {
       const { data: os } = await supabase.from('onboarding_schritte').select('schritt_key, erledigt');
       setManuell(new Set(((os as Array<{ schritt_key: string; erledigt: boolean }>) || []).filter((x) => x.erledigt).map((x) => x.schritt_key)));
     } catch { /* Tabelle evtl. noch nicht eingespielt */ }
+
+    // Beispiel-Kontakte: wie viele sind aktuell geladen? (fehlertolerant)
+    try {
+      const { count } = await supabase.from('kontakte').select('*', { count: 'exact', head: true }).eq('quelle', BEISPIEL_QUELLE);
+      setBeispielCount(count || 0);
+    } catch { /* egal */ }
   }, []);
 
   useEffect(() => {
@@ -111,6 +121,28 @@ export default function OnboardingPage() {
   }
   function tippToggle(key: string) {
     setOffeneTipps((o) => { const n = new Set(o); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  }
+
+  async function beispieleLaden() {
+    if (!uid || beispielBusy || beispielCount > 0) return;
+    setBeispielBusy(true);
+    try {
+      const zeilen = beispielZeilen(kategorie, uid);
+      const { error } = await supabase.from('kontakte').insert(zeilen);
+      if (!error) await laden_(uid);
+    } finally {
+      setBeispielBusy(false);
+    }
+  }
+  async function beispieleEntfernen() {
+    if (!uid || beispielBusy) return;
+    setBeispielBusy(true);
+    try {
+      const { error } = await supabase.from('kontakte').delete().eq('owner_user_id', uid).eq('quelle', BEISPIEL_QUELLE);
+      if (!error) await laden_(uid);
+    } finally {
+      setBeispielBusy(false);
+    }
   }
 
   function zeile(s: RenderSchritt) {
@@ -153,6 +185,36 @@ export default function OnboardingPage() {
         <span style={styles.importBannerCta}>Zum Import-Center ›</span>
       </a>
 
+      {!laden && (
+        <div style={styles.beispielBox}>
+          <div style={styles.beispielKopf}>
+            <span style={styles.beispielIcon}>🎁</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>Zum Ausprobieren: Beispiel-Kunden laden</div>
+              <div style={{ color: C.textDim, fontSize: 13, lineHeight: 1.5 }}>
+                {beispielCount > 0
+                  ? `${beispielCount} Beispiel-Kontakte sind geladen. Schau sie dir im CRM an — oder entferne sie wieder, wenn du mit deinen echten Daten startest.`
+                  : 'Lade dir ein paar typische Beispiel-Kunden deiner Branche ins CRM und probiere ARGONAUT sofort aus — Angebot, Rechnung, alles dran. Du kannst die Beispiele jederzeit wieder entfernen.'}
+              </div>
+            </div>
+          </div>
+          <div style={styles.beispielAktionen}>
+            {beispielCount > 0 ? (
+              <>
+                <a href="/dashboard/crm" style={styles.beispielCta}>Im CRM ansehen ›</a>
+                <button onClick={beispieleEntfernen} disabled={beispielBusy} style={styles.beispielEntfernen}>
+                  {beispielBusy ? 'Bitte warten …' : 'Beispiele wieder entfernen'}
+                </button>
+              </>
+            ) : (
+              <button onClick={beispieleLaden} disabled={beispielBusy} style={styles.beispielBtn}>
+                {beispielBusy ? 'Lädt …' : '🎁 Beispiele laden'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={styles.fortschritt}>
         <div style={styles.balken}><div style={{ ...styles.balkenFill, width: `${prozent}%` }} /></div>
         <div style={styles.fortText}>{fertig} von {alle.length} erledigt · <b style={{ color: prozent === 100 ? C.green : C.gold }}>{prozent}%</b></div>
@@ -194,6 +256,13 @@ const styles: Record<string, CSSProperties> = {
   importBannerIcon: { fontSize: 24, lineHeight: 1, flexShrink: 0 },
   importBannerText: { flex: 1, fontSize: 13.5, lineHeight: 1.5, color: C.text },
   importBannerCta: { color: C.cyan, fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', flexShrink: 0 },
+  beispielBox: { marginTop: 12, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 },
+  beispielKopf: { display: 'flex', gap: 14, alignItems: 'flex-start' },
+  beispielIcon: { fontSize: 24, lineHeight: 1, flexShrink: 0 },
+  beispielAktionen: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
+  beispielBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  beispielCta: { color: C.cyan, textDecoration: 'none', fontWeight: 700, fontSize: 13.5, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 13px' },
+  beispielEntfernen: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 13px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' },
   fortschritt: { marginTop: 18 },
   balken: { height: 12, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden' },
   balkenFill: { height: '100%', background: `linear-gradient(90deg, ${C.gold}, ${C.green})`, borderRadius: 999, transition: 'width .3s' },
