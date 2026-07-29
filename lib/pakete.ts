@@ -35,6 +35,7 @@ export const KERN_MODULE: string[] = [
   'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
   'objekte',      // 🏛 Objekt-/Asset-Register (universelles Objekt-Register)
   'aufwand',      // ⏱ Aufwand-Cockpit (offener Aufwand über Projekte + Objekte)
+  'import',       // 📥 Import-Center (Sammelstelle für alle CSV-Importe)
 ];
 
 export type BranchenPaket = {
