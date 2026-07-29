@@ -13,8 +13,12 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const GOLD = '#c9a84c'
-// Letzter buchbarer Tag (Monat 0-basiert → 7 = August).
-const MAX_JAHR = 2026, MAX_MONAT = 7, MAX_TAG = 15
+// Betriebsurlaub (Monat 0-basiert → 7 = August): keine Buchung 16.–31.08.2026.
+// Danach läuft der Kalender ROLLEND weiter (immer ~8 Wochen voraus, dieselben Zeiten) —
+// muss nie wieder von Hand angefasst werden.
+const URLAUB_VON = { j: 2026, m: 7, t: 16 }
+const URLAUB_BIS = { j: 2026, m: 7, t: 31 }
+const WOCHEN_VORAUS = 8
 const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const WEEKDAY_TIMES = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
@@ -45,18 +49,21 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
   const weeks = useMemo<Day[][]>(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
-    const maxTag = new Date(MAX_JAHR, MAX_MONAT, MAX_TAG); maxTag.setHours(0, 0, 0, 0) // letzter buchbarer Tag
+    const horizon = new Date(today); horizon.setDate(today.getDate() + WOCHEN_VORAUS * 7) // rollend N Wochen voraus
+    const urlaubVon = new Date(URLAUB_VON.j, URLAUB_VON.m, URLAUB_VON.t); urlaubVon.setHours(0, 0, 0, 0)
+    const urlaubBis = new Date(URLAUB_BIS.j, URLAUB_BIS.m, URLAUB_BIS.t); urlaubBis.setHours(0, 0, 0, 0)
     const monday = new Date(today); const dow = (monday.getDay() + 6) % 7; monday.setDate(monday.getDate() - dow)
     const rows: Day[][] = []
-    // Bis zur Woche des letzten buchbaren Tages (Deckel 30 Wochen als Sicherheitsnetz).
-    for (let w = 0; w < 30; w++) {
+    // Rollender Horizont; die Betriebsurlaubs-Wochen fallen automatisch raus (kein hasFuture).
+    for (let w = 0; w < 20; w++) {
       const wMonday = new Date(monday); wMonday.setDate(monday.getDate() + w * 7)
-      if (wMonday > maxTag) break // ganze Woche liegt nach dem Enddatum
+      if (wMonday > horizon) break // ganze Woche liegt nach dem Horizont
       const days: Day[] = []
       let hasFuture = false
       for (let i = 0; i < 5; i++) {
         const c = new Date(monday); c.setDate(monday.getDate() + w * 7 + i)
-        const bookable = c >= tomorrow && c <= maxTag
+        const imUrlaub = c >= urlaubVon && c <= urlaubBis
+        const bookable = c >= tomorrow && c <= horizon && !imUrlaub
         if (bookable) hasFuture = true
         days.push({ key: ymd(c), wd: WD[c.getDay()], label: pad(c.getDate()) + '.' + pad(c.getMonth() + 1) + '.', year: c.getFullYear(), isFri: c.getDay() === 5, bookable })
       }
@@ -125,7 +132,7 @@ export default function TerminPicker({ ma, value, onChange }: { ma?: number; val
           </div>
 
           <p style={{ fontSize: '.75rem', color: '#7f97a4', margin: '10px 0 0', lineHeight: 1.5 }}>
-            <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 9 Mitarbeiter. · Buchbar bis <span style={{ color: GOLD }}>15.08.2026</span>.
+            <span style={{ color: GOLD }}>Freitag (gold umrandet)</span>: Kurz-Termine à 20 Min. — nur für Betriebe bis 9 Mitarbeiter. · <span style={{ color: GOLD }}>Betriebsurlaub 16.–31.08.</span> — ab 1. September geht es mit denselben Zeiten weiter.
           </p>
         </>
       )}
