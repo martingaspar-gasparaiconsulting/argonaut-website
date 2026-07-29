@@ -15,7 +15,7 @@
 
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-import { seederListe, loeschReihenfolge, registerZeilen, REGISTER_TABELLE } from "@/lib/uebungswelt";
+import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE } from "@/lib/uebungswelt";
 import { BEISPIEL_QUELLE } from "@/lib/beispielKatalog";
 
 export const runtime = "nodejs";
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       const kategorie = (prof?.kategorie && String(prof.kategorie).trim()) ? String(prof.kategorie).trim() : null;
 
       let angelegt = 0;
-      for (const s of seederListe()) {
+      for (const s of aktiveSeeder(kategorie)) {
         const zeilen = s.baue(kategorie, uid);
         if (!zeilen.length) continue;
         const { data, error } = await supabase.from(s.tabelle).insert(zeilen).select("id");
