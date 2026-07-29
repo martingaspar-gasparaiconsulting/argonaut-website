@@ -12,6 +12,7 @@ import {
   bestandStufe,
   fehlendeZellen,
   zaehleVarianten,
+  artikelStammAusVariante,
   type BestandStufe,
 } from "@/lib/varianten";
 import { variantenMatrixPdf } from "@/lib/variantenMatrixPdf";
@@ -72,6 +73,7 @@ interface Variante {
   bestand: number | null;
   mindestbestand: number | null;
   aktiv: boolean;
+  artikel_id: string | null;
   created_at: string;
 }
 
@@ -290,6 +292,32 @@ export default function VariantenSeite() {
     await ladeAlles();
   }
 
+  // ---------------- Ins Lager übernehmen (Option B: jede SKU = Lager-Artikel) ----------------
+  async function variantenInsLager(g: Gruppe) {
+    const vs = variantenByGruppe.get(g.id) ?? [];
+    if (vs.length === 0) { setHinweis(`„${g.bezeichnung}": keine Varianten zum Übernehmen.`); return; }
+    let erstellt = 0, aktualisiert = 0, fehler = 0;
+    for (const v of vs) {
+      const stamm = artikelStammAusVariante(
+        { bezeichnung: g.bezeichnung, sku_basis: g.sku_basis, basis_vk: g.basis_vk },
+        { achse1_wert: v.achse1_wert, achse2_wert: v.achse2_wert, sku: v.sku, aufpreis: v.aufpreis, mindestbestand: v.mindestbestand },
+      );
+      if (v.artikel_id) {
+        const { error } = await supabase.from("artikel").update(stamm).eq("id", v.artikel_id);
+        if (error) fehler++; else aktualisiert++;
+      } else {
+        const base = { ...stamm, aktueller_bestand: Number(v.bestand) || 0 };
+        const insertObj = userId ? { ...base, owner_user_id: userId } : base;
+        const { data, error } = await supabase.from("artikel").insert(insertObj).select("id").single();
+        if (error || !data) { fehler++; continue; }
+        await supabase.from("variante_artikel").update({ artikel_id: (data as { id: string }).id }).eq("id", v.id);
+        erstellt++;
+      }
+    }
+    setHinweis(`„${g.bezeichnung}": ${erstellt} im Lager neu angelegt, ${aktualisiert} aktualisiert${fehler ? `, ${fehler} Fehler` : ""}.`);
+    await ladeAlles();
+  }
+
   // ---------------- Varianten CRUD ----------------
   function oeffneNeueVariante(gruppeId: string) {
     setVEditId(null);
@@ -498,6 +526,7 @@ export default function VariantenSeite() {
               const zweiAchsen = w2.length > 0;
               const offen = offeneGruppe === g.id;
               const varByCell = new Map(vs.map((v) => [zelleKey(v.achse1_wert, v.achse2_wert), v]));
+              const imLager = vs.filter((v) => v.artikel_id).length;
               return (
                 <div key={g.id} style={card}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
@@ -517,6 +546,7 @@ export default function VariantenSeite() {
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {fehlt.length > 0 && <button style={btnGold} onClick={() => erzeugeMatrix(g)}>⚡ Matrix erzeugen ({fehlt.length})</button>}
+                      {vs.length > 0 && <button style={btnGhost} onClick={() => variantenInsLager(g)} title="Jede Variante als Lager-Artikel anlegen/aktualisieren">🏬 Ins Lager ({imLager}/{vs.length})</button>}
                       <button style={btnGhost} onClick={() => setOffeneGruppe(offen ? null : g.id)}>{offen ? "▲ Matrix" : "▼ Matrix"}</button>
                       <button style={btnGhost} onClick={() => { setVarFilter(g.id); setTab("varianten"); }}>Varianten ›</button>
                       <button style={btnGhost} onClick={() => pdfFuerGruppe(g)}>📄 PDF</button>

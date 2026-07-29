@@ -204,3 +204,38 @@ export function zaehleVarianten(gruppen: GruppeVoll[], varianten: VarianteLite[]
     lagerwert: r2(lagerwert),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Option B · Varianten ↔ Lager: Stammdaten des Lager-Artikels je Variante
+// ---------------------------------------------------------------------------
+export interface ArtikelStamm {
+  bezeichnung: string;
+  artikelnummer: string;
+  kategorie: string;
+  einheit: string;
+  verkaufspreis: number;
+  mindestbestand: number;
+}
+
+/**
+ * Baut die Stammdaten des Lager-Artikels aus einer Varianten-Zelle:
+ * Bezeichnung = „Gruppe · Wert1 / Wert2", Artikelnummer = SKU (Fallback aus
+ * Basis+Achsen), VK = Basis-VK + Aufpreis. OHNE aktueller_bestand — der wird nur
+ * beim Anlegen gesetzt und danach im Lager (Kasse/Wareneingang) geführt.
+ */
+export function artikelStammAusVariante(
+  g: { bezeichnung: string; sku_basis?: string | null; basis_vk?: number | null },
+  v: { achse1_wert?: string | null; achse2_wert?: string | null; sku?: string | null; aufpreis?: unknown; mindestbestand?: unknown },
+): ArtikelStamm {
+  const teile = [v.achse1_wert, v.achse2_wert].map((s) => String(s || '').trim()).filter((s) => s.length > 0);
+  const bez = teile.length > 0 ? `${g.bezeichnung} · ${teile.join(' / ')}` : g.bezeichnung;
+  const nr = (v.sku && String(v.sku).trim()) || skuFor(g.sku_basis, v.achse1_wert, v.achse2_wert);
+  return {
+    bezeichnung: bez,
+    artikelnummer: nr,
+    kategorie: g.bezeichnung,
+    einheit: 'Stk',
+    verkaufspreis: variantePreis(g.basis_vk, v.aufpreis),
+    mindestbestand: Number(v.mindestbestand) || 0,
+  };
+}
