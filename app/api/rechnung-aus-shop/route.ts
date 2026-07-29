@@ -5,10 +5,12 @@
 // Nach dem Muster von /api/rechnung-aus-reservierung (Doppel-Schutz via
 // rechnung_id, Storno bei Positionsfehler, Nummer via Trigger).
 //
-// ⚠️ MwSt: Shop-Positionen tragen KEINEN Steuersatz und die Preise sind BRUTTO
-//   (der Kunde hat brutto bezahlt). Wir rechnen die Netto-Werte mit Standard
-//   19 % heraus, damit die Rechnungs-Bruttosumme dem entspricht, was im Shop
-//   bezahlt wurde. Für 7-%-Ware oder Kleinunternehmer später anpassbar.
+// ⚠️ MwSt: Shop-Preise sind BRUTTO (der Kunde hat brutto bezahlt). Jede Position
+//   trägt ihren eigenen Satz (Feld `mwst`: 7 für Lebensmittel, 19 für Getränke/
+//   Non-Food). Fehlt der Satz -> Fallback 19 %. Verschiedene Sätze in einer
+//   Bestellung werden über steuerGruppen korrekt getrennt ausgewiesen. Wir rechnen
+//   Netto je Position heraus, damit die Rechnungs-Bruttosumme dem Bezahlten
+//   entspricht. (Kleinunternehmer = 0 % kommt mit der globalen Einstellung.)
 //
 // Body:    { bestellungId }
 // Antwort: { rechnungId, bereitsVorhanden }
@@ -24,7 +26,7 @@ export const dynamic = "force-dynamic";
 const ZAHLUNGSZIEL_TAGE = 14;
 const STANDARD_MWST = 19;
 
-type ShopPos = { bezeichnung?: string; menge?: number; einzelpreis?: number };
+type ShopPos = { bezeichnung?: string; menge?: number; einzelpreis?: number; mwst?: number };
 
 export async function POST(req: Request) {
   try {
@@ -62,7 +64,8 @@ export async function POST(req: Request) {
     const rechnungsPosten = posRaw.map((p, i) => {
       const menge = Number(p?.menge) || 1;
       const bruttoEinzel = Number(p?.einzelpreis) || 0;
-      const nettoEinzel = cent(bruttoEinzel / (1 + STANDARD_MWST / 100));
+      const satz = Number(p?.mwst) > 0 ? Number(p.mwst) : STANDARD_MWST;
+      const nettoEinzel = cent(bruttoEinzel / (1 + satz / 100));
       return {
         owner_user_id: user.id,
         position: i + 1,
@@ -70,7 +73,7 @@ export async function POST(req: Request) {
         menge,
         einheit: "Stk",
         einzelpreis: nettoEinzel,
-        mwst_satz: STANDARD_MWST,
+        mwst_satz: satz,
         gesamt_netto: cent(menge * nettoEinzel),
       };
     });
