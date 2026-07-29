@@ -10,7 +10,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   const { data } = await supabase
     .from('leads')
-    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand, angebot_entwurf, angebot_status, angebot_erstellt_am, angebot_versendet_am')
+    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, kampagne_id, ist_bestand, angebot_entwurf, angebot_status, angebot_erstellt_am, angebot_versendet_am')
     .eq('id', id)
     .single()
 

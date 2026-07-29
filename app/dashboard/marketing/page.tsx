@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import MarketingRoi from '../_components/MarketingRoi';
+import { leadsProKampagne } from '@/lib/marketing';
 
 // ============================================================
 // ARGONAUT OS · MODUL 3 MARKETING · M2 Cockpit
@@ -83,6 +84,7 @@ function fmtBudget(b: number | null): string {
 
 export default function MarketingCockpit() {
   const [kampagnen, setKampagnen] = useState<Kampagne[]>([]);
+  const [leadCounts, setLeadCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('alle');
@@ -113,6 +115,8 @@ export default function MarketingCockpit() {
     } else {
       setKampagnen((data ?? []) as Kampagne[]);
     }
+    const { data: leadsD } = await supabase.from('leads').select('kampagne_id');
+    setLeadCounts(leadsProKampagne((leadsD ?? []) as { kampagne_id: string | null }[]));
     setLoading(false);
   }
 
@@ -524,6 +528,9 @@ export default function MarketingCockpit() {
                       {fmtDatum(k.start_datum)} – {fmtDatum(k.end_datum)}
                     </span>
                     <span>Budget: {fmtBudget(k.budget)}</span>
+                    {(leadCounts[k.id] ?? 0) > 0 && (
+                      <span style={{ color: C.gold, fontWeight: 700 }}>🧲 {leadCounts[k.id]} Lead{leadCounts[k.id] === 1 ? '' : 's'}</span>
+                    )}
                     {k.kanaele && k.kanaele.length > 0 && (
                       <span>Kanäle: {k.kanaele.join(', ')}</span>
                     )}

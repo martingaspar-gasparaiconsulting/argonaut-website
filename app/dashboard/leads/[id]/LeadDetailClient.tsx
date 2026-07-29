@@ -1,6 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+)
 
 export type LeadDetail = {
   id: string
@@ -19,6 +25,7 @@ export type LeadDetail = {
   ki_zusammenfassung: string | null
   ki_naechster_schritt: string | null
   quelle: string | null
+  kampagne_id: string | null
   ist_bestand: boolean | null
   angebot_entwurf: string | null
   angebot_status: string | null
@@ -69,6 +76,25 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [sendMeldung, setSendMeldung] = useState<string | null>(null)
 
   const mengeAnzeige = [lead.menge, lead.einheit].filter(Boolean).join(' ') || null
+
+  const [kampagnen, setKampagnen] = useState<{ id: string; name: string }[]>([])
+  const [kampagneId, setKampagneId] = useState<string>(lead.kampagne_id ?? '')
+  const [kampMeldung, setKampMeldung] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('marketing_kampagnen')
+      .select('id, name')
+      .order('created_at', { ascending: false })
+      .then(({ data }: { data: { id: string; name: string }[] | null }) => setKampagnen(data ?? []))
+  }, [])
+
+  async function setzeKampagne(id: string) {
+    setKampagneId(id)
+    setKampMeldung(null)
+    const { error } = await supabase.from('leads').update({ kampagne_id: id || null }).eq('id', lead.id)
+    setKampMeldung(error ? 'Konnte nicht gespeichert werden.' : 'Quelle gespeichert.')
+  }
 
   async function entwurfErzeugen() {
     setLadend(true)
@@ -203,6 +229,19 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
           <div style={{ marginTop: '18px' }}>
             <Feld label="Nachricht" wert={lead.nachricht} />
           </div>
+        </section>
+
+        <section style={card}>
+          <div style={labelStil}>Quelle · Marketing-Kampagne</div>
+          <select
+            value={kampagneId}
+            onChange={(e) => setzeKampagne(e.target.value)}
+            style={{ width: '100%', marginTop: '8px', padding: '11px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(10,22,40,0.6)', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'var(--font-dm-sans), sans-serif' }}
+          >
+            <option value="">{'— keiner Kampagne zugeordnet —'}</option>
+            {kampagnen.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+          </select>
+          {kampMeldung && <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)', margin: '8px 0 0' }}>{kampMeldung}</p>}
         </section>
 
         {(lead.score != null || lead.ki_intent || lead.ki_zusammenfassung || lead.ki_naechster_schritt) && (
