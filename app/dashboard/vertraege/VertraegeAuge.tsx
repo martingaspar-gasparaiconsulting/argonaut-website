@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import type { AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · VERTRÄGE-AUGE (Übersichts-Auge)
@@ -40,7 +41,7 @@ function vName(v: { bezeichnung?: string | null; vertragspartner?: string | null
 }
 
 export default function VertraegeAuge() {
-  const [kontext, setKontext] = useState<string>("");
+  const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
 
   useEffect(() => {
@@ -138,7 +139,8 @@ export default function VertraegeAuge() {
           zeilen.push(`Keine dringenden Fristen — alle Verträge laufen ruhig.`);
         }
 
-        setKontext(zeilen.join("\n"));
+        const stimmung: AugeErgebnis["stimmung"] = kuendigungBald.length > 0 ? "achtung" : laeuftAus.length > 0 ? "neutral" : "gut";
+        setErgebnis({ klartext: zeilen[0] ?? "", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);
@@ -146,12 +148,12 @@ export default function VertraegeAuge() {
     })();
   }, []);
 
-  if (!bereit || !kontext) return null;
+  if (!bereit || !ergebnis) return null;
 
   return (
     <KiAuge
       modul="Verträge & Fristen"
-      kontext={kontext}
+      regel={ergebnis}
       aktionHref="/dashboard/vertraege"
       aktionText="Zu den Verträgen"
     />

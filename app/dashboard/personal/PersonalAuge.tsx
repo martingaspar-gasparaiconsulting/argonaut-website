@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import type { AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · PERSONAL-AUGE (Pilot des Übersichts-Auges)
@@ -33,7 +34,7 @@ function ymd(d: Date): string {
 }
 
 export default function PersonalAuge() {
-  const [kontext, setKontext] = useState<string>("");
+  const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
 
   useEffect(() => {
@@ -120,7 +121,8 @@ export default function PersonalAuge() {
           zeilen.push(`Abwesenheitsquote heute: ca. ${quote}%.`);
         }
 
-        setKontext(zeilen.join("\n"));
+        const stimmung: AugeErgebnis["stimmung"] = schulungAbgelaufen > 0 ? "achtung" : abwesendGesamt > 0 ? "neutral" : "gut";
+        setErgebnis({ klartext: zeilen[0] ?? "", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);
@@ -129,12 +131,12 @@ export default function PersonalAuge() {
   }, []);
 
   // Solange noch nicht geladen: nichts anzeigen (kein Flackern).
-  if (!bereit || !kontext) return null;
+  if (!bereit || !ergebnis) return null;
 
   return (
     <KiAuge
       modul="Personal"
-      kontext={kontext}
+      regel={ergebnis}
       aktionHref="/dashboard/personal"
       aktionText="Zum Personal-Cockpit"
     />

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import type { AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · AUFTRÄGE-AUGE (Übersichts-Auge)
@@ -44,7 +45,7 @@ function auftragLabel(a: { auftragsnummer?: string | null; titel?: string | null
 }
 
 export default function AuftraegeAuge() {
-  const [kontext, setKontext] = useState<string>("");
+  const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
 
   useEffect(() => {
@@ -165,7 +166,8 @@ export default function AuftraegeAuge() {
           zeilen.push(`Aktuell keine offenen Aufträge.`);
         }
 
-        setKontext(zeilen.join("\n"));
+        const stimmung: AugeErgebnis["stimmung"] = (ueberfaellige.length > 0 || nichtAbgerechnet.length > 0) ? "achtung" : offeneAnzahl > 0 ? "gut" : "neutral";
+        setErgebnis({ klartext: zeilen[0] ?? "Aktuell keine offenen Aufträge.", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);
@@ -173,12 +175,12 @@ export default function AuftraegeAuge() {
     })();
   }, []);
 
-  if (!bereit || !kontext) return null;
+  if (!bereit || !ergebnis) return null;
 
   return (
     <KiAuge
       modul="Aufträge"
-      kontext={kontext}
+      regel={ergebnis}
       aktionHref="/dashboard/auftraege"
       aktionText="Zu den Aufträgen"
     />

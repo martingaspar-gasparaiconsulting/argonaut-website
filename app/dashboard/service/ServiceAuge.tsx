@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import type { AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · SERVICE-AUGE (Übersichts-Auge fürs Ticketing)
@@ -40,7 +41,7 @@ function ticketLabel(t: { ticket_nummer?: string | null; betreff?: string | null
 }
 
 export default function ServiceAuge() {
-  const [kontext, setKontext] = useState<string>("");
+  const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
 
   useEffect(() => {
@@ -131,7 +132,8 @@ export default function ServiceAuge() {
           zeilen.push(`Alle Tickets gelöst — kein offener Servicefall.`);
         }
 
-        setKontext(zeilen.join("\n"));
+        const stimmung: AugeErgebnis["stimmung"] = (ueberfaellige.length > 0 || hochPrioOffen.length > 0) ? "achtung" : offeneAnzahl > 0 ? "neutral" : "gut";
+        setErgebnis({ klartext: zeilen[0] ?? "", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);
@@ -139,12 +141,12 @@ export default function ServiceAuge() {
     })();
   }, []);
 
-  if (!bereit || !kontext) return null;
+  if (!bereit || !ergebnis) return null;
 
   return (
     <KiAuge
       modul="Kundenservice / Tickets"
-      kontext={kontext}
+      regel={ergebnis}
       aktionHref="/dashboard/service"
       aktionText="Zum Kundenservice"
     />

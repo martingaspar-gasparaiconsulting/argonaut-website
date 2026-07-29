@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import type { AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · PROJEKTE-AUGE (Übersichts-Auge)
@@ -32,7 +33,7 @@ function istAbgeschlossen(status?: string): boolean {
 }
 
 export default function ProjekteAuge() {
-  const [kontext, setKontext] = useState<string>("");
+  const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
 
   useEffect(() => {
@@ -119,7 +120,8 @@ export default function ProjekteAuge() {
           zeilen.push(`Kein Projekt überfällig — alle Termine im Rahmen.`);
         }
 
-        setKontext(zeilen.join("\n"));
+        const stimmung: AugeErgebnis["stimmung"] = ueberfaellig.length > 0 ? "achtung" : gesamtAktiv > 0 ? "gut" : "neutral";
+        setErgebnis({ klartext: zeilen[0] ?? "", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);
@@ -127,12 +129,12 @@ export default function ProjekteAuge() {
     })();
   }, []);
 
-  if (!bereit || !kontext) return null;
+  if (!bereit || !ergebnis) return null;
 
   return (
     <KiAuge
       modul="Projekte"
-      kontext={kontext}
+      regel={ergebnis}
       aktionHref="/dashboard/projekte"
       aktionText="Zu den Projekten"
     />
