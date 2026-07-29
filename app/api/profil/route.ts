@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Nur erlaubte Felder uebernehmen, leere Strings als NULL speichern
-  const update: Record<string, string | null> = {};
+  const update: Record<string, string | null | boolean> = {};
   for (const feld of ERLAUBTE_FELDER) {
     if (feld in body) {
       const wert = body[feld];
@@ -47,6 +47,11 @@ export async function PATCH(req: NextRequest) {
       }
       update[feld] = wert === null || wert.trim() === "" ? null : wert.trim();
     }
+  }
+
+  // Boolean-Feld Kleinunternehmerregelung (§19) — kein String, separat behandeln.
+  if ("kleinunternehmer" in body) {
+    update["kleinunternehmer"] = body.kleinunternehmer === true || body.kleinunternehmer === "true";
   }
 
   if (Object.keys(update).length === 0) {

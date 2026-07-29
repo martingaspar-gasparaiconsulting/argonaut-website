@@ -21,6 +21,7 @@ export type FirmaProfil = {
   firma_bank?: string | null
   firma_bic?: string | null
   firma_akzentfarbe?: string | null
+  kleinunternehmer?: boolean | null
 }
 
 type FeldKey = keyof FirmaProfil
@@ -103,6 +104,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
 
   const [werte, setWerte] = useState<Record<FeldKey, string>>(initial)
   const [akzentfarbe, setAkzentfarbe] = useState<string>(profil.firma_akzentfarbe || '#1A1A2E')
+  const [kleinunternehmer, setKleinunternehmer] = useState<boolean>(!!profil.kleinunternehmer)
   const [speichernd, setSpeichernd] = useState(false)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [istFehler, setIstFehler] = useState(false)
@@ -120,7 +122,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
       const res = await fetch('/api/profil', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...werte, firma_akzentfarbe: akzentfarbe }),
+        body: JSON.stringify({ ...werte, firma_akzentfarbe: akzentfarbe, kleinunternehmer }),
       })
       if (res.ok) {
         setMeldung('Firmenprofil gespeichert.')
@@ -161,6 +163,20 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
           </div>
         </section>
       ))}
+
+      <section style={card}>
+        <h2 style={gruppenTitel}>Steuer · Kleinunternehmerregelung</h2>
+        <p style={hinweisStil}>Als Kleinunternehmer nach § 19 UStG weisen Ihre Rechnungen keine Umsatzsteuer aus (0 %) und tragen den gesetzlichen Hinweis. Das gilt dann automatisch überall — auch für Shop-Rechnungen.</p>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={kleinunternehmer}
+            onChange={(e) => setKleinunternehmer(e.target.checked)}
+            style={{ width: '20px', height: '20px', accentColor: '#C9A84C', cursor: 'pointer', flex: '0 0 auto' }}
+          />
+          <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>Ich bin Kleinunternehmer (§ 19 UStG) — keine Umsatzsteuer ausweisen</span>
+        </label>
+      </section>
 
       <section style={card}>
         <h2 style={gruppenTitel}>Dokument-Branding</h2>

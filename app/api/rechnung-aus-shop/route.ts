@@ -38,6 +38,10 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
 
+    // Kleinunternehmer-Einstellung (§19, global im Profil) → 0 % auf alles, Vorrang vor Positions-Sätzen.
+    const { data: prof } = await supabase.from("profiles").select("kleinunternehmer").eq("id", user.id).maybeSingle();
+    const kleinunternehmer = !!prof?.kleinunternehmer;
+
     // ---- 1) Bestellung laden (RLS schützt auf owner) ----
     const { data: b, error: bErr } = await supabase
       .from("shop_bestellungen")
@@ -64,7 +68,7 @@ export async function POST(req: Request) {
     const rechnungsPosten = posRaw.map((p, i) => {
       const menge = Number(p?.menge) || 1;
       const bruttoEinzel = Number(p?.einzelpreis) || 0;
-      const satz = Number(p?.mwst) > 0 ? Number(p.mwst) : STANDARD_MWST;
+      const satz = kleinunternehmer ? 0 : (Number(p?.mwst) > 0 ? Number(p.mwst) : STANDARD_MWST);
       const nettoEinzel = cent(bruttoEinzel / (1 + satz / 100));
       return {
         owner_user_id: user.id,
@@ -87,7 +91,7 @@ export async function POST(req: Request) {
 
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
       owner_user_id: user.id, auftrag_id: null, kontakt_id: null, firma_id: null,
-      titel, empfaenger_name: b.besteller || null, zahlungsstatus: "offen",
+      titel, empfaenger_name: b.besteller || null, zahlungsstatus: "offen", kleinunternehmer,
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: ZAHLUNGSZIEL_TAGE, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
     }).select("id").single();
