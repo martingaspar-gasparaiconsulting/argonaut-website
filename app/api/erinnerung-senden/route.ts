@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-import { sendeMail, mailLayout } from "@/lib/mail";
+import { sendeMail, kundenMailLayout, absenderBranding } from "@/lib/mail";
 
 export const runtime = "nodejs";
 
 // ============================================================
 // ARGONAUT OS · B-III · "Erinnerung senden" (Mini-Paket 3)
 // Verschickt eine Erinnerung mit Kanal = E-Mail über lib/mail (Resend).
-// Baut aus Titel/Termin/Notiz eine markenkonforme Mail (mailLayout) und
-// setzt die Erinnerung danach auf erledigt + gesendet_am. sendeMail wirft
+// Baut aus Titel/Termin/Notiz eine Mail im Namen DES KUNDEN (kundenMailLayout)
+// und setzt die Erinnerung danach auf erledigt + gesendet_am. sendeMail wirft
 // nie — Fehler werden sauber zurückgegeben (Erinnerung bleibt offen).
 // Voraussetzung: RESEND_API_KEY in Vercel gesetzt (Mail-Infra steht laut Setup).
 // ============================================================
@@ -19,6 +19,10 @@ function fmt(iso: string | null): string {
   const d = s.slice(0, 10).split('-');
   const t = s.length >= 16 ? s.slice(11, 16) : '';
   return d.length === 3 ? `${d[2]}.${d[1]}.${d[0]}${t ? ` ${t} Uhr` : ''}` : s;
+}
+
+function escapeHtml(s: string): string {
+  return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export async function POST(req: Request) {
@@ -41,13 +45,15 @@ export async function POST(req: Request) {
     const name = String(e.kunde_name || '').trim();
     const titel = String(e.titel || 'Erinnerung').trim() || 'Erinnerung';
     const teile: string[] = [];
-    teile.push(`<p>Guten Tag${name ? ` ${name}` : ''},</p>`);
+    teile.push(`<p>Guten Tag${name ? ` ${escapeHtml(name)}` : ''},</p>`);
     teile.push(`<p>dies ist eine freundliche Erinnerung${e.termin_am ? ` an Ihren Termin am <b>${fmt(e.termin_am)}</b>` : ''}.</p>`);
-    if (e.notiz) teile.push(`<p>${String(e.notiz)}</p>`);
+    if (e.notiz) teile.push(`<p>${escapeHtml(String(e.notiz))}</p>`);
     teile.push(`<p>Mit freundlichen Grüßen</p>`);
-    const html = mailLayout(titel, teile.join(''));
 
-    const r = await sendeMail({ an, betreff: titel, html });
+    const brand = await absenderBranding(supabase, user.id);
+    const html = kundenMailLayout(brand.firma, brand.akzent, titel, teile.join(''));
+
+    const r = await sendeMail({ an, betreff: titel, html, absenderName: brand.firma, antwortAn: brand.email });
     if (!r.ok) return NextResponse.json({ error: 'Mailversand fehlgeschlagen: ' + r.fehler }, { status: 502 });
 
     const jetzt = new Date().toISOString();

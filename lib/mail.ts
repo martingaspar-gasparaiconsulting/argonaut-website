@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { Resend } from "resend";
+import { escapeHtml, sichereFarbe } from "@/lib/newsletter";
 
 // ---------------------------------------------------------------------------
 // Konfiguration — zentrale Absender-Identitaet.
@@ -172,6 +173,77 @@ export function mailLayout(titel: string, inhalt: string): string {
       <div style="background:#0F1F33;padding:18px 32px;color:#8FA3BE;font-size:12px;line-height:1.5;">
         Diese E-Mail wurde automatisch von ARGONAUT OS versendet.<br>
         Bei Fragen antworten Sie einfach auf diese E-Mail (${ANTWORT_MAIL}).
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// KUNDEN-Layout (Punkt 29c-Folge) — fuer Mails, die im Namen DES KUNDEN an
+// dessen Kunden gehen (Rechnung, Terminbestaetigung, Erinnerung, Bewertung…).
+// Neutrales Weiss, Firmenname im Kopf, Firmen-Akzentfarbe — KEIN ARGONAUT.
+// `inhalt` ist bereits fertiges HTML (wie bei mailLayout), wird roh eingesetzt.
+// ---------------------------------------------------------------------------
+
+/** Firmen-Branding eines Kontos laden (Absendername/Akzentfarbe/Antwort-Mail).
+ *  `supabase` ist ein beliebiger Client mit .from() (Session ODER Admin). */
+export async function absenderBranding(
+  supabase: any,
+  userId: string,
+): Promise<{ firma: string; akzent: string; email: string | undefined }> {
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("firma_name, firma_email, firma_akzentfarbe, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const p = (data ?? {}) as {
+      firma_name?: string | null;
+      firma_email?: string | null;
+      firma_akzentfarbe?: string | null;
+      full_name?: string | null;
+    };
+    const firma = (p.firma_name || "").trim() || (p.full_name || "").trim() || "Ihr Dienstleister";
+    return {
+      firma,
+      akzent: sichereFarbe(p.firma_akzentfarbe),
+      email: (p.firma_email || "").trim() || undefined,
+    };
+  } catch {
+    return { firma: "Ihr Dienstleister", akzent: sichereFarbe(null), email: undefined };
+  }
+}
+
+/**
+ * Neutrales Kunden-Mail-Layout. `inhalt` = bereits fertiges HTML.
+ * @param firma       Firmenname des Kunden (Kopf + Signatur).
+ * @param akzentfarbe Firmen-Akzentfarbe (Hex, wird abgesichert).
+ * @param titel       Optionale Ueberschrift.
+ * @param inhalt      HTML-Inhalt des Haupttextes.
+ */
+export function kundenMailLayout(
+  firma: string,
+  akzentfarbe: string | null | undefined,
+  titel: string,
+  inhalt: string,
+): string {
+  const f = escapeHtml((firma || "").trim());
+  const a = sichereFarbe(akzentfarbe);
+  const t = escapeHtml((titel || "").trim());
+  return `
+  <div style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+      <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        <div style="padding:24px 28px;border-bottom:3px solid ${a};">
+          <div style="font-size:20px;font-weight:800;color:${a};">${f}</div>
+        </div>
+        <div style="padding:28px;color:#1a2332;font-size:15px;line-height:1.6;">
+          ${t ? `<div style="font-size:18px;font-weight:700;margin:0 0 14px;color:#1a2332;">${t}</div>` : ""}
+          ${inhalt}
+        </div>
+        <div style="padding:16px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
+          ${f}
+        </div>
       </div>
     </div>
   </div>`;

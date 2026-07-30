@@ -4,12 +4,13 @@
 // SICHERHEIT: Lädt den Termin serverseitig mit der Session des Nutzers
 // (RLS -> nur eigene Termine). Nimmt die E-Mail AUS DER DB, nie vom Browser.
 // Setzt bestaetigung_gesendet_am, damit man sieht/steuern kann, was raus ist.
+// Branding: im Namen DES KUNDEN (kundenMailLayout + Firmen-Akzentfarbe).
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -66,10 +67,12 @@ export async function POST(req: NextRequest) {
   const zeitStr = `${beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}–${ende.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
   const anrede = termin.kunde_name ? `Guten Tag ${escapeHtml(termin.kunde_name)},` : 'Guten Tag,';
 
+  const brand = await absenderBranding(supabase, userData.user.id);
+
   const inhalt = `
     <p>${anrede}</p>
     <p>vielen Dank — Ihr Termin ist bestätigt:</p>
-    <div style="background:#F4F1E8;border-left:4px solid #C9A84C;border-radius:8px;padding:16px 20px;margin:16px 0;">
+    <div style="background:#f7f8fa;border-left:4px solid ${brand.akzent};border-radius:8px;padding:16px 20px;margin:16px 0;">
       <div style="font-size:16px;font-weight:700;color:#0A1628;">${escapeHtml(termin.titel ?? 'Termin')}</div>
       <div style="margin-top:6px;color:#1a2332;">${datumStr}</div>
       <div style="color:#1a2332;">${zeitStr}</div>
@@ -77,10 +80,10 @@ export async function POST(req: NextRequest) {
     <p>Sollten Sie den Termin nicht wahrnehmen können, antworten Sie einfach auf diese E-Mail.</p>
     <p>Wir freuen uns auf Sie.</p>`;
 
-  const html = mailLayout('Terminbestätigung', inhalt);
+  const html = kundenMailLayout(brand.firma, brand.akzent, 'Terminbestätigung', inhalt);
   const betreff = `Terminbestätigung: ${termin.titel ?? 'Ihr Termin'} am ${beginn.toLocaleDateString('de-DE')}`;
 
-  const r = await sendeMail({ an: termin.kunde_email, betreff, html });
+  const r = await sendeMail({ an: termin.kunde_email, betreff, html, absenderName: brand.firma, antwortAn: brand.email });
   if (!r.ok) {
     return NextResponse.json({ ok: false, fehler: r.fehler });
   }

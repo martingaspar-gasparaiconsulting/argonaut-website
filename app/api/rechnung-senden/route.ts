@@ -5,12 +5,15 @@
 // über /api/rechnung-e bzw. /api/rechnung-zugferd im Client; diese Route ist
 // bewusst ein reiner, sicherer Mail-Versand: Datei anhängen, abschicken.
 //
+// Branding: Mail geht im Namen DES KUNDEN raus (kundenMailLayout + Firmenname
+// + Firmen-Akzentfarbe), nicht ARGONAUT.
+//
 // Body: { an, betreff?, nachricht?, rechnungsnummer?, dateiname, inhaltBase64, typ }
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 
@@ -55,12 +58,16 @@ export async function POST(req: NextRequest) {
       ${nachricht ? `<p>${escapeHtml(nachricht)}</p>` : ''}
       <p>Bei Fragen antworten Sie einfach auf diese E-Mail.</p>
       <p>Vielen Dank.</p>`;
-    const html = mailLayout('Ihre Rechnung', inhalt);
+
+    const brand = await absenderBranding(supabase, user.id);
+    const html = kundenMailLayout(brand.firma, brand.akzent, 'Ihre Rechnung', inhalt);
 
     const r = await sendeMail({
       an,
       betreff,
       html,
+      absenderName: brand.firma,
+      antwortAn: brand.email,
       anhaenge: [{ dateiname, inhalt: anhangBuffer, typ }],
     });
     if (!r.ok) return NextResponse.json({ error: r.fehler }, { status: 500 });
