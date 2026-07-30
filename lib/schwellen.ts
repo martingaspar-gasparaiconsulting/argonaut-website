@@ -22,5 +22,6 @@ export const SCHWELLEN = {
   ki: {
     rateLimitProMinute: 20,   // max. KI-Aufrufe je Nutzer/Minute (Bot-/Endlosschleifen-Schutz)
     kostenAlarmTagUsd: 5,     // Tages-KI-Kosten je Kunde über diesem Wert -> Alarm im Command Center
+    demoKiProTag: 40,         // (Punkt 28) harte Obergrenze KI-Aufrufe je DEMO-Konto pro Tag (rollende 24 h) — Kosten-Schutz
   },
 } as const;

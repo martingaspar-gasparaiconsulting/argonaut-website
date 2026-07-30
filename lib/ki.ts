@@ -21,6 +21,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { SCHWELLEN } from '@/lib/schwellen'
+import { demoStatus } from '@/lib/demo'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -124,6 +125,50 @@ export async function kiFetch(route: string, options: RequestInit): Promise<Resp
       }
     } catch (e) {
       console.error('[rate-limit] Prüfung fehlgeschlagen (fahre fort):', e)
+    }
+  }
+
+  // --- Demo-Deckelung (Punkt 28): Kosten-Schutz für Demo-Konten -------------
+  // Ein Demo-Konto (profiles.demo=true) darf die KI ZEIGEN, aber nur begrenzt:
+  //   · abgelaufene Demo -> KI serverseitig AUS (zusätzlich zum Client-Read-only-
+  //     Guard aus Punkt 26b; schließt die Lücke, falls jemand die KI-Route direkt
+  //     anspricht statt über die Oberfläche).
+  //   · aktive Demo      -> harte TAGES-Obergrenze SCHWELLEN.ki.demoKiProTag
+  //     (rollende 24 h, gezählt aus ki_nutzung). Darüber kommt eine freundliche
+  //     Meldung STATT eines teuren KI-Aufrufs — der Anthropic-Call unterbleibt.
+  // Kein SQL nötig: profiles.demo/demo_ablauf + ki_nutzung existieren bereits.
+  // Best effort — schlägt die Prüfung fehl, läuft der Aufruf normal weiter
+  // (nie den Kunden aussperren wegen eines DB-Fehlers).
+  if (userId) {
+    try {
+      const admin = createAdminClient()
+      const { data: profil } = await admin.from('profiles')
+        .select('demo, demo_ablauf').eq('id', userId).maybeSingle()
+      const demo = demoStatus(
+        (profil as { demo?: boolean } | null)?.demo,
+        (profil as { demo_ablauf?: string | null } | null)?.demo_ablauf,
+        new Date().toISOString(),
+      )
+      if (demo.istDemo) {
+        if (demo.abgelaufen) {
+          return new Response(
+            JSON.stringify({ error: 'Im abgelaufenen Demo-Modus ist die KI deaktiviert. Für den vollen Zugang vereinbare bitte einen Termin.' }),
+            { status: 403, headers: { 'content-type': 'application/json' } },
+          )
+        }
+        const seitTag = new Date(Date.now() - 86_400_000).toISOString()
+        const { count } = await admin.from('ki_nutzung')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId).gte('created_at', seitTag)
+        if ((count || 0) >= SCHWELLEN.ki.demoKiProTag) {
+          return new Response(
+            JSON.stringify({ error: 'Das KI-Kontingent der Demo ist für heute aufgebraucht. In 24 Stunden geht es weiter — oder sichere dir mit einem Termin den vollen Zugang.' }),
+            { status: 429, headers: { 'content-type': 'application/json' } },
+          )
+        }
+      }
+    } catch (e) {
+      console.error('[demo-deckelung] Prüfung fehlgeschlagen (fahre fort):', e)
     }
   }
 
