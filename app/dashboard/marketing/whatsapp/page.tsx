@@ -51,25 +51,50 @@ export default function WhatsappSeite() {
   const [vBusy, setVBusy] = useState(false);
   const [vMeldung, setVMeldung] = useState<string | null>(null);
 
+  // Versand (P3b)
+  const [aktiveEmpfaenger, setAktiveEmpfaenger] = useState(0);
+  const [sendBusyId, setSendBusyId] = useState<string | null>(null);
+  const [sendMeldung, setSendMeldung] = useState<string | null>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
-      const [rE, rV, rB] = await Promise.all([
+      const [rE, rV, rB, rK] = await Promise.all([
         fetch('/api/marketing/whatsapp-einstellungen'),
         fetch('/api/marketing/whatsapp-vorlagen'),
         fetch('/api/marketing/whatsapp-verbindung'),
+        fetch('/api/marketing/whatsapp-kontakte'),
       ]);
       const jE = await rE.json();
       const jV = await rV.json();
       const jB = await rB.json();
+      const jK = await rK.json();
       if (jE?.ok) { setAnbieter(jE.anbieter || ''); setAbsender(jE.absender || ''); }
       if (jB?.ok) { setVVerbunden(!!jB.verbunden); setVHatToken(!!jB.hatToken); setVPhoneId(jB.meta_phone_number_id || ''); setVEncKey(jB.encKeyBereit !== false); setVToken(''); }
+      if (jK?.ok) { setAktiveEmpfaenger((jK.liste as { status?: string }[]).filter((k) => k?.status === 'aktiv').length); }
       if (!rV.ok || !jV?.ok) { setFehler(jV?.error || 'Laden fehlgeschlagen.'); }
       else { setListe(jV.liste as Vorlage[]); }
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLoading(false); }
   }
   useEffect(() => { laden(); }, []);
+
+  async function sendeVorlage(v: Vorlage) {
+    if (!vVerbunden) { setSendMeldung('Bitte zuerst die Verbindung oben herstellen.'); return; }
+    if (aktiveEmpfaenger === 0) { setSendMeldung('Noch keine aktiven Empfänger — bitte zuerst unter „Empfänger" sammeln.'); return; }
+    if (!confirm(`Vorlage „${v.name}" jetzt an ${aktiveEmpfaenger} aktive Empfänger senden?`)) return;
+    setSendBusyId(v.id); setSendMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/whatsapp-senden', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ vorlage_id: v.id }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setSendMeldung(j?.error || 'Versand fehlgeschlagen.'); }
+      else { setSendMeldung(`✓ Versand gestartet: ${j.gesendet} gesendet${j.fehler ? `, ${j.fehler} fehlgeschlagen` : ''} (von ${j.empfaenger}).`); }
+    } catch { setSendMeldung('Versand fehlgeschlagen.'); }
+    finally { setSendBusyId(null); }
+  }
 
   async function speichereVerbindung() {
     setVBusy(true); setVMeldung(null);
@@ -302,12 +327,24 @@ export default function WhatsappSeite() {
                   <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.1vw, 17px)', whiteSpace: 'pre-wrap' }}>{v.inhalt}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => sendeVorlage(v)}
+                    disabled={sendBusyId === v.id || !vVerbunden}
+                    title={!vVerbunden ? 'Erst Verbindung herstellen' : ''}
+                    style={{ ...btn(C.green), opacity: (sendBusyId === v.id || !vVerbunden) ? 0.5 : 1, cursor: (sendBusyId === v.id || !vVerbunden) ? 'not-allowed' : 'pointer' }}
+                  >
+                    {sendBusyId === v.id ? 'Sende…' : `📤 Senden${vVerbunden ? ` (${aktiveEmpfaenger})` : ''}`}
+                  </button>
                   <button onClick={() => bearbeiten(v)} style={btn(C.gold)}>Bearbeiten</button>
                   <button onClick={() => loeschen(v)} style={btn(C.danger)}>Löschen</button>
                 </div>
               </div>
             ))}
           </div>
+        )}
+
+        {sendMeldung && (
+          <div style={{ marginTop: 14, background: sendMeldung.startsWith('✓') ? 'rgba(76,175,125,0.12)' : 'rgba(224,162,76,0.12)', border: `1px solid ${sendMeldung.startsWith('✓') ? C.green : C.warn}`, borderRadius: 12, padding: '12px 16px', color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{sendMeldung}</div>
         )}
       </div>
 
