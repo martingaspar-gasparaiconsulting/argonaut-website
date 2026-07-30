@@ -153,3 +153,41 @@ export function uhrzeit(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return '';
   return `${zweistellig(d.getHours())}:${zweistellig(d.getMinutes())}`;
 }
+
+/**
+ * Wochenraster Montag–Sonntag der Woche, die refIso enthält (7 Tage).
+ * jetztIso setzt „heute" + Horizont.
+ */
+export function wochenGitter(refIso: string, jetztIso: string): KalenderTag[] {
+  const ref = new Date(refIso);
+  const versatz = (ref.getDay() + 6) % 7; // Mo=0 … So=6
+  const montag = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - versatz);
+  const heuteIso = tagIso(new Date(jetztIso));
+  const refMonat = ref.getMonth();
+  const tage: KalenderTag[] = [];
+  const cursor = new Date(montag);
+  for (let i = 0; i < 7; i++) {
+    const iso = tagIso(cursor);
+    tage.push({
+      iso,
+      tag: cursor.getDate(),
+      imMonat: cursor.getMonth() === refMonat,
+      istHeute: iso === heuteIso,
+      imHorizont: istImHorizont(`${iso}T12:00:00`, jetztIso),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return tage;
+}
+
+/** Einzelner Kalendertag (für die Tagesansicht). */
+export function einTag(iso: string, jetztIso: string): KalenderTag {
+  const d = new Date(`${iso}T12:00:00`);
+  return {
+    iso,
+    tag: d.getDate(),
+    imMonat: true,
+    istHeute: iso === tagIso(new Date(jetztIso)),
+    imHorizont: istImHorizont(`${iso}T12:00:00`, jetztIso),
+  };
+}
