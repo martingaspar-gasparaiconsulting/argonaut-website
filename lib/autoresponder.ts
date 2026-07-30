@@ -99,3 +99,58 @@ export function verzoegerungText(tage: number | null | undefined): string {
   if (t === 1) return 'nach 1 Tag';
   return `nach ${t} Tagen`;
 }
+
+// ---------------------------------------------------------------------------
+// Versand-Motor-Helfer (Paket 2) — weiterhin rein & node-testbar.
+// ---------------------------------------------------------------------------
+
+export type LaufLite = { status?: string | null };
+
+/** Erster aktiver Schritt (in Reihenfolge) oder null. */
+export function ersterAktiverSchritt<T extends SchrittLite>(schritte: T[]): T | null {
+  const s = sortiereSchritte(schritte).filter((x) => x?.aktiv ?? true);
+  return s.length ? s[0] : null;
+}
+
+/**
+ * Aktueller faelliger Schritt fuer einen Lauf: der aktive Schritt mit
+ * position >= naechstePosition (nimmt den naechsten, falls der urspruengliche
+ * inzwischen geloescht/deaktiviert wurde). null = Sequenz durch.
+ */
+export function faelligerSchritt<T extends SchrittLite>(schritte: T[], naechstePosition: number): T | null {
+  const s = sortiereSchritte(schritte).filter(
+    (x) => (x?.aktiv ?? true) && (x?.position ?? 0) >= naechstePosition,
+  );
+  return s.length ? s[0] : null;
+}
+
+/** Naechster aktiver Schritt mit position > nachPosition, sonst null. */
+export function naechsterAktiverSchrittNachPosition<T extends SchrittLite>(
+  schritte: T[],
+  nachPosition: number,
+): T | null {
+  const s = sortiereSchritte(schritte).filter(
+    (x) => (x?.aktiv ?? true) && (x?.position ?? 0) > nachPosition,
+  );
+  return s.length ? s[0] : null;
+}
+
+/** Laeufe zaehlen: gesamt / aktiv / fertig / abgemeldet. */
+export function zaehleLaeufe(liste: LaufLite[]): {
+  gesamt: number;
+  aktiv: number;
+  fertig: number;
+  abgemeldet: number;
+} {
+  const l = liste || [];
+  let aktiv = 0;
+  let fertig = 0;
+  let abgemeldet = 0;
+  for (const x of l) {
+    const st = x?.status ?? 'aktiv';
+    if (st === 'fertig') fertig++;
+    else if (st === 'abgemeldet') abgemeldet++;
+    else if (st === 'aktiv') aktiv++;
+  }
+  return { gesamt: l.length, aktiv, fertig, abgemeldet };
+}

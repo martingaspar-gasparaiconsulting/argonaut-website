@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/demo-aufraeumen",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/autoresponder",
+      "schedule": "0 5 * * *"
     }
   ]
 }

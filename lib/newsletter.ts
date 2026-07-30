@@ -119,3 +119,58 @@ export function newsletterMailHtml(
 </body>
 </html>`;
 }
+
+// ---------------------------------------------------------------------------
+// Autoresponder (Marketing-Autopilot Phase 2) — Mail-Bausteine.
+// Gleiche Optik/Marke wie der Newsletter (Branding DES KUNDEN), nur der
+// Fusstext ist auf die automatische Info-Serie angepasst. §7 UWG: Abmelde-
+// Link ist Pflicht und liegt in JEDER Mail.
+// ---------------------------------------------------------------------------
+
+/** Oeffentlicher Abmelde-Link fuer einen Autoresponder-Lauf. */
+export function autoresponderAbmeldeUrl(origin: string | null | undefined, token: string): string {
+  const base = (origin || 'https://argonaut-os.com').replace(/\/+$/, '');
+  return `${base}/api/autoresponder/abmelden?token=${encodeURIComponent(token || '')}`;
+}
+
+/**
+ * Baut die komplette Autoresponder-Mail im Branding DES KUNDEN.
+ * Wie newsletterMailHtml, aber neutraler Info-Serien-Fusstext.
+ */
+export function autoresponderMailHtml(
+  firmaName: string | null | undefined,
+  betreff: string,
+  inhaltText: string,
+  abmelde: string,
+  akzentfarbe?: string | null,
+): string {
+  const firma = escapeHtml((firmaName || '').trim() || 'Info-Serie');
+  const akzent = sichereFarbe(akzentfarbe);
+  const titel = escapeHtml(betreff);
+  const inhalt = textZuHtml(inhaltText);
+
+  return `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <div style="padding:24px 28px;border-bottom:3px solid ${akzent};">
+        <div style="font-size:20px;font-weight:800;color:${akzent};">${firma}</div>
+      </div>
+      <div style="padding:28px;">
+        ${titel ? `<h1 style="font-size:20px;font-weight:700;margin:0 0 16px;color:#1a2332;">${titel}</h1>` : ''}
+        <div style="font-size:15px;line-height:1.6;color:#1a2332;">${inhalt}</div>
+      </div>
+      <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
+        Du erhältst diese E-Mail als Teil einer automatischen Info-Serie von ${firma}.<br>
+        <a href="${abmelde}" style="color:${akzent};text-decoration:underline;">Keine weiteren E-Mails erhalten</a>.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}

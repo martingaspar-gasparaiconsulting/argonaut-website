@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../../_components/Leerzustand';
 import {
   zaehleSequenzen,
+  zaehleLaeufe,
   sortiereSchritte,
   sequenzInfo,
   naechsteVerzoegerung,
@@ -83,6 +84,14 @@ export default function AutoresponderSeite() {
   const [kTage, setKTage] = useState('0');
   const [schrittBusy, setSchrittBusy] = useState(false);
 
+  // Eintritt (Empfänger in Sequenz aufnehmen)
+  const [laufCounts, setLaufCounts] = useState<Record<string, { gesamt: number; aktiv: number; fertig: number; abgemeldet: number }>>({});
+  const [eintragenSeq, setEintragenSeq] = useState<Sequenz | null>(null);
+  const [eText, setEText] = useState('');
+  const [eAusNewsletter, setEAusNewsletter] = useState(false);
+  const [eBusy, setEBusy] = useState(false);
+  const [eMeldung, setEMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null);
+
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -103,6 +112,16 @@ export default function AutoresponderSeite() {
       .select('*')
       .order('position', { ascending: true });
     setSchritte((schrittD ?? []) as Schritt[]);
+
+    const { data: laufD } = await supabase.from('autoresponder_lauf').select('sequenz_id, status');
+    const proSeq: Record<string, { status: string }[]> = {};
+    for (const r of (laufD ?? []) as { sequenz_id: string; status: string }[]) {
+      (proSeq[r.sequenz_id] ||= []).push({ status: r.status });
+    }
+    const counts: Record<string, { gesamt: number; aktiv: number; fertig: number; abgemeldet: number }> = {};
+    for (const [sid, arr] of Object.entries(proSeq)) counts[sid] = zaehleLaeufe(arr);
+    setLaufCounts(counts);
+
     setLoading(false);
   }
 
@@ -243,6 +262,49 @@ export default function AutoresponderSeite() {
     laden();
   }
 
+  // ---------- Eintritt ----------
+  function eintragenOeffnen(seq: Sequenz) {
+    setEintragenSeq(seq);
+    setEText('');
+    setEAusNewsletter(false);
+    setEMeldung(null);
+  }
+
+  async function eintragenSenden() {
+    if (!eintragenSeq) return;
+    const emails = eText
+      .split(/[\s,;]+/)
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((email) => ({ email }));
+    if (emails.length === 0 && !eAusNewsletter) {
+      setEMeldung({ art: 'fehler', text: 'Bitte E-Mail-Adressen eingeben oder die Newsletter-Liste wählen.' });
+      return;
+    }
+    setEBusy(true);
+    try {
+      const res = await fetch('/api/autoresponder/eintragen', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sequenzId: eintragenSeq.id, emails, ausNewsletter: eAusNewsletter }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.ok) {
+        setEMeldung({ art: 'fehler', text: j?.error || 'Eintragen fehlgeschlagen.' });
+      } else {
+        const ns = j.uebersprungen > 0 ? ` (${j.uebersprungen} übersprungen)` : '';
+        setEMeldung({ art: 'ok', text: `✓ ${j.eingetragen} eingetragen${ns}.` });
+        setEText('');
+        setEAusNewsletter(false);
+        laden();
+      }
+    } catch (e: unknown) {
+      setEMeldung({ art: 'fehler', text: e instanceof Error ? e.message : 'Eintragen fehlgeschlagen.' });
+    } finally {
+      setEBusy(false);
+    }
+  }
+
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
@@ -348,11 +410,20 @@ export default function AutoresponderSeite() {
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.06vw, 17px)', color: C.textDim }}>
                         <span>📧 {info.anzahl} Schritt{info.anzahl === 1 ? '' : 'e'}</span>
                         <span>⏱ Läuft über {info.dauerTage} Tag{info.dauerTage === 1 ? '' : 'e'}</span>
+                        {(laufCounts[seq.id]?.aktiv ?? 0) > 0 && (
+                          <span style={{ color: C.gold, fontWeight: 700 }}>👥 {laufCounts[seq.id].aktiv} aktiv eingetragen</span>
+                        )}
+                        {(laufCounts[seq.id]?.fertig ?? 0) > 0 && (
+                          <span>✅ {laufCounts[seq.id].fertig} durchgelaufen</span>
+                        )}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                       <button onClick={() => setOffen(istOffen ? null : seq.id)} style={btnStyle(C.cyan)}>
                         {istOffen ? 'Zuklappen' : `Schritte (${seqSchritte.length})`}
+                      </button>
+                      <button onClick={() => eintragenOeffnen(seq)} style={btnStyle(C.gold)}>
+                        👥 Empfänger
                       </button>
                       {seq.status !== 'aktiv' ? (
                         <button onClick={() => seqStatus(seq, 'aktiv')} style={btnStyle(C.green)}>Aktiv</button>
@@ -466,6 +537,43 @@ export default function AutoresponderSeite() {
               <button onClick={() => setSchrittDialog(false)} style={btnGhost}>Abbrechen</button>
               <button onClick={schrittSpeichern} disabled={schrittBusy} style={{ ...btnGold, opacity: schrittBusy ? 0.7 : 1, cursor: schrittBusy ? 'wait' : 'pointer' }}>
                 {schrittBusy ? 'Speichere…' : 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Eintragen-Dialog */}
+      {eintragenSeq && (
+        <div style={overlay} onClick={() => setEintragenSeq(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={modal}>
+            <h2 style={modalTitel}>Empfänger eintragen</h2>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.55 }}>
+              Sequenz <strong style={{ color: '#fff' }}>{eintragenSeq.name}</strong>. Die eingetragenen Empfänger
+              durchlaufen die Schritte automatisch. Jeder Empfänger wird nur einmal je Sequenz aufgenommen.
+            </p>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>E-Mail-Adressen (eine pro Zeile oder mit Komma getrennt)</label>
+              <textarea value={eText} onChange={(e) => setEText(e.target.value)} rows={6} placeholder={'maria@beispiel.de\nthomas@beispiel.de'} style={{ ...inputStyle, resize: 'vertical' }} />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 4 }}>
+              <input type="checkbox" checked={eAusNewsletter} onChange={(e) => setEAusNewsletter(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.gold }} />
+              <span style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(14px, 1.19vw, 19px)' }}>
+                Alle aktiven Newsletter-Abonnenten übernehmen
+              </span>
+            </label>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '10px 0 0', fontSize: 'clamp(12px, 1vw, 16px)', lineHeight: 1.5 }}>
+              Tragen Sie nur Empfänger ein, die eingewilligt haben. Jede Mail enthält automatisch einen Abmelde-Link (§7 UWG).
+            </p>
+            {eMeldung && (
+              <p style={{ fontFamily: 'DM Sans, sans-serif', margin: '14px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: eMeldung.art === 'ok' ? C.green : C.danger }}>
+                {eMeldung.text}
+              </p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setEintragenSeq(null)} style={btnGhost}>Schließen</button>
+              <button onClick={eintragenSenden} disabled={eBusy} style={{ ...btnGold, opacity: eBusy ? 0.7 : 1, cursor: eBusy ? 'wait' : 'pointer' }}>
+                {eBusy ? 'Trage ein…' : 'Eintragen'}
               </button>
             </div>
           </div>
