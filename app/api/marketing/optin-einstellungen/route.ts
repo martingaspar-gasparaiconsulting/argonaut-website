@@ -35,7 +35,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data } = await admin
     .from('profiles')
-    .select('optin_slug, optin_aktiv, optin_titel, optin_text')
+    .select('optin_slug, optin_aktiv, optin_titel, optin_text, optin_sequenz_id')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -44,6 +44,7 @@ export async function GET() {
     optin_aktiv?: boolean | null;
     optin_titel?: string | null;
     optin_text?: string | null;
+    optin_sequenz_id?: string | null;
   };
   return NextResponse.json({
     ok: true,
@@ -51,6 +52,7 @@ export async function GET() {
     optin_aktiv: !!p.optin_aktiv,
     optin_titel: p.optin_titel ?? '',
     optin_text: p.optin_text ?? '',
+    optin_sequenz_id: p.optin_sequenz_id ?? '',
   });
 }
 
@@ -68,6 +70,7 @@ export async function POST(req: Request) {
   const aktiv = body.optin_aktiv === true || body.optin_aktiv === 'true';
   const titel = (body.optin_titel || '').toString().trim().slice(0, 120) || null;
   const text = (body.optin_text || '').toString().trim().slice(0, 600) || null;
+  const sequenzId = (body.optin_sequenz_id || '').toString().trim() || null;
 
   if (aktiv && slug.length < 3) {
     return NextResponse.json(
@@ -84,6 +87,7 @@ export async function POST(req: Request) {
       optin_aktiv: aktiv,
       optin_titel: titel,
       optin_text: text,
+      optin_sequenz_id: sequenzId,
     })
     .eq('id', user.id);
 
@@ -94,5 +98,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Speichern fehlgeschlagen.' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, optin_slug: slug, optin_aktiv: aktiv, optin_titel: titel ?? '', optin_text: text ?? '' });
+  return NextResponse.json({ ok: true, optin_slug: slug, optin_aktiv: aktiv, optin_titel: titel ?? '', optin_text: text ?? '', optin_sequenz_id: sequenzId ?? '' });
 }

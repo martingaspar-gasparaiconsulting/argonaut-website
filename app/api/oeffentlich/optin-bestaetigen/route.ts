@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
+import { ersterAktiverSchritt, naechsterVersandAm } from '@/lib/autoresponder';
+import { verschickeFaellige, type LaufRow } from '@/lib/autoresponderVersand';
 
 // ============================================================================
 // ARGONAUT OS · app/api/oeffentlich/optin-bestaetigen/route.ts  (Paket 2b)
@@ -12,6 +14,8 @@ import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
 
 function seite(firma: string, akzent: string, titel: string, text: string): Response {
   const f = escapeHtml(firma);
@@ -51,11 +55,11 @@ export async function GET(req: Request) {
 
     const { data: gefunden } = await admin
       .from('newsletter_abonnenten')
-      .select('id, status, owner_user_id')
+      .select('id, status, owner_user_id, email, name')
       .eq('bestaetigt_token', token)
       .maybeSingle();
 
-    const ab = gefunden as { id: string; status: string; owner_user_id: string | null } | null;
+    const ab = gefunden as { id: string; status: string; owner_user_id: string | null; email: string; name: string | null } | null;
 
     // Branding des Betriebs fuer die Seite laden (falls vorhanden).
     let firma = 'Newsletter';
@@ -82,6 +86,66 @@ export async function GET(req: Request) {
       .from('newsletter_abonnenten')
       .update({ status: 'aktiv', bestaetigt_am: new Date().toISOString() })
       .eq('id', ab.id);
+
+    // Verzahnung (Paket 2c): Ist beim Betrieb eine Willkommens-Sequenz
+    // hinterlegt (optin_sequenz_id) und aktiv, tritt der frisch bestaetigte
+    // Kontakt automatisch ein — der Tag-0-Schritt geht sofort raus.
+    try {
+      if (ab.owner_user_id) {
+        const { data: prof } = await admin
+          .from('profiles')
+          .select('optin_sequenz_id')
+          .eq('id', ab.owner_user_id)
+          .maybeSingle();
+        const seqId = (prof as { optin_sequenz_id?: string | null } | null)?.optin_sequenz_id || null;
+        if (seqId) {
+          const { data: seq } = await admin
+            .from('autoresponder_sequenz')
+            .select('id, status')
+            .eq('id', seqId)
+            .maybeSingle();
+          if (seq && (seq as { status: string }).status === 'aktiv') {
+            const { data: schritte } = await admin
+              .from('autoresponder_schritt')
+              .select('position, verzoegerung_tage, aktiv')
+              .eq('sequenz_id', seqId);
+            const erster = ersterAktiverSchritt(
+              (schritte ?? []) as { position: number; verzoegerung_tage: number; aktiv: boolean }[],
+            );
+            if (erster) {
+              const { data: schon } = await admin
+                .from('autoresponder_lauf')
+                .select('id')
+                .eq('sequenz_id', seqId)
+                .eq('email', ab.email)
+                .maybeSingle();
+              if (!schon) {
+                const jetzt = new Date().toISOString();
+                const { data: neu } = await admin
+                  .from('autoresponder_lauf')
+                  .insert({
+                    owner_user_id: ab.owner_user_id,
+                    sequenz_id: seqId,
+                    email: ab.email,
+                    name: ab.name,
+                    naechste_position: erster.position ?? 1,
+                    naechster_versand_am: naechsterVersandAm(jetzt, erster.verzoegerung_tage ?? 0),
+                    gestartet_am: jetzt,
+                    status: 'aktiv',
+                  })
+                  .select('id, owner_user_id, sequenz_id, email, name, abmelde_token, naechste_position, gestartet_am')
+                  .single();
+                if (neu && Math.round(erster.verzoegerung_tage ?? 0) === 0) {
+                  await verschickeFaellige(admin, [neu as LaufRow], BASIS_URL);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Opt-in Sequenz-Eintritt fehlgeschlagen', e instanceof Error ? e.message : e);
+    }
 
     return seite(
       firma,

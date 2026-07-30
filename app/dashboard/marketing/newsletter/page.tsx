@@ -79,6 +79,8 @@ export default function NewsletterAbonnenten() {
   const [oBusy, setOBusy] = useState(false);
   const [oMeldung, setOMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null);
   const [oKopiert, setOKopiert] = useState(false);
+  const [oSequenzId, setOSequenzId] = useState('');
+  const [oSequenzen, setOSequenzen] = useState<{ id: string; name: string; status: string }[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -90,10 +92,16 @@ export default function NewsletterAbonnenten() {
           setOAktiv(!!j.optin_aktiv);
           setOTitel(j.optin_titel || '');
           setOText(j.optin_text || '');
+          setOSequenzId(j.optin_sequenz_id || '');
         }
       } catch {
         /* optionale Sektion */
       }
+      const { data: seqD } = await supabase
+        .from('autoresponder_sequenz')
+        .select('id, name, status')
+        .order('created_at', { ascending: false });
+      setOSequenzen((seqD ?? []) as { id: string; name: string; status: string }[]);
     })();
   }, []);
 
@@ -106,7 +114,7 @@ export default function NewsletterAbonnenten() {
       const res = await fetch('/api/marketing/optin-einstellungen', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ optin_slug: oSlug, optin_aktiv: oAktiv, optin_titel: oTitel, optin_text: oText }),
+        body: JSON.stringify({ optin_slug: oSlug, optin_aktiv: oAktiv, optin_titel: oTitel, optin_text: oText, optin_sequenz_id: oSequenzId }),
       });
       const j = await res.json();
       if (!res.ok || !j?.ok) {
@@ -114,6 +122,7 @@ export default function NewsletterAbonnenten() {
       } else {
         setOSlug(j.optin_slug || '');
         setOAktiv(!!j.optin_aktiv);
+        setOSequenzId(j.optin_sequenz_id || '');
         setOMeldung({ art: 'ok', text: '✓ Gespeichert.' });
       }
     } catch {
@@ -321,6 +330,21 @@ export default function NewsletterAbonnenten() {
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Kurzer Einleitungstext</label>
             <textarea value={oText} onChange={(e) => setOText(e.target.value)} rows={3} placeholder="z. B. Aktionen, Neuigkeiten und Tipps — direkt in Ihr Postfach." style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Nach Bestätigung automatisch starten (optional)</label>
+            <select value={oSequenzId} onChange={(e) => setOSequenzId(e.target.value)} style={inputStyle}>
+              <option value="">— keine Sequenz —</option>
+              {oSequenzen.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.status !== 'aktiv' ? ' (nicht aktiv)' : ''}
+                </option>
+              ))}
+            </select>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(12px, 1vw, 15px)' }}>
+              Bestätigte Kontakte treten dann automatisch in diese Autoresponder-Sequenz ein (Willkommensserie). Die Sequenz muss auf „Aktiv“ stehen.
+            </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
