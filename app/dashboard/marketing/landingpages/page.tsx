@@ -23,6 +23,9 @@ type Lp = {
   id: string; slug: string; typ: string; titel: string; untertitel: string | null;
   nutzen: string[] | null; cta_text: string | null;
   hero_bild_url: string | null; video_url: string | null;
+  ab_aktiv: boolean | null;
+  titel_b: string | null; untertitel_b: string | null; nutzen_b: string[] | null;
+  cta_text_b: string | null; hero_bild_b_url: string | null;
   aktiv: boolean; created_at: string;
 };
 
@@ -52,6 +55,17 @@ export default function LandingpagesSeite() {
   const [vorschlagBusy, setVorschlagBusy] = useState(false);
   const dateiRef = useRef<HTMLInputElement>(null);
 
+  // A-B: Variante B
+  const [eAbAktiv, setEAbAktiv] = useState(false);
+  const [eTitelB, setETitelB] = useState('');
+  const [eUnterB, setEUnterB] = useState('');
+  const [eNutzenB, setENutzenB] = useState('');
+  const [eCtaB, setECtaB] = useState('');
+  const [eHeroB, setEHeroB] = useState('');
+  const [bildBBusy, setBildBBusy] = useState(false);
+  const [dragOverB, setDragOverB] = useState(false);
+  const dateiRefB = useRef<HTMLInputElement>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
@@ -76,6 +90,8 @@ export default function LandingpagesSeite() {
     setECta(v.cta_text);
     setEHeroBild('');
     setEVideo('');
+    setEAbAktiv(false);
+    setETitelB(''); setEUnterB(''); setENutzenB(''); setECtaB(''); setEHeroB('');
     setEKategorie('');
     setEMeldung(null);
     setPickerOffen(false);
@@ -92,6 +108,12 @@ export default function LandingpagesSeite() {
     setECta(lp.cta_text ?? '');
     setEHeroBild(lp.hero_bild_url ?? '');
     setEVideo(lp.video_url ?? '');
+    setEAbAktiv(lp.ab_aktiv === true);
+    setETitelB(lp.titel_b ?? '');
+    setEUnterB(lp.untertitel_b ?? '');
+    setENutzenB((lp.nutzen_b ?? []).join('\n'));
+    setECtaB(lp.cta_text_b ?? '');
+    setEHeroB(lp.hero_bild_b_url ?? '');
     setEKategorie('');
     setEMeldung(null);
     setEditOffen(true);
@@ -112,27 +134,41 @@ export default function LandingpagesSeite() {
     finally { setVorschlagBusy(false); }
   }
 
-  async function bildHochladen(file: File | null | undefined) {
+  async function bildHochladen(file: File | null | undefined, ziel: 'A' | 'B') {
     if (!file) return;
     if (!istErlaubtesBild(file.type)) { setEMeldung('Nur Bilder erlaubt (JPG, PNG, WebP oder GIF).'); return; }
     if (file.size > MEDIEN_MAX_MB * 1024 * 1024) { setEMeldung(`Das Bild ist zu groß (max. ${MEDIEN_MAX_MB} MB).`); return; }
-    setBildBusy(true); setEMeldung(null);
+    const setBusy = ziel === 'B' ? setBildBBusy : setBildBusy;
+    const setUrl = ziel === 'B' ? setEHeroB : setEHeroBild;
+    setBusy(true); setEMeldung(null);
     try {
       const fd = new FormData();
       fd.append('datei', file);
       const res = await fetch('/api/marketing/lp-medien', { method: 'POST', body: fd });
       const j = await res.json();
       if (!res.ok || !j?.ok) { setEMeldung(j?.error || 'Upload fehlgeschlagen.'); }
-      else { setEHeroBild(j.url as string); }
+      else { setUrl(j.url as string); }
     } catch { setEMeldung('Upload fehlgeschlagen.'); }
-    finally { setBildBusy(false); }
+    finally { setBusy(false); }
   }
 
-  function aufDrop(e: React.DragEvent<HTMLDivElement>) {
+  function aufDrop(e: React.DragEvent<HTMLDivElement>, ziel: 'A' | 'B') {
     e.preventDefault();
-    setDragOver(false);
+    (ziel === 'B' ? setDragOverB : setDragOver)(false);
     const file = e.dataTransfer?.files?.[0];
-    if (file) bildHochladen(file);
+    if (file) bildHochladen(file, ziel);
+  }
+
+  function abEinschalten(an: boolean) {
+    setEAbAktiv(an);
+    // Beim Aktivieren Variante B aus A vorbefuellen, falls noch leer (Startpunkt zum Anpassen).
+    if (an && !eTitelB && !eUnterB && !eNutzenB && !eCtaB && !eHeroB) {
+      setETitelB(eTitel);
+      setEUnterB(eUnter);
+      setENutzenB(eNutzen);
+      setECtaB(eCta);
+      setEHeroB(eHeroBild);
+    }
   }
 
   async function speichern(aktiv: boolean) {
@@ -145,6 +181,9 @@ export default function LandingpagesSeite() {
           id: editId, typ: eTyp, slug: eSlug, titel: eTitel.trim(),
           untertitel: eUnter.trim(), nutzen: nutzenAusText(eNutzen), cta_text: eCta.trim(),
           hero_bild_url: eHeroBild.trim(), video_url: eVideo.trim(), aktiv,
+          ab_aktiv: eAbAktiv,
+          titel_b: eTitelB.trim(), untertitel_b: eUnterB.trim(), nutzen_b: nutzenAusText(eNutzenB),
+          cta_text_b: eCtaB.trim(), hero_bild_b_url: eHeroB.trim(),
         }),
       });
       const j = await res.json();
@@ -161,6 +200,9 @@ export default function LandingpagesSeite() {
         id: lp.id, typ: lp.typ, slug: lp.slug, titel: lp.titel,
         untertitel: lp.untertitel ?? '', nutzen: lp.nutzen ?? [], cta_text: lp.cta_text ?? '',
         hero_bild_url: lp.hero_bild_url ?? '', video_url: lp.video_url ?? '', aktiv,
+        ab_aktiv: lp.ab_aktiv === true,
+        titel_b: lp.titel_b ?? '', untertitel_b: lp.untertitel_b ?? '', nutzen_b: lp.nutzen_b ?? [],
+        cta_text_b: lp.cta_text_b ?? '', hero_bild_b_url: lp.hero_bild_b_url ?? '',
       }),
     });
     const j = await res.json();
@@ -258,6 +300,7 @@ export default function LandingpagesSeite() {
                       <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: lp.aktiv ? C.green : C.textDim, border: `1px solid ${lp.aktiv ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 10px' }}>{lp.aktiv ? 'Live' : 'Entwurf'}</span>
                       <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '1px 8px' }}>{vorlageFuer(lp.typ).icon} {vorlageFuer(lp.typ).name}</span>
                       {lp.video_url && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px' }}>▶ Video</span>}
+                      {lp.ab_aktiv && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '1px 8px' }}>🧪 A/B</span>}
                     </div>
                     <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.cyan, fontSize: 'clamp(13px, 1.06vw, 17px)', wordBreak: 'break-all' }}>argonaut-os.com/lp/{lp.slug}</div>
                   </div>
@@ -357,7 +400,7 @@ export default function LandingpagesSeite() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
                 style={{ display: 'none' }}
-                onChange={(e) => { bildHochladen(e.target.files?.[0]); e.target.value = ''; }}
+                onChange={(e) => { bildHochladen(e.target.files?.[0], 'A'); e.target.value = ''; }}
               />
               {eHeroBild ? (
                 <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -373,7 +416,7 @@ export default function LandingpagesSeite() {
                   onClick={() => !bildBusy && dateiRef.current?.click()}
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
-                  onDrop={aufDrop}
+                  onDrop={(e) => aufDrop(e, 'A')}
                   style={{
                     border: `2px dashed ${dragOver ? C.cyan : 'rgba(255,255,255,0.25)'}`,
                     background: dragOver ? 'rgba(0,229,255,0.06)' : 'transparent',
@@ -395,6 +438,79 @@ export default function LandingpagesSeite() {
               <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
                 Tipp: Bei echten Videos einen YouTube- oder Vimeo-Link verwenden — das lädt schneller und spart Speicher.
               </p>
+            </div>
+
+            {/* A-B-Test (Variante B) */}
+            <div style={{ marginBottom: 14, background: '#0F1F33', border: `1px solid ${eAbAktiv ? C.gold : 'rgba(255,255,255,0.12)'}`, borderRadius: 10, padding: '14px 16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
+                <input type="checkbox" checked={eAbAktiv} onChange={(e) => abEinschalten(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.gold }} />
+                <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: '#fff', fontWeight: 700, fontSize: 'clamp(14px, 1.2vw, 18px)' }}>🧪 A/B-Test — zweite Version testen</span>
+              </label>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '8px 0 0', fontSize: 'clamp(12px, 1vw, 15px)' }}>
+                Besucher werden automatisch 50/50 auf Version A (oben) und Version B aufgeteilt. In der Auswertung sehen Sie, welche besser läuft. Link, Impressum und Datenschutz bleiben identisch.
+              </p>
+
+              {eAbAktiv && (
+                <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 14 }}>
+                  <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C.gold, fontWeight: 700, marginBottom: 12, fontSize: 'clamp(14px, 1.2vw, 18px)' }}>Variante B</div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={lbl}>Überschrift (B)</label>
+                    <input value={eTitelB} onChange={(e) => setETitelB(e.target.value)} style={input} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={lbl}>Untertitel (B)</label>
+                    <input value={eUnterB} onChange={(e) => setEUnterB(e.target.value)} style={input} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={lbl}>Nutzen-Punkte (B) — eine Zeile = ein Punkt</label>
+                    <textarea value={eNutzenB} onChange={(e) => setENutzenB(e.target.value)} rows={4} style={{ ...input, resize: 'vertical' }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={lbl}>Knopf-Text / CTA (B)</label>
+                    <input value={eCtaB} onChange={(e) => setECtaB(e.target.value)} placeholder="Jetzt anmelden" style={input} />
+                  </div>
+
+                  <label style={lbl}>Hero-Bild (B)</label>
+                  <input
+                    ref={dateiRefB}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    style={{ display: 'none' }}
+                    onChange={(e) => { bildHochladen(e.target.files?.[0], 'B'); e.target.value = ''; }}
+                  />
+                  {eHeroB ? (
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={eHeroB} alt="Vorschau B" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)' }} />
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button onClick={() => dateiRefB.current?.click()} disabled={bildBBusy} style={btn(C.cyan)}>{bildBBusy ? 'Lädt…' : 'Anderes Bild'}</button>
+                        <button onClick={() => setEHeroB('')} disabled={bildBBusy} style={btn(C.danger)}>Entfernen</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => !bildBBusy && dateiRefB.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverB(true); }}
+                      onDragLeave={() => setDragOverB(false)}
+                      onDrop={(e) => aufDrop(e, 'B')}
+                      style={{
+                        border: `2px dashed ${dragOverB ? C.cyan : 'rgba(255,255,255,0.25)'}`,
+                        background: dragOverB ? 'rgba(0,229,255,0.06)' : 'transparent',
+                        borderRadius: 10, padding: '18px 16px', textAlign: 'center', cursor: bildBBusy ? 'wait' : 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', color: C.textDim,
+                      }}
+                    >
+                      <div style={{ fontSize: 24, marginBottom: 6 }}>🖼️</div>
+                      <div style={{ fontSize: 'clamp(13px, 1.13vw, 17px)', color: '#fff' }}>{bildBBusy ? 'Bild wird hochgeladen…' : 'Bild für Version B hierher ziehen oder klicken'}</div>
+                      <div style={{ fontSize: 'clamp(11px, 1vw, 14px)', marginTop: 4 }}>Leer lassen = Version B nutzt dasselbe Bild wie A.</div>
+                    </div>
+                  )}
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '10px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+                    Leere Felder in Version B übernehmen automatisch den Inhalt von Version A.
+                  </p>
+                </div>
+              )}
             </div>
 
             {eMeldung && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.danger, margin: '0 0 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{eMeldung}</p>}

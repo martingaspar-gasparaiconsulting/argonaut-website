@@ -34,7 +34,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('landingpages')
-    .select('id, slug, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv, created_at')
+    .select('id, slug, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv, ab_aktiv, titel_b, untertitel_b, nutzen_b, cta_text_b, hero_bild_b_url, created_at')
     .eq('owner_user_id', uid)
     .order('created_at', { ascending: false });
   const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', uid).maybeSingle();
@@ -66,6 +66,16 @@ export async function POST(req: Request) {
     ? (body.nutzen as unknown[]).map((n) => String(n).trim()).filter(Boolean).slice(0, 12)
     : [];
 
+  // A-B: Variante B (optional). Aktiv nur, wenn ab_aktiv gesetzt ist.
+  const ab_aktiv = body.ab_aktiv === true || body.ab_aktiv === 'true';
+  const titel_b = (body.titel_b || '').toString().trim().slice(0, 140) || null;
+  const untertitel_b = (body.untertitel_b || '').toString().trim().slice(0, 300) || null;
+  const cta_text_b = (body.cta_text_b || '').toString().trim().slice(0, 60) || null;
+  const hero_bild_b_url = sichereMedienUrl(body.hero_bild_b_url) || null;
+  const nutzen_b = Array.isArray(body.nutzen_b)
+    ? (body.nutzen_b as unknown[]).map((n) => String(n).trim()).filter(Boolean).slice(0, 12)
+    : [];
+
   if (!titel) return NextResponse.json({ ok: false, error: 'Bitte eine Überschrift eingeben.' }, { status: 400 });
   if (slug.length < 3) return NextResponse.json({ ok: false, error: 'Bitte einen Link-Namen mit mindestens 3 Zeichen vergeben.' }, { status: 400 });
 
@@ -83,7 +93,10 @@ export async function POST(req: Request) {
     }
   }
 
-  const felder = { slug, typ, titel, untertitel, cta_text, nutzen, hero_bild_url, video_url, aktiv };
+  const felder = {
+    slug, typ, titel, untertitel, cta_text, nutzen, hero_bild_url, video_url, aktiv,
+    ab_aktiv, titel_b, untertitel_b, cta_text_b, hero_bild_b_url, nutzen_b,
+  };
 
   let error;
   let neuId = id;

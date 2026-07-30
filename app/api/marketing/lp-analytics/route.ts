@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { funnelJeLandingpage, funnelGesamt, tagesreihe } from '@/lib/lpAnalytics';
+import { funnelJeLandingpage, funnelGesamt, tagesreihe, funnelJeVariante, abSieger } from '@/lib/lpAnalytics';
 
 // ============================================================================
-// ARGONAUT OS · app/api/marketing/lp-analytics/route.ts  (Funnel-Analytics P1)
+// ARGONAUT OS · app/api/marketing/lp-analytics/route.ts  (Funnel P1/P2 + A-B)
 //
 // GET -> Funnel je Landingpage (Aufrufe -> Anmeldungen -> Bestaetigt) + Quoten
-//        + Gesamt-Uebersicht. Nur eingeloggte Betriebe, hart auf eigene Daten
-//        beschraenkt (owner_user_id = user.id).
+//        + Gesamt-Uebersicht + 30-Tage-Verlauf. Fuer A-B-aktive Landingpages
+//        zusaetzlich der Vergleich A gegen B (+ Sieger). Nur eingeloggte
+//        Betriebe, hart auf eigene Daten beschraenkt (owner_user_id = user.id).
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -28,16 +29,16 @@ export async function GET() {
 
   const { data: lpData } = await admin
     .from('landingpages')
-    .select('id, slug, titel, aktiv, created_at')
+    .select('id, slug, titel, aktiv, ab_aktiv, created_at')
     .eq('owner_user_id', uid)
     .order('created_at', { ascending: false });
-  const landingpages = (lpData ?? []) as { id: string; slug: string; titel: string; aktiv: boolean; created_at: string }[];
+  const landingpages = (lpData ?? []) as { id: string; slug: string; titel: string; aktiv: boolean; ab_aktiv: boolean | null; created_at: string }[];
 
   const { data: evData } = await admin
     .from('lp_ereignisse')
-    .select('landingpage_id, typ, created_at')
+    .select('landingpage_id, typ, variante, created_at')
     .eq('owner_user_id', uid);
-  const ereignisse = (evData ?? []) as { landingpage_id: string | null; typ: string | null; created_at: string | null }[];
+  const ereignisse = (evData ?? []) as { landingpage_id: string | null; typ: string | null; variante: string | null; created_at: string | null }[];
 
   const funnels = funnelJeLandingpage(ereignisse, landingpages.map((l) => l.id));
   const funnelMap = new Map(funnels.map((f) => [f.landingpage_id, f]));
@@ -45,16 +46,28 @@ export async function GET() {
   const zeilen = landingpages
     .map((l) => {
       const f = funnelMap.get(l.id)!;
+      let ab: {
+        A: ReturnType<typeof funnelJeVariante>['A'];
+        B: ReturnType<typeof funnelJeVariante>['B'];
+        sieger: ReturnType<typeof abSieger>;
+      } | null = null;
+      if (l.ab_aktiv) {
+        const nurLp = ereignisse.filter((e) => e.landingpage_id === l.id);
+        const v = funnelJeVariante(nurLp);
+        ab = { A: v.A, B: v.B, sieger: abSieger(v.A, v.B) };
+      }
       return {
         landingpage_id: l.id,
         slug: l.slug,
         titel: l.titel,
         aktiv: l.aktiv,
+        ab_aktiv: l.ab_aktiv === true,
         aufrufe: f.aufrufe,
         anmeldungen: f.anmeldungen,
         bestaetigungen: f.bestaetigungen,
         quoteAnmeldung: f.quoteAnmeldung,
         quoteBestaetigung: f.quoteBestaetigung,
+        ab,
       };
     })
     .sort((a, b) => (b.aufrufe - a.aufrufe) || (b.anmeldungen - a.anmeldungen));

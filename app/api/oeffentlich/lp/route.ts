@@ -4,25 +4,27 @@ import { randomUUID } from 'crypto';
 import { sendeMail, absenderBranding } from '@/lib/mail';
 import { emailNormalisieren, istEmailGueltig, optinBestaetigenUrl, optinBestaetigungHtml } from '@/lib/newsletter';
 import { protokolliereLpEreignis } from '@/lib/lpEreignis';
+import { waehleVariante, inhaltFuerVariante, type Variante } from '@/lib/landingpages';
 
 // ============================================================================
-// ARGONAUT OS · app/api/oeffentlich/lp/route.ts  (LP Paket 1 + Funnel Paket 1)
+// ARGONAUT OS · app/api/oeffentlich/lp/route.ts  (LP P1 + Funnel P1 + A-B-Tests)
 //
 // ÖFFENTLICH (kein Login). Versorgt eine Landingpage /lp/<slug>:
-//   GET  ?slug=..  -> Inhalt + Branding + Impressumsdaten des Betriebs
-//                     (+ zaehlt einen Funnel-'aufruf')
-//   POST { slug, email, name? } -> Double-Opt-In-Anmeldung (wie /anmelden):
-//        Abonnent status='unbestaetigt' + Bestaetigungsmail (+ Funnel-'anmeldung'
-//        + landingpage_id am Abonnenten fuer die spaetere 'bestaetigung'-Zuordnung).
+//   GET  ?slug=..  -> Inhalt (je Variante) + Branding + Impressum
+//                     (+ Funnel-'aufruf' mit variante; setzt Varianten-Cookie)
+//   POST { slug, email, name? } -> Double-Opt-In-Anmeldung (+ Funnel-'anmeldung'
+//        mit variante; landingpage_id + variante am Abonnenten fuer die spaetere
+//        'bestaetigung'-Zuordnung).
 //
-// Betrieb wird ueber landingpages.slug ermittelt; die Seite muss aktiv sein.
-// Service-Role umgeht RLS -> owner_user_id wird explizit gesetzt.
+// A-B: Ist ab_aktiv, wird der Besucher 50/50 auf A/B verteilt und per Cookie
+// (lpv_<lpId>) stabil gehalten. Der Cookie ist Grundlage der Zuordnung im POST.
 // ============================================================================
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
+const COOKIE_TAGE = 60 * 60 * 24 * 30;
 
 function admin() {
   return createClient(
@@ -32,10 +34,24 @@ function admin() {
   );
 }
 
+/** Liest die gesetzte Variante ('A'|'B') aus dem Cookie lpv_<lpId>. */
+function varianteAusCookie(req: Request, lpId: string): Variante | null {
+  const roh = req.headers.get('cookie') || '';
+  const name = `lpv_${lpId}=`;
+  for (const teil of roh.split(';')) {
+    const t = teil.trim();
+    if (t.startsWith(name)) {
+      const w = t.slice(name.length);
+      return w === 'A' || w === 'B' ? w : null;
+    }
+  }
+  return null;
+}
+
 async function lpAusSlug(db: ReturnType<typeof admin>, slug: string) {
   const { data } = await db
     .from('landingpages')
-    .select('id, owner_user_id, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv')
+    .select('id, owner_user_id, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv, ab_aktiv, titel_b, untertitel_b, nutzen_b, cta_text_b, hero_bild_b_url')
     .eq('slug', slug)
     .maybeSingle();
   if (!data || (data as { aktiv?: boolean }).aktiv !== true) return null;
@@ -49,6 +65,12 @@ async function lpAusSlug(db: ReturnType<typeof admin>, slug: string) {
     cta_text: string | null;
     hero_bild_url: string | null;
     video_url: string | null;
+    ab_aktiv: boolean | null;
+    titel_b: string | null;
+    untertitel_b: string | null;
+    nutzen_b: string[] | null;
+    cta_text_b: string | null;
+    hero_bild_b_url: string | null;
   };
 }
 
@@ -60,8 +82,14 @@ export async function GET(req: Request) {
     const lp = await lpAusSlug(db, slug);
     if (!lp) return NextResponse.json({ error: 'Diese Seite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
-    // Funnel: Seitenaufruf zaehlen (nicht-blockierend, Fehler geschluckt).
-    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf');
+    // A-B: Variante bestimmen (Cookie-stabil, sonst 50/50).
+    const variante: Variante | null = lp.ab_aktiv
+      ? waehleVariante(varianteAusCookie(req, lp.id), Math.random())
+      : null;
+    const inhalt = inhaltFuerVariante(lp, variante);
+
+    // Funnel: Seitenaufruf zaehlen (nicht-blockierend, mit variante).
+    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf', variante);
 
     const { data: prof } = await db
       .from('profiles')
@@ -70,14 +98,15 @@ export async function GET(req: Request) {
       .maybeSingle();
     const p = (prof ?? {}) as Record<string, string | null>;
 
-    return NextResponse.json({
-      titel: lp.titel,
-      untertitel: lp.untertitel,
-      nutzen: Array.isArray(lp.nutzen) ? lp.nutzen : [],
-      cta_text: lp.cta_text,
+    const res = NextResponse.json({
+      titel: inhalt.titel,
+      untertitel: inhalt.untertitel,
+      nutzen: inhalt.nutzen,
+      cta_text: inhalt.cta_text,
       typ: lp.typ,
-      hero_bild_url: lp.hero_bild_url,
+      hero_bild_url: inhalt.hero_bild_url,
       video_url: lp.video_url,
+      variante,
       betrieb: (p.firma_name || '').trim() || 'Angebot',
       akzent: p.firma_akzentfarbe,
       impressum: {
@@ -96,6 +125,11 @@ export async function GET(req: Request) {
         steuernummer: p.firma_steuernummer || '',
       },
     });
+
+    if (variante) {
+      res.cookies.set(`lpv_${lp.id}`, variante, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: COOKIE_TAGE });
+    }
+    return res;
   } catch {
     return NextResponse.json({ error: 'Seite konnte nicht geladen werden.' }, { status: 500 });
   }
@@ -114,6 +148,9 @@ export async function POST(req: Request) {
     const lp = await lpAusSlug(db, slug);
     if (!lp) return NextResponse.json({ ok: false, error: 'Diese Seite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
+    // A-B: die Variante, die dieser Besucher gesehen hat (aus dem Cookie).
+    const variante: Variante | null = lp.ab_aktiv ? varianteAusCookie(req, lp.id) : null;
+
     const { data: vorhanden } = await db
       .from('newsletter_abonnenten')
       .select('id, status')
@@ -127,7 +164,7 @@ export async function POST(req: Request) {
     if (v) {
       await db
         .from('newsletter_abonnenten')
-        .update({ status: 'unbestaetigt', bestaetigt_token: token, bestaetigt_am: null, name, landingpage_id: lp.id })
+        .update({ status: 'unbestaetigt', bestaetigt_token: token, bestaetigt_am: null, name, landingpage_id: lp.id, variante })
         .eq('id', v.id);
     } else {
       await db.from('newsletter_abonnenten').insert({
@@ -138,6 +175,7 @@ export async function POST(req: Request) {
         quelle: 'landingpage',
         bestaetigt_token: token,
         landingpage_id: lp.id,
+        variante,
       });
     }
 
@@ -151,8 +189,8 @@ export async function POST(req: Request) {
       antwortAn: brand.email,
     });
 
-    // Funnel: Anmeldung (Opt-in gestartet) zaehlen (nicht-blockierend).
-    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'anmeldung');
+    // Funnel: Anmeldung (Opt-in gestartet) zaehlen (nicht-blockierend, mit variante).
+    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'anmeldung', variante);
 
     return NextResponse.json({ ok: true, status: 'bestaetigung_gesendet' });
   } catch (e: unknown) {

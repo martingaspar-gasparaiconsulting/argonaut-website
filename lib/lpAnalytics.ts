@@ -133,3 +133,83 @@ export function funnelGesamt(funnels: LpFunnel[]): LpFunnelGesamt {
     quoteBestaetigung: prozent(s.bestaetigungen, s.anmeldungen),
   };
 }
+
+// ============================================================================
+// A-B-TESTS — Funnel je Variante + Sieger-Ermittlung (pure)
+// ============================================================================
+
+export type VariantenFunnel = {
+  aufrufe: number;
+  anmeldungen: number;
+  bestaetigungen: number;
+  quoteAnmeldung: number;      // Anmeldungen / Aufrufe (%)
+  quoteBestaetigung: number;   // Bestaetigungen / Anmeldungen (%)
+  quoteGesamt: number;         // Bestaetigungen / Aufrufe (%) — End-to-End-Conversion
+};
+
+export type VariantenEreignis = { typ: string | null; variante?: string | null };
+
+/** Zaehlt die Ereignisse EINER Landingpage getrennt nach Variante A und B. */
+export function funnelJeVariante(ereignisse: VariantenEreignis[]): { A: VariantenFunnel; B: VariantenFunnel } {
+  const mk = () => ({ aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 });
+  const a = mk();
+  const b = mk();
+  for (const e of ereignisse || []) {
+    const ziel = e?.variante === 'A' ? a : e?.variante === 'B' ? b : null;
+    if (!ziel) continue;
+    if (e.typ === 'aufruf') ziel.aufrufe++;
+    else if (e.typ === 'anmeldung') ziel.anmeldungen++;
+    else if (e.typ === 'bestaetigung') ziel.bestaetigungen++;
+  }
+  const fin = (z: { aufrufe: number; anmeldungen: number; bestaetigungen: number }): VariantenFunnel => ({
+    ...z,
+    quoteAnmeldung: prozent(z.anmeldungen, z.aufrufe),
+    quoteBestaetigung: prozent(z.bestaetigungen, z.anmeldungen),
+    quoteGesamt: prozent(z.bestaetigungen, z.aufrufe),
+  });
+  return { A: fin(a), B: fin(b) };
+}
+
+export type AbSieger = {
+  reif: boolean;                       // genug Daten fuer eine Aussage?
+  sieger: 'A' | 'B' | 'gleich' | null;
+  quoteA: number;                      // End-to-End (Aufruf -> Bestaetigt), %
+  quoteB: number;
+  hinweis: string;
+};
+
+/**
+ * Bewertet A gegen B anhand der End-to-End-Conversion (Bestaetigt/Aufrufe).
+ * Braucht je Variante mind. `minAufrufe` Aufrufe, sonst „noch zu wenig Daten".
+ * Pure/node-testbar.
+ */
+export function abSieger(
+  a: { aufrufe: number; bestaetigungen: number },
+  b: { aufrufe: number; bestaetigungen: number },
+  minAufrufe = 30,
+): AbSieger {
+  const quoteA = prozent(a.bestaetigungen, a.aufrufe);
+  const quoteB = prozent(b.bestaetigungen, b.aufrufe);
+  if (a.aufrufe < minAufrufe || b.aufrufe < minAufrufe) {
+    return {
+      reif: false,
+      sieger: null,
+      quoteA,
+      quoteB,
+      hinweis: `Noch zu wenig Daten — für ein verlässliches Ergebnis sollte jede Version mindestens ${minAufrufe} Aufrufe haben.`,
+    };
+  }
+  if (Math.abs(quoteA - quoteB) < 0.1) {
+    return { reif: true, sieger: 'gleich', quoteA, quoteB, hinweis: 'Beide Versionen sind praktisch gleichauf.' };
+  }
+  const sieger: 'A' | 'B' = quoteA > quoteB ? 'A' : 'B';
+  const hoch = Math.max(quoteA, quoteB);
+  const tief = Math.min(quoteA, quoteB);
+  return {
+    reif: true,
+    sieger,
+    quoteA,
+    quoteB,
+    hinweis: `Variante ${sieger} liegt vorn (Aufruf → Bestätigt: ${hoch} % vs. ${tief} %).`,
+  };
+}

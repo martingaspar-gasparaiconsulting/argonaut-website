@@ -13,10 +13,19 @@ const C = {
   green: '#4CAF7D', danger: '#E06666', warn: '#E0A24C', textDim: '#8FA3BE',
 };
 
+type VariantenFunnel = {
+  aufrufe: number; anmeldungen: number; bestaetigungen: number;
+  quoteAnmeldung: number; quoteBestaetigung: number; quoteGesamt: number;
+};
+type AbBlock = {
+  A: VariantenFunnel; B: VariantenFunnel;
+  sieger: { reif: boolean; sieger: 'A' | 'B' | 'gleich' | null; quoteA: number; quoteB: number; hinweis: string };
+};
 type Zeile = {
-  landingpage_id: string; slug: string; titel: string; aktiv: boolean;
+  landingpage_id: string; slug: string; titel: string; aktiv: boolean; ab_aktiv: boolean;
   aufrufe: number; anmeldungen: number; bestaetigungen: number;
   quoteAnmeldung: number; quoteBestaetigung: number;
+  ab: AbBlock | null;
 };
 type Gesamt = {
   aufrufe: number; anmeldungen: number; bestaetigungen: number;
@@ -119,6 +128,7 @@ export default function LpAuswertungSeite() {
                       <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)' }}>{z.titel}</span>
                       <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: z.aktiv ? C.green : C.textDim, border: `1px solid ${z.aktiv ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 10px' }}>{z.aktiv ? 'Live' : 'Entwurf'}</span>
                       <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.cyan, fontSize: 'clamp(12px, 1vw, 16px)', wordBreak: 'break-all' }}>/lp/{z.slug}</span>
+                      {z.ab_aktiv && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '1px 8px' }}>🧪 A/B</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'stretch', gap: 10, flexWrap: 'wrap' }}>
                       <Stufe label="Aufrufe" wert={z.aufrufe} farbe={C.cyan} />
@@ -127,6 +137,7 @@ export default function LpAuswertungSeite() {
                       <Pfeil quote={z.quoteBestaetigung} />
                       <Stufe label="Bestätigt" wert={z.bestaetigungen} farbe={C.green} />
                     </div>
+                    {z.ab_aktiv && z.ab && <AbVergleich ab={z.ab} />}
                   </div>
                 ))}
                 </div>
@@ -202,6 +213,52 @@ function MiniVerlauf({ punkte, feld, farbe, label }: {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'DM Sans, sans-serif', color: '#8FA3BE', fontSize: 11, marginTop: 2 }}>
         <span>{datumKurz(punkte[0]?.datum ?? '')}</span>
         <span>{datumKurz(punkte[punkte.length - 1]?.datum ?? '')}</span>
+      </div>
+    </div>
+  );
+}
+
+/** A-gegen-B-Vergleich einer Landingpage mit Sieger-Hinweis. */
+function AbVergleich({ ab }: { ab: AbBlock }) {
+  const C2 = { navy: '#0A1628', gold: '#C9A84C', green: '#4CAF7D', textDim: '#8FA3BE' };
+  const gewinnt = (welche: 'A' | 'B') => ab.sieger.reif && ab.sieger.sieger === welche;
+
+  function Spalte({ welche, f }: { welche: 'A' | 'B'; f: VariantenFunnel }) {
+    const win = gewinnt(welche);
+    return (
+      <div style={{ flex: '1 1 200px', minWidth: 200, background: C2.navy, border: `1px solid ${win ? C2.green : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.3vw, 20px)' }}>Version {welche}</span>
+          {win && <span style={{ fontFamily: 'DM Sans, sans-serif', color: C2.green, fontWeight: 700, fontSize: 'clamp(12px, 1vw, 15px)' }}>★ vorn</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          {[
+            { l: 'Aufrufe', v: f.aufrufe },
+            { l: 'Anmeldungen', v: f.anmeldungen },
+            { l: 'Bestätigt', v: f.bestaetigungen },
+          ].map((x) => (
+            <div key={x.l}>
+              <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.7vw, 26px)' }}>{x.v}</div>
+              <div style={{ fontFamily: 'DM Sans, sans-serif', color: C2.textDim, fontSize: 'clamp(11px, 1vw, 14px)' }}>{x.l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, fontFamily: 'DM Sans, sans-serif', color: C2.gold, fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
+          Aufruf → Bestätigt: <strong>{f.quoteGesamt} %</strong>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 14 }}>
+      <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: C2.gold, fontWeight: 700, marginBottom: 10, fontSize: 'clamp(14px, 1.2vw, 18px)' }}>🧪 A/B-Test</div>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <Spalte welche="A" f={ab.A} />
+        <Spalte welche="B" f={ab.B} />
+      </div>
+      <div style={{ marginTop: 10, fontFamily: 'DM Sans, sans-serif', color: ab.sieger.reif ? C2.green : C2.textDim, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
+        {ab.sieger.reif ? '✓ ' : 'ℹ️ '}{ab.sieger.hinweis}
       </div>
     </div>
   );

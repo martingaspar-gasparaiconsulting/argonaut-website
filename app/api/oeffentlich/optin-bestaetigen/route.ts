@@ -58,13 +58,14 @@ export async function GET(req: Request) {
 
     const { data: gefunden } = await admin
       .from('newsletter_abonnenten')
-      .select('id, status, owner_user_id, email, name, landingpage_id')
+      .select('id, status, owner_user_id, email, name, landingpage_id, variante')
       .eq('bestaetigt_token', token)
       .maybeSingle();
 
     const ab = gefunden as {
       id: string; status: string; owner_user_id: string | null;
       email: string; name: string | null; landingpage_id: string | null;
+      variante: 'A' | 'B' | null;
     } | null;
 
     // Branding des Betriebs fuer die Seite laden (falls vorhanden).
@@ -93,8 +94,9 @@ export async function GET(req: Request) {
       .update({ status: 'aktiv', bestaetigt_am: new Date().toISOString() })
       .eq('id', ab.id);
 
-    // Funnel P1: stammt der Kontakt von einer Landingpage, Bestaetigung zaehlen.
-    await protokolliereLpEreignis(admin, ab.owner_user_id, ab.landingpage_id, 'bestaetigung');
+    // Funnel P1: stammt der Kontakt von einer Landingpage, Bestaetigung zaehlen
+    // (A-B: mit der Variante, die der Kontakt bei der Anmeldung gesehen hat).
+    await protokolliereLpEreignis(admin, ab.owner_user_id, ab.landingpage_id, 'bestaetigung', ab.variante);
 
     // Verzahnung (Paket 2c): Ist beim Betrieb eine Willkommens-Sequenz
     // hinterlegt (optin_sequenz_id) und aktiv, tritt der frisch bestaetigte

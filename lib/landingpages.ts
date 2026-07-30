@@ -219,3 +219,69 @@ export function videoHinweis(roh: string | null | undefined): string {
     default: return '⚠️ Link nicht erkannt — bitte einen YouTube-/Vimeo-Link oder eine .mp4-Adresse verwenden.';
   }
 }
+
+// ============================================================================
+// A-B-TESTS — reine Helfer (Varianten-Wahl + Inhalt je Variante)
+// ============================================================================
+
+export type Variante = 'A' | 'B';
+
+/**
+ * Wählt die Variante für einen Besucher: bleibt beim vorhandenen Cookie-Wert
+ * (A/B) — sonst 50/50 anhand einer übergebenen Zufallszahl [0,1). Pure/node-testbar.
+ */
+export function waehleVariante(cookieWert: string | null | undefined, zufall: number): Variante {
+  if (cookieWert === 'A' || cookieWert === 'B') return cookieWert;
+  return zufall < 0.5 ? 'A' : 'B';
+}
+
+/** Landingpage-Felder inklusive optionaler B-Variante (für die Ausspielung). */
+export type LpMitVariante = {
+  ab_aktiv?: boolean | null;
+  titel: string;
+  untertitel: string | null;
+  nutzen: string[] | null;
+  cta_text: string | null;
+  hero_bild_url: string | null;
+  video_url?: string | null;
+  titel_b?: string | null;
+  untertitel_b?: string | null;
+  nutzen_b?: string[] | null;
+  cta_text_b?: string | null;
+  hero_bild_b_url?: string | null;
+};
+
+export type LpInhalt = {
+  titel: string;
+  untertitel: string | null;
+  nutzen: string[];
+  cta_text: string | null;
+  hero_bild_url: string | null;
+};
+
+function nichtLeer(w: string | null | undefined): string | null {
+  return w && w.trim() ? w : null;
+}
+
+/**
+ * Liefert den anzuzeigenden Inhalt je Variante. Für Variante B werden gesetzte
+ * B-Felder verwendet, leere B-Felder fallen auf A zurück (Teil-Varianten ok).
+ * Ohne aktiven A-B-Test oder Variante 'A' -> immer der A-Inhalt. Pure.
+ */
+export function inhaltFuerVariante(lp: LpMitVariante, variante: Variante | null | undefined): LpInhalt {
+  const aInhalt: LpInhalt = {
+    titel: lp.titel,
+    untertitel: lp.untertitel ?? null,
+    nutzen: Array.isArray(lp.nutzen) ? lp.nutzen : [],
+    cta_text: lp.cta_text ?? null,
+    hero_bild_url: lp.hero_bild_url ?? null,
+  };
+  if (!lp.ab_aktiv || variante !== 'B') return aInhalt;
+  return {
+    titel: nichtLeer(lp.titel_b) ?? lp.titel,
+    untertitel: nichtLeer(lp.untertitel_b) ?? (lp.untertitel ?? null),
+    nutzen: (Array.isArray(lp.nutzen_b) && lp.nutzen_b.length) ? lp.nutzen_b : aInhalt.nutzen,
+    cta_text: nichtLeer(lp.cta_text_b) ?? (lp.cta_text ?? null),
+    hero_bild_url: nichtLeer(lp.hero_bild_b_url) ?? (lp.hero_bild_url ?? null),
+  };
+}
