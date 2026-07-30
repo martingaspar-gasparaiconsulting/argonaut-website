@@ -3,16 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { sendeMail, absenderBranding } from '@/lib/mail';
 import { emailNormalisieren, istEmailGueltig, optinBestaetigenUrl, optinBestaetigungHtml } from '@/lib/newsletter';
+import { protokolliereLpEreignis } from '@/lib/lpEreignis';
 
 // ============================================================================
-// ARGONAUT OS · app/api/oeffentlich/lp/route.ts  (LP Paket 1)
+// ARGONAUT OS · app/api/oeffentlich/lp/route.ts  (LP Paket 1 + Funnel Paket 1)
 //
 // ÖFFENTLICH (kein Login). Versorgt eine Landingpage /lp/<slug>:
 //   GET  ?slug=..  -> Inhalt + Branding + Impressumsdaten des Betriebs
+//                     (+ zaehlt einen Funnel-'aufruf')
 //   POST { slug, email, name? } -> Double-Opt-In-Anmeldung (wie /anmelden):
-//        Abonnent status='unbestaetigt' + Bestaetigungsmail. Nach Klick auf den
-//        Bestaetigen-Link (optin-bestaetigen) wird er aktiv und tritt ggf. in
-//        die konto-weite Willkommens-Sequenz ein (profiles.optin_sequenz_id).
+//        Abonnent status='unbestaetigt' + Bestaetigungsmail (+ Funnel-'anmeldung'
+//        + landingpage_id am Abonnenten fuer die spaetere 'bestaetigung'-Zuordnung).
 //
 // Betrieb wird ueber landingpages.slug ermittelt; die Seite muss aktiv sein.
 // Service-Role umgeht RLS -> owner_user_id wird explizit gesetzt.
@@ -58,6 +59,9 @@ export async function GET(req: Request) {
     const db = admin();
     const lp = await lpAusSlug(db, slug);
     if (!lp) return NextResponse.json({ error: 'Diese Seite ist nicht (mehr) verfügbar.' }, { status: 404 });
+
+    // Funnel: Seitenaufruf zaehlen (nicht-blockierend, Fehler geschluckt).
+    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf');
 
     const { data: prof } = await db
       .from('profiles')
@@ -123,7 +127,7 @@ export async function POST(req: Request) {
     if (v) {
       await db
         .from('newsletter_abonnenten')
-        .update({ status: 'unbestaetigt', bestaetigt_token: token, bestaetigt_am: null, name })
+        .update({ status: 'unbestaetigt', bestaetigt_token: token, bestaetigt_am: null, name, landingpage_id: lp.id })
         .eq('id', v.id);
     } else {
       await db.from('newsletter_abonnenten').insert({
@@ -133,6 +137,7 @@ export async function POST(req: Request) {
         status: 'unbestaetigt',
         quelle: 'landingpage',
         bestaetigt_token: token,
+        landingpage_id: lp.id,
       });
     }
 
@@ -145,6 +150,9 @@ export async function POST(req: Request) {
       absenderName: brand.firma,
       antwortAn: brand.email,
     });
+
+    // Funnel: Anmeldung (Opt-in gestartet) zaehlen (nicht-blockierend).
+    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'anmeldung');
 
     return NextResponse.json({ ok: true, status: 'bestaetigung_gesendet' });
   } catch (e: unknown) {

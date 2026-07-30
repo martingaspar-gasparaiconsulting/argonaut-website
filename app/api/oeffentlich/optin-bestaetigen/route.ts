@@ -2,14 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
 import { ersterAktiverSchritt, naechsterVersandAm } from '@/lib/autoresponder';
 import { verschickeFaellige, type LaufRow } from '@/lib/autoresponderVersand';
+import { protokolliereLpEreignis } from '@/lib/lpEreignis';
 
 // ============================================================================
-// ARGONAUT OS · app/api/oeffentlich/optin-bestaetigen/route.ts  (Paket 2b)
+// ARGONAUT OS · app/api/oeffentlich/optin-bestaetigen/route.ts  (Paket 2b + Funnel P1)
 //
 // ÖFFENTLICH (kein Login). Ziel des Bestaetigen-Knopfs aus der Double-Opt-In-
 // Mail: GET ?token=<bestaetigt_token>. Setzt den Abonnenten auf status='aktiv'
 // + bestaetigt_am=jetzt (nachweisbare Einwilligung). Zeigt eine gebrandete
 // Bestaetigungsseite. Idempotent: erneuter Klick zeigt weiterhin Erfolg.
+// Funnel P1: stammt der Abonnent von einer Landingpage (landingpage_id gesetzt),
+// wird bei der ERSTEN Bestaetigung ein 'bestaetigung'-Ereignis gezaehlt.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -55,11 +58,14 @@ export async function GET(req: Request) {
 
     const { data: gefunden } = await admin
       .from('newsletter_abonnenten')
-      .select('id, status, owner_user_id, email, name')
+      .select('id, status, owner_user_id, email, name, landingpage_id')
       .eq('bestaetigt_token', token)
       .maybeSingle();
 
-    const ab = gefunden as { id: string; status: string; owner_user_id: string | null; email: string; name: string | null } | null;
+    const ab = gefunden as {
+      id: string; status: string; owner_user_id: string | null;
+      email: string; name: string | null; landingpage_id: string | null;
+    } | null;
 
     // Branding des Betriebs fuer die Seite laden (falls vorhanden).
     let firma = 'Newsletter';
@@ -86,6 +92,9 @@ export async function GET(req: Request) {
       .from('newsletter_abonnenten')
       .update({ status: 'aktiv', bestaetigt_am: new Date().toISOString() })
       .eq('id', ab.id);
+
+    // Funnel P1: stammt der Kontakt von einer Landingpage, Bestaetigung zaehlen.
+    await protokolliereLpEreignis(admin, ab.owner_user_id, ab.landingpage_id, 'bestaetigung');
 
     // Verzahnung (Paket 2c): Ist beim Betrieb eine Willkommens-Sequenz
     // hinterlegt (optin_sequenz_id) und aktiv, tritt der frisch bestaetigte
