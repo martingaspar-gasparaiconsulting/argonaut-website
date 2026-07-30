@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { funnelJeLandingpage, funnelGesamt } from '@/lib/lpAnalytics';
+import { funnelJeLandingpage, funnelGesamt, tagesreihe } from '@/lib/lpAnalytics';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/lp-analytics/route.ts  (Funnel-Analytics P1)
@@ -35,9 +35,9 @@ export async function GET() {
 
   const { data: evData } = await admin
     .from('lp_ereignisse')
-    .select('landingpage_id, typ')
+    .select('landingpage_id, typ, created_at')
     .eq('owner_user_id', uid);
-  const ereignisse = (evData ?? []) as { landingpage_id: string | null; typ: string | null }[];
+  const ereignisse = (evData ?? []) as { landingpage_id: string | null; typ: string | null; created_at: string | null }[];
 
   const funnels = funnelJeLandingpage(ereignisse, landingpages.map((l) => l.id));
   const funnelMap = new Map(funnels.map((f) => [f.landingpage_id, f]));
@@ -59,5 +59,7 @@ export async function GET() {
     })
     .sort((a, b) => (b.aufrufe - a.aufrufe) || (b.anmeldungen - a.anmeldungen));
 
-  return NextResponse.json({ ok: true, zeilen, gesamt: funnelGesamt(funnels) });
+  const verlauf = tagesreihe(ereignisse, new Date().toISOString(), 30);
+
+  return NextResponse.json({ ok: true, zeilen, gesamt: funnelGesamt(funnels), verlauf });
 }

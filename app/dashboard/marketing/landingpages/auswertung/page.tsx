@@ -22,10 +22,12 @@ type Gesamt = {
   aufrufe: number; anmeldungen: number; bestaetigungen: number;
   quoteAnmeldung: number; quoteBestaetigung: number;
 };
+type TagPunkt = { datum: string; aufrufe: number; anmeldungen: number; bestaetigungen: number };
 
 export default function LpAuswertungSeite() {
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [gesamt, setGesamt] = useState<Gesamt>({ aufrufe: 0, anmeldungen: 0, bestaetigungen: 0, quoteAnmeldung: 0, quoteBestaetigung: 0 });
+  const [verlauf, setVerlauf] = useState<TagPunkt[]>([]);
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export default function LpAuswertungSeite() {
       const res = await fetch('/api/marketing/lp-analytics');
       const j = await res.json();
       if (!res.ok || !j?.ok) { setFehler(j?.error || 'Laden fehlgeschlagen.'); }
-      else { setZeilen(j.zeilen as Zeile[]); setGesamt(j.gesamt as Gesamt); }
+      else { setZeilen(j.zeilen as Zeile[]); setGesamt(j.gesamt as Gesamt); setVerlauf((j.verlauf ?? []) as TagPunkt[]); }
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLoading(false); }
   }
@@ -100,7 +102,17 @@ export default function LpAuswertungSeite() {
                 <a href="/dashboard/marketing/landingpages" style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 800, textDecoration: 'none' }}>Zu den Landingpages</a>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
+              <>
+                <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 24 }}>
+                  <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: C.gold, fontSize: 'clamp(16px, 1.4vw, 22px)', marginBottom: 4 }}>Verlauf — letzte 30 Tage</div>
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>Alle Landingpages zusammen. Fahren Sie mit der Maus über einen Balken für Tag und Wert.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                    <MiniVerlauf punkte={verlauf} feld="aufrufe" farbe={C.cyan} label="Aufrufe" />
+                    <MiniVerlauf punkte={verlauf} feld="anmeldungen" farbe={C.gold} label="Anmeldungen" />
+                    <MiniVerlauf punkte={verlauf} feld="bestaetigungen" farbe={C.green} label="Bestätigt" />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gap: 12 }}>
                 {zeilen.map((z) => (
                   <div key={z.landingpage_id} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -117,7 +129,8 @@ export default function LpAuswertungSeite() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              </>
             )}
           </>
         )}
@@ -140,6 +153,56 @@ function Pfeil({ quote }: { quote: number }) {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 56, color: '#8FA3BE' }}>
       <div style={{ fontSize: 22, lineHeight: 1 }}>→</div>
       <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 15px)', fontWeight: 700, color: quote > 0 ? '#C9A84C' : '#8FA3BE' }}>{quote} %</div>
+    </div>
+  );
+}
+
+function datumKurz(iso: string): string {
+  if (!iso) return '';
+  const t = iso.split('-');
+  return t.length === 3 ? `${t[2]}.${t[1]}.` : iso;
+}
+
+/** Kleines Balken-Diagramm einer Kennzahl ueber die Tagesreihe (Small Multiple, eine Farbe). */
+function MiniVerlauf({ punkte, feld, farbe, label }: {
+  punkte: TagPunkt[]; feld: 'aufrufe' | 'anmeldungen' | 'bestaetigungen'; farbe: string; label: string;
+}) {
+  const werte = punkte.map((p) => p[feld]);
+  const max = Math.max(1, ...werte);
+  const summe = werte.reduce((s, v) => s + v, 0);
+  const W = 600, H = 96, padX = 4, achse = 16;
+  const n = Math.max(1, punkte.length);
+  const slot = (W - padX * 2) / n;
+  const barW = Math.max(2, slot - 2);
+  const nutzH = H - achse - 6;
+
+  return (
+    <div style={{ background: '#0A1628', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <span style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontWeight: 700, fontSize: 'clamp(14px, 1.2vw, 18px)' }}>{label}</span>
+        <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', color: farbe, fontWeight: 700, fontSize: 'clamp(16px, 1.4vw, 22px)' }}>{summe}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" role="img" aria-label={`${label}: Verlauf der letzten ${punkte.length} Tage`}>
+        <line x1={padX} y1={H - achse} x2={W - padX} y2={H - achse} stroke="rgba(255,255,255,0.14)" strokeWidth={1} />
+        {punkte.map((p, i) => {
+          const v = p[feld];
+          const h = v <= 0 ? 0 : Math.max(3, Math.round((v / max) * nutzH));
+          const x = padX + i * slot;
+          const y = (H - achse) - h;
+          return (
+            <g key={p.datum}>
+              {v > 0 && <rect x={x} y={y} width={barW} height={h} rx={1.5} fill={farbe} />}
+              <rect x={x} y={0} width={barW} height={H - achse} fill="transparent">
+                <title>{`${datumKurz(p.datum)} ${v}`}</title>
+              </rect>
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'DM Sans, sans-serif', color: '#8FA3BE', fontSize: 11, marginTop: 2 }}>
+        <span>{datumKurz(punkte[0]?.datum ?? '')}</span>
+        <span>{datumKurz(punkte[punkte.length - 1]?.datum ?? '')}</span>
+      </div>
     </div>
   );
 }

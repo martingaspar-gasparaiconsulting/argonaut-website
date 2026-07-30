@@ -73,6 +73,50 @@ export function funnelJeLandingpage(
   });
 }
 
+export type TagPunkt = {
+  datum: string;        // YYYY-MM-DD (UTC)
+  aufrufe: number;
+  anmeldungen: number;
+  bestaetigungen: number;
+};
+
+/**
+ * Baut eine lueckenlose Tagesreihe der letzten `tage` Tage (endend an bisDatumIso).
+ * bisDatumIso = beliebiger ISO-Zeitstempel; der Tagesanteil (YYYY-MM-DD, UTC) zaehlt.
+ * Tage ohne Ereignisse erscheinen mit 0. Pure + node-testbar (Referenzdatum wird
+ * uebergeben). Zeitzone: UTC — Feinschliff (Europe/Berlin) spaeter.
+ */
+export function tagesreihe(
+  ereignisse: { typ: string | null; created_at?: string | null }[],
+  bisDatumIso: string,
+  tage = 30,
+): TagPunkt[] {
+  const n = Math.max(1, Math.floor(tage));
+  const bis = new Date(bisDatumIso);
+  const tageListe: string[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(bis);
+    d.setUTCDate(d.getUTCDate() - i);
+    tageListe.push(d.toISOString().slice(0, 10));
+  }
+  const map = new Map<string, { aufrufe: number; anmeldungen: number; bestaetigungen: number }>();
+  for (const t of tageListe) map.set(t, { aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 });
+  for (const e of ereignisse || []) {
+    const roh = e?.created_at;
+    if (!roh) continue;
+    const tag = String(roh).slice(0, 10);
+    const eintrag = map.get(tag);
+    if (!eintrag) continue;
+    if (e.typ === 'aufruf') eintrag.aufrufe++;
+    else if (e.typ === 'anmeldung') eintrag.anmeldungen++;
+    else if (e.typ === 'bestaetigung') eintrag.bestaetigungen++;
+  }
+  return tageListe.map((t) => {
+    const z = map.get(t) as { aufrufe: number; anmeldungen: number; bestaetigungen: number };
+    return { datum: t, aufrufe: z.aufrufe, anmeldungen: z.anmeldungen, bestaetigungen: z.bestaetigungen };
+  });
+}
+
 /** Summiert mehrere Funnel zu einer Gesamt-Uebersicht. */
 export function funnelGesamt(funnels: LpFunnel[]): LpFunnelGesamt {
   const s = { aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 };
