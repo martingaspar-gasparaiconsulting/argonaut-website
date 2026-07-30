@@ -24,9 +24,6 @@ const ABSENDER_NAME = "ARGONAUT OS";
 const ABSENDER_MAIL = "noreply@argonaut-os.com";
 const ANTWORT_MAIL = "info@argonaut-os.com";
 
-/** Zusammengesetzter From-Header: "ARGONAUT OS <noreply@argonaut-os.com>". */
-const FROM = `${ABSENDER_NAME} <${ABSENDER_MAIL}>`;
-
 // ---------------------------------------------------------------------------
 // Resend-Client. Lazy erzeugt, damit ein fehlender Key nicht schon beim
 // Import knallt, sondern erst beim tatsaechlichen Versand eine klare Meldung
@@ -43,6 +40,14 @@ function client(): Resend {
   }
   if (!_resend) _resend = new Resend(key);
   return _resend;
+}
+
+/** Baut den From-Header. Standard-Absendername ARGONAUT OS; einzelne Module
+ *  (z. B. der Kunden-Newsletter) koennen einen eigenen Anzeigenamen setzen —
+ *  die Absender-Domain bleibt IMMER die verifizierte argonaut-os.com. */
+function fromHeader(absenderName?: string): string {
+  const clean = (absenderName || "").replace(/[<>"\r\n]/g, "").trim();
+  return `${clean || ABSENDER_NAME} <${ABSENDER_MAIL}>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +79,9 @@ export type MailEingang = {
   bcc?: string | string[];
   /** Abweichende Antwort-Adresse. Standard: info@argonaut-os.com. */
   antwortAn?: string;
+  /** Abweichender Absender-ANZEIGENAME (Domain bleibt argonaut-os.com).
+   *  Fuer den Kunden-Newsletter = der Firmenname des Kunden. Standard: ARGONAUT OS. */
+  absenderName?: string;
   /** Optionale Datei-Anhaenge (z. B. Rechnungs-PDF). */
   anhaenge?: MailAnhang[];
 };
@@ -113,7 +121,7 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
     }));
 
     const { data, error } = await resend.emails.send({
-      from: FROM,
+      from: fromHeader(eingang.absenderName),
       to: eingang.an,
       subject: eingang.betreff,
       html: eingang.html,
@@ -139,6 +147,8 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
 // ---------------------------------------------------------------------------
 // Kleiner HTML-Rahmen im ARGONAUT-Branding — optional nutzbar, damit einzelne
 // Module nicht jedes Mal HTML von Hand bauen muessen.
+// HINWEIS: Nur fuer ARGONAUT-EIGENE Post (System-Mails). Kunden-Post, die im
+// Namen des Kunden rausgeht (Newsletter), nutzt ein neutrales Kunden-Layout.
 // ---------------------------------------------------------------------------
 
 /**

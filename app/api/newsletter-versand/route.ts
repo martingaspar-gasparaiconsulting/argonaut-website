@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { sendeMail, mailLayout } from '@/lib/mail';
-import { abmeldeUrl, newsletterBodyHtml } from '@/lib/newsletter';
+import { sendeMail } from '@/lib/mail';
+import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 
 // ============================================================================
-// ARGONAUT OS · app/api/newsletter-versand/route.ts  (Punkt 29b)
+// ARGONAUT OS · app/api/newsletter-versand/route.ts  (Punkt 29b/29c)
 //
 // POST { betreff, inhalt } — verschickt den Newsletter an alle AKTIVEN
 // Abonnenten des Kontos (RLS liefert automatisch die eigene Liste bzw. die
 // des Chefs). Jede Mail bekommt einen persönlichen Abmelde-Link (§7 UWG).
-// Der Versand wird in newsletter_versand protokolliert (Owner via Trigger).
+//
+// WICHTIG (29c): Die Mail trägt das Branding DES KUNDEN (firma_name +
+// firma_akzentfarbe), NICHT ARGONAUT. Auch der Absender-Anzeigename ist der
+// Firmenname des Kunden, die Antwort geht an dessen firma_email. Die
+// Versand-Domain bleibt technisch die verifizierte argonaut-os.com.
 //
 // Demo-Konten dürfen NICHT verschicken (Spam-/Kostenschutz).
 // ============================================================================
@@ -34,14 +38,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Bitte Betreff und Inhalt ausfüllen.' }, { status: 400 });
     }
 
+    // Firmen-Branding + Demo-Flag des Absenders laden.
+    const { data: profil } = await supabase
+      .from('profiles')
+      .select('demo, firma_name, firma_email, firma_akzentfarbe')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const p = (profil ?? {}) as {
+      demo?: boolean;
+      firma_name?: string | null;
+      firma_email?: string | null;
+      firma_akzentfarbe?: string | null;
+    };
+
     // Demo-Konto: kein echter Versand.
-    const { data: profil } = await supabase.from('profiles').select('demo').eq('id', user.id).maybeSingle();
-    if ((profil as { demo?: boolean } | null)?.demo) {
+    if (p.demo) {
       return NextResponse.json(
         { ok: false, error: 'Im Demo-Modus ist der echte Newsletter-Versand deaktiviert.' },
         { status: 403 },
       );
     }
+
+    const firmaName = (p.firma_name || '').trim() || 'Newsletter';
+    const antwortAn = (p.firma_email || '').trim() || user.email || undefined;
 
     // Aktive Abonnenten laden.
     const { data: abos, error: ladeFehler } = await supabase
@@ -66,8 +86,20 @@ export async function POST(req: Request) {
     let erfolg = 0;
     let fehler = 0;
     for (const a of empfaenger) {
-      const html = mailLayout(betreff, newsletterBodyHtml(inhalt, abmeldeUrl(origin, a.abmelde_token)));
-      const r = await sendeMail({ an: a.email as string, betreff, html });
+      const html = newsletterMailHtml(
+        firmaName,
+        betreff,
+        inhalt,
+        abmeldeUrl(origin, a.abmelde_token as string),
+        p.firma_akzentfarbe,
+      );
+      const r = await sendeMail({
+        an: a.email as string,
+        betreff,
+        html,
+        absenderName: firmaName,
+        antwortAn,
+      });
       if (r.ok) erfolg++;
       else fehler++;
     }

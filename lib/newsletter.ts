@@ -38,7 +38,7 @@ export function zaehleAbonnenten(liste: AbonnentLite[]): {
 }
 
 // ---------------------------------------------------------------------------
-// Versand-Helfer (Punkt 29b)
+// Versand-Helfer (Punkt 29b/29c)
 // ---------------------------------------------------------------------------
 
 /** Öffentlicher Abmelde-Link für eine Mail. origin z.B. "https://argonaut-os.com". */
@@ -63,17 +63,59 @@ export function textZuHtml(text: string | null | undefined): string {
 }
 
 /**
- * Baut den inneren HTML-Inhalt einer Newsletter-Mail: der Fließtext plus der
- * gesetzlich nötige Abmelde-Fuß (§7 UWG). Wird anschließend in mailLayout()
- * verpackt. `abmelde` ist die fertige Abmelde-URL (siehe abmeldeUrl()).
+ * Sichere Farbe: nur echte Hex-Farben durchlassen (#abc oder #aabbcc…), sonst
+ * neutraler Standard. Verhindert, dass ein Firmen-Farbwert das Mail-HTML bricht.
  */
-export function newsletterBodyHtml(inhaltText: string, abmelde: string): string {
+export function sichereFarbe(farbe: string | null | undefined, standard = '#1a2332'): string {
+  const f = (farbe || '').trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(f) ? f : standard;
+}
+
+/**
+ * Baut die KOMPLETTE Newsletter-Mail im Branding DES KUNDEN (nicht ARGONAUT):
+ * Firmenname im Kopf, Firmen-Akzentfarbe als Linie/Links, neutrales Weiß.
+ * Enthält den gesetzlich nötigen Abmelde-Fuß (§7 UWG). Kein ARGONAUT-Bezug.
+ *
+ * @param firmaName  Anzeigename des Absenders (Firma des Kunden).
+ * @param betreff    Betreff, wird zugleich als Überschrift gezeigt.
+ * @param inhaltText Reiner Text aus dem Formular (wird entschärft + umgebrochen).
+ * @param abmelde    Fertige Abmelde-URL (siehe abmeldeUrl()).
+ * @param akzentfarbe Firmen-Akzentfarbe (Hex) — Fallback neutral.
+ */
+export function newsletterMailHtml(
+  firmaName: string | null | undefined,
+  betreff: string,
+  inhaltText: string,
+  abmelde: string,
+  akzentfarbe?: string | null,
+): string {
+  const firma = escapeHtml((firmaName || '').trim() || 'Newsletter');
+  const akzent = sichereFarbe(akzentfarbe);
+  const titel = escapeHtml(betreff);
   const inhalt = textZuHtml(inhaltText);
-  return (
-    `<div style="font-size:15px;line-height:1.6;color:#1a2332;">${inhalt}</div>` +
-    `<div style="margin-top:28px;border-top:1px solid #e5e7eb;padding-top:14px;font-size:12px;line-height:1.5;color:#8a94a6;">` +
-    `Du erhältst diese E-Mail, weil du dich für unseren Newsletter eingetragen hast. ` +
-    `<a href="${abmelde}" style="color:#8a94a6;text-decoration:underline;">Vom Newsletter abmelden</a>.` +
-    `</div>`
-  );
+
+  return `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <div style="padding:24px 28px;border-bottom:3px solid ${akzent};">
+        <div style="font-size:20px;font-weight:800;color:${akzent};">${firma}</div>
+      </div>
+      <div style="padding:28px;">
+        ${titel ? `<h1 style="font-size:20px;font-weight:700;margin:0 0 16px;color:#1a2332;">${titel}</h1>` : ''}
+        <div style="font-size:15px;line-height:1.6;color:#1a2332;">${inhalt}</div>
+      </div>
+      <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
+        Du erhältst diese E-Mail, weil du dich beim Newsletter von ${firma} angemeldet hast.<br>
+        <a href="${abmelde}" style="color:${akzent};text-decoration:underline;">Vom Newsletter abmelden</a>.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
 }
