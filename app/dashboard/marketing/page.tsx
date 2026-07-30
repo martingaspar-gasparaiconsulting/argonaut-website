@@ -252,6 +252,25 @@ export default function MarketingCockpit() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
+            href="/dashboard/marketing/cockpit"
+            style={{
+              background: C.gold,
+              color: C.navy,
+              border: `1px solid ${C.gold}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+              fontWeight: 700,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            🛰️ Cockpit
+          </a>
+          <a
             href="/dashboard/marketing/stratege"
             style={{
               background: 'rgba(201,168,76,0.12)',
