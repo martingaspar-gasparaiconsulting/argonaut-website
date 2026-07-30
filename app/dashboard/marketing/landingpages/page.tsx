@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { LP_VORLAGEN, vorlageFuer, zaehleLandingpages, nutzenAusText, type LpVorlage } from '@/lib/landingpages';
+import { LP_VORLAGEN, LP_KATEGORIEN, vorlageFuer, zaehleLandingpages, nutzenAusText, type LpVorlage } from '@/lib/landingpages';
 
 // ============================================================
 // ARGONAUT OS · MARKETING · Landingpage-Bauer (LP Paket 1)
@@ -38,6 +38,8 @@ export default function LandingpagesSeite() {
   const [eBusy, setEBusy] = useState(false);
   const [eMeldung, setEMeldung] = useState<string | null>(null);
   const [kopiert, setKopiert] = useState<string | null>(null);
+  const [eKategorie, setEKategorie] = useState('');
+  const [vorschlagBusy, setVorschlagBusy] = useState(false);
 
   async function laden() {
     setLoading(true); setFehler(null);
@@ -61,6 +63,7 @@ export default function LandingpagesSeite() {
     setEUnter(v.untertitel);
     setENutzen(v.nutzen.join('\n'));
     setECta(v.cta_text);
+    setEKategorie('');
     setEMeldung(null);
     setPickerOffen(false);
     setEditOffen(true);
@@ -74,8 +77,24 @@ export default function LandingpagesSeite() {
     setEUnter(lp.untertitel ?? '');
     setENutzen((lp.nutzen ?? []).join('\n'));
     setECta(lp.cta_text ?? '');
+    setEKategorie('');
     setEMeldung(null);
     setEditOffen(true);
+  }
+
+  async function vorschlagHolen() {
+    if (!eKategorie) { setEMeldung('Bitte zuerst eine Branche wählen.'); return; }
+    setVorschlagBusy(true); setEMeldung(null);
+    try {
+      const res = await fetch(`/api/marketing/lp-vorschlag?kategorie=${encodeURIComponent(eKategorie)}&typ=${encodeURIComponent(eTyp)}`);
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setEMeldung(j?.error || 'Vorschlag fehlgeschlagen.'); }
+      else {
+        if (j.untertitel) setEUnter(j.untertitel);
+        if (Array.isArray(j.nutzen) && j.nutzen.length) setENutzen(j.nutzen.join('\n'));
+      }
+    } catch { setEMeldung('Vorschlag fehlgeschlagen.'); }
+    finally { setVorschlagBusy(false); }
   }
 
   async function speichern(aktiv: boolean) {
@@ -242,6 +261,26 @@ export default function LandingpagesSeite() {
                 <input value={eSlug} onChange={(e) => setESlug(e.target.value)} placeholder="herbst-aktion" style={{ ...input, flex: '1 1 160px', width: 'auto' }} />
               </div>
             </div>
+            <div style={{ marginBottom: 14, background: '#0F1F33', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 10, padding: '14px 16px' }}>
+              <label style={lbl}>Branche — für automatische Text-Vorschläge</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <select value={eKategorie} onChange={(e) => setEKategorie(e.target.value)} style={{ ...input, flex: '1 1 220px', width: 'auto' }}>
+                  <option value="">— Branche wählen —</option>
+                  {LP_KATEGORIEN.map((k) => <option key={k} value={k}>{k}</option>)}
+                </select>
+                <button
+                  onClick={vorschlagHolen}
+                  disabled={vorschlagBusy || !eKategorie}
+                  style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '10px 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: (vorschlagBusy || !eKategorie) ? 'not-allowed' : 'pointer', opacity: (vorschlagBusy || !eKategorie) ? 0.6 : 1 }}
+                >
+                  {vorschlagBusy ? 'Hole…' : '✨ Branchen-Text vorschlagen'}
+                </button>
+              </div>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '8px 0 0', fontSize: 'clamp(12px, 1vw, 15px)' }}>
+                Füllt Untertitel und Nutzen-Punkte passend zu Ihrer Branche vor — Sie können anschließend alles frei anpassen.
+              </p>
+            </div>
+
             <div style={{ marginBottom: 14 }}>
               <label style={lbl}>Überschrift *</label>
               <input value={eTitel} onChange={(e) => setETitel(e.target.value)} style={input} />

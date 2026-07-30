@@ -62,6 +62,33 @@ export function vorlageFuer(typ: string | null | undefined): LpVorlage {
   return LP_VORLAGEN.find((v) => v.id === typ) ?? LP_VORLAGEN[0];
 }
 
+/**
+ * Die 19 Website-Kategorien (exakt wie in branchen-verkauf.ts / KATEGORIE_ORDER).
+ * Client-sichere Liste für das Branchen-Dropdown im Landingpage-Editor.
+ * Die eigentliche Branchen-Copy zieht der Server aus branchen-verkauf.ts.
+ */
+export const LP_KATEGORIEN: string[] = [
+  'Handwerk & Bau',
+  'Industrie & Produktion',
+  'Handel & E-Commerce',
+  'Fahrzeuge & Mobilität',
+  'Gastronomie, Hotellerie & Tourismus',
+  'Lebensmittel & Nahversorgung',
+  'Logistik & Transport',
+  'IT & Technologie',
+  'Energie & Umwelt',
+  'Immobilien & Verwaltung',
+  'Marketing, Medien & Kreativ',
+  'Recht, Steuern & Finanzen',
+  'Bildung & Wissenschaft',
+  'Gesundheit & Wellness',
+  'Sport, Beauty & Lifestyle',
+  'Tiere',
+  'Landwirtschaft, Garten & Forst',
+  'Dienstleistungen',
+  'Kultur, Soziales & Öffentliches',
+];
+
 /** Slug vereinheitlichen (Kleinbuchstaben, nur a-z 0-9 -, max 40). */
 export function slugNormalisieren(roh: string | null | undefined): string {
   return (roh || '')
