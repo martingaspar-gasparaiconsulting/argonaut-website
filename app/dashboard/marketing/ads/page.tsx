@@ -5,6 +5,7 @@ import {
   ADS_PLATTFORMEN, ADS_ZIELE, ADS_STATUS, plattformFuer, plattformenNachGruppe,
   zielFuer, gesamtBudget, laufzeitTage, budgetProblemeFuerKanal, validiereKampagne,
   zaehleKampagnen, zaehleAdsKanaele, formatEuro, zuBetrag,
+  VERBINDBARE_ADS, adsVerbindungFeld,
 } from '@/lib/ads';
 import { sichereMedienUrl } from '@/lib/landingpages';
 
@@ -38,6 +39,8 @@ type Kampagne = {
 };
 
 type KanalRow = { plattform: string; aktiv: boolean; verbunden: boolean; konto_name: string | null; geprueft_am: string | null };
+type VStatus = { verbunden: boolean; konto_id: string; konto_name: string; hatToken: boolean };
+const V_LEER: VStatus = { verbunden: false, konto_id: '', konto_name: '', hatToken: false };
 
 function fmtDatum(iso: string | null): string {
   if (!iso) return '';
@@ -75,16 +78,37 @@ export default function AdsSeite() {
   // Kanal-Verwaltung
   const [kanalBusy, setKanalBusy] = useState<string | null>(null);
 
+  // Werbekonto-Verbindung (Meta/Google/LinkedIn/TikTok)
+  const [verb, setVerb] = useState<Record<string, VStatus>>({});
+  const [vEncKey, setVEncKey] = useState(true);
+  const [vKonto, setVKonto] = useState<Record<string, string>>({});
+  const [vKontoName, setVKontoName] = useState<Record<string, string>>({});
+  const [vToken, setVToken] = useState<Record<string, string>>({});
+  const [vBusy, setVBusy] = useState<string | null>(null);
+  const [vMeldung, setVMeldung] = useState<Record<string, string | null>>({});
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
-      const [rK, rC] = await Promise.all([
+      const [rK, rC, rV] = await Promise.all([
         fetch('/api/marketing/ads-kampagnen'),
         fetch('/api/marketing/ads-kanaele'),
+        fetch('/api/marketing/ads-verbindung'),
       ]);
       const jK = await rK.json();
       const jC = await rC.json();
+      const jV = await rV.json();
       if (jC?.ok) setKanaele((jC.liste as KanalRow[]) || []);
+      if (jV?.ok) {
+        const st = (k: string) => (jV[k] as VStatus) || V_LEER;
+        const neu: Record<string, VStatus> = {};
+        VERBINDBARE_ADS.forEach((k) => { neu[k] = st(k); });
+        setVerb(neu);
+        setVEncKey(jV.encKeyBereit !== false);
+        setVKonto((prev) => { const o: Record<string, string> = {}; VERBINDBARE_ADS.forEach((k) => { o[k] = st(k).konto_id; }); return { ...o, ...prev }; });
+        setVKontoName((prev) => { const o: Record<string, string> = {}; VERBINDBARE_ADS.forEach((k) => { o[k] = st(k).konto_name; }); return { ...o, ...prev }; });
+        setVToken({});
+      }
       if (!rK.ok || !jK?.ok) setFehler(jK?.error || 'Laden fehlgeschlagen.');
       else setListe(jK.liste as Kampagne[]);
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
@@ -198,6 +222,31 @@ export default function AdsSeite() {
       }
     } catch { /* still */ }
     finally { setKanalBusy(null); }
+  }
+
+  async function verbinde(plattform: string) {
+    setVBusy(plattform); setVMeldung((m) => ({ ...m, [plattform]: null }));
+    try {
+      const res = await fetch('/api/marketing/ads-verbindung', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plattform, konto_id: vKonto[plattform] || '', konto_name: vKontoName[plattform] || '', token: vToken[plattform] || '' }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setVMeldung((m) => ({ ...m, [plattform]: j?.error || 'Speichern fehlgeschlagen.' }));
+      else { setVMeldung((m) => ({ ...m, [plattform]: '✓ Verbunden.' })); setVToken((t) => ({ ...t, [plattform]: '' })); laden(); }
+    } catch { setVMeldung((m) => ({ ...m, [plattform]: 'Speichern fehlgeschlagen.' })); }
+    finally { setVBusy(null); }
+  }
+  async function trenne(plattform: string) {
+    if (!confirm('Verbindung wirklich trennen? Der gespeicherte Zugang wird entfernt.')) return;
+    setVBusy(plattform); setVMeldung((m) => ({ ...m, [plattform]: null }));
+    try {
+      const res = await fetch(`/api/marketing/ads-verbindung?plattform=${encodeURIComponent(plattform)}`, { method: 'DELETE' });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setVMeldung((m) => ({ ...m, [plattform]: j?.error || 'Trennen fehlgeschlagen.' }));
+      else { setVMeldung((m) => ({ ...m, [plattform]: null })); laden(); }
+    } catch { setVMeldung((m) => ({ ...m, [plattform]: 'Trennen fehlgeschlagen.' })); }
+    finally { setVBusy(null); }
   }
 
   return (
@@ -412,6 +461,57 @@ export default function AdsSeite() {
           </div>
         </div>
 
+        {/* Verbindungen — Werbekonten */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Verbindungen — Werbekonten</div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
+            Verbinden Sie Ihr Werbekonto je Plattform. Der Zugangs-Token wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt. Die genaue Schritt-für-Schritt-Einrichtung erhalten Sie separat.
+          </p>
+
+          {!vEncKey && (
+            <div style={{ background: 'rgba(224,162,76,0.12)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
+              <strong style={{ color: C.warn }}>⚠️ Sicherheits-Schlüssel fehlt.</strong> Zum sicheren Speichern des Tokens muss einmalig die Umgebungsvariable <strong style={{ color: '#fff' }}>APP_ENC_KEY</strong> gesetzt werden. Danach lässt sich die Verbindung speichern.
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gap: 14 }}>
+            {VERBINDBARE_ADS.map((id) => {
+              const p = plattformFuer(id)!;
+              const feld = adsVerbindungFeld(id)!;
+              const st = verb[id] || V_LEER;
+              return (
+                <div key={id} style={{ background: C.navy, border: `1px solid ${st.verbunden ? C.green : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.3vw, 20px)' }}>{p.icon} {p.name}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: st.verbunden ? C.green : C.textDim, border: `1px solid ${st.verbunden ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 12px' }}>{st.verbunden ? '✓ Verbunden' : 'Nicht verbunden'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={lbl}>{feld.kontoLabel}</label>
+                      <input value={vKonto[id] ?? ''} onChange={(e) => setVKonto((v) => ({ ...v, [id]: e.target.value }))} placeholder="z. B. act_1234567890" style={input} />
+                    </div>
+                    <div>
+                      <label style={lbl}>Anzeigename (optional)</label>
+                      <input value={vKontoName[id] ?? ''} onChange={(e) => setVKontoName((v) => ({ ...v, [id]: e.target.value }))} placeholder="z. B. Schäfer Holzernte" style={input} />
+                    </div>
+                  </div>
+                  <label style={lbl}>{feld.tokenLabel}</label>
+                  <input type="password" value={vToken[id] ?? ''} onChange={(e) => setVToken((v) => ({ ...v, [id]: e.target.value }))} placeholder={st.hatToken ? '•••••••• (gespeichert — zum Ändern neu eingeben)' : 'hier einfügen'} style={{ ...input, maxWidth: 460 }} />
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 12px', fontSize: 'clamp(11px, 1vw, 14px)' }}>{feld.kontoHinweis}</p>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => verbinde(id)} disabled={vBusy === id} style={{ ...btnGold, opacity: vBusy === id ? 0.6 : 1, cursor: vBusy === id ? 'wait' : 'pointer' }}>{vBusy === id ? 'Speichere…' : st.verbunden ? 'Zugang aktualisieren' : 'Verbinden'}</button>
+                    {st.verbunden && <button onClick={() => trenne(id)} disabled={vBusy === id} style={btn(C.danger)}>Trennen</button>}
+                    {vMeldung[id] && <span style={{ fontFamily: 'DM Sans, sans-serif', color: vMeldung[id]!.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{vMeldung[id]}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '14px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            Sobald verbunden, kann ARGONAUT im nächsten Schritt Ihre Kampagnen direkt über dieses Werbekonto schalten und das Budget steuern.
+          </p>
+        </div>
+
         {/* Werbekanal-Verwaltung */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Werbekanal-Verwaltung</div>
@@ -426,12 +526,13 @@ export default function AdsSeite() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
                 {plattformenNachGruppe(g).map((p) => {
                   const an = kanalAktiv(p.id);
-                  const statusText = an ? 'vorgemerkt · verbinden folgt' : 'nicht vorgemerkt';
+                  const istVerbunden = verb[p.id]?.verbunden === true;
+                  const statusText = istVerbunden ? '✓ verbunden' : an ? 'vorgemerkt · verbinden folgt' : 'nicht vorgemerkt';
                   return (
-                    <div key={p.id} style={{ background: C.navy, border: `1px solid ${an ? 'rgba(76,175,125,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                    <div key={p.id} style={{ background: C.navy, border: `1px solid ${istVerbunden ? C.green : an ? 'rgba(76,175,125,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.icon} {p.name}</div>
-                        <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 12 }}>{statusText}</div>
+                        <div style={{ fontFamily: 'DM Sans, sans-serif', color: istVerbunden ? C.green : C.textDim, fontSize: 12 }}>{statusText}</div>
                       </div>
                       <button onClick={() => toggleKanalAktiv(p.id)} disabled={kanalBusy === p.id}
                         style={{ flexShrink: 0, background: an ? 'transparent' : C.green, color: an ? C.textDim : C.navy, border: `1px solid ${an ? 'rgba(255,255,255,0.2)' : C.green}`, borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, cursor: kanalBusy === p.id ? 'wait' : 'pointer' }}>

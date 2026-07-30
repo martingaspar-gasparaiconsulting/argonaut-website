@@ -247,3 +247,49 @@ export function zaehleAdsKanaele(liste: { aktiv?: boolean | null }[]): { gesamt:
   for (const x of l) if (x?.aktiv) aktiv++;
   return { gesamt: l.length, aktiv };
 }
+
+// ============================================================================
+// WERBEKONTO-VERBINDUNG (Ads P2)
+// Generische, token-basierte Verbindung je Werbekonto (Muster wie Social/Meta):
+// Konto-Kennung + Zugangs-Token werden serverseitig AES-256-GCM verschluesselt
+// (lib/crypto.ts) in ads_zugang abgelegt. Der Token wird nie an den Client
+// zurueckgegeben. Das echte Schalten (P3) liest + entschluesselt serverseitig.
+// ============================================================================
+
+/** Alle Ad-Plattformen, die per Token-Verbindung anbindbar sind (aktuell alle 4). */
+export const VERBINDBARE_ADS: AdsPlattformId[] = ['meta', 'google', 'linkedin', 'tiktok'];
+
+export function istVerbindbar(id: string | null | undefined): boolean {
+  return VERBINDBARE_ADS.includes(id as AdsPlattformId);
+}
+
+export type AdsVerbindungFeld = { kontoLabel: string; kontoHinweis: string; tokenLabel: string };
+
+/** Welche Felder der Betrieb je Werbekonto eintraegt (UI-getrieben aus Daten). */
+export const ADS_VERBINDUNG_FELDER: Record<AdsPlattformId, AdsVerbindungFeld> = {
+  meta: {
+    kontoLabel: 'Werbekonto-ID (act_…)',
+    kontoHinweis: 'Ihre Meta-Werbekonto-ID aus dem Werbeanzeigen-Manager, beginnt mit „act_“.',
+    tokenLabel: 'System-User-Zugangs-Token',
+  },
+  google: {
+    kontoLabel: 'Kundennummer (Customer-ID)',
+    kontoHinweis: 'Ihre 10-stellige Google-Ads-Kundennummer (ohne Bindestriche), oben rechts im Konto.',
+    tokenLabel: 'OAuth-Zugangs-Token',
+  },
+  linkedin: {
+    kontoLabel: 'Werbekonto-URN',
+    kontoHinweis: 'Form „urn:li:sponsoredAccount:…“ aus dem LinkedIn-Kampagnen-Manager.',
+    tokenLabel: 'LinkedIn-Zugangs-Token',
+  },
+  tiktok: {
+    kontoLabel: 'Advertiser-ID',
+    kontoHinweis: 'Ihre TikTok-Advertiser-ID aus dem TikTok Ads Manager (Konto-Info).',
+    tokenLabel: 'TikTok-Zugangs-Token',
+  },
+};
+
+/** Feld-Definition zu einer Ad-Plattform (oder null, wenn nicht verbindbar). */
+export function adsVerbindungFeld(id: string | null | undefined): AdsVerbindungFeld | null {
+  return (id && istVerbindbar(id)) ? ADS_VERBINDUNG_FELDER[id as AdsPlattformId] : null;
+}
