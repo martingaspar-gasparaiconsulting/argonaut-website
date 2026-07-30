@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { emailNormalisieren, istEmailGueltig } from '@/lib/newsletter';
 import { ersterAktiverSchritt, naechsterVersandAm } from '@/lib/autoresponder';
+import { verschickeFaellige, type LaufRow } from '@/lib/autoresponderVersand';
 
 // ============================================================================
 // ARGONAUT OS · app/api/autoresponder/eintragen/route.ts  (Paket 2)
@@ -20,6 +22,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_EMPFAENGER = 1000;
+// Wie viele Tag-0-Empfaenger direkt beim Eintragen sofort verschickt werden
+// (der Rest laeuft ueber den Cron nach). Schuetzt vor Timeout bei Massen-Import.
+const SOFORT_MAX = 50;
+const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
 
 type EingangEmail = { email?: string | null; name?: string | null };
 
@@ -96,6 +102,7 @@ export async function POST(req: Request) {
 
     let eingetragen = 0;
     let uebersprungen = 0;
+    const neuEingetragen = new Set<string>();
     for (const [email, name] of kandidaten) {
       if (schon.has(email)) {
         uebersprungen++;
@@ -115,10 +122,38 @@ export async function POST(req: Request) {
         uebersprungen++;
       } else {
         eingetragen++;
+        neuEingetragen.add(email);
       }
     }
 
-    return NextResponse.json({ ok: true, eingetragen, uebersprungen });
+    // SOFORT-START: Ist der erste Schritt "Tag 0" (Verzoegerung 0), geht die
+    // Willkommensmail direkt raus — nicht erst beim naechsten Cron-Lauf.
+    // Nur die gerade neu eingetragenen Empfaenger, gedeckelt auf SOFORT_MAX.
+    let sofortGesendet = 0;
+    if (eingetragen > 0 && Math.round(erster.verzoegerung_tage ?? 0) === 0) {
+      try {
+        const admin = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+          process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+        );
+        const { data: neue } = await admin
+          .from('autoresponder_lauf')
+          .select('id, owner_user_id, sequenz_id, email, name, abmelde_token, naechste_position, gestartet_am')
+          .eq('sequenz_id', sequenzId)
+          .eq('status', 'aktiv')
+          .lte('naechster_versand_am', new Date().toISOString())
+          .limit(SOFORT_MAX);
+        const zuSenden = ((neue ?? []) as LaufRow[]).filter((l) => neuEingetragen.has(emailNormalisieren(l.email)));
+        if (zuSenden.length > 0) {
+          const r = await verschickeFaellige(admin, zuSenden, BASIS_URL);
+          sofortGesendet = r.gesendet;
+        }
+      } catch (e) {
+        console.error('Sofort-Versand fehlgeschlagen', e instanceof Error ? e.message : e);
+      }
+    }
+
+    return NextResponse.json({ ok: true, eingetragen, uebersprungen, sofortGesendet });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Eintragen fehlgeschlagen.';
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

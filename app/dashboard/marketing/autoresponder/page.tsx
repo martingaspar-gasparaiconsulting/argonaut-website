@@ -293,7 +293,8 @@ export default function AutoresponderSeite() {
         setEMeldung({ art: 'fehler', text: j?.error || 'Eintragen fehlgeschlagen.' });
       } else {
         const ns = j.uebersprungen > 0 ? ` (${j.uebersprungen} übersprungen)` : '';
-        setEMeldung({ art: 'ok', text: `✓ ${j.eingetragen} eingetragen${ns}.` });
+        const sofort = j.sofortGesendet > 0 ? ` · ${j.sofortGesendet} sofort gesendet` : '';
+        setEMeldung({ art: 'ok', text: `✓ ${j.eingetragen} eingetragen${ns}${sofort}.` });
         setEText('');
         setEAusNewsletter(false);
         laden();
@@ -342,9 +343,10 @@ export default function AutoresponderSeite() {
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.2vw, 19px)', lineHeight: 1.6 }}>
             Eine <strong style={{ color: '#fff' }}>Sequenz</strong> ist eine feste Kette von E-Mails, die automatisch nacheinander an
             neue Interessenten gehen — im Branding <strong style={{ color: '#fff' }}>Ihrer Firma</strong>. Sie legen die Sequenz an,
-            fügen <strong style={{ color: '#fff' }}>Schritte</strong> hinzu (z. B. Tag 0 Willkommen · Tag 2 Nutzen · Tag 5 Angebot) und
-            stellen sie auf <strong style={{ color: C.green }}>Aktiv</strong>. Der automatische Versand wird im nächsten Schritt
-            freigeschaltet — bis dahin bauen Sie hier in Ruhe Ihre Strecken.
+            fügen <strong style={{ color: '#fff' }}>Schritte</strong> hinzu (z. B. Tag 0 Willkommen · Tag 2 Nutzen · Tag 5 Angebot),
+            stellen sie auf <strong style={{ color: C.green }}>Aktiv</strong> und tragen über <strong style={{ color: '#fff' }}>👥 Empfänger</strong>
+            die Empfänger ein. Der erste Schritt (Tag 0) geht <strong style={{ color: C.green }}>sofort</strong> raus, die weiteren
+            automatisch nach Ihrem Zeitplan — im Branding Ihrer Firma, jede Mail mit Abmelde-Link (§7 UWG).
           </p>
         </div>
 
