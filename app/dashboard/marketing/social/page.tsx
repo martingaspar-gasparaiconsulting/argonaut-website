@@ -82,6 +82,10 @@ export default function SocialSeite() {
   const [vBusy, setVBusy] = useState<string | null>(null);
   const [vMeldung, setVMeldung] = useState<Record<string, string | null>>({});
 
+  // Sofort posten
+  const [sendBusyId, setSendBusyId] = useState<string | null>(null);
+  const [sendMeldung, setSendMeldung] = useState<string | null>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
@@ -232,6 +236,24 @@ export default function SocialSeite() {
     finally { setVBusy(null); }
   }
 
+  async function jetztPosten(b: Beitrag) {
+    const metaKanaele = (b.kanaele || []).filter((k) => k === 'facebook' || k === 'instagram');
+    if (metaKanaele.length === 0) { setSendMeldung('Für das automatische Posten sind aktuell Facebook und Instagram möglich — weitere Kanäle folgen.'); return; }
+    if (!confirm(`Diesen Beitrag jetzt auf ${metaKanaele.join(' + ')} posten?`)) return;
+    setSendBusyId(b.id); setSendMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/social-senden', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ beitrag_id: b.id }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setSendMeldung(j?.error || 'Posten fehlgeschlagen.');
+      else setSendMeldung(`✓ Gepostet: ${j.gesendet} Kanal${j.gesendet === 1 ? '' : 'e'}${j.fehler ? `, ${j.fehler} fehlgeschlagen` : ''}.`);
+      laden();
+    } catch { setSendMeldung('Posten fehlgeschlagen.'); }
+    finally { setSendBusyId(null); }
+  }
+
   const vorschauKanaele = eKanaele.map((id) => plattformFuer(id)).filter(Boolean);
 
   return (
@@ -350,9 +372,13 @@ export default function SocialSeite() {
 
           <label style={lbl}>Video-Link (optional)</label>
           <input value={eVideo} onChange={(e) => setEVideo(e.target.value)} placeholder="YouTube-, Vimeo- oder .mp4-Link" style={input} />
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            🔒 Videos werden nur <strong style={{ color: '#fff' }}>verlinkt</strong> und nicht bei uns gespeichert. Später hochgeladene Videos werden <strong style={{ color: '#fff' }}>nach dem Posten automatisch von unseren Servern gelöscht</strong>.
+          </p>
           {eVideo.trim() && (
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: videoInfo.embedUrl ? C.green : C.warn, margin: '6px 0 16px', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>{videoHinweis(eVideo)}</p>
           )}
+          {!eVideo.trim() && <div style={{ marginBottom: 16 }} />}
 
           {/* Kanäle */}
           <label style={{ ...lbl, marginTop: 6 }}>Kanäle</label>
@@ -529,6 +555,7 @@ export default function SocialSeite() {
             {liste.map((b) => {
               const urls = Array.isArray(b.medien_urls) ? b.medien_urls : [];
               const bild = urls.find((u) => !videoEinbettung(u).embedUrl);
+              const hatMeta = (b.kanaele || []).some((k) => k === 'facebook' || k === 'instagram');
               const statusLabel = SOCIAL_STATUS.find((s) => s.id === b.status)?.label || 'Entwurf';
               const statusFarbe = b.status === 'gesendet' ? C.green : b.status === 'geplant' ? C.cyan : C.textDim;
               return (
@@ -552,6 +579,11 @@ export default function SocialSeite() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                    {hatMeta && b.status !== 'gesendet' && (
+                      <button onClick={() => jetztPosten(b)} disabled={sendBusyId === b.id} style={{ ...btn(C.green), opacity: sendBusyId === b.id ? 0.5 : 1, cursor: sendBusyId === b.id ? 'wait' : 'pointer' }}>
+                        {sendBusyId === b.id ? 'Poste…' : '📤 Jetzt posten'}
+                      </button>
+                    )}
                     <button onClick={() => bearbeiten(b)} style={btn(C.gold)}>Bearbeiten</button>
                     <button onClick={() => loeschen(b)} style={btn(C.danger)}>Löschen</button>
                   </div>
@@ -559,6 +591,10 @@ export default function SocialSeite() {
               );
             })}
           </div>
+        )}
+
+        {sendMeldung && (
+          <div style={{ marginTop: 14, background: sendMeldung.startsWith('✓') ? 'rgba(76,175,125,0.12)' : 'rgba(224,162,76,0.12)', border: `1px solid ${sendMeldung.startsWith('✓') ? C.green : C.warn}`, borderRadius: 12, padding: '12px 16px', color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{sendMeldung}</div>
         )}
       </div>
     </div>
