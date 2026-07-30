@@ -1,6 +1,6 @@
 // ============================================================================
 // ARGONAUT OS · lib/landingpages.ts — reine Helfer fuer den Landingpage-Bauer
-// (Marketing-Autopilot · LP Paket 1)
+// (Marketing-Autopilot · LP Paket 1 + 1b + 2)
 //
 // KEINE Supabase-Aufrufe, KEINE React-Hooks — nur pure Funktionen (node-testbar).
 // ============================================================================
@@ -141,4 +141,81 @@ export function nutzenAusText(text: string | null | undefined): string[] {
     .map((z) => z.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+
+// ============================================================================
+// LP Paket 2 · MEDIEN — reine Helfer (Bild-Upload-Regeln + Video-Einbettung)
+// ============================================================================
+
+/** Maximale Bildgröße für den Hero-Bild-Upload (in MB). */
+export const MEDIEN_MAX_MB = 6;
+
+/** Erlaubte Bild-Typen (MIME) für den Hero-Bild-Upload. */
+export const ERLAUBTE_BILD_TYPEN: string[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/** Passende Dateiendung zu einem erlaubten Bild-MIME (Fallback: 'bin'). */
+export function bildEndungFuer(mime: string | null | undefined): string {
+  switch ((mime || '').toLowerCase()) {
+    case 'image/jpeg': return 'jpg';
+    case 'image/png': return 'png';
+    case 'image/webp': return 'webp';
+    case 'image/gif': return 'gif';
+    default: return 'bin';
+  }
+}
+
+/** true, wenn der MIME-Typ ein erlaubtes Bild ist. */
+export function istErlaubtesBild(mime: string | null | undefined): boolean {
+  return ERLAUBTE_BILD_TYPEN.includes((mime || '').toLowerCase());
+}
+
+/**
+ * Nur echte http(s)-URLs durchlassen (gegen javascript:/data: etc.), gekappt.
+ * Leerer/ungültiger Wert -> '' (wird beim Speichern zu NULL).
+ */
+export function sichereMedienUrl(roh: string | null | undefined): string {
+  const s = (roh || '').trim();
+  if (!/^https?:\/\/[^\s]+$/i.test(s)) return '';
+  return s.slice(0, 500);
+}
+
+export type VideoTyp = 'youtube' | 'vimeo' | 'datei' | 'unbekannt';
+
+/**
+ * Wandelt einen eingegebenen Video-Link in eine einbettbare Form um.
+ *   - YouTube (watch / youtu.be / embed / shorts / live)  -> www.youtube.com/embed/<id>
+ *   - Vimeo   (vimeo.com/<zahl> / player.vimeo.com/...)    -> player.vimeo.com/video/<id>
+ *   - direkte Videodatei (.mp4/.webm/.ogg)                 -> die URL selbst (typ 'datei')
+ *   - sonst                                                 -> typ 'unbekannt', embedUrl null
+ * Rein & node-testbar; kein Netzwerk.
+ */
+export function videoEinbettung(roh: string | null | undefined): { typ: VideoTyp; embedUrl: string | null } {
+  const url = (roh || '').trim();
+  if (!url) return { typ: 'unbekannt', embedUrl: null };
+
+  const yt = url.match(
+    /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i,
+  );
+  if (yt) return { typ: 'youtube', embedUrl: `https://www.youtube.com/embed/${yt[1]}` };
+
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d{6,})/i);
+  if (vm) return { typ: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vm[1]}` };
+
+  if (/^https?:\/\/[^\s]+\.(mp4|webm|ogg)(\?[^\s]*)?$/i.test(url)) {
+    return { typ: 'datei', embedUrl: url };
+  }
+
+  return { typ: 'unbekannt', embedUrl: null };
+}
+
+/** Kurzer, deutscher Klartext-Hinweis zum erkannten Video-Typ (für den Editor). */
+export function videoHinweis(roh: string | null | undefined): string {
+  if (!(roh || '').trim()) return '';
+  const { typ } = videoEinbettung(roh);
+  switch (typ) {
+    case 'youtube': return '✓ YouTube-Video erkannt';
+    case 'vimeo': return '✓ Vimeo-Video erkannt';
+    case 'datei': return '✓ Video-Datei erkannt';
+    default: return '⚠️ Link nicht erkannt — bitte einen YouTube-/Vimeo-Link oder eine .mp4-Adresse verwenden.';
+  }
 }

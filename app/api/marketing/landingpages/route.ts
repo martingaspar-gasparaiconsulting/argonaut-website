@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { slugNormalisieren, impressumVollstaendig, vorlageFuer } from '@/lib/landingpages';
+import { slugNormalisieren, impressumVollstaendig, vorlageFuer, sichereMedienUrl } from '@/lib/landingpages';
 
 // ============================================================================
-// ARGONAUT OS · app/api/marketing/landingpages/route.ts  (LP Paket 1)
+// ARGONAUT OS · app/api/marketing/landingpages/route.ts  (LP Paket 1 + 2)
 //
 // Verwaltung der Landingpages durch den Betrieb selbst.
 //   GET            -> { liste, impressum:{ok,fehlend} }
@@ -13,6 +13,7 @@ import { slugNormalisieren, impressumVollstaendig, vorlageFuer } from '@/lib/lan
 //
 // Schreibt ueber den Admin-Client, aber IMMER hart auf owner_user_id = user.id
 // beschraenkt. Slug wird normalisiert; Doppel-Slug -> 409.
+// Paket 2: hero_bild_url + video_url werden mitgelesen und -gespeichert.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -33,7 +34,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('landingpages')
-    .select('id, slug, typ, titel, untertitel, nutzen, cta_text, aktiv, created_at')
+    .select('id, slug, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv, created_at')
     .eq('owner_user_id', uid)
     .order('created_at', { ascending: false });
   const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', uid).maybeSingle();
@@ -59,6 +60,8 @@ export async function POST(req: Request) {
   const cta_text = (body.cta_text || '').toString().trim().slice(0, 60) || null;
   const slug = slugNormalisieren((body.slug || '').toString());
   const aktiv = body.aktiv === true || body.aktiv === 'true';
+  const hero_bild_url = sichereMedienUrl(body.hero_bild_url) || null;
+  const video_url = sichereMedienUrl(body.video_url) || null;
   const nutzen = Array.isArray(body.nutzen)
     ? (body.nutzen as unknown[]).map((n) => String(n).trim()).filter(Boolean).slice(0, 12)
     : [];
@@ -80,7 +83,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const felder = { slug, typ, titel, untertitel, cta_text, nutzen, aktiv };
+  const felder = { slug, typ, titel, untertitel, cta_text, nutzen, hero_bild_url, video_url, aktiv };
 
   let error;
   let neuId = id;

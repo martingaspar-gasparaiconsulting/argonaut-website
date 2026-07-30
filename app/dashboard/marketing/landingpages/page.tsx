@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { LP_VORLAGEN, LP_KATEGORIEN, vorlageFuer, zaehleLandingpages, nutzenAusText, type LpVorlage } from '@/lib/landingpages';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import {
+  LP_VORLAGEN, LP_KATEGORIEN, vorlageFuer, zaehleLandingpages, nutzenAusText,
+  videoHinweis, istErlaubtesBild, MEDIEN_MAX_MB, type LpVorlage,
+} from '@/lib/landingpages';
 
 // ============================================================
-// ARGONAUT OS · MARKETING · Landingpage-Bauer (LP Paket 1)
+// ARGONAUT OS · MARKETING · Landingpage-Bauer (LP Paket 1 + 2)
 // Aus Vorlage starten → füllen → aktiv schalten. Rechts-Fuß (Impressum +
 // Datenschutz) entsteht automatisch aus den Firmendaten. Aktivschalten nur
 // bei vollständigem Impressum.
+// Paket 2: Hero-Bild per Drag & Drop hochladen + Video als Embed-Link.
 // ============================================================
 
 const C = {
@@ -17,7 +21,9 @@ const C = {
 
 type Lp = {
   id: string; slug: string; typ: string; titel: string; untertitel: string | null;
-  nutzen: string[] | null; cta_text: string | null; aktiv: boolean; created_at: string;
+  nutzen: string[] | null; cta_text: string | null;
+  hero_bild_url: string | null; video_url: string | null;
+  aktiv: boolean; created_at: string;
 };
 
 export default function LandingpagesSeite() {
@@ -35,11 +41,16 @@ export default function LandingpagesSeite() {
   const [eUnter, setEUnter] = useState('');
   const [eNutzen, setENutzen] = useState('');
   const [eCta, setECta] = useState('');
+  const [eHeroBild, setEHeroBild] = useState('');
+  const [eVideo, setEVideo] = useState('');
+  const [bildBusy, setBildBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [eBusy, setEBusy] = useState(false);
   const [eMeldung, setEMeldung] = useState<string | null>(null);
   const [kopiert, setKopiert] = useState<string | null>(null);
   const [eKategorie, setEKategorie] = useState('');
   const [vorschlagBusy, setVorschlagBusy] = useState(false);
+  const dateiRef = useRef<HTMLInputElement>(null);
 
   async function laden() {
     setLoading(true); setFehler(null);
@@ -63,6 +74,8 @@ export default function LandingpagesSeite() {
     setEUnter(v.untertitel);
     setENutzen(v.nutzen.join('\n'));
     setECta(v.cta_text);
+    setEHeroBild('');
+    setEVideo('');
     setEKategorie('');
     setEMeldung(null);
     setPickerOffen(false);
@@ -77,6 +90,8 @@ export default function LandingpagesSeite() {
     setEUnter(lp.untertitel ?? '');
     setENutzen((lp.nutzen ?? []).join('\n'));
     setECta(lp.cta_text ?? '');
+    setEHeroBild(lp.hero_bild_url ?? '');
+    setEVideo(lp.video_url ?? '');
     setEKategorie('');
     setEMeldung(null);
     setEditOffen(true);
@@ -97,6 +112,29 @@ export default function LandingpagesSeite() {
     finally { setVorschlagBusy(false); }
   }
 
+  async function bildHochladen(file: File | null | undefined) {
+    if (!file) return;
+    if (!istErlaubtesBild(file.type)) { setEMeldung('Nur Bilder erlaubt (JPG, PNG, WebP oder GIF).'); return; }
+    if (file.size > MEDIEN_MAX_MB * 1024 * 1024) { setEMeldung(`Das Bild ist zu groß (max. ${MEDIEN_MAX_MB} MB).`); return; }
+    setBildBusy(true); setEMeldung(null);
+    try {
+      const fd = new FormData();
+      fd.append('datei', file);
+      const res = await fetch('/api/marketing/lp-medien', { method: 'POST', body: fd });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setEMeldung(j?.error || 'Upload fehlgeschlagen.'); }
+      else { setEHeroBild(j.url as string); }
+    } catch { setEMeldung('Upload fehlgeschlagen.'); }
+    finally { setBildBusy(false); }
+  }
+
+  function aufDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) bildHochladen(file);
+  }
+
   async function speichern(aktiv: boolean) {
     if (!eTitel.trim()) { setEMeldung('Bitte eine Überschrift eingeben.'); return; }
     setEBusy(true); setEMeldung(null);
@@ -105,7 +143,8 @@ export default function LandingpagesSeite() {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           id: editId, typ: eTyp, slug: eSlug, titel: eTitel.trim(),
-          untertitel: eUnter.trim(), nutzen: nutzenAusText(eNutzen), cta_text: eCta.trim(), aktiv,
+          untertitel: eUnter.trim(), nutzen: nutzenAusText(eNutzen), cta_text: eCta.trim(),
+          hero_bild_url: eHeroBild.trim(), video_url: eVideo.trim(), aktiv,
         }),
       });
       const j = await res.json();
@@ -120,7 +159,8 @@ export default function LandingpagesSeite() {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         id: lp.id, typ: lp.typ, slug: lp.slug, titel: lp.titel,
-        untertitel: lp.untertitel ?? '', nutzen: lp.nutzen ?? [], cta_text: lp.cta_text ?? '', aktiv,
+        untertitel: lp.untertitel ?? '', nutzen: lp.nutzen ?? [], cta_text: lp.cta_text ?? '',
+        hero_bild_url: lp.hero_bild_url ?? '', video_url: lp.video_url ?? '', aktiv,
       }),
     });
     const j = await res.json();
@@ -140,6 +180,8 @@ export default function LandingpagesSeite() {
     try { await navigator.clipboard.writeText(`https://argonaut-os.com/lp/${slug}`); setKopiert(slug); setTimeout(() => setKopiert(null), 2000); } catch { /* ignore */ }
   }
 
+  const vHinweis = videoHinweis(eVideo);
+
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
@@ -149,7 +191,7 @@ export default function LandingpagesSeite() {
               🖼️ Landingpages
             </h1>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0' }}>
-              Eigene Anmelde-Seiten aus Vorlagen — in Ihren Farben, mit Double-Opt-In.
+              Eigene Anmelde-Seiten aus Vorlagen — in Ihren Farben, mit Bild, Video und Double-Opt-In.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -162,7 +204,8 @@ export default function LandingpagesSeite() {
         <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: `1px solid ${C.gold}`, marginBottom: 16 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: C.gold, fontSize: 'clamp(16px, 1.4vw, 22px)', marginBottom: 8 }}>So geht&apos;s</div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.2vw, 19px)', lineHeight: 1.6 }}>
-            Vorlage wählen → Überschrift, Text und Nutzen anpassen → <strong style={{ color: C.green }}>Aktiv</strong> schalten. Sie erhalten einen teilbaren Link
+            Vorlage wählen → Überschrift, Text und Nutzen anpassen → optional ein <strong style={{ color: '#fff' }}>Hero-Bild</strong> per Drag &amp; Drop und ein <strong style={{ color: '#fff' }}>Video</strong> (YouTube/Vimeo-Link) einfügen →
+            <strong style={{ color: C.green }}> Aktiv</strong> schalten. Sie erhalten einen teilbaren Link
             <strong style={{ color: '#fff' }}> argonaut-os.com/lp/ihr-name</strong>. Wer sich einträgt, bekommt eine Bestätigungsmail (Double-Opt-In) und landet erst nach dem Klick
             in Ihrer Liste — und startet automatisch Ihre Willkommens-Sequenz (falls im Newsletter-Bereich hinterlegt). Impressum &amp; Datenschutz erscheinen automatisch aus Ihren Firmendaten.
           </p>
@@ -203,13 +246,20 @@ export default function LandingpagesSeite() {
           <div style={{ display: 'grid', gap: 12 }}>
             {liste.map((lp) => (
               <div key={lp.id} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: 240 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
-                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)' }}>{lp.titel}</span>
-                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: lp.aktiv ? C.green : C.textDim, border: `1px solid ${lp.aktiv ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 10px' }}>{lp.aktiv ? 'Live' : 'Entwurf'}</span>
-                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '1px 8px' }}>{vorlageFuer(lp.typ).icon} {vorlageFuer(lp.typ).name}</span>
+                <div style={{ flex: 1, minWidth: 240, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                  {lp.hero_bild_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lp.hero_bild_url} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)' }} />
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)' }}>{lp.titel}</span>
+                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: lp.aktiv ? C.green : C.textDim, border: `1px solid ${lp.aktiv ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 10px' }}>{lp.aktiv ? 'Live' : 'Entwurf'}</span>
+                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '1px 8px' }}>{vorlageFuer(lp.typ).icon} {vorlageFuer(lp.typ).name}</span>
+                      {lp.video_url && <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '1px 8px' }}>▶ Video</span>}
+                    </div>
+                    <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.cyan, fontSize: 'clamp(13px, 1.06vw, 17px)', wordBreak: 'break-all' }}>argonaut-os.com/lp/{lp.slug}</div>
                   </div>
-                  <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.cyan, fontSize: 'clamp(13px, 1.06vw, 17px)', wordBreak: 'break-all' }}>argonaut-os.com/lp/{lp.slug}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                   <button onClick={() => kopieren(lp.slug)} style={btn(C.cyan)}>{kopiert === lp.slug ? '✓ Kopiert' : 'Link kopieren'}</button>
@@ -297,6 +347,55 @@ export default function LandingpagesSeite() {
               <label style={lbl}>Knopf-Text (CTA)</label>
               <input value={eCta} onChange={(e) => setECta(e.target.value)} placeholder="Jetzt anmelden" style={input} />
             </div>
+
+            {/* Medien (Paket 2) */}
+            <div style={{ marginBottom: 14, background: '#0F1F33', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '14px 16px' }}>
+              <label style={lbl}>Hero-Bild (optional)</label>
+              <input
+                ref={dateiRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={(e) => { bildHochladen(e.target.files?.[0]); e.target.value = ''; }}
+              />
+              {eHeroBild ? (
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={eHeroBild} alt="Vorschau" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)' }} />
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button onClick={() => dateiRef.current?.click()} disabled={bildBusy} style={btn(C.cyan)}>{bildBusy ? 'Lädt…' : 'Anderes Bild'}</button>
+                    <button onClick={() => setEHeroBild('')} disabled={bildBusy} style={btn(C.danger)}>Entfernen</button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => !bildBusy && dateiRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={aufDrop}
+                  style={{
+                    border: `2px dashed ${dragOver ? C.cyan : 'rgba(255,255,255,0.25)'}`,
+                    background: dragOver ? 'rgba(0,229,255,0.06)' : 'transparent',
+                    borderRadius: 10, padding: '22px 16px', textAlign: 'center', cursor: bildBusy ? 'wait' : 'pointer',
+                    fontFamily: 'DM Sans, sans-serif', color: C.textDim,
+                  }}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
+                  <div style={{ fontSize: 'clamp(13px, 1.13vw, 17px)', color: '#fff' }}>{bildBusy ? 'Bild wird hochgeladen…' : 'Bild hierher ziehen oder klicken zum Auswählen'}</div>
+                  <div style={{ fontSize: 'clamp(11px, 1vw, 14px)', marginTop: 4 }}>JPG, PNG, WebP oder GIF · max. {MEDIEN_MAX_MB} MB</div>
+                </div>
+              )}
+
+              <label style={{ ...lbl, marginTop: 16 }}>Video (optional) — YouTube-, Vimeo-Link oder .mp4-Adresse</label>
+              <input value={eVideo} onChange={(e) => setEVideo(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" style={input} />
+              {vHinweis && (
+                <p style={{ fontFamily: 'DM Sans, sans-serif', margin: '6px 0 0', fontSize: 'clamp(12px, 1vw, 15px)', color: vHinweis.startsWith('✓') ? C.green : C.warn }}>{vHinweis}</p>
+              )}
+              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+                Tipp: Bei echten Videos einen YouTube- oder Vimeo-Link verwenden — das lädt schneller und spart Speicher.
+              </p>
+            </div>
+
             {eMeldung && <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.danger, margin: '0 0 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{eMeldung}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => setEditOffen(false)} style={btnGhost}>Abbrechen</button>

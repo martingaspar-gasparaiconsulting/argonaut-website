@@ -1,14 +1,16 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Öffentliche Landingpage (ohne Login) · LP Paket 1
+// ARGONAUT OS · Öffentliche Landingpage (ohne Login) · LP Paket 1 + 2
 // /lp/<slug> — branchengebrandeter Marken-Hero + Nutzen + Double-Opt-In
 // + Rechts-Fuß (Impressum + generierte Datenschutzerklärung aus Firmendaten).
+// Paket 2: Hero-Bild (mit Lesbarkeits-Overlay) + eingebettetes Video.
 // Liest & schreibt nur über /api/oeffentlich/lp. Kein Supabase im Client.
 // ============================================================
 
 import { useEffect, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
+import { videoEinbettung } from '@/lib/landingpages';
 
 type Impressum = {
   firma_name: string; rechtsform: string; strasse: string; plz: string; ort: string;
@@ -19,6 +21,7 @@ type Impressum = {
 type LpDaten = {
   titel: string; untertitel: string | null; nutzen: string[]; cta_text: string | null;
   typ: string; betrieb: string; akzent: string | null; impressum: Impressum;
+  hero_bild_url: string | null; video_url: string | null;
 };
 
 function sichereFarbe(f: string | null | undefined): string {
@@ -78,14 +81,21 @@ export default function LandingpageSeite() {
   }
 
   const akzent = sichereFarbe(d?.akzent);
+  const heroBild = (d?.hero_bild_url || '').trim();
+  const video = videoEinbettung(d?.video_url);
 
   const S: Record<string, CSSProperties> = {
     page: { minHeight: '100dvh', background: '#f4f5f7', color: '#1a2332', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
-    hero: { background: `linear-gradient(135deg, ${akzent} 0%, #0A1628 130%)`, color: '#fff', padding: '64px 20px 72px', textAlign: 'center' },
+    hero: heroBild
+      ? { background: `linear-gradient(135deg, rgba(10,22,40,0.55) 0%, rgba(10,22,40,0.78) 100%), url("${heroBild}") center / cover no-repeat`, color: '#fff', padding: '84px 20px 92px', textAlign: 'center' }
+      : { background: `linear-gradient(135deg, ${akzent} 0%, #0A1628 130%)`, color: '#fff', padding: '64px 20px 72px', textAlign: 'center' },
     firma: { fontSize: 14, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.92 },
-    h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 800, margin: '14px auto 10px', maxWidth: 720, lineHeight: 1.1 },
-    unter: { fontSize: 'clamp(16px, 1.8vw, 21px)', maxWidth: 620, margin: '0 auto', opacity: 0.95, lineHeight: 1.5 },
+    h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 800, margin: '14px auto 10px', maxWidth: 720, lineHeight: 1.1, textShadow: heroBild ? '0 2px 12px rgba(0,0,0,0.35)' : 'none' },
+    unter: { fontSize: 'clamp(16px, 1.8vw, 21px)', maxWidth: 620, margin: '0 auto', opacity: 0.95, lineHeight: 1.5, textShadow: heroBild ? '0 1px 8px rgba(0,0,0,0.3)' : 'none' },
     wrap: { maxWidth: 640, margin: '-40px auto 0', padding: '0 16px 56px' },
+    videoBox: { maxWidth: 640, margin: '-20px auto 0', padding: '0 16px', position: 'relative', zIndex: 2 },
+    videoRahmen: { position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 16, overflow: 'hidden', boxShadow: '0 12px 40px rgba(10,22,40,0.18)', background: '#000' },
+    videoInner: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', display: 'block' },
     card: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 28, boxShadow: '0 12px 40px rgba(10,22,40,0.12)' },
     nutzenLi: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10, fontSize: 'clamp(15px, 1.4vw, 18px)', lineHeight: 1.5 },
     lbl: { display: 'block', fontSize: 13, color: '#6b7280', marginBottom: 5, fontWeight: 600 },
@@ -120,6 +130,24 @@ export default function LandingpageSeite() {
         <h1 style={S.h1}>{d.titel}</h1>
         {d.untertitel && <p style={S.unter}>{d.untertitel}</p>}
       </div>
+
+      {video.embedUrl && (
+        <div style={S.videoBox}>
+          <div style={S.videoRahmen}>
+            {video.typ === 'datei' ? (
+              <video src={video.embedUrl} controls playsInline style={S.videoInner} />
+            ) : (
+              <iframe
+                src={video.embedUrl}
+                title="Video"
+                style={S.videoInner}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={S.wrap}>
         <div style={S.card}>
