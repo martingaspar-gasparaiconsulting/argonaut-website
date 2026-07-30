@@ -4,8 +4,11 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   SOCIAL_PLATTFORMEN, SOCIAL_STATUS, plattformFuer, plattformenNachGruppe,
   bindendesLimit, zaehleZeichen, validiereBeitrag, zaehleBeitraege, zaehleKanaele,
-  META_PLATTFORMEN, metaVerbindungFeld,
+  META_PLATTFORMEN, metaVerbindungFeld, verbindungFeld,
 } from '@/lib/social';
+
+const WEITERE_VERBINDBAR = ['google_business', 'linkedin'];
+const POSTBARE = ['facebook', 'instagram', 'google_business', 'linkedin'];
 import { videoEinbettung, videoHinweis, sichereMedienUrl } from '@/lib/landingpages';
 
 // ============================================================
@@ -99,12 +102,14 @@ export default function SocialSeite() {
       const jV = await rV.json();
       if (jK?.ok) setKanaele((jK.liste as KanalRow[]) || []);
       if (jV?.ok) {
-        const fb = (jV.facebook as VStatus) || V_LEER;
-        const ig = (jV.instagram as VStatus) || V_LEER;
-        setVerb({ facebook: fb, instagram: ig });
+        const st = (k: string) => (jV[k] as VStatus) || V_LEER;
+        const alle = ['facebook', 'instagram', 'google_business', 'linkedin'];
+        const neu: Record<string, VStatus> = {};
+        alle.forEach((k) => { neu[k] = st(k); });
+        setVerb(neu);
         setVEncKey(jV.encKeyBereit !== false);
-        setVZiel((prev) => ({ facebook: fb.ziel_id, instagram: ig.ziel_id, ...prev }));
-        setVKonto((prev) => ({ facebook: fb.konto_name, instagram: ig.konto_name, ...prev }));
+        setVZiel((prev) => { const o: Record<string, string> = {}; alle.forEach((k) => { o[k] = st(k).ziel_id; }); return { ...o, ...prev }; });
+        setVKonto((prev) => { const o: Record<string, string> = {}; alle.forEach((k) => { o[k] = st(k).konto_name; }); return { ...o, ...prev }; });
         setVToken({});
       }
       if (!rB.ok || !jB?.ok) setFehler(jB?.error || 'Laden fehlgeschlagen.');
@@ -237,9 +242,10 @@ export default function SocialSeite() {
   }
 
   async function jetztPosten(b: Beitrag) {
-    const metaKanaele = (b.kanaele || []).filter((k) => k === 'facebook' || k === 'instagram');
-    if (metaKanaele.length === 0) { setSendMeldung('Für das automatische Posten sind aktuell Facebook und Instagram möglich — weitere Kanäle folgen.'); return; }
-    if (!confirm(`Diesen Beitrag jetzt auf ${metaKanaele.join(' + ')} posten?`)) return;
+    const kanaele = (b.kanaele || []).filter((k) => POSTBARE.includes(k));
+    if (kanaele.length === 0) { setSendMeldung('Für das automatische Posten sind aktuell Facebook, Instagram, Google Unternehmensprofil und LinkedIn möglich — weitere Kanäle folgen.'); return; }
+    const namen = kanaele.map((k) => plattformFuer(k)?.name || k).join(' + ');
+    if (!confirm(`Diesen Beitrag jetzt auf ${namen} posten?`)) return;
     setSendBusyId(b.id); setSendMeldung(null);
     try {
       const res = await fetch('/api/marketing/social-senden', {
@@ -506,6 +512,47 @@ export default function SocialSeite() {
           </p>
         </div>
 
+        {/* Verbindungen — Google Unternehmensprofil + LinkedIn */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Verbindungen — Google Unternehmensprofil &amp; LinkedIn</div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
+            Auch hier gilt: Zugangs-Token wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt. Die genaue Einrichtung erhalten Sie separat.
+          </p>
+          <div style={{ display: 'grid', gap: 14 }}>
+            {WEITERE_VERBINDBAR.map((id) => {
+              const p = plattformFuer(id)!;
+              const feld = verbindungFeld(id)!;
+              const st = verb[id] || V_LEER;
+              return (
+                <div key={id} style={{ background: C.navy, border: `1px solid ${st.verbunden ? C.green : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.3vw, 20px)' }}>{p.icon} {p.name}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: st.verbunden ? C.green : C.textDim, border: `1px solid ${st.verbunden ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 12px' }}>{st.verbunden ? '✓ Verbunden' : 'Nicht verbunden'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={lbl}>{feld.zielLabel}</label>
+                      <input value={vZiel[id] ?? ''} onChange={(e) => setVZiel((v) => ({ ...v, [id]: e.target.value }))} placeholder={id === 'linkedin' ? 'urn:li:person:…' : 'accounts/…/locations/…'} style={input} />
+                    </div>
+                    <div>
+                      <label style={lbl}>Anzeigename (optional)</label>
+                      <input value={vKonto[id] ?? ''} onChange={(e) => setVKonto((v) => ({ ...v, [id]: e.target.value }))} placeholder="z. B. Bäckerei Sonnenschein" style={input} />
+                    </div>
+                  </div>
+                  <label style={lbl}>{feld.tokenLabel}</label>
+                  <input type="password" value={vToken[id] ?? ''} onChange={(e) => setVToken((v) => ({ ...v, [id]: e.target.value }))} placeholder={st.hatToken ? '•••••••• (gespeichert — zum Ändern neu eingeben)' : 'hier einfügen'} style={{ ...input, maxWidth: 460 }} />
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 12px', fontSize: 'clamp(11px, 1vw, 14px)' }}>{feld.zielHinweis}</p>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => verbinde(id)} disabled={vBusy === id} style={{ ...btnGold, opacity: vBusy === id ? 0.6 : 1, cursor: vBusy === id ? 'wait' : 'pointer' }}>{vBusy === id ? 'Speichere…' : st.verbunden ? 'Zugang aktualisieren' : 'Verbinden'}</button>
+                    {st.verbunden && <button onClick={() => trenne(id)} disabled={vBusy === id} style={btn(C.danger)}>Trennen</button>}
+                    {vMeldung[id] && <span style={{ fontFamily: 'DM Sans, sans-serif', color: vMeldung[id]!.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{vMeldung[id]}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Kanal-Verwaltung */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Kanal-Verwaltung</div>
@@ -556,7 +603,7 @@ export default function SocialSeite() {
             {liste.map((b) => {
               const urls = Array.isArray(b.medien_urls) ? b.medien_urls : [];
               const bild = urls.find((u) => !videoEinbettung(u).embedUrl);
-              const hatMeta = (b.kanaele || []).some((k) => k === 'facebook' || k === 'instagram');
+              const hatMeta = (b.kanaele || []).some((k) => POSTBARE.includes(k));
               const statusLabel = SOCIAL_STATUS.find((s) => s.id === b.status)?.label || 'Entwurf';
               const statusFarbe = b.status === 'gesendet' ? C.green : b.status === 'geplant' ? C.cyan : C.textDim;
               return (

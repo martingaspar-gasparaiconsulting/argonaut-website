@@ -45,7 +45,7 @@ async function metaZugaenge(admin: ReturnType<typeof service>, uid: string): Pro
     .from('social_zugang')
     .select('plattform, ziel_id, token_verschluesselt, verbunden')
     .eq('owner_user_id', uid)
-    .in('plattform', ['facebook', 'instagram']);
+    .in('plattform', ['facebook', 'instagram', 'google_business', 'linkedin']);
   const map: Record<string, MetaZugang> = {};
   for (const r of (data ?? []) as { plattform: string; ziel_id: string | null; token_verschluesselt: string | null; verbunden: boolean | null }[]) {
     if (r.verbunden !== true || !r.token_verschluesselt || !r.ziel_id) continue;

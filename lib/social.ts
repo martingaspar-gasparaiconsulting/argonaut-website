@@ -367,3 +367,37 @@ export const META_VERBINDUNG_FELDER: Record<'facebook' | 'instagram', MetaVerbin
 export function metaVerbindungFeld(id: string | null | undefined): MetaVerbindungFeld | null {
   return (id === 'facebook' || id === 'instagram') ? META_VERBINDUNG_FELDER[id] : null;
 }
+
+// ============================================================================
+// WEITERE KERN-KANAELE (Google Unternehmensprofil + LinkedIn) — Social P6
+// Generische, token-basierte Verbindung (wie Meta). social_zugang bleibt generisch.
+// ============================================================================
+
+/** Alle Kanaele, die per Token-Verbindung direkt anbindbar sind. */
+export const VERBINDBARE_PLATTFORMEN: SocialPlattformId[] = ['facebook', 'instagram', 'google_business', 'linkedin'];
+
+export function istVerbindbar(id: string | null | undefined): boolean {
+  return VERBINDBARE_PLATTFORMEN.includes(id as SocialPlattformId);
+}
+
+export type VerbindungFeld = { zielLabel: string; zielHinweis: string; tokenLabel: string };
+
+/** Welche Felder der Betrieb je verbindbarem Kanal eintraegt (UI-getrieben). */
+export const VERBINDUNG_FELDER: Record<string, VerbindungFeld> = {
+  facebook: META_VERBINDUNG_FELDER.facebook,
+  instagram: META_VERBINDUNG_FELDER.instagram,
+  google_business: {
+    zielLabel: 'Standort-Ressourcenname',
+    zielHinweis: 'Form „accounts/…/locations/…“ aus Ihrem Google-Unternehmensprofil (Standort-ID).',
+    tokenLabel: 'Google-Zugangs-Token (OAuth)',
+  },
+  linkedin: {
+    zielLabel: 'Autor-URN',
+    zielHinweis: 'urn:li:person:… (persönlich) oder urn:li:organization:… (Unternehmensseite).',
+    tokenLabel: 'LinkedIn-Zugangs-Token',
+  },
+};
+
+export function verbindungFeld(id: string | null | undefined): VerbindungFeld | null {
+  return (id && VERBINDUNG_FELDER[id]) || null;
+}
