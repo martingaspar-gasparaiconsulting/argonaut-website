@@ -13,6 +13,9 @@
 //  · Es werden nur die minimal nötigen Felder nach außen gegeben
 //    (Betriebsname, freie Slots) — keine internen Daten.
 //
+// Branding: Die Bestätigungs-Mail geht im Namen DES BETRIEBS raus
+// (kundenMailLayout + firma_akzentfarbe), nicht ARGONAUT.
+//
 // GET  ?slug=..&artId=..&tage=21  -> { betrieb, artId, arten[], slots[] }
 // POST { slug, artId, beginn_am, ende_am, mitarbeiter_id?, kunde_name,
 //        kunde_email, telefon?, notiz? } -> { ok } | { error }
@@ -21,7 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { berechneSlots, type VerfuegbarkeitRow, type TerminRow, type AbwesenheitRow, type TerminArt } from '@/app/dashboard/_components/slotLogik';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -192,20 +195,28 @@ export async function POST(req: NextRequest) {
     });
     if (insErr) throw insErr;
 
-    // Bestätigungs-Mail an den Kunden (bricht die Buchung bei Mailproblem nicht ab).
+    // Bestätigungs-Mail an den Kunden — im Branding DES BETRIEBS
+    // (bricht die Buchung bei Mailproblem nicht ab).
     try {
+      const brand = await absenderBranding(db, betrieb.ownerId);
       const datumStr = beginnD.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
       const zeitStr = `${beginnD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })}–${endeD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
       const inhalt = `
         <p>Guten Tag ${escapeHtml(kundeName)},</p>
         <p>vielen Dank — Ihr Termin bei <b>${escapeHtml(betrieb.name)}</b> ist gebucht:</p>
-        <div style="background:#F4F1E8;border-left:4px solid #C9A84C;border-radius:8px;padding:16px 20px;margin:16px 0;">
+        <div style="background:#f7f8fa;border-left:4px solid ${brand.akzent};border-radius:8px;padding:16px 20px;margin:16px 0;">
           <div style="font-size:16px;font-weight:700;color:#0A1628;">${escapeHtml(art.name || 'Termin')}</div>
           <div style="margin-top:6px;color:#1a2332;">${datumStr}</div>
           <div style="color:#1a2332;">${zeitStr}</div>
         </div>
         <p>Sollten Sie den Termin nicht wahrnehmen können, antworten Sie einfach auf diese E-Mail.</p>`;
-      await sendeMail({ an: kundeMail, betreff: `Terminbestätigung: ${art.name || 'Termin'} am ${beginnD.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}`, html: mailLayout('Terminbestätigung', inhalt) });
+      await sendeMail({
+        an: kundeMail,
+        betreff: `Terminbestätigung: ${art.name || 'Termin'} am ${beginnD.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}`,
+        html: kundenMailLayout(brand.firma, brand.akzent, 'Terminbestätigung', inhalt),
+        absenderName: brand.firma,
+        antwortAn: brand.email,
+      });
     } catch { /* Mail optional */ }
 
     return NextResponse.json({ ok: true });

@@ -5,12 +5,14 @@
 // - Läuft mit Service-Role (kein Login) über ALLE Betriebe hinweg.
 // - "Morgen" wird in Europe/Berlin bestimmt (Sommer-/Winterzeit-sicher).
 // - erinnerung_gesendet_am verhindert Doppel-Versand (idempotent).
+// Branding: JEDE Mail im Namen DES jeweiligen BETRIEBS (kundenMailLayout +
+// firma_akzentfarbe), pro Termin-Besitzer geladen (gecacht).
 // Aufruf: n8n-Cron 1x täglich, POST mit Header x-cron-secret.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 
@@ -32,7 +34,7 @@ function aktiv(status: string | null): boolean {
 }
 
 type TerminZeile = {
-  id: string; titel: string | null; beginn_am: string; ende_am: string;
+  id: string; owner_user_id: string; titel: string | null; beginn_am: string; ende_am: string;
   kunde_name: string | null; kunde_email: string | null; status: string | null;
 };
 
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
   // 3) Kandidaten laden: künftig, noch nicht erinnert, mit E-Mail
   const { data, error } = await supabase
     .from('termine')
-    .select('id, titel, beginn_am, ende_am, kunde_name, kunde_email, status')
+    .select('id, owner_user_id, titel, beginn_am, ende_am, kunde_name, kunde_email, status')
     .gte('beginn_am', now.toISOString())
     .lte('beginn_am', fensterBis.toISOString())
     .is('erinnerung_gesendet_am', null)
@@ -72,6 +74,16 @@ export async function POST(req: NextRequest) {
   const faellig = ((data as TerminZeile[]) ?? []).filter(
     (t) => aktiv(t.status) && !!t.kunde_email && berlinDatum(new Date(t.beginn_am)) === zielDatum
   );
+
+  // Branding je Betrieb cachen (mehrere Termine pro Betrieb -> nur einmal laden).
+  const brandCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
+  async function ownerBrand(ownerId: string) {
+    const treffer = brandCache.get(ownerId);
+    if (treffer) return treffer;
+    const b = await absenderBranding(supabase, ownerId);
+    brandCache.set(ownerId, b);
+    return b;
+  }
 
   let gesendet = 0;
   const fehlerListe: string[] = [];
@@ -87,10 +99,12 @@ export async function POST(req: NextRequest) {
       `–${ende.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
     const anrede = t.kunde_name ? `Guten Tag ${escapeHtml(t.kunde_name)},` : 'Guten Tag,';
 
+    const brand = await ownerBrand(t.owner_user_id);
+
     const inhalt = `
       <p>${anrede}</p>
       <p>eine kurze Erinnerung — Ihr Termin findet <b>morgen</b> statt:</p>
-      <div style="background:#F4F1E8;border-left:4px solid #C9A84C;border-radius:8px;padding:16px 20px;margin:16px 0;">
+      <div style="background:#f7f8fa;border-left:4px solid ${brand.akzent};border-radius:8px;padding:16px 20px;margin:16px 0;">
         <div style="font-size:16px;font-weight:700;color:#0A1628;">${escapeHtml(t.titel ?? 'Termin')}</div>
         <div style="margin-top:6px;color:#1a2332;">${datumStr}</div>
         <div style="color:#1a2332;">${zeitStr}</div>
@@ -98,10 +112,10 @@ export async function POST(req: NextRequest) {
       <p>Sollten Sie den Termin nicht wahrnehmen können, antworten Sie einfach auf diese E-Mail.</p>
       <p>Wir freuen uns auf Sie.</p>`;
 
-    const html = mailLayout('Terminerinnerung', inhalt);
+    const html = kundenMailLayout(brand.firma, brand.akzent, 'Terminerinnerung', inhalt);
     const betreff = `Erinnerung: ${t.titel ?? 'Ihr Termin'} morgen um ${beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
 
-    const r = await sendeMail({ an: t.kunde_email as string, betreff, html });
+    const r = await sendeMail({ an: t.kunde_email as string, betreff, html, absenderName: brand.firma, antwortAn: brand.email });
     if (r.ok) {
       await supabase.from('termine').update({ erinnerung_gesendet_am: new Date().toISOString() }).eq('id', t.id);
       gesendet++;
