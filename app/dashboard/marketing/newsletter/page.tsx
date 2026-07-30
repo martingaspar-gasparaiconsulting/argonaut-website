@@ -5,9 +5,9 @@ import { createBrowserClient } from '@supabase/ssr';
 import { emailNormalisieren, istEmailGueltig, zaehleAbonnenten } from '@/lib/newsletter';
 
 // ============================================================
-// ARGONAUT OS · MARKETING · Newsletter (Punkt 29a)
-// Abonnenten-Liste + manuelle Pflege. Versand + öffentliche
-// Abmeldung folgen in Punkt 29b.
+// ARGONAUT OS · MARKETING · Newsletter (Punkt 29a + 29b)
+// Abonnenten-Liste + Versand über Resend + Versand-Historie.
+// Öffentliche Abmeldung: /api/newsletter/abmelden?token=…
 // ============================================================
 
 const C = {
@@ -36,13 +36,28 @@ type Abonnent = {
   abgemeldet_am: string | null;
 };
 
+type Versand = {
+  id: string;
+  betreff: string;
+  empfaenger_anzahl: number;
+  erfolg_anzahl: number;
+  fehler_anzahl: number;
+  gesendet_am: string;
+};
+
 function fmtDatum(d: string | null): string {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function fmtDatumZeit(d: string | null): string {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function NewsletterAbonnenten() {
   const [liste, setListe] = useState<Abonnent[]>([]);
+  const [versandListe, setVersandListe] = useState<Versand[]>([]);
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -50,6 +65,11 @@ export default function NewsletterAbonnenten() {
   const [fName, setFName] = useState('');
   const [speichern, setSpeichern] = useState(false);
   const [hinweis, setHinweis] = useState<string | null>(null);
+
+  const [betreff, setBetreff] = useState('');
+  const [inhalt, setInhalt] = useState('');
+  const [sende, setSende] = useState(false);
+  const [sendeMeldung, setSendeMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null);
 
   async function laden() {
     setLoading(true);
@@ -64,6 +84,12 @@ export default function NewsletterAbonnenten() {
     } else {
       setListe((data ?? []) as Abonnent[]);
     }
+    const { data: vData } = await supabase
+      .from('newsletter_versand')
+      .select('id, betreff, empfaenger_anzahl, erfolg_anzahl, fehler_anzahl, gesendet_am')
+      .order('gesendet_am', { ascending: false })
+      .limit(10);
+    setVersandListe((vData ?? []) as Versand[]);
     setLoading(false);
   }
 
@@ -88,7 +114,6 @@ export default function NewsletterAbonnenten() {
     });
     setSpeichern(false);
     if (error) {
-      // 23505 = Unique-Verletzung (E-Mail schon in der Liste dieses Kontos)
       if ((error as { code?: string }).code === '23505') {
         setHinweis('Diese E-Mail steht bereits in deiner Liste.');
       } else {
@@ -126,6 +151,42 @@ export default function NewsletterAbonnenten() {
     laden();
   }
 
+  async function senden() {
+    setSendeMeldung(null);
+    if (!betreff.trim() || !inhalt.trim()) {
+      setSendeMeldung({ art: 'fehler', text: 'Bitte Betreff und Inhalt ausfüllen.' });
+      return;
+    }
+    if (kpi.aktiv === 0) {
+      setSendeMeldung({ art: 'fehler', text: 'Es gibt keine aktiven Abonnenten.' });
+      return;
+    }
+    if (!confirm(`Newsletter jetzt an ${kpi.aktiv} aktive Abonnent${kpi.aktiv === 1 ? '' : 'en'} senden?`)) return;
+
+    setSende(true);
+    try {
+      const res = await fetch('/api/newsletter-versand', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ betreff: betreff.trim(), inhalt: inhalt.trim() }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.ok) {
+        setSendeMeldung({ art: 'fehler', text: j?.error || 'Versand fehlgeschlagen.' });
+      } else {
+        const nachsatz = j.fehler > 0 ? ` (${j.fehler} nicht zustellbar)` : '';
+        setSendeMeldung({ art: 'ok', text: `✓ An ${j.gesendet} Abonnenten gesendet${nachsatz}.` });
+        setBetreff('');
+        setInhalt('');
+        laden();
+      }
+    } catch (e: unknown) {
+      setSendeMeldung({ art: 'fehler', text: e instanceof Error ? e.message : 'Versand fehlgeschlagen.' });
+    } finally {
+      setSende(false);
+    }
+  }
+
   return (
     <div style={{ background: C.navy, minHeight: '100vh' }}>
       <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
@@ -136,7 +197,7 @@ export default function NewsletterAbonnenten() {
               ✉️ Newsletter
             </h1>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0' }}>
-              Deine Empfänger-Liste. Versand & Abmelde-Seite folgen im nächsten Schritt.
+              Empfänger-Liste pflegen und Newsletter versenden.
             </p>
           </div>
           <a
@@ -165,7 +226,39 @@ export default function NewsletterAbonnenten() {
           ))}
         </div>
 
-        {/* Hinzufügen */}
+        {/* Newsletter schreiben & senden */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: `1px solid ${C.gold}`, marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: C.gold, fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 14 }}>
+            Newsletter schreiben & senden
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Betreff</label>
+            <input value={betreff} onChange={(e) => setBetreff(e.target.value)} placeholder="z. B. Unsere Herbst-Aktion für Sie" style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Inhalt</label>
+            <textarea value={inhalt} onChange={(e) => setInhalt(e.target.value)} rows={8} placeholder={'Guten Tag,\n\nhier kommt Ihre Nachricht …\n\nHerzliche Grüße'} style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <button
+              onClick={senden}
+              disabled={sende}
+              style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 26px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', cursor: sende ? 'wait' : 'pointer', opacity: sende ? 0.7 : 1 }}
+            >
+              {sende ? 'Sende…' : `📨 An ${kpi.aktiv} aktive senden`}
+            </button>
+            {sendeMeldung && (
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: sendeMeldung.art === 'ok' ? C.green : C.danger }}>
+                {sendeMeldung.text}
+              </span>
+            )}
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '14px 0 0', fontSize: 'clamp(12px, 1vw, 16px)' }}>
+            Jede Mail enthält automatisch einen Abmelde-Link (§7 UWG). Versand nur an Empfänger mit Einwilligung.
+          </p>
+        </div>
+
+        {/* Abonnent hinzufügen */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '20px 24px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 24 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)', marginBottom: 14 }}>
             Abonnent hinzufügen
@@ -182,7 +275,7 @@ export default function NewsletterAbonnenten() {
             <button
               onClick={hinzufuegen}
               disabled={speichern}
-              style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1, height: 44 }}
+              style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: speichern ? 'wait' : 'pointer', opacity: speichern ? 0.7 : 1, height: 44 }}
             >
               {speichern ? 'Speichere…' : '+ Hinzufügen'}
             </button>
@@ -192,12 +285,9 @@ export default function NewsletterAbonnenten() {
               {hinweis}
             </p>
           )}
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '12px 0 0', fontSize: 'clamp(12px, 1vw, 16px)' }}>
-            Hinweis: Newsletter nur an Empfänger senden, die zugestimmt haben (§7 UWG). Später melden sich Abonnenten selbst über das E-Book-Formular an.
-          </p>
         </div>
 
-        {/* Liste */}
+        {/* Abonnenten-Liste */}
         {loading ? (
           <p style={{ color: C.textDim, fontFamily: 'DM Sans, sans-serif' }}>Lade Abonnenten…</p>
         ) : fehler ? (
@@ -242,6 +332,29 @@ export default function NewsletterAbonnenten() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Versand-Historie */}
+        {versandListe.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)', marginBottom: 14 }}>
+              Letzte Versände
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {versandListe.map((v) => (
+                <div key={v.id} style={{ background: C.navy2, borderRadius: 10, padding: '12px 16px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(14px, 1.19vw, 19px)', fontWeight: 600 }}>
+                    {v.betreff}
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: C.textDim }}>
+                    <span style={{ color: C.green }}>{v.erfolg_anzahl} gesendet</span>
+                    {v.fehler_anzahl > 0 && <span style={{ color: C.danger }}>{v.fehler_anzahl} Fehler</span>}
+                    <span>{fmtDatumZeit(v.gesendet_am)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
