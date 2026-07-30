@@ -422,6 +422,25 @@ export default function MarketingCockpit() {
           >
             📣 Social
           </a>
+          <a
+            href="/dashboard/marketing/ads"
+            style={{
+              background: 'rgba(201,168,76,0.12)',
+              color: C.gold,
+              border: `1px solid ${C.gold}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+              fontWeight: 700,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            📢 Ads
+          </a>
           <button
             onClick={dialogNeu}
             style={{
