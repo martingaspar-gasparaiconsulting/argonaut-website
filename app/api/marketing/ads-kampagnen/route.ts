@@ -33,7 +33,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('ads_kampagne')
-    .select('id, name, ziel, kanaele, tagesbudget, start_datum, end_datum, zielgruppe, ueberschrift, text, medien_urls, status, created_at')
+    .select('id, name, ziel, kanaele, tagesbudget, start_datum, end_datum, zielgruppe, ueberschrift, text, ziel_url, medien_urls, status, created_at')
     .eq('owner_user_id', uid)
     .order('created_at', { ascending: false });
 
@@ -57,6 +57,7 @@ export async function POST(req: Request) {
   const zielgruppe = (body.zielgruppe || '').toString().slice(0, 2000);
   const ueberschrift = (body.ueberschrift || '').toString().slice(0, 300);
   const text = (body.text || '').toString().slice(0, 8000);
+  const ziel_url = sichereMedienUrl((body.ziel_url || '').toString().trim()) || null;
 
   // Medien-URLs saeubern: nur echte http(s)-Links, max 10.
   const medienRoh = Array.isArray(body.medien_urls) ? body.medien_urls : [];
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const felder = {
     name, ziel, kanaele, tagesbudget,
-    start_datum, end_datum, zielgruppe, ueberschrift, text, medien_urls, status,
+    start_datum, end_datum, zielgruppe, ueberschrift, text, ziel_url, medien_urls, status,
   };
 
   let error;

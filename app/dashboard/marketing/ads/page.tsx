@@ -33,6 +33,7 @@ type Kampagne = {
   zielgruppe: string | null;
   ueberschrift: string | null;
   text: string | null;
+  ziel_url: string | null;
   medien_urls: string[] | null;
   status: string;
   created_at: string;
@@ -68,6 +69,7 @@ export default function AdsSeite() {
   const [eZielgruppe, setEZielgruppe] = useState('');
   const [eUeberschrift, setEUeberschrift] = useState('');
   const [eText, setEText] = useState('');
+  const [eZielUrl, setEZielUrl] = useState('');
   const [eBild, setEBild] = useState('');
   const [eStatus, setEStatus] = useState<'entwurf' | 'bereit'>('entwurf');
   const [eBusy, setEBusy] = useState(false);
@@ -77,6 +79,10 @@ export default function AdsSeite() {
 
   // Kanal-Verwaltung
   const [kanalBusy, setKanalBusy] = useState<string | null>(null);
+
+  // Schalten (Meta)
+  const [schaltBusyId, setSchaltBusyId] = useState<string | null>(null);
+  const [schaltMeldung, setSchaltMeldung] = useState<string | null>(null);
 
   // Werbekonto-Verbindung (Meta/Google/LinkedIn/TikTok)
   const [verb, setVerb] = useState<Record<string, VStatus>>({});
@@ -140,7 +146,7 @@ export default function AdsSeite() {
   function neueKampagne() {
     setEditId(null); setEName(''); setEZiel(''); setEKanaele([]); setEBudget('');
     setEStart(''); setEEnde(''); setEZielgruppe(''); setEUeberschrift(''); setEText('');
-    setEBild(''); setEStatus('entwurf'); setEMeldung(null);
+    setEZielUrl(''); setEBild(''); setEStatus('entwurf'); setEMeldung(null);
   }
   function bearbeiten(k: Kampagne) {
     setEditId(k.id);
@@ -153,6 +159,7 @@ export default function AdsSeite() {
     setEZielgruppe(k.zielgruppe || '');
     setEUeberschrift(k.ueberschrift || '');
     setEText(k.text || '');
+    setEZielUrl(k.ziel_url || '');
     setEBild(Array.isArray(k.medien_urls) && k.medien_urls[0] ? k.medien_urls[0] : '');
     setEStatus(k.status === 'bereit' ? 'bereit' : 'entwurf');
     setEMeldung(null);
@@ -185,7 +192,7 @@ export default function AdsSeite() {
         body: JSON.stringify({
           id: editId, name: eName, ziel: eZiel || null, kanaele: eKanaele,
           tagesbudget: budgetZahl, start_datum: eStart || null, end_datum: eEnde || null,
-          zielgruppe: eZielgruppe, ueberschrift: eUeberschrift, text: eText,
+          zielgruppe: eZielgruppe, ueberschrift: eUeberschrift, text: eText, ziel_url: eZielUrl,
           medien_urls: bild ? [bild] : [], status: eStatus,
         }),
       });
@@ -247,6 +254,36 @@ export default function AdsSeite() {
       else { setVMeldung((m) => ({ ...m, [plattform]: null })); laden(); }
     } catch { setVMeldung((m) => ({ ...m, [plattform]: 'Trennen fehlgeschlagen.' })); }
     finally { setVBusy(null); }
+  }
+
+  async function schalten(k: Kampagne, aktion: 'schalten' | 'aktivieren' | 'pausieren' | 'beenden') {
+    const fragen: Record<string, string> = {
+      schalten: `Kampagne „${k.name}" jetzt bei Meta anlegen? Sie wird zunächst PAUSIERT angelegt — es fließt noch kein Budget.`,
+      aktivieren: `Kampagne „${k.name}" bei Meta AKTIV schalten? Ab jetzt wird das Tagesbudget ausgegeben.`,
+      pausieren: `Kampagne „${k.name}" bei Meta pausieren?`,
+      beenden: `Kampagne „${k.name}" bei Meta beenden (archivieren)?`,
+    };
+    if (!confirm(fragen[aktion])) return;
+    setSchaltBusyId(k.id); setSchaltMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/ads-schalten', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kampagne_id: k.id, aktion }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setSchaltMeldung(j?.error || 'Aktion fehlgeschlagen.');
+      else {
+        const txt: Record<string, string> = {
+          schalten: '✓ Bei Meta angelegt (pausiert). Zum Ausspielen „Aktiv schalten".',
+          aktivieren: '✓ Kampagne ist bei Meta aktiv.',
+          pausieren: '✓ Kampagne pausiert.',
+          beenden: '✓ Kampagne beendet.',
+        };
+        setSchaltMeldung(txt[aktion]);
+      }
+      laden();
+    } catch { setSchaltMeldung('Aktion fehlgeschlagen.'); }
+    finally { setSchaltBusyId(null); }
   }
 
   return (
@@ -415,6 +452,12 @@ export default function AdsSeite() {
           <label style={lbl}>Anzeigentext</label>
           <textarea value={eText} onChange={(e) => setEText(e.target.value)} rows={4} placeholder={'Der Text Ihrer Anzeige. Z. B. „Ofenfertiges Buchenholz aus der Region – Lieferung frei Haus. Jetzt für den Winter sichern."'} style={{ ...input, resize: 'vertical' }} />
           <div style={{ marginBottom: 16 }} />
+
+          <label style={lbl}>Ziel-URL (wohin die Anzeige führt)</label>
+          <input value={eZielUrl} onChange={(e) => setEZielUrl(e.target.value)} placeholder="https://www.ihre-seite.de/aktion" inputMode="url" style={input} />
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 16px', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            Für das echte Schalten nötig — z. B. Ihre Landingpage oder Startseite. Kann als Entwurf noch leer bleiben.
+          </p>
 
           {/* Bild */}
           <label style={lbl}>Anzeigenbild (optional)</label>
@@ -591,6 +634,16 @@ export default function AdsSeite() {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                    {(k.kanaele || []).includes('meta') && (() => {
+                      const busy = schaltBusyId === k.id;
+                      const b = (label: string, farbe: string, akt: 'schalten' | 'aktivieren' | 'pausieren' | 'beenden') => (
+                        <button onClick={() => schalten(k, akt)} disabled={busy} style={{ ...btn(farbe), opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : label}</button>
+                      );
+                      if (k.status === 'entwurf' || k.status === 'bereit') return b('📢 Bei Meta anlegen', C.green, 'schalten');
+                      if (k.status === 'pausiert') return <>{b('▶️ Aktiv schalten', C.green, 'aktivieren')}{b('⏹ Beenden', C.textDim, 'beenden')}</>;
+                      if (k.status === 'aktiv') return <>{b('⏸ Pausieren', C.warn, 'pausieren')}{b('⏹ Beenden', C.textDim, 'beenden')}</>;
+                      return null;
+                    })()}
                     <button onClick={() => bearbeiten(k)} style={btn(C.gold)}>Bearbeiten</button>
                     <button onClick={() => loeschen(k)} style={btn(C.danger)}>Löschen</button>
                   </div>
@@ -598,6 +651,10 @@ export default function AdsSeite() {
               );
             })}
           </div>
+        )}
+
+        {schaltMeldung && (
+          <div style={{ marginTop: 14, background: schaltMeldung.startsWith('✓') ? 'rgba(76,175,125,0.12)' : 'rgba(224,162,76,0.12)', border: `1px solid ${schaltMeldung.startsWith('✓') ? C.green : C.warn}`, borderRadius: 12, padding: '12px 16px', color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{schaltMeldung}</div>
         )}
       </div>
     </div>
