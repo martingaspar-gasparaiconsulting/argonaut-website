@@ -122,3 +122,20 @@ export function zaehleVorlagen(liste: { status?: string | null }[]): { gesamt: n
   for (const x of l) if (x?.status === 'freigegeben') freigegeben++;
   return { gesamt: l.length, freigegeben };
 }
+
+/** Empfänger zählen: gesamt / aktiv. */
+export function zaehleKontakte(liste: { status?: string | null }[]): { gesamt: number; aktiv: number } {
+  const l = liste || [];
+  let aktiv = 0;
+  for (const x of l) if (x?.status === 'aktiv') aktiv++;
+  return { gesamt: l.length, aktiv };
+}
+
+/**
+ * Kanonischer Einwilligungstext (serverseitig erzeugt, nachweisbar dokumentiert).
+ * Bewusst nicht vom Client übernommen — der Betriebsname bestimmt den Text.
+ */
+export function einwilligungsText(firma: string | null | undefined): string {
+  const f = (firma || '').trim() || 'diesem Unternehmen';
+  return `Ich willige ein, von ${f} WhatsApp-Nachrichten (u. a. Angebote/Neuigkeiten) zu erhalten. Ich kann mich jederzeit abmelden (z. B. mit „STOP“).`;
+}
