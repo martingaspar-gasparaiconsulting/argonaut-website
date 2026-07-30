@@ -42,22 +42,59 @@ export default function WhatsappSeite() {
   const [eBusy, setEBusy] = useState(false);
   const [eMeldung, setEMeldung] = useState<string | null>(null);
 
+  // Verbindung (P3a)
+  const [vVerbunden, setVVerbunden] = useState(false);
+  const [vHatToken, setVHatToken] = useState(false);
+  const [vPhoneId, setVPhoneId] = useState('');
+  const [vToken, setVToken] = useState('');
+  const [vEncKey, setVEncKey] = useState(true);
+  const [vBusy, setVBusy] = useState(false);
+  const [vMeldung, setVMeldung] = useState<string | null>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
-      const [rE, rV] = await Promise.all([
+      const [rE, rV, rB] = await Promise.all([
         fetch('/api/marketing/whatsapp-einstellungen'),
         fetch('/api/marketing/whatsapp-vorlagen'),
+        fetch('/api/marketing/whatsapp-verbindung'),
       ]);
       const jE = await rE.json();
       const jV = await rV.json();
+      const jB = await rB.json();
       if (jE?.ok) { setAnbieter(jE.anbieter || ''); setAbsender(jE.absender || ''); }
+      if (jB?.ok) { setVVerbunden(!!jB.verbunden); setVHatToken(!!jB.hatToken); setVPhoneId(jB.meta_phone_number_id || ''); setVEncKey(jB.encKeyBereit !== false); setVToken(''); }
       if (!rV.ok || !jV?.ok) { setFehler(jV?.error || 'Laden fehlgeschlagen.'); }
       else { setListe(jV.liste as Vorlage[]); }
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLoading(false); }
   }
   useEffect(() => { laden(); }, []);
+
+  async function speichereVerbindung() {
+    setVBusy(true); setVMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/whatsapp-verbindung', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: vToken, meta_phone_number_id: vPhoneId }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setVMeldung(j?.error || 'Speichern fehlgeschlagen.'); }
+      else { setVMeldung('✓ Verbunden.'); laden(); }
+    } catch { setVMeldung('Speichern fehlgeschlagen.'); }
+    finally { setVBusy(false); }
+  }
+  async function trenneVerbindung() {
+    if (!confirm('Verbindung wirklich trennen? Der gespeicherte Zugang wird entfernt.')) return;
+    setVBusy(true); setVMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/whatsapp-verbindung', { method: 'DELETE' });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setVMeldung(j?.error || 'Trennen fehlgeschlagen.'); }
+      else { setVMeldung(null); laden(); }
+    } catch { setVMeldung('Trennen fehlgeschlagen.'); }
+    finally { setVBusy(false); }
+  }
 
   const kpi = useMemo(() => zaehleVorlagen(liste), [liste]);
   const platzhalter = useMemo(() => platzhalterFinden(eInhalt), [eInhalt]);
@@ -192,7 +229,40 @@ export default function WhatsappSeite() {
             {einstMeldung && <span style={{ fontFamily: 'DM Sans, sans-serif', color: einstMeldung.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{einstMeldung}</span>}
           </div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '12px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
-            Die eigentliche Verbindung (Zugangs-Token) und der Versand folgen im nächsten Schritt — hier legen Sie schon einmal Anbieter und Nummer fest.
+            Legen Sie hier Anbieter und Nummer fest. Die eigentliche Verbindung (Zugangs-Token) tragen Sie darunter ein.
+          </p>
+        </div>
+
+        {/* Verbindung (P3a) */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: `1px solid ${vVerbunden ? C.green : 'rgba(255,255,255,0.08)'}`, marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(16px, 1.4vw, 22px)' }}>Verbindung</div>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: vVerbunden ? C.green : C.textDim, border: `1px solid ${vVerbunden ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 12px' }}>{vVerbunden ? '✓ Verbunden' : 'Nicht verbunden'}</span>
+          </div>
+
+          {!vEncKey && (
+            <div style={{ background: 'rgba(224,162,76,0.12)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '12px 14px', marginBottom: 12, color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
+              <strong style={{ color: C.warn }}>⚠️ Sicherheits-Schlüssel fehlt.</strong> Zum sicheren Speichern des Tokens muss einmalig die Umgebungsvariable <strong style={{ color: '#fff' }}>APP_ENC_KEY</strong> gesetzt werden. Danach lässt sich die Verbindung speichern.
+            </div>
+          )}
+
+          {anbieter === 'meta' && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={lbl}>Telefonnummer-ID (phone number id)</label>
+              <input value={vPhoneId} onChange={(e) => setVPhoneId(e.target.value)} placeholder="z. B. 123456789012345" style={{ ...input, maxWidth: 420 }} />
+            </div>
+          )}
+          <div style={{ marginBottom: 12 }}>
+            <label style={lbl}>{anbieter === 'dialog360' ? '360dialog API-Schlüssel' : 'Zugangs-Token'}</label>
+            <input type="password" value={vToken} onChange={(e) => setVToken(e.target.value)} placeholder={vHatToken ? '•••••••• (gespeichert — zum Ändern neu eingeben)' : 'hier einfügen'} style={{ ...input, maxWidth: 420 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={speichereVerbindung} disabled={vBusy || !anbieter} style={{ ...btnGold, opacity: (vBusy || !anbieter) ? 0.6 : 1, cursor: (vBusy || !anbieter) ? 'not-allowed' : 'pointer' }}>{vBusy ? 'Speichere…' : (vVerbunden ? 'Zugang aktualisieren' : 'Verbinden')}</button>
+            {vVerbunden && <button onClick={trenneVerbindung} disabled={vBusy} style={btn(C.danger)}>Trennen</button>}
+            {vMeldung && <span style={{ fontFamily: 'DM Sans, sans-serif', color: vMeldung.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{vMeldung}</span>}
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '12px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            Der Token wird verschlüsselt gespeichert und nie wieder angezeigt. Sobald verbunden, ist der Versand möglich (nächster Schritt). Die genaue Schritt-für-Schritt-Einrichtung des Zugangs erhalten Sie separat.
           </p>
         </div>
 
