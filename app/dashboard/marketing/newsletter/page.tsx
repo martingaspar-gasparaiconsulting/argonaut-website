@@ -71,6 +71,69 @@ export default function NewsletterAbonnenten() {
   const [sende, setSende] = useState(false);
   const [sendeMeldung, setSendeMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null);
 
+  // Öffentliches Anmeldeformular (Double-Opt-In)
+  const [oSlug, setOSlug] = useState('');
+  const [oAktiv, setOAktiv] = useState(false);
+  const [oTitel, setOTitel] = useState('');
+  const [oText, setOText] = useState('');
+  const [oBusy, setOBusy] = useState(false);
+  const [oMeldung, setOMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null);
+  const [oKopiert, setOKopiert] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/marketing/optin-einstellungen');
+        const j = await res.json();
+        if (res.ok && j?.ok) {
+          setOSlug(j.optin_slug || '');
+          setOAktiv(!!j.optin_aktiv);
+          setOTitel(j.optin_titel || '');
+          setOText(j.optin_text || '');
+        }
+      } catch {
+        /* optionale Sektion */
+      }
+    })();
+  }, []);
+
+  const optinUrl = oSlug ? `https://argonaut-os.com/anmelden/${oSlug}` : '';
+
+  async function optinSpeichern() {
+    setOMeldung(null);
+    setOBusy(true);
+    try {
+      const res = await fetch('/api/marketing/optin-einstellungen', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ optin_slug: oSlug, optin_aktiv: oAktiv, optin_titel: oTitel, optin_text: oText }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) {
+        setOMeldung({ art: 'fehler', text: j?.error || 'Speichern fehlgeschlagen.' });
+      } else {
+        setOSlug(j.optin_slug || '');
+        setOAktiv(!!j.optin_aktiv);
+        setOMeldung({ art: 'ok', text: '✓ Gespeichert.' });
+      }
+    } catch {
+      setOMeldung({ art: 'fehler', text: 'Speichern fehlgeschlagen.' });
+    } finally {
+      setOBusy(false);
+    }
+  }
+
+  async function optinKopieren() {
+    if (!optinUrl) return;
+    try {
+      await navigator.clipboard.writeText(optinUrl);
+      setOKopiert(true);
+      setTimeout(() => setOKopiert(false), 2000);
+    } catch {
+      /* Clipboard evtl. blockiert */
+    }
+  }
+
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -213,6 +276,7 @@ export default function NewsletterAbonnenten() {
           {[
             { label: 'Abonnenten gesamt', wert: kpi.gesamt, farbe: C.cyan },
             { label: 'Aktiv', wert: kpi.aktiv, farbe: C.green },
+            { label: 'Unbestätigt', wert: kpi.unbestaetigt, farbe: C.warn },
             { label: 'Abgemeldet', wert: kpi.abgemeldet, farbe: C.textDim },
           ].map((kp) => (
             <div key={kp.label} style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -224,6 +288,63 @@ export default function NewsletterAbonnenten() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Öffentliches Anmeldeformular (Double-Opt-In) */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: `1px solid ${C.cyan}`, marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: C.cyan, fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 8 }}>
+            🔗 Öffentliches Anmeldeformular (Double-Opt-In)
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.55 }}>
+            Teilen Sie einen Link, über den sich Interessenten selbst eintragen. Jeder bekommt zuerst eine
+            Bestätigungsmail und landet <strong style={{ color: '#fff' }}>erst nach dem Klick</strong> aktiv in Ihrer Liste — rechtssicher (DSGVO/§7 UWG).
+          </p>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 16 }}>
+            <input type="checkbox" checked={oAktiv} onChange={(e) => setOAktiv(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.cyan }} />
+            <span style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(14px, 1.19vw, 19px)' }}>Anmeldeformular aktiv (öffentlich erreichbar)</span>
+          </label>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Link-Name</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 17px)', padding: '10px 4px 10px 0' }}>argonaut-os.com/anmelden/</span>
+              <input value={oSlug} onChange={(e) => setOSlug(e.target.value)} placeholder="ihre-firma" style={{ ...inputStyle, flex: '1 1 160px', width: 'auto' }} />
+            </div>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(12px, 1vw, 15px)' }}>Nur Kleinbuchstaben, Zahlen und Bindestriche.</p>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Überschrift auf der Seite</label>
+            <input value={oTitel} onChange={(e) => setOTitel(e.target.value)} placeholder="z. B. Unser Newsletter" style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Kurzer Einleitungstext</label>
+            <textarea value={oText} onChange={(e) => setOText(e.target.value)} rows={3} placeholder="z. B. Aktionen, Neuigkeiten und Tipps — direkt in Ihr Postfach." style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <button
+              onClick={optinSpeichern}
+              disabled={oBusy}
+              style={{ background: C.cyan, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.19vw, 19px)', cursor: oBusy ? 'wait' : 'pointer', opacity: oBusy ? 0.7 : 1 }}
+            >
+              {oBusy ? 'Speichere…' : 'Speichern'}
+            </button>
+            {oMeldung && (
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', color: oMeldung.art === 'ok' ? C.green : C.danger }}>
+                {oMeldung.text}
+              </span>
+            )}
+          </div>
+
+          {oAktiv && optinUrl && (
+            <div style={{ marginTop: 18, background: C.navy, borderRadius: 10, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', wordBreak: 'break-all', flex: 1 }}>{optinUrl}</span>
+              <button onClick={optinKopieren} style={btnStyle(C.cyan)}>{oKopiert ? '✓ Kopiert' : 'Kopieren'}</button>
+              <a href={optinUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnStyle(C.textDim), textDecoration: 'none' }}>Vorschau</a>
+            </div>
+          )}
         </div>
 
         {/* Newsletter schreiben & senden */}
@@ -304,6 +425,9 @@ export default function NewsletterAbonnenten() {
           <div style={{ display: 'grid', gap: 10 }}>
             {liste.map((a) => {
               const abgemeldet = a.status === 'abgemeldet';
+              const unbest = a.status === 'unbestaetigt';
+              const badgeFarbe = abgemeldet ? C.textDim : unbest ? C.warn : C.green;
+              const badgeText = abgemeldet ? 'Abgemeldet' : unbest ? 'Unbestätigt' : 'Aktiv';
               return (
                 <div key={a.id} style={{ background: C.navy2, borderRadius: 12, padding: '14px 18px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 220 }}>
@@ -311,8 +435,8 @@ export default function NewsletterAbonnenten() {
                       <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
                         {a.email}
                       </span>
-                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: abgemeldet ? C.textDim : C.green, border: `1px solid ${abgemeldet ? C.textDim : C.green}`, borderRadius: 12, padding: '2px 10px' }}>
-                        {abgemeldet ? 'Abgemeldet' : 'Aktiv'}
+                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: badgeFarbe, border: `1px solid ${badgeFarbe}`, borderRadius: 12, padding: '2px 10px' }}>
+                        {badgeText}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: C.textDim, marginTop: 4 }}>

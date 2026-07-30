@@ -21,20 +21,24 @@ export function istEmailGueltig(email: string | null | undefined): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-/** Abonnenten zählen: gesamt / aktiv / abgemeldet. */
+/** Abonnenten zählen: gesamt / aktiv / abgemeldet / unbestätigt (Double-Opt-In). */
 export function zaehleAbonnenten(liste: AbonnentLite[]): {
   gesamt: number;
   aktiv: number;
   abgemeldet: number;
+  unbestaetigt: number;
 } {
   const l = liste || [];
   let aktiv = 0;
   let abgemeldet = 0;
+  let unbestaetigt = 0;
   for (const a of l) {
-    if ((a?.status ?? 'aktiv') === 'abgemeldet') abgemeldet++;
+    const st = a?.status ?? 'aktiv';
+    if (st === 'abgemeldet') abgemeldet++;
+    else if (st === 'unbestaetigt') unbestaetigt++;
     else aktiv++;
   }
-  return { gesamt: l.length, aktiv, abgemeldet };
+  return { gesamt: l.length, aktiv, abgemeldet, unbestaetigt };
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +172,64 @@ export function autoresponderMailHtml(
       <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
         Du erhältst diese E-Mail als Teil einer automatischen Info-Serie von ${firma}.<br>
         <a href="${abmelde}" style="color:${akzent};text-decoration:underline;">Keine weiteren E-Mails erhalten</a>.
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Double-Opt-In (Paket 2b) — Bestätigungs-Mail fuer die oeffentliche Anmeldung.
+// Nach dem Eintragen ins oeffentliche Formular bekommt der Interessent DIESE
+// Mail: er muss auf den Bestaetigen-Knopf klicken, erst dann ist er aktiv
+// (DSGVO/BGH: nachweisbare Einwilligung). Branding DES KUNDEN.
+// ---------------------------------------------------------------------------
+
+/** Bestaetigungs-Link (Double-Opt-In) fuer eine oeffentliche Anmeldung. */
+export function optinBestaetigenUrl(origin: string | null | undefined, token: string): string {
+  const base = (origin || 'https://argonaut-os.com').replace(/\/+$/, '');
+  return `${base}/api/oeffentlich/optin-bestaetigen?token=${encodeURIComponent(token || '')}`;
+}
+
+/**
+ * Baut die Double-Opt-In-Bestaetigungsmail im Branding DES KUNDEN.
+ * Grosser, klarer Bestaetigen-Knopf + Klartext, worum es geht.
+ */
+export function optinBestaetigungHtml(
+  firmaName: string | null | undefined,
+  bestaetigenUrl: string,
+  akzentfarbe?: string | null,
+  name?: string | null,
+): string {
+  const firma = escapeHtml((firmaName || '').trim() || 'Newsletter');
+  const akzent = sichereFarbe(akzentfarbe);
+  const anrede = (name || '').trim() ? `Hallo ${escapeHtml(name!.trim())},` : 'Hallo,';
+
+  return `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <div style="padding:24px 28px;border-bottom:3px solid ${akzent};">
+        <div style="font-size:20px;font-weight:800;color:${akzent};">${firma}</div>
+      </div>
+      <div style="padding:28px;font-size:15px;line-height:1.6;color:#1a2332;">
+        <p style="margin:0 0 14px;">${anrede}</p>
+        <p style="margin:0 0 20px;">bitte bestätige einmalig, dass du E-Mails von <b>${firma}</b> erhalten möchtest. Klicke dazu auf den folgenden Knopf:</p>
+        <p style="text-align:center;margin:0 0 24px;">
+          <a href="${bestaetigenUrl}" style="display:inline-block;background:${akzent};color:#ffffff;text-decoration:none;font-weight:800;font-size:16px;padding:14px 28px;border-radius:10px;">Anmeldung bestätigen</a>
+        </p>
+        <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Falls der Knopf nicht funktioniert, kopiere diesen Link in deinen Browser:<br>
+        <a href="${bestaetigenUrl}" style="color:${akzent};word-break:break-all;">${bestaetigenUrl}</a></p>
+      </div>
+      <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
+        Du erhältst diese E-Mail, weil sich jemand mit deiner Adresse bei ${firma} angemeldet hat.
+        Warst du das nicht, ignoriere diese Nachricht einfach — ohne Bestätigung senden wir dir nichts.
       </div>
     </div>
   </div>
