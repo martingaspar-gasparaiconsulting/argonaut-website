@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   SOCIAL_PLATTFORMEN, SOCIAL_STATUS, plattformFuer, plattformenNachGruppe,
   bindendesLimit, zaehleZeichen, validiereBeitrag, zaehleBeitraege, zaehleKanaele,
+  META_PLATTFORMEN, metaVerbindungFeld,
 } from '@/lib/social';
 import { videoEinbettung, videoHinweis, sichereMedienUrl } from '@/lib/landingpages';
 
@@ -30,6 +31,8 @@ type Beitrag = {
 };
 
 type KanalRow = { plattform: string; aktiv: boolean; verbunden: boolean; konto_name: string | null; geprueft_am: string | null };
+type VStatus = { verbunden: boolean; ziel_id: string; konto_name: string; hatToken: boolean };
+const V_LEER: VStatus = { verbunden: false, ziel_id: '', konto_name: '', hatToken: false };
 
 // ISO -> Wert fuer <input type="datetime-local"> (lokale Zeit, ohne Sekunden).
 function isoZuLokal(iso: string | null): string {
@@ -70,16 +73,36 @@ export default function SocialSeite() {
   // Kanal-Verwaltung
   const [kanalBusy, setKanalBusy] = useState<string | null>(null);
 
+  // Meta-Verbindung (Facebook + Instagram)
+  const [verb, setVerb] = useState<Record<string, VStatus>>({ facebook: V_LEER, instagram: V_LEER });
+  const [vEncKey, setVEncKey] = useState(true);
+  const [vZiel, setVZiel] = useState<Record<string, string>>({});
+  const [vKonto, setVKonto] = useState<Record<string, string>>({});
+  const [vToken, setVToken] = useState<Record<string, string>>({});
+  const [vBusy, setVBusy] = useState<string | null>(null);
+  const [vMeldung, setVMeldung] = useState<Record<string, string | null>>({});
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
-      const [rB, rK] = await Promise.all([
+      const [rB, rK, rV] = await Promise.all([
         fetch('/api/marketing/social-beitraege'),
         fetch('/api/marketing/social-kanaele'),
+        fetch('/api/marketing/social-verbindung'),
       ]);
       const jB = await rB.json();
       const jK = await rK.json();
+      const jV = await rV.json();
       if (jK?.ok) setKanaele((jK.liste as KanalRow[]) || []);
+      if (jV?.ok) {
+        const fb = (jV.facebook as VStatus) || V_LEER;
+        const ig = (jV.instagram as VStatus) || V_LEER;
+        setVerb({ facebook: fb, instagram: ig });
+        setVEncKey(jV.encKeyBereit !== false);
+        setVZiel((prev) => ({ facebook: fb.ziel_id, instagram: ig.ziel_id, ...prev }));
+        setVKonto((prev) => ({ facebook: fb.konto_name, instagram: ig.konto_name, ...prev }));
+        setVToken({});
+      }
       if (!rB.ok || !jB?.ok) setFehler(jB?.error || 'Laden fehlgeschlagen.');
       else setListe(jB.liste as Beitrag[]);
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
@@ -182,6 +205,31 @@ export default function SocialSeite() {
       }
     } catch { /* still */ }
     finally { setKanalBusy(null); }
+  }
+
+  async function verbinde(plattform: string) {
+    setVBusy(plattform); setVMeldung((m) => ({ ...m, [plattform]: null }));
+    try {
+      const res = await fetch('/api/marketing/social-verbindung', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plattform, ziel_id: vZiel[plattform] || '', konto_name: vKonto[plattform] || '', token: vToken[plattform] || '' }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setVMeldung((m) => ({ ...m, [plattform]: j?.error || 'Speichern fehlgeschlagen.' }));
+      else { setVMeldung((m) => ({ ...m, [plattform]: '✓ Verbunden.' })); setVToken((t) => ({ ...t, [plattform]: '' })); laden(); }
+    } catch { setVMeldung((m) => ({ ...m, [plattform]: 'Speichern fehlgeschlagen.' })); }
+    finally { setVBusy(null); }
+  }
+  async function trenne(plattform: string) {
+    if (!confirm('Verbindung wirklich trennen? Der gespeicherte Zugang wird entfernt.')) return;
+    setVBusy(plattform); setVMeldung((m) => ({ ...m, [plattform]: null }));
+    try {
+      const res = await fetch(`/api/marketing/social-verbindung?plattform=${encodeURIComponent(plattform)}`, { method: 'DELETE' });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setVMeldung((m) => ({ ...m, [plattform]: j?.error || 'Trennen fehlgeschlagen.' }));
+      else { setVMeldung((m) => ({ ...m, [plattform]: null })); laden(); }
+    } catch { setVMeldung((m) => ({ ...m, [plattform]: 'Trennen fehlgeschlagen.' })); }
+    finally { setVBusy(null); }
   }
 
   const vorschauKanaele = eKanaele.map((id) => plattformFuer(id)).filter(Boolean);
@@ -380,6 +428,57 @@ export default function SocialSeite() {
           </div>
         </div>
 
+        {/* Verbindungen — Meta (Facebook + Instagram) */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Verbindungen — Meta (Facebook &amp; Instagram)</div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
+            Verbinden Sie Ihre Facebook-Seite und Ihr Instagram-Business-Konto. Der Zugangs-Token wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt. Die genaue Schritt-für-Schritt-Einrichtung erhalten Sie separat.
+          </p>
+
+          {!vEncKey && (
+            <div style={{ background: 'rgba(224,162,76,0.12)', border: `1px solid ${C.warn}`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
+              <strong style={{ color: C.warn }}>⚠️ Sicherheits-Schlüssel fehlt.</strong> Zum sicheren Speichern des Tokens muss einmalig die Umgebungsvariable <strong style={{ color: '#fff' }}>APP_ENC_KEY</strong> gesetzt werden. Danach lässt sich die Verbindung speichern.
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gap: 14 }}>
+            {META_PLATTFORMEN.map((id) => {
+              const p = plattformFuer(id)!;
+              const feld = metaVerbindungFeld(id)!;
+              const st = verb[id] || V_LEER;
+              return (
+                <div key={id} style={{ background: C.navy, border: `1px solid ${st.verbunden ? C.green : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.3vw, 20px)' }}>{p.icon} {p.name}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: st.verbunden ? C.green : C.textDim, border: `1px solid ${st.verbunden ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 12px' }}>{st.verbunden ? '✓ Verbunden' : 'Nicht verbunden'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={lbl}>{feld.zielLabel}</label>
+                      <input value={vZiel[id] ?? ''} onChange={(e) => setVZiel((v) => ({ ...v, [id]: e.target.value }))} placeholder="z. B. 1234567890" style={input} />
+                    </div>
+                    <div>
+                      <label style={lbl}>Anzeigename (optional)</label>
+                      <input value={vKonto[id] ?? ''} onChange={(e) => setVKonto((v) => ({ ...v, [id]: e.target.value }))} placeholder="z. B. Bäckerei Sonnenschein" style={input} />
+                    </div>
+                  </div>
+                  <label style={lbl}>{feld.tokenLabel}</label>
+                  <input type="password" value={vToken[id] ?? ''} onChange={(e) => setVToken((v) => ({ ...v, [id]: e.target.value }))} placeholder={st.hatToken ? '•••••••• (gespeichert — zum Ändern neu eingeben)' : 'hier einfügen'} style={{ ...input, maxWidth: 460 }} />
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 12px', fontSize: 'clamp(11px, 1vw, 14px)' }}>{feld.zielHinweis}</p>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={() => verbinde(id)} disabled={vBusy === id} style={{ ...btnGold, opacity: vBusy === id ? 0.6 : 1, cursor: vBusy === id ? 'wait' : 'pointer' }}>{vBusy === id ? 'Speichere…' : st.verbunden ? 'Zugang aktualisieren' : 'Verbinden'}</button>
+                    {st.verbunden && <button onClick={() => trenne(id)} disabled={vBusy === id} style={btn(C.danger)}>Trennen</button>}
+                    {vMeldung[id] && <span style={{ fontFamily: 'DM Sans, sans-serif', color: vMeldung[id]!.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{vMeldung[id]}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '14px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            Sobald verbunden, kann ARGONAUT direkt auf diese Kanäle posten (nächster Schritt). Weitere Kanäle wie Google Unternehmensprofil und LinkedIn folgen einzeln.
+          </p>
+        </div>
+
         {/* Kanal-Verwaltung */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Kanal-Verwaltung</div>
@@ -394,11 +493,13 @@ export default function SocialSeite() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
                 {plattformenNachGruppe(g).map((p) => {
                   const an = kanalAktiv(p.id);
+                  const istVerbunden = verb[p.id]?.verbunden === true;
+                  const statusText = istVerbunden ? '✓ verbunden' : an ? 'vorgemerkt · verbinden folgt' : 'nicht vorgemerkt';
                   return (
-                    <div key={p.id} style={{ background: C.navy, border: `1px solid ${an ? C.green : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                    <div key={p.id} style={{ background: C.navy, border: `1px solid ${istVerbunden ? C.green : an ? 'rgba(76,175,125,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.icon} {p.name}</div>
-                        <div style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 12 }}>{an ? 'vorgemerkt · verbinden folgt' : 'nicht vorgemerkt'}</div>
+                        <div style={{ fontFamily: 'DM Sans, sans-serif', color: istVerbunden ? C.green : C.textDim, fontSize: 12 }}>{statusText}</div>
                       </div>
                       <button onClick={() => toggleKanalAktiv(p.id)} disabled={kanalBusy === p.id}
                         style={{ flexShrink: 0, background: an ? 'transparent' : C.green, color: an ? C.textDim : C.navy, border: `1px solid ${an ? 'rgba(255,255,255,0.2)' : C.green}`, borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, cursor: kanalBusy === p.id ? 'wait' : 'pointer' }}>

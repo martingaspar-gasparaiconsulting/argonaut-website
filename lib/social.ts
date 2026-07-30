@@ -333,3 +333,37 @@ export function zaehleKanaele(liste: { aktiv?: boolean | null }[]): { gesamt: nu
   for (const x of l) if (x?.aktiv) aktiv++;
   return { gesamt: l.length, aktiv };
 }
+
+// ============================================================================
+// META-VERBINDUNG (Facebook-Seite + Instagram) — Social P2
+// Reine Definitionen/Helfer; das Speichern/Verschluesseln passiert serverseitig.
+// ============================================================================
+
+/** Die zwei Meta-Kanaele, die ueber einen Zugang verbunden werden. */
+export const META_PLATTFORMEN: SocialPlattformId[] = ['facebook', 'instagram'];
+
+/** true, wenn die Plattform ueber die Meta-Verbindung laeuft. */
+export function istMetaPlattform(id: string | null | undefined): boolean {
+  return META_PLATTFORMEN.includes(id as SocialPlattformId);
+}
+
+export type MetaVerbindungFeld = { zielLabel: string; zielHinweis: string; tokenLabel: string };
+
+/** Welche Felder der Betrieb je Meta-Kanal eintraegt (UI-getrieben aus Daten). */
+export const META_VERBINDUNG_FELDER: Record<'facebook' | 'instagram', MetaVerbindungFeld> = {
+  facebook: {
+    zielLabel: 'Seiten-ID (Facebook-Page-ID)',
+    zielHinweis: 'Die ID Ihrer Facebook-Seite — steht in den Seiten-Einstellungen unter „Über“.',
+    tokenLabel: 'Seiten-Zugangs-Token',
+  },
+  instagram: {
+    zielLabel: 'Instagram-Konto-ID (Business-Konto)',
+    zielHinweis: 'Die ID Ihres Instagram-Business-Kontos, das mit der Facebook-Seite verknüpft ist.',
+    tokenLabel: 'Zugangs-Token',
+  },
+};
+
+/** Feld-Definition zu einem Meta-Kanal (oder null, wenn kein Meta-Kanal). */
+export function metaVerbindungFeld(id: string | null | undefined): MetaVerbindungFeld | null {
+  return (id === 'facebook' || id === 'instagram') ? META_VERBINDUNG_FELDER[id] : null;
+}
