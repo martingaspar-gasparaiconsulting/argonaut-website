@@ -258,10 +258,10 @@ export default function AdsSeite() {
 
   async function schalten(k: Kampagne, aktion: 'schalten' | 'aktivieren' | 'pausieren' | 'beenden') {
     const fragen: Record<string, string> = {
-      schalten: `Kampagne „${k.name}" jetzt bei Meta anlegen? Sie wird zunächst PAUSIERT angelegt — es fließt noch kein Budget.`,
-      aktivieren: `Kampagne „${k.name}" bei Meta AKTIV schalten? Ab jetzt wird das Tagesbudget ausgegeben.`,
-      pausieren: `Kampagne „${k.name}" bei Meta pausieren?`,
-      beenden: `Kampagne „${k.name}" bei Meta beenden (archivieren)?`,
+      schalten: `Kampagne „${k.name}" jetzt auf den verbundenen Werbekanälen anlegen? Sie wird überall zunächst PAUSIERT angelegt — es fließt noch kein Budget.`,
+      aktivieren: `Kampagne „${k.name}" AKTIV schalten? Ab jetzt wird das Tagesbudget ausgegeben.`,
+      pausieren: `Kampagne „${k.name}" pausieren?`,
+      beenden: `Kampagne „${k.name}" beenden (archivieren)?`,
     };
     if (!confirm(fragen[aktion])) return;
     setSchaltBusyId(k.id); setSchaltMeldung(null);
@@ -271,16 +271,10 @@ export default function AdsSeite() {
         body: JSON.stringify({ kampagne_id: k.id, aktion }),
       });
       const j = await res.json();
-      if (!res.ok || !j?.ok) setSchaltMeldung(j?.error || 'Aktion fehlgeschlagen.');
-      else {
-        const txt: Record<string, string> = {
-          schalten: '✓ Bei Meta angelegt (pausiert). Zum Ausspielen „Aktiv schalten".',
-          aktivieren: '✓ Kampagne ist bei Meta aktiv.',
-          pausieren: '✓ Kampagne pausiert.',
-          beenden: '✓ Kampagne beendet.',
-        };
-        setSchaltMeldung(txt[aktion]);
-      }
+      const fehlerTxt = Array.isArray(j?.fehler) && j.fehler.length ? ` (${j.fehler.join('; ')})` : '';
+      if (!res.ok || !j?.ok) setSchaltMeldung((j?.error || (Array.isArray(j?.fehler) ? j.fehler.join('; ') : 'Aktion fehlgeschlagen.')) || 'Aktion fehlgeschlagen.');
+      else if (aktion === 'schalten') setSchaltMeldung(`✓ Auf ${j.angelegt} Kanal${j.angelegt === 1 ? '' : 'en'} angelegt (pausiert). Zum Ausspielen „Aktiv schalten".${fehlerTxt}`);
+      else setSchaltMeldung(`✓ ${aktion === 'aktivieren' ? 'Aktiv geschaltet' : aktion === 'pausieren' ? 'Pausiert' : 'Beendet'} auf ${j.geaendert} Kanal${j.geaendert === 1 ? '' : 'en'}.${fehlerTxt}`);
       laden();
     } catch { setSchaltMeldung('Aktion fehlgeschlagen.'); }
     finally { setSchaltBusyId(null); }
@@ -302,6 +296,7 @@ export default function AdsSeite() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <a href="/dashboard/marketing" style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, textDecoration: 'none' }}>‹ Zurück zum Marketing</a>
             <a href="/dashboard/marketing/ads/auswertung" style={{ background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '10px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, textDecoration: 'none' }}>📊 Auswertung</a>
+            <a href="/dashboard/marketing/ads/kosten" style={{ background: 'rgba(201,168,76,0.12)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '10px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, textDecoration: 'none' }}>💶 Kosten</a>
             {editId && (
               <button onClick={neueKampagne} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 22px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(15px, 1.31vw, 21px)', cursor: 'pointer' }}>+ Neue Kampagne</button>
             )}
@@ -635,12 +630,12 @@ export default function AdsSeite() {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {(k.kanaele || []).includes('meta') && (() => {
+                    {(k.kanaele || []).some((id) => ['meta', 'google', 'linkedin', 'tiktok'].includes(id)) && (() => {
                       const busy = schaltBusyId === k.id;
                       const b = (label: string, farbe: string, akt: 'schalten' | 'aktivieren' | 'pausieren' | 'beenden') => (
                         <button onClick={() => schalten(k, akt)} disabled={busy} style={{ ...btn(farbe), opacity: busy ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer' }}>{busy ? '…' : label}</button>
                       );
-                      if (k.status === 'entwurf' || k.status === 'bereit') return b('📢 Bei Meta anlegen', C.green, 'schalten');
+                      if (k.status === 'entwurf' || k.status === 'bereit') return b('📢 Schalten', C.green, 'schalten');
                       if (k.status === 'pausiert') return <>{b('▶️ Aktiv schalten', C.green, 'aktivieren')}{b('⏹ Beenden', C.textDim, 'beenden')}</>;
                       if (k.status === 'aktiv') return <>{b('⏸ Pausieren', C.warn, 'pausieren')}{b('⏹ Beenden', C.textDim, 'beenden')}</>;
                       return null;

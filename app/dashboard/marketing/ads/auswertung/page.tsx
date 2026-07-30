@@ -48,6 +48,10 @@ export default function AdsAuswertung() {
   const [fUmsatz, setFUmsatz] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Insights-Autofüllen
+  const [insBusy, setInsBusy] = useState(false);
+  const [insMeldung, setInsMeldung] = useState<string | null>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
@@ -105,6 +109,19 @@ export default function AdsAuswertung() {
     finally { setBusy(false); }
   }
 
+  async function insightsAktualisieren() {
+    setInsBusy(true); setInsMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/ads-insights', { method: 'POST' });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setInsMeldung(j?.error || 'Aktualisieren fehlgeschlagen.');
+      else if (j.geschaltet === 0) setInsMeldung('Noch keine geschaltete Kampagne — erst schalten, dann liefern die Werbekonten Zahlen.');
+      else setInsMeldung(`✓ ${j.aktualisiert} Kampagne${j.aktualisiert === 1 ? '' : 'n'} aus den Werbekonten aktualisiert.`);
+      laden();
+    } catch { setInsMeldung('Aktualisieren fehlgeschlagen.'); }
+    finally { setInsBusy(false); }
+  }
+
   const kpi = [
     { label: 'Ausgaben', wert: formatEuro(agg.ausgaben), farbe: C.cyan },
     { label: 'Umsatz', wert: formatEuro(agg.umsatz), farbe: C.green },
@@ -127,8 +144,18 @@ export default function AdsAuswertung() {
               Ausgaben, Ergebnisse und ROAS Ihrer Kampagnen auf einen Blick.
             </p>
           </div>
-          <a href="/dashboard/marketing/ads" style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, textDecoration: 'none' }}>‹ Zurück zu Ads</a>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={insightsAktualisieren} disabled={insBusy}
+              style={{ background: C.green, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, cursor: insBusy ? 'wait' : 'pointer', opacity: insBusy ? 0.6 : 1 }}>
+              {insBusy ? 'Hole Zahlen…' : '🔄 Insights aktualisieren'}
+            </button>
+            <a href="/dashboard/marketing/ads/kosten" style={{ background: 'rgba(201,168,76,0.12)', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 10, padding: '10px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, textDecoration: 'none' }}>💶 Kosten</a>
+            <a href="/dashboard/marketing/ads" style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, textDecoration: 'none' }}>‹ Zurück zu Ads</a>
+          </div>
         </div>
+        {insMeldung && (
+          <div style={{ marginBottom: 16, background: insMeldung.startsWith('✓') ? 'rgba(76,175,125,0.12)' : 'rgba(224,162,76,0.12)', border: `1px solid ${insMeldung.startsWith('✓') ? C.green : C.warn}`, borderRadius: 12, padding: '12px 16px', color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{insMeldung}</div>
+        )}
 
         {/* Hinweis */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '16px 22px', border: `1px solid ${C.gold}`, marginBottom: 20 }}>
