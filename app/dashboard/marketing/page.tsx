@@ -327,6 +327,25 @@ export default function MarketingCockpit() {
           >
             📚 Bibliothek
           </a>
+          <a
+            href="/dashboard/marketing/newsletter"
+            style={{
+              background: 'rgba(0,229,255,0.12)',
+              color: C.cyan,
+              border: `1px solid ${C.cyan}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+              fontWeight: 700,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            ✉️ Newsletter
+          </a>
           <button
             onClick={dialogNeu}
             style={{
