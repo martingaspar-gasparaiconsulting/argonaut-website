@@ -5,6 +5,12 @@ import {
   LP_VORLAGEN, LP_KATEGORIEN, vorlageFuer, zaehleLandingpages, nutzenAusText,
   videoHinweis, istErlaubtesBild, MEDIEN_MAX_MB, type LpVorlage,
 } from '@/lib/landingpages';
+import { createBrowserClient } from '@supabase/ssr';
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+);
 
 // ============================================================
 // ARGONAUT OS · MARKETING · Landingpage-Bauer (LP Paket 1 + 2)
@@ -52,6 +58,7 @@ export default function LandingpagesSeite() {
   const [eMeldung, setEMeldung] = useState<string | null>(null);
   const [kopiert, setKopiert] = useState<string | null>(null);
   const [eKategorie, setEKategorie] = useState('');
+  const [profilKategorie, setProfilKategorie] = useState('');
   const [vorschlagBusy, setVorschlagBusy] = useState(false);
   const dateiRef = useRef<HTMLInputElement>(null);
 
@@ -73,6 +80,14 @@ export default function LandingpagesSeite() {
       const j = await res.json();
       if (!res.ok || !j?.ok) { setFehler(j?.error || 'Laden fehlgeschlagen.'); }
       else { setListe(j.liste as Lp[]); setImpressum(j.impressum || { ok: true, fehlend: [] }); }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: prof } = await supabase.from('profiles').select('kategorie').eq('id', user.id).maybeSingle();
+          const kat = ((prof?.kategorie as string) || '').trim();
+          if (kat && LP_KATEGORIEN.includes(kat)) setProfilKategorie(kat);
+        }
+      } catch { /* Branche ist optional */ }
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLoading(false); }
   }
@@ -92,7 +107,7 @@ export default function LandingpagesSeite() {
     setEVideo('');
     setEAbAktiv(false);
     setETitelB(''); setEUnterB(''); setENutzenB(''); setECtaB(''); setEHeroB('');
-    setEKategorie('');
+    setEKategorie(profilKategorie);
     setEMeldung(null);
     setPickerOffen(false);
     setEditOffen(true);
@@ -114,7 +129,7 @@ export default function LandingpagesSeite() {
     setENutzenB((lp.nutzen_b ?? []).join('\n'));
     setECtaB(lp.cta_text_b ?? '');
     setEHeroB(lp.hero_bild_b_url ?? '');
-    setEKategorie('');
+    setEKategorie(profilKategorie);
     setEMeldung(null);
     setEditOffen(true);
   }
