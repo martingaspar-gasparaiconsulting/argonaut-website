@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
+import { augeProvisionen } from '@/lib/auge';
 import { provisionBetrag, proEmpfaenger, provisionSummen, empfaengerName, formatEuro } from '@/lib/provision';
 
 const supabase = createBrowserClient(
@@ -102,17 +103,10 @@ export default function ProvisionenSeite() {
     finally { setBusy(null); }
   }
 
-  const augeRegel = {
-    klartext: summen.anzahlDeals === 0
-      ? 'Noch keine Provisionen erfasst. Trag bei einem gewonnenen Deal einen Satz ein.'
-      : `${eur(summen.offen)} Provision offen · ${eur(summen.ausgezahlt)} ausgezahlt.`,
-    punkte: [
-      `Gesamt fällig: ${eur(summen.gesamt)} über ${summen.anzahlDeals} Deals`,
-      `Offen: ${eur(summen.offen)} · Ausgezahlt: ${eur(summen.ausgezahlt)}`,
-      summen.anzahlEmpfaenger > 0 ? `${summen.anzahlEmpfaenger} Empfänger` : 'Noch kein Empfänger hinterlegt',
-    ],
-    stimmung: (summen.offen > 0 ? 'achtung' : 'gut') as 'gut' | 'neutral' | 'achtung',
-  };
+  const augeRegel = augeProvisionen({
+    offen: summen.offen, ausgezahlt: summen.ausgezahlt, gesamt: summen.gesamt,
+    anzahlDeals: summen.anzahlDeals, anzahlEmpfaenger: summen.anzahlEmpfaenger,
+  });
 
   return (
     <div style={styles.page}>

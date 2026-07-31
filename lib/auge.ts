@@ -943,3 +943,77 @@ export function augeObjektzeiten(d: { objekte: number; minutenGesamt: number; mi
   if ((Number(d.minutenAbrechenbar) || 0) < (Number(d.minutenGesamt) || 0)) punkte.push('Ein Teil ist nicht abrechenbar — Stundensätze/Kennzeichnung prüfen.');
   return { klartext: `Im ${monat}: ${h(d.minutenGesamt)} auf ${d.objekte} Objekt${d.objekte === 1 ? '' : 'e'} gebucht, davon ${h(d.minutenAbrechenbar)} abrechenbar.`, punkte, stimmung: 'gut' };
 }
+
+/** Deal-Pipeline: offene Chancen, gewichteter Forecast, überfällige Abschlüsse. */
+export function augePipeline(d: {
+  offen: number; pipelineWert: number; gewichtet: number; winRate: number;
+  gewonnen: number; verloren: number;
+  topTitel?: string | null; topScore?: number | null; ueberfaellig?: number;
+}): AugeErgebnis {
+  const ueberfaellig = Number(d.ueberfaellig) || 0;
+  if ((Number(d.offen) || 0) === 0) {
+    return { klartext: 'Noch keine offenen Deals — leg deine erste Vertriebschance an.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte: string[] = [];
+  punkte.push(`Pipeline-Wert offen: ${eur(d.pipelineWert)} · gewichteter Forecast: ${eur(d.gewichtet)}`);
+  if (d.topTitel) punkte.push(`Heißester Deal: „${d.topTitel}"${d.topScore != null ? ` (Score ${Math.round(Number(d.topScore))})` : ''} — hier zuerst dran.`);
+  if ((d.gewonnen + d.verloren) > 0) punkte.push(`Win-Rate: ${Math.round(Number(d.winRate) || 0)} % (${d.gewonnen} gewonnen)`);
+
+  if (ueberfaellig > 0) {
+    return {
+      klartext: `${ueberfaellig} Deal${ueberfaellig === 1 ? '' : 's'} mit überfälligem Abschlusstermin — da solltest du jetzt nachfassen.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  return {
+    klartext: `${d.offen} offene Deal${d.offen === 1 ? '' : 's'} · gewichteter Forecast ${eur(d.gewichtet)}.`,
+    punkte, stimmung: 'gut',
+  };
+}
+
+/** Provisionen: offene vs. ausgezahlte Verkaufsprovisionen aus gewonnenen Deals. */
+export function augeProvisionen(d: {
+  offen: number; ausgezahlt: number; gesamt: number; anzahlDeals: number; anzahlEmpfaenger: number;
+}): AugeErgebnis {
+  if ((Number(d.anzahlDeals) || 0) === 0) {
+    return { klartext: 'Noch keine Provisionen erfasst — trag bei einem gewonnenen Deal einen Satz ein.', punkte: [], stimmung: 'neutral' };
+  }
+  const punkte = [
+    `Gesamt fällig: ${eur(d.gesamt)} über ${d.anzahlDeals} Deal${d.anzahlDeals === 1 ? '' : 's'}`,
+    `Ausgezahlt: ${eur(d.ausgezahlt)} · ${d.anzahlEmpfaenger} Empfänger`,
+  ];
+  if ((Number(d.offen) || 0) > 0) {
+    return { klartext: `${eur(d.offen)} Provision offen zum Auszahlen.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `Alle Provisionen ausgezahlt — nichts offen. Sauber.`, punkte, stimmung: 'gut' };
+}
+
+/**
+ * GESAMT-AUGE (Aggregator fürs Tagescockpit „Heute"): bündelt die Auge-Ergebnisse
+ * mehrerer Module zu EINER priorisierten Antwort. Schlimmste Stimmung gewinnt;
+ * die „achtung"-Bereiche zuerst. Reine Zusammenführung — 0 €.
+ */
+export function augeGesamt(
+  module: Array<{ modul: string; ergebnis: AugeErgebnis }>,
+  maxPunkte: number = 5,
+): AugeErgebnis {
+  const liste = (module || []).filter((m) => m && m.ergebnis);
+  const achtung = liste.filter((m) => m.ergebnis.stimmung === 'achtung');
+  const neutral = liste.filter((m) => m.ergebnis.stimmung === 'neutral');
+
+  if (achtung.length > 0) {
+    return {
+      klartext: `${achtung.length} Bereich${achtung.length === 1 ? '' : 'e'} ${achtung.length === 1 ? 'braucht' : 'brauchen'} jetzt deine Aufmerksamkeit.`,
+      punkte: achtung.slice(0, maxPunkte).map((m) => `${m.modul}: ${m.ergebnis.klartext}`),
+      stimmung: 'achtung',
+    };
+  }
+  if (neutral.length > 0) {
+    return {
+      klartext: `Nichts Dringendes — ${neutral.length} Bereich${neutral.length === 1 ? '' : 'e'} im Blick behalten.`,
+      punkte: neutral.slice(0, maxPunkte).map((m) => `${m.modul}: ${m.ergebnis.klartext}`),
+      stimmung: 'neutral',
+    };
+  }
+  return { klartext: 'Alles im grünen Bereich — nichts Dringendes. Sauber.', punkte: [], stimmung: 'gut' };
+}

@@ -15,6 +15,7 @@ import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { STUFEN, OFFENE_STUFEN, stufeInfo, stufeWahrscheinlichkeit, zaehlePipeline, dealWahrscheinlichkeit, formatEuro } from '@/lib/pipeline';
 import { dealScore, priorisiere } from '@/lib/dealScoring';
+import { augePipeline } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -128,19 +129,15 @@ export default function PipelineSeite() {
     finally { setBusy(null); }
   }
 
-  const augeRegel = {
-    klartext: kpi.offen === 0
-      ? 'Noch keine offenen Deals in der Pipeline.'
-      : topDeals.length > 0
-        ? `Kümmere dich zuerst um „${topDeals[0].deal.titel}" (Score ${topDeals[0].score.score}). ${kpi.offen} offene Deals · gewichteter Forecast ${eur(kpi.gewichtet)}.`
-        : `${kpi.offen} offene Deals · gewichteter Forecast ${eur(kpi.gewichtet)}.`,
-    punkte: [
-      ...topDeals.map((t) => `${t.score.klasseLabel} (${t.score.score}): ${t.deal.titel} — ${t.score.gruende.slice(0, 2).join(', ')}`),
-      `Pipeline-Wert (offen): ${eur(kpi.pipelineWert)} · Gewichteter Forecast: ${eur(kpi.gewichtet)}`,
-      (kpi.gewonnen + kpi.verloren) > 0 ? `Win-Rate: ${kpi.winRate}% (${kpi.gewonnen} gewonnen)` : 'Noch keine entschiedenen Deals',
-    ],
-    stimmung: (kpi.offen > 0 ? 'gut' : 'neutral') as 'gut' | 'neutral' | 'achtung',
-  };
+  const ueberfaelligAnzahl = useMemo(
+    () => [...scores.values()].filter((s) => s.gruende.some((g) => g.includes('überfällig'))).length,
+    [scores],
+  );
+  const augeRegel = augePipeline({
+    offen: kpi.offen, pipelineWert: kpi.pipelineWert, gewichtet: kpi.gewichtet, winRate: kpi.winRate,
+    gewonnen: kpi.gewonnen, verloren: kpi.verloren,
+    topTitel: topDeals[0]?.deal.titel, topScore: topDeals[0]?.score.score, ueberfaellig: ueberfaelligAnzahl,
+  });
 
   return (
     <div style={styles.page}>
