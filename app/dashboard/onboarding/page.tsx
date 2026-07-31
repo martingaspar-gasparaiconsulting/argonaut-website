@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
+import KiGuide from '../_components/KiGuide';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -114,6 +115,7 @@ export default function OnboardingPage() {
   function erledigt(s: RenderSchritt) { return s.autoDone || manuell.has(s.key); }
   const fertig = alle.filter(erledigt).length;
   const prozent = alle.length > 0 ? Math.round((fertig / alle.length) * 100) : 0;
+  const naechster = alle.find((s) => !erledigt(s)) || null;
 
   async function toggle(s: RenderSchritt) {
     if (!uid) return;
@@ -178,6 +180,22 @@ export default function OnboardingPage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>🚀 Erste Schritte mit ARGONAUT</h1>
       <p style={styles.sub}>Deine geführte Startstrecke. Vieles erkennt ARGONAUT automatisch — den Rest hakst du selbst ab.</p>
+
+      {!laden && (
+        <KiGuide
+          begruessung={prozent === 100 ? 'Alles startklar!' : 'Willkommen bei ARGONAUT.'}
+          nachricht={prozent === 100
+            ? 'Stark — jeder Schritt ist erledigt. Dein ARGONAUT ist einsatzbereit. Ich bin da, falls du etwas Neues einrichten willst.'
+            : naechster
+              ? 'Ich führe dich Schritt für Schritt. Das ist als Nächstes dran:'
+              : 'Lass uns dein System startklar machen.'}
+          schritte={naechster ? [`${naechster.icon} ${naechster.titel}`] : undefined}
+          aktionText={naechster ? 'Diesen Schritt öffnen' : undefined}
+          aktionHref={naechster ? naechster.link : undefined}
+          stimmung={prozent === 100 ? 'gut' : 'neutral'}
+          fortschritt={prozent}
+        />
+      )}
 
       <div style={styles.anleitung}>
         <b>So nutzt du diese Seite:</b> Arbeite dich von oben nach unten durch. Was ARGONAUT schon erkennt, ist grün abgehakt.
