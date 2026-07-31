@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
 import { rechneAngebot, freigabeNoetig, RABATT_FREIGABE_AB, type Staffel } from '@/lib/angebotRabatt';
+import { normalisierePositionen, nurGefuellte, bundleName, bundleLabel, type Bundle } from '@/lib/angebotBundle';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -64,6 +65,8 @@ export default function AngebotePage() {
   const [gesamtRabatt, setGesamtRabatt] = useState('0');
   const [staffelAn, setStaffelAn] = useState(false);
   const [staffeln, setStaffeln] = useState<Staffel[]>([{ abMenge: 10, rabatt: 5 }, { abMenge: 50, rabatt: 10 }]);
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [bundleNeuName, setBundleNeuName] = useState('');
 
   const basisUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -86,9 +89,40 @@ export default function AngebotePage() {
         name: (k.anzeigename || `${k.vorname || ''} ${k.nachname || ''}`.trim() || k.name || k.email || '—'),
       })));
       await laden_();
+      await bundleLaden();
       setLaden(false);
     })();
   }, [laden_]);
+
+  const bundleLaden = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('angebot_bundle').select('id, name, positionen').order('name', { ascending: true });
+      setBundles(((data as Array<{ id: string; name: string; positionen: unknown }>) ?? []).map((b) => ({
+        id: b.id, name: b.name, positionen: normalisierePositionen(b.positionen),
+      })));
+    } catch { /* Tabelle evtl. noch nicht eingespielt */ }
+  }, []);
+
+  function bundleEinfuegen(id: string) {
+    const b = bundles.find((x) => x.id === id);
+    if (!b) return;
+    setPositionen((ps) => [...nurGefuellte(ps), ...b.positionen]);
+  }
+
+  async function bundleSpeichern() {
+    if (!uid) return;
+    const name = bundleName(bundleNeuName);
+    if (!name) { setFehler('Bitte einen Namen für den Baustein angeben.'); return; }
+    const pos = nurGefuellte(positionen);
+    if (!pos.length) { setFehler('Keine Positionen zum Speichern.'); return; }
+    setBusy('bundle'); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.from('angebot_bundle').insert({ owner_user_id: uid, name, positionen: pos });
+      if (error) { setFehler('Baustein konnte nicht gespeichert werden.'); return; }
+      setBundleNeuName(''); setOk(`Baustein „${name}" gespeichert — ab jetzt mit einem Klick einfügbar.`);
+      await bundleLaden();
+    } finally { setBusy(null); }
+  }
 
   const aktiveStaffeln = useMemo(() => (staffelAn ? staffeln.filter((s) => s.abMenge > 0 && s.rabatt > 0) : []), [staffelAn, staffeln]);
   const summe = useMemo(() => rechneAngebot(alsRabattPos(positionen), gesamtRabatt, aktiveStaffeln), [positionen, gesamtRabatt, aktiveStaffeln]);
@@ -230,6 +264,19 @@ export default function AngebotePage() {
         ))}
         <button type="button" style={styles.dazuBtn} onClick={posDazu}>＋ Position</button>
 
+        {/* --- Bausteine / Bundles (CPQ A8b) --- */}
+        <div style={styles.bundleBox}>
+          <span style={{ color: C.textDim, fontSize: 13, fontWeight: 700 }}>📦 Bausteine:</span>
+          {bundles.length > 0 && (
+            <select style={{ ...styles.inp, maxWidth: 260 }} value="" onChange={(e) => { if (e.target.value) bundleEinfuegen(e.target.value); }}>
+              <option value="">— Bundle einfügen —</option>
+              {bundles.map((b) => <option key={b.id} value={b.id}>{bundleLabel(b)}</option>)}
+            </select>
+          )}
+          <input style={{ ...styles.inp, maxWidth: 180 }} value={bundleNeuName} onChange={(e) => setBundleNeuName(e.target.value)} placeholder="Name für neuen Baustein" />
+          <button type="button" style={{ ...styles.dazuBtn, opacity: busy === 'bundle' ? 0.6 : 1 }} disabled={busy === 'bundle'} onClick={bundleSpeichern}>＋ Als Baustein speichern</button>
+        </div>
+
         {/* --- Rabatte & Staffeln (CPQ) --- */}
         <div style={styles.rabattBox}>
           <div style={styles.rabattZeile}>
@@ -341,6 +388,7 @@ const styles: Record<string, CSSProperties> = {
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit', minWidth: 0 },
   posKopf: { display: 'grid', gridTemplateColumns: '1fr 58px 54px 80px 52px 58px 32px', gap: 6, color: C.textDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 2px' },
   posRow: { display: 'grid', gridTemplateColumns: '1fr 58px 54px 80px 52px 58px 32px', gap: 6, alignItems: 'center' },
+  bundleBox: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px' },
   rabattBox: { display: 'flex', flexDirection: 'column', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' },
   rabattZeile: { display: 'flex', gap: 18, alignItems: 'flex-end', flexWrap: 'wrap' },
   staffelToggle: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: C.text, cursor: 'pointer' },
