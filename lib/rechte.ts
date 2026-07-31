@@ -98,6 +98,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb' },
   { label: '📊 Deal-Pipeline', href: '/dashboard/pipeline', modul: 'pipeline', ebene: 3, gruppe: 'vertrieb' },
+  { label: '💰 Provisionen', href: '/dashboard/provisionen', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
   { label: '🧭 Kunden-Akte', href: '/dashboard/kunde-akte', modul: 'kundenakte', ebene: 3, gruppe: 'vertrieb' },
   { label: '🕒 Aktivität', href: '/dashboard/aktivitaet', modul: 'aktivitaet', ebene: 3, gruppe: 'vertrieb' },
   { label: '🧾 Angebote', href: '/dashboard/angebote', modul: 'angebote', ebene: 3, gruppe: 'vertrieb' },

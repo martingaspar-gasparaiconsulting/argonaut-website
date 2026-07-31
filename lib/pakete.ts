@@ -25,6 +25,7 @@
 export const KERN_MODULE: string[] = [
   'crm',          // 🤝 Vertrieb / CRM (Kontakte)
   'pipeline',     // 📊 Deal-Pipeline (Vertriebschancen + gewichteter Forecast)
+  'provisionen',  // 💰 Provisionen (Verkaufsprovisionen aus gewonnenen Deals)
   'auftraege',    // 📋 Aufträge
   'angebote',     // 🧾 Angebote
   'rechnungen',   // 🧾 Rechnungen

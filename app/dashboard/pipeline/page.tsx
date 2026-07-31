@@ -14,6 +14,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { STUFEN, OFFENE_STUFEN, stufeInfo, stufeWahrscheinlichkeit, zaehlePipeline, dealWahrscheinlichkeit, formatEuro } from '@/lib/pipeline';
+import { dealScore, priorisiere } from '@/lib/dealScoring';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,7 +53,7 @@ export default function PipelineSeite() {
     setLaden(true); setFehler(null);
     try {
       const [d, k] = await Promise.all([
-        supabase.from('crm_deal').select('*').order('created_at', { ascending: false }),
+        supabase.from('crm_deal').select('*').order('erstellt_am', { ascending: false }),
         supabase.from('kontakte').select('id, vorname, nachname, firma').order('nachname', { ascending: true }),
       ]);
       setDeals((d.data as Deal[]) ?? []);
@@ -73,6 +74,13 @@ export default function PipelineSeite() {
   }, [laden_]);
 
   const kpi = useMemo(() => zaehlePipeline(deals), [deals]);
+  const heute = useMemo(() => new Date(), []);
+  const scores = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof dealScore>>();
+    deals.forEach((d) => m.set(d.id, dealScore(d, heute)));
+    return m;
+  }, [deals, heute]);
+  const topDeals = useMemo(() => priorisiere(deals, heute).slice(0, 3), [deals, heute]);
   const kontaktName = useCallback((id: string | null) => {
     if (!id) return '';
     const k = kontakte.find((x) => x.id === id);
@@ -121,10 +129,14 @@ export default function PipelineSeite() {
   }
 
   const augeRegel = {
-    klartext: kpi.offen === 0 ? 'Noch keine offenen Deals in der Pipeline.' : `${kpi.offen} offene Deals · gewichteter Forecast ${eur(kpi.gewichtet)}.`,
+    klartext: kpi.offen === 0
+      ? 'Noch keine offenen Deals in der Pipeline.'
+      : topDeals.length > 0
+        ? `Kümmere dich zuerst um „${topDeals[0].deal.titel}" (Score ${topDeals[0].score.score}). ${kpi.offen} offene Deals · gewichteter Forecast ${eur(kpi.gewichtet)}.`
+        : `${kpi.offen} offene Deals · gewichteter Forecast ${eur(kpi.gewichtet)}.`,
     punkte: [
-      `Pipeline-Wert (offen): ${eur(kpi.pipelineWert)}`,
-      `Gewichteter Forecast: ${eur(kpi.gewichtet)}`,
+      ...topDeals.map((t) => `${t.score.klasseLabel} (${t.score.score}): ${t.deal.titel} — ${t.score.gruende.slice(0, 2).join(', ')}`),
+      `Pipeline-Wert (offen): ${eur(kpi.pipelineWert)} · Gewichteter Forecast: ${eur(kpi.gewichtet)}`,
       (kpi.gewonnen + kpi.verloren) > 0 ? `Win-Rate: ${kpi.winRate}% (${kpi.gewonnen} gewonnen)` : 'Noch keine entschiedenen Deals',
     ],
     stimmung: (kpi.offen > 0 ? 'gut' : 'neutral') as 'gut' | 'neutral' | 'achtung',
@@ -193,9 +205,14 @@ export default function PipelineSeite() {
                   <span style={{ fontWeight: 800, color: s.farbe }}>{s.label}</span>
                   <span style={styles.spalteMeta}>{ds.length} · {eur(summe)}</span>
                 </div>
-                {ds.length === 0 ? <div style={styles.spalteLeer}>—</div> : ds.map((d) => (
+                {ds.length === 0 ? <div style={styles.spalteLeer}>—</div> : ds.map((d) => {
+                  const sc = scores.get(d.id);
+                  return (
                   <div key={d.id} style={styles.deal}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{d.titel}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{d.titel}</div>
+                      {sc && <span style={{ ...styles.scorePill, background: sc.farbe + '22', color: sc.farbe, border: `1px solid ${sc.farbe}66` }} title={sc.gruende.join(' · ')}>🔥 {sc.score}</span>}
+                    </div>
                     <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 2 }}>
                       {(d.firma || kontaktName(d.kontakt_id) || '—')}{d.erwartetes_datum ? ` · ${fmtDate(d.erwartetes_datum)}` : ''}
                     </div>
@@ -210,7 +227,8 @@ export default function PipelineSeite() {
                       <button style={styles.miniX} disabled={busy === d.id} onClick={() => loeschen(d)}>✕</button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -258,6 +276,7 @@ const styles: Record<string, CSSProperties> = {
   spalteMeta: { color: C.textDim, fontSize: 12 },
   spalteLeer: { color: C.textDim, fontSize: 13, textAlign: 'center', padding: '18px 0' },
   deal: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', marginBottom: 8 },
+  scorePill: { flexShrink: 0, fontSize: 11.5, fontWeight: 800, borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap', lineHeight: 1.4 },
   selMini: { flex: 1, background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 8px', fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer' },
   miniX: { background: 'transparent', color: C.danger, border: `1px solid ${C.danger}55`, borderRadius: 8, padding: '4px 9px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
   hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '10px 0' },
