@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { HONORARGRUPPEN, KATEGORIEN, honorar, honorarsatz, summePositionen, zaehleGutachten } from '@/lib/gutachten';
+import Leerzustand from '../_components/Leerzustand';
 import { augeGutachten } from '@/lib/auge';
 import { gutachtenPdf } from '@/lib/gutachtenPdf';
 import KiAuge from '../_components/KiAuge';
@@ -194,7 +195,7 @@ export default function GutachtenPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {gutachten.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Gutachten.</div> : (
+              {gutachten.length === 0 ? <Leerzustand icon="⚖️" titel="Noch keine Gutachten" text="Erstelle strukturierte Gutachten mit JVEG-Honorar-Rechner." schritte={["Gutachten oben anlegen", "Befund und Bewertung als Positionen erfassen", "Honorar berechnen lassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Titel</th><th style={styles.th}>Auftraggeber</th><th style={styles.th}>Status</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

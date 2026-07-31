@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import Leerzustand from "../_components/Leerzustand";
 import { augeRaeume } from "@/lib/auge";
 import {
   RESSOURCE_TYP,
@@ -258,7 +259,7 @@ export default function RaeumeSeite() {
             <label style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 6 }}>⤓ CSV importieren<input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={onCsv} /></label>
             <button style={btnGold} onClick={() => openRessource()}>+ Ressource</button>
           </div>
-          {ressourcen.length === 0 ? <div style={{ ...card, color: C.textDim }}>Noch keine Ressourcen. Lege Räume und Ausstattung an.</div> : (
+          {ressourcen.length === 0 ? <Leerzustand icon="🏫" titel="Noch keine Ressourcen" text="Lege Räume und Ausstattung an, die belegt werden können." schritte={["Ressource oben anlegen", "Typ und Kapazität erfassen", "Im Belegungsplan buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ressourcen.map((r) => (
                 <div key={r.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>

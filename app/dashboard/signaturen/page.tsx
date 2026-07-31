@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -161,7 +162,7 @@ export default function SignaturenPage() {
 
       <div style={{ ...styles.card, marginTop: 16 }}>
         <div style={styles.cardTitel}>Anfragen</div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : liste.length === 0 ? <p style={styles.dim}>Noch keine Signatur-Anfragen.</p> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : liste.length === 0 ? <Leerzustand icon="✍️" titel="Noch keine Signatur-Anfragen" text="Sende Dokumente zur Unterschrift und verfolge den Status." schritte={["Dokument oben anlegen", "Unterschrifts-Link teilen", "Signiertes PDF laden"]} /> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {liste.map((a) => {
               const st = STATUS[a.status] || { l: a.status, f: C.textDim };

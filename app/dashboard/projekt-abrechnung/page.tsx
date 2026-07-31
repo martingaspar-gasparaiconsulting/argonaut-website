@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -145,7 +146,7 @@ export default function ProjektAbrechnungPage() {
       <div style={styles.projektZeile}>
         <label style={styles.lbl}>Projekt</label>
         {projekte.length === 0 ? (
-          <div style={styles.hint}>Noch keine Projekte. Lege zuerst unter <a href="/dashboard/projekte" style={{ color: C.cyan, fontWeight: 700 }}>Projekte</a> eines an.</div>
+          <Leerzustand icon="📁" titel="Noch keine Projekte" text="Die Projekt-Abrechnung hängt an deinen Projekten — lege zuerst eines an." aktionText="Zu Projekten" aktionHref="/dashboard/projekte" />
         ) : (
           <select style={{ ...styles.input, maxWidth: 420 }} value={projektId} onChange={(e) => setProjektId(e.target.value)}>
             {projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt ohne Name'}</option>)}

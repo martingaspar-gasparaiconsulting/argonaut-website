@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden } from '@/lib/spenden';
+import Leerzustand from '../_components/Leerzustand';
 import { augeSpenden } from '@/lib/auge';
 import { zuwendungPdf } from '@/lib/zuwendungPdf';
 import KiAuge from '../_components/KiAuge';
@@ -180,7 +181,7 @@ export default function SpendenPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {spenden.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Zuwendungen.</div> : (
+              {spenden.length === 0 ? <Leerzustand icon="🎗️" titel="Noch keine Zuwendungen" text="Erfasse Geld- und Sachspenden und erstelle Zuwendungsbestätigungen nach amtlichem Muster." schritte={["Zuwendung oben anlegen", "Art und Betrag erfassen", "Zuwendungsbestätigung (§50 EStDV) ausgeben"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Spender</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>Betrag</th><th style={styles.th}>Bestätigung</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

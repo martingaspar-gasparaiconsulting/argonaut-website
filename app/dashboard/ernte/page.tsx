@@ -14,6 +14,7 @@ import {
 import { markttagPdf } from "@/lib/markttagPdf";
 import { offeneBuchungen } from "@/lib/umsatzBuchung";
 import { findeArtikelId, artikelStammAusErnte, neuerBestand } from "@/lib/lagerZugang";
+import Leerzustand from "../_components/Leerzustand";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-6 · Ernte, Direktvermarktung & Marktstände
@@ -318,7 +319,7 @@ export default function ErnteSeite() {
       ) : tab === "ernte" ? (
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><button style={btnGold} onClick={() => openErnte()}>+ Ernte erfassen</button></div>
-          {ernten.length === 0 ? <div style={{ ...card, color: C.textDim }}>Noch keine Ernte erfasst.</div> : (
+          {ernten.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Ernte erfasst" text="Erfasse Erntemengen je Kultur — Basis für Lager und Direktvermarktung." schritte={["Ernte oben erfassen", "Kultur, Menge und Qualität eintragen", "Bei Bedarf ins Lager buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ernten.map((e) => (
                 <div key={e.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -351,7 +352,7 @@ export default function ErnteSeite() {
             <label style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 6 }}>⤓ CSV importieren<input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={onCsv} /></label>
             <button style={btnGold} onClick={() => openProdukt()}>+ Produkt</button>
           </div>
-          {produkte.length === 0 ? <div style={{ ...card, color: C.textDim }}>Noch keine Produkte im Katalog.</div> : (
+          {produkte.length === 0 ? <Leerzustand icon="🥕" titel="Noch keine Produkte im Katalog" text="Lege deine Marktstand-Produkte mit Preis und MwSt an." schritte={["Produkt oben anlegen", "Preis (inkl. MwSt) und Kategorie setzen", "Beim Markttag verkaufen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {produkte.map((p) => (
                 <div key={p.id} style={{ ...card, opacity: p.verfuegbar ? 1 : 0.55, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -403,7 +404,7 @@ export default function ErnteSeite() {
             {vk.produkt_id && vk.menge && <div style={{ marginTop: 8, color: C.cyan }}>Position: {eur(verkaufsWerte(zahl(vk.menge), zahl(vk.einzelpreis), zahl(vk.mwst_satz)).brutto)} brutto</div>}
           </div>
 
-          {markttage.length === 0 ? <div style={{ ...card, color: C.textDim }}>Noch keine Verkäufe gebucht.</div> : (
+          {markttage.length === 0 ? <Leerzustand icon="🧺" titel="Noch keine Verkäufe gebucht" text="Buche Marktverkäufe — sie werden zu Markttagen mit Tageserlös gebündelt." schritte={["Produkt und Menge wählen", "Verkauf buchen", "Markttag-Abrechnung als PDF"]} /> : (
             <div style={{ display: "grid", gap: 12 }}>
               {markttage.map((t) => (
                 <div key={`${t.datum}|${t.ort}`} style={card}>

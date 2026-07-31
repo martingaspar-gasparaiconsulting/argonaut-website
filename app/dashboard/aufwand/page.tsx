@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   ausProjektleistung,
   ausObjektzeit,
@@ -152,7 +153,7 @@ export default function AufwandCockpit() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : gruppen.length === 0 ? (
-          <div style={styles.hint}>Noch kein abrechenbarer Aufwand. Buch Zeiten unter Projekt-Abrechnung oder Objekt-Zeiterfassung.</div>
+          <Leerzustand icon="⏱️" titel="Kein abrechenbarer Aufwand" text="Sobald du Zeiten buchst, sammelt sich der offene Aufwand hier zum Abrechnen." schritte={["Zeiten unter Projekt-Abrechnung buchen", "oder unter Objekt-Zeiterfassung", "Offene Aufwände hier abrechnen"]} />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
