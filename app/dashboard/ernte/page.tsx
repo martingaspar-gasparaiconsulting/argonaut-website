@@ -13,6 +13,7 @@ import {
 } from "@/lib/ernte";
 import { markttagPdf } from "@/lib/markttagPdf";
 import { offeneBuchungen } from "@/lib/umsatzBuchung";
+import { findeArtikelId, artikelStammAusErnte, neuerBestand } from "@/lib/lagerZugang";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-6 · Ernte, Direktvermarktung & Marktstände
@@ -31,7 +32,7 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-interface Ernte { id: string; schlag_id: string | null; kultur: string; datum: string | null; menge: number | null; einheit: string | null; qualitaet: string | null; lagerort: string | null; status: string; notiz: string | null; }
+interface Ernte { id: string; schlag_id: string | null; kultur: string; datum: string | null; menge: number | null; einheit: string | null; qualitaet: string | null; lagerort: string | null; status: string; notiz: string | null; lager_gebucht: boolean; }
 interface Produkt { id: string; bezeichnung: string; kategorie: string | null; einheit: string; preis: number | null; mwst_satz: number | null; bio: boolean; herkunft: string; verfuegbar: boolean; notiz: string | null; }
 interface Verkauf { id: string; produkt_id: string | null; bezeichnung: string | null; datum: string | null; ort: string | null; menge: number | null; einzelpreis: number | null; mwst_satz: number | null; }
 interface SchlagKurz { id: string; bezeichnung: string; }
@@ -113,6 +114,39 @@ export default function ErnteSeite() {
       setFinanzMeldung(`${payloads.length} Verkauf${payloads.length === 1 ? "" : "e"} in die Finanzen gebucht — sichtbar in EÜR & Finanz-Cockpit.`);
     } catch (e: any) {
       setFehler("Fehler: " + (e?.message || "unbekannt"));
+    }
+    setBusy(false);
+  }
+
+  // Ernte-Menge als Zugang ins Lager buchen (Artikel per Namen finden → Bestand
+  // erhöhen, sonst neuen Artikel anlegen). Idempotent über ernte_ernte.lager_gebucht.
+  async function bucheInsLager(e: Ernte) {
+    const menge = Number(e.menge) || 0;
+    if (menge <= 0) { setHinweis("Dieser Ernte-Posten hat keine Menge zum Einlagern."); return; }
+    setBusy(true); setFehler(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id ?? userId;
+      if (!uid) { setFehler("Nicht eingeloggt."); setBusy(false); return; }
+      const { data: artsRaw } = await supabase.from("artikel").select("id, bezeichnung, aktueller_bestand");
+      const arts = (artsRaw ?? []) as { id: string; bezeichnung: string | null; aktueller_bestand: number | null }[];
+      const treffer = findeArtikelId(e.kultur, arts);
+      if (treffer) {
+        const alt = arts.find((a) => a.id === treffer)?.aktueller_bestand ?? 0;
+        const { error } = await supabase.from("artikel").update({ aktueller_bestand: neuerBestand(alt, menge) }).eq("id", treffer);
+        if (error) { setFehler("Lager-Update fehlgeschlagen: " + error.message); setBusy(false); return; }
+      } else {
+        const stamm = artikelStammAusErnte(e.kultur, e.einheit);
+        const ins = { ...stamm, aktueller_bestand: menge, owner_user_id: uid };
+        const { error } = await supabase.from("artikel").insert(ins);
+        if (error) { setFehler("Artikel anlegen fehlgeschlagen: " + error.message); setBusy(false); return; }
+      }
+      const { error: uErr } = await supabase.from("ernte_ernte").update({ lager_gebucht: true }).eq("id", e.id);
+      if (uErr) { setFehler("Markieren fehlgeschlagen: " + uErr.message); setBusy(false); return; }
+      setHinweis(`${num(menge)} ${e.einheit ?? ""} „${e.kultur}" ins Lager gebucht${treffer ? " (Bestand erhöht)" : " (neuer Artikel angelegt)"}.`);
+      await ladeAlles();
+    } catch (err: any) {
+      setFehler("Fehler: " + (err?.message || "unbekannt"));
     }
     setBusy(false);
   }
@@ -296,7 +330,12 @@ export default function ErnteSeite() {
                       {dstr(e.datum)}{e.schlag_id && schlagName[e.schlag_id] ? ` · Schlag ${schlagName[e.schlag_id]}` : ""}{e.qualitaet ? ` · ${e.qualitaet}` : ""}{e.lagerort ? ` · Lager ${e.lagerort}` : ""}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    {e.menge != null && e.menge > 0 && (
+                      e.lager_gebucht
+                        ? <span style={{ ...pill(C.green) }}>✓ im Lager</span>
+                        : <button style={{ ...btnGhost, color: C.cyan, borderColor: "rgba(0,229,255,0.4)" }} disabled={busy} onClick={() => bucheInsLager(e)}>📦 Ins Lager</button>
+                    )}
                     {e.status === "gelagert" && <button style={btnGhost} onClick={() => ernteStatus(e, "verkauft")}>✓ verkauft</button>}
                     <button style={btnGhost} onClick={() => openErnte(e)}>Bearbeiten</button>
                     <button style={{ ...btnGhost, color: C.danger, borderColor: "rgba(224,102,102,0.4)" }} onClick={() => loescheErnte(e)}>✕</button>

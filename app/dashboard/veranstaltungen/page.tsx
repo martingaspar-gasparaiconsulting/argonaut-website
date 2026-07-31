@@ -30,7 +30,7 @@ const C = {
 };
 
 type Veranstaltung = { id: string; titel: string; art: string; ort: string | null; beginn: string | null; ende: string | null; kapazitaet: number; preis: number; status: string; beschreibung: string | null };
-type Anmeldung = { id: string; veranstaltung_id: string; name: string; email: string | null; plaetze: number; status: string; bezahlt: boolean; betrag: number; angemeldet_am: string | null };
+type Anmeldung = { id: string; veranstaltung_id: string; name: string; email: string | null; plaetze: number; status: string; bezahlt: boolean; betrag: number; angemeldet_am: string | null; rechnung_id: string | null };
 
 const E_STATUS = [
   { v: 'geplant', l: 'geplant' }, { v: 'aktiv', l: 'aktiv (Anmeldung offen)' },
@@ -55,6 +55,7 @@ export default function VeranstaltungenPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [finanzMeldung, setFinanzMeldung] = useState<string | null>(null);
+  const [rechnungBusy, setRechnungBusy] = useState<string | null>(null);
 
   const [nEvent, setNEvent] = useState({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' });
   const [nAnm, setNAnm] = useState<{ veranstaltung_id: string; name: string; email: string; plaetze: string } | null>(null);
@@ -100,7 +101,7 @@ export default function VeranstaltungenPage() {
     try {
       const { data: vorhanden } = await supabase.from('zahlungen').select('referenz');
       const refs = (vorhanden ?? []).map((z: { referenz: string | null }) => z.referenz || '').filter(Boolean);
-      const roh = anmeldungen.filter((a) => a.bezahlt).map((a) => ({ id: a.id, betrag: Number(a.betrag) || 0, datum: a.angemeldet_am }));
+      const roh = anmeldungen.filter((a) => a.bezahlt && !a.rechnung_id).map((a) => ({ id: a.id, betrag: Number(a.betrag) || 0, datum: a.angemeldet_am }));
       const heute = new Date().toISOString().slice(0, 10);
       const payloads = offeneBuchungen(roh, 'event', refs, heute, 'Veranstaltung');
       if (payloads.length === 0) { setFinanzMeldung('Alle bezahlten Anmeldungen sind bereits in den Finanzen gebucht.'); setBusy(null); return; }
@@ -112,6 +113,24 @@ export default function VeranstaltungenPage() {
     } catch (err: unknown) {
       setFehler('Buchen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
+  }
+
+  // Aus EINER Anmeldung eine echte §14-Rechnung erzeugen (Ticket × Plätze)
+  async function rechnungErstellen(a: Anmeldung) {
+    if (Number(a.betrag) <= 0) { setFehler('Kostenlose Anmeldung — keine Rechnung nötig.'); return; }
+    setRechnungBusy(a.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-veranstaltung', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anmeldungId: a.id }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Rechnung konnte nicht erstellt werden.');
+      setOk('Rechnung erstellt — in „Rechnungen" sichtbar.');
+      await laden_();
+    } catch (err: unknown) {
+      setFehler('Rechnung fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setRechnungBusy(null); }
   }
 
   async function eventAnlegen() {
@@ -205,7 +224,7 @@ export default function VeranstaltungenPage() {
         <div style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={styles.cardTitel}>💶 Einnahmen in die Finanzen buchen</div>
-            <div style={{ color: C.textDim, fontSize: 13, marginTop: 3 }}>Überträgt bezahlte Anmeldungen als Einnahmen in EÜR &amp; Finanz-Cockpit. Mehrfaches Klicken bucht nichts doppelt.</div>
+            <div style={{ color: C.textDim, fontSize: 13, marginTop: 3 }}>Überträgt bezahlte Anmeldungen als Einnahmen in EÜR &amp; Finanz-Cockpit. Anmeldungen mit eigener Rechnung werden übersprungen (die zählen über ihre Rechnung). Mehrfaches Klicken bucht nichts doppelt.</div>
             {finanzMeldung && <div style={{ color: C.cyan, fontSize: 13, marginTop: 6 }}>{finanzMeldung}</div>}
           </div>
           <button onClick={bucheInFinanzen} disabled={busy === 'finanzen'} style={{ background: C.gold, color: '#0A1628', border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 800, cursor: busy === 'finanzen' ? 'default' : 'pointer', opacity: busy === 'finanzen' ? 0.6 : 1, fontFamily: 'inherit' }}>{busy === 'finanzen' ? '…' : 'In Finanzen buchen'}</button>
@@ -306,7 +325,12 @@ export default function VeranstaltungenPage() {
                         <td style={{ ...styles.td, textAlign: 'center' }}>
                           <button style={{ ...styles.mini, color: a.bezahlt ? C.green : C.textDim, borderColor: (a.bezahlt ? C.green : C.textDim) + '55' }} disabled={busy === a.id} onClick={() => bezahltToggle(a)}>{a.bezahlt ? '✓ bezahlt' : 'offen'}</button>
                         </td>
-                        <td style={{ ...styles.td, textAlign: 'right' }}><button style={styles.miniX} disabled={busy === a.id} onClick={() => loesche('event_anmeldung', a.id)}>✕</button></td>
+                        <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {a.rechnung_id
+                            ? <a href="/dashboard/rechnungen" style={{ ...styles.mini, color: C.green, borderColor: C.green + '55', textDecoration: 'none' }}>Rechnung ›</a>
+                            : <button style={{ ...styles.mini, color: C.gold, borderColor: C.gold + '55' }} disabled={rechnungBusy === a.id || Number(a.betrag) <= 0} onClick={() => rechnungErstellen(a)}>{rechnungBusy === a.id ? '…' : '🧾 Rechnung'}</button>}
+                          <button style={{ ...styles.miniX, marginLeft: 6 }} disabled={busy === a.id} onClick={() => loesche('event_anmeldung', a.id)}>✕</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
