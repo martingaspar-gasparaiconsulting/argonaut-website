@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
+import { positionsNetto } from "@/lib/angebotRabatt";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
 
 const MWST_STD = 19;
 
-type AngPos = { bezeichnung: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null };
+type AngPos = { bezeichnung: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null; rabatt_prozent: number | null };
 
 export async function POST(req: Request) {
   try {
@@ -43,21 +44,27 @@ export async function POST(req: Request) {
 
     // 3) Positionen laden
     const { data: posRaw, error: pErr } = await supabase.from("angebot_positionen")
-      .select("bezeichnung, menge, einheit, einzelpreis, mwst_satz").eq("angebot_id", angebotId).order("position", { ascending: true });
+      .select("bezeichnung, menge, einheit, einzelpreis, mwst_satz, rabatt_prozent").eq("angebot_id", angebotId).order("position", { ascending: true });
     if (pErr) return NextResponse.json({ error: "Positionen konnten nicht geladen werden." }, { status: 500 });
     const positionen = (posRaw || []) as AngPos[];
     if (!positionen.length) return NextResponse.json({ error: "Das Angebot hat keine Positionen." }, { status: 400 });
 
-    // 4) Positionen -> Rechnungsposten
+    // 4) Positionen -> Rechnungsposten. Rabatt je Position (effektiver Prozentsatz
+    //    aus dem Angebot) mit IDENTISCHER Rundung wie lib/angebotRabatt, damit die
+    //    Rechnungssumme exakt der Angebotssumme entspricht. Einzelpreis wird auf den
+    //    rabattierten Netto-Preis heruntergerechnet (Zeile bleibt in sich stimmig).
     const rechnungsPosten = positionen.map((p, i) => {
-      const menge = cent(Number(p.menge) || 0);
-      const einzelpreis = cent(Number(p.einzelpreis) || 0);
+      const mengeRoh = Number(p.menge) || 0;
+      const einzelRoh = Number(p.einzelpreis) || 0;
+      const rabatt = Number(p.rabatt_prozent) || 0;
+      const netto = positionsNetto(mengeRoh, einzelRoh, rabatt);
+      const einzelEff = mengeRoh > 0 ? cent(netto / mengeRoh) : cent(einzelRoh);
       return {
         owner_user_id: user.id, position: i + 1,
         bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
-        menge, einheit: (p.einheit || "").trim() || "Stk", einzelpreis,
+        menge: cent(mengeRoh), einheit: (p.einheit || "").trim() || "Stk", einzelpreis: einzelEff,
         mwst_satz: Number(p.mwst_satz) || MWST_STD,
-        gesamt_netto: cent(menge * einzelpreis),
+        gesamt_netto: cent(netto),
       };
     });
     const summe = steuerGruppen(rechnungsPosten.map<SteuerPosten>((p) => ({ netto: p.gesamt_netto, satz: p.mwst_satz })));

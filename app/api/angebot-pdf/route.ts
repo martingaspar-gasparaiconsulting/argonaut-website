@@ -24,7 +24,7 @@ function pick(o: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) { const v = o?.[k]; if (typeof v === 'string' && v.trim()) return v.trim(); }
   return '';
 }
-type Pos = { position: number | null; bezeichnung: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null; gesamt_netto: number | null };
+type Pos = { position: number | null; bezeichnung: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null; gesamt_netto: number | null; rabatt_prozent: number | null };
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,14 +36,15 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
 
     const { data: a } = await supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, gueltig_bis, netto_summe, mwst_summe, brutto_summe, notiz, erstellt_am')
+      .select('id, angebotsnummer, titel, kunde_name, gueltig_bis, netto_summe, mwst_summe, brutto_summe, rabatt_betrag, notiz, erstellt_am')
       .eq('id', id).maybeSingle();
     if (!a) return NextResponse.json({ error: 'Angebot nicht gefunden.' }, { status: 404 });
 
     const { data: posRaw } = await supabase.from('angebot_positionen')
-      .select('position, bezeichnung, menge, einheit, einzelpreis, mwst_satz, gesamt_netto')
+      .select('position, bezeichnung, menge, einheit, einzelpreis, mwst_satz, gesamt_netto, rabatt_prozent')
       .eq('angebot_id', a.id).order('position', { ascending: true });
     const positionen = (posRaw || []) as Pos[];
+    const rabattBetrag = Number((a as Record<string, unknown>).rabatt_betrag) || 0;
 
     const { data: pRaw } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
     const p = (pRaw || {}) as Record<string, unknown>;
@@ -53,15 +54,20 @@ export async function GET(req: NextRequest) {
     const mail = pick(p, ['rechnung_email', 'email', 'kontakt_email']);
     const tel = pick(p, ['telefon', 'phone', 'tel']);
 
-    const zeilen = positionen.map((x) => `
+    const zeilen = positionen.map((x) => {
+      const rab = Number(x.rabatt_prozent) || 0;
+      const origNetto = (Number(x.menge) || 0) * (Number(x.einzelpreis) || 0);
+      return `
       <tr>
         <td>${x.position ?? ''}</td>
         <td>${esc(x.bezeichnung || '')}</td>
         <td class="r">${(Number(x.menge) || 0).toLocaleString('de-DE')}</td>
         <td>${esc(x.einheit || '')}</td>
         <td class="r">${eur(x.einzelpreis)}</td>
-        <td class="r">${eur(x.gesamt_netto)}</td>
-      </tr>`).join('');
+        <td class="r">${rab > 0 ? `${rab.toLocaleString('de-DE')} %` : '—'}</td>
+        <td class="r">${eur(origNetto)}</td>
+      </tr>`;
+    }).join('');
 
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8">
 <style>
@@ -100,13 +106,15 @@ export async function GET(req: NextRequest) {
   <div class="empf"><div class="label">Für</div><div style="font-size:14px;font-weight:700;">${esc(a.kunde_name || '')}</div></div>
   <h1>${esc(a.titel || 'Angebot')}</h1>
   <table class="pos">
-    <thead><tr><th style="width:28px;">#</th><th>Bezeichnung</th><th class="r">Menge</th><th>Einheit</th><th class="r">Einzel</th><th class="r">Netto</th></tr></thead>
-    <tbody>${zeilen || '<tr><td colspan="6" style="color:#8a949e;">Keine Positionen.</td></tr>'}</tbody>
+    <thead><tr><th style="width:28px;">#</th><th>Bezeichnung</th><th class="r">Menge</th><th>Einheit</th><th class="r">Einzel</th><th class="r">Rabatt</th><th class="r">Netto</th></tr></thead>
+    <tbody>${zeilen || '<tr><td colspan="7" style="color:#8a949e;">Keine Positionen.</td></tr>'}</tbody>
   </table>
   <table class="summe">
-    <tr><td colspan="4"></td><td class="r">Summe netto</td><td class="r">${eur(a.netto_summe)}</td></tr>
-    <tr><td colspan="4"></td><td class="r">zzgl. MwSt</td><td class="r">${eur(a.mwst_summe)}</td></tr>
-    <tr class="brutto"><td colspan="4"></td><td class="r">Gesamtbetrag</td><td class="r">${eur(a.brutto_summe)}</td></tr>
+    ${rabattBetrag > 0 ? `<tr><td colspan="5"></td><td class="r">Zwischensumme netto</td><td class="r">${eur((Number(a.netto_summe) || 0) + rabattBetrag)}</td></tr>
+    <tr><td colspan="5"></td><td class="r">Rabatt</td><td class="r">−${eur(rabattBetrag)}</td></tr>` : ''}
+    <tr><td colspan="5"></td><td class="r">Summe netto</td><td class="r">${eur(a.netto_summe)}</td></tr>
+    <tr><td colspan="5"></td><td class="r">zzgl. MwSt</td><td class="r">${eur(a.mwst_summe)}</td></tr>
+    <tr class="brutto"><td colspan="5"></td><td class="r">Gesamtbetrag</td><td class="r">${eur(a.brutto_summe)}</td></tr>
   </table>
   <div class="hinweis">Dieses Angebot ist freibleibend${a.gueltig_bis ? ` und gültig bis zum ${datum(a.gueltig_bis)}` : ''}. ${a.notiz ? esc(a.notiz) : ''}</div>
   <div class="fuss">${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''} · Angebot erstellt mit ARGONAUT OS</div>
