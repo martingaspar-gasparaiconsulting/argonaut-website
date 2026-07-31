@@ -24,7 +24,7 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type Position = { bezeichnung: string; menge: number; einzelpreis: number; mwst?: number };
+type Position = { bezeichnung: string; menge: number; einzelpreis: number; mwst?: number; artikelnummer?: string };
 type Bestellung = {
   id: string; quelle: string; extern_id: string | null; besteller: string | null; email: string | null;
   status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null; kontakt_id: string | null; lager_gebucht: boolean;
@@ -52,10 +52,10 @@ function parseCsv(text: string): { extern_id: string; besteller: string; email: 
   if (erste.includes('bezeichnung') || erste.includes('besteller') || erste.includes('extern') || erste.includes('mwst')) start = 1;
   for (let i = start; i < zeilen.length; i++) {
     const t = zeilen[i].split(trenner).map((x) => x.trim().replace(/^"|"$/g, ''));
-    const [extern_id = '', besteller = '', email = '', bezeichnung = '', menge = '1', einzelpreis = '0', mwst = ''] = t;
+    const [extern_id = '', besteller = '', email = '', bezeichnung = '', menge = '1', einzelpreis = '0', mwst = '', artikelnummer = ''] = t;
     const key = extern_id || `zeile-${i}`;
     const satz = mwst.trim() ? num(mwst) : 0;
-    const pos: Position = { bezeichnung: bezeichnung || 'Position', menge: num(menge) || 1, einzelpreis: num(einzelpreis), mwst: satz > 0 ? satz : undefined };
+    const pos: Position = { bezeichnung: bezeichnung || 'Position', menge: num(menge) || 1, einzelpreis: num(einzelpreis), mwst: satz > 0 ? satz : undefined, artikelnummer: artikelnummer.trim() || undefined };
     if (!map[key]) map[key] = { extern_id: extern_id || '', besteller, email, positionen: [], brutto: 0 };
     map[key].positionen.push(pos);
     map[key].brutto += pos.menge * pos.einzelpreis;
@@ -186,8 +186,8 @@ export default function ShopPage() {
     if (b.lager_gebucht) return;
     setLagerBusy(b.id); setFehler(null); setOk(null);
     try {
-      const { data: artikelD } = await supabase.from('artikel').select('id, bezeichnung, aktueller_bestand');
-      const artikel = (artikelD ?? []) as { id: string; bezeichnung: string | null; aktueller_bestand: number | null }[];
+      const { data: artikelD } = await supabase.from('artikel').select('id, bezeichnung, artikelnummer, aktueller_bestand');
+      const artikel = (artikelD ?? []) as { id: string; bezeichnung: string | null; artikelnummer: string | null; aktueller_bestand: number | null }[];
       const plan = planeLagerabzug(b.positionen || [], artikel);
       for (const ab of plan.abzuege) {
         const a = artikel.find((x) => x.id === ab.artikel_id);
@@ -198,7 +198,7 @@ export default function ShopPage() {
       const { error: updErr } = await supabase.from('shop_bestellungen').update({ lager_gebucht: true }).eq('id', b.id);
       if (updErr) throw updErr;
       setListe((l) => l.map((x) => (x.id === b.id ? { ...x, lager_gebucht: true } : x)));
-      setOk(`Lager gebucht: ${plan.zugeordnet} Position(en) abgezogen${plan.offen ? `, ${plan.offen} ohne passenden Artikel übersprungen` : ''}.`);
+      setOk(`Lager gebucht: ${plan.zugeordnet} Position(en) abgezogen (${plan.perNummer}× per Artikelnr., ${plan.perName}× per Name)${plan.offen ? `, ${plan.offen} ohne passenden Artikel übersprungen` : ''}.`);
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Lager-Buchung fehlgeschlagen.');
     } finally { setLagerBusy(null); }
@@ -225,7 +225,7 @@ export default function ShopPage() {
       <div style={styles.card}>
         <div style={{ fontWeight: 800, marginBottom: 4 }}>Bestellungen importieren (CSV)</div>
         <div style={styles.hinweis}>
-          Eine Zeile je Position. Spalten: <code>extern_id ; besteller ; email ; bezeichnung ; menge ; einzelpreis ; mwst</code>.
+          Eine Zeile je Position. Spalten: <code>extern_id ; besteller ; email ; bezeichnung ; menge ; einzelpreis ; mwst ; artikelnummer</code>. Die <strong>Artikelnummer</strong> (optional, letzte Spalte) ordnet die Position beim Lagerabzug eindeutig dem Artikel zu — sonst per Name.
           Zeilen mit gleicher <code>extern_id</code> werden zu einer Bestellung zusammengefasst. Kopfzeile optional.
           <br /><br />
           <span style={{ color: C.warn, fontWeight: 700 }}>Steuersatz (letzte Spalte):</span> <strong>7</strong> für Lebensmittel, <strong>19</strong> für Getränke &amp; Non-Food. Fehlt die Angabe, rechnen wir mit <strong>19 %</strong> — bei Lebensmitteln bitte <strong>7</strong> eintragen. Verschiedene Sätze in einer Bestellung sind erlaubt (werden korrekt getrennt ausgewiesen).

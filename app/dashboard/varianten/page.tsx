@@ -157,6 +157,8 @@ export default function VariantenSeite() {
   const [vFehler, setVFehler] = useState<string | null>(null);
   const [vSpeichern, setVSpeichern] = useState(false);
 
+  const [artikelBestand, setArtikelBestand] = useState<Record<string, number>>({});
+
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -171,11 +173,16 @@ export default function VariantenSeite() {
     const [g, v, a] = await Promise.all([
       supabase.from("variante_gruppe").select("*").order("bezeichnung", { ascending: true }),
       supabase.from("variante_artikel").select("*").order("created_at", { ascending: true }),
-      supabase.from("artikel").select("id, bezeichnung").eq("aktiv", true).order("bezeichnung", { ascending: true }),
+      supabase.from("artikel").select("id, bezeichnung, aktueller_bestand").eq("aktiv", true).order("bezeichnung", { ascending: true }),
     ]);
     if (!g.error && g.data) setGruppen(g.data as Gruppe[]);
     if (!v.error && v.data) setVarianten(v.data as Variante[]);
-    if (!a.error && a.data) setArtikel(a.data as ArtikelKurz[]);
+    if (!a.error && a.data) {
+      setArtikel(a.data as ArtikelKurz[]);
+      const bmap: Record<string, number> = {};
+      for (const x of a.data as { id: string; aktueller_bestand?: number | null }[]) bmap[x.id] = Number(x.aktueller_bestand) || 0;
+      setArtikelBestand(bmap);
+    }
     setLaden(false);
   }
 
@@ -574,11 +581,13 @@ export default function VariantenSeite() {
                               {(zweiAchsen ? w2 : [""]).map((c, i) => {
                                 const v = varByCell.get(zelleKey(r, c));
                                 if (!v) return <td key={i} style={{ ...tdStil, textAlign: "center", color: C.textDim }}>—</td>;
-                                const st = bestandStufe(v.bestand, v.mindestbestand);
+                                const gekoppelt = !!v.artikel_id && artikelBestand[v.artikel_id] != null;
+                                const anzeigeBestand = gekoppelt ? artikelBestand[v.artikel_id as string] : (Number(v.bestand) || 0);
+                                const st = bestandStufe(anzeigeBestand, v.mindestbestand);
                                 return (
-                                  <td key={i} style={{ ...tdStil, textAlign: "center", cursor: "pointer" }} onClick={() => oeffneVarianteBearbeiten(v)}>
+                                  <td key={i} style={{ ...tdStil, textAlign: "center", cursor: "pointer" }} onClick={() => oeffneVarianteBearbeiten(v)} title={gekoppelt ? "Live-Lagerbestand (mit Artikel gekoppelt)" : "Varianten-Bestand"}>
                                     <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: STUFE_FARBE[st], marginRight: 6 }} />
-                                    <span style={{ fontWeight: 700 }}>{num(v.bestand)}</span>
+                                    <span style={{ fontWeight: 700 }}>{num(anzeigeBestand)}</span>{gekoppelt && <span style={{ marginLeft: 4, fontSize: "clamp(9px,0.8vw,12px)", color: C.textDim }}>🏬</span>}
                                     <div style={{ fontSize: "clamp(10px,0.85vw,13px)", color: C.textDim }}>{v.sku || ""}</div>
                                   </td>
                                 );
