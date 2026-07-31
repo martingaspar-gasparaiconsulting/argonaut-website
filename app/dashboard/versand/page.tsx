@@ -30,8 +30,9 @@ type Sendung = {
   strasse: string | null; plz: string | null; ort: string | null; land: string | null;
   gewicht_kg: number | null; carrier: string | null; service: string | null; status: string;
   tracking_nr: string | null; kosten: number | null; referenz: string | null;
-  richtung: string | null; retoure_grund: string | null;
+  richtung: string | null; retoure_grund: string | null; label_url: string | null;
 };
+type Verbindung = { verbunden: boolean; konto_name: string; encKeyBereit: boolean };
 
 function num(s: string): number { return parseFloat((s || '').replace(',', '.')) || 0; }
 const LEER = {
@@ -51,12 +52,16 @@ export default function VersandSeite() {
   const [form, setForm] = useState({ ...LEER });
   const [trackEntwurf, setTrackEntwurf] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<'ausgehend' | 'retoure'>('ausgehend');
+  const [verb, setVerb] = useState<Verbindung | null>(null);
+  const [apiKey, setApiKey] = useState('');
+  const [kontoName, setKontoName] = useState('');
+  const [verbAuf, setVerbAuf] = useState(false);
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
       const [s, k] = await Promise.all([
-        supabase.from('versand_sendung').select('id, kontakt_id, empfaenger_name, empfaenger_firma, strasse, plz, ort, land, gewicht_kg, carrier, service, status, tracking_nr, kosten, referenz, richtung, retoure_grund').order('erstellt_am', { ascending: false }),
+        supabase.from('versand_sendung').select('id, kontakt_id, empfaenger_name, empfaenger_firma, strasse, plz, ort, land, gewicht_kg, carrier, service, status, tracking_nr, kosten, referenz, richtung, retoure_grund, label_url').order('erstellt_am', { ascending: false }),
         supabase.from('kontakte').select('id, anzeigename, vorname, nachname, firma').order('nachname', { ascending: true }),
       ]);
       setSendungen((s.data as Sendung[]) ?? []);
@@ -69,6 +74,14 @@ export default function VersandSeite() {
     } finally { setLaden(false); }
   }, []);
 
+  const verbLaden = useCallback(async () => {
+    try {
+      const r = await fetch('/api/versand/verbindung');
+      const j = await r.json();
+      if (j?.ok) setVerb({ verbunden: !!j.verbunden, konto_name: j.konto_name || '', encKeyBereit: !!j.encKeyBereit });
+    } catch { /* egal */ }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -76,8 +89,40 @@ export default function VersandSeite() {
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
       await laden_();
+      await verbLaden();
     })();
-  }, [laden_]);
+  }, [laden_, verbLaden]);
+
+  async function verbinden() {
+    if (!apiKey.trim()) { setFehler('Bitte den shipcloud-API-Key eingeben.'); return; }
+    setBusy('verb'); setFehler(null);
+    try {
+      const r = await fetch('/api/versand/verbindung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: apiKey.trim(), konto_name: kontoName.trim() }) });
+      const j = await r.json();
+      if (!j?.ok) { setFehler(j?.error || 'Verbinden fehlgeschlagen.'); return; }
+      setApiKey(''); setVerbAuf(false); await verbLaden();
+    } finally { setBusy(null); }
+  }
+  async function trennen() {
+    if (!window.confirm('Versand-Konto wirklich trennen?')) return;
+    setBusy('verb'); setFehler(null);
+    try {
+      const r = await fetch('/api/versand/verbindung', { method: 'DELETE' });
+      const j = await r.json();
+      if (!j?.ok) { setFehler(j?.error || 'Trennen fehlgeschlagen.'); return; }
+      await verbLaden();
+    } finally { setBusy(null); }
+  }
+  async function buchen(s: Sendung) {
+    setBusy(s.id); setFehler(null);
+    try {
+      const r = await fetch('/api/versand/buchen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sendungId: s.id }) });
+      const j = await r.json();
+      if (!j?.ok) { setFehler(j?.error || 'Buchung fehlgeschlagen.'); return; }
+      await laden_();
+    } catch (e) { setFehler('Buchung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
 
   const ausgehendListe = useMemo(() => sendungen.filter((s) => (s.richtung || 'ausgehend') !== 'retoure'), [sendungen]);
   const retourenListe = useMemo(() => sendungen.filter((s) => (s.richtung || 'ausgehend') === 'retoure'), [sendungen]);
@@ -182,6 +227,37 @@ export default function VersandSeite() {
 
       {!laden && <div style={{ marginBottom: 14 }}><KiAuge modul="Versand" regel={augeRegel} /></div>}
 
+      {/* Versand-Konto (shipcloud) — anschlussfertig */}
+      {verb && (
+        <div style={styles.verbBox}>
+          {verb.verbunden ? (
+            <>
+              <span style={{ color: C.green, fontWeight: 800 }}>✓ Versand-Konto verbunden</span>
+              {verb.konto_name && <span style={{ color: C.textDim, fontSize: 13 }}>· {verb.konto_name}</span>}
+              <span style={{ flex: 1 }} />
+              <button style={styles.mini} disabled={busy === 'verb'} onClick={trennen}>Trennen</button>
+            </>
+          ) : (
+            <>
+              <span style={{ color: C.textDim, fontSize: 13.5 }}>📮 Verbinde ein Versand-Konto (shipcloud), um <strong>echte Paketscheine</strong> zu frankieren und Tracking automatisch zu holen.</span>
+              <span style={{ flex: 1 }} />
+              <button style={styles.mini} onClick={() => setVerbAuf((v) => !v)}>{verbAuf ? 'Abbrechen' : 'Versand-Konto verbinden'}</button>
+            </>
+          )}
+        </div>
+      )}
+      {verb && !verb.verbunden && verbAuf && (
+        <div style={{ ...styles.card, marginBottom: 12 }}>
+          {!verb.encKeyBereit && <div style={styles.hinweisWarn}>Hinweis: Der Sicherheits-Schlüssel (APP_ENC_KEY) ist noch nicht gesetzt — das Speichern klappt erst danach.</div>}
+          <div style={styles.grid}>
+            <label style={styles.lab}>shipcloud-API-Key<input style={styles.inp} type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Aus deinem shipcloud-Konto" /></label>
+            <label style={styles.lab}>Konto-Name (optional)<input style={styles.inp} value={kontoName} onChange={(e) => setKontoName(e.target.value)} placeholder="z. B. Hauptkonto" /></label>
+          </div>
+          <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={verbinden}>🔗 Verbinden</button>
+          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Der Key wird verschlüsselt gespeichert und nie im Browser angezeigt. Ein shipcloud-Konto deckt DHL/DPD/GLS/Hermes/UPS über einen Vertrag ab.</div>
+        </div>
+      )}
+
       <div style={styles.tabs}>
         {RICHTUNGEN.map((r) => {
           const anzahl = r.key === 'retoure' ? retourenListe.length : ausgehendListe.length;
@@ -285,7 +361,12 @@ export default function VersandSeite() {
                 </div>
                 <span style={{ ...styles.badge, color: st.farbe, borderColor: st.farbe }}>{st.label}</span>
                 <div style={styles.itemBtns}>
-                  <a href={`/api/versand/label?id=${encodeURIComponent(s.id)}`} target="_blank" rel="noreferrer" style={styles.miniLink}>🖨 Label</a>
+                  {verb?.verbunden && !istRetoure(s.richtung) && s.carrier !== 'spedition' && !s.label_url && (
+                    <button style={{ ...styles.miniLink, background: C.gold, color: C.navy, borderColor: C.gold, cursor: 'pointer' }} disabled={busy === s.id} onClick={() => buchen(s)}>📮 Buchen</button>
+                  )}
+                  {s.label_url
+                    ? <a href={s.label_url} target="_blank" rel="noreferrer" style={styles.miniLink}>🏷 Paketschein</a>
+                    : <a href={`/api/versand/label?id=${encodeURIComponent(s.id)}`} target="_blank" rel="noreferrer" style={styles.miniLink}>🖨 Label</a>}
                   <select style={styles.sel} value={s.status} disabled={busy === s.id} onChange={(e) => statusSetzen(s, e.target.value)}>
                     {VERSAND_STATUS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
                   </select>
@@ -320,6 +401,7 @@ const styles: Record<string, CSSProperties> = {
   lab: { display: 'flex', flexDirection: 'column', gap: 5, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim },
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 'clamp(14px, 1.2vw, 18px)', fontFamily: 'inherit', minWidth: 0, boxSizing: 'border-box' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 'clamp(13.5px, 1.2vw, 18px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  verbBox: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 },
   tabs: { display: 'flex', gap: 8, margin: '4px 0 14px', flexWrap: 'wrap' },
   tab: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 999, padding: '8px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   tabAktiv: { background: 'rgba(201,168,76,0.12)', color: C.gold, borderColor: C.gold },
