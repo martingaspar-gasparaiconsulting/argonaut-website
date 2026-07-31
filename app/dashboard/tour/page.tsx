@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { zaehleStopps, fortschrittProzent, zustellquote, zaehleTour } from '@/lib/tour';
+import Leerzustand from '../_components/Leerzustand';
 import { augeTour } from '@/lib/auge';
 import { ablieferPdf } from '@/lib/ablieferPdf';
 import KiAuge from '../_components/KiAuge';
@@ -235,7 +236,7 @@ export default function TourPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {touren.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Touren.</div> : (
+              {touren.length === 0 ? <Leerzustand icon="🗺️" titel="Noch keine Touren" text="Plane Liefertouren mit Stopps und elektronischem Abliefernachweis." schritte={["Tour oben anlegen", "Stopps und Empfänger zuordnen", "Unterwegs Status und Unterschrift erfassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Tour</th><th style={styles.th}>Fahrer</th><th style={{ ...styles.th, textAlign: 'right' }}>Stopps</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

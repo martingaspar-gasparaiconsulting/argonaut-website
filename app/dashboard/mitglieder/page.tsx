@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -260,7 +261,7 @@ export default function MitgliederPage() {
           <button onClick={neu} style={styles.primaer}>+ Neues Mitglied</button>
         </div>
         {laden ? <div style={styles.hint}>Lädt …</div> : liste.length === 0 ? (
-          <div style={styles.hint}>Noch keine Mitglieder. Leg oben rechts das erste an.</div>
+          <Leerzustand icon="👥" titel="Noch keine Mitglieder" text="Verwalte Mitglieder mit Beitrag, Intervall und SEPA-Mandat." schritte={["Mitglied oben rechts anlegen", "Beitrag, Intervall und IBAN erfassen", "SEPA-Lastschrift fürs Bankprogramm erzeugen"]} />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

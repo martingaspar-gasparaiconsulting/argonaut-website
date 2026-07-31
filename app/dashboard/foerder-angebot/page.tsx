@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -200,7 +201,7 @@ export default function FoerderAngebotPage() {
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : liste.length === 0 ? (
-        <p style={styles.sub}>Noch keine Angebote. Oben eines erstellen und speichern.</p>
+        <Leerzustand icon="📑" titel="Noch keine Förderangebote" text="Erstelle förder-taugliche Angebote mit Live-Förderschätzung und PDF." schritte={["Oben ein Angebot erstellen", "Positionen erfassen und Förderung prüfen", "Als PDF speichern"]} />
       ) : (
         <div style={styles.liste}>
           {liste.map((a) => (

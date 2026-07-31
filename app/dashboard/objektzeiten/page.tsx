@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import Leerzustand from '../_components/Leerzustand';
 import { augeObjektzeiten } from '@/lib/auge';
 import {
   summiereJeObjekt, summiereGesamt, stundenText, eur,
@@ -450,7 +451,7 @@ export default function ObjektzeitenPage() {
           <div style={{ ...styles.card, marginTop: 16 }}>
             <h2 style={styles.cardTitle}>Objekte</h2>
             {objekte.length === 0 ? (
-              <div style={styles.hint}>Noch keine Objekte. Leg oben rechts das erste an.</div>
+              <Leerzustand icon="🏢" titel="Noch keine Objekte" text="Lege dein erstes Objekt an, um Zeiten darauf zu erfassen und je Objekt abzurechnen." schritte={["Objekt oben rechts anlegen", "Zeiten je Objekt erfassen", "Abrechenbare Zeiten in eine Rechnung übernehmen"]} />
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>

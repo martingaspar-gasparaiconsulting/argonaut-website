@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { verpflegung, fahrtkosten, round2, type Fahrzeug } from '@/lib/reisekosten';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -206,7 +207,7 @@ export default function ReisekostenPage() {
           <div style={styles.cardTitel}>Reisen</div>
           {reisen.length > 0 && <button style={styles.ghost} onClick={csvExport}>⬇ CSV-Export</button>}
         </div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : reisen.length === 0 ? <p style={styles.dim}>Noch keine Reisen erfasst.</p> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : reisen.length === 0 ? <Leerzustand icon="🧳" titel="Noch keine Reisen erfasst" text="Erfasse Dienstreisen — ARGONAUT rechnet Verpflegungspauschale und Fahrtkosten automatisch." schritte={["Reise oben anlegen", "Reisetage, Ziele und km eintragen", "Gesamtbetrag übernehmen"]} /> : (
           <div style={{ overflowX: 'auto', marginTop: 8 }}>
             <table style={styles.table}>
               <thead><tr>
