@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -136,7 +137,7 @@ export default function ZahlungenPage() {
 
           <section style={styles.card}>
             <div style={styles.titel}>✅ Erhaltene Zahlungen</div>
-            {erhalten.length === 0 ? <p style={styles.dim}>Noch keine bezahlten Rechnungen.</p> : (
+            {erhalten.length === 0 ? <Leerzustand icon="✅" titel="Noch keine Zahlungseingänge" text="Sobald Kundenrechnungen bezahlt sind, erscheinen sie hier." schritte={["Rechnung im Modul „Rechnungen“ stellen", "Zahlung erfassen oder vom Kunden bestätigen lassen", "Eingang taucht automatisch hier auf"]} /> : (
               <div style={{ marginTop: 8 }}>
                 {erhalten.slice(0, 100).map((r) => (
                   <div key={r.id} style={styles.zeileMini}>

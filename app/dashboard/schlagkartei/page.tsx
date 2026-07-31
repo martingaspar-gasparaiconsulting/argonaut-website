@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   DUENGE_FRIST_TAGE, PSM_FRIST_TAGE, DUENGER_ART, PSM_VERWENDUNGSART,
   dokuStatus, summeN, nSaldo, zaehleSchlagkartei,
@@ -240,7 +241,7 @@ export default function SchlagkarteiPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {schlaege.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Schläge.</div> : (
+              {schlaege.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Schläge" text="Lege deine Feldstücke an — Basis für Düngung, Pflanzenschutz und N-Saldo." schritte={["Schlag oben anlegen", "Fläche und Kultur erfassen", "Düngung und Pflanzenschutz dokumentieren"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Schlag</th><th style={styles.th}>Flurstück</th><th style={{ ...styles.th, textAlign: 'right' }}>Fläche</th><th style={styles.th}>Kultur</th><th style={styles.th}>Aussaat–Ernte</th><th style={{ ...styles.th, textAlign: 'right' }}>Nachweis</th></tr></thead>
                   <tbody>
@@ -307,7 +308,7 @@ export default function SchlagkarteiPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {duengungen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Düngungen dokumentiert.</div> : (
+              {duengungen.length === 0 ? <Leerzustand icon="💧" titel="Noch keine Düngungen" text="Dokumentiere Düngungen DüV-konform (Frist 14 Tage)." schritte={["Schlag wählen", "Düngung mit Menge und Datum erfassen", "N-Saldo und Frist-Ampel im Blick behalten"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Schlag</th><th style={styles.th}>Mittel</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>N / P₂O₅</th><th style={styles.th}>Doku</th></tr></thead>
                   <tbody>
@@ -372,7 +373,7 @@ export default function SchlagkarteiPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {psm.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Pflanzenschutz-Anwendungen dokumentiert.</div> : (
+              {psm.length === 0 ? <Leerzustand icon="🐛" titel="Noch keine Pflanzenschutz-Anwendungen" text="Pflichtdokumentation ab 01.01.2026 (Frist 30 Tage)." schritte={["Schlag wählen", "Mittel, Menge und Grund erfassen", "Fristgerecht dokumentieren"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Schlag</th><th style={styles.th}>Mittel (Zul.-Nr.)</th><th style={{ ...styles.th, textAlign: 'right' }}>Aufwand</th><th style={styles.th}>Wartezeit</th><th style={styles.th}>Doku</th></tr></thead>
                   <tbody>
@@ -420,7 +421,7 @@ export default function SchlagkarteiPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {bedarfe.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Düngebedarfsermittlung erfasst.</div> : (
+              {bedarfe.length === 0 ? <Leerzustand icon="🧮" titel="Noch keine Düngebedarfsermittlung" text="Die Düngebedarfsermittlung ist Voraussetzung für die Düngung." schritte={["Schlag wählen", "Kultur und Ertragserwartung erfassen", "Bedarf berechnen lassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Jahr</th><th style={styles.th}>Schlag</th><th style={styles.th}>Kultur</th><th style={{ ...styles.th, textAlign: 'right' }}>N-Bedarf</th><th style={{ ...styles.th, textAlign: 'right' }}>P-Bedarf</th></tr></thead>
                   <tbody>

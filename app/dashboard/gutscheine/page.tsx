@@ -11,6 +11,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import Leerzustand from '../_components/Leerzustand';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   GUTSCHEIN_ARTEN, gutscheinArtInfo, MWST_TYPEN, verjaehrungEnde, tageBisVerfall,
@@ -331,7 +332,7 @@ export default function GutscheinePage() {
       {/* ---------- LISTE ---------- */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
         <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-          {gutscheine.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Gutscheine.</div> : (
+          {gutscheine.length === 0 ? <Leerzustand icon="🎁" titel="Noch keine Gutscheine" text="Wert-, Mehrfach- oder Leistungsgutscheine ausgeben und einlösen." schritte={["Gutschein oben anlegen", "Art und Wert festlegen", "Einlösungen erfassen — Restwert rechnet sich live"]} /> : (
             <table style={styles.table}>
               <thead><tr>
                 <th style={styles.th}>Code / Art</th><th style={styles.th}>Empfänger</th>

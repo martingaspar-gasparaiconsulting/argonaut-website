@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Fragment, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   PRUEF_NORMEN, pruefNorm, naechsteFaelligkeit, gesamtErgebnis, faelligBucket, zaehlePruef,
 } from '@/lib/pruefungen';
@@ -235,7 +236,7 @@ export default function PruefprotokollePage() {
       {/* Liste */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
         <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-          {protokolle.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Prüfprotokolle.</div> : (
+          {protokolle.length === 0 ? <Leerzustand icon="🔧" titel="Noch keine Prüfprotokolle" text="Prüfungen norm-basiert anlegen (DGUV/DIN/VDE) mit automatischer Fälligkeit." schritte={["Prüfung aus Norm-Katalog anlegen", "Prüfpunkte abhaken", "Nächste Fälligkeit wird automatisch gesetzt"]} /> : (
             <table style={styles.table}>
               <thead><tr>
                 <th style={styles.th}>Prüfart</th><th style={styles.th}>Objekt</th><th style={styles.th}>Datum</th>
