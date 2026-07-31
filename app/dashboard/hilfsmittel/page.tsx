@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { VERSORGUNG_STATUS, kvSumme, mehrkostenSumme, gesamtSumme, hmvGueltig, zaehleVersorgung } from '@/lib/hilfsmittel';
+import Leerzustand from '../_components/Leerzustand';
 import { augeHilfsmittel } from '@/lib/auge';
 import { kvPdf } from '@/lib/kvPdf';
 import KiAuge from '../_components/KiAuge';
@@ -194,7 +195,7 @@ export default function HilfsmittelPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {versorgungen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Versorgungen.</div> : (
+              {versorgungen.length === 0 ? <Leerzustand icon="🦽" titel="Noch keine Versorgungen" text="Erfasse Hilfsmittel-Versorgungen von der Verordnung bis zur Genehmigung." schritte={["Versorgung oben anlegen", "Positionen mit HMV-Nummer erfassen", "Kostenvoranschlag und Genehmigung dokumentieren"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Versicherter</th><th style={styles.th}>Krankenkasse</th><th style={styles.th}>Status</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

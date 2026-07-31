@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   FRIST_ARTEN, VORFRIST_TAGE_STD, fristStatus, restTage, verjaehrungEnde, zaehleFristen,
   type FristStatus,
@@ -237,7 +238,7 @@ export default function KanzleiPage() {
 
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {fristen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Fristen.</div> : (
+              {fristen.length === 0 ? <Leerzustand icon="⏰" titel="Noch keine Fristen" text="Verwalte Fristen mit Vorfrist-Ampel und Verjährungs-Rechner (§195/§199 BGB)." schritte={["Frist oben anlegen", "Vorfrist und Verjährung setzen", "Ampel behält den Überblick"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Frist</th><th style={styles.th}>Akte</th><th style={styles.th}>Bezeichnung</th><th style={styles.th}>Art</th><th style={styles.th}>Status</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>
@@ -283,7 +284,7 @@ export default function KanzleiPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {akten.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Akten.</div> : (
+              {akten.length === 0 ? <Leerzustand icon="📁" titel="Noch keine Akten" text="Lege Mandate/Akten an und hänge Fristen daran." schritte={["Akte oben anlegen", "Mandant und Aktenzeichen erfassen", "Fristen zur Akte pflegen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Aktenzeichen</th><th style={styles.th}>Mandant ./. Gegner</th><th style={styles.th}>Rechtsgebiet</th><th style={{ ...styles.th, textAlign: 'right' }}>Streitwert</th><th style={styles.th}>Status</th></tr></thead>
                   <tbody>

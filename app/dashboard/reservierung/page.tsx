@@ -11,6 +11,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import Leerzustand from '../_components/Leerzustand';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   RES_ARTEN, resArtInfo, PLATZ_ARTEN, STATUS_JE_ART, START_STATUS, statusInfo,
@@ -327,7 +328,7 @@ export default function ReservierungPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {vorgaenge.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Vorgänge.</div> : (
+              {vorgaenge.length === 0 ? <Leerzustand icon="🍽️" titel="Noch keine Vorgänge" text="Reservierungen, Einlagerungen oder Vorbestellungen — je nach Betriebsart." schritte={["Betriebsart und Platz wählen", "Vorgang mit Termin erfassen", "Status pflegen (reserviert → erledigt)"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Art</th><th style={styles.th}>Kunde</th><th style={styles.th}>Platz</th>
@@ -403,7 +404,7 @@ export default function ReservierungPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {plaetze.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Plätze.</div> : (
+              {plaetze.length === 0 ? <Leerzustand icon="🪑" titel="Noch keine Plätze" text="Lege Tische, Lagerplätze oder Abholstationen an." schritte={["Platz oben anlegen", "Kapazität/Bezeichnung erfassen", "Plätze für Vorgänge nutzen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Art</th><th style={styles.th}>Bezeichnung</th><th style={styles.th}>Standort</th>

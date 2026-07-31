@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   TIERARTEN, BEWEGUNG_ARTEN, MELDEFRIST_TAGE_STD, meldeStatus, fristRest, zaehleTierbestand,
   type MeldeStatus,
@@ -223,7 +224,7 @@ export default function TierbestandPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {gruppen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Bestände.</div> : (
+              {gruppen.length === 0 ? <Leerzustand icon="🐄" titel="Noch keine Bestände" text="Erfasse Tiergruppen je Tierart mit VVVO-Nummer." schritte={["Tiergruppe oben anlegen", "Tierart und Bestand erfassen", "Bewegungen und Stichtag melden"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Gruppe</th><th style={styles.th}>Tierart</th><th style={styles.th}>VVVO-Nr.</th><th style={{ ...styles.th, textAlign: 'right' }}>Bestand</th><th style={styles.th}>Standort</th></tr></thead>
                   <tbody>
@@ -276,7 +277,7 @@ export default function TierbestandPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {bewegungen.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Bewegungen.</div> : (
+              {bewegungen.length === 0 ? <Leerzustand icon="🔁" titel="Noch keine Bewegungen" text="Zu- und Abgänge sind meldepflichtig — die 7-Tage-Ampel behält die Frist im Blick." schritte={["Bewegung erfassen (Zugang/Abgang)", "Datum und Anzahl eintragen", "Fristgerecht an HIT melden"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Gruppe</th><th style={styles.th}>Ereignis</th><th style={{ ...styles.th, textAlign: 'right' }}>Anzahl</th><th style={styles.th}>Meldung</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>
@@ -324,7 +325,7 @@ export default function TierbestandPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {stichtage.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Stichtagsmeldungen.</div> : (
+              {stichtage.length === 0 ? <Leerzustand icon="📆" titel="Noch keine Stichtagsmeldungen" text="Die jährliche Stichtagsmeldung wird hier dokumentiert." schritte={["Stichtag anlegen", "Bestand zum Stichtag erfassen", "Meldung ablegen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Stichtag</th><th style={styles.th}>Gruppe</th><th style={styles.th}>Tierart</th><th style={{ ...styles.th, textAlign: 'right' }}>Bestand</th></tr></thead>
                   <tbody>

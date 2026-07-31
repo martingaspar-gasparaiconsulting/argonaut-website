@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   mietTage, mietPreis, freieAnzahl, istUeberfaellig, zaehleVerleih,
   VERLEIH_VORLAGEN, verleihVorlage, type VorgangBasis,
@@ -250,7 +251,7 @@ export default function VerleihPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {vorgaenge.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Ausleihen.</div> : (
+              {vorgaenge.length === 0 ? <Leerzustand icon="🔑" titel="Noch keine Ausleihen" text="Verleihe Mietgegenstände: reservieren → ausgeben → zurücknehmen." schritte={["Mietgegenstand anlegen (Reiter „Mietgegenstände“)", "Ausleihe mit Zeitraum erfassen", "Ausgabe, Rückgabe und Kaution buchen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Gegenstand</th><th style={styles.th}>Mieter</th><th style={styles.th}>Zeitraum</th>
@@ -316,7 +317,7 @@ export default function VerleihPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {artikel.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Mietgegenstände.</div> : (
+              {artikel.length === 0 ? <Leerzustand icon="📦" titel="Noch keine Mietgegenstände" text="Lege an, was du vermietest — mit Tages-/Wochenpreis und Kaution." schritte={["Mietgegenstand oben anlegen", "Preise und Kaution setzen", "Aus Vorlage typische Gegenstände übernehmen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Gegenstand</th><th style={styles.th}>Kategorie</th>

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import Leerzustand from "../_components/Leerzustand";
 import { augeHousekeeping } from "@/lib/auge";
 import {
   HK_STATUS,
@@ -280,7 +281,7 @@ export default function HousekeepingSeite() {
           <div style={{ display: "flex", justifyContent: "flex-end", margin: "14px 0" }}><button style={btnGold} onClick={neuZimmer}>+ Zimmer / Einheit</button></div>
 
           {zimmer.length === 0 ? (
-            <div style={{ ...card, color: C.textDim }}>Noch keine Zimmer. Lege deine Zimmer/Einheiten an und pflege den Reinigungsstatus.</div>
+            <Leerzustand icon="🛎️" titel="Noch keine Zimmer" text="Lege Zimmer/Einheiten an und pflege den Reinigungsstatus." schritte={["Zimmer oben anlegen", "Etage und Kategorie erfassen", "Reinigungsstatus durchschalten"]} />
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {zimmer.map((z) => {
@@ -327,7 +328,7 @@ export default function HousekeepingSeite() {
           </div>
 
           {gerichte.length === 0 ? (
-            <div style={{ ...card, color: C.textDim }}>Noch keine Gerichte. Lege dein erstes Gericht an — mit Preis, Allergenen und Zusatzstoffen.</div>
+            <Leerzustand icon="🍽️" titel="Noch keine Gerichte" text="Baue deine Speisekarte mit Preis, Allergenen und Zusatzstoffen." schritte={["Gericht oben anlegen", "Allergene und Zusatzstoffe ankreuzen", "Speisekarte als PDF ausgeben"]} />
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {gruppiert.map(([kat, gs]) => (

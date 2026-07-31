@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { DICHTE, optimiereZuschnitt, gewicht, gewichtProMeter } from '@/lib/zuschnitt';
+import Leerzustand from '../_components/Leerzustand';
 import { augeZuschnitt } from '@/lib/auge';
 import { zuschnittplanPdf } from '@/lib/zuschnittplanPdf';
 import KiAuge from '../_components/KiAuge';
@@ -185,7 +186,7 @@ export default function ZuschnittPage() {
           </div>
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {projekte.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Projekte.</div> : (
+              {projekte.length === 0 ? <Leerzustand icon="✂️" titel="Noch keine Zuschnitt-Projekte" text="Lege ein Projekt mit Teileliste an — ARGONAUT optimiert Stangenbedarf und Verschnitt." schritte={["Projekt oben anlegen", "Teile und Materiallänge erfassen", "Schnittplan optimieren lassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Projekt</th><th style={styles.th}>Material</th><th style={{ ...styles.th, textAlign: 'right' }}>Stangenlänge</th><th style={{ ...styles.th, textAlign: 'right' }}>Teile</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>
