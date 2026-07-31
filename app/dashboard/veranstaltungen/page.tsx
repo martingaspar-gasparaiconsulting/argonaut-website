@@ -18,6 +18,7 @@ import { augeEvents } from '@/lib/auge';
 import { eventPdf } from '@/lib/eventPdf';
 import { offeneBuchungen } from '@/lib/umsatzBuchung';
 import KiAuge from '../_components/KiAuge';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -257,7 +258,7 @@ export default function VeranstaltungenPage() {
 
       {/* Event-Karten */}
       {events.length === 0 ? (
-        <div style={styles.hint}>Noch keine Veranstaltungen — leg die erste an.</div>
+        <Leerzustand icon="🎫" titel="Noch keine Veranstaltungen" text="Lege Events mit Kapazität und Ticketpreis an — Auslastung und Einnahmen rechnen sich automatisch." schritte={["Veranstaltung oben anlegen", "Anmeldungen erfassen", "Teilnehmerliste als PDF"]} />
       ) : events.map((ev) => {
         const abs = (anmProEvent.get(ev.id) || []).slice().sort((x, y) => (x.angemeldet_am || '').localeCompare(y.angemeldet_am || ''));
         const k = eventKennzahl(ev as EventLite, abs as AnmeldungLite[]);

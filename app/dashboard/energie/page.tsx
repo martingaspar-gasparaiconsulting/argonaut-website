@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -123,7 +124,7 @@ export default function EnergiePage() {
                 </button>
               );
             })}
-            {!anlagen.length && <p style={styles.dim}>Noch keine Anlagen.</p>}
+            {!anlagen.length && <Leerzustand icon="⚡" titel="Noch keine Anlagen" text="Verwalte Anlagen (PV/Wärmepumpe/BHKW) mit Wartungs-Ampel und Ablesungen." schritte={["Anlage oben anlegen", "Typ und Leistung erfassen", "Ablesungen und Wartung pflegen"]} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links eine Anlage wählen.</p> : (

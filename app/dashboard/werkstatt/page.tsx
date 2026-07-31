@@ -25,6 +25,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import Leerzustand from '../_components/Leerzustand';
 import { augeWerkstatt } from '@/lib/auge';
 import {
   STATUS_PHASEN, statusDef, gruppiereBoard, naechsterStatus, istAbgeschlossen,
@@ -857,7 +858,7 @@ export default function WerkstattPage() {
       {laden ? (
         <div style={styles.hint}>Lädt …</div>
       ) : auftraege.length === 0 ? (
-        <div style={styles.card}><div style={styles.hint}>Noch keine Aufträge. Leg oben rechts den ersten an.</div></div>
+        <Leerzustand icon="🔧" titel="Noch keine Aufträge" text="Werkstatt-Aufträge als Kanban-Board — von Annahme bis Abholung." schritte={["Auftrag oben rechts anlegen", "Fahrzeug und Leistungen erfassen", "Status durchs Board ziehen"]} />
       ) : (
         <div style={styles.board}>
           {spalten.map(({ def, auftraege: liste }) => (

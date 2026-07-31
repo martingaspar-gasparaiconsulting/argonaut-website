@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   OBJEKT_ARTEN, VERMARKTUNG_ARTEN, AUSWEIS_TYPEN, STATUS_INFO,
   energieKlasse, preisProM2, provision, pflichtangabenVollstaendig, fehlendePflichtangaben,
@@ -293,7 +294,7 @@ export default function ExposePage() {
       {/* ---------- LISTE ---------- */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
         <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-          {exposes.length === 0 ? <div style={{ padding: 20, color: C.textDim }}>Noch keine Exposés.</div> : (
+          {exposes.length === 0 ? <Leerzustand icon="🏡" titel="Noch keine Exposés" text="Erstelle Immobilien-Exposés mit Energieklasse und druckfertigem PDF." schritte={["Exposé oben anlegen", "Objektdaten und Energieausweis erfassen", "Als PDF exportieren"]} /> : (
             <table style={styles.table}>
               <thead><tr>
                 <th style={styles.th}>Objekt</th><th style={styles.th}>Ort</th>

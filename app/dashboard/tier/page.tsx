@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -138,7 +139,7 @@ export default function TierPage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>{t.halter || '—'}{t.rasse ? ` · ${t.rasse}` : ''}</div>
               </button>
             ))}
-            {!tiere.length && <p style={styles.dim}>Noch keine Tiere.</p>}
+            {!tiere.length && <Leerzustand icon="🐾" titel="Noch keine Tiere" text="Führe eine Tierkartei mit Behandlungen und Impfungen." schritte={["Tier oben anlegen", "Stammdaten erfassen", "Behandlungen und Impfungen dokumentieren"]} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links ein Tier wählen.</p> : (

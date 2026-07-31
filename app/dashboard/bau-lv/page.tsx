@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -182,7 +183,7 @@ export default function BauLvPage() {
                     <div style={{ color: C.textDim, fontSize: 13 }}>{lv.kunde_name || '—'} · {eur(lv.netto_summe)} netto · {lv.status}</div>
                   </button>
                 ))}
-                {!lvs.length && <p style={styles.dim}>Noch keine LVs.</p>}
+                {!lvs.length && <Leerzustand icon="📐" titel="Noch keine Leistungsverzeichnisse" text="Kalkuliere LVs mit Nachträgen und erzeuge daraus Rechnungen." schritte={["LV oben anlegen", "Positionen kalkulieren", "In Rechnung übernehmen"]} />}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -272,7 +273,7 @@ export default function BauLvPage() {
                 <span style={{ ...styles.badge, color: ART_FARBE[a.art] || C.textDim, borderColor: ART_FARBE[a.art] || C.border }}>{ART_LABEL[a.art] || a.art}</span>
               </div>
             ))}
-            {!abnahmen.length && <p style={styles.dim}>Noch keine Abnahmen.</p>}
+            {!abnahmen.length && <Leerzustand icon="✅" titel="Noch keine Abnahmen" text="Dokumentiere Abnahmen mit Mängelliste." schritte={["Abnahme anlegen", "Mängel erfassen", "Protokoll abschließen"]} />}
           </div>
         </>
       )}

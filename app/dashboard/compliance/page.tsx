@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -189,7 +190,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!sofort.length && <p style={styles.dim}>Noch keine Meldungen erfasst.</p>}
+          {!sofort.length && <Leerzustand icon="📋" titel="Noch keine Meldungen" text="Melde neue Beschäftigte vor Arbeitsbeginn (Sofortmeldung)." schritte={["Beschäftigten erfassen", "Vor Arbeitsbeginn melden", "Nachweis ablegen"]} />}
         </div>
       </div>
 
@@ -230,7 +231,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!frei.length && <p style={styles.dim}>Noch keine Bescheinigungen hinterlegt.</p>}
+          {!frei.length && <Leerzustand icon="📄" titel="Noch keine Bescheinigungen" text="Freistellungsbescheinigungen (§48b) für dich und Subunternehmer." schritte={["Bescheinigung hinterlegen", "Gültigkeit erfassen", "Vor Ablauf erinnern lassen"]} />}
         </div>
       </div>
 
@@ -270,7 +271,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!pruef.length && <p style={styles.dim}>Noch keine Prüffristen hinterlegt.</p>}
+          {!pruef.length && <Leerzustand icon="⏰" titel="Noch keine Prüffristen" text="Behalte Bauabzugsteuer-relevante Fristen im Blick." schritte={["Prüffrist anlegen", "Datum erfassen", "Rechtzeitig erinnert werden"]} />}
         </div>
       </div>
 
