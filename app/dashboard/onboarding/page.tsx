@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
 import KiGuide from '../_components/KiGuide';
+import GefuehrteTour from '../_components/GefuehrteTour';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,6 +53,7 @@ export default function OnboardingPage() {
   const [weltAnzahl, setWeltAnzahl] = useState(0);
   const [weltBusy, setWeltBusy] = useState(false);
   const [laden, setLaden] = useState(true);
+  const [tourOffen, setTourOffen] = useState(false);
 
   const laden_ = useCallback(async (id: string) => {
     const { data: p } = await supabase.from('profiles').select('firma_name, sepa_iban, kategorie').eq('id', id).maybeSingle();
@@ -197,6 +199,14 @@ export default function OnboardingPage() {
         />
       )}
 
+      {!laden && (
+        <button onClick={() => setTourOffen(true)} style={styles.tourStart}>
+          🧭 Zeig mir alles — geführte Tour starten
+        </button>
+      )}
+
+      <GefuehrteTour offen={tourOffen} onFertig={() => setTourOffen(false)} />
+
       <div style={styles.anleitung}>
         <b>So nutzt du diese Seite:</b> Arbeite dich von oben nach unten durch. Was ARGONAUT schon erkennt, ist grün abgehakt.
         Bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
@@ -277,6 +287,7 @@ const styles: Record<string, CSSProperties> = {
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
   anleitung: { marginTop: 14, background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', color: C.textDim, fontSize: 13.5, lineHeight: 1.55 },
+  tourStart: { display: 'inline-block', marginTop: 2, marginBottom: 6, background: 'rgba(0,229,255,0.08)', color: C.cyan, border: `1px solid ${C.cyan}66`, borderRadius: 10, padding: '10px 18px', fontSize: 'clamp(14px, 1.2vw, 18px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   importBanner: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 14, background: 'linear-gradient(90deg, rgba(201,168,76,0.12), rgba(0,229,255,0.06))', border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: 12, padding: '13px 16px', textDecoration: 'none', color: C.text },
   importBannerIcon: { fontSize: 24, lineHeight: 1, flexShrink: 0 },
   importBannerText: { flex: 1, fontSize: 13.5, lineHeight: 1.5, color: C.text },
