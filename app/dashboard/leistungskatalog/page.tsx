@@ -23,6 +23,8 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import { augeLeistungskatalog } from '@/lib/auge';
+import Leerzustand from '../_components/Leerzustand';
+import { baueStartKatalog, hatStartKatalog } from '@/lib/startKatalog';
 import {
   nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
   type KatalogEintrag,
@@ -157,6 +159,33 @@ export default function LeistungskatalogPage() {
   function setF<K extends keyof Form>(k: K, v: Form[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
   const formIstMenge = istMengenLeistung(form.erfassungsart);
+
+  const [startBusy, setStartBusy] = useState(false);
+
+  // Typische Leistungen der Branche (profiles.kategorie) in den Katalog laden.
+  async function ladeStartkatalog() {
+    if (!uid) return;
+    setStartBusy(true); setFehler(null);
+    try {
+      const { data: prof } = await supabase.from('profiles').select('kategorie').eq('id', uid).maybeSingle();
+      const kat = ((prof?.kategorie as string) || '').trim();
+      const zeilen = baueStartKatalog(kat, uid, liste.map((k) => k.bezeichnung || ''))
+        .map((z) => ({ ...z, aktualisiert_am: new Date().toISOString() }));
+      if (zeilen.length === 0) {
+        setFehler(kat
+          ? `Für „${kat}" sind keine neuen Vorschläge übrig — dein Katalog ist schon gefüllt.`
+          : 'Für Vorschläge brauche ich deine Branche: Setz sie im Onboarding bzw. in den Einstellungen, dann lade ich typische Leistungen.');
+        setStartBusy(false); return;
+      }
+      const label = kat && hatStartKatalog(kat) ? `„${kat}"` : 'deine Branche';
+      if (!window.confirm(`${zeilen.length} typische Leistungen für ${label} in den Katalog laden?\n\nAlles sind Startwerte — du kannst danach jede Leistung frei anpassen oder löschen.`)) { setStartBusy(false); return; }
+      const { error } = await supabase.from('leistungskatalog').insert(zeilen);
+      if (error) throw error;
+      await laden_();
+    } catch (e: unknown) {
+      setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setStartBusy(false); }
+  }
 
   async function speichern() {
     if (!uid) return;
@@ -353,6 +382,7 @@ export default function LeistungskatalogPage() {
           <p style={styles.sub}>Ihre Leistungen — nach Zeit (Minuten, Stunden, Arbeitswerte) oder nach Menge (m², lfm, Hektar, Festmeter, Stück). Selbst anlegen oder per CSV importieren.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={ladeStartkatalog} disabled={startBusy} style={styles.ghostBtn}>{startBusy ? '…' : '✨ Typische Leistungen'}</button>
           <button onClick={impOeffnen} style={styles.ghostBtn}>📥 CSV-Import</button>
           <button onClick={neu} style={styles.primaerBtn}>+ Neue Leistung</button>
         </div>
@@ -388,7 +418,11 @@ export default function LeistungskatalogPage() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : gefiltert.length === 0 ? (
-          <div style={styles.hint}>Noch keine Leistungen. Leg oben rechts die erste an — oder importiere eine CSV.</div>
+          liste.length === 0 ? (
+            <Leerzustand icon="🧰" titel="Noch keine Leistungen" text="Lade typische Leistungen deiner Branche und pass die Preise an — oder leg sie selbst an." schritte={["„✨ Typische Leistungen“ laden", "Preise und Einheiten anpassen", "Beim Angebot/Auftrag auswählen"]} aktionText="✨ Typische Leistungen laden" onAktion={ladeStartkatalog} />
+          ) : (
+            <div style={styles.hint}>Keine Leistungen für diesen Filter.</div>
+          )
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
