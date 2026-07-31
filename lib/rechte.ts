@@ -104,6 +104,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧾 Angebote', href: '/dashboard/angebote', modul: 'angebote', ebene: 3, gruppe: 'vertrieb' },
   { label: '✍️ Signaturen', href: '/dashboard/signaturen', modul: 'signaturen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
   { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb' },
+  { label: '📦 Versand', href: '/dashboard/versand', modul: 'versand', ebene: 3, gruppe: 'vertrieb' },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3, gruppe: 'vertrieb' },
   { label: '💼 Projekt-Abrechnung', href: '/dashboard/projekt-abrechnung', modul: 'projekt-abrechnung', ebene: 3, gruppe: 'vertrieb' },
   { label: '⏱ Aufwand-Cockpit', href: '/dashboard/aufwand', modul: 'aufwand', ebene: 3, gruppe: 'vertrieb' },

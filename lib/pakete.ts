@@ -32,6 +32,7 @@ export const KERN_MODULE: string[] = [
   'termine',      // 🗓 Termine
   'dokumente',    // 📄 Dokumente
   'kundenportal', // 👤 Kunden-Portal
+  'versand',      // 📦 Versand-Center (Sendungen, Adress-Label, Tracking)
   'finanzen',     // 💶 Finanzen
   'gobd',         // 🗂 GoBD
   'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
