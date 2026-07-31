@@ -9,10 +9,12 @@
 // Pfad: app/dashboard/heute/page.tsx
 // ============================================================
 
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, useEffect, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
-import { augeHeute } from '@/lib/auge';
+import { augeHeute, augeGesamt, augePipeline, augeProvisionen, type AugeErgebnis } from '@/lib/auge';
+import { zaehlePipeline, OFFENE_STUFEN } from '@/lib/pipeline';
+import { provisionSummen } from '@/lib/provision';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,6 +27,17 @@ const C = {
 };
 
 type Item = { icon: string; titel: string; datum: string; href: string; tage: number };
+type Operativ = {
+  pipelineOffen: number; pipelineWert: number; gewichtet: number; winRate: number; gewonnen: number; verloren: number; pipelineUeberfaellig: number;
+  provOffen: number; provAusgezahlt: number; provGesamt: number; provDeals: number; provEmpf: number;
+  angeboteWartend: number; freigabeNoetig: number;
+};
+function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); }
+type DealRow = {
+  stufe?: string | null; wert_netto?: number | string | null; wahrscheinlichkeit?: number | string | null;
+  erwartetes_datum?: string | null; provision_prozent?: number | string | null;
+  provision_empfaenger?: string | null; provision_ausgezahlt?: boolean | null;
+};
 
 function heute() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 function inTagen(iso: string) { return Math.ceil((new Date(iso + 'T00:00:00').getTime() - heute().getTime()) / 86400000); }
@@ -71,6 +84,7 @@ export default function HeutePage() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [signaturen, setSignaturen] = useState<Array<{ id: string; titel: string; empf: string; seit: number }>>([]);
+  const [op, setOp] = useState<Operativ | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -109,6 +123,40 @@ export default function HeutePage() {
         setSignaturen(offeneSig);
       } catch { /* Modul evtl. nicht eingespielt */ }
 
+      // Operative Signale (Vertrieb / Angebote / Provisionen) — robust, still übersprungen.
+      const neuOp: Operativ = {
+        pipelineOffen: 0, pipelineWert: 0, gewichtet: 0, winRate: 0, gewonnen: 0, verloren: 0, pipelineUeberfaellig: 0,
+        provOffen: 0, provAusgezahlt: 0, provGesamt: 0, provDeals: 0, provEmpf: 0,
+        angeboteWartend: 0, freigabeNoetig: 0,
+      };
+      const offeneKeys = new Set(OFFENE_STUFEN.map((s) => s.key));
+      try {
+        const { data: dealData } = await supabase.from('crm_deal')
+          .select('stufe, wert_netto, erwartetes_datum, provision_prozent, provision_empfaenger, provision_ausgezahlt');
+        const deals = (dealData ?? []) as DealRow[];
+        if (deals.length) {
+          const k = zaehlePipeline(deals);
+          neuOp.pipelineOffen = k.offen; neuOp.pipelineWert = k.pipelineWert; neuOp.gewichtet = k.gewichtet;
+          neuOp.winRate = k.winRate; neuOp.gewonnen = k.gewonnen; neuOp.verloren = k.verloren;
+          neuOp.pipelineUeberfaellig = deals.filter((d) => {
+            const iso = d.erwartetes_datum;
+            return offeneKeys.has(String(d.stufe)) && !!iso && inTagen(String(iso).slice(0, 10)) < 0;
+          }).length;
+          const ps = provisionSummen(deals);
+          neuOp.provOffen = ps.offen; neuOp.provAusgezahlt = ps.ausgezahlt; neuOp.provGesamt = ps.gesamt;
+          neuOp.provDeals = ps.anzahlDeals; neuOp.provEmpf = ps.anzahlEmpfaenger;
+        }
+      } catch { /* Pipeline/Provisionen evtl. nicht eingespielt */ }
+      try {
+        const { data: ang } = await supabase.from('angebote').select('status, genehmigung_noetig, genehmigt');
+        if (ang) {
+          const rows = ang as Record<string, unknown>[];
+          neuOp.angeboteWartend = rows.filter((r) => r.status === 'entwurf' || r.status === 'gesendet').length;
+          neuOp.freigabeNoetig = rows.filter((r) => r.genehmigung_noetig && !r.genehmigt).length;
+        }
+      } catch { /* Angebote evtl. nicht verfügbar */ }
+      setOp(neuOp);
+
       setLaden(false);
     })();
   }, []);
@@ -116,6 +164,30 @@ export default function HeutePage() {
   const ueberfaellig = items.filter((i) => i.tage < 0);
   const dieseWoche = items.filter((i) => i.tage >= 0 && i.tage <= 7);
   const spaeter = items.filter((i) => i.tage > 7);
+
+  // Gesamt-Auge: Fristen + operative Bereiche zu EINER priorisierten Antwort bündeln.
+  const gesamtRegel = useMemo(() => {
+    const module: Array<{ modul: string; ergebnis: AugeErgebnis }> = [
+      { modul: 'Fristen', ergebnis: augeHeute({ ueberfaellig: ueberfaellig.length, dieseWoche: dieseWoche.length, spaeter: spaeter.length }) },
+    ];
+    if (op) {
+      module.push({ modul: 'Vertrieb', ergebnis: augePipeline({
+        offen: op.pipelineOffen, pipelineWert: op.pipelineWert, gewichtet: op.gewichtet, winRate: op.winRate,
+        gewonnen: op.gewonnen, verloren: op.verloren, ueberfaellig: op.pipelineUeberfaellig,
+      }) });
+      const angErg: AugeErgebnis = op.freigabeNoetig > 0
+        ? { klartext: `${op.freigabeNoetig} Angebot${op.freigabeNoetig === 1 ? '' : 'e'} ${op.freigabeNoetig === 1 ? 'braucht' : 'brauchen'} eine Freigabe.`, punkte: [], stimmung: 'achtung' }
+        : op.angeboteWartend > 0
+          ? { klartext: `${op.angeboteWartend} Angebot${op.angeboteWartend === 1 ? '' : 'e'} ${op.angeboteWartend === 1 ? 'wartet' : 'warten'} auf Zusage.`, punkte: [], stimmung: 'neutral' }
+          : { klartext: 'Keine offenen Angebote.', punkte: [], stimmung: 'gut' };
+      module.push({ modul: 'Angebote', ergebnis: angErg });
+      module.push({ modul: 'Provisionen', ergebnis: augeProvisionen({ offen: op.provOffen, ausgezahlt: op.provAusgezahlt, gesamt: op.provGesamt, anzahlDeals: op.provDeals, anzahlEmpfaenger: op.provEmpf }) });
+    }
+    if (signaturen.length > 0) {
+      module.push({ modul: 'Unterschriften', ergebnis: { klartext: `${signaturen.length} Unterschrift${signaturen.length === 1 ? '' : 'en'} ausstehend.`, punkte: [], stimmung: 'neutral' } });
+    }
+    return augeGesamt(module);
+  }, [op, signaturen.length, ueberfaellig.length, dieseWoche.length, spaeter.length]);
 
   return (
     <div style={styles.page}>
@@ -135,7 +207,36 @@ export default function HeutePage() {
         </div>
       </div>
 
-      <KiAuge modul="Heute" regel={augeHeute({ ueberfaellig: ueberfaellig.length, dieseWoche: dieseWoche.length, spaeter: spaeter.length })} />
+      <KiAuge modul="Heute" regel={gesamtRegel} />
+
+      {op && (op.pipelineOffen > 0 || op.angeboteWartend > 0 || op.freigabeNoetig > 0 || op.provOffen > 0) && (
+        <div style={styles.opRow}>
+          {op.freigabeNoetig > 0 && (
+            <a href="/dashboard/angebote" style={{ ...styles.opCard, borderColor: C.warn }}>
+              <span style={{ ...styles.opWert, color: C.warn }}>{op.freigabeNoetig}</span>
+              <span style={styles.opLabel}>Angebote · Freigabe nötig</span>
+            </a>
+          )}
+          {op.angeboteWartend > 0 && (
+            <a href="/dashboard/angebote" style={styles.opCard}>
+              <span style={{ ...styles.opWert, color: C.cyan }}>{op.angeboteWartend}</span>
+              <span style={styles.opLabel}>Angebote warten auf Zusage</span>
+            </a>
+          )}
+          {op.pipelineOffen > 0 && (
+            <a href="/dashboard/pipeline" style={{ ...styles.opCard, borderColor: op.pipelineUeberfaellig > 0 ? C.danger : C.border }}>
+              <span style={{ ...styles.opWert, color: C.gold }}>{eur(op.gewichtet)}</span>
+              <span style={styles.opLabel}>{op.pipelineOffen} offene Deals · Forecast{op.pipelineUeberfaellig > 0 ? ` · ${op.pipelineUeberfaellig} überfällig` : ''}</span>
+            </a>
+          )}
+          {op.provOffen > 0 && (
+            <a href="/dashboard/provisionen" style={{ ...styles.opCard, borderColor: C.warn }}>
+              <span style={{ ...styles.opWert, color: C.warn }}>{eur(op.provOffen)}</span>
+              <span style={styles.opLabel}>Provision offen zum Auszahlen</span>
+            </a>
+          )}
+        </div>
+      )}
 
       {signaturen.length > 0 && (
         <div style={styles.block}>
@@ -193,6 +294,10 @@ const styles: Record<string, CSSProperties> = {
   kpi: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px', textAlign: 'center' },
   kWert: { fontSize: 30, fontWeight: 800, lineHeight: 1 },
   kLabel: { color: C.textDim, fontSize: 12.5, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  opRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, margin: '14px 0 4px' },
+  opCard: { display: 'flex', flexDirection: 'column', gap: 4, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', textDecoration: 'none' },
+  opWert: { fontSize: 22, fontWeight: 800, lineHeight: 1.1 },
+  opLabel: { color: C.textDim, fontSize: 12.5 },
   block: { marginTop: 18 },
   blockTitel: { fontWeight: 800, fontSize: 16, marginBottom: 10 },
   liste: { display: 'flex', flexDirection: 'column', gap: 8 },
