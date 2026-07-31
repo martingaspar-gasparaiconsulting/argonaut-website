@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   KATEGORIEN, VERSION_STATUS, FEEDBACK_TYPEN,
   kategorieLabel, versionStatusLabel, assetStatusLabel, feedbackTypLabel,
@@ -208,7 +209,7 @@ export default function FreigabenPage() {
 
       {/* Asset-Karten */}
       {assets.length === 0 ? (
-        <div style={styles.hint}>Noch keine Assets — leg das erste an und reiche eine Version zur Freigabe ein.</div>
+        <Leerzustand icon="🎨" titel="Noch keine Assets" text="Verwalte Kreativ-Assets mit Versionsständen und Kunden-Freigabe." schritte={["Asset oben anlegen", "Version hochladen", "Zur Freigabe an den Kunden geben"]} />
       ) : assets.map((a) => {
         const vs = (versProAsset.get(a.id) || []).slice().sort((x, y) => y.version_nr - x.version_nr);
         const st = assetStatus(vs as VersionLite[]);

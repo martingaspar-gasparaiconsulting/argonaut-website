@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import FristAmpel from '../_components/FristAmpel';
+import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeWartung } from '@/lib/auge';
 import {
@@ -720,7 +721,7 @@ export default function WartungPage() {
             {historieBusy ? (
               <div style={styles.hint}>Lädt …</div>
             ) : historieRows.length === 0 ? (
-              <div style={styles.hint}>Noch keine Wartung dokumentiert. Über „✓ Wartung + Protokoll" den ersten Eintrag anlegen.</div>
+              <Leerzustand icon="🛠️" titel="Noch keine Wartungsverträge" text="Lege wiederkehrende Wartungsverträge mit Fälligkeits-Ampel an." schritte={["Vertrag über „✓ Wartung + Protokoll“ anlegen", "Intervall und nächste Fälligkeit setzen", "Bei Fälligkeit zur Rechnung übernehmen"]} />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {historieRows.map((h) => {
