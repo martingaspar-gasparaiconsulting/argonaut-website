@@ -3,6 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import ServiceAuge from "./ServiceAuge";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'tickets';
 
 // ============================================================
 // ARGONAUT OS · BLOCK 11 · KUNDENSERVICE — T2 Ticket-Cockpit
@@ -175,6 +179,12 @@ export default function ServicePage() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  // Eigene Felder
+  const [uid, setUid] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   // Filter/Suche
   const [suche, setSuche] = useState('');
   const [filterStatus, setFilterStatus] = useState('alle');
@@ -195,6 +205,7 @@ export default function ServicePage() {
       setLaden(false);
       return;
     }
+    setUid(userData.user.id);
     const { data, error } = await supabase
       .from('tickets')
       .select('*')
@@ -204,7 +215,10 @@ export default function ServicePage() {
       setLaden(false);
       return;
     }
-    setTickets((data as Ticket[]) || []);
+    const rows = (data as Ticket[]) || [];
+    setTickets(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     setLaden(false);
   }, []);
 
@@ -266,14 +280,22 @@ export default function ServicePage() {
       faellig_am: faellig,
     };
 
-    const { error } = await supabase.from('tickets').insert(insertObj);
+    const { data: neu, error } = await supabase
+      .from('tickets')
+      .insert(insertObj)
+      .select('id')
+      .single();
     setSpeichern(false);
-    if (error) {
-      setFehler(error.message);
+    if (error || !neu) {
+      setFehler(error?.message || 'Ticket konnte nicht gespeichert werden.');
       return;
     }
+    try {
+      await speichereWerte(MODUL, (neu as { id: string }).id, userData.user.id, nmExtra);
+    } catch { /* eigene Felder optional */ }
     setModalOffen(false);
     setForm(LEER);
+    setNmExtra({});
     laden_tickets();
   }
 
@@ -472,6 +494,11 @@ export default function ServicePage() {
         </select>
       </div>
 
+      {/* ---- Eigene Felder verwalten ---- */}
+      {uid && (
+        <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_tickets} />
+      )}
+
       {/* ---- Fehler ---- */}
       {fehler && (
         <div
@@ -571,6 +598,7 @@ export default function ServicePage() {
                       {KANAL_LABEL[t.kanal] || t.kanal} · erstellt{' '}
                       {datumKurz(t.created_at)}
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[t.id]} />
                   </div>
 
                   <div
@@ -732,6 +760,26 @@ export default function ServicePage() {
                 <option value="persoenlich">Persönlich</option>
               </select>
             </div>
+
+            {felder.length > 0 && (
+              <div
+                style={{
+                  display: 'grid',
+                  gap: '14px',
+                  marginBottom: '14px',
+                }}
+              >
+                <EigeneFelderInputs
+                  felder={felder}
+                  werte={nmExtra}
+                  setWert={(fid, w) =>
+                    setNmExtra((s) => ({ ...s, [fid]: w }))
+                  }
+                  inpStyle={inputStil}
+                  labStyle={labelStil}
+                />
+              </div>
+            )}
 
             <div
               style={{

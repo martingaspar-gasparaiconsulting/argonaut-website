@@ -57,7 +57,8 @@ export async function ladeWerte(modul: string, datensatzIds: string[]): Promise<
   return out;
 }
 
-export async function speichereWerte(modul: string, datensatzId: string, ownerId: string, werte: Record<string, string>): Promise<void> {
+export async function speichereWerte(modul: string, datensatzId: string | null | undefined, ownerId: string | null | undefined, werte: Record<string, string>): Promise<void> {
+  if (!datensatzId) return;
   for (const [feldId, roh] of Object.entries(werte)) {
     const w = (roh ?? '').toString().trim();
     if (!w) {

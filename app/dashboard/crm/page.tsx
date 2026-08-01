@@ -7,6 +7,15 @@ import KiAuge from "../_components/KiAuge";
 import { augeCrm } from "@/lib/auge";
 import KundenAuge from "./KundenAuge";
 import Leerzustand from "../_components/Leerzustand";
+import {
+  EigeneFelderManager,
+  EigeneFelderInputs,
+  EigeneFelderAnzeige,
+  ladeFelder,
+  ladeWerte,
+  speichereWerte,
+} from "../_components/EigeneFelder";
+import type { EigenesFeld } from "@/lib/eigeneFelder";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
@@ -40,6 +49,8 @@ const QUELLE_OPTIONEN = [
   "Telefon",
   "Sonstige",
 ];
+
+const MODUL = "kontakte";
 
 interface Kontakt {
   id: string;
@@ -123,6 +134,11 @@ export default function CrmCockpitPage() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  const [uid, setUid] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
   const [quelleFilter, setQuelleFilter] = useState("alle");
@@ -188,7 +204,11 @@ export default function CrmCockpitPage() {
       setLaden(false);
       return;
     }
-    setKontakte((data as Kontakt[]) || []);
+    const rows = (data as Kontakt[]) || [];
+    setKontakte(rows);
+
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
 
     const { data: tagData } = await supabase
       .from("kontakt_tags")
@@ -210,6 +230,7 @@ export default function CrmCockpitPage() {
   }
 
   useEffect(() => {
+    supabase.auth.getUser().then((r) => setUid(r.data?.user?.id ?? null));
     laden_();
   }, []);
 
@@ -290,6 +311,7 @@ export default function CrmCockpitPage() {
   function dialogNeu() {
     setBearbeite(null);
     setForm(LEER_FORM);
+    setNmExtra({});
     setDublette(null);
     setDubletteBestaetigt(false);
     setDialogOffen(true);
@@ -297,6 +319,7 @@ export default function CrmCockpitPage() {
 
   function dialogBearbeiten(k: Kontakt) {
     setBearbeite(k);
+    setNmExtra(werteMap[k.id] || {});
     setForm({
       vorname: k.vorname || "",
       nachname: k.nachname || "",
@@ -365,6 +388,7 @@ export default function CrmCockpitPage() {
     };
 
     let error;
+    let zielId: string | null = bearbeite ? bearbeite.id : null;
     if (bearbeite) {
       const res = await supabase
         .from("kontakte")
@@ -372,8 +396,13 @@ export default function CrmCockpitPage() {
         .eq("id", bearbeite.id);
       error = res.error;
     } else {
-      const res = await supabase.from("kontakte").insert(nutzlast);
+      const res = await supabase
+        .from("kontakte")
+        .insert(nutzlast)
+        .select("id")
+        .single();
       error = res.error;
+      if (!error && res.data) zielId = (res.data as { id: string }).id;
     }
 
     setSpeichert(false);
@@ -381,6 +410,14 @@ export default function CrmCockpitPage() {
       setFehler(error.message);
       return;
     }
+    if (uid && zielId) {
+      try {
+        await speichereWerte(MODUL, zielId, uid, nmExtra);
+      } catch {
+        /* eigene Felder optional */
+      }
+    }
+    setNmExtra({});
     setDialogOffen(false);
     laden_();
   }
@@ -966,6 +1003,10 @@ export default function CrmCockpitPage() {
           </div>
         )}
 
+        {uid && (
+          <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />
+        )}
+
         {/* Tabelle */}
         <div
           style={{
@@ -973,6 +1014,7 @@ export default function CrmCockpitPage() {
             border: `1px solid ${C.border}`,
             borderRadius: 14,
             overflow: "hidden",
+            marginTop: 18,
           }}
         >
           {laden ? (
@@ -1060,6 +1102,7 @@ export default function CrmCockpitPage() {
                               })}
                             </div>
                           )}
+                          <EigeneFelderAnzeige felder={felder} werte={werteMap[k.id]} />
                         </td>
                         <td style={{ ...td, color: C.textDim }}>
                           {k.firma || "—"}
@@ -1236,6 +1279,22 @@ export default function CrmCockpitPage() {
                 onChange={(e) => feld("notizen", e.target.value)}
               />
             </Feld>
+
+            <EigeneFelderInputs
+              felder={felder}
+              werte={nmExtra}
+              setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))}
+              inpStyle={inp}
+              labStyle={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 5,
+                fontFamily: "'DM Sans', sans-serif",
+                color: C.textDim,
+                fontSize: "clamp(12px, 1.06vw, 17px)",
+                marginBottom: 12,
+              }}
+            />
 
             {!bearbeite && (
               <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>

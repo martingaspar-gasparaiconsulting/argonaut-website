@@ -52,6 +52,10 @@ import {
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'werkstatt_auftraege';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -155,6 +159,10 @@ export default function WerkstattPage() {
   const [gespeichertHinweis, setGespeichertHinweis] = useState(false);
   const [positionen, setPositionen] = useState<PositionRow[]>([]);
   const [log, setLog] = useState<StatusLogEintrag[]>([]);
+  // Eigene Felder (additiv)
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const [fzSuche, setFzSuche] = useState('');
   const [fzNeuAuf, setFzNeuAuf] = useState(false);
@@ -190,7 +198,10 @@ export default function WerkstattPage() {
         supabase.from('ressourcen').select('id, bezeichnung, typ, farbe').eq('archiviert', false).order('bezeichnung', { ascending: true }),
       ]);
       if (aRes.error) throw aRes.error;
-      setAuftraege((aRes.data as AuftragRow[]) ?? []);
+      const aListe = (aRes.data as AuftragRow[]) ?? [];
+      setAuftraege(aListe);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, aListe.map((x) => x.id)));
       setFahrzeuge((fRes.data as FahrzeugRow[]) ?? []);
       setKatalog((kRes.data as KatalogRow[]) ?? []);
       setRessourcen((rRes.data as RessourceRow[]) ?? []);
@@ -225,6 +236,7 @@ export default function WerkstattPage() {
     setForm(LEER); setLog([]); setPositionen([]); setFzSuche(''); setFzNeuAuf(false);
     setFzNeu({ fin: '', kennzeichen: '', hersteller: '', modell: '', halter_name: '', naechste_hu: '' });
     setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);
+    setNmExtra({});
     setModalAuf(true);
   }
   async function bearbeiten(a: AuftragRow) {
@@ -237,6 +249,7 @@ export default function WerkstattPage() {
       kundenanliegen: a.kundenanliegen ?? '', annahme_zustand: a.annahme_zustand ?? '',
     });
     setFzSuche(''); setFzNeuAuf(false); setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);
+    setNmExtra(werteMap[a.id] ?? {});
     setModalAuf(true);
     await Promise.all([ladePositionen(a.id), ladeLog(a.id), ladeBuchungen(a.id)]);
     // Buchungsformular vorbelegen: heute, erste Ressource
@@ -269,10 +282,13 @@ export default function WerkstattPage() {
       if (istNeu) {
         const { data, error } = await supabase.from('werkstatt_auftraege').insert(payload).select('id').single();
         if (error) throw error;
-        setForm((f) => ({ ...f, id: (data as { id: string }).id })); // in Bearbeiten-Modus wechseln
+        const neuId = (data as { id: string }).id;
+        try { await speichereWerte(MODUL, neuId, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        setForm((f) => ({ ...f, id: neuId })); // in Bearbeiten-Modus wechseln
       } else {
         const { error } = await supabase.from('werkstatt_auftraege').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setGespeichertHinweis(true);
       setTimeout(() => setGespeichertHinweis(false), 2500);
@@ -904,6 +920,11 @@ export default function WerkstattPage() {
                             <span style={{ color: C.textDim }}>{durchlaufzeitText(a)}</span>
                           </div>
                         </button>
+                        {felder.length > 0 && werteMap[a.id] && (
+                          <div style={{ padding: '0 12px 8px' }}>
+                            <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
+                          </div>
+                        )}
                         {naechster && (
                           <button onClick={() => weiterruecken(a)} style={styles.weiterBtn} title={`→ ${statusDef(naechster).label}`}>
                             → {statusDef(naechster).label}
@@ -957,7 +978,10 @@ export default function WerkstattPage() {
               <Feld label="Beschreibung" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.beschreibung} onChange={(e) => setF('beschreibung', e.target.value)} />
               </Feld>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
+
+            {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
             {!form.id ? (
               <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Fahrzeug und Leistungen hinzufügen.</div>

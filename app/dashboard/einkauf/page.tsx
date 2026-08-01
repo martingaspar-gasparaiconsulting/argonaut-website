@@ -18,6 +18,10 @@ import { augeEinkauf } from '@/lib/auge';
 import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bestellung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -62,6 +66,9 @@ export default function EinkaufPage() {
   const [np, setNp] = useState<NeuePos>({ ...LEER_NP });
   const [posEntwurf, setPosEntwurf] = useState<NeuePos[]>([]);
   const [selBest, setSelBest] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nbExtra, setNbExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [weEdit, setWeEdit] = useState<Record<string, { erhalten: string; retoure: string; grund: string; artikel_id: string }>>({});
 
   // Kalkulation
@@ -78,9 +85,12 @@ export default function EinkaufPage() {
         supabase.from('artikel').select('id, bezeichnung, artikelnummer, einheit, aktueller_bestand').eq('aktiv', true).order('bezeichnung', { ascending: true }),
       ]);
       setLieferanten((l.data as Lieferant[]) ?? []);
-      setBestellungen((b.data as Bestellung[]) ?? []);
+      const bestRows = (b.data as Bestellung[]) ?? [];
+      setBestellungen(bestRows);
       setPositionen((p.data as Position[]) ?? []);
       setArtikel((a.data as LagerArtikel[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, bestRows.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -153,7 +163,8 @@ export default function EinkaufPage() {
       }));
       const { error: e2 } = await supabase.from('bestellung_position').insert(rows);
       if (e2) throw e2;
-      setNb({ lieferant_id: '', bestell_nr: '', datum: heuteLokal(), notiz: '' });
+      try { await speichereWerte(MODUL, bid, uid, nbExtra); } catch { /* eigene Felder optional */ }
+      setNb({ lieferant_id: '', bestell_nr: '', datum: heuteLokal(), notiz: '' }); setNbExtra({});
       setPosEntwurf([]); setOk('Bestellung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -284,6 +295,7 @@ export default function EinkaufPage() {
               <label style={styles.lab}>Bestell-Nr. (optional)<input style={styles.inp} value={nb.bestell_nr} onChange={(e) => setNb({ ...nb, bestell_nr: e.target.value })} placeholder="automatisch" /></label>
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
               <label style={styles.lab}>Notiz (optional)<input style={styles.inp} value={nb.notiz} onChange={(e) => setNb({ ...nb, notiz: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nbExtra} setWert={(fid, w) => setNbExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
 
             <div style={{ ...styles.subCard, marginTop: 12 }}>
@@ -310,6 +322,7 @@ export default function EinkaufPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'bestellung' ? 0.6 : 1 }} disabled={busy === 'bestellung'} onClick={bestellungAnlegen}>＋ Bestellung anlegen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
@@ -334,7 +347,7 @@ export default function EinkaufPage() {
                       return (
                         <Fragment key={b.id}>
                           <tr style={{ opacity: b.status === 'storniert' ? 0.55 : 1 }}>
-                            <td style={styles.td}><b>{b.bestell_nr}</b></td>
+                            <td style={styles.td}><b>{b.bestell_nr}</b><EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} /></td>
                             <td style={{ ...styles.td, color: C.textDim }}>{liefName(b.lieferant_id)}</td>
                             <td style={styles.td}>{fmtDatum(b.datum)}</td>
                             <td style={{ ...styles.td, textAlign: 'right' }}>{eur(bestellNetto(ps))}{offen > 0 ? <div style={{ color: C.warn, fontSize: 12 }}>{offen} offen</div> : ''}</td>

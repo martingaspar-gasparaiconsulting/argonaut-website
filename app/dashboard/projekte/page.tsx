@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import ProjekteAuge from "./ProjekteAuge";
 import Leerzustand from "../_components/Leerzustand";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'projekte';
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P2 — Projekt-Liste + Anlegen
@@ -108,6 +112,10 @@ export default function ProjektePage() {
   const [modal, setModal] = useState<any | null>(null);
   const [speichern, setSpeichern] = useState(false);
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   // Vorlagen
   const [vorlagen, setVorlagen] = useState<any[]>([]);
   const [vorlagenModal, setVorlagenModal] = useState(false);
@@ -139,8 +147,11 @@ export default function ProjektePage() {
           .order('erstellt_am', { ascending: false }),
         supabase.from('vorlagen_aufgaben').select('id,vorlage_id')
       ]);
-      setProjekte(projRes.data || []);
+      const projRows = projRes.data || [];
+      setProjekte(projRows);
       setAufgaben(aufgRes.data || []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, projRows.map((r: any) => r.id)));
       // Vorlagen mit Aufgaben-Anzahl anreichern
       const zaehl: Record<string, number> = {};
       (vAufgRes.data || []).forEach((r: any) => { zaehl[r.vorlage_id] = (zaehl[r.vorlage_id] || 0) + 1; });
@@ -163,7 +174,8 @@ export default function ProjektePage() {
     return { erledigt, gesamt, pct };
   }
 
-  function oeffneNeu() { setModal(leeresProjekt()); }  function oeffneBearbeiten(p: Projekt) {
+  function oeffneNeu() { setNmExtra({}); setModal(leeresProjekt()); }  function oeffneBearbeiten(p: Projekt) {
+    setNmExtra(werteMap[p.id] ? { ...werteMap[p.id] } : {});
     setModal({
       id: p.id,
       name: p.name || '',
@@ -195,14 +207,18 @@ export default function ProjektePage() {
         verantwortlich: modal.verantwortlich || null,
         farbe: modal.farbe || '#00e5ff',
       };
-      let res;
+      let datensatzId = modal.id as string | null;
       if (modal.id) {
-        res = await supabase.from('projekte').update(datensatz).eq('id', modal.id);
+        const res = await supabase.from('projekte').update(datensatz).eq('id', modal.id);
+        if (res.error) throw res.error;
       } else {
-        res = await supabase.from('projekte').insert(datensatz);
+        const res = await supabase.from('projekte').insert(datensatz).select('id').single();
+        if (res.error) throw res.error;
+        datensatzId = (res.data as { id: string }).id;
       }
-      if (res.error) throw res.error;
+      if (datensatzId) { try { await speichereWerte(MODUL, datensatzId, ownerId, nmExtra); } catch { /* eigene Felder optional */ } }
       setModal(null);
+      setNmExtra({});
       await ladeDaten();
     } catch (e: any) {
       alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
@@ -463,6 +479,12 @@ export default function ProjektePage() {
         </button>
       </div>
 
+      {ownerId && (
+        <div style={{ marginBottom: 18 }}>
+          <EigeneFelderManager modul={MODUL} ownerId={ownerId} onChange={ladeDaten} />
+        </div>
+      )}
+
       {fehler && (
         <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, marginBottom: 16 }}>{fehler}</div>
       )}
@@ -527,6 +549,8 @@ export default function ProjektePage() {
                   {p.verantwortlich && <span>👤 {p.verantwortlich}</span>}
                   {p.budget != null && <span>💶 {Number(p.budget).toLocaleString('de-DE')} €</span>}
                 </div>
+
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[p.id]} />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <a href={`/dashboard/projekte/${p.id}`} style={{ ...btn, padding: '7px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', textDecoration: 'none', display: 'inline-block' }}>
@@ -608,6 +632,12 @@ export default function ProjektePage() {
                 ))}
               </div>
             </div>
+
+            {felder.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button style={btnGhost} onClick={() => setModal(null)} disabled={speichern}>Abbrechen</button>

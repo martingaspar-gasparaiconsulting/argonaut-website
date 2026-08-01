@@ -13,6 +13,10 @@ import { nameSplit } from '@/lib/leadKontakt';
 import { planeLagerabzug } from '@/lib/lagerAbzug';
 import { createBrowserClient } from '@supabase/ssr';
 import { anbieterVon, type IntegrationTyp } from '@/lib/konnektoren';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'shop_bestellungen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -78,12 +82,18 @@ export default function ShopPage() {
   const [rechBusy, setRechBusy] = useState<string | null>(null);
   const [crmBusy, setCrmBusy] = useState<string | null>(null);
   const [lagerBusy, setLagerBusy] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('shop_bestellungen')
       .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id, lager_gebucht')
       .order('erstellt_am', { ascending: false });
-    setListe((data as Bestellung[]) ?? []);
+    const rows = (data as Bestellung[]) ?? [];
+    setListe(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
 
   useEffect(() => {
@@ -117,11 +127,15 @@ export default function ShopPage() {
           brutto_summe: Math.round(o.brutto * 100) / 100, positionen: o.positionen,
           bestell_am: new Date().toISOString(),
         };
-        const { error } = await supabase.from('shop_bestellungen').insert(row);
-        if (error) uebersprungen++; else neu++;
+        const { data: neuRow, error } = await supabase.from('shop_bestellungen').insert(row).select('id').single();
+        if (error || !neuRow) { uebersprungen++; }
+        else {
+          neu++;
+          try { await speichereWerte(MODUL, (neuRow as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        }
       }
       setOk(`${neu} Bestellung(en) importiert${uebersprungen ? `, ${uebersprungen} übersprungen (bereits vorhanden)` : ''}.`);
-      setCsv('');
+      setCsv(''); setNmExtra({});
       await laden_();
     } finally { setBusy(false); }
   }
@@ -232,12 +246,20 @@ export default function ShopPage() {
         </div>
         <textarea style={styles.textarea} value={csv} onChange={(e) => setCsv(e.target.value)}
           placeholder={'1001;Max Muster;max@mail.de;Winterreifen 205/55;4;89,90;19\n1001;Max Muster;max@mail.de;Montage;1;40,00;19\n2002;Hofladen Meier;kunde@mail.de;Bio-Gemüsekiste;1;24,90;7'} />
+        {felder.length > 0 && (
+          <div style={styles.extraRow}>
+            <span style={{ color: C.textDim, fontSize: 12.5, alignSelf: 'center' }}>Eigene Felder (gelten für alle importierten Bestellungen):</span>
+            <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} />
+          </div>
+        )}
         {ok && <div style={styles.ok}>{ok}</div>}
         {fehler && <div style={styles.err}>{fehler}</div>}
         <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={importieren}>
           {busy ? 'Importiert …' : '⬆ Importieren'}
         </button>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Status-Übersicht */}
       <div style={styles.statusRow}>
@@ -267,6 +289,7 @@ export default function ShopPage() {
                   <div style={{ color: C.textDim, fontSize: 13 }}>
                     {(b.positionen || []).map((p) => `${p.menge}× ${p.bezeichnung}`).join(', ') || '—'}
                   </div>
+                  <EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} />
                 </div>
                 <div style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{eur(b.brutto_summe)}</div>
                 {b.rechnung_id ? (
@@ -328,6 +351,7 @@ const styles: Record<string, CSSProperties> = {
   hinweis: { background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 },
   textarea: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 14, fontFamily: 'monospace', minHeight: 120, resize: 'vertical' },
   primaer: { alignSelf: 'flex-start', background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  extraRow: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' },
   statusRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, margin: '18px 0' },
   statusKarte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px', textAlign: 'center' },
   liste: { display: 'flex', flexDirection: 'column', gap: 10 },
