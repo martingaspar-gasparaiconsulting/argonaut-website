@@ -17,6 +17,10 @@ import {
 import { augePruef } from '@/lib/auge';
 import { pruefprotokollPdf } from '@/lib/pruefPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'pruef_protokoll';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,6 +67,9 @@ export default function PruefprotokollePage() {
 
   const [nk, setNk] = useState({ pruef_key: '', asset_id: '', objekt_bezeichnung: '', datum: H, pruefer: '', bemerkung: '', pruef_art_custom: '', norm_custom: '', intervall_custom: '12', durchgefallen: false });
   const [draft, setDraft] = useState<Draft[]>([]);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -72,9 +79,12 @@ export default function PruefprotokollePage() {
         supabase.from('pruef_punkt').select('*').order('position', { ascending: true }),
         supabase.from('assets').select('id, bezeichnung').order('bezeichnung', { ascending: true }),
       ]);
-      setProtokolle((p.data as Protokoll[]) ?? []);
+      const pp = (p.data as Protokoll[]) ?? [];
+      setProtokolle(pp);
       setPunkte((pk.data as Punkt[]) ?? []);
       setAssets((a.data as Asset[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, pp.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -129,6 +139,7 @@ export default function PruefprotokollePage() {
         intervall_monate: intervall || null, naechste_pruefung: naechste || null, ergebnis: ergebnisLive, bemerkung: nk.bemerkung.trim() || null,
       }).select('id').single();
       if (error || !neu) throw new Error(error?.message || 'Speichern fehlgeschlagen.');
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       const reihen = draft.filter((p) => p.punkt.trim()).map((p, i) => ({
         owner_user_id: uid, protokoll_id: neu.id, position: i + 1, punkt: p.punkt.trim(), status: p.status, hinweis: p.hinweis.trim() || null,
       }));
@@ -142,7 +153,7 @@ export default function PruefprotokollePage() {
         await supabase.from('assets').update({ letzte_kontrolle: nk.datum, naechste_kontrolle: naechste || null, zustand }).eq('id', nk.asset_id);
       }
       setNk({ pruef_key: '', asset_id: '', objekt_bezeichnung: '', datum: H, pruefer: '', bemerkung: '', pruef_art_custom: '', norm_custom: '', intervall_custom: '12', durchgefallen: false });
-      setDraft([]); setOk('Prüfprotokoll gespeichert.'); await laden_();
+      setDraft([]); setNmExtra({}); setOk('Prüfprotokoll gespeichert.'); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(false); }
   }
@@ -198,6 +209,7 @@ export default function PruefprotokollePage() {
             <label style={styles.lab}>Norm (frei)<input style={styles.inp} value={nk.norm_custom} onChange={(e) => setNk({ ...nk, norm_custom: e.target.value })} placeholder="z. B. DIN EN 12453" /></label>
             <label style={styles.lab}>Intervall (Monate)<input style={styles.inp} inputMode="numeric" value={nk.intervall_custom} onChange={(e) => setNk({ ...nk, intervall_custom: e.target.value })} /></label>
           </>}
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
 
         {nk.pruef_key && (
@@ -233,6 +245,8 @@ export default function PruefprotokollePage() {
         )}
       </div>
 
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+
       {/* Liste */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
         <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
@@ -251,7 +265,7 @@ export default function PruefprotokollePage() {
                     <Fragment key={p.id}>
                       <tr>
                         <td style={styles.td}><b>{p.pruef_art}</b>{p.norm ? <div style={{ color: C.textDim, fontSize: 'clamp(11px,0.9vw,14px)' }}>{p.norm}</div> : null}</td>
-                        <td style={{ ...styles.td, color: C.textDim }}>{p.objekt_bezeichnung || '—'}</td>
+                        <td style={{ ...styles.td, color: C.textDim }}>{p.objekt_bezeichnung || '—'}<EigeneFelderAnzeige felder={felder} werte={werteMap[p.id]} /></td>
                         <td style={styles.td}>{d(p.datum)}{p.pruefer ? <div style={{ color: C.textDim, fontSize: 'clamp(11px,0.9vw,14px)' }}>{p.pruefer}</div> : null}</td>
                         <td style={styles.td}><span style={{ ...styles.badge, color: em.farbe, borderColor: em.farbe }}>{em.label}</span></td>
                         <td style={styles.td}><span style={{ color: AMPEL[bucket] }}>● </span>{d(p.naechste_pruefung)}</td>

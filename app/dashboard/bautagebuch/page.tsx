@@ -14,6 +14,10 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bautagebuch';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -76,6 +80,9 @@ export default function BautagebuchPage() {
   const [eintragModal, setEintragModal] = useState(false);
   const [eintragForm, setEintragForm] = useState({ ...LEER_EINTRAG });
   const [eintragBusy, setEintragBusy] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [eintragExtra, setEintragExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [fotoBusy, setFotoBusy] = useState<string | null>(null);
 
   const [mangelModal, setMangelModal] = useState(false);
@@ -108,6 +115,8 @@ export default function BautagebuchPage() {
       if (mRes.error) throw mRes.error;
       const ein = (eRes.data as Eintrag[]) ?? [];
       setEintraege(ein);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, ein.map((r) => r.id)));
       setMaengel((mRes.data as Mangel[]) ?? []);
 
       const ids = ein.map((e) => e.id);
@@ -140,7 +149,7 @@ export default function BautagebuchPage() {
     if (!uid || !projektId) { setFehler('Bitte zuerst ein Projekt wählen.'); return; }
     setEintragBusy(true); setFehler(null);
     try {
-      const { error } = await supabase.from('bautagebuch').insert({
+      const { data: neu, error } = await supabase.from('bautagebuch').insert({
         owner_user_id: uid, projekt_id: projektId, erstellt_von: uid,
         datum: eintragForm.datum || heute(),
         wetter: eintragForm.wetter.trim() || null,
@@ -149,9 +158,10 @@ export default function BautagebuchPage() {
         arbeiten: eintragForm.arbeiten.trim() || null,
         material: eintragForm.material.trim() || null,
         vorkommnisse: eintragForm.vorkommnisse.trim() || null,
-      });
+      }).select('id').single();
       if (error) throw error;
-      setEintragModal(false); setEintragForm({ ...LEER_EINTRAG });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, eintragExtra); } catch { /* eigene Felder optional */ }
+      setEintragModal(false); setEintragForm({ ...LEER_EINTRAG }); setEintragExtra({});
       await laden_();
     } catch (e: unknown) {
       setFehler('Eintrag konnte nicht gespeichert werden: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -272,7 +282,7 @@ export default function BautagebuchPage() {
       ) : !projektId ? null : tab === 'tagebuch' ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <button onClick={() => { setEintragForm({ ...LEER_EINTRAG }); setEintragModal(true); }} style={styles.primaerBtn}>+ Neuer Eintrag</button>
+            <button onClick={() => { setEintragForm({ ...LEER_EINTRAG }); setEintragExtra({}); setEintragModal(true); }} style={styles.primaerBtn}>+ Neuer Eintrag</button>
           </div>
           {eintraege.length === 0 ? (
             <Leerzustand icon="📓" titel="Noch kein Eintrag" text="Dokumentiere den Baufortschritt als Regiebericht." schritte={["Baustelle oben wählen", "Regiebericht oben rechts anlegen", "Wetter, Arbeiten und Stunden erfassen"]} />
@@ -293,6 +303,7 @@ export default function BautagebuchPage() {
                     {e.arbeiten && <Zeile label="Geleistete Arbeiten" wert={e.arbeiten} />}
                     {e.material && <Zeile label="Material" wert={e.material} />}
                     {e.vorkommnisse && <Zeile label="Besondere Vorkommnisse" wert={e.vorkommnisse} />}
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[e.id]} />
 
                     <div style={styles.fotoBereich}>
                       <div style={styles.fotoKopf}>
@@ -324,6 +335,7 @@ export default function BautagebuchPage() {
               })}
             </div>
           )}
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
         </>
       ) : (
         <>
@@ -376,6 +388,7 @@ export default function BautagebuchPage() {
               <Feld label="Geleistete Arbeiten" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={eintragForm.arbeiten} onChange={(e) => setEintragForm((f) => ({ ...f, arbeiten: e.target.value }))} /></Feld>
               <Feld label="Material" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.material} onChange={(e) => setEintragForm((f) => ({ ...f, material: e.target.value }))} /></Feld>
               <Feld label="Besondere Vorkommnisse / Behinderungen" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.vorkommnisse} onChange={(e) => setEintragForm((f) => ({ ...f, vorkommnisse: e.target.value }))} placeholder="Verzögerungen, Nachträge, Anweisungen …" /></Feld>
+              <EigeneFelderInputs felder={felder} werte={eintragExtra} setWert={(fid, w) => setEintragExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setEintragModal(false)} disabled={eintragBusy} style={styles.ghostBtn}>Abbrechen</button>

@@ -15,6 +15,9 @@ import { markttagPdf } from "@/lib/markttagPdf";
 import { offeneBuchungen } from "@/lib/umsatzBuchung";
 import { findeArtikelId, artikelStammAusErnte, neuerBestand } from "@/lib/lagerZugang";
 import Leerzustand from "../_components/Leerzustand";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+const MODUL = 'ernte_ernte';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-6 · Ernte, Direktvermarktung & Marktstände
@@ -68,6 +71,9 @@ export default function ErnteSeite() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [finanzMeldung, setFinanzMeldung] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Verkauf-Buchung
   const [vk, setVk] = useState({ datum: heute(), ort: "", produkt_id: "", menge: "", einzelpreis: "", mwst_satz: "7" });
@@ -93,6 +99,9 @@ export default function ErnteSeite() {
     if (!p.error && p.data) setProdukte(p.data as Produkt[]);
     if (!v.error && v.data) setVerkaeufe(v.data as Verkauf[]);
     if (!s.error && s.data) setSchlaege(s.data as SchlagKurz[]); // Schlagkartei optional
+    const erRows = (!e.error && e.data ? e.data : []) as Ernte[];
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, erRows.map((r) => r.id)));
     setLaden(false);
   }
 
@@ -161,6 +170,7 @@ export default function ErnteSeite() {
   function openErnte(e?: Ernte) {
     setEEdit(e?.id ?? null);
     setEForm(e ? { schlag_id: e.schlag_id ?? "", kultur: e.kultur ?? "", datum: e.datum ?? heute(), menge: e.menge != null ? String(e.menge) : "", einheit: e.einheit ?? "kg", qualitaet: e.qualitaet ?? "", lagerort: e.lagerort ?? "", status: e.status ?? "gelagert", notiz: e.notiz ?? "" } : LEER_E);
+    setNmExtra(e ? (werteMap[e.id] ?? {}) : {});
     setFehler(null); setEModal(true);
   }
   async function speichereErnte() {
@@ -168,11 +178,18 @@ export default function ErnteSeite() {
     setBusy(true); setFehler(null);
     const payload = { schlag_id: eForm.schlag_id || null, kultur: eForm.kultur.trim(), datum: eForm.datum || null, menge: zahl(eForm.menge), einheit: eForm.einheit.trim() || null, qualitaet: eForm.qualitaet.trim() || null, lagerort: eForm.lagerort.trim() || null, status: eForm.status, notiz: eForm.notiz.trim() || null };
     let error = null as { message: string } | null;
-    if (eEdit) error = (await supabase.from("ernte_ernte").update(payload).eq("id", eEdit)).error;
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("ernte_ernte").insert(ins)).error; }
+    if (eEdit) {
+      error = (await supabase.from("ernte_ernte").update(payload).eq("id", eEdit)).error;
+      if (!error) { try { await speichereWerte(MODUL, eEdit, userId, nmExtra); } catch {} }
+    } else {
+      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+      const { data: neu, error: insErr } = await supabase.from("ernte_ernte").insert(ins).select("id").single();
+      error = insErr;
+      if (!insErr && neu) { try { await speichereWerte(MODUL, (neu as { id: string }).id, userId, nmExtra); } catch {} }
+    }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
-    setEModal(false); await ladeAlles();
+    setNmExtra({}); setEModal(false); await ladeAlles();
   }
   async function ernteStatus(e: Ernte, status: string) {
     const { error } = await supabase.from("ernte_ernte").update({ status }).eq("id", e.id);
@@ -319,6 +336,7 @@ export default function ErnteSeite() {
       ) : tab === "ernte" ? (
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><button style={btnGold} onClick={() => openErnte()}>+ Ernte erfassen</button></div>
+          {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
           {ernten.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Ernte erfasst" text="Erfasse Erntemengen je Kultur — Basis für Lager und Direktvermarktung." schritte={["Ernte oben erfassen", "Kultur, Menge und Qualität eintragen", "Bei Bedarf ins Lager buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ernten.map((e) => (
@@ -330,6 +348,7 @@ export default function ErnteSeite() {
                     <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 4 }}>
                       {dstr(e.datum)}{e.schlag_id && schlagName[e.schlag_id] ? ` · Schlag ${schlagName[e.schlag_id]}` : ""}{e.qualitaet ? ` · ${e.qualitaet}` : ""}{e.lagerort ? ` · Lager ${e.lagerort}` : ""}
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[e.id]} />
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                     {e.menge != null && e.menge > 0 && (
@@ -451,6 +470,7 @@ export default function ErnteSeite() {
               </div>
               <div><label style={label}>Status</label><select style={input} value={eForm.status} onChange={(e) => setEForm({ ...eForm, status: e.target.value })}>{ERNTE_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={eForm.notiz} onChange={(e) => setEForm({ ...eForm, notiz: e.target.value })} /></div>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>

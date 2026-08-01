@@ -9,6 +9,10 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'energie_anlagen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,10 +50,16 @@ export default function EnergiePage() {
   const [ok, setOk] = useState<string | null>(null);
   const [na, setNa] = useState({ ...LEER_A });
   const [nb, setNb] = useState({ datum: heute(), zaehlerstand: '', ertrag_kwh: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const ladeAnlagen = useCallback(async () => {
     const { data } = await supabase.from('energie_anlagen').select('id, bezeichnung, typ, standort, leistung_kw, inbetriebnahme, wartung_faellig').order('wartung_faellig', { ascending: true, nullsFirst: false });
-    setAnlagen((data as Anlage[]) ?? []);
+    const rows = (data as Anlage[]) ?? [];
+    setAnlagen(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
   const ladeAblesungen = useCallback(async (anlageId: string) => {
     const { data } = await supabase.from('energie_ablesungen').select('id, datum, zaehlerstand, ertrag_kwh').eq('anlage_id', anlageId).order('datum', { ascending: false });
@@ -73,6 +83,8 @@ export default function EnergiePage() {
       leistung_kw: na.leistung_kw ? num(na.leistung_kw) : null, inbetriebnahme: na.inbetriebnahme || null, wartung_faellig: na.wartung_faellig || null,
     }).select('id, bezeichnung, typ, standort, leistung_kw, inbetriebnahme, wartung_faellig').single();
     if (error || !data) { setFehler('Anlage konnte nicht angelegt werden.'); return; }
+    try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    setNmExtra({});
     setNa({ ...LEER_A }); setOk('Anlage gespeichert.'); await ladeAnlagen();
     setAktiv(data as Anlage); await ladeAblesungen((data as Anlage).id);
   }
@@ -107,9 +119,11 @@ export default function EnergiePage() {
           <label style={styles.lab}>kW<input style={{ ...styles.inp, width: 70 }} value={na.leistung_kw} onChange={(e) => setNa({ ...na, leistung_kw: e.target.value })} inputMode="decimal" /></label>
           <label style={styles.lab}>Inbetriebn.<input type="date" style={styles.inp} value={na.inbetriebnahme} onChange={(e) => setNa({ ...na, inbetriebnahme: e.target.value })} /></label>
           <label style={styles.lab}>Wartung fällig<input type="date" style={styles.inp} value={na.wartung_faellig} onChange={(e) => setNa({ ...na, wartung_faellig: e.target.value })} /></label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
           <button style={styles.primaer} onClick={anlageAnlegen}>＋ Anlage</button>
         </div>
       </div>
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeAnlagen} />}
 
       {laden ? <p style={styles.dim}>Lädt …</p> : (
         <div style={styles.split}>
@@ -121,6 +135,7 @@ export default function EnergiePage() {
                   <div style={{ fontWeight: 700 }}>{a.bezeichnung}</div>
                   <div style={{ color: C.textDim, fontSize: 13 }}>{a.typ || '—'}{a.leistung_kw ? ` · ${a.leistung_kw} kW` : ''}</div>
                   <div style={{ color: amp.farbe, fontSize: 12, marginTop: 3 }}>● {amp.txt}</div>
+                  <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                 </button>
               );
             })}

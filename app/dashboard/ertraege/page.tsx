@@ -17,6 +17,10 @@ import {
 import { augeErtraege } from '@/lib/auge';
 import { ertraegePdf } from '@/lib/ertraegePdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'ertrag_anlage';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -54,6 +58,9 @@ export default function ErtraegePage() {
 
   const [nAnl, setNAnl] = useState({ bezeichnung: '', typ: 'pv', standort: '', nennleistung_kwp: '', soll_spezifisch: String(SOLL_SPEZIFISCH_STD), verguetung_ct: '', strompreis_ct: '', status: 'aktiv' });
   const [nAbl, setNAbl] = useState({ anlage_id: '', von: monatsErster(), bis: heuteLokal(), ertrag_kwh: '', eigenverbrauch_kwh: '', einspeisung_kwh: '', verbrauch_kwh: '', ausfall_stunden: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nAnlExtra, setNAnlExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -62,8 +69,11 @@ export default function ErtraegePage() {
         supabase.from('ertrag_anlage').select('*').order('bezeichnung', { ascending: true }),
         supabase.from('ertrag_ablesung').select('*').order('bis', { ascending: false }),
       ]);
-      setAnlagen((a.data as Anlage[]) ?? []);
+      const aa = (a.data as Anlage[]) ?? [];
+      setAnlagen(aa);
       setAblesungen((b.data as Ablesung[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, aa.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -112,13 +122,15 @@ export default function ErtraegePage() {
     if (!uid || !nAnl.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('anl'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('ertrag_anlage').insert({
+      const { data: neu, error } = await supabase.from('ertrag_anlage').insert({
         owner_user_id: uid, bezeichnung: nAnl.bezeichnung.trim(), typ: nAnl.typ, standort: nAnl.standort.trim() || null,
         nennleistung_kwp: num(nAnl.nennleistung_kwp), soll_spezifisch: num(nAnl.soll_spezifisch),
         verguetung_ct: num(nAnl.verguetung_ct), strompreis_ct: num(nAnl.strompreis_ct), status: nAnl.status,
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nAnlExtra); } catch { /* eigene Felder optional */ }
       setNAnl({ bezeichnung: '', typ: 'pv', standort: '', nennleistung_kwp: '', soll_spezifisch: String(SOLL_SPEZIFISCH_STD), verguetung_ct: '', strompreis_ct: '', status: 'aktiv' });
+      setNAnlExtra({});
       setOk('Anlage angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -220,6 +232,7 @@ export default function ErtraegePage() {
                 <option value="aktiv">aktiv</option><option value="wartung">in Wartung</option><option value="stillgelegt">stillgelegt</option>
               </select>
             </label>
+            <EigeneFelderInputs felder={felder} werte={nAnlExtra} setWert={(fid, w) => setNAnlExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
           </div>
           {nAnl.typ === 'pv' && <div style={{ marginTop: 6, color: C.textDim, fontSize: 13 }}>Orientierung PV Deutschland: 800–1.200 kWh/kWp·a (Norden ~900, Süden ~1.100+).</div>}
           <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'anl' ? 0.6 : 1 }} disabled={busy === 'anl'} onClick={anlageAnlegen}>＋ Anlage</button>
@@ -228,12 +241,15 @@ export default function ErtraegePage() {
             <div style={{ marginTop: 12 }}>
               {anlagen.map((a) => (
                 <div key={a.id} style={styles.zeile}>
-                  <span>{a.bezeichnung} <span style={{ color: C.textDim }}>· {typLabel(a.typ)} · {a.nennleistung_kwp || 0} {typEinheit(a.typ)} · Soll {a.soll_spezifisch || 0} · {a.status}</span></span>
+                  <span style={{ minWidth: 0 }}>{a.bezeichnung} <span style={{ color: C.textDim }}>· {typLabel(a.typ)} · {a.nennleistung_kwp || 0} {typEinheit(a.typ)} · Soll {a.soll_spezifisch || 0} · {a.status}</span>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
+                  </span>
                   <button style={styles.miniX} disabled={busy === a.id} onClick={() => loesche('ertrag_anlage', a.id)}>✕</button>
                 </div>
               ))}
             </div>
           )}
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
         </div>
       )}
 
