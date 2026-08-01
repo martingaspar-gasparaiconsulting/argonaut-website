@@ -2,14 +2,10 @@
 
 // ============================================================
 // ARGONAUT OS · Präsentations-Modus (Auto-Rundgang für Frühstück/Screen)
-// NEU (v2): Ein durchgehender Rundgang am Beispiel der Bäckerei Sonnenschein.
-//   · Startet mit einem hellen Willkommens-Screen (kein Abdunkeln der Daten).
-//   · Danach 10 Stationen, je 12 Sekunden, jede mit eigener Headline, die
-//     EINEN Auftrag von Marketing bis Steuer erzählt (Catering, 1.800 €).
-//   · Feste Unterzeile unten mittig — sie springt NIE (Flex-Zentrierung statt
-//     transform), nur der Text wechselt per sanftem Überblenden.
-//   · Endlosschleife; Steuerung Pause/Zurück/Weiter/Beenden; ESC beendet.
-// Eingehängt global in app/dashboard/layout.tsx → läuft über alle Seiten.
+// Rundgang am Beispiel der Bäckerei Sonnenschein: Willkommen + 10 Stationen,
+// je 12 s, eigene Headlines, feste Unterzeile (springt nicht).
+// NEU: Die Textkarte ist VERSCHIEBBAR — oben am Griff ziehen (ideal auf Pause),
+//      Doppelklick auf den Griff setzt die Position zurück.
 // Pfad: app/dashboard/_components/PraesentationsModus.tsx
 // ============================================================
 
@@ -22,47 +18,35 @@ type Schritt = {
   titel: string;
   text: string;
   sekunden: number;
-  gross?: boolean; // Willkommen/Abschluss: großer Screen mittig
+  gross?: boolean;
 };
 
 const FIRMA = 'Bäckerei Sonnenschein';
-const SEK = 12; // Mindest-Standzeit je Seite (Wunsch: >= 12 s)
+const SEK = 12;
 
-// Der rote Faden: ein Catering-Auftrag über 1.800 € — von Anfang bis Ende.
 const SKRIPT: Schritt[] = [
   { href: '/dashboard', gross: true, kapitel: 'Willkommen', titel: 'Ihr Rundgang durch ARGONAUT OS',
     text: `Am Beispiel der ${FIRMA} begleiten wir einen echten Auftrag — von der ersten Anfrage bis zur fertigen Steuer. Lehnen Sie sich zurück, der Rundgang startet automatisch.`, sekunden: SEK },
-
   { href: '/dashboard/marketing', kapitel: '1 · Marketing', titel: 'Es beginnt mit einer Kampagne',
     text: 'Die Aktion „Frühlings-Catering 2026“ geht an die Stammkunden — so kommen neue Aufträge herein.', sekunden: SEK },
-
   { href: '/dashboard/leads', kapitel: '2 · Leads', titel: 'Eine Anfrage kommt herein',
     text: 'Die Stadtwerke Böblingen fragen: Catering für 40 Personen zum Firmenjubiläum. Die Anfrage landet automatisch als Lead im System.', sekunden: SEK },
-
   { href: '/dashboard/crm', kapitel: '3 · Kunden / CRM', titel: 'Aus der Anfrage wird ein Kunde',
     text: 'Ein Klick macht aus dem Lead einen Kunden in der Kunden-Akte — Adresse, Kontakt und Historie an einem Ort.', sekunden: SEK },
-
   { href: '/dashboard/pipeline', kapitel: '4 · Deal-Pipeline', titel: 'Der Auftrag wandert durch die Pipeline',
     text: 'Von der Anfrage über das Angebot bis „gewonnen“ — immer sichtbar, was als Nächstes zu tun ist.', sekunden: SEK },
-
   { href: '/dashboard/angebote', kapitel: '5 · Angebote', titel: 'Das Angebot steht',
     text: 'Catering-Paket Firmenjubiläum, 40 Personen, 1.800 €. Der Kunde sagt zu — Angebot angenommen.', sekunden: SEK },
-
   { href: '/dashboard/rechnungen', kapitel: '6 · Rechnungen', titel: 'Ein Klick zur Rechnung',
     text: 'Aus dem angenommenen Angebot wird per Klick die Rechnung — §14-konform, mit GiroCode zum Scannen. Nichts doppelt tippen.', sekunden: SEK },
-
   { href: '/dashboard/banking', kapitel: '7 · Banking', titel: 'Die Zahlung kommt an',
     text: '1.800 € von den Stadtwerken gehen ein — ARGONAUT erkennt die Zahlung und ordnet sie der Rechnung automatisch zu.', sekunden: SEK },
-
   { href: '/dashboard/euer', kapitel: '8 · EÜR & Steuer', titel: 'Die Steuer rechnet sich selbst',
     text: 'Der Umsatz landet automatisch in der Einnahmenüberschussrechnung — dieselben Zahlen, eine einzige Quelle.', sekunden: SEK },
-
   { href: '/dashboard/anschluesse', kapitel: '9 · Anschlüsse', titel: 'Alles sicher verbunden',
     text: 'Bank, Postfach, Marktplätze und ELSTER — an einem Ort verbunden, damit alles automatisch zusammenläuft.', sekunden: SEK },
-
   { href: '/dashboard/rezeptur', kapitel: '10 · Ihre Branche', titel: 'Für Ihre Branche gemacht',
     text: 'Die Bäckerei rechnet Rezepturen und Ausbeute — jeder Betrieb bekommt genau die Werkzeuge, die er braucht.', sekunden: SEK },
-
   { href: '/dashboard', gross: true, kapitel: 'Abschluss', titel: 'Ein System. Ein Login.',
     text: `Von der ersten Anfrage bis zur Steuer — alles greift ineinander. ARGONAUT OS für die ${FIRMA}.`, sekunden: SEK },
 ];
@@ -77,12 +61,13 @@ export default function PraesentationsModus() {
   const [aktiv, setAktiv] = useState(false);
   const [i, setI] = useState(0);
   const [pause, setPause] = useState(false);
+  const [off, setOff] = useState({ x: 0, y: 0 });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
 
   const stopp = useCallback(() => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } }, []);
   const beenden = useCallback(() => { stopp(); setAktiv(false); }, [stopp]);
 
-  // Zum aktuellen Schritt navigieren + den nächsten planen (Endlosschleife).
   useEffect(() => {
     if (!aktiv) return;
     router.push(SKRIPT[i].href);
@@ -94,7 +79,6 @@ export default function PraesentationsModus() {
     return stopp;
   }, [aktiv, i, pause, router, stopp]);
 
-  // ESC beendet.
   useEffect(() => {
     if (!aktiv) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') beenden(); };
@@ -102,9 +86,23 @@ export default function PraesentationsModus() {
     return () => window.removeEventListener('keydown', onKey);
   }, [aktiv, beenden]);
 
-  function starten() { setI(0); setPause(false); setAktiv(true); }
+  function starten() { setI(0); setPause(false); setOff({ x: 0, y: 0 }); setAktiv(true); }
   function weiter() { stopp(); setI((x) => (x + 1) % SKRIPT.length); }
   function zurueck() { stopp(); setI((x) => (x - 1 + SKRIPT.length) % SKRIPT.length); }
+
+  // --- Verschieben (Drag) der Karte ---
+  function dragStart(e: React.PointerEvent) {
+    dragRef.current = { sx: e.clientX, sy: e.clientY, ox: off.x, oy: off.y };
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* noop */ }
+  }
+  function dragMove(e: React.PointerEvent) {
+    const d = dragRef.current; if (!d) return;
+    setOff({ x: d.ox + (e.clientX - d.sx), y: d.oy + (e.clientY - d.sy) });
+  }
+  function dragEnd(e: React.PointerEvent) {
+    dragRef.current = null;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+  }
 
   if (!aktiv) {
     return (
@@ -116,9 +114,18 @@ export default function PraesentationsModus() {
 
   const s = SKRIPT[i];
 
-  // Gemeinsame Karten-Innereien (Kapitel, Titel, Text, Fortschritt, Steuerung).
   const Karte = (
     <div key={i} style={s.gross ? styles.karteGross : styles.karte}>
+      <div
+        style={styles.griff}
+        onPointerDown={dragStart}
+        onPointerMove={dragMove}
+        onPointerUp={dragEnd}
+        onDoubleClick={() => setOff({ x: 0, y: 0 })}
+        title="Zum Verschieben ziehen · Doppelklick = zurück"
+      >
+        ⠿ Verschieben
+      </div>
       <div style={styles.eyebrow}>ARGONAUT OS · {FIRMA} · {s.kapitel}</div>
       <div style={s.gross ? styles.titelGross : styles.titel}>{s.titel}</div>
       <div style={s.gross ? styles.textGross : styles.text}>{s.text}</div>
@@ -134,6 +141,14 @@ export default function PraesentationsModus() {
     </div>
   );
 
+  // Verschiebe-Offset sitzt auf dem ÄUSSEREN Wrapper, damit die Einblend-
+  // Animation der Karte die Position nicht zurücksetzt.
+  const versch = (
+    <div style={{ transform: `translate(${off.x}px, ${off.y}px)`, pointerEvents: 'none' }}>
+      {Karte}
+    </div>
+  );
+
   return (
     <>
       <style>{`
@@ -141,13 +156,10 @@ export default function PraesentationsModus() {
         @keyframes argoIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes argoFade { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
-
       {s.gross ? (
-        // Willkommen / Abschluss: großer Screen mittig, weicher Hintergrund.
-        <div style={styles.grossWrap}>{Karte}</div>
+        <div style={styles.grossWrap}>{versch}</div>
       ) : (
-        // Tour: KEIN Abdunkeln — nur die feste Unterzeile unten mittig.
-        <div style={styles.unterzeileWrap}>{Karte}</div>
+        <div style={styles.unterzeileWrap}>{versch}</div>
       )}
     </>
   );
@@ -171,17 +183,15 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', backdropFilter: 'blur(6px)',
   },
 
-  // Tour-Unterzeile: fest unten, mittig via Flex (kein transform → springt nie).
   unterzeileWrap: {
     position: 'fixed', left: 0, right: 0, bottom: '3.5vh', zIndex: 9999,
     display: 'flex', justifyContent: 'center', pointerEvents: 'none',
   },
   karte: {
-    ...cardBase, width: 'min(880px, 94vw)', padding: '18px 26px 16px',
+    ...cardBase, width: 'min(880px, 94vw)', padding: '8px 26px 16px',
     animation: 'argoIn .45s ease',
   },
 
-  // Willkommen/Abschluss: ganzflächig, weicher Schleier NUR hier (keine Daten dahinter nötig).
   grossWrap: {
     position: 'fixed', inset: 0, zIndex: 9999,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -189,10 +199,15 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: 'auto', animation: 'argoFade .4s ease',
   },
   karteGross: {
-    ...cardBase, width: 'min(820px, 92vw)', padding: '46px 52px 30px', textAlign: 'center',
+    ...cardBase, width: 'min(820px, 92vw)', padding: '10px 52px 30px', textAlign: 'center',
     animation: 'argoIn .5s ease',
   },
 
+  griff: {
+    pointerEvents: 'auto', cursor: 'grab', userSelect: 'none', touchAction: 'none',
+    textAlign: 'center', color: 'rgba(159,179,189,0.7)', fontSize: 11, fontWeight: 700,
+    letterSpacing: 1.5, textTransform: 'uppercase', padding: '4px 0 8px', marginBottom: 2,
+  },
   eyebrow: { color: C.gold, letterSpacing: 1.6, textTransform: 'uppercase', fontSize: 12, fontWeight: 800, marginBottom: 8 },
   titel: { color: C.text, fontSize: 'clamp(20px, 2.1vw, 28px)', fontWeight: 800, marginBottom: 6, lineHeight: 1.15 },
   titelGross: { color: C.text, fontSize: 'clamp(28px, 3.4vw, 44px)', fontWeight: 800, marginBottom: 14, lineHeight: 1.1 },
