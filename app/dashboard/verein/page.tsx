@@ -9,6 +9,10 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'verein_mitglieder';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -39,10 +43,16 @@ export default function VereinPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [nm, setNm] = useState({ name: '', email: '', beitrag: '', intervall: 'jahr', rolle: 'Mitglied' });
   const [nv, setNv] = useState({ titel: '', datum: heute(), ort: '', teilnehmer: '', ehrenamt_stunden: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [mWerte, setMWerte] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     const { data: m } = await supabase.from('verein_mitglieder').select('id, name, email, beitrag, intervall, rolle, status').order('name', { ascending: true });
-    setMitglieder((m as Mitglied[]) ?? []);
+    const mm = (m as Mitglied[]) ?? [];
+    setMitglieder(mm);
+    setFelder(await ladeFelder(MODUL));
+    setMWerte(await ladeWerte(MODUL, mm.map((x) => x.id)));
     const { data: v } = await supabase.from('verein_veranstaltungen').select('id, titel, datum, ort, teilnehmer, ehrenamt_stunden').order('datum', { ascending: false });
     setVeranst((v as Veranstaltung[]) ?? []);
   }, []);
@@ -59,11 +69,12 @@ export default function VereinPage() {
   async function mitgliedAnlegen() {
     if (!uid || !nm.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('verein_mitglieder').insert({
+    const { data: neu, error } = await supabase.from('verein_mitglieder').insert({
       owner_user_id: uid, name: nm.name.trim(), email: nm.email.trim() || null, beitrag: num(nm.beitrag), intervall: nm.intervall, rolle: nm.rolle.trim() || null,
-    });
-    if (error) { setFehler('Mitglied konnte nicht gespeichert werden.'); return; }
-    setNm({ name: '', email: '', beitrag: '', intervall: 'jahr', rolle: 'Mitglied' }); setOk('Mitglied gespeichert.'); await laden_();
+    }).select('id').single();
+    if (error || !neu) { setFehler('Mitglied konnte nicht gespeichert werden.'); return; }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    setNm({ name: '', email: '', beitrag: '', intervall: 'jahr', rolle: 'Mitglied' }); setNmExtra({}); setOk('Mitglied gespeichert.'); await laden_();
   }
   async function veranstAnlegen() {
     if (!uid || !nv.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
@@ -104,10 +115,12 @@ export default function VereinPage() {
               <label style={styles.lab}>Beitrag €<input style={{ ...styles.inp, width: 76 }} value={nm.beitrag} onChange={(e) => setNm({ ...nm, beitrag: e.target.value })} inputMode="decimal" /></label>
               <select style={styles.inp} value={nm.intervall} onChange={(e) => setNm({ ...nm, intervall: e.target.value })}><option value="monat">monatl.</option><option value="quartal">quartal</option><option value="jahr">jährl.</option></select>
               <input style={{ ...styles.inp, width: 120 }} value={nm.rolle} onChange={(e) => setNm({ ...nm, rolle: e.target.value })} placeholder="Rolle" />
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
               <button style={styles.primaer} onClick={mitgliedAnlegen}>＋ Mitglied</button>
             </div>
             <div style={{ color: C.textDim, fontSize: 12.5 }}>💡 Beitrags-Einzug per SEPA läuft über das Modul „👥 Mitglieder & Abos".</div>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {mitglieder.map((m) => (
@@ -115,6 +128,7 @@ export default function VereinPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{m.name} <span style={{ color: C.textDim, fontWeight: 400 }}>· {m.rolle || 'Mitglied'}</span></div>
                     <div style={{ color: C.textDim, fontSize: 13 }}>{eur(m.beitrag)} / {m.intervall} · {eur(jahresBeitrag(m))}/Jahr</div>
+                    <EigeneFelderAnzeige felder={felder} werte={mWerte[m.id]} />
                   </div>
                   <span style={{ ...styles.badge, color: m.status === 'aktiv' ? C.green : C.textDim, borderColor: m.status === 'aktiv' ? C.green : C.border }}>{m.status}</span>
                 </div>
