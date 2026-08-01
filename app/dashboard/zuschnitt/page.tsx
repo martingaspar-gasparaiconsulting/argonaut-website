@@ -15,6 +15,10 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeZuschnitt } from '@/lib/auge';
 import { zuschnittplanPdf } from '@/lib/zuschnittplanPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'zuschnitt_projekt';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -47,6 +51,9 @@ export default function ZuschnittPage() {
 
   const [np, setNp] = useState({ bezeichnung: '', material: '', stangenlaenge: '6000', saegeblatt_mm: '3', dichteKey: '', querschnitt_mm2: '' });
   const [nt, setNt] = useState({ bezeichnung: '', laenge: '', anzahl: '1' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -55,8 +62,11 @@ export default function ZuschnittPage() {
         supabase.from('zuschnitt_projekt').select('*').order('erstellt_am', { ascending: false }),
         supabase.from('zuschnitt_teil').select('*').order('erstellt_am', { ascending: true }),
       ]);
-      setProjekte((p.data as Projekt[]) ?? []);
+      const pp = (p.data as Projekt[]) ?? [];
+      setProjekte(pp);
       setTeile((t.data as Teil[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, pp.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -102,7 +112,8 @@ export default function ZuschnittPage() {
         querschnitt_mm2: np.querschnitt_mm2.trim() ? num(np.querschnitt_mm2) : null, dichte, status: 'offen',
       }).select('id').single();
       if (error) throw error;
-      setNp({ bezeichnung: '', material: '', stangenlaenge: '6000', saegeblatt_mm: '3', dichteKey: '', querschnitt_mm2: '' });
+      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNp({ bezeichnung: '', material: '', stangenlaenge: '6000', saegeblatt_mm: '3', dichteKey: '', querschnitt_mm2: '' }); setNmExtra({});
       setOk('Projekt angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('zuschnitt'); }
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -181,9 +192,11 @@ export default function ZuschnittPage() {
                 </select>
               </label>
               <label style={styles.lab}>Querschnitt (mm², für Gewicht)<input style={styles.inp} inputMode="decimal" value={np.querschnitt_mm2} onChange={(e) => setNp({ ...np, querschnitt_mm2: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'projekt' ? 0.6 : 1 }} disabled={busy === 'projekt'} onClick={projektAnlegen}>＋ Anlegen & öffnen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {projekte.length === 0 ? <Leerzustand icon="✂️" titel="Noch keine Zuschnitt-Projekte" text="Lege ein Projekt mit Teileliste an — ARGONAUT optimiert Stangenbedarf und Verschnitt." schritte={["Projekt oben anlegen", "Teile und Materiallänge erfassen", "Schnittplan optimieren lassen"]} /> : (
@@ -192,7 +205,7 @@ export default function ZuschnittPage() {
                   <tbody>
                     {projekte.map((p) => (
                       <tr key={p.id} style={{ opacity: p.status === 'erledigt' ? 0.5 : 1 }}>
-                        <td style={styles.td}>{p.bezeichnung}</td>
+                        <td style={styles.td}>{p.bezeichnung}<EigeneFelderAnzeige felder={felder} werte={werteMap[p.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{p.material || '—'}</td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>{mm(p.stangenlaenge)}</td>
                         <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{teile.filter((t) => t.projekt_id === p.id).length}</td>

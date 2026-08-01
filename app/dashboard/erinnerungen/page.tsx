@@ -18,6 +18,10 @@ import {
 } from '@/lib/erinnerungen';
 import { augeErinnerungen } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'erinnerung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,6 +67,9 @@ export default function ErinnerungenPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [ne, setNe] = useState({ ...LEER_NE });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -72,7 +79,10 @@ export default function ErinnerungenPage() {
         supabase.from('reservierung_vorgang').select('id,art,kunde_name,kontakt_id,von,status,kennzeichen').order('von', { ascending: true }),
         supabase.from('kontakte').select('*'),
       ]);
-      setErinnerungen((e.data as Erinnerung[]) ?? []);
+      const ee = (e.data as Erinnerung[]) ?? [];
+      setErinnerungen(ee);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, ee.map((r) => r.id)));
       setResVorgaenge((r.data as ResVorgang[]) ?? []);
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err: unknown) {
@@ -126,14 +136,16 @@ export default function ErinnerungenPage() {
     if (!ne.kunde_name.trim() && !ne.kontakt_id && !ne.titel.trim()) { setFehler('Bitte Titel oder Kunde angeben.'); return; }
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('erinnerung').insert({
+      const { data: neu, error } = await supabase.from('erinnerung').insert({
         owner_user_id: uid, titel: ne.titel.trim() || null, bezug_typ: ne.bezug_typ,
         bezug_id: ne.bezug_id || null, kontakt_id: ne.kontakt_id || null,
         kunde_name: ne.kunde_name.trim() || null, kanal: ne.kanal,
         faellig_am: ne.faellig_am, termin_am: ne.termin_am || null, status: 'offen',
         notiz: ne.notiz.trim() || null, email: ne.email.trim() || null,
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNmExtra({});
       setNe({ ...LEER_NE, faellig_am: jetztLokal() });
       setOk('Erinnerung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -225,9 +237,12 @@ export default function ErinnerungenPage() {
             </select>
           </label>
           <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz (optional)<input style={styles.inp} value={ne.notiz} onChange={(e) => setNe({ ...ne, notiz: e.target.value })} /></label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={anlegen}>＋ Erinnerung anlegen</button>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* ---------- ARBEITSLISTE ---------- */}
       <div style={{ display: 'flex', gap: 8, margin: '16px 0 10px' }}>
@@ -258,7 +273,7 @@ export default function ErinnerungenPage() {
                         {b === 'ueberfaellig' && <div style={{ fontSize: 12 }}>überfällig{rest != null ? ` (${Math.abs(rest)} h)` : ''}</div>}
                         {b === 'heute' && <div style={{ fontSize: 12 }}>heute</div>}
                       </td>
-                      <td style={styles.td}>{e.titel || '—'}{e.termin_am ? <div style={{ color: C.textDim, fontSize: 13 }}>Termin: {fmtZeit(e.termin_am)}</div> : ''}{e.notiz ? <div style={{ color: C.textDim, fontSize: 13 }}>{e.notiz}</div> : ''}</td>
+                      <td style={styles.td}>{e.titel || '—'}{e.termin_am ? <div style={{ color: C.textDim, fontSize: 13 }}>Termin: {fmtZeit(e.termin_am)}</div> : ''}{e.notiz ? <div style={{ color: C.textDim, fontSize: 13 }}>{e.notiz}</div> : ''}<EigeneFelderAnzeige felder={felder} werte={werteMap[e.id]} /></td>
                       <td style={{ ...styles.td, color: C.textDim }}>{e.kunde_name || kontaktName_(e.kontakt_id) || '—'}</td>
                       <td style={styles.td}>{ki.icon} <span style={{ color: C.textDim, fontSize: 13 }}>{ki.label}</span></td>
                       <td style={styles.td}><span style={{ ...styles.badge, color: FARBE[si.farbe], borderColor: FARBE[si.farbe] }}>{si.label}</span></td>

@@ -18,6 +18,9 @@ import {
   summiereJeObjekt, summiereGesamt, stundenText, eur,
   type ObjektBasis, type ObjektZeitBasis,
 } from '../_components/objektLogik';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+const MODUL = 'objekt_zeiten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -90,6 +93,9 @@ export default function ObjektzeitenPage() {
   const [zeiten, setZeiten] = useState<ZeitRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Zeitraum für die Auswertung (Monat)
   const [monat, setMonat] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
@@ -132,7 +138,10 @@ export default function ObjektzeitenPage() {
         .gte('datum', start).lte('datum', ende)
         .order('datum', { ascending: false });
       if (e2) throw e2;
-      setZeiten((z as ZeitRow[]) ?? []);
+      const zListe = (z as ZeitRow[]) ?? [];
+      setZeiten(zListe);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, zListe.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -212,7 +221,7 @@ export default function ObjektzeitenPage() {
 
     setSpeichert(true); setFehler(null);
     try {
-      const { error } = await supabase.from('objekt_zeiten').insert({
+      const { data: neu, error } = await supabase.from('objekt_zeiten').insert({
         owner_user_id: uid,
         objekt_id: zeitForm.objekt_id,
         datum: zeitForm.datum,
@@ -221,8 +230,10 @@ export default function ObjektzeitenPage() {
         stundensatz_netto: satz != null && Number.isFinite(satz) ? satz : null,
         abrechenbar: zeitForm.abrechenbar,
         notiz: zeitForm.notiz.trim() || null,
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch {}
+      setNmExtra({});
       setZeitForm(zeitLeer(zeitForm.objekt_id)); // Objekt-Auswahl beibehalten (schnelles Nachbuchen)
       await laden_();
     } catch (e: unknown) {
@@ -330,6 +341,7 @@ export default function ObjektzeitenPage() {
                 {zeitForm.abrechenbar ? 'Abrechenbar' : 'Nicht abrechenbar'}
               </button>
             </div>
+            <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={zeitSpeichern} disabled={speichert} style={{ ...styles.primaerBtn, opacity: speichert ? 0.6 : 1 }}>
                 {speichert ? 'Bucht …' : 'Zeit buchen'}
@@ -338,6 +350,8 @@ export default function ObjektzeitenPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Zeitraum + Auswertung */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 14px' }}>
@@ -429,7 +443,7 @@ export default function ObjektzeitenPage() {
                       <tr key={z.id}>
                         <td style={styles.td}>{(z.datum ?? '').split('-').reverse().join('.')}</td>
                         <td style={styles.td}>{objName(z.objekt_id ?? null)}</td>
-                        <td style={{ ...styles.td, color: C.textDim }}>{z.taetigkeit || '—'}</td>
+                        <td style={{ ...styles.td, color: C.textDim }}>{z.taetigkeit || '—'}<EigeneFelderAnzeige felder={felder} werte={werteMap[z.id]} /></td>
                         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>{stundenText(z.dauer_minuten)}</td>
                         <td style={{ ...styles.td, textAlign: 'center' }}>
                           {z.abgerechnet

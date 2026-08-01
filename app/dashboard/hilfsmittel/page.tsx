@@ -15,6 +15,10 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeHilfsmittel } from '@/lib/auge';
 import { kvPdf } from '@/lib/kvPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'hilfsmittel_versorgung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,6 +56,9 @@ export default function HilfsmittelPage() {
 
   const [nv, setNv] = useState({ versicherter: '', versicherten_nr: '', krankenkasse: '', arzt: '', verordnung_datum: H, diagnose: '' });
   const [np, setNp] = useState({ hmv_nummer: '', bezeichnung: '', menge: '1', einzelpreis: '', mehrkosten: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -60,8 +67,11 @@ export default function HilfsmittelPage() {
         supabase.from('hilfsmittel_versorgung').select('*').order('erstellt_am', { ascending: false }),
         supabase.from('hilfsmittel_position').select('*').order('position', { ascending: true }),
       ]);
-      setVersorgungen((v.data as Versorgung[]) ?? []);
+      const vv = (v.data as Versorgung[]) ?? [];
+      setVersorgungen(vv);
       setPositionen((p.data as Position[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, vv.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -93,7 +103,8 @@ export default function HilfsmittelPage() {
         arzt: nv.arzt.trim() || null, verordnung_datum: nv.verordnung_datum || null, diagnose: nv.diagnose.trim() || null, status: 'verordnet',
       }).select('id').single();
       if (error) throw error;
-      setNv({ versicherter: '', versicherten_nr: '', krankenkasse: '', arzt: '', verordnung_datum: H, diagnose: '' });
+      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNv({ versicherter: '', versicherten_nr: '', krankenkasse: '', arzt: '', verordnung_datum: H, diagnose: '' }); setNmExtra({});
       setOk('Versorgung angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('bearbeiten'); }
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -190,9 +201,11 @@ export default function HilfsmittelPage() {
               <label style={styles.lab}>Verordnender Arzt<input style={styles.inp} value={nv.arzt} onChange={(e) => setNv({ ...nv, arzt: e.target.value })} /></label>
               <label style={styles.lab}>Verordnung vom<input type="date" style={styles.inp} value={nv.verordnung_datum} onChange={(e) => setNv({ ...nv, verordnung_datum: e.target.value })} /></label>
               <label style={styles.lab}>Diagnose<input style={styles.inp} value={nv.diagnose} onChange={(e) => setNv({ ...nv, diagnose: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'versorgung' ? 0.6 : 1 }} disabled={busy === 'versorgung'} onClick={versorgungAnlegen}>＋ Anlegen & öffnen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {versorgungen.length === 0 ? <Leerzustand icon="🦽" titel="Noch keine Versorgungen" text="Erfasse Hilfsmittel-Versorgungen von der Verordnung bis zur Genehmigung." schritte={["Versorgung oben anlegen", "Positionen mit HMV-Nummer erfassen", "Kostenvoranschlag und Genehmigung dokumentieren"]} /> : (
@@ -201,7 +214,7 @@ export default function HilfsmittelPage() {
                   <tbody>
                     {versorgungen.map((v) => (
                       <tr key={v.id}>
-                        <td style={styles.td}>{v.versicherter}<div style={{ color: C.textDim, fontSize: 'clamp(12px,0.95vw,15px)' }}>{v.diagnose || ''}</div></td>
+                        <td style={styles.td}>{v.versicherter}<div style={{ color: C.textDim, fontSize: 'clamp(12px,0.95vw,15px)' }}>{v.diagnose || ''}</div><EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{v.krankenkasse || '—'}</td>
                         <td style={styles.td}><span style={{ ...styles.badge, color: STATUS_FARBE[v.status] || C.textDim, borderColor: STATUS_FARBE[v.status] || C.border }}>{STATUS_LABEL[v.status] || v.status}</span></td>
                         <td style={{ ...styles.td, textAlign: 'right' }}><button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => { setAktivId(v.id); setTab('bearbeiten'); }}>öffnen ›</button></td>

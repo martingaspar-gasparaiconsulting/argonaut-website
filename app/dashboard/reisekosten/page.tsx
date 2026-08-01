@@ -12,6 +12,10 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { verpflegung, fahrtkosten, round2, type Fahrzeug } from '@/lib/reisekosten';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'reisekosten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -48,12 +52,18 @@ export default function ReisekostenPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [form, setForm] = useState({ ...LEER });
   const [editId, setEditId] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true);
     try {
       const { data } = await supabase.from('reisekosten').select('id, reisender, anlass, ziel, abreise, rueckkehr, km, fahrzeug, fahrt_betrag, verpflegung_netto, uebernachtung, sonstige, gesamt, status').order('abreise', { ascending: false });
-      setReisen((data as Reise[]) ?? []);
+      const rows = (data as Reise[]) ?? [];
+      setReisen(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch { setFehler('Laden fehlgeschlagen. Ist das SQL eingespielt?'); }
     finally { setLaden(false); }
   }, []);
@@ -68,7 +78,7 @@ export default function ReisekostenPage() {
   }, [laden_]);
 
   function setF<K extends keyof typeof LEER>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
-  function reset() { setForm({ ...LEER }); setEditId(null); }
+  function reset() { setForm({ ...LEER }); setEditId(null); setNmExtra({}); }
 
   // ---- Regel-Ebene: live rechnen (kostenlos, sofort) ----
   const rechnung = useMemo(() => {
@@ -94,14 +104,20 @@ export default function ReisekostenPage() {
       uebernachtung, sonstige, gesamt, status: form.status, notiz: form.notiz.trim() || null, updated_at: new Date().toISOString(),
     };
     try {
-      if (editId) { const { error } = await supabase.from('reisekosten').update(payload).eq('id', editId); if (error) throw error; }
-      else { const { error } = await supabase.from('reisekosten').insert(payload); if (error) throw error; }
-      setOk('Reise gespeichert.'); reset(); await laden_();
+      if (editId) {
+        const { error } = await supabase.from('reisekosten').update(payload).eq('id', editId); if (error) throw error;
+        try { await speichereWerte(MODUL, editId, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      } else {
+        const { data: neu, error } = await supabase.from('reisekosten').insert(payload).select('id').single(); if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      }
+      setNmExtra({}); setOk('Reise gespeichert.'); reset(); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
 
   function bearbeiten(r: Reise) {
     setEditId(r.id);
+    setNmExtra(werteMap[r.id] ?? {});
     const loc = (iso: string | null) => {
       if (!iso) return '';
       const d = new Date(iso);
@@ -173,6 +189,7 @@ export default function ReisekostenPage() {
           <label style={styles.lab}>Gefahrene km<input style={styles.inp} value={form.km} onChange={(e) => setF('km', e.target.value)} inputMode="decimal" placeholder="0" /></label>
           <label style={styles.lab}>Übernachtung €<input style={styles.inp} value={form.uebernachtung} onChange={(e) => setF('uebernachtung', e.target.value)} inputMode="decimal" placeholder="tatsächliche Kosten" /></label>
           <label style={styles.lab}>Sonstiges € (Bahn, Parken …)<input style={styles.inp} value={form.sonstige} onChange={(e) => setF('sonstige', e.target.value)} inputMode="decimal" placeholder="0" /></label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
 
         <div style={styles.mahlzeiten}>
@@ -202,6 +219,8 @@ export default function ReisekostenPage() {
         </div>
       </div>
 
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+
       <div style={{ ...styles.card, marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div style={styles.cardTitel}>Reisen</div>
@@ -217,7 +236,7 @@ export default function ReisekostenPage() {
                 {reisen.map((r) => (
                   <tr key={r.id}>
                     <td style={styles.td}>{r.reisender || '—'}</td>
-                    <td style={styles.td}>{r.anlass || '—'}{r.ziel ? <span style={{ color: C.textDim }}> · {r.ziel}</span> : null}</td>
+                    <td style={styles.td}>{r.anlass || '—'}{r.ziel ? <span style={{ color: C.textDim }}> · {r.ziel}</span> : null}<EigeneFelderAnzeige felder={felder} werte={werteMap[r.id]} /></td>
                     <td style={styles.td}>{dtag(r.abreise)}{r.rueckkehr && dtag(r.rueckkehr) !== dtag(r.abreise) ? <span style={{ color: C.textDim }}> – {dtag(r.rueckkehr)}</span> : null}</td>
                     <td style={{ ...styles.tdR, fontWeight: 700 }}>{eur(r.gesamt)}</td>
                     <td style={styles.td}>

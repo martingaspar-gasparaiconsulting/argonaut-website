@@ -18,6 +18,10 @@ import {
 import { augeKanzlei } from '@/lib/auge';
 import { fristenlistePdf } from '@/lib/fristenlistePdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'kanzlei_frist';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -61,6 +65,9 @@ export default function KanzleiPage() {
   const [na, setNa] = useState({ aktenzeichen: '', mandant: '', gegner: '', rechtsgebiet: '', gegenstandswert: '', sachbearbeiter: '' });
   const [nf, setNf] = useState({ akte_id: '', bezeichnung: '', art: 'notfrist', frist_datum: H, vorfrist_tage: '7', verantwortlich: '' });
   const [rech, setRech] = useState({ entstehung: '', jahre: '3' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nfExtra, setNfExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -70,7 +77,10 @@ export default function KanzleiPage() {
         supabase.from('kanzlei_frist').select('*').order('frist_datum', { ascending: true }),
       ]);
       setAkten((a.data as Akte[]) ?? []);
-      setFristen((f.data as Frist[]) ?? []);
+      const ff = (f.data as Frist[]) ?? [];
+      setFristen(ff);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, ff.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -116,12 +126,13 @@ export default function KanzleiPage() {
     if (!nf.frist_datum) { setFehler('Bitte ein Fristdatum angeben.'); return; }
     setBusy('frist'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('kanzlei_frist').insert({
+      const { data: neu, error } = await supabase.from('kanzlei_frist').insert({
         owner_user_id: uid, akte_id: nf.akte_id, bezeichnung: nf.bezeichnung.trim(), art: nf.art, frist_datum: nf.frist_datum,
         vorfrist_tage: Math.round(num(nf.vorfrist_tage)) || VORFRIST_TAGE_STD, verantwortlich: nf.verantwortlich.trim() || null, erledigt: false,
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNf({ akte_id: '', bezeichnung: '', art: 'notfrist', frist_datum: H, vorfrist_tage: '7', verantwortlich: '' });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nfExtra); } catch { /* eigene Felder optional */ }
+      setNf({ akte_id: '', bezeichnung: '', art: 'notfrist', frist_datum: H, vorfrist_tage: '7', verantwortlich: '' }); setNfExtra({});
       setOk('Frist eingetragen.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -215,6 +226,7 @@ export default function KanzleiPage() {
                   <label style={styles.lab}>Fristdatum<input type="date" style={styles.inp} value={nf.frist_datum} onChange={(e) => setNf({ ...nf, frist_datum: e.target.value })} /></label>
                   <label style={styles.lab}>Vorfrist (Tage)<input style={styles.inp} inputMode="numeric" value={nf.vorfrist_tage} onChange={(e) => setNf({ ...nf, vorfrist_tage: e.target.value })} /></label>
                   <label style={styles.lab}>Verantwortlich<input style={styles.inp} value={nf.verantwortlich} onChange={(e) => setNf({ ...nf, verantwortlich: e.target.value })} /></label>
+                  <EigeneFelderInputs felder={felder} werte={nfExtra} setWert={(fid, w) => setNfExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
                 </div>
                 <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'frist' ? 0.6 : 1 }} disabled={busy === 'frist'} onClick={fristAnlegen}>＋ Eintragen</button>
               </>
@@ -236,6 +248,8 @@ export default function KanzleiPage() {
             )}
           </div>
 
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {fristen.length === 0 ? <Leerzustand icon="⏰" titel="Noch keine Fristen" text="Verwalte Fristen mit Vorfrist-Ampel und Verjährungs-Rechner (§195/§199 BGB)." schritte={["Frist oben anlegen", "Vorfrist und Verjährung setzen", "Ampel behält den Überblick"]} /> : (
@@ -249,7 +263,7 @@ export default function KanzleiPage() {
                         <tr key={f.id} style={{ opacity: f.erledigt ? 0.5 : 1 }}>
                           <td style={styles.td}>{fmtDatum(f.frist_datum)}{!f.erledigt && <div style={{ color: C.textDim, fontSize: 'clamp(11px,0.9vw,14px)' }}>{rest < 0 ? `${Math.abs(rest)} T über` : rest === 0 ? 'heute' : `in ${rest} T`}</div>}</td>
                           <td style={{ ...styles.td, color: C.textDim }}>{a ? (a.aktenzeichen || a.mandant) : '—'}</td>
-                          <td style={styles.td}>{f.bezeichnung}</td>
+                          <td style={styles.td}>{f.bezeichnung}<EigeneFelderAnzeige felder={felder} werte={werteMap[f.id]} /></td>
                           <td style={{ ...styles.td, color: C.textDim }}>{ART_LABEL[f.art] || f.art}</td>
                           <td style={styles.td}><FristBadge f={f} /></td>
                           <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
