@@ -89,6 +89,24 @@ export function baueSendungen(_kat: string | null | undefined, uid: string, _heu
   }));
 }
 
+/** Eingangsbelege (für Vorsteuer / EÜR / Beleg-Inbox). */
+export function baueBelege(_kat: string | null | undefined, uid: string, heute: string): Zeile[] {
+  const S = [
+    { l: 'Bürobedarf Meier', n: 120, k: 'Bürobedarf' },
+    { l: 'Tankstelle Aral', n: 85, k: 'Fahrzeugkosten' },
+    { l: 'Großhandel Weber', n: 640, k: 'Wareneinkauf' },
+    { l: 'Stadtwerke', n: 210, k: 'Nebenkosten' },
+  ];
+  return S.map((x) => {
+    const ust = Math.round(x.n * 0.19 * 100) / 100;
+    return {
+      owner_user_id: uid, lieferant: x.l, belegnummer: null, belegdatum: heute,
+      netto: x.n, ust_satz: 19, ust_betrag: ust, brutto: Math.round((x.n + ust) * 100) / 100,
+      kategorie: x.k, notiz: 'Beispiel-Beleg (Übungswelt)', datev_konto: null, datev_rahmen: null, datei_pfad: null,
+    };
+  });
+}
+
 // --- Externe Anschlüsse als „verbunden" (klar erkennbare Beispiel-Konten) ---
 // token_verschluesselt bekommt einen Demo-Platzhalter — er wird nie entschlüsselt,
 // sorgt aber dafür, dass das Anschlüsse-Cockpit „✓ verbunden" zeigt.

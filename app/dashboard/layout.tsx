@@ -8,6 +8,7 @@ import Glocke from './Glocke'
 import SwRegister from './_components/SwRegister'
 import { demoStatus, demoRestText } from '@/lib/demo'
 import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
+import PraesentationsModus from './_components/PraesentationsModus'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -155,6 +156,9 @@ export default async function DashboardLayout({
 
       {/* PULS · KI-Assistent — zentral, schwebt auf allen Seiten unten rechts */}
       <DashboardChat />
+
+      {/* Präsentations-Modus — Auto-Loop (Abdunkeln + Gold), Start-Knopf unten links */}
+      <PraesentationsModus />
 
       {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
       <SwRegister />
