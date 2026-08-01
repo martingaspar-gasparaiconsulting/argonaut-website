@@ -14,6 +14,17 @@
 @font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 300; font-display: swap; src: url('/fonts/dm-sans-300-italic.woff2') format('woff2'); }
 @font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 400; font-display: swap; src: url('/fonts/dm-sans-400-italic.woff2') format('woff2'); }
 @font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 500; font-display: swap; src: url('/fonts/dm-sans-500-italic.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/dm-sans-600.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/dm-sans-700.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 800; font-display: swap; src: url('/fonts/dm-sans-800.woff2') format('woff2'); }
+
+/* ============================================================
+   ARGONAUT · Überschriften vereinheitlicht: die Überschriften-Variable
+   --font-syne (Syne) wird app-weit auf DM Sans umgeleitet, damit ALLES
+   in einer Schrift läuft (aus einem Guss). html:root gewinnt sicher gegen
+   die next/font-Klasse. Zurückdrehen = diese eine Regel entfernen.
+   ============================================================ */
+html:root { --font-syne: 'DM Sans', system-ui, sans-serif; }
 
 /* ============================================================
    ARGONAUT · Globales Design-Baseline (Welle 1, korrigiert)
