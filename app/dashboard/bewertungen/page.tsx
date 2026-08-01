@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bewertungsanfragen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -43,6 +47,9 @@ export default function BewertungenPage() {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [kopiert, setKopiert] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const linkBasis = typeof window !== 'undefined' ? window.location.origin : 'https://www.argonaut-os.com';
 
@@ -63,7 +70,10 @@ export default function BewertungenPage() {
     try {
       const { data, error } = await supabase.from('bewertungsanfragen').select('*').order('erstellt_am', { ascending: false });
       if (error) throw error;
-      setListe((data as Anfrage[]) ?? []);
+      const rows = (data as Anfrage[]) ?? [];
+      setListe(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Bewertungen konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -77,11 +87,13 @@ export default function BewertungenPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.round(Math.random() * 1e9);
-      const { error } = await supabase.from('bewertungsanfragen').insert({
+      const { data: neu, error } = await supabase.from('bewertungsanfragen').insert({
         owner_user_id: uid, kunde_name: name.trim() || null, kunde_email: email.trim(),
         token, status: 'offen', quelle: 'manuell',
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNmExtra({});
       const link = `${linkBasis}/bewerten/${token}`;
       const res = await fetch('/api/bewertung-senden', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -151,11 +163,14 @@ export default function BewertungenPage() {
         <div style={styles.formGrid}>
           <div><label style={styles.lbl}>Name (optional)</label><input style={styles.input} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><label style={styles.lbl}>E-Mail *</label><input style={styles.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kunde@example.com" /></div>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
         </div>
         <div style={{ marginTop: 14 }}>
           <button onClick={einladen} disabled={busy} style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }}>{busy ? 'Sendet …' : '✉️ Einladung senden'}</button>
         </div>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Abgegebene Bewertungen */}
       <div style={{ ...styles.card, marginTop: 16 }}>
@@ -171,6 +186,7 @@ export default function BewertungenPage() {
                   <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{a.kunde_name || 'Kunde'} · {datumHuebsch(a.abgegeben_am)}</div>
                 </div>
                 {a.text && <div style={{ marginTop: 8, lineHeight: 1.5, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>„{a.text}"</div>}
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button onClick={() => veroeffentlichen(a, !a.veroeffentlicht)}
                     style={a.veroeffentlicht ? styles.miniBtnAktiv : styles.miniBtn}>
@@ -194,6 +210,7 @@ export default function BewertungenPage() {
                 <div>
                   <div style={{ fontWeight: 600 }}>{a.kunde_name || a.kunde_email || 'Kunde'}</div>
                   <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>eingeladen {datumHuebsch(a.erstellt_am)}</div>
+                  <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button onClick={() => kopiere(a.token)} style={styles.miniBtnGhost}>{kopiert === a.token ? '✓ Link kopiert' : 'Link kopieren'}</button>

@@ -14,6 +14,10 @@ import {
   type BelegungLite,
 } from "@/lib/raeume";
 import { belegungsplanPdf } from "@/lib/belegungsplanPdf";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import type { EigenesFeld } from "@/lib/eigeneFelder";
+
+const MODUL = "raum_ressource";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-5 · Raum-/Ressourcenbelegung (Bildung/VHS/Coworking)
@@ -61,6 +65,9 @@ export default function RaeumeSeite() {
   const [rForm, setRForm] = useState<RForm>(LEER_R);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Belegungs-Buchung
   const [bEdit, setBEdit] = useState<string | null>(null);
@@ -82,7 +89,12 @@ export default function RaeumeSeite() {
       supabase.from("raum_belegung").select("*").order("von", { ascending: true }),
       supabase.from("bildung_kurse").select("*").limit(500),
     ]);
-    if (!r.error && r.data) setRessourcen(r.data as Ressource[]);
+    if (!r.error && r.data) {
+      const rows = r.data as Ressource[];
+      setRessourcen(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((x) => x.id)));
+    }
     if (!bl.error && bl.data) setBelegungen(bl.data as Belegung[]);
     if (!ku.error && ku.data) {
       setKurse((ku.data as Record<string, unknown>[]).map((k) => ({ id: String(k.id), label: String(k.titel ?? k.bezeichnung ?? k.name ?? "Kurs") })));
@@ -115,6 +127,7 @@ export default function RaeumeSeite() {
   function openRessource(r?: Ressource) {
     setREdit(r?.id ?? null);
     setRForm(r ? { bezeichnung: r.bezeichnung ?? "", typ: r.typ ?? "raum", kapazitaet: r.kapazitaet != null ? String(r.kapazitaet) : "", standort: r.standort ?? "", ausstattung: r.ausstattung ?? "", buchbar: r.buchbar, notiz: r.notiz ?? "" } : LEER_R);
+    setNmExtra(r ? { ...(werteMap[r.id] ?? {}) } : {});
     setFehler(null); setRModal(true);
   }
   async function speichereRessource() {
@@ -122,10 +135,18 @@ export default function RaeumeSeite() {
     setBusy(true); setFehler(null);
     const payload = { bezeichnung: rForm.bezeichnung.trim(), typ: rForm.typ, kapazitaet: zahl(rForm.kapazitaet), standort: rForm.standort.trim() || null, ausstattung: rForm.ausstattung.trim() || null, buchbar: rForm.buchbar, notiz: rForm.notiz.trim() || null };
     let error = null as { message: string } | null;
+    let datensatzId: string | null = rEdit;
     if (rEdit) error = (await supabase.from("raum_ressource").update(payload).eq("id", rEdit)).error;
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("raum_ressource").insert(ins)).error; }
+    else {
+      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+      const res = await supabase.from("raum_ressource").insert(ins).select("id").single();
+      error = res.error;
+      if (res.data) datensatzId = (res.data as { id: string }).id;
+    }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
+    try { await speichereWerte(MODUL, datensatzId, userId, nmExtra); } catch { /* eigene Felder optional */ }
+    setNmExtra({});
     setRModal(false); await ladeAlles();
   }
   async function loescheRessource(r: Ressource) {
@@ -259,6 +280,7 @@ export default function RaeumeSeite() {
             <label style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 6 }}>⤓ CSV importieren<input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={onCsv} /></label>
             <button style={btnGold} onClick={() => openRessource()}>+ Ressource</button>
           </div>
+          {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
           {ressourcen.length === 0 ? <Leerzustand icon="🏫" titel="Noch keine Ressourcen" text="Lege Räume und Ausstattung an, die belegt werden können." schritte={["Ressource oben anlegen", "Typ und Kapazität erfassen", "Im Belegungsplan buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ressourcen.map((r) => (
@@ -271,6 +293,7 @@ export default function RaeumeSeite() {
                     <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 4 }}>
                       {[r.standort, r.ausstattung].filter(Boolean).join(" · ") || "—"}
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[r.id]} />
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button style={btnGhost} onClick={() => openRessource(r)}>Bearbeiten</button>
@@ -362,6 +385,9 @@ export default function RaeumeSeite() {
               <div><label style={label}>Ausstattung</label><input style={input} value={rForm.ausstattung} onChange={(e) => setRForm({ ...rForm, ausstattung: e.target.value })} placeholder="Beamer, Whiteboard…" /></div>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><input type="checkbox" checked={rForm.buchbar} onChange={(e) => setRForm({ ...rForm, buchbar: e.target.checked })} /> buchbar</label></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={rForm.notiz} onChange={(e) => setRForm({ ...rForm, notiz: e.target.value })} /></div>
+              <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
+              </div>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>

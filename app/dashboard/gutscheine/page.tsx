@@ -22,6 +22,10 @@ import {
 import { augeGutscheine } from '@/lib/auge';
 import { gutscheinPdf } from '@/lib/gutscheinPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'gutschein';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -73,6 +77,9 @@ export default function GutscheinePage() {
   const [ng, setNg] = useState({ ...LEER_NG, code: '' });
   const [einloeseZiel, setEinloeseZiel] = useState<string | null>(null);
   const [einloeseWert, setEinloeseWert] = useState('');
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -82,7 +89,10 @@ export default function GutscheinePage() {
         supabase.from('gutschein_einloesung').select('*').order('datum', { ascending: false }),
         supabase.from('kontakte').select('*'),
       ]);
-      setGutscheine((g.data as Gutschein[]) ?? []);
+      const gr = (g.data as Gutschein[]) ?? [];
+      setGutscheine(gr);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, gr.map((r) => r.id)));
       setEinloesungen((e.data as Einloesung[]) ?? []);
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err: unknown) {
@@ -147,7 +157,7 @@ export default function GutscheinePage() {
     if (info.hatNutzungen && Math.round(num(ng.nutzungen_gesamt)) <= 0) { setFehler('Bitte die Anzahl der Nutzungen angeben.'); return; }
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('gutschein').insert({
+      const { data: neu, error } = await supabase.from('gutschein').insert({
         owner_user_id: uid, code: ng.code.trim() || neuerCode(), art: ng.art, mwst_typ: ng.mwst_typ,
         wert: num(ng.wert), mwst_satz: num(ng.mwst_satz) || 19,
         nutzungen_gesamt: info.hatNutzungen ? Math.round(num(ng.nutzungen_gesamt)) : null,
@@ -155,9 +165,10 @@ export default function GutscheinePage() {
         kontakt_id: ng.kontakt_id || null, empfaenger_name: ng.empfaenger_name.trim() || null,
         anlass: ng.anlass.trim() || null, ausgestellt_am: ng.ausgestellt_am,
         gueltig_bis: ng.gueltig_bis || null, status: 'aktiv', notiz: ng.notiz.trim() || null,
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNg({ ...LEER_NG, code: neuerCode() });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNg({ ...LEER_NG, code: neuerCode() }); setNmExtra({});
       setOk('Gutschein angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -299,6 +310,7 @@ export default function GutscheinePage() {
           <label style={styles.lab}>Anlass (optional)<input style={styles.inp} value={ng.anlass} onChange={(e) => setNg({ ...ng, anlass: e.target.value })} placeholder="z. B. Geburtstag" /></label>
           <label style={styles.lab}>Ausgestellt am<input type="date" style={styles.inp} value={ng.ausgestellt_am} onChange={(e) => ausstellDatum(e.target.value)} /></label>
           <label style={styles.lab}>Gültig bis (§195 BGB)<input type="date" style={styles.inp} value={ng.gueltig_bis} onChange={(e) => setNg({ ...ng, gueltig_bis: e.target.value })} /></label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
 
         <div style={styles.hintBox}>
@@ -308,6 +320,8 @@ export default function GutscheinePage() {
         </div>
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={gutscheinAnlegen}>＋ {info.label} ausstellen</button>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* ---------- EINLÖSE-PANEL ---------- */}
       {zielG && zielLite && (
@@ -352,7 +366,7 @@ export default function GutscheinePage() {
                   const offen = st === 'aktiv';
                   return (
                     <tr key={g.id} style={{ opacity: (st === 'storniert' || st === 'eingeloest') ? 0.55 : 1 }}>
-                      <td style={styles.td}><span style={{ fontWeight: 700 }}>{g.code}</span><div style={{ color: C.textDim, fontSize: 13 }}>{ai.icon} {ai.label}{g.leistung_text ? ` · ${g.leistung_text}` : ''}</div></td>
+                      <td style={styles.td}><span style={{ fontWeight: 700 }}>{g.code}</span><div style={{ color: C.textDim, fontSize: 13 }}>{ai.icon} {ai.label}{g.leistung_text ? ` · ${g.leistung_text}` : ''}</div><EigeneFelderAnzeige felder={felder} werte={werteMap[g.id]} /></td>
                       <td style={styles.td}>{g.empfaenger_name || kontaktName_(g.kontakt_id) || '—'}{g.anlass ? <span style={{ color: C.textDim }}> · {g.anlass}</span> : ''}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}>{rest}</td>
                       <td style={{ ...styles.td, color: verfallFarbe }}>{fmtDatum(g.gueltig_bis)}{tage != null && tage >= 0 && tage <= BALD_VERFALL_TAGE ? <div style={{ fontSize: 12 }}>noch {tage} T</div> : ''}</td>

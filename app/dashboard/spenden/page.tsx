@@ -15,6 +15,10 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeSpenden } from '@/lib/auge';
 import { zuwendungPdf } from '@/lib/zuwendungPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'spende';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,6 +55,9 @@ export default function SpendenPage() {
   const JAHR = new Date().getFullYear();
 
   const [ns, setNs] = useState({ datum: H, spender_name: '', spender_anschrift: '', betrag: '', art: 'geldzuwendung', sachwert_text: '', verzicht_aufwand: false, zweck: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nsExtra, setNsExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -59,7 +66,10 @@ export default function SpendenPage() {
         supabase.from('spende').select('*').order('datum', { ascending: false }),
         supabase.from('spende_einstellung').select('*').maybeSingle(),
       ]);
-      setSpenden((s.data as Spende[]) ?? []);
+      const ss = (s.data as Spende[]) ?? [];
+      setSpenden(ss);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, ss.map((r) => r.id)));
       if (e.data) setEForm({ ...LEER_E, ...(e.data as Partial<Einstellung>) });
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
@@ -82,12 +92,14 @@ export default function SpendenPage() {
     if (!uid || !ns.spender_name.trim()) { setFehler('Bitte den Spender angeben.'); return; }
     setBusy('spende'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('spende').insert({
+      const { data: neu, error } = await supabase.from('spende').insert({
         owner_user_id: uid, datum: ns.datum, spender_name: ns.spender_name.trim(), spender_anschrift: ns.spender_anschrift.trim() || null,
         betrag: num(ns.betrag), art: ns.art, sachwert_text: ns.sachwert_text.trim() || null, verzicht_aufwand: ns.art === 'aufwandsverzicht' || ns.verzicht_aufwand,
         zweck: ns.zweck.trim() || null, bestaetigt: false,
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nsExtra); } catch { /* eigene Felder optional */ }
+      setNsExtra({});
       setNs({ datum: H, spender_name: '', spender_anschrift: '', betrag: '', art: 'geldzuwendung', sachwert_text: '', verzicht_aufwand: false, zweck: '' });
       setOk('Zuwendung erfasst.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -170,6 +182,7 @@ export default function SpendenPage() {
               <label style={styles.lab}>Betrag / Wert (€)<input style={styles.inp} inputMode="decimal" value={ns.betrag} onChange={(e) => setNs({ ...ns, betrag: e.target.value })} /></label>
               {ns.art === 'sachzuwendung' && <label style={styles.lab}>Sachwert-Beschreibung<input style={styles.inp} value={ns.sachwert_text} onChange={(e) => setNs({ ...ns, sachwert_text: e.target.value })} /></label>}
               <label style={styles.lab}>Zweck<input style={styles.inp} value={ns.zweck} onChange={(e) => setNs({ ...ns, zweck: e.target.value })} placeholder="z. B. Jugendarbeit" /></label>
+              <EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             {vorschauWorte && (
               <div style={{ ...styles.vorschau, marginTop: 12 }}>
@@ -179,6 +192,7 @@ export default function SpendenPage() {
             )}
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'spende' ? 0.6 : 1 }} disabled={busy === 'spende'} onClick={spendeAnlegen}>＋ Erfassen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {spenden.length === 0 ? <Leerzustand icon="🎗️" titel="Noch keine Zuwendungen" text="Erfasse Geld- und Sachspenden und erstelle Zuwendungsbestätigungen nach amtlichem Muster." schritte={["Zuwendung oben anlegen", "Art und Betrag erfassen", "Zuwendungsbestätigung (§50 EStDV) ausgeben"]} /> : (
@@ -188,7 +202,7 @@ export default function SpendenPage() {
                     {spenden.map((s) => (
                       <tr key={s.id}>
                         <td style={styles.td}>{fmtDatum(s.datum)}</td>
-                        <td style={styles.td}>{s.spender_name}</td>
+                        <td style={styles.td}>{s.spender_name}<EigeneFelderAnzeige felder={felder} werte={werteMap[s.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{ART_LABEL[s.art] || s.art}</td>
                         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>{eur(s.betrag)}</td>
                         <td style={styles.td}>{s.bestaetigt

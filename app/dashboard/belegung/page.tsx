@@ -12,6 +12,8 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
 import {
   ABRECHNUNGSARTEN, berechneVorgang, konflikte, zaehleBelegung, istAktuellBelegt,
   type Abrechnungsart,
@@ -23,6 +25,8 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
+
+const MODUL = 'belegung_vorgang';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -78,6 +82,9 @@ export default function BelegungPage() {
 
   const [ne, setNe] = useState({ bezeichnung: '', kategorie: '', einheit_nr: '', abrechnungsart: 'nacht' as Abrechnungsart, preis: '', grundgebuehr: '', kaution: '', max_belegung: '', mwst_satz: '7' });
   const [nv, setNv] = useState({ einheit_id: '', kontakt_id: '', gast_name: '', von: H, bis: plusTage(H, 1), anzahl_gaeste: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -88,7 +95,10 @@ export default function BelegungPage() {
         supabase.from('kontakte').select('*'),
       ]);
       setEinheiten((e.data as Einheit[]) ?? []);
-      setVorgaenge((v.data as Vorgang[]) ?? []);
+      const vv = (v.data as Vorgang[]) ?? [];
+      setVorgaenge(vv);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, vv.map((r) => r.id)));
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((p, q) => p.name.localeCompare(q.name)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
@@ -161,17 +171,19 @@ export default function BelegungPage() {
     if (vorschau && !vorschau.frei) { setFehler('Dieser Zeitraum ist für die Einheit bereits belegt.'); return; }
     setBusy('vorgang'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('belegung_vorgang').insert({
+      const { data: neu, error } = await supabase.from('belegung_vorgang').insert({
         owner_user_id: uid, einheit_id: e.id, kontakt_id: nv.kontakt_id || null, gast_name: nv.gast_name.trim() || null,
         von: nv.von, bis: nv.bis, anzahl_gaeste: nv.anzahl_gaeste.trim() ? Math.round(num(nv.anzahl_gaeste)) : null,
         preis_pro_einheit: e.preis_pro_einheit, grundgebuehr: e.grundgebuehr, kaution: e.kaution, mwst_satz: e.mwst_satz,
         status: 'reserviert',
-      });
+      }).select('id').single();
       if (error) {
         // 23P01 = exclusion_violation → Doppelbelegung durch DB verhindert
         if ((error as { code?: string }).code === '23P01') { setFehler('Dieser Zeitraum ist für die Einheit bereits belegt (von der Datenbank gesperrt).'); return; }
         throw error;
       }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNmExtra({});
       setNv({ einheit_id: '', kontakt_id: '', gast_name: '', von: H, bis: plusTage(H, 1), anzahl_gaeste: '' });
       setOk('Belegung reserviert.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -267,6 +279,7 @@ export default function BelegungPage() {
                     <input type={selArt === 'stunde' ? 'datetime-local' : 'date'} style={styles.inp} value={nv.bis} onChange={(e) => setNv({ ...nv, bis: e.target.value })} />
                   </label>
                   <label style={styles.lab}>Personen (optional)<input style={styles.inp} inputMode="numeric" value={nv.anzahl_gaeste} onChange={(e) => setNv({ ...nv, anzahl_gaeste: e.target.value })} /></label>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
                 </div>
                 {vorschau && (
                   <div style={{ ...styles.vorschau, borderColor: vorschau.frei ? C.border : C.danger }}>
@@ -280,6 +293,8 @@ export default function BelegungPage() {
               </>
             )}
           </div>
+
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
@@ -298,7 +313,7 @@ export default function BelegungPage() {
                       return (
                         <tr key={v.id} style={{ opacity: v.status === 'storniert' ? 0.5 : 1 }}>
                           <td style={styles.td}>{e?.bezeichnung ?? '—'}</td>
-                          <td style={{ ...styles.td, color: C.textDim }}>{v.gast_name || kontaktName_(v.kontakt_id) || '—'}</td>
+                          <td style={{ ...styles.td, color: C.textDim }}>{v.gast_name || kontaktName_(v.kontakt_id) || '—'}<EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} /></td>
                           <td style={styles.td}>{zeige(v.von, art)} – {zeige(v.bis, art)} <span style={{ color: C.textDim }}>({p.menge} {ART_LABEL[art]})</span></td>
                           <td style={{ ...styles.td, textAlign: 'right', color: C.gold, fontWeight: 700 }}>{eur(p.brutto)}</td>
                           <td style={styles.td}><span style={{ ...styles.badge, color: sm.farbe, borderColor: sm.farbe }}>{sm.label}</span></td>

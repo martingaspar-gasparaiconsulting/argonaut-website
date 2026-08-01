@@ -16,6 +16,9 @@ import {
   type MerkmalLite,
 } from "@/lib/chargen";
 import { chargenPdf } from "@/lib/chargenPdf";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+const MODUL = 'charge_los';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-3 · Serien-/Chargen- & Prüfplan-Tiefe (Industrie)
@@ -87,6 +90,10 @@ export default function ChargenSeite() {
   const [selPruef, setSelPruef] = useState<string | null>(null);
   const [mk, setMk] = useState({ merkmal: "", sollwert: "", toleranz_minus: "", toleranz_plus: "", istwert: "", einheit: "" });
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -106,6 +113,7 @@ export default function ChargenSeite() {
       supabase.from("artikel").select("id, bezeichnung").eq("aktiv", true).order("bezeichnung", { ascending: true }),
     ]);
     if (!l.error && l.data) setLos(l.data as Los[]);
+    { const rows = (l.data as Los[]) ?? []; setFelder(await ladeFelder(MODUL)); setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id))); }
     if (!v.error && v.data) setVerwendungen(v.data as Verwendung[]);
     if (!p.error && p.data) setPruefungen(p.data as Pruefung[]);
     if (!m.error && m.data) setMerkmale(m.data as Merkmal[]);
@@ -133,7 +141,7 @@ export default function ChargenSeite() {
 
   // ---------------- Charge CRUD ----------------
   function setF<K extends keyof LosForm>(k: K, w: LosForm[K]) { setForm((f) => ({ ...f, [k]: w })); }
-  function oeffneNeu() { setEditId(null); setForm(LEER_LOS); setFehler(null); setModal(true); }
+  function oeffneNeu() { setEditId(null); setForm(LEER_LOS); setNmExtra({}); setFehler(null); setModal(true); }
   function oeffneBearbeiten(l: Los) {
     setEditId(l.id);
     setForm({
@@ -142,6 +150,7 @@ export default function ChargenSeite() {
       herstell_datum: l.herstell_datum ?? "", mhd: l.mhd ?? "", herkunft: l.herkunft ?? "", auftrag: l.auftrag ?? "",
       status: l.status ?? "freigegeben", bemerkung: l.bemerkung ?? "",
     });
+    setNmExtra(werteMap[l.id] ?? {});
     setFehler(null); setModal(true);
   }
   async function speichere() {
@@ -154,10 +163,17 @@ export default function ChargenSeite() {
       auftrag: form.auftrag.trim() || null, status: form.status || "freigegeben", bemerkung: form.bemerkung.trim() || null,
     };
     let error = null as { message: string } | null;
+    let datensatzId: string | null = editId;
     if (editId) { error = (await supabase.from("charge_los").update(payload).eq("id", editId)).error; }
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("charge_los").insert(ins)).error; }
+    else {
+      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+      const res = await supabase.from("charge_los").insert(ins).select('id').single();
+      error = res.error; datensatzId = res.data ? (res.data as { id: string }).id : null;
+    }
     setSpeichern(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
+    try { await speichereWerte(MODUL, datensatzId, userId, nmExtra); } catch { /* eigene Felder optional */ }
+    setNmExtra({});
     setModal(false); await ladeAlles();
   }
   async function statusSetzen(l: Los, status: string) {
@@ -290,6 +306,8 @@ export default function ChargenSeite() {
         </div>
       )}
 
+      {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
+
       <div style={{ margin: "16px 0 14px" }}>
         <input style={{ ...input, maxWidth: 360 }} placeholder="Suche: Chargen-Nr., Bezeichnung, Auftrag…" value={suche} onChange={(e) => setSuche(e.target.value)} />
       </div>
@@ -323,6 +341,7 @@ export default function ChargenSeite() {
                       {l.menge != null && <> · {num(l.menge)} {l.einheit} (offen {num(rest)})</>}
                       {l.mhd && <> · MHD <span style={{ color: mhdFarbe(ms), fontWeight: 700 }}>{dstr(l.mhd)}</span></>}
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[l.id]} />
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button style={btnGhost} onClick={() => { setOffen(istOffen ? null : l.id); setSelPruef(null); }}>{istOffen ? "▲ Details" : "▼ Details"}</button>
@@ -478,6 +497,7 @@ export default function ChargenSeite() {
               <div><label style={label}>Auftrag / Los</label><input style={input} value={form.auftrag} onChange={(e) => setF("auftrag", e.target.value)} /></div>
               <div><label style={label}>Status</label><select style={input} value={form.status} onChange={(e) => setF("status", e.target.value)}>{CHARGE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s].text}</option>)}</select></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Bemerkung</label><input style={input} value={form.bemerkung} onChange={(e) => setF("bemerkung", e.target.value)} /></div>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
