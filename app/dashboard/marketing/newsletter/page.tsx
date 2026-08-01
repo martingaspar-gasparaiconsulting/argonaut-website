@@ -3,6 +3,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { emailNormalisieren, istEmailGueltig, zaehleAbonnenten } from '@/lib/newsletter';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'newsletter_abonnenten';
 
 // ============================================================
 // ARGONAUT OS · MARKETING · Newsletter (Punkt 29a + 29b)
@@ -60,6 +64,10 @@ export default function NewsletterAbonnenten() {
   const [versandListe, setVersandListe] = useState<Versand[]>([]);
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const [fEmail, setFEmail] = useState('');
   const [fName, setFName] = useState('');
@@ -154,7 +162,12 @@ export default function NewsletterAbonnenten() {
       setFehler(error.message);
       setListe([]);
     } else {
-      setListe((data ?? []) as Abonnent[]);
+      const rows = (data ?? []) as Abonnent[];
+      setListe(rows);
+      const { data: auth } = await supabase.auth.getUser();
+      setUid(auth?.user?.id ?? null);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     }
     const { data: vData } = await supabase
       .from('newsletter_versand')
@@ -179,22 +192,24 @@ export default function NewsletterAbonnenten() {
       return;
     }
     setSpeichern(true);
-    const { error } = await supabase.from('newsletter_abonnenten').insert({
+    const { data: neu, error } = await supabase.from('newsletter_abonnenten').insert({
       email,
       name: fName.trim() || null,
       quelle: 'manuell',
-    });
+    }).select('id').single();
     setSpeichern(false);
-    if (error) {
-      if ((error as { code?: string }).code === '23505') {
+    if (error || !neu) {
+      if ((error as { code?: string })?.code === '23505') {
         setHinweis('Diese E-Mail steht bereits in deiner Liste.');
       } else {
-        setHinweis('Fehler beim Speichern: ' + error.message);
+        setHinweis('Fehler beim Speichern: ' + (error?.message ?? ''));
       }
       return;
     }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
     setFEmail('');
     setFName('');
+    setNmExtra({});
     laden();
   }
 
@@ -417,6 +432,7 @@ export default function NewsletterAbonnenten() {
               <label style={labelStyle}>Name (optional)</label>
               <input value={fName} onChange={(e) => setFName(e.target.value)} placeholder="z. B. Maria Muster" style={inputStyle} />
             </div>
+            <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStyle} labStyle={labelStyle} />
             <button
               onClick={hinzufuegen}
               disabled={speichern}
@@ -431,6 +447,8 @@ export default function NewsletterAbonnenten() {
             </p>
           )}
         </div>
+
+        {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden} />}
 
         {/* Abonnenten-Liste */}
         {loading ? (
@@ -468,6 +486,7 @@ export default function NewsletterAbonnenten() {
                       <span>Quelle: {a.quelle ?? '—'}</span>
                       <span>Seit: {fmtDatum(a.angemeldet_am)}</span>
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                     {abgemeldet ? (
