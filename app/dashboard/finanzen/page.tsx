@@ -28,7 +28,6 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-type Zahlung = { betrag: number; zahlungsdatum: string; rechnung_id: string };
 type Rechnung = {
   id: string;
   netto_summe: number;
@@ -36,9 +35,10 @@ type Rechnung = {
   brutto_summe: number;
   bezahlter_betrag: number;
   zahlungsstatus: string;
+  bezahlt_am: string | null;
   faelligkeitsdatum: string | null;
 };
-type Ausgabe = { betrag_brutto: number; mwst_satz: number; ausgabedatum: string };
+type Beleg = { netto: number; belegdatum: string | null };
 
 function eur(n: number | null | undefined): string {
   const v = typeof n === "number" ? n : 0;
@@ -69,9 +69,8 @@ export default function FinanzCockpit() {
 
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [zahlungen, setZahlungen] = useState<Zahlung[]>([]);
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
-  const [ausgaben, setAusgaben] = useState<Ausgabe[]>([]);
+  const [belege, setBelege] = useState<Beleg[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -85,19 +84,16 @@ export default function FinanzCockpit() {
         return;
       }
       try {
-        const [zRes, rRes, aRes] = await Promise.all([
-          supabase.from("zahlungen").select("betrag,zahlungsdatum,rechnung_id"),
+        const [rRes, bRes] = await Promise.all([
           supabase
             .from("rechnungen")
-            .select("id,netto_summe,mwst_summe,brutto_summe,bezahlter_betrag,zahlungsstatus,faelligkeitsdatum"),
-          supabase.from("ausgaben").select("betrag_brutto,mwst_satz,ausgabedatum"),
+            .select("id,netto_summe,mwst_summe,brutto_summe,bezahlter_betrag,zahlungsstatus,bezahlt_am,faelligkeitsdatum"),
+          supabase.from("eingangsbelege").select("netto,belegdatum"),
         ]);
-        if (zRes.error) throw zRes.error;
         if (rRes.error) throw rRes.error;
-        if (aRes.error) throw aRes.error;
-        setZahlungen((zRes.data as Zahlung[]) || []);
+        if (bRes.error) throw bRes.error;
         setRechnungen((rRes.data as Rechnung[]) || []);
-        setAusgaben((aRes.data as Ausgabe[]) || []);
+        setBelege((bRes.data as Beleg[]) || []);
       } catch (e: any) {
         setFehler(e?.message || "Fehler beim Laden der Finanzdaten.");
       }
@@ -107,27 +103,19 @@ export default function FinanzCockpit() {
   }, []);
 
   const kpis = useMemo(() => {
-    const rMap: Record<string, Rechnung> = {};
-    rechnungen.forEach((r) => (rMap[r.id] = r));
-
+    // Einnahmen = bezahlte Rechnungen nach Zufluss-Prinzip — dieselbe Quelle wie EÜR/ELSTER.
     let einnahmenNetto = 0;
-    for (const z of zahlungen) {
-      if (jahrVon(z.zahlungsdatum) !== jahr) continue;
-      const betrag = Number(z.betrag) || 0;
-      const r = z.rechnung_id ? rMap[z.rechnung_id] : undefined;
-      if (r && Number(r.brutto_summe) > 0) {
-        einnahmenNetto += betrag * (Number(r.netto_summe) / Number(r.brutto_summe));
-      } else {
-        einnahmenNetto += betrag;
-      }
+    for (const r of rechnungen) {
+      if (r.zahlungsstatus !== "bezahlt") continue;
+      if (jahrVon(r.bezahlt_am || "") !== jahr) continue;
+      einnahmenNetto += Number(r.netto_summe) || 0;
     }
 
+    // Ausgaben = Eingangsbelege / OCR-Inbox (netto) — dieselbe Quelle wie EÜR/ELSTER.
     let ausgabenNetto = 0;
-    for (const a of ausgaben) {
-      if (jahrVon(a.ausgabedatum) !== jahr) continue;
-      const brutto = Number(a.betrag_brutto) || 0;
-      const satz = Number(a.mwst_satz) || 0;
-      ausgabenNetto += brutto / (1 + satz / 100);
+    for (const b of belege) {
+      if (jahrVon(b.belegdatum || "") !== jahr) continue;
+      ausgabenNetto += Number(b.netto) || 0;
     }
 
     // Offene Forderungen (nicht bezahlt/storniert)
@@ -150,7 +138,7 @@ export default function FinanzCockpit() {
       offen: r2(offen),
       ueberfaelligAnzahl,
     };
-  }, [zahlungen, rechnungen, ausgaben, jahr]);
+  }, [rechnungen, belege, jahr]);
 
   const tools = [
     { icon: "💶", titel: "Ausgaben", text: "Belege erfassen & kategorisieren", href: "/dashboard/finanzen/ausgaben", farbe: C.warn },
@@ -275,8 +263,8 @@ export default function FinanzCockpit() {
             </div>
 
             <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 24, lineHeight: 1.5 }}>
-              Alle Werte netto nach Zufluss-/Abfluss-Prinzip. Der Banking-Abgleich (automatischer
-              Kontoimport) folgt in einer späteren Ausbaustufe.
+              Alle Werte netto nach Zufluss-/Abfluss-Prinzip: Einnahmen aus bezahlten Rechnungen,
+              Ausgaben aus der Beleg-Inbox (OCR) — dieselbe Grundlage wie EÜR und Umsatzsteuer.
             </p>
           </>
         )}

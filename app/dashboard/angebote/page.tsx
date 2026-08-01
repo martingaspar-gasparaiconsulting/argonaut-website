@@ -61,6 +61,7 @@ export default function AngebotePage() {
 
   // Formular
   const [kunde, setKunde] = useState('');
+  const [kontaktId, setKontaktId] = useState('');
   const [titel, setTitel] = useState('Angebot');
   const [gueltig, setGueltig] = useState(heutePlus(30));
   const [positionen, setPositionen] = useState<Pos[]>([{ ...LEER_POS }]);
@@ -104,10 +105,10 @@ export default function AngebotePage() {
     if (!posClean.length) { setFehler('Bitte mindestens eine Position erfassen.'); return; }
     setBusy('neu'); setFehler(null); setOk(null);
     try {
-      const treffer = kontakte.find((k) => k.name === kunde.trim());
+      const gewaehlt = kontakte.find((k) => k.id === kontaktId) || kontakte.find((k) => k.name === kunde.trim());
       const s = rechne(posClean);
       const { data: ang, error } = await supabase.from('angebote').insert({
-        owner_user_id: uid, kontakt_id: treffer?.id ?? null, kunde_name: kunde.trim(), kunde_email: treffer?.email || null,
+        owner_user_id: uid, kontakt_id: gewaehlt?.id ?? null, kunde_name: kunde.trim(), kunde_email: gewaehlt?.email || null,
         titel: titel.trim() || 'Angebot', status: 'entwurf', gueltig_bis: gueltig || null,
         netto_summe: s.netto, mwst_summe: s.mwst, brutto_summe: s.brutto, notiz: notiz.trim() || null,
       }).select('id, token').single();
@@ -122,7 +123,7 @@ export default function AngebotePage() {
       if (pErr) { await supabase.from('angebote').delete().eq('id', ang.id); setFehler('Positionen konnten nicht gespeichert werden.'); return; }
 
       setOk('Angebot erstellt. Zusage-Link ist jetzt bereit zum Kopieren.');
-      setKunde(''); setTitel('Angebot'); setPositionen([{ ...LEER_POS }]); setNotiz(''); setGueltig(heutePlus(30));
+      setKunde(''); setKontaktId(''); setTitel('Angebot'); setPositionen([{ ...LEER_POS }]); setNotiz(''); setGueltig(heutePlus(30));
       await laden_();
     } finally { setBusy(null); }
   }
@@ -187,8 +188,11 @@ export default function AngebotePage() {
       <div style={styles.card}>
         <div style={styles.row2}>
           <label style={styles.lab}>Kunde
-            <input list="kl" style={styles.inp} value={kunde} onChange={(e) => setKunde(e.target.value)} placeholder="Name / Firma" />
-            <datalist id="kl">{kontakte.map((k) => <option key={k.id} value={k.name} />)}</datalist>
+            <select style={styles.inp} value={kontaktId} onChange={(e) => { const id = e.target.value; setKontaktId(id); const k = kontakte.find((x) => x.id === id); if (k) setKunde(k.name); }}>
+              <option value="">— Kontakt wählen —</option>
+              {kontakte.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+            </select>
+            <input style={styles.inp} value={kunde} onChange={(e) => { setKunde(e.target.value); setKontaktId(''); }} placeholder="oder Name frei eingeben" />
           </label>
           <label style={styles.lab}>Titel
             <input style={styles.inp} value={titel} onChange={(e) => setTitel(e.target.value)} />

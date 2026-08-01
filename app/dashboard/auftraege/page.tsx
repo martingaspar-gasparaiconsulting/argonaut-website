@@ -54,6 +54,7 @@ const STATUS_REIHENFOLGE: StatusKey[] = [
 ];
 
 const PHASE: Record<string, { label: string; farbe: string }> = {
+  lead: { label: "Lead", farbe: C.textDim },
   erstkontakt: { label: "Erstkontakt", farbe: C.textDim },
   qualifiziert: { label: "Qualifiziert", farbe: C.cyan },
   angebot: { label: "Angebot", farbe: C.warn },
@@ -67,6 +68,7 @@ const PHASE_RANG: Record<string, number> = {
   angebot: 2,
   qualifiziert: 3,
   erstkontakt: 4,
+  lead: 5,
   verloren: 9,
 };
 
@@ -219,10 +221,10 @@ export default function AuftraegeCockpit() {
     setChancenLoading(true);
     setFehler(null);
     const { data, error } = await supabase
-      .from("verkaufschancen")
-      .select("id, titel, wert, waehrung, kontakt_id, firma_id, phase")
+      .from("crm_deal")
+      .select("id, titel, wert:wert_netto, kontakt_id, phase:stufe, auftrag_id")
       .is("auftrag_id", null)
-      .neq("phase", "verloren");
+      .neq("stufe", "verloren");
 
     if (error) {
       setFehler(error.message);
@@ -247,8 +249,8 @@ export default function AuftraegeCockpit() {
 
     // Phase & Daten IM MOMENT DES KLICKS frisch laden — verhindert Timing-Fehler
     const { data: fresh, error: fErr } = await supabase
-      .from("verkaufschancen")
-      .select("id, titel, wert, waehrung, kontakt_id, firma_id, phase, auftrag_id")
+      .from("crm_deal")
+      .select("id, titel, wert:wert_netto, kontakt_id, phase:stufe, auftrag_id")
       .eq("id", ch.id)
       .single();
 
@@ -332,7 +334,7 @@ export default function AuftraegeCockpit() {
 
     // 4) Chance verknüpfen
     await supabase
-      .from("verkaufschancen")
+      .from("crm_deal")
       .update({ auftrag_id: auftragId })
       .eq("id", f.id);
 
