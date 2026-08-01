@@ -5,13 +5,13 @@ import { verschluessele, encKeyBereit } from '@/lib/crypto';
 
 // ============================================================================
 // ARGONAUT OS · Banking 11 · app/api/banking/verbindung/route.ts
-// Speichert den Bank-Aggregator-Zugang (finAPI) je Betrieb — anschlussfertig,
-// aber der Auto-Abruf ist noch „in Aufbau". Bis dahin läuft der CSV-Abgleich.
-//   GET    -> { verbunden, encKeyBereit }
-//   POST {client_id, secret} -> Secret verschluesselt in bank_zugang
-//   DELETE -> trennen
-// Secret NIE an den Client. bank_zugang ist per RLS nur der Service-Role
-// zugaenglich. Muster wie ads-/versand-verbindung.
+// MEHRBANK-fähig: beliebig viele Bank-Zugänge (finAPI) je Betrieb — jeder mit
+// eigenem Namen. Anschlussfertig, Auto-Abruf noch „in Aufbau". CSV-Abgleich
+// läuft parallel. Secret verschluesselt (AES-256-GCM), nie an den Client.
+// bank_zugang ist per RLS nur der Service-Role zugaenglich.
+//   GET    -> { verbindungen: [{id, bank_name, verbunden}], encKeyBereit }
+//   POST {bank_name, client_id, secret} -> neuen Zugang anlegen
+//   DELETE ?id=.. -> diesen Zugang entfernen (owner-hart)
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -30,13 +30,15 @@ export async function GET() {
   if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
   const admin = createAdminClient();
   const { data } = await admin.from('bank_zugang')
-    .select('konto_id, token_verschluesselt, verbunden')
-    .eq('owner_user_id', uid).eq('aggregator', AGGREGATOR).maybeSingle();
-  return NextResponse.json({
-    ok: true,
-    verbunden: data?.verbunden === true && !!data?.token_verschluesselt,
-    encKeyBereit: encKeyBereit(),
-  });
+    .select('id, bank_name, verbunden, token_verschluesselt')
+    .eq('owner_user_id', uid).eq('aggregator', AGGREGATOR)
+    .order('bank_name', { ascending: true });
+  const verbindungen = ((data as unknown as Array<Record<string, unknown>>) ?? []).map((r) => ({
+    id: String(r.id),
+    bank_name: (r.bank_name as string) || 'Bank',
+    verbunden: r.verbunden === true && !!r.token_verschluesselt,
+  }));
+  return NextResponse.json({ ok: true, verbindungen, encKeyBereit: encKeyBereit() });
 }
 
 export async function POST(req: Request) {
@@ -48,6 +50,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
 
+  const bank_name = (body.bank_name || '').toString().trim().slice(0, 120) || 'Bank';
   const client_id = (body.client_id || '').toString().trim().slice(0, 200);
   const secret = (body.secret || '').toString().trim();
   if (!client_id) return NextResponse.json({ ok: false, error: 'Bitte die finAPI Client-ID eingeben.' }, { status: 400 });
@@ -58,21 +61,23 @@ export async function POST(req: Request) {
   catch (e) { return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : 'Verschlüsselung fehlgeschlagen.' }, { status: 500 }); }
 
   const admin = createAdminClient();
-  const { error } = await admin.from('bank_zugang').upsert(
-    { owner_user_id: uid, aggregator: AGGREGATOR, konto_id: client_id, token_verschluesselt, verbunden: true, geprueft_am: new Date().toISOString() },
-    { onConflict: 'owner_user_id,aggregator' },
-  );
+  const { error } = await admin.from('bank_zugang').insert({
+    owner_user_id: uid, aggregator: AGGREGATOR, bank_name, konto_id: client_id,
+    token_verschluesselt, verbunden: true, geprueft_am: new Date().toISOString(),
+  });
   if (error) return NextResponse.json({ ok: false, error: 'Speichern fehlgeschlagen.' }, { status: 500 });
-  return NextResponse.json({ ok: true, verbunden: true });
+  return NextResponse.json({ ok: true });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const uid = await userId();
   if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const id = (new URL(req.url).searchParams.get('id') || '').trim();
+  if (!id) return NextResponse.json({ ok: false, error: 'Kein Zugang angegeben.' }, { status: 400 });
+
   const admin = createAdminClient();
   const { error } = await admin.from('bank_zugang')
-    .update({ token_verschluesselt: null, verbunden: false, geprueft_am: null })
-    .eq('owner_user_id', uid).eq('aggregator', AGGREGATOR);
+    .delete().eq('id', id).eq('owner_user_id', uid).eq('aggregator', AGGREGATOR);
   if (error) return NextResponse.json({ ok: false, error: 'Trennen fehlgeschlagen.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

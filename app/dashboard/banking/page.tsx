@@ -34,11 +34,12 @@ export default function BankingSeite() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [erledigt, setErledigt] = useState<Set<string>>(new Set());
-  // Bank-Verbindung (in Aufbau)
+  // Bank-Verbindungen (Mehrbank, in Aufbau)
+  const [verbindungen, setVerbindungen] = useState<Array<{ id: string; bank_name: string; verbunden: boolean }>>([]);
   const [verbAuf, setVerbAuf] = useState(false);
+  const [bankName, setBankName] = useState('');
   const [clientId, setClientId] = useState('');
   const [secret, setSecret] = useState('');
-  const [verbunden, setVerbunden] = useState(false);
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -52,7 +53,7 @@ export default function BankingSeite() {
       })));
       try {
         const rv = await fetch('/api/banking/verbindung'); const jv = await rv.json();
-        if (jv?.ok) setVerbunden(!!jv.verbunden);
+        if (jv?.ok) setVerbindungen(Array.isArray(jv.verbindungen) ? jv.verbindungen : []);
       } catch { /* egal */ }
     } catch (e) {
       setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -96,15 +97,29 @@ export default function BankingSeite() {
     finally { setBusy(null); }
   }
 
+  async function verbindungenLaden() {
+    try { const rv = await fetch('/api/banking/verbindung'); const jv = await rv.json(); if (jv?.ok) setVerbindungen(Array.isArray(jv.verbindungen) ? jv.verbindungen : []); } catch { /* egal */ }
+  }
   async function bankVerbinden() {
     if (!clientId.trim() || !secret.trim()) { setFehler('Bitte Client-ID und Secret eingeben.'); return; }
     setBusy('verb'); setFehler(null);
     try {
-      const r = await fetch('/api/banking/verbindung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: clientId.trim(), secret: secret.trim() }) });
+      const r = await fetch('/api/banking/verbindung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bank_name: bankName.trim(), client_id: clientId.trim(), secret: secret.trim() }) });
       const j = await r.json();
       if (!j?.ok) { setFehler(j?.error || 'Verbinden fehlgeschlagen.'); return; }
-      setClientId(''); setSecret(''); setVerbAuf(false); setVerbunden(true);
+      setBankName(''); setClientId(''); setSecret(''); setVerbAuf(false);
       setOk('Bank-Zugang gespeichert. Der automatische Abruf wird gerade finalisiert.');
+      await verbindungenLaden();
+    } finally { setBusy(null); }
+  }
+  async function bankTrennen(id: string) {
+    if (!window.confirm('Diesen Bank-Zugang wirklich entfernen?')) return;
+    setBusy('verb'); setFehler(null);
+    try {
+      const r = await fetch(`/api/banking/verbindung?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const j = await r.json();
+      if (!j?.ok) { setFehler(j?.error || 'Trennen fehlgeschlagen.'); return; }
+      await verbindungenLaden();
     } finally { setBusy(null); }
   }
 
@@ -119,23 +134,36 @@ export default function BankingSeite() {
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
 
-      {/* Bankverbindung (in Aufbau) */}
+      {/* Bankverbindungen (Mehrbank, in Aufbau) */}
       <div style={styles.verbBox}>
         <span style={styles.beta}>in Aufbau</span>
-        {verbunden
-          ? <span style={{ color: C.green, fontWeight: 700 }}>✓ Bank-Zugang hinterlegt · automatischer Abruf folgt</span>
-          : <span style={{ color: C.textDim, fontSize: 13.5 }}>🔗 Automatische Bankanbindung (finAPI) — Zugang schon jetzt hinterlegbar, der Auto-Abruf wird gerade finalisiert.</span>}
+        <span style={{ color: C.textDim, fontSize: 13.5 }}>🔗 Automatische Bankanbindung (finAPI) — mehrere Banken hinterlegbar, der Auto-Abruf wird gerade finalisiert.</span>
         <span style={{ flex: 1 }} />
-        <button style={styles.mini} onClick={() => setVerbAuf((v) => !v)}>{verbAuf ? 'Abbrechen' : (verbunden ? 'Zugang ändern' : 'Bank verbinden')}</button>
+        <button style={styles.mini} onClick={() => setVerbAuf((v) => !v)}>{verbAuf ? 'Abbrechen' : '＋ Bank hinzufügen'}</button>
       </div>
+      {verbindungen.length > 0 && (
+        <div style={{ ...styles.card, marginBottom: 12, padding: '12px 16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {verbindungen.map((v) => (
+              <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ color: C.green, fontWeight: 700 }}>🏦 {v.bank_name}</span>
+                <span style={{ ...styles.badge, color: C.cyan, borderColor: C.cyan }}>hinterlegt · Abruf folgt</span>
+                <span style={{ flex: 1 }} />
+                <button style={styles.mini} disabled={busy === 'verb'} onClick={() => bankTrennen(v.id)}>Entfernen</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {verbAuf && (
         <div style={{ ...styles.card, marginBottom: 14 }}>
           <div style={styles.grid}>
+            <label style={styles.lab}>Bank-Name<input style={styles.inp} value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="z. B. Sparkasse, Volksbank, N26" /></label>
             <label style={styles.lab}>finAPI Client-ID<input style={styles.inp} value={clientId} onChange={(e) => setClientId(e.target.value)} /></label>
             <label style={styles.lab}>finAPI Secret<input style={styles.inp} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} /></label>
           </div>
-          <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={bankVerbinden}>🔗 Zugang speichern</button>
-          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. Bis der Auto-Abruf live ist, nutze den CSV-Import unten — der funktioniert sofort.</div>
+          <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={bankVerbinden}>🔗 Bank speichern</button>
+          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. Du kannst beliebig viele Banken hinterlegen. Bis der Auto-Abruf live ist, nutze den CSV-Import unten — der funktioniert sofort.</div>
         </div>
       )}
 
