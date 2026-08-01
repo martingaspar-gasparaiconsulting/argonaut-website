@@ -17,6 +17,8 @@ const C = {
 
 type Rechnung = { id: string; nummer: string; titel: string; datum: string | null; faellig: string | null; betrag: number; status: string; bezahlt: boolean; gemeldet?: boolean };
 type Termin = { titel: string; beginn: string | null; ende: string | null; status: string };
+type Angebot = { titel: string; betrag: number; gueltig_bis: string | null; token: string | null };
+type Sendung = { dienstleister: string; status: string; istRetoure: boolean; verfolgen_url: string; datum: string | null };
 
 // --- Kalender-Helfer: aus einem Termin eine .ics-Datei (Google/Apple/Outlook) ---
 function utcStempel(iso: string | null, plusStunden = 0): string {
@@ -83,6 +85,8 @@ export default function PortalSeite() {
   const [kunde, setKunde] = useState('');
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [termine, setTermine] = useState<Termin[]>([]);
+  const [angebote, setAngebote] = useState<Angebot[]>([]);
+  const [sendungen, setSendungen] = useState<Sendung[]>([]);
   const [meldeStatus, setMeldeStatus] = useState<Record<string, 'busy' | 'ok' | 'err'>>({});
 
   async function bezahltMelden(id: string) {
@@ -109,6 +113,8 @@ export default function PortalSeite() {
         setKunde(j.kunde || '');
         setRechnungen(Array.isArray(j.rechnungen) ? j.rechnungen : []);
         setTermine(Array.isArray(j.termine) ? j.termine : []);
+        setAngebote(Array.isArray(j.angebote) ? j.angebote : []);
+        setSendungen(Array.isArray(j.sendungen) ? j.sendungen : []);
       } catch {
         setFehler('Verbindung fehlgeschlagen.');
       } finally { setLaden(false); }
@@ -130,7 +136,7 @@ export default function PortalSeite() {
           <>
             <div style={styles.card}>
               <h1 style={styles.h1}>Willkommen{kunde ? <>, <span style={{ color: C.gold }}>{kunde}</span></> : ''}</h1>
-              <p style={styles.sub}>Hier finden Sie Ihre Rechnungen und Termine bei {betrieb || 'uns'} — jederzeit, ohne Anmeldung.</p>
+              <p style={styles.sub}>Hier finden Sie Ihre Angebote, Rechnungen, Sendungen und Termine bei {betrieb || 'uns'} — jederzeit, ohne Anmeldung.</p>
               {offeneSumme > 0 && (
                 <div style={styles.summe}>Offener Betrag: <strong style={{ color: C.warn }}>{eur(offeneSumme)}</strong></div>
               )}
@@ -198,6 +204,46 @@ export default function PortalSeite() {
               )}
             </div>
 
+            {/* --- Angebote (offen, mit Online-Zusage) --- */}
+            {angebote.length > 0 && (
+              <div style={styles.card}>
+                <h2 style={styles.h2}>🗒 Ihre Angebote</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {angebote.map((a, i) => (
+                    <div key={i} style={styles.zeile}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700 }}>{a.titel}</div>
+                        <div style={{ color: C.textDim, fontSize: 13 }}>{eur(a.betrag)}{a.gueltig_bis ? ` · gültig bis ${String(a.gueltig_bis).split('T')[0].split('-').reverse().join('.')}` : ''}</div>
+                      </div>
+                      {a.token
+                        ? <a href={`/angebot/${a.token}`} style={styles.zusageBtn}>Ansehen & zusagen ›</a>
+                        : <span style={{ color: C.textDim, fontSize: 13 }}>in Bearbeitung</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* --- Sendungen (mit Tracking) --- */}
+            {sendungen.length > 0 && (
+              <div style={styles.card}>
+                <h2 style={styles.h2}>📦 Ihre Sendungen</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {sendungen.map((s, i) => (
+                    <div key={i} style={styles.zeile}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700 }}>{s.istRetoure ? '↩️ Rücksendung' : s.dienstleister}{!s.istRetoure ? '' : ` · ${s.dienstleister}`}</div>
+                        <div style={{ color: C.textDim, fontSize: 13 }}>Status: {s.status}{s.datum ? ` · ${String(s.datum).split('T')[0].split('-').reverse().join('.')}` : ''}</div>
+                      </div>
+                      {s.verfolgen_url
+                        ? <a href={s.verfolgen_url} target="_blank" rel="noreferrer" style={styles.zusageBtn}>🔎 Verfolgen ›</a>
+                        : <span style={{ color: C.textDim, fontSize: 13 }}>—</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* --- Termine --- */}
             <div style={styles.card}>
               <h2 style={styles.h2}>🗓 Ihre Termine</h2>
@@ -243,6 +289,8 @@ const styles: Record<string, CSSProperties> = {
   sub: { color: C.textDim, fontSize: 'clamp(14px, 1.3vw, 17px)', lineHeight: 1.5, margin: '10px 0 0' },
   summe: { marginTop: 16, padding: '12px 14px', background: 'rgba(224,162,76,0.08)', border: `1px solid ${C.warn}`, borderRadius: 12, fontSize: 16 },
   leer: { color: C.textDim, fontSize: 15, margin: 0 },
+  zeile: { display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', flexWrap: 'wrap' },
+  zusageBtn: { background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 14px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 15 },
   th: { textAlign: 'left', color: C.textDim, fontWeight: 600, fontSize: 13, padding: '0 12px 10px', borderBottom: `1px solid ${C.border}` },
   td: { padding: '12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' },

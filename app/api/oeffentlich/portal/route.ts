@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { trackingLink, carrierName, statusInfo } from '@/lib/versand';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -109,13 +110,42 @@ export async function GET(req: NextRequest) {
       }));
     }
 
-    // 5) Zugriffszeit vermerken (rein informativ, best effort).
+    // 5) Offene Angebote dieses Kunden (hart: Betrieb + kontakt_id). Nur offene,
+    //    mit Token für die Online-Zusage-Seite /angebot/<token>.
+    const { data: aRaw } = await db.from('angebote')
+      .select('titel, brutto_summe, gueltig_bis, status, token, kontakt_id')
+      .eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
+      .in('status', ['entwurf', 'gesendet'])
+      .order('erstellt_am', { ascending: false })
+      .limit(50);
+    const angebote = (aRaw || []).map((a) => ({
+      titel: a.titel || 'Angebot',
+      betrag: Number(a.brutto_summe) || 0,
+      gueltig_bis: a.gueltig_bis || null,
+      token: a.token || null,
+    }));
+
+    // 6) Sendungen dieses Kunden (hart: Betrieb + kontakt_id). Mit Tracking-Link.
+    const { data: sRaw } = await db.from('versand_sendung')
+      .select('status, carrier, tracking_nr, erstellt_am, kontakt_id, richtung')
+      .eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
+      .order('erstellt_am', { ascending: false })
+      .limit(50);
+    const sendungen = (sRaw || []).map((s) => ({
+      dienstleister: carrierName(s.carrier),
+      status: statusInfo(s.status).label,
+      istRetoure: s.richtung === 'retoure',
+      verfolgen_url: trackingLink(s.carrier, s.tracking_nr),
+      datum: s.erstellt_am || null,
+    }));
+
+    // 7) Zugriffszeit vermerken (rein informativ, best effort).
     await db.from('portal_zugaenge')
       .update({ letzter_zugriff_am: new Date().toISOString() })
       .eq('id', zugang.id);
 
     const betrieb = await betriebName(db, ownerId);
-    return NextResponse.json({ betrieb, kunde: kundeName, rechnungen, termine });
+    return NextResponse.json({ betrieb, kunde: kundeName, rechnungen, termine, angebote, sendungen });
   } catch (e: unknown) {
     console.error('Portal GET:', e instanceof Error ? e.message : 'unbekannt');
     return NextResponse.json({ error: 'Fehler beim Laden.' }, { status: 500 });
