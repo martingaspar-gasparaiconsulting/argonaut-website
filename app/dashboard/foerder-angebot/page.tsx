@@ -10,6 +10,9 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+const MODUL = 'foerder_angebote';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -68,6 +71,9 @@ export default function FoerderAngebotPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Formular
   const [kunde, setKunde] = useState('');
@@ -80,7 +86,10 @@ export default function FoerderAngebotPage() {
     const { data } = await supabase.from('foerder_angebote')
       .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz')
       .order('erstellt_am', { ascending: false });
-    setListe((data as Angebot[]) ?? []);
+    const rows = (data as Angebot[]) ?? [];
+    setListe(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
 
   useEffect(() => {
@@ -120,7 +129,10 @@ export default function FoerderAngebotPage() {
         .insert({ owner_user_id: uid, kunde_name: kunde.trim(), titel: titel.trim() || 'ARGONAUT Einführungspaket', positionen: posClean, netto_summe: netto, foerderquote: quote, notiz: notiz.trim() || null })
         .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz').single();
       if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
+      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch {}
       setListe((l) => [data as Angebot, ...l]);
+      setWerteMap((m) => ({ ...m, [(data as { id: string }).id]: { ...nmExtra } }));
+      setNmExtra({});
       setOk('Angebot gespeichert. Sie können jetzt das PDF herunterladen.');
     } finally { setBusy(false); }
   }
@@ -189,6 +201,12 @@ export default function FoerderAngebotPage() {
           <div><div style={styles.sk}>Eigenanteil (netto)</div><div style={styles.sv}>{eur(netto - zuschuss)}</div></div>
         </div>
 
+        {felder.length > 0 && (
+          <div style={styles.row2}>
+            <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((st) => ({ ...st, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          </div>
+        )}
+
         {ok && <div style={styles.ok}>{ok}</div>}
         {fehler && <div style={styles.err}>{fehler}</div>}
 
@@ -196,6 +214,8 @@ export default function FoerderAngebotPage() {
           {busy ? 'Speichert …' : '💾 Angebot speichern'}
         </button>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       <h2 style={styles.h2}>Gespeicherte Angebote <span style={{ color: C.textDim, fontWeight: 400 }}>({liste.length})</span></h2>
       {laden ? (
@@ -211,6 +231,7 @@ export default function FoerderAngebotPage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>
                   {a.kunde_name || '—'} · netto {eur(a.netto_summe)} · Zuschuss ~{eur(Math.round(a.netto_summe * a.foerderquote) / 100)} ({a.foerderquote} %)
                 </div>
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
               </div>
               <div style={styles.itemBtns}>
                 <a href={`/api/foerder-angebot-pdf?id=${encodeURIComponent(a.id)}`} target="_blank" rel="noreferrer" style={styles.dl}>⬇ PDF</a>

@@ -13,6 +13,9 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
 import { signaturStarten } from '@/lib/signaturStart';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+const MODUL = 'kunden_mandate';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -58,6 +61,10 @@ export default function SepaEinzugPage() {
   const [mform, setMform] = useState<Mandat>({ kontakt_id: '', kontoinhaber: '', iban: '', bic: '', mandatsreferenz: '', mandat_datum: '', erst_einzug: true, aktiv: true });
   const [mbusy, setMbusy] = useState(false);
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -81,6 +88,8 @@ export default function SepaEinzugPage() {
       const mm: Record<string, Mandat> = {};
       ((mData as Mandat[]) || []).forEach((m) => { mm[m.kontakt_id] = m; });
       setMandate(mm);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, Object.values(mm).map((m) => m.id).filter(Boolean) as string[]));
 
       const { data: rData } = await supabase.from('rechnungen')
         .select('id, rechnungsnummer, kontakt_id, brutto_summe, faelligkeitsdatum, titel, empfaenger_name, zahlungsstatus, bezahlt_am')
@@ -151,8 +160,10 @@ export default function SepaEinzugPage() {
         mandatsreferenz: (mform.mandatsreferenz || '').trim(), mandat_datum: mform.mandat_datum,
         aktiv: mform.aktiv !== false, updated_at: new Date().toISOString(),
       };
-      const { error } = await supabase.from('kunden_mandate').upsert(payload, { onConflict: 'owner_user_id,kontakt_id' });
+      const { data: neu, error } = await supabase.from('kunden_mandate').upsert(payload, { onConflict: 'owner_user_id,kontakt_id' }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* Zugabe */ }
+      setNmExtra({});
       setOk('Mandat gespeichert.');
       setMform({ kontakt_id: '', kontoinhaber: '', iban: '', bic: '', mandatsreferenz: '', mandat_datum: '', erst_einzug: true, aktiv: true });
       await laden_();
@@ -291,6 +302,7 @@ export default function SepaEinzugPage() {
           <label style={styles.lab}>BIC (optional)<input style={styles.inp} value={mform.bic || ''} onChange={(e) => setMform((f) => ({ ...f, bic: e.target.value }))} /></label>
           <label style={styles.lab}>Mandatsreferenz<input style={styles.inp} value={mform.mandatsreferenz || ''} onChange={(e) => setMform((f) => ({ ...f, mandatsreferenz: e.target.value }))} placeholder="eindeutig, z. B. K-2026-001" /></label>
           <label style={styles.lab}>Mandat unterschrieben am<input type="date" style={styles.inp} value={mform.mandat_datum || ''} onChange={(e) => setMform((f) => ({ ...f, mandat_datum: e.target.value }))} /></label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
         <button onClick={mandatSpeichern} disabled={mbusy || !mform.kontakt_id} style={{ ...styles.primaer, marginTop: 12, opacity: (mbusy || !mform.kontakt_id) ? 0.6 : 1 }}>{mbusy ? 'Speichert …' : '💾 Mandat speichern'}</button>
 
@@ -304,10 +316,12 @@ export default function SepaEinzugPage() {
                 <span style={{ ...styles.badge, color: m.erst_einzug === false ? C.cyan : C.gold, borderColor: m.erst_einzug === false ? C.cyan : C.gold }}>{m.erst_einzug === false ? 'RCUR' : 'FRST'}</span>
                 <button style={styles.mini} onClick={() => mandatUnterschrift(m)}>✍️ unterschreiben</button>
                 <button style={styles.mini} onClick={() => mandatWaehlen(m.kontakt_id)}>Bearbeiten</button>
+                <div style={{ flexBasis: '100%' }}><EigeneFelderAnzeige felder={felder} werte={werteMap[(m as { id: string }).id]} /></div>
               </div>
             ))}
           </div>
         )}
+        {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
       </div>
 
       {/* Einzug */}

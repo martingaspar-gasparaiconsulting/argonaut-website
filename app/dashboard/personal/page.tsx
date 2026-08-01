@@ -11,6 +11,8 @@
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import PersonalAuge from "./PersonalAuge";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -18,6 +20,7 @@ const supabase = createBrowserClient(
 );
 
 const BUCKET = 'hr-dokumente';
+const MODUL = 'mitarbeiter';
 
 const C = {
   navy: '#0A1628', navySoft: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -162,6 +165,10 @@ export default function PersonalPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<Selected>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+  const [uid, setUid] = useState<string | null>(null);
 
   // Benachrichtigungen (Glocke)
   const [benach, setBenach] = useState<Benachrichtigung[]>([]);
@@ -179,6 +186,7 @@ export default function PersonalPage() {
     if (data?.bundesland) setBundesland(data.bundesland);
   }, []);
   useEffect(() => { ladeBundesland(); }, [ladeBundesland]);
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setUid(data?.user?.id ?? null)); }, []);
 
   async function bundeslandSpeichern(neu: string) {
     setBundesland(neu); setBlSaving(true);
@@ -221,6 +229,8 @@ export default function PersonalPage() {
           .order('created_at', { ascending: false });
         if (error) throw error;
         setMitarbeiter((data as Mitarbeiter[]) ?? []);
+        setFelder(await ladeFelder(MODUL));
+        setWerteMap(await ladeWerte(MODUL, ((data as Mitarbeiter[]) ?? []).map((r) => r.id)));
         const { data: abwData } = await supabase.from('hr_abwesenheiten')
           .select('mitarbeiter_id,typ,von,bis,tage,status');
         setAbwAlle((abwData as AbwLite[]) ?? []);
@@ -340,7 +350,7 @@ export default function PersonalPage() {
               <TabButton active={maAnsicht === 'hr'} onClick={() => setMaAnsicht('hr')}>HR-Kennzahlen</TabButton>
             </div>
             {maAnsicht === 'stamm' ? (
-              <MitarbeiterTabelle rows={mitarbeiter} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+              <MitarbeiterTabelle rows={mitarbeiter} felder={felder} werteMap={werteMap} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             ) : (
               <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} chk={chkAlle} schul={schulAlle} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             )}
@@ -351,7 +361,8 @@ export default function PersonalPage() {
         )}
       </div>
 
-      {modalOpen && <NeuModal tab={tab} onClose={() => setModalOpen(false)} onSaved={() => { setModalOpen(false); load(); }} />}
+      {uid && tab === 'mitarbeiter' && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={load} />}
+      {modalOpen && <NeuModal tab={tab} felder={tab === 'mitarbeiter' ? felder : []} extra={nmExtra} setExtra={setNmExtra} onClose={() => { setModalOpen(false); setNmExtra({}); }} onSaved={() => { setModalOpen(false); setNmExtra({}); load(); }} />}
       {selectedMA && <DetailDrawer typ="mitarbeiter" ma={selectedMA} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
       {selectedBW && <DetailDrawer typ="bewerber" bw={selectedBW} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
     </div>
@@ -369,14 +380,14 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 // ============================================================
 // Tabellen
 // ============================================================
-function MitarbeiterTabelle({ rows, onAdd, onSelect }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void }) {
+function MitarbeiterTabelle({ rows, onAdd, onSelect, felder, werteMap }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void; felder: EigenesFeld[]; werteMap: Record<string, Record<string, string>> }) {
   if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   return (
     <table style={styles.table}>
       <thead><tr><Th>Name</Th><Th>Position</Th><Th>Kontakt</Th><Th>Eintritt</Th><Th>Status</Th></tr></thead>
       <tbody>{rows.map((m) => (
         <ClickRow key={m.id} onClick={() => onSelect(m.id)}>
-          <Td><span style={styles.name}>{m.vorname} {m.nachname}</span></Td>
+          <Td><span style={styles.name}>{m.vorname} {m.nachname}</span><EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></Td>
           <Td>{m.position || <Dim>—</Dim>}</Td>
           <Td><KontaktZelle email={m.email} telefon={m.telefon} /></Td>
           <Td>{formatDate(m.eintrittsdatum)}</Td>
@@ -1853,7 +1864,7 @@ function VorlagenPanel({ id, rows, onAdded, setMsg }: {
 // ============================================================
 // Modal: Neu anlegen
 // ============================================================
-function NeuModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; onSaved: () => void }) {
+function NeuModal({ tab, onClose, onSaved, felder, extra, setExtra }: { tab: Tab; onClose: () => void; onSaved: () => void; felder: EigenesFeld[]; extra: Record<string, string>; setExtra: (fn: (s: Record<string, string>) => Record<string, string>) => void }) {
   const istMA = tab === 'mitarbeiter';
   const [vorname, setVorname] = useState(''); const [nachname, setNachname] = useState('');
   const [email, setEmail] = useState(''); const [telefon, setTelefon] = useState('');
@@ -1870,8 +1881,10 @@ function NeuModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
       const ownerId = userData?.user?.id;
       if (!ownerId) { setErr('Keine aktive Sitzung gefunden. Bitte neu einloggen.'); setSaving(false); return; }
       if (istMA) {
-        const { error } = await supabase.from('mitarbeiter').insert({ owner_user_id: ownerId, vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null, telefon: telefon.trim() || null, position: position.trim() || null, status });
+        const { data: neu, error } = await supabase.from('mitarbeiter').insert({ owner_user_id: ownerId, vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null, telefon: telefon.trim() || null, position: position.trim() || null, status }).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string })?.id, ownerId, extra); } catch { /* eigene Felder optional */ }
+        setExtra(() => ({}));
       } else {
         const { error } = await supabase.from('bewerber').insert({ owner_user_id: ownerId, vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null, telefon: telefon.trim() || null, position: position.trim() || null, quelle: quelle.trim() || null, status });
         if (error) throw error;
@@ -1899,6 +1912,7 @@ function NeuModal({ tab, onClose, onSaved }: { tab: Tab; onClose: () => void; on
               {(istMA ? MA_STATUS : BW_STATUS).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
           </Field>
+          {istMA && <EigeneFelderInputs felder={felder} werte={extra} setWert={(fid, w) => setExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.field} />}
         </div>
         {err && <div style={styles.formError}>{err}</div>}
         <div style={styles.modalFoot}>

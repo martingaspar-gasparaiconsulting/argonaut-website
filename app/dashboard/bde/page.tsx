@@ -16,6 +16,10 @@ import {
 import { augeBde } from '@/lib/auge';
 import { bdePdf } from '@/lib/bdePdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bde_buchung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -58,6 +62,9 @@ export default function BdePage() {
   const [nMasch, setNMasch] = useState({ bezeichnung: '', maschinen_nr: '', standort: '', ideal_takt_sek: '', status: 'aktiv' });
   const [nBuch, setNBuch] = useState({ maschine_id: '', datum: heuteLokal(), auftrag: '', schicht: 'Früh', bediener: '', planbelegung_min: '', menge_gesamt: '', menge_gut: '', ideal_takt_sek: '' });
   const [nStoer, setNStoer] = useState<{ buchung_id: string; kategorie: string; grund: string; dauer_min: string } | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -68,8 +75,11 @@ export default function BdePage() {
         supabase.from('bde_stoerung').select('*'),
       ]);
       setMaschinen((m.data as Maschine[]) ?? []);
-      setBuchungen((b.data as Buchung[]) ?? []);
+      const bb = (b.data as Buchung[]) ?? [];
+      setBuchungen(bb);
       setStoerungen((s.data as Stoerung[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, bb.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -136,13 +146,15 @@ export default function BdePage() {
     if (num(nBuch.planbelegung_min) <= 0) { setFehler('Bitte die Planbelegungszeit (Minuten) angeben.'); return; }
     setBusy('buch'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('bde_buchung').insert({
+      const { data: neu, error } = await supabase.from('bde_buchung').insert({
         owner_user_id: uid, maschine_id: nBuch.maschine_id, datum: nBuch.datum || null, auftrag: nBuch.auftrag.trim() || null,
         schicht: nBuch.schicht || null, bediener: nBuch.bediener.trim() || null,
         planbelegung_min: Math.round(num(nBuch.planbelegung_min)), menge_gesamt: num(nBuch.menge_gesamt),
         menge_gut: num(nBuch.menge_gut), ideal_takt_sek: num(nBuch.ideal_takt_sek), status: 'offen',
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNmExtra({});
       setNBuch((v) => ({ ...v, auftrag: '', bediener: '', planbelegung_min: '', menge_gesamt: '', menge_gut: '' }));
       setOk('Buchung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -292,6 +304,7 @@ export default function BdePage() {
                   <label style={styles.lab}>Idealtakt (Sek./Teil)<input style={styles.inp} inputMode="decimal" value={nBuch.ideal_takt_sek} onChange={(e) => setNBuch({ ...nBuch, ideal_takt_sek: e.target.value })} /></label>
                   <label style={styles.lab}>Menge gesamt (Stk)<input style={styles.inp} inputMode="numeric" value={nBuch.menge_gesamt} onChange={(e) => setNBuch({ ...nBuch, menge_gesamt: e.target.value })} /></label>
                   <label style={styles.lab}>davon Gutmenge (Stk)<input style={styles.inp} inputMode="numeric" value={nBuch.menge_gut} onChange={(e) => setNBuch({ ...nBuch, menge_gut: e.target.value })} /></label>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
                 </div>
                 {(num(nBuch.planbelegung_min) > 0 || num(nBuch.menge_gesamt) > 0) && (
                   <div style={styles.vorschau}>
@@ -303,6 +316,8 @@ export default function BdePage() {
               </>
             )}
           </div>
+
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {/* Filter */}
           {maschinen.length > 0 && (
@@ -348,6 +363,7 @@ export default function BdePage() {
                   <span>Menge <b>{k.menge_gesamt}</b> · Gut <b>{k.menge_gut}</b> · Ausschuss <b style={{ color: k.ausschuss ? C.warn : C.text }}>{k.ausschuss}</b></span>
                 </div>
                 {k.leistungRoh > 1 && <div style={{ color: C.warn, fontSize: 13, marginBottom: 8 }}>⚠ Roh-Leistung {pct(k.leistungRoh)} — schneller als Idealtakt; Takt/Menge prüfen (OEE auf 100 % begrenzt).</div>}
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} />
 
                 {/* Störgründe */}
                 <div style={styles.stoerBox}>

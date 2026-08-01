@@ -4,6 +4,10 @@ import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
 import { augeLager } from "@/lib/auge";
 import Leerzustand from "../_components/Leerzustand";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'artikel';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E2 Lager-Cockpit
@@ -120,6 +124,10 @@ export default function LagerCockpit() {
   const [speichern, setSpeichern] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -135,7 +143,12 @@ export default function LagerCockpit() {
       .from("artikel")
       .select("*")
       .order("bezeichnung", { ascending: true });
-    if (!error && data) setArtikel(data as Artikel[]);
+    if (!error && data) {
+      const rows = data as Artikel[];
+      setArtikel(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
+    }
     setLaden(false);
   }
 
@@ -231,6 +244,7 @@ export default function LagerCockpit() {
   function oeffneNeu() {
     setBearbeiteId(null);
     setForm(LEER_FORM);
+    setNmExtra({});
     setFehler(null);
     setModalOffen(true);
   }
@@ -252,6 +266,7 @@ export default function LagerCockpit() {
       lieferant_id: a.lieferant_id ?? "",
       aktiv: a.aktiv,
     });
+    setNmExtra(werteMap[a.id] ?? {});
     setFehler(null);
     setModalOffen(true);
   }
@@ -293,12 +308,18 @@ export default function LagerCockpit() {
         .update(payload)
         .eq("id", bearbeiteId);
       error = res.error;
+      if (!res.error) {
+        try { await speichereWerte(MODUL, bearbeiteId, userId, nmExtra); } catch { /* eigene Felder optional */ }
+      }
     } else {
       const insertObj = userId
         ? { ...payload, owner_user_id: userId }
         : payload; // sonst füllt DB-Default auth.uid()
-      const res = await supabase.from("artikel").insert(insertObj);
+      const res = await supabase.from("artikel").insert(insertObj).select('id').single();
       error = res.error;
+      if (!res.error && res.data) {
+        try { await speichereWerte(MODUL, (res.data as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ }
+      }
     }
 
     setSpeichern(false);
@@ -306,6 +327,7 @@ export default function LagerCockpit() {
       setFehler("Speichern fehlgeschlagen: " + error.message);
       return;
     }
+    setNmExtra({});
     setModalOffen(false);
     await ladeArtikel();
   }
@@ -507,6 +529,8 @@ export default function LagerCockpit() {
         </label>
       </div>
 
+      {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeArtikel} />}
+
       {/* Tabelle */}
       <div style={{ ...card, padding: 0, overflowX: "auto" }}>
         {laden ? (
@@ -582,6 +606,7 @@ export default function LagerCockpit() {
                           Nr. {a.artikelnummer}
                         </div>
                       )}
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                     </td>
                     <td style={{ ...tdStil, color: C.textDim }}>
                       {a.kategorie || "—"}
@@ -794,6 +819,25 @@ export default function LagerCockpit() {
                   onChange={(e) => setF("beschreibung", e.target.value)}
                 />
               </div>
+
+              {felder.length > 0 && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 14,
+                  }}
+                >
+                  <EigeneFelderInputs
+                    felder={felder}
+                    werte={nmExtra}
+                    setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))}
+                    inpStyle={inputStil}
+                    labStyle={{ ...labelStil, display: "flex", flexDirection: "column", gap: 6 }}
+                  />
+                </div>
+              )}
 
               <div style={{ gridColumn: "1 / -1" }}>
                 <label
