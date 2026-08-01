@@ -48,7 +48,7 @@ export default async function DashboardLayout({
   // maybeSingle() wirft nicht, wenn nichts da ist -> Fehler koennen den Header
   // nie kaputt machen (Notnagel greift dann).
   const [profilRes, mitarbeiterRes] = await Promise.all([
-    supabase.from('profiles').select('full_name, demo, demo_ablauf').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('full_name, firma_name, demo, demo_ablauf').eq('id', user.id).maybeSingle(),
     supabase.from('mitarbeiter').select('vorname, nachname').eq('auth_user_id', user.id).maybeSingle(),
   ])
 
@@ -59,6 +59,9 @@ export default async function DashboardLayout({
 
   const anzeigeName =
     maName || profilRes.data?.full_name || user.email?.split('@')[0] || 'Nutzer'
+
+  // Firmenname des Inhabers für den Header ("ARGONAUT OS für <Firma>").
+  const firmaName = ((profilRes.data as { firma_name?: string | null } | null)?.firma_name || '').trim()
 
   // Demo-Konto-Status (Punkt 26): steuert das Banner. profilRes kann demo-Felder
   // erst nach dem SQL-Rollout liefern — vorher ist demo schlicht false.
@@ -81,13 +84,13 @@ export default async function DashboardLayout({
               height={56}
               style={{ height: 'clamp(40px, 3.4vw, 56px)', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: '10px', rowGap: '2px', lineHeight: 1.1 }}>
               <span style={{ fontSize: 'clamp(20px, 2vw, 32px)', fontWeight: 900, letterSpacing: '0.14em', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
                 ARGONAUT OS
               </span>
-              <span style={{ fontSize: 'clamp(11px, 0.85vw, 14px)', color: '#C9A84C', letterSpacing: '0.22em', textTransform: 'uppercase', marginTop: '5px' }}>
-                Dashboard
-              </span>
+              {firmaName
+                ? <span style={{ fontSize: 'clamp(13px, 1.1vw, 19px)', color: '#C9A84C', fontWeight: 600, letterSpacing: '0.01em' }}>für {firmaName}</span>
+                : <span style={{ fontSize: 'clamp(11px, 0.85vw, 14px)', color: '#C9A84C', letterSpacing: '0.22em', textTransform: 'uppercase' }}>Dashboard</span>}
             </div>
           </a>
 
