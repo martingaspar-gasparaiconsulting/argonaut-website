@@ -1,6 +1,21 @@
 @import "tailwindcss";
 
 /* ============================================================
+   ARGONAUT · Schriftart DM Sans self-hosted unter Klarnamen.
+   next/font stellt DM Sans nur über var(--font-dm-sans) bereit; viele
+   Stellen schreiben aber fontFamily: 'DM Sans' direkt und fielen dadurch
+   auf die Systemschrift zurück. Diese @font-face-Regeln (gleiche Gewichte
+   wie next/font: 300/400/500 normal+kursiv, self-hosted = DSGVO-sauber)
+   lassen den Klarnamen 'DM Sans' überall die echte Schrift finden.
+   ============================================================ */
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 300; font-display: swap; src: url('/fonts/dm-sans-300.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/dm-sans-400.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/dm-sans-500.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 300; font-display: swap; src: url('/fonts/dm-sans-300-italic.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 400; font-display: swap; src: url('/fonts/dm-sans-400-italic.woff2') format('woff2'); }
+@font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 500; font-display: swap; src: url('/fonts/dm-sans-500-italic.woff2') format('woff2'); }
+
+/* ============================================================
    ARGONAUT · Globales Design-Baseline (Welle 1, korrigiert)
    Das GESAMTE Produkt ist dunkel (Website + Dashboard). Deshalb ist
    das dunkle Baseline jetzt GLOBAL — nicht mehr nur aufs Dashboard begrenzt.
