@@ -207,6 +207,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔁 Wiederkehr-Cockpit', href: '/dashboard/wiederkehr', modul: 'wiederkehr', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📊 Analytics', href: '/dashboard/analytics', modul: 'analytics', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🧮 Report-Baukasten', href: '/dashboard/reports', modul: 'reports', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '🏦 Banking-Abgleich', href: '/dashboard/banking', modul: 'banking', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🕐 Zeit-Nachweis', href: '/dashboard/arbeitszeit-nachweis', modul: 'zeit-nachweis', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🗂 GoBD', href: '/dashboard/gobd', modul: 'gobd', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '⚖️ Compliance', href: '/dashboard/compliance', modul: 'compliance', ebene: 2, sensibel: true, gruppe: 'finanzen' },
