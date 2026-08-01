@@ -17,6 +17,10 @@ import {
 } from '@/lib/verleih';
 import { augeVerleih } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'verleih_artikel';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,6 +69,9 @@ export default function VerleihPage() {
 
   const [na, setNa] = useState({ bezeichnung: '', kategorie: '', tagessatz: '', wochensatz: '', kaution: '', anzahl: '1' });
   const [nv, setNv] = useState({ artikel_id: '', kontakt_id: '', mieter_name: '', von: H, bis: H });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [naExtra, setNaExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -74,7 +81,10 @@ export default function VerleihPage() {
         supabase.from('verleih_vorgang').select('*').order('von', { ascending: false }),
         supabase.from('kontakte').select('*'),
       ]);
-      setArtikel((a.data as Artikel[]) ?? []);
+      const aa = (a.data as Artikel[]) ?? [];
+      setArtikel(aa);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, aa.map((x) => x.id)));
       setVorgaenge((v.data as Vorgang[]) ?? []);
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((p, q) => p.name.localeCompare(q.name)));
     } catch (e: unknown) {
@@ -109,13 +119,14 @@ export default function VerleihPage() {
     if (!uid || !na.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('artikel'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('verleih_artikel').insert({
+      const { data: neu, error } = await supabase.from('verleih_artikel').insert({
         owner_user_id: uid, bezeichnung: na.bezeichnung.trim(), kategorie: na.kategorie.trim() || null,
         tagessatz: num(na.tagessatz), wochensatz: na.wochensatz.trim() ? num(na.wochensatz) : null,
         kaution: num(na.kaution), anzahl: Math.max(1, Math.round(num(na.anzahl)) || 1), status: 'aktiv',
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNa({ bezeichnung: '', kategorie: '', tagessatz: '', wochensatz: '', kaution: '', anzahl: '1' });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, naExtra); } catch { /* eigene Felder optional */ }
+      setNa({ bezeichnung: '', kategorie: '', tagessatz: '', wochensatz: '', kaution: '', anzahl: '1' }); setNaExtra({});
       setOk('Mietgegenstand angelegt.'); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -311,9 +322,11 @@ export default function VerleihPage() {
               <label style={styles.lab}>Wochensatz (€, optional)<input style={styles.inp} inputMode="decimal" value={na.wochensatz} onChange={(e) => setNa({ ...na, wochensatz: e.target.value })} /></label>
               <label style={styles.lab}>Kaution (€)<input style={styles.inp} inputMode="decimal" value={na.kaution} onChange={(e) => setNa({ ...na, kaution: e.target.value })} /></label>
               <label style={styles.lab}>Exemplare<input style={styles.inp} inputMode="numeric" value={na.anzahl} onChange={(e) => setNa({ ...na, anzahl: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={naExtra} setWert={(fid, w) => setNaExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'artikel' ? 0.6 : 1 }} disabled={busy === 'artikel'} onClick={artikelAnlegen}>＋ Anlegen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
@@ -329,7 +342,7 @@ export default function VerleihPage() {
                       const frei = freieAnzahl(a.anzahl, vorgaenge.filter((x) => x.artikel_id === a.id), H, H);
                       return (
                         <tr key={a.id}>
-                          <td style={styles.td}>{a.bezeichnung}{a.status !== 'aktiv' ? <span style={{ color: C.textDim }}> · {a.status}</span> : ''}</td>
+                          <td style={styles.td}>{a.bezeichnung}{a.status !== 'aktiv' ? <span style={{ color: C.textDim }}> · {a.status}</span> : ''}<EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} /></td>
                           <td style={{ ...styles.td, color: C.textDim }}>{a.kategorie || '—'}</td>
                           <td style={{ ...styles.td, textAlign: 'right' }}>{eur(a.tagessatz)}</td>
                           <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{a.wochensatz ? eur(a.wochensatz) : '—'}</td>

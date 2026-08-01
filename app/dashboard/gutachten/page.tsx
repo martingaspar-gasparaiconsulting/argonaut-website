@@ -14,6 +14,10 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeGutachten } from '@/lib/auge';
 import { gutachtenPdf } from '@/lib/gutachtenPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'gutachten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,6 +55,9 @@ export default function GutachtenPage() {
 
   const [ng, setNg] = useState({ titel: '', auftraggeber: '', objekt: '', art: '', aktenzeichen: '', datum: H, gutachter: '', honorargruppe: '', stunden: '', zusammenfassung: '' });
   const [np, setNp] = useState({ kategorie: 'befund', titel: '', text: '', betrag: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -59,8 +66,11 @@ export default function GutachtenPage() {
         supabase.from('gutachten').select('*').order('datum', { ascending: false }),
         supabase.from('gutachten_position').select('*').order('position', { ascending: true }),
       ]);
-      setGutachten((g.data as Gutachten[]) ?? []);
+      const gg = (g.data as Gutachten[]) ?? [];
+      setGutachten(gg);
       setPositionen((p.data as Position[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, gg.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -95,8 +105,9 @@ export default function GutachtenPage() {
         honorargruppe: ng.honorargruppe || null, stunden: ng.stunden.trim() ? num(ng.stunden) : null, zusammenfassung: ng.zusammenfassung.trim() || null, status: 'entwurf',
       }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNg({ titel: '', auftraggeber: '', objekt: '', art: '', aktenzeichen: '', datum: H, gutachter: '', honorargruppe: '', stunden: '', zusammenfassung: '' });
-      setOk('Gutachten angelegt.'); await laden_();
+      setNmExtra({}); setOk('Gutachten angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('bearbeiten'); }
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -188,11 +199,13 @@ export default function GutachtenPage() {
                 </select>
               </label>
               <label style={styles.lab}>Stunden<input style={styles.inp} inputMode="decimal" value={ng.stunden} onChange={(e) => setNg({ ...ng, stunden: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <label style={{ ...styles.lab, marginTop: 12 }}>Zusammenfassung / Fazit<textarea style={{ ...styles.inp, minHeight: 60, resize: 'vertical' }} value={ng.zusammenfassung} onChange={(e) => setNg({ ...ng, zusammenfassung: e.target.value })} /></label>
             {ngHonorar != null && <div style={{ ...styles.vorschau, marginTop: 12 }}><span>JVEG-Honorar: <b style={{ color: C.gold }}>{eur(ngHonorar)}</b> <span style={{ color: C.textDim }}>({honorarsatz(ng.honorargruppe)} €/h × {num(ng.stunden)} h)</span></span></div>}
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'gutachten' ? 0.6 : 1 }} disabled={busy === 'gutachten'} onClick={gutachtenAnlegen}>＋ Anlegen & öffnen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {gutachten.length === 0 ? <Leerzustand icon="⚖️" titel="Noch keine Gutachten" text="Erstelle strukturierte Gutachten mit JVEG-Honorar-Rechner." schritte={["Gutachten oben anlegen", "Befund und Bewertung als Positionen erfassen", "Honorar berechnen lassen"]} /> : (
@@ -202,7 +215,7 @@ export default function GutachtenPage() {
                     {gutachten.map((g) => (
                       <tr key={g.id} style={{ opacity: g.status === 'fertig' ? 0.85 : 1 }}>
                         <td style={styles.td}>{fmtDatum(g.datum)}</td>
-                        <td style={styles.td}>{g.titel}</td>
+                        <td style={styles.td}>{g.titel}<EigeneFelderAnzeige felder={felder} werte={werteMap[g.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{g.auftraggeber || '—'}</td>
                         <td style={styles.td}><span style={{ ...styles.badge, color: g.status === 'fertig' ? C.green : C.warn, borderColor: g.status === 'fertig' ? C.green : C.warn }}>{g.status === 'fertig' ? 'fertig' : 'Entwurf'}</span></td>
                         <td style={{ ...styles.td, textAlign: 'right' }}><button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => { setAktivId(g.id); setTab('bearbeiten'); }}>öffnen ›</button></td>

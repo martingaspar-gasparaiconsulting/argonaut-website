@@ -15,6 +15,10 @@ import {
   type AblaufStatus,
 } from "@/lib/itassets";
 import { itBerichtPdf, type Ampel } from "@/lib/itBerichtPdf";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import type { EigenesFeld } from "@/lib/eigeneFelder";
+
+const MODUL = "it_asset";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-4 · Lizenz-, Asset- & SLA-Verwaltung (IT/MSP)
@@ -67,6 +71,9 @@ export default function ItAssetsSeite() {
   const [sForm, setSForm] = useState<SlaForm>(LEER_S);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     (async () => {
@@ -84,9 +91,12 @@ export default function ItAssetsSeite() {
       supabase.from("it_lizenz").select("*").order("ablauf", { ascending: true }),
       supabase.from("it_sla").select("*").order("bezeichnung", { ascending: true }),
     ]);
-    if (!a.error && a.data) setAssets(a.data as Asset[]);
+    const rows = (!a.error && a.data ? (a.data as Asset[]) : []);
+    if (!a.error && a.data) setAssets(rows);
     if (!l.error && l.data) setLizenzen(l.data as Lizenz[]);
     if (!s.error && s.data) setSla(s.data as Sla[]);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     setLaden(false);
   }
 
@@ -101,6 +111,7 @@ export default function ItAssetsSeite() {
   function openAsset(a?: Asset) {
     setEditId(a?.id ?? null);
     setAForm(a ? { kunde: a.kunde ?? "", bezeichnung: a.bezeichnung ?? "", typ: a.typ ?? "hardware", hersteller: a.hersteller ?? "", modell: a.modell ?? "", seriennr: a.seriennr ?? "", standort: a.standort ?? "", status: a.status ?? "aktiv", anschaffung: a.anschaffung ?? "", garantie_bis: a.garantie_bis ?? "", notiz: a.notiz ?? "" } : LEER_A);
+    setNmExtra(a ? { ...(werteMap[a.id] ?? {}) } : {});
     setFehler(null); setModal("asset");
   }
   function openLizenz(l?: Lizenz) {
@@ -120,8 +131,16 @@ export default function ItAssetsSeite() {
     if (modal === "asset") {
       if (!aForm.bezeichnung.trim()) { setBusy(false); setFehler("Bezeichnung ist Pflicht."); return; }
       const payload = { kunde: aForm.kunde.trim() || null, bezeichnung: aForm.bezeichnung.trim(), typ: aForm.typ, hersteller: aForm.hersteller.trim() || null, modell: aForm.modell.trim() || null, seriennr: aForm.seriennr.trim() || null, standort: aForm.standort.trim() || null, status: aForm.status, anschaffung: aForm.anschaffung || null, garantie_bis: aForm.garantie_bis || null, notiz: aForm.notiz.trim() || null };
-      if (editId) error = (await supabase.from("it_asset").update(payload).eq("id", editId)).error;
-      else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("it_asset").insert(ins)).error; }
+      if (editId) {
+        error = (await supabase.from("it_asset").update(payload).eq("id", editId)).error;
+        if (!error) { try { await speichereWerte(MODUL, editId, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+      } else {
+        const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+        const res = await supabase.from("it_asset").insert(ins).select("id").single();
+        error = res.error;
+        if (!error && res.data) { try { await speichereWerte(MODUL, (res.data as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+      }
+      if (!error) setNmExtra({});
     } else if (modal === "lizenz") {
       if (!lForm.bezeichnung.trim()) { setBusy(false); setFehler("Bezeichnung ist Pflicht."); return; }
       const payload = { kunde: lForm.kunde.trim() || null, bezeichnung: lForm.bezeichnung.trim(), hersteller: lForm.hersteller.trim() || null, lizenztyp: lForm.lizenztyp, plaetze: ganz(lForm.plaetze) ?? 1, belegt: ganz(lForm.belegt) ?? 0, start: lForm.start || null, ablauf: lForm.ablauf || null, kosten_jahr: zahl(lForm.kosten_jahr), schluessel: lForm.schluessel.trim() || null, notiz: lForm.notiz.trim() || null, status: lForm.status };
@@ -243,6 +262,7 @@ export default function ItAssetsSeite() {
                     <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 4 }}>
                       {a.kunde ? `${a.kunde} · ` : ""}{[a.hersteller, a.modell].filter(Boolean).join(" ")}{a.seriennr ? ` · SN ${a.seriennr}` : ""}{a.standort ? ` · ${a.standort}` : ""}
                     </div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button style={btnGhost} onClick={() => openAsset(a)}>Bearbeiten</button>
@@ -252,6 +272,7 @@ export default function ItAssetsSeite() {
               ); })}
             </div>
           )}
+          {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
         </div>
       ) : tab === "lizenzen" ? (
         <div>
@@ -325,6 +346,7 @@ export default function ItAssetsSeite() {
                 <div><label style={label}>Anschaffung</label><input type="date" style={input} value={aForm.anschaffung} onChange={(e) => setAForm({ ...aForm, anschaffung: e.target.value })} /></div>
                 <div><label style={label}>Garantie bis</label><input type="date" style={input} value={aForm.garantie_bis} onChange={(e) => setAForm({ ...aForm, garantie_bis: e.target.value })} /></div>
                 <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={aForm.notiz} onChange={(e) => setAForm({ ...aForm, notiz: e.target.value })} /></div>
+                {felder.length > 0 && <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></div>}
               </div>
             )}
 

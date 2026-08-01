@@ -21,6 +21,10 @@ import {
 import { augeReservierung } from '@/lib/auge';
 import { verwahrProtokollPdf } from '@/lib/verwahrProtokollPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'reservierung_vorgang';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -78,6 +82,9 @@ export default function ReservierungPage() {
 
   const [np, setNp] = useState({ ...LEER_NP });
   const [nv, setNv] = useState({ ...LEER_NV });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -88,7 +95,10 @@ export default function ReservierungPage() {
         supabase.from('kontakte').select('*'),
       ]);
       setPlaetze((p.data as Platz[]) ?? []);
-      setVorgaenge((v.data as Vorgang[]) ?? []);
+      const vv = (v.data as Vorgang[]) ?? [];
+      setVorgaenge(vv);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, vv.map((r) => r.id)));
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
@@ -161,7 +171,7 @@ export default function ReservierungPage() {
     if (!nv.kunde_name.trim() && !nv.kontakt_id) { setFehler('Bitte Kunde (Kontakt oder Freitext) angeben.'); return; }
     setBusy('vorgang'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('reservierung_vorgang').insert({
+      const { data: neu, error } = await supabase.from('reservierung_vorgang').insert({
         owner_user_id: uid, art: nv.art, platz_id: nv.platz_id || null, kontakt_id: nv.kontakt_id || null,
         kunde_name: nv.kunde_name.trim() || null, kunde_tel: nv.kunde_tel.trim() || null,
         von: nv.von, bis: info.hatZeitfenster ? nv.bis : null,
@@ -169,8 +179,10 @@ export default function ReservierungPage() {
         gegenstand: nv.gegenstand.trim() || null, kennzeichen: nv.kennzeichen.trim() || null,
         betrag: info.hatBetrag ? num(nv.betrag) : 0, mwst_satz: num(nv.mwst_satz) || 19,
         status: START_STATUS[nv.art],
-      });
+      }).select('id').single();
       if (error) throw error;
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNmExtra({});
       setNv({ ...LEER_NV, art: nv.art, von: info.hatZeitfenster ? jetztLokal() : (nv.art === 'einlagerung' ? heuteLokal() : jetztLokal()) });
       setOk(`${info.label} angelegt.`); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -310,6 +322,7 @@ export default function ReservierungPage() {
                   </label>
                 </>
               )}
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
 
             {(vorschau.b || (nv.art === 'tischreservierung' && nv.platz_id && nv.bis > nv.von && nv.von)) && (
@@ -325,6 +338,8 @@ export default function ReservierungPage() {
             )}
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'vorgang' ? 0.6 : 1 }} disabled={busy === 'vorgang'} onClick={vorgangAnlegen}>＋ {info.label} anlegen</button>
           </div>
+
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
@@ -350,6 +365,7 @@ export default function ReservierungPage() {
                             {v.art === 'einlagerung' && <>{fmtDatum(v.von)}{lager ? <span style={{ color: lager.verwertbar ? C.danger : C.textDim }}> · {lager.tageEingelagert} T{lager.verwertbar ? ' · verwertbar' : lager.ueberLaufzeit ? ' · über Laufzeit' : ''}</span> : ''}{v.gegenstand ? <div style={{ color: C.textDim, fontSize: 13 }}>{v.gegenstand}</div> : ''}</>}
                             {v.art === 'vorbestellung' && <>{fmtZeit(v.von)}{v.anzahl ? <span style={{ color: C.textDim }}> · {v.anzahl} Stk</span> : ''}{v.gegenstand ? <div style={{ color: C.textDim, fontSize: 13 }}>{v.gegenstand}</div> : ''}</>}
                             {b ? <div style={{ color: C.gold, fontSize: 13 }}>{eur(b.brutto)} brutto</div> : ''}
+                            <EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} />
                           </td>
                           <td style={styles.td}><span style={{ ...styles.badge, color: FARBE[sm.farbe], borderColor: FARBE[sm.farbe] }}>{sm.label}</span></td>
                           <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>

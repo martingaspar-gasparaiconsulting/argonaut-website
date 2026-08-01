@@ -12,6 +12,10 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan, GWG_GRENZE } from '@/lib/afa';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'anlagegueter';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -50,6 +54,9 @@ export default function AnlagenPage() {
   const [form, setForm] = useState({ ...LEER });
   const [editId, setEditId] = useState<string | null>(null);
   const [planOffen, setPlanOffen] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const jahr = new Date().getFullYear();
 
@@ -57,7 +64,10 @@ export default function AnlagenPage() {
     setLaden(true);
     try {
       const { data } = await supabase.from('anlagegueter').select('id, bezeichnung, kategorie, anschaffungsdatum, anschaffungskosten, nutzungsdauer_jahre, notiz, status').order('anschaffungsdatum', { ascending: false });
-      setAnlagen((data as Anlage[]) ?? []);
+      const rows = (data as Anlage[]) ?? [];
+      setAnlagen(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch { setFehler('Laden fehlgeschlagen. Ist das SQL eingespielt?'); }
     finally { setLaden(false); }
   }, []);
@@ -72,7 +82,7 @@ export default function AnlagenPage() {
   }, [laden_]);
 
   function setF<K extends keyof typeof LEER>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
-  function reset() { setForm({ ...LEER }); setEditId(null); setPlanOffen(false); }
+  function reset() { setForm({ ...LEER }); setEditId(null); setPlanOffen(false); setNmExtra({}); }
 
   // ---- Regel-Ebene: AfA live rechnen ----
   const rechnung = useMemo(
@@ -91,8 +101,13 @@ export default function AnlagenPage() {
       status: form.status, updated_at: new Date().toISOString(),
     };
     try {
-      if (editId) { const { error } = await supabase.from('anlagegueter').update(payload).eq('id', editId); if (error) throw error; }
-      else { const { error } = await supabase.from('anlagegueter').insert(payload); if (error) throw error; }
+      if (editId) {
+        const { error } = await supabase.from('anlagegueter').update(payload).eq('id', editId); if (error) throw error;
+        try { await speichereWerte(MODUL, editId, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      } else {
+        const { data: neu, error } = await supabase.from('anlagegueter').insert(payload).select('id').single(); if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      }
       setOk('Anlagegut gespeichert.'); reset(); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
@@ -104,6 +119,7 @@ export default function AnlagenPage() {
       anschaffungskosten: a.anschaffungskosten != null ? String(a.anschaffungskosten) : '',
       nutzungsdauer_jahre: a.nutzungsdauer_jahre != null ? String(a.nutzungsdauer_jahre) : '', notiz: a.notiz || '', status: a.status || 'aktiv',
     });
+    setNmExtra(werteMap[a.id] ?? {});
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async function loeschen(a: Anlage) {
@@ -162,6 +178,7 @@ export default function AnlagenPage() {
               <option value="ausgemustert">ausgemustert</option>
             </select>
           </label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
         <div style={styles.ndHilfe}>
           <span style={{ color: C.textDim, fontSize: 12.5 }}>Übliche Nutzungsdauer:</span>
@@ -209,6 +226,8 @@ export default function AnlagenPage() {
         </div>
       </div>
 
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+
       <datalist id="nd-hilfe">{ND_HILFE.map((h) => <option key={h.label} value={h.jahre}>{h.label}</option>)}</datalist>
 
       <div style={{ ...styles.card, marginTop: 16 }}>
@@ -232,7 +251,7 @@ export default function AnlagenPage() {
               <tbody>
                 {berechnet.map(({ a, p }) => (
                   <tr key={a.id}>
-                    <td style={styles.td}>{a.bezeichnung}{a.kategorie ? <span style={{ color: C.textDim }}> · {a.kategorie}</span> : null}{a.status !== 'aktiv' ? <span style={{ color: C.warn, fontSize: 12 }}> ({a.status})</span> : null}</td>
+                    <td style={styles.td}>{a.bezeichnung}{a.kategorie ? <span style={{ color: C.textDim }}> · {a.kategorie}</span> : null}{a.status !== 'aktiv' ? <span style={{ color: C.warn, fontSize: 12 }}> ({a.status})</span> : null}<EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} /></td>
                     <td style={styles.td}>{dtag(a.anschaffungsdatum)}</td>
                     <td style={styles.tdR}>{eur(a.anschaffungskosten)}</td>
                     <td style={styles.td}><span style={{ color: p.methode === 'gwg' ? C.cyan : C.textDim, fontSize: 13 }}>{p.methode === 'gwg' ? 'GWG' : `linear · ${a.nutzungsdauer_jahre} J.`}</span></td>

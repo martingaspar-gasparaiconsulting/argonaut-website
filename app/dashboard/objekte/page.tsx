@@ -24,6 +24,10 @@ import {
 } from '@/lib/assets';
 import { augeObjekte } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'assets';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -91,6 +95,9 @@ export default function ObjekteRegister() {
   const [form, setForm] = useState<FormState>(LEER);
   const [speichert, setSpeichert] = useState(false);
   const [wartungBusy, setWartungBusy] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const heute = heuteLokal();
 
   const laden_ = useCallback(async () => {
@@ -100,8 +107,11 @@ export default function ObjekteRegister() {
         supabase.from('assets').select('*').eq('archiviert', zeigeArchiv).order('naechste_kontrolle', { ascending: true, nullsFirst: false }),
         supabase.from('asset_gruppen').select('id, bezeichnung, adresse').order('bezeichnung', { ascending: true }),
       ]);
-      setAssets((a.data as Asset[]) ?? []);
+      const rows = (a.data as Asset[]) ?? [];
+      setAssets(rows);
       setGruppen((g.data as Gruppe[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Register konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -133,8 +143,9 @@ export default function ObjekteRegister() {
     });
   }, [assets, suche, typFilter, gruppeFilter, nurFaellige, heute, gruppeName]);
 
-  function neuOeffnen() { setForm(LEER); setFehler(null); setModalAuf(true); }
+  function neuOeffnen() { setForm(LEER); setNmExtra({}); setFehler(null); setModalAuf(true); }
   function bearbeiten(a: Asset) {
+    setNmExtra(werteMap[a.id] ?? {});
     setForm({
       id: a.id, bezeichnung: a.bezeichnung ?? '', typ: a.typ ?? 'Maschine', gruppe_id: a.gruppe_id ?? '',
       neueGruppe: '', standort: a.standort ?? '', hersteller: a.hersteller ?? '', kennung: a.kennung ?? '',
@@ -178,11 +189,13 @@ export default function ObjekteRegister() {
       if (form.id) {
         const { error } = await supabase.from('assets').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { error } = await supabase.from('assets').insert(payload);
+        const { data: neu, error } = await supabase.from('assets').insert(payload).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
-      setModalAuf(false); setForm(LEER); setOk('Objekt gespeichert.'); await laden_();
+      setModalAuf(false); setForm(LEER); setNmExtra({}); setOk('Objekt gespeichert.'); await laden_();
     } catch (e: unknown) {
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setSpeichert(false); }
@@ -304,6 +317,7 @@ export default function ObjekteRegister() {
                         <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                           {a.typ}{a.kennung ? ` · ${a.kennung}` : ''}{a.hersteller ? ` · ${a.hersteller}` : ''}
                         </div>
+                        <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                       </td>
                       <td style={{ ...styles.td, color: C.textDim }}>
                         {gruppeName(a.gruppe_id) || '—'}{a.standort ? <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)' }}>{a.standort}</div> : null}
@@ -336,6 +350,8 @@ export default function ObjekteRegister() {
         )}
       </div>
 
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+
       <div style={styles.rechtHinweis}>
         Die nächste Kontrolle wird automatisch aus letzter Kontrolle + Intervall berechnet; der Objekt-Typ setzt die Standard-Prüffrist. Für Abschreibung/AfA nutze das Anlagen-Modul, für die Fahrzeug-Historie die Fahrzeugakte — das Register dupliziert diese Tiefe bewusst nicht, sondern verknüpft.
       </div>
@@ -362,6 +378,7 @@ export default function ObjekteRegister() {
               <Feld label="Anschaffungsdatum"><input type="date" style={styles.input} value={form.anschaffungsdatum} onChange={(e) => setF('anschaffungsdatum', e.target.value)} /></Feld>
               <Feld label="Anschaffungswert (€)"><input style={styles.input} value={form.anschaffungswert} onChange={(e) => setF('anschaffungswert', e.target.value)} inputMode="decimal" placeholder="0,00" /></Feld>
               <Feld label="Notiz" voll><textarea style={{ ...styles.input, minHeight: 56, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></Feld>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>Abbrechen</button>

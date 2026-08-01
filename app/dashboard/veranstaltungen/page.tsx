@@ -19,6 +19,10 @@ import { eventPdf } from '@/lib/eventPdf';
 import { offeneBuchungen } from '@/lib/umsatzBuchung';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'event_veranstaltung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,6 +64,9 @@ export default function VeranstaltungenPage() {
 
   const [nEvent, setNEvent] = useState({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' });
   const [nAnm, setNAnm] = useState<{ veranstaltung_id: string; name: string; email: string; plaetze: string } | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -68,8 +75,11 @@ export default function VeranstaltungenPage() {
         supabase.from('event_veranstaltung').select('*').order('beginn', { ascending: true }),
         supabase.from('event_anmeldung').select('*').order('angemeldet_am', { ascending: true }),
       ]);
-      setEvents((e.data as Veranstaltung[]) ?? []);
+      const rows = (e.data as Veranstaltung[]) ?? [];
+      setEvents(rows);
       setAnmeldungen((a.data as Anmeldung[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -138,13 +148,14 @@ export default function VeranstaltungenPage() {
     if (!uid || !nEvent.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setBusy('event'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('event_veranstaltung').insert({
+      const { data: neu, error } = await supabase.from('event_veranstaltung').insert({
         owner_user_id: uid, titel: nEvent.titel.trim(), art: nEvent.art, ort: nEvent.ort.trim() || null,
         beginn: nEvent.beginn || null, ende: nEvent.ende || null, kapazitaet: Math.round(num(nEvent.kapazitaet)),
         preis: num(nEvent.preis), status: nEvent.status,
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNEvent({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNEvent({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' }); setNmExtra({});
       setOk('Veranstaltung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -252,9 +263,11 @@ export default function VeranstaltungenPage() {
               {E_STATUS.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
             </select>
           </label>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
         </div>
         <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'event' ? 0.6 : 1 }} disabled={busy === 'event'} onClick={eventAnlegen}>＋ Veranstaltung</button>
       </div>
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Event-Karten */}
       {events.length === 0 ? (
@@ -268,6 +281,7 @@ export default function VeranstaltungenPage() {
               <div>
                 <div style={{ fontWeight: 800, fontSize: 'clamp(15px,1.3vw,20px)' }}>{ev.titel} <span style={{ color: C.textDim, fontWeight: 400 }}>· {eventArtLabel(ev.art)}</span></div>
                 <div style={{ color: C.textDim, fontSize: 13, marginTop: 2 }}>{fmtDT(ev.beginn)}{ev.ort ? ` · ${ev.ort}` : ''}{ev.preis ? ` · ${eur(ev.preis)}/Ticket` : ' · kostenlos'}</div>
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[ev.id]} />
               </div>
               <span style={{ ...styles.statusPill, color: E_ST_FARBE[ev.status] || C.textDim, borderColor: (E_ST_FARBE[ev.status] || C.textDim) + '55' }}>{k.ausverkauft && ev.status === 'aktiv' ? 'ausverkauft' : (E_STATUS.find((s) => s.v === ev.status)?.l ?? ev.status)}</span>
             </div>
