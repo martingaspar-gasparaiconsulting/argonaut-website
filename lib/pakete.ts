@@ -34,6 +34,7 @@ export const KERN_MODULE: string[] = [
   'kundenportal', // 👤 Kunden-Portal
   'versand',      // 📦 Versand-Center (Sendungen, Adress-Label, Tracking)
   'marktplaetze', // 🛒 Marktplätze (Amazon/eBay/Kaufland/OTTO; Abgleich in Aufbau)
+  'mail-sync',    // 📬 Mail & Kalender (Outlook/Google/IMAP/CalDAV; Sync in Aufbau)
   'reports',      // 🧮 Report-Baukasten (Self-Service-Auswertungen)
   'banking',      // 🏦 Banking-Abgleich (CSV-Umsätze ↔ Rechnungen; finAPI in Aufbau)
   'elster',       // 🏛 USt-Voranmeldung (Kennziffern; ELSTER-Übermittlung in Aufbau)

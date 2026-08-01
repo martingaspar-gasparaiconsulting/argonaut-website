@@ -90,6 +90,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat', ebene: 4, gruppe: 'komm' },
   { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente', ebene: 4, gruppe: 'komm' },
   { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz', ebene: 4, gruppe: 'komm' },
+  { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', ebene: 4, gruppe: 'komm' },
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
