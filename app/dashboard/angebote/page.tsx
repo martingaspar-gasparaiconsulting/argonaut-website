@@ -11,8 +11,6 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
-import { rechneAngebot, freigabeNoetig, RABATT_FREIGABE_AB, type Staffel } from '@/lib/angebotRabatt';
-import { normalisierePositionen, nurGefuellte, bundleName, bundleLabel, type Bundle } from '@/lib/angebotBundle';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,12 +23,11 @@ const C = {
 };
 
 type Kontakt = { id: string; name: string; email: string };
-type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst_satz: string; rabatt: string };
+type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst_satz: string };
 type Angebot = {
   id: string; angebotsnummer: string | null; titel: string; kunde_name: string | null;
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
   kunde_email: string | null; kontakt_id: string | null;
-  rabatt_prozent: number | null; genehmigung_noetig: boolean | null; genehmigt: boolean | null;
 };
 
 const STATUS_FARBE: Record<string, string> = {
@@ -40,11 +37,17 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 function num(s: string) { return parseFloat((s || '').replace(/\./g, '').replace(',', '.')) || 0; }
 function heutePlus(tage: number) { const d = new Date(); d.setDate(d.getDate() + tage); return d.toISOString().slice(0, 10); }
 
-const LEER_POS: Pos = { bezeichnung: '', menge: '1', einheit: 'Stk', einzelpreis: '', mwst_satz: '19', rabatt: '0' };
+const LEER_POS: Pos = { bezeichnung: '', menge: '1', einheit: 'Stk', einzelpreis: '', mwst_satz: '19' };
 
-// Positionen für die Rechen-Lib aufbereiten (Strings -> die Lib parst selbst).
-function alsRabattPos(pos: Pos[]) {
-  return pos.map((p) => ({ menge: p.menge, einzelpreis: p.einzelpreis, mwst_satz: p.mwst_satz, rabatt: p.rabatt }));
+// Netto/MwSt/Brutto in Cent-Genauigkeit (je Steuersatz auf die Gruppensumme).
+function rechne(pos: Pos[]) {
+  let nettoC = 0; const perSatz: Record<number, number> = {};
+  for (const p of pos) {
+    const c = Math.round(num(p.menge) * num(p.einzelpreis) * 100);
+    nettoC += c; const s = num(p.mwst_satz); perSatz[s] = (perSatz[s] || 0) + c;
+  }
+  let mwstC = 0; for (const s of Object.keys(perSatz)) mwstC += Math.round(perSatz[Number(s)] * Number(s) / 100);
+  return { netto: nettoC / 100, mwst: mwstC / 100, brutto: (nettoC + mwstC) / 100 };
 }
 
 export default function AngebotePage() {
@@ -62,17 +65,12 @@ export default function AngebotePage() {
   const [gueltig, setGueltig] = useState(heutePlus(30));
   const [positionen, setPositionen] = useState<Pos[]>([{ ...LEER_POS }]);
   const [notiz, setNotiz] = useState('');
-  const [gesamtRabatt, setGesamtRabatt] = useState('0');
-  const [staffelAn, setStaffelAn] = useState(false);
-  const [staffeln, setStaffeln] = useState<Staffel[]>([{ abMenge: 10, rabatt: 5 }, { abMenge: 50, rabatt: 10 }]);
-  const [bundles, setBundles] = useState<Bundle[]>([]);
-  const [bundleNeuName, setBundleNeuName] = useState('');
 
   const basisUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id, rabatt_prozent, genehmigung_noetig, genehmigt')
+      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id')
       .order('erstellt_am', { ascending: false });
     setListe((data as Angebot[]) ?? []);
   }, []);
@@ -89,44 +87,11 @@ export default function AngebotePage() {
         name: (k.anzeigename || `${k.vorname || ''} ${k.nachname || ''}`.trim() || k.name || k.email || '—'),
       })));
       await laden_();
-      await bundleLaden();
       setLaden(false);
     })();
   }, [laden_]);
 
-  const bundleLaden = useCallback(async () => {
-    try {
-      const { data } = await supabase.from('angebot_bundle').select('id, name, positionen').order('name', { ascending: true });
-      setBundles(((data as Array<{ id: string; name: string; positionen: unknown }>) ?? []).map((b) => ({
-        id: b.id, name: b.name, positionen: normalisierePositionen(b.positionen),
-      })));
-    } catch { /* Tabelle evtl. noch nicht eingespielt */ }
-  }, []);
-
-  function bundleEinfuegen(id: string) {
-    const b = bundles.find((x) => x.id === id);
-    if (!b) return;
-    setPositionen((ps) => [...nurGefuellte(ps), ...b.positionen]);
-  }
-
-  async function bundleSpeichern() {
-    if (!uid) return;
-    const name = bundleName(bundleNeuName);
-    if (!name) { setFehler('Bitte einen Namen für den Baustein angeben.'); return; }
-    const pos = nurGefuellte(positionen);
-    if (!pos.length) { setFehler('Keine Positionen zum Speichern.'); return; }
-    setBusy('bundle'); setFehler(null); setOk(null);
-    try {
-      const { error } = await supabase.from('angebot_bundle').insert({ owner_user_id: uid, name, positionen: pos });
-      if (error) { setFehler('Baustein konnte nicht gespeichert werden.'); return; }
-      setBundleNeuName(''); setOk(`Baustein „${name}" gespeichert — ab jetzt mit einem Klick einfügbar.`);
-      await bundleLaden();
-    } finally { setBusy(null); }
-  }
-
-  const aktiveStaffeln = useMemo(() => (staffelAn ? staffeln.filter((s) => s.abMenge > 0 && s.rabatt > 0) : []), [staffelAn, staffeln]);
-  const summe = useMemo(() => rechneAngebot(alsRabattPos(positionen), gesamtRabatt, aktiveStaffeln), [positionen, gesamtRabatt, aktiveStaffeln]);
-  const freigabe = freigabeNoetig(summe.rabattProzentGesamt);
+  const summe = useMemo(() => rechne(positionen), [positionen]);
 
   function setPos(i: number, f: keyof Pos, v: string) { setPositionen((ps) => ps.map((p, k) => (k === i ? { ...p, [f]: v } : p))); }
   function posWeg(i: number) { setPositionen((ps) => ps.filter((_, k) => k !== i)); }
@@ -140,29 +105,24 @@ export default function AngebotePage() {
     setBusy('neu'); setFehler(null); setOk(null);
     try {
       const treffer = kontakte.find((k) => k.name === kunde.trim());
-      const s = rechneAngebot(alsRabattPos(posClean), gesamtRabatt, aktiveStaffeln);
-      const brauchtFreigabe = freigabeNoetig(s.rabattProzentGesamt);
+      const s = rechne(posClean);
       const { data: ang, error } = await supabase.from('angebote').insert({
         owner_user_id: uid, kontakt_id: treffer?.id ?? null, kunde_name: kunde.trim(), kunde_email: treffer?.email || null,
         titel: titel.trim() || 'Angebot', status: 'entwurf', gueltig_bis: gueltig || null,
         netto_summe: s.netto, mwst_summe: s.mwst, brutto_summe: s.brutto, notiz: notiz.trim() || null,
-        rabatt_prozent: s.rabattProzentGesamt, rabatt_betrag: s.rabattBetrag,
-        genehmigung_noetig: brauchtFreigabe, genehmigt: false,
       }).select('id, token').single();
       if (error || !ang) { setFehler('Angebot konnte nicht gespeichert werden.'); return; }
 
       const posRows = posClean.map((p, i) => ({
         owner_user_id: uid, angebot_id: ang.id, position: i + 1,
         bezeichnung: p.bezeichnung.trim() || '(ohne Bezeichnung)', menge: num(p.menge), einheit: p.einheit.trim() || 'Stk',
-        einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz),
-        rabatt_prozent: s.positionen[i]?.effektivProzent ?? 0,
-        gesamt_netto: s.positionen[i]?.netto ?? Math.round(num(p.menge) * num(p.einzelpreis) * 100) / 100,
+        einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz), gesamt_netto: Math.round(num(p.menge) * num(p.einzelpreis) * 100) / 100,
       }));
       const { error: pErr } = await supabase.from('angebot_positionen').insert(posRows);
       if (pErr) { await supabase.from('angebote').delete().eq('id', ang.id); setFehler('Positionen konnten nicht gespeichert werden.'); return; }
 
       setOk('Angebot erstellt. Zusage-Link ist jetzt bereit zum Kopieren.');
-      setKunde(''); setTitel('Angebot'); setPositionen([{ ...LEER_POS }]); setNotiz(''); setGueltig(heutePlus(30)); setGesamtRabatt('0');
+      setKunde(''); setTitel('Angebot'); setPositionen([{ ...LEER_POS }]); setNotiz(''); setGueltig(heutePlus(30));
       await laden_();
     } finally { setBusy(null); }
   }
@@ -173,15 +133,6 @@ export default function AngebotePage() {
       const { error } = await supabase.from('angebote').update({ status, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
       if (error) { setFehler('Änderung fehlgeschlagen.'); return; }
       setListe((l) => l.map((x) => (x.id === a.id ? { ...x, status } : x)));
-    } finally { setBusy(null); }
-  }
-  async function freigeben(a: Angebot) {
-    setBusy(a.id); setFehler(null);
-    try {
-      const { error } = await supabase.from('angebote').update({ genehmigt: true, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
-      if (error) { setFehler('Freigabe fehlgeschlagen.'); return; }
-      setListe((l) => l.map((x) => (x.id === a.id ? { ...x, genehmigt: true } : x)));
-      setOk('Angebot freigegeben — es kann jetzt versendet werden.');
     } finally { setBusy(null); }
   }
   async function kopieren(a: Angebot) {
@@ -249,7 +200,7 @@ export default function AngebotePage() {
 
         <div style={styles.posKopf}>
           <span>Bezeichnung</span><span style={{ textAlign: 'right' }}>Menge</span><span>Einheit</span>
-          <span style={{ textAlign: 'right' }}>Einzel €</span><span style={{ textAlign: 'right' }}>MwSt %</span><span style={{ textAlign: 'right' }}>Rabatt %</span><span />
+          <span style={{ textAlign: 'right' }}>Einzel €</span><span style={{ textAlign: 'right' }}>MwSt %</span><span />
         </div>
         {positionen.map((p, i) => (
           <div key={i} style={styles.posRow}>
@@ -258,73 +209,20 @@ export default function AngebotePage() {
             <input style={styles.inp} value={p.einheit} onChange={(e) => setPos(i, 'einheit', e.target.value)} />
             <input style={{ ...styles.inp, textAlign: 'right' }} value={p.einzelpreis} onChange={(e) => setPos(i, 'einzelpreis', e.target.value)} inputMode="decimal" placeholder="0" />
             <input style={{ ...styles.inp, textAlign: 'right' }} value={p.mwst_satz} onChange={(e) => setPos(i, 'mwst_satz', e.target.value)} inputMode="decimal" />
-            <input style={{ ...styles.inp, textAlign: 'right' }} value={p.rabatt} onChange={(e) => setPos(i, 'rabatt', e.target.value)} inputMode="decimal" placeholder="0" title="Positionsrabatt in %" />
             <button type="button" style={styles.wegBtn} onClick={() => posWeg(i)} aria-label="entfernen">✕</button>
           </div>
         ))}
         <button type="button" style={styles.dazuBtn} onClick={posDazu}>＋ Position</button>
-
-        {/* --- Bausteine / Bundles (CPQ A8b) --- */}
-        <div style={styles.bundleBox}>
-          <span style={{ color: C.textDim, fontSize: 13, fontWeight: 700 }}>📦 Bausteine:</span>
-          {bundles.length > 0 && (
-            <select style={{ ...styles.inp, maxWidth: 260 }} value="" onChange={(e) => { if (e.target.value) bundleEinfuegen(e.target.value); }}>
-              <option value="">— Bundle einfügen —</option>
-              {bundles.map((b) => <option key={b.id} value={b.id}>{bundleLabel(b)}</option>)}
-            </select>
-          )}
-          <input style={{ ...styles.inp, maxWidth: 180 }} value={bundleNeuName} onChange={(e) => setBundleNeuName(e.target.value)} placeholder="Name für neuen Baustein" />
-          <button type="button" style={{ ...styles.dazuBtn, opacity: busy === 'bundle' ? 0.6 : 1 }} disabled={busy === 'bundle'} onClick={bundleSpeichern}>＋ Als Baustein speichern</button>
-        </div>
-
-        {/* --- Rabatte & Staffeln (CPQ) --- */}
-        <div style={styles.rabattBox}>
-          <div style={styles.rabattZeile}>
-            <label style={{ ...styles.lab, flex: '0 0 auto' }}>Gesamtrabatt %
-              <input style={{ ...styles.inp, width: 110, textAlign: 'right' }} value={gesamtRabatt} onChange={(e) => setGesamtRabatt(e.target.value)} inputMode="decimal" placeholder="0" />
-            </label>
-            <label style={styles.staffelToggle}>
-              <input type="checkbox" checked={staffelAn} onChange={(e) => setStaffelAn(e.target.checked)} />
-              Mengenrabatt (Staffel) automatisch anwenden
-            </label>
-          </div>
-          {staffelAn && (
-            <div style={styles.staffelListe}>
-              {staffeln.map((st, i) => (
-                <div key={i} style={styles.staffelRow}>
-                  <span style={{ color: C.textDim, fontSize: 13 }}>ab Menge</span>
-                  <input style={{ ...styles.inp, width: 80, textAlign: 'right' }} value={String(st.abMenge)} inputMode="decimal"
-                    onChange={(e) => setStaffeln((s) => s.map((x, k) => (k === i ? { ...x, abMenge: num(e.target.value) } : x)))} />
-                  <span style={{ color: C.textDim, fontSize: 13 }}>→ Rabatt</span>
-                  <input style={{ ...styles.inp, width: 80, textAlign: 'right' }} value={String(st.rabatt)} inputMode="decimal"
-                    onChange={(e) => setStaffeln((s) => s.map((x, k) => (k === i ? { ...x, rabatt: num(e.target.value) } : x)))} />
-                  <span style={{ color: C.textDim, fontSize: 13 }}>%</span>
-                  <button type="button" style={styles.wegBtn} onClick={() => setStaffeln((s) => s.filter((_, k) => k !== i))} aria-label="entfernen">✕</button>
-                </div>
-              ))}
-              <button type="button" style={styles.dazuBtn} onClick={() => setStaffeln((s) => [...s, { abMenge: 0, rabatt: 0 }])}>＋ Staffel</button>
-              <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 2 }}>Die Staffel greift je Position, wenn die Menge erreicht ist — und nur, wenn sie höher ist als der eingetippte Positionsrabatt.</div>
-            </div>
-          )}
-        </div>
 
         <label style={styles.lab}>Anmerkung (optional)
           <input style={styles.inp} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="z. B. Lieferzeit, Zahlungsbedingungen" />
         </label>
 
         <div style={styles.summe}>
-          {summe.rabattBetrag > 0 && <div><span style={styles.sk}>Zwischensumme</span> {eur(summe.zwischenNetto)}</div>}
-          {summe.rabattBetrag > 0 && <div style={{ color: C.green }}><span style={styles.sk}>Rabatt ({summe.rabattProzentGesamt} %)</span> −{eur(summe.rabattBetrag)}</div>}
           <div><span style={styles.sk}>Netto</span> {eur(summe.netto)}</div>
           <div><span style={styles.sk}>MwSt</span> {eur(summe.mwst)}</div>
           <div style={styles.brutto}><span style={styles.sk}>Gesamt</span> {eur(summe.brutto)}</div>
         </div>
-
-        {freigabe && (
-          <div style={styles.freigabeHinweis}>
-            ⚠️ Rabatt {summe.rabattProzentGesamt} % liegt ab {RABATT_FREIGABE_AB} % — dieses Angebot wird als <strong>„Freigabe nötig"</strong> gespeichert und sollte vor dem Versand freigegeben werden.
-          </div>
-        )}
 
         {ok && <div style={styles.ok}>{ok}</div>}
         {fehler && <div style={styles.err}>{fehler}</div>}
@@ -350,11 +248,8 @@ export default function AngebotePage() {
             <div key={a.id} style={styles.item}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{a.titel} <span style={{ color: C.textDim, fontWeight: 400 }}>· {a.kunde_name || '—'}</span></div>
-                <div style={{ color: C.textDim, fontSize: 13 }}>{eur(a.brutto_summe)} brutto{(a.rabatt_prozent ?? 0) > 0 ? ` · ${a.rabatt_prozent} % Rabatt` : ''}{a.gueltig_bis ? ` · gültig bis ${a.gueltig_bis.split('-').reverse().join('.')}` : ''}</div>
+                <div style={{ color: C.textDim, fontSize: 13 }}>{eur(a.brutto_summe)} brutto{a.gueltig_bis ? ` · gültig bis ${a.gueltig_bis.split('-').reverse().join('.')}` : ''}</div>
               </div>
-              {a.genehmigung_noetig && (a.genehmigt
-                ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ freigegeben</span>
-                : <span style={{ ...styles.badge, color: C.warn, borderColor: C.warn }}>⚠️ Freigabe nötig</span>)}
               <span style={{ ...styles.badge, color: STATUS_FARBE[a.status] || C.textDim, borderColor: STATUS_FARBE[a.status] || C.border }}>
                 {a.status}
               </span>
@@ -362,8 +257,8 @@ export default function AngebotePage() {
                 <button style={styles.mini} onClick={() => kopieren(a)}>🔗 Link</button>
                 <a href={`/api/angebot-pdf?id=${encodeURIComponent(a.id)}`} target="_blank" rel="noreferrer" style={styles.miniLink}>⬇ PDF</a>
                 <button style={styles.mini} disabled={busy === a.id} onClick={() => zurUnterschrift(a)}>✍️ Unterschrift</button>
-                {a.genehmigung_noetig && !a.genehmigt && <button style={{ ...styles.mini, color: C.navy, background: C.warn, borderColor: C.warn }} disabled={busy === a.id} onClick={() => freigeben(a)}>✓ Freigeben</button>}
                 {a.status === 'entwurf' && <button style={styles.mini} disabled={busy === a.id} onClick={() => statusSetzen(a, 'gesendet')}>✓ gesendet</button>}
+                {a.status === 'gesendet' && <button style={{ ...styles.mini, color: C.navy, background: C.green, borderColor: C.green }} disabled={busy === a.id} onClick={() => statusSetzen(a, 'angenommen')}>✓ angenommen</button>}
                 {a.status === 'angenommen' && (a.rechnung_id
                   ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ Rechnung</span>
                   : <button style={{ ...styles.mini, color: C.navy, background: C.gold, borderColor: C.gold }} disabled={busy === a.id} onClick={() => inRechnung(a)}>→ Rechnung</button>)}
@@ -386,15 +281,8 @@ const styles: Record<string, CSSProperties> = {
   row2: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 },
   lab: { display: 'flex', flexDirection: 'column', gap: 5, fontSize: 13, color: C.textDim },
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 15, fontFamily: 'inherit', minWidth: 0 },
-  posKopf: { display: 'grid', gridTemplateColumns: '1fr 58px 54px 80px 52px 58px 32px', gap: 6, color: C.textDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 2px' },
-  posRow: { display: 'grid', gridTemplateColumns: '1fr 58px 54px 80px 52px 58px 32px', gap: 6, alignItems: 'center' },
-  bundleBox: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px' },
-  rabattBox: { display: 'flex', flexDirection: 'column', gap: 10, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' },
-  rabattZeile: { display: 'flex', gap: 18, alignItems: 'flex-end', flexWrap: 'wrap' },
-  staffelToggle: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: C.text, cursor: 'pointer' },
-  staffelListe: { display: 'flex', flexDirection: 'column', gap: 8, borderTop: `1px solid ${C.border}`, paddingTop: 10 },
-  staffelRow: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  freigabeHinweis: { color: C.warn, background: 'rgba(224,162,76,0.1)', border: '1px solid rgba(224,162,76,0.35)', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, lineHeight: 1.5 },
+  posKopf: { display: 'grid', gridTemplateColumns: '1fr 70px 70px 90px 70px 34px', gap: 6, color: C.textDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 2px' },
+  posRow: { display: 'grid', gridTemplateColumns: '1fr 70px 70px 90px 70px 34px', gap: 6, alignItems: 'center' },
   wegBtn: { background: 'transparent', color: C.danger, border: `1px solid ${C.border}`, borderRadius: 8, padding: '9px 0', fontSize: 13, cursor: 'pointer' },
   dazuBtn: { alignSelf: 'flex-start', background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '8px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   summe: { display: 'flex', gap: 20, justifyContent: 'flex-end', flexWrap: 'wrap', fontSize: 15, borderTop: `1px solid ${C.border}`, paddingTop: 12 },

@@ -88,7 +88,7 @@ export default function BankingSeite() {
     try {
       const { error } = await supabase.from('rechnungen').update({
         zahlungsstatus: 'bezahlt', bezahlt_am: new Date().toISOString().slice(0, 10),
-        bezahlter_betrag: m.transaktion.betrag, aktualisiert_am: new Date().toISOString(),
+        bezahlter_betrag: m.transaktion.betrag, updated_at: new Date().toISOString(),
       }).eq('id', m.rechnungId);
       if (error) throw error;
       setErledigt((s) => new Set(s).add(m.rechnungId as string));

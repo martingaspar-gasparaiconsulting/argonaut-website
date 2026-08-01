@@ -281,7 +281,7 @@ export default function TerminePage() {
         owner_user_id: uid, termin_art_id: aktiveArt.id,
         beginn_am: buchSlot.beginn.toISOString(), ende_am: buchSlot.ende.toISOString(),
         titel: buchForm.titel.trim() || aktiveArt.name,
-        kunde_name: buchForm.kundeName.trim() || null, kunde_email: buchForm.kundeEmail.trim() || null,
+        kunde_name: buchForm.kundeName.trim() || null, kunde_email: buchForm.kundeEmail.trim().toLowerCase() || null,
         notiz: buchForm.notiz.trim() || null, status: 'geplant', quelle: 'intern',
       }).select('id').single();
       if (error) throw error;
@@ -351,7 +351,7 @@ export default function TerminePage() {
       const { error } = await supabase.from('termine').update({
         beginn_am: s.toISOString(), ende_am: e.toISOString(),
         titel: bearbForm.titel.trim() || 'Termin',
-        kunde_name: bearbForm.kundeName.trim() || null, kunde_email: bearbForm.kundeEmail.trim() || null,
+        kunde_name: bearbForm.kundeName.trim() || null, kunde_email: bearbForm.kundeEmail.trim().toLowerCase() || null,
         notiz: bearbForm.notiz.trim() || null,
       }).eq('id', bearbForm.id);
       if (error) throw error;
