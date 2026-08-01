@@ -20,6 +20,7 @@ import { beispielZeilen } from './beispielKatalog';
 import { beispielArtikelZeilen, beispielLieferantenZeilen } from './beispielStammdaten';
 import { baueVerleihArtikel, baueProjekte, baueMitglieder } from './beispielModule';
 import { kategorieModule } from './branchenkatalog';
+import { baueAngebote, baueRechnungen, baueDeals, baueSendungen } from './beispielKern';
 
 /** Name der Register-Tabelle (Sicherheitsnetz für sauberes Entfernen). */
 export const REGISTER_TABELLE = 'beispiel_datensatz';
@@ -47,6 +48,11 @@ export const SEEDER: Seeder[] = [
   { key: 'verleih', tabelle: 'verleih_artikel', modul: 'verleih', baue: (kat, uid) => baueVerleihArtikel(kat, uid) },
   { key: 'projekte', tabelle: 'projekte', modul: 'projekte', baue: (kat, uid, heute) => baueProjekte(kat, uid, heute) },
   { key: 'mitglieder', tabelle: 'mitglieder', modul: 'mitglieder', baue: (kat, uid, heute) => baueMitglieder(kat, uid, heute) },
+  // Kern-Ketten (ungegatet, für jede Branche + Demo): Angebote, Rechnungen, Pipeline, Versand.
+  { key: 'angebote', tabelle: 'angebote', baue: (kat, uid, heute) => baueAngebote(kat, uid, heute) },
+  { key: 'rechnungen', tabelle: 'rechnungen', baue: (kat, uid, heute) => baueRechnungen(kat, uid, heute) },
+  { key: 'deals', tabelle: 'crm_deal', baue: (kat, uid, heute) => baueDeals(kat, uid, heute) },
+  { key: 'sendungen', tabelle: 'versand_sendung', baue: (kat, uid, heute) => baueSendungen(kat, uid, heute) },
 ];
 
 /** Kopie der Seeder-Liste (Aufrufer mutieren nicht die Konstante). */
@@ -63,6 +69,9 @@ export function aktiveSeeder(kategorie: string | null | undefined): Seeder[] {
 // Explizite Loesch-Reihenfolge: abhaengige Belege (Kinder) zuerst, Kontakte
 // zuletzt. Register-Tabellen, die hier fehlen, haengt die Route hinten an.
 export const LOESCH_ORDER: string[] = [
+  'versand_sendung',
+  'crm_deal',
+  'rechnungen',
   'zahlungen',
   'angebot_positionen',
   'angebote',
