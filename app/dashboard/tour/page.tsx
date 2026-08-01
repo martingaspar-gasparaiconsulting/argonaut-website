@@ -15,6 +15,10 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeTour } from '@/lib/auge';
 import { ablieferPdf } from '@/lib/ablieferPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'tour';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -99,6 +103,9 @@ export default function TourPage() {
 
   const [nt, setNt] = useState({ bezeichnung: '', datum: H, fahrer: '', fahrzeug: '' });
   const [nst, setNst] = useState({ empfaenger: '', adresse: '', kolli: '1' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -107,8 +114,11 @@ export default function TourPage() {
         supabase.from('tour').select('*').order('datum', { ascending: false }),
         supabase.from('tour_stopp').select('*').order('reihenfolge', { ascending: true }),
       ]);
-      setTouren((t.data as Tour[]) ?? []);
+      const tt = (t.data as Tour[]) ?? [];
+      setTouren(tt);
       setStopps((s.data as Stopp[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, tt.map((r) => r.id)));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -140,7 +150,8 @@ export default function TourPage() {
         owner_user_id: uid, bezeichnung: nt.bezeichnung.trim(), datum: nt.datum, fahrer: nt.fahrer.trim() || null, fahrzeug: nt.fahrzeug.trim() || null, status: 'geplant',
       }).select('id').single();
       if (error) throw error;
-      setNt({ bezeichnung: '', datum: H, fahrer: '', fahrzeug: '' });
+      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNt({ bezeichnung: '', datum: H, fahrer: '', fahrzeug: '' }); setNmExtra({});
       setOk('Tour angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('stopps'); }
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -231,9 +242,11 @@ export default function TourPage() {
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nt.datum} onChange={(e) => setNt({ ...nt, datum: e.target.value })} /></label>
               <label style={styles.lab}>Fahrer<input style={styles.inp} value={nt.fahrer} onChange={(e) => setNt({ ...nt, fahrer: e.target.value })} /></label>
               <label style={styles.lab}>Fahrzeug<input style={styles.inp} value={nt.fahrzeug} onChange={(e) => setNt({ ...nt, fahrzeug: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'tour' ? 0.6 : 1 }} disabled={busy === 'tour'} onClick={tourAnlegen}>＋ Anlegen & öffnen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {touren.length === 0 ? <Leerzustand icon="🗺️" titel="Noch keine Touren" text="Plane Liefertouren mit Stopps und elektronischem Abliefernachweis." schritte={["Tour oben anlegen", "Stopps und Empfänger zuordnen", "Unterwegs Status und Unterschrift erfassen"]} /> : (
@@ -245,7 +258,7 @@ export default function TourPage() {
                       return (
                         <tr key={t.id}>
                           <td style={styles.td}>{fmtDatum(t.datum)}</td>
-                          <td style={styles.td}>{t.bezeichnung}<span style={{ color: C.textDim }}> · {TOUR_META[t.status] || t.status}</span></td>
+                          <td style={styles.td}>{t.bezeichnung}<span style={{ color: C.textDim }}> · {TOUR_META[t.status] || t.status}</span><EigeneFelderAnzeige felder={felder} werte={werteMap[t.id]} /></td>
                           <td style={{ ...styles.td, color: C.textDim }}>{t.fahrer || '—'}</td>
                           <td style={{ ...styles.td, textAlign: 'right' }}>{fortschrittProzent(ts)}% <span style={{ color: C.textDim }}>({ts.length})</span></td>
                           <td style={{ ...styles.td, textAlign: 'right' }}><button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => { setAktivId(t.id); setTab('stopps'); }}>öffnen ›</button></td>

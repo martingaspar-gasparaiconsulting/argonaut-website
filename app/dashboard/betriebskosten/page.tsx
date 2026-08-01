@@ -18,6 +18,10 @@ import {
 import { augeBk } from '@/lib/auge';
 import { betriebskostenPdf } from '@/lib/betriebskostenPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bk_kostenart';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -50,6 +54,9 @@ export default function BetriebskostenPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nKostExtra, setNKostExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const [nAbr, setNAbr] = useState({ bezeichnung: '', zeitraum_von: `${new Date().getFullYear() - 1}-01-01`, zeitraum_bis: `${new Date().getFullYear() - 1}-12-31` });
   const [nEinheit, setNEinheit] = useState({ bezeichnung: '', mieter_name: '', wohnflaeche: '', personen: '', verbrauch: '', vorauszahlung: '' });
@@ -66,7 +73,10 @@ export default function BetriebskostenPage() {
       const abr = (a.data as Abrechnung[]) ?? [];
       setAbrechnungen(abr);
       setEinheiten((e.data as Einheit[]) ?? []);
-      setKostenarten((k.data as Kostenart[]) ?? []);
+      const kk = (k.data as Kostenart[]) ?? [];
+      setKostenarten(kk);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, kk.map((r) => r.id)));
       setSelAbr((cur) => cur ?? (abr[0]?.id ?? null));
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
@@ -128,13 +138,14 @@ export default function BetriebskostenPage() {
     if (num(nKost.betrag) <= 0) { setFehler('Bitte einen Gesamtbetrag angeben.'); return; }
     setBusy('kost'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('bk_kostenart').insert({
+      const { data: neu, error } = await supabase.from('bk_kostenart').insert({
         owner_user_id: uid, abrechnung_id: selAbr, bezeichnung: kat.bezeichnung, betrag_gesamt: num(nKost.betrag),
         verteiler: kat.verteiler, betrkv_nr: kat.nr, ist_heizkosten: Boolean(kat.heiz),
         verbrauch_anteil_prozent: kat.heiz ? Math.round(num(nKost.verbrauch_anteil)) : null,
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNKost({ katalog: '17', betrag: '', verbrauch_anteil: String(HEIZ_VERBRAUCH_STD) });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nKostExtra); } catch { /* eigene Felder optional */ }
+      setNKost({ katalog: '17', betrag: '', verbrauch_anteil: String(HEIZ_VERBRAUCH_STD) }); setNKostExtra({});
       setOk('Kostenart hinzugefügt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -251,6 +262,11 @@ export default function BetriebskostenPage() {
               ) : <div style={{ alignSelf: 'end', color: C.textDim, fontSize: 13, paddingBottom: 10 }}>Schlüssel: {VERT_LABEL[BETRKV_KATALOG.find((x) => String(x.nr) === nKost.katalog)?.verteiler ?? 'wohnflaeche']}</div>}
               <button style={{ ...styles.primaer, opacity: busy === 'kost' ? 0.6 : 1 }} disabled={busy === 'kost'} onClick={kostenartAnlegen}>＋</button>
             </div>
+            {felder.length > 0 && (
+              <div style={styles.grid}>
+                <EigeneFelderInputs felder={felder} werte={nKostExtra} setWert={(fid, w) => setNKostExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              </div>
+            )}
             {BETRKV_KATALOG.find((x) => String(x.nr) === nKost.katalog)?.heiz && !heizAnteilGueltig(num(nKost.verbrauch_anteil)) && (
               <div style={{ marginTop: 6, color: C.warn, fontSize: 13 }}>⚠ HeizkostenV: Verbrauchsanteil muss zwischen 50 % und 70 % liegen.</div>
             )}
@@ -258,7 +274,10 @@ export default function BetriebskostenPage() {
               <div style={{ marginTop: 10 }}>
                 {abrKosten.map((k) => (
                   <div key={k.id} style={styles.zeile}>
-                    <span>{k.betrkv_nr}. {k.bezeichnung} <span style={{ color: C.textDim }}>· {eur(k.betrag_gesamt)} · {k.ist_heizkosten ? `Verbr./Fläche ${k.verbrauch_anteil_prozent ?? HEIZ_VERBRAUCH_STD}%` : VERT_LABEL[k.verteiler]}</span></span>
+                    <div style={{ minWidth: 0 }}>
+                      <span>{k.betrkv_nr}. {k.bezeichnung} <span style={{ color: C.textDim }}>· {eur(k.betrag_gesamt)} · {k.ist_heizkosten ? `Verbr./Fläche ${k.verbrauch_anteil_prozent ?? HEIZ_VERBRAUCH_STD}%` : VERT_LABEL[k.verteiler]}</span></span>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[k.id]} />
+                    </div>
                     <button style={styles.miniX} disabled={busy === k.id} onClick={() => loesche('bk_kostenart', k.id)}>✕</button>
                   </div>
                 ))}
@@ -268,6 +287,8 @@ export default function BetriebskostenPage() {
               </div>
             )}
           </div>
+
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {/* Ergebnis */}
           {abrEinheiten.length > 0 && abrKosten.length > 0 && (

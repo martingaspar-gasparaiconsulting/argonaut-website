@@ -18,6 +18,10 @@ import {
 } from "@/lib/housekeeping";
 import { ALLERGENE, parseAllergene, allergenNamen } from "@/lib/etiketten";
 import { speisekartePdf } from "@/lib/speisekartePdf";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import type { EigenesFeld } from "@/lib/eigeneFelder";
+
+const MODUL = "hk_zimmer";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-7 · Housekeeping & Speisekarte/Menü (Gastro/Hotellerie)
@@ -73,6 +77,9 @@ export default function HousekeepingSeite() {
   const [gForm, setGForm] = useState<GForm>(LEER_G);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     (async () => {
@@ -89,8 +96,11 @@ export default function HousekeepingSeite() {
       supabase.from("hk_zimmer").select("*").order("bezeichnung", { ascending: true }),
       supabase.from("menu_gericht").select("*").order("reihenfolge", { ascending: true }),
     ]);
-    if (!z.error && z.data) setZimmer(z.data as Zimmer[]);
+    const zz = (!z.error && z.data ? (z.data as Zimmer[]) : []);
+    if (!z.error && z.data) setZimmer(zz);
     if (!g.error && g.data) setGerichte(g.data as Gericht[]);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, zz.map((r) => r.id)));
     setLaden(false);
   }
 
@@ -113,10 +123,11 @@ export default function HousekeepingSeite() {
 
   // ---------- Zimmer ----------
   function setZF<K extends keyof ZForm>(k: K, w: ZForm[K]) { setZForm((f) => ({ ...f, [k]: w })); }
-  function neuZimmer() { setZEdit(null); setZForm(LEER_Z); setFehler(null); setZModal(true); }
+  function neuZimmer() { setZEdit(null); setZForm(LEER_Z); setNmExtra({}); setFehler(null); setZModal(true); }
   function editZimmer(z: Zimmer) {
     setZEdit(z.id);
     setZForm({ bezeichnung: z.bezeichnung ?? "", etage: z.etage ?? "", kategorie: z.kategorie ?? "", status: z.status ?? "schmutzig", prio: z.prio ?? "bleibt", zustaendig: z.zustaendig ?? "", notiz: z.notiz ?? "" });
+    setNmExtra(werteMap[z.id] ?? {});
     setFehler(null); setZModal(true);
   }
   async function speichereZimmer() {
@@ -124,11 +135,18 @@ export default function HousekeepingSeite() {
     setBusy(true); setFehler(null);
     const payload = { bezeichnung: zForm.bezeichnung.trim(), etage: zForm.etage.trim() || null, kategorie: zForm.kategorie.trim() || null, status: zForm.status, prio: zForm.prio, zustaendig: zForm.zustaendig.trim() || null, notiz: zForm.notiz.trim() || null };
     let error = null as { message: string } | null;
-    if (zEdit) { error = (await supabase.from("hk_zimmer").update(payload).eq("id", zEdit)).error; }
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("hk_zimmer").insert(ins)).error; }
+    if (zEdit) {
+      error = (await supabase.from("hk_zimmer").update(payload).eq("id", zEdit)).error;
+      if (!error) { try { await speichereWerte(MODUL, zEdit, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+    } else {
+      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+      const { data: neu, error: insErr } = await supabase.from("hk_zimmer").insert(ins).select("id").single();
+      error = insErr;
+      if (!error && neu) { try { await speichereWerte(MODUL, (neu as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+    }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
-    setZModal(false); await ladeAlles();
+    setNmExtra({}); setZModal(false); await ladeAlles();
   }
   async function hkWeiter(z: Zimmer) {
     const neu = naechsterHkStatus(z.status);
@@ -279,6 +297,7 @@ export default function HousekeepingSeite() {
           </div>
           <KiAuge modul="Housekeeping" regel={augeHousekeeping({ schmutzig: hkKpi.schmutzig, inReinigung: hkKpi.inReinigung, abreisenOffen: hkKpi.abreisenOffen, gesamt: hkKpi.gesamt })} />
           <div style={{ display: "flex", justifyContent: "flex-end", margin: "14px 0" }}><button style={btnGold} onClick={neuZimmer}>+ Zimmer / Einheit</button></div>
+          {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
 
           {zimmer.length === 0 ? (
             <Leerzustand icon="🛎️" titel="Noch keine Zimmer" text="Lege Zimmer/Einheiten an und pflege den Reinigungsstatus." schritte={["Zimmer oben anlegen", "Etage und Kategorie erfassen", "Reinigungsstatus durchschalten"]} />
@@ -298,6 +317,7 @@ export default function HousekeepingSeite() {
                       <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 4 }}>
                         {z.zustaendig ? `Zuständig: ${z.zustaendig}` : "Zuständig: —"}{z.letzte_reinigung ? ` · zuletzt gereinigt ${new Date(z.letzte_reinigung).toLocaleDateString("de-DE")}` : ""}{z.notiz ? ` · ${z.notiz}` : ""}
                       </div>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[z.id]} />
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {z.status !== "geprueft" && z.status !== "gesperrt" && <button style={btnGold} onClick={() => hkWeiter(z)}>{HK_LABEL[naechsterHkStatus(z.status)].text} →</button>}
@@ -378,6 +398,9 @@ export default function HousekeepingSeite() {
               <div><label style={label}>Priorität</label><select style={input} value={zForm.prio} onChange={(e) => setZF("prio", e.target.value)}>{HK_PRIO.map((p) => <option key={p} value={p}>{PRIO_LABEL[p]}</option>)}</select></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Zuständig</label><input style={input} value={zForm.zustaendig} onChange={(e) => setZF("zustaendig", e.target.value)} /></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={zForm.notiz} onChange={(e) => setZF("notiz", e.target.value)} /></div>
+              <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 12 }}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
+              </div>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>

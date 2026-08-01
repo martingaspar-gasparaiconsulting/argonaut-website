@@ -19,6 +19,10 @@ import {
   baueZeitpunkt, gruppiereNachRessource, zaehleHeute, istGleicherTag, parseZeit,
   type BuchungBasis, type RessourceBasis,
 } from '../_components/buchungsLogik';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'buchungen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -92,6 +96,9 @@ export default function BuchungenPage() {
   const [buchungen, setBuchungen] = useState<BuchungRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Timeline-Tag
   const [tag, setTag] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); });
@@ -133,7 +140,10 @@ export default function BuchungenPage() {
         .gte('ende_am', tagStart.toISOString())
         .order('beginn_am', { ascending: true });
       if (e2) throw e2;
-      setBuchungen((buch as BuchungRow[]) ?? []);
+      const bb = (buch as BuchungRow[]) ?? [];
+      setBuchungen(bb);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, bb.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -191,6 +201,7 @@ export default function BuchungenPage() {
   function buchNeu(resId?: string) {
     const ziel = resId || (ressourcen[0]?.id ?? '');
     setBuchForm({ ...buchLeer(ziel), datum: isoTag(tag) });
+    setNmExtra({});
     setBuchModalAuf(true);
   }
   function setB<K extends keyof BuchForm>(k: K, v: BuchForm[K]) { setBuchForm((f) => ({ ...f, [k]: v })); }
@@ -241,10 +252,13 @@ export default function BuchungenPage() {
       if (buchForm.id) {
         const { error } = await supabase.from('buchungen').update(payload).eq('id', buchForm.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, buchForm.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { error } = await supabase.from('buchungen').insert(payload);
+        const { data: neu, error } = await supabase.from('buchungen').insert(payload).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
+      setNmExtra({});
       setBuchModalAuf(false);
       await laden_();
     } catch (e: unknown) {
@@ -271,6 +285,7 @@ export default function BuchungenPage() {
       status: b.status ?? 'geplant',
       beschreibung: b.beschreibung ?? '',
     });
+    setNmExtra(werteMap[b.id] ?? {});
     setBuchModalAuf(true);
   }
   async function buchStornieren(b: BuchungRow) {
@@ -364,19 +379,21 @@ export default function BuchungenPage() {
                       tagesBuchungen.map((b) => {
                         const a = buchungsAmpel(b as BuchungBasis);
                         return (
-                          <button
-                            key={b.id}
-                            onClick={() => buchBearbeiten(b as BuchungRow)}
-                            title={`${b.titel} · ${zeitraumText(b.beginn_am, b.ende_am)} · ${dauerText(b.beginn_am, b.ende_am)}`}
-                            style={{
-                              ...styles.block,
-                              background: `${ressource.farbe ?? C.cyan}22`,
-                              borderColor: ressource.farbe ?? C.cyan,
-                            }}>
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: a.farbe, display: 'inline-block', flexShrink: 0 }} />
-                            <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.titel}</span>
-                            <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', whiteSpace: 'nowrap' }}>{uhrzeit(b.beginn_am)}–{uhrzeit(b.ende_am)}</span>
-                          </button>
+                          <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                            <button
+                              onClick={() => buchBearbeiten(b as BuchungRow)}
+                              title={`${b.titel} · ${zeitraumText(b.beginn_am, b.ende_am)} · ${dauerText(b.beginn_am, b.ende_am)}`}
+                              style={{
+                                ...styles.block,
+                                background: `${ressource.farbe ?? C.cyan}22`,
+                                borderColor: ressource.farbe ?? C.cyan,
+                              }}>
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: a.farbe, display: 'inline-block', flexShrink: 0 }} />
+                              <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.titel}</span>
+                              <span style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', whiteSpace: 'nowrap' }}>{uhrzeit(b.beginn_am)}–{uhrzeit(b.ende_am)}</span>
+                            </button>
+                            <EigeneFelderAnzeige felder={felder} werte={werteMap[(b as BuchungRow).id]} />
+                          </div>
                         );
                       })
                     )}
@@ -388,6 +405,8 @@ export default function BuchungenPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Ressourcen-Verwaltung */}
       {!laden && ressourcen.length > 0 && (
@@ -494,6 +513,7 @@ export default function BuchungenPage() {
               <Feld label="Beschreibung" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={buchForm.beschreibung} onChange={(e) => setB('beschreibung', e.target.value)} />
               </Feld>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
 
             {/* LIVE-KONFLIKT-ANZEIGE */}

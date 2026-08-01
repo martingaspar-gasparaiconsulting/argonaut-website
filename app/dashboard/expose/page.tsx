@@ -20,6 +20,10 @@ import {
 import { augeExpose } from '@/lib/auge';
 import { exposePdf } from '@/lib/exposePdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'expose';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -68,6 +72,9 @@ export default function ExposePage() {
   const [interessenten, setInteressenten] = useState<Interessent[]>([]);
   const [selInter, setSelInter] = useState<string>('');
   const [nInter, setNInter] = useState({ name: '', email: '', telefon: '', status: 'neu', notiz: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -78,6 +85,8 @@ export default function ExposePage() {
       ]);
       const liste = (ex.data as Expose[]) ?? [];
       setExposes(liste);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, liste.map((r) => r.id)));
       setInteressenten((it.data as Interessent[]) ?? []);
       setSelInter((cur) => cur || (liste[0]?.id ?? ''));
     } catch (err: unknown) {
@@ -114,7 +123,7 @@ export default function ExposePage() {
     if (!uid || !f.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('expose').insert({
+      const { data: neu, error } = await supabase.from('expose').insert({
         owner_user_id: uid, bezeichnung: f.bezeichnung.trim(), objekt_art: f.objekt_art, vermarktung_art: f.vermarktung_art,
         ort: f.ort.trim() || null, adresse: f.adresse.trim() || null,
         wohnflaeche: f.wohnflaeche.trim() ? num(f.wohnflaeche) : null, grundstuecksflaeche: f.grundstuecksflaeche.trim() ? num(f.grundstuecksflaeche) : null,
@@ -128,9 +137,10 @@ export default function ExposePage() {
         energietraeger: ausweisVorhanden ? (f.energietraeger.trim() || null) : null,
         lage_text: f.lage_text.trim() || null, ausstattung_text: f.ausstattung_text.trim() || null, objekt_text: f.objekt_text.trim() || null,
         status: 'entwurf',
-      });
+      }).select('id').single();
       if (error) throw error;
-      setF({ ...LEER }); setAusweisVorhanden(true); setOk('Exposé angelegt.'); await laden_();
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setF({ ...LEER }); setAusweisVorhanden(true); setNmExtra({}); setOk('Exposé angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -283,6 +293,10 @@ export default function ExposePage() {
           <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Objektbeschreibung<textarea style={styles.ta} value={f.objekt_text} onChange={(e) => setF({ ...f, objekt_text: e.target.value })} /></label>
         </div>
 
+        <div style={{ ...styles.grid, marginTop: 12 }}>
+          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+        </div>
+
         <div style={styles.hintBox}>
           {m2Preis > 0 && <>Preis: <b style={{ color: C.gold }}>{eur(m2Preis)} /m²</b>{prov ? ' · ' : ''}</>}
           {prov && <>Provision {prov.prozent} %: <b>{eur(prov.brutto)}</b> brutto</>}
@@ -290,6 +304,8 @@ export default function ExposePage() {
         </div>
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={anlegen}>＋ Exposé anlegen</button>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* ---------- LISTE ---------- */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
@@ -310,7 +326,7 @@ export default function ExposePage() {
                   const oa = OBJEKT_ARTEN.find((o) => o.key === e.objekt_art)?.label ?? e.objekt_art;
                   return (
                     <tr key={e.id} style={{ opacity: (st === 'verkauft' || st === 'vermietet') ? 0.6 : 1 }}>
-                      <td style={styles.td}>{e.bezeichnung}<div style={{ color: C.textDim, fontSize: 13 }}>{oa} · {e.vermarktung_art === 'kauf' ? 'Kauf' : 'Miete'}{e.wohnflaeche ? ` · ${e.wohnflaeche} m²` : ''}</div></td>
+                      <td style={styles.td}>{e.bezeichnung}<div style={{ color: C.textDim, fontSize: 13 }}>{oa} · {e.vermarktung_art === 'kauf' ? 'Kauf' : 'Miete'}{e.wohnflaeche ? ` · ${e.wohnflaeche} m²` : ''}</div><EigeneFelderAnzeige felder={felder} werte={werteMap[e.id]} /></td>
                       <td style={{ ...styles.td, color: C.textDim }}>{e.ort || '—'}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}>{eur(e.preis)}{e.wohnflaeche ? <div style={{ color: C.textDim, fontSize: 12 }}>{eur(preisProM2(e.preis, e.wohnflaeche))}/m²</div> : ''}</td>
                       <td style={styles.td}>{kl ? <span style={{ ...styles.badge, color: C.gold, borderColor: C.gold }}>{kl}</span> : <span style={{ color: C.textDim }}>—</span>}{luecke && st === 'aktiv' ? <div style={{ color: C.warn, fontSize: 12 }}>⚠ GEG unvollst.</div> : ''}</td>

@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'fertigung_auftraege';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -47,6 +51,9 @@ export default function FertigungPage() {
   const [nsl, setNsl] = useState({ name: '', produkt: '' });
   const [np, setNp] = useState({ komponente: '', menge: '1', einheit: 'Stk' });
   const [na, setNa] = useState({ auftragsnr: '', produkt: '', stueckliste_id: '', menge: '1', start_am: heute() });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const ladeSls = useCallback(async () => {
     const { data } = await supabase.from('fertigung_stuecklisten').select('id, name, produkt').order('erstellt_am', { ascending: false });
@@ -58,7 +65,10 @@ export default function FertigungPage() {
   }, []);
   const ladeAuftraege = useCallback(async () => {
     const { data } = await supabase.from('fertigung_auftraege').select('id, auftragsnr, produkt, stueckliste_id, menge, status, start_am, fertig_am').order('erstellt_am', { ascending: false });
-    setAuftraege((data as Auftrag[]) ?? []);
+    const rows = (data as Auftrag[]) ?? [];
+    setAuftraege(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
 
   useEffect(() => {
@@ -90,12 +100,13 @@ export default function FertigungPage() {
   async function auftragAnlegen() {
     if (!uid || !na.produkt.trim()) { setFehler('Bitte ein Produkt angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('fertigung_auftraege').insert({
+    const { data: neu, error } = await supabase.from('fertigung_auftraege').insert({
       owner_user_id: uid, auftragsnr: na.auftragsnr.trim() || null, produkt: na.produkt.trim(),
       stueckliste_id: na.stueckliste_id || null, menge: num(na.menge) || 1, start_am: na.start_am || null,
-    });
-    if (error) { setFehler('Auftrag konnte nicht angelegt werden.'); return; }
-    setNa({ auftragsnr: '', produkt: '', stueckliste_id: '', menge: '1', start_am: heute() }); setOk('Fertigungsauftrag angelegt.'); await ladeAuftraege();
+    }).select('id').single();
+    if (error || !neu) { setFehler('Auftrag konnte nicht angelegt werden.'); return; }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    setNa({ auftragsnr: '', produkt: '', stueckliste_id: '', menge: '1', start_am: heute() }); setNmExtra({}); setOk('Fertigungsauftrag angelegt.'); await ladeAuftraege();
   }
   async function auftragStatus(a: Auftrag, status: string) {
     const patch: Record<string, unknown> = { status };
@@ -173,9 +184,11 @@ export default function FertigungPage() {
               </select>
               <label style={styles.lab}>Menge<input style={{ ...styles.inp, width: 70 }} value={na.menge} onChange={(e) => setNa({ ...na, menge: e.target.value })} inputMode="decimal" /></label>
               <label style={styles.lab}>Start<input type="date" style={styles.inp} value={na.start_am} onChange={(e) => setNa({ ...na, start_am: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
               <button style={styles.primaer} onClick={auftragAnlegen}>＋ Auftrag</button>
             </div>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeAuftraege} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {auftraege.map((a) => {
@@ -185,6 +198,7 @@ export default function FertigungPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700 }}>{a.auftragsnr ? `#${a.auftragsnr} · ` : ''}{a.produkt} <span style={{ color: C.textDim, fontWeight: 400 }}>· {a.menge} Stk</span></div>
                       <div style={{ color: C.textDim, fontSize: 13 }}>{a.stueckliste_id ? `${slName[a.stueckliste_id] || 'Stückliste'} · ` : ''}{a.start_am ? `Start ${a.start_am.split('-').reverse().join('.')}` : ''}{a.fertig_am ? ` · fertig ${a.fertig_am.split('-').reverse().join('.')}` : ''}</div>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                     </div>
                     <select style={styles.statusSelect} value={a.status} onChange={(e) => auftragStatus(a, e.target.value)}>
                       {ST_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}

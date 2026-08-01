@@ -3,6 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'hr_schicht_vorlagen';
 
 // ============================================================
 // ARGONAUT OS · HR · BLOCK 6 — Schichtplanung Grundgeruest
@@ -249,6 +253,11 @@ export default function SchichtplanPage() {
     name: '', beginn_um: '', ende_um: '', pause_minuten: 0, farbe: '#00e5ff',
   });
 
+  // Eigene Felder (Schichtarten)
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   // Drag & Drop (Schicht verschieben)
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
@@ -314,7 +323,10 @@ export default function SchichtplanPage() {
       );
       setMitarbeiter(maListe);
       setSchichten(schichtRes.data || []);
-      setVorlagen(vorlagenRes.data || []);
+      const vorlagenListe = vorlagenRes.data || [];
+      setVorlagen(vorlagenListe);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, vorlagenListe.map((r: any) => r.id)));
 
       // Offene Tausch-Anfragen laden (unabhaengig von der angezeigten Woche)
       const { data: tauschRows } = await supabase
@@ -658,9 +670,11 @@ export default function SchichtplanPage() {
         ende_um: neueVorlage.ende_um,
         pause_minuten: Number(neueVorlage.pause_minuten) || 0,
         farbe: neueVorlage.farbe || '#00e5ff',
-      });
+      }).select('id').single();
       if (res.error) throw res.error;
+      try { await speichereWerte(MODUL, (res.data as { id: string }).id, ownerId, nmExtra); } catch { /* eigene Felder optional */ }
       setNeueVorlage({ name: '', beginn_um: '', ende_um: '', pause_minuten: 0, farbe: '#00e5ff' });
+      setNmExtra({});
       await ladeDaten();
     } catch (e: any) {
       alert('Vorlage speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
@@ -1595,6 +1609,7 @@ export default function SchichtplanPage() {
                       <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
                         {hhmm(v.beginn_um)}&ndash;{hhmm(v.ende_um)} &middot; {v.pause_minuten || 0} Min Pause
                       </div>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} />
                     </div>
                     <button
                       style={{ ...btnGhost, color: BRAND.danger, borderColor: BRAND.danger, padding: '5px 10px' }}
@@ -1659,8 +1674,11 @@ export default function SchichtplanPage() {
                   ))}
                 </div>
               </div>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
               <button style={btn} onClick={speichereVorlage}>+ Schichtart speichern</button>
             </div>
+
+            {ownerId && <EigeneFelderManager modul={MODUL} ownerId={ownerId} onChange={ladeDaten} />}
 
             <div style={{ marginTop: 18, textAlign: 'right' }}>
               <button style={btnGhost} onClick={() => setVorlagenModal(false)}>Schliessen</button>
