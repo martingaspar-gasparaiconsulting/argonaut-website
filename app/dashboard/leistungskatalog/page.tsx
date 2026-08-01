@@ -29,6 +29,10 @@ import {
   nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
   type KatalogEintrag,
 } from '../_components/leistungLogik';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'leistungskatalog';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -94,6 +98,9 @@ export default function LeistungskatalogPage() {
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<Form>(LEER);
   const [speichert, setSpeichert] = useState(false);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [formExtra, setFormExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // CSV-Import
   const [impOffen, setImpOffen] = useState(false);
@@ -121,7 +128,10 @@ export default function LeistungskatalogPage() {
         .select('*')
         .order('kategorie', { ascending: true }).order('bezeichnung', { ascending: true });
       if (error) throw error;
-      setListe((data as KatalogRow[]) ?? []);
+      const rows = (data as KatalogRow[]) ?? [];
+      setListe(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Katalog konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -141,8 +151,9 @@ export default function LeistungskatalogPage() {
   }, [liste, kategorieFilter]);
 
   // --- Anlegen / Bearbeiten ---------------------------------------------
-  function neu() { setForm(LEER); setModalAuf(true); }
+  function neu() { setForm(LEER); setFormExtra({}); setModalAuf(true); }
   function bearbeiten(k: KatalogRow) {
+    setFormExtra(werteMap[k.id] ?? {});
     setForm({
       id: k.id, bezeichnung: k.bezeichnung ?? '', kuerzel: k.kuerzel ?? '', kategorie: k.kategorie ?? '',
       erfassungsart: k.erfassungsart ?? 'stunden', standard_wert: String(k.standard_wert ?? 1),
@@ -219,13 +230,15 @@ export default function LeistungskatalogPage() {
         aktualisiert_am: new Date().toISOString(),
       };
       if (istNeu) {
-        const { error } = await supabase.from('leistungskatalog').insert(payload);
+        const { data: neuRow, error } = await supabase.from('leistungskatalog').insert(payload).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neuRow as { id: string }).id, uid, formExtra); } catch { /* eigene Felder optional */ }
       } else {
         const { error } = await supabase.from('leistungskatalog').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id as string, uid, formExtra); } catch { /* eigene Felder optional */ }
       }
-      setModalAuf(false); setForm(LEER);
+      setModalAuf(false); setForm(LEER); setFormExtra({});
       await laden_();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Fehler';
@@ -449,6 +462,7 @@ export default function LeistungskatalogPage() {
                     <tr key={k.id} style={{ opacity: k.aktiv ? 1 : 0.5 }}>
                       <td style={{ ...styles.td, fontWeight: 600 }}>
                         {k.bezeichnung}{k.kuerzel ? <span style={{ color: C.textDim, fontWeight: 400 }}> · {k.kuerzel}</span> : null}
+                        <EigeneFelderAnzeige felder={felder} werte={werteMap[k.id]} />
                       </td>
                       <td style={styles.td}>{k.kategorie || '—'}</td>
                       <td style={styles.td}>{artLabel(k.erfassungsart)}{k.erfassungsart === 'aw' && k.aw_minuten ? ` (1 AW=${k.aw_minuten}m)` : ''}</td>
@@ -470,6 +484,8 @@ export default function LeistungskatalogPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* --- Modal: Anlegen/Bearbeiten --------------------------------- */}
       {modalAuf && (
@@ -529,6 +545,7 @@ export default function LeistungskatalogPage() {
               <Feld label="Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
               </Feld>
+              <EigeneFelderInputs felder={felder} werte={formExtra} setWert={(fid, w) => setFormExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
 
             {/* Pauschale gewinnt — das muss dastehen, sonst sucht jemand den Fehler */}

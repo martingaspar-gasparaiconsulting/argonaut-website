@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'agrar_schlaege';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,10 +41,16 @@ export default function LandwirtschaftPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [ns, setNs] = useState({ name: '', flaeche_ha: '', kultur: '', standort: '' });
   const [nm, setNm] = useState({ datum: heute(), art: 'aussaat', mittel: '', menge: '', einheit: 'kg/ha', ertrag: '', notiz: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nsExtra, setNsExtra] = useState<Record<string, string>>({});
+  const [sWerte, setSWerte] = useState<Record<string, Record<string, string>>>({});
 
   const ladeSchlaege = useCallback(async () => {
     const { data } = await supabase.from('agrar_schlaege').select('id, name, flaeche_ha, kultur, standort').order('name', { ascending: true });
-    setSchlaege((data as Schlag[]) ?? []);
+    const rows = (data as Schlag[]) ?? [];
+    setSchlaege(rows);
+    setFelder(await ladeFelder(MODUL));
+    setSWerte(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
   const ladeMassnahmen = useCallback(async (sid: string) => {
     const { data } = await supabase.from('agrar_massnahmen').select('id, datum, art, mittel, menge, einheit, ertrag, notiz').eq('schlag_id', sid).order('datum', { ascending: false });
@@ -63,7 +73,8 @@ export default function LandwirtschaftPage() {
       owner_user_id: uid, name: ns.name.trim(), flaeche_ha: ns.flaeche_ha ? num(ns.flaeche_ha) : null, kultur: ns.kultur.trim() || null, standort: ns.standort.trim() || null,
     }).select('id, name, flaeche_ha, kultur, standort').single();
     if (error || !data) { setFehler('Schlag konnte nicht gespeichert werden.'); return; }
-    setNs({ name: '', flaeche_ha: '', kultur: '', standort: '' }); setOk('Schlag gespeichert.'); await ladeSchlaege(); setAktiv(data as Schlag); setMassnahmen([]);
+    try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nsExtra); } catch { /* eigene Felder optional */ }
+    setNs({ name: '', flaeche_ha: '', kultur: '', standort: '' }); setNsExtra({}); setOk('Schlag gespeichert.'); await ladeSchlaege(); setAktiv(data as Schlag); setMassnahmen([]);
   }
   async function schlagOeffnen(s: Schlag) { setAktiv(s); await ladeMassnahmen(s.id); }
   async function massnahmeAnlegen() {
@@ -93,9 +104,11 @@ export default function LandwirtschaftPage() {
           <label style={styles.lab}>ha<input style={{ ...styles.inp, width: 80 }} value={ns.flaeche_ha} onChange={(e) => setNs({ ...ns, flaeche_ha: e.target.value })} inputMode="decimal" /></label>
           <input style={{ ...styles.inp, width: 140 }} value={ns.kultur} onChange={(e) => setNs({ ...ns, kultur: e.target.value })} placeholder="Kultur (z. B. Weizen)" />
           <input style={{ ...styles.inp, width: 140 }} value={ns.standort} onChange={(e) => setNs({ ...ns, standort: e.target.value })} placeholder="Standort" />
+          <EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
           <button style={styles.primaer} onClick={schlagAnlegen}>＋ Schlag</button>
         </div>
       </div>
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeSchlaege} />}
 
       {laden ? <p style={styles.dim}>Lädt …</p> : (
         <div style={styles.split}>
@@ -104,6 +117,7 @@ export default function LandwirtschaftPage() {
               <button key={s.id} style={{ ...styles.lvItem, ...(aktiv?.id === s.id ? styles.lvAktiv : {}) }} onClick={() => schlagOeffnen(s)}>
                 <div style={{ fontWeight: 700 }}>{s.name}</div>
                 <div style={{ color: C.textDim, fontSize: 13 }}>{s.flaeche_ha ? `${s.flaeche_ha} ha · ` : ''}{s.kultur || '—'}</div>
+                <EigeneFelderAnzeige felder={felder} werte={sWerte[s.id]} />
               </button>
             ))}
             {!schlaege.length && <p style={styles.dim}>Noch keine Schläge.</p>}

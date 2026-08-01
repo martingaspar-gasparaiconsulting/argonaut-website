@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'immo_einheiten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -40,10 +44,16 @@ export default function ImmobilienPage() {
 
   const [ne, setNe] = useState({ objekt: '', bezeichnung: '', flaeche_qm: '', zimmer: '', kaltmiete: '', nebenkosten: '' });
   const [nv, setNv] = useState({ einheit_id: '', mieter_name: '', mieter_email: '', beginn: heute(), kaltmiete: '', nebenkosten: '', kaution: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [neExtra, setNeExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     const { data: e } = await supabase.from('immo_einheiten').select('id, objekt, bezeichnung, flaeche_qm, zimmer, kaltmiete, nebenkosten, status').order('objekt', { ascending: true });
-    setEinheiten((e as Einheit[]) ?? []);
+    const ee = (e as Einheit[]) ?? [];
+    setEinheiten(ee);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, ee.map((r) => r.id)));
     const { data: v } = await supabase.from('immo_mietvertraege').select('id, einheit_id, mieter_name, beginn, kaltmiete, nebenkosten, status').order('erstellt_am', { ascending: false });
     setVertraege((v as Vertrag[]) ?? []);
     const { data: z } = await supabase.from('immo_zahlungen').select('id, vertrag_id, monat, betrag');
@@ -62,13 +72,14 @@ export default function ImmobilienPage() {
   async function einheitAnlegen() {
     if (!uid || !ne.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('immo_einheiten').insert({
+    const { data: neu, error } = await supabase.from('immo_einheiten').insert({
       owner_user_id: uid, objekt: ne.objekt.trim() || null, bezeichnung: ne.bezeichnung.trim(),
       flaeche_qm: ne.flaeche_qm ? num(ne.flaeche_qm) : null, zimmer: ne.zimmer ? num(ne.zimmer) : null,
       kaltmiete: num(ne.kaltmiete), nebenkosten: num(ne.nebenkosten),
-    });
-    if (error) { setFehler('Einheit konnte nicht gespeichert werden.'); return; }
-    setNe({ objekt: '', bezeichnung: '', flaeche_qm: '', zimmer: '', kaltmiete: '', nebenkosten: '' }); setOk('Einheit gespeichert.'); await laden_();
+    }).select('id').single();
+    if (error || !neu) { setFehler('Einheit konnte nicht gespeichert werden.'); return; }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, neExtra); } catch { /* eigene Felder optional */ }
+    setNe({ objekt: '', bezeichnung: '', flaeche_qm: '', zimmer: '', kaltmiete: '', nebenkosten: '' }); setNeExtra({}); setOk('Einheit gespeichert.'); await laden_();
   }
 
   async function vertragAnlegen() {
@@ -117,9 +128,11 @@ export default function ImmobilienPage() {
               <label style={styles.lab}>Zi.<input style={{ ...styles.inp, width: 56 }} value={ne.zimmer} onChange={(e) => setNe({ ...ne, zimmer: e.target.value })} inputMode="decimal" /></label>
               <label style={styles.lab}>Kalt €<input style={{ ...styles.inp, width: 80 }} value={ne.kaltmiete} onChange={(e) => setNe({ ...ne, kaltmiete: e.target.value })} inputMode="decimal" /></label>
               <label style={styles.lab}>NK €<input style={{ ...styles.inp, width: 70 }} value={ne.nebenkosten} onChange={(e) => setNe({ ...ne, nebenkosten: e.target.value })} inputMode="decimal" /></label>
+              <EigeneFelderInputs felder={felder} werte={neExtra} setWert={(fid, w) => setNeExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
               <button style={styles.primaer} onClick={einheitAnlegen}>＋ Einheit</button>
             </div>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {einheiten.map((e) => (
@@ -127,6 +140,7 @@ export default function ImmobilienPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{einheitName[e.id]}</div>
                     <div style={{ color: C.textDim, fontSize: 13 }}>{e.flaeche_qm ? `${e.flaeche_qm} m² · ` : ''}{e.zimmer ? `${e.zimmer} Zi. · ` : ''}{eur(e.kaltmiete)} kalt + {eur(e.nebenkosten)} NK</div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[e.id]} />
                   </div>
                   <span style={{ ...styles.badge, color: e.status === 'vermietet' ? C.green : C.warn, borderColor: e.status === 'vermietet' ? C.green : C.warn }}>{e.status}</span>
                 </div>

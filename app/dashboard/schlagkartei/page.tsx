@@ -19,6 +19,10 @@ import {
 import { augeSchlagkartei } from '@/lib/auge';
 import { schlagNachweisPdf } from '@/lib/schlagNachweisPdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'schlag';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -59,6 +63,9 @@ export default function SchlagkarteiPage() {
   const [nbed, setNbed] = useState({ schlag_id: '', jahr: String(JAHR), kultur: '', ertragserwartung: '', n_bedarf: '', p_bedarf: '' });
   const [ndue, setNdue] = useState({ schlag_id: '', datum: H, duengemittel: '', art: 'mineralisch', menge: '', einheit: 'kg/ha', n_gesamt: '', n_verfuegbar: '', p2o5: '', anwender: '' });
   const [npsm, setNpsm] = useState({ schlag_id: '', datum: H, startzeit: '', verwendungsart: 'freiland', mittel_name: '', zulassungsnr: '', aufwandmenge: '', aufwand_einheit: 'l/ha', kultur: '', flaeche_ha: '', eppo_code: '', bbch_stadium: '', anwendungsgebiet: '', wartezeit_tage: '', anwender: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -69,7 +76,10 @@ export default function SchlagkarteiPage() {
         supabase.from('schlag_duengung').select('*').order('datum', { ascending: false }),
         supabase.from('schlag_psm').select('*').order('datum', { ascending: false }),
       ]);
-      setSchlaege((s.data as Schlag[]) ?? []);
+      const schl = (s.data as Schlag[]) ?? [];
+      setSchlaege(schl);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, schl.map((r) => r.id)));
       setBedarfe((b.data as Bedarf[]) ?? []);
       setDuengungen((d.data as Duengung[]) ?? []);
       setPsm((p.data as Psm[]) ?? []);
@@ -109,13 +119,14 @@ export default function SchlagkarteiPage() {
     if (!uid || !nsch.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('schlag'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('schlag').insert({
+      const { data: neu, error } = await supabase.from('schlag').insert({
         owner_user_id: uid, bezeichnung: nsch.bezeichnung.trim(), flurstueck: nsch.flurstueck.trim() || null,
         flaeche_ha: num(nsch.flaeche_ha), kultur: nsch.kultur.trim() || null, kultur_jahr: JAHR,
         aussaat_am: nsch.aussaat_am || null, ernte_am: nsch.ernte_am || null, standort: nsch.standort.trim() || null, status: 'aktiv',
-      });
-      if (error) throw error;
-      setNsch({ bezeichnung: '', flurstueck: '', flaeche_ha: '', kultur: '', aussaat_am: '', ernte_am: '', standort: '' });
+      }).select('id').single();
+      if (error || !neu) throw error ?? new Error('Kein Datensatz');
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNsch({ bezeichnung: '', flurstueck: '', flaeche_ha: '', kultur: '', aussaat_am: '', ernte_am: '', standort: '' }); setNmExtra({});
       setOk('Schlag angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -236,9 +247,11 @@ export default function SchlagkarteiPage() {
               <label style={styles.lab}>Aussaat<input type="date" style={styles.inp} value={nsch.aussaat_am} onChange={(e) => setNsch({ ...nsch, aussaat_am: e.target.value })} /></label>
               <label style={styles.lab}>Ernte<input type="date" style={styles.inp} value={nsch.ernte_am} onChange={(e) => setNsch({ ...nsch, ernte_am: e.target.value })} /></label>
               <label style={styles.lab}>Standort / GPS<input style={styles.inp} value={nsch.standort} onChange={(e) => setNsch({ ...nsch, standort: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'schlag' ? 0.6 : 1 }} disabled={busy === 'schlag'} onClick={schlagAnlegen}>＋ Anlegen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {schlaege.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Schläge" text="Lege deine Feldstücke an — Basis für Düngung, Pflanzenschutz und N-Saldo." schritte={["Schlag oben anlegen", "Fläche und Kultur erfassen", "Düngung und Pflanzenschutz dokumentieren"]} /> : (
@@ -247,7 +260,7 @@ export default function SchlagkarteiPage() {
                   <tbody>
                     {schlaege.map((s) => (
                       <tr key={s.id} style={{ opacity: s.status !== 'aktiv' ? 0.5 : 1 }}>
-                        <td style={styles.td}>{s.bezeichnung}</td>
+                        <td style={styles.td}>{s.bezeichnung}<EigeneFelderAnzeige felder={felder} werte={werteMap[s.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{s.flurstueck || '—'}</td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>{ha(s.flaeche_ha)}</td>
                         <td style={{ ...styles.td, color: C.textDim }}>{s.kultur || '—'}</td>

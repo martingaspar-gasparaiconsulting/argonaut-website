@@ -18,6 +18,10 @@ import {
 import { augeTierbestand } from '@/lib/auge';
 import { hitMeldelistePdf } from '@/lib/hitMeldelistePdf';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'tier_gruppe';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,6 +67,9 @@ export default function TierbestandPage() {
   const [ng, setNg] = useState({ tierart: 'rind', bezeichnung: '', betriebsnummer: '', standort: '', meldefrist_tage: '7', aktueller_bestand: '0' });
   const [nb, setNb] = useState({ gruppe_id: '', datum: H, art: 'zugang', anzahl: '1', ohrmarke: '', partner: '' });
   const [ns, setNs] = useState({ gruppe_id: '', jahr: String(JAHR), stichtag: `${JAHR}-01-01`, anzahl: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -72,7 +79,10 @@ export default function TierbestandPage() {
         supabase.from('tier_bewegung').select('*').order('datum', { ascending: false }),
         supabase.from('tier_stichtag').select('*').order('stichtag', { ascending: false }),
       ]);
-      setGruppen((g.data as Gruppe[]) ?? []);
+      const gg = (g.data as Gruppe[]) ?? [];
+      setGruppen(gg);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, gg.map((r) => r.id)));
       setBewegungen((b.data as Bewegung[]) ?? []);
       setStichtage((s.data as Stichtag[]) ?? []);
     } catch (err: unknown) {
@@ -100,13 +110,14 @@ export default function TierbestandPage() {
     if (!uid || !ng.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('gruppe'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('tier_gruppe').insert({
+      const { data: neu, error } = await supabase.from('tier_gruppe').insert({
         owner_user_id: uid, tierart: ng.tierart, bezeichnung: ng.bezeichnung.trim(), betriebsnummer: ng.betriebsnummer.trim() || null,
         standort: ng.standort.trim() || null, meldefrist_tage: Math.round(num(ng.meldefrist_tage)) || MELDEFRIST_TAGE_STD,
         aktueller_bestand: Math.round(num(ng.aktueller_bestand)), status: 'aktiv',
-      });
+      }).select('id').single();
       if (error) throw error;
-      setNg({ tierart: 'rind', bezeichnung: '', betriebsnummer: '', standort: '', meldefrist_tage: '7', aktueller_bestand: '0' });
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setNg({ tierart: 'rind', bezeichnung: '', betriebsnummer: '', standort: '', meldefrist_tage: '7', aktueller_bestand: '0' }); setNmExtra({});
       setOk('Tiergruppe angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -219,9 +230,11 @@ export default function TierbestandPage() {
               <label style={styles.lab}>Standort<input style={styles.inp} value={ng.standort} onChange={(e) => setNg({ ...ng, standort: e.target.value })} /></label>
               <label style={styles.lab}>Aktueller Bestand (Stück)<input style={styles.inp} inputMode="numeric" value={ng.aktueller_bestand} onChange={(e) => setNg({ ...ng, aktueller_bestand: e.target.value })} /></label>
               <label style={styles.lab}>Meldefrist (Tage)<input style={styles.inp} inputMode="numeric" value={ng.meldefrist_tage} onChange={(e) => setNg({ ...ng, meldefrist_tage: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'gruppe' ? 0.6 : 1 }} disabled={busy === 'gruppe'} onClick={gruppeAnlegen}>＋ Anlegen</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {gruppen.length === 0 ? <Leerzustand icon="🐄" titel="Noch keine Bestände" text="Erfasse Tiergruppen je Tierart mit VVVO-Nummer." schritte={["Tiergruppe oben anlegen", "Tierart und Bestand erfassen", "Bewegungen und Stichtag melden"]} /> : (
@@ -230,7 +243,7 @@ export default function TierbestandPage() {
                   <tbody>
                     {gruppen.map((g) => (
                       <tr key={g.id} style={{ opacity: g.status !== 'aktiv' ? 0.5 : 1 }}>
-                        <td style={styles.td}>{g.bezeichnung}</td>
+                        <td style={styles.td}>{g.bezeichnung}<EigeneFelderAnzeige felder={felder} werte={werteMap[g.id]} /></td>
                         <td style={{ ...styles.td, color: C.textDim }}>{TIERART_LABEL[g.tierart] || g.tierart}</td>
                         <td style={{ ...styles.td, color: C.textDim }}>{g.betriebsnummer || '—'}</td>
                         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>{g.aktueller_bestand}</td>
