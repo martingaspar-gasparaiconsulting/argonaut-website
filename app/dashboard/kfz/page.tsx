@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'kfz_fahrzeuge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,10 +56,16 @@ export default function KfzPage() {
   const [busy, setBusy] = useState(false);
   const [fz, setFz] = useState({ ...LEER_FZ });
   const [r, setR] = useState({ ...LEER_R });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const laden_ = useCallback(async () => {
     const { data: f } = await supabase.from('kfz_fahrzeuge').select('id, halter, kennzeichen, marke, modell, vin, erstzulassung, hu_faellig, au_faellig, km_stand, notiz').order('hu_faellig', { ascending: true, nullsFirst: false });
-    setFahrzeuge((f as Fahrzeug[]) ?? []);
+    const rows = (f as Fahrzeug[]) ?? [];
+    setFahrzeuge(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((x) => x.id)));
     const { data: re } = await supabase.from('kfz_reifeneinlagerung').select('id, kunde_name, kennzeichen, saison, groesse, anzahl, lagerplatz, eingelagert_am, ausgelagert_am').order('eingelagert_am', { ascending: false });
     setReifen((re as Reifen[]) ?? []);
   }, []);
@@ -74,14 +84,15 @@ export default function KfzPage() {
     if (!fz.kennzeichen.trim() && !fz.halter.trim()) { setFehler('Bitte mindestens Kennzeichen oder Halter angeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('kfz_fahrzeuge').insert({
+      const { data: neu, error } = await supabase.from('kfz_fahrzeuge').insert({
         owner_user_id: uid, halter: fz.halter.trim() || null, kennzeichen: fz.kennzeichen.trim() || null,
         marke: fz.marke.trim() || null, modell: fz.modell.trim() || null, vin: fz.vin.trim() || null,
         erstzulassung: fz.erstzulassung || null, hu_faellig: fz.hu_faellig || null, au_faellig: fz.au_faellig || null,
         km_stand: fz.km_stand ? parseInt(fz.km_stand, 10) : null,
-      });
-      if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
-      setFz({ ...LEER_FZ }); setOk('Fahrzeug gespeichert.'); await laden_();
+      }).select('id').single();
+      if (error || !neu) { setFehler('Speichern fehlgeschlagen.'); return; }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setFz({ ...LEER_FZ }); setNmExtra({}); setOk('Fahrzeug gespeichert.'); await laden_();
     } finally { setBusy(false); }
   }
   async function fzLoeschen(id: string) {
@@ -141,9 +152,11 @@ export default function KfzPage() {
               <label style={styles.lab}>Erstzulassung<input type="date" style={styles.inp} value={fz.erstzulassung} onChange={(e) => setFz({ ...fz, erstzulassung: e.target.value })} /></label>
               <label style={styles.lab}>HU fällig<input type="date" style={styles.inp} value={fz.hu_faellig} onChange={(e) => setFz({ ...fz, hu_faellig: e.target.value })} /></label>
               <label style={styles.lab}>AU fällig<input type="date" style={styles.inp} value={fz.au_faellig} onChange={(e) => setFz({ ...fz, au_faellig: e.target.value })} /></label>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
             </div>
             <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={fzSpeichern}>💾 Fahrzeug speichern</button>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
           {laden ? <p style={styles.dim}>Lädt …</p> : fahrzeuge.length === 0 ? <p style={styles.dim}>Noch keine Fahrzeuge.</p> : (
             <div style={styles.liste}>
@@ -154,6 +167,7 @@ export default function KfzPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700 }}>{f.kennzeichen || '—'} <span style={{ color: C.textDim, fontWeight: 400 }}>· {[f.marke, f.modell].filter(Boolean).join(' ') || '—'}{f.halter ? ` · ${f.halter}` : ''}</span></div>
                       <div style={{ color: C.textDim, fontSize: 13 }}>HU {dHu(f.hu_faellig)} · AU {dHu(f.au_faellig)}{f.km_stand ? ` · ${f.km_stand.toLocaleString('de-DE')} km` : ''}</div>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[f.id]} />
                     </div>
                     <span style={{ ...styles.badge, color: a.farbe, borderColor: a.farbe }}>🔧 HU {a.txt}</span>
                     <button style={styles.wegBtn} onClick={() => fzLoeschen(f.id)}>🗑</button>

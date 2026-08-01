@@ -10,6 +10,10 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'bau_lv';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -50,6 +54,9 @@ export default function BauLvPage() {
 
   const [neuLv, setNeuLv] = useState({ titel: '', kunde: '' });
   const [pos, setPos] = useState({ ...LEER_POS });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   const [ab, setAb] = useState({ titel: 'Abnahme', datum: heute(), ort: '', teilnehmer: '', art: 'voll', unterschrift_name: '' });
   const [maengel, setMaengel] = useState<Mangel[]>([]);
@@ -57,7 +64,10 @@ export default function BauLvPage() {
 
   const ladeLvs = useCallback(async () => {
     const { data } = await supabase.from('bau_lv').select('id, titel, kunde_name, status, netto_summe, rechnung_id').order('erstellt_am', { ascending: false });
-    setLvs((data as LV[]) ?? []);
+    const rows = (data as LV[]) ?? [];
+    setLvs(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
   const ladeAbnahmen = useCallback(async () => {
     const { data } = await supabase.from('bau_abnahmen').select('id, titel, datum, ort, art, maengel, unterschrift_name').order('datum', { ascending: false });
@@ -86,7 +96,9 @@ export default function BauLvPage() {
       const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null })
         .select('id, titel, kunde_name, status, netto_summe, rechnung_id').single();
       if (error || !data) { setFehler('LV konnte nicht angelegt werden.'); return; }
-      setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '' });
+      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '' }); setNmExtra({});
+      setWerteMap((w) => ({ ...w, [(data as { id: string }).id]: { ...nmExtra } }));
       setAktivLv(data as LV); setPositionen([]);
     } finally { setBusy(false); }
   }
@@ -170,9 +182,11 @@ export default function BauLvPage() {
             <div style={styles.row}>
               <input style={styles.inp} value={neuLv.titel} onChange={(e) => setNeuLv({ ...neuLv, titel: e.target.value })} placeholder="Titel (z. B. Rohbau Haus Müller)" />
               <input style={styles.inp} value={neuLv.kunde} onChange={(e) => setNeuLv({ ...neuLv, kunde: e.target.value })} placeholder="Kunde" />
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
               <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={lvAnlegen}>＋ Anlegen</button>
             </div>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeLvs} />}
 
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.split}>
@@ -181,6 +195,7 @@ export default function BauLvPage() {
                   <button key={lv.id} style={{ ...styles.lvItem, ...(aktivLv?.id === lv.id ? styles.lvAktiv : {}) }} onClick={() => lvOeffnen(lv)}>
                     <div style={{ fontWeight: 700 }}>{lv.titel}</div>
                     <div style={{ color: C.textDim, fontSize: 13 }}>{lv.kunde_name || '—'} · {eur(lv.netto_summe)} netto · {lv.status}</div>
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[lv.id]} />
                   </button>
                 ))}
                 {!lvs.length && <Leerzustand icon="📐" titel="Noch keine Leistungsverzeichnisse" text="Kalkuliere LVs mit Nachträgen und erzeuge daraus Rechnungen." schritte={["LV oben anlegen", "Positionen kalkulieren", "In Rechnung übernehmen"]} />}

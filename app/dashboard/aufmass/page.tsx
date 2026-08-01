@@ -34,6 +34,10 @@ import {
 import { preisText, type KatalogEintrag } from '../_components/leistungLogik';
 import { aufmassPdf } from '../_components/aufmassPdf';
 import { parseGaeb, baueGaeb, type GaebLV } from '@/lib/gaeb';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'aufmasse';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -105,6 +109,10 @@ export default function AufmassPage() {
   const [rechnungBusy, setRechnungBusy] = useState(false);
   const [gaebBusy, setGaebBusy] = useState(false);
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   const ghostInline: CSSProperties = { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit', cursor: 'pointer' };
 
   useEffect(() => {
@@ -129,8 +137,11 @@ export default function AufmassPage() {
           .order('bezeichnung', { ascending: true }),
       ]);
       if (aRes.error) throw aRes.error;
-      setAufmasse((aRes.data as AufmassRow[]) ?? []);
+      const aRows = (aRes.data as AufmassRow[]) ?? [];
+      setAufmasse(aRows);
       setKatalog((kRes.data as KatalogRow[]) ?? []);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, aRows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Aufmaße konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -147,6 +158,7 @@ export default function AufmassPage() {
   function neu() {
     setForm(LEER); setPositionen([]); setGespeichertHinweis(false);
     setLeiSuche(''); setLeiOffen(false); setMengeFehler({});
+    setNmExtra({});
     setModalAuf(true);
   }
   async function bearbeiten(a: AufmassRow) {
@@ -156,6 +168,7 @@ export default function AufmassPage() {
       aufmass_datum: a.aufmass_datum ?? LEER.aufmass_datum, bearbeiter: a.bearbeiter ?? '', notiz: a.notiz ?? '',
     });
     setGespeichertHinweis(false); setLeiSuche(''); setLeiOffen(false); setMengeFehler({});
+    setNmExtra(werteMap[a.id] ?? {});
     setModalAuf(true);
     await ladePositionen(a.id);
   }
@@ -181,10 +194,13 @@ export default function AufmassPage() {
       if (istNeu) {
         const { data, error } = await supabase.from('aufmasse').insert(payload).select('id').single();
         if (error) throw error;
-        setForm((f) => ({ ...f, id: (data as { id: string }).id }));
+        const neuId = (data as { id: string }).id;
+        setForm((f) => ({ ...f, id: neuId }));
+        try { await speichereWerte(MODUL, neuId, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
         const { error } = await supabase.from('aufmasse').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setGespeichertHinweis(true); setTimeout(() => setGespeichertHinweis(false), 2500);
       await laden_();
@@ -452,6 +468,7 @@ export default function AufmassPage() {
                       <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim }}>
                         {[a.kunde_name, a.projekt, datumHuebsch(a.aufmass_datum)].filter(Boolean).join(' · ')}
                       </div>
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                     </div>
                   </div>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -464,6 +481,8 @@ export default function AufmassPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* --- Modal ------------------------------------------------------ */}
       {modalAuf && (
@@ -521,6 +540,9 @@ export default function AufmassPage() {
               <Feld label="Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
               </Feld>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} />
+              </div>
             </div>
 
             {!form.id ? (

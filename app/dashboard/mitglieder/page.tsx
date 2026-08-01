@@ -11,6 +11,10 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
 import Leerzustand from '../_components/Leerzustand';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'mitglieder';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,6 +64,10 @@ export default function MitgliederPage() {
   const [speichert, setSpeichert] = useState(false);
   const [ausfuehrung, setAusfuehrung] = useState(heutePlus(6));
 
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -83,7 +91,10 @@ export default function MitgliederPage() {
     try {
       const { data, error } = await supabase.from('mitglieder').select('*').order('name', { ascending: true });
       if (error) throw error;
-      setListe((data as Mitglied[]) ?? []);
+      const rows = (data as Mitglied[]) ?? [];
+      setListe(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Mitglieder konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -105,7 +116,7 @@ export default function MitgliederPage() {
     } finally { setCredBusy(false); }
   }
 
-  function neu() { setForm(LEER); setModal(true); }
+  function neu() { setForm(LEER); setNmExtra({}); setModal(true); }
   function bearbeiten(m: Mitglied) {
     setForm({
       id: m.id, name: m.name ?? '', email: m.email ?? '', telefon: m.telefon ?? '',
@@ -113,6 +124,7 @@ export default function MitgliederPage() {
       beginn_am: m.beginn_am ?? '', iban: m.iban ?? '', bic: m.bic ?? '',
       mandatsreferenz: m.mandatsreferenz ?? '', mandat_datum: m.mandat_datum ?? '', notiz: m.notiz ?? '',
     });
+    setNmExtra(werteMap[m.id] ?? {});
     setModal(true);
   }
   function setF<K extends keyof MForm>(k: K, v: MForm[K]) { setForm((f) => ({ ...f, [k]: v })); }
@@ -131,10 +143,13 @@ export default function MitgliederPage() {
       if (form.id) {
         const { error } = await supabase.from('mitglieder').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { error } = await supabase.from('mitglieder').insert(payload);
+        const { data: neu, error } = await supabase.from('mitglieder').insert(payload).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
+      setNmExtra({});
       setModal(false); await laden_();
     } catch (e: unknown) {
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -275,7 +290,7 @@ export default function MitgliederPage() {
                   const bereit = m.iban && m.mandatsreferenz && m.mandat_datum;
                   return (
                     <tr key={m.id}>
-                      <td style={styles.td}><div style={{ fontWeight: 600 }}>{m.name}</div>{m.email && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{m.email}</div>}</td>
+                      <td style={styles.td}><div style={{ fontWeight: 600 }}>{m.name}</div>{m.email && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{m.email}</div>}<EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></td>
                       <td style={styles.td}>{m.betrag != null ? `${eur(m.betrag)} / ${intv}` : '—'}</td>
                       <td style={styles.td}>{bereit ? <span style={{ color: C.green }}>✓ Mandat</span> : <span style={{ color: C.warn }}>fehlt</span>}</td>
                       <td style={styles.td}><span style={{ color: si.f }}>{si.l}</span></td>
@@ -288,6 +303,8 @@ export default function MitgliederPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {/* Modal */}
       {modal && (
@@ -308,6 +325,7 @@ export default function MitgliederPage() {
               <div><label style={styles.lbl}>Mandatsreferenz</label><input style={styles.input} value={form.mandatsreferenz} onChange={(e) => setF('mandatsreferenz', e.target.value)} placeholder="eindeutig, z. B. M-2025-001" /></div>
               <div><label style={styles.lbl}>Mandat unterschrieben am</label><input type="date" style={styles.input} value={form.mandat_datum} onChange={(e) => setF('mandat_datum', e.target.value)} /></div>
               <div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Notiz</label><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></div>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
             </div>
             <div style={styles.modalAktionen}>
               {form.id && <button onClick={() => loeschen(liste.find((x) => x.id === form.id) as Mitglied)} disabled={speichert} style={{ ...styles.ghostBtn, color: C.danger, borderColor: C.danger, marginRight: 'auto' }}>Löschen</button>}

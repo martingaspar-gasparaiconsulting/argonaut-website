@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import VertraegeAuge from "./VertraegeAuge";
 import { signaturStarten } from "@/lib/signaturStart";
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'vertraege';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V2 Verträge-Cockpit
@@ -170,6 +174,9 @@ export default function VertraegeCockpit() {
   const [form, setForm] = useState<FormState>(LEER_FORM);
   const [speichern, setSpeichern] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     (async () => {
@@ -186,7 +193,12 @@ export default function VertraegeCockpit() {
       .from("vertraege")
       .select("*")
       .order("bezeichnung", { ascending: true });
-    if (!error && data) setVertraege(data as Vertrag[]);
+    if (!error && data) {
+      const rows = data as Vertrag[];
+      setVertraege(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
+    }
     setLaden(false);
   }
 
@@ -229,6 +241,7 @@ export default function VertraegeCockpit() {
   function oeffneNeu() {
     setBearbeiteId(null);
     setForm(LEER_FORM);
+    setNmExtra({});
     setFehler(null);
     setModalOffen(true);
   }
@@ -252,6 +265,7 @@ export default function VertraegeCockpit() {
       status: v.status ?? "aktiv",
       notizen: v.notizen ?? "",
     });
+    setNmExtra(werteMap[v.id] ?? {});
     setFehler(null);
     setModalOffen(true);
   }
@@ -294,16 +308,23 @@ export default function VertraegeCockpit() {
         .update(payload)
         .eq("id", bearbeiteId);
       error = res.error;
+      if (!res.error) {
+        try { await speichereWerte(MODUL, bearbeiteId, userId, nmExtra); } catch { /* eigene Felder optional */ }
+      }
     } else {
       const insertObj = userId ? { ...payload, owner_user_id: userId } : payload;
-      const res = await supabase.from("vertraege").insert(insertObj);
+      const res = await supabase.from("vertraege").insert(insertObj).select('id').single();
       error = res.error;
+      if (!res.error && res.data) {
+        try { await speichereWerte(MODUL, (res.data as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ }
+      }
     }
     setSpeichern(false);
     if (error) {
       setFehler("Speichern fehlgeschlagen: " + error.message);
       return;
     }
+    setNmExtra({});
     setModalOffen(false);
     await lade();
   }
@@ -642,6 +663,7 @@ export default function VertraegeCockpit() {
                           {v.vertragspartner}
                         </div>
                       )}
+                      <EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} />
                     </td>
                     <td style={{ ...tdStil, color: C.textDim }}>
                       {v.kategorie || "—"}
@@ -700,6 +722,8 @@ export default function VertraegeCockpit() {
           </table>
         )}
       </div>
+
+      {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={lade} />}
 
       {/* Modal */}
       {modalOffen && (
@@ -881,6 +905,9 @@ export default function VertraegeCockpit() {
                   value={form.notizen}
                   onChange={(e) => setF("notizen", e.target.value)}
                 />
+              </div>
+              <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
               </div>
             </div>
 

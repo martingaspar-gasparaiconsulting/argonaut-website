@@ -30,6 +30,10 @@ import {
   type WartungBasis,
 } from '../_components/wartungsLogik';
 import { WARTUNG_VORLAGEN, wartungVorlage } from '@/lib/wiederkehr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'wartungsvertraege';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -155,6 +159,11 @@ export default function WartungPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [zeigeArchiv, setZeigeArchiv] = useState(false);
 
+  // Eigene Felder
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+
   // Modal-Zustand
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<FormState>(LEER);
@@ -215,6 +224,8 @@ export default function WartungPage() {
       // Dringendste zuerst (nutzt wartungsLogik)
       rows.sort((a, b) => sortierSchluessel(a) - sortierSchluessel(b));
       setListe(rows);
+      setFelder(await ladeFelder(MODUL));
+      setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Verträge konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
       setListe([]);
@@ -224,8 +235,9 @@ export default function WartungPage() {
   useEffect(() => { void laden_(); }, [laden_]);
 
   // --- Modal öffnen: leer (neu) oder befüllt (bearbeiten) -----------------
-  function neuOeffnen() { setForm(LEER); setModalAuf(true); }
+  function neuOeffnen() { setForm(LEER); setNmExtra({}); setModalAuf(true); }
   function bearbeiten(r: WartungRow) {
+    setNmExtra(werteMap[r.id] ?? {});
     setForm({
       id: r.id,
       titel: r.titel ?? '',
@@ -312,14 +324,17 @@ export default function WartungPage() {
       };
 
       if (istNeu) {
-        const { error } = await supabase.from('wartungsvertraege').insert(payload);
+        const { data: neu, error } = await supabase.from('wartungsvertraege').insert(payload).select('id').single();
         if (error) throw error;
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
         const { error } = await supabase.from('wartungsvertraege').update(payload).eq('id', form.id);
         if (error) throw error;
+        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setModalAuf(false);
       setForm(LEER);
+      setNmExtra({});
       await laden_();
     } catch (e: unknown) {
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -533,6 +548,7 @@ export default function WartungPage() {
                         <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 2 }}>
                           {r.vertragsnummer ? `Nr. ${r.vertragsnummer} · ` : ''}{statusLabel(r.status)}
                         </div>
+                        <EigeneFelderAnzeige felder={felder} werte={werteMap[r.id]} />
                       </td>
                       <td style={styles.td}>{r.kunde_name || '—'}</td>
                       <td style={styles.td}>alle {r.intervall_monate} Mon.</td>
@@ -571,6 +587,8 @@ export default function WartungPage() {
           </div>
         )}
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       <div style={styles.rechtHinweis}>
         Die nächste Fälligkeit wird automatisch aus letzter Wartung (bzw. Vertragsbeginn) und Intervall berechnet und bei „✓ Gewartet" fortgeschrieben.
@@ -632,6 +650,7 @@ export default function WartungPage() {
               <Feld label="Interne Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
               </Feld>
+              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} />
             </div>
 
             <div style={styles.modalAktionen}>

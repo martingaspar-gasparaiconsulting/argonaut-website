@@ -8,6 +8,10 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'gastro_reservierungen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -42,12 +46,18 @@ export default function GastroPage() {
   const [ok, setOk] = useState<string | null>(null);
 
   const [nr, setNr] = useState({ uhrzeit: '19:00', personen: '2', gast_name: '', telefon: '', tisch: '' });
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nrExtra, setNrExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [nz, setNz] = useState({ nummer: '', typ: 'Doppelzimmer', max_personen: '2', preis_nacht: '' });
   const [nb, setNb] = useState({ zimmer_id: '', gast_name: '', personen: '1', anreise: heute(), abreise: '' });
 
   const ladeRes = useCallback(async (tag: string) => {
     const { data } = await supabase.from('gastro_reservierungen').select('id, datum, uhrzeit, personen, gast_name, telefon, tisch, status').eq('datum', tag).order('uhrzeit', { ascending: true });
-    setRes((data as Res[]) ?? []);
+    const rows = (data as Res[]) ?? [];
+    setRes(rows);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
   const ladeHotel = useCallback(async () => {
     const { data: z } = await supabase.from('hotel_zimmer').select('id, nummer, typ, max_personen, preis_nacht, aktiv').order('nummer', { ascending: true });
@@ -70,12 +80,13 @@ export default function GastroPage() {
   async function resSpeichern() {
     if (!uid || !nr.gast_name.trim()) { setFehler('Bitte einen Gastnamen angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('gastro_reservierungen').insert({
+    const { data: neu, error } = await supabase.from('gastro_reservierungen').insert({
       owner_user_id: uid, datum, uhrzeit: nr.uhrzeit || null, personen: parseInt(nr.personen, 10) || 2,
       gast_name: nr.gast_name.trim(), telefon: nr.telefon.trim() || null, tisch: nr.tisch.trim() || null,
-    });
-    if (error) { setFehler('Reservierung fehlgeschlagen.'); return; }
-    setNr({ uhrzeit: '19:00', personen: '2', gast_name: '', telefon: '', tisch: '' }); setOk('Reservierung gespeichert.'); await ladeRes(datum);
+    }).select('id').single();
+    if (error || !neu) { setFehler('Reservierung fehlgeschlagen.'); return; }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nrExtra); } catch { /* eigene Felder optional */ }
+    setNr({ uhrzeit: '19:00', personen: '2', gast_name: '', telefon: '', tisch: '' }); setNrExtra({}); setOk('Reservierung gespeichert.'); await ladeRes(datum);
   }
   async function resStatus(r: Res, status: string) {
     const { error } = await supabase.from('gastro_reservierungen').update({ status }).eq('id', r.id);
@@ -132,9 +143,11 @@ export default function GastroPage() {
               <label style={styles.lab}>Pers.<input style={{ ...styles.inp, width: 60 }} value={nr.personen} onChange={(e) => setNr({ ...nr, personen: e.target.value })} inputMode="numeric" /></label>
               <input style={{ ...styles.inp, flex: 1, minWidth: 140 }} value={nr.gast_name} onChange={(e) => setNr({ ...nr, gast_name: e.target.value })} placeholder="Gast" />
               <input style={{ ...styles.inp, width: 100 }} value={nr.tisch} onChange={(e) => setNr({ ...nr, tisch: e.target.value })} placeholder="Tisch" />
+              <EigeneFelderInputs felder={felder} werte={nrExtra} setWert={(fid, w) => setNrExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
               <button style={styles.primaer} onClick={resSpeichern}>＋ Reservieren</button>
             </div>
           </div>
+          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={() => ladeRes(datum)} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : res.length === 0 ? <p style={styles.dim}>Keine Reservierungen für {d(datum)}.</p> : (
             <div style={styles.liste}>
               {res.map((r) => (
@@ -143,6 +156,7 @@ export default function GastroPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{r.gast_name} <span style={{ color: C.textDim, fontWeight: 400 }}>· {r.personen} Pers.{r.tisch ? ` · Tisch ${r.tisch}` : ''}</span></div>
                     {r.telefon && <div style={{ color: C.textDim, fontSize: 13 }}>{r.telefon}</div>}
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[r.id]} />
                   </div>
                   <select style={styles.statusSelect} value={r.status} onChange={(e) => resStatus(r, e.target.value)}>
                     <option value="reserviert">reserviert</option><option value="eingetroffen">eingetroffen</option><option value="no_show">No-Show</option><option value="storniert">storniert</option>
