@@ -33,6 +33,7 @@ export const KERN_MODULE: string[] = [
   'dokumente',    // 📄 Dokumente
   'kundenportal', // 👤 Kunden-Portal
   'versand',      // 📦 Versand-Center (Sendungen, Adress-Label, Tracking)
+  'reports',      // 🧮 Report-Baukasten (Self-Service-Auswertungen)
   'finanzen',     // 💶 Finanzen
   'gobd',         // 🗂 GoBD
   'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
