@@ -35,6 +35,7 @@ export const KERN_MODULE: string[] = [
   'versand',      // 📦 Versand-Center (Sendungen, Adress-Label, Tracking)
   'reports',      // 🧮 Report-Baukasten (Self-Service-Auswertungen)
   'banking',      // 🏦 Banking-Abgleich (CSV-Umsätze ↔ Rechnungen; finAPI in Aufbau)
+  'elster',       // 🏛 USt-Voranmeldung (Kennziffern; ELSTER-Übermittlung in Aufbau)
   'finanzen',     // 💶 Finanzen
   'gobd',         // 🗂 GoBD
   'wiederkehr',   // 🔁 Wiederkehr-Cockpit (universelle Wiederkehr-Übersicht)
