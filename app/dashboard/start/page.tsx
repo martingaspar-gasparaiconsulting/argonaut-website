@@ -131,18 +131,7 @@ export default async function StartPage() {
         <KiCallBar used={kiUsed} limit={kiLimit} />
       </section>
 
-      {/* Stripe Kundenportal */}
-      <section>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '14px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px 0' }}>Ihr Abonnement verwalten</h3>
-            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Rechnungen, Zahlungsmethode und Kündigung — alles an einem Ort.</p>
-          </div>
-          <a href="https://billing.stripe.com/p/login/bpc_1TWAmTGFbovq8BEu7CipgZAd" target="_blank" rel="noopener noreferrer" style={{ padding: '10px 24px', background: '#D4A843', color: '#0D1B3E', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            Abo verwalten →
-          </a>
-        </div>
-      </section>
+      {/* Abo-Verwaltung läuft intern über das SEPA-Lastschriftmandat — kein externes Stripe-Portal mehr. */}
 
     </main>
   )
