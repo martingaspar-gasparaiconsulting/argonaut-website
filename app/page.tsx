@@ -1,27 +1,11 @@
-import Navbar from '@/components/Navbar'
-import Hero from '@/components/Hero'
-import Services from '@/components/Services'
-import AgentTeam from '@/components/AgentTeam'
-import ScrollingBanner from '@/components/ScrollingBanner'
-import Process from '@/components/Process'
-import Industries from '@/components/Industries'
-import Pricing from '@/components/Pricing'
-import CtaSection from '@/components/CtaSection'
-import Footer from '@/components/Footer'
+// ============================================================================
+// ARGONAUT OS · app/page.tsx — offizielle Startseite (/)
+//
+// Ab sofort ist die dunkle Vorschau-Seite die echte Startseite. Sie wird hier
+// unter "/" gerendert. Die alte weiße Startseite (components/Hero, Pricing,
+// Services, … mit den früheren Agenten-Paketen und Stripe-Links) bleibt als
+// Relikt im Repo erhalten, ist aber nicht mehr verlinkt und damit offline.
+// ============================================================================
 
-export default function Home() {
-  return (
-    <main>
-      <Navbar />
-      <Hero />
-      <ScrollingBanner />
-      <AgentTeam />
-      <Services />
-      <Process />
-      <Industries />
-      <Pricing />
-      <CtaSection />
-      <Footer />
-    </main>
-  )
-}
+export { metadata } from './vorschau/page'
+export { default } from './vorschau/page'

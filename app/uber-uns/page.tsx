@@ -6,7 +6,7 @@ import Footer from '../vorschau/_components/Footer'
 // ============================================================================
 // ARGONAUT OS · app/uber-uns/page.tsx — Über uns im neuen dunklen Design.
 // Story (Jason/Argonauten) + Gründer-Mission, ausgebaut, einheitlich „Sie",
-// aktuelle Fakten (690+ Branchen). Neue Sektion „Wofür wir stehen".
+// aktuelle Fakten (698 Branchen). Neue Sektion „Wofür wir stehen".
 // ============================================================================
 
 const GOLD = '#c9a84c'
@@ -25,7 +25,7 @@ const werte = [
 ]
 
 const zahlen = [
-  { zahl: '690+', label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
+  { zahl: '698', label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
   { zahl: '1', label: 'System statt zwölf', sub: 'CRM, ERP, Warenwirtschaft, DMS — ein Login' },
   { zahl: '🇩🇪', label: 'EU-Hosting & DSGVO', sub: 'Ihre Daten bleiben in der EU' },
   { zahl: '24/7', label: 'Ihre KI-Crew im Einsatz', sub: 'non-stop — auch wenn Sie schlafen' },

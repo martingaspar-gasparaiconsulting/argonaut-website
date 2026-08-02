@@ -169,7 +169,7 @@ export default function AGB() {
 
             <section id="laufzeit" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 5 Laufzeit & Kündigung</h2>
-              <p className="lp-p">5.1 Verträge haben eine Mindestlaufzeit von 12 Monaten; wahlweise sind 24 oder 36 Monate mit Laufzeit-Rabatt (§ 3.6) buchbar. Nach Ablauf verlängert sich der Vertrag automatisch um 12 weitere Monate, sofern nicht mit einer Frist von 30 Tagen zum Laufzeitende schriftlich gekündigt wird.</p>
+              <p className="lp-p">5.1 Verträge haben eine Mindestlaufzeit von 12 Monaten; wahlweise sind 24 oder 36 Monate mit Laufzeit-Rabatt (§ 3.6) buchbar. Nach Ablauf der Mindestlaufzeit läuft der Vertrag unbefristet weiter und kann von beiden Seiten mit einer Frist von einem Monat zum Monatsende in Textform gekündigt werden.</p>
               <p className="lp-p">5.2 Kündigungen sind ausschließlich in Textform (E-Mail) an info@argonaut-os.com zu richten.</p>
               <p className="lp-p">5.3 Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.</p>
             </section>

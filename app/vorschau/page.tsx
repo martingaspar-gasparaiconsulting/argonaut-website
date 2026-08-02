@@ -32,7 +32,7 @@ const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für über 690 Branchen vorkonfiguriert.' },
+  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für 698 Branchen vorkonfiguriert.' },
   { q: 'Was kostet ARGONAUT?', a: 'Eine monatliche Grundgebühr nach Betriebsgröße plus die Nutzer-Sitze, die Sie brauchen — ab 499 € im Monat für Einzelunternehmer. Die KI-Nutzung ist unbegrenzt inklusive.' },
   { q: 'Ist die KI wirklich unbegrenzt inklusive?', a: 'Ja. Kein Kontingent, keine nutzungsabhängigen Zusatzkosten. Sie arbeiten so viel Sie wollen.' },
   { q: 'Wo liegen meine Daten?', a: 'Auf EU-Servern, DSGVO-konform. Ihre Daten bleiben in der EU.' },
@@ -653,7 +653,7 @@ export default function VorschauPage() {
       <section className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
-            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>205 Branchen.</span>
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>698 Branchen.</span>
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
             Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
@@ -695,7 +695,7 @@ export default function VorschauPage() {
           </div>
 
           <p style={{ marginTop: '40px', fontSize: '.92rem', color: '#8fa9b6' }}>
-            Und über 200 weitere Branchen:
+            Und viele weitere Branchen:
           </p>
           <div className="arg-more">
             {['Gastronomie', 'Bau & Immobilien', 'Logistik', 'Landwirtschaft', 'Steuerberatung', 'Friseure & Beauty', 'Fitness & Wellness', 'Kfz & Werkstatt', 'Reinigung', 'Beratung', 'Bildung', 'Sicherheit'].map((t) => (
@@ -716,7 +716,7 @@ export default function VorschauPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
             {[
-              { k: '690+', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
+              { k: '698', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
               { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
               { k: '🇩🇪', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
             ].map((x) => (
