@@ -596,7 +596,7 @@ export default function VorschauPage() {
             <div className="arg-steps-line" aria-hidden="true" />
             {[
               { title: 'Persönlicher Start', desc: 'Erstgespräch, Video-Call oder Vor-Ort — wir richten ARGONAUT mit Ihnen ein. Keine Installation, kein IT-Projekt.' },
-              { title: 'Das Auge begrüßt Sie', desc: 'ARGONAUT meldet sich mit Namen: „Sollen wir loslegen?" Sie entscheiden.' },
+              { title: 'Ihr Onboarding-Helfer begrüßt Sie', desc: 'ARGONAUT meldet sich mit Namen: „Sollen wir loslegen?" Sie entscheiden.' },
               { title: '10 Minuten am Tag', desc: 'In kleinen Etappen durchs System — pausierbar, ganz in Ihrem Tempo.' },
               { title: 'Vom Matrosen zum Kapitän', desc: 'Zertifikate zeigen Ihren Fortschritt. Nach einem Jahr können Sie mehr als die meisten Profis.' },
             ].map((s, i) => (
@@ -790,14 +790,14 @@ export default function VorschauPage() {
               SOLO 990 € · Mini 1.500 € · Klein 2.900 € · Mittel 4.900 € · Groß 9.900 € · Enterprise: Projekt auf Anfrage
             </p>
             <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
-              Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — nicht rabattierbar. Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB) und persönliche Einweisung.
+              Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — nicht rabattierbar. Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB), persönliche Einweisung sowie Hologramm-Onboarding + Zertifikat.
             </p>
           </div>
 
           <AngebotRechner />
 
           <div className="arg-incl">
-            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Persönliches Onboarding + Zertifikat', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
+            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikat', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
               <span key={x} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <span aria-hidden="true" style={{ color: GOLD }}>✓</span> {x}
               </span>

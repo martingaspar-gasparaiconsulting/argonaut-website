@@ -40,16 +40,10 @@ import { gebuchteModulKeys, pfadGebucht, type TenantModulRow } from './lib/tenan
 
 // Der Export MUSS `proxy` heissen. Hiess bis Next.js 15 `middleware`.
 export async function proxy(req: NextRequest) {
-  // === A · BAUSTELLEN-RIEGEL (Phase 1) ===================================
-  // Der matcher unten laesst dieses Proxy NUR auf Marketing-Routen + /dashboard
-  // laufen. Kommt hier ein Pfad an, der NICHT mit /dashboard beginnt, ist es
-  // eine Marketing-Route -> intern auf /baustelle umschreiben (Rewrite: die URL
-  // bleibt stehen, kein Redirect-Kreis). Laeuft VOR der Supabase-Session, damit
-  // oeffentliche Seiten schnell bleiben. /impressum, /datenschutz, /agb, /admin,
-  // /admin-login, /auth, /api stehen NICHT im matcher -> unberuehrt & erreichbar.
-  if (!req.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.rewrite(new URL('/baustelle', req.url))
-  }
+  // === GO-LIVE (Baustellen-Riegel entfernt) ===============================
+  // Die Marketing-/Branchen-Seiten sind live. Der Proxy laeuft ab jetzt NUR
+  // noch auf /dashboard (siehe matcher unten) und macht dort den Zugriffs-
+  // schutz. Oeffentliche Seiten werden vom Proxy gar nicht mehr angefasst.
   // =======================================================================
   const res = NextResponse.next()
 
@@ -161,12 +155,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
-    '/branchen/:path*',
-    '/uber-uns/:path*',
-    '/demo/:path*',
-    '/multistandort/:path*',
-    '/anfrage/:path*',
     '/dashboard/:path*',
   ]
 }
