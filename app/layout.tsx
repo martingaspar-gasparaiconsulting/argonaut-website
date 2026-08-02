@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: 'ARGONAUT OS — Das KI-Betriebssystem für den deutschen Mittelstand',
     template: '%s',
   },
-  description: 'Ein System statt zwölf: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem — für den deutschen Mittelstand, DSGVO-konform, deutscher Server.',
+  description: 'Ein System statt zwölf: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem — für den deutschen Mittelstand, DSGVO-konform, EU-Hosting.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

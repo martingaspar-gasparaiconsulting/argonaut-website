@@ -625,7 +625,7 @@ export default function VorschauPage() {
             {[
               { val: '24/7', lab: 'Ihre KI-Crew ist immer an Bord' },
               { val: 'Unbegrenzt', lab: 'KI inklusive — keine Nachzahlung pro Aktion' },
-              { val: '100 %', lab: 'DSGVO-konform · EU-Hosting · Audit-Trails' },
+              { val: 'EU-Hosting', lab: 'DSGVO-konform · Audit-Trails · Daten in der EU' },
               { val: '1 statt 12', lab: 'Ein System, ein Login, ein Preis' },
             ].map((f) => (
               <div key={f.lab} className="arg-fact">

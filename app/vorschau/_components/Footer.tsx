@@ -75,7 +75,7 @@ export default function Footer() {
 
         <div style={{ marginTop: '44px', paddingTop: '22px', borderTop: '1px solid rgba(122,163,179,0.14)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between', fontSize: '.82rem', color: '#7f97a4' }}>
           <span>© 2026 Gaspar AI Consulting · Martin Gaspar · Böblingen</span>
-          <span>Deutscher Server · DSGVO-konform</span>
+          <span>EU-Hosting · DSGVO-konform</span>
         </div>
       </div>
     </footer>

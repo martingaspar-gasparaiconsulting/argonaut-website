@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const b = websiteBrancheBySlug(slug)
   if (!b) return { title: 'ARGONAUT — Branche' }
   const title = `Software für ${b.name} — ARGONAUT OS`
-  const description = `Die Branchensoftware für ${b.name}: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem System. Für ${b.name} vorkonfiguriert, DSGVO-konform, deutscher Server.`
+  const description = `Die Branchensoftware für ${b.name}: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem System. Für ${b.name} vorkonfiguriert, DSGVO-konform, EU-Hosting.`
   const url = `${SITE}/vorschau/branchen/${b.slug}`
   return {
     title,
