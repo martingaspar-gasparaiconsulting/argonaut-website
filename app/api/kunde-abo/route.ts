@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
-import { monatspreis, onboardingFuer, getStufe, euro, STUFEN, type StufeKey, type SitzTyp } from '@/lib/tarif'
+import { monatspreis, onboardingFuer, getStufe, euro, MWST, STUFEN, type StufeKey, type SitzTyp } from '@/lib/tarif'
 import { ibanGueltig } from '@/lib/sepa'
 import { sendeMail, mailLayout } from '@/lib/mail'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { aboRechnungHtml, aboRechnungPdf } from '@/lib/aboRechnungPdf'
 
 // ============================================================================
 // ARGONAUT OS · /api/kunde-abo  (Onboarding C · Schritt 5 · Teil 1)
@@ -103,9 +105,11 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   }
 
-  const { error } = await supabase
+  const { data: aboRow, error } = await supabase
     .from('kunden_abo')
     .upsert(payload, { onConflict: 'tenant_user_id' })
+    .select('id')
+    .single()
   if (error) {
     return NextResponse.json({ ok: false, error: 'Abo konnte nicht gespeichert werden: ' + error.message }, { status: 500 })
   }
@@ -113,7 +117,7 @@ export async function POST(req: Request) {
   // --- Betreiber benachrichtigen (Control-Center-Meldung) --------------------
   const { data: profil } = await supabase
     .from('profiles')
-    .select('firma_name, company_name, company, email')
+    .select('*')
     .eq('id', user.id)
     .maybeSingle()
   const firma = profil?.firma_name || profil?.company_name || profil?.company || profil?.email || user.email || 'Kunde'
@@ -134,6 +138,77 @@ export async function POST(req: Request) {
       <p style="color:#8FA3BE;font-size:13px;">Der Einzug läuft über die Betreiber-Sammellastschrift — bitte im Control Center prüfen und freigeben. Es wurde noch nichts abgebucht.</p>
     `),
   })
+
+  // --- Automatische Rechnung an den Kunden (best effort — bricht das Abo nie ab) ---
+  try {
+    const admin = createAdminClient()
+    const posInvoice = preis.positionen.map((p) => ({ label: p.label, betrag: p.betrag }))
+    if (onboarding > 0) posInvoice.push({ label: `Einrichtung / Onboarding ${stufeObj.name} (einmalig)`, betrag: onboarding })
+    const nettoGes = Math.round((preis.netto + onboarding) * 100) / 100
+    const mwstGes = Math.round(nettoGes * MWST * 100) / 100
+    const bruttoGes = Math.round((nettoGes + mwstGes) * 100) / 100
+    const kundenEmail = ((profil?.email as string | undefined) || user.email || '').trim() || null
+
+    const { data: rech, error: reErr } = await admin.from('kunden_abo_rechnungen').insert({
+      tenant_user_id: user.id,
+      abo_id: aboRow?.id ?? null,
+      art: istBestandskunde ? 'upgrade' : 'neu',
+      positionen: posInvoice,
+      netto: nettoGes,
+      mwst: mwstGes,
+      brutto: bruttoGes,
+      onboarding_netto: onboarding,
+      empfaenger_email: kundenEmail,
+    }).select('id, rechnungsnummer, rechnungsdatum').single()
+
+    if (reErr || !rech) {
+      console.error('Abo-Rechnung anlegen fehlgeschlagen:', reErr?.message)
+    } else if (kundenEmail) {
+      const p = profil as Record<string, unknown> | null
+      const feldP = (...keys: string[]): string => {
+        for (const k of keys) { const v = p?.[k]; if (typeof v === 'string' && v.trim()) return v.trim() }
+        return ''
+      }
+      const html = aboRechnungHtml({
+        rechnungsnummer: String(rech.rechnungsnummer),
+        rechnungsdatum: String(rech.rechnungsdatum),
+        art: istBestandskunde ? 'upgrade' : 'neu',
+        empfaenger: {
+          firma,
+          name: feldP('full_name', 'name', 'ansprechpartner', 'geschaeftsfuehrer'),
+          strasse: feldP('firma_strasse', 'strasse', 'adresse', 'street'),
+          plzOrt: [feldP('firma_plz', 'plz', 'zip'), feldP('firma_ort', 'ort', 'stadt', 'city')].filter(Boolean).join(' '),
+          email: kundenEmail,
+        },
+        positionen: posInvoice,
+        onboardingNetto: onboarding,
+        netto: nettoGes,
+        mwst: mwstGes,
+        brutto: bruttoGes,
+        stufeName: stufeObj.name,
+        mandatsreferenz,
+      })
+      const pdf = await aboRechnungPdf(html)
+      const anrede = feldP('full_name', 'name')
+      const mail = await sendeMail({
+        an: kundenEmail,
+        betreff: `Ihre Rechnung ${rech.rechnungsnummer} — ARGONAUT OS`,
+        html: mailLayout('Ihre Rechnung', `
+          <p>Guten Tag${anrede ? ' ' + anrede : ''},</p>
+          <p>vielen Dank für Ihr Vertrauen. Anbei Ihre Rechnung <b>${rech.rechnungsnummer}</b> über <b>${euro(bruttoGes)}</b> (brutto).</p>
+          <p>Der Betrag wird per SEPA-Lastschrift von Ihrem hinterlegten Konto eingezogen — Sie müssen nichts weiter veranlassen.</p>
+          <p>Bei Fragen antworten Sie einfach auf diese E-Mail.</p>`),
+        ...(pdf ? { anhaenge: [{ dateiname: `${rech.rechnungsnummer}.pdf`, inhalt: pdf, typ: 'application/pdf' }] } : {}),
+      })
+      if (mail.ok) {
+        await admin.from('kunden_abo_rechnungen').update({ pdf_versandt: !!pdf }).eq('id', rech.id)
+      } else {
+        console.error('Rechnungs-Mail fehlgeschlagen:', mail.fehler)
+      }
+    }
+  } catch (e) {
+    console.error('Auto-Rechnung fehlgeschlagen:', e)
+  }
 
   return NextResponse.json({
     ok: true,
