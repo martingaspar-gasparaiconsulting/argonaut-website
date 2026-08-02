@@ -712,7 +712,7 @@ export default function VorschauPage() {
           <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1rem' }}>Aus der Praxis</div>
           <h2 className="arg-h2">Für den Mittelstand gebaut — <span style={{ color: GOLD }}>mit dem Mittelstand</span>.</h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '56ch', margin: '0 auto 2.4rem', lineHeight: 1.55 }}>
-            ARGONAUT wird gerade mit echten Betrieben in der Pilotphase erprobt — vom Forstbetrieb bis zur Werkstatt. Die Fakten sprechen für sich:
+            ARGONAUT ist für den harten Praxis-Alltag gebaut — vom Forstbetrieb bis zur Werkstatt. Die Fakten sprechen für sich:
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
             {[
