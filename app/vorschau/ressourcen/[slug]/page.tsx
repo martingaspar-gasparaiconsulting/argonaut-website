@@ -6,7 +6,7 @@ import Footer from '../../_components/Footer'
 import { alleArtikel, artikelBySlug } from '../../_lib/ressourcen'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/ressourcen/[slug]/page.tsx — Artikel-Vorlage.
+// ARGONAUT OS · app/ressourcen/[slug]/page.tsx — Artikel-Vorlage.
 // Rendert die Blöcke, Article-JSON-LD, Metadaten, Lesezeit + "Erstellt am".
 // robots: noindex (Vorschau).
 // ============================================================================
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description: a.description,
     alternates: { canonical: url },
     openGraph: { title: a.title, description: a.description, url, type: 'article', siteName: 'ARGONAUT OS', locale: 'de_DE' },
-    robots: { index: false, follow: false },
+    robots: { index: true, follow: true },
   }
 }
 
@@ -72,7 +72,7 @@ export default async function Artikel({ params }: { params: Promise<{ slug: stri
 
       <article style={{ padding: '120px 0 40px' }}>
         <div className="art-wrap">
-          <Link href="/vorschau/ressourcen" style={{ color: GOLD, textDecoration: 'none', fontSize: '.9rem' }}>← Alle Ressourcen</Link>
+          <Link href="/ressourcen" style={{ color: GOLD, textDecoration: 'none', fontSize: '.9rem' }}>← Alle Ressourcen</Link>
           <div style={{ margin: '20px 0 10px' }}>
             <span style={{ fontSize: '.72rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: GOLD, background: 'rgba(201,168,76,0.12)', borderRadius: '999px', padding: '3px 11px' }}>{a.tag}</span>
             <span style={{ color: '#7f97a4', fontSize: '.85rem', marginLeft: '12px' }}>{a.lesezeit} Lesezeit · Erstellt am {fmtDatum(a.datum)}</span>
@@ -92,7 +92,7 @@ export default async function Artikel({ params }: { params: Promise<{ slug: stri
             <p style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(1.3rem, 3vw, 1.8rem)', color: '#EAF1F6', margin: '0 0 12px', lineHeight: 1.2 }}>
               Ein System statt zwölf — sehen Sie es live.
             </p>
-            <a href="/vorschau#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '14px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
+            <a href="/#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '14px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
           </div>
         </div>
       </article>
@@ -104,7 +104,7 @@ export default async function Artikel({ params }: { params: Promise<{ slug: stri
             <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.3rem', margin: '0 0 16px' }}>Weiterlesen</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {weitere.map((w) => (
-                <Link key={w.slug} href={`/vorschau/ressourcen/${w.slug}`} style={{ color: '#c4d3db', textDecoration: 'none', background: 'rgba(122,163,179,0.05)', border: '1px solid rgba(122,163,179,0.14)', borderRadius: '12px', padding: '14px 18px' }}>
+                <Link key={w.slug} href={`/ressourcen/${w.slug}`} style={{ color: '#c4d3db', textDecoration: 'none', background: 'rgba(122,163,179,0.05)', border: '1px solid rgba(122,163,179,0.14)', borderRadius: '12px', padding: '14px 18px' }}>
                   <span style={{ color: GOLD, fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>{w.tag}</span>
                   <div style={{ color: '#EAF1F6', fontWeight: 600, marginTop: '4px' }}>{w.title}</div>
                 </Link>

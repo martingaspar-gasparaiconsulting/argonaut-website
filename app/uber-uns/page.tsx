@@ -143,7 +143,7 @@ export default function UberUns() {
             <p className="uu-p" style={{ color: '#b9cdd6', margin: '0 auto 2rem' }}>
               Lassen Sie uns gemeinsam Ihren Betrieb aufs nächste Level bringen — damit Sie wieder das tun können, wofür Sie ursprünglich angetreten sind.
             </p>
-            <a href="/vorschau#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '16px 34px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
+            <a href="/#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '16px 34px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
               Demo buchen <span aria-hidden="true">→</span>
             </a>
             <p style={{ fontSize: '.85rem', color: '#7f97a4', marginTop: '24px' }}>ARGONAUT OS — Ihre Crew. Ihr Weg. Ihr Goldenes Vlies. 🔱</p>

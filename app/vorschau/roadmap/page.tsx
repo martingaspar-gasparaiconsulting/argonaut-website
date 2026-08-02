@@ -4,7 +4,7 @@ import Navbar from '../_components/Navbar'
 import Footer from '../_components/Footer'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/roadmap/page.tsx — Öffentliche Roadmap.
+// ARGONAUT OS · app/roadmap/page.tsx — Öffentliche Roadmap.
 // Drei Status: Verfügbar (Gold) · In Entwicklung · Geplant. Kundentauglich
 // benannt, KEINE Datumsversprechen. Handwerk zuerst. Datengetrieben (status
 // je Eintrag umschaltbar). Server-Component, Navbar + Footer, noindex (Vorschau).
@@ -83,7 +83,7 @@ const GRUPPEN: { status: Status; kicker: string; titel: string; sub: string }[] 
 export const metadata: Metadata = {
   title: 'Roadmap — was ist da, was kommt | ARGONAUT OS',
   description: 'Offene Roadmap: Was in ARGONAUT OS heute schon verfügbar ist, woran wir gerade bauen und was als Nächstes kommt. Ehrlich, ohne Datumsversprechen.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 }
 
 export default function RoadmapPage() {
@@ -161,9 +161,9 @@ export default function RoadmapPage() {
             <p style={{ color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto 20px', lineHeight: 1.6 }}>
               Sagen Sie uns, was für Ihren Betrieb zählt — das fließt direkt in unsere Prioritäten ein.
             </p>
-            <a href="/vorschau#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
+            <a href="/#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
             <div style={{ marginTop: '16px' }}>
-              <Link href="/vorschau/vergleich" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>Alle Funktionen ansehen →</Link>
+              <Link href="/vergleich" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>Alle Funktionen ansehen →</Link>
             </div>
           </div>
         </div>

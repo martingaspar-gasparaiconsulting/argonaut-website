@@ -13,13 +13,13 @@ const spalten: { titel: string; links: { label: string; href: string }[] }[] = [
   {
     titel: 'Produkt',
     links: [
-      { label: 'System', href: '/vorschau#module' },
-      { label: 'Preise', href: '/vorschau#preise' },
-      { label: 'Branchen', href: '/vorschau/branchen' },
-      { label: 'Funktionen', href: '/vorschau/vergleich' },
-      { label: 'Roadmap', href: '/vorschau/roadmap' },
-      { label: 'Ressourcen', href: '/vorschau/ressourcen' },
-      { label: 'Sicherheit', href: '/vorschau#sicherheit' },
+      { label: 'System', href: '/#module' },
+      { label: 'Preise', href: '/#preise' },
+      { label: 'Branchen', href: '/branchen' },
+      { label: 'Funktionen', href: '/vergleich' },
+      { label: 'Roadmap', href: '/roadmap' },
+      { label: 'Ressourcen', href: '/ressourcen' },
+      { label: 'Sicherheit', href: '/#sicherheit' },
     ],
   },
   {
@@ -33,7 +33,7 @@ const spalten: { titel: string; links: { label: string; href: string }[] }[] = [
   {
     titel: 'Kontakt',
     links: [
-      { label: 'Demo buchen', href: '/vorschau#demo' },
+      { label: 'Demo buchen', href: '/#demo' },
       { label: 'info@argonaut-os.com', href: 'mailto:info@argonaut-os.com' },
       { label: 'Login', href: '/auth/login' },
     ],
@@ -47,7 +47,7 @@ export default function Footer() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', justifyContent: 'space-between' }}>
           {/* Marke */}
           <div style={{ maxWidth: '300px' }}>
-            <Link href="/vorschau" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
               <span aria-hidden="true">🔱</span>
               <span style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, letterSpacing: '.16em', color: '#EAF1F6', fontSize: '1rem' }}>ARGONAUT&nbsp;OS</span>
             </Link>
@@ -75,7 +75,7 @@ export default function Footer() {
 
         <div style={{ marginTop: '44px', paddingTop: '22px', borderTop: '1px solid rgba(122,163,179,0.14)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between', fontSize: '.82rem', color: '#7f97a4' }}>
           <span>© 2026 Gaspar AI Consulting · Martin Gaspar · Böblingen</span>
-          <span>EU-Hosting · DSGVO-konform</span>
+          <span>Deutscher Server · DSGVO-konform</span>
         </div>
       </div>
     </footer>

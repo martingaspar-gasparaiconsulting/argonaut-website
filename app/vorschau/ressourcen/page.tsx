@@ -5,7 +5,7 @@ import Footer from '../_components/Footer'
 import { alleArtikel } from '../_lib/ressourcen'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/ressourcen/page.tsx — Blog-/Ressourcen-Übersicht.
+// ARGONAUT OS · app/ressourcen/page.tsx — Blog-/Ressourcen-Übersicht.
 // Zeigt Lesezeit + "Erstellt am" (fester Rhythmus Mo/Mi/Fr). noindex (Vorschau).
 // ============================================================================
 
@@ -20,7 +20,7 @@ function fmtDatum(iso: string) {
 export const metadata: Metadata = {
   title: 'Ressourcen — Wissen für den Mittelstand | ARGONAUT OS',
   description: 'Praxisnahe Artikel für den deutschen Mittelstand: Digitalisierung, Software, Pflichten und wie ein System statt zwölf den Alltag leichter macht.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 }
 
 export default function Ressourcen() {
@@ -44,7 +44,7 @@ export default function Ressourcen() {
       <section style={{ padding: '30px 0 90px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '18px' }}>
           {artikel.map((a) => (
-            <Link key={a.slug} href={`/vorschau/ressourcen/${a.slug}`} style={{ textDecoration: 'none', display: 'block', background: 'linear-gradient(160deg, rgba(18,32,54,0.6), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '24px 26px', transition: 'border-color .2s' }}>
+            <Link key={a.slug} href={`/ressourcen/${a.slug}`} style={{ textDecoration: 'none', display: 'block', background: 'linear-gradient(160deg, rgba(18,32,54,0.6), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '24px 26px', transition: 'border-color .2s' }}>
               <span style={{ display: 'inline-block', fontSize: '.72rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: GOLD, background: 'rgba(201,168,76,0.12)', borderRadius: '999px', padding: '3px 11px', marginBottom: '14px' }}>{a.tag}</span>
               <h2 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#EAF1F6', margin: '0 0 10px', lineHeight: 1.3 }}>{a.title}</h2>
               <p style={{ color: '#9fb3bd', fontSize: '.92rem', lineHeight: 1.55, margin: '0 0 14px' }}>{a.description}</p>

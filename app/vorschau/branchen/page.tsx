@@ -6,7 +6,7 @@ import BranchenAccordion from '../_components/BranchenAccordion'
 import { websiteKategorien, websiteBranchen } from '../_lib/branchen-web'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/branchen/page.tsx — Branchen-Übersicht (Aufklapp)
+// ARGONAUT OS · app/branchen/page.tsx — Branchen-Übersicht (Aufklapp)
 // Server-Komponente: lädt die gefilterte 19-Kategorien-Struktur und übergibt sie
 // an die Client-Komponente <BranchenAccordion> (Aufklappen, Suche, Animation).
 // robots: noindex (Vorschau).
@@ -18,7 +18,7 @@ const GOLD = '#c9a84c'
 export const metadata: Metadata = {
   title: 'ARGONAUT — Für Ihre Branche gemacht',
   description: 'ARGONAUT ist für hunderte Branchen vorkonfiguriert — vom Handwerk bis zur Industrie. Wählen Sie Ihren Bereich.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 }
 
 export default function BranchenPage() {
@@ -57,8 +57,8 @@ export default function BranchenPage() {
             Ihre Branche nicht dabei? ARGONAUT passt sich an — fragen Sie einfach.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/vorschau#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, padding: '14px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
-            <Link href="/vorschau" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, padding: '14px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>← Zur Startseite</Link>
+            <a href="/#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, padding: '14px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo buchen →</a>
+            <Link href="/" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, padding: '14px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>← Zur Startseite</Link>
           </div>
         </div>
       </section>

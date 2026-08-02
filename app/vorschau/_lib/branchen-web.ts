@@ -1,5 +1,5 @@
 // app/vorschau/_lib/branchen-web.ts
-// Helfer für die NEUEN Branchen-Seiten (/vorschau/branchen …).
+// Helfer für die NEUEN Branchen-Seiten (/branchen …).
 // Liest die bestehende Branchen-Datenbank (lib/branchen.ts) und legt eine
 // WEBSITE-SCHICHT darüber: neue 19-Kategorien-Struktur (REMAP) + Ausschlüsse.
 // lib/branchen.ts (vom Kundensystem genutzt) bleibt unangetastet.

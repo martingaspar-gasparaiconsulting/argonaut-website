@@ -4,7 +4,7 @@ import Navbar from '../_components/Navbar'
 import Footer from '../_components/Footer'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/vergleich/page.tsx — FUNKTIONEN-Showcase
+// ARGONAUT OS · app/vergleich/page.tsx — FUNKTIONEN-Showcase
 // Positive Leistungs-Seite: "Das volle Spektrum. Ein System." Kein Konkurrenz-
 // Vergleich mehr (raus: ✓/–-Matrix + Wettbewerber-Preise → §6-UWG-Risiko weg).
 // Bereich für Bereich in Kacheln. Server-Component, Navbar + Footer, noindex.
@@ -17,7 +17,7 @@ const TEAL = '#7aa3b3'
 export const metadata: Metadata = {
   title: 'Funktionen — alles, was ARGONAUT OS kann',
   description: 'Das volle Spektrum in einem System: CRM, Aufträge, Rechnungen (E-Rechnung), Warenwirtschaft, Kasse, DMS, Personal & Zeit, Auswertungen und KI — für rund 700 Branchen vorkonfiguriert.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 }
 
 type Feature = { name: string; sub: string }
@@ -223,12 +223,12 @@ export default function FunktionenPage() {
       {/* CTA */}
       <section style={{ padding: '20px 0 100px', textAlign: 'center' }}>
         <div className="fk-wrap">
-          <a href="/vorschau#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
+          <a href="/#demo" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
             Demo buchen <span aria-hidden="true">→</span>
           </a>
           <div style={{ marginTop: '18px', display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/vorschau/branchen" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>Alle Branchen ansehen →</Link>
-            <Link href="/vorschau" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>← Zurück zur Übersicht</Link>
+            <Link href="/branchen" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>Alle Branchen ansehen →</Link>
+            <Link href="/" style={{ color: TEAL, textDecoration: 'none', fontSize: '.9rem' }}>← Zurück zur Übersicht</Link>
           </div>
         </div>
       </section>

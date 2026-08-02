@@ -10,7 +10,7 @@ import { baukastenFor } from '../../_lib/branchen-bausteine'
 import { verkaufPack, fuelleText } from '../../_lib/branchen-verkauf'
 
 // ============================================================================
-// ARGONAUT OS · app/vorschau/branchen/[slug]/page.tsx — Branchen-Detailseite
+// ARGONAUT OS · app/branchen/[slug]/page.tsx — Branchen-Detailseite
 // Kompletter Vertriebsweg auf einer Seite: Hero · Schmerzpunkte · Ergebnisse ·
 // "Das ist Ihr System" (kategoriespezifischer Baukasten: Kern + Basis) ·
 // "Speziell für ..." (kuratierte Spezial-Module) · Preis-Rechner (branchen-
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!b) return { title: 'ARGONAUT — Branche' }
   const title = `Software für ${b.name} — ARGONAUT OS`
   const description = `Die Branchensoftware für ${b.name}: CRM, Aufträge, Rechnungen, Personal und Auswertungen in einem System. Für ${b.name} vorkonfiguriert, DSGVO-konform, EU-Hosting.`
-  const url = `${SITE}/vorschau/branchen/${b.slug}`
+  const url = `${SITE}/branchen/${b.slug}`
   return {
     title,
     description,
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: url },
     openGraph: { title, description, url, type: 'website', siteName: 'ARGONAUT OS', locale: 'de_DE' },
     twitter: { card: 'summary_large_image', title, description },
-    robots: { index: false, follow: false },
+    robots: { index: true, follow: true },
   }
 }
 
@@ -67,8 +67,8 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Start', item: `${SITE}/vorschau` },
-        { '@type': 'ListItem', position: 2, name: 'Branchen', item: `${SITE}/vorschau/branchen` },
-        { '@type': 'ListItem', position: 3, name: b.name, item: `${SITE}/vorschau/branchen/${b.slug}` },
+        { '@type': 'ListItem', position: 2, name: 'Branchen', item: `${SITE}/branchen` },
+        { '@type': 'ListItem', position: 3, name: b.name, item: `${SITE}/branchen/${b.slug}` },
       ],
     },
   ]
@@ -125,7 +125,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo für {b.name} buchen →</a>
-            <Link href="/vorschau/branchen" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>Alle Branchen</Link>
+            <Link href="/branchen" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>Alle Branchen</Link>
           </div>
         </div>
       </section>
@@ -279,7 +279,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             <h2 className="bd-h2" style={{ fontSize: 'clamp(1.2rem, 2.6vw, 1.6rem)' }}>Ähnliche Branchen</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {verwandte.map((v) => (
-                <Link key={v.slug} href={`/vorschau/branchen/${v.slug}`} style={{ background: 'rgba(122,163,179,0.06)', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '999px', padding: '9px 16px', fontSize: '.9rem', color: '#c4d3db', textDecoration: 'none' }}>{v.name}</Link>
+                <Link key={v.slug} href={`/branchen/${v.slug}`} style={{ background: 'rgba(122,163,179,0.06)', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '999px', padding: '9px 16px', fontSize: '.9rem', color: '#c4d3db', textDecoration: 'none' }}>{v.name}</Link>
               ))}
             </div>
           </div>

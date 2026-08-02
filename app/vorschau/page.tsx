@@ -24,7 +24,7 @@ import AnfrageFormular from './_components/AnfrageFormular'
 export const metadata: Metadata = {
   title: 'ARGONAUT OS — Vorschau',
   description: 'Das Betriebssystem, das jedes Unternehmen haben wird.',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 }
 
 const NAVY = '#0A1628'
@@ -636,7 +636,7 @@ export default function VorschauPage() {
           </div>
 
           <a
-            href="/vorschau/vergleich"
+            href="/vergleich"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '10px',
               background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '0.98rem',
@@ -812,7 +812,7 @@ export default function VorschauPage() {
             <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '.98rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.22)' }}>
               Individuelles Angebot anfragen <span aria-hidden="true">→</span>
             </a>
-            <a href="/vorschau/vergleich" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '.98rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(201,168,76,0.45)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+            <a href="/vergleich" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '.98rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(201,168,76,0.45)', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
               Warum sich das rechnet <span aria-hidden="true" style={{ color: GOLD }}>→</span>
             </a>
           </div>
