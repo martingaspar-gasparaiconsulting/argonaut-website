@@ -83,7 +83,15 @@ export default function AngebotRechner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ color: '#c4d3db' }}>Mitarbeiter im Betrieb:</span>
             <button type="button" onClick={() => setMa(Math.max(1, ma - 1))} style={stepBtn} aria-label="weniger">−</button>
-            <span style={{ minWidth: '40px', textAlign: 'center', color: '#EAF1F6', fontWeight: 700, fontSize: '1.1rem' }}>{ma}</span>
+            <input
+              type="number"
+              min={1}
+              max={9999}
+              value={ma}
+              onChange={(e) => { const v = parseInt(e.target.value, 10); setMa(Number.isNaN(v) ? 1 : Math.min(9999, Math.max(1, v))); }}
+              aria-label="Mitarbeiterzahl eingeben"
+              style={{ width: '64px', textAlign: 'center', color: '#EAF1F6', fontWeight: 700, fontSize: '1.1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: '8px', padding: '5px 4px', fontFamily: 'inherit' }}
+            />
             <button type="button" onClick={() => setMa(ma + 1)} style={stepBtn} aria-label="mehr">+</button>
           </div>
           <div style={{ textAlign: 'right' }}>
