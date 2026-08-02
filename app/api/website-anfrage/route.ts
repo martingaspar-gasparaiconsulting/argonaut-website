@@ -7,16 +7,22 @@
 //   1. (falls Wunschtermin) Slot in website_termine reservieren — UNIQUE-Sperre
 //      verhindert Doppelbuchung -> 409 "vergeben".
 //   2. Komplette Anfrage in website_anfragen speichern (eigene DB, kein Lead
-//      geht verloren; das spätere Command Center liest genau diese Tabelle).
-//   3. An den eigenen n8n-Webhook weiterleiten (Bestätigungsmail / weitere Autom.).
-// Antwort ok, sobald die Anfrage entweder in der DB liegt ODER n8n sie annahm.
+//      geht verloren; das Control-Center liest genau diese Tabelle).
+//   3. VOLL AUTONOM (kein n8n mehr): interne Benachrichtigung an info@argonaut-os.com
+//      + Bestätigungsmail an den Interessenten — beide über den eigenen
+//      Resend-Versand (lib/mail.ts).
+// Antwort ok, sobald die Anfrage entweder in der DB liegt ODER die interne
+// Benachrichtigung raus ist (kein Lead geht verloren).
 // -----------------------------------------------------------------------------
 import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { sendeMail, mailLayout } from '@/lib/mail'
+import { escapeHtml } from '@/lib/newsletter'
 
 export const runtime = 'nodejs'
 
-const N8N_KONTAKT_WEBHOOK = 'https://n8n.srv1133627.hstgr.cloud/webhook/kontaktformular'
+// Interne Postadresse für neue Website-Leads (landet in Martins Postfach).
+const INTERN_MAIL = 'info@argonaut-os.com'
 
 function clean(v: unknown, max = 2000): string | null {
   if (typeof v !== 'string') return null
@@ -55,6 +61,68 @@ async function speichereAnfrage(supabase: SupabaseClient | null, payload: Record
   const { error } = await supabase.from('website_anfragen').insert(payload)
   if (error) { console.error('Anfrage speichern fehlgeschlagen:', error); return false }
   return true
+}
+
+// Baut eine kleine HTML-Definitionsliste aus den ausgefüllten Feldern.
+function felderHtml(rows: Array<[string, string | null]>): string {
+  return rows
+    .filter(([, v]) => v && v.trim() !== '')
+    .map(([label, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#6b7688;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td><td style="padding:4px 0;color:#1a2332;font-weight:600;">${escapeHtml(String(v))}</td></tr>`)
+    .join('')
+}
+
+// Interne Benachrichtigung an info@argonaut-os.com. true = zugestellt.
+async function benachrichtigeIntern(payload: Record<string, string | null>): Promise<boolean> {
+  const titel = 'Neue Website-Anfrage'
+  const tabelle = felderHtml([
+    ['Name', payload.name],
+    ['Unternehmen', payload.unternehmen],
+    ['E-Mail', payload.email],
+    ['Telefon', payload.telefon],
+    ['Mitarbeiter', payload.mitarbeiter],
+    ['Branche', payload.branche],
+    ['Kontaktwunsch', payload.kontaktwunsch],
+    ['Wunschtermin', payload.wunschtermin],
+    ['Angebot', payload.angebot],
+    ['Preis', payload.preis],
+    ['Nachricht', payload.nachricht],
+  ])
+  const html = mailLayout(
+    titel,
+    `<p style="margin:0 0 14px;">Über das Formular auf der Website ist eine neue Anfrage eingegangen:</p>
+     <table style="border-collapse:collapse;font-size:14px;">${tabelle}</table>
+     <p style="margin:16px 0 0;color:#6b7688;font-size:13px;">Die Anfrage ist im Control Room unter „Website-Anfragen" gespeichert. Auf diese E-Mail antworten geht direkt an den Interessenten.</p>`
+  )
+  const betreff = `Neue Website-Anfrage: ${payload.name || 'unbekannt'}${payload.unternehmen ? ' · ' + payload.unternehmen : ''}`
+  const r = await sendeMail({
+    an: INTERN_MAIL,
+    betreff,
+    html,
+    // Antwort geht direkt an den Interessenten (falls E-Mail vorhanden).
+    ...(payload.email ? { antwortAn: payload.email } : {}),
+  })
+  if (!r.ok) console.error('Interne Anfrage-Mail fehlgeschlagen:', r.fehler)
+  return r.ok
+}
+
+// Bestätigungsmail an den Interessenten (best effort, nicht erfolgskritisch).
+async function bestaetigeInteressent(payload: Record<string, string | null>): Promise<void> {
+  if (!payload.email) return
+  const vorname = (payload.name || '').split(' ')[0]
+  const kontaktLabel = payload.kontaktwunsch === 'Anruf' ? 'telefonisch' : 'per E-Mail'
+  const html = mailLayout(
+    'Anfrage erhalten',
+    `<p style="margin:0 0 14px;">Guten Tag${vorname ? ' ' + escapeHtml(vorname) : ''},</p>
+     <p style="margin:0 0 14px;">vielen Dank für Ihr Interesse an ARGONAUT OS. Ihre Anfrage ist bei uns eingegangen — wir melden uns innerhalb von 24 Stunden ${kontaktLabel} bei Ihnen.</p>
+     <p style="margin:0 0 14px;">Wenn Sie in der Zwischenzeit Fragen haben, antworten Sie einfach auf diese E-Mail.</p>
+     <p style="margin:16px 0 0;">Beste Grüße<br>Ihr ARGONAUT-Team</p>`
+  )
+  try {
+    const r = await sendeMail({ an: payload.email, betreff: 'Ihre Anfrage bei ARGONAUT OS', html })
+    if (!r.ok) console.error('Bestätigungsmail fehlgeschlagen:', r.fehler)
+  } catch (e) {
+    console.error('Bestätigungsmail-Versand fehlgeschlagen:', e)
+  }
 }
 
 export async function POST(req: Request) {
@@ -107,20 +175,14 @@ export async function POST(req: Request) {
     // 2. In eigener DB speichern (kein Lead geht verloren).
     const dbOk = await speichereAnfrage(supabase, payload)
 
-    // 3. An n8n weiterleiten (Bestätigungsmail / weitere Automatisierung).
-    let n8nOk = false
-    try {
-      const res = await fetch(N8N_KONTAKT_WEBHOOK, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, timestamp: new Date().toISOString() }),
-      })
-      n8nOk = res.ok
-      if (!res.ok) console.error('n8n Kontakt-Webhook antwortete mit', res.status)
-    } catch (e) {
-      console.error('n8n nicht erreichbar:', e)
-    }
+    // 3. Autonome Zustellung über den eigenen Mailversand (kein n8n):
+    //    a) interne Benachrichtigung an info@argonaut-os.com
+    //    b) Bestätigung an den Interessenten (falls E-Mail vorhanden)
+    const internOk = await benachrichtigeIntern(payload)
+    await bestaetigeInteressent(payload)
 
-    if (!dbOk && !n8nOk) {
+    // Erfolg, sobald die Anfrage in der DB liegt ODER intern zugestellt wurde.
+    if (!dbOk && !internOk) {
       return NextResponse.json({ error: 'Zustellung fehlgeschlagen.' }, { status: 502 })
     }
     return NextResponse.json({ ok: true })
