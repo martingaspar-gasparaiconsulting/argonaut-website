@@ -21,7 +21,7 @@ export const DEFAULT_VERKAUF: VerkaufPack = {
   schmerzHint: 'Das kostet jeden Tag Zeit, Nerven und bares Geld — muss aber nicht sein.',
   nutzenHint: 'Einmal eingerichtet, läuft der Papierkram im Hintergrund — Sie machen wieder das, wofür Sie {branche} geworden sind.',
   beweis: [
-    { icon: '🇩🇪', titel: 'Deutscher Server, DSGVO', text: 'Ihre Daten bleiben in Deutschland und in Ihrer Hand — keine Cloud-Fragezeichen.' },
+    { icon: '🇩🇪', titel: 'EU-Hosting, DSGVO', text: 'Ihre Daten bleiben in der EU und in Ihrer Hand — keine Cloud-Fragezeichen.' },
     { icon: '🤝', titel: 'Persönlich eingerichtet', text: 'Wir richten ARGONAUT gemeinsam mit Ihnen ein. Sie starten begleitet, nicht allein.' },
     { icon: '⚡', titel: 'In Tagen startklar', text: 'Bestehende Daten werden übernommen — Ihr Team arbeitet schnell produktiv.' },
   ],
@@ -167,7 +167,7 @@ export const VERKAUF: Record<string, VerkaufPack> = {
     nutzenHint: 'Akten, Fristen und Leistungen hängen zusammen — nichts läuft ab, ohne dass Sie es kommen sehen.',
     beweis: [
       { icon: '⚖️', titel: 'Keine Frist rutscht durch', text: 'Fristen und Wiedervorlagen erinnern von selbst — Sie haben den Kalender im Griff, nicht andersherum.' },
-      { icon: '🗂️', titel: 'Akte vollständig', text: 'Alle Dokumente am Mandat, DSGVO-konform und auf deutschem Server — sofort auffindbar.' },
+      { icon: '🗂️', titel: 'Akte vollständig', text: 'Alle Dokumente am Mandat, DSGVO-konform und auf EU-Servern — sofort auffindbar.' },
       { icon: '💶', titel: 'Leistung sauber abgerechnet', text: 'Erfasste Tätigkeiten fließen direkt in die Rechnung — transparent und nachvollziehbar.' },
     ],
     ctaClaim: 'Zeigen Sie uns einen typischen Fall — wir zeigen Ihnen, wie {branche} Akten, Fristen und Abrechnung in einem System sichert.',

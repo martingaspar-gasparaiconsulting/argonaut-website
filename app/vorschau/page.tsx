@@ -35,7 +35,7 @@ const FAQ: { q: string; a: string }[] = [
   { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für über 690 Branchen vorkonfiguriert.' },
   { q: 'Was kostet ARGONAUT?', a: 'Eine monatliche Grundgebühr nach Betriebsgröße plus die Nutzer-Sitze, die Sie brauchen — ab 499 € im Monat für Einzelunternehmer. Die KI-Nutzung ist unbegrenzt inklusive.' },
   { q: 'Ist die KI wirklich unbegrenzt inklusive?', a: 'Ja. Kein Kontingent, keine nutzungsabhängigen Zusatzkosten. Sie arbeiten so viel Sie wollen.' },
-  { q: 'Wo liegen meine Daten?', a: 'Auf deutschen Servern, DSGVO-konform. Ihre Daten bleiben in Deutschland.' },
+  { q: 'Wo liegen meine Daten?', a: 'Auf EU-Servern, DSGVO-konform. Ihre Daten bleiben in der EU.' },
   { q: 'Wie läuft die Einführung?', a: 'Persönlich mit Ihnen — Erstgespräch, Einrichtung, Datenübernahme und Einweisung. Keine Installation, kein IT-Projekt. Bis 1 TB Datenübernahme ist inklusive.' },
   { q: 'Brauche ich IT-Kenntnisse?', a: 'Nein. Wir richten ARGONAUT mit Ihnen ein und begleiten den Start. Die Bedienung ist für jeden gedacht, nicht nur für IT-Profis.' },
   { q: 'Kann ich später erweitern?', a: 'Jederzeit. Sitze, Speicher und Funktionen lassen sich flexibel dazubuchen — das System wächst mit Ihrem Betrieb.' },
@@ -718,7 +718,7 @@ export default function VorschauPage() {
             {[
               { k: '690+', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
               { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
-              { k: '🇩🇪', t: 'Deutscher Server, DSGVO', d: 'Ihre Daten bleiben in Deutschland — sicher und rechtskonform.' },
+              { k: '🇩🇪', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
             ].map((x) => (
               <div key={x.t} style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '26px 24px' }}>
                 <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '2.2rem', color: GOLD, lineHeight: 1, marginBottom: '10px' }}>{x.k}</div>
@@ -835,7 +835,7 @@ export default function VorschauPage() {
                 icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" /></svg>),
               },
               {
-                t: 'EU-Hosting', d: 'Ihre Daten bleiben in Europa. Serverstandort Deutschland/EU.',
+                t: 'EU-Hosting', d: 'Ihre Daten bleiben in Europa. Serverstandort EU.',
                 icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>),
               },
               {

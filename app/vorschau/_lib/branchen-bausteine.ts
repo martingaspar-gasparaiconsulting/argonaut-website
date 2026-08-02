@@ -23,7 +23,7 @@ export const KERN: Baustein[] = [
   { icon: '📄', name: 'Dokumente & Verträge', tag: 'DMS', sub: 'Alles digital, DSGVO-konform' },
   { icon: '📊', name: 'Auswertungen & Dashboard', tag: 'BI', sub: 'Ihre Zahlen in Echtzeit' },
   { icon: '🧭', name: 'Ihre KI-Crew', sub: 'Nimmt Routine ab und denkt mit' },
-  { icon: '🔒', name: 'Deutscher Server & DSGVO', sub: 'Sicher und rechtskonform' },
+  { icon: '🔒', name: 'EU-Hosting & DSGVO', sub: 'Sicher und rechtskonform' },
 ]
 
 // --- Erweiterte Basis (situativ zugeschaltet) ---
