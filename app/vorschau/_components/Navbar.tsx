@@ -15,6 +15,7 @@ const LINKS = [
   { label: 'Preise', href: '/#preise' },
   { label: 'Branchen', href: '/branchen' },
   { label: 'Funktionen', href: '/vergleich' },
+  { label: 'Multistandort', href: '/multistandort' },
   { label: 'Roadmap', href: '/roadmap' },
   { label: 'Ressourcen', href: '/ressourcen' },
   { label: 'Sicherheit', href: '/#sicherheit' },

@@ -17,7 +17,6 @@ const nextConfig: NextConfig = {
       { source: "/vorschau/ressourcen", destination: "/ressourcen", permanent: true },
       { source: "/vorschau/ressourcen/:slug", destination: "/ressourcen/:slug", permanent: true },
       { source: "/demo", destination: "/", permanent: true },
-      { source: "/multistandort", destination: "/", permanent: true },
       { source: "/baustelle", destination: "/", permanent: true },
     ];
   },

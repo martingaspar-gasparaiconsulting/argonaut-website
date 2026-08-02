@@ -1,634 +1,160 @@
-'use client'
+import type { Metadata } from 'next'
+import Navbar from '../vorschau/_components/Navbar'
+import Footer from '../vorschau/_components/Footer'
+import AngebotRechner from '../vorschau/_components/AngebotRechner'
 
-import { useState, useEffect } from 'react'
+// ============================================================================
+// ARGONAUT OS · app/multistandort/page.tsx — Multistandort im dunklen Design.
+// Löst die alte weiße Seite (veraltete Agenten-Preise) ab. Erklärt das faire
+// Standort-Preismodell (Hauptsitz 100 %, weitere Standorte 40 % eigener Stufe)
+// und bindet den Angebot-Rechner (Multistandort-Modus) direkt ein.
+// ============================================================================
 
-const pakete = [
-  { name: 'STARTER', preis: 2500, farbe: '#6b7280' },
-  { name: 'PROFESSIONAL', preis: 3000, farbe: '#C9A84C' },
-  { name: 'BUSINESS', preis: 6000, farbe: '#C9A84C' },
-  { name: 'ENTERPRISE', preis: 9000, farbe: '#C9A84C' },
+const GOLD = '#c9a84c'
+const NAVY = '#0A1628'
+
+export const metadata: Metadata = {
+  title: 'Multistandort — viele Filialen, ein System',
+  description: 'ARGONAUT OS für Unternehmen mit mehreren Standorten: jede Filiale arbeitet autonom, die Zentrale sieht alles. Faire Standort-Preise — Hauptsitz voll, jeder weitere Standort nur 40 %.',
+}
+
+const vorteile = [
+  { icon: '🏢', t: 'Jeder Standort autonom', d: 'Jede Filiale hat ihren eigenen Bereich — Termine, Aufträge, Personal, Abrechnung. Kein Datenmix zwischen den Standorten.' },
+  { icon: '👁', t: 'Die Zentrale sieht alles', d: 'Ein zentrales Dashboard über alle Standorte: Umsätze, Auslastung, offene Posten — auf einen Blick, in Echtzeit.' },
+  { icon: '⚖️', t: 'Faire Standort-Preise', d: 'Der größte Standort zahlt die volle Grundgebühr, jeder weitere nur 40 % seiner eigenen Größe. Kleine Filialen kosten wenig.' },
+  { icon: '⚡', t: 'Neue Filiale in Tagen', d: 'Ein Standort mehr? Einfach dazuschalten — das System steht schon, kein neues IT-Projekt, keine Doppelarbeit.' },
 ]
 
 const beispiele = [
-  {
-    icon: '🏥',
-    branche: 'Arztpraxis',
-    beschreibung: '5 Standorte, eine Patientenverwaltung',
-    detail: 'Jede Praxis läuft autonom — Termine, Dokumente, Abrechnung. Die Zentrale sieht alles auf einen Blick.',
-  },
-  {
-    icon: '💪',
-    branche: 'Fitnessstudio',
-    beschreibung: '3 Studios, ein Mitgliedersystem',
-    detail: 'Mitglieder können in jedem Studio einchecken. Marketing läuft zentral. Jedes Studio behält seine eigene Kasse.',
-  },
-  {
-    icon: '🔧',
-    branche: 'Handwerksbetrieb',
-    beschreibung: '4 Filialen, ein Auftragssystem',
-    detail: 'Aufträge werden zentral vergeben, lokal abgewickelt. Materialbestellung, Zeiterfassung und Rechnungen laufen automatisch.',
-  },
-  {
-    icon: '🏨',
-    branche: 'Hotel-Gruppe',
-    beschreibung: '8 Häuser, eine Buchungsplattform',
-    detail: 'Verfügbarkeiten, Preise, Gästekommunikation — alles zentral gesteuert. Jedes Haus behält sein eigenes Team.',
-  },
-  {
-    icon: '🏗️',
-    branche: 'Bauunternehmen',
-    beschreibung: '6 Baustellen, ein Projektmanagement',
-    detail: 'Aufträge, Materialbestellung und Zeiterfassung laufen zentral. Jede Baustelle bleibt autonom.',
-  },
-  {
-    icon: '🚗',
-    branche: 'Autohaus-Gruppe',
-    beschreibung: '4 Standorte, ein CRM',
-    detail: 'Leads, Probefahrten und Verkaufsberichte laufen zentral. Jedes Haus behält seine eigene Kasse.',
-  },
-  {
-    icon: '🍽️',
-    branche: 'Restaurantkette',
-    beschreibung: '10 Filialen, ein Bestellsystem',
-    detail: 'Speisekarten, Bestellungen und Personal zentral gesteuert. Jede Filiale bleibt flexibel.',
-  },
-  {
-    icon: '📦',
-    branche: 'Logistik & Lager',
-    beschreibung: '5 Lager, eine Plattform',
-    detail: 'Bestände, Lieferungen und Routen laufen automatisch. Die Zentrale hat immer den Überblick.',
-  },
-  {
-    icon: '🦷',
-    branche: 'Zahnarztpraxis-Kette',
-    beschreibung: '4 Praxen, ein Abrechnungssystem',
-    detail: 'Behandlungspläne, Abrechnung und Terminverwaltung laufen zentral. Jede Praxis behält ihr eigenes Team.',
-  },
-  {
-    icon: '🧘',
-    branche: 'Physiotherapie-Gruppe',
-    beschreibung: '6 Studios, ein Terminkalender',
-    detail: 'Patienten buchen online, Therapeuten sehen ihren Kalender. Auslastung und Abrechnung laufen zentral.',
-  },
-  {
-    icon: '📊',
-    branche: 'Steuerberatungskanzlei',
-    beschreibung: '3 Standorte, ein Mandantensystem',
-    detail: 'Mandanten, Dokumente und Fristen zentral verwaltet. Jeder Standort arbeitet autonom — die Zentrale behält den Überblick.',
-  },
-  {
-    icon: '🏠',
-    branche: 'Immobilienmakler',
-    beschreibung: '5 Büros, eine Objektverwaltung',
-    detail: 'Objekte, Interessenten und Besichtigungen zentral gesteuert. Jedes Büro behält seine eigenen Makler und Provisionen.',
-  },
-  {
-    icon: '💊',
-    branche: 'Apothekenkette',
-    beschreibung: '8 Filialen, ein Lagersystem',
-    detail: 'Bestände, Rezepte und Bestellungen laufen automatisch. Jede Filiale bleibt voll funktionsfähig — auch offline.',
-  },
-  {
-    icon: '✂️',
-    branche: 'Friseur-Kette',
-    beschreibung: '10 Salons, ein Buchungssystem',
-    detail: 'Kunden buchen online bei jedem Salon. Marketing, Gutscheine und Auswertungen laufen zentral.',
-  },
-  {
-    icon: '🚨',
-    branche: 'Sicherheitsdienst',
-    beschreibung: '12 Einsatzgebiete, ein Dispositionssystem',
-    detail: 'Einsätze, Schichtpläne und Berichte zentral disponiert. Jedes Team meldet sich automatisch — lückenlose Dokumentation.',
-  },
-  {
-    icon: '🧹',
-    branche: 'Reinigungsunternehmen',
-    beschreibung: '7 Teams, ein Auftragsmanagement',
-    detail: 'Aufträge, Routen und Zeiterfassung automatisch verteilt. Die Zentrale sieht jeden Auftragsstatus in Echtzeit.',
-  },
-  {
-    icon: '❤️',
-    branche: 'Pflegedienst',
-    beschreibung: '4 Standorte, eine Tourenplanung',
-    detail: 'Touren, Pflegeprotokolle und Abrechnung laufen zentral. Jeder Pflegedienst bleibt eigenständig — mit vollem Überblick für die Leitung.',
-  },
+  { icon: '🏥', branche: 'Arztpraxen', text: '5 Standorte, eine Patientenverwaltung — jede Praxis autonom, die Zentrale mit dem Gesamtbild.' },
+  { icon: '💪', branche: 'Fitnessstudios', text: 'Mehrere Studios, ein Mitglieder- und Vertragssystem — Beiträge laufen automatisch, standortübergreifend auswertbar.' },
+  { icon: '🏨', branche: 'Hotels & Gastro', text: 'Jedes Haus mit eigenem Team, zentral gesteuerte Preise, Verfügbarkeiten und Abrechnung.' },
+  { icon: '⚖️', branche: 'Kanzleien', text: '3 Standorte, ein Mandantensystem — Akten, Fristen und Dokumente zentral, jeder Standort mit eigenem Zugriff.' },
+  { icon: '🛒', branche: 'Handel & Filialen', text: 'Filialbelieferung, Warenwirtschaft und Kasse je Standort — die Zentrale plant und wertet aus.' },
+  { icon: '🔧', branche: 'Handwerk & Service', text: 'Niederlassungen mit eigener Dispo und Tour, zentrale Aufträge, Rechnungen und Controlling.' },
 ]
 
-const fragen = [
-  {
-    frage: 'Welche Standorte können verbunden werden?',
-    antwort: 'Alle Standorte Ihres Unternehmens — egal ob 2 oder 20. Jede Filiale, jede Niederlassung, jedes Büro wird in einem zentralen Dashboard zusammengeführt.',
-  },
-  {
-    frage: 'Bleiben die Daten jedes Standorts getrennt?',
-    antwort: 'Ja. Jeder Standort hat seinen eigenen Bereich. Die Zentrale sieht alles — ein Standort sieht nur seine eigenen Daten. Keine Überschneidungen, kein Datenmix.',
-  },
-  {
-    frage: 'Was kostet die Einrichtung?',
-    antwort: 'Es gibt keine Setup-Gebühr. Sie wählen Ihr Paket, wir richten alles ein. Erstgespräch + Live-Demo in 24h.',
-  },
-  {
-    frage: 'Müssen alle Standorte dasselbe Paket haben?',
-    antwort: 'Ja, für eine einheitliche Infrastruktur buchen alle Standorte dasselbe Paket. Das sichert Kompatibilität und reibungslosen Datenaustausch zwischen den Standorten.',
-  },
-  {
-    frage: 'Wer hat Zugriff auf was?',
-    antwort: 'Sie bestimmen das vollständig. Standortleiter sehen nur ihren Bereich. Die Geschäftsführung hat Zugriff auf alle Standorte. Individuelle Rollen sind konfigurierbar.',
-  },
-  {
-    frage: 'Wie schnell sind neue Standorte eingebunden?',
-    antwort: 'Einen neuen Standort hinzufügen dauert weniger als 24 Stunden. Kein zusätzlicher Technikeinsatz — alles läuft über Ihr zentrales ARGONAUT Dashboard.',
-  },
-  {
-    frage: 'Funktioniert das auch für internationale Standorte?',
-    antwort: 'Ja. ARGONAUT ist sprachunabhängig einsetzbar und unterstützt mehrere Zeitzonen. Standorte in Deutschland, Österreich, Schweiz und darüber hinaus sind problemlos integrierbar.',
-  },
-  {
-    frage: 'Was passiert, wenn ein Standort ausfällt?',
-    antwort: 'Die anderen Standorte laufen vollständig weiter. Kein Standort ist vom anderen abhängig. Der ausgefallene Standort wird automatisch neu synchronisiert sobald er wieder online ist.',
-  },
+const faq = [
+  { q: 'Wie viele Standorte kann ich verbinden?', a: 'So viele Sie brauchen — ob 2 oder 20. Jede Filiale, Niederlassung oder jedes Büro läuft in einem zentralen Dashboard zusammen.' },
+  { q: 'Bleiben die Daten je Standort getrennt?', a: 'Ja. Jeder Standort hat seinen eigenen Bereich. Die Zentrale sieht alles, ein Standort nur seine eigenen Daten — kein Datenmix.' },
+  { q: 'Wie wird ein zusätzlicher Standort bepreist?', a: 'Der größte Standort ist der Hauptsitz und zahlt die volle Grundgebühr nach seiner Größe. Jeder weitere Standort zahlt nur 40 % seiner eigenen Größenstufe — für Grundgebühr und Einrichtung. Die Nutzer-Sitze rechnen wir über alle Standorte nach echter Nutzerzahl.' },
+  { q: 'Wie schnell ist ein neuer Standort eingebunden?', a: 'In der Regel in wenigen Tagen — das System steht bereits, der neue Standort wird nur dazugeschaltet. Kein zusätzliches IT-Projekt.' },
+  { q: 'Wer darf was sehen?', a: 'Das bestimmen Sie. Standortleiter sehen nur ihren Bereich, die Geschäftsführung alle Standorte. Rollen und Rechte sind frei konfigurierbar.' },
 ]
 
 export default function MultistandortPage() {
-  const [selectedStandorte, setSelectedStandorte] = useState(5)
-  const [selectedPaket, setSelectedPaket] = useState(pakete[1])
-
-  const gesamtPaket = selectedPaket.preis * selectedStandorte
-
-  useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://js-eu1.hsforms.net/forms/embed/146991109.js'
-    script.defer = true
-    document.body.appendChild(script)
-    return () => {
-      document.body.removeChild(script)
-    }
-  }, [])
-
   return (
-    <main style={{
-      background: '#0A1628',
-      minHeight: '100vh',
-      fontFamily: 'var(--font-dm-sans), sans-serif',
-      color: '#ffffff',
-    }}>
+    <>
+      <Navbar />
+      <main style={{ background: NAVY, minHeight: '100vh', color: '#EAF1F6', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 300, overflowX: 'hidden' }}>
+        <style>{`
+          .ms-wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+          .ms-narrow { max-width: 780px; margin: 0 auto; padding: 0 24px; }
+          .ms-eyebrow { color: ${GOLD}; font-size: .78rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase; margin: 0 0 16px; }
+          .ms-h1 { font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: clamp(2.2rem, 5.4vw, 3.6rem); line-height: 1.1; margin: 0 0 1.2rem; }
+          .ms-h2 { font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.2; margin: 0 0 1rem; }
+          .ms-lead { color: #b9cdd6; font-size: clamp(1.05rem, 2vw, 1.28rem); line-height: 1.6; }
+          .ms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 40px; text-align: left; }
+          .ms-card { background: linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6)); border: 1px solid rgba(122,163,179,0.14); border-radius: 16px; padding: 24px; }
+          .ms-card .ic { font-size: 1.7rem; }
+          .ms-card h3 { font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: 1.2rem; color: #EAF1F6; margin: 12px 0 6px; }
+          .ms-card p { color: #90a6b2; font-size: .95rem; line-height: 1.55; margin: 0; }
+          .ms-ex { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 36px; text-align: left; }
+          .ms-exc { background: rgba(122,163,179,0.05); border: 1px solid rgba(122,163,179,0.12); border-radius: 14px; padding: 20px; }
+          .ms-exc .ic { font-size: 1.5rem; }
+          .ms-exc b { display: block; font-family: var(--font-syne), sans-serif; color: #EAF1F6; margin: 10px 0 6px; font-size: 1.02rem; }
+          .ms-exc span { color: #90a6b2; font-size: .88rem; line-height: 1.5; }
+          .ms-faq { text-align: left; margin-top: 30px; }
+          .ms-faq details { border-bottom: 1px solid rgba(122,163,179,0.14); padding: 18px 0; }
+          .ms-faq summary { cursor: pointer; font-weight: 600; color: #EAF1F6; font-size: 1.05rem; list-style: none; }
+          .ms-faq summary::-webkit-details-marker { display: none; }
+          .ms-faq p { color: #b9cdd6; font-size: .98rem; line-height: 1.7; margin: 12px 0 0; }
+          .ms-btn { display: inline-flex; align-items: center; gap: 10px; background: ${GOLD}; color: ${NAVY}; font-weight: 600; font-size: 1rem; padding: 15px 32px; border-radius: 10px; text-decoration: none; box-shadow: 0 10px 30px rgba(201,168,76,0.22); }
+          @media (max-width: 760px) { .ms-grid { grid-template-columns: 1fr; } .ms-ex { grid-template-columns: 1fr; } }
+        `}</style>
 
-      {/* HERO */}
-      <section style={{
-        position: 'relative',
-        padding: '120px 24px 80px',
-        textAlign: 'center',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '800px',
-          height: '800px',
-          background: 'radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
-
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          background: 'rgba(201,168,76,0.1)',
-          border: '1px solid rgba(201,168,76,0.3)',
-          borderRadius: '999px',
-          padding: '6px 16px',
-          marginBottom: '32px',
-        }}>
-          <span style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            Multistandort-Lösung
-          </span>
-        </div>
-
-        <h1 style={{
-          fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-          fontWeight: 700,
-          lineHeight: 1.05,
-          marginBottom: '24px',
-          fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
-          letterSpacing: '-0.02em',
-        }}>
-          Ein Gehirn.<br />
-          <span style={{ color: '#C9A84C' }}>Viele Standorte.</span>
-        </h1>
-
-        <p style={{
-          fontSize: 'clamp(16px, 2vw, 20px)',
-          color: 'rgba(255,255,255,0.6)',
-          maxWidth: '600px',
-          margin: '0 auto 48px',
-          lineHeight: 1.7,
-        }}>
-          ARGONAUT verbindet alle Ihre Standorte zu einem intelligenten Netzwerk — jeder Standort autonom, alle gemeinsam gesteuert.
-        </p>
-
-        <div style={{
-          maxWidth: '760px',
-          margin: '0 auto 80px',
-          aspectRatio: '16/9',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(201,168,76,0.2)',
-          borderRadius: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '16px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.05) 0%, transparent 50%, rgba(10,22,40,0.5) 100%)',
-          }} />
-          <div style={{
-            width: '72px',
-            height: '72px',
-            borderRadius: '50%',
-            background: 'rgba(201,168,76,0.15)',
-            border: '2px solid rgba(201,168,76,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '28px',
-            position: 'relative',
-          }}>▶</div>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase', position: 'relative' }}>
-            Video folgt in Kürze
-          </p>
-        </div>
-      </section>
-
-      {/* WIE ES FUNKTIONIERT */}
-      <section style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-            Das Konzept
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 700, fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif', letterSpacing: '-0.02em' }}>
-            Jeder Standort ist eigenständig.<br />Gemeinsam sind sie unschlagbar.
-          </h2>
-        </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginBottom: '32px',
-        }}>
-          {['Standort A', 'Standort B', 'Standort C', 'Standort D'].map((s, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '12px',
-              padding: '24px',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: 'rgba(201,168,76,0.1)',
-                border: '1px solid rgba(201,168,76,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 12px',
-                fontSize: '20px',
-              }}>🏢</div>
-              <p style={{ fontWeight: 700, fontSize: '18px', marginBottom: '8px' }}>{s}</p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigene Automatisierung</p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigene Daten</p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Eigenes Team</p>
-            </div>
-          ))}
-        </div>
-
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.05) 100%)',
-          border: '1px solid rgba(201,168,76,0.3)',
-          borderRadius: '16px',
-          padding: '40px',
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🧠</div>
-          <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#C9A84C', marginBottom: '12px', fontFamily: 'var(--font-syne), sans-serif' }}>
-            ARGONAUT Zentral-Hub
-          </h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.7 }}>
-            Die Geschäftsführung sieht alle Standorte in einem Dashboard. Kein Standort kann in die Automatisierung eines anderen eingreifen — nur die Zentrale hat den Überblick.
-          </p>
-        </div>
-      </section>
-
-      {/* BEISPIELE */}
-      <section style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Beispiele
+        {/* Hero */}
+        <section style={{ padding: '140px 24px 50px', textAlign: 'center', background: 'radial-gradient(1000px 500px at 50% -10%, rgba(201,168,76,0.14), transparent 60%)' }}>
+          <div className="ms-narrow">
+            <p className="ms-eyebrow">Multistandort</p>
+            <h1 className="ms-h1">Viele Standorte.<br /><span style={{ color: GOLD }}>Ein System.</span></h1>
+            <p className="ms-lead" style={{ maxWidth: '620px', margin: '0 auto' }}>
+              Jede Filiale arbeitet autonom, die Zentrale sieht alles. Und Sie zahlen fair: der Hauptsitz voll,
+              jeder weitere Standort nur <span style={{ color: '#EAF1F6', fontWeight: 600 }}>40 %</span> seiner eigenen Größe.
             </p>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
-              Für welche Betriebe?
-            </h2>
           </div>
+        </section>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
-            {beispiele.map((b, i) => (
-              <div key={i} style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '16px',
-                padding: '32px',
-                transition: 'border-color 0.2s',
-              }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(201,168,76,0.4)' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
-              >
-                <div style={{ fontSize: '36px', marginBottom: '16px' }}>{b.icon}</div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#C9A84C' }}>{b.branche}</h3>
-                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'rgba(255,255,255,0.8)' }}>{b.beschreibung}</p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{b.detail}</p>
-              </div>
-            ))}
-
-            {/* WILDCARD KARTE */}
-            <a href="#kontakt" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)',
-                border: '2px solid #C9A84C',
-                borderRadius: '16px',
-                padding: '32px',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-                height: '100%',
-                boxSizing: 'border-box',
-                boxShadow: '0 0 32px rgba(201,168,76,0.12)',
-              }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 48px rgba(201,168,76,0.28)';
-                  (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(201,168,76,0.08) 100%)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 32px rgba(201,168,76,0.12)';
-                  (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)';
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: '-20px',
-                  right: '-20px',
-                  width: '120px',
-                  height: '120px',
-                  background: 'radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%)',
-                  pointerEvents: 'none',
-                }} />
-                <div style={{ fontSize: '36px', marginBottom: '16px' }}>⚡</div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: '#C9A84C' }}>
-                  Ihre Branche fehlt?
-                </h3>
-                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'rgba(255,255,255,0.9)' }}>
-                  Multistandort für jedes Unternehmen
-                </p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '24px' }}>
-                  ARGONAUT passt sich jeder Branche an. Wenn Sie mehrere Standorte haben, haben wir die Lösung.
-                </p>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: '#C9A84C',
-                  color: '#0A1628',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  padding: '10px 20px',
-                  borderRadius: '4px',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}>
-                  Jetzt Gespräch vereinbaren →
+        {/* Vorteile */}
+        <section style={{ padding: '30px 24px 20px' }}>
+          <div className="ms-wrap">
+            <div className="ms-grid">
+              {vorteile.map((v) => (
+                <div key={v.t} className="ms-card">
+                  <div className="ic">{v.icon}</div>
+                  <h3>{v.t}</h3>
+                  <p>{v.d}</p>
                 </div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* PREISRECHNER */}
-      <section style={{ padding: '80px 24px', maxWidth: '900px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-            Pricing
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
-            Ihr individuelles Paket
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '16px' }}>
-            Alle Standorte buchen dasselbe Paket — auf Anfrage kalkulieren wir Ihren Gesamtpreis.
-          </p>
-        </div>
-
-        <div style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(201,168,76,0.2)',
-          borderRadius: '20px',
-          padding: '40px',
-        }}>
-          <div style={{ marginBottom: '40px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>
-              Anzahl Standorte
-            </p>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {[2, 3, 4, 5, 7, 10].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setSelectedStandorte(n)}
-                  style={{
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    border: selectedStandorte === n ? '2px solid #C9A84C' : '1px solid rgba(255,255,255,0.12)',
-                    background: selectedStandorte === n ? 'rgba(201,168,76,0.15)' : 'transparent',
-                    color: selectedStandorte === n ? '#C9A84C' : 'rgba(255,255,255,0.5)',
-                    fontWeight: 700,
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {n}
-                </button>
               ))}
             </div>
           </div>
+        </section>
 
-          <div style={{ marginBottom: '40px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>
-              Paket (für alle Standorte)
+        {/* Preis-Rechner (Multistandort-Modus) */}
+        <section style={{ padding: '50px 24px 20px', textAlign: 'center' }}>
+          <div className="ms-wrap">
+            <p className="ms-eyebrow">Preis-Richtlinie</p>
+            <h2 className="ms-h2">Rechnen Sie Ihre Standorte durch.</h2>
+            <p className="ms-lead" style={{ maxWidth: '620px', margin: '0 auto' }}>
+              Oben im Rechner auf <span style={{ color: GOLD, fontWeight: 600 }}>„Mehrere Standorte"</span> — tragen Sie je Filiale die Mitarbeiterzahl ein und sehen Sie sofort beide Varianten im Vergleich. Grobe Richtlinie fürs Gespräch, kein Vertrag.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-              {pakete.map((p) => (
-                <button
-                  key={p.name}
-                  onClick={() => setSelectedPaket(p)}
-                  style={{
-                    padding: '16px',
-                    borderRadius: '12px',
-                    border: selectedPaket.name === p.name ? '2px solid #C9A84C' : '1px solid rgba(255,255,255,0.1)',
-                    background: selectedPaket.name === p.name ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.02)',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    textAlign: 'left',
-                  }}
-                >
-                  <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: selectedPaket.name === p.name ? '#C9A84C' : 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
-                    {p.name}
-                  </p>
-                  <p style={{ fontSize: '18px', fontWeight: 900 }}>{p.preis.toLocaleString('de-DE')}€</p>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>/ Monat / Standort</p>
-                </button>
+            <AngebotRechner />
+          </div>
+        </section>
+
+        {/* Beispiele */}
+        <section style={{ padding: '50px 24px 20px', textAlign: 'center' }}>
+          <div className="ms-wrap">
+            <h2 className="ms-h2">Für Betriebe mit mehreren Standorten</h2>
+            <div className="ms-ex">
+              {beispiele.map((b) => (
+                <div key={b.branche} className="ms-exc">
+                  <div className="ic">{b.icon}</div>
+                  <b>{b.branche}</b>
+                  <span>{b.text}</span>
+                </div>
               ))}
             </div>
           </div>
+        </section>
 
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.05) 100%)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            borderRadius: '16px',
-            padding: '32px',
-          }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <div>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>{selectedPaket.name} × {selectedStandorte} Standorte</p>
-                <p style={{ fontSize: '20px', fontWeight: 700 }}>{gesamtPaket.toLocaleString('de-DE')} €</p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: '#C9A84C', fontWeight: 700, marginBottom: '4px' }}>Gesamt / Monat</p>
-                <p style={{ fontSize: '28px', fontWeight: 900, color: '#C9A84C' }}>{gesamtPaket.toLocaleString('de-DE')} €</p>
-              </div>
+        {/* FAQ */}
+        <section style={{ padding: '50px 24px 30px' }}>
+          <div className="ms-narrow">
+            <h2 className="ms-h2" style={{ textAlign: 'center' }}>Häufige Fragen</h2>
+            <div className="ms-faq">
+              {faq.map((f) => (
+                <details key={f.q}>
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
             </div>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-              Alle Preise zzgl. 19% MwSt. · Zentral-Hub inklusive ab 3 Standorten
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section style={{ padding: '20px 24px 100px', textAlign: 'center' }}>
+          <div className="ms-narrow">
+            <h2 className="ms-h2">Mehrere Standorte, ein Erstgespräch.</h2>
+            <p className="ms-lead" style={{ maxWidth: '560px', margin: '0 auto 28px' }}>
+              Wir schauen uns Ihre Standorte gemeinsam an und rechnen die faire Variante für Sie durch.
             </p>
+            <a href="/#demo" className="ms-btn">Demo buchen <span aria-hidden="true">→</span></a>
           </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Häufige Fragen
-            </p>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
-              Was Unternehmer wissen wollen
-            </h2>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '24px',
-          }}>
-            {fragen.map((f, i) => (
-              <div key={i} style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '16px',
-                padding: '32px',
-              }}>
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: 'rgba(201,168,76,0.15)',
-                    border: '1px solid rgba(201,168,76,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    color: '#C9A84C',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                  }}>?</div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', lineHeight: 1.4 }}>{f.frage}</h3>
-                </div>
-                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, paddingLeft: '40px' }}>
-                  {f.antwort}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* WARUM 60 MINUTEN */}
-      <section style={{ padding: '80px 24px', maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif', marginBottom: '24px' }}>
-          Warum 60 Minuten?
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, fontSize: '18px', marginBottom: '48px' }}>
-          Jedes Multistandort-Setup ist einzigartig. In einem strukturierten Gespräch klären wir Ihre genaue Struktur, welche Standorte verbunden werden sollen und wie die Zentrale gesteuert wird. Kein Verkaufsgespräch — nur technische Klärung, damit wir sofort loslegen können.
-        </p>
-
-        <a
-          href="#kontakt"
-          style={{
-            display: 'inline-block',
-            background: '#C9A84C',
-            color: '#0A1628',
-            fontWeight: 700,
-            fontSize: '13px',
-            padding: '20px 48px',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            marginBottom: '16px',
-          }}
-        >
-          Jetzt Gespräch vereinbaren →
-        </a>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
-          Martin Gaspar · ARGONAUT · 71032 Böblingen
-        </p>
-      </section>
-
-      {/* KONTAKT FORMULAR */}
-      <section id="kontakt" style={{ padding: '80px 24px', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <p style={{ color: '#C9A84C', fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
-            Kontakt
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 900, fontFamily: 'var(--font-syne), sans-serif' }}>
-            Gespräch vereinbaren
-          </h2>
-        </div>
-
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '20px',
-          padding: '48px',
-        }}>
-          <div
-            className="hs-form-frame"
-            data-region="eu1"
-            data-form-id="5f732c8a-0994-46b0-a4d4-c37e23b804a7"
-            data-portal-id="146991109"
-          />
-        </div>
-      </section>
-
-    </main>
+        </section>
+      </main>
+      <Footer />
+    </>
   )
 }
