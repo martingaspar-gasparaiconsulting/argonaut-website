@@ -21,7 +21,7 @@ export const DEFAULT_VERKAUF: VerkaufPack = {
   schmerzHint: 'Das kostet jeden Tag Zeit, Nerven und bares Geld — muss aber nicht sein.',
   nutzenHint: 'Einmal eingerichtet, läuft der Papierkram im Hintergrund — Sie machen wieder das, wofür Sie {branche} geworden sind.',
   beweis: [
-    { icon: '🇩🇪', titel: 'EU-Hosting, DSGVO', text: 'Ihre Daten bleiben in der EU und in Ihrer Hand — keine Cloud-Fragezeichen.' },
+    { icon: '🇪🇺', titel: 'EU-Hosting, DSGVO', text: 'Ihre Daten bleiben in der EU und in Ihrer Hand — keine Cloud-Fragezeichen.' },
     { icon: '🤝', titel: 'Persönlich eingerichtet', text: 'Wir richten ARGONAUT gemeinsam mit Ihnen ein. Sie starten begleitet, nicht allein.' },
     { icon: '⚡', titel: 'In Tagen startklar', text: 'Bestehende Daten werden übernommen — Ihr Team arbeitet schnell produktiv.' },
   ],

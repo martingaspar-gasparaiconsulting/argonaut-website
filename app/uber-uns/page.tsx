@@ -6,7 +6,7 @@ import Footer from '../vorschau/_components/Footer'
 // ============================================================================
 // ARGONAUT OS · app/uber-uns/page.tsx — Über uns im neuen dunklen Design.
 // Story (Jason/Argonauten) + Gründer-Mission, ausgebaut, einheitlich „Sie",
-// aktuelle Fakten (698 Branchen). Neue Sektion „Wofür wir stehen".
+// aktuelle Fakten (690+ Branchen). Neue Sektion „Wofür wir stehen".
 // ============================================================================
 
 const GOLD = '#c9a84c'
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
 const werte = [
   { icon: '🔓', t: 'Zugänglich', d: 'KI und moderne Software gehören nicht nur den Großen. Wir machen sie für jeden Betrieb nutzbar — vom Einzelunternehmer bis zum Konzern.' },
   { icon: '🧩', t: 'Ein System statt zwölf', d: 'Ein Login, ein Ort, ein roter Faden — statt Flickenteppich aus Insellösungen, die nicht miteinander reden.' },
-  { icon: '🇩🇪', t: 'In Deutschland zu Hause', d: 'EU-Hosting, DSGVO-konform, Sprache und Support auf Augenhöhe. Ihre Daten bleiben hier.' },
+  { icon: '🇩🇪', t: 'In Deutschland zu Hause', d: 'EU-Hosting, DSGVO-konform, Sprache und Support auf Augenhöhe. Ihre Daten bleiben in der EU.' },
   { icon: '🤝', t: 'Persönlich', d: 'Wir richten ARGONAUT mit Ihnen ein und bleiben an Bord — kein anonymer Software-Konzern, sondern eine Crew.' },
 ]
 
 const zahlen = [
-  { zahl: '698', label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
+  { zahl: '690+', label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
   { zahl: '1', label: 'System statt zwölf', sub: 'CRM, ERP, Warenwirtschaft, DMS — ein Login' },
-  { zahl: '🇩🇪', label: 'EU-Hosting & DSGVO', sub: 'Ihre Daten bleiben in der EU' },
-  { zahl: '24/7', label: 'Ihre KI-Crew im Einsatz', sub: 'non-stop — auch wenn Sie schlafen' },
+  { zahl: '🇪🇺', label: 'EU-Hosting & DSGVO', sub: 'Ihre Daten bleiben in der EU' },
+  { zahl: '24/7', label: 'Ihre KI ist immer ansprechbar', sub: 'rund um die Uhr — beantwortet, füllt aus, schlägt vor' },
 ]
 
 export default function UberUns() {

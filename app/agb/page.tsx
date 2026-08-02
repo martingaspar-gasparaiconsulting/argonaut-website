@@ -156,7 +156,7 @@ export default function AGB() {
               <p className="lp-p">3.3 Die einmalige Einrichtungsgebühr wird bei Vertragsschluss fällig und deckt Einrichtung, Datenübernahme und Einweisung ab.</p>
               <p className="lp-p">3.4 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
               <p className="lp-p">3.5 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
-              <p className="lp-p">3.6 Laufzeit-Rabatte: Bei einer Vertragslaufzeit von 24 Monaten gewährt der Anbieter 5 %, bei 36 Monaten 10 % Rabatt auf die monatlichen Gebühren (Grundgebühr und Nutzer-Sitze). Die einmalige Einrichtungsgebühr ist vom Rabatt ausgenommen.</p>
+              <p className="lp-p">3.6 Laufzeit-Rabatte: Bei einer Vertragslaufzeit von 24 Monaten gewährt der Anbieter 5 %, bei 36 Monaten 8 % Rabatt auf die monatlichen Gebühren (Grundgebühr und Nutzer-Sitze). Die einmalige Einrichtungsgebühr ist vom Rabatt ausgenommen.</p>
             </section>
 
             <section id="zahlung" style={{ marginBottom: '44px' }}>

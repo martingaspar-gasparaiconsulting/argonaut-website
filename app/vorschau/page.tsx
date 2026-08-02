@@ -32,7 +32,7 @@ const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für 698 Branchen vorkonfiguriert.' },
+  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für über 690 Branchen vorkonfiguriert.' },
   { q: 'Was kostet ARGONAUT?', a: 'Eine monatliche Grundgebühr nach Betriebsgröße plus die Nutzer-Sitze, die Sie brauchen — ab 499 € im Monat für Einzelunternehmer. Die KI-Nutzung ist unbegrenzt inklusive.' },
   { q: 'Ist die KI wirklich unbegrenzt inklusive?', a: 'Ja. Kein Kontingent, keine nutzungsabhängigen Zusatzkosten. Sie arbeiten so viel Sie wollen.' },
   { q: 'Wo liegen meine Daten?', a: 'Auf EU-Servern, DSGVO-konform. Ihre Daten bleiben in der EU.' },
@@ -625,7 +625,7 @@ export default function VorschauPage() {
             {[
               { val: '24/7', lab: 'Ihre KI-Crew ist immer an Bord' },
               { val: 'Unbegrenzt', lab: 'KI inklusive — keine Nachzahlung pro Aktion' },
-              { val: 'EU-Hosting', lab: 'DSGVO-konform · Audit-Trails · Daten in der EU' },
+              { val: '100 %', lab: 'DSGVO-konform · EU-Hosting · Audit-Trails' },
               { val: '1 statt 12', lab: 'Ein System, ein Login, ein Preis' },
             ].map((f) => (
               <div key={f.lab} className="arg-fact">
@@ -653,7 +653,7 @@ export default function VorschauPage() {
       <section className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
-            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>698 Branchen.</span>
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>205 Branchen.</span>
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
             Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
@@ -695,7 +695,7 @@ export default function VorschauPage() {
           </div>
 
           <p style={{ marginTop: '40px', fontSize: '.92rem', color: '#8fa9b6' }}>
-            Und viele weitere Branchen:
+            Und über 200 weitere Branchen:
           </p>
           <div className="arg-more">
             {['Gastronomie', 'Bau & Immobilien', 'Logistik', 'Landwirtschaft', 'Steuerberatung', 'Friseure & Beauty', 'Fitness & Wellness', 'Kfz & Werkstatt', 'Reinigung', 'Beratung', 'Bildung', 'Sicherheit'].map((t) => (
@@ -712,13 +712,13 @@ export default function VorschauPage() {
           <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1rem' }}>Aus der Praxis</div>
           <h2 className="arg-h2">Für den Mittelstand gebaut — <span style={{ color: GOLD }}>mit dem Mittelstand</span>.</h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '56ch', margin: '0 auto 2.4rem', lineHeight: 1.55 }}>
-            ARGONAUT ist für den harten Praxis-Alltag gebaut — vom Forstbetrieb bis zur Werkstatt. Die Fakten sprechen für sich:
+            ARGONAUT wird gerade mit echten Betrieben in der Pilotphase erprobt — vom Forstbetrieb bis zur Werkstatt. Die Fakten sprechen für sich:
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
             {[
-              { k: '698', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
+              { k: '690+', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
               { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
-              { k: '🇩🇪', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
+              { k: '🇪🇺', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
             ].map((x) => (
               <div key={x.t} style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '26px 24px' }}>
                 <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '2.2rem', color: GOLD, lineHeight: 1, marginBottom: '10px' }}>{x.k}</div>
@@ -790,14 +790,14 @@ export default function VorschauPage() {
               SOLO 990 € · Mini 1.500 € · Klein 2.900 € · Mittel 4.900 € · Groß 9.900 € · Enterprise: Projekt auf Anfrage
             </p>
             <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
-              Flexibel zahlbar: sofort (−10 %), 50/50 bei Start &amp; Go-Live, oder auf 12 Monate verteilt — starten Sie ohne große Einstiegssumme. Enthält Ihr komplettes Hologramm-Onboarding samt Zertifikat.
+              Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — nicht rabattierbar. Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB) und persönliche Einweisung.
             </p>
           </div>
 
           <AngebotRechner />
 
           <div className="arg-incl">
-            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikate', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
+            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Persönliches Onboarding + Zertifikat', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
               <span key={x} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <span aria-hidden="true" style={{ color: GOLD }}>✓</span> {x}
               </span>
@@ -835,7 +835,7 @@ export default function VorschauPage() {
                 icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" /></svg>),
               },
               {
-                t: 'EU-Hosting', d: 'Ihre Daten bleiben in Europa. Serverstandort EU.',
+                t: 'EU-Hosting', d: 'Ihre Daten bleiben in Europa. Serverstandort Deutschland/EU.',
                 icon: (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>),
               },
               {

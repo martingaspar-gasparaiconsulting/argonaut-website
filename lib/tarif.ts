@@ -65,7 +65,7 @@ export const SPEICHER_BLOCK_PREIS = 5;
 // --- Laufzeit-Rabatte (auf die monatlichen Gebühren, nicht aufs Onboarding) --
 export const LAUFZEIT_RABATT: { monate: number; prozent: number }[] = [
   { monate: 24, prozent: 5 },
-  { monate: 36, prozent: 10 },
+  { monate: 36, prozent: 8 },
 ];
 
 // ---------------------------------------------------------------------------

@@ -114,7 +114,7 @@ export default function AngebotRechner() {
         <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '14px', padding: '20px 22px', marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis</p>
-            <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>+ einmalige Einrichtung: {setupText(ma)}</p>
+            <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>zuzüglich einmalig im 1. Monat: Einrichtung {setupText(ma)}</p>
           </div>
           <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
             {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
