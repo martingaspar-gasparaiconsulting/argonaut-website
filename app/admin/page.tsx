@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
 import LogoutButton from './LogoutButton'
 import CustomersTable, { type Customer, type Plan } from './CustomersTable'
@@ -201,6 +202,35 @@ export default async function AdminPage() {
             Kundenverwaltung
           </h1>
         </div>
+
+        {/* ── Control-Room Navigation ─────────────────────────────────────────── */}
+        <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '36px' }}>
+          {[
+            { href: '/admin/anfragen', label: '📬 Website-Anfragen', hot: true },
+            { href: '/admin/verbrauch', label: '⚡ KI-Verbrauch', hot: false },
+            { href: '/admin/abo-einzug', label: '💶 Abo-Einzug', hot: false },
+            { href: '/admin/tenants', label: '🏢 Kunden & Module', hot: false },
+            { href: '/admin/branchen', label: '🗂 Branchen', hot: false },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                letterSpacing: '0.02em',
+                color: l.hot ? '#0A1628' : '#E8EDF4',
+                background: l.hot ? '#C9A84C' : 'rgba(255,255,255,0.04)',
+                border: l.hot ? '1px solid #C9A84C' : '1px solid rgba(201,168,76,0.2)',
+              }}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
         {/* Summary stat cards */}
         <section style={{ marginBottom: '48px' }}>
