@@ -40,7 +40,7 @@ const SKRIPT: Schritt[] = [
   { href: '/dashboard/rechnungen', kapitel: '6 · Rechnungen', titel: 'Ein Klick zur Rechnung',
     text: 'Aus dem angenommenen Angebot wird per Klick die Rechnung — §14-konform, mit GiroCode zum Scannen. Nichts doppelt tippen.', sekunden: SEK },
   { href: '/dashboard/banking', kapitel: '7 · Banking', titel: 'Die Zahlung kommt an',
-    text: '1.800 € von den Stadtwerken gehen ein — ARGONAUT erkennt die Zahlung und ordnet sie der Rechnung automatisch zu.', sekunden: SEK },
+    text: '1.926 € von den Stadtwerken gehen ein — ARGONAUT erkennt die Zahlung und ordnet sie der Rechnung automatisch zu.', sekunden: SEK },
   { href: '/dashboard/euer', kapitel: '8 · EÜR & Steuer', titel: 'Die Steuer rechnet sich selbst',
     text: 'Der Umsatz landet automatisch in der Einnahmenüberschussrechnung — dieselben Zahlen, eine einzige Quelle.', sekunden: SEK },
   { href: '/dashboard/anschluesse', kapitel: '9 · Anschlüsse', titel: 'Alles sicher verbunden',

@@ -171,7 +171,7 @@ export default function BankingSeite() {
       <div style={styles.card}>
         <div style={styles.cardTitel}>Kontoumsätze abgleichen</div>
         <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 10px' }}>Exportiere deine Umsätze im Online-Banking als CSV und füge sie hier ein (oder lade die Datei). ARGONAUT erkennt Datum, Betrag und Verwendungszweck automatisch.</p>
-        <textarea style={styles.area} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={'Buchungstag;Name;Verwendungszweck;Betrag\n01.08.2026;Max Muster;Rechnung RE-2026-118;238,00'} />
+        <textarea style={styles.area} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={'Buchungstag;Name;Verwendungszweck;Betrag\n20.07.2026;Stadtwerke Böblingen;Rechnung RE-2026-0001;1926,00'} />
         <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button style={styles.primaer} onClick={abgleichen}>🔍 Abgleichen</button>
           <label style={styles.dateiBtn}>📁 CSV-Datei
