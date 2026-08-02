@@ -20,7 +20,7 @@ const sections = [
   { id: 'laufzeit', label: '§ 5 Laufzeit & Kündigung' },
   { id: 'leistungsumfang', label: '§ 6 Leistungsumfang & SLA' },
   { id: 'nutzungsrechte', label: '§ 7 Nutzungsrechte' },
-  { id: 'ki-training', label: '§ 8 KI-Training & Daten' },
+  { id: 'ki-training', label: '§ 8 Anonyme Produktverbesserung' },
   { id: 'faire-nutzung', label: '§ 9 Faire Nutzung' },
   { id: 'speicher', label: '§ 9a Speicherplatz' },
   { id: 'haftung', label: '§ 10 Haftungsbeschränkung' },
@@ -161,7 +161,7 @@ export default function AGB() {
 
             <section id="zahlung" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 4 Zahlung & Abrechnung</h2>
-              <p className="lp-p">4.1 Die Zahlung erfolgt monatlich im Voraus per Kreditkarte oder SEPA-Lastschrift über den Zahlungsdienstleister Stripe. Die erste Zahlung ist bei Vertragsschluss fällig.</p>
+              <p className="lp-p">4.1 Die Zahlung erfolgt monatlich im Voraus per SEPA-Lastschrift. Der Kunde erteilt hierzu bei Vertragsschluss ein SEPA-Lastschriftmandat. Die erste Zahlung ist bei Vertragsschluss fällig.</p>
               <p className="lp-p">4.2 Speicher-Upgrade-Gebühren gemäß § 9a werden im Folgemonat automatisch eingezogen. Der Kunde erhält vor dem Einzug eine Rechnung per E-Mail.</p>
               <p className="lp-p">4.3 Bei Zahlungsverzug von mehr als 14 Tagen ist der Anbieter berechtigt, den Zugang zur Plattform zu sperren. Die Zahlungsverpflichtung bleibt davon unberührt.</p>
               <p className="lp-p">4.4 Rechnungen werden ausschließlich in elektronischer Form per E-Mail zugestellt.</p>
@@ -190,9 +190,9 @@ export default function AGB() {
             </section>
 
             <section id="ki-training" style={{ marginBottom: '44px' }}>
-              <h2 className="lp-h2">§ 8 KI-Training & Daten</h2>
-              <p className="lp-p">8.1 Mit der Nutzung von ARGONAUT OS stimmt der Kunde zu, dass anonymisierte, nicht personenbezogene Nutzungsdaten (z. B. Workflow-Strukturen, Automatisierungsmuster, Interaktionsdaten) zur Verbesserung und zum Training von ARGONAUT OS KI-Modellen verwendet werden dürfen.</p>
-              <p className="lp-p">8.2 Personenbezogene Daten werden nicht für KI-Training verwendet. Die Anonymisierung erfolgt vor jeder Verwendung zu Trainingszwecken.</p>
+              <h2 className="lp-h2">§ 8 Anonyme Produktverbesserung</h2>
+              <p className="lp-p">8.1 Mit der Nutzung von ARGONAUT OS stimmt der Kunde zu, dass anonymisierte, nicht personenbezogene Nutzungsdaten (z. B. Workflow-Strukturen, Automatisierungsmuster, Interaktionsdaten) zur anonymen Verbesserung der Funktionen von ARGONAUT OS verwendet werden dürfen.</p>
+              <p className="lp-p">8.2 Personenbezogene Daten werden nicht zur Produktverbesserung verwendet. Die Anonymisierung erfolgt vor jeder Verwendung.</p>
               <p className="lp-p">8.3 Der Kunde kann der Verwendung jederzeit schriftlich per E-Mail an info@argonaut-os.com widersprechen. Der Widerspruch gilt für zukünftige Daten.</p>
               <p className="lp-p">8.4 Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).</p>
             </section>

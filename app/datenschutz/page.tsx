@@ -18,7 +18,7 @@ const sections = [
   { id: 'zwecke', label: '§ 3 Zwecke & Rechtsgrundlagen' },
   { id: 'speicherung', label: '§ 4 Speicherdauer' },
   { id: 'weitergabe', label: '§ 5 Datenweitergabe' },
-  { id: 'ki-training', label: '§ 6 KI-Training & Nutzungsdaten' },
+  { id: 'ki-training', label: '§ 6 Anonyme Produktverbesserung' },
   { id: 'overuse', label: '§ 7 Nutzungs- & Verbrauchsdaten' },
   { id: 'cookies', label: '§ 8 Cookies & Tracking' },
   { id: 'rechte', label: '§ 9 Ihre Rechte' },
@@ -103,7 +103,7 @@ export default function Datenschutz() {
                   <tbody>
                     {[
                       ['Stammdaten', 'Name, Firmenname, E-Mail, Adresse', 'Registrierung / Buchung'],
-                      ['Zahlungsdaten', 'Zahlungsmethode, Transaktions-ID', 'Stripe (verschlüsselt)'],
+                      ['Zahlungsdaten', 'Kontoinhaber, IBAN (SEPA-Lastschrift)', 'Angabe bei Vertragsschluss'],
                       ['Nutzungsdaten', 'Login-Zeiten, Workflow-Aktivitäten, KI-Nutzung, belegter Speicher', 'Automatisch beim Nutzen der Plattform'],
                       ['Kommunikationsdaten', 'E-Mail-Inhalte, Support- und Kontaktanfragen', 'Direktkontakt / Kontaktformular'],
                       ['Technische Daten', 'IP-Adresse, Browser, Geräteinformationen', 'Automatisch beim Websitebesuch'],
@@ -128,7 +128,7 @@ export default function Datenschutz() {
                     {[
                       ['Vertragserfüllung (Zugang, Abrechnung, Support)', 'Art. 6 Abs. 1 lit. b DSGVO'],
                       ['Rechnungsstellung und Buchhaltung', 'Art. 6 Abs. 1 lit. c DSGVO (gesetzliche Pflicht)'],
-                      ['KI-Training mit anonymisierten Daten', 'Art. 6 Abs. 1 lit. a DSGVO (Einwilligung)'],
+                      ['Anonyme Produktverbesserung', 'Art. 6 Abs. 1 lit. a DSGVO (Einwilligung)'],
                       ['Sicherheit und Missbrauchsprävention', 'Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)'],
                       ['Newsletter und Marketing (nur mit Einwilligung)', 'Art. 6 Abs. 1 lit. a DSGVO'],
                     ].map(([zweck, grund], i) => (
@@ -158,13 +158,11 @@ export default function Datenschutz() {
                   <thead><tr><th>Empfänger</th><th>Zweck</th><th>Rechtsgrundlage</th></tr></thead>
                   <tbody>
                     {[
-                      ['Stripe Inc.', 'Zahlungsabwicklung', 'Art. 6 Abs. 1 lit. b DSGVO'],
-                      ['Lexoffice (Haufe)', 'Rechnungsstellung & Buchhaltung', 'Art. 6 Abs. 1 lit. c DSGVO'],
                       ['Supabase Inc.', 'Datenbankhosting (verschlüsselt, EU-North-1 Stockholm)', 'Art. 6 Abs. 1 lit. b DSGVO'],
                       ['Vercel Inc.', 'Website-Hosting', 'Art. 6 Abs. 1 lit. f DSGVO'],
+                      ['Hostinger International Ltd.', 'Server-/Infrastruktur-Hosting (EU-Rechenzentrum)', 'Art. 6 Abs. 1 lit. f DSGVO'],
                       ['Anthropic PBC', 'KI-API für Agenten & Workflow-Ausführung (anonymisiert, USA)', 'Art. 6 Abs. 1 lit. b DSGVO, SCC gemäß Art. 46 DSGVO'],
                       ['Voyage AI Inc.', 'Embedding-API für Dokumentensuche & RAG (anonymisierte Chunks, USA)', 'Art. 6 Abs. 1 lit. b DSGVO, SCC gemäß Art. 46 DSGVO'],
-                      ['n8n GmbH', 'Workflow-Automatisierungsplattform (selbstgehostet)', 'Art. 6 Abs. 1 lit. b DSGVO'],
                     ].map(([emp, zweck, grund], i) => (
                       <tr key={i}>
                         <td style={{ fontWeight: 600, color: '#EAF1F6' }}>{emp}</td>
@@ -179,15 +177,15 @@ export default function Datenschutz() {
             </section>
 
             <section id="ki-training" style={{ marginBottom: '44px' }}>
-              <h2 className="lp-h2">§ 6 KI-Training & Nutzungsdaten</h2>
+              <h2 className="lp-h2">§ 6 Anonyme Produktverbesserung</h2>
               <div className="lp-note">
                 <p style={{ color: '#EAF1F6', fontSize: '.9rem', fontWeight: 600, margin: '0 0 4px' }}>Wichtiger Hinweis</p>
-                <p style={{ color: '#b9cdd6', fontSize: '.9rem', lineHeight: 1.7, margin: 0 }}>Personenbezogene Daten werden niemals für KI-Training verwendet. Nur vollständig anonymisierte, nicht personenbezogene Nutzungsmuster fließen in die Modellverbesserung ein.</p>
+                <p style={{ color: '#b9cdd6', fontSize: '.9rem', lineHeight: 1.7, margin: 0 }}>Personenbezogene Daten werden niemals zur Produktverbesserung verwendet. Nur vollständig anonymisierte, nicht personenbezogene Nutzungsmuster fließen in die Verbesserung unserer Funktionen ein.</p>
               </div>
-              <p className="lp-p">6.1 Mit der Nutzung von ARGONAUT OS stimmt der Kunde zu, dass anonymisierte, nicht personenbezogene Nutzungsdaten (z. B. Workflow-Strukturen, Automatisierungsmuster, Interaktionsdaten) zur Verbesserung und zum Training von ARGONAUT OS KI-Modellen verwendet werden dürfen.</p>
-              <p className="lp-p">6.2 Die Anonymisierung erfolgt automatisch vor jeder Verwendung zu Trainingszwecken. Eine Rückführung auf einzelne Personen oder Unternehmen ist technisch ausgeschlossen.</p>
+              <p className="lp-p">6.1 Mit der Nutzung von ARGONAUT OS stimmt der Kunde zu, dass anonymisierte, nicht personenbezogene Nutzungsdaten (z. B. Workflow-Strukturen, Automatisierungsmuster, Interaktionsdaten) zur anonymen Verbesserung der Funktionen von ARGONAUT OS verwendet werden dürfen.</p>
+              <p className="lp-p">6.2 Die Anonymisierung erfolgt automatisch vor jeder Verwendung. Eine Rückführung auf einzelne Personen oder Unternehmen ist technisch ausgeschlossen.</p>
               <p className="lp-p">6.3 Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).</p>
-              <p className="lp-p">6.4 Der Widerspruch gegen die Verwendung zu Trainingszwecken ist jederzeit möglich per E-Mail an info@argonaut-os.com. Der Widerspruch gilt für zukünftige Daten.</p>
+              <p className="lp-p">6.4 Der Widerspruch gegen diese Verwendung ist jederzeit möglich per E-Mail an info@argonaut-os.com. Der Widerspruch gilt für zukünftige Daten.</p>
             </section>
 
             <section id="overuse" style={{ marginBottom: '44px' }}>
@@ -229,15 +227,15 @@ export default function Datenschutz() {
             <section id="sicherheit" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 10 Datensicherheit</h2>
               <p className="lp-p">10.1 Wir verwenden SSL/TLS-Verschlüsselung für alle Datenübertragungen. Alle Datenbankverbindungen sind verschlüsselt.</p>
-              <p className="lp-p">10.2 Zahlungsdaten werden ausschließlich durch Stripe verarbeitet und niemals auf unseren Servern gespeichert. Stripe ist PCI-DSS-zertifiziert.</p>
+              <p className="lp-p">10.2 Die Zahlung erfolgt per SEPA-Lastschrift. Die Bankdaten (Kontoinhaber, IBAN) werden ausschließlich zur Einziehung des vereinbarten Entgelts verwendet und zur Ausführung an unsere Bank übermittelt.</p>
               <p className="lp-p">10.3 Zugangsdaten werden mit modernen Hashing-Verfahren (bcrypt) gespeichert. Passwörter sind niemals im Klartext gespeichert.</p>
               <p className="lp-p">10.4 Bei Sicherheitsvorfällen informieren wir betroffene Kunden und die zuständige Aufsichtsbehörde innerhalb von 72 Stunden gemäß Art. 33 DSGVO.</p>
             </section>
 
             <section id="drittanbieter" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 11 Drittanbieter & internationale Übermittlungen</h2>
-              <p className="lp-p">11.1 Einige unserer Dienstleister (Stripe, Supabase, Vercel, Anthropic, Voyage AI) haben ihren Sitz in den USA. Die Datenübermittlung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 DSGVO.</p>
-              <p className="lp-p">11.2 Stripe ist unter dem EU-U.S. Data Privacy Framework zertifiziert. Supabase betreibt unsere Datenbank in der EU (eu-north-1, Stockholm).</p>
+              <p className="lp-p">11.1 Einige unserer Dienstleister (Supabase, Vercel, Anthropic, Voyage AI) haben ihren Sitz in den USA. Die Datenübermittlung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 DSGVO.</p>
+              <p className="lp-p">11.2 Supabase betreibt unsere Datenbank in der EU (eu-north-1, Stockholm). Die übrige Server-Infrastruktur wird bei Hostinger in einem EU-Rechenzentrum betrieben.</p>
               <p className="lp-p">11.3 Voyage AI verarbeitet ausschließlich anonymisierte Textfragmente (Chunks) aus hochgeladenen Dokumenten zur Erstellung von Embeddings für die Dokumentensuche. Personenbezogene Daten werden vor der Übermittlung entfernt. Für Voyage AI liegt ein Data Processing Agreement (DPA) vor.</p>
               <p className="lp-p">11.4 Alle Dienstleister wurden sorgfältig ausgewählt und sind vertraglich zur Einhaltung der DSGVO verpflichtet (Auftragsverarbeitungsverträge gemäß Art. 28 DSGVO).</p>
             </section>
