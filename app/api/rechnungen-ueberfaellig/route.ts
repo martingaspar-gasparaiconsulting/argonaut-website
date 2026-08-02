@@ -33,11 +33,22 @@ function eur(n: number | null | undefined): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(wert);
 }
 
-export async function POST(req: NextRequest) {
-  // --- Absicherung: gleicher Geheim-Header wie termin-erinnerung ---
-  const geheim = process.env.TERMIN_CRON_GEHEIM;
-  const auth = req.headers.get('authorization');
-  if (!geheim || auth !== `Bearer ${geheim}`) {
+/** Vercel-Cron-fähig: Bearer CRON_SECRET oder ?secret= (Vercel/manuell),
+ *  plus Alt-Bearer TERMIN_CRON_GEHEIM (Rückwärtskompatibilität). */
+function erlaubt(req: NextRequest): boolean {
+  const cron = process.env.CRON_SECRET;
+  if (cron) {
+    const a = req.headers.get('authorization') || '';
+    const url = new URL(req.url);
+    if (a === `Bearer ${cron}` || url.searchParams.get('secret') === cron) return true;
+  }
+  const legacy = process.env.TERMIN_CRON_GEHEIM;
+  if (legacy && (req.headers.get('authorization') === `Bearer ${legacy}` || req.headers.get('x-cron-secret') === legacy)) return true;
+  return false;
+}
+
+async function lauf(req: NextRequest) {
+  if (!erlaubt(req)) {
     return NextResponse.json({ ok: false, fehler: 'Nicht autorisiert' }, { status: 401 });
   }
 
@@ -115,3 +126,6 @@ export async function POST(req: NextRequest) {
     stand: heute,
   });
 }
+
+export async function GET(req: NextRequest) { return lauf(req); }
+export async function POST(req: NextRequest) { return lauf(req); }

@@ -38,11 +38,25 @@ type TerminZeile = {
   kunde_name: string | null; kunde_email: string | null; status: string | null;
 };
 
-export async function POST(req: NextRequest) {
-  // 1) Autorisierung per Geheim-Header
-  const secret = process.env.TERMIN_CRON_GEHEIM;
-  const gegeben = req.headers.get('x-cron-secret');
-  if (!secret || gegeben !== secret) {
+export const dynamic = 'force-dynamic';
+
+/** Vercel-Cron-fähig: Bearer CRON_SECRET oder ?secret= (Vercel/manuell),
+ *  plus Alt-Header x-cron-secret===TERMIN_CRON_GEHEIM (Rückwärtskompatibilität). */
+function erlaubt(req: NextRequest): boolean {
+  const cron = process.env.CRON_SECRET;
+  if (cron) {
+    const auth = req.headers.get('authorization') || '';
+    const url = new URL(req.url);
+    if (auth === `Bearer ${cron}` || url.searchParams.get('secret') === cron) return true;
+  }
+  const legacy = process.env.TERMIN_CRON_GEHEIM;
+  if (legacy && (req.headers.get('x-cron-secret') === legacy || req.headers.get('authorization') === `Bearer ${legacy}`)) return true;
+  return false;
+}
+
+async function lauf(req: NextRequest) {
+  // Autorisierung: Vercel-Cron (Bearer CRON_SECRET) oder Alt-Header
+  if (!erlaubt(req)) {
     return NextResponse.json({ ok: false, fehler: 'Nicht autorisiert.' }, { status: 401 });
   }
 
@@ -132,3 +146,6 @@ export async function POST(req: NextRequest) {
     fehler: fehlerListe,
   });
 }
+
+export async function GET(req: NextRequest) { return lauf(req); }
+export async function POST(req: NextRequest) { return lauf(req); }
