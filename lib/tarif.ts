@@ -160,3 +160,88 @@ export function stufenWechsel(vonKey: StufeKey, nachKey: StufeKey): {
 export function euro(n: number): string {
   return n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
 }
+
+// ============================================================================
+// MULTISTANDORT — Preis-Richtlinie für Betriebe mit mehreren Filialen/Standorten
+//
+// Modell (von Martin freigegeben 02.08.2026):
+//  - Sitze/Mitarbeiterkosten unverändert (pro echtem Nutzer, siehe monatspreis).
+//  - Grundgebühr + Onboarding je Standort nach DESSEN eigener Größenstufe.
+//  - Der größte Standort = Hauptsitz zahlt 100 %.
+//  - Jeder weitere Standort zahlt nur STANDORT_FAKTOR (40 %) seiner eigenen
+//    Stufe — für Grundgebühr UND Onboarding (ein Setup zentral, Filialen dranhängen).
+// Reine Richtlinie fürs Beratungsgespräch — keine Abbuchung.
+// ============================================================================
+
+/** Rabatt-Faktor für jeden weiteren Standort (Grundgebühr + Onboarding). */
+export const STANDORT_FAKTOR = 0.4;
+
+export type StandortEingabe = { name?: string; mitarbeiter: number };
+export type StandortZeile = {
+  name: string;
+  mitarbeiter: number;
+  stufe: Stufe;
+  istHauptsitz: boolean;
+  faktor: number;         // 1 = Hauptsitz, sonst STANDORT_FAKTOR
+  grundgebuehr: number;   // €/Monat netto (bereits mit Faktor)
+  onboarding: number;     // einmalig netto (bereits mit Faktor)
+};
+export type MultiStandortErgebnis = {
+  zeilen: StandortZeile[];
+  grundgebuehrGesamt: number;
+  onboardingGesamt: number;
+  gesamtMitarbeiter: number;
+};
+
+/** Nur Standorte mit mindestens 1 Mitarbeiter. */
+function bereinigeStandorte(standorte: StandortEingabe[]): StandortEingabe[] {
+  return standorte.filter((s) => Number(s.mitarbeiter) > 0);
+}
+
+/**
+ * Je-Standort-Variante: größter Standort = Hauptsitz (100 %), jeder weitere
+ * 40 % SEINER eigenen Größenstufe (Grundgebühr + Onboarding).
+ */
+export function multiStandort(standorte: StandortEingabe[]): MultiStandortErgebnis {
+  const liste = bereinigeStandorte(standorte);
+  if (liste.length === 0) {
+    return { zeilen: [], grundgebuehrGesamt: 0, onboardingGesamt: 0, gesamtMitarbeiter: 0 };
+  }
+  // Hauptsitz = meiste Mitarbeiter; bei Gleichstand der erste.
+  let hauptIdx = 0;
+  liste.forEach((s, i) => { if (s.mitarbeiter > liste[hauptIdx].mitarbeiter) hauptIdx = i; });
+
+  const zeilen: StandortZeile[] = liste.map((s, i) => {
+    const stufe = stufeFuerMitarbeiter(s.mitarbeiter);
+    const istHauptsitz = i === hauptIdx;
+    const faktor = istHauptsitz ? 1 : STANDORT_FAKTOR;
+    return {
+      name: s.name?.trim() || (istHauptsitz ? 'Hauptsitz' : `Standort ${i + 1}`),
+      mitarbeiter: s.mitarbeiter,
+      stufe,
+      istHauptsitz,
+      faktor,
+      grundgebuehr: Math.round(stufe.grundgebuehr * faktor),
+      onboarding: Math.round(stufe.onboarding * faktor),
+    };
+  });
+
+  return {
+    zeilen,
+    grundgebuehrGesamt: zeilen.reduce((a, z) => a + z.grundgebuehr, 0),
+    onboardingGesamt: zeilen.reduce((a, z) => a + z.onboarding, 0),
+    gesamtMitarbeiter: liste.reduce((a, s) => a + s.mitarbeiter, 0),
+  };
+}
+
+/**
+ * Firmenweite Variante: alle Mitarbeiter zusammengezählt → EINE Größenstufe
+ * fürs ganze Unternehmen (ein Vertrag). Vergleichsgröße zur je-Standort-Variante.
+ */
+export function firmenweit(standorte: StandortEingabe[]): {
+  stufe: Stufe; grundgebuehr: number; onboarding: number; gesamtMitarbeiter: number;
+} {
+  const total = bereinigeStandorte(standorte).reduce((a, s) => a + s.mitarbeiter, 0);
+  const stufe = stufeFuerMitarbeiter(Math.max(1, total));
+  return { stufe, grundgebuehr: stufe.grundgebuehr, onboarding: stufe.onboarding, gesamtMitarbeiter: total };
+}
