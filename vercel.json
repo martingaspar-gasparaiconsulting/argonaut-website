@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/social-posten",
-      "schedule": "* * * * *"
+      "schedule": "*/6 * * * *"
     },
     {
       "path": "/api/termin-erinnerung",

@@ -653,7 +653,7 @@ export default function VorschauPage() {
       <section className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
-            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>205 Branchen.</span>
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>698 Branchen.</span>
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
             Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
@@ -716,7 +716,7 @@ export default function VorschauPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
             {[
-              { k: '690+', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
+              { k: '698', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
               { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
               { k: '🇪🇺', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
             ].map((x) => (

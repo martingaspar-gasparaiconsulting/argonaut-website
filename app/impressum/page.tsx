@@ -6,7 +6,7 @@ import Footer from '../vorschau/_components/Footer'
 // ============================================================================
 // ARGONAUT OS · app/impressum/page.tsx — Impressum im neuen dunklen Design.
 // Inhalt unverändert (recht24), nur: Steuernummer-Platzhalter entfernt
-// (USt-IdNr genügt), Design an /vorschau angeglichen. Telefon folgt später.
+// (USt-IdNr genügt), Design an /vorschau angeglichen. Telefon seit 03.08. hinterlegt.
 // ============================================================================
 
 const GOLD = '#c9a84c'
@@ -62,6 +62,7 @@ export default function Impressum() {
           <section style={{ marginBottom: '40px' }}>
             <h2 className="im-h2">Kontakt</h2>
             <div className="im-card">
+              <div className="im-row"><span className="k">Telefon</span><span className="v">+49 178 9888683</span></div>
               <div className="im-row"><span className="k">E-Mail</span><span className="v">info@argonaut-os.com</span></div>
               <div className="im-row"><span className="k">Website</span><span className="v">www.argonaut-os.com</span></div>
             </div>
