@@ -42,7 +42,7 @@ function norm(s: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
-type Kat = { kategorie: string; anzahl: number; beispiele: string[] };
+type Kat = { kategorie: string; schluessel: string; anzahl: number; beispiele: string[] };
 
 export default function Uebersicht({
   branchen, kategorien,
@@ -154,7 +154,7 @@ export default function Uebersicht({
           <div style={s.trenner}>… oder blättern Sie durch die Kategorien</div>
           <div style={s.gitter}>
             {kategorien.map((k) => (
-              <Link key={k.kategorie} href={`/vorfuehrung/kategorie/${encodeURIComponent(k.kategorie)}`} style={s.kachel}>
+              <Link key={k.kategorie} href={`/vorfuehrung/kategorie/${k.schluessel}`} style={s.kachel}>
                 <div style={s.zeichen}>{ZEICHEN[k.kategorie] || '🔱'}</div>
                 <div style={s.katName}>{k.kategorie}</div>
                 <div style={s.katAnzahl}>{k.anzahl} Branchen</div>

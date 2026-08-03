@@ -57,7 +57,11 @@ function eur0(n: number): string {
 export default function Abspieler({
   daten, qr, qrZiel,
 }: { daten: VorfuehrDaten; qr: boolean[][]; qrZiel: string }) {
-  const { titel, kategorie, betrieb, ort, schmerzen, hoehepunkte, kiFrage, kiAntwort, module, schritte, preis } = daten;
+  const { titel, kategorie, betrieb, ort, schmerzen, hoehepunkte, kiFrage, kiAntwort, module, schritte, preis, webSlug } = daten;
+
+  // Der Weg nach dem Bildschirm: die echte Branchenseite mit Preisrechner und
+  // Terminbuchung. Die Vorführung weckt Interesse — dort wird daraus eine Anfrage.
+  const branchenSeite = webSlug ? `/vorschau/branchen/${webSlug}` : '/vorschau';
 
   const [bild, setBild] = useState(0);
   const [laeuft, setLaeuft] = useState(true);
@@ -276,19 +280,21 @@ export default function Abspieler({
         {bild === 6 && (
           <>
             <div style={s.qrReihe}>
-              <div style={{ flex: 1, minWidth: 280 }}>
+              <div style={{ flex: 1, minWidth: 300 }}>
                 <div style={s.oben}>Ihr nächster Schritt</div>
-                <h2 style={s.h2}>Nehmen Sie Ihre Branche mit.</h2>
+                <h2 style={s.h2}>Ihre Branche auf Ihrem Handy.</h2>
                 <p style={s.unter}>
-                  Scannen Sie den Code — dann haben Sie diese Seite auf Ihrem Handy und können sie in Ruhe
-                  zu Hause anschauen. Kein Formular, keine E-Mail-Adresse, nichts.
+                  Scannen Sie den Code. Sie landen auf der Seite für <b style={{ color: C.text }}>{titel}</b> —
+                  dort können Sie in Ruhe durchlesen, <b style={{ color: C.text }}>Ihre tatsächliche Mitarbeiterzahl
+                  eingeben</b> und sehen sofort Ihren Preis.
                 </p>
-                <p style={{ ...s.unter, marginTop: 14 }}>
-                  Wenn Sie mehr wollen: ein <b style={{ color: C.text }}>Dossier für genau Ihre Branche</b> und einen
-                  Testzugang für sieben Tage — kostenlos und unverbindlich.
+                <p style={{ ...s.unter, marginTop: 12 }}>
+                  Und wenn Sie mögen, buchen Sie dort gleich einen Termin oder fordern das Dossier für Ihre
+                  Branche an. <b style={{ color: C.text }}>Kein Formular hier am Bildschirm</b> — Sie entscheiden
+                  in Ruhe, wann und ob.
                 </p>
                 <div style={s.ctaReihe}>
-                  <Link href="/vorschau" style={s.ctaGold}>Dossier anfordern</Link>
+                  <Link href={branchenSeite} style={s.ctaGold}>Zur Branchenseite</Link>
                   <Link href="/vorfuehrung" style={s.ctaLeer}>Andere Branche</Link>
                 </div>
                 <p style={s.hinweis}>

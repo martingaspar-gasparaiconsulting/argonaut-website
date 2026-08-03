@@ -10,7 +10,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { CSSProperties } from 'react';
-import { alleBranchenKurz, kategorienKurz } from '@/lib/vorfuehrung';
+import { alleBranchenKurz, kategorienKurz, kategorieAusSchluessel } from '@/lib/vorfuehrung';
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -20,12 +20,13 @@ const C = {
 };
 
 export function generateStaticParams() {
-  return kategorienKurz().map((k) => ({ kat: encodeURIComponent(k.kategorie) }));
+  return kategorienKurz().map((k) => ({ kat: k.schluessel }));
 }
 
 export default async function KategorieSeite({ params }: { params: Promise<{ kat: string }> }) {
   const { kat } = await params;
-  const name = decodeURIComponent(kat);
+  const name = kategorieAusSchluessel(kat);
+  if (!name) notFound();
   const liste = alleBranchenKurz().filter((b) => b.kategorie === name);
   if (liste.length === 0) notFound();
 

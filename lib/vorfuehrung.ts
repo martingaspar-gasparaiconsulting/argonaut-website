@@ -37,6 +37,12 @@ export type ModulKachel = { key: string; label: string; kern: boolean };
 
 export type VorfuehrDaten = {
   slug: string;
+  /**
+   * Schlüssel der ECHTEN Branchenseite auf der Website. Dorthin führen QR-Code
+   * und Knopf am Ende der Vorführung — dort gibt es den Preisrechner mit
+   * eigener Mitarbeiterzahl und die Terminbuchung. null = keine Seite vorhanden.
+   */
+  webSlug: string | null;
   /** Überschrift des ersten Bildes — der Beruf, wie der Besucher ihn nennt. */
   titel: string;
   kategorie: string;
@@ -106,6 +112,7 @@ export function vorfuehrDaten(slug: string): VorfuehrDaten | null {
     const module = modulListe(demo.kategorie);
     return {
       slug,
+      webSlug: demo.webSlug,
       titel: demo.branche,
       kategorie: demo.kategorie,
       betrieb: `${demo.firma} ${demo.rechtsform}`.trim(),
@@ -129,6 +136,7 @@ export function vorfuehrDaten(slug: string): VorfuehrDaten | null {
   const module = modulListe(b.kategorie);
   return {
     slug,
+    webSlug: b.slug,
     titel: b.name,
     kategorie: b.kategorie,
     betrieb: null,
@@ -151,6 +159,27 @@ export function vorfuehrDaten(slug: string): VorfuehrDaten | null {
 
 export type BrancheKurz = { slug: string; name: string; kategorie: string };
 
+/**
+ * Kategoriename → URL-tauglicher Schlüssel. Die Kategorienamen enthalten
+ * Kommas, Und-Zeichen und Umlaute — die direkt in eine Adresse zu schreiben
+ * hat prompt zu einer 404-Seite geführt. Jetzt steht dort „sport-beauty-lifestyle".
+ */
+export function katSchluessel(kategorie: string): string {
+  return kategorie
+    .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/&/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Kategorie zu einem Schlüssel zurückfinden. */
+export function kategorieAusSchluessel(schluessel: string): string | null {
+  const k = String(schluessel || '').toLowerCase();
+  for (const g of kategorienKurz()) if (g.schluessel === k) return g.kategorie;
+  return null;
+}
+
 /** Alle 698 für die Suche — bewusst schlank, das geht in den Browser. */
 export function alleBranchenKurz(): BrancheKurz[] {
   return websiteBranchen()
@@ -159,7 +188,7 @@ export function alleBranchenKurz(): BrancheKurz[] {
 }
 
 /** Die 19 Kategorien mit Anzahl — zum Blättern für die, die nicht tippen wollen. */
-export function kategorienKurz(): { kategorie: string; anzahl: number; beispiele: string[] }[] {
+export function kategorienKurz(): { kategorie: string; schluessel: string; anzahl: number; beispiele: string[] }[] {
   const map = new Map<string, string[]>();
   for (const b of websiteBranchen()) {
     if (!map.has(b.kategorie)) map.set(b.kategorie, []);
@@ -170,6 +199,7 @@ export function kategorienKurz(): { kategorie: string; anzahl: number; beispiele
   );
   return sortiert.map((k) => ({
     kategorie: k,
+    schluessel: katSchluessel(k),
     anzahl: map.get(k)!.length,
     beispiele: map.get(k)!.slice(0, 3),
   }));

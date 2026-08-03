@@ -28,9 +28,14 @@ export default async function VorfuehrBranche({ params }: { params: Promise<{ sl
   const daten = vorfuehrDaten(slug);
   if (!daten) notFound();
 
-  // Der QR-Code führt auf genau diese Seite. Wer ihn scannt, nimmt seine Branche
-  // mit nach Hause — ohne dass er uns vorher seine E-Mail-Adresse geben muss.
-  const ziel = `https://argonaut-os.com/vorfuehrung/${slug}`;
+  // Der QR-Code führt NICHT auf die Vorführung zurück, sondern auf die echte
+  // Branchenseite der Website. Der Unterschied ist entscheidend: Dort kann der
+  // Besucher scrollen statt zu klicken, seine tatsächliche Mitarbeiterzahl
+  // eingeben, den Preis rechnen lassen und direkt einen Termin buchen.
+  // Die Vorführung weckt das Interesse — die Branchenseite nimmt die Anfrage auf.
+  const ziel = daten.webSlug
+    ? `https://argonaut-os.com/vorschau/branchen/${daten.webSlug}`
+    : 'https://argonaut-os.com/vorschau';
   let qr: boolean[][] = [];
   try {
     qr = qrMatrix(ziel);
