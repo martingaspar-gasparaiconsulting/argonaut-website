@@ -659,7 +659,7 @@ export default function RechtePage() {
                           </span>
                         </div>
                         {/* Module in Spalten statt in einer endlosen Reihe. */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", columnGap: 26 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(410px, 1fr))", columnGap: 28 }}>
                         {items.map((it) => {
                           const an = akt.module.includes(it.key);
                           const sensibel = istSensibel(it.key);
@@ -704,14 +704,15 @@ export default function RechtePage() {
                               {sensibel && (
                                 <span
                                   style={{
-                                    fontSize: 'clamp(10.5px, 0.94vw, 15px)',
+                                    fontSize: 'clamp(10px, 0.81vw, 13px)',
                                     fontWeight: 700,
                                     color: C.warn,
                                     background: `${C.warn}1E`,
                                     border: `1px solid ${C.warn}55`,
                                     borderRadius: 999,
-                                    padding: "1px 7px",
+                                    padding: "1px 6px",
                                     whiteSpace: "nowrap",
+                                    flexShrink: 0,
                                   }}
                                 >
                                   🔒 sensibel
@@ -777,10 +778,10 @@ export default function RechtePage() {
                   </button>
                   <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                     {akt.module.filter((k) => erlaubteKeys.has(k)).length} von {erlaubteKeys.size} Modulen freigeschaltet
-                    {akt.schreibModule.length > 0 && (
+                    {akt.schreibModule.filter((k) => erlaubteKeys.has(k) && akt.module.includes(k)).length > 0 && (
                       <span style={{ color: C.cyan }}>
                         {" "}
-                        · {akt.schreibModule.length} mit ✏️ Änderungsrecht
+                        · {akt.schreibModule.filter((k) => erlaubteKeys.has(k) && akt.module.includes(k)).length} mit ✏️ Änderungsrecht
                       </span>
                     )}
                   </span>
