@@ -357,6 +357,29 @@ export const GRUPPEN: { key: string; label: string }[] = [
 ]
 
 /**
+ * Modul-Katalog NACH GRUPPEN — exakt die Ordnung des Hauptmenues.
+ *
+ * Vorher pflegte die Rechte-Oberflaeche eine eigene, von Hand gefuellte
+ * Gruppierung. Die deckte 21 von 116 Modulen ab; die restlichen 95 fielen in
+ * einen Auffangtopf "Betrieb & Werkstatt" und standen dort in einer einzigen,
+ * seitenlangen Spalte untereinander. Zwei Ordnungen fuer dieselbe Sache sind
+ * eine zu viel — deshalb kommt sie jetzt aus derselben Quelle wie das Menue.
+ *
+ * Ein neues Modul mit `modul`- und `gruppe`-Eintrag erscheint automatisch an
+ * der richtigen Stelle. Module ohne Gruppe landen unter 'verwaltung'.
+ */
+export const MODULE_NACH_GRUPPE: { key: string; label: string; items: { key: string; label: string }[] }[] =
+  GRUPPEN
+    .map((g) => ({
+      key: g.key,
+      label: g.label || '🏠 Start',
+      items: NAV_LINKS
+        .filter((l) => l.modul && (l.gruppe ?? 'verwaltung') === g.key)
+        .map((l) => ({ key: l.modul as string, label: l.label })),
+    }))
+    .filter((g) => g.items.length > 0)
+
+/**
  * Ordnet die bereits gefilterten (sichtbaren) Links ihren Gruppen zu und liefert
  * sie in GRUPPEN-Reihenfolge zurueck. Leere Gruppen fallen raus — ein Mitarbeiter
  * ohne Finanz-Rechte sieht die Ueberschrift "Finanzen & Sensibles" gar nicht erst.

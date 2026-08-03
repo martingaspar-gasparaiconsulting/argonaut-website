@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import {
-  ALLE_MODULE,
+  MODULE_NACH_GRUPPE,
   ALLE_MODUL_KEYS,
   verteilbareModule,
   istSensibel,
@@ -61,79 +61,35 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-// Modul-Katalog (Schlüssel = Nav-Filter-Schlüssel), gruppiert
-const GRUPPEN: { titel: string; farbe: string; items: { key: string; label: string }[] }[] = [
-  {
-    titel: "💶 Finanzen",
-    farbe: C.gold,
-    items: [
-      { key: "rechnungen", label: "Rechnungen" },
-      { key: "mahnwesen", label: "Mahnwesen" },
-      { key: "finanzen", label: "Finanzen" },
-      { key: "vertraege", label: "Verträge" },
-    ],
-  },
-  {
-    titel: "🤝 Vertrieb & Marketing",
-    farbe: C.lila,
-    items: [
-      { key: "leads", label: "Leads" },
-      { key: "crm", label: "Vertrieb/CRM" },
-      { key: "marketing", label: "Marketing" },
-    ],
-  },
-  {
-    titel: "🏭 Betrieb",
-    farbe: "#4f94e8",
-    items: [
-      { key: "auftraege", label: "Aufträge" },
-      { key: "projekte", label: "Projekte" },
-      { key: "service", label: "Service" },
-      { key: "erp", label: "ERP/Lager" },
-    ],
-  },
-  {
-    titel: "👥 Personal",
-    farbe: C.green,
-    items: [
-      { key: "personal", label: "Personal" },
-      { key: "schichtplan", label: "Schichtplan" },
-    ],
-  },
-  {
-    titel: "💬 Kommunikation",
-    farbe: C.cyan,
-    items: [
-      { key: "chat", label: "Chat (KI-Assistent)" },
-      { key: "team-chat", label: "Team-Chat" },
-      { key: "korrespondenz", label: "Korrespondenz" },
-      { key: "dokumente", label: "Dokumente" },
-    ],
-  },
-  {
-    titel: "🧩 Tools & KI",
-    farbe: C.warn,
-    items: [
-      { key: "agenten", label: "Agenten" },
-      { key: "academy", label: "Academy" },
-      { key: "analytics", label: "Analytics" },
-      { key: "automatisierungen", label: "Automatisierungen" },
-    ],
-  },
-];
+// ---------------------------------------------------------------------------
+// MODUL-ORDNUNG — kommt aus lib/rechte (MODULE_NACH_GRUPPE), also aus derselben
+// Quelle wie das Hauptmenü.
+//
+// Vorher standen hier sechs von Hand gepflegte Gruppen mit zusammen 21 Modulen.
+// Die übrigen 95 fielen in einen Auffangtopf „Betrieb & Werkstatt" und standen
+// dort in EINER seitenlangen Spalte untereinander — Lager neben Gastro neben
+// Immobilien, ohne erkennbare Ordnung. Jetzt sitzt jedes der 116 Module dort,
+// wo der Kunde es auch im Menü findet, und ein neues Modul landet automatisch
+// an der richtigen Stelle.
+// ---------------------------------------------------------------------------
 
-// Keys, die bereits in einer festen Gruppe stehen
-const GRUPPIERTE_KEYS = GRUPPEN.flatMap((g) => g.items.map((i) => i.key));
+const GRUPPEN_FARBE: Record<string, string> = {
+  mein: C.green,
+  komm: C.cyan,
+  vertrieb: C.lila,
+  termine: "#6fb3ff",
+  betrieb: "#4f94e8",
+  lager: C.green,
+  finanzen: C.gold,
+  verwaltung: C.warn,
+};
 
-// Self-filling: jedes Modul aus NAV_LINKS, das noch KEINE Gruppe hat,
-// kommt automatisch hier rein. Neues Modul = automatisch ein Schalter.
-const REST_ITEMS = ALLE_MODULE.filter((m) => !GRUPPIERTE_KEYS.includes(m.key));
-
-// Vollstaendige Gruppen-Liste inkl. Auffang-Gruppe (nur falls es Reste gibt)
-const ALLE_GRUPPEN =
-  REST_ITEMS.length > 0
-    ? [...GRUPPEN, { titel: "⚙️ Betrieb & Werkstatt", farbe: C.cyan, items: REST_ITEMS }]
-    : GRUPPEN;
+const ALLE_GRUPPEN = MODULE_NACH_GRUPPE.map((g) => ({
+  key: g.key,
+  titel: g.label,
+  farbe: GRUPPEN_FARBE[g.key] ?? C.cyan,
+  items: g.items,
+}));
 
 // Zaehlbasis = ALLE Modul-Keys aus NAV_LINKS (nicht nur die hartcodierten)
 const ALLE_KEYS = ALLE_MODUL_KEYS;
@@ -688,13 +644,22 @@ export default function RechtePage() {
                 </div>
 
                 {/* Modul-Checkboxen, gruppiert — nur verteilbare Module */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
+                <div style={{ display: "grid", gap: 24 }}>
                   {ALLE_GRUPPEN.map((g) => {
                     const items = g.items.filter((it) => erlaubteKeys.has(it.key));
                     if (items.length === 0) return null;
+                    const anZahl = items.filter((it) => akt.module.includes(it.key)).length;
                     return (
-                      <div key={g.titel}>
-                        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, color: g.farbe, marginBottom: 8 }}>{g.titel}</div>
+                      <div key={g.key}>
+                        {/* Gruppenkopf mit Zaehler — man sieht sofort, wo man steht. */}
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", borderBottom: `1px solid ${g.farbe}44`, paddingBottom: 7, marginBottom: 10 }}>
+                          <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, color: g.farbe }}>{g.titel}</span>
+                          <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, fontWeight: 600 }}>
+                            {anZahl} von {items.length} freigeschaltet
+                          </span>
+                        </div>
+                        {/* Module in Spalten statt in einer endlosen Reihe. */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", columnGap: 26 }}>
                         {items.map((it) => {
                           const an = akt.module.includes(it.key);
                           const sensibel = istSensibel(it.key);
@@ -704,14 +669,21 @@ export default function RechtePage() {
                             <div
                               key={it.key}
                               style={{
-                                display: "flex",
+                                // Festes Raster: Modul links, Aenderungsrecht IMMER rechts.
+                                // Vorher brach die Zeile je nach Textlaenge um — dadurch
+                                // sprang "darf aendern" mal nach rechts, mal in die naechste
+                                // Zeile, und das Auge fand keine Spur mehr.
+                                display: "grid",
+                                gridTemplateColumns: "1fr auto",
                                 alignItems: "center",
-                                gap: 10,
-                                padding: "6px 0",
-                                flexWrap: "wrap",
-                                fontSize: 'clamp(14px, 1.25vw, 20px)',
+                                columnGap: 12,
+                                padding: "8px 0",
+                                minHeight: 44,
+                                borderBottom: `1px solid ${C.border}`,
+                                fontSize: 'clamp(13.5px, 1.13vw, 18px)',
                               }}
                             >
+                              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, flexWrap: "wrap" }}>
                               {/* Sicht-Haekchen (wie bisher) */}
                               <label
                                 style={{
@@ -745,7 +717,8 @@ export default function RechtePage() {
                                   🔒 sensibel
                                 </span>
                               )}
-                              {/* PUNKT 8: "darf ändern" — nur sichtbar, wenn Sicht an ist */}
+                              </span>
+                              {/* PUNKT 8: "darf ändern" — sitzt jetzt in der festen rechten Spalte */}
                               {an && (
                                 <label
                                   title="Darf in diesem Bereich speichern und löschen. Ohne Häkchen nur ansehen."
@@ -754,7 +727,6 @@ export default function RechtePage() {
                                     alignItems: "center",
                                     gap: 6,
                                     cursor: "pointer",
-                                    marginLeft: "auto",
                                     fontSize: 'clamp(12px, 1.06vw, 17px)',
                                     fontWeight: 700,
                                     color: darfAendern ? C.cyan : C.textDim,
@@ -777,6 +749,7 @@ export default function RechtePage() {
                             </div>
                           );
                         })}
+                        </div>
                       </div>
                     );
                   })}
@@ -803,7 +776,7 @@ export default function RechtePage() {
                     {busy ? "Speichert…" : "💾 Rechte speichern"}
                   </button>
                   <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-                    {akt.module.length} von {erlaubteKeys.size} Modulen freigeschaltet
+                    {akt.module.filter((k) => erlaubteKeys.has(k)).length} von {erlaubteKeys.size} Modulen freigeschaltet
                     {akt.schreibModule.length > 0 && (
                       <span style={{ color: C.cyan }}>
                         {" "}
