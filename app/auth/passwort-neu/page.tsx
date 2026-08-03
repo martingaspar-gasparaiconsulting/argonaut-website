@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
+import Dreizack from '@/components/Dreizack';
 
 export default function PasswortNeuPage() {
   const router = useRouter()
@@ -66,8 +66,7 @@ export default function PasswortNeuPage() {
         border: '1px solid rgba(201,168,76,0.25)', borderRadius: '16px', padding: '48px 40px', backdropFilter: 'blur(12px)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '36px' }}>
-          <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={56} height={56}
-            style={{ objectFit: 'contain', marginBottom: '14px' }} />
+          <Dreizack hoehe={56} style={{ marginBottom: 14 }} />
           <span style={{
             fontSize: '22px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.2em',
             textTransform: 'uppercase', fontFamily: 'var(--font-syne), sans-serif',

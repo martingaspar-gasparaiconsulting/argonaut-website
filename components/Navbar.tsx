@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import Dreizack from './Dreizack';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -12,7 +12,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href='/' style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'10px' }}>
-          <Image src='/images/ARGONAUT_HELM_SPARTAN .png' alt='ARGONAUT Logo' width={40} height={40} style={{ objectFit:'contain' }} />
+          <Dreizack hoehe={40} />
           <span style={{ fontSize:'20px', fontWeight:900, color:'#0A1628', letterSpacing:'0.15em', textTransform:'uppercase' }}>ARGONAUT</span>
         </Link>
 

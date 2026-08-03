@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
+import Dreizack from '@/components/Dreizack';
 
 // ---------------------------------------------------------------------------
 // Hinweis zu „Passwort speichern": Das übernimmt der Browser bzw. der
@@ -115,13 +115,7 @@ export default function LoginPage() {
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '36px' }}>
-          <Image
-            src="/images/ARGONAUT_HELM_SPARTAN .png"
-            alt="ARGONAUT"
-            width={56}
-            height={56}
-            style={{ objectFit: 'contain', marginBottom: '14px' }}
-          />
+          <Dreizack hoehe={56} style={{ marginBottom: 14 }} />
           <span style={{
             fontSize: '22px', fontWeight: 900, color: '#FFFFFF',
             letterSpacing: '0.2em', textTransform: 'uppercase',

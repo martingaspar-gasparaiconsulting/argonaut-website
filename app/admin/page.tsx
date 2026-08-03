@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
 import LogoutButton from './LogoutButton'
 import CustomersTable, { type Customer, type Plan } from './CustomersTable'
+import Dreizack from '@/components/Dreizack';
 
 // ─── MRR config ───────────────────────────────────────────────────────────────
 
@@ -139,13 +139,7 @@ export default async function AdminPage() {
         }}>
           {/* Logo + breadcrumb */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            <Image
-              src="/images/ARGONAUT_HELM_SPARTAN .png"
-              alt="ARGONAUT"
-              width={36}
-              height={36}
-              style={{ objectFit: 'contain' }}
-            />
+            <Dreizack hoehe={36} />
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
               <span style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '0.15em', fontFamily: 'var(--font-syne), sans-serif' }}>
                 ARGONAUT

@@ -1,4 +1,4 @@
- {
+{
   "name": "ARGONAUT OS",
   "short_name": "ARGONAUT",
   "description": "KI-Betriebssystem für den Mittelstand",
@@ -9,14 +9,16 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/images/ARGONAUT_HELM_SPARTAN .png",
+      "src": "/images/argonaut-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/images/ARGONAUT_HELM_SPARTAN .png",
+      "src": "/images/argonaut-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

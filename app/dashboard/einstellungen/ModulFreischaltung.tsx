@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { ALLE_MODULE } from '@/lib/rechte';
+import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 
 // ============================================================
 // ARGONAUT OS · Einstellungen · Modul-Freischaltung (Starter-Modus, P2-2)
@@ -36,11 +37,9 @@ type Modul = { key: string; label: string };
 // Ohne Dedup zaehlt der Nenner 92 Zeilen, der Set aber nur 88 Schluessel -> "88/92"
 // klemmt und "Alle an" wird nie erreicht. Der explizite [string, Modul]-Tupeltyp
 // ist noetig, sonst liest tsc [m.key, m] als (string|Modul)[] und new Map() bricht.
-const MODULE: Modul[] = Array.from(
+const ALLE_MODULE_EINDEUTIG: Modul[] = Array.from(
   new Map(ALLE_MODULE.map((m): [string, Modul] => [m.key, m])).values()
 );
-
-const ALLE_KEYS = MODULE.map((m) => m.key);
 
 function Toggle({ an, onClick }: { an: boolean; onClick: () => void }) {
   return (
@@ -78,7 +77,10 @@ function Toggle({ an, onClick }: { an: boolean; onClick: () => void }) {
 export default function ModulFreischaltung() {
   const [userId, setUserId] = useState<string | null>(null);
   const [geladen, setGeladen] = useState(false);
-  const [an, setAn] = useState<Set<string>>(new Set(ALLE_KEYS));
+  // Gebuchte Module des Betriebs. null = fail-open (nicht scharf konfiguriert
+  // -> alles zeigen), genau wie im Menue (DashboardNav).
+  const [gebucht, setGebucht] = useState<Set<string> | null>(null);
+  const [an, setAn] = useState<Set<string>>(new Set());
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -93,13 +95,33 @@ export default function ModulFreischaltung() {
           .select('sichtbare_module')
           .eq('id', user.id)
           .maybeSingle();
+        // Gebuchte Module des Betriebs — dieselbe Quelle wie das Menue.
+        const { data: tm } = await supabase.from('tenant_module').select('modul_key, aktiv');
+        const g = gebuchteModulKeys((tm as TenantModulRow[] | null) ?? null);
+        setGebucht(g);
+
+        const eigene = g ? ALLE_MODULE_EINDEUTIG.filter((m) => g.has(m.key)) : ALLE_MODULE_EINDEUTIG;
         const sm = data?.sichtbare_module;
         // null/kein Array = alle an (kein Starter-Modus)
-        setAn(Array.isArray(sm) ? new Set(sm as string[]) : new Set(ALLE_KEYS));
+        setAn(Array.isArray(sm) ? new Set(sm as string[]) : new Set(eigene.map((m) => m.key)));
       }
       setGeladen(true);
     })();
   }, []);
+
+  /**
+   * NUR die Module des eigenen Betriebs.
+   *
+   * Vorher stand hier die komplette Liste aus NAV_LINKS — ein Metallbaubetrieb
+   * sah dadurch Baumkataster, KFZ-Fachpaket und Schlagkartei und musste sich
+   * fragen, wofuer er das bezahlt. Das Menue hat schon immer nach
+   * tenant_module gefiltert; nur diese Liste nicht. Jetzt beide gleich.
+   */
+  const MODULE = useMemo(
+    () => (gebucht ? ALLE_MODULE_EINDEUTIG.filter((m) => gebucht.has(m.key)) : ALLE_MODULE_EINDEUTIG),
+    [gebucht],
+  );
+  const ALLE_KEYS = useMemo(() => MODULE.map((m) => m.key), [MODULE]);
 
   const anzahlAn = an.size;
   const alleAn = anzahlAn === MODULE.length;

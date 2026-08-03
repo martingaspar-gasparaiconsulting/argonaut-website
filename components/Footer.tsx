@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import Dreizack from './Dreizack';
 
 export default function Footer() {
   return (
@@ -14,7 +14,7 @@ export default function Footer() {
           {/* Spalte 1 — Logo & Beschreibung */}
           <div>
             <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <Image src="/images/ARGONAUT_HELM_SPARTAN .png" alt="ARGONAUT" width={36} height={36} style={{ objectFit: 'contain' }} />
+              <Dreizack hoehe={36} />
               <span style={{ fontSize: '18px', fontWeight: 900, color: '#0A1628', letterSpacing: '0.15em' }}>ARGONAUT</span>
             </Link>
             <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.7, marginBottom: '20px', maxWidth: '220px' }}>
