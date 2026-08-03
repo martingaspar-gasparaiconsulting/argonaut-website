@@ -24,6 +24,22 @@ Stand: laufend. Oben **deine Punkte** (fest zugesagt), darunter **Claudes Empfeh
 **Betreiber-Kontrolle**
 - [ ] Command Center: KI-Kosten + Speicher je Kunde messen & visuell (Paket → Limit → Verbrauch → Upgrade).
 
+**💡 Marketing-Content-Maschine — ein Rundgang-Video pro Branche (Idee 01.08.2026, Martin)**
+- [ ] Den Präsentations-Modus (Bäckerei-Rundgang) als Content-Motor nutzen: pro Branche ein eigener, in sich stimmiger Rundgang → Bildschirmaufnahme → als „News-Show" schneiden.
+- [ ] 698 Branchen = 698 Videos. Ausspielen auf YouTube, LinkedIn, Meta (Facebook/Instagram) und Amazon.
+- [ ] Länge: aktueller Loop ~2 Min (10 Stationen × 12 s + Willkommen) — ideal für Social; bewusst eher kürzer als 5 Min halten.
+- [ ] Für UNSER eigenes ARGONAUT-Marketing denselben Rundgang „in perfekter Balance" bauen (eigene Story, nicht nur Demo-Kunde).
+- [ ] Voraussetzung je Branche: ein sauberer Demo-Datensatz mit einem roten Faden (wie Bäckerei Sonnenschein).
+- Status: geparkt — Bäckerei Sonnenschein bleibt vorerst so; Struktur-Abfrage (information_schema) liegt vor für den späteren Vollausbau.
+
+**💡 Branchen-Kalkulator — der Rezeptur-Rechner für jede Branche (Idee 01.08.2026, Martin)**
+- [ ] Der Rezeptur-/Ausbeute-Rechner (Bäcker) ist ein Spezialfall eines universellen Musters: Eingaben (Material/Zeit/Energie) → Live-Kennzahlen (Kosten je Einheit, Verbrauch, Verkaufspreis-Vorschlag).
+- [ ] Metallbau: Bauteil = Blech (kg/Länge) + Schnitt-/Rüstzeit + Laser-/Maschinen-Energie (kWh) → Kosten je Teil, kWh je Teil.
+- [ ] Maler/Lackierer: Fläche (m²) + Farbe (l/m²) + Grundierung + Zeit → Verbrauch & Kosten je m².
+- [ ] Kern-Nutzen: Je mehr Projekte erfasst werden, desto genauer die eigenen empirischen Verbrauchsnormen → Angebote aus echten Daten statt Bauchgefühl.
+- [ ] Baut auf Vorhandenem auf: Zuschnitt, BDE, Energie-Ablesungen, Aufmaß, Leistungskatalog.
+- [ ] Passt perfekt zur Content-Maschine: je Branche ein eigener Kalkulator = eigenes Verkaufsargument.
+
 ---
 
 ## 2) CLAUDES EMPFEHLUNGEN (zusätzlich denkbar)

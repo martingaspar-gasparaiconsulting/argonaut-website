@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGONAUT OS — Fahrplan Rechtssicherheit &amp; ISO</title>
+<style>
+  :root{
+    --navy:#0A1628; --navy2:#0F2036; --gold:#C9A84C; --cyan:#00e5ff;
+    --green:#4CAF7D; --dim:#8FA3BE; --border:rgba(143,163,190,0.18);
+    --danger:#E06666; --warn:#E0A24C; --text:#EAF1F6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--text);
+    font-family:'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    line-height:1.65;font-weight:400;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 22px}
+  header{background:radial-gradient(900px 420px at 50% -25%,rgba(201,168,76,0.16),transparent 60%);
+    border-bottom:1px solid var(--border);padding:64px 0 40px}
+  .kicker{color:var(--gold);letter-spacing:.24em;text-transform:uppercase;font-size:.72rem;font-weight:700;margin-bottom:14px}
+  h1{font-size:clamp(1.9rem,4vw,2.9rem);font-weight:800;margin:0 0 12px;line-height:1.12}
+  .sub{color:var(--dim);font-size:1.02rem;max-width:720px}
+  .meta{margin-top:18px;color:var(--dim);font-size:.85rem}
+  h2{font-size:1.35rem;font-weight:800;margin:0 0 6px;padding-top:6px}
+  h2 .num{color:var(--gold);font-weight:800;margin-right:10px}
+  h3{font-size:1.02rem;font-weight:700;margin:22px 0 8px;color:var(--text)}
+  section{padding:34px 0;border-bottom:1px solid var(--border)}
+  p{margin:0 0 12px}
+  .lead{color:var(--dim);margin-bottom:20px}
+  a{color:var(--cyan);text-decoration:none}
+  code{background:rgba(143,163,190,0.12);padding:1px 6px;border-radius:5px;font-size:.86em;color:#cfe}
+  .toc{background:var(--navy2);border:1px solid var(--border);border-radius:14px;padding:22px 26px;margin:26px 0 0}
+  .toc ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:34px}
+  .toc li{margin:5px 0;color:var(--dim)}
+  .toc a{color:var(--text)}
+  .badge{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.06em;
+    padding:3px 9px;border-radius:999px;vertical-align:middle;margin-left:8px}
+  .b-green{background:rgba(76,175,125,.16);color:var(--green);border:1px solid rgba(76,175,125,.4)}
+  .b-warn{background:rgba(224,162,76,.14);color:var(--warn);border:1px solid rgba(224,162,76,.4)}
+  .b-red{background:rgba(224,102,102,.14);color:var(--danger);border:1px solid rgba(224,102,102,.4)}
+  .card{background:var(--navy2);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:14px 0}
+  .card.red{border-color:rgba(224,102,102,.45)}
+  .card.warn{border-color:rgba(224,162,76,.4)}
+  .card.green{border-color:rgba(76,175,125,.4)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;margin:14px 0}
+  th{background:rgba(201,168,76,.12);color:var(--gold);text-align:left;padding:11px 14px;font-weight:700}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);color:#c9d6e3;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  ul.check{list-style:none;padding:0;margin:10px 0}
+  ul.check li{padding:8px 0 8px 30px;position:relative;border-bottom:1px solid var(--border)}
+  ul.check li:before{content:"☐";position:absolute;left:0;top:7px;color:var(--gold);font-size:1.05rem}
+  ul.check li:last-child{border-bottom:none}
+  .pill{display:inline-block;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);
+    color:var(--cyan);border-radius:8px;padding:2px 9px;font-size:.78rem;font-weight:700;margin-right:6px}
+  .flow{font-size:.86rem;color:var(--dim);margin-top:4px}
+  .strike{color:var(--danger);text-decoration:line-through}
+  .arrow{color:var(--gold);font-weight:800}
+  .foot{padding:34px 0 60px;color:var(--dim);font-size:.82rem}
+  .q{background:var(--navy2);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:14px 18px;margin:12px 0}
+  strong{color:var(--text)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">ARGONAUT OS · Interner Fahrplan</div>
+    <h1>Rechtssicherheit &amp; ISO — der saubere Aufbau</h1>
+    <p class="sub">Wo unsere Daten liegen, was wir dokumentieren, was wir selbst bauen und was extern bleibt — bis zur 100&nbsp;%igen, nachweisbaren Freigabe.</p>
+    <div class="meta">Stand: 01.08.2026 · v3 (Stripe &amp; Lexoffice raus, Google rein, „Mango" = MongoDB/Voyage geklärt, Retention-Opt-out ergänzt) · Gaspar AI Consulting, Martin Gaspar · Ablage: <code>docs/ARGONAUT-Rechts-und-ISO-Fahrplan.html</code></div>
+
+    <div class="toc">
+      <div style="color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.72rem">Inhalt</div>
+      <ol>
+        <li><a href="#lage">Ausgangslage &amp; Statusampel</a></li>
+        <li><a href="#landkarte">Datenlandkarte (Transparenz)</a></li>
+        <li><a href="#avv">Die zwei AVV-Rollen</a></li>
+        <li><a href="#ki">Eigene KI raus — was das ändert</a></li>
+        <li><a href="#texte">Textänderungen § für §</a></li>
+        <li><a href="#preise">Preis-Empfehlung</a></li>
+        <li><a href="#isms">ISO-Vorbereitung (selbst)</a></li>
+        <li><a href="#extern">Was extern bleibt + Kosten</a></li>
+        <li><a href="#anwalt">Checkliste für den Rechtsanwalt</a></li>
+        <li><a href="#phasen">Phasenplan / Reihenfolge</a></li>
+        <li><a href="#offen">Offene Entscheidungen</a></li>
+      </ol>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="lage">
+  <h2><span class="num">1</span>Ausgangslage &amp; Statusampel</h2>
+  <p class="lead">Das Fundament trägt besser als gedacht. Impressum, Datenschutz und AGB sind inhaltlich schon weit. Entscheidend: Wir behaupten <strong>keine</strong> ISO-Zertifizierung, die wir nicht haben — das schützt uns. Für die Präsentation am Donnerstag ist rechtlich nichts akut gefährlich.</p>
+
+  <table>
+    <tr><th>Bereich</th><th>Status</th><th>Kurz</th></tr>
+    <tr><td>Impressum</td><td><span class="badge b-green">grün</span></td><td>Vollständig; nur <code>§ 5 TMG</code> → <code>§ 5 DDG</code> aktualisieren.</td></tr>
+    <tr><td>Datenschutzerklärung</td><td><span class="badge b-warn">gelb</span></td><td>Inhaltlich stark (Subunternehmer, SCC, 72h-Meldung). KI-Training-Teil raus, Hostinger ergänzen.</td></tr>
+    <tr><td>AGB</td><td><span class="badge b-warn">gelb</span></td><td>Sauber gegliedert. Unternehmer-Klausel + Rabatte + KI-Klausel anpassen.</td></tr>
+    <tr><td>AVV (an Kunden)</td><td><span class="badge b-red">rot</span></td><td>Existiert nur als Versprechen „auf Anfrage" — muss echtes Dokument werden (Art. 28 DSGVO).</td></tr>
+    <tr><td>Alte weiße Startseite</td><td><span class="badge b-red">rot</span></td><td>Live &amp; bewirbt altes KI-Call-Kontingent — widerspricht AGB („KI unbegrenzt").</td></tr>
+    <tr><td>„Deutscher Server"</td><td><span class="badge b-red">rot</span></td><td>An 5 Stellen; laut eigenem Datenschutz falsch (Supabase = Schweden, KI = USA). Abmahnfähig.</td></tr>
+    <tr><td>Branchenzahl</td><td><span class="badge b-warn">gelb</span></td><td>205 vs. 690+ gemischt — auf eine verifizierte Zahl bringen.</td></tr>
+    <tr><td>ISMS / ISO 27001</td><td><span class="badge b-warn">gelb</span></td><td>Technik weitgehend da (RLS, TLS, EU-DB). Dokumentation fehlt — selbst baubar.</td></tr>
+  </table>
+</section>
+
+<section id="landkarte">
+  <h2><span class="num">2</span>Datenlandkarte — was liegt wo, warum</h2>
+  <p class="lead">Dein Wunsch: Jeder, der es sehen darf, soll nachvollziehen, was mit den Daten passiert und wohin sie gehen. Das ist die ehrliche Karte — sie wird 1:1 die Grundlage für die öffentliche Subunternehmer-Seite und das interne Verzeichnis (VVT).</p>
+
+  <table>
+    <tr><th>Datenart</th><th>Dienstleister</th><th>Ort</th><th>Zweck</th><th>Rechtsgrundlage</th></tr>
+    <tr><td>Stamm- &amp; Vertragsdaten, Inhalte (CRM/ERP)</td><td>Supabase (Datenbank)</td><td><strong>EU</strong> — Stockholm</td><td>Betrieb der Plattform</td><td>Art. 6 (1) b · AVV nötig</td></tr>
+    <tr><td>Website-Auslieferung</td><td>Vercel</td><td>USA / globales CDN</td><td>Hosting Frontend</td><td>Art. 6 (1) f · SCC · AVV nötig</td></tr>
+    <tr><td>KI-Funktionen (KI-Auge, an wenigen Stellen)</td><td>Anthropic</td><td>USA</td><td><strong>Feature</strong>, kein Training</td><td>SCC · DPA nötig</td></tr>
+    <tr><td>Dokumentensuche (Embeddings)</td><td>Voyage AI (jetzt MongoDB)</td><td>USA — GCP US West</td><td>Embeddings</td><td>SCC · <strong>DPA ✔</strong> · Retention-Opt-out!</td></tr>
+    <tr><td>E-Mail &amp; Firmen-Konten</td><td>Google Workspace (Business)</td><td>EU / global</td><td>E-Mail, Accounts</td><td>Art. 6 (1) b · Google-DPA nötig</td></tr>
+    <tr><td>Server / Infrastruktur</td><td>Hostinger (VPS)</td><td>zu verifizieren</td><td>Self-Hosting</td><td>fehlt im Datenschutz ⚠ · AVV nötig</td></tr>
+    <tr><td colspan="5" style="color:var(--danger)"><strong>Raus aus dem Stack:</strong> Stripe (Zahlung) und Lexoffice (Buchhaltung) — in Datenschutz &amp; AGB noch genannt, müssen entfernt werden.</td></tr>
+  </table>
+  <p class="flow"><strong>Kernbotschaft für außen:</strong> Datenbank in der EU. Externe KI-Dienste in den USA — nur als Funktion, mit EU-Standardvertragsklauseln, ohne Training mit euren Daten. Ehrlich und haltbar — im Gegensatz zu „deutscher Server".</p>
+</section>
+
+<section id="avv">
+  <h2><span class="num">3</span>Die zwei AVV-Rollen — nicht verwechseln</h2>
+  <p class="lead">Das ist der Punkt, an dem die meisten SaaS stolpern. ARGONAUT trägt zwei Hüte gleichzeitig.</p>
+
+  <div class="card green">
+    <h3>Geklärt: „Mango" = MongoDB — es geht um Voyage AI</h3>
+    <p>Der E-Mail-Verlauf löst es auf: <strong>MongoDB hat Voyage AI übernommen</strong>. Deshalb beantwortet das „MongoDB Privacy Team" (Brianna Stout, Didi Coeur) deine DPA-Anfrage an Voyage. Das gespeicherte Dokument ist die <strong>Voyage-AI-DPA</strong> — nicht Anthropic. Sie ist <strong>nicht unterschriftspflichtig</strong>: online unter <code>voyageai.com/dpa</code> veröffentlicht und in die Voyage-AGB eingebaut — mit der Vertragsannahme gelten die SCC als unterzeichnet.</p>
+    <p><strong>Inhalt der DPA (von mir geprüft):</strong> Verarbeitung in den <strong>USA</strong> (Google/AWS, laut Mail „GCP US West"); Sub-Auftragsverarbeiter: Amazon Web Services, Google LLC, Baseten (ab Aug 2026); EU-SCC + UK-Addendum als Transfermechanismus; Löschung bei Vertragsende.</p>
+    <div class="card red" style="margin:12px 0 0">
+      <p style="margin:0"><strong>⚠ Aktion nur von dir machbar — Retention abschalten:</strong> Für „Zero-Retention" musst du in Voyage aktiv <strong>opt-out</strong>en: Zahlungsmittel hinterlegt + Organisations-Admin, dann Dashboard → Organization → Terms of Service → Schalter „Opted In" auf <strong>„Opted Out"</strong>. Sonst darf Voyage Daten behalten.</p>
+    </div>
+  </div>
+
+  <div class="card green">
+    <h3>Hut 1: ARGONAUT sammelt AVVs von seinen Zulieferern <span class="badge b-warn">teils offen</span></h3>
+    <p>ARGONAUT ist hier <strong>Verantwortlicher</strong> und braucht von jedem Dienstleister, der personenbezogene Daten verarbeitet, einen AVV/DPA (Art. 28 Abs. 4). Nach der Aufräum-Runde:</p>
+    <p><strong>AVV/DPA nötig bei:</strong> Supabase, Vercel, Anthropic, Google Workspace, Hostinger. <strong>Voyage AI ✔</strong> (DPA via MongoDB, online + in ToS — nur noch Retention-Opt-out setzen).<br>
+    <strong>Raus:</strong> Stripe und Lexoffice werden nicht mehr genutzt — beide müssen aus Datenschutz und AGB entfernt werden.</p>
+    <p class="flow">Alle vorhandenen AVVs/DPAs kommen in einen Nachweisordner (<code>docs/avv-nachweise/</code>) — sie belegen die Aussage in Datenschutz § 11.4.</p>
+  </div>
+
+  <div class="card red">
+    <h3>Hut 2: ARGONAUT gibt seinen Kunden einen AVV <span class="badge b-red">fehlt · neu erkannt</span></h3>
+    <p><strong>Neu in dieser Prüfung gefunden — bisher nie besprochen, weil so etwas beim Funktionsbauen nicht auffällt, sondern nur bei einer gezielten Rechtsprüfung.</strong> Sobald ein Kunde Daten seiner Kunden/Mitarbeiter eingibt (CRM/ERP), ist ARGONAUT <strong>Auftragsverarbeiter</strong> und muss dem Kunden einen AVV <strong>geben</strong> (Art. 28 Abs. 3). Aktuell sagt AGB § 11.3 nur „auf Anfrage" — zu schwach. Wir brauchen ein fertiges AVV-Dokument, das beim Vertragsschluss automatisch mitgeschlossen und im Konto abrufbar ist. <strong>Das schreiben wir selbst</strong> (Vorlage z. B. eRecht24/GDD).</p>
+  </div>
+</section>
+
+<section id="ki">
+  <h2><span class="num">4</span>Eigene KI über Bord — das macht uns sauberer</h2>
+  <p class="lead">Deine Entscheidung, die eigene KI weit nach hinten zu schieben, ist rechtlich ein Gewinn. Die KI-Training-Klausel war die wackeligste Stelle im ganzen Werk.</p>
+
+  <div class="card">
+    <p><span class="strike">AGB § 8 „KI-Training &amp; Daten" — Kundendaten trainieren unser Modell, doppelte Rechtsgrundlage</span> <span class="arrow">→</span> <strong>raus.</strong></p>
+    <p><span class="strike">Datenschutz § 6 „KI-Training &amp; Nutzungsdaten"</span> <span class="arrow">→</span> <strong>ersetzen</strong> durch eine schlanke Klausel:</p>
+    <p style="margin-left:14px;color:#c9d6e3;border-left:2px solid var(--gold);padding-left:14px">
+      „Zur Verbesserung unseres Produkts werten wir <strong>anonymisierte und aggregierte</strong> Nutzungsdaten aus (z. B. welche Funktionen genutzt werden, wo Nutzer hängenbleiben). Rückschlüsse auf einzelne Personen oder Kunden sind ausgeschlossen. Rechtsgrundlage: Art. 6 (1) f (berechtigtes Interesse). Widerspruch jederzeit möglich."
+    </p>
+    <p class="flow">Das deckt genau deinen Wunsch: intern besser werden, ohne echte Kundendaten anzufassen — und ist Standard bei SaaS, also gut verteidigbar. Kein Bezug mehr zu „eigenem KI-Training".</p>
+  </div>
+  <p>Wichtig für die Datenschutz-Formulierung: Anthropic/Voyage bleiben — aber als <strong>Funktions-Dienste</strong> („KI-Auge" an wenigen Stellen), nicht als Trainingsquelle. Das Wording in § 5/§ 11 wird entsprechend von „Training" auf „Funktion" umgestellt. Welche interne Auswertung wir konkret sammeln wollen, klären wir separat, bevor wir es festschreiben.</p>
+</section>
+
+<section id="texte">
+  <h2><span class="num">5</span>Textänderungen — konkret, § für §</h2>
+  <p class="lead">Das ist zugleich der spätere Arbeitsauftrag. Jede Zeile mit Datei &amp; Fundstelle.</p>
+
+  <table>
+    <tr><th>#</th><th>Was</th><th>Wo</th></tr>
+    <tr><td>1</td><td>KI-Training-Klausel entfernen / auf „anonyme Produktverbesserung" umstellen</td><td><code>app/agb/page.tsx</code> § 8 · <code>app/datenschutz/page.tsx</code> § 6</td></tr>
+    <tr><td>2</td><td>„Deutscher Server / Daten bleiben in Deutschland" → „EU-Hosting" (ehrliche Formulierung)</td><td><code>app/layout.tsx</code> Z. 21 · <code>app/vorschau/page.tsx</code> Z. 38, 628, 721, 838</td></tr>
+    <tr><td>3</td><td>Unternehmer-Klausel (nur B2B, § 14 BGB) + Bestätigung im Bestellprozess</td><td><code>app/agb/page.tsx</code> § 2 + Buchungsstrecke</td></tr>
+    <tr><td>4</td><td>Laufzeit &amp; Rabatte an Empfehlung angleichen (identisch in AGB + Preisseite)</td><td><code>app/agb/page.tsx</code> § 3.6 / § 5.1 · Preisseite</td></tr>
+    <tr><td>5</td><td>Alte weiße Startseite ablösen: neue Vorschau wird Startseite; KI-Call-Kontingent raus</td><td><code>app/page.tsx</code> · <code>components/Pricing.tsx</code></td></tr>
+    <tr><td>6</td><td>Dienstleister-Liste aufräumen: <strong>Stripe &amp; Lexoffice raus</strong>, <strong>Google Workspace rein</strong>, Hostinger ergänzen, n8n prüfen (noch aktiv?)</td><td><code>app/datenschutz/page.tsx</code> § 5 · § 11</td></tr>
+    <tr><td>7</td><td>AVV-Dokument (an Kunden) erstellen + Seite + PDF; AGB § 11.3 von „auf Anfrage" auf „liegt bei / im Konto"</td><td>neu: <code>app/avv/page.tsx</code> · <code>app/agb/page.tsx</code> § 11.3</td></tr>
+    <tr><td>8</td><td>„§ 5 TMG" → „§ 5 DDG" (TMG wurde Mai 2024 abgelöst)</td><td><code>app/impressum/page.tsx</code></td></tr>
+    <tr><td>9</td><td>„100 % DSGVO-konform" → „DSGVO-konform gestaltet"</td><td><code>app/vorschau/page.tsx</code> · Datenschutz</td></tr>
+    <tr><td>10</td><td>Branchenzahl auf eine verifizierte Zahl (echte Liste auszählen)</td><td><code>components/Industries.tsx</code>, <code>components/Footer.tsx</code>, Vorschau</td></tr>
+    <tr><td>11</td><td>Öffentliche Subunternehmer-/Auftragsverarbeiter-Liste (Transparenz)</td><td>neu: Unterseite</td></tr>
+    <tr><td>12</td><td>Zahlungsart klären &amp; in AGB aktualisieren (Stripe ist raus — welcher Weg jetzt?); Buchhaltungsweg ohne Lexoffice festlegen</td><td><code>app/agb/page.tsx</code> § 4</td></tr>
+  </table>
+</section>
+
+<section id="preise">
+  <h2><span class="num">6</span>Preis-Empfehlung — schlank, liquiditätsschonend</h2>
+  <p class="lead">Du hast freie Hand — hier meine klare Empfehlung. Prämisse: Am Anfang zählen Marge und Liquidität mehr als Wachstum um jeden Preis. Ihr braucht Geld für Zertifizierung und Marketing. Also: niedrige Rabatte, kleiner Vorauszahlungsanreiz.</p>
+
+  <table>
+    <tr><th>Hebel</th><th>Empfehlung</th><th>Warum</th></tr>
+    <tr><td>Grundmodell</td><td>Grundgebühr nach Betriebsgröße + Nutzer-Sitze, <strong>KI unbegrenzt</strong> (kein Kontingent)</td><td>Bleibt wie in AGB/Vorschau — nur die alte Kontingent-Seite muss weg.</td></tr>
+    <tr><td>12 Monate (Regellaufzeit)</td><td><strong>0 %</strong></td><td>Standard. Kein Rabatt nötig.</td></tr>
+    <tr><td>24 Monate</td><td><strong>5 %</strong></td><td>Kleiner Anreiz für Bindung, schont die Marge.</td></tr>
+    <tr><td>36 Monate</td><td><strong>8 %</strong></td><td>Deutlich unter den früher genannten 15 %.</td></tr>
+    <tr><td>Jahres-Vorauszahlung</td><td><strong>3 %</strong> (nur auf Grundgebühr)</td><td>Bringt sofort Liquidität, kostet fast nichts.</td></tr>
+    <tr><td>Einrichtungsgebühr</td><td><strong>nie rabattiert</strong></td><td>Deckt echte Onboarding-Kosten.</td></tr>
+  </table>
+  <p class="flow">Zum Vergleich: aktuell steht in der AGB 24&nbsp;Mon. = 5&nbsp;%, 36&nbsp;Mon. = 10&nbsp;%. Meine Empfehlung senkt 36&nbsp;Mon. auf 8&nbsp;% und ergänzt einen kleinen Vorauszahlungsrabatt statt eines großen Sofortzahler-Rabatts. Was wir festlegen, muss <strong>identisch</strong> in AGB und Preisseite stehen — sonst ist es angreifbar.</p>
+</section>
+
+<section id="isms">
+  <h2><span class="num">7</span>ISO-Vorbereitung — was wir selbst bauen</h2>
+  <p class="lead">Die Technik ist großteils da (EU-Datenbank, TLS, RLS/Rollen, bcrypt, 72h-Meldekette). Was fehlt, ist die <strong>Dokumentation</strong> — und die kostet nur Zeit, kein Geld. Genau das spart später die teuren Beraterstunden.</p>
+  <ul class="check">
+    <li>Verzeichnis von Verarbeitungstätigkeiten (VVT, Art. 30 DSGVO) — ohnehin Pflicht, Basis ist die Datenlandkarte oben</li>
+    <li>TOM-Dokument (technische &amp; organisatorische Maßnahmen, Art. 32)</li>
+    <li>ISMS-Grundgerüst (ISO 27001): Sicherheitsleitlinie, Asset-Register, Risikoanalyse, Statement of Applicability</li>
+    <li>Hostinger-VPS im ISMS: Härtung, Backups, Zugriffskontrolle, Patch-Prozess dokumentieren</li>
+    <li>Incident-Response-Plan (die 72h-Kette steht im Datenschutz — jetzt als echter Prozess)</li>
+    <li>Lösch- und Berechtigungskonzept (RLS/Rollen haben wir — muss verschriftlicht werden)</li>
+    <li>Dienstleister-AVVs/DPAs einsammeln &amp; ablegen (inkl. Mango-AVV) — Nachweisordner</li>
+  </ul>
+</section>
+
+<section id="extern">
+  <h2><span class="num">8</span>Was extern bleibt — und was es kostet</h2>
+  <p class="lead">Zwei Dinge kann man weder selbst machen noch wegsparen. Alles andere bereiten wir so weit vor, dass Anwalt und Auditor nur noch prüfen statt erarbeiten — das drückt auch deren Rechnung.</p>
+  <div class="card warn">
+    <h3>Anwältliche Endfreigabe <span class="pill">~1.800 €</span></h3>
+    <p>AGB, Datenschutz, AVV, Impressum, Werbeaussagen durch einen Fachanwalt IT-Recht. <strong>Das ist deine gewünschte „100-%-Freigabe".</strong> Ich bereite alles bis zur Unterschriftsreife vor — aber eine rechtsverbindliche Freigabe kann nur ein Anwalt geben, nicht ich.</p>
+  </div>
+  <div class="card warn">
+    <h3>ISO-27001-Zertifikat <span class="pill">~3.500–5.500 € Audit</span> <span class="pill">~8.000–25.000 € Jahr 1</span></h3>
+    <p>Durch eine akkreditierte Stelle (TÜV / DEKRA / DQS). Eine <strong>Selbst-Zertifizierung bei 27001 gibt es nicht</strong> — das Zertifikat vergibt nur die akkreditierte Stelle nach Audit.</p>
+  </div>
+  <p class="flow">Optional später: ISO 9001 (QM, ~1.500–10.000 €). ISO 27017/27018/27701 nur zusammen mit gültiger 27001.</p>
+</section>
+
+<section id="anwalt">
+  <h2><span class="num">9</span>Checkliste für den Rechtsanwalt — wo klicken, wo finden</h2>
+  <p class="lead">Damit die Prüfung schnell und günstig geht: Jede Fundstelle mit Link, Datei und dem, worauf zu achten ist.</p>
+  <table>
+    <tr><th>Prüfpunkt</th><th>Öffnen unter</th><th>Datei im Repo</th><th>Worauf achten</th></tr>
+    <tr><td>Impressum</td><td><code>/impressum</code></td><td><code>app/impressum/page.tsx</code></td><td>DDG statt TMG, Anschrift, USt-IdNr., Kontakt (Telefon?)</td></tr>
+    <tr><td>Datenschutzerklärung</td><td><code>/datenschutz</code></td><td><code>app/datenschutz/page.tsx</code></td><td>Subunternehmer vollständig, SCC, KI-Klausel neu, Hostinger ergänzt</td></tr>
+    <tr><td>AGB</td><td><code>/agb</code></td><td><code>app/agb/page.tsx</code></td><td>Unternehmer-Klausel, Laufzeit/Verlängerung, Rabatte, AVV-Verweis, KI-Klausel</td></tr>
+    <tr><td>AVV (an Kunden)</td><td><code>/avv</code> (neu)</td><td><code>app/avv/page.tsx</code></td><td>Art. 28 vollständig, TOM-Anlage, Subunternehmer-Anlage</td></tr>
+    <tr><td>Werbeaussagen</td><td><code>/</code> &amp; <code>/vorschau</code></td><td><code>app/page.tsx</code>, <code>app/vorschau/page.tsx</code></td><td>„EU-Hosting" statt „deutscher Server", keine absoluten Claims, Branchenzahl</td></tr>
+    <tr><td>Datenlandkarte / VVT</td><td>interner Ordner</td><td><code>docs/</code></td><td>Deckt sich mit Datenschutz? Alle Länder/Rechtsgrundlagen korrekt?</td></tr>
+    <tr><td>Dienstleister-AVVs</td><td>Nachweisordner</td><td><code>docs/avv-nachweise/</code></td><td>Supabase, Vercel, Anthropic (✔), Voyage, Google Workspace, Hostinger vorhanden? (Stripe/Lexoffice raus)</td></tr>
+  </table>
+</section>
+
+<section id="phasen">
+  <h2><span class="num">10</span>Phasenplan — in dieser Reihenfolge</h2>
+  <div class="card red">
+    <h3>Phase 0 — vor Live-Schaltung der neuen Seite <span class="badge b-red">dringend</span></h3>
+    <p>Die abmahnrelevanten Punkte zuerst: „deutscher Server" → „EU-Hosting", alte Kontingent-Startseite ablösen, Unternehmer-Klausel, KI-Training-Klausel raus. (Für die Präsentation Donnerstag im Demo-Account irrelevant — betrifft nur den öffentlichen Auftritt.)</p>
+  </div>
+  <div class="card">
+    <h3>Phase 1 — Dokumente vervollständigen</h3>
+    <p>AVV-Dokument (an Kunden) + öffentliche Subunternehmer-Seite + Preis/Laufzeit final + Impressum DDG + Branchenzahl + Hostinger/n8n klären.</p>
+  </div>
+  <div class="card">
+    <h3>Phase 2 — ISMS-Dokumentation</h3>
+    <p>VVT, TOM, ISMS-Grundgerüst, Incident-Response, Lösch-/Berechtigungskonzept, AVV-Nachweisordner (inkl. Mango).</p>
+  </div>
+  <div class="card">
+    <h3>Phase 3 — Anwalt</h3>
+    <p>Alles vorbereitet zur Freigabe geben (~1.800 €). Erst danach ist der öffentliche Auftritt „amtlich".</p>
+  </div>
+  <div class="card">
+    <h3>Phase 4 — ISO-Audit</h3>
+    <p>Wenn Umsatz &amp; ISMS stehen: akkreditierte Zertifizierungsstelle beauftragen.</p>
+  </div>
+</section>
+
+<section id="offen">
+  <h2><span class="num">11</span>Offene Entscheidungen — für unser Gespräch</h2>
+  <div class="q"><strong>1. Nur Unternehmer (B2B)?</strong> — Mein Rat: ja. Löst Verlängerungsklausel, Widerrufsrecht und Button-Lösung auf einmal.</div>
+  <div class="q"><strong>2. Preis/Rabatt final?</strong> — Empfehlung: 24&nbsp;Mon. 5&nbsp;%, 36&nbsp;Mon. 8&nbsp;%, Vorauszahlung 3&nbsp;%, Einrichtung nie rabattiert.</div>
+  <div class="q"><strong>3. n8n noch aktiv?</strong> — Du sagtest „damals mit n8n gearbeitet". Wenn nicht mehr, fliegt es aus dem Datenschutz.</div>
+  <div class="q"><strong>4. Interne Datenauswertung</strong> — welche anonymen Daten wollen wir für die eigene Verbesserung sammeln? Das klären wir separat, bevor wir es festschreiben.</div>
+  <div class="q"><strong>5. Zahlung &amp; Buchhaltung</strong> — Stripe und Lexoffice sind raus. Womit werden Zahlungen und Rechnungen jetzt abgewickelt? Muss in AGB § 4 und Datenschutz nachgezogen werden.</div>
+</section>
+
+<div class="foot wrap">
+  Kein Rechtsrat — dies ist eine sorgfältige interne Einschätzung als Grundlage für die anwaltliche Prüfung.<br>
+  ARGONAUT OS · Gaspar AI Consulting · Stand 01.08.2026
+</div>
+
+</main>
+</body>
+</html>
