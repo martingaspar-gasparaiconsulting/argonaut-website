@@ -5,6 +5,7 @@
 // ============================================================================
 
 import Link from 'next/link'
+import Dreizack from '@/components/Dreizack';
 
 const GOLD = '#c9a84c'
 const NAVY = '#0A1628'
@@ -48,7 +49,7 @@ export default function Footer() {
           {/* Marke */}
           <div style={{ maxWidth: '300px' }}>
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-              <span aria-hidden="true">🔱</span>
+              <Dreizack hoehe={22} />
               <span style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, letterSpacing: '.16em', color: '#EAF1F6', fontSize: '1rem' }}>ARGONAUT&nbsp;OS</span>
             </Link>
             <p style={{ margin: '16px 0 0', fontSize: '.9rem', lineHeight: 1.6, color: '#8fa9b6' }}>

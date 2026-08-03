@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
+import Dreizack from '@/components/Dreizack';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#c9a84c', teal: '#7aa3b3',
@@ -91,7 +92,7 @@ export default function BuchenSeite() {
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
-        <div style={styles.brand}>🔱 ARGONAUT OS</div>
+        <div style={styles.brand}><Dreizack hoehe={16} style={{ display: 'inline-block', verticalAlign: '-3px' }} /> ARGONAUT OS</div>
 
         {gebucht ? (
           <div style={styles.card}>

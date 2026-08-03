@@ -8,6 +8,7 @@ import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_
 import { seoBySlug } from '../../_lib/branchen-seo'
 import { baukastenFor } from '../../_lib/branchen-bausteine'
 import { verkaufPack, fuelleText } from '../../_lib/branchen-verkauf'
+import Dreizack from '@/components/Dreizack';
 
 // ============================================================================
 // ARGONAUT OS · app/branchen/[slug]/page.tsx — Branchen-Detailseite
@@ -117,7 +118,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
       }}>
         <div className="bd-wrap">
           <div style={{ color: GOLD, letterSpacing: '.22em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1.2rem' }}>
-            🔱 ARGONAUT für {b.kategorie}
+            <Dreizack hoehe={15} style={{ display: 'inline-block', verticalAlign: '-3px' }} /> ARGONAUT für {b.kategorie}
           </div>
           <h1 className="bd-h1">{b.name}</h1>
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.28rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto 2rem', lineHeight: 1.55 }}>

@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { useState } from 'react'
+import Dreizack from '@/components/Dreizack';
 
 const GOLD = '#c9a84c'
 const NAVY = '#0A1628'
@@ -28,7 +29,7 @@ export default function Navbar() {
     <>
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: 'rgba(10,22,40,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.18)' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <span aria-hidden="true">🔱</span>
+          <Dreizack hoehe={26} />
           <span style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, letterSpacing: '.16em', color: '#EAF1F6', fontSize: '1rem' }}>ARGONAUT&nbsp;OS</span>
         </a>
 

@@ -19,6 +19,7 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
 import type { BrancheKurz } from '@/lib/vorfuehrung';
+import Dreizack from '@/components/Dreizack';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', gold2: '#e8c46a',
@@ -94,7 +95,7 @@ export default function Uebersicht({
     const b = branchen[lockIndex] || branchen[0];
     return (
       <div style={s.lock} onClick={() => setRuhe(false)}>
-        <div style={s.lockMarke}>🔱&nbsp;&nbsp;A R G O N A U T&nbsp;&nbsp; O S</div>
+        <div style={s.lockMarke}><Dreizack hoehe={30} style={{ display: 'inline-block', verticalAlign: '-6px', marginRight: 14 }} />A R G O N A U T&nbsp;&nbsp; O S</div>
         <div style={s.lockZeile}>Wir haben</div>
         <div style={s.lockName}>{b?.name}</div>
         <div style={s.lockZeile}>und {branchen.length - 1} weitere Branchen.</div>
@@ -106,7 +107,7 @@ export default function Uebersicht({
   return (
     <div style={s.seite}>
       <div style={s.kopf}>
-        <div style={s.marke}>🔱&nbsp;&nbsp;A R G O N A U T&nbsp;&nbsp; O S</div>
+        <div style={s.marke}><Dreizack hoehe={24} style={{ display: 'inline-block', verticalAlign: '-5px', marginRight: 12 }} />A R G O N A U T&nbsp;&nbsp; O S</div>
         <h1 style={s.h1}>Was machen Sie beruflich?</h1>
         <p style={s.unter}>
           Tippen Sie es ein. Wir haben <b style={{ color: C.gold2 }}>{branchen.length} Branchen</b> hinterlegt —

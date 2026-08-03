@@ -3,6 +3,7 @@ import ErsparnisRechner from './_components/ErsparnisRechner'
 import AngebotRechner from './_components/AngebotRechner'
 import Navbar from './_components/Navbar'
 import AnfrageFormular from './_components/AnfrageFormular'
+import Dreizack from '@/components/Dreizack';
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/page.tsx — NEUE WEBSITE (Parallel-Bau / Vorschau)
@@ -228,7 +229,7 @@ export default function VorschauPage() {
                   color: GOLD, marginBottom: '1.8rem',
                 }}
               >
-                <span aria-hidden="true">🔱</span> ARGONAUT&nbsp;OS
+                <Dreizack hoehe={17} style={{ display: 'inline-block', verticalAlign: '-3px' }} /> ARGONAUT&nbsp;OS
               </div>
 
               <h1 className="arg-h1">
@@ -899,7 +900,7 @@ export default function VorschauPage() {
         <footer className="arg-footer">
           <div className="arg-wrap">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '18px' }}>
-              <span aria-hidden="true">🔱</span>
+              <Dreizack hoehe={22} />
               <span style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, letterSpacing: '.2em', color: '#EAF1F6' }}>ARGONAUT&nbsp;OS</span>
             </div>
             <div className="arg-footer-links">
