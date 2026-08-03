@@ -63,7 +63,7 @@ export default function AngebotRechner() {
   // Gebuehren — die einmalige Einrichtung bleibt in beiden Varianten voll.
   const rab = (n: number) => Math.round(n * (1 - rabattProzent / 100) * 100) / 100
   const msMonat = rab(ms.grundgebuehrGesamt)
-  const fwMonat = rab(fw.grundgebuehr)
+  const fwMonat = rab(fw.monatGesamt)
 
   function fillMix() {
     const v = Math.max(1, Math.round(ma * 0.16))
@@ -216,9 +216,9 @@ export default function AngebotRechner() {
           <div style={{ background: 'rgba(122,163,179,0.06)', border: '1px solid rgba(122,163,179,0.22)', borderRadius: '14px', padding: '18px' }}>
             <p style={{ margin: 0, fontSize: '.78rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>Firmenweit · ein Vertrag</p>
             <p style={{ margin: '10px 0 0', color: '#EAF1F6', fontWeight: 700, fontSize: '1.35rem' }}>{euro(fwMonat)}<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
-            {rabattProzent > 0 && <p style={{ margin: '2px 0 0', fontSize: '.78rem', color: TEAL }}>statt {euro(fw.grundgebuehr)} — {rabattProzent} % Laufzeit-Rabatt</p>}
-            <p style={{ margin: '4px 0 0', fontSize: '.8rem', color: '#8fa9b6' }}>+ einmalig Einrichtung {euro(fw.onboarding)}</p>
-            <p style={{ margin: '8px 0 0', fontSize: '.72rem', color: '#7f97a4', lineHeight: 1.4 }}>{fmt(fw.gesamtMitarbeiter)} Mitarbeiter zusammen → Stufe {fw.stufe.name}.</p>
+            {rabattProzent > 0 && <p style={{ margin: '2px 0 0', fontSize: '.78rem', color: TEAL }}>statt {euro(fw.monatGesamt)} — {rabattProzent} % Laufzeit-Rabatt</p>}
+            <p style={{ margin: '4px 0 0', fontSize: '.8rem', color: '#8fa9b6' }}>+ einmalig Einrichtung {euro(fw.einrichtungGesamt)}</p>
+            <p style={{ margin: '8px 0 0', fontSize: '.72rem', color: '#7f97a4', lineHeight: 1.4 }}>{fmt(fw.gesamtMitarbeiter)} Mitarbeiter zusammen → Stufe {fw.stufe.name}. Enthält {fmt(Math.max(0, fw.standorte - 1))} × Standort-Zuschlag ({euro(fw.standortZuschlag)}/Mon., einmalig {euro(fw.standortEinrichtung)}).</p>
           </div>
         </div>
         <p style={{ fontSize: '.78rem', color: '#8fa9b6', textAlign: 'center', margin: '16px 0 0', lineHeight: 1.5 }}>

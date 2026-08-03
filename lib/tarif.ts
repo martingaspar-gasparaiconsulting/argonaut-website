@@ -35,18 +35,18 @@ export type Stufe = {
 // --- Die Stufen (Grundgebühr + einmaliges Onboarding je Betriebsgröße) ------
 export const STUFEN: Stufe[] = [
   { key: 'solo',       name: 'SOLO',       personen: '1–2',     minMa: 1,   maxMa: 2,    grundgebuehr: 499,  onboarding: 990,   allIn: true, hinweis: 'All-in: inkl. 1 Voll-Nutzer + KI — keine getrennten Sitze' },
-  { key: 'mini',       name: 'MINI',       personen: '3–9',     minMa: 3,   maxMa: 9,    grundgebuehr: 790,  onboarding: 1500,  hinweis: 'ab hier Sitze getrennt hinzu' },
-  { key: 'klein',      name: 'KLEIN',      personen: '10–24',   minMa: 10,  maxMa: 24,   grundgebuehr: 1290, onboarding: 2900 },
-  { key: 'mittel',     name: 'MITTEL',     personen: '25–99',   minMa: 25,  maxMa: 99,   grundgebuehr: 2690, onboarding: 4900,  hinweis: 'Sitz-Staffel greift' },
-  { key: 'gross',      name: 'GROSS',      personen: '100–499', minMa: 100, maxMa: 499,  grundgebuehr: 4900, onboarding: 9900 },
-  { key: 'enterprise', name: 'ENTERPRISE', personen: '500+',    minMa: 500, maxMa: null, grundgebuehr: 7900, onboarding: 14900, abPreis: true, hinweis: 'individuell, nach oben offen — verhandelbar' },
+  { key: 'mini',       name: 'MINI',       personen: '3–9',     minMa: 3,   maxMa: 9,    grundgebuehr: 790,  onboarding: 1900,  hinweis: 'ab hier Sitze getrennt hinzu' },
+  { key: 'klein',      name: 'KLEIN',      personen: '10–24',   minMa: 10,  maxMa: 24,   grundgebuehr: 1290, onboarding: 3900 },
+  { key: 'mittel',     name: 'MITTEL',     personen: '25–99',   minMa: 25,  maxMa: 99,   grundgebuehr: 2690, onboarding: 7900,  hinweis: 'Sitz-Staffel greift' },
+  { key: 'gross',      name: 'GROSS',      personen: '100–499', minMa: 100, maxMa: 499,  grundgebuehr: 4900, onboarding: 14900 },
+  { key: 'enterprise', name: 'ENTERPRISE', personen: '500+',    minMa: 500, maxMa: null, grundgebuehr: 7900, onboarding: 24900, abPreis: true, hinweis: 'individuell, nach oben offen — verhandelbar' },
 ];
 
 // --- Sitz-Preise je Nutzer-Typ. Staffel an die Betriebsgröße gekoppelt: -----
 //     Band 0 = MINI/KLEIN · Band 1 = MITTEL · Band 2 = GROSS · Band 3 = ENTERPRISE.
 export const SITZ: Record<SitzTyp, { name: string; wer: string; preise: [number, number, number, number] }> = {
-  voll:         { name: 'Voll-Nutzer',     wer: 'Chef, GF, Büro, Meister, Verwaltung',        preise: [380, 320, 260, 190] },
-  standard:     { name: 'Standard-Nutzer', wer: 'operative Nutzung (Monteure, Verkauf, Fachkräfte)', preise: [170, 145, 120, 90] },
+  voll:         { name: 'Voll-Nutzer',     wer: 'Chef, GF, Büro, Meister, Verwaltung',        preise: [420, 380, 340, 290] },
+  standard:     { name: 'Standard-Nutzer', wer: 'operative Nutzung (Monteure, Verkauf, Fachkräfte)', preise: [190, 170, 150, 125] },
   self_service: { name: 'Self-Service',    wer: 'eingeschränkt: Zeiterfassung & eigene Daten', preise: [19, 19, 19, 14] },
 };
 
@@ -292,6 +292,16 @@ export function euro(n: number): string {
 /** Rabatt-Faktor für jeden weiteren Standort (Grundgebühr + Onboarding). */
 export const STANDORT_FAKTOR = 0.4;
 
+/**
+ * Standort-Zuschlag in der FIRMENWEITEN Variante (ein Vertrag).
+ * Jeder weitere Standort verursacht echten Aufwand — eigene Stammdaten, eigene
+ * Kasse, eigene Schichtplaene, eigene Nutzerverwaltung, eigener Support. In der
+ * je-Standort-Variante ist das bereits ueber den 40-%-Anteil abgegolten; in der
+ * firmenweiten Variante wird es hierueber abgebildet.
+ */
+export const STANDORT_ZUSCHLAG_MONAT = 49;
+export const STANDORT_ZUSCHLAG_EINRICHTUNG = 190;
+
 export type StandortEingabe = { name?: string; mitarbeiter: number };
 export type StandortZeile = {
   name: string;
@@ -350,14 +360,47 @@ export function multiStandort(standorte: StandortEingabe[]): MultiStandortErgebn
   };
 }
 
+export type FirmenweitErgebnis = {
+  stufe: Stufe;
+  /** Reine Stufen-Grundgebuehr, OHNE Standort-Zuschlag. */
+  grundgebuehr: number;
+  /** Reine Stufen-Einrichtung, OHNE Standort-Zuschlag. */
+  onboarding: number;
+  gesamtMitarbeiter: number;
+  /** Anzahl Standorte insgesamt (inkl. Hauptsitz). */
+  standorte: number;
+  /** Zuschlag fuer jeden WEITEREN Standort, monatlich. */
+  standortZuschlag: number;
+  /** Zuschlag fuer jeden WEITEREN Standort, einmalig. */
+  standortEinrichtung: number;
+  /** Was monatlich wirklich faellig wird: Grundgebuehr + Zuschlag. */
+  monatGesamt: number;
+  /** Was einmalig wirklich faellig wird: Einrichtung + Zuschlag. */
+  einrichtungGesamt: number;
+};
+
 /**
  * Firmenweite Variante: alle Mitarbeiter zusammengezählt → EINE Größenstufe
  * fürs ganze Unternehmen (ein Vertrag). Vergleichsgröße zur je-Standort-Variante.
+ * Jeder WEITERE Standort (über den Hauptsitz hinaus) kostet zusätzlich
+ * STANDORT_ZUSCHLAG_MONAT bzw. einmalig STANDORT_ZUSCHLAG_EINRICHTUNG.
  */
-export function firmenweit(standorte: StandortEingabe[]): {
-  stufe: Stufe; grundgebuehr: number; onboarding: number; gesamtMitarbeiter: number;
-} {
-  const total = bereinigeStandorte(standorte).reduce((a, s) => a + s.mitarbeiter, 0);
+export function firmenweit(standorte: StandortEingabe[]): FirmenweitErgebnis {
+  const liste = bereinigeStandorte(standorte);
+  const total = liste.reduce((a, s) => a + s.mitarbeiter, 0);
   const stufe = stufeFuerMitarbeiter(Math.max(1, total));
-  return { stufe, grundgebuehr: stufe.grundgebuehr, onboarding: stufe.onboarding, gesamtMitarbeiter: total };
+  const weitere = Math.max(0, liste.length - 1);
+  const standortZuschlag = weitere * STANDORT_ZUSCHLAG_MONAT;
+  const standortEinrichtung = weitere * STANDORT_ZUSCHLAG_EINRICHTUNG;
+  return {
+    stufe,
+    grundgebuehr: stufe.grundgebuehr,
+    onboarding: stufe.onboarding,
+    gesamtMitarbeiter: total,
+    standorte: liste.length,
+    standortZuschlag,
+    standortEinrichtung,
+    monatGesamt: stufe.grundgebuehr + standortZuschlag,
+    einrichtungGesamt: stufe.onboarding + standortEinrichtung,
+  };
 }

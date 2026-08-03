@@ -30,16 +30,16 @@ const sections = [
 
 const groessen = [
   { name: 'SOLO', ma: '1–2 (Einzelunternehmer)', fee: '499 €', setup: '990 €', highlight: false },
-  { name: 'Mini', ma: '3–9', fee: '790 €', setup: '1.500 €', highlight: false },
-  { name: 'Klein', ma: '10–24', fee: '1.290 €', setup: '2.900 €', highlight: false },
-  { name: 'Mittel', ma: '25–99', fee: '2.690 €', setup: '4.900 €', highlight: true },
-  { name: 'Groß', ma: '100–499', fee: '4.900 €', setup: '9.900 €', highlight: false },
-  { name: 'Enterprise', ma: 'ab 500', fee: 'ab 7.900 €', setup: 'auf Anfrage', highlight: false },
+  { name: 'Mini', ma: '3–9', fee: '790 €', setup: '1.900 €', highlight: false },
+  { name: 'Klein', ma: '10–24', fee: '1.290 €', setup: '3.900 €', highlight: false },
+  { name: 'Mittel', ma: '25–99', fee: '2.690 €', setup: '7.900 €', highlight: true },
+  { name: 'Groß', ma: '100–499', fee: '4.900 €', setup: '14.900 €', highlight: false },
+  { name: 'Enterprise', ma: 'ab 500', fee: 'ab 7.900 €', setup: 'ab 24.900 €', highlight: false },
 ]
 
 const sitze = [
-  { typ: 'Voll-Nutzer', wer: 'Chef, GF, Büro, Dispo', preis: '380 € (Mini/Klein) · 320 € (Mittel) · 260 € (Groß) · 190 € (Enterprise)' },
-  { typ: 'Standard-Nutzer', wer: 'Sachbearbeiter mit Doku', preis: '170 € (Mini/Klein) · 145 € (Mittel) · 120 € (Groß) · 90 € (Enterprise)' },
+  { typ: 'Voll-Nutzer', wer: 'Chef, GF, Büro, Dispo', preis: '420 € (Mini/Klein) · 380 € (Mittel) · 340 € (Groß) · 290 € (Enterprise)' },
+  { typ: 'Standard-Nutzer', wer: 'Sachbearbeiter mit Doku', preis: '190 € (Mini/Klein) · 170 € (Mittel) · 150 € (Groß) · 125 € (Enterprise)' },
   { typ: 'Self-Service', wer: 'Zeiterfassung, Lohnzettel, „Mein Bereich"', preis: '19 € · 14 € (Enterprise)' },
 ]
 
@@ -156,7 +156,7 @@ export default function AGB() {
 
               <p className="lp-p">3.2 SOLO (Einzelunternehmer) ist all-in: 499 €/Monat inkl. 1 Voll-Nutzer und unbegrenzter KI-Nutzung — zusätzliche Sitze sind nicht erforderlich.</p>
               <p className="lp-p">3.3 Die einmalige Einrichtungsgebühr wird bei Vertragsschluss fällig und deckt Einrichtung, Datenübernahme und Einweisung ab.</p>
-              <p className="lp-p">3.4 Für Mehrstandort-Kunden gelten individuelle Konditionen, die in einem separaten Angebot schriftlich vereinbart werden.</p>
+              <p className="lp-p">3.4 <strong style={{ color: '#EAF1F6' }}>Mehrere Standorte:</strong> Betreibt der Kunde mehrere Standorte, kann er zwischen zwei Modellen wählen. (a) <em>Firmenweit</em>: Alle Mitarbeiter werden zusammengezählt, es gilt eine Betriebsgröße für das gesamte Unternehmen; für jeden weiteren Standort über den Hauptsitz hinaus fällt ein Standort-Zuschlag von 49 € pro Monat sowie einmalig 190 € an. (b) <em>Je Standort</em>: Jeder Standort wird nach seiner eigenen Betriebsgröße abgerechnet; der größte Standort zahlt die volle Grundgebühr und Einrichtung, jeder weitere Standort 40 % der auf ihn entfallenden Beträge. Welches Modell günstiger ist, wird vor Vertragsschluss gemeinsam berechnet und im Angebot ausgewiesen.</p>
               <p className="lp-p">3.5 Der Anbieter behält sich vor, Preise mit einer Ankündigungsfrist von 60 Tagen zu ändern. Bestehende Laufzeitverträge sind davon nicht betroffen.</p>
               <p className="lp-p">3.6 Laufzeit-Rabatte: Bei einer Vertragslaufzeit von 24 Monaten gewährt der Anbieter 5 %, bei 36 Monaten 8 % Rabatt auf die monatlichen Gebühren (Grundgebühr und Nutzer-Sitze). Die einmalige Einrichtungsgebühr ist vom Rabatt ausgenommen.</p>
             </section>
