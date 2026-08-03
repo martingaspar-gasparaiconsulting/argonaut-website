@@ -10,7 +10,7 @@
 // ============================================================================
 
 import { useState } from 'react'
-import { stufeFuerMitarbeiter, sitzPreis, multiStandort, firmenweit, euro } from '@/lib/tarif'
+import { stufeFuerMitarbeiter, sitzPreis, multiStandort, firmenweit, euro, monatspreis, laufzeitOptionen, laufzeitRabattProzent, LAUFZEIT_STANDARD } from '@/lib/tarif'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
@@ -36,6 +36,7 @@ const numInput: React.CSSProperties = {
 
 export default function AngebotRechner() {
   const [multi, setMulti] = useState(false)
+  const [laufzeit, setLaufzeit] = useState<number>(LAUFZEIT_STANDARD)
   const [ma, setMa] = useState(12)
   const [voll, setVoll] = useState(2)
   const [std, setStd] = useState(4)
@@ -51,13 +52,18 @@ export default function AngebotRechner() {
   const sp = sitzPreis('standard', s.key)
   const sfp = sitzPreis('self_service', s.key)
 
-  const vollSum = solo ? 0 : voll * vp
-  const stdSum = solo ? 0 : std * sp
-  const selfSum = solo ? 0 : self * sfp
-  const total = solo ? s.grundgebuehr : s.grundgebuehr + vollSum + stdSum + selfSum
+  // Preis kommt komplett aus lib/tarif — inklusive Laufzeit-Rabatt.
+  const mp = monatspreis(s.key, solo ? {} : { voll, standard: std, self_service: self }, laufzeit)
+  const total = mp.netto
+  const rabattProzent = laufzeitRabattProzent(laufzeit)
 
   const ms = multiStandort(standorte)
   const fw = firmenweit(standorte)
+  // Der Laufzeit-Rabatt gilt auch bei mehreren Standorten auf die monatlichen
+  // Gebuehren — die einmalige Einrichtung bleibt in beiden Varianten voll.
+  const rab = (n: number) => Math.round(n * (1 - rabattProzent / 100) * 100) / 100
+  const msMonat = rab(ms.grundgebuehrGesamt)
+  const fwMonat = rab(fw.grundgebuehr)
 
   function fillMix() {
     const v = Math.max(1, Math.round(ma * 0.16))
@@ -102,6 +108,20 @@ export default function AngebotRechner() {
         <button type="button" onClick={() => setMulti(true)} style={{ padding: '8px 16px', borderRadius: '999px', border: `1px solid ${multi ? GOLD : 'rgba(122,163,179,0.3)'}`, background: multi ? 'rgba(201,168,76,0.12)' : 'transparent', color: multi ? GOLD : '#8fa9b6', fontFamily: 'inherit', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer' }}>Mehrere Standorte</button>
       </div>
 
+      {/* Laufzeit — wirkt auf beide Ansichten */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+        <span style={{ fontSize: '.85rem', color: '#8fa9b6' }}>Vertragslaufzeit:</span>
+        {laufzeitOptionen().map((o) => {
+          const aktiv = laufzeit === o.monate
+          return (
+            <button key={o.monate} type="button" onClick={() => setLaufzeit(o.monate)}
+              style={{ padding: '8px 15px', borderRadius: '999px', border: `1px solid ${aktiv ? GOLD : 'rgba(122,163,179,0.3)'}`, background: aktiv ? 'rgba(201,168,76,0.14)' : 'transparent', color: aktiv ? GOLD : '#8fa9b6', fontFamily: 'inherit', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer' }}>
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+
       {!multi && (
       <div style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.22)', borderRadius: '18px', padding: '26px' }}>
 
@@ -140,12 +160,22 @@ export default function AngebotRechner() {
         {/* Gesamt */}
         <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '14px', padding: '20px 22px', marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div>
-            <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis</p>
+            <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis · {laufzeit} Monate</p>
             <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>zuzüglich einmalig im 1. Monat: Einrichtung {setupText(ma)}</p>
+            {mp.rabattBetrag > 0 && (
+              <p style={{ margin: '6px 0 0', fontSize: '.85rem', color: GOLD }}>
+                Sie sparen {fmt(mp.rabattBetrag)} € pro Monat — {fmt(Math.round(mp.rabattBetrag * laufzeit))} € über die Laufzeit.
+              </p>
+            )}
           </div>
-          <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
-            {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
-          </p>
+          <div style={{ textAlign: 'right' }}>
+            {mp.rabattBetrag > 0 && (
+              <p style={{ margin: '0 0 2px', fontSize: '.9rem', color: '#8fa9b6', textDecoration: 'line-through' }}>{fmt(mp.nettoVorRabatt)} €</p>
+            )}
+            <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
+              {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
+            </p>
+          </div>
         </div>
       </div>
       )}
@@ -178,13 +208,15 @@ export default function AngebotRechner() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '22px' }}>
           <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.28)', borderRadius: '14px', padding: '18px' }}>
             <p style={{ margin: 0, fontSize: '.78rem', color: GOLD, textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>Je Standort · autonom</p>
-            <p style={{ margin: '10px 0 0', color: '#EAF1F6', fontWeight: 700, fontSize: '1.35rem' }}>{euro(ms.grundgebuehrGesamt)}<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
+            <p style={{ margin: '10px 0 0', color: '#EAF1F6', fontWeight: 700, fontSize: '1.35rem' }}>{euro(msMonat)}<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
+            {rabattProzent > 0 && <p style={{ margin: '2px 0 0', fontSize: '.78rem', color: GOLD }}>statt {euro(ms.grundgebuehrGesamt)} — {rabattProzent} % Laufzeit-Rabatt</p>}
             <p style={{ margin: '4px 0 0', fontSize: '.8rem', color: '#8fa9b6' }}>+ einmalig Einrichtung {euro(ms.onboardingGesamt)}</p>
             <p style={{ margin: '8px 0 0', fontSize: '.72rem', color: '#7f97a4', lineHeight: 1.4 }}>Größter Standort 100 %, jeder weitere 40 % seiner eigenen Größe.</p>
           </div>
           <div style={{ background: 'rgba(122,163,179,0.06)', border: '1px solid rgba(122,163,179,0.22)', borderRadius: '14px', padding: '18px' }}>
             <p style={{ margin: 0, fontSize: '.78rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>Firmenweit · ein Vertrag</p>
-            <p style={{ margin: '10px 0 0', color: '#EAF1F6', fontWeight: 700, fontSize: '1.35rem' }}>{euro(fw.grundgebuehr)}<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
+            <p style={{ margin: '10px 0 0', color: '#EAF1F6', fontWeight: 700, fontSize: '1.35rem' }}>{euro(fwMonat)}<span style={{ fontSize: '.8rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span></p>
+            {rabattProzent > 0 && <p style={{ margin: '2px 0 0', fontSize: '.78rem', color: TEAL }}>statt {euro(fw.grundgebuehr)} — {rabattProzent} % Laufzeit-Rabatt</p>}
             <p style={{ margin: '4px 0 0', fontSize: '.8rem', color: '#8fa9b6' }}>+ einmalig Einrichtung {euro(fw.onboarding)}</p>
             <p style={{ margin: '8px 0 0', fontSize: '.72rem', color: '#7f97a4', lineHeight: 1.4 }}>{fmt(fw.gesamtMitarbeiter)} Mitarbeiter zusammen → Stufe {fw.stufe.name}.</p>
           </div>
@@ -202,7 +234,7 @@ export default function AngebotRechner() {
       </div>
 
       <p style={{ fontSize: '.78rem', color: '#7f97a4', textAlign: 'center', margin: '16px 0 0', lineHeight: 1.5 }}>
-        Unverbindliche Beispielrechnung · Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt nach Betriebsgröße · Laufzeit-Rabatte (24/36 Mon.) noch nicht eingerechnet.
+        Unverbindliche Beispielrechnung · Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt nach Betriebsgröße · Laufzeit-Rabatt ist eingerechnet — die einmalige Einrichtung wird nie rabattiert.
       </p>
     </div>
   )

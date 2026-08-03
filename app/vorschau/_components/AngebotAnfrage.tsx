@@ -7,12 +7,12 @@
 // darunter seine Daten ein. Config + Preis wandern automatisch in die Anfrage.
 // Kontaktwunsch (Anruf/E-Mail, Pflicht), eigener Termin-Picker, Datenschutz+AGB.
 // Rollen (Voll/Standard/Self) sind branchengerecht setzbar (optional, mit Fallback).
-// Sendet an /api/website-anfrage → n8n → eigenes CRM + Bestätigungsmail.
+// Sendet an /api/website-anfrage → eigenes CRM (website_anfragen) + Bestätigungsmail.
 // ============================================================================
 
 import { useState } from 'react'
 import TerminPicker from './TerminPicker'
-import { stufeFuerMitarbeiter, sitzPreis } from '@/lib/tarif'
+import { stufeFuerMitarbeiter, sitzPreis, monatspreis, laufzeitOptionen, LAUFZEIT_STANDARD } from '@/lib/tarif'
 
 const NAVY = '#0A1628'
 const GOLD = '#c9a84c'
@@ -50,6 +50,7 @@ const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', 
 export default function AngebotAnfrage({ branche, rollen }: { branche?: string; rollen?: { voll: string; std: string; self: string } }) {
   const R = rollen ?? DEFAULT_ROLLEN
   // Konfigurator
+  const [laufzeit, setLaufzeit] = useState<number>(LAUFZEIT_STANDARD)
   const [ma, setMa] = useState(12)
   const [voll, setVoll] = useState(2)
   const [std, setStd] = useState(4)
@@ -66,10 +67,9 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
   const vp = sitzPreis('voll', g.key)
   const sp = sitzPreis('standard', g.key)
   const sfp = sitzPreis('self_service', g.key)
-  const vollSum = solo ? 0 : voll * vp
-  const stdSum = solo ? 0 : std * sp
-  const selfSum = solo ? 0 : self * sfp
-  const total = solo ? g.fee : g.fee + vollSum + stdSum + selfSum
+  // Preis inklusive Laufzeit-Rabatt — komplett aus lib/tarif.
+  const mp = monatspreis(g.key, solo ? {} : { voll, standard: std, self_service: self }, laufzeit)
+  const total = mp.netto
 
   function fillMix() {
     const v = Math.max(1, Math.round(ma * 0.16))
@@ -78,9 +78,13 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
     setVoll(v); setStd(s); setSelf(se)
   }
 
+  function laufzeitText() {
+    return mp.rabattProzent > 0 ? `${laufzeit} Monate (−${mp.rabattProzent} % Laufzeit-Rabatt)` : `${laufzeit} Monate`
+  }
   function angebotText() {
-    if (solo) return `SOLO (Einzelunternehmer) · 499 €/Monat + Einrichtung ${setupFee(ma)}`
-    return `${ma} Mitarbeiter · ${voll} Voll / ${std} Standard / ${self} Self-Service · ${fmt(total)} €/Monat + Einrichtung ${setupFee(ma)}`
+    const lz = ` · Laufzeit ${laufzeitText()}`
+    if (solo) return `SOLO (Einzelunternehmer) · ${fmt(total)} €/Monat${lz} + Einrichtung ${setupFee(ma)}`
+    return `${ma} Mitarbeiter · ${voll} Voll / ${std} Standard / ${self} Self-Service · ${fmt(total)} €/Monat${lz} + Einrichtung ${setupFee(ma)}`
   }
 
   async function submit(e: React.FormEvent) {
@@ -100,7 +104,7 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
           branche: branche ?? null,
           mitarbeiter: String(ma),
           angebot: angebotText(),
-          preis: `${fmt(total)} €/Monat`,
+          preis: `${fmt(total)} €/Monat · Laufzeit ${laufzeitText()}`,
         }),
       })
       if (res.status === 409) {
@@ -206,18 +210,42 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
             </>
           )}
 
+          {/* Laufzeit */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '20px' }}>
+            <span style={{ fontSize: '.85rem', color: '#8fa9b6' }}>Vertragslaufzeit:</span>
+            {laufzeitOptionen().map((o) => {
+              const aktiv = laufzeit === o.monate
+              return (
+                <button key={o.monate} type="button" onClick={() => setLaufzeit(o.monate)}
+                  style={{ padding: '8px 15px', borderRadius: '999px', border: `1px solid ${aktiv ? GOLD : 'rgba(122,163,179,0.3)'}`, background: aktiv ? 'rgba(201,168,76,0.14)' : 'transparent', color: aktiv ? GOLD : '#8fa9b6', fontFamily: 'inherit', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                  {o.label}
+                </button>
+              )
+            })}
+          </div>
+
           {/* Gesamt */}
-          <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '14px', padding: '20px 22px', marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '14px', padding: '20px 22px', marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis</p>
+              <p style={{ margin: 0, fontSize: '.8rem', color: TEAL, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ihr Preis · {laufzeit} Monate</p>
               <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#8fa9b6' }}>+ einmalige Einrichtung: {setupFee(ma)}</p>
+              {mp.rabattBetrag > 0 && (
+                <p style={{ margin: '6px 0 0', fontSize: '.85rem', color: GOLD }}>
+                  Sie sparen {fmt(mp.rabattBetrag)} € pro Monat — {fmt(Math.round(mp.rabattBetrag * laufzeit))} € über die Laufzeit.
+                </p>
+              )}
             </div>
-            <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
-              {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
-            </p>
+            <div style={{ textAlign: 'right' }}>
+              {mp.rabattBetrag > 0 && (
+                <p style={{ margin: '0 0 2px', fontSize: '.9rem', color: '#8fa9b6', textDecoration: 'line-through' }}>{fmt(mp.nettoVorRabatt)} €</p>
+              )}
+              <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(1.8rem, 5vw, 2.6rem)', color: GOLD, margin: 0, lineHeight: 1 }}>
+                {fmt(total)} €<span style={{ fontSize: '.9rem', color: '#8fa9b6', fontWeight: 400 }}> / Monat</span>
+              </p>
+            </div>
           </div>
           <p style={{ fontSize: '.76rem', color: '#7f97a4', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>
-            Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt · Laufzeit-Rabatte (24/36 Mon.) noch nicht eingerechnet.
+            Preise netto, zzgl. 19 % MwSt. · Sitzpreise gestaffelt · Laufzeit-Rabatt ist eingerechnet — die einmalige Einrichtung wird nie rabattiert.
           </p>
 
           {/* --- ANFRAGE --- */}
