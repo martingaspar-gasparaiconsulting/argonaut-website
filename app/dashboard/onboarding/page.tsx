@@ -15,6 +15,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
 import { STUFEN, stufeFuer, naechsteStufe, bisNaechsteStufe } from '@/lib/onboardingStufen';
 import { bereicheAus } from '@/lib/onboardingBereiche';
+import KiGuide from '../_components/KiGuide';
+import GefuehrteTour from '../_components/GefuehrteTour';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -90,6 +92,7 @@ export default function OnboardingPage() {
   const [email, setEmail] = useState('');
   const [aufstieg, setAufstieg] = useState(false);
   const [zertBusy, setZertBusy] = useState(false);
+  const [tourOffen, setTourOffen] = useState(false);
 
   const laden_ = useCallback(async (id: string) => {
     const { data: pRoh } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -185,6 +188,14 @@ export default function OnboardingPage() {
     const t = setTimeout(() => setAufstieg(false), 9000);
     return () => clearTimeout(t);
   }, [laden, uid, prozent, anzahlSchritte]);
+
+  // --- Was der Begleiter sagt ----------------------------------------------
+  // Der Guide nennt die nächsten drei OFFENEN Schritte und verlinkt den ersten.
+  // Damit steht auf der Seite nicht nur eine Häkchenliste, sondern jemand, der
+  // dem Kunden sagt, wo er steht und was er als Nächstes tun kann.
+  const offeneSchritte = alle.filter((x) => !erledigt(x) && !x.optional);
+  const naechsterSchritt = offeneSchritte[0] ?? null;
+  const guideStimmung: 'gut' | 'neutral' | 'achtung' = prozent >= 100 ? 'gut' : prozent === 0 ? 'achtung' : 'neutral';
 
   // --- Daten fürs Zertifikat ------------------------------------------------
   const personName =
@@ -292,6 +303,26 @@ export default function OnboardingPage() {
       `}</style>
       <h1 style={styles.h1}>🚀 Erste Schritte mit ARGONAUT</h1>
       <p style={styles.sub}>Deine geführte Startstrecke. Vieles erkennt ARGONAUT automatisch — den Rest hakst du selbst ab.</p>
+
+      {!laden && (
+        <div style={{ marginTop: 18 }}>
+          <KiGuide
+            begruessung={prozent >= 100 ? 'Geschafft — du führst deinen Betrieb mit ARGONAUT.' : `Dein Rang: ${stufe.rang}`}
+            nachricht={prozent >= 100 ? stufe.spruch : `${stufe.spruch} ${stufe.ausblick}`}
+            schritte={offeneSchritte.slice(0, 3).map((x) => x.titel)}
+            aktionText={naechsterSchritt ? `${naechsterSchritt.titel} öffnen` : undefined}
+            aktionHref={naechsterSchritt ? naechsterSchritt.link : undefined}
+            stimmung={guideStimmung}
+            fortschritt={prozent}
+            name="ARGONAUT"
+          />
+          <button onClick={() => setTourOffen(true)} style={styles.tourKnopf}>
+            👉 Zeig mir das System — geführte Tour starten
+          </button>
+        </div>
+      )}
+
+      <GefuehrteTour offen={tourOffen} onFertig={() => setTourOffen(false)} />
 
       <div style={styles.anleitung}>
         <b>Zwei Wege — such dir aus, wie du starten willst:</b><br />
@@ -454,6 +485,7 @@ const styles: Record<string, CSSProperties> = {
   balken: { height: 12, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden' },
   balkenFill: { height: '100%', background: `linear-gradient(90deg, ${C.gold}, ${C.green})`, borderRadius: 999, transition: 'width .3s' },
   fortText: { color: C.textDim, fontSize: 13, marginTop: 7 },
+  tourKnopf: { marginTop: 10, width: '100%', background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 18px', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   stufenLeiste: { display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 11 },
   stufenChip: { display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid', borderRadius: 999, padding: '4px 11px 4px 8px', fontSize: 12.5, whiteSpace: 'nowrap', transition: 'all .3s' },
   stufenDot: { width: 9, height: 9, borderRadius: '50%', border: '1.5px solid', flexShrink: 0 },
