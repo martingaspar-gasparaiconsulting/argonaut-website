@@ -38,7 +38,20 @@ export const SCHWELLEN = {
      */
     tagProSitz: { voll: 150, standard: 60, self_service: 15 } as Record<string, number>,
 
-    /** Ab diesem Anteil der Tagesgrenze geht eine Warnmail an den Betreiber. */
+    /** Ab diesem Anteil des Firmen-Topfs geht eine Warnmail an den Betreiber. */
     warnAbProzent: 70,
+
+    /**
+     * STILLER PUFFER. Der Firmen-Topf (Summe der Sitz-Kontingente) ist die
+     * Groesse, die wir dem Kunden gegenueber vertreten. Die HARTE Sperre liegt
+     * beim Doppelten: dazwischen laeuft alles normal weiter, der Kunde merkt
+     * nichts — nur der Betreiber bekommt den Bericht.
+     *
+     * Warum ein Topf statt einer Grenze je Nutzer: Die Nutzung ist in jedem
+     * Betrieb ungleich verteilt. Zwei, drei Poweruser machen den Grossteil,
+     * viele Kollegen fassen die KI kaum an. Eine Einzelgrenze wuerde genau die
+     * produktivsten Leute ausbremsen, waehrend daneben Kontingente verfallen.
+     */
+    pufferFaktor: 2,
   },
 } as const;

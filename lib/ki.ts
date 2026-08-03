@@ -105,24 +105,89 @@ async function protokolliere(userId: string | null, route: string, data: any) {
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
+export type Betrieb = {
+  /** Chef-/Eigentuemer-ID = der Mandant. */
+  tenantId: string
+  /** Sitz-Typ des aufrufenden Nutzers. */
+  typ: string
+  /** Alle Login-IDs des Betriebs (Chef + Mitarbeiter mit Zugang). */
+  userIds: string[]
+  /** Summe der Sitz-Kontingente = Firmen-Topf je Tag. */
+  pool: number
+  /** Wie viele Sitze welchen Typs — fuer den Bericht. */
+  sitze: Record<string, number>
+}
+
 /**
- * Bezahlter Sitz-Typ eines Nutzers. Ein Mitarbeiter traegt seinen Typ in
- * mitarbeiter.nutzer_typ; wer dort nicht steht, ist der Chef/Eigentuemer selbst
- * und gilt als Voll-Nutzer. Im Zweifel IMMER 'voll' — lieber grosszuegig als
+ * Ermittelt den Betrieb eines Nutzers samt Firmen-Topf.
+ *
+ * Der Topf ist die Summe der Tages-Kontingente ALLER Sitze des Betriebs
+ * (Chef zaehlt als Voll-Nutzer). Wer viel arbeitet, schoepft daraus; wer die KI
+ * nicht nutzt, gibt sein Kontingent automatisch an die Kollegen weiter.
+ *
+ * Im Zweifel wird grosszuegig gerechnet — lieber ein Kontingent zu viel als
  * einen zahlenden Kunden faelschlich ausbremsen.
  */
-async function sitzTypVon(admin: AdminClient, userId: string): Promise<string> {
+async function betriebVon(admin: AdminClient, userId: string): Promise<Betrieb> {
+  const alleinTyp = SCHWELLEN.ki.tagProSitz.voll
+  const fallback: Betrieb = {
+    tenantId: userId, typ: 'voll', userIds: [userId],
+    pool: alleinTyp, sitze: { voll: 1 },
+  }
   try {
-    const { data } = await admin
+    // Steht der Nutzer in mitarbeiter? Dann ist owner_user_id sein Chef.
+    const { data: ich } = await admin
       .from('mitarbeiter')
-      .select('nutzer_typ')
+      .select('owner_user_id, nutzer_typ')
       .eq('auth_user_id', userId)
       .maybeSingle()
-    const typ = (data as { nutzer_typ?: string } | null)?.nutzer_typ
-    return typ && SCHWELLEN.ki.tagProSitz[typ] ? typ : 'voll'
+    const zeile = ich as { owner_user_id?: string; nutzer_typ?: string } | null
+    const tenantId = zeile?.owner_user_id || userId
+    const typRoh = zeile?.nutzer_typ
+    const typ = typRoh && SCHWELLEN.ki.tagProSitz[typRoh] ? typRoh : 'voll'
+
+    // Das ganze Team des Betriebs.
+    const { data: team } = await admin
+      .from('mitarbeiter')
+      .select('auth_user_id, nutzer_typ')
+      .eq('owner_user_id', tenantId)
+    const zeilen = (team as Array<{ auth_user_id?: string | null; nutzer_typ?: string | null }> | null) || []
+
+    // Chef zaehlt immer als Voll-Sitz.
+    const sitze: Record<string, number> = { voll: 1, standard: 0, self_service: 0 }
+    let pool = SCHWELLEN.ki.tagProSitz.voll
+    for (const m of zeilen) {
+      const t = m.nutzer_typ && SCHWELLEN.ki.tagProSitz[m.nutzer_typ] ? m.nutzer_typ : 'standard'
+      sitze[t] = (sitze[t] || 0) + 1
+      pool += SCHWELLEN.ki.tagProSitz[t]
+    }
+
+    const userIds = [tenantId, ...zeilen.map((m) => m.auth_user_id).filter(Boolean) as string[]]
+    return { tenantId, typ, userIds: [...new Set(userIds)], pool, sitze }
   } catch {
-    return 'voll'
+    return fallback
   }
+}
+
+/** Aufrufe der letzten 24 h je Nutzer im Betrieb — Basis fuer Topf und Bericht. */
+async function nutzungImBetrieb(
+  admin: AdminClient,
+  userIds: string[],
+): Promise<{ gesamt: number; jeNutzer: Record<string, number> }> {
+  const seitTag = new Date(Date.now() - 86_400_000).toISOString()
+  const { data } = await admin
+    .from('ki_nutzung')
+    .select('user_id')
+    .in('user_id', userIds)
+    .gte('created_at', seitTag)
+    .neq('route', WARN_MARKER)
+  const zeilen = (data as Array<{ user_id: string | null }> | null) || []
+  const jeNutzer: Record<string, number> = {}
+  for (const z of zeilen) {
+    if (!z.user_id) continue
+    jeNutzer[z.user_id] = (jeNutzer[z.user_id] || 0) + 1
+  }
+  return { gesamt: zeilen.length, jeNutzer }
 }
 
 /** Wurde fuer diesen Nutzer heute schon gewarnt? (Marker-Zeile in ki_nutzung) */
@@ -178,13 +243,13 @@ async function warneBetreiber(
   }
 }
 
-/** Tages-KI-Kosten eines Nutzers in USD (rollende 24 h). */
-async function tagesKosten(admin: AdminClient, userId: string): Promise<number> {
+/** Tages-KI-Kosten eines ganzen BETRIEBS in USD (rollende 24 h). */
+async function tagesKosten(admin: AdminClient, userIds: string[]): Promise<number> {
   const seitTag = new Date(Date.now() - 86_400_000).toISOString()
   const { data } = await admin
     .from('ki_nutzung')
     .select('kosten_usd')
-    .eq('user_id', userId)
+    .in('user_id', userIds)
     .gte('created_at', seitTag)
   const zeilen = (data as Array<{ kosten_usd: number | null }> | null) || []
   return zeilen.reduce((a, z) => a + (Number(z.kosten_usd) || 0), 0)
@@ -269,50 +334,56 @@ export async function kiFetch(route: string, options: RequestInit): Promise<Resp
     }
   }
 
-  // --- Tages-Obergrenze je SITZ-TYP (Kosten-Schutz, AGB § 9.3) --------------
-  // Greift NUR fuer echte (Nicht-Demo-)Konten; Demo-Konten haben oben bereits
-  // ihre eigene, strengere Deckelung. Gezaehlt wird rollend ueber 24 Stunden.
-  // Best effort — schlaegt die Pruefung fehl, laeuft der Aufruf normal weiter.
+  // --- FIRMEN-TOPF statt Einzelgrenze (Kosten-Schutz, AGB § 9.3) ------------
+  // Jeder Sitz zahlt sein Tages-Kontingent in einen gemeinsamen Topf ein. Wer
+  // viel arbeitet, schoepft daraus; ungenutzte Kontingente kommen den Kollegen
+  // zugute. Gesperrt wird erst beim DOPPELTEN Topf (stiller Puffer) — dazwischen
+  // laeuft alles normal weiter und nur der Betreiber bekommt den Bericht.
+  // Greift nur fuer echte (Nicht-Demo-)Konten. Best effort.
   if (userId && !istDemo) {
     try {
       const admin = createAdminClient()
-      const typ = await sitzTypVon(admin, userId)
-      const grenze = SCHWELLEN.ki.tagProSitz[typ] ?? SCHWELLEN.ki.tagProSitz.voll
-      const seitTag = new Date(Date.now() - 86_400_000).toISOString()
-      const { count } = await admin
-        .from('ki_nutzung')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', seitTag)
-        .neq('route', WARN_MARKER)
-      const genutzt = count || 0
+      const betrieb = await betriebVon(admin, userId)
+      const { gesamt, jeNutzer } = await nutzungImBetrieb(admin, betrieb.userIds)
+      const harteGrenze = betrieb.pool * SCHWELLEN.ki.pufferFaktor
 
-      if (genutzt >= grenze) {
-        await warneBetreiber(admin, userId, 'ARGONAUT: KI-Tagesgrenze erreicht', [
-          `Sitz-Typ: <b>${typ}</b>`,
-          `Tagesgrenze: <b>${grenze}</b> Aufrufe`,
-          `Bereits genutzt: <b>${genutzt}</b> — weitere Aufrufe sind bis morgen gesperrt.`,
+      // Wer im Betrieb wie viel nutzt — fuer den Bericht, absteigend sortiert.
+      const rang = Object.entries(jeNutzer).sort((a, b) => b[1] - a[1])
+      const spitze = rang[0]
+      const verteilung = [
+        `Firmen-Topf: <b>${betrieb.pool}</b> Aufrufe/Tag (${betrieb.sitze.voll || 0} Voll · ${betrieb.sitze.standard || 0} Standard · ${betrieb.sitze.self_service || 0} Self-Service)`,
+        `Heute genutzt: <b>${gesamt}</b> (${Math.round((gesamt / Math.max(1, betrieb.pool)) * 100)} % des Topfs)`,
+        spitze
+          ? `Spitzenreiter: <code>${spitze[0]}</code> mit <b>${spitze[1]}</b> Aufrufen — ${Math.round((spitze[1] / Math.max(1, gesamt)) * 100)} % des ganzen Betriebs`
+          : 'Noch keine Nutzung erfasst.',
+        `Aktive Nutzer: <b>${rang.length}</b> von ${betrieb.userIds.length} Zugaengen — ${betrieb.userIds.length - rang.length} ungenutzt`,
+      ]
+
+      if (gesamt >= harteGrenze) {
+        await warneBetreiber(admin, betrieb.tenantId, 'ARGONAUT: KI-Topf inkl. Puffer ausgeschoepft — gesperrt', [
+          ...verteilung,
+          `<b>Harte Grenze ${harteGrenze} erreicht — weitere Aufrufe sind bis morgen gesperrt.</b>`,
         ])
         return new Response(
           JSON.stringify({
             error:
-              'Ihr KI-Kontingent fuer heute ist aufgebraucht. In 24 Stunden geht es automatisch weiter — oder melden Sie sich bei uns, dann heben wir das Limit fuer Sie an.',
+              'Das KI-Kontingent Ihres Betriebs ist fuer heute aufgebraucht. In 24 Stunden geht es automatisch weiter — oder melden Sie sich bei uns, dann heben wir das Limit an.',
           }),
           { status: 429, headers: { 'content-type': 'application/json' } },
         )
       }
 
-      // Frueh warnen, damit man den Kunden ansprechen kann, BEVOR er ansteht.
-      const warnAb = Math.round((grenze * SCHWELLEN.ki.warnAbProzent) / 100)
-      if (genutzt >= warnAb) {
-        await warneBetreiber(admin, userId, 'ARGONAUT: KI-Nutzung naehert sich der Tagesgrenze', [
-          `Sitz-Typ: <b>${typ}</b>`,
-          `Tagesgrenze: <b>${grenze}</b> Aufrufe`,
-          `Bereits genutzt: <b>${genutzt}</b> (${Math.round((genutzt / grenze) * 100)} %)`,
+      // Topf ueberschritten, Puffer laeuft: Kunde merkt NICHTS, Betreiber schon.
+      if (gesamt >= betrieb.pool) {
+        await warneBetreiber(admin, betrieb.tenantId, 'ARGONAUT: KI-Topf ueberschritten — stiller Puffer laeuft', [
+          ...verteilung,
+          `Der Betrieb laeuft jetzt im Puffer (bis ${harteGrenze}). Fuer den Kunden aendert sich nichts.`,
         ])
+      } else if (gesamt >= Math.round((betrieb.pool * SCHWELLEN.ki.warnAbProzent) / 100)) {
+        await warneBetreiber(admin, betrieb.tenantId, 'ARGONAUT: KI-Nutzung naehert sich dem Topf', verteilung)
       }
     } catch (e) {
-      console.error('[tagesgrenze] Pruefung fehlgeschlagen (fahre fort):', e)
+      console.error('[ki-topf] Pruefung fehlgeschlagen (fahre fort):', e)
     }
   }
 
@@ -331,10 +402,11 @@ export async function kiFetch(route: string, options: RequestInit): Promise<Resp
       if (userId && !istDemo) {
         try {
           const admin = createAdminClient()
-          const kosten = await tagesKosten(admin, userId)
+          const betrieb = await betriebVon(admin, userId)
+          const kosten = await tagesKosten(admin, betrieb.userIds)
           if (kosten > SCHWELLEN.ki.kostenAlarmTagUsd) {
-            await warneBetreiber(admin, userId, 'ARGONAUT: KI-Tageskosten ueber der Schwelle', [
-              `Tageskosten: <b>${kosten.toFixed(2)} USD</b>`,
+            await warneBetreiber(admin, betrieb.tenantId, 'ARGONAUT: KI-Tageskosten ueber der Schwelle', [
+              `Tageskosten des Betriebs: <b>${kosten.toFixed(2)} USD</b>`,
               `Schwelle: ${SCHWELLEN.ki.kostenAlarmTagUsd.toFixed(2)} USD`,
               `Zuletzt genutzt: ${route}`,
             ])
