@@ -37,11 +37,18 @@ export interface KiKlartextProps {
   onErgebnis?: (klartext: string, aktion: string) => void;
   /** Zusätzlicher Style am äußeren Container. */
   style?: React.CSSProperties;
+  /**
+   * Nur wenn true feuert die KI beim Öffnen der Seite von selbst.
+   * Standard ist false: Der Nutzer klickt bewusst — manche wollen die Einschätzung,
+   * manche nicht. Das spart obendrein KI-Kosten bei jedem Seitenaufruf.
+   */
+  autoStart?: boolean;
 }
 
 export default function KiKlartext({
   kontext,
   modul,
+  autoStart = false,
   aktionHref,
   staticKlartext,
   staticAktion,
@@ -64,7 +71,11 @@ export default function KiKlartext({
   const aktionBtnBg = dunkel ? GOLD : NAVY;
   const aktionBtnText = dunkel ? NAVY : GOLD;
 
-  const [laden, setLaden] = useState<boolean>(!statisch);
+  // Ohne autoStart passiert beim Laden der Seite GAR NICHTS — erst der Klick
+  // startet die Einschätzung. Vorher feuerte diese Komponente bei jedem Öffnen
+  // eines Reiters ungefragt eine KI-Anfrage.
+  const [gestartet, setGestartet] = useState<boolean>(statisch || autoStart);
+  const [laden, setLaden] = useState<boolean>(!statisch && autoStart);
   const [fehler, setFehler] = useState<boolean>(false);
   const [klartext, setKlartext] = useState<string>(statisch ? (staticKlartext as string) : "");
   const [aktion, setAktion] = useState<string>(statisch ? (staticAktion || "") : "");
@@ -104,11 +115,29 @@ export default function KiKlartext({
   }
 
   useEffect(() => {
-    if (statisch) return;
+    if (statisch || !gestartet) return;
     laden_();
     return () => abbruch.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kontext, modul, statisch]);
+  }, [kontext, modul, statisch, gestartet]);
+
+  // Noch nicht gestartet: nur der Knopf. Kein Text, keine Anfrage, keine Kosten.
+  if (!gestartet) {
+    return (
+      <button
+        onClick={() => { setGestartet(true); setLaden(true); }}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 9,
+          background: "transparent", color: dunkel ? CYAN : NAVY,
+          border: `1px solid ${akzent}66`, borderRadius: 12,
+          padding: "11px 16px", fontSize: 14, fontWeight: 700,
+          cursor: "pointer", fontFamily: "inherit", ...style,
+        }}
+      >
+        👁 Was heißt das gerade für mich?
+      </button>
+    );
+  }
 
   return (
     <div

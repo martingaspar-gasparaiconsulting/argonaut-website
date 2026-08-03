@@ -61,7 +61,7 @@ export default function Abspieler({
 
   // Der Weg nach dem Bildschirm: die echte Branchenseite mit Preisrechner und
   // Terminbuchung. Die Vorführung weckt Interesse — dort wird daraus eine Anfrage.
-  const branchenSeite = webSlug ? `/vorschau/branchen/${webSlug}` : '/vorschau';
+  const branchenSeite = webSlug ? `/branchen/${webSlug}` : '/branchen';
 
   const [bild, setBild] = useState(0);
   const [laeuft, setLaeuft] = useState(true);

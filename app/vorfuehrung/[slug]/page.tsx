@@ -34,8 +34,8 @@ export default async function VorfuehrBranche({ params }: { params: Promise<{ sl
   // eingeben, den Preis rechnen lassen und direkt einen Termin buchen.
   // Die Vorführung weckt das Interesse — die Branchenseite nimmt die Anfrage auf.
   const ziel = daten.webSlug
-    ? `https://argonaut-os.com/vorschau/branchen/${daten.webSlug}`
-    : 'https://argonaut-os.com/vorschau';
+    ? `https://argonaut-os.com/branchen/${daten.webSlug}`
+    : 'https://argonaut-os.com/branchen';
   let qr: boolean[][] = [];
   try {
     qr = qrMatrix(ziel);

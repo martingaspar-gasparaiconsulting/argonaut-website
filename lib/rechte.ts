@@ -373,8 +373,13 @@ export const MODULE_NACH_GRUPPE: { key: string; label: string; items: { key: str
     .map((g) => ({
       key: g.key,
       label: g.label || '🏠 Start',
+      // Ein Schluessel = EIN Schalter. `rechnungen` steht z. B. fuenfmal im
+      // Menue (Rechnungen, E-Rechnung, Beleg-Inbox, SEPA, Wiederkehr) — es ist
+      // aber ein einziges Recht. Fuenf Haekchen, die gemeinsam umspringen,
+      // verwirren nur; deshalb bleibt der erste, sprechendste Name stehen.
       items: NAV_LINKS
         .filter((l) => l.modul && (l.gruppe ?? 'verwaltung') === g.key)
+        .filter((l, i, arr) => arr.findIndex((x) => x.modul === l.modul) === i)
         .map((l) => ({ key: l.modul as string, label: l.label })),
     }))
     .filter((g) => g.items.length > 0)
