@@ -809,9 +809,13 @@ export default function RechtePage() {
                 inset: 0,
                 background: "rgba(4,10,20,0.72)",
                 display: "flex",
-                alignItems: "center",
+                // Oben ausrichten statt mittig: Ein Dialog, der hoeher ist als
+                // der Bildschirm, wuerde sonst oben UND unten abgeschnitten —
+                // dann ist der Bestaetigen-Knopf nicht mehr erreichbar.
+                alignItems: "flex-start",
                 justifyContent: "center",
                 padding: 20,
+                overflowY: "auto",
                 zIndex: 1000,
               }}
             >
@@ -822,8 +826,11 @@ export default function RechtePage() {
                   border: `1px solid ${C.warn}66`,
                   borderRadius: 16,
                   padding: "26px 26px 22px",
-                  maxWidth: 480,
+                  maxWidth: 520,
                   width: "100%",
+                  margin: "auto",
+                  maxHeight: "calc(100vh - 40px)",
+                  overflowY: "auto",
                   boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
                 }}
               >
@@ -927,19 +934,24 @@ export default function RechtePage() {
 
           // art === "speichern"
           const aktM = rechte[modal.mid] || { rolle: null, module: [], schreibModule: [] };
-          const sensibleListe = aktM.module.filter((k) => istSensibel(k)).map((k) => LABEL_MAP[k] || k);
+          // Nur was auch wirklich buchbar ist — sonst zaehlt der Dialog
+          // Karteileichen aus frueheren Zuweisungen mit.
+          const echteModule = aktM.module.filter((k) => erlaubteKeys.has(k));
+          // [...new Set()] entfernt Dubletten: Zwei Modul-Schluessel koennen
+          // dieselbe Beschriftung tragen, und dann stand sie zweimal im Dialog.
+          const sensibleListe = [...new Set(echteModule.filter((k) => istSensibel(k)).map((k) => LABEL_MAP[k] || k))];
           // PUNKT 8: sensible Module MIT Aenderungsrecht gesondert ausweisen.
-          const sensibelAendern = aktM.module
+          const sensibelAendern = [...new Set(echteModule
             .filter((k) => istSensibel(k) && aktM.schreibModule.includes(k))
-            .map((k) => LABEL_MAP[k] || k);
+            .map((k) => LABEL_MAP[k] || k))];
           return overlay(
             <>
               <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(19px, 1.69vw, 27px)', fontWeight: 800, marginBottom: 12 }}>
                 💾 Rechte speichern — Zusammenfassung
               </div>
               <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: "0 0 12px" }}>
-                <strong>{nm}</strong> erhält <strong>{aktM.module.length}</strong>{" "}
-                {aktM.module.length === 1 ? "Modul" : "Module"} — darunter{" "}
+                <strong>{nm}</strong> erhält <strong>{echteModule.length}</strong>{" "}
+                {echteModule.length === 1 ? "Modul" : "Module"} — darunter{" "}
                 <strong style={{ color: C.warn }}>{sensibleListe.length}</strong> sensible
                 {sensibleListe.length === 1 ? "n Bereich" : " Bereiche"}:
               </p>
@@ -952,6 +964,10 @@ export default function RechtePage() {
                   background: `${C.warn}12`,
                   border: `1px solid ${C.warn}44`,
                   borderRadius: 12,
+                  // Bei vielen sensiblen Bereichen scrollt die Liste in sich,
+                  // damit die Knoepfe darunter immer sichtbar bleiben.
+                  maxHeight: "34vh",
+                  overflowY: "auto",
                 }}
               >
                 {sensibleListe.map((lab) => (
