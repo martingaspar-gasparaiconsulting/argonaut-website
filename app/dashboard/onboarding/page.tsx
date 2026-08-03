@@ -86,6 +86,7 @@ export default function OnboardingPage() {
   const [offeneTipps, setOffeneTipps] = useState<Set<string>>(new Set());
   const [weltGeladen, setWeltGeladen] = useState(false);
   const [weltAnzahl, setWeltAnzahl] = useState(0);
+  const [weltBereiche, setWeltBereiche] = useState<{ label: string; href: string; anzahl: number }[]>([]);
   const [weltBusy, setWeltBusy] = useState(false);
   const [laden, setLaden] = useState(true);
   const [profil, setProfil] = useState<Record<string, unknown> | null>(null);
@@ -137,6 +138,7 @@ export default function OnboardingPage() {
       const j = await r.json();
       setWeltGeladen(!!j?.geladen);
       setWeltAnzahl(Number(j?.anzahl) || 0);
+      setWeltBereiche(Array.isArray(j?.bereiche) ? j.bereiche : []);
     } catch { /* egal */ }
   }, []);
 
@@ -346,15 +348,29 @@ export default function OnboardingPage() {
               <div style={{ fontWeight: 700 }}>Übungswelt · Beispieldaten zum Ausprobieren</div>
               <div style={{ color: C.textDim, fontSize: 13, lineHeight: 1.5 }}>
                 {weltGeladen
-                  ? `Deine Übungswelt ist geladen (${weltAnzahl} Beispiel-Datensätze). Probier alles gefahrlos aus — und entferne sie mit einem Klick, wenn du mit deinen echten Daten startest.`
+                  ? `Deine Übungswelt ist geladen: ${weltAnzahl} Beispiel-Datensätze in ${weltBereiche.length} Bereichen. Klick dich unten direkt hinein — und entferne alles mit einem Klick, wenn du mit deinen echten Daten startest.`
                   : 'Lade dir eine Übungswelt mit branchentypischen Beispieldaten und probiere ARGONAUT völlig gefahrlos aus. Nichts davon vermischt sich mit echten Daten — ein Klick lädt alles, ein Klick entfernt es restlos.'}
               </div>
             </div>
           </div>
+          {/* Was wurde WO angelegt? Vorher stand hier nur „Im CRM ansehen" —
+              dadurch dachte jeder, die Übungswelt sei eine CRM-Sache, obwohl
+              ein Dutzend Bereiche gefüllt wird. Jetzt ist jeder anklickbar. */}
+          {weltGeladen && weltBereiche.length > 0 && (
+            <div style={styles.bereicheGitter}>
+              {weltBereiche.map((b) => (
+                <a key={b.label} href={b.href} style={styles.bereichKachel}>
+                  <span style={styles.bereichZahl}>{b.anzahl}</span>
+                  <span style={styles.bereichLabel}>{b.label}</span>
+                  <span style={styles.bereichPfeil}>›</span>
+                </a>
+              ))}
+            </div>
+          )}
+
           <div style={styles.beispielAktionen}>
             {weltGeladen ? (
               <>
-                <a href="/dashboard/crm" style={styles.beispielCta}>Im CRM ansehen ›</a>
                 <button onClick={weltEntfernen} disabled={weltBusy} style={styles.beispielEntfernen}>
                   {weltBusy ? 'Bitte warten …' : 'Übungswelt entfernen'}
                 </button>
@@ -485,6 +501,11 @@ const styles: Record<string, CSSProperties> = {
   balken: { height: 12, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden' },
   balkenFill: { height: '100%', background: `linear-gradient(90deg, ${C.gold}, ${C.green})`, borderRadius: 999, transition: 'width .3s' },
   fortText: { color: C.textDim, fontSize: 13, marginTop: 7 },
+  bereicheGitter: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 8, marginTop: 4 },
+  bereichKachel: { display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(201,168,76,0.07)', border: `1px solid ${C.border}`, borderRadius: 11, padding: '10px 13px', textDecoration: 'none', color: C.text, fontSize: 13.5 },
+  bereichZahl: { color: C.gold, fontWeight: 800, fontSize: 16, minWidth: 26, textAlign: 'right' },
+  bereichLabel: { flex: 1, minWidth: 0 },
+  bereichPfeil: { color: C.cyan, fontWeight: 800, fontSize: 17 },
   tourKnopf: { marginTop: 10, width: '100%', background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 18px', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   stufenLeiste: { display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 11 },
   stufenChip: { display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid', borderRadius: 999, padding: '4px 11px 4px 8px', fontSize: 12.5, whiteSpace: 'nowrap', transition: 'all .3s' },

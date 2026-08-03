@@ -15,7 +15,7 @@
 
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE } from "@/lib/uebungswelt";
+import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE, bereicheAusZaehlung } from "@/lib/uebungswelt";
 import { BEISPIEL_QUELLE } from "@/lib/beispielKatalog";
 import { baueAngebotKopf, baueAngebotPositionen, baueBeispielZahlungen, type KontaktRef } from "@/lib/beispielBelege";
 import { baueAssets, baueWartungAusAsset } from "@/lib/beispielModule";
@@ -33,6 +33,21 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     const uid = user.id;
 
+    /**
+     * Was liegt wo? Das Register weiss je Zeile, in welche Tabelle sie ging.
+     * Daraus bauen wir die Liste der gefuellten Bereiche — damit die Oberflaeche
+     * nicht mehr nur „Im CRM ansehen" anbietet, obwohl ein Dutzend Bereiche
+     * gefuellt wurde.
+     */
+    const bereicheLesen = async (): Promise<{ label: string; href: string; anzahl: number }[]> => {
+      const { data } = await supabase.from(REGISTER_TABELLE).select("tabelle").eq("owner_user_id", uid);
+      const zaehlung: Record<string, number> = {};
+      for (const r of ((data as Array<{ tabelle: string }> | null) || [])) {
+        zaehlung[r.tabelle] = (zaehlung[r.tabelle] || 0) + 1;
+      }
+      return bereicheAusZaehlung(zaehlung);
+    };
+
     const zaehleRegister = async (): Promise<number> => {
       const { count } = await supabase.from(REGISTER_TABELLE).select("*", { count: "exact", head: true }).eq("owner_user_id", uid);
       return count || 0;
@@ -41,7 +56,11 @@ export async function POST(req: Request) {
     // ---- STATUS ----
     if (aktion === "status") {
       const anzahl = await zaehleRegister();
-      return NextResponse.json({ geladen: anzahl > 0, anzahl });
+      return NextResponse.json({
+        geladen: anzahl > 0,
+        anzahl,
+        bereiche: anzahl > 0 ? await bereicheLesen() : [],
+      });
     }
 
     // ---- LADEN ----
@@ -134,7 +153,7 @@ export async function POST(req: Request) {
         console.error("Übungswelt: Modulgruppe Objekte/Wartung fehlgeschlagen:", e instanceof Error ? e.message : e);
       }
 
-      return NextResponse.json({ angelegt, hinweise });
+      return NextResponse.json({ angelegt, hinweise, bereiche: await bereicheLesen() });
     }
 
     // ---- ENTFERNEN ----

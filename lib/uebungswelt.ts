@@ -114,3 +114,60 @@ export function loeschReihenfolge(): string[] {
 export function registerZeilen(tabelle: string, ids: string[], ownerId: string): SeedZeile[] {
   return ids.map((id) => ({ owner_user_id: ownerId, tabelle, datensatz_id: id }));
 }
+
+// ---------------------------------------------------------------------------
+// WO LIEGT WAS? — Tabelle → lesbarer Bereich + Ziel im Dashboard.
+//
+// Bisher stand nach dem Laden genau ein Knopf da: „Im CRM ansehen". Dadurch
+// dachte jeder, die Übungswelt sei eine CRM-Sache — dabei füllt sie ein Dutzend
+// Bereiche. Diese Zuordnung macht sichtbar, was tatsächlich angelegt wurde, und
+// verlinkt jeden Bereich direkt.
+// ---------------------------------------------------------------------------
+
+export type BereichsInfo = { label: string; href: string; sammel?: string };
+
+export const BEREICH_JE_TABELLE: Record<string, BereichsInfo> = {
+  kontakte:            { label: '🤝 Kontakte im CRM',      href: '/dashboard/crm' },
+  lieferanten:         { label: '🚚 Lieferanten',          href: '/dashboard/erp' },
+  artikel:             { label: '📦 Artikel im Lager',     href: '/dashboard/erp' },
+  verleih_artikel:     { label: '🔑 Mietgegenstände',      href: '/dashboard/verleih' },
+  projekte:            { label: '📁 Projekte',             href: '/dashboard/projekte' },
+  mitglieder:          { label: '👥 Mitglieder',           href: '/dashboard/mitglieder' },
+  angebote:            { label: '📝 Angebote',             href: '/dashboard/angebote' },
+  rechnungen:          { label: '🧾 Rechnungen',           href: '/dashboard/rechnungen' },
+  zahlungen:           { label: '💶 Zahlungseingänge',     href: '/dashboard/finanzen' },
+  crm_deal:            { label: '📊 Chancen in der Pipeline', href: '/dashboard/pipeline' },
+  versand_sendung:     { label: '📮 Sendungen',            href: '/dashboard/versand' },
+  eingangsbelege:      { label: '📥 Eingangsbelege',       href: '/dashboard/eingangsbelege' },
+  assets:              { label: '🏛 Objekte',              href: '/dashboard/objekte' },
+  wartungsvertraege:   { label: '🔧 Wartungsverträge',     href: '/dashboard/wartung' },
+  // Die sechs Zugänge werden zu EINER Zeile zusammengefasst — sonst stünde
+  // sechsmal fast dasselbe da.
+  mail_zugang:         { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+  marktplatz_zugang:   { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+  versand_zugang:      { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+  bank_zugang:         { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+  elster_zugang:       { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+  ads_zugang:          { label: '🔌 Anschlüsse verbunden', href: '/dashboard/anschluesse', sammel: 'anschluesse' },
+};
+
+/**
+ * Aus den gezählten Tabellen eine anzeigefertige Liste bauen: zusammengefasst,
+ * ohne Hilfstabellen (Angebotspositionen zählen zum Angebot) und in einer
+ * Reihenfolge, die dem Arbeitsalltag folgt.
+ */
+export function bereicheAusZaehlung(zaehlung: Record<string, number>): { label: string; href: string; anzahl: number }[] {
+  const zusammen = new Map<string, { label: string; href: string; anzahl: number }>();
+  for (const [tabelle, anzahl] of Object.entries(zaehlung)) {
+    const info = BEREICH_JE_TABELLE[tabelle];
+    if (!info || !anzahl) continue;                 // unbekannt oder leer -> nicht anzeigen
+    const schluessel = info.sammel ?? tabelle;
+    const da = zusammen.get(schluessel);
+    if (da) da.anzahl += anzahl;
+    else zusammen.set(schluessel, { label: info.label, href: info.href, anzahl });
+  }
+  const reihenfolge = Object.keys(BEREICH_JE_TABELLE);
+  return [...zusammen.entries()]
+    .sort((a, b) => reihenfolge.indexOf(a[0]) - reihenfolge.indexOf(b[0]))
+    .map(([, v]) => v);
+}
