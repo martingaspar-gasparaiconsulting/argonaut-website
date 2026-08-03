@@ -37,6 +37,19 @@ export type Seeder = {
   tabelle: string;
   /** Optionales Modul-Gate (tenant_module-Key): laeuft nur, wenn die Branche es hat. */
   modul?: string;
+  /**
+   * Anschluss-Tabelle: wird NICHT ueber das Register verwaltet.
+   *
+   * Grund (geprueft gegen information_schema am 03.08.2026): mail_zugang,
+   * marktplatz_zugang, versand_zugang, elster_zugang und ads_zugang haben gar
+   * keine Spalte `id` — ein .select('id') beim Anlegen scheitert dort hart und
+   * hat bisher alle sechs Anschluesse gekippt. Damit alle sechs gleich
+   * behandelt werden (auch bank_zugang, das ein `id` hat), gilt fuer sie:
+   * anlegen ohne .select('id'), kein Register-Eintrag, entfernt wird ueber die
+   * Beispiel-Markierung DEMO_TOKEN. Echte Zugaenge eines Betriebs tragen einen
+   * echten Token und bleiben dadurch unangetastet.
+   */
+  zugang?: boolean;
   /** Baut die anzulegenden Zeilen (leer = fuer diese Branche nichts anzulegen). heute = ISO-Datum. */
   baue: (kategorie: string | null | undefined, ownerId: string, heute: string) => SeedZeile[];
 };
@@ -60,13 +73,25 @@ export const SEEDER: Seeder[] = [
   // Anschluesse als „verbunden" (klar erkennbare Beispiel-Konten). Die Bauteile
   // lagen fertig in beispielKern, waren aber nie verdrahtet — dadurch stand das
   // Anschluesse-Cockpit in jeder Demo auf 0 von 6, obwohl alles vorbereitet war.
-  { key: 'zugang_mail', tabelle: 'mail_zugang', baue: (kat, uid, heute) => baueMailZugang(kat, uid, heute) },
-  { key: 'zugang_marktplatz', tabelle: 'marktplatz_zugang', baue: (kat, uid, heute) => baueMarktplatzZugang(kat, uid, heute) },
-  { key: 'zugang_versand', tabelle: 'versand_zugang', baue: (kat, uid, heute) => baueVersandZugang(kat, uid, heute) },
-  { key: 'zugang_bank', tabelle: 'bank_zugang', baue: (kat, uid, heute) => baueBankZugang(kat, uid, heute) },
-  { key: 'zugang_elster', tabelle: 'elster_zugang', baue: (kat, uid, heute) => baueElsterZugang(kat, uid, heute) },
-  { key: 'zugang_ads', tabelle: 'ads_zugang', baue: (kat, uid, heute) => baueAdsZugang(kat, uid, heute) },
+  { key: 'zugang_mail', tabelle: 'mail_zugang', zugang: true, baue: (kat, uid, heute) => baueMailZugang(kat, uid, heute) },
+  { key: 'zugang_marktplatz', tabelle: 'marktplatz_zugang', zugang: true, baue: (kat, uid, heute) => baueMarktplatzZugang(kat, uid, heute) },
+  { key: 'zugang_versand', tabelle: 'versand_zugang', zugang: true, baue: (kat, uid, heute) => baueVersandZugang(kat, uid, heute) },
+  { key: 'zugang_bank', tabelle: 'bank_zugang', zugang: true, baue: (kat, uid, heute) => baueBankZugang(kat, uid, heute) },
+  { key: 'zugang_elster', tabelle: 'elster_zugang', zugang: true, baue: (kat, uid, heute) => baueElsterZugang(kat, uid, heute) },
+  { key: 'zugang_ads', tabelle: 'ads_zugang', zugang: true, baue: (kat, uid, heute) => baueAdsZugang(kat, uid, heute) },
 ];
+
+/**
+ * Die sechs Anschluss-Tabellen. Sie stehen nicht im Register, deshalb braucht
+ * das Entfernen sie als eigene Liste — geloescht wird ueber owner_user_id PLUS
+ * die Beispiel-Markierung, damit echte Zugaenge eines Betriebs nie mitgehen.
+ */
+export const ZUGANG_TABELLEN: string[] = SEEDER.filter((s) => s.zugang).map((s) => s.tabelle);
+
+/** Nur die Anschluss-Seeder (zum Nachziehen ohne die uebrige Uebungswelt). */
+export function zugangSeeder(kategorie: string | null | undefined): Seeder[] {
+  return aktiveSeeder(kategorie).filter((s) => s.zugang);
+}
 
 /** Kopie der Seeder-Liste (Aufrufer mutieren nicht die Konstante). */
 export function seederListe(): Seeder[] {
@@ -82,12 +107,8 @@ export function aktiveSeeder(kategorie: string | null | undefined): Seeder[] {
 // Explizite Loesch-Reihenfolge: abhaengige Belege (Kinder) zuerst, Kontakte
 // zuletzt. Register-Tabellen, die hier fehlen, haengt die Route hinten an.
 export const LOESCH_ORDER: string[] = [
-  'mail_zugang',
-  'marktplatz_zugang',
-  'versand_zugang',
-  'bank_zugang',
-  'elster_zugang',
-  'ads_zugang',
+  // Die sechs *_zugang-Tabellen stehen hier bewusst NICHT mehr: sie laufen
+  // nicht ueber das Register, sondern werden ueber DEMO_TOKEN entfernt.
   'eingangsbelege',
   'versand_sendung',
   'crm_deal',

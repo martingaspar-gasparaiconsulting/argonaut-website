@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '../../../../lib/supabase-server';
 import { DEMO_BETRIEBE, demoEmail, demoPasswort, type DemoBetrieb } from '../../../../lib/demoBetriebe';
 import { kategorieModule } from '../../../../lib/branchenkatalog';
-import { aktiveSeeder } from '../../../../lib/uebungswelt';
+import { aktiveSeeder, zugangSeeder, ZUGANG_TABELLEN } from '../../../../lib/uebungswelt';
+import { DEMO_TOKEN } from '../../../../lib/beispielKern';
 import { branchenSchritte } from '../../../../lib/onboardingBranchen';
 
 // ============================================================================
@@ -152,8 +153,37 @@ async function weltLaden(
   const { count: schon } = await admin
     .from('beispiel_datensatz').select('*', { count: 'exact', head: true }).eq('owner_user_id', userId);
 
+  /**
+   * Die sechs Anschluss-Zugaenge sind beim ersten Lauf komplett durchgefallen
+   * (fuenf Tabellen ohne `id`, bank_zugang ohne Pflichtfeld `aggregator`). Ein
+   * erneuter Klick soll sie nachziehen, ohne die 593 vorhandenen Datensaetze
+   * anzufassen — deshalb laufen die Zugaenge hier IMMER, unabhaengig davon, ob
+   * die Uebungswelt schon geladen ist. Doppelte werden vorher weggeraeumt.
+   */
+  const zugaengeNachziehen = async (): Promise<number> => {
+    let neu = 0;
+    for (const s of zugangSeeder(kategorie)) {
+      const zeilen = s.baue(kategorie, userId, heute);
+      if (!zeilen.length) continue;
+      await admin.from(s.tabelle).delete().eq('owner_user_id', userId).eq('token_verschluesselt', DEMO_TOKEN);
+      const { error } = await admin.from(s.tabelle).insert(zeilen);
+      if (error) hinweise.push(`${s.key}: ${error.message}`);
+      else neu += zeilen.length;
+    }
+    return neu;
+  };
+
   if ((schon || 0) > 0) {
-    if (!zuruecksetzen) return { anzahl: schon || 0, hinweise: ['Übungswelt war schon geladen'] };
+    if (!zuruecksetzen) {
+      const nachgezogen = await zugaengeNachziehen();
+      return {
+        anzahl: (schon || 0) + nachgezogen,
+        hinweise: hinweise.length ? hinweise : [`Übungswelt war schon geladen · ${nachgezogen} Anschlüsse ergänzt`],
+      };
+    }
+    for (const tab of ZUGANG_TABELLEN) {
+      await admin.from(tab).delete().eq('owner_user_id', userId).eq('token_verschluesselt', DEMO_TOKEN);
+    }
     const { data: reg } = await admin
       .from('beispiel_datensatz').select('tabelle, datensatz_id').eq('owner_user_id', userId);
     const proTabelle = new Map<string, string[]>();
@@ -173,6 +203,15 @@ async function weltLaden(
   for (const s of aktiveSeeder(kategorie)) {
     const zeilen = s.baue(kategorie, userId, heute);
     if (!zeilen.length) continue;
+
+    // Tabellen ohne `id`-Spalte: anlegen, zaehlen, KEIN Register-Eintrag.
+    if (s.zugang) {
+      const { error: fehler } = await admin.from(s.tabelle).insert(zeilen);
+      if (fehler) hinweise.push(`${s.key}: ${fehler.message}`);
+      else anzahl += zeilen.length;
+      continue;
+    }
+
     const { data, error } = await admin.from(s.tabelle).insert(zeilen).select('id');
     if (error || !data) {
       hinweise.push(`${s.key}: ${error?.message || 'keine Daten'}`);

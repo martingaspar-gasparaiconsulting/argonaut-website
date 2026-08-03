@@ -110,7 +110,10 @@ export function baueBelege(_kat: string | null | undefined, uid: string, heute: 
 // --- Externe Anschlüsse als „verbunden" (klar erkennbare Beispiel-Konten) ---
 // token_verschluesselt bekommt einen Demo-Platzhalter — er wird nie entschlüsselt,
 // sorgt aber dafür, dass das Anschlüsse-Cockpit „✓ verbunden" zeigt.
-const DEMO_TOKEN = 'DEMO-UEBUNGSWELT';
+// Exportiert, weil das Entfernen der Übungswelt genau an dieser Markierung
+// erkennt, welche Zugänge Beispiel sind — fünf der sechs Tabellen haben keine
+// Spalte `id` und können deshalb nicht über das Register geloescht werden.
+export const DEMO_TOKEN = 'DEMO-UEBUNGSWELT';
 
 export function baueMailZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
   return [{ owner_user_id: uid, anbieter: 'microsoft', konto_id: 'beispiel@ihre-firma.de', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
@@ -125,7 +128,9 @@ export function baueVersandZugang(_k: string | null | undefined, uid: string, he
   return [{ owner_user_id: uid, aggregator: 'shipcloud', konto_name: 'Beispiel-Versandkonto', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
 }
 export function baueBankZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
-  return [{ owner_user_id: uid, bank_name: 'Beispiel-Bank (Demo)', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
+  // `aggregator` ist in bank_zugang PFLICHTFELD (NOT NULL) und fehlte hier —
+  // dadurch ist der Seeder jedes Mal gekippt. Gegen das echte Schema geprüft.
+  return [{ owner_user_id: uid, aggregator: 'demo', bank_name: 'Beispiel-Bank (Demo)', konto_id: 'DE00 0000 0000 (Beispiel)', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
 }
 export function baueAdsZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
   return [{ owner_user_id: uid, plattform: 'meta', konto_id: 'act_000000000 (Beispiel)', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];

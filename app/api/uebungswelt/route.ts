@@ -15,8 +15,9 @@
 
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE, bereicheAusZaehlung } from "@/lib/uebungswelt";
+import { aktiveSeeder, loeschReihenfolge, registerZeilen, REGISTER_TABELLE, bereicheAusZaehlung, ZUGANG_TABELLEN } from "@/lib/uebungswelt";
 import { BEISPIEL_QUELLE } from "@/lib/beispielKatalog";
+import { DEMO_TOKEN } from "@/lib/beispielKern";
 import { baueAngebotKopf, baueAngebotPositionen, baueBeispielZahlungen, type KontaktRef } from "@/lib/beispielBelege";
 import { baueAssets, baueWartungAusAsset } from "@/lib/beispielModule";
 
@@ -44,6 +45,14 @@ export async function POST(req: Request) {
       const zaehlung: Record<string, number> = {};
       for (const r of ((data as Array<{ tabelle: string }> | null) || [])) {
         zaehlung[r.tabelle] = (zaehlung[r.tabelle] || 0) + 1;
+      }
+      // Die Zugangs-Tabellen ohne `id` stehen nicht im Register — sonst fehlten
+      // sie in der Bereichs-Anzeige, obwohl sie angelegt wurden.
+      for (const tab of ZUGANG_TABELLEN) {
+        const { count } = await supabase.from(tab)
+          .select("owner_user_id", { count: "exact", head: true })
+          .eq("owner_user_id", uid).eq("token_verschluesselt", DEMO_TOKEN);
+        if (count) zaehlung[tab] = (zaehlung[tab] || 0) + count;
       }
       return bereicheAusZaehlung(zaehlung);
     };
@@ -84,6 +93,19 @@ export async function POST(req: Request) {
       for (const s of aktiveSeeder(kategorie)) {
         const zeilen = s.baue(kategorie, uid, heuteLaden);
         if (!zeilen.length) continue;
+
+        // Tabellen ohne `id`-Spalte: anlegen, zaehlen, KEIN Register-Eintrag.
+        if (s.zugang) {
+          const { error: fehler } = await supabase.from(s.tabelle).insert(zeilen);
+          if (fehler) {
+            console.error(`Übungswelt: Seeder '${s.key}' fehlgeschlagen:`, fehler.message);
+            hinweise.push(`${s.key}: ${fehler.message}`);
+          } else {
+            angelegt += zeilen.length;
+          }
+          continue;
+        }
+
         const { data, error } = await supabase.from(s.tabelle).insert(zeilen).select("id");
         if (error || !data) {
           // Eine Schicht darf die anderen nicht stoppen.
@@ -177,6 +199,16 @@ export async function POST(req: Request) {
         const { error } = await supabase.from(tab).delete().in("id", ids);
         if (!error) entfernt += ids.length;
         else console.error(`Übungswelt: Löschen in '${tab}' fehlgeschlagen:`, error.message);
+      }
+
+      // Zugaenge ohne `id` stehen nicht im Register: ueber die Beispiel-Markierung
+      // entfernen. Echte Zugaenge eines Betriebs haben einen echten Token und
+      // bleiben dadurch unangetastet.
+      for (const tab of ZUGANG_TABELLEN) {
+        const { error } = await supabase.from(tab).delete()
+          .eq("owner_user_id", uid).eq("token_verschluesselt", DEMO_TOKEN);
+        if (error) console.error(`Übungswelt: Löschen in '${tab}' fehlgeschlagen:`, error.message);
+        else entfernt += 1;
       }
 
       // Register leeren + Sicherheitsnetz fuer markierte Kontakte.
