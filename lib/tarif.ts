@@ -68,6 +68,44 @@ export const LAUFZEIT_RABATT: { monate: number; prozent: number }[] = [
   { monate: 36, prozent: 8 },
 ];
 
+// --- Laufzeit: waehlbare Vertragslaufzeiten + Rabatt-Rechnung ---------------
+// AGB § 5.1: Mindestlaufzeit 12 Monate; wahlweise 24 oder 36 Monate mit Rabatt.
+// AGB § 3.6: Der Rabatt gilt NUR auf die monatlichen Gebuehren (Grundgebuehr +
+// Nutzer-Sitze). Die einmalige Einrichtungsgebuehr ist ausdruecklich AUSGENOMMEN.
+export const LAUFZEITEN = [12, 24, 36] as const;
+export type LaufzeitMonate = (typeof LAUFZEITEN)[number];
+export const LAUFZEIT_STANDARD: LaufzeitMonate = 12;
+
+/** Kaufmaennisch auf 2 Nachkommastellen runden. */
+function rund(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Rabattsatz in Prozent fuer eine Laufzeit. 12 Monate = 0 % (Mindestlaufzeit).
+ * Laengere Laufzeiten als 36 Monate erhalten den hoechsten hinterlegten Satz.
+ */
+export function laufzeitRabattProzent(monate: number): number {
+  const m = Math.round(Number(monate) || 0);
+  let prozent = 0;
+  for (const r of LAUFZEIT_RABATT) {
+    if (m >= r.monate && r.prozent > prozent) prozent = r.prozent;
+  }
+  return prozent;
+}
+
+/** Laufzeit-Auswahl fuers UI — Beschriftung inklusive. */
+export function laufzeitOptionen(): { monate: LaufzeitMonate; prozent: number; label: string }[] {
+  return LAUFZEITEN.map((monate) => {
+    const prozent = laufzeitRabattProzent(monate);
+    return {
+      monate,
+      prozent,
+      label: prozent ? `${monate} Monate (\u2212${prozent}\u00a0%)` : `${monate} Monate`,
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Reine Helfer (keine Seiteneffekte)
 // ---------------------------------------------------------------------------
@@ -100,13 +138,35 @@ export function sitzPreis(typ: SitzTyp, key: StufeKey): number {
 
 export type Sitzbelegung = { voll?: number; standard?: number; self_service?: number };
 export type PreisPosition = { label: string; betrag: number };
-export type Monatspreis = { netto: number; mwst: number; brutto: number; positionen: PreisPosition[] };
+export type Monatspreis = {
+  /** Zu zahlender Nettobetrag je Monat — bereits NACH Laufzeit-Rabatt. */
+  netto: number;
+  mwst: number;
+  brutto: number;
+  positionen: PreisPosition[];
+  /** Netto vor Abzug des Laufzeit-Rabatts (Listenpreis). */
+  nettoVorRabatt: number;
+  /** Gewaehlte Laufzeit in Monaten. */
+  laufzeitMonate: number;
+  /** Angewandter Rabattsatz in Prozent (0 bei 12 Monaten). */
+  rabattProzent: number;
+  /** Ersparnis je Monat in Euro. */
+  rabattBetrag: number;
+};
 
 /**
- * Monatspreis = Grundgebühr + Σ Sitze. Bei SOLO nur die Grundgebühr
- * (1 Voll-Nutzer + KI sind im All-in enthalten).
+ * Monatspreis = Grundgebühr + Σ Sitze − Laufzeit-Rabatt.
+ * Bei SOLO nur die Grundgebühr (1 Voll-Nutzer + KI sind im All-in enthalten).
+ *
+ * Der dritte Parameter ist optional; ohne Angabe wird mit der Mindestlaufzeit
+ * von 12 Monaten gerechnet, also OHNE Rabatt. Bestehende Aufrufer ohne
+ * Laufzeit-Angabe liefern deshalb exakt dasselbe Ergebnis wie bisher.
  */
-export function monatspreis(key: StufeKey, sitze: Sitzbelegung = {}): Monatspreis {
+export function monatspreis(
+  key: StufeKey,
+  sitze: Sitzbelegung = {},
+  laufzeitMonate: number = LAUFZEIT_STANDARD,
+): Monatspreis {
   const stufe = getStufe(key);
   const positionen: PreisPosition[] = [{ label: `Grundgebühr ${stufe.name}`, betrag: stufe.grundgebuehr }];
   let netto = stufe.grundgebuehr;
@@ -123,8 +183,64 @@ export function monatspreis(key: StufeKey, sitze: Sitzbelegung = {}): Monatsprei
     });
   }
 
-  const mwst = Math.round(netto * MWST * 100) / 100;
-  return { netto, mwst, brutto: netto + mwst, positionen };
+  const nettoVorRabatt = rund(netto);
+  const rabattProzent = laufzeitRabattProzent(laufzeitMonate);
+  const rabattBetrag = rund((nettoVorRabatt * rabattProzent) / 100);
+  if (rabattBetrag > 0) {
+    positionen.push({
+      label: `Laufzeit-Rabatt ${Math.round(laufzeitMonate)} Monate (\u2212${rabattProzent}\u00a0%)`,
+      betrag: -rabattBetrag,
+    });
+  }
+  const nettoNachRabatt = rund(nettoVorRabatt - rabattBetrag);
+  const mwst = rund(nettoNachRabatt * MWST);
+
+  return {
+    netto: nettoNachRabatt,
+    mwst,
+    brutto: rund(nettoNachRabatt + mwst),
+    positionen,
+    nettoVorRabatt,
+    laufzeitMonate: Math.round(Number(laufzeitMonate) || LAUFZEIT_STANDARD),
+    rabattProzent,
+    rabattBetrag,
+  };
+}
+
+export type Angebotssumme = {
+  monatlich: Monatspreis;
+  /** Einmalige Einrichtung — NIE rabattiert (AGB § 3.6). */
+  einrichtungNetto: number;
+  einrichtungMwst: number;
+  einrichtungBrutto: number;
+  /** Was im ersten Monat insgesamt faellig wird (brutto). */
+  ersterMonatBrutto: number;
+  /** Ersparnis ueber die gesamte Laufzeit gegenueber 12 Monaten ohne Rabatt. */
+  ersparnisGesamt: number;
+};
+
+/**
+ * Komplette Angebotssumme fuer die Bestellstrecke: monatliche Gebuehren mit
+ * Laufzeit-Rabatt PLUS die einmalige Einrichtung ohne Rabatt.
+ * istBestandskunde = true -> keine erneute Einrichtungsgebuehr (Upgrade-Regel).
+ */
+export function angebotssumme(
+  key: StufeKey,
+  sitze: Sitzbelegung = {},
+  laufzeitMonate: number = LAUFZEIT_STANDARD,
+  istBestandskunde = false,
+): Angebotssumme {
+  const monatlich = monatspreis(key, sitze, laufzeitMonate);
+  const einrichtungNetto = onboardingFuer(key, istBestandskunde);
+  const einrichtungMwst = rund(einrichtungNetto * MWST);
+  return {
+    monatlich,
+    einrichtungNetto,
+    einrichtungMwst,
+    einrichtungBrutto: rund(einrichtungNetto + einrichtungMwst),
+    ersterMonatBrutto: rund(monatlich.brutto + einrichtungNetto + einrichtungMwst),
+    ersparnisGesamt: rund(monatlich.rabattBetrag * monatlich.laufzeitMonate),
+  };
 }
 
 /** Jahrespreis bei Jahreszahlung (2 Monate frei). */
