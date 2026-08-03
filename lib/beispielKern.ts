@@ -127,3 +127,6 @@ export function baueVersandZugang(_k: string | null | undefined, uid: string, he
 export function baueBankZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
   return [{ owner_user_id: uid, bank_name: 'Beispiel-Bank (Demo)', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
 }
+export function baueAdsZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
+  return [{ owner_user_id: uid, plattform: 'meta', konto_id: 'act_000000000 (Beispiel)', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
+}

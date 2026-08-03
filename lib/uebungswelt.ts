@@ -20,7 +20,10 @@ import { beispielZeilen } from './beispielKatalog';
 import { beispielArtikelZeilen, beispielLieferantenZeilen } from './beispielStammdaten';
 import { baueVerleihArtikel, baueProjekte, baueMitglieder } from './beispielModule';
 import { kategorieModule } from './branchenkatalog';
-import { baueAngebote, baueRechnungen, baueDeals, baueSendungen, baueBelege } from './beispielKern';
+import {
+  baueAngebote, baueRechnungen, baueDeals, baueSendungen, baueBelege,
+  baueMailZugang, baueMarktplatzZugang, baueVersandZugang, baueBankZugang, baueElsterZugang, baueAdsZugang,
+} from './beispielKern';
 
 /** Name der Register-Tabelle (Sicherheitsnetz für sauberes Entfernen). */
 export const REGISTER_TABELLE = 'beispiel_datensatz';
@@ -54,6 +57,15 @@ export const SEEDER: Seeder[] = [
   { key: 'deals', tabelle: 'crm_deal', baue: (kat, uid, heute) => baueDeals(kat, uid, heute) },
   { key: 'sendungen', tabelle: 'versand_sendung', baue: (kat, uid, heute) => baueSendungen(kat, uid, heute) },
   { key: 'belege', tabelle: 'eingangsbelege', baue: (kat, uid, heute) => baueBelege(kat, uid, heute) },
+  // Anschluesse als „verbunden" (klar erkennbare Beispiel-Konten). Die Bauteile
+  // lagen fertig in beispielKern, waren aber nie verdrahtet — dadurch stand das
+  // Anschluesse-Cockpit in jeder Demo auf 0 von 6, obwohl alles vorbereitet war.
+  { key: 'zugang_mail', tabelle: 'mail_zugang', baue: (kat, uid, heute) => baueMailZugang(kat, uid, heute) },
+  { key: 'zugang_marktplatz', tabelle: 'marktplatz_zugang', baue: (kat, uid, heute) => baueMarktplatzZugang(kat, uid, heute) },
+  { key: 'zugang_versand', tabelle: 'versand_zugang', baue: (kat, uid, heute) => baueVersandZugang(kat, uid, heute) },
+  { key: 'zugang_bank', tabelle: 'bank_zugang', baue: (kat, uid, heute) => baueBankZugang(kat, uid, heute) },
+  { key: 'zugang_elster', tabelle: 'elster_zugang', baue: (kat, uid, heute) => baueElsterZugang(kat, uid, heute) },
+  { key: 'zugang_ads', tabelle: 'ads_zugang', baue: (kat, uid, heute) => baueAdsZugang(kat, uid, heute) },
 ];
 
 /** Kopie der Seeder-Liste (Aufrufer mutieren nicht die Konstante). */
@@ -70,6 +82,12 @@ export function aktiveSeeder(kategorie: string | null | undefined): Seeder[] {
 // Explizite Loesch-Reihenfolge: abhaengige Belege (Kinder) zuerst, Kontakte
 // zuletzt. Register-Tabellen, die hier fehlen, haengt die Route hinten an.
 export const LOESCH_ORDER: string[] = [
+  'mail_zugang',
+  'marktplatz_zugang',
+  'versand_zugang',
+  'bank_zugang',
+  'elster_zugang',
+  'ads_zugang',
   'eingangsbelege',
   'versand_sendung',
   'crm_deal',

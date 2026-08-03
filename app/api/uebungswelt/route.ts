@@ -57,6 +57,10 @@ export async function POST(req: Request) {
       const kategorie = (prof?.kategorie && String(prof.kategorie).trim()) ? String(prof.kategorie).trim() : null;
 
       let angelegt = 0;
+      // Was NICHT durchlief, wird mitgegeben statt nur in die Server-Logs zu
+      // wandern. Vor einer Präsentation muss man sehen können, ob wirklich
+      // alles steht — eine stille Lücke fällt sonst erst auf der Bühne auf.
+      const hinweise: string[] = [];
       const heuteLaden = new Date().toISOString().slice(0, 10);
       for (const s of aktiveSeeder(kategorie)) {
         const zeilen = s.baue(kategorie, uid, heuteLaden);
@@ -65,6 +69,7 @@ export async function POST(req: Request) {
         if (error || !data) {
           // Eine Schicht darf die anderen nicht stoppen.
           console.error(`Übungswelt: Seeder '${s.key}' fehlgeschlagen:`, error?.message ?? error);
+          hinweise.push(`${s.key}: ${error?.message ?? "keine Daten"}`);
           continue;
         }
         const ids = (data as Array<{ id: string }>).map((r) => r.id).filter(Boolean);
@@ -129,7 +134,7 @@ export async function POST(req: Request) {
         console.error("Übungswelt: Modulgruppe Objekte/Wartung fehlgeschlagen:", e instanceof Error ? e.message : e);
       }
 
-      return NextResponse.json({ angelegt });
+      return NextResponse.json({ angelegt, hinweise });
     }
 
     // ---- ENTFERNEN ----
