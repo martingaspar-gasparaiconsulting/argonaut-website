@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
 
+// ---------------------------------------------------------------------------
+// Hinweis zu „Passwort speichern": Das übernimmt der Browser bzw. der
+// Passwortmanager — eine Website darf und kann ein Passwort nicht selbst
+// ablegen. Damit der Browser es überhaupt ANBIETET, brauchen die Felder
+// name/id und die richtigen autoComplete-Werte ("username" + "current-password").
+// Genau die fehlten hier; deshalb kam die Speichern-Abfrage oft gar nicht.
+// ---------------------------------------------------------------------------
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -189,7 +197,8 @@ export default function LoginPage() {
                   color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em',
                   textTransform: 'uppercase', marginBottom: '8px',
                 }}>E-Mail</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                <input type="email" name="email" id="login-email" autoComplete="username"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
                   required placeholder="name@unternehmen.de" style={inputStyle}
                   onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)' }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
@@ -203,7 +212,8 @@ export default function LoginPage() {
                     color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em',
                     textTransform: 'uppercase', marginBottom: '8px',
                   }}>Passwort</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  <input type="password" name="password" id="login-passwort" autoComplete="current-password"
+                    value={password} onChange={(e) => setPassword(e.target.value)}
                     required placeholder="••••••••" style={inputStyle}
                     onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)' }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
