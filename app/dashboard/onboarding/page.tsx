@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { branchenSchritte, type BranchenSchritt } from '@/lib/onboardingBranchen';
 import { STUFEN, stufeFuer, naechsteStufe, bisNaechsteStufe } from '@/lib/onboardingStufen';
+import { bereicheAus } from '@/lib/onboardingBereiche';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -26,22 +27,20 @@ const C = {
 };
 
 type Lage = { firma: boolean; iban: boolean; kontakte: number; rechnungen: number; angebote: number; zahlungAktiv: boolean };
-// „bereich" ist die Formulierung fürs Abschluss-Zertifikat: nicht der Arbeits-
-// schritt, sondern der Bereich, den der Kunde danach beherrscht.
-type UniSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; bereich: string; auto: (l: Lage) => boolean; optional?: boolean };
-type RenderSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; bereich: string; optional?: boolean; autoDone: boolean };
+type UniSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; auto: (l: Lage) => boolean; optional?: boolean };
+type RenderSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; optional?: boolean; autoDone: boolean };
 
 const SCHRITTE: UniSchritt[] = [
-  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Geh in Einstellungen und trag deine Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', bereich: 'Stammdaten & Firmenprofil', auto: (l) => l.firma },
-  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Lade dein Logo hoch und wähle deine Farbe. Damit sehen deine PDFs und dein Kundenportal nach dir aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', bereich: 'Erscheinungsbild (Logo & Farben)', auto: () => false },
-  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Trag deine IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', bereich: 'Bankverbindung & SEPA', auto: (l) => l.iban },
-  { key: 'import', icon: '📥', titel: 'Bestehende Daten importieren', text: 'Kunden, Lieferanten, Artikel & Co. aus deinem alten System übernehmen.', tipp: 'Hast du schon Daten in Excel oder einem alten Programm? Im Import-Center lädst du je Bereich eine fertige CSV-Vorlage, füllst sie mit deinen Daten und spielst sie ein — so ist dein ARGONAUT in Minuten gefüllt, statt alles einzeln abzutippen.', link: '/dashboard/import', bereich: 'Datenübernahme / Import', auto: () => false, optional: true },
-  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Leg deinen ersten Kunden im CRM an — oder importiere gleich deine ganze Kundenliste über das Import-Center. Danach kannst du Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', bereich: 'CRM & Kundenverwaltung', auto: (l) => l.kontakte > 0 },
-  { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', tipp: 'Erstelle ein Angebot und schick es raus. Der Kunde kann online zusagen und unterschreiben — aus dem Angebot wird per Klick ein Auftrag oder eine Rechnung.', link: '/dashboard/angebote', bereich: 'Angebotswesen', auto: (l) => l.angebote > 0 },
-  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreib deine erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', bereich: 'Rechnungswesen', auto: (l) => l.rechnungen > 0 },
-  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', tipp: 'Optional: Verbinde einen Bezahldienst, damit Kunden per Klick online zahlen können. Kannst du auch später machen.', link: '/dashboard/schnittstellen', bereich: 'Online-Zahlungen', auto: (l) => l.zahlungAktiv, optional: true },
-  { key: 'anschluesse', icon: '🔌', titel: 'Anschlüsse verbinden', text: 'Postfach & Kalender, Bank, Marktplätze, ELSTER — sicher hinterlegen.', tipp: 'Im Anschlüsse-Cockpit verbindest du an einem Ort dein Postfach & Kalender (Outlook/Google), deine Bank, deine Marktplätze und ELSTER. Alle Zugänge werden verschlüsselt gespeichert und sind nie im Browser sichtbar. Du kannst sie schon jetzt eintragen — der automatische Abgleich wird gerade finalisiert.', link: '/dashboard/anschluesse', bereich: 'Anschlüsse & Schnittstellen', auto: () => false, optional: true },
-  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', tipp: 'Lade deine Mitarbeiter ein und gib ihnen nur die Bereiche frei, die sie brauchen. Jeder sieht dann genau seinen Ausschnitt.', link: '/dashboard/einstellungen', bereich: 'Team & Rechteverwaltung', auto: () => false },
+  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Geh in Einstellungen und trag deine Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
+  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Lade dein Logo hoch und wähle deine Farbe. Damit sehen deine PDFs und dein Kundenportal nach dir aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', auto: () => false },
+  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Trag deine IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
+  { key: 'import', icon: '📥', titel: 'Bestehende Daten importieren', text: 'Kunden, Lieferanten, Artikel & Co. aus deinem alten System übernehmen.', tipp: 'Hast du schon Daten in Excel oder einem alten Programm? Im Import-Center lädst du je Bereich eine fertige CSV-Vorlage, füllst sie mit deinen Daten und spielst sie ein — so ist dein ARGONAUT in Minuten gefüllt, statt alles einzeln abzutippen.', link: '/dashboard/import', auto: () => false, optional: true },
+  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Leg deinen ersten Kunden im CRM an — oder importiere gleich deine ganze Kundenliste über das Import-Center. Danach kannst du Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
+  { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', tipp: 'Erstelle ein Angebot und schick es raus. Der Kunde kann online zusagen und unterschreiben — aus dem Angebot wird per Klick ein Auftrag oder eine Rechnung.', link: '/dashboard/angebote', auto: (l) => l.angebote > 0 },
+  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreib deine erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
+  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', tipp: 'Optional: Verbinde einen Bezahldienst, damit Kunden per Klick online zahlen können. Kannst du auch später machen.', link: '/dashboard/schnittstellen', auto: (l) => l.zahlungAktiv, optional: true },
+  { key: 'anschluesse', icon: '🔌', titel: 'Anschlüsse verbinden', text: 'Postfach & Kalender, Bank, Marktplätze, ELSTER — sicher hinterlegen.', tipp: 'Im Anschlüsse-Cockpit verbindest du an einem Ort dein Postfach & Kalender (Outlook/Google), deine Bank, deine Marktplätze und ELSTER. Alle Zugänge werden verschlüsselt gespeichert und sind nie im Browser sichtbar. Du kannst sie schon jetzt eintragen — der automatische Abgleich wird gerade finalisiert.', link: '/dashboard/anschluesse', auto: () => false, optional: true },
+  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', tipp: 'Lade deine Mitarbeiter ein und gib ihnen nur die Bereiche frei, die sie brauchen. Jeder sieht dann genau seinen Ausschnitt.', link: '/dashboard/einstellungen', auto: () => false },
 ];
 
 /**
@@ -151,11 +150,9 @@ export default function OnboardingPage() {
     })();
   }, [laden_, weltStatus]);
 
-  const uniRender: RenderSchritt[] = SCHRITTE.map((s) => ({ key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, bereich: s.bereich, optional: s.optional, autoDone: s.auto(lage) }));
-  // Bei den Branchenschritten ist der Titel zugleich der Bereich — genau das
-  // macht das Zertifikat je Branche individuell.
+  const uniRender: RenderSchritt[] = SCHRITTE.map((s) => ({ key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, optional: s.optional, autoDone: s.auto(lage) }));
   const branchRender: RenderSchritt[] = branchenSchritte(kategorie).map((s: BranchenSchritt) => ({
-    key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, bereich: s.titel, optional: s.optional,
+    key: s.key, icon: s.icon, titel: s.titel, text: s.text, tipp: s.tipp, link: s.link, optional: s.optional,
     autoDone: s.tabelle ? (counts[s.tabelle] || 0) > 0 : false,
   }));
   const alle = [...uniRender, ...branchRender];
@@ -209,8 +206,9 @@ export default function OnboardingPage() {
         firma: firmaName,
         branche: kategorie,
         schritte: anzahlSchritte,
-        // Nur die tatsächlich erledigten Bereiche — und damit je Branche anders.
-        bereiche: alle.filter(erledigt).map((s) => s.bereich),
+        // Gebündelte Bereiche aus den tatsächlich erledigten Schritten —
+        // je Branche eine andere Liste (siehe lib/onboardingBereiche.ts).
+        bereiche: bereicheAus(alle.filter(erledigt).map((s) => ({ key: s.key, titel: s.titel }))),
         ausstellungsdatum: heute,
         nummer: mod.zertifikatsNummer(uid || '', heute),
       });
