@@ -99,13 +99,15 @@ export default function AGB() {
               <p className="lp-p">1.1 Die Gaspar AI Consulting, vertreten durch Martin Gaspar, Böblingen (nachfolgend „Anbieter") betreibt die KI-gestützte Unternehmensplattform ARGONAUT OS, zugänglich unter argonaut-os.com (nachfolgend „Plattform").</p>
               <p className="lp-p">1.2 ARGONAUT OS bietet Unternehmen des deutschen Mittelstands (nachfolgend „Kunde") KI-Agenten, Automatisierungsworkflows, Analyse- und Verwaltungsfunktionen als Software-as-a-Service (SaaS) an.</p>
               <p className="lp-p">1.3 Die konkret gebuchten Leistungen richten sich nach der Betriebsgröße (monatliche Grundgebühr) und den gebuchten Nutzer-Sitzen (§ 3). Der Leistungsumfang ist in § 6 und der aktuellen Leistungsbeschreibung auf argonaut-os.com definiert.</p>
+              <p className="lp-p">1.4 <strong style={{ color: '#EAF1F6' }}>Adressatenkreis:</strong> Das Angebot des Anbieters richtet sich ausschließlich an Unternehmer im Sinne des § 14 BGB, an juristische Personen des öffentlichen Rechts sowie an öffentlich-rechtliche Sondervermögen. Ein Vertragsschluss mit Verbrauchern im Sinne des § 13 BGB ist ausgeschlossen. Der Kunde bestätigt mit Abgabe seiner Bestellung, dass er in Ausübung seiner gewerblichen oder selbständigen beruflichen Tätigkeit handelt.</p>
+              <p className="lp-p">1.5 Da der Vertrag ausschließlich mit Unternehmern geschlossen wird, finden die Vorschriften des Verbraucherschutzrechts — insbesondere das Widerrufsrecht nach §§ 355 ff. BGB — keine Anwendung. Stellt sich nachträglich heraus, dass der Kunde entgegen seiner Bestätigung als Verbraucher gehandelt hat, ist der Anbieter berechtigt, den Vertrag mit sofortiger Wirkung zu beenden.</p>
             </section>
 
             <section id="vertragsschluss" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 2 Vertragsschluss</h2>
-              <p className="lp-p">2.1 Der Vertrag kommt durch Auswahl eines Pakets, Eingabe der Zahlungsdaten und Bestätigung der Buchung zustande. Mit Abschluss der Buchung erklärt der Kunde sein Einverständnis mit diesen AGB sowie der Datenschutzerklärung.</p>
-              <p className="lp-p">2.2 Der Anbieter ist berechtigt, eine Buchung ohne Angabe von Gründen abzulehnen, insbesondere bei begründetem Verdacht auf missbräuchliche Nutzung.</p>
-              <p className="lp-p">2.3 Der Vertrag wird in deutscher Sprache geschlossen. Der Vertragstext wird nach Vertragsschluss nicht gesondert gespeichert und ist über das Kundenkonto abrufbar.</p>
+              <p className="lp-p">2.1 Der Vertrag kommt zustande, indem der Kunde Betriebsgröße, Nutzer-Sitze und Vertragslaufzeit auswählt, seine Unternehmereigenschaft nach § 1.4 bestätigt, das SEPA-Lastschriftmandat erteilt und die Bestellung verbindlich abschickt. Alternativ kommt der Vertrag durch Annahme eines vom Anbieter in Textform übermittelten Angebots zustande. Mit Abgabe der Bestellung erklärt der Kunde sein Einverständnis mit diesen AGB, der Datenschutzerklärung und dem Vertrag zur Auftragsverarbeitung.</p>
+              <p className="lp-p">2.2 Der Anbieter ist berechtigt, eine Bestellung ohne Angabe von Gründen abzulehnen, insbesondere bei begründetem Verdacht auf missbräuchliche Nutzung oder wenn Zweifel an der Unternehmereigenschaft des Kunden bestehen.</p>
+              <p className="lp-p">2.3 Der Vertrag wird in deutscher Sprache geschlossen. Der Anbieter speichert den Vertragstext und übersendet ihn dem Kunden unverzüglich nach Vertragsschluss zusammen mit der Auftragsbestätigung in Textform. Zusätzlich ist der Vertragstext jederzeit im Kundenkonto abrufbar.</p>
             </section>
 
             <section id="preise" style={{ marginBottom: '44px' }}>
@@ -162,6 +164,7 @@ export default function AGB() {
             <section id="zahlung" style={{ marginBottom: '44px' }}>
               <h2 className="lp-h2">§ 4 Zahlung & Abrechnung</h2>
               <p className="lp-p">4.1 Die Zahlung erfolgt monatlich im Voraus per SEPA-Lastschrift. Der Kunde erteilt hierzu bei Vertragsschluss ein SEPA-Lastschriftmandat. Die erste Zahlung ist bei Vertragsschluss fällig.</p>
+              <p className="lp-p">4.1a <strong style={{ color: '#EAF1F6' }}>Vorabankündigung:</strong> Der Anbieter kündigt jeden Einzug spätestens einen Bankarbeitstag vor dem Fälligkeitstag in Textform an (Pre-Notification). Die Ankündigungsfrist des SEPA-Basislastschriftverfahrens wird hiermit einvernehmlich auf einen Bankarbeitstag verkürzt. Die Rechnung gilt als Vorabankündigung, sofern sie Betrag, Fälligkeitsdatum, Mandatsreferenz und die Gläubiger-Identifikationsnummer des Anbieters ausweist. Der Kunde stellt die Deckung des Kontos zum Fälligkeitstag sicher.</p>
               <p className="lp-p">4.2 Speicher-Upgrade-Gebühren gemäß § 9a werden im Folgemonat automatisch eingezogen. Der Kunde erhält vor dem Einzug eine Rechnung per E-Mail.</p>
               <p className="lp-p">4.3 Bei Zahlungsverzug von mehr als 14 Tagen ist der Anbieter berechtigt, den Zugang zur Plattform zu sperren. Die Zahlungsverpflichtung bleibt davon unberührt.</p>
               <p className="lp-p">4.4 Rechnungen werden ausschließlich in elektronischer Form per E-Mail zugestellt.</p>
@@ -240,7 +243,7 @@ export default function AGB() {
             <section id="schluss" style={{ marginBottom: '10px' }}>
               <h2 className="lp-h2">§ 12 Schlussbestimmungen</h2>
               <p className="lp-p">12.1 Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).</p>
-              <p className="lp-p">12.2 Gerichtsstand ist, soweit gesetzlich zulässig, Böblingen.</p>
+              <p className="lp-p">12.2 Ausschließlicher Gerichtsstand für alle Streitigkeiten aus und im Zusammenhang mit diesem Vertrag ist Böblingen, sofern der Kunde Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen ist. Der Anbieter bleibt berechtigt, den Kunden auch an dessen allgemeinem Gerichtsstand zu verklagen.</p>
               <p className="lp-p">12.3 Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
               <p className="lp-p">12.4 Der Anbieter ist berechtigt, diese AGB mit 30 Tagen Ankündigungsfrist zu ändern. Widerspricht der Kunde nicht innerhalb von 14 Tagen, gelten die geänderten AGB als akzeptiert.</p>
               <p className="lp-p">12.5 Mündliche Nebenabreden bestehen nicht. Änderungen bedürfen der Textform.</p>
