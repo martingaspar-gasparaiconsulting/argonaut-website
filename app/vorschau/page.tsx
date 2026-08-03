@@ -790,14 +790,14 @@ export default function VorschauPage() {
               SOLO 990 € · Mini 1.500 € · Klein 2.900 € · Mittel 4.900 € · Groß 9.900 € · Enterprise: Projekt auf Anfrage
             </p>
             <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
-              Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — nicht rabattierbar. Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB), persönliche Einweisung sowie Hologramm-Onboarding + Zertifikat.
+              Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — vom Laufzeit-Rabatt ausgenommen (dieser gilt nur für die monatlichen Gebühren). Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB), persönliche Einweisung sowie Hologramm-Onboarding + Zertifikat.
             </p>
           </div>
 
           <AngebotRechner />
 
           <div className="arg-incl">
-            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikat', 'Laufzeit-Rabatte (24/36 Mon.)'].map((x) => (
+            {['Alle Module inklusive', 'Ihr Dashboard', 'KI unbegrenzt', 'DSGVO & EU-Hosting', 'Hologramm-Onboarding + Zertifikat', 'Laufzeit-Rabatt: 24 Mon. −5 %, 36 Mon. −8 %'].map((x) => (
               <span key={x} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <span aria-hidden="true" style={{ color: GOLD }}>✓</span> {x}
               </span>
@@ -805,7 +805,7 @@ export default function VorschauPage() {
           </div>
 
           <p style={{ fontSize: '.82rem', color: '#7f97a4', margin: '22px auto 0', maxWidth: '60ch', lineHeight: 1.5 }}>
-            Alle Preise netto, zzgl. 19 % MwSt. · ab „Mini" Grundgebühr + Nutzer-Sitze · Ihr individuelles Angebot in Minuten.
+            Alle Preise netto, zzgl. 19 % MwSt. · ab „Mini" Grundgebühr + Nutzer-Sitze · Laufzeit-Rabatt auf die monatlichen Gebühren: 24 Monate −5 %, 36 Monate −8 % · Ihr individuelles Angebot in Minuten.
           </p>
 
           <div style={{ marginTop: '28px', display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>

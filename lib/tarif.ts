@@ -50,12 +50,12 @@ export const SITZ: Record<SitzTyp, { name: string; wer: string; preise: [number,
   self_service: { name: 'Self-Service',    wer: 'eingeschränkt: Zeiterfassung & eigene Daten', preise: [19, 19, 19, 14] },
 };
 
-// --- Fair-Use KI-Nutzung ----------------------------------------------------
-export const FAIR_USE: { stufe: string; calls: string; aufpreis: number | null; text: string }[] = [
-  { stufe: 'Inklusive',  calls: 'bis 10.000',       aufpreis: 0,    text: '0 € · enthalten' },
-  { stufe: 'Heavy',      calls: '10.000 – 50.000',  aufpreis: 200,  text: '+ 200 € / Monat' },
-  { stufe: 'Enterprise', calls: 'über 50.000',      aufpreis: null, text: 'individuell' },
-];
+// --- KI-Nutzung -------------------------------------------------------------
+// Es gibt KEIN KI-Kontingent und keine nutzungsabhaengigen Zusatzkosten mehr:
+// "KI unbegrenzt inklusive" (AGB § 9.1). Das frueher hier stehende FAIR_USE-
+// Staffelmodell (10k / 50k Calls, +200 EUR) wurde bewusst ENTFERNT, damit es
+// nicht versehentlich wieder in Preisanzeigen auftaucht. Schutz vor Missbrauch
+// laeuft rein technisch ueber lib/schwellen.ts (Rate-Limit, Demo-Deckel).
 
 // --- Zusatzspeicher ---------------------------------------------------------
 export const SPEICHER_INKL_PRO_MA_GB = 100;
