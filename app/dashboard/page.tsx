@@ -137,7 +137,7 @@ export default async function DashboardPage() {
     supabase.from('kontakte').select('id, vorname, nachname, created_at'),
     supabase.from('kontakt_aktivitaeten').select('id, kontakt_id, typ, inhalt, created_at'),
     supabase.from('zahlungen').select('betrag, zahlungsdatum, rechnung_id'),
-    supabase.from('ausgaben').select('betrag_brutto, mwst_satz, ausgabedatum'),
+    supabase.from('eingangsbelege').select('netto, brutto, ust_satz, belegdatum'), // B4: Ausgaben aus eingangsbelege (eine Quelle)
   ])
 
   const leads = leadsR.data || []
@@ -206,11 +206,18 @@ export default async function DashboardPage() {
     einnahmenNetto += r && brutto > 0 ? betrag * (Number(r.netto_summe) / brutto) : betrag
   }
   let ausgabenNetto = 0
+  // B4: Ausgaben aus eingangsbelege (eine Quelle). netto ist gespeichert;
+  // fehlt es (Alt-/OCR-Beleg nur mit Brutto), aus brutto/(1+ust_satz) ableiten.
   for (const a of ausgaben as any[]) {
-    if (jahrVon(a.ausgabedatum) !== jahrNow) continue
-    const brutto = Number(a.betrag_brutto) || 0
-    const satz = Number(a.mwst_satz) || 0
-    ausgabenNetto += brutto / (1 + satz / 100)
+    if (jahrVon(a.belegdatum) !== jahrNow) continue
+    const netto = Number(a.netto)
+    if (Number.isFinite(netto) && netto > 0) {
+      ausgabenNetto += netto
+    } else {
+      const brutto = Number(a.brutto) || 0
+      const satz = Number(a.ust_satz) || 0
+      ausgabenNetto += brutto / (1 + satz / 100)
+    }
   }
   const gewinn = Math.round(einnahmenNetto - ausgabenNetto)
 
