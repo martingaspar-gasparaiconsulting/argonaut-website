@@ -269,14 +269,12 @@ export default async function DashboardPage() {
   const hasApiKeys = onboardingData?.toolEntries?.some((e: { apiKey?: string }) => e.apiKey && e.apiKey.length > 0) ?? false
   const setupFertig = onboardingCompleted && hasApiKeys
 
-  const SHELL_MAX = '1600px'
-  const SHELL_PAD = 'clamp(16px, 3vw, 48px)'
-
   return (
     <>
       <UpgradePopup />
       <OverusePopup kiUsed={kiUsed} kiLimit={kiLimit} currentPaket={rawPaket} userEmail={user.email || ''} />
-      <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
+      {/* A4: Breite/Abstand kommen aus der zentralen Seitenschale (layout.tsx) — keine eigene Breite mehr. */}
+      <div>
 
         {/* Begruessung */}
         <section style={{ marginBottom: '32px' }}>
@@ -436,7 +434,7 @@ export default async function DashboardPage() {
         </section>
 
 
-      </main>
+      </div>
     </>
   )
 }
@@ -461,11 +459,9 @@ function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
     { icon: '🗨️', titel: 'Team-Chat', text: 'Mit dem Team schreiben', href: '/dashboard/team-chat', farbe: '#A98CE0' },
   ]
 
-  const SHELL_MAX = '1600px'
-  const SHELL_PAD = 'clamp(16px, 3vw, 48px)'
-
+  // A4: Breite/Abstand kommen aus der zentralen Seitenschale (layout.tsx) — keine eigene Breite mehr.
   return (
-    <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
+    <div>
       <section style={{ marginBottom: '36px' }}>
         <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Mitgliederbereich</p>
         <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 46px)', fontWeight: 900, margin: '0 0 12px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>
@@ -514,6 +510,6 @@ function MitarbeiterUebersicht({ ma }: { ma: MitarbeiterZeile }) {
           </div>
         </a>
       </section>
-    </main>
+    </div>
   )
 }

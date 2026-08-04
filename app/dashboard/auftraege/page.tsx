@@ -345,14 +345,12 @@ export default function AuftraegeCockpit() {
   return (
     <div
       style={{
-        background: C.navy,
-        minHeight: "100vh",
-        padding: "32px 24px 80px",
         color: "#fff",
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      {/* A4: Hintergrund, Höhe, Breite und Seitenabstand kommen aus der zentralen Seitenschale (layout.tsx). */}
+      <div>
         <div
           style={{
             display: "flex",
