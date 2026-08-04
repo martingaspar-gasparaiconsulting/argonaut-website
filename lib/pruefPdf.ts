@@ -6,6 +6,8 @@
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 export interface PruefPunktPdf { punkt: string; status: string; hinweis?: string | null; }
 
@@ -102,6 +104,7 @@ export function pruefprotokollPdf(dn: PruefPdfDaten): void {
   y = Math.max(y + 14, 262);
   doc.setDrawColor(GREY); doc.setLineWidth(0.3);
   doc.line(L, y, L + 70, y); doc.line(R - 70, y, R, y);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), L, y, 55, 18);
   doc.setFontSize(9); doc.setTextColor(GREY);
   doc.text(`${dn.objekt ? '' : ''}Datum, Unterschrift Prüfer`, L, y + 5);
   doc.text('Unterschrift / Stempel Betreiber', R - 70, y + 5);

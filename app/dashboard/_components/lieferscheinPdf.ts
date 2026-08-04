@@ -25,6 +25,8 @@
 
 import { jsPDF } from 'jspdf';
 import { eur, formatZahl, mengeText } from './positionsLogik';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 // ----------------------------------------------------------------------------
 
@@ -255,6 +257,7 @@ function baue(d: LieferscheinDaten): jsPDF {
   doc.setDrawColor(...GRAU);
   doc.line(rand, y, rand + unterB, y);
   doc.line(rand + unterB + 14, y, rechts, y);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), rand + unterB + 14, y, 48, 12);
   doc.setFontSize(8); doc.setTextColor(...GRAU); doc.setFont('helvetica', 'normal');
   doc.text('Datum, Unterschrift Empfänger', rand, y + 4.5);
   doc.text('Datum, Unterschrift Lieferant', rand + unterB + 14, y + 4.5);

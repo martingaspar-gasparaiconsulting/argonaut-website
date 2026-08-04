@@ -5,6 +5,8 @@
 // dazu Obhut-, Laufzeit- und Verwertungshinweis (Verwertung erst nach Ablauf der
 // Laufzeit + schriftlicher 14-Tage-Frist).
 import { jsPDF } from 'jspdf';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 export interface VerwahrDaten {
   aussteller: string;
@@ -89,6 +91,7 @@ export function verwahrProtokollPdf(d: VerwahrDaten): void {
   doc.setDrawColor(160); doc.setLineWidth(0.3);
   doc.line(L, y, L + 70, y);
   doc.line(R - 70, y, R, y);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), R - 70, y, 55, 18);
   doc.setFontSize(8); doc.setTextColor(dim);
   y += 4;
   doc.text('Ort, Datum, Unterschrift Kunde', L, y);

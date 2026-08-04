@@ -19,7 +19,7 @@ function absatz(s: any): string {
   return t ? t.replace(/\n/g, '<br>') : '<span class="leer">— keine Angabe —</span>';
 }
 
-function baueHtml(inhalt: any, version: number, status: string): string {
+function baueHtml(inhalt: any, version: number, status: string, unterschriftPng: string | null): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const k = inhalt?.firmenkopf || {};
   const v = inhalt?.verantwortung || {};
@@ -49,7 +49,10 @@ function baueHtml(inhalt: any, version: number, status: string): string {
   .abschnitt p { margin: 0; text-align: justify; }
   .leer { color: #9aa7b8; font-style: italic; }
   .sig { display: flex; gap: 40px; margin-top: 46px; }
-  .sig div { flex: 1; border-top: 1px solid #0A1628; padding-top: 6px; font-size: 11px; color: #5b6b80; }
+  .sigcol { flex: 1; }
+  .sigimg { height: 42px; display: flex; align-items: flex-end; }
+  .sigimg img { max-height: 42px; max-width: 200px; }
+  .sigline { border-top: 1px solid #0A1628; padding-top: 6px; font-size: 11px; color: #5b6b80; }
   .fuss { margin-top: 26px; border-top: 1px solid #e1e6ee; padding-top: 10px; color: #8a99ad; font-size: 10px; line-height: 1.5; }
 </style></head><body>
   <div class="marke">GoBD-Verfahrensdokumentation</div>
@@ -86,8 +89,8 @@ function baueHtml(inhalt: any, version: number, status: string): string {
   ${abschnitt('8', 'Aufbewahrung & Fristen', a.aufbewahrung)}
 
   <div class="sig">
-    <div>Ort, Datum</div>
-    <div>Unterschrift Geschäftsführung</div>
+    <div class="sigcol"><div class="sigimg"></div><div class="sigline">Ort, Datum</div></div>
+    <div class="sigcol"><div class="sigimg">${unterschriftPng ? `<img src="${unterschriftPng}" alt="Unterschrift">` : ''}</div><div class="sigline">Unterschrift Geschäftsführung</div></div>
   </div>
 
   <div class="fuss">
@@ -121,7 +124,13 @@ export async function POST(req: NextRequest) {
     }
     if (!row) return NextResponse.json({ error: 'Keine Verfahrensdokumentation gefunden. Bitte zuerst speichern.' }, { status: 404 });
 
-    const html = baueHtml(row.inhalt || {}, row.version || 1, row.status || 'entwurf');
+    // Gespeicherte Unterschrift der Geschäftsführung (aktueller Nutzer) — optional
+    const { data: sig } = await supabase.from('benutzer_unterschrift')
+      .select('bild,aktiv').eq('auth_user_id', user.id).maybeSingle();
+    const unterschriftPng = (sig && (sig as { aktiv?: boolean }).aktiv !== false)
+      ? ((sig as { bild?: string | null }).bild ?? null) : null;
+
+    const html = baueHtml(row.inhalt || {}, row.version || 1, row.status || 'entwurf', unterschriftPng);
 
     const gotenbergUrl = process.env.GOTENBERG_URL;
     const gUser = process.env.GOTENBERG_USER;

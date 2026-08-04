@@ -7,6 +7,26 @@
 // ============================================================================
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ---------------------------------------------------------------------------
+// Prozess-weiter Cache (nur Browser). Das Dashboard-Layout lädt die Unterschrift
+// EINMAL beim Betreten und legt sie hier ab; jeder synchrone PDF-Generator liest
+// sie danach ohne eigenen Datenbank-Aufruf und ohne Änderung an den Aufrufseiten.
+// Fehlt sie (nicht eingeloggt / nichts hinterlegt), bleibt der Wert null und die
+// Signaturlinie im PDF einfach leer.
+// ---------------------------------------------------------------------------
+let _cache: string | null = null;
+
+/** Synchroner Lesezugriff für PDF-Generatoren. */
+export function meineUnterschriftCache(): string | null {
+  return _cache;
+}
+
+/** Setzt/aktualisiert den Cache (Layout-Loader + „Meine Unterschrift"-Karte). */
+export function setMeineUnterschriftCache(bild: string | null): void {
+  _cache = bild;
+}
+
 export async function ladeMeineUnterschrift(supabase: any): Promise<string | null> {
   try {
     const { data: u } = await supabase.auth.getUser();

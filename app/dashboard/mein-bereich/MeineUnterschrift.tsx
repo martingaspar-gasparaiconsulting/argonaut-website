@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { setMeineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -48,6 +49,7 @@ export default function MeineUnterschrift() {
             .maybeSingle();
           const bild = (row as { bild?: string | null } | null)?.bild ?? null;
           setGespeichert(bild);
+          setMeineUnterschriftCache(bild);
           if (!bild) setBearbeiten(true);
         }
       } catch {
@@ -115,6 +117,7 @@ export default function MeineUnterschrift() {
         .upsert({ auth_user_id: uid, bild: kandidat, updated_at: new Date().toISOString() }, { onConflict: 'auth_user_id' });
       if (error) throw error;
       setGespeichert(kandidat);
+      setMeineUnterschriftCache(kandidat);
       setKandidat(null); setBearbeiten(false); leeren();
       setMsg('Unterschrift gespeichert.');
     } catch {
@@ -130,7 +133,7 @@ export default function MeineUnterschrift() {
     setBusy(true); setMsg(null);
     try {
       await supabase.from('benutzer_unterschrift').delete().eq('auth_user_id', uid);
-      setGespeichert(null); setBearbeiten(true); setKandidat(null); leeren();
+      setGespeichert(null); setMeineUnterschriftCache(null); setBearbeiten(true); setKandidat(null); leeren();
       setMsg('Unterschrift entfernt.');
     } finally {
       setBusy(false);

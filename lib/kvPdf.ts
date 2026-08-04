@@ -8,6 +8,8 @@
 
 import { jsPDF } from 'jspdf';
 import { kvSumme, mehrkostenSumme, gesamtSumme } from '@/lib/hilfsmittel';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 export interface KvAussteller { name?: string | null; anschrift?: string | null; ort?: string | null }
 export interface KvVersorgung {
@@ -97,6 +99,7 @@ export function kvPdf(aussteller: KvAussteller, v: KvVersorgung, positionen: KvP
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(NAVY);
   doc.text(`${aussteller.ort || '__________'}, den ${deDatum(new Date().toISOString())}`, L, y); y += 14;
   doc.setDrawColor(GREY); doc.setLineWidth(0.3); doc.line(L, y, L + 80, y);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), L, y, 55, 18);
   doc.setFontSize(9); doc.setTextColor(GREY);
   doc.text('Unterschrift / Stempel Leistungserbringer', L, y + 5);
 

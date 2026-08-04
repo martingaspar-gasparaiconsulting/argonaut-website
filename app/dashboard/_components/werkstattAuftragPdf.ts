@@ -11,6 +11,8 @@
 // ============================================================
 
 import { jsPDF } from 'jspdf';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 import {
   positionsMinuten, positionsBetrag, auftragsSumme, zeitText, eur,
   type PositionBasis,
@@ -273,6 +275,7 @@ export function werkstattAuftragPdf(
   doc.setDrawColor(...GRAU);
   doc.line(rand, y, rand + unterschriftB, y);
   doc.line(rand + unterschriftB + 14, y, seiteB - rand, y);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), rand + unterschriftB + 14, y, 48, 12);
   doc.setFontSize(8); doc.setTextColor(...GRAU); doc.setFont('helvetica', 'normal');
   doc.text('Datum, Unterschrift Kunde', rand, y + 4.5);
   doc.text('Datum, Unterschrift Werkstatt', rand + unterschriftB + 14, y + 4.5);

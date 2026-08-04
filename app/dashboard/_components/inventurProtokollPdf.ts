@@ -7,6 +7,8 @@
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
 export type PdfFirma = {
   name?: string | null;
@@ -335,6 +337,7 @@ export function baueInventurDoc(d: InventurPdfDaten): jsPDF {
   const sigB = (randR - randL - 10) / 2;
   doc.line(randL, y + 8, randL + sigB, y + 8);
   doc.line(randR - sigB, y + 8, randR, y + 8);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), randR - sigB, y + 8, 44, 10);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(grau[0], grau[1], grau[2]);

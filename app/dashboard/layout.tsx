@@ -8,6 +8,7 @@ import SwRegister from './_components/SwRegister'
 import { demoStatus, demoRestText } from '@/lib/demo'
 import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 import PraesentationsModus from './_components/PraesentationsModus'
+import UnterschriftLoader from './_components/UnterschriftLoader'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -197,6 +198,9 @@ export default async function DashboardLayout({
 
       {/* Read-only-Sperre fuer abgelaufene Demo-Konten (Punkt 26b) */}
       <DemoReadonlyGuard readonly={demoInfo.abgelaufen} />
+
+      {/* Q2d: Lädt die gespeicherte Unterschrift einmal in den Cache (rendert nichts) */}
+      <UnterschriftLoader />
     </div>
   )
 }

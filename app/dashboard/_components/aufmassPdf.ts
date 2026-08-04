@@ -15,6 +15,8 @@
 //       Jahren fragt jemand, woher die 47,31 kamen.
 // ============================================================
 
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 import { jsPDF } from 'jspdf';
 import {
   aufmassSumme, positionsBetrag, mengeText, eur, satzText,
@@ -244,6 +246,7 @@ export function aufmassPdf(aufmass: PdfAufmass, positionen: PdfPosition[], firma
   doc.setDrawColor(...GRAU);
   doc.line(rand, unterY, rand + 60, unterY);
   doc.line(seiteB - rand - 60, unterY, seiteB - rand, unterY);
+  unterschriftUeberLinie(doc, meineUnterschriftCache(), rand, unterY, 48, 12);
   doc.setFontSize(7.5); doc.setTextColor(...GRAU); doc.setFont('helvetica', 'normal');
   doc.text('Aufgemessen', rand, unterY + 4);
   doc.text('Kunde / Bestätigung', seiteB - rand - 60, unterY + 4);
