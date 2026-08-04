@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import MeineUnterschrift from './MeineUnterschrift';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -391,6 +392,8 @@ export default function MeinBereichPage() {
 
       <div style={styles.wrap}>
         {loading && <div style={styles.stateBox}>Lädt …</div>}
+
+        {!loading && <MeineUnterschrift />}
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>
