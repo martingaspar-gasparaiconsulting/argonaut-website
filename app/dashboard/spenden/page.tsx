@@ -14,6 +14,7 @@ import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpen
 import Leerzustand from '../_components/Leerzustand';
 import { augeSpenden } from '@/lib/auge';
 import { zuwendungPdf } from '@/lib/zuwendungPdf';
+import { ladeMeineUnterschrift } from '@/lib/meineUnterschrift';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -129,7 +130,8 @@ export default function SpendenPage() {
     setBusy(s.id); setFehler(null); setOk(null);
     try {
       const nr = s.bestaetigung_nr || `ZB-${JAHR}-${String(spenden.filter((x) => x.bestaetigung_nr).length + 1).padStart(3, '0')}`;
-      zuwendungPdf(eForm, { ...s, bestaetigung_nr: nr });
+      const unterschriftPng = await ladeMeineUnterschrift(supabase);
+      zuwendungPdf({ ...eForm, unterschriftPng }, { ...s, bestaetigung_nr: nr });
       if (!s.bestaetigt) {
         const { error } = await supabase.from('spende').update({ bestaetigt: true, bestaetigt_am: H, bestaetigung_nr: nr }).eq('id', s.id);
         if (error) throw error;

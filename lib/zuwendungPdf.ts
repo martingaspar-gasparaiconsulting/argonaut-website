@@ -9,11 +9,13 @@
 
 import { jsPDF } from 'jspdf';
 import { euroInWorten } from '@/lib/spenden';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 
 export interface ZuwendungAussteller {
   org_name?: string | null; org_anschrift?: string | null; finanzamt?: string | null;
   steuernummer?: string | null; freistellung_datum?: string | null; freistellung_zeitraum?: string | null;
   koerperschaft_art?: string | null; zweck?: string | null; aussteller_ort?: string | null;
+  unterschriftPng?: string | null;
 }
 export interface ZuwendungSpende {
   datum: string; spender_name: string; spender_anschrift?: string | null; betrag: number;
@@ -93,6 +95,7 @@ export function zuwendungPdf(aussteller: ZuwendungAussteller, s: ZuwendungSpende
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(NAVY);
   doc.text(`${aussteller.aussteller_ort || '__________'}, den ${deDatum(new Date().toISOString())}`, L, y);
   y += 16;
+  unterschriftUeberLinie(doc, aussteller.unterschriftPng, L, y);
   doc.setDrawColor(GREY); doc.setLineWidth(0.3); doc.line(L, y, L + 80, y);
   doc.setFontSize(9); doc.setTextColor(GREY);
   doc.text('Unterschrift des Zuwendungsempfängers', L, y + 5);
