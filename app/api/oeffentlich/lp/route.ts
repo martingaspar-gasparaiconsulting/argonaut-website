@@ -48,6 +48,14 @@ function varianteAusCookie(req: Request, lpId: string): Variante | null {
   return null;
 }
 
+/** D1-Dedupe: hat dieser Browser im aktuellen Fenster schon einen Aufruf
+ *  gezählt? Cookie lpa_<lpId> verhindert, dass Reloads die Aufrufe hochzählen. */
+function schonAlsAufrufGezaehlt(req: Request, lpId: string): boolean {
+  const roh = req.headers.get('cookie') || '';
+  const name = `lpa_${lpId}=`;
+  return roh.split(';').some((teil) => teil.trim().startsWith(name));
+}
+
 async function lpAusSlug(db: ReturnType<typeof admin>, slug: string) {
   const { data } = await db
     .from('landingpages')
@@ -88,8 +96,12 @@ export async function GET(req: Request) {
       : null;
     const inhalt = inhaltFuerVariante(lp, variante);
 
-    // Funnel: Seitenaufruf zaehlen (nicht-blockierend, mit variante).
-    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf', variante);
+    // Funnel: Seitenaufruf zaehlen — DEDUPE (D1): nur EINMAL je Browser/Fenster,
+    // damit Reloads die Aufrufe nicht künstlich hochzählen. Cookie lpa_<id> unten.
+    const schonGezaehlt = schonAlsAufrufGezaehlt(req, lp.id);
+    if (!schonGezaehlt) {
+      await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf', variante);
+    }
 
     const { data: prof } = await db
       .from('profiles')
@@ -128,6 +140,10 @@ export async function GET(req: Request) {
 
     if (variante) {
       res.cookies.set(`lpv_${lp.id}`, variante, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: COOKIE_TAGE });
+    }
+    // D1-Dedupe-Fenster für Aufrufe: 24 h (max. 1 gezählter Aufruf je Browser/Tag).
+    if (!schonGezaehlt) {
+      res.cookies.set(`lpa_${lp.id}`, '1', { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 });
     }
     return res;
   } catch {

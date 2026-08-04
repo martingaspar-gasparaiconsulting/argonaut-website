@@ -57,11 +57,21 @@ async function lauf(req: Request) {
   const laeufe = (laeufeD ?? []) as LaufRow[];
   const res = await verschickeFaellige(admin, laeufe, BASIS_URL);
 
+  // D1-Härtung: Deckel sichtbar machen. Ist MAX_PRO_DURCHGANG voll ausgeschöpft,
+  // warten evtl. weitere fällige Läufe — der nächste Cron-Lauf holt sie nach.
+  const gedeckelt = laeufe.length >= MAX_PRO_DURCHGANG;
+  if (gedeckelt) {
+    console.warn(
+      `[autoresponder] Deckel erreicht: ${MAX_PRO_DURCHGANG} Läufe in diesem Durchgang verarbeitet — ` +
+        `es könnten weitere fällige Läufe warten (werden im nächsten Lauf nachgeholt).`,
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     geprueft: laeufe.length,
     ...res,
-    gedeckelt: laeufe.length >= MAX_PRO_DURCHGANG,
+    gedeckelt,
   });
 }
 

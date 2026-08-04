@@ -74,17 +74,28 @@ export function funnelJeLandingpage(
 }
 
 export type TagPunkt = {
-  datum: string;        // YYYY-MM-DD (UTC)
+  datum: string;        // YYYY-MM-DD (Europe/Berlin)
   aufrufe: number;
   anmeldungen: number;
   bestaetigungen: number;
 };
 
+/** Kalendertag in Europe/Berlin (YYYY-MM-DD) für einen ISO-Zeitstempel.
+ *  Berücksichtigt Sommer-/Winterzeit automatisch; Leerstring bei Ungültigkeit. */
+export function berlinTag(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
+}
+
 /**
  * Baut eine lueckenlose Tagesreihe der letzten `tage` Tage (endend an bisDatumIso).
- * bisDatumIso = beliebiger ISO-Zeitstempel; der Tagesanteil (YYYY-MM-DD, UTC) zaehlt.
- * Tage ohne Ereignisse erscheinen mit 0. Pure + node-testbar (Referenzdatum wird
- * uebergeben). Zeitzone: UTC — Feinschliff (Europe/Berlin) spaeter.
+ * bisDatumIso = beliebiger ISO-Zeitstempel; gezaehlt wird nach dem Kalendertag in
+ * Europe/Berlin (D1-Härtung: nicht mehr UTC — Ereignisse kurz nach Mitternacht
+ * landen so im richtigen deutschen Tag). Tage ohne Ereignisse erscheinen mit 0.
+ * Pure + node-testbar (Referenzdatum wird uebergeben).
  */
 export function tagesreihe(
   ereignisse: { typ: string | null; created_at?: string | null }[],
@@ -92,10 +103,12 @@ export function tagesreihe(
   tage = 30,
 ): TagPunkt[] {
   const n = Math.max(1, Math.floor(tage));
-  const bis = new Date(bisDatumIso);
+  const endeTag = berlinTag(bisDatumIso) || new Date(bisDatumIso).toISOString().slice(0, 10);
+  // Mittag-UTC-Anker: reines Kalender-Rechnen, DST-unabhaengig.
+  const anker = new Date(`${endeTag}T12:00:00Z`);
   const tageListe: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(bis);
+    const d = new Date(anker);
     d.setUTCDate(d.getUTCDate() - i);
     tageListe.push(d.toISOString().slice(0, 10));
   }
@@ -104,7 +117,7 @@ export function tagesreihe(
   for (const e of ereignisse || []) {
     const roh = e?.created_at;
     if (!roh) continue;
-    const tag = String(roh).slice(0, 10);
+    const tag = berlinTag(String(roh));
     const eintrag = map.get(tag);
     if (!eintrag) continue;
     if (e.typ === 'aufruf') eintrag.aufrufe++;
@@ -180,8 +193,9 @@ export type AbSieger = {
 
 /**
  * Bewertet A gegen B anhand der End-to-End-Conversion (Bestaetigt/Aufrufe).
- * Braucht je Variante mind. `minAufrufe` Aufrufe, sonst „noch zu wenig Daten".
- * Pure/node-testbar.
+ * D1-Härtung: kein Sieger mehr allein wegen eines Prozent-Unterschieds — es
+ * braucht je Variante mind. `minAufrufe` Aufrufe UND statistische Signifikanz
+ * (Zwei-Stichproben-Anteilstest / z-Test, ~95 % Konfidenz). Pure/node-testbar.
  */
 export function abSieger(
   a: { aufrufe: number; bestaetigungen: number },
@@ -199,10 +213,22 @@ export function abSieger(
       hinweis: `Noch zu wenig Daten — für ein verlässliches Ergebnis sollte jede Version mindestens ${minAufrufe} Aufrufe haben.`,
     };
   }
-  if (Math.abs(quoteA - quoteB) < 0.1) {
-    return { reif: true, sieger: 'gleich', quoteA, quoteB, hinweis: 'Beide Versionen sind praktisch gleichauf.' };
+  // Zwei-Stichproben-Anteilstest auf die End-to-End-Conversion (Bestaetigt/Aufrufe).
+  const pA = a.bestaetigungen / a.aufrufe;
+  const pB = b.bestaetigungen / b.aufrufe;
+  const pPool = (a.bestaetigungen + b.bestaetigungen) / (a.aufrufe + b.aufrufe);
+  const se = Math.sqrt(pPool * (1 - pPool) * (1 / a.aufrufe + 1 / b.aufrufe));
+  const z = se > 0 ? (pA - pB) / se : 0;
+  if (Math.abs(z) < 1.96) {
+    return {
+      reif: true,
+      sieger: 'gleich',
+      quoteA,
+      quoteB,
+      hinweis: 'Der Unterschied ist statistisch noch nicht aussagekräftig (95 %-Konfidenz nicht erreicht) — weiter testen.',
+    };
   }
-  const sieger: 'A' | 'B' = quoteA > quoteB ? 'A' : 'B';
+  const sieger: 'A' | 'B' = pA > pB ? 'A' : 'B';
   const hoch = Math.max(quoteA, quoteB);
   const tief = Math.min(quoteA, quoteB);
   return {
@@ -210,6 +236,6 @@ export function abSieger(
     sieger,
     quoteA,
     quoteB,
-    hinweis: `Variante ${sieger} liegt vorn (Aufruf → Bestätigt: ${hoch} % vs. ${tief} %).`,
+    hinweis: `Variante ${sieger} liegt statistisch signifikant vorn (Aufruf → Bestätigt: ${hoch} % vs. ${tief} %, 95 %-Konfidenz).`,
   };
 }
