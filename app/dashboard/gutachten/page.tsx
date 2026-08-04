@@ -13,6 +13,7 @@ import { HONORARGRUPPEN, KATEGORIEN, honorar, honorarsatz, summePositionen, zaeh
 import Leerzustand from '../_components/Leerzustand';
 import { augeGutachten } from '@/lib/auge';
 import { gutachtenPdf } from '@/lib/gutachtenPdf';
+import { ladeMeineUnterschrift } from '@/lib/meineUnterschrift';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -136,12 +137,14 @@ export default function GutachtenPage() {
     finally { setBusy(null); }
   }
 
-  function pdfErstellen(g: Gutachten) {
+  async function pdfErstellen(g: Gutachten) {
     const pos = positionen.filter((p) => p.gutachten_id === g.id);
+    const unterschriftPng = await ladeMeineUnterschrift(supabase);
     gutachtenPdf({
       titel: g.titel, auftraggeber: g.auftraggeber, objekt: g.objekt, art: g.art, aktenzeichen: g.aktenzeichen,
       datum: g.datum, gutachter: g.gutachter, honorargruppe: g.honorargruppe, stunden: g.stunden,
       zusammenfassung: g.zusammenfassung, aussteller_ort: ausstellerOrt,
+      unterschriftPng,
     }, pos);
   }
 

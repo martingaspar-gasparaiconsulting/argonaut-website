@@ -8,11 +8,13 @@
 
 import { jsPDF } from 'jspdf';
 import { honorar, honorarsatz, summePositionen } from '@/lib/gutachten';
+import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 
 export interface GutachtenKopf {
   titel: string; auftraggeber?: string | null; objekt?: string | null; art?: string | null;
   aktenzeichen?: string | null; datum: string; gutachter?: string | null;
   honorargruppe?: string | null; stunden?: number | null; zusammenfassung?: string | null; aussteller_ort?: string | null;
+  unterschriftPng?: string | null;
 }
 export interface GutachtenPos { position: number; kategorie: string; titel?: string | null; text?: string | null; betrag?: number | null }
 
@@ -104,6 +106,7 @@ export function gutachtenPdf(g: GutachtenKopf, positionen: GutachtenPos[]): void
   if (y > 275) { doc.addPage(); y = 258; }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(NAVY);
   doc.text(`${g.aussteller_ort || '__________'}, den ${deDatum(g.datum)}`, L, y); y += 16;
+  unterschriftUeberLinie(doc, g.unterschriftPng, L, y);
   doc.setDrawColor(GREY); doc.setLineWidth(0.3); doc.line(L, y, L + 80, y);
   doc.setFontSize(9); doc.setTextColor(GREY);
   doc.text(`${g.gutachter || 'Gutachter'} · Unterschrift`, L, y + 5);
