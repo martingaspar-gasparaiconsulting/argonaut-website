@@ -256,6 +256,54 @@ async function tagesKosten(admin: AdminClient, userIds: string[]): Promise<numbe
 }
 
 /**
+ * Prompt Caching zentral (B2, 04.08.2026): setzt cache_control:{type:'ephemeral'}
+ * auf den grossen, statischen System-Prompt (und – falls vorhanden – die
+ * Tool-Definitionen), bevor der Body an Anthropic geht. Der System-Block steht
+ * im Prompt hinter den Tools; sein Cache-Punkt deckt also Tools + System ab.
+ *
+ * Wirkt an EINER Stelle auf ALLE ~30 Routen, die durch kiFetch laufen. Rein
+ * additiv: Antwort und Verhalten bleiben identisch, nur die Kosten sinken
+ * (Cache-Lesen = 0,1x Input). Zu kurze Prompts (< Mindestlaenge) ignoriert die
+ * API stillschweigend. Best effort — bei jedem Zweifel bleibt der Body
+ * unveraendert, und das Original-options-Objekt wird nie mutiert.
+ */
+function mitCacheControl(options: RequestInit): RequestInit {
+  try {
+    if (!options || typeof options.body !== 'string') return options
+    const koerper: any = JSON.parse(options.body)
+    if (!koerper || typeof koerper !== 'object') return options
+
+    let geaendert = false
+
+    // System-Prompt cachen (der grosse, gleichbleibende Block).
+    if (typeof koerper.system === 'string' && koerper.system.trim().length > 0) {
+      koerper.system = [{ type: 'text', text: koerper.system, cache_control: { type: 'ephemeral' } }]
+      geaendert = true
+    } else if (Array.isArray(koerper.system) && koerper.system.length > 0) {
+      const letzter = koerper.system[koerper.system.length - 1]
+      if (letzter && typeof letzter === 'object' && !letzter.cache_control) {
+        letzter.cache_control = { type: 'ephemeral' }
+        geaendert = true
+      }
+    }
+
+    // Tool-Definitionen cachen (falls vorhanden).
+    if (Array.isArray(koerper.tools) && koerper.tools.length > 0) {
+      const letztesTool = koerper.tools[koerper.tools.length - 1]
+      if (letztesTool && typeof letztesTool === 'object' && !letztesTool.cache_control) {
+        letztesTool.cache_control = { type: 'ephemeral' }
+        geaendert = true
+      }
+    }
+
+    if (!geaendert) return options
+    return { ...options, body: JSON.stringify(koerper) }
+  } catch {
+    return options
+  }
+}
+
+/**
  * Ersatz fuer `fetch("https://api.anthropic.com/v1/messages", options)`.
  * Gibt die UNVERAENDERTE Original-Antwort zurueck (res.ok / res.json() wie gehabt)
  * und schreibt zusaetzlich eine Nutzungs-Zeile nach ki_nutzung.
@@ -387,7 +435,7 @@ export async function kiFetch(route: string, options: RequestInit): Promise<Resp
     }
   }
 
-  const res = await fetch(ANTHROPIC_URL, options)
+  const res = await fetch(ANTHROPIC_URL, mitCacheControl(options))
 
   // Nur erfolgreiche Antworten protokollieren. Klon lesen -> Original unberuehrt.
   try {
