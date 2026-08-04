@@ -2,17 +2,24 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
-import type { AugeErgebnis } from "@/lib/auge";
+import { augeAuftraege, type AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · AUFTRÄGE-AUGE (Übersichts-Auge)
-// Lädt Aufträge, findet offene/überfällige und noch nicht abgerechnete
-// und übergibt die Lage ans KiAuge.
+// ARGONAUT OS · AUFTRÄGE-AUGE (Übersichts-Auge fürs Auftrags-Cockpit)
 //
-// EINBAU in app/dashboard/auftraege/page.tsx:
-//   1) Import ergänzen:   import AuftraegeAuge from "./AuftraegeAuge";
-//   2) Im sichtbaren Bereich (nach Modul-Kopf / KPIs) einfügen:  <AuftraegeAuge />
-//   (Kein altes KiKlartext vorhanden — nur einfügen.)
+// Lädt die Aufträge und übergibt die fertig berechnete Regel-Antwort aus
+// lib/auge.ts (augeAuftraege) ans wiederverwendbare KiAuge — 0 €, kein
+// KI-Aufruf. Drei Signale: überfällig (Lieferdatum überschritten),
+// abgeschlossen-ohne-Rechnung, beauftragt-ohne-Liefertermin.
+//
+// Schema-treu zu app/dashboard/auftraege (Liste + Detailseite):
+//   auftraege: status (entwurf/beauftragt/in_bearbeitung/abgeschlossen/
+//   storniert), lieferdatum, brutto_summe, rechnung_id. RLS scopet je
+//   Betrieb — genau wie die Cockpit-Seiten selbst (kein owner-Filter).
+//
+// EINBAU (bereits erledigt in page.tsx):
+//   import AuftraegeAuge from "./AuftraegeAuge";
+//   <AuftraegeAuge />
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -20,9 +27,7 @@ const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function eur(n: number): string {
-  return (Number(n) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-}
+// Datum in YYYY-MM-DD (lokal)
 function ymdHeute(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -30,11 +35,7 @@ function ymdHeute(): string {
   const t = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${t}`;
 }
-function istAbgeschlossen(status?: string): boolean {
-  const s = (status || "").toLowerCase();
-  return s.includes("abgeschlossen") || s.includes("abgerechnet") ||
-    s.includes("erledigt") || s.includes("storniert") || s.includes("abgebrochen");
-}
+
 function auftragLabel(a: { auftragsnummer?: string | null; titel?: string | null }): string {
   const nr = (a.auftragsnummer || "").trim();
   const ti = (a.titel || "").trim();
@@ -44,6 +45,27 @@ function auftragLabel(a: { auftragsnummer?: string | null; titel?: string | null
   return "Auftrag";
 }
 
+// Tage, die das Lieferdatum bereits zurückliegt (positiv = überfällig).
+function tageUeber(lieferdatum: string, heute: string): number {
+  const l = new Date(lieferdatum + "T00:00:00Z").getTime();
+  const h = new Date(heute + "T00:00:00Z").getTime();
+  return Math.round((h - l) / 86400000);
+}
+
+type Row = {
+  auftragsnummer?: string | null;
+  titel?: string | null;
+  status?: string | null;
+  lieferdatum?: string | null;
+  brutto_summe?: number | null;
+  rechnung_id?: string | null;
+};
+
+// Offene (noch laufende) Auftrags-Status.
+const OFFEN = ["entwurf", "beauftragt", "in_bearbeitung"];
+// Status, die einen zugesagten Liefertermin brauchen (Entwurf noch nicht).
+const BRAUCHT_TERMIN = ["beauftragt", "in_bearbeitung"];
+
 export default function AuftraegeAuge() {
   const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
@@ -51,123 +73,55 @@ export default function AuftraegeAuge() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        const uid = userData?.user?.id;
-        if (!uid) {
-          setBereit(true);
-          return;
-        }
-
-        const { data: rows } = await supabase
-          .from("auftraege")
-          .select(
-            "auftragsnummer, titel, status, lieferdatum, brutto_summe, rechnung_id"
-          );
-
-        const auftraege = rows || [];
         const heute = ymdHeute();
+        const { data } = await supabase
+          .from("auftraege")
+          .select("auftragsnummer, titel, status, lieferdatum, brutto_summe, rechnung_id");
+        const rows = (data || []) as Row[];
 
-        // Offene (nicht abgeschlossene) Aufträge
-        const offene = auftraege.filter(
-          (a: { status?: string }) => !istAbgeschlossen(a.status)
-        );
+        const st = (r: Row) => (r.status || "").toLowerCase();
+        const wertOf = (r: Row) => Number(r.brutto_summe) || 0;
+        const liefer = (r: Row) => (r.lieferdatum || "").slice(0, 10);
+
+        // Offene Aufträge
+        const offene = rows.filter((r) => OFFEN.includes(st(r)));
         const offeneAnzahl = offene.length;
-        let offenerWert = 0;
+        const offenerWert = offene.reduce((s, r) => s + wertOf(r), 0);
 
-        type Auf = {
-          label: string;
-          wert: number;
-          tageBisLieferung: number | null;
-          ueberfaellig: boolean;
-        };
-        const liste: Auf[] = [];
-        // Aufträge, die erledigt/lieferbereit wirken aber KEINE Rechnung haben
-        type Abr = { label: string; wert: number };
-        const nichtAbgerechnet: Abr[] = [];
+        // Überfällig: offen und Lieferdatum liegt vor heute
+        const ueberfaelligeRows = offene.filter((r) => {
+          const l = liefer(r);
+          return l !== "" && l < heute;
+        });
+        const ueberfaelligAnzahl = ueberfaelligeRows.length;
+        const ueberfaelligWert = ueberfaelligeRows.reduce((s, r) => s + wertOf(r), 0);
+        const topUeberfaellig = ueberfaelligeRows
+          .map((r) => ({ label: auftragLabel(r), tageUeber: tageUeber(liefer(r), heute), wert: wertOf(r) }))
+          .sort((a, b) => b.tageUeber - a.tageUeber)
+          .slice(0, 3);
 
-        for (const a of offene as Array<{
-          auftragsnummer?: string;
-          titel?: string;
-          lieferdatum?: string | null;
-          brutto_summe?: number;
-          rechnung_id?: string | null;
-        }>) {
-          const wert = Number(a.brutto_summe) || 0;
-          offenerWert += wert;
+        // Abgeschlossen, aber noch keine Rechnung erzeugt
+        const nichtAbgerechnetRows = rows.filter((r) => st(r) === "abgeschlossen" && !r.rechnung_id);
+        const nichtAbgerechnetAnzahl = nichtAbgerechnetRows.length;
+        const nichtAbgerechnetWert = nichtAbgerechnetRows.reduce((s, r) => s + wertOf(r), 0);
 
-          let tageBis: number | null = null;
-          let ueberfaellig = false;
-          if (a.lieferdatum) {
-            const diff =
-              (new Date(a.lieferdatum).getTime() - new Date(heute).getTime()) /
-              (24 * 60 * 60 * 1000);
-            tageBis = Math.round(diff);
-            if (tageBis < 0) ueberfaellig = true;
-          }
-          liste.push({ label: auftragLabel(a), wert, tageBisLieferung: tageBis, ueberfaellig });
-        }
+        // Beauftragt/in Bearbeitung, aber ohne Liefertermin
+        const ohneTerminAnzahl = rows.filter(
+          (r) => BRAUCHT_TERMIN.includes(st(r)) && liefer(r) === ""
+        ).length;
 
-        // Nicht abgerechnete: Aufträge OHNE rechnung_id, deren Lieferdatum erreicht ist
-        for (const a of auftraege as Array<{
-          auftragsnummer?: string;
-          titel?: string;
-          status?: string;
-          lieferdatum?: string | null;
-          brutto_summe?: number;
-          rechnung_id?: string | null;
-        }>) {
-          if (a.rechnung_id) continue; // schon abgerechnet
-          if ((a.status || "").toLowerCase().includes("storniert")) continue;
-          if ((a.status || "").toLowerCase().includes("abgebrochen")) continue;
-          const lieferErreicht = a.lieferdatum ? a.lieferdatum <= heute : false;
-          if (lieferErreicht) {
-            nichtAbgerechnet.push({
-              label: auftragLabel(a),
-              wert: Number(a.brutto_summe) || 0,
-            });
-          }
-        }
-
-        const ueberfaellige = liste.filter((o) => o.ueberfaellig);
-        ueberfaellige.sort((a, b) => (a.tageBisLieferung ?? 0) - (b.tageBisLieferung ?? 0));
-
-        const zeilen: string[] = [];
-        zeilen.push(
-          `${offeneAnzahl} offene Aufträge im Wert von ${eur(offenerWert)}.`
+        setErgebnis(
+          augeAuftraege({
+            offeneAnzahl,
+            offenerWert,
+            ueberfaelligAnzahl,
+            ueberfaelligWert,
+            topUeberfaellig,
+            nichtAbgerechnetAnzahl,
+            nichtAbgerechnetWert,
+            ohneTerminAnzahl,
+          })
         );
-        if (ueberfaellige.length > 0) {
-          const top = ueberfaellige
-            .slice(0, 3)
-            .map(
-              (o) =>
-                `${o.label} (${eur(o.wert)}, Lieferung ${Math.abs(
-                  o.tageBisLieferung ?? 0
-                )} Tage überfällig)`
-            )
-            .join("; ");
-          zeilen.push(
-            `${ueberfaellige.length} mit überschrittenem Lieferdatum: ${top}.`
-          );
-        }
-        if (nichtAbgerechnet.length > 0) {
-          const summe = nichtAbgerechnet.reduce((s, x) => s + x.wert, 0);
-          const top = nichtAbgerechnet
-            .slice(0, 3)
-            .map((x) => `${x.label} (${eur(x.wert)})`)
-            .join("; ");
-          zeilen.push(
-            `${nichtAbgerechnet.length} gelieferte Aufträge noch NICHT abgerechnet (${eur(summe)} offen): ${top}.`
-          );
-        }
-        if (ueberfaellige.length === 0 && nichtAbgerechnet.length === 0 && offeneAnzahl > 0) {
-          zeilen.push(`Alle Aufträge im Zeitplan und keine offene Abrechnung.`);
-        }
-        if (offeneAnzahl === 0 && nichtAbgerechnet.length === 0) {
-          zeilen.push(`Aktuell keine offenen Aufträge.`);
-        }
-
-        const stimmung: AugeErgebnis["stimmung"] = (ueberfaellige.length > 0 || nichtAbgerechnet.length > 0) ? "achtung" : offeneAnzahl > 0 ? "gut" : "neutral";
-        setErgebnis({ klartext: zeilen[0] ?? "Aktuell keine offenen Aufträge.", punkte: zeilen.slice(1), stimmung });
         setBereit(true);
       } catch {
         setBereit(true);

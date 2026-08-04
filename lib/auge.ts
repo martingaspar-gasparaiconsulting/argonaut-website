@@ -270,6 +270,39 @@ export function augePersonal(d: {
   return { klartext: 'Team vollständig da, alle Zertifikate gültig — nichts Dringendes im Personal.', punkte, stimmung: 'gut' };
 }
 
+/** Auftrags-Cockpit: offene Aufträge, überfällige (Lieferdatum), abgeschlossen-ohne-Rechnung, ohne Liefertermin. */
+export function augeAuftraege(d: {
+  offeneAnzahl: number;
+  offenerWert: number;
+  ueberfaelligAnzahl: number;
+  ueberfaelligWert: number;
+  topUeberfaellig?: Array<{ label: string; tageUeber: number; wert: number }>;
+  nichtAbgerechnetAnzahl: number;
+  nichtAbgerechnetWert: number;
+  ohneTerminAnzahl: number;
+}): AugeErgebnis {
+  if (d.offeneAnzahl === 0 && d.nichtAbgerechnetAnzahl === 0) {
+    return { klartext: 'Keine offenen Aufträge — alles abgeschlossen. Sauber.', punkte: [], stimmung: 'gut' };
+  }
+
+  const punkte: string[] = [];
+  if (d.offeneAnzahl > 0) punkte.push(`${d.offeneAnzahl} ${d.offeneAnzahl === 1 ? 'offener Auftrag' : 'offene Aufträge'} im Wert von ${eur(d.offenerWert)}.`);
+  (d.topUeberfaellig || []).slice(0, 3).forEach((u) => punkte.push(`${u.label}: ${u.tageUeber} Tag${u.tageUeber === 1 ? '' : 'e'} über Lieferdatum (${eur(u.wert)})`));
+  if (d.nichtAbgerechnetAnzahl > 0 && d.ueberfaelligAnzahl > 0) punkte.push(`${d.nichtAbgerechnetAnzahl} ${d.nichtAbgerechnetAnzahl === 1 ? 'abgeschlossener Auftrag' : 'abgeschlossene Aufträge'} noch ohne Rechnung (${eur(d.nichtAbgerechnetWert)}).`);
+  if (d.ohneTerminAnzahl > 0) punkte.push(`${d.ohneTerminAnzahl} ${d.ohneTerminAnzahl === 1 ? 'beauftragter Auftrag' : 'beauftragte Aufträge'} ohne Liefertermin — hier fehlt die Terminzusage.`);
+
+  if (d.ueberfaelligAnzahl > 0) {
+    return { klartext: `${d.ueberfaelligAnzahl} ${d.ueberfaelligAnzahl === 1 ? 'Auftrag ist' : 'Aufträge sind'} über dem Lieferdatum (${eur(d.ueberfaelligWert)}) — die zuerst nachziehen.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.nichtAbgerechnetAnzahl > 0) {
+    return { klartext: `${d.nichtAbgerechnetAnzahl} ${d.nichtAbgerechnetAnzahl === 1 ? 'abgeschlossener Auftrag ist' : 'abgeschlossene Aufträge sind'} noch nicht abgerechnet (${eur(d.nichtAbgerechnetWert)}) — hier wartet bereits verdientes Geld auf die Rechnung.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.ohneTerminAnzahl > 0) {
+    return { klartext: `Nichts überfällig, aber ${d.ohneTerminAnzahl} ${d.ohneTerminAnzahl === 1 ? 'beauftragter Auftrag hat' : 'beauftragte Aufträge haben'} noch keinen Liefertermin — Termin setzen, damit nichts durchrutscht.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `${d.offeneAnzahl} offene Aufträge — alle mit Termin und im Zeitplan, nichts überfällig.`, punkte, stimmung: 'gut' };
+}
+
 /** Wiederkehr-Cockpit: MRR, fällige/bald fällige Wiederkehr, laufende Ausgaben. */
 export function augeWiederkehr(d: {
   mrr: number;
