@@ -2,22 +2,25 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
-import type { AugeErgebnis } from "@/lib/auge";
+import { augePersonal, type AugeErgebnis } from "@/lib/auge";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · PERSONAL-AUGE (Pilot des Übersichts-Auges)
-// Eigenständiger Baustein: lädt selbst die Personal-Kennzahlen und
-// übergibt sie als Kontext ans wiederverwendbare KiAuge.
+// ARGONAUT OS · PERSONAL-AUGE (Übersichts-Auge fürs Personal-Cockpit)
 //
-// EINBAU im Personal-Cockpit (app/dashboard/personal/page.tsx):
-//   1) Oben bei den Imports EINE Zeile ergänzen:
-//        import PersonalAuge from "./PersonalAuge";
-//   2) Im sichtbaren Bereich (direkt nach der Personal-Überschrift)
-//      EINE Zeile einfügen:
-//        <PersonalAuge />
+// Lädt selbst die Personal-Kennzahlen (Team, heutige Abwesenheiten,
+// ablaufende Zertifikate, offene Bewerbungen) und übergibt die fertig
+// berechnete Regel-Antwort aus lib/auge.ts (augePersonal) ans
+// wiederverwendbare KiAuge — 0 €, kein KI-Aufruf.
 //
-// So bleibt die große page.tsx praktisch unangetastet (rein additiv).
-// Das Auge lädt seine Zahlen selbst — unabhängig vom restlichen Cockpit.
+// Schema-treu zu app/dashboard/personal/page.tsx: mitarbeiter.status
+// (aktiv/inaktiv/beurlaubt), hr_abwesenheiten (typ/von/bis/status),
+// hr_schulungen (gueltig_bis), bewerber (status). Alle Abfragen ohne
+// owner-Filter — die Row-Level-Security scopet je Betrieb, genau wie
+// die Cockpit-Seite selbst.
+//
+// EINBAU (bereits erledigt in page.tsx):
+//   import PersonalAuge from "./PersonalAuge";
+//   <PersonalAuge />  (direkt unter der Personal-Überschrift)
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -33,6 +36,11 @@ function ymd(d: Date): string {
   return `${y}-${m}-${t}`;
 }
 
+type MaRow = { status?: string | null };
+type AbwRow = { typ?: string | null; von?: string | null; bis?: string | null; status?: string | null };
+type SchulRow = { gueltig_bis?: string | null };
+type BewRow = { status?: string | null };
+
 export default function PersonalAuge() {
   const [ergebnis, setErgebnis] = useState<AugeErgebnis | null>(null);
   const [bereit, setBereit] = useState(false);
@@ -40,89 +48,59 @@ export default function PersonalAuge() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        const uid = userData?.user?.id;
-        if (!uid) {
-          setBereit(true);
-          return;
-        }
-
         const heute = ymd(new Date());
 
-        // Mitarbeiter (aktiv)
-        const { data: ma } = await supabase
-          .from("mitarbeiter")
-          .select("id, aktiv")
-          .eq("owner_user_id", uid);
-        const mitarbeiterListe = ma || [];
-        const anzahlAktiv = mitarbeiterListe.filter(
-          (m: { aktiv?: boolean }) => m.aktiv !== false
-        ).length;
-        const anzahlGesamt = mitarbeiterListe.length;
+        // Mitarbeiter — Feld ist `status` (aktiv/inaktiv/beurlaubt), RLS-scoped.
+        const { data: ma } = await supabase.from("mitarbeiter").select("id,status");
+        const maListe = (ma || []) as MaRow[];
+        const mitarbeiterGesamt = maListe.length;
+        const mitarbeiterAktiv = maListe.filter((m) => (m.status || "") === "aktiv").length;
 
-        // Aktuelle Abwesenheiten (heute) — nur definitive.
-        // select("*") statt fester Spalten: robust, falls Felder anders heißen.
+        // Heutige Abwesenheiten: Zeitraum überlappt heute, nicht abgelehnt/storniert.
         const { data: abw } = await supabase
           .from("hr_abwesenheiten")
-          .select("*")
-          .eq("owner_user_id", uid)
-          .lte("von", heute)
-          .gte("bis", heute);
-        const abwHeute = (abw || []).filter(
-          (a: { status?: string }) =>
-            a.status === "genehmigt" || a.status === "erfasst"
-        );
-        const krankHeute = abwHeute.filter((a: { art?: string; typ?: string }) => {
-          const wert = (a.art || a.typ || "").toString().toLowerCase();
-          return wert.includes("krank");
-        }).length;
-        const abwesendGesamt = abwHeute.length;
+          .select("typ,von,bis,status");
+        const abwHeute = ((abw || []) as AbwRow[]).filter((a) => {
+          const von = (a.von || "").slice(0, 10);
+          const bis = (a.bis || "").slice(0, 10);
+          const st = (a.status || "").toLowerCase();
+          return von && bis && von <= heute && bis >= heute && st !== "abgelehnt" && st !== "storniert";
+        });
+        const abwesendHeute = abwHeute.length;
+        const krankHeute = abwHeute.filter(
+          (a) => (a.typ || "").toLowerCase().includes("krank")
+        ).length;
 
-        // Schulungen — abgelaufen / laufen bald ab (nächste 30 Tage)
+        // Schulungen/Zertifikate — abgelaufen / in den nächsten 30 Tagen fällig.
+        const { data: schul } = await supabase.from("hr_schulungen").select("gueltig_bis");
+        const in30 = ymd(new Date(Date.now() + 30 * 86400000));
         let schulungAbgelaufen = 0;
         let schulungBald = 0;
-        try {
-          const { data: schul } = await supabase
-            .from("hr_schulungen")
-            .select("gueltig_bis")
-            .eq("owner_user_id", uid);
-          const in30 = new Date();
-          in30.setDate(in30.getDate() + 30);
-          for (const s of schul || []) {
-            const g = (s as { gueltig_bis?: string }).gueltig_bis;
-            if (!g) continue;
-            const d = new Date(g);
-            if (isNaN(d.getTime())) continue;
-            if (d < new Date()) schulungAbgelaufen++;
-            else if (d <= in30) schulungBald++;
-          }
-        } catch {
-          // Tabelle evtl. anders benannt — Schulungen dann einfach weglassen.
+        for (const s of (schul || []) as SchulRow[]) {
+          const g = (s.gueltig_bis || "").slice(0, 10);
+          if (!g) continue;
+          if (g < heute) schulungAbgelaufen++;
+          else if (g <= in30) schulungBald++;
         }
 
-        // Kontext-Text für die KI zusammenbauen (nur echte Zahlen).
-        const zeilen: string[] = [];
-        zeilen.push(
-          `${anzahlGesamt} Mitarbeiter im System (${anzahlAktiv} aktiv).`
-        );
-        zeilen.push(
-          abwesendGesamt > 0
-            ? `Heute abwesend: ${abwesendGesamt} (davon ${krankHeute} krankgemeldet).`
-            : `Heute sind alle anwesend.`
-        );
-        if (schulungAbgelaufen > 0 || schulungBald > 0) {
-          zeilen.push(
-            `Schulungen/Zertifikate: ${schulungAbgelaufen} abgelaufen, ${schulungBald} laufen in den nächsten 30 Tagen ab.`
-          );
-        }
-        // Krank-Quote als Kontext (hilft der KI, Dringlichkeit einzuschätzen)
-        if (anzahlAktiv > 0 && abwesendGesamt > 0) {
-          const quote = Math.round((abwesendGesamt / anzahlAktiv) * 100);
-          zeilen.push(`Abwesenheitsquote heute: ca. ${quote}%.`);
-        }
+        // Offene Bewerbungen (warten auf Rückmeldung).
+        const { data: bew } = await supabase.from("bewerber").select("status");
+        const offeneBewerber = ((bew || []) as BewRow[]).filter((b) => {
+          const st = (b.status || "").toLowerCase();
+          return st === "neu" || st === "in_pruefung" || st === "eingeladen";
+        }).length;
 
-        const stimmung: AugeErgebnis["stimmung"] = schulungAbgelaufen > 0 ? "achtung" : abwesendGesamt > 0 ? "neutral" : "gut";
-        setErgebnis({ klartext: zeilen[0] ?? "", punkte: zeilen.slice(1), stimmung });
+        setErgebnis(
+          augePersonal({
+            mitarbeiterGesamt,
+            mitarbeiterAktiv,
+            abwesendHeute,
+            krankHeute,
+            schulungAbgelaufen,
+            schulungBald,
+            offeneBewerber,
+          })
+        );
         setBereit(true);
       } catch {
         setBereit(true);

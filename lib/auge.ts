@@ -226,6 +226,50 @@ export function augeCrm(d: { ueberfaellig: number; wiedervorlage: number; gesamt
   return { klartext: `Alle Kontakte sind frisch betreut — nichts liegt liegen.`, punkte: [`${d.gesamt} Kontakte gesamt`], stimmung: 'gut' };
 }
 
+/** Personal-Cockpit: Team-Stärke, heutige Abwesenheiten, ablaufende Zertifikate, offene Bewerbungen. */
+export function augePersonal(d: {
+  mitarbeiterGesamt: number;
+  mitarbeiterAktiv: number;
+  abwesendHeute: number;
+  krankHeute: number;
+  schulungAbgelaufen: number;
+  schulungBald: number;
+  offeneBewerber: number;
+}): AugeErgebnis {
+  if (d.mitarbeiterGesamt === 0) {
+    return { klartext: 'Noch keine Mitarbeiter erfasst — leg dein Team an, dann behalte ich Abwesenheiten, Zertifikate und Bewerbungen für dich im Blick.', punkte: [], stimmung: 'neutral' };
+  }
+
+  const punkte: string[] = [`${d.mitarbeiterGesamt} Mitarbeiter im Team (${d.mitarbeiterAktiv} aktiv).`];
+  if (d.abwesendHeute > 0) {
+    const quote = d.mitarbeiterAktiv > 0 ? Math.round((d.abwesendHeute / d.mitarbeiterAktiv) * 100) : 0;
+    punkte.push(`Heute abwesend: ${d.abwesendHeute}${d.krankHeute > 0 ? ` (davon ${d.krankHeute} krankgemeldet)` : ''}${quote > 0 ? ` — rund ${quote}% des aktiven Teams` : ''}.`);
+  }
+  if (d.schulungBald > 0) punkte.push(`${d.schulungBald} Zertifikat${d.schulungBald === 1 ? '' : 'e'} ${d.schulungBald === 1 ? 'läuft' : 'laufen'} in den nächsten 30 Tagen ab.`);
+  if (d.offeneBewerber > 0) punkte.push(`${d.offeneBewerber} offene Bewerbung${d.offeneBewerber === 1 ? '' : 'en'} ${d.offeneBewerber === 1 ? 'wartet' : 'warten'} auf Rückmeldung.`);
+
+  if (d.schulungAbgelaufen > 0) {
+    return {
+      klartext: `${d.schulungAbgelaufen} Zertifikat${d.schulungAbgelaufen === 1 ? ' ist' : 'e sind'} abgelaufen — hier drohen Arbeitsschutz-Lücken und Haftung, das zuerst nachziehen.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  if (d.abwesendHeute > 0) {
+    const quoteAnteil = d.mitarbeiterAktiv > 0 ? d.abwesendHeute / d.mitarbeiterAktiv : 0;
+    return {
+      klartext: `Heute ${d.abwesendHeute} Mitarbeiter abwesend${d.krankHeute > 0 ? `, davon ${d.krankHeute} krankgemeldet` : ''} — plan die offenen Aufgaben entsprechend um.`,
+      punkte, stimmung: quoteAnteil >= 0.3 ? 'achtung' : 'neutral',
+    };
+  }
+  if (d.schulungBald > 0) {
+    return { klartext: `Nichts überfällig, aber ${d.schulungBald} Zertifikat${d.schulungBald === 1 ? '' : 'e'} ${d.schulungBald === 1 ? 'läuft' : 'laufen'} bald ab — rechtzeitig auffrischen.`, punkte, stimmung: 'neutral' };
+  }
+  if (d.offeneBewerber > 0) {
+    return { klartext: `${d.offeneBewerber} offene Bewerbung${d.offeneBewerber === 1 ? '' : 'en'} ${d.offeneBewerber === 1 ? 'wartet' : 'warten'} auf Rückmeldung — dranbleiben, bevor gute Leute abspringen.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: 'Team vollständig da, alle Zertifikate gültig — nichts Dringendes im Personal.', punkte, stimmung: 'gut' };
+}
+
 /** Wiederkehr-Cockpit: MRR, fällige/bald fällige Wiederkehr, laufende Ausgaben. */
 export function augeWiederkehr(d: {
   mrr: number;
