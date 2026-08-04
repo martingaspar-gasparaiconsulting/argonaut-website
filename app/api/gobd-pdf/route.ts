@@ -92,6 +92,7 @@ function baueHtml(inhalt: any, version: number, status: string, unterschriftPng:
     <div class="sigcol"><div class="sigimg"></div><div class="sigline">Ort, Datum</div></div>
     <div class="sigcol"><div class="sigimg">${unterschriftPng ? `<img src="${unterschriftPng}" alt="Unterschrift">` : ''}</div><div class="sigline">Unterschrift Geschäftsführung</div></div>
   </div>
+  ${unterschriftPng ? `<div style="margin-top:10px;color:#8a99ad;font-size:9px;font-style:italic;line-height:1.45">Die eingesetzte Unterschrift der Geschäftsführung ist ein elektronisches Faksimile (einfache elektronische Signatur). Sie ist ohne gesetzliche Formvorschrift wirksam, ersetzt aber keine eigenhändige oder qualifizierte Signatur, wo Schriftform verlangt wird.</div>` : ''}
 
   <div class="fuss">
     Diese Verfahrensdokumentation beschreibt die im Betrieb eingesetzten Verfahren zur Verarbeitung und Aufbewahrung

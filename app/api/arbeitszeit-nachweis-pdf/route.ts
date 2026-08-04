@@ -110,6 +110,7 @@ function baueHtml(maName: string, monatName: string, nachweis: ReturnType<typeof
     <div class="sigcol"><div class="sigimg"></div><div class="sigline">Datum, Unterschrift Mitarbeiter/in</div></div>
     <div class="sigcol"><div class="sigimg">${unterschriftPng ? `<img src="${unterschriftPng}" alt="Unterschrift">` : ''}</div><div class="sigline">Datum, Unterschrift Arbeitgeber/in</div></div>
   </div>
+  ${unterschriftPng ? `<div style="margin-top:10px;color:#8a99ad;font-size:9px;font-style:italic;line-height:1.45">Die eingesetzte Arbeitgeber-Unterschrift ist ein elektronisches Faksimile (einfache elektronische Signatur). Sie ist ohne gesetzliche Formvorschrift wirksam, ersetzt aber keine eigenhändige oder qualifizierte Signatur, wo Schriftform verlangt wird.</div>` : ''}
 
   <div class="fuss">
     Rechtsgrundlage: Arbeitszeitgesetz (§3 Höchstarbeitszeit, §4 Pausen, §5 Ruhezeit, §9/§10 Sonn- und Feiertagsruhe).
