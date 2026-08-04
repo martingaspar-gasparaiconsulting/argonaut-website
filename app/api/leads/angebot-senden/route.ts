@@ -1,12 +1,14 @@
 // app/api/leads/angebot-senden/route.ts
-// ARGONAUT OS — V6: Angebot als PDF per Mail an den Lead senden.
+// ARGONAUT OS — F1: Angebot als PDF per Mail an den Lead senden — DIREKT ueber
+// Resend (lib/mail.ts), ohne den frueheren n8n-Umweg.
 // POST { id: <lead-id> }
 //   1) User-Client: eingeloggt? Lead gehoert dem User? (gleiche Sicherheit wie angebot-pdf)
 //   2) Vorbedingungen: angebot_entwurf vorhanden + angebot_status === 'Freigegeben' + Lead hat E-Mail
 //   3) Firmenprofil laden (Admin-Client)
 //   4) buildAngebotPdf(...) -> frische PDF (SavedDocument mit storage_path)
-//   5) Admin-Client: createSignedUrl(storage_path, 300) -> 5 Minuten gueltig
-//   6) POST an n8n-Webhook (N8N_ANGEBOT_SENDEN_URL): Empfaenger + PDF-Link + Dateiname
+//   5) PDF-Bytes aus dem privaten Bucket laden (Admin-Client)
+//   6) sendeMail(...): PDF als Anhang, im Namen der Kundenfirma (Kunden-Layout,
+//      Antwort geht an die Firmen-Mail des Kontos)
 //   7) Bei Erfolg: leads.angebot_versendet_am = jetzt (Status bleibt 'Freigegeben'!)
 //   -> { ok:true, versendet_am } | { ok:false, error }
 //
@@ -14,18 +16,24 @@
 // zeigt 'Freigegeben' gruen; ein anderer Wert wuerde das Badge golden faerben und
 // PDF-/Senden-Button (haengen an istFreigegeben) deaktivieren. Versand wird daher
 // ausschliesslich ueber die Spalte angebot_versendet_am festgehalten.
+//
+// FRUEHER (bis F1): Schritt 5/6 erzeugten eine Signed-URL und POSTeten sie an einen
+// n8n-Webhook auf Hostinger (N8N_ANGEBOT_SENDEN_URL), der die Mail verschickte. Der
+// Umweg stammte aus der Zeit des fiktiven Betriebs „Holzernte Schaefer". Alle anderen
+// System-Mails laufen laengst direkt ueber Resend — jetzt auch diese. Der Anhang geht
+// als echtes PDF mit (kein 5-Minuten-Link mehr).
 // -----------------------------------------------------------------------------
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { buildAngebotPdf } from '@/lib/angebot-pdf';
+import { sendeMail, kundenMailLayout } from '@/lib/mail';
+import { escapeHtml } from '@/lib/newsletter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const BUCKET = 'erstellte-dokumente';
-// Wie lange die Signed-URL gueltig ist (Sekunden). 5 Minuten -> genug Zeit fuer n8n.
-const SIGNED_URL_TTL = 300;
 
 // Sauberen Dateinamen fuer den Mail-Anhang bauen (analog Download-Route).
 function anhangName(name: string | null, storagePath: string): string {
@@ -76,13 +84,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Dieser Lead hat keine E-Mail-Adresse. Versand nicht moeglich.' }, { status: 400 });
     }
 
-    // Webhook-URL pruefen (verhindert PDF-Erzeugung ins Leere, falls ENV fehlt)
-    const webhookUrl = process.env.N8N_ANGEBOT_SENDEN_URL;
-    if (!webhookUrl || webhookUrl.trim() === '' || webhookUrl.includes('PLATZHALTER')) {
-      console.error('ANGEBOT-SENDEN: N8N_ANGEBOT_SENDEN_URL fehlt oder ist noch Platzhalter.');
-      return NextResponse.json({ ok: false, error: 'Versand ist noch nicht konfiguriert (Webhook-URL fehlt).' }, { status: 503 });
-    }
-
     // 3) Firmenprofil laden (Admin-Client)
     const admin = createAdminClient();
     const { data: profil } = await admin
@@ -93,33 +94,41 @@ export async function POST(req: Request) {
 
     // 4) Frische PDF erzeugen (liefert SavedDocument mit storage_path)
     const dokument = await buildAngebotPdf(profil ?? {}, lead, lead.angebot_entwurf, user.id);
-
-    // 5) Signed-URL erzeugen (Bucket privat -> Admin-Client)
     const dateiname = anhangName(dokument.name, dokument.storage_path);
-    const { data: signed, error: signErr } = await admin.storage
-      .from(BUCKET)
-      .createSignedUrl(dokument.storage_path, SIGNED_URL_TTL, { download: dateiname });
-    if (signErr || !signed) {
-      console.error('ANGEBOT-SENDEN: createSignedUrl fehlgeschlagen', { signErr, storage_path: dokument.storage_path });
-      return NextResponse.json({ ok: false, error: 'PDF-Link konnte nicht erstellt werden.' }, { status: 500 });
-    }
 
-    // 6) An n8n-Webhook schicken
-    const n8nRes = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        lead_id: lead.id,
-        empfaenger_name: lead.name || 'Interessent',
-        empfaenger_email: lead.email,
-        firma_name: profil?.firma_name ?? '',
-        pdf_url: signed.signedUrl,
-        pdf_dateiname: dateiname,
-      }),
+    // 5) PDF-Bytes aus dem privaten Bucket laden (Admin-Client -> Buffer fuer den Anhang)
+    const { data: pdfBlob, error: dlErr } = await admin.storage.from(BUCKET).download(dokument.storage_path);
+    if (dlErr || !pdfBlob) {
+      console.error('ANGEBOT-SENDEN: PDF-Download fehlgeschlagen', { dlErr, storage_path: dokument.storage_path });
+      return NextResponse.json({ ok: false, error: 'PDF konnte nicht geladen werden.' }, { status: 500 });
+    }
+    const pdfBuffer = Buffer.from(await pdfBlob.arrayBuffer());
+
+    // 6) Mail direkt ueber Resend — im Namen der Kundenfirma, PDF als Anhang.
+    const firma = (profil?.firma_name || '').trim() || 'Ihr Dienstleister';
+    const firmaEmail = (profil?.firma_email || '').trim() || undefined;
+    const anrede = lead.name && lead.name.trim() !== ''
+      ? `Guten Tag ${escapeHtml(lead.name.trim())},`
+      : 'Guten Tag,';
+    const inhalt = `
+      <p style="margin:0 0 14px;">${anrede}</p>
+      <p style="margin:0 0 14px;">vielen Dank fuer Ihr Interesse. Im Anhang finden Sie unser Angebot als PDF-Dokument.</p>
+      <p style="margin:0 0 14px;">Bei Rueckfragen erreichen Sie uns jederzeit — antworten Sie einfach auf diese E-Mail.</p>
+      <p style="margin:0;">Mit freundlichen Gruessen<br><b>${escapeHtml(firma)}</b></p>
+    `;
+    const html = kundenMailLayout(firma, profil?.firma_akzentfarbe, 'Ihr Angebot', inhalt);
+
+    const mail = await sendeMail({
+      an: lead.email,
+      betreff: `Ihr Angebot von ${firma}`,
+      html,
+      text: `${lead.name ? 'Guten Tag ' + lead.name + ',' : 'Guten Tag,'}\n\nvielen Dank fuer Ihr Interesse. Im Anhang finden Sie unser Angebot als PDF.\n\nMit freundlichen Gruessen\n${firma}`,
+      absenderName: firma,
+      antwortAn: firmaEmail,
+      anhaenge: [{ dateiname, inhalt: pdfBuffer, typ: 'application/pdf' }],
     });
-    if (!n8nRes.ok) {
-      const txt = await n8nRes.text().catch(() => '');
-      console.error('ANGEBOT-SENDEN: n8n-Webhook Fehler', n8nRes.status, txt);
+    if (!mail.ok) {
+      console.error('ANGEBOT-SENDEN: Resend-Versand fehlgeschlagen', mail.fehler);
       return NextResponse.json({ ok: false, error: 'Versand fehlgeschlagen (Mail-Dienst nicht erreichbar).' }, { status: 502 });
     }
 
