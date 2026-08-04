@@ -178,6 +178,51 @@ export default function VertraegeCockpit() {
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
+  // KI-Kündigungsschreiben (nutzt die vorhandene Route /api/vertrag-kuendigung).
+  const [kVertrag, setKVertrag] = useState<Vertrag | null>(null);
+  const [kBusy, setKBusy] = useState(false);
+  const [kText, setKText] = useState("");
+  const [kFehler, setKFehler] = useState<string | null>(null);
+  const [kKopiert, setKKopiert] = useState(false);
+
+  async function kuendigungsschreiben(v: Vertrag) {
+    setKVertrag(v);
+    setKBusy(true);
+    setKText("");
+    setKFehler(null);
+    setKKopiert(false);
+    try {
+      const res = await fetch("/api/vertrag-kuendigung", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          vertrag: {
+            bezeichnung: v.bezeichnung,
+            kategorie: v.kategorie,
+            vertragspartner: v.vertragspartner,
+            vertragsnummer: v.vertragsnummer,
+            ende: v.ende,
+            kuendigungsfrist_tage: v.kuendigungsfrist_tage,
+            kuendigungstermin: stichtag(v),
+          },
+        }),
+      });
+      const d = await res.json();
+      if (d?.text) setKText(d.text);
+      else setKFehler(d?.fehler || "Der Entwurf konnte nicht erstellt werden.");
+    } catch {
+      setKFehler("Verbindungsfehler. Bitte erneut versuchen.");
+    } finally {
+      setKBusy(false);
+    }
+  }
+
+  function schliesseKSchreiben() {
+    setKVertrag(null);
+    setKText("");
+    setKFehler(null);
+  }
+
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -699,6 +744,20 @@ export default function VertraegeCockpit() {
                         {signaturBusy === v.id ? "…" : "✍️ Unterschrift"}
                       </button>
                       <button
+                        style={{
+                          ...btnGhost,
+                          marginRight: 6,
+                          color: "#00e5ff",
+                          borderColor: "rgba(0,229,255,0.35)",
+                          opacity: kBusy && kVertrag?.id === v.id ? 0.6 : 1,
+                        }}
+                        onClick={() => kuendigungsschreiben(v)}
+                        disabled={kBusy && kVertrag?.id === v.id}
+                        title="KI-Kündigungsschreiben (Entwurf) für diesen Vertrag erstellen"
+                      >
+                        {kBusy && kVertrag?.id === v.id ? "…" : "📄 Kündigungsschreiben"}
+                      </button>
+                      <button
                         style={{ ...btnGhost, marginRight: 6 }}
                         onClick={() => oeffneBearbeiten(v)}
                       >
@@ -724,6 +783,68 @@ export default function VertraegeCockpit() {
       </div>
 
       {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={lade} />}
+
+      {/* KI-Kündigungsschreiben (Entwurf) */}
+      {kVertrag && (
+        <div
+          onClick={schliesseKSchreiben}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#0F2036", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 16, padding: 24, maxWidth: 720, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: 18, color: "#E8EDF4" }}>
+                📄 Kündigungsschreiben — {kVertrag.bezeichnung}
+              </div>
+              <button style={{ ...btnGhost }} onClick={schliesseKSchreiben}>Schließen</button>
+            </div>
+
+            {kBusy && (
+              <div style={{ color: "#8FA3BE", padding: "20px 0" }}>ARGONAUT formuliert den Entwurf …</div>
+            )}
+
+            {kFehler && !kBusy && (
+              <div style={{ color: C.danger }}>
+                {kFehler}
+                <div style={{ marginTop: 10 }}>
+                  <button style={{ ...btnGhost }} onClick={() => kuendigungsschreiben(kVertrag)}>Erneut versuchen</button>
+                </div>
+              </div>
+            )}
+
+            {kText && !kBusy && (
+              <>
+                <textarea
+                  readOnly
+                  value={kText}
+                  style={{ flex: 1, minHeight: 320, width: "100%", background: "#0A1628", border: "1px solid rgba(201,168,76,0.18)", borderRadius: 10, color: "#E8EDF4", padding: 14, fontSize: 14, lineHeight: 1.5, fontFamily: "inherit", resize: "vertical" }}
+                />
+                <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    style={{ ...btnGhost, color: C.gold, borderColor: `${C.gold}55` }}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(kText);
+                        setKKopiert(true);
+                        setTimeout(() => setKKopiert(false), 2000);
+                      } catch {
+                        /* Zwischenablage nicht verfügbar — Text ist markierbar. */
+                      }
+                    }}
+                  >
+                    {kKopiert ? "Kopiert ✓" : "In Zwischenablage kopieren"}
+                  </button>
+                  <span style={{ color: "#8FA3BE", fontSize: 13 }}>
+                    Entwurf — bitte vor dem Versand prüfen und Platzhalter [ ] ausfüllen.
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {modalOffen && (
