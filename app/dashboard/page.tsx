@@ -260,7 +260,6 @@ export default async function DashboardPage() {
   const kiLimit = usageData?.ki_calls_limit ?? KI_CALL_LIMITS[rawPaket] ?? 15000
   const kiUsed = usageData?.ki_calls_used ?? 0
   const kiPct = Math.min(Math.round((kiUsed / kiLimit) * 100), 100)
-  const automationsCount = profile?.automations_count ?? 0
 
   const onboardingCompleted = profile?.onboarding_completed ?? false
   const onboardingData = profile?.onboarding_data ? (typeof profile.onboarding_data === 'string' ? JSON.parse(profile.onboarding_data) : profile.onboarding_data) : null
@@ -385,7 +384,6 @@ export default async function DashboardPage() {
             <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🏭 Betrieb</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
-              <KpiKachel href="/dashboard/automatisierungen" icon="⚙️" label="Aktive Automatisierungen" wert={automationsCount} sub="Bibliothek öffnen" akzent="#C9A84C" />
               <KpiKachel href="/dashboard/start" icon="⚡" label="KI-Calls diesen Monat" wert={`${kiPct}%`} sub={`${kiUsed.toLocaleString('de-DE')} / ${kiLimit.toLocaleString('de-DE')}`} akzent="#C9A84C" alarm={kiPct >= 100} />
             </div>
           </div>
@@ -435,24 +433,6 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        {/* Automatisierungs-Banner (CTA) */}
-        <section>
-          <a href="/dashboard/automatisierungen" style={{ textDecoration: 'none', display: 'block' }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '14px', padding: '20px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', cursor: 'pointer',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <span style={{ fontSize: 'clamp(28px, 2.44vw, 39px)' }}>⚡</span>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 700, color: '#FFFFFF' }}>Automatisierungs-Bibliothek</p>
-                  <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.45)' }}>128 Workflows in 15 Clustern — sehen Sie wie viele Stunden Sie sparen.</p>
-                </div>
-              </div>
-              <div style={{ padding: '8px 20px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: '#C9A84C', borderRadius: '8px', fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)', whiteSpace: 'nowrap' }}>Bibliothek öffnen →</div>
-            </div>
-          </a>
-        </section>
 
       </main>
     </>

@@ -86,9 +86,45 @@ export default function TeamChatPage() {
 
   const [uploadLaedt, setUploadLaedt] = useState(false);
   const [uploadFehler, setUploadFehler] = useState<string | null>(null);
+
+  // Fehler beim Senden waren bisher unsichtbar: der Text sprang zurueck ins
+  // Feld, sonst nichts. Genau deshalb war der Chat jahrelang „kaputt", ohne
+  // dass jemand sagen konnte warum. Ab jetzt steht der Grund auf dem Schirm.
+  const [sendeFehler, setSendeFehler] = useState<string | null>(null);
+  // Live-Verbindung: solange sie nicht steht, wird im Hintergrund nachgeladen,
+  // damit Nachrichten trotzdem ankommen.
+  const [liveVerbunden, setLiveVerbunden] = useState(false);
   const dateiInputRef = useRef<HTMLInputElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Eine Nachricht in die Liste legen — ohne Dubletten, immer nach Zeit sortiert.
+   *
+   * Braucht es, weil dieselbe Zeile aus zwei Richtungen kommen kann: sofort beim
+   * Absenden (damit man den eigenen Satz nicht erst nach der Serverantwort
+   * sieht) und noch einmal ueber die Live-Verbindung.
+   */
+  const nachrichtAufnehmen = useCallback((neu: Nachricht) => {
+    setNachrichten((prev) => {
+      if (prev.some((m) => m.id === neu.id)) return prev;
+      const liste = [...prev, neu];
+      liste.sort((a, b) => a.created_at.localeCompare(b.created_at));
+      return liste;
+    });
+  }, []);
+
+  /** Verstaendlicher Klartext statt Datenbank-Kauderwelsch. */
+  function fehlerText(meldung: string): string {
+    const m = (meldung || '').toLowerCase();
+    if (m.includes('row-level security') || m.includes('42501')) {
+      return 'Du bist kein Mitglied dieses Kanals — deshalb hat die Datenbank das Schreiben abgelehnt. Lass dich vom Ersteller des Kanals einladen.';
+    }
+    if (m.includes('failed to fetch') || m.includes('networkerror')) {
+      return 'Keine Verbindung zum Server. Internet pruefen und noch einmal senden.';
+    }
+    return 'Konnte nicht gesendet werden: ' + meldung;
+  }
 
   // --- Kanaele laden ---------------------------------------------------------
   const ladeKanaele = useCallback(async () => {
@@ -163,19 +199,35 @@ export default function TeamChatPage() {
           filter: 'kanal_id=eq.' + aktiverKanal,
         },
         (payload: { new: Nachricht }) => {
-          const neu = payload.new;
-          setNachrichten((prev) =>
-            prev.some((m) => m.id === neu.id) ? prev : [...prev, neu]
-          );
+          if (aktiv) nachrichtAufnehmen(payload.new);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (aktiv) setLiveVerbunden(status === 'SUBSCRIBED');
+      });
+
+    /**
+     * Sicherheitsnetz. Steht die Live-Verbindung nicht (Firma hinter einer
+     * strengen Firewall, Handy im Funkloch, Realtime-Kontingent erschoepft),
+     * wuerde der Chat einfach stumm bleiben. Alle 8 Sekunden nachladen kostet
+     * fast nichts und macht den Unterschied zwischen „geht nicht" und „geht".
+     */
+    const takt = setInterval(async () => {
+      const { data } = await supabase
+        .from('chat_nachrichten')
+        .select('*')
+        .eq('kanal_id', aktiverKanal)
+        .order('created_at', { ascending: true });
+      if (aktiv && data) for (const m of data as Nachricht[]) nachrichtAufnehmen(m);
+    }, 8000);
 
     return () => {
       aktiv = false;
+      clearInterval(takt);
+      setLiveVerbunden(false);
       supabase.removeChannel(ch);
     };
-  }, [aktiverKanal, supabase]);
+  }, [aktiverKanal, supabase, nachrichtAufnehmen]);
 
   // --- Mitglieder des aktiven Kanals laden -----------------------------------
   useEffect(() => {
@@ -202,15 +254,20 @@ export default function TeamChatPage() {
     if (!aktiverKanal) return;
     const frage = ausloeser.replace(/@argonaut/gi, '').trim();
 
+    /** KI-Zeile schreiben, sofort anzeigen, Fehler sichtbar machen. */
+    const kiSchreiben = async (text: string) => {
+      const { data, error } = await supabase
+        .from('chat_nachrichten')
+        .insert({ kanal_id: aktiverKanal, absender_id: null, absender_name: 'ARGONAUT', ist_ki: true, text })
+        .select()
+        .single();
+      if (error) { setSendeFehler(fehlerText(error.message)); return; }
+      if (data) nachrichtAufnehmen(data as Nachricht);
+    };
+
     // Kein Text hinter @ARGONAUT -> freundliche Rueckfrage statt Fehler
     if (!frage) {
-      await supabase.from('chat_nachrichten').insert({
-        kanal_id: aktiverKanal,
-        absender_id: null,
-        absender_name: 'ARGONAUT',
-        ist_ki: true,
-        text: 'Gern! Stellen Sie mir Ihre Frage einfach direkt hinter @ARGONAUT — z. B. „@ARGONAUT fasse die letzten Nachrichten zusammen".',
-      });
+      await kiSchreiben('Gern! Stellen Sie mir Ihre Frage einfach direkt hinter @ARGONAUT — z. B. „@ARGONAUT fasse die letzten Nachrichten zusammen".');
       return;
     }
 
@@ -233,21 +290,9 @@ export default function TeamChatPage() {
         (data && typeof data.text === 'string' && data.text.trim()) ||
         'Entschuldigung, ich konnte gerade keine Antwort erzeugen.';
 
-      await supabase.from('chat_nachrichten').insert({
-        kanal_id: aktiverKanal,
-        absender_id: null,
-        absender_name: 'ARGONAUT',
-        ist_ki: true,
-        text: antwort,
-      });
+      await kiSchreiben(antwort);
     } catch {
-      await supabase.from('chat_nachrichten').insert({
-        kanal_id: aktiverKanal,
-        absender_id: null,
-        absender_name: 'ARGONAUT',
-        ist_ki: true,
-        text: 'Entschuldigung, die Verbindung zu ARGONAUT ist gerade gestört.',
-      });
+      await kiSchreiben('Entschuldigung, die Verbindung zu ARGONAUT ist gerade gestört.');
     } finally {
       setKiDenkt(false);
     }
@@ -258,17 +303,30 @@ export default function TeamChatPage() {
     const text = entwurf.trim();
     if (!text || !aktiverKanal || !userId) return;
     setEntwurf('');
-    const { error } = await supabase.from('chat_nachrichten').insert({
-      kanal_id: aktiverKanal,
-      absender_id: userId,
-      absender_name: anzeigename,
-      ist_ki: false,
-      text,
-    });
+    setSendeFehler(null);
+
+    // Die eingefuegte Zeile direkt zurueckgeben lassen und sofort anzeigen.
+    // Vorher hing die eigene Nachricht komplett an der Live-Verbindung: stand
+    // die nicht, sah man den eigenen Satz erst nach dem Neuladen der Seite.
+    const { data, error } = await supabase
+      .from('chat_nachrichten')
+      .insert({
+        kanal_id: aktiverKanal,
+        absender_id: userId,
+        absender_name: anzeigename,
+        ist_ki: false,
+        text,
+      })
+      .select()
+      .single();
+
     if (error) {
       setEntwurf(text);
+      setSendeFehler(fehlerText(error.message));
       return;
     }
+    if (data) nachrichtAufnehmen(data as Nachricht);
+
     if (/@argonaut/i.test(text)) {
       argonautAntworten(text);
     }
@@ -298,15 +356,29 @@ export default function TeamChatPage() {
         return;
       }
 
-      await supabase.from('chat_nachrichten').insert({
-        kanal_id: aktiverKanal,
-        absender_id: userId,
-        absender_name: anzeigename,
-        ist_ki: false,
-        text: '',
-        datei_pfad: pfad,
-        datei_name: file.name,
-      });
+      // Der Fehler beim Einfuegen wurde vorher gar nicht abgefragt: die Datei lag
+      // dann im Speicher, die Nachricht dazu erschien nie. Jetzt wird die
+      // verwaiste Datei wieder entfernt und der Grund angezeigt.
+      const { data, error: insErr } = await supabase
+        .from('chat_nachrichten')
+        .insert({
+          kanal_id: aktiverKanal,
+          absender_id: userId,
+          absender_name: anzeigename,
+          ist_ki: false,
+          text: '',
+          datei_pfad: pfad,
+          datei_name: file.name,
+        })
+        .select()
+        .single();
+
+      if (insErr) {
+        await supabase.storage.from(BUCKET).remove([pfad]);
+        setUploadFehler(fehlerText(insErr.message));
+        return;
+      }
+      if (data) nachrichtAufnehmen(data as Nachricht);
     } finally {
       setUploadLaedt(false);
     }
@@ -781,8 +853,37 @@ export default function TeamChatPage() {
                       …, um die KI in den Kanal zu holen.
                     </span>
                     {uploadLaedt && <span style={{ color: CYAN }}>📎 Datei wird hochgeladen …</span>}
-                    {uploadFehler && <span style={{ color: '#E06666' }}>{uploadFehler}</span>}
+                    {!liveVerbunden && !uploadLaedt && (
+                      <span style={{ color: GOLD }} title="Nachrichten werden alle 8 Sekunden nachgeladen.">
+                        ● Live-Verbindung wird aufgebaut
+                      </span>
+                    )}
                   </div>
+
+                  {(sendeFehler || uploadFehler) && (
+                    <div
+                      style={{
+                        background: 'rgba(224,102,102,0.10)',
+                        border: '1px solid rgba(224,102,102,0.35)',
+                        color: '#E06666',
+                        borderRadius: 10,
+                        padding: '10px 13px',
+                        fontSize: 'clamp(13px, 1.13vw, 18px)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>{sendeFehler || uploadFehler}</span>
+                      <button
+                        onClick={() => { setSendeFehler(null); setUploadFehler(null); }}
+                        style={{ background: 'transparent', border: 'none', color: '#E06666', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+                        title="Meldung ausblenden"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                     <input
                       ref={dateiInputRef}
