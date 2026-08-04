@@ -47,6 +47,14 @@ export default function DashboardNav() {
   const [sichtbareModule, setSichtbareModule] = useState<Set<string> | null>(null);
   // P49: gebuchte Module des Betreibers. null = fail-open (nichts ausblenden).
   const [gebucht, setGebucht] = useState<Set<string> | null>(null);
+  /**
+   * Ungelesene Team-Chat-Nachrichten.
+   *
+   * Grund: Im Laden ist Betrieb, niemand klickt von sich aus in den Chat. Ohne
+   * sichtbaren Zaehler fuellt er sich, und keiner merkt es. Die Zahl kommt aus
+   * derselben Benachrichtigungs-Anlage wie die Glocke im Kopf.
+   */
+  const [chatUngelesen, setChatUngelesen] = useState(0);
 
   useEffect(() => {
     let aktiv = true;
@@ -102,6 +110,21 @@ export default function DashboardNav() {
     return () => { aktiv = false; };
   }, []);
 
+  // Zaehler laden und alle 30 Sekunden auffrischen. Eine einzelne Zahl,
+  // kein Datensatz — das kostet praktisch nichts.
+  useEffect(() => {
+    let aktiv = true;
+    const holen = async () => {
+      try {
+        const { data } = await supabase.rpc('chat_ungelesen_anzahl');
+        if (aktiv) setChatUngelesen(typeof data === 'number' ? data : 0);
+      } catch { /* ohne Zaehler laeuft das Menue normal weiter */ }
+    };
+    void holen();
+    const takt = setInterval(holen, 30000);
+    return () => { aktiv = false; clearInterval(takt); };
+  }, []);
+
   // Bis geladen: nur die Übersicht zeigen. Kein Aufblitzen von Knöpfen, die
   // der Nutzer gar nicht anklicken darf.
   const sichtbar = geladen
@@ -154,9 +177,34 @@ export default function DashboardNav() {
                 background: golden ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.06)',
                 border: golden ? '1px solid rgba(201,168,76,0.3)' : '1px solid transparent',
               };
+              const zeigeZaehler = link.href === '/dashboard/team-chat' && chatUngelesen > 0;
               return (
-                <a key={link.href} href={link.href} style={stil}>
+                <a
+                  key={link.href}
+                  href={link.href}
+                  style={zeigeZaehler ? { ...stil, display: 'inline-flex', alignItems: 'center', gap: 7 } : stil}
+                >
                   {link.label}
+                  {zeigeZaehler && (
+                    <span
+                      title={chatUngelesen + ' ungelesene Nachricht' + (chatUngelesen === 1 ? '' : 'en')}
+                      style={{
+                        background: '#E06666',
+                        color: '#fff',
+                        borderRadius: 999,
+                        minWidth: 19,
+                        height: 19,
+                        padding: '0 6px',
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        lineHeight: '19px',
+                        textAlign: 'center',
+                        display: 'inline-block',
+                      }}
+                    >
+                      {chatUngelesen > 9 ? '9+' : chatUngelesen}
+                    </span>
+                  )}
                 </a>
               );
             })}

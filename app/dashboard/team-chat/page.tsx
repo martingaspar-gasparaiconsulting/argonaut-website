@@ -235,6 +235,19 @@ export default function TeamChatPage() {
     else setMitglieder([]);
   }, [aktiverKanal, ladeMitglieder]);
 
+  /**
+   * Kanal offen = gelesen.
+   *
+   * Loescht den roten Punkt am Menue-Knopf und den Eintrag in der Glocke —
+   * aber nur fuer DIESEN Kanal. Andere Kanaele bleiben ungelesen stehen.
+   * Laeuft auch beim Eintreffen neuer Nachrichten, solange der Kanal offen
+   * ist: wer zuschaut, hat gelesen.
+   */
+  useEffect(() => {
+    if (!aktiverKanal) return;
+    void supabase.rpc('chat_kanal_gelesen', { p_kanal: aktiverKanal });
+  }, [aktiverKanal, supabase, nachrichten.length]);
+
   // --- Kollegenliste laden, wenn Einladen-Panel geoeffnet wird ---------------
   useEffect(() => {
     if (zeigeEinladen && aktiverKanal) {
