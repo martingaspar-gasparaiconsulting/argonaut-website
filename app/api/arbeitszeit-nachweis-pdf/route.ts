@@ -30,7 +30,7 @@ function tagNr(iso: string): string { const p = iso.split('-'); return p.length 
 function druckFarbe(s: Schwere): string { return s === 'rot' ? '#c0392b' : s === 'gelb' ? '#b7791f' : '#2e7d32'; }
 function statusWort(s: Schwere): string { return s === 'rot' ? 'Verstoss' : s === 'gelb' ? 'Pruefen' : 'i.O.'; }
 
-function baueHtml(maName: string, monatName: string, nachweis: ReturnType<typeof berechneNachweis>, rows: ZeitSitzung[], opt: Required<WaechterOptionen>): string {
+function baueHtml(maName: string, monatName: string, nachweis: ReturnType<typeof berechneNachweis>, rows: ZeitSitzung[], opt: Required<WaechterOptionen>, unterschriftPng: string | null): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
 
   const rohProTag = new Map<string, ZeitSitzung[]>();
@@ -82,7 +82,10 @@ function baueHtml(maName: string, monatName: string, nachweis: ReturnType<typeof
   .vzelle { padding-top: 0; border-bottom: 1px solid #eef1f6; }
   .v { font-size: 11px; padding-left: 8px; }
   .sig { display: flex; gap: 40px; margin-top: 48px; }
-  .sig div { flex: 1; border-top: 1px solid #0A1628; padding-top: 6px; font-size: 11px; color: #5b6b80; }
+  .sigcol { flex: 1; }
+  .sigimg { height: 44px; display: flex; align-items: flex-end; }
+  .sigimg img { max-height: 44px; max-width: 210px; }
+  .sigline { border-top: 1px solid #0A1628; padding-top: 6px; font-size: 11px; color: #5b6b80; }
   .fuss { margin-top: 26px; border-top: 1px solid #e1e6ee; padding-top: 10px; color: #8a99ad; font-size: 10px; line-height: 1.5; }
 </style></head><body>
   <div class="kopf">
@@ -104,8 +107,8 @@ function baueHtml(maName: string, monatName: string, nachweis: ReturnType<typeof
   </table>
 
   <div class="sig">
-    <div>Datum, Unterschrift Mitarbeiter/in</div>
-    <div>Datum, Unterschrift Arbeitgeber/in</div>
+    <div class="sigcol"><div class="sigimg"></div><div class="sigline">Datum, Unterschrift Mitarbeiter/in</div></div>
+    <div class="sigcol"><div class="sigimg">${unterschriftPng ? `<img src="${unterschriftPng}" alt="Unterschrift">` : ''}</div><div class="sigline">Datum, Unterschrift Arbeitgeber/in</div></div>
   </div>
 
   <div class="fuss">
@@ -137,6 +140,12 @@ export async function POST(req: NextRequest) {
       .select('id,vorname,nachname').eq('id', mitarbeiterId).eq('owner_user_id', user.id).maybeSingle();
     if (!ma) return NextResponse.json({ error: 'Mitarbeiter nicht gefunden.' }, { status: 404 });
 
+    // Gespeicherte Unterschrift des ausstellenden Nutzers (Arbeitgeber) — optional
+    const { data: sig } = await supabase.from('benutzer_unterschrift')
+      .select('bild,aktiv').eq('auth_user_id', user.id).maybeSingle();
+    const unterschriftPng = (sig && (sig as { aktiv?: boolean }).aktiv !== false)
+      ? ((sig as { bild?: string | null }).bild ?? null) : null;
+
     // Monatsbereich
     const start = `${jahr}-${zwei(monat)}-01`;
     const endeDate = new Date(jahr, monat, 0); // letzter Tag des Monats
@@ -159,7 +168,7 @@ export async function POST(req: NextRequest) {
     const monatName = new Date(jahr, monat - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     const maName = `${ma.vorname} ${ma.nachname}`.trim();
 
-    const html = baueHtml(maName, monatName, nachweis, rows, optMerged);
+    const html = baueHtml(maName, monatName, nachweis, rows, optMerged, unterschriftPng);
 
     // Gotenberg: HTML -> PDF
     const gotenbergUrl = process.env.GOTENBERG_URL;
