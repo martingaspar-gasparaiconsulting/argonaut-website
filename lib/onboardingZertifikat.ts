@@ -22,6 +22,7 @@
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
+import { UNTERSCHRIFT_ARGONAUT } from './unterschriftArgonaut';
 
 const NAVY = '#0A1628';
 const GOLD = '#C9A84C';
@@ -281,10 +282,13 @@ export function baueOnboardingZertifikat(dn: OnboardingZertifikatDaten): jsPDF {
 
   // --- Unterschrift links ---------------------------------------------------
   const sigY = 178;
-  if (dn.unterschriftPng) {
+  // Standard = eingebettete Aussteller-Unterschrift (Martin Gaspar); eine
+  // explizit übergebene unterschriftPng hat Vorrang.
+  const sigBild = dn.unterschriftPng || UNTERSCHRIFT_ARGONAUT;
+  if (sigBild) {
     try {
       // Über der Linie platziert, damit sie wie eine echte Unterschrift sitzt.
-      doc.addImage(dn.unterschriftPng, 'PNG', 42, sigY - 20, 55, 18);
+      doc.addImage(sigBild, 'PNG', 42, sigY - 20, 55, 18);
     } catch {
       /* Unterschrift optional — bei fehlerhaftem Bild bleibt die Linie leer. */
     }
