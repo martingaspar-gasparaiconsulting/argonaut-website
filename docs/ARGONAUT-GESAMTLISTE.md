@@ -1,6 +1,9 @@
 # ARGONAUT OS — Gesamtliste
 
-**Stand: Dienstag, 04.08.2026, 00:45 Uhr**
+**Stand: Dienstag, 04.08.2026, 09:45 Uhr**
+
+> **Diese Liste ist jetzt in vier PDFs aufgeteilt** — Donnerstag, Zwei-Personen-Tests,
+> Was noch zu bauen ist, Extern & Warten. Sie bleibt die Quelle, aus der die PDFs entstehen.
 **Präsentation: Donnerstag, 06.08.2026 · Testtag: Mittwoch, 05.08.2026**
 
 > **Wie diese Liste zu lesen ist.**
@@ -21,10 +24,30 @@
 
 # 🔴 STUFE 1 — vor Mittwoch. Nur Martin.
 
+- ⬜ **SQL ausführen**: `supabase-sql/team-chat-mandantentrennung.sql` im Supabase-Editor. Schließt das Loch, durch das man betriebsfremde Personen in einen Chat-Kanal holen konnte.
 - ⬜ **Unterschrift als PNG** mit durchsichtigem Hintergrund fürs Zertifikat
-- ⬜ **Zwei Pushes von heute Nacht rausschicken** (liegen fertig im Repo)
+- ⬜ **Offene Pushes rausschicken** (liegen fertig im Repo)
 - ⬜ **Übungswelt im eigenen Konto einmal entfernen und neu laden** — deine geladene Fassung stammt von vor der Anschlüsse-Reparatur
 - ⬜ Entscheidung: Was passiert mit der Kachel **„KI-Calls diesen Monat 0 / 15.000"**? Sie widerspricht deinem eigenen Pitch („KI — unbegrenzt inklusive")
+
+---
+
+# 👥 ZWEI-PERSONEN-TESTS — heute Abend
+
+> **Warum das ein eigener Punkt ist.** Bei Martin sieht die Seite regelmäßig
+> anders aus als bei seiner Freundin — anderes Gerät, anderer Browser, anderes
+> Konto, andere Rechte. Genau so wurde der unscrollbare Bestätigungsdialog
+> gefunden, den vorher niemand bemerkt hatte. Alles, was zwei Menschen oder zwei
+> Geräte braucht, gehört hierher statt in einen Einzeltest.
+
+- ⬜ **Team-Chat, beide Richtungen** — ein Fenster als Chef, eines als Mitarbeiter im selben Betrieb.
+  Erwartung: Der eigene Satz erscheint **sofort** beim Absender, beim anderen innerhalb von Sekunden.
+  Zusätzlich prüfen: Datei anhängen, `@ARGONAUT` ansprechen, Kollegen einladen.
+  Wenn etwas nicht klappt, steht der Grund jetzt in einem roten Kasten — **den Wortlaut aufschreiben**, der zeigt die Ursache.
+- ⬜ **Zugriffsrechte** — Chef schaltet einem Mitarbeiter Module frei, Mitarbeiter lädt neu: sieht er genau diese und keine anderen?
+- ⬜ **Bestätigungsdialoge auf kleinem Bildschirm** — Laptop und Handy, nicht nur der große Monitor
+- ⬜ **Login mit gespeichertem Passwort** auf einem zweiten Gerät
+- ⬜ **Onboarding aus Sicht eines frischen Kontos** — nicht aus deinem, das schon alles gesehen hat
 
 ---
 
@@ -34,11 +57,14 @@ Nach Wirkung sortiert. Was ein Besucher am Bildschirm sieht, steht oben.
 
 | # | Punkt | Warum jetzt |
 |---|---|---|
-| 1 | **Eine gemeinsame Seitenbreite für alle Dashboard-Seiten** | Der eigentliche Grund für die schiefe Seitenansicht. Details unten. |
-| 2 | **KI-Auge auf die Modulseiten** — CRM und Rechnungen haben es, Personal und Aufträge nicht | Akt 4 des Drehbuchs |
-| 3 | **Repo aufräumen** — 25 Sicherungsdateien, zwei geparkte Module | Quick Win, heute Nacht vorbereitet |
-| 4 | **KI-Calls-Kachel** entscheiden und umsetzen | widerspricht dem Pitch |
-| 5 | Demo-Konten durchklicken (Maler, Autohaus, Bäckerei) | Generalprobe |
+| ✅ | **Gemeinsame Seitenschale** für alle Dashboard-Seiten | erledigt 04.08. — `<main>` im Layout, vier Seiten nachgezogen |
+| ✅ | **Repo aufräumen** | erledigt 04.08. · `c4dc879` |
+| ✅ | **KI-Calls-Kachel** raus | erledigt 04.08. |
+| ✅ | **Team-Chat** repariert und abgesichert | erledigt 04.08. · `07fd664` |
+| ⬜ | **KI-Auge auf Personal und Aufträge** | Akt 4 des Drehbuchs — braucht neue Regel in `lib/auge.ts` |
+| ⬜ | **Überlauf-Hinweis** `OverusePopup` entscheiden | arbeitet noch mit dem alten KI-Limit |
+| ⬜ | Seitenschale über die restlichen Modulseiten nachziehen | Mittwoch, beim Durchklicken |
+| ⬜ | Demo-Konten durchklicken (Maler, Autohaus, Bäckerei) | Generalprobe |
 
 ## Punkt 1 im Detail — die schiefe Seitenansicht
 
@@ -133,14 +159,45 @@ Seite.
 
 # ⚠️ KORREKTUREN — hier war die alte Liste falsch
 
-## ⚠️ Team-Chat-Bug: **nicht** behoben
-Du sagtest, das sei seit zwei Wochen erledigt. Der Code sagt etwas anderes:
+## ✅ Team-Chat — untersucht und repariert am 04.08.
 
-- `docs/team-chat-bug.md`, geändert **26.07.2026**, Zeile 3: *„Status: dokumentiert, noch nicht behoben. Bewusste Entscheidung: nicht blind fixen, sondern erst am laufenden System reproduzieren."*
-- `docs/ARGONAUT-MASTER-BRIEFING.md`, geändert **27.07.2026**, Zeile 681, Abschnitt „Offene Punkte": derselbe Punkt, offen.
-- `app/dashboard/team-chat/page.tsx` wurde zuletzt am **15.07.2026** angefasst — also **vor** beiden Dokumenten. Seitdem keine Änderung.
+Die alte Fehlerakte `docs/team-chat-bug.md` zeigte in die **falsche Richtung**: sie
+vermutete ein Problem mit `owner_user_id` und `mein_chef_id()`. Beides existiert im
+Team-Chat gar nicht — er läuft über Kanäle und Mitgliedschaften, nicht über die
+Betriebs-Spalte wie der Rest des Systems. Die Akte wurde nach dem Muster der
+anderen Module geschrieben, ohne in diese Tabellen zu schauen. Deshalb hat die
+Suche nie etwas gefunden.
 
-Es gibt keinen Beleg für eine Behebung. Vermutlich verwechselst du es mit einer anderen Chat-Sache. **Bleibt offen.**
+**Realtime war es nicht.** Geprüft: `chat_nachrichten` steht in
+`supabase_realtime`. Die echten Fehler lagen im Code:
+
+- ✅ **Eigene Nachricht erschien nicht beim Absender.** `senden()` fügte ein und
+  wartete darauf, dass die Live-Verbindung das Einfügen zurückmeldet — die Zeile
+  wurde nie lokal angezeigt. Jetzt gibt die Datenbank die fertige Zeile direkt
+  zurück, Dublette wird über die ID abgefangen.
+- ✅ **Fehler wurden stumm verschluckt.** Bei einem Fehler sprang nur der Text ins
+  Feld zurück, sonst nichts. Jetzt: roter Kasten mit dem Grund auf Deutsch —
+  „Du bist kein Mitglied dieses Kanals" statt `42501`.
+- ✅ **Datei-Upload:** der Fehler beim Anlegen der Nachricht wurde **gar nicht
+  abgefragt**. Datei lag im Speicher, Nachricht erschien nie. Jetzt mit
+  Fehlermeldung und Aufräumen der verwaisten Datei.
+- ✅ **Sicherheitsnetz**, falls die Live-Verbindung nicht steht (Firmen-Firewall):
+  alle 8 Sekunden nachladen, Zustand sichtbar.
+- ⬜ **SQL noch auszuführen:** `supabase-sql/team-chat-mandantentrennung.sql`
+
+## 🔒 Team-Chat: Mandantentrennung war offen — SQL liegt bereit
+
+`chat_mitglied_per_email` und `chat_mitglied_hinzufuegen` laufen beide mit
+`SECURITY DEFINER` und prüften **nur**, ob der Aufrufer den Kanal erstellt hat —
+**nicht**, ob die eingeladene Person zum selben Betrieb gehört. Über die
+öffentliche Schnittstelle konnte man damit jeden ARGONAUT-Nutzer in seinen Kanal
+holen. Die Oberfläche bot es nur nicht an; verhindert hat sie es nicht.
+
+Behoben in `supabase-sql/team-chat-mandantentrennung.sql`: neuer Helfer
+`chat_betrieb_von()`, Prüfung in beiden Funktionen, gleiche Antwort für
+„unbekannt" und „fremder Betrieb" (sonst ließe sich durchprobieren, welche
+Firmen ARGONAUT einsetzen). Dazu die Löschregel für KI-Nachrichten — die hatten
+`absender_id = null` und ließen sich von niemandem entfernen.
 
 ## ⚠️ n8n ist **nicht** stillgelegt
 Die Liste behauptete: „n8n stillgelegt, nur noch Gotenberg." Falsch.
@@ -203,8 +260,10 @@ Durchsucht: 348 Quelldateien in `app/`, `lib/`, `components/`. Null Treffer. Die
 
 # 🧹 AUFRÄUMEN — heute Nacht vorbereitet
 
-## ⬜ 25 Sicherungsdateien, rund 600 KB
-Vollständig aufgelistet, Löschbefehl liegt bereit.
+## ✅ 25 Sicherungsdateien, rund 600 KB — ERLEDIGT · `c4dc879`
+Gelöscht am 04.08. Der Commit zeigt 2.996 entfernte Zeilen. Die 21 kleineren
+Dateien standen nie unter Versionskontrolle und tauchen deshalb nicht im Commit
+auf — von der Platte sind sie trotzdem weg.
 
 | Ort | Dateien |
 |---|---|
@@ -215,7 +274,7 @@ Vollständig aufgelistet, Löschbefehl liegt bereit.
 | `lib/document-*` | 5 Sicherungen |
 | `db/` | `policies-backup-2026-07-14.sql` (113 KB) |
 
-## ⬜ Zwei geparkte Module raus
+## ✅ Zwei geparkte Module raus — ERLEDIGT · `c4dc879`
 - `app/dashboard/agenten/` (6 KB) — liest Tabelle `agents`, aus dem Menü genommen, **von nirgends mehr verlinkt**
 - `app/dashboard/automatisierungen/` (13 KB) — liest Tabelle `automatisierungen`, aus dem Menü genommen
 - ✅ Die letzten zwei Verweise darauf im Live-Cockpit habe ich **bereits entfernt**: die Kachel „Aktive Automatisierungen" und den Kasten „Automatisierungs-Bibliothek — 128 Workflows in 15 Clustern" (die Zahl war frei erfunden, nicht gezählt)
