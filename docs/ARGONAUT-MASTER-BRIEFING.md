@@ -3,7 +3,7 @@
 > **Für eine neue Claude-Session: Lies diese Datei ZUERST vollständig.**
 > Danach bist du auf unserem Stand und kannst sofort Schritt für Schritt weiterbauen.
 > Diese Datei ist die einzige Quelle der Wahrheit für Arbeitsweise, Architektur und Plan.
-> Letzte Aktualisierung: Session vom 27.07.2026 (A1 Verleih, A2 Kurse, A3 Prüfprotokolle komplett).
+> Letzte Aktualisierung: Session vom 27.07.2026 (Bausteine 1–18 komplett: 6 geteilte + 12 große List-1-Module).
 
 ---
 
@@ -174,7 +174,7 @@ mitglieder, vertraege). Jetzt verbunden:
   Import-Vorlage `public/vorlagen/wartungsvertraege-import-vorlage.csv`;
   §14-UStG bestätigt (Auto-Nummer-Trigger `fn_rechnung_nummer` greift für alle
   erzeugten Rechnungen).
-- **OFFEN → Testtag:** Live-Tests (A6 etc.) gebündelt; optional später:
+- **OFFEN → Testtag:** Live-Tests (Baustein 12 etc.) gebündelt; optional später:
   bestehende `pruefpflichten`-Einträge als Wartungsverträge importieren.
 
 ### Baustein 2 · Objekt-/Asset-Register — KOMPLETT (27.07.2026)
@@ -289,8 +289,13 @@ live in Produktion, alle mit reinen node-getesteten Formeln + Regel-Auge, alle
 verzahnt. Neue KERN-Module: wiederkehr, objekte, aufwand. Nächste Phase: Testtag
 (gebündelte Live-Tests) + verbleibende Branchen-Feinschliffe.
 
-### A1 · Verleih-/Vermietungs-Modul — KOMPLETT (27.07.2026)
-Erstes Modul aus der List-1-Build-Queue (A1 Verleih, ~15 Branchen: KFZ-/Baumaschinen-/
+### Große List-1-Module · Baustein 7–18 (die 12 branchenspezifischen Vertiefungen)
+Fortlaufend im Anschluss an die 6 geteilten Bausteine nummeriert. In früheren Notizen
+liefen diese Module als »A1–A12«; Zuordnung: A1 = Baustein 7, A2 = 8, A3 = 9, A4 = 10,
+A5 = 11, A6 = 12, A7 = 13, A8 = 14, A9 = 15, A10 = 16, A11 = 17, A12 = 18.
+
+### Baustein 7 · Verleih-/Vermietungs-Modul — KOMPLETT (27.07.2026)
+Erstes Modul aus der List-1-Build-Queue (Baustein 7, ~15 Branchen: KFZ-/Baumaschinen-/
 Event-/Self-Storage-/Geräteverleih). Neuer Modul-Key `verleih`, NAV
 „🔑 Verleih & Vermietung" (ebene 3, Gruppe betrieb, nach Objektzeiten).
 - **V1–V3:** SQL `verleih_artikel` (bezeichnung/kategorie/inventar_nr/tagessatz/
@@ -310,10 +315,10 @@ Event-/Self-Storage-/Geräteverleih). Neuer Modul-Key `verleih`, NAV
 - **W2 — Vorlagen + Pakete:** `VERLEIH_VORLAGEN` (18 typische Mietgegenstände nach
   Branche, bewusst OHNE Preise) + „Aus Vorlage starten"-Dropdown; `verleih` in den
   Branchen-Paketen Handwerk/KFZ/Handel/Immobilien/Landwirtschaft (NICHT Kern).
-- **OFFEN → Testtag:** Live-Tests. Nächste List-1-Module: A2 Kurse/Teilnehmer (~22),
-  A3 Prüfprotokolle (~14).
+- **OFFEN → Testtag:** Live-Tests. Nächste List-1-Module: Baustein 8 Kurse/Teilnehmer (~22),
+  Baustein 9 Prüfprotokolle (~14).
 
-### A2 · Kurse & Teilnehmer — KOMPLETT (27.07.2026)
+### Baustein 8 · Kurse & Teilnehmer — KOMPLETT (27.07.2026)
 Zweites List-1-Modul (~22 Branchen: Fahr-/Musik-/Koch-/Hundeschule, VHS, Studios,
 BGM). Kein Neubau — **Vertiefung** des vorhandenen `bildung`-Moduls (`bildung_kurse`
 + `bildung_anmeldungen`, hatte schon „Rechnung aus Anmeldung").
@@ -330,9 +335,9 @@ BGM). Kein Neubau — **Vertiefung** des vorhandenen `bildung`-Moduls (`bildung_
   Zertifikat bewusst NICHT abgebildet); „🎓 Bescheinigung"-Knopf setzt zertifikat_am.
 - **K4:** `bildung` in Branchen-Pakete Wellness/Tier/Verein; Import-Vorlage
   `public/vorlagen/kurse-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A3 Prüfprotokolle (~14).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 9 Prüfprotokolle (~14).
 
-### A3 · Prüfprotokolle — KOMPLETT (27.07.2026)
+### Baustein 9 · Prüfprotokolle — KOMPLETT (27.07.2026)
 Drittes List-1-Modul (~14 Branchen: Elektro/E-Check, Leitern, Regale, Spielplätze,
 PSA, Feuerlöscher). Neues Modul `pruefprotokolle`, NAV „📋 Prüfprotokolle".
 - **P1:** SQL `pruef_protokoll` (optional `asset_id`→Register, pruef_art, norm,
@@ -349,9 +354,9 @@ PSA, Feuerlöscher). Neues Modul `pruefprotokolle`, NAV „📋 Prüfprotokolle"
   (gut/beobachten/kritisch) + letzte/nächste Kontrolle.
 - **P4:** `pruefprotokolle` in Pakete Handwerk/Fertigung/Handel/Energie/Immobilien/
   Logistik; Import-Vorlage `public/vorlagen/pruefprotokolle-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A4 Belegung generisch (~13).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 10 Belegung generisch (~13).
 
-### A4 · Belegung generisch — KOMPLETT (27.07.2026)
+### Baustein 10 · Belegung generisch — KOMPLETT (27.07.2026)
 Viertes List-1-Modul (~13 Branchen: Ferienwohnung, Camping/Stellplatz, Halle/Bahn/
 Platz, Serviced Apartments). Neuer Modul-Key `belegung`, NAV „🗓 Belegung".
 - **B1:** SQL `belegung_einheit` (abrechnungsart nacht|tag|stunde, preis_pro_einheit,
@@ -372,9 +377,9 @@ Platz, Serviced Apartments). Neuer Modul-Key `belegung`, NAV „🗓 Belegung".
   „Rechnung ›"-Link.
 - **B4:** `augeBelegung`; NAV; `belegung` in Pakete Gastro/Immobilien/Verein/
   Landwirtschaft; Import-Vorlage `public/vorlagen/belegung-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A5 Schlagkartei / Dünge- & PSM-Doku (~15).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 11 Schlagkartei / Dünge- & PSM-Doku (~15).
 
-### A5 · Schlagkartei / Dünge- & PSM-Doku — KOMPLETT (27.07.2026)
+### Baustein 11 · Schlagkartei / Dünge- & PSM-Doku — KOMPLETT (27.07.2026)
 Fünftes List-1-Modul (~15 Branchen: Landwirt Acker, Lohnunternehmer, Winzer,
 Obst/Gemüse, Gärtnerei, Baumschule …). Neubau, Modul-Key `schlagkartei`,
 NAV „🌾 Schlagkartei".
@@ -393,9 +398,9 @@ NAV „🌾 Schlagkartei".
   PSM lückenlos); „📄 {Jahr}"-Knopf je Schlag = Jahresnachweis für Kontrolle.
 - **B4:** NAV; `schlagkartei` in Paket Landwirtschaft; Import-Vorlage
   `public/vorlagen/schlaege-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A6 Tierbestand / HIT-Meldung (~12).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 12 Tierbestand / HIT-Meldung (~12).
 
-### A6 · Tierbestand / HIT-Meldung — KOMPLETT (27.07.2026)
+### Baustein 12 · Tierbestand / HIT-Meldung — KOMPLETT (27.07.2026)
 Sechstes List-1-Modul (~12 Branchen: Rinder-/Schweine-/Schaf-/Ziegenhalter,
 Milchvieh, Reitbetrieb, Geflügel). Neubau, Modul-Key `tierbestand`, NAV „🐄 Tierbestand".
 - **B1:** SQL 3 Tabellen — `tier_gruppe` (tierart, VVVO-Betriebsnummer, meldefrist_tage
@@ -410,9 +415,9 @@ Milchvieh, Reitbetrieb, Geflügel). Neubau, Modul-Key `tierbestand`, NAV „🐄
   Frist-Rest als Checkliste); „📄 HIT-Meldeliste"-Knopf.
 - **B4:** NAV; `tierbestand` in Pakete Landwirtschaft + Tier; Import-Vorlage
   `public/vorlagen/tiergruppen-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A7 Kanzlei — Akten & Fristen (~13).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 13 Kanzlei — Akten & Fristen (~13).
 
-### A7 · Kanzlei — Akten & Fristen — KOMPLETT (27.07.2026)
+### Baustein 13 · Kanzlei — Akten & Fristen — KOMPLETT (27.07.2026)
 Siebtes List-1-Modul (~13 Branchen: Rechtsanwalt, Steuerberater, Notar, WP, Inkasso).
 Neubau. **Wichtig:** Modul-Key `fristen`, Pfad `/dashboard/fristen`, NAV „⚖️ Akten &
 Fristen" — bewusst NEBEN dem schon existierenden `kanzlei`-Modul (⚖️ Kanzlei & Steuer).
@@ -430,16 +435,16 @@ Fristen" — bewusst NEBEN dem schon existierenden `kanzlei`-Modul (⚖️ Kanzl
 - **Lehre:** vor jedem neuen Modul prüfen, ob Pfad/Modul-Key schon existiert (rechte.ts +
   pakete.ts grep) — hatte versehentlich /dashboard/kanzlei überschrieben, per
   `git checkout` wiederhergestellt (war nicht committet).
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A8 Zuschnitt / Stückliste (~10).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 14 Zuschnitt / Stückliste (~10).
 
-### A8 · Zuschnitt / Stückliste — KOMPLETT (27.07.2026)
+### Baustein 14 · Zuschnitt / Stückliste — KOMPLETT (27.07.2026)
 Achtes List-1-Modul (~10 Branchen: Tischler, Metallbau, Glaser, Trockenbau, Zimmerei,
 Stahlbau). Neubau, Modul-Key `zuschnitt`, NAV „📐 Zuschnitt".
 - **B1:** SQL `zuschnitt_projekt` (stangenlaenge, saegeblatt_mm/Kerf, querschnitt_mm2,
   dichte) + `zuschnitt_teil` (laenge, anzahl). `lib/zuschnitt.ts` (15/15 node-getestet:
   `optimiereZuschnitt` = 1D-FFD-Bin-Packing mit Kerf → Stangenbedarf, Verschnitt %,
   Schnittplan; Materialgewicht `flaecheRund/Flach/Rohr` + `gewicht`; `DICHTE` Stahl 7,85
-  usw. — verifiziert). **B1+B2 in EINEM Push** (Lehre aus A7-lib-Falle).
+  usw. — verifiziert). **B1+B2 in EINEM Push** (Lehre aus der lib-Falle bei Baustein 13).
 - **B2:** Seite `/dashboard/zuschnitt` (Projekte + Teile, Live-Ergebnis Stangen/
   Verschnitt/Gewicht + Schnittplan je Stange); `augeZuschnitt`.
 - **B3:** `lib/zuschnittplanPdf.ts` (jsPDF: Schnittplan je Stange für die Werkstatt).
@@ -447,9 +452,9 @@ Stahlbau). Neubau, Modul-Key `zuschnitt`, NAV „📐 Zuschnitt".
   `public/vorlagen/zuschnitt-teile-import-vorlage.csv`.
 - **Lib-Falle-Lehre:** neue lib nicht mehr allein in B1 vorschicken (wird ungenutzt grün
   gepusht und fällt erst beim ersten Import auf) — mit dem ersten Nutzer bündeln.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A9 Spenden / Zuwendungsnachweis (~20).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 15 Spenden / Zuwendungsnachweis (~20).
 
-### A9 · Spenden / Zuwendungsnachweis — KOMPLETT (27.07.2026)
+### Baustein 15 · Spenden / Zuwendungsnachweis — KOMPLETT (27.07.2026)
 Neuntes List-1-Modul (~20 Branchen: Vereine, Stiftungen, gemeinnützige Organisationen,
 Fördervereine). Neubau, Modul-Key `spenden`, NAV „❤️ Spenden" (Gruppe finanzen).
 - **B1:** SQL `spende` (art geldzuwendung|sachzuwendung|aufwandsverzicht, bestaetigt,
@@ -465,9 +470,9 @@ Fördervereine). Neubau, Modul-Key `spenden`, NAV „❤️ Spenden" (Gruppe fin
   + fortlaufende Beleg-Nr. ZB-JAHR-NNN.
 - **B4:** NAV; `spenden` in Verein-Paket; Import-Vorlage
   `public/vorlagen/spenden-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A10 Tour / Dispo-ePOD (~18).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 16 Tour / Dispo-ePOD (~18).
 
-### A10 · Tour / Dispo-ePOD — KOMPLETT (27.07.2026)
+### Baustein 16 · Tour / Dispo-ePOD — KOMPLETT (27.07.2026)
 Zehntes List-1-Modul (~18 Branchen: Logistik/Spedition, Kurier, Lieferdienste,
 Möbelspedition, Getränkelieferung, Entsorgung). Neubau, Modul-Key `tour`,
 NAV „🚚 Tour & ePOD" (nicht = /dashboard/dispo Field-Service).
@@ -484,9 +489,9 @@ NAV „🚚 Tour & ePOD" (nicht = /dashboard/dispo Field-Service).
   `public/vorlagen/tour-stopps-import-vorlage.csv`.
 - **Zwischenfall:** Device-Bridge riss kurz ab (device_commit_files verschwand) →
   get_device_info-Reconnect + Tool via ToolSearch neu geladen, dann committet.
-- **OFFEN → Testtag:** Live-Tests. Nächstes: A11 Gutachten / Sachverständige (~7).
+- **OFFEN → Testtag:** Live-Tests. Nächstes: Baustein 17 Gutachten / Sachverständige (~7).
 
-### A11 · Gutachten / Sachverständige — KOMPLETT (27.07.2026)
+### Baustein 17 · Gutachten / Sachverständige — KOMPLETT (27.07.2026)
 Elftes List-1-Modul (~7 Branchen: KFZ-/Bau-/Immobilien-/Schadensgutachter). Neubau,
 Modul-Key `gutachten`, NAV „📑 Gutachten".
 - **B1:** SQL `gutachten` (honorargruppe, stunden, status entwurf|fertig) +
@@ -499,10 +504,10 @@ Modul-Key `gutachten`, NAV „📑 Gutachten".
 - **B3:** `lib/gutachtenPdf.ts` (jsPDF: gegliederte Positionen, Summe, JVEG-Honorar).
 - **B4:** NAV; `gutachten` in Pakete KFZ + Immobilien; Import-Vorlage
   `public/vorlagen/gutachten-import-vorlage.csv`.
-- **OFFEN → Testtag:** Live-Tests. Nächstes + LETZTES der 12 großen: A12 Hilfsmittel-
+- **OFFEN → Testtag:** Live-Tests. Nächstes + LETZTES der 12 großen: Baustein 18 Hilfsmittel-
   Versorgung (~5). Danach: List-1 Teil B/C + Querschnitt (siehe §9/§6).
 
-### A12 · Hilfsmittel-Versorgung — KOMPLETT (27.07.2026) — 🏁 ALLE 12 GROSSEN DURCH
+### Baustein 18 · Hilfsmittel-Versorgung — KOMPLETT (27.07.2026) — 🏁 ALLE 12 GROSSEN LIST-1-MODULE (BAUSTEIN 7–18) DURCH
 Zwölftes + letztes der großen List-1-Module (~5 Branchen: Sanitätshaus, Ortho-
 pädietechnik, Hörgeräteakustiker, Orthopädieschuhtechnik, Reha-Technik). Modul-Key
 `hilfsmittel`, NAV „🦽 Hilfsmittel".
@@ -517,10 +522,10 @@ pädietechnik, Hörgeräteakustiker, Orthopädieschuhtechnik, Reha-Technik). Mod
 - **B4:** NAV; `hilfsmittel` in Wellness/Gesundheit-Paket; Import-Vorlage
   `public/vorlagen/hilfsmittel-import-vorlage.csv`.
 
-### 🏁 ALLE 12 GROSSEN LIST-1-MODULE KOMPLETT (27.07.2026)
-A1 Verleih · A2 Kurse · A3 Prüfprotokolle · A4 Belegung · A5 Schlagkartei · A6 Tier-
-bestand · A7 Akten&Fristen · A8 Zuschnitt · A9 Spenden · A10 Tour/ePOD · A11 Gutachten ·
-A12 Hilfsmittel — alle live, alle mit node-getesteten Formeln + Regel-Auge + (meist)
+### 🏁 ALLE 12 GROSSEN LIST-1-MODULE KOMPLETT · BAUSTEIN 7–18 (27.07.2026)
+Baustein 7 Verleih · 8 Kurse · 9 Prüfprotokolle · 10 Belegung · 11 Schlagkartei · 12 Tier-
+bestand · 13 Akten&Fristen · 14 Zuschnitt · 15 Spenden · 16 Tour/ePOD · 17 Gutachten ·
+18 Hilfsmittel — alle live, alle mit node-getesteten Formeln + Regel-Auge + (meist)
 PDF-Nachweis + NAV + Branchen-Paket + Import-Vorlage. Modul-Zähler jetzt 92.
 **Danach:** List-1 Teil B (schmale 2–5er-Gruppen) + Teil C (Singletons) + Querschnitt
 (Testtag, Import-Center, Font-Vereinheitlichung, Aufräumen, Gläubiger-ID, Partner-Brocken).
