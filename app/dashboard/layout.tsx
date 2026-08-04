@@ -154,8 +154,37 @@ export default async function DashboardLayout({
         </div>
       )}
 
-      {/* Inhalt der jeweiligen Unterseite */}
-      {children}
+      {/*
+        DIE SEITENSCHALE (04.08.2026)
+
+        Vorher stand hier nur `{children}` — ohne jeden Rahmen. Kopfzeile, Menü
+        und Banner sassen alle in maxWidth 1600 px, der Seiteninhalt darunter
+        bekam gar nichts. Jede der rund 130 Modulseiten legte ihre Breite selbst
+        fest, und zwar voellig unterschiedlich:
+
+          Etiketten & LMIV      1400 px, KEIN Innenabstand -> Text klebt am Rand
+          Landwirtschaft/Forst  1020 px, 4 px Innenabstand
+          Rechnungen, CRM       1200 px, 32 px
+          Schlagkartei           860 px, 28 px
+
+        Deshalb wirkte der Inhalt mal randlos, mal schmal und nie buendig mit
+        der Kopfzeile. Es waren nicht einzelne kaputte Seiten — es fehlte die
+        gemeinsame Schale.
+
+        Diese Schale setzt jetzt drei Dinge fuer ALLE Seiten auf einmal:
+          · dieselbe Hoechstbreite wie die Kopfzeile (buendig)
+          · denselben seitlichen Abstand (nie wieder Text am Rand)
+          · einen ruhigen Abstand nach oben und unten
+
+        Seiten, die eine eigene, kleinere Breite setzen, bleiben davon
+        unberuehrt und stehen weiterhin mittig — nur eben innerhalb eines
+        Rahmens statt frei im Raum. Die Feinarbeit an den Einzelseiten kann
+        danach Stueck fuer Stueck folgen, ohne dass hier noch etwas passieren
+        muss.
+      */}
+      <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(16px, 1.6vw, 28px) ${SHELL_PAD} 64px` }}>
+        {children}
+      </main>
 
       {/* PULS · KI-Assistent — zentral, schwebt auf allen Seiten unten rechts */}
       <DashboardChat />

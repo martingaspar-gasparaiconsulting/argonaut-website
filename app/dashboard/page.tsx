@@ -259,7 +259,10 @@ export default async function DashboardPage() {
 
   const kiLimit = usageData?.ki_calls_limit ?? KI_CALL_LIMITS[rawPaket] ?? 15000
   const kiUsed = usageData?.ki_calls_used ?? 0
-  const kiPct = Math.min(Math.round((kiUsed / kiLimit) * 100), 100)
+  // Die Kachel „KI-Calls diesen Monat" ist am 04.08.2026 von der Startseite
+  // genommen worden: sie zeigte dem Kunden eine Obergrenze, waehrend im
+  // Verkaufsgespraech „KI unbegrenzt inklusive" zugesagt wird. kiUsed und
+  // kiLimit bleiben, weil der Ueberlauf-Hinweis unten sie noch braucht.
 
   const onboardingCompleted = profile?.onboarding_completed ?? false
   const onboardingData = profile?.onboarding_data ? (typeof profile.onboarding_data === 'string' ? JSON.parse(profile.onboarding_data) : profile.onboarding_data) : null
@@ -384,7 +387,6 @@ export default async function DashboardPage() {
             <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🏭 Betrieb</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/projekte" icon="📁" label="Laufende Projekte" wert={projekteLaufend} sub={`${projekte.length} gesamt`} akzent="#4f94e8" />
-              <KpiKachel href="/dashboard/start" icon="⚡" label="KI-Calls diesen Monat" wert={`${kiPct}%`} sub={`${kiUsed.toLocaleString('de-DE')} / ${kiLimit.toLocaleString('de-DE')}`} akzent="#C9A84C" alarm={kiPct >= 100} />
             </div>
           </div>
 

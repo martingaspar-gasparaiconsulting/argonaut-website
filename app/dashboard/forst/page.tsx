@@ -252,7 +252,8 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { maxWidth: 1020, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
+  /* Breite und Rand kommen seit 04.08.2026 aus der Seitenschale im Layout. */
+  page: { color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   subnav: { display: 'flex', gap: 8, margin: '12px 0 4px', flexWrap: 'wrap' },
   subnavAktiv: { background: C.gold, color: C.navy, borderRadius: 9, padding: '7px 14px', fontSize: 14, fontWeight: 800 },

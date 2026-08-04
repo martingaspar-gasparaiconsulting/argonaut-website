@@ -299,7 +299,7 @@ export default function EtikettenSeite() {
   const kWert: React.CSSProperties = { fontSize: "clamp(24px,2.1vw,34px)", fontWeight: 800, marginTop: 4 };
 
   return (
-    <div style={{ color: "#fff", maxWidth: 1400, margin: "0 auto" }}>
+    <div style={{ color: "#fff" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "clamp(26px,2.25vw,36px)", fontWeight: 800 }}>🏷️ Etiketten & LMIV</h1>

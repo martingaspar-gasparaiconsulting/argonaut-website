@@ -463,7 +463,10 @@ function Kpi({ label, value, accent }: { label: string; value: string; accent?: 
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px' },
+  /* Rand und Hoechstbreite kommen seit 04.08.2026 aus der Seitenschale im Layout.
+     `background` und `minHeight` sind hier ueberfluessig — beides setzt bereits
+     das Dashboard-Layout; doppelt gesetzt erzeugte es nur eine zweite Flaeche. */
+  page: { color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif" },
   eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(28px, 2.5vw, 40px)', fontWeight: 800, margin: 0, color: C.text },
   sub: { color: C.textDim, margin: '8px 0 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 860, lineHeight: 1.5 },

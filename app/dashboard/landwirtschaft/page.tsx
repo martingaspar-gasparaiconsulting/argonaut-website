@@ -154,7 +154,8 @@ export default function LandwirtschaftPage() {
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { maxWidth: 1020, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
+  /* Breite und Rand kommen seit 04.08.2026 aus der Seitenschale im Layout. */
+  page: { color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0' },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 },
