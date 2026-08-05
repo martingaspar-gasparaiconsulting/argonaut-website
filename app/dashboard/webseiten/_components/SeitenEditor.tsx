@@ -8,8 +8,9 @@
 // Webauftritt (eine Quelle der Wahrheit) — von hier aus verlinkt.
 // ============================================================
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { BAUSTEIN_KATALOG, type Block } from '@/lib/webBloecke';
+import FotoPicker from './FotoPicker';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', navy3: '#0c1a2e', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -37,10 +38,22 @@ function neuerBlock(typ: Block['typ']): Block {
 }
 
 export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; onChange: (b: Block[]) => void }) {
+  // Bild-Auswahl: welcher Block, welches Ziel (Hero-Titelbild oder Galerie).
+  const [picker, setPicker] = useState<{ index: number; ziel: 'hero' | 'galerie'; start: string } | null>(null);
+
   function setBlock(i: number, patch: Record<string, unknown>) {
     const kopie = bloecke.map((b, idx) => (idx === i ? ({ ...b, ...patch } as Block) : b));
     onChange(kopie);
   }
+
+  function bildGewaehlt(url: string) {
+    if (!picker) return;
+    const b = bloecke[picker.index];
+    if (picker.ziel === 'hero') setBlock(picker.index, { bild: url });
+    else if (b && b.typ === 'galerie') setBlock(picker.index, { bilder: [...((b.bilder as string[]) || []), url] });
+    setPicker(null);
+  }
+  function openPicker(index: number, ziel: 'hero' | 'galerie', start: string) { setPicker({ index, ziel, start }); }
   function move(i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= bloecke.length) return;
@@ -63,7 +76,7 @@ export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; 
               <button style={styles.miniBtnDanger} title="Löschen" onClick={() => remove(i)}>✕</button>
             </div>
           </div>
-          <div style={styles.felder}>{felderFuer(b, i, setBlock)}</div>
+          <div style={styles.felder}>{felderFuer(b, i, setBlock, openPicker)}</div>
         </div>
       ))}
 
@@ -73,12 +86,19 @@ export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; 
           <button key={k.typ} style={styles.addBtn} onClick={() => add(k.typ)}>{k.icon} {k.name}</button>
         ))}
       </div>
+
+      {picker && <FotoPicker start={picker.start} onPick={bildGewaehlt} onClose={() => setPicker(null)} />}
     </div>
   );
 }
 
 // --- Felder je Baustein-Typ -------------------------------------------------
-function felderFuer(b: Block, i: number, setBlock: (i: number, patch: Record<string, unknown>) => void) {
+function felderFuer(
+  b: Block,
+  i: number,
+  setBlock: (i: number, patch: Record<string, unknown>) => void,
+  openPicker: (index: number, ziel: 'hero' | 'galerie', start: string) => void,
+) {
   const T = (label: string, key: string, val: string, area = false) =>
     area
       ? <Area key={key} label={label} value={val} onChange={(v) => setBlock(i, { [key]: v })} />
@@ -86,15 +106,40 @@ function felderFuer(b: Block, i: number, setBlock: (i: number, patch: Record<str
 
   switch (b.typ) {
     case 'hero':
-      return [T('Label (klein oben)', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel), T('Untertitel', 'unterzeile', b.unterzeile), T('Knopf-Text', 'knopf', b.knopf)];
+      return [
+        T('Label (klein oben)', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel), T('Untertitel', 'unterzeile', b.unterzeile), T('Knopf-Text', 'knopf', b.knopf),
+        <div key="bild" style={styles.bildFeld}>
+          <span style={styles.feldLabel}>Titelbild</span>
+          {b.bild
+            ? <div style={styles.bildVorschauRow}><img src={b.bild} alt="" style={styles.bildVorschau} /><button style={styles.miniBtnDanger} onClick={() => setBlock(i, { bild: '' })}>Entfernen</button></div>
+            : <span style={styles.keinBild}>Kein Bild — es erscheint der Farb-Hintergrund.</span>}
+          <button style={styles.bildBtn} onClick={() => openPicker(i, 'hero', b.titel || 'business')}>🖼️ Titelbild wählen</button>
+        </div>,
+      ];
     case 'ueber':
       return [T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true)];
     case 'kontakt':
       return [T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true)];
     case 'cta':
       return [T('Überschrift', 'titel', b.titel), T('Knopf-Text', 'knopf', b.knopf)];
-    case 'galerie':
-      return [T('Überschrift', 'titel', b.titel), <Feld key="anzahl" label="Anzahl Bilder (1–6)" value={String(b.anzahl)} onChange={(v) => { const n = Math.max(1, Math.min(6, parseInt(v) || 1)); setBlock(i, { anzahl: n }); }} />];
+    case 'galerie': {
+      const bilder = (b.bilder as string[]) || [];
+      return [
+        T('Überschrift', 'titel', b.titel),
+        <div key="bilder" style={styles.bildFeld}>
+          <span style={styles.feldLabel}>Bilder</span>
+          {bilder.length > 0
+            ? <div style={styles.galRow}>{bilder.map((u, k) => (
+                <div key={k} style={styles.galThumbWrap}>
+                  <img src={u} alt="" style={styles.galThumb} />
+                  <button style={styles.galRemove} title="Entfernen" onClick={() => setBlock(i, { bilder: bilder.filter((_, x) => x !== k) })}>✕</button>
+                </div>
+              ))}</div>
+            : <span style={styles.keinBild}>Noch keine Bilder — es erscheinen graue Platzhalter.</span>}
+          <button style={styles.bildBtn} onClick={() => openPicker(i, 'galerie', b.titel || 'business')}>🖼️ Bild hinzufügen</button>
+        </div>,
+      ];
+    }
     case 'stats':
       return [
         T('Überschrift (optional)', 'titel', b.titel || ''),
@@ -180,4 +225,14 @@ const styles: Record<string, CSSProperties> = {
   addBar: { display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center', background: C.navy3, border: `1px dashed ${C.border}`, borderRadius: 12, padding: 12 },
   addLabel: { fontSize: FS.klein, color: C.textDim, fontWeight: 700, marginRight: 4 },
   addBtn: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 12px', fontSize: FS.mini, fontWeight: 700, cursor: 'pointer' },
+
+  bildFeld: { gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 7, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: 10 },
+  keinBild: { fontSize: FS.mini, color: C.textDim },
+  bildVorschauRow: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
+  bildVorschau: { width: 120, height: 72, objectFit: 'cover', borderRadius: 8, border: `1px solid ${C.border}` },
+  bildBtn: { alignSelf: 'flex-start', background: `${C.cyan}14`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: '7px 13px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
+  galRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  galThumbWrap: { position: 'relative', width: 92, height: 62 },
+  galThumb: { width: 92, height: 62, objectFit: 'cover', borderRadius: 8, border: `1px solid ${C.border}`, display: 'block' },
+  galRemove: { position: 'absolute', top: -7, right: -7, width: 22, height: 22, borderRadius: 999, background: C.danger, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', lineHeight: '22px', padding: 0 },
 };

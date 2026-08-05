@@ -34,7 +34,7 @@ export type Block =
   | { typ: 'stats'; titel?: string; zahlen: { wert: string; label: string }[] }
   | { typ: 'leistungen'; eyebrow?: string; titel: string; punkte: { titel: string; text: string }[] }
   | { typ: 'ueber'; eyebrow?: string; titel: string; text: string }
-  | { typ: 'galerie'; titel: string; anzahl: number }
+  | { typ: 'galerie'; titel: string; anzahl: number; bilder?: string[] }
   | { typ: 'testimonials'; eyebrow?: string; titel: string; stimmen: { text: string; name: string; rolle: string }[] }
   | { typ: 'faq'; eyebrow?: string; titel: string; fragen: { frage: string; antwort: string }[] }
   | { typ: 'kontakt'; titel: string; text: string }
@@ -130,10 +130,15 @@ export function blockHtml(b: Block, ci: CiWeb): string {
         '</div></section>',
       ].join('');
     case 'galerie': {
-      const n = Math.max(1, Math.min(12, b.anzahl || 3));
-      let boxen = '';
-      for (let i = 0; i < n; i++) boxen += '<div class="ph"><span>Bild</span></div>';
-      return '<section class="sec"><div class="wrap"><h2>' + esc(b.titel) + '</h2><div class="gal">' + boxen + '</div></div></section>';
+      const bilder = Array.isArray(b.bilder) ? b.bilder.map(safeUrl).filter(Boolean) : [];
+      let inner = '';
+      if (bilder.length) {
+        inner = bilder.slice(0, 12).map((u) => '<div class="galimg"><img src="' + u + '" alt="" loading="lazy"></div>').join('');
+      } else {
+        const n = Math.max(1, Math.min(12, b.anzahl || 3));
+        for (let i = 0; i < n; i++) inner += '<div class="ph"><span>Bild</span></div>';
+      }
+      return '<section class="sec"><div class="wrap"><h2>' + esc(b.titel) + '</h2><div class="gal">' + inner + '</div></div></section>';
     }
     case 'testimonials':
       return [
@@ -240,6 +245,8 @@ function seiteCss(ci: CiWeb): string {
     // Galerie
     '.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}',
     '.ph{aspect-ratio:4/3;background:linear-gradient(135deg,#eef2f7,#dde5ee);border:1px dashed #c3ccd7;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#9aa7b5;font-weight:700}',
+    '.galimg{aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#eef2f7}',
+    '.galimg img{width:100%;height:100%;object-fit:cover;display:block}',
     // Bewertungen
     '.stimme{margin:0;background:#fff;border:1px solid #e7ebf1;border-radius:16px;padding:24px;box-shadow:0 12px 30px -22px rgba(20,40,70,.35)}',
     '.sterne{color:#f5b301;font-size:18px;letter-spacing:2px}',
