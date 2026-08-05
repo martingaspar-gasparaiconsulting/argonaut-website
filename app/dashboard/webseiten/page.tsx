@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
+import SeitenEditor from './_components/SeitenEditor';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -36,7 +37,7 @@ const GERAETE: { key: string; label: string; icon: string; breite: number | null
   { key: 'handy', label: 'Handy', icon: '📲', breite: 390 },
 ];
 
-type Modus = 'vorlage' | 'ki';
+type Modus = 'vorlage' | 'ki' | 'editor';
 
 export default function WebseitenPage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export default function WebseitenPage() {
   const [modus, setModus] = useState<Modus>('vorlage');
   const [story, setStory] = useState('');
   const [kiBloecke, setKiBloecke] = useState<Block[] | null>(null);
+  const [editBloecke, setEditBloecke] = useState<Block[] | null>(null);
   const [kiLaden, setKiLaden] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -71,13 +73,21 @@ export default function WebseitenPage() {
   }, [ladeCi]);
 
   // Beim Zweck-Wechsel das KI-Ergebnis verwerfen (es gehörte zum alten Zweck).
-  function waehleZweck(z: string) { setZweck(z); setKiBloecke(null); setMeldung(null); setGespeichert(null); }
+  function waehleZweck(z: string) { setZweck(z); setKiBloecke(null); setEditBloecke(null); setMeldung(null); setGespeichert(null); if (modus === 'editor') setModus('vorlage'); }
+
+  function editorStart() {
+    if (!ci) return;
+    setEditBloecke(kiBloecke ?? baueVorlage(ci, zweck).bloecke);
+    setModus('editor');
+    setGespeichert(null);
+  }
 
   const aktuelleBloecke: Block[] = useMemo(() => {
     if (!ci) return [];
+    if (modus === 'editor' && editBloecke) return editBloecke;
     if (modus === 'ki' && kiBloecke) return kiBloecke;
     return baueVorlage(ci, zweck).bloecke;
-  }, [ci, zweck, modus, kiBloecke]);
+  }, [ci, zweck, modus, kiBloecke, editBloecke]);
 
   const html = useMemo(() => {
     if (!ci) return '';
@@ -168,13 +178,21 @@ export default function WebseitenPage() {
                 <div style={styles.wegText}>Fertige Baustein-Vorlage je Zweck — sofort ohne KI.</div>
                 <div style={styles.aktivBadge}>aktiv</div>
               </button>
-              <div style={{ ...styles.weg, opacity: 0.7 }}>
+              <button onClick={editorStart} style={{ ...styles.weg, ...(modus === 'editor' ? styles.wegAktiv : {}) }}>
                 <div style={styles.wegIcon}>🎛️</div>
                 <div style={styles.wegName}>KI + selbst justieren</div>
-                <div style={styles.wegText}>Vorschlag der KI, dann Farben/Texte/Reihenfolge selbst anpassen.</div>
-                <div style={styles.bald}>folgt (Editor)</div>
-              </div>
+                <div style={styles.wegText}>Erst KI oder Vorlage, dann Texte und Reihenfolge selbst anpassen.</div>
+                <div style={styles.aktivBadge}>aktiv</div>
+              </button>
             </div>
+
+            {modus === 'editor' && editBloecke && (
+              <div style={styles.editPanel}>
+                <div style={styles.feldLabel}>Bausteine bearbeiten — die Vorschau unten wandert live mit.</div>
+                <SeitenEditor bloecke={editBloecke} onChange={setEditBloecke} />
+                <p style={styles.mini}>🎨 Farben &amp; Schrift ändern Sie im <a href="/dashboard/webauftritt" style={styles.link}>Webauftritt</a> — das gilt dann überall.</p>
+              </div>
+            )}
 
             {modus === 'ki' && (
               <div style={styles.kiPanel}>
@@ -261,6 +279,7 @@ const styles: Record<string, CSSProperties> = {
   bald: { marginTop: 4, alignSelf: 'flex-start', background: `${C.cyan}18`, color: C.cyan, border: `1px solid ${C.cyan}44`, borderRadius: 7, padding: '3px 9px', fontSize: FS.mini, fontWeight: 700 },
 
   kiPanel: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  editPanel: { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
   feldLabel: { fontSize: FS.klein, color: C.textDim, fontWeight: 600 },
   textarea: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 13px', fontSize: FS.text, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', minHeight: 92, resize: 'vertical', lineHeight: 1.5 },
   kiBtnRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
