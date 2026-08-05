@@ -1,16 +1,18 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · W3 · Website-Bauer · Vorschau „So könnte Ihre Seite aussehen"
-// Lädt den CI-Speicher, baut je nach ZWECK eine fertige Vorlage und zeigt sie
-// als echte Webseite in einem <iframe> — umschaltbar für Desktop/Tablet/Handy.
-// Die drei Bau-Wege (KI komplett · KI + Editor · selbst) docken hier in W4/W5 an.
+// ARGONAUT OS · W3/W4 · Website-Bauer
+// Zeigt eine fertige Seite aus dem CI-Speicher. Zwei aktive Wege:
+//   • Vorlage        — feste Baustein-Vorlage je Zweck (W3)
+//   • Komplett mit KI — die KI schreibt die Texte scharf aus (W4)
+// Vorschau als echte Webseite im <iframe> (Desktop/Tablet/Handy), Speichern
+// in web_seiten. Der Editor (KI + selbst justieren) folgt in W5.
 // Pfad: app/dashboard/webseiten/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { seiteHtml, type CiWeb } from '@/lib/webBloecke';
+import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
 
 const supabase = createBrowserClient(
@@ -34,17 +36,24 @@ const GERAETE: { key: string; label: string; icon: string; breite: number | null
   { key: 'handy', label: 'Handy', icon: '📲', breite: 390 },
 ];
 
-const WEGE: { key: string; icon: string; name: string; text: string }[] = [
-  { key: 'ki', icon: '✨', name: 'Komplett mit KI', text: 'Die KI baut alles fertig — Sie schauen nur noch drüber.' },
-  { key: 'ki-editor', icon: '🎛️', name: 'KI + selbst justieren', text: 'Die KI macht den Vorschlag, Sie passen Farben, Texte und Reihenfolge an.' },
-  { key: 'selbst', icon: '🧱', name: 'Komplett selbst', text: 'Von null mit unserem Baustein-Katalog — volle Freiheit.' },
-];
+type Modus = 'vorlage' | 'ki';
 
 export default function WebseitenPage() {
+  const [uid, setUid] = useState<string | null>(null);
   const [ci, setCi] = useState<CiWeb | null>(null);
   const [laden, setLaden] = useState(true);
   const [zweck, setZweck] = useState('webseite');
   const [geraet, setGeraet] = useState('desktop');
+
+  const [modus, setModus] = useState<Modus>('vorlage');
+  const [story, setStory] = useState('');
+  const [kiBloecke, setKiBloecke] = useState<Block[] | null>(null);
+  const [kiLaden, setKiLaden] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  const [speichert, setSpeichert] = useState(false);
+  const [gespeichert, setGespeichert] = useState<string | null>(null);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data } = await supabase.from('web_ci').select('*').eq('owner_user_id', userId).maybeSingle();
@@ -55,16 +64,61 @@ export default function WebseitenPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
+      setUid(id);
       if (id) await ladeCi(id);
       setLaden(false);
     })();
   }, [ladeCi]);
 
+  // Beim Zweck-Wechsel das KI-Ergebnis verwerfen (es gehörte zum alten Zweck).
+  function waehleZweck(z: string) { setZweck(z); setKiBloecke(null); setMeldung(null); setGespeichert(null); }
+
+  const aktuelleBloecke: Block[] = useMemo(() => {
+    if (!ci) return [];
+    if (modus === 'ki' && kiBloecke) return kiBloecke;
+    return baueVorlage(ci, zweck).bloecke;
+  }, [ci, zweck, modus, kiBloecke]);
+
   const html = useMemo(() => {
     if (!ci) return '';
-    const jahr = new Date().getFullYear();
-    return seiteHtml(baueVorlage(ci, zweck), ci, jahr);
-  }, [ci, zweck]);
+    return seiteHtml({ bloecke: aktuelleBloecke }, ci, new Date().getFullYear());
+  }, [ci, aktuelleBloecke]);
+
+  async function kiBauen() {
+    setFehler(null); setMeldung(null); setGespeichert(null); setKiLaden(true);
+    try {
+      const res = await fetch('/api/webseite-ki', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ zweck, story }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFehler(data?.error || 'Die KI konnte die Seite nicht bauen.'); setKiLaden(false); return; }
+      setKiBloecke(Array.isArray(data.bloecke) ? data.bloecke : null);
+      setMeldung(data?.hinweis || 'Fertig — die KI hat Ihre Seite geschrieben. Schauen Sie in die Vorschau.');
+    } catch {
+      setFehler('Verbindung zur KI fehlgeschlagen. Bitte erneut versuchen.');
+    }
+    setKiLaden(false);
+  }
+
+  async function speichern() {
+    if (!uid || !ci) return;
+    setFehler(null); setGespeichert(null); setSpeichert(true);
+    const row = {
+      owner_user_id: uid,
+      titel: (ci.firma ?? 'Meine Seite').toString(),
+      slug: zweck,
+      zweck,
+      status: 'entwurf',
+      ist_startseite: zweck === 'webseite',
+      bloecke: aktuelleBloecke,
+      aktualisiert_am: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('web_seiten').upsert(row, { onConflict: 'owner_user_id,slug' });
+    if (error) { setFehler('Konnte nicht gespeichert werden.'); setSpeichert(false); return; }
+    setGespeichert('Seite gespeichert. Veröffentlichen kommt in einem der nächsten Schritte.');
+    setSpeichert(false);
+  }
 
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
   const zweckInfo = ZWECKE.find((z) => z.key === zweck);
@@ -74,8 +128,8 @@ export default function WebseitenPage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>🖥️ Website-Bauer</h1>
       <p style={styles.sub}>
-        Aus Ihrem Firmen-Auftritt entsteht in Sekunden eine fertige Seite. Wählen Sie den Zweck — die Vorschau baut
-        sich sofort neu. Impressum, Datenschutz und AGB sitzen automatisch im Fuß.
+        Aus Ihrem Firmen-Auftritt entsteht in Sekunden eine fertige Seite. Wählen Sie den Zweck, lassen Sie die KI
+        die Texte schreiben — oder nehmen Sie die Vorlage. Impressum, Datenschutz und AGB sitzen automatisch im Fuß.
       </p>
 
       {laden ? (
@@ -87,21 +141,67 @@ export default function WebseitenPage() {
         </div>
       ) : (
         <>
-          {/* Zweck-Auswahl */}
+          {/* 1 · Zweck */}
           <div style={styles.card}>
             <div style={styles.cardTitel}>1 · Wofür ist die Seite?</div>
             <div style={styles.tabRow}>
               {ZWECKE.map((zk) => (
-                <button key={zk.key} onClick={() => setZweck(zk.key)} style={zweck === zk.key ? styles.tabAktiv : styles.tab}>{zk.label}</button>
+                <button key={zk.key} onClick={() => waehleZweck(zk.key)} style={zweck === zk.key ? styles.tabAktiv : styles.tab}>{zk.label}</button>
               ))}
             </div>
             {zweckInfo && <p style={styles.mini}>{zweckInfo.beschreibung}</p>}
           </div>
 
-          {/* Vorschau */}
+          {/* 2 · Bau-Weg */}
+          <div style={styles.card}>
+            <div style={styles.cardTitel}>2 · Wie soll gebaut werden?</div>
+            <div style={styles.wegeGrid}>
+              <button onClick={() => { setModus('ki'); setGespeichert(null); }} style={{ ...styles.weg, ...(modus === 'ki' ? styles.wegAktiv : {}) }}>
+                <div style={styles.wegIcon}>✨</div>
+                <div style={styles.wegName}>Komplett mit KI</div>
+                <div style={styles.wegText}>Die KI schreibt die Texte aus Ihren Angaben und Ihrer Story.</div>
+                <div style={styles.aktivBadge}>aktiv</div>
+              </button>
+              <button onClick={() => { setModus('vorlage'); setGespeichert(null); }} style={{ ...styles.weg, ...(modus === 'vorlage' ? styles.wegAktiv : {}) }}>
+                <div style={styles.wegIcon}>🧩</div>
+                <div style={styles.wegName}>Feste Vorlage</div>
+                <div style={styles.wegText}>Fertige Baustein-Vorlage je Zweck — sofort ohne KI.</div>
+                <div style={styles.aktivBadge}>aktiv</div>
+              </button>
+              <div style={{ ...styles.weg, opacity: 0.7 }}>
+                <div style={styles.wegIcon}>🎛️</div>
+                <div style={styles.wegName}>KI + selbst justieren</div>
+                <div style={styles.wegText}>Vorschlag der KI, dann Farben/Texte/Reihenfolge selbst anpassen.</div>
+                <div style={styles.bald}>folgt (Editor)</div>
+              </div>
+            </div>
+
+            {modus === 'ki' && (
+              <div style={styles.kiPanel}>
+                <label style={styles.feldLabel}>Erzählen Sie kurz, worum es geht (optional, macht es besser)</label>
+                <textarea
+                  style={styles.textarea}
+                  value={story}
+                  onChange={(e) => setStory(e.target.value)}
+                  placeholder={'z. B. „Wir sind ein Elektro-Meisterbetrieb in Rosenheim, machen Neubau, Sanierung und 24-h-Notdienst. Wir wollen mehr Anfragen für Photovoltaik."'}
+                />
+                <div style={styles.kiBtnRow}>
+                  <button style={{ ...styles.btnGold, opacity: kiLaden ? 0.6 : 1 }} disabled={kiLaden} onClick={kiBauen}>
+                    {kiLaden ? 'KI schreibt …' : '✨ KI baut die Seite'}
+                  </button>
+                  {kiBloecke && <span style={styles.okInline}>✓ KI-Text geladen</span>}
+                </div>
+              </div>
+            )}
+
+            {meldung && <div style={styles.ok}>{meldung}</div>}
+            {fehler && <div style={styles.err}>{fehler}</div>}
+          </div>
+
+          {/* 3 · Vorschau */}
           <div style={styles.card}>
             <div style={styles.vorschauKopf}>
-              <div style={styles.cardTitel}>2 · Vorschau</div>
+              <div style={styles.cardTitel}>3 · Vorschau</div>
               <div style={styles.tabRow}>
                 {GERAETE.map((g) => (
                   <button key={g.key} onClick={() => setGeraet(g.key)} style={geraet === g.key ? styles.tabAktiv : styles.tab}>{g.icon} {g.label}</button>
@@ -116,18 +216,15 @@ export default function WebseitenPage() {
             <p style={styles.mini}>Das ist eine echte, in sich geschlossene Webseite — genau so wird sie später veröffentlicht.</p>
           </div>
 
-          {/* Die drei Wege (docken in W4/W5 an) */}
+          {/* 4 · Speichern */}
           <div style={styles.card}>
-            <div style={styles.cardTitel}>3 · So bauen Sie weiter</div>
-            <div style={styles.wegeGrid}>
-              {WEGE.map((w) => (
-                <div key={w.key} style={styles.weg}>
-                  <div style={styles.wegIcon}>{w.icon}</div>
-                  <div style={styles.wegName}>{w.name}</div>
-                  <div style={styles.wegText}>{w.text}</div>
-                  <div style={styles.bald}>folgt im nächsten Schritt</div>
-                </div>
-              ))}
+            <div style={styles.cardTitel}>4 · Speichern</div>
+            <p style={styles.mini}>Sichert die aktuelle Vorschau als Ihre Seite. Bearbeiten und Veröffentlichen folgen in den nächsten Schritten.</p>
+            <div style={styles.saveBar}>
+              <button style={{ ...styles.btnGold, opacity: speichert ? 0.6 : 1 }} disabled={speichert} onClick={speichern}>
+                {speichert ? 'Speichert …' : '💾 Als meine Seite speichern'}
+              </button>
+              {gespeichert && <span style={styles.okInline}>{gespeichert}</span>}
             </div>
           </div>
 
@@ -144,7 +241,7 @@ export default function WebseitenPage() {
 const styles: Record<string, CSSProperties> = {
   page: { maxWidth: 980, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontSize: FS.text },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: FS.h1, fontWeight: 800, margin: 0 },
-  sub: { color: C.textDim, fontSize: FS.text, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
+  sub: { color: C.textDim, fontSize: FS.text, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 780 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 },
   cardTitel: { fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: FS.titel },
@@ -154,19 +251,32 @@ const styles: Record<string, CSSProperties> = {
   tab: { background: C.navy, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
   tabAktiv: { background: `${C.gold}22`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 8, padding: '8px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
 
+  wegeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 },
+  weg: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left', cursor: 'pointer', color: C.text, font: 'inherit' },
+  wegAktiv: { border: `1px solid ${C.gold}88`, background: `${C.gold}12`, boxShadow: `0 0 0 1px ${C.gold}44` },
+  wegIcon: { fontSize: 26 },
+  wegName: { fontWeight: 800, fontSize: FS.text },
+  wegText: { color: C.textDim, fontSize: FS.klein, lineHeight: 1.5 },
+  aktivBadge: { marginTop: 4, alignSelf: 'flex-start', background: `${C.green}1e`, color: C.green, border: `1px solid ${C.green}55`, borderRadius: 7, padding: '3px 9px', fontSize: FS.mini, fontWeight: 700 },
+  bald: { marginTop: 4, alignSelf: 'flex-start', background: `${C.cyan}18`, color: C.cyan, border: `1px solid ${C.cyan}44`, borderRadius: 7, padding: '3px 9px', fontSize: FS.mini, fontWeight: 700 },
+
+  kiPanel: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  feldLabel: { fontSize: FS.klein, color: C.textDim, fontWeight: 600 },
+  textarea: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 13px', fontSize: FS.text, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', minHeight: 92, resize: 'vertical', lineHeight: 1.5 },
+  kiBtnRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
+
   vorschauKopf: { display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
   rahmen: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 10, overflow: 'hidden' },
   iframe: { width: '100%', height: 620, border: '1px solid rgba(143,163,190,0.25)', borderRadius: 8, background: '#fff', display: 'block' },
 
-  wegeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 },
-  weg: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 6 },
-  wegIcon: { fontSize: 26 },
-  wegName: { fontWeight: 800, fontSize: FS.text },
-  wegText: { color: C.textDim, fontSize: FS.klein, lineHeight: 1.5 },
-  bald: { marginTop: 4, alignSelf: 'flex-start', background: `${C.cyan}18`, color: C.cyan, border: `1px solid ${C.cyan}44`, borderRadius: 7, padding: '3px 9px', fontSize: FS.mini, fontWeight: 700 },
+  saveBar: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
+  btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: FS.btn, fontWeight: 800, cursor: 'pointer' },
+  okInline: { color: C.green, fontSize: FS.klein, fontWeight: 700 },
 
   warnBox: { marginTop: 14, fontSize: FS.text, color: C.text, background: `${C.warn}18`, border: `1px solid ${C.warn}55`, borderRadius: 12, padding: '14px 16px', lineHeight: 1.6 },
   link: { color: C.gold, fontWeight: 700 },
   hinweis: { marginTop: 14, fontSize: FS.klein, color: C.textDim, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
   dim: { color: C.textDim, fontSize: FS.text, marginTop: 8 },
+  ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: FS.klein },
+  err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: FS.klein },
 };
