@@ -11,6 +11,8 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -179,6 +181,20 @@ export default function AngebotePage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🧾 Angebote</h1>
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="Angebote" aktionHref="/dashboard/angebote" aktionText="Zu den Angeboten"
+            regel={(() => {
+              const t = new Date().toISOString().slice(0, 10);
+              const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+              const offen = liste.filter((a) => a.status !== 'angenommen' && a.status !== 'abgelehnt');
+              const rot = offen.filter((a) => a.gueltig_bis && a.gueltig_bis < t).length;
+              const gelb = offen.filter((a) => a.gueltig_bis && a.gueltig_bis >= t && a.gueltig_bis <= in7).length;
+              return augeAmpel('Angebote', { rot, gelb });
+            })()}
+          />
+        </div>
+      )}
       <p style={styles.sub}>
         Erstellen Sie ein Angebot, schicken Sie dem Kunden den <strong>Zusage-Link</strong> — er nimmt online an oder
         lehnt ab. Aus einem angenommenen Angebot wird mit einem Klick eine Rechnung.

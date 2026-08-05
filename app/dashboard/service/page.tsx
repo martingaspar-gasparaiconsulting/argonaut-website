@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 import ServiceAuge from "./ServiceAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -377,6 +379,20 @@ export default function ServicePage() {
         >
           🎫 Kundenservice
         </h1>
+        {!laden && (
+          <div style={{ marginTop: 14, marginBottom: 4 }}>
+            <KiAuge modul="Kundenservice" aktionHref="/dashboard/service" aktionText="Zu den Tickets"
+              regel={(() => {
+                const now = Date.now();
+                const in24 = now + 24 * 3600000;
+                const offen = tickets.filter((t) => t.status !== 'geloest' && t.status !== 'geschlossen');
+                const rot = offen.filter((t) => t.faellig_am && new Date(t.faellig_am).getTime() < now).length;
+                const gelb = offen.filter((t) => t.faellig_am && new Date(t.faellig_am).getTime() >= now && new Date(t.faellig_am).getTime() <= in24).length;
+                return augeAmpel('SLA-Tickets', { rot, gelb });
+              })()}
+            />
+          </div>
+        )}
         <p
           style={{
             color: 'rgba(255,255,255,0.65)',
