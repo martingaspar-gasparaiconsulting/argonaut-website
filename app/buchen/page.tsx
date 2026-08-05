@@ -22,7 +22,7 @@ const C = {
 };
 
 const SITZ_TYPEN: SitzTyp[] = ['voll', 'standard', 'self_service'];
-const SCHRITTE = ['Paket', 'Nutzer', 'Laufzeit', 'Für Unternehmen', 'Überblick'];
+const SCHRITTE = ['Paket', 'Nutzer', 'Laufzeit', 'Für Unternehmen', 'Firmendaten', 'Überblick'];
 
 export default function BuchenPage() {
   const [schritt, setSchritt] = useState(1);
@@ -30,6 +30,7 @@ export default function BuchenPage() {
   const [sitze, setSitze] = useState<Required<Sitzbelegung>>({ voll: 0, standard: 0, self_service: 0 });
   const [laufzeit, setLaufzeit] = useState<LaufzeitMonate>(12);
   const [istUnternehmer, setIstUnternehmer] = useState(false);
+  const [firma, setFirma] = useState({ firma: '', strasse: '', plz: '', ort: '', ustId: '', ansprechpartner: '', email: '', telefon: '' });
 
   const stufe = stufeKey ? STUFEN.find((s) => s.key === stufeKey) ?? null : null;
   const summe = stufeKey ? angebotssumme(stufeKey, sitze, laufzeit) : null;
@@ -39,7 +40,12 @@ export default function BuchenPage() {
     setSitze((s) => ({ ...s, [typ]: n }));
   }
 
-  const kannWeiter = schritt === 1 ? !!stufeKey : schritt === 4 ? istUnternehmer : true;
+  function setFirmaFeld(k: keyof typeof firma, v: string) {
+    setFirma((f) => ({ ...f, [k]: v }));
+  }
+
+  const firmaOk = !!(firma.firma.trim() && firma.strasse.trim() && firma.plz.trim() && firma.ort.trim() && firma.ansprechpartner.trim() && firma.email.trim());
+  const kannWeiter = schritt === 1 ? !!stufeKey : schritt === 4 ? istUnternehmer : schritt === 5 ? firmaOk : true;
 
   return (
     <div style={styles.wrap}>
@@ -158,10 +164,32 @@ export default function BuchenPage() {
 
             {schritt === 5 && (
               <div style={styles.card}>
-                <div style={styles.cardTitel}>5 · Überblick</div>
-                <p style={styles.dim}>
-                  Das ist Ihre unverbindliche Zusammenstellung. Die weiteren Schritte
-                  (Firmendaten, SEPA-Mandat, AGB) folgen in Kürze.
+                <div style={styles.cardTitel}>5 · Firmendaten</div>
+                <p style={styles.dim}>Für Auftragsbestätigung und Rechnung. Felder mit * sind Pflicht.</p>
+                <div style={styles.formGrid}>
+                  <div style={{ gridColumn: '1 / -1' }}><Feld label="Firma *" value={firma.firma} onChange={(v) => setFirmaFeld('firma', v)} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><Feld label="Straße & Nr. *" value={firma.strasse} onChange={(v) => setFirmaFeld('strasse', v)} /></div>
+                  <Feld label="PLZ *" value={firma.plz} onChange={(v) => setFirmaFeld('plz', v)} />
+                  <Feld label="Ort *" value={firma.ort} onChange={(v) => setFirmaFeld('ort', v)} />
+                  <Feld label="USt-IdNr. (optional)" value={firma.ustId} onChange={(v) => setFirmaFeld('ustId', v)} />
+                  <Feld label="Ansprechpartner *" value={firma.ansprechpartner} onChange={(v) => setFirmaFeld('ansprechpartner', v)} />
+                  <Feld label="E-Mail *" value={firma.email} onChange={(v) => setFirmaFeld('email', v)} />
+                  <Feld label="Telefon (optional)" value={firma.telefon} onChange={(v) => setFirmaFeld('telefon', v)} />
+                </div>
+              </div>
+            )}
+
+            {schritt === 6 && (
+              <div style={styles.card}>
+                <div style={styles.cardTitel}>6 · Überblick</div>
+                <div style={styles.ueberblick}>
+                  <div><span style={styles.ubLabel}>Paket</span> <b>{stufe?.name}</b> · {laufzeit} Monate</div>
+                  <div><span style={styles.ubLabel}>Firma</span> {firma.firma}, {firma.plz} {firma.ort}</div>
+                  <div><span style={styles.ubLabel}>Ansprechpartner</span> {firma.ansprechpartner} · {firma.email}</div>
+                  {summe && <div><span style={styles.ubLabel}>Erster Monat</span> <b style={{ color: C.gold }}>{euro(summe.ersterMonatBrutto)}</b> brutto</div>}
+                </div>
+                <p style={{ ...styles.dim, marginTop: 12 }}>
+                  Unverbindliche Zusammenstellung. Die letzten Schritte (SEPA-Mandat, AGB &amp; AVV, verbindliche Bestellung) folgen in Kürze.
                 </p>
                 <button style={styles.bestellBtn} disabled title="Wird in Kürze freigeschaltet">
                   Verbindlich bestellen — bald verfügbar
@@ -212,6 +240,15 @@ export default function BuchenPage() {
   );
 }
 
+function Feld({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label style={styles.feld}>
+      <span style={styles.feldLabel}>{label}</span>
+      <input style={styles.feldInput} value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
+
 const styles: Record<string, CSSProperties> = {
   wrap: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   vorschau: { background: 'rgba(224,162,76,0.14)', borderBottom: '1px solid rgba(224,162,76,0.5)', color: '#E0A24C', textAlign: 'center', padding: '10px 16px', fontSize: 14 },
@@ -250,6 +287,13 @@ const styles: Record<string, CSSProperties> = {
   laufAktiv: { border: `2px solid ${C.gold}`, background: 'rgba(201,168,76,0.08)' },
 
   check: { display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 15, lineHeight: 1.5, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, cursor: 'pointer' },
+
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 },
+  feld: { display: 'flex', flexDirection: 'column', gap: 5 },
+  feldLabel: { fontSize: 12, color: C.textDim, fontWeight: 600 },
+  feldInput: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+  ueberblick: { display: 'flex', flexDirection: 'column', gap: 8, fontSize: 15, color: C.text, lineHeight: 1.5 },
+  ubLabel: { display: 'inline-block', minWidth: 130, color: C.textDim, fontSize: 13 },
 
   nav: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 20px', fontSize: 15, fontWeight: 800, cursor: 'pointer' },
