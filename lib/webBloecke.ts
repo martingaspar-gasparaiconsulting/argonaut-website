@@ -72,6 +72,30 @@ function eyebrowHtml(text?: string): string {
   return text ? '<div class="eyebrow">' + esc(text) + '</div>' : '';
 }
 
+// Text auf n Zeichen kürzen (für Meta-Beschreibung).
+function kurz(s: string, n: number): string {
+  const t = (s || '').replace(/\s+/g, ' ').trim();
+  return t.length <= n ? t : t.slice(0, n - 1).trimEnd() + '…';
+}
+
+// SEO-/Social-Meta-Tags für den <head> — aus dem CI abgeleitet. Rein additiv:
+// Beschreibung aus Slogan/Über-uns, Vorschaubild aus dem Logo. firmaEsc ist
+// bereits HTML-escaped (kommt aus seiteHtml).
+function seoMeta(ci: CiWeb, firmaEsc: string): string {
+  const besch = esc(kurz(z(ci.slogan) || z(ci.ueber_uns) || '', 155));
+  const bild = safeUrl(ci.logo_url);
+  return [
+    besch ? '<meta name="description" content="' + besch + '">' : '',
+    '<meta property="og:type" content="website">',
+    '<meta property="og:title" content="' + firmaEsc + '">',
+    besch ? '<meta property="og:description" content="' + besch + '">' : '',
+    bild ? '<meta property="og:image" content="' + bild + '">' : '',
+    '<meta name="twitter:card" content="' + (bild ? 'summary_large_image' : 'summary') + '">',
+    '<meta name="twitter:title" content="' + firmaEsc + '">',
+    besch ? '<meta name="twitter:description" content="' + besch + '">' : '',
+  ].filter(Boolean).join('');
+}
+
 const SCHRIFT_STACKS: Record<string, string> = {
   modern: "'Inter','Segoe UI',system-ui,sans-serif",
   klassisch: "Georgia,'Times New Roman',serif",
@@ -434,6 +458,7 @@ export function seiteHtml(
     '<html lang="de"><head><meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<title>' + firma + '</title>',
+    seoMeta(ci, firma),
     '<style>' + seiteCss(ci) + '</style>',
     '</head><body>',
     '<header class="top"><div class="trow">',
