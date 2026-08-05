@@ -38,6 +38,7 @@ export type Block =
   | { typ: 'testimonials'; eyebrow?: string; titel: string; stimmen: { text: string; name: string; rolle: string }[] }
   | { typ: 'faq'; eyebrow?: string; titel: string; fragen: { frage: string; antwort: string }[] }
   | { typ: 'kontakt'; titel: string; text: string; knopf?: string }
+  | { typ: 'newsletter'; titel: string; text: string; knopf?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -50,6 +51,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'testimonials', icon: '⭐', name: 'Bewertungen', beschreibung: 'Kundenstimmen mit Sternen' },
   { typ: 'faq', icon: '❓', name: 'FAQ', beschreibung: 'Häufige Fragen zum Aufklappen' },
   { typ: 'kontakt', icon: '✉️', name: 'Kontakt', beschreibung: 'Adresse, Telefon, Anfrage' },
+  { typ: 'newsletter', icon: '📧', name: 'Newsletter', beschreibung: 'E-Mail-Anmeldung mit Bestätigung (DSGVO)' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -115,6 +117,33 @@ function anfrageFormular(oeffentlichId?: string, knopf?: string): string {
 // Seite). Prüft die Felder, blockt Spam per Honeypot und sendet per fetch.
 function anfrageSkript(): string {
   return '<script>(function(){var f=document.getElementById("ao-anfrage");if(!f)return;var el=f.elements;var m=document.getElementById("ao-anfrage-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var tel=(el.telefon.value||"").trim();if(!name||(!email&&!tel)){set("Bitte Name und E-Mail oder Telefon angeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihre Anfrage gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/web-anfrage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,email:email,telefon:tel,nachricht:el.nachricht.value,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Vielen Dank! Ihre Anfrage ist eingegangen \\u2014 wir melden uns zeitnah.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+}
+
+// Newsletter-Anmeldung auf der Kundenseite. Sendet an
+// /api/oeffentlich/web-newsletter, das den Kontakt mit Double-Opt-In in die
+// Abonnenten-Liste des Seiten-Inhabers einträgt. Ohne oeffentlichId (Vorschau)
+// sichtbar, aber inert.
+function newsletterFormular(oeffentlichId?: string, knopf?: string): string {
+  const seite = oeffentlichId ? esc(oeffentlichId) : '';
+  const knopfText = esc(z(knopf) || 'Anmelden');
+  return [
+    '<form class="ao-news" id="ao-newsletter">',
+    '<input type="hidden" name="seite" value="' + seite + '">',
+    '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+    '<div class="ao-news-row">',
+    '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" required>',
+    '<button type="submit" class="btn">' + knopfText + '</button>',
+    '</div>',
+    '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich m&ouml;chte E-Mails erhalten und habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen.*</label>',
+    '<div class="ao-msg" id="ao-newsletter-msg" role="status"></div>',
+    '</form>',
+  ].join('');
+}
+
+// Skript für die Newsletter-Anmeldung (Double-Opt-In: nach dem Absenden folgt
+// die Bestätigungsmail). Läuft in der fertigen Seite.
+function newsletterSkript(): string {
+  return '<script>(function(){var f=document.getElementById("ao-newsletter");if(!f)return;var el=f.elements;var m=document.getElementById("ao-newsletter-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var email=(el.email.value||"").trim();if(!email||email.indexOf("@")<1){set("Bitte eine g\\u00fcltige E-Mail-Adresse eingeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird die Anmeldung gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="\\u2026";fetch("/api/oeffentlich/web-newsletter",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,email:email,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Fast geschafft! Bitte best\\u00e4tigen Sie die Anmeldung \\u00fcber den Link in Ihrer E-Mail.",true);}else{set((x.d&&x.d.error)||"Anmeldung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
 }
 
 // --- Ein Baustein → HTML ----------------------------------------------------
@@ -207,6 +236,14 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
     }
     case 'cta':
       return '<section class="cta"><div class="wrap"><h2>' + esc(b.titel) + '</h2><a class="btn btn-dunkel" href="#kontakt">' + esc(b.knopf) + '</a></div></section>';
+    case 'newsletter':
+      return [
+        '<section class="sec" id="newsletter"><div class="wrap narrow">',
+        '<h2>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
+        newsletterFormular(ctx.oeffentlichId, b.knopf),
+        '</div></section>',
+      ].join('');
     default:
       return '';
   }
@@ -306,14 +343,20 @@ function seiteCss(ci: CiWeb): string {
     '.ao-anfrage textarea{resize:vertical;min-height:96px;line-height:1.5}',
     '.ao-zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
     '@media(max-width:520px){.ao-zwei{grid-template-columns:1fr}}',
-    '.ao-anfrage .ao-dsgvo{flex-direction:row;display:flex;gap:9px;align-items:flex-start;font-size:13px;font-weight:500;color:#51606f}',
-    '.ao-anfrage .ao-dsgvo input{width:auto;margin-top:3px;flex:0 0 auto}',
-    '.ao-anfrage .ao-dsgvo a{color:var(--p);font-weight:700}',
+    '.ao-dsgvo{flex-direction:row;display:flex;gap:9px;align-items:flex-start;font-size:13px;font-weight:500;color:#51606f}',
+    '.ao-dsgvo input{width:auto;margin-top:3px;flex:0 0 auto}',
+    '.ao-dsgvo a{color:var(--p);font-weight:700}',
     '.ao-anfrage .btn{border:none;cursor:pointer;align-self:flex-start}',
     '.ao-hp{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none}',
     '.ao-msg{font-size:14px;font-weight:600}',
     '.ao-msg.ok{color:#2e7d55}',
     '.ao-msg.err{color:#c0392b}',
+    // Newsletter-Anmeldung
+    '.ao-news{display:flex;flex-direction:column;gap:12px;max-width:600px}',
+    '.ao-news-row{display:flex;gap:10px;flex-wrap:wrap}',
+    '.ao-news input[type=email]{flex:1;min-width:200px;font:inherit;font-size:15px;color:#1c2430;background:#fff;border:1px solid #d3dbe4;border-radius:10px;padding:12px 14px;box-sizing:border-box}',
+    '.ao-news input[type=email]:focus{outline:none;border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 22%,transparent)}',
+    '.ao-news .btn{border:none;cursor:pointer;white-space:nowrap}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -361,6 +404,7 @@ export function seiteHtml(
     rechtsSektionen(ci),
     fussHtml(ci, jahr),
     anfrageSkript(),
+    newsletterSkript(),
     '</body></html>',
   ].join('\n');
 }
