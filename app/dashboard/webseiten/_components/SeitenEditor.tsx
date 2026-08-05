@@ -33,6 +33,7 @@ function neuerBlock(typ: Block['typ']): Block {
     case 'faq': return { typ, eyebrow: 'FAQ', titel: 'Häufige Fragen', fragen: [{ frage: 'Frage?', antwort: 'Antwort.' }] };
     case 'kontakt': return { typ, titel: 'Kontakt', text: 'Schreiben Sie uns — wir melden uns schnell zurück.', knopf: 'Anfrage senden' };
     case 'newsletter': return { typ, titel: 'Newsletter', text: 'Bleiben Sie auf dem Laufenden — melden Sie sich für unseren Newsletter an.', knopf: 'Anmelden' };
+    case 'termin': return { typ, titel: 'Termin anfragen', text: 'Wünschen Sie einen Termin? Nennen Sie uns Ihren Wunschtermin — wir bestätigen zeitnah.', knopf: 'Termin anfragen' };
     case 'cta': return { typ, titel: 'Bereit? Wir freuen uns auf Ihre Anfrage.', knopf: 'Jetzt anfragen' };
     default: return { typ: 'ueber', titel: 'Text', text: '' } as Block;
   }
@@ -123,6 +124,8 @@ function felderFuer(
       return [T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true), T('Knopf-Text (Formular)', 'knopf', b.knopf || 'Anfrage senden')];
     case 'newsletter':
       return [T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true), T('Knopf-Text', 'knopf', b.knopf || 'Anmelden')];
+    case 'termin':
+      return [T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true), T('Knopf-Text', 'knopf', b.knopf || 'Termin anfragen')];
     case 'cta':
       return [T('Überschrift', 'titel', b.titel), T('Knopf-Text', 'knopf', b.knopf)];
     case 'galerie': {

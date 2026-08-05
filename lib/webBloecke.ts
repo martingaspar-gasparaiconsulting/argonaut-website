@@ -39,6 +39,7 @@ export type Block =
   | { typ: 'faq'; eyebrow?: string; titel: string; fragen: { frage: string; antwort: string }[] }
   | { typ: 'kontakt'; titel: string; text: string; knopf?: string }
   | { typ: 'newsletter'; titel: string; text: string; knopf?: string }
+  | { typ: 'termin'; titel: string; text: string; knopf?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -52,6 +53,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'faq', icon: '❓', name: 'FAQ', beschreibung: 'Häufige Fragen zum Aufklappen' },
   { typ: 'kontakt', icon: '✉️', name: 'Kontakt', beschreibung: 'Adresse, Telefon, Anfrage' },
   { typ: 'newsletter', icon: '📧', name: 'Newsletter', beschreibung: 'E-Mail-Anmeldung mit Bestätigung (DSGVO)' },
+  { typ: 'termin', icon: '📅', name: 'Termin anfragen', beschreibung: 'Terminwunsch aufnehmen — landet im CRM' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -144,6 +146,37 @@ function newsletterFormular(oeffentlichId?: string, knopf?: string): string {
 // die Bestätigungsmail). Läuft in der fertigen Seite.
 function newsletterSkript(): string {
   return '<script>(function(){var f=document.getElementById("ao-newsletter");if(!f)return;var el=f.elements;var m=document.getElementById("ao-newsletter-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var email=(el.email.value||"").trim();if(!email||email.indexOf("@")<1){set("Bitte eine g\\u00fcltige E-Mail-Adresse eingeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird die Anmeldung gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="\\u2026";fetch("/api/oeffentlich/web-newsletter",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,email:email,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Fast geschafft! Bitte best\\u00e4tigen Sie die Anmeldung \\u00fcber den Link in Ihrer E-Mail.",true);}else{set((x.d&&x.d.error)||"Anmeldung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+}
+
+// Termin-Anfrage auf der Kundenseite. Nimmt einen Terminwunsch auf und sendet
+// ihn über /api/oeffentlich/web-anfrage als Lead ins CRM (Wunschtermin steht in
+// der Nachricht). Bewusst schlank — die volle Slot-Buchung ist ein eigener
+// Baustein. Ohne oeffentlichId (Vorschau) sichtbar, aber inert.
+function terminFormular(oeffentlichId?: string, knopf?: string): string {
+  const seite = oeffentlichId ? esc(oeffentlichId) : '';
+  const knopfText = esc(z(knopf) || 'Termin anfragen');
+  return [
+    '<form class="ao-anfrage" id="ao-termin" novalidate>',
+    '<input type="hidden" name="seite" value="' + seite + '">',
+    '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
+    '<div class="ao-zwei">',
+    '<div class="ao-feld"><label>E-Mail</label><input type="email" name="email"></div>',
+    '<div class="ao-feld"><label>Telefon</label><input type="tel" name="telefon"></div>',
+    '</div>',
+    '<div class="ao-feld"><label>Wunschtermin</label><input type="text" name="wunsch" placeholder="z. B. nächste Woche vormittags"></div>',
+    '<div class="ao-feld"><label>Nachricht</label><textarea name="nachricht" rows="3"></textarea></div>',
+    '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
+    '<button type="submit" class="btn">' + knopfText + '</button>',
+    '<div class="ao-msg" id="ao-termin-msg" role="status"></div>',
+    '</form>',
+  ].join('');
+}
+
+// Skript für die Termin-Anfrage: baut aus Wunschtermin + Nachricht eine Zeile
+// und sendet an dieselbe Anfrage-Route wie das Kontaktformular.
+function terminSkript(): string {
+  return '<script>(function(){var f=document.getElementById("ao-termin");if(!f)return;var el=f.elements;var m=document.getElementById("ao-termin-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var tel=(el.telefon.value||"").trim();var wunsch=(el.wunsch.value||"").trim();var nr=(el.nachricht.value||"").trim();if(!name||(!email&&!tel)){set("Bitte Name und E-Mail oder Telefon angeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihre Terminanfrage gesendet.",true);return;}var nachricht=(wunsch?"Terminwunsch: "+wunsch:"")+(nr?(wunsch?"\\n":"")+nr:"");var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/web-anfrage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,email:email,telefon:tel,nachricht:nachricht,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Danke! Ihre Terminanfrage ist eingegangen \\u2014 wir melden uns zur Abstimmung.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
 }
 
 // --- Ein Baustein → HTML ----------------------------------------------------
@@ -242,6 +275,14 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
         '<h2>' + esc(b.titel) + '</h2>',
         b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
         newsletterFormular(ctx.oeffentlichId, b.knopf),
+        '</div></section>',
+      ].join('');
+    case 'termin':
+      return [
+        '<section class="sec alt" id="termin"><div class="wrap narrow">',
+        '<h2>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
+        terminFormular(ctx.oeffentlichId, b.knopf),
         '</div></section>',
       ].join('');
     default:
@@ -405,6 +446,7 @@ export function seiteHtml(
     fussHtml(ci, jahr),
     anfrageSkript(),
     newsletterSkript(),
+    terminSkript(),
     '</body></html>',
   ].join('\n');
 }
