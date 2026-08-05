@@ -4,6 +4,8 @@ import { ibanGueltig } from '@/lib/sepa'
 import { sendeMail, mailLayout } from '@/lib/mail'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { BESTELLSTRECKE_LIVE } from '@/lib/flags'
+import { auftragsbestaetigungHtml } from '@/lib/auftragsbestaetigung'
+import { aboRechnungPdf } from '@/lib/aboRechnungPdf'
 
 // ============================================================================
 // ARGONAUT OS · /api/bestellung  (Block I1d — öffentliche Bestellstrecke)
@@ -127,6 +129,34 @@ export async function POST(req: Request) {
     // E-Mail existiert bereits / anderer Fehler: Bestellung bleibt „neu",
     // der Betreiber sieht sie in der Benachrichtigung und legt manuell an.
   } catch { /* Konto-Anlage ist best-effort */ }
+
+  // --- I3: Auftragsbestätigung an den Kunden (best-effort; PDF via Gotenberg,
+  //         ohne Gotenberg trotzdem eine Bestätigungs-Mail). -------------------
+  try {
+    const stufeName = STUFEN.find((s) => s.key === stufe)?.name ?? stufe.toUpperCase()
+    const html = auftragsbestaetigungHtml({
+      firma,
+      ansprechpartner: ansprech,
+      strasse: b.firma?.strasse ?? null,
+      plz: b.firma?.plz ?? null,
+      ort: b.firma?.ort ?? null,
+      ustId: b.firma?.ustId ?? null,
+      stufeName,
+      laufzeit,
+      summe,
+      datum: new Date().toLocaleDateString('de-DE'),
+    })
+    const pdf = await aboRechnungPdf(html)
+    await sendeMail({
+      an: email,
+      betreff: 'Ihre Auftragsbestätigung — ARGONAUT OS',
+      html: mailLayout('Ihre Auftragsbestätigung', `
+        <p>Guten Tag ${ansprech},</p>
+        <p>vielen Dank für Ihre Bestellung. Ihre Auftragsbestätigung finden Sie ${pdf ? 'im Anhang' : 'unten zusammengefasst'}.</p>
+        <p><b>${stufeName}</b> · ${laufzeit} Monate — erster Monat <b>${euro(summe.ersterMonatBrutto)}</b> brutto.</p>`),
+      ...(pdf ? { anhaenge: [{ dateiname: 'Auftragsbestaetigung-ARGONAUT.pdf', inhalt: pdf, typ: 'application/pdf' }] } : {}),
+    })
+  } catch { /* Auftragsbestätigung ist best-effort */ }
 
   // Benachrichtigung an den Betreiber — KEIN Einzug.
   try {
