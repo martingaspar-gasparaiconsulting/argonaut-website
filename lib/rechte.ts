@@ -222,6 +222,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📝 Förder-Angebot', href: '/dashboard/foerder-angebot', modul: 'foerder-angebot', ebene: 3, gruppe: 'finanzen' },
 
   // --- Verwaltung -----------------------------------------------------------
+  { label: '🌐 Webauftritt', href: '/dashboard/webauftritt', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '👥 Nutzer & Tarif', href: '/dashboard/nutzer-tarif', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🏢 Standorte & Filialen', href: '/dashboard/standorte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
