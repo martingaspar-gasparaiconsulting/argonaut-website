@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
+import { limitBytes, passtNochRein, speicherStatus, formatBytes } from '@/lib/speicher';
 
 // ============================================================
 // ARGONAUT OS · Website-Bauer · app/api/webseite-foto/route.ts
@@ -52,10 +53,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Nur JPG, PNG, WebP oder GIF sind erlaubt.' }, { status: 400 });
     }
 
-    // 3. In den öffentlichen Bucket legen — Pfad nach owner getrennt.
+    const db = admin();
+
+    // 3. Speicher-Wächter: aktuelle Belegung gegen das Tarif-Kontingent prüfen.
+    const { data: prof } = await db.from('profiles').select('plan, zusatz_speicher_gb').eq('id', user.id).maybeSingle();
+    const p = prof as { plan?: string | null; zusatz_speicher_gb?: number | null } | null;
+    const limit = limitBytes(p?.plan ?? null, p?.zusatz_speicher_gb ?? 0);
+    const { data: genutztRaw } = await db.rpc('speicher_bytes_fuer', { owner_key: user.id });
+    const genutzt = Number(genutztRaw) || 0;
+    if (!passtNochRein(genutzt, limit, datei.size)) {
+      const st = speicherStatus(genutzt, limit);
+      return NextResponse.json({
+        error: `Speicher voll — ${formatBytes(st.genutzt)} von ${formatBytes(st.limit)} belegt. Bitte ein Speicher-Paket dazubuchen.`,
+        code: 'speicher_voll',
+        genutzt: st.genutzt,
+        limit: st.limit,
+      }, { status: 413 });
+    }
+
+    // 4. In den öffentlichen Bucket legen — Pfad nach owner getrennt.
     const bytes = Buffer.from(await datei.arrayBuffer());
     const pfad = `${user.id}/${randomUUID()}.${endung}`;
-    const db = admin();
     const { error: upErr } = await db.storage.from(BUCKET).upload(pfad, bytes, {
       contentType: datei.type,
       upsert: false,
