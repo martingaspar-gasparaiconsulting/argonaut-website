@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -93,6 +95,19 @@ export default function ItMspPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>💻 IT & MSP</h1>
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="IT & MSP" aktionHref="/dashboard/it-msp" aktionText="Zu den Wartungsverträgen"
+            regel={(() => {
+              const t = new Date().toISOString().slice(0, 10);
+              const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+              const rot = vertraege.filter((v) => v.naechste_wartung && v.naechste_wartung < t).length;
+              const gelb = vertraege.filter((v) => v.naechste_wartung && v.naechste_wartung >= t && v.naechste_wartung <= in30).length;
+              return augeAmpel('Wartungstermine', { rot, gelb });
+            })()}
+          />
+        </div>
+      )}
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'vertraege' ? styles.tabAn : {}) }} onClick={() => setTab('vertraege')}>🛡 Verträge</button>
         <button style={{ ...styles.tab, ...(tab === 'assets' ? styles.tabAn : {}) }} onClick={() => setTab('assets')}>🖥 Assets</button>

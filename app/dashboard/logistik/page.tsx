@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeTour } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -87,6 +89,17 @@ export default function LogistikPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🚚 Logistik</h1>
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="Logistik" aktionHref="/dashboard/logistik" aktionText="Zu den Touren"
+            regel={augeTour({
+              touren: touren.length,
+              offeneTouren: touren.filter((t) => t.status !== 'erledigt' && t.status !== 'abgeschlossen').length,
+              offeneStopps: sendungen.filter((s) => s.status !== 'zugestellt').length,
+              zugestelltGesamt: sendungen.filter((s) => s.status === 'zugestellt').length,
+            })} />
+        </div>
+      )}
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
 
