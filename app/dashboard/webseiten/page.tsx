@@ -56,10 +56,18 @@ export default function WebseitenPage() {
 
   const [speichert, setSpeichert] = useState(false);
   const [gespeichert, setGespeichert] = useState<string | null>(null);
+  const [liveInfo, setLiveInfo] = useState<{ oeffentlich_id: string | null; status: string } | null>(null);
+  const [veroeffLaden, setVeroeffLaden] = useState(false);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data } = await supabase.from('web_ci').select('*').eq('owner_user_id', userId).maybeSingle();
     setCi((data as CiWeb) ?? null);
+  }, []);
+
+  const ladeLive = useCallback(async (userId: string, slug: string) => {
+    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
+    const d = data as { oeffentlich_id: string | null; status: string } | null;
+    setLiveInfo(d ? { oeffentlich_id: d.oeffentlich_id, status: d.status } : null);
   }, []);
 
   useEffect(() => {
@@ -71,6 +79,8 @@ export default function WebseitenPage() {
       setLaden(false);
     })();
   }, [ladeCi]);
+
+  useEffect(() => { if (uid) ladeLive(uid, zweck); }, [uid, zweck, ladeLive]);
 
   // Beim Zweck-Wechsel das KI-Ergebnis verwerfen (es gehörte zum alten Zweck).
   function waehleZweck(z: string) { setZweck(z); setKiBloecke(null); setEditBloecke(null); setMeldung(null); setGespeichert(null); if (modus === 'editor') setModus('vorlage'); }
@@ -126,8 +136,27 @@ export default function WebseitenPage() {
     };
     const { error } = await supabase.from('web_seiten').upsert(row, { onConflict: 'owner_user_id,slug' });
     if (error) { setFehler('Konnte nicht gespeichert werden.'); setSpeichert(false); return; }
-    setGespeichert('Seite gespeichert. Veröffentlichen kommt in einem der nächsten Schritte.');
+    setGespeichert('Seite gespeichert.');
     setSpeichert(false);
+    await ladeLive(uid, zweck);
+  }
+
+  async function setzeLive(live: boolean) {
+    if (!uid || !ci) return;
+    setFehler(null); setVeroeffLaden(true);
+    await speichern(); // aktuelle Bausteine sichern (Zeile anlegen, falls nötig)
+    try {
+      const res = await fetch('/api/webseite-veroeffentlichen', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: zweck, live }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFehler(data?.error || 'Konnte nicht veröffentlichen.'); setVeroeffLaden(false); return; }
+      setLiveInfo({ oeffentlich_id: data.oeffentlich_id, status: data.status });
+    } catch {
+      setFehler('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
+    }
+    setVeroeffLaden(false);
   }
 
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
@@ -246,6 +275,22 @@ export default function WebseitenPage() {
             </div>
           </div>
 
+          {/* 5 · Veröffentlichen */}
+          <div style={styles.card}>
+            <div style={styles.cardTitel}>5 · Veröffentlichen</div>
+            <p style={styles.mini}>Schaltet Ihre Seite live auf einer ARGONAUT-Adresse — sofort online. (Eigene Domain mit SSL folgt.)</p>
+            <div style={styles.saveBar}>
+              {liveInfo?.status === 'live'
+                ? <button style={styles.btnGhost} disabled={veroeffLaden} onClick={() => setzeLive(false)}>{veroeffLaden ? '…' : '⏸ Offline nehmen'}</button>
+                : <button style={{ ...styles.btnGold, opacity: veroeffLaden ? 0.6 : 1 }} disabled={veroeffLaden} onClick={() => setzeLive(true)}>{veroeffLaden ? 'Veröffentlicht …' : '🌐 Jetzt veröffentlichen'}</button>}
+            </div>
+            {liveInfo?.status === 'live' && liveInfo.oeffentlich_id && (
+              <div style={styles.liveBox}>
+                ✅ Live: <a href={`/p/${liveInfo.oeffentlich_id}`} target="_blank" rel="noreferrer" style={styles.link}>{(typeof window !== 'undefined' ? window.location.origin : '')}/p/{liveInfo.oeffentlich_id}</a>
+              </div>
+            )}
+          </div>
+
           <div style={styles.hinweis}>
             ℹ️ Sobald jemand auf Ihrer Seite eine Anfrage schickt, landet der Kontakt automatisch in Ihrem CRM —
             Website und Vertrieb sind dieselbe Maschine.
@@ -290,7 +335,9 @@ const styles: Record<string, CSSProperties> = {
 
   saveBar: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: FS.btn, fontWeight: 800, cursor: 'pointer' },
+  btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 20px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
   okInline: { color: C.green, fontSize: FS.klein, fontWeight: 700 },
+  liveBox: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: FS.klein, wordBreak: 'break-all' },
 
   warnBox: { marginTop: 14, fontSize: FS.text, color: C.text, background: `${C.warn}18`, border: `1px solid ${C.warn}55`, borderRadius: 12, padding: '14px 16px', lineHeight: 1.6 },
   link: { color: C.gold, fontWeight: 700 },
