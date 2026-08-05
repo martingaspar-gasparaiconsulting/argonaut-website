@@ -9,6 +9,7 @@ import { demoStatus, demoRestText } from '@/lib/demo'
 import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 import PraesentationsModus from './_components/PraesentationsModus'
 import UnterschriftLoader from './_components/UnterschriftLoader'
+import FilialUmschalter from './_components/FilialUmschalter'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -114,6 +115,7 @@ export default async function DashboardLayout({
             >
               {anzeigeName}
             </span>
+            <FilialUmschalter />
             <Glocke />
             <LogoutButton />
           </div>
