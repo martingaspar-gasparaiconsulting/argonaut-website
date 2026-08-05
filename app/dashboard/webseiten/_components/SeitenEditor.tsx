@@ -185,11 +185,39 @@ function Feld({ label, value, onChange }: { label: string; value: string; onChan
   );
 }
 function Area({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [ladt, setLadt] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const leer = !(value || '').trim();
+
+  async function ki(modus: 'verbessern' | 'kuerzen' | 'umschreiben') {
+    const text = (value || '').trim();
+    if (!text || ladt) return;
+    setLadt(true); setFehler(null);
+    try {
+      const res = await fetch('/api/webseite-text-ki', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text, modus }),
+      });
+      const data = await res.json();
+      if (res.ok && data.text) onChange(data.text);
+      else setFehler(data?.error || 'KI fehlgeschlagen.');
+    } catch {
+      setFehler('Verbindung fehlgeschlagen.');
+    }
+    setLadt(false);
+  }
+
   return (
-    <label style={styles.feld}>
+    <div style={styles.feld}>
       <span style={styles.feldLabel}>{label}</span>
       <textarea style={{ ...styles.input, minHeight: 68, resize: 'vertical', lineHeight: 1.5 }} value={value} onChange={(e) => onChange(e.target.value)} />
-    </label>
+      <div style={styles.kiRow}>
+        <button type="button" style={styles.kiBtn} disabled={ladt || leer} onClick={() => ki('verbessern')}>{ladt ? '✨ …' : '✨ Verbessern'}</button>
+        <button type="button" style={styles.kiBtn} disabled={ladt || leer} onClick={() => ki('kuerzen')}>Kürzen</button>
+        <button type="button" style={styles.kiBtn} disabled={ladt || leer} onClick={() => ki('umschreiben')}>Umschreiben</button>
+        {fehler && <span style={styles.kiErr}>{fehler}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -225,6 +253,9 @@ const styles: Record<string, CSSProperties> = {
   feld: { display: 'flex', flexDirection: 'column', gap: 4 },
   feldLabel: { fontSize: FS.mini, color: C.textDim, fontWeight: 600 },
   input: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 11px', fontSize: FS.klein, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+  kiRow: { display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 2 },
+  kiBtn: { background: `${C.gold}14`, color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 7, padding: '4px 10px', fontSize: FS.mini, fontWeight: 700, cursor: 'pointer' },
+  kiErr: { color: C.danger, fontSize: FS.mini },
   liste: { gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 7, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: 10 },
   listItem: { display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' },
   addRow: { alignSelf: 'flex-start', background: 'transparent', color: C.cyan, border: `1px dashed ${C.cyan}55`, borderRadius: 7, padding: '6px 12px', fontSize: FS.mini, fontWeight: 700, cursor: 'pointer' },
