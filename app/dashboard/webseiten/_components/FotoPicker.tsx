@@ -7,7 +7,7 @@
 // URL über onPick zurück.
 // ============================================================
 
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', navy3: '#0c1a2e', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -22,6 +22,7 @@ export default function FotoPicker({ start, onPick, onClose }: { start?: string;
   const [laden, setLaden] = useState(false);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [eigene, setEigene] = useState('');
+  const [hochlaedt, setHochlaedt] = useState(false);
 
   const suchen = useCallback(async (begriff: string) => {
     setLaden(true); setHinweis(null);
@@ -37,6 +38,27 @@ export default function FotoPicker({ start, onPick, onClose }: { start?: string;
   }, []);
 
   useEffect(() => { suchen(start || 'business'); }, [suchen, start]);
+
+  // Eigenes Foto hochladen: Datei an die geschützte Route geben, gewählte URL
+  // direkt übernehmen. Bild-Prüfung passiert zusätzlich serverseitig.
+  async function hochladen(e: ChangeEvent<HTMLInputElement>) {
+    const datei = e.target.files?.[0];
+    e.target.value = '';
+    if (!datei) return;
+    if (datei.size > 8 * 1024 * 1024) { setHinweis('Das Bild ist zu groß (maximal 8 MB).'); return; }
+    setHochlaedt(true); setHinweis(null);
+    try {
+      const fd = new FormData();
+      fd.append('datei', datei);
+      const res = await fetch('/api/webseite-foto', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) { onPick(data.url); return; }
+      setHinweis(data?.error || 'Upload fehlgeschlagen.');
+    } catch {
+      setHinweis('Upload fehlgeschlagen. Bitte erneut versuchen.');
+    }
+    setHochlaedt(false);
+  }
 
   return (
     <div style={styles.overlay} onClick={onClose}>
@@ -69,6 +91,11 @@ export default function FotoPicker({ start, onPick, onClose }: { start?: string;
           {!laden && fotos.length === 0 && <div style={styles.leer}>Keine Bilder gefunden.</div>}
         </div>
 
+        <label style={styles.uploadRow}>
+          <span style={styles.uploadBtn}>{hochlaedt ? 'Lädt hoch …' : '📤 Eigenes Foto hochladen'}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={hochladen} disabled={hochlaedt} />
+        </label>
+
         <div style={styles.eigeneRow}>
           <input
             style={styles.input}
@@ -99,5 +126,7 @@ const styles: Record<string, CSSProperties> = {
   thumb: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   autor: { position: 'absolute', left: 0, right: 0, bottom: 0, fontSize: 10, color: '#fff', background: 'linear-gradient(transparent, rgba(0,0,0,.7))', padding: '10px 6px 4px', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   leer: { color: C.textDim, gridColumn: '1 / -1', padding: 20, textAlign: 'center' },
-  eigeneRow: { display: 'flex', gap: 8, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  uploadRow: { display: 'flex', borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  uploadBtn: { display: 'inline-block', width: '100%', textAlign: 'center', background: `${C.gold}14`, color: C.gold, border: `1px dashed ${C.gold}66`, borderRadius: 9, padding: '11px 16px', fontWeight: 800, fontSize: 'clamp(13px,1.1vw,17px)', cursor: 'pointer' },
+  eigeneRow: { display: 'flex', gap: 8, paddingTop: 12 },
 };
