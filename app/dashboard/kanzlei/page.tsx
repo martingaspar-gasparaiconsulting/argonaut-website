@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeKanzlei } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -80,6 +82,11 @@ export default function KanzleiPage() {
   const mandatName = useMemo(() => Object.fromEntries(mandate.map((m) => [m.id, m.mandant])), [mandate]);
   const offen = fristen.filter((f) => !f.erledigt);
   const offenKritisch = offen.filter((f) => new Date(f.frist) <= new Date(new Date().getTime() + 7 * 86400000)).length;
+  // Für das KI-Auge (mechanisch, 0 €): überfällige und in Kürze fällige Fristen.
+  const heuteMs = new Date(heute() + 'T00:00:00').getTime();
+  const in7Ms = heuteMs + 7 * 86400000;
+  const ueberfaellig = offen.filter((f) => new Date(f.frist + 'T00:00:00').getTime() < heuteMs).length;
+  const vorfrist = offen.filter((f) => { const t = new Date(f.frist + 'T00:00:00').getTime(); return t >= heuteMs && t <= in7Ms; }).length;
 
   return (
     <div style={styles.page}>
@@ -89,6 +96,13 @@ export default function KanzleiPage() {
         <button style={{ ...styles.tab, ...(tab === 'mandate' ? styles.tabAn : {}) }} onClick={() => setTab('mandate')}>📁 Mandate</button>
       </div>
       <p style={styles.sub}>Reines Verwaltungswerkzeug — keine Steuer- oder Rechtsberatung.</p>
+
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="Kanzlei" regel={augeKanzlei({ akten: mandate.length, offen: offen.length, ueberfaellig, vorfrist })} aktionHref="/dashboard/kanzlei" aktionText="Zu den Fristen" />
+        </div>
+      )}
+
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
 
