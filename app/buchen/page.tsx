@@ -1,11 +1,11 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Öffentliche Bestellstrecke — Gerüst (DUNKEL)
-// I1a: Schritt 1 Paket + Schritt 2 Sitze + Live-Preis.
-// I1b: Schritt 3 Laufzeit (12/24/36, Live-Rabatt) + Schritt 4 §14-Bestätigung.
-// Weiter (I1c/I1d): Firmendaten, SEPA, AGB, verbindliche Bestellung.
-// Solange flags.BESTELLSTRECKE_LIVE === false: nicht verlinkt, Bestellung aus.
+// ARGONAUT OS · Öffentliche Bestellstrecke (DUNKEL bis Schalter an)
+// I1a Paket+Sitze · I1b Laufzeit+§14 · I1c Firmendaten
+// I1d SEPA-Mandat + AGB/AVV + verbindliche Bestellung (→ /api/bestellung).
+// Solange flags.BESTELLSTRECKE_LIVE === false: nicht verlinkt, Absenden aus
+// (Knopf deaktiviert; die API lehnt zusätzlich serverseitig ab).
 // Pfad: app/buchen/page.tsx
 // ============================================================
 
@@ -22,7 +22,24 @@ const C = {
 };
 
 const SITZ_TYPEN: SitzTyp[] = ['voll', 'standard', 'self_service'];
-const SCHRITTE = ['Paket', 'Nutzer', 'Laufzeit', 'Für Unternehmen', 'Firmendaten', 'Überblick'];
+const SCHRITTE = ['Paket', 'Nutzer', 'Laufzeit', 'Für Unternehmen', 'Firmendaten', 'SEPA', 'AGB & AVV', 'Abschluss'];
+
+// IBAN-Prüfung (Modulo-97) — nur für die UX-Anzeige. Die verbindliche Prüfung
+// macht die Server-Route mit lib/sepa.ibanGueltig.
+function ibanClientOk(raw: string): boolean {
+  const iban = (raw || '').replace(/\s+/g, '').toUpperCase();
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(iban)) return false;
+  const re = iban.slice(4) + iban.slice(0, 4);
+  const num = re.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+  let rem = 0;
+  for (let i = 0; i < num.length; i += 7) rem = Number(String(rem) + num.substr(i, 7)) % 97;
+  return rem === 1;
+}
+function maskIbanAnzeige(raw: string): string {
+  const c = (raw || '').replace(/\s+/g, '').toUpperCase();
+  if (c.length < 8) return c || '—';
+  return `${c.slice(0, 4)} …… ${c.slice(-4)}`;
+}
 
 export default function BuchenPage() {
   const [schritt, setSchritt] = useState(1);
@@ -31,21 +48,55 @@ export default function BuchenPage() {
   const [laufzeit, setLaufzeit] = useState<LaufzeitMonate>(12);
   const [istUnternehmer, setIstUnternehmer] = useState(false);
   const [firma, setFirma] = useState({ firma: '', strasse: '', plz: '', ort: '', ustId: '', ansprechpartner: '', email: '', telefon: '' });
+  const [kontoinhaber, setKontoinhaber] = useState('');
+  const [iban, setIban] = useState('');
+  const [bic, setBic] = useState('');
+  const [mandatOk, setMandatOk] = useState(false);
+  const [agbOk, setAgbOk] = useState(false);
+  const [avvOk, setAvvOk] = useState(false);
+  const [sende, setSende] = useState(false);
+  const [ergebnis, setErgebnis] = useState<{ ok: boolean; text: string } | null>(null);
 
   const stufe = stufeKey ? STUFEN.find((s) => s.key === stufeKey) ?? null : null;
   const summe = stufeKey ? angebotssumme(stufeKey, sitze, laufzeit) : null;
+  const ibanOk = ibanClientOk(iban);
 
   function setSitz(typ: SitzTyp, wert: string) {
     const n = Math.max(0, Math.floor(Number(wert) || 0));
     setSitze((s) => ({ ...s, [typ]: n }));
   }
-
   function setFirmaFeld(k: keyof typeof firma, v: string) {
     setFirma((f) => ({ ...f, [k]: v }));
   }
 
   const firmaOk = !!(firma.firma.trim() && firma.strasse.trim() && firma.plz.trim() && firma.ort.trim() && firma.ansprechpartner.trim() && firma.email.trim());
-  const kannWeiter = schritt === 1 ? !!stufeKey : schritt === 4 ? istUnternehmer : schritt === 5 ? firmaOk : true;
+  const sepaOk = !!(kontoinhaber.trim() && ibanOk && mandatOk);
+  const agbAllesOk = agbOk && avvOk;
+  const abschlussOk = !!stufeKey && istUnternehmer && firmaOk && sepaOk && agbAllesOk;
+
+  const kannWeiter =
+    schritt === 1 ? !!stufeKey :
+    schritt === 4 ? istUnternehmer :
+    schritt === 5 ? firmaOk :
+    schritt === 6 ? sepaOk :
+    schritt === 7 ? agbAllesOk : true;
+
+  async function bestellen() {
+    setSende(true); setErgebnis(null);
+    try {
+      const res = await fetch('/api/bestellung', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stufe: stufeKey, sitze, laufzeit, istUnternehmer, firma, kontoinhaber, iban, bic, mandatOk, agbOk, avvOk }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) setErgebnis({ ok: false, text: j.error || 'Es ist ein Fehler aufgetreten.' });
+      else setErgebnis({ ok: true, text: 'Vielen Dank! Ihre Bestellung ist eingegangen — wir melden uns umgehend.' });
+    } catch {
+      setErgebnis({ ok: false, text: 'Netzwerkfehler. Bitte später erneut versuchen.' });
+    }
+    setSende(false);
+  }
 
   return (
     <div style={styles.wrap}>
@@ -59,7 +110,6 @@ export default function BuchenPage() {
         <h1 style={styles.h1}>ARGONAUT OS buchen</h1>
         <p style={styles.sub}>In wenigen Schritten zum passenden Paket — der Preis rechnet sich live mit.</p>
 
-        {/* Fortschritt */}
         <div style={styles.stepbar}>
           {SCHRITTE.map((s, i) => {
             const nr = i + 1;
@@ -78,7 +128,6 @@ export default function BuchenPage() {
         </div>
 
         <div style={styles.grid}>
-          {/* Hauptbereich */}
           <div style={{ minWidth: 0 }}>
             {schritt === 1 && (
               <div style={styles.card}>
@@ -139,7 +188,7 @@ export default function BuchenPage() {
                         style={{ ...styles.lauf, ...(gewaehlt ? styles.laufAktiv : {}) }}>
                         <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 20 }}>{o.monate} Monate</div>
                         <div style={{ fontSize: 13, color: o.prozent ? C.green : C.textDim, fontWeight: 700, marginTop: 4 }}>
-                          {o.prozent ? `−${o.prozent} % Rabatt` : 'kein Rabatt'}
+                          {o.prozent ? `−${o.prozent} % Rabatt` : 'kein Rabatt'}
                         </div>
                       </button>
                     );
@@ -181,23 +230,70 @@ export default function BuchenPage() {
 
             {schritt === 6 && (
               <div style={styles.card}>
-                <div style={styles.cardTitel}>6 · Überblick</div>
+                <div style={styles.cardTitel}>6 · SEPA-Lastschriftmandat</div>
+                <p style={styles.dim}>Für den späteren Einzug der monatlichen Gebühren. Es wird jetzt <b>nichts abgebucht</b>.</p>
+                <div style={styles.formGrid}>
+                  <div style={{ gridColumn: '1 / -1' }}><Feld label="Kontoinhaber *" value={kontoinhaber} onChange={setKontoinhaber} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><Feld label="IBAN *" value={iban} onChange={setIban} /></div>
+                  <Feld label="BIC (optional)" value={bic} onChange={setBic} />
+                </div>
+                <div style={{ fontSize: 13, marginTop: 6, color: iban.trim() === '' ? C.textDim : ibanOk ? C.green : C.danger }}>
+                  {iban.trim() === '' ? 'IBAN eingeben' : ibanOk ? '✓ IBAN gültig' : '✗ IBAN unvollständig oder ungültig'}
+                </div>
+                <label style={{ ...styles.check, marginTop: 12 }}>
+                  <input type="checkbox" checked={mandatOk} onChange={(e) => setMandatOk(e.target.checked)} />
+                  <span>Ich ermächtige ARGONAUT OS, Zahlungen von meinem Konto per SEPA-Lastschrift einzuziehen (Mandat). Es erfolgt <b>keine sofortige Abbuchung</b>.</span>
+                </label>
+              </div>
+            )}
+
+            {schritt === 7 && (
+              <div style={styles.card}>
+                <div style={styles.cardTitel}>7 · AGB &amp; Auftragsverarbeitung</div>
+                <label style={styles.check}>
+                  <input type="checkbox" checked={agbOk} onChange={(e) => setAgbOk(e.target.checked)} />
+                  <span>Ich akzeptiere die <a href="/agb" target="_blank" rel="noreferrer" style={styles.link}>AGB</a>.</span>
+                </label>
+                <label style={{ ...styles.check, marginTop: 10 }}>
+                  <input type="checkbox" checked={avvOk} onChange={(e) => setAvvOk(e.target.checked)} />
+                  <span>Ich stimme dem <a href="/agb" target="_blank" rel="noreferrer" style={styles.link}>Auftragsverarbeitungsvertrag (AVV)</a> zu.</span>
+                </label>
+              </div>
+            )}
+
+            {schritt === 8 && (
+              <div style={styles.card}>
+                <div style={styles.cardTitel}>8 · Abschluss</div>
                 <div style={styles.ueberblick}>
                   <div><span style={styles.ubLabel}>Paket</span> <b>{stufe?.name}</b> · {laufzeit} Monate</div>
                   <div><span style={styles.ubLabel}>Firma</span> {firma.firma}, {firma.plz} {firma.ort}</div>
                   <div><span style={styles.ubLabel}>Ansprechpartner</span> {firma.ansprechpartner} · {firma.email}</div>
+                  <div><span style={styles.ubLabel}>SEPA</span> {kontoinhaber} · {maskIbanAnzeige(iban)}</div>
                   {summe && <div><span style={styles.ubLabel}>Erster Monat</span> <b style={{ color: C.gold }}>{euro(summe.ersterMonatBrutto)}</b> brutto</div>}
                 </div>
-                <p style={{ ...styles.dim, marginTop: 12 }}>
-                  Unverbindliche Zusammenstellung. Die letzten Schritte (SEPA-Mandat, AGB &amp; AVV, verbindliche Bestellung) folgen in Kürze.
-                </p>
-                <button style={styles.bestellBtn} disabled title="Wird in Kürze freigeschaltet">
-                  Verbindlich bestellen — bald verfügbar
-                </button>
+
+                {ergebnis && <div style={ergebnis.ok ? styles.ok : styles.err}>{ergebnis.text}</div>}
+
+                {BESTELLSTRECKE_LIVE ? (
+                  <button
+                    style={{ ...styles.btnGold, marginTop: 14, opacity: abschlussOk && !sende ? 1 : 0.5 }}
+                    disabled={!abschlussOk || sende}
+                    onClick={bestellen}>
+                    {sende ? 'Wird gesendet …' : 'Zahlungspflichtig bestellen'}
+                  </button>
+                ) : (
+                  <>
+                    <button style={styles.bestellBtn} disabled title="Wird zum Start freigeschaltet">
+                      Verbindlich bestellen — bald verfügbar
+                    </button>
+                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>
+                      Die Bestellstrecke ist noch nicht scharfgeschaltet. Alle Eingaben sind hier bereits vollständig testbar.
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
-            {/* Navigation */}
             <div style={styles.nav}>
               {schritt > 1 && <button style={styles.btnGhost} onClick={() => setSchritt((s) => s - 1)}>‹ Zurück</button>}
               <span style={{ flex: 1 }} />
@@ -208,7 +304,6 @@ export default function BuchenPage() {
             </div>
           </div>
 
-          {/* Preis-Seitenleiste */}
           <aside style={styles.seite}>
             <div style={styles.seiteTitel}>Ihr Preis</div>
             {!summe ? (
@@ -257,11 +352,11 @@ const styles: Record<string, CSSProperties> = {
   sub: { color: C.textDim, fontSize: 16, margin: '8px 0 0' },
 
   stepbar: { display: 'flex', alignItems: 'center', gap: 4, margin: '24px 0 20px', flexWrap: 'wrap' },
-  stepItem: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 },
+  stepItem: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 },
   stepNr: { width: 26, height: 26, borderRadius: 999, background: C.navy2, border: `1px solid ${C.border}`, color: C.textDim, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 },
   stepNrAktiv: { background: C.gold, color: C.navy, border: `1px solid ${C.gold}` },
   stepNrFertig: { background: `${C.green}22`, color: C.green, border: `1px solid ${C.green}66` },
-  stepLinie: { width: 'clamp(10px,2.5vw,32px)', height: 1, background: C.border, margin: '0 4px' },
+  stepLinie: { width: 'clamp(8px,1.8vw,24px)', height: 1, background: C.border, margin: '0 2px' },
 
   grid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 20, alignItems: 'start' },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
@@ -287,6 +382,7 @@ const styles: Record<string, CSSProperties> = {
   laufAktiv: { border: `2px solid ${C.gold}`, background: 'rgba(201,168,76,0.08)' },
 
   check: { display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 15, lineHeight: 1.5, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, cursor: 'pointer' },
+  link: { color: C.cyan, textDecoration: 'underline' },
 
   formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 },
   feld: { display: 'flex', flexDirection: 'column', gap: 5 },
@@ -309,4 +405,6 @@ const styles: Record<string, CSSProperties> = {
   seiteFuss: { fontSize: 12, color: C.textDim, marginTop: 12, lineHeight: 1.5 },
 
   dim: { color: C.textDim, fontSize: 14, lineHeight: 1.6 },
+  ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
+  err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
 };
