@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { sichtbareNavLinks, gruppiereNavLinks } from '../../lib/rechte';
 import { gebuchteModulKeys, nurGebuchteLinks, type TenantModulRow } from '../../lib/tenantModule';
+import { aktiveModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
+import { leseStandortCookie, istStandortAktiv } from '../../lib/aktiverStandort';
 
 // ============================================================
 // ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
@@ -47,6 +49,8 @@ export default function DashboardNav() {
   const [sichtbareModule, setSichtbareModule] = useState<Set<string> | null>(null);
   // P49: gebuchte Module des Betreibers. null = fail-open (nichts ausblenden).
   const [gebucht, setGebucht] = useState<Set<string> | null>(null);
+  // G3b: am aktiven Standort freigeschaltete Module. null = fail-open / kein Standort aktiv.
+  const [standortAktiv, setStandortAktiv] = useState<Set<string> | null>(null);
   /**
    * Ungelesene Team-Chat-Nachrichten.
    *
@@ -79,6 +83,20 @@ export default function DashboardNav() {
           .from('tenant_module')
           .select('modul_key, aktiv');
         if (aktiv) setGebucht(gebuchteModulKeys((tm as TenantModulRow[] | null) ?? null));
+
+        // G3b: aktiven Standort aus dem Cookie lesen. NUR bei konkretem Standort
+        // (nicht 'alle') die dort freigeschalteten Module laden; RLS scopt auf
+        // den eigenen Tenant. Kein Standort aktiv = fail-open (nichts ausblenden).
+        const stCookie = leseStandortCookie();
+        if (istStandortAktiv(stCookie)) {
+          const { data: sm } = await supabase
+            .from('standort_module')
+            .select('modul_key, aktiv')
+            .eq('standort_id', stCookie);
+          if (aktiv) setStandortAktiv(aktiveModuleAmStandort((sm as StandortModulRow[] | null) ?? null));
+        } else if (aktiv) {
+          setStandortAktiv(null);
+        }
 
         // Ist der eingeloggte Nutzer ein Mitarbeiter? (kein Eintrag = Chef)
         const { data: ma } = await supabase
@@ -135,8 +153,13 @@ export default function DashboardNav() {
   // Fail-open (gebucht === null) reicht die Liste unveraendert durch.
   const sichtbarGebucht = nurGebuchteLinks(sichtbar, gebucht);
 
+  // G3b: zusaetzlich auf die am aktiven Standort freigeschalteten Module
+  // einschraenken. Fail-open (standortAktiv === null bzw. kein Standort aktiv)
+  // reicht die Liste unveraendert durch.
+  const sichtbarStandort = nurStandortAktiveLinks(sichtbarGebucht, standortAktiv);
+
   // Q2: sichtbare Links in Gruppen-Bloecke ordnen (leere Gruppen fallen raus).
-  const gruppen = gruppiereNavLinks(sichtbarGebucht);
+  const gruppen = gruppiereNavLinks(sichtbarStandort);
 
   return (
     <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -12,6 +12,8 @@
 // eigentliche Gate-Wirkung wird erst mit dem Filial-Umschalter (G3) verdrahtet.
 // ============================================================================
 
+import type { NavLink } from './rechte';
+
 /** Eine Zeile aus public.standort_module (nur die fuers Gate noetigen Spalten). */
 export type StandortModulRow = { modul_key: string; aktiv: boolean };
 
@@ -40,4 +42,17 @@ export function istModulAmStandortAktiv(
   if (!modulKey) return true;      // Infra-Link, nicht buchbar
   if (aktive === null) return true; // fail-open: nicht scharf konfiguriert
   return aktive.has(modulKey);
+}
+
+/**
+ * Filtert eine bereits (rechte-/buchungs-)gefilterte Nav-Liste zusaetzlich auf
+ * die am aktiven Standort freigeschalteten Module. Fail-open (aktive === null)
+ * reicht die Liste unveraendert durch — Infra-Links ohne `modul` bleiben immer.
+ */
+export function nurStandortAktiveLinks(
+  links: NavLink[],
+  aktive: Set<string> | null,
+): NavLink[] {
+  if (aktive === null) return links;
+  return links.filter((l) => istModulAmStandortAktiv(l.modul, aktive));
 }
