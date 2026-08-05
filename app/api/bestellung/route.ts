@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   const summe = angebotssumme(stufe, sitze, laufzeit)
 
   const admin = createAdminClient()
-  const { error } = await admin.from('oeffentliche_bestellungen').insert({
+  const { data: ins, error } = await admin.from('oeffentliche_bestellungen').insert({
     stufe_key: stufe,
     sitze,
     laufzeit_monate: laufzeit,
@@ -94,8 +94,39 @@ export async function POST(req: Request) {
     agb_ok: true,
     avv_ok: true,
     status: 'neu',
-  })
-  if (error) return NextResponse.json({ ok: false, error: 'Bestellung konnte nicht gespeichert werden.' }, { status: 500 })
+  }).select('id').single()
+  if (error || !ins) return NextResponse.json({ ok: false, error: 'Bestellung konnte nicht gespeichert werden.' }, { status: 500 })
+  const orderId = ins.id as string
+
+  // --- I2: Konto automatisch anlegen (best-effort; ein Fehler kippt die
+  //         gespeicherte Bestellung NICHT). Läuft nur, wenn die Strecke scharf
+  //         ist (oben bereits per BESTELLSTRECKE_LIVE abgesichert). ------------
+  try {
+    const origin = new URL(req.url).origin
+    const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent('/auth/passwort-neu')}`
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo } })
+    if (!linkErr && linkData?.user?.id) {
+      const userId = linkData.user.id
+      const felder = { email, firma_name: firma || null, plan: stufe, status: 'active', onboarding_completed: false }
+      const { data: upd } = await admin.from('profiles').update(felder).eq('id', userId).select('id')
+      if (!upd || upd.length === 0) await admin.from('profiles').insert({ id: userId, ...felder })
+      await admin.from('oeffentliche_bestellungen').update({ kunde_user_id: userId, status: 'konto_angelegt' }).eq('id', orderId)
+      const actionLink = linkData.properties?.action_link
+      if (actionLink) {
+        await sendeMail({
+          an: email,
+          betreff: 'Willkommen bei ARGONAUT OS — Zugang aktivieren',
+          html: mailLayout('Ihr Zugang steht bereit', `
+            <p>Herzlich willkommen bei ARGONAUT OS${firma ? `, ${firma}` : ''}!</p>
+            <p>Ihr Zugang wurde eingerichtet. Klicken Sie auf den Button, um Ihr Passwort zu setzen und loszulegen:</p>
+            <p style="margin:24px 0;"><a href="${actionLink}" style="display:inline-block;background:#C9A84C;color:#0A1628;text-decoration:none;font-weight:800;padding:13px 24px;border-radius:8px;">Passwort setzen &amp; starten</a></p>
+            <p style="color:#8FA3BE;font-size:13px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br>${actionLink}</p>`),
+        })
+      }
+    }
+    // E-Mail existiert bereits / anderer Fehler: Bestellung bleibt „neu",
+    // der Betreiber sieht sie in der Benachrichtigung und legt manuell an.
+  } catch { /* Konto-Anlage ist best-effort */ }
 
   // Benachrichtigung an den Betreiber — KEIN Einzug.
   try {
