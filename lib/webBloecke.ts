@@ -37,7 +37,7 @@ export type Block =
   | { typ: 'galerie'; titel: string; anzahl: number; bilder?: string[] }
   | { typ: 'testimonials'; eyebrow?: string; titel: string; stimmen: { text: string; name: string; rolle: string }[] }
   | { typ: 'faq'; eyebrow?: string; titel: string; fragen: { frage: string; antwort: string }[] }
-  | { typ: 'kontakt'; titel: string; text: string }
+  | { typ: 'kontakt'; titel: string; text: string; knopf?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -87,8 +87,38 @@ function sterne(): string {
   return '<span class="sterne">' + '★★★★★' + '</span>';
 }
 
+// Anfrage-Formular auf der veröffentlichten Kundenseite. Sendet an
+// /api/oeffentlich/web-anfrage, das den Kontakt als Lead ins CRM des Seiten-
+// Inhabers schreibt. Ohne oeffentlichId (Editor-/Dashboard-Vorschau) ist es
+// sichtbar, sendet aber nicht — der Kunde sieht, wie es aussieht.
+function anfrageFormular(oeffentlichId?: string, knopf?: string): string {
+  const seite = oeffentlichId ? esc(oeffentlichId) : '';
+  const knopfText = esc(z(knopf) || 'Anfrage senden');
+  return [
+    '<form class="ao-anfrage" id="ao-anfrage" novalidate>',
+    '<input type="hidden" name="seite" value="' + seite + '">',
+    '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
+    '<div class="ao-zwei">',
+    '<div class="ao-feld"><label>E-Mail</label><input type="email" name="email"></div>',
+    '<div class="ao-feld"><label>Telefon</label><input type="tel" name="telefon"></div>',
+    '</div>',
+    '<div class="ao-feld"><label>Ihre Nachricht</label><textarea name="nachricht" rows="4"></textarea></div>',
+    '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
+    '<button type="submit" class="btn">' + knopfText + '</button>',
+    '<div class="ao-msg" id="ao-anfrage-msg" role="status"></div>',
+    '</form>',
+  ].join('');
+}
+
+// Kleines, eigenständiges Skript für das Anfrage-Formular (läuft in der fertigen
+// Seite). Prüft die Felder, blockt Spam per Honeypot und sendet per fetch.
+function anfrageSkript(): string {
+  return '<script>(function(){var f=document.getElementById("ao-anfrage");if(!f)return;var el=f.elements;var m=document.getElementById("ao-anfrage-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var tel=(el.telefon.value||"").trim();if(!name||(!email&&!tel)){set("Bitte Name und E-Mail oder Telefon angeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihre Anfrage gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/web-anfrage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,email:email,telefon:tel,nachricht:el.nachricht.value,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Vielen Dank! Ihre Anfrage ist eingegangen \\u2014 wir melden uns zeitnah.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+}
+
 // --- Ein Baustein → HTML ----------------------------------------------------
-export function blockHtml(b: Block, ci: CiWeb): string {
+export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } = {}): string {
   switch (b.typ) {
     case 'hero': {
       const url = safeUrl(b.bild);
@@ -169,7 +199,9 @@ export function blockHtml(b: Block, ci: CiWeb): string {
         '<section class="sec alt" id="kontakt"><div class="wrap narrow">',
         '<h2>' + esc(b.titel) + '</h2>',
         b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
-        li.length ? '<ul class="kontakt">' + li.join('') + '</ul>' : '',
+        li.length
+          ? '<div class="kontakt-grid"><ul class="kontakt">' + li.join('') + '</ul>' + anfrageFormular(ctx.oeffentlichId, b.knopf) + '</div>'
+          : anfrageFormular(ctx.oeffentlichId, b.knopf),
         '</div></section>',
       ].join('');
     }
@@ -263,6 +295,25 @@ function seiteCss(ci: CiWeb): string {
     '.faq-a{padding:0 18px 16px;color:#51606f}',
     // Kontakt
     '.kontakt{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:10px;font-size:17px;color:#38434f}',
+    // Anfrage-Formular
+    '.kontakt-grid{display:grid;grid-template-columns:1fr;gap:26px;margin-top:8px}',
+    '@media(min-width:720px){.kontakt-grid{grid-template-columns:1fr 1.15fr;align-items:start}.kontakt{margin-top:0}}',
+    '.ao-anfrage{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid #e7ebf1;border-radius:16px;padding:22px;box-shadow:0 12px 30px -22px rgba(20,40,70,.35)}',
+    '.ao-anfrage .ao-feld{display:flex;flex-direction:column;gap:5px}',
+    '.ao-anfrage label{font-size:14px;font-weight:700;color:#41505f}',
+    '.ao-anfrage input,.ao-anfrage textarea{font:inherit;font-size:15px;color:#1c2430;background:#fff;border:1px solid #d3dbe4;border-radius:10px;padding:11px 13px;width:100%;box-sizing:border-box}',
+    '.ao-anfrage input:focus,.ao-anfrage textarea:focus{outline:none;border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 22%,transparent)}',
+    '.ao-anfrage textarea{resize:vertical;min-height:96px;line-height:1.5}',
+    '.ao-zwei{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
+    '@media(max-width:520px){.ao-zwei{grid-template-columns:1fr}}',
+    '.ao-anfrage .ao-dsgvo{flex-direction:row;display:flex;gap:9px;align-items:flex-start;font-size:13px;font-weight:500;color:#51606f}',
+    '.ao-anfrage .ao-dsgvo input{width:auto;margin-top:3px;flex:0 0 auto}',
+    '.ao-anfrage .ao-dsgvo a{color:var(--p);font-weight:700}',
+    '.ao-anfrage .btn{border:none;cursor:pointer;align-self:flex-start}',
+    '.ao-hp{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none}',
+    '.ao-msg{font-size:14px;font-weight:600}',
+    '.ao-msg.ok{color:#2e7d55}',
+    '.ao-msg.err{color:#c0392b}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -284,6 +335,7 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
+  opts: { oeffentlichId?: string } = {},
 ): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   const slogan = esc(z(ci.slogan));
@@ -291,7 +343,7 @@ export function seiteHtml(
     ? '<span class="logo"><img src="' + safeUrl(ci.logo_url) + '" alt="Logo"></span>'
     : '<span class="logo">' + esc((z(ci.firma) || 'A').charAt(0).toUpperCase()) + '</span>';
 
-  const koerper = (seite.bloecke || []).map((b) => blockHtml(b, ci)).join('\n');
+  const koerper = (seite.bloecke || []).map((b) => blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId })).join('\n');
 
   return [
     '<!doctype html>',
@@ -308,6 +360,7 @@ export function seiteHtml(
     koerper,
     rechtsSektionen(ci),
     fussHtml(ci, jahr),
+    anfrageSkript(),
     '</body></html>',
   ].join('\n');
 }

@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .maybeSingle();
 
     const bloecke = Array.isArray((seite as { bloecke?: unknown }).bloecke) ? ((seite as { bloecke: Block[] }).bloecke) : [];
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear());
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung });
 
     return new Response(html, {
       status: 200,
