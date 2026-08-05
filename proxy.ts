@@ -5,7 +5,7 @@ import { istNurChefPfad, mitarbeiterDarf, pfadPasst } from './lib/rechte'
 import { gebuchteModulKeys, pfadGebucht, type TenantModulRow } from './lib/tenantModule'
 
 // ============================================================================
-// ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard
+// ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard + Custom-Domains
 //
 // HIESS BIS NEXT.JS 15: middleware.ts
 //
@@ -13,38 +13,70 @@ import { gebuchteModulKeys, pfadGebucht, type TenantModulRow } from './lib/tenan
 // Projektstamm ODER in src/ — aber auf DIESELBE EBENE wie `app` bzw. `pages`.
 // Hier liegt `app/` im Stamm, also gehoert `proxy.ts` in den Stamm.
 //
-// Warum das wichtig ist: `src/middleware.ts` lag zwar in src/, aber es gibt
-// kein src/app. Next hat die Datei nie gefunden. Der Zugriffsschutz — die
-// Chef-Sperre, die Rollen-Weiche, die Rechtepruefung — lief nicht.
-// Der Chef merkte nichts, weil er ohnehin ueber den customers-Zweig laeuft.
-//
-// Weitere Regeln der Konvention:
+// Regeln der Konvention:
 //   - Der Export muss `proxy` heissen (benannt oder default). NICHT `middleware`.
 //   - Nur EINE Proxy-Datei pro Projekt.
 //   - Proxy laeuft auf der Node.js-Laufzeit. Edge ist nicht konfigurierbar.
 //     `createServerClient` aus @supabase/ssr vertraegt das.
 //
-// Die Regeln selbst stehen in lib/rechte.ts — dieselbe Datei, aus der auch
-// DashboardNav.tsx liest. Ein Knopf, den das Menue zeigt, den die Sperre aber
-// blockiert, ist damit strukturell unmoeglich.
-//
-// P49 (14.07.26): AEUSSERSTES Gate — das Betreiber-Buchungs-Gate (tenant_module).
-// Ein nicht gebuchtes Modul ist fuer NIEMANDEN im Tenant per URL erreichbar,
-// auch nicht fuer den Chef (Buchung steht ueber den Rollen). Steht deshalb ganz
-// oben, direkt nach dem Session-Check, VOR der Rollen-Weiche. Fail-open: hat der
-// Tenant keine tenant_module-Zeile, laesst pfadGebucht() alles durch. RLS scopt
-// die Abfrage automatisch auf den eigenen Betreiber. Selbe Wahrheit wie die Nav
-// (beide lesen lib/tenantModule.ts) — Menue und Sperre koennen nicht auseinander-
-// laufen.
+// W7 (Website-Bauer): Der Proxy erkennt jetzt zuerst den HOST. Kommt der Aufruf
+// ueber eine FREMDE Domain (die Domain eines Kunden, nicht unsere eigene), wird
+// die Anfrage auf /p-domain/<host> umgeschrieben — dort wird die veroeffentlichte
+// Kundenseite ausgeliefert. Nur auf UNSERER eigenen Domain greift der bestehende
+// Dashboard-Schutz. Assets (_next), /api und favicon passieren immer.
 // ============================================================================
+
+// Eigene App-Hosts (Dashboard + Marketing). Alles andere gilt als Kundendomain.
+// Selbst-konfigurierend: Vercel liefert die Produktions- und Deployment-Domain
+// automatisch (VERCEL_PROJECT_PRODUCTION_URL / VERCEL_URL). Zusaetzlich
+// NEXT_PUBLIC_SITE_URL, sinnvolle Defaults und die frei erweiterbare Liste
+// NEXT_PUBLIC_APP_HOSTS. *.vercel.app + localhost gelten IMMER als eigen.
+function hostAus(v?: string): string {
+  if (!v) return ''
+  try { return new URL(v.startsWith('http') ? v : `https://${v}`).host.toLowerCase() } catch { return v.toLowerCase().split('/')[0] }
+}
+const EIGENE_HOSTS = [
+  'argonaut-os.com', 'www.argonaut-os.com',
+  ...(process.env.NEXT_PUBLIC_APP_HOSTS || '').split(',').map((s) => s.trim().toLowerCase()),
+  hostAus(process.env.NEXT_PUBLIC_SITE_URL),
+  hostAus(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+  hostAus(process.env.VERCEL_URL),
+].filter(Boolean)
+
+function istEigeneDomain(host: string): boolean {
+  const h = (host || '').toLowerCase().split(':')[0]
+  if (!h) return true
+  if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.vercel.app')) return true
+  return EIGENE_HOSTS.includes(h)
+}
+
+// App-Pfade, die NIE auf eine Kundenseite umgeschrieben werden (harter
+// Aussperr-Schutz — selbst bei falsch erkanntem Host bleibt das Dashboard offen).
+const RESERVIERT = ['/dashboard', '/auth']
 
 // Der Export MUSS `proxy` heissen. Hiess bis Next.js 15 `middleware`.
 export async function proxy(req: NextRequest) {
-  // === GO-LIVE (Baustellen-Riegel entfernt) ===============================
-  // Die Marketing-/Branchen-Seiten sind live. Der Proxy laeuft ab jetzt NUR
-  // noch auf /dashboard (siehe matcher unten) und macht dort den Zugriffs-
-  // schutz. Oeffentliche Seiten werden vom Proxy gar nicht mehr angefasst.
-  // =======================================================================
+  const host = (req.headers.get('host') || '').toLowerCase()
+  const pfad = req.nextUrl.pathname
+
+  // Interne/technische Pfade nie umschreiben.
+  if (pfad.startsWith('/p-domain') || pfad.startsWith('/api') || pfad.startsWith('/_next') || pfad === '/favicon.ico') {
+    return NextResponse.next()
+  }
+
+  // --- Custom-Domain eines Kunden -----------------------------------------
+  // Fremder Host -> die veroeffentlichte Seite dieses Kunden ausliefern.
+  // Reservierte App-Pfade (/dashboard, /auth) werden NIE umgeschrieben.
+  const reserviert = RESERVIERT.some((pre) => pfad === pre || pfad.startsWith(pre + '/'))
+  if (host && !istEigeneDomain(host) && !reserviert) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/p-domain/${encodeURIComponent(host.split(':')[0])}`
+    return NextResponse.rewrite(url)
+  }
+
+  // --- Ab hier: unsere eigene Domain. Nur /dashboard wird geschuetzt. ------
+  if (!pfad.startsWith('/dashboard')) return NextResponse.next()
+
   const res = NextResponse.next()
 
   const supabase = createServerClient(
@@ -61,93 +93,66 @@ export async function proxy(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (req.nextUrl.pathname.startsWith('/dashboard')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/auth/login', req.url))
+  if (!session) {
+    return NextResponse.redirect(new URL('/auth/login', req.url))
+  }
+
+  // --- P49 · BETREIBER-BUCHUNGS-GATE (aeusserste Ebene) -------------------
+  {
+    const { data: tmRows } = await supabase
+      .from('tenant_module')
+      .select('modul_key, aktiv')
+    const gebucht = gebuchteModulKeys((tmRows as TenantModulRow[] | null) ?? null)
+    if (!pfadGebucht(req.nextUrl.pathname, gebucht)) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
+  }
 
-    // --- P49 · BETREIBER-BUCHUNGS-GATE (aeusserste Ebene) -------------------
-    // Greift fuer JEDEN im Tenant — Chef wie Mitarbeiter. Ein Modul, das der
-    // Betreiber nicht (aktiv) gebucht hat, ist per URL nicht erreichbar.
-    // RLS liefert nur die Zeilen des eigenen Betreibers; kein Ergebnis (oder
-    // Fehler) => gebucht=null => fail-open => nichts wird blockiert.
-    // Infra-Pfade (Uebersicht, Mein Bereich, Einstellungen, Rechte, upgrade …)
-    // haben keinen Modul-Schluessel und passieren immer.
-    {
-      const { data: tmRows } = await supabase
-        .from('tenant_module')
-        .select('modul_key, aktiv')
-      const gebucht = gebuchteModulKeys((tmRows as TenantModulRow[] | null) ?? null)
-      if (!pfadGebucht(req.nextUrl.pathname, gebucht)) {
-        // Nicht gebucht -> zurueck zur Uebersicht (hat keinen Modul-Schluessel,
-        // ist also immer erreichbar -> keine Redirect-Schleife).
-        return NextResponse.redirect(new URL('/dashboard', req.url))
-      }
+  // --- Rollen-Weiche -------------------------------------------------------
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('status')
+    .eq('email', session.user.email)
+    .single()
+
+  if (customer) {
+    // CHEF: bestehendes Verhalten unveraendert
+    if (customer.status === 'gesperrt') {
+      return NextResponse.redirect(new URL('/dashboard/upgrade', req.url))
     }
+  } else {
+    // KEIN Kunde -> pruefen, ob es ein eingeladener Mitarbeiter ist
+    const { data: mitarbeiter } = await supabase
+      .from('mitarbeiter')
+      .select('id, darf_verteilen')
+      .eq('auth_user_id', session.user.id)
+      .maybeSingle()
 
-    // --- Rollen-Weiche -------------------------------------------------------
-    // Kunde (Chef) = hat eine customers-Zeile. Mitarbeiter (Self-Service) =
-    // kein Kunde, aber ein mitarbeiter-Datensatz mit auth_user_id = Login.
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('status')
-      .eq('email', session.user.email)
-      .single()
+    if (mitarbeiter) {
+      const p = req.nextUrl.pathname
+      const darfVerteilen = mitarbeiter.darf_verteilen === true
 
-    if (customer) {
-      // CHEF: bestehendes Verhalten unveraendert
-      if (customer.status === 'gesperrt') {
-        return NextResponse.redirect(new URL('/dashboard/upgrade', req.url))
-      }
-    } else {
-      // KEIN Kunde -> pruefen, ob es ein eingeladener Mitarbeiter ist
-      const { data: mitarbeiter } = await supabase
-        .from('mitarbeiter')
-        .select('id, darf_verteilen')
-        .eq('auth_user_id', session.user.id)
-        .maybeSingle()
-
-      if (mitarbeiter) {
-        const p = req.nextUrl.pathname
-
-        // Verteil-Vollmacht dieses Mitarbeiters. Setzt NUR der Eigentuemer.
-        const darfVerteilen = mitarbeiter.darf_verteilen === true
-
-        // HARTE SPERRE: Chef-only Module IMMER blockieren — mit EINER Ausnahme:
-        // Ein Administrator MIT Verteil-Vollmacht darf die Verteil-UI
-        // (/dashboard/rechte) erreichen. Genau er soll die Rechte verteilen
-        // (Reiser-Prinzip: bei 200/500/2000 Mitarbeitern macht das nicht der Chef
-        // persoenlich, sondern eine Person unter ihm). Die Seite selbst filtert
-        // dort auf seine verteilbaren Module und wirft reine Mitarbeiter erneut
-        // zurueck — doppelt gesichert. Die Ausnahme greift NUR fuer den exakten
-        // Rechte-Pfad; jeder andere nurChef-Pfad bleibt fuer alle hart dicht.
-        //
-        // Die Vollmacht-Vergabe selbst (darf_verteilen setzen) hat hier KEINEN
-        // Schalter -> bleibt strukturell Eigentuemer-only. Die eiserne Grenze.
-        if (istNurChefPfad(p)) {
-          const istVerteilTuer = pfadPasst(p, '/dashboard/rechte') && darfVerteilen
-          if (!istVerteilTuer) {
-            return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
-          }
-          // Administrator auf der Verteil-UI: durchlassen. Den Rest regelt die Seite.
-          return res
-        }
-
-        // MITARBEITER: Basis-Bereiche + die vom Chef freigeschalteten Module
-        const { data: recht } = await supabase
-          .from('mitarbeiter_rechte')
-          .select('module')
-          .eq('mitarbeiter_id', mitarbeiter.id)
-          .maybeSingle()
-
-        const module: string[] = (recht?.module as string[]) || []
-
-        if (!mitarbeiterDarf(p, module)) {
+      if (istNurChefPfad(p)) {
+        const istVerteilTuer = pfadPasst(p, '/dashboard/rechte') && darfVerteilen
+        if (!istVerteilTuer) {
           return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
         }
+        return res
       }
-      // weder Kunde noch Mitarbeiter: unveraendert durchlassen
+
+      const { data: recht } = await supabase
+        .from('mitarbeiter_rechte')
+        .select('module')
+        .eq('mitarbeiter_id', mitarbeiter.id)
+        .maybeSingle()
+
+      const module: string[] = (recht?.module as string[]) || []
+
+      if (!mitarbeiterDarf(p, module)) {
+        return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+      }
     }
+    // weder Kunde noch Mitarbeiter: unveraendert durchlassen
   }
 
   return res
@@ -155,6 +160,8 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
+    // Alles ausser statischen Assets / Bild-Optimierung / favicon / api.
+    // Noetig, damit der Proxy auch auf '/' laeuft und Custom-Domains erkennt.
+    '/((?!_next/static|_next/image|favicon.ico|api).*)',
   ]
 }

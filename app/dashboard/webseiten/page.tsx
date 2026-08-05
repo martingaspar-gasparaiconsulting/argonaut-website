@@ -58,6 +58,9 @@ export default function WebseitenPage() {
   const [gespeichert, setGespeichert] = useState<string | null>(null);
   const [liveInfo, setLiveInfo] = useState<{ oeffentlich_id: string | null; status: string } | null>(null);
   const [veroeffLaden, setVeroeffLaden] = useState(false);
+  const [domain, setDomain] = useState('');
+  const [domainMsg, setDomainMsg] = useState<string | null>(null);
+  const [domainSpeichert, setDomainSpeichert] = useState(false);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data } = await supabase.from('web_ci').select('*').eq('owner_user_id', userId).maybeSingle();
@@ -65,9 +68,10 @@ export default function WebseitenPage() {
   }, []);
 
   const ladeLive = useCallback(async (userId: string, slug: string) => {
-    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
-    const d = data as { oeffentlich_id: string | null; status: string } | null;
+    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status, domain').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
+    const d = data as { oeffentlich_id: string | null; status: string; domain: string | null } | null;
     setLiveInfo(d ? { oeffentlich_id: d.oeffentlich_id, status: d.status } : null);
+    setDomain(d?.domain || '');
   }, []);
 
   useEffect(() => {
@@ -157,6 +161,23 @@ export default function WebseitenPage() {
       setFehler('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
     }
     setVeroeffLaden(false);
+  }
+
+  async function domainSpeichern() {
+    if (!uid) return;
+    setDomainMsg(null); setDomainSpeichert(true);
+    const norm = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
+    await speichern(); // Zeile sicherstellen
+    const { error } = await supabase.from('web_seiten')
+      .update({ domain: norm || null, aktualisiert_am: new Date().toISOString() })
+      .eq('owner_user_id', uid).eq('slug', zweck);
+    if (error) {
+      setDomainMsg(error.code === '23505' ? 'Diese Domain ist bereits mit einer anderen Seite verbunden.' : 'Konnte die Domain nicht speichern.');
+      setDomainSpeichert(false); return;
+    }
+    setDomain(norm);
+    setDomainMsg(norm ? 'Domain gespeichert. Jetzt die DNS-Einträge setzen und die Domain im Hoster hinterlegen.' : 'Domain entfernt.');
+    setDomainSpeichert(false);
   }
 
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
@@ -291,6 +312,23 @@ export default function WebseitenPage() {
             )}
           </div>
 
+          {/* 6 · Eigene Domain */}
+          <div style={styles.card}>
+            <div style={styles.cardTitel}>6 · Eigene Domain <span style={styles.optional}>optional</span></div>
+            <p style={styles.mini}>Verbinden Sie eine gekaufte Domain (z. B. meine-firma.de) — die Seite läuft dann direkt auf Ihrer Adresse mit https.</p>
+            <div style={styles.saveBar}>
+              <input style={styles.eingabe} value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="meine-firma.de" />
+              <button style={{ ...styles.btnGold, opacity: domainSpeichert ? 0.6 : 1 }} disabled={domainSpeichert} onClick={domainSpeichern}>{domainSpeichert ? '…' : 'Domain speichern'}</button>
+            </div>
+            {domainMsg && <div style={styles.liveBox}>{domainMsg}</div>}
+            <div style={styles.dnsBox}>
+              <b>So verbinden Sie die Domain (einmalig):</b>
+              <div style={{ marginTop: 6 }}>1) Beim Domain-Anbieter eintragen: Root-Domain per <b>A-Record</b> auf <code style={styles.code}>76.76.21.21</code>, und <code style={styles.code}>www</code> per <b>CNAME</b> auf <code style={styles.code}>cname.vercel-dns.com</code>.</div>
+              <div style={{ marginTop: 4 }}>2) Die Domain einmal im Hoster (Vercel) hinterlegen — das SSL-Zertifikat kommt dann automatisch.</div>
+              <div style={{ marginTop: 4 }}>Danach ist Ihre Seite unter der eigenen Adresse erreichbar.</div>
+            </div>
+          </div>
+
           <div style={styles.hinweis}>
             ℹ️ Sobald jemand auf Ihrer Seite eine Anfrage schickt, landet der Kontakt automatisch in Ihrem CRM —
             Website und Vertrieb sind dieselbe Maschine.
@@ -338,6 +376,10 @@ const styles: Record<string, CSSProperties> = {
   btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 20px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
   okInline: { color: C.green, fontSize: FS.klein, fontWeight: 700 },
   liveBox: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: FS.klein, wordBreak: 'break-all' },
+  optional: { background: 'rgba(143,163,190,0.14)', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 7, padding: '2px 8px', fontSize: FS.mini, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
+  eingabe: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 13px', fontSize: FS.text, fontFamily: 'inherit', flex: 1, minWidth: 200, maxWidth: 360, boxSizing: 'border-box' },
+  dnsBox: { fontSize: FS.klein, color: C.textDim, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
+  code: { background: 'rgba(0,229,255,0.1)', color: C.cyan, borderRadius: 5, padding: '1px 6px', fontFamily: 'ui-monospace, monospace', fontSize: '0.92em' },
 
   warnBox: { marginTop: 14, fontSize: FS.text, color: C.text, background: `${C.warn}18`, border: `1px solid ${C.warn}55`, borderRadius: 12, padding: '14px 16px', lineHeight: 1.6 },
   link: { color: C.gold, fontWeight: 700 },
