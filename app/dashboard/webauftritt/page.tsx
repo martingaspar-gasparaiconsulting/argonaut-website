@@ -169,11 +169,11 @@ export default function WebauftrittPage() {
                   ? <img src={ci.logo_url} alt="Logo" onError={() => setLogoFehler(true)} style={{ height: 40, width: 'auto', borderRadius: 6, background: '#fff2' }} />
                   : <div style={{ height: 40, width: 40, borderRadius: 8, background: ci.farbe_sekundaer, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: ci.farbe_primaer }}>{(ci.firma || 'A').charAt(0).toUpperCase()}</div>}
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: '#fff', fontWeight: 800, fontSize: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ci.firma || 'Ihr Firmenname'}</div>
-                  <div style={{ color: ci.farbe_sekundaer, fontSize: 14, fontWeight: 600 }}>{ci.slogan || 'Ihr Claim / Slogan erscheint hier'}</div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: 'clamp(18px, 1.7vw, 28px)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ci.firma || 'Ihr Firmenname'}</div>
+                  <div style={{ color: ci.farbe_sekundaer, fontSize: 'clamp(13px, 1.2vw, 19px)', fontWeight: 600 }}>{ci.slogan || 'Ihr Claim / Slogan erscheint hier'}</div>
                 </div>
               </div>
-              <button style={{ marginTop: 16, background: ci.farbe_akzent, color: ci.farbe_primaer, border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 800, fontSize: 14, cursor: 'default', fontFamily: stack }}>Jetzt anfragen →</button>
+              <button style={{ marginTop: 16, background: ci.farbe_akzent, color: ci.farbe_primaer, border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 800, fontSize: 'clamp(13px, 1.2vw, 19px)', cursor: 'default', fontFamily: stack }}>Jetzt anfragen →</button>
             </div>
             <div style={styles.vorschauFuss}>Live-Vorschau · so wirken Ihre Farben und Schrift zusammen</div>
           </div>
@@ -296,35 +296,46 @@ function FarbFeld({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
+// Mitwachsende Schriftgrößen — dieselbe clamp()-Skala wie im übrigen Dashboard
+// (min für Handy · vw skaliert mit der Breite · max für große Touchscreens).
+const FS = {
+  h1: 'clamp(26px, 2.4vw, 40px)',
+  titel: 'clamp(17px, 1.5vw, 24px)',
+  text: 'clamp(14px, 1.25vw, 20px)',
+  klein: 'clamp(12px, 1.06vw, 17px)',
+  mini: 'clamp(11px, 0.95vw, 15px)',
+  btn: 'clamp(14px, 1.25vw, 20px)',
+};
+
 const styles: Record<string, CSSProperties> = {
-  page: { maxWidth: 900, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
-  h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
-  sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 660 },
+  page: { maxWidth: 980, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontSize: FS.text },
+  h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: FS.h1, fontWeight: 800, margin: 0 },
+  sub: { color: C.textDim, fontSize: FS.text, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
 
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 },
-  cardTitel: { fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 17 },
-  mini: { fontSize: 13, color: C.textDim, margin: '-4px 0 2px', lineHeight: 1.5 },
-  pflicht: { background: `${C.warn}22`, color: C.warn, border: `1px solid ${C.warn}66`, borderRadius: 7, padding: '2px 8px', fontSize: 11, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
+  cardTitel: { fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: FS.titel },
+  mini: { fontSize: FS.klein, color: C.textDim, margin: '-4px 0 2px', lineHeight: 1.5 },
+  pflicht: { background: `${C.warn}22`, color: C.warn, border: `1px solid ${C.warn}66`, borderRadius: 7, padding: '2px 8px', fontSize: FS.mini, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
 
-  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 },
   feld: { display: 'flex', flexDirection: 'column', gap: 5 },
-  feldLabel: { fontSize: 12, color: C.textDim, fontWeight: 600 },
-  input: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 12px', fontSize: 14, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+  feldLabel: { fontSize: FS.klein, color: C.textDim, fontWeight: 600 },
+  input: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 13px', fontSize: FS.text, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
 
-  vorschauFuss: { fontSize: 12, color: C.textDim, padding: '10px 16px', borderTop: `1px solid ${C.border}`, background: C.navy2 },
+  vorschauFuss: { fontSize: FS.klein, color: C.textDim, padding: '10px 16px', borderTop: `1px solid ${C.border}`, background: C.navy2 },
 
   saveBar: { display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' },
-  btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer' },
-  btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+  btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: FS.btn, fontWeight: 800, cursor: 'pointer' },
+  btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
 
-  autoBadge: { background: `${C.cyan}1e`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: '2px 8px', fontSize: 11, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
+  autoBadge: { background: `${C.cyan}1e`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: '2px 8px', fontSize: FS.mini, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
   tabRow: { display: 'flex', gap: 6, flexWrap: 'wrap' },
-  tab: { background: C.navy, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  tabAktiv: { background: `${C.gold}22`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  rechtPre: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', fontSize: 13, lineHeight: 1.6, color: C.text, whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', margin: 0, maxHeight: 360, overflow: 'auto' },
+  tab: { background: C.navy, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
+  tabAktiv: { background: `${C.gold}22`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 8, padding: '8px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
+  rechtPre: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', fontSize: FS.klein, lineHeight: 1.7, color: C.text, whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0, maxHeight: 420, overflow: 'auto' },
 
-  hinweis: { marginTop: 14, fontSize: 13, color: C.textDim, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
-  dim: { color: C.textDim, fontSize: 14, marginTop: 8 },
-  ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
-  err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
+  hinweis: { marginTop: 14, fontSize: FS.klein, color: C.textDim, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
+  dim: { color: C.textDim, fontSize: FS.text, marginTop: 8 },
+  ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: FS.klein },
+  err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: FS.klein },
 };
