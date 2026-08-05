@@ -343,6 +343,35 @@ export function sichtbareNavLinks(
   })
 }
 
+// ============================================================================
+// BLOCK H · SITZ-TYP als Sicht-/Rechte-Schicht (nutzer_typ)
+// Bisher steuerte nutzer_typ nur den Preis (lib/tarif.ts). Ab hier bestimmt er
+// zusaetzlich, WAS ein Mitarbeiter im Menue sieht. Reine, testbare Funktion —
+// wird NACH sichtbareNavLinks angewandt und NUR auf Mitarbeiter (der Chef ist
+// immer voll). Fail-open: unbekannt/leer -> keine zusaetzliche Einschraenkung.
+// ============================================================================
+
+export type NutzerTyp = 'voll' | 'standard' | 'self_service'
+
+/**
+ * Filtert die (bereits rechte-gefilterten) Links zusaetzlich nach Sitz-Typ:
+ *  - 'self_service' : nur die immer sichtbaren Infra-Links (Mein Bereich,
+ *                     Zeiterfassung, Meine Einsaetze, Uebersicht, Einstellungen).
+ *  - 'standard'     : operativer Alltag OHNE sensible Bereiche
+ *                     (sensibel oder Ebene <= 2 fallen raus).
+ *  - 'voll' / leer  : unveraendert (fail-open).
+ */
+export function nurNachNutzerTyp(
+  links: NavLink[],
+  typ: string | null | undefined,
+): NavLink[] {
+  if (typ === 'self_service') return links.filter((l) => l.immer === true)
+  if (typ === 'standard') {
+    return links.filter((l) => !l.sensibel && (l.ebene === undefined || l.ebene >= 3))
+  }
+  return links // 'voll' oder unbekannt -> nichts zusaetzlich verstecken
+}
+
 // ---------------------------------------------------------------------------
 // Q2 · NAVBAR-GRUPPEN — nur Anzeige. Reihenfolge + Ueberschriften.
 // Leeres label = kein sichtbarer Titel (fuer 'start'/Uebersicht).

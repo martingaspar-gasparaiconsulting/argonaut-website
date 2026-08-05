@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { sichtbareNavLinks, gruppiereNavLinks } from '../../lib/rechte';
+import { sichtbareNavLinks, gruppiereNavLinks, nurNachNutzerTyp } from '../../lib/rechte';
 import { gebuchteModulKeys, nurGebuchteLinks, type TenantModulRow } from '../../lib/tenantModule';
 import { aktiveModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
 import { leseStandortCookie, istStandortAktiv } from '../../lib/aktiverStandort';
@@ -51,6 +51,8 @@ export default function DashboardNav() {
   const [gebucht, setGebucht] = useState<Set<string> | null>(null);
   // G3b: am aktiven Standort freigeschaltete Module. null = fail-open / kein Standort aktiv.
   const [standortAktiv, setStandortAktiv] = useState<Set<string> | null>(null);
+  // Block H: Sitz-Typ des Mitarbeiters (voll/standard/self_service). null = Chef/unbekannt.
+  const [nutzerTyp, setNutzerTyp] = useState<string | null>(null);
   /**
    * Ungelesene Team-Chat-Nachrichten.
    *
@@ -101,7 +103,7 @@ export default function DashboardNav() {
         // Ist der eingeloggte Nutzer ein Mitarbeiter? (kein Eintrag = Chef)
         const { data: ma } = await supabase
           .from('mitarbeiter')
-          .select('id')
+          .select('id, nutzer_typ')
           .eq('auth_user_id', user.id)
           .maybeSingle();
 
@@ -109,6 +111,9 @@ export default function DashboardNav() {
           if (aktiv) { setIstChef(true); setGeladen(true); }
           return;
         }
+
+        // Block H: Sitz-Typ des Mitarbeiters merken (steuert die Sicht).
+        if (aktiv) setNutzerTyp(((ma as { nutzer_typ?: string | null }).nutzer_typ) ?? null);
 
         // Mitarbeiter -> freigeschaltete Module laden
         const { data: recht } = await supabase
@@ -149,9 +154,13 @@ export default function DashboardNav() {
     ? sichtbareNavLinks(istChef, erlaubt, sichtbareModule)
     : sichtbareNavLinks(false, new Set(), null).filter((l) => l.href === '/dashboard');
 
+  // Block H: Sitz-Typ-Schicht — nur fuer Mitarbeiter (Chef bleibt voll).
+  // self_service = nur Infra, standard = ohne sensible Bereiche, voll = alles.
+  const sichtbarTyp = istChef ? sichtbar : nurNachNutzerTyp(sichtbar, nutzerTyp);
+
   // P49: zusaetzlich auf die vom Betreiber gebuchten Module einschraenken.
   // Fail-open (gebucht === null) reicht die Liste unveraendert durch.
-  const sichtbarGebucht = nurGebuchteLinks(sichtbar, gebucht);
+  const sichtbarGebucht = nurGebuchteLinks(sichtbarTyp, gebucht);
 
   // G3b: zusaetzlich auf die am aktiven Standort freigeschalteten Module
   // einschraenken. Fail-open (standortAktiv === null bzw. kein Standort aktiv)
