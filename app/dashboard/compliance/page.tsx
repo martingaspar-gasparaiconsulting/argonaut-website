@@ -11,6 +11,8 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -149,6 +151,20 @@ export default function CompliancePage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>⚖️ Compliance-Center</h1>
       <p style={styles.sub}>Zwei Pflichten mit echten Folgen: die Sofortmeldung neuer Beschäftigter und die §48b-Freistellungsbescheinigung. ARGONAUT bereitet alles vor und erinnert dich rechtzeitig.</p>
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="Compliance" aktionHref="/dashboard/compliance" aktionText="Zu den Pflichten"
+            regel={(() => {
+              const t = heute();
+              const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+              const ungemeldet = sofort.filter((s) => !s.gemeldet).length;
+              const pruefUeberfaellig = pruef.filter((p) => p.naechste_pruefung && p.naechste_pruefung < t).length;
+              const pruefBald = pruef.filter((p) => p.naechste_pruefung && p.naechste_pruefung >= t && p.naechste_pruefung <= in30).length;
+              return augeAmpel('Compliance-Pflichten', { rot: ungemeldet + pruefUeberfaellig, gelb: pruefBald });
+            })()}
+          />
+        </div>
+      )}
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
 

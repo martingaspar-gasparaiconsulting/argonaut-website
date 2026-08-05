@@ -9,6 +9,8 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -105,6 +107,19 @@ export default function EnergiePage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>⚡ Energie-Fachpaket</h1>
       <p style={styles.sub}>Energie-Anlagen mit Wartungs-Ampel und Zählerständen/Erträgen — für PV, Wärmepumpe, BHKW & Co.</p>
+      {!laden && (
+        <div style={{ marginTop: 14 }}>
+          <KiAuge modul="Energie" aktionHref="/dashboard/energie" aktionText="Zu den Anlagen"
+            regel={(() => {
+              const t = heute();
+              const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+              const rot = anlagen.filter((a) => a.wartung_faellig && a.wartung_faellig < t).length;
+              const gelb = anlagen.filter((a) => a.wartung_faellig && a.wartung_faellig >= t && a.wartung_faellig <= in30).length;
+              return augeAmpel('Anlagen-Wartungen', { rot, gelb });
+            })()}
+          />
+        </div>
+      )}
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
 
