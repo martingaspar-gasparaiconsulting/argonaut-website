@@ -223,6 +223,7 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Verwaltung -----------------------------------------------------------
   { label: '🌐 Webauftritt', href: '/dashboard/webauftritt', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
+  { label: '🖥️ Website-Bauer', href: '/dashboard/webseiten', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '👥 Nutzer & Tarif', href: '/dashboard/nutzer-tarif', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🏢 Standorte & Filialen', href: '/dashboard/standorte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
