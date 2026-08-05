@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { impressumText, datenschutzText, agbText } from '@/lib/webRecht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -58,6 +59,9 @@ export default function WebauftrittPage() {
   const [speichert, setSpeichert] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [rechtTab, setRechtTab] = useState<'impressum' | 'datenschutz' | 'agb'>('impressum');
+  const [logoFehler, setLogoFehler] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -91,6 +95,21 @@ export default function WebauftrittPage() {
   function setF<K extends keyof CI>(k: K, v: CI[K]) {
     setCi((c) => ({ ...c, [k]: v }));
     setOk(null);
+    if (k === 'logo_url') setLogoFehler(false);
+  }
+
+  const rechtText = rechtTab === 'impressum'
+    ? impressumText(ci)
+    : rechtTab === 'datenschutz'
+      ? datenschutzText(ci)
+      : agbText(ci);
+
+  async function rechtKopieren() {
+    try {
+      await navigator.clipboard.writeText(rechtText);
+      setKopiert(true);
+      setTimeout(() => setKopiert(false), 1800);
+    } catch { /* Clipboard nicht verfügbar — Text bleibt zum Markieren sichtbar */ }
   }
 
   async function speichern() {
@@ -146,8 +165,8 @@ export default function WebauftrittPage() {
           <div style={{ ...styles.card, padding: 0, overflow: 'hidden' }}>
             <div style={{ background: ci.farbe_primaer, padding: '22px 20px', fontFamily: stack }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {ci.logo_url
-                  ? <img src={ci.logo_url} alt="Logo" style={{ height: 40, width: 'auto', borderRadius: 6, background: '#fff2' }} />
+                {ci.logo_url && !logoFehler
+                  ? <img src={ci.logo_url} alt="Logo" onError={() => setLogoFehler(true)} style={{ height: 40, width: 'auto', borderRadius: 6, background: '#fff2' }} />
                   : <div style={{ height: 40, width: 40, borderRadius: 8, background: ci.farbe_sekundaer, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: ci.farbe_primaer }}>{(ci.firma || 'A').charAt(0).toUpperCase()}</div>}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ci.firma || 'Ihr Firmenname'}</div>
@@ -210,6 +229,24 @@ export default function WebauftrittPage() {
               <Feld label="Handelsregister (falls eingetragen)" value={ci.impressum_register} onChange={(v) => setF('impressum_register', v)} placeholder="HRB 12345, Amtsgericht Traunstein" />
             </div>
             <Feld label="Aufsichtsbehörde / Kammer (falls zutreffend)" value={ci.impressum_aufsicht} onChange={(v) => setF('impressum_aufsicht', v)} placeholder="z. B. Handwerkskammer München" />
+          </div>
+
+          {/* 5) Rechtstexte (automatisch aus den Angaben oben) */}
+          <div style={styles.card}>
+            <div style={styles.cardTitel}>5 · Ihre Rechtstexte <span style={styles.autoBadge}>automatisch erzeugt</span></div>
+            <p style={styles.mini}>
+              Aus Ihren Angaben oben — sie aktualisieren sich live. Diese Texte hängen später automatisch im Fuß
+              <b> jeder</b> Seite (Impressum · Datenschutz · AGB). Hier können Sie sie ansehen und kopieren.
+            </p>
+            <div style={styles.tabRow}>
+              {([['impressum', 'Impressum'], ['datenschutz', 'Datenschutz'], ['agb', 'AGB']] as const).map(([key, lbl]) => (
+                <button key={key} onClick={() => setRechtTab(key)} style={rechtTab === key ? styles.tabAktiv : styles.tab}>{lbl}</button>
+              ))}
+            </div>
+            <pre style={styles.rechtPre}>{rechtText}</pre>
+            <div>
+              <button style={styles.btnGhost} onClick={rechtKopieren}>{kopiert ? '✓ Kopiert' : '📋 Text kopieren'}</button>
+            </div>
           </div>
 
           <div style={styles.saveBar}>
@@ -278,6 +315,13 @@ const styles: Record<string, CSSProperties> = {
 
   saveBar: { display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: 15, fontWeight: 800, cursor: 'pointer' },
+  btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+
+  autoBadge: { background: `${C.cyan}1e`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: '2px 8px', fontSize: 11, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
+  tabRow: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  tab: { background: C.navy, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+  tabAktiv: { background: `${C.gold}22`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+  rechtPre: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', fontSize: 13, lineHeight: 1.6, color: C.text, whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', margin: 0, maxHeight: 360, overflow: 'auto' },
 
   hinweis: { marginTop: 14, fontSize: 13, color: C.textDim, background: 'rgba(0,229,255,0.06)', border: `1px solid rgba(0,229,255,0.2)`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
   dim: { color: C.textDim, fontSize: 14, marginTop: 8 },
