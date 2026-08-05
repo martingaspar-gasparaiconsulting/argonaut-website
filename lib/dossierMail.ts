@@ -21,7 +21,7 @@ export function dossierBestaetigenHtml(name: string | null, url: string): string
 
 /** Auslieferungs-Mail mit dem Dossier-Link (nach Bestätigung). */
 export function dossierAusliefernHtml(name: string | null, branche: string | null): string {
-  const link = `${BASIS_URL}/vorschau`;
+  const link = `${BASIS_URL}/api/oeffentlich/dossier-pdf?branche=${encodeURIComponent(branche || '')}`;
   return mailLayout('Ihr ARGONAUT-Dossier', `
     <p>Guten Tag${name ? ' ' + name : ''},</p>
     <p>vielen Dank für Ihr Interesse. Hier ist Ihr persönliches Dossier${branche ? ` für „${branche}"` : ''}:</p>
