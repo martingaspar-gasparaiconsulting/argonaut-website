@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -126,6 +128,20 @@ export default function KfzPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🚗 KFZ-Fachpaket</h1>
+      <div style={{ marginTop: 14 }}>
+        <KiAuge
+          modul="KFZ"
+          aktionHref="/dashboard/kfz"
+          aktionText="Zu den Fahrzeugen"
+          regel={(() => {
+            const t = new Date().toISOString().slice(0, 10);
+            const in30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+            const rot = fahrzeuge.filter((f) => f.hu_faellig && f.hu_faellig < t).length;
+            const gelb = fahrzeuge.filter((f) => f.hu_faellig && f.hu_faellig >= t && f.hu_faellig <= in30).length;
+            return augeAmpel('HU-Termine', { rot, gelb });
+          })()}
+        />
+      </div>
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'fahrzeuge' ? styles.tabAn : {}) }} onClick={() => setTab('fahrzeuge')}>
           🚙 Fahrzeuge {faellig > 0 && <span style={styles.pill}>{faellig}</span>}

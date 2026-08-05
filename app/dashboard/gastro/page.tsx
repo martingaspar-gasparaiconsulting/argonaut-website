@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeBelegung } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -127,6 +129,26 @@ export default function GastroPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🍽 Gastro & Hotel</h1>
+      <div style={{ marginTop: 14 }}>
+        <KiAuge
+          modul="Gastro & Hotel"
+          aktionHref="/dashboard/gastro"
+          aktionText="Zur Übersicht"
+          regel={(() => {
+            const t = heute();
+            const aktiveEinheiten = zimmer.filter((z) => z.aktiv).length;
+            const belegtJetzt = beleg.filter((b) => b.anreise <= t && b.abreise >= t).length;
+            return augeBelegung({
+              aktiveEinheiten,
+              belegtJetzt,
+              freiJetzt: Math.max(0, aktiveEinheiten - belegtJetzt),
+              anreisenHeute: beleg.filter((b) => b.anreise === t).length,
+              abreisenHeute: beleg.filter((b) => b.abreise === t).length,
+              reservierungenOffen: res.filter((r) => (r.status || 'offen') === 'offen').length,
+            });
+          })()}
+        />
+      </div>
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'res' ? styles.tabAn : {}) }} onClick={() => setTab('res')}>🍽 Reservierungen</button>
         <button style={{ ...styles.tab, ...(tab === 'hotel' ? styles.tabAn : {}) }} onClick={() => setTab('hotel')}>🛏 Hotel</button>
