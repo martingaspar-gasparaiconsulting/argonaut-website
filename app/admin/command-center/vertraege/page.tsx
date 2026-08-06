@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import Dreizack from '@/components/Dreizack';
+import VertragNeu from './VertragNeu';
+import VertragZeile from './VertragZeile';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · app/admin/command-center/vertraege/page.tsx
@@ -27,12 +29,6 @@ const MRR_BY_PLAN: Record<string, number> = { SOLO: 1799, START: 3000, PRO: 4000
 function eur(v: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v);
 }
-function datumDe(s: string | null): string {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 type Vertrag = {
   id: string;
   anbieter: string | null;
@@ -173,40 +169,18 @@ export default async function VertraegePage({
         <h2 style={{ fontFamily: 'var(--font-syne), sans-serif', fontSize: '1.15rem', fontWeight: 700, margin: '0 0 1rem' }}>
           Verträge ({vertraege.length})
         </h2>
+
+        <VertragNeu ansicht={ansicht} />
+
         {vertraege.length === 0 ? (
           <div style={{ background: C.card, border: `1px dashed ${C.border}`, borderRadius: 14, padding: '2rem', textAlign: 'center', color: C.dim }}>
             Noch keine Verträge erfasst. Das Hinzufügen kommt im nächsten Schritt — dann trägst du Vercel, Supabase, Domain &amp; Co. ein.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {vertraege.map((v) => {
-              const inaktiv = v.aktiv === false;
-              return (
-                <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '0.85rem 1rem', opacity: inaktiv ? 0.55 : 1 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600 }}>{v.anbieter || 'Ohne Anbieter'}</span>
-                      {v.bezeichnung && <span style={{ color: C.dim, fontSize: '0.85rem' }}>· {v.bezeichnung}</span>}
-                      {v.kategorie && <span style={{ fontSize: '0.72rem', color: C.dim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '0.05rem 0.4rem' }}>{v.kategorie}</span>}
-                      {inaktiv && <span style={{ fontSize: '0.72rem', color: C.dim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '0.05rem 0.4rem' }}>inaktiv</span>}
-                    </div>
-                    <div style={{ color: C.dim, fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                      {v.intervall === 'jahr' ? 'jährlich' : 'monatlich'} · {Number(v.absetzbar_prozent) || 0}% absetzbar
-                      {v.start_datum ? ` · ab ${datumDe(v.start_datum)}` : ''}
-                      {v.ende_datum ? ` · bis ${datumDe(v.ende_datum)}` : ''}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '1.05rem' }}>
-                      {eur(proMonat(v))}<span style={{ color: C.dim, fontSize: '0.75rem', fontWeight: 400 }}> / Mon.</span>
-                    </div>
-                    {v.intervall === 'jahr' && Number.isFinite(Number(v.betrag)) && (
-                      <div style={{ color: C.dim, fontSize: '0.72rem', marginTop: '0.2rem' }}>{eur(Number(v.betrag))} / Jahr</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {vertraege.map((v) => (
+              <VertragZeile key={v.id} vertrag={v} />
+            ))}
           </div>
         )}
 
