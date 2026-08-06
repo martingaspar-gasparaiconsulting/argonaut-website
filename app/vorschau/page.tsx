@@ -768,8 +768,8 @@ export default function VorschauPage() {
           </h3>
           <div className="arg-seats">
             {[
-              { nm: 'Voll-Nutzer', who: 'Chef, GF, Büro, Dispo — alle Module, volle Bearbeitung', pr: 'ab 380 €/Nutzer·Mon' },
-              { nm: 'Standard-Nutzer', who: 'Sachbearbeiter, Monteur mit Doku — operative Module', pr: 'ab 170 €/Nutzer·Mon' },
+              { nm: 'Voll-Nutzer', who: 'Chef, GF, Büro, Dispo — alle Module, volle Bearbeitung', pr: 'ab 420 €/Nutzer·Mon' },
+              { nm: 'Standard-Nutzer', who: 'Sachbearbeiter, Monteur mit Doku — operative Module', pr: 'ab 190 €/Nutzer·Mon' },
               { nm: 'Self-Service', who: 'Zeiterfassung, Lohnzettel, Mein Bereich — Basis-Zugang', pr: 'ab 19 €/Nutzer·Mon' },
             ].map((s) => (
               <div key={s.nm} className="arg-seat">
@@ -788,7 +788,7 @@ export default function VorschauPage() {
           <div className="arg-setup">
             <p style={{ fontWeight: 700, color: '#EAF1F6', margin: '0 0 6px' }}>Einmalige Einrichtung — einmal, dann läuft's</p>
             <p style={{ fontSize: '.9rem', color: '#c4d3db', margin: '0 0 8px', lineHeight: 1.6 }}>
-              SOLO 990 € · Mini 1.500 € · Klein 2.900 € · Mittel 4.900 € · Groß 9.900 € · Enterprise: Projekt auf Anfrage
+              SOLO 990 € · Mini 1.900 € · Klein 3.900 € · Mittel 7.900 € · Groß 14.900 € · Enterprise: ab 24.900 €
             </p>
             <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: 0, lineHeight: 1.55 }}>
               Einmalig bei Vertragsschluss fällig und per SEPA-Lastschrift eingezogen — vom Laufzeit-Rabatt ausgenommen (dieser gilt nur für die monatlichen Gebühren). Enthält Erstgespräch, komplette Einrichtung, Datenübernahme (bis 1 TB), persönliche Einweisung sowie Hologramm-Onboarding + Zertifikat.
