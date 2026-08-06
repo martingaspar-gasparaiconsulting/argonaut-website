@@ -6,13 +6,11 @@ import Dreizack from '@/components/Dreizack';
 import LogoutButton from '../LogoutButton';
 
 // ============================================================================
-// ARGONAUT OS · app/admin/command-center/page.tsx — NEU (Grundgerüst + KPIs)
-// Betreiber-Control-Room, komplett neu im sauberen Marken-Look (Navy/Gold,
-// Syne + DM Sans, clamp) — der alte Sci-Fi-iframe-Mockup ist ersetzt.
-// NUR FÜR MARTIN: zusätzlich zum Admin-Rollen-Schloss (app/admin/layout.tsx)
-// hart auf die Betreiber-User-ID gesperrt (ANALYSE_BETREIBER_ID).
-// Schritt 1: Kennzahlen-Leiste (echte Daten) + Sektionskacheln. Weitere
-// Sektionen füllen wir Schritt für Schritt.
+// ARGONAUT OS · app/admin/command-center/page.tsx — Betreiber-Cockpit
+// Nur für Martin (zusätzlich zum Admin-Rollen-Schloss hart auf ANALYSE_BETREIBER_ID).
+// Block A: Umschalter [Geschäftlich · Privat] + volles Kachel-Raster + echte
+// Kennzahlen. Weitere Bereiche (Belege/EÜR, Verträge/Kosten, E-Mail, Banking …)
+// füllen wir Block für Block. Sauberer Marken-Look (Navy/Gold, Syne+DM Sans, clamp).
 // ============================================================================
 
 export const dynamic = 'force-dynamic';
@@ -33,20 +31,24 @@ function admin() {
   return createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.SUPABASE_SERVICE_ROLE_KEY as string, { auth: { persistSession: false } });
 }
 
-export default async function CommandCenter() {
+type Kpi = { label: string; wert: string; sub: string; akzent: string };
+type Sektion = { titel: string; sub: string; href?: string; bald?: boolean };
+
+export default async function CommandCenter({ searchParams }: { searchParams: Promise<{ ansicht?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin-login');
-  // Nur der Betreiber sieht das Command Center (zusätzlich zum Rollen-Schloss).
   const betreiber = process.env.ANALYSE_BETREIBER_ID;
   if (betreiber && user.id !== betreiber) redirect('/admin');
+
+  const sp = await searchParams;
+  const ansicht: 'geschaeftlich' | 'privat' = sp?.ansicht === 'privat' ? 'privat' : 'geschaeftlich';
 
   // ── Kennzahlen (echte Daten, defensiv) ──────────────────────────────────
   const now = new Date();
   const monatStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const vor7Tagen = new Date(now.getTime() - 7 * 86400000).toISOString();
 
-  // Kunden + MRR (Nutzer-Client, RLS erlaubt Admin)
   const { data: rawCustomers } = await supabase.from('customers').select('paket, status');
   const customers = (rawCustomers as Array<{ paket?: string; status?: string }>) || [];
   const aktiveKunden = customers.filter((c) => c.status === 'active' || c.status === 'aktiv').length;
@@ -54,11 +56,8 @@ export default async function CommandCenter() {
     .filter((c) => (c.status === 'active' || c.status === 'aktiv') && c.paket && c.paket in MRR_BY_PLAN)
     .reduce((s, c) => s + MRR_BY_PLAN[c.paket as string], 0);
 
-  // Website + KI (Service-Role — direkter RPC ist aus dem Browser gesperrt)
   const db = admin();
-  let besucher7 = 0;
-  let anfragenMonat = 0;
-  let kiKostenUsd = 0;
+  let besucher7 = 0, anfragenMonat = 0, kiKostenUsd = 0;
   try {
     const { data: ov } = await db.rpc('web_stats_uebersicht', { seit: vor7Tagen, p_seite: 'argonaut-os' });
     besucher7 = ((ov as Array<{ besucher?: number }>) || [])[0]?.besucher || 0;
@@ -73,31 +72,57 @@ export default async function CommandCenter() {
   } catch { /* still */ }
   const kiKostenEur = kiKostenUsd * 0.92;
 
-  const kpis: { label: string; wert: string; sub: string; akzent: string }[] = [
+  const kpisGesch: Kpi[] = [
     { label: 'MRR / Monat', wert: eur(mrr), sub: 'wiederkehrend, aktive Kunden', akzent: C.gold },
     { label: 'Aktive Kunden', wert: String(aktiveKunden), sub: `${customers.length} gesamt`, akzent: C.cyan },
-    { label: 'Letzte SEPA-Zahlung', wert: '—', sub: 'Einzug · folgt', akzent: C.dim },
+    { label: 'Letzte SEPA-Zahlung', wert: '—', sub: 'Einzug · folgt (Block C)', akzent: C.dim },
     { label: 'Website-Besucher', wert: String(besucher7), sub: 'letzte 7 Tage · argonaut-os.com', akzent: C.cyan },
     { label: 'Anfragen / Termine', wert: String(anfragenMonat), sub: 'diesen Monat', akzent: C.green },
-    { label: 'KI-Kosten', wert: `≈ ${kiKostenEur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`, sub: 'diesen Monat', akzent: C.gold },
+    { label: 'KI-Kosten', wert: `≈ ${kiKostenEur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`, sub: 'diesen Monat · Anthropic-Token', akzent: C.gold },
+  ];
+  const kpisPrivat: Kpi[] = [
+    { label: 'Offene private Rechnungen', wert: '—', sub: 'folgt mit Beleg-Erfassung', akzent: C.dim },
+    { label: 'Lebenshaltung / Monat', wert: '—', sub: 'folgt · du pflegst es selbst', akzent: C.dim },
+    { label: 'Verfügbar', wert: '—', sub: 'Entnahme diesen Monat', akzent: C.dim },
   ];
 
-  const sektionen: { titel: string; sub: string; href?: string; bald?: boolean }[] = [
+  const sektionenGesch: Sektion[] = [
     { titel: 'Website-Analyse', sub: 'Besucher · Klicks · Kanäle · Termine', href: '/dashboard/analyse' },
     { titel: 'Kunden & Module', sub: 'Tenants, Onboarding, Freischaltung', href: '/admin/tenants' },
     { titel: 'Website-Anfragen', sub: 'Eingehende Anfragen & Leads', href: '/admin/anfragen' },
+    { titel: 'Rechnungen & SEPA-Einzug', sub: 'Abo-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },
-    { titel: 'Abo-Einzug', sub: 'SEPA-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'Branchen', sub: 'Branchen-Katalog & Module', href: '/admin/branchen' },
-    { titel: 'Pipeline', sub: 'Deals & nächste Schritte', bald: true },
+    { titel: 'Belege & EÜR', sub: 'Beleg-Foto → KI sortiert & bucht', bald: true },
+    { titel: 'Verträge & laufende Kosten', sub: 'System-Verträge, Anthropic, Break-even', bald: true },
+    { titel: 'Marketing', sub: 'Kampagnen, Newsletter, Reichweite', bald: true },
+    { titel: 'Vertrieb & Pipeline', sub: 'Deals & nächste Schritte', bald: true },
+    { titel: 'E-Mail', sub: 'Schreiben & Verlauf', bald: true },
+    { titel: 'Banking', sub: 'Konten & Bewegungen', bald: true },
     { titel: 'Systeme / Infrastruktur', sub: 'Vercel, Supabase, DATEV, Google', bald: true },
-    { titel: 'KI-Telefon', sub: 'Anrufe, Dauer, Ergebnisse', bald: true },
     { titel: 'Imperium', sub: 'Zukunftsperspektive', bald: true },
   ];
+  const sektionenPrivat: Sektion[] = [
+    { titel: 'Belege & EÜR — privat', sub: 'Beleg-Foto → KI erkennt „privat"', bald: true },
+    { titel: 'Offene private Rechnungen', sub: 'Bezeichnung, Betrag, fällig, bezahlt', bald: true },
+    { titel: 'Lebenshaltung & Entnahme', sub: 'Dein persönlicher Überblick', bald: true },
+  ];
+
+  const kpis = ansicht === 'privat' ? kpisPrivat : kpisGesch;
+  const sektionen = ansicht === 'privat' ? sektionenPrivat : sektionenGesch;
+
+  const tab = (key: 'geschaeftlich' | 'privat', label: string) => {
+    const aktiv = ansicht === key;
+    return (
+      <Link href={key === 'privat' ? '?ansicht=privat' : '/admin/command-center'} style={{
+        padding: '9px 18px', borderRadius: 999, fontSize: 'clamp(13px,1.1vw,15px)', fontWeight: 700, textDecoration: 'none',
+        color: aktiv ? C.navy : C.text, background: aktiv ? C.gold : 'transparent', border: `1px solid ${aktiv ? C.gold : C.border}`,
+      }}>{label}</Link>
+    );
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: C.navy, color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
-      {/* Kopf */}
       <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(10,22,40,0.97)', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: 1360, margin: '0 auto', padding: '0 clamp(16px,3vw,32px)', height: 70, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -117,9 +142,15 @@ export default async function CommandCenter() {
       </header>
 
       <main style={{ maxWidth: 1360, margin: '0 auto', padding: 'clamp(24px,4vw,48px) clamp(16px,3vw,32px) 80px' }}>
-        <div style={{ marginBottom: 'clamp(20px,3vw,34px)' }}>
+        <div style={{ marginBottom: 'clamp(16px,2vw,22px)' }}>
           <p style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 600 }}>Sofort-Überblick</p>
           <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 900, fontSize: 'clamp(28px,4vw,48px)', margin: 0 }}>Command Center</h1>
+        </div>
+
+        {/* Umschalter Geschäftlich · Privat */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 'clamp(20px,3vw,30px)' }}>
+          {tab('geschaeftlich', 'Geschäftlich')}
+          {tab('privat', 'Privat')}
         </div>
 
         {/* Kennzahlen-Leiste */}
@@ -134,8 +165,10 @@ export default async function CommandCenter() {
           ))}
         </section>
 
-        {/* Sektionen */}
-        <p style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 16px', fontWeight: 600 }}>Bereiche</p>
+        {/* Bereiche */}
+        <p style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 16px', fontWeight: 600 }}>
+          {ansicht === 'privat' ? 'Privat — nur für dich' : 'Bereiche'}
+        </p>
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(clamp(240px,26vw,320px),1fr))', gap: 'clamp(12px,1.4vw,18px)' }}>
           {sektionen.map((s) => {
             const inhalt = (
@@ -156,7 +189,7 @@ export default async function CommandCenter() {
         </section>
 
         <p style={{ marginTop: 'clamp(28px,4vw,44px)', color: C.dim, fontSize: 'clamp(11px,0.95vw,13px)', lineHeight: 1.6 }}>
-          Neues Grundgerüst · nur für dich sichtbar. Die einzelnen Bereiche füllen wir Schritt für Schritt mit Live-Inhalten.
+          Dein Cockpit · nur für dich sichtbar. „BALD" heißt: Struktur steht, Inhalt füllen wir Block für Block.
         </p>
       </main>
     </div>
