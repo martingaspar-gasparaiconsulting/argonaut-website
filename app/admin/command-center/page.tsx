@@ -94,7 +94,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },
     { titel: 'Branchen', sub: 'Branchen-Katalog & Module', href: '/admin/branchen' },
     { titel: 'Belege & EÜR', sub: 'Beleg-Foto → KI sortiert & bucht', href: '/admin/command-center/belege' },
-    { titel: 'Verträge & laufende Kosten', sub: 'System-Verträge, Anthropic, Break-even', bald: true },
+    { titel: 'Verträge & laufende Kosten', sub: 'System-Verträge, Anthropic, Break-even', href: '/admin/command-center/vertraege' },
     { titel: 'Marketing', sub: 'Kampagnen, Newsletter, Reichweite', bald: true },
     { titel: 'Vertrieb & Pipeline', sub: 'Deals & nächste Schritte', bald: true },
     { titel: 'E-Mail', sub: 'Schreiben & Verlauf', bald: true },
