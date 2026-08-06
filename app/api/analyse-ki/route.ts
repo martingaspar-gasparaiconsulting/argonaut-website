@@ -24,6 +24,16 @@ function admin() {
   );
 }
 
+type Db = ReturnType<typeof admin>;
+
+// Mandantenfähig: Nur die eigene(n) Seite(n) — 'argonaut-os' nur für den Betreiber.
+async function darfSeite(db: Db, userId: string, seite: string): Promise<boolean> {
+  if (seite === 'argonaut-os') return !!process.env.ANALYSE_BETREIBER_ID && userId === process.env.ANALYSE_BETREIBER_ID;
+  const { data } = await db.from('web_seiten').select('owner_user_id').eq('oeffentlich_id', seite).maybeSingle();
+  const row = data as { owner_user_id?: string } | null;
+  return !!row && row.owner_user_id === userId;
+}
+
 const SYSTEM = `Du bist „das KI-Auge" von ARGONAUT OS — der KI-Analyst für die Website eines deutschen Mittelstands-Betriebs.
 Du bekommst echte, anonyme Website-Kennzahlen. Deute sie nüchtern und gib klare, umsetzbare Empfehlungen.
 Regeln:
@@ -47,6 +57,9 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: 'KI nicht konfiguriert.' }, { status: 500 });
 
     const db = admin();
+    if (!(await darfSeite(db, user.id, seite))) {
+      return NextResponse.json({ error: 'Kein Zugriff auf diese Seite.' }, { status: 403 });
+    }
     const seit = new Date(Date.now() - tage * 86400000).toISOString();
     const p = { seit, p_seite: seite };
     const call = (fn: string) => db.rpc(fn, p);

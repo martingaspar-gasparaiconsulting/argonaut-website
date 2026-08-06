@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Website-Analyse — Dashboard (Paket 1: + KI-Auge & UI)
-// Cookiefreie Kennzahlen aus web_ereignisse + das KI-Auge, das die Zahlen
-// bewertet und 3 konkrete Handlungsempfehlungen gibt (/api/analyse-ki).
-// Pfad: app/dashboard/analyse/page.tsx
+// ARGONAUT OS · Website-Analyse — Dashboard (Paket 2b: mandantenfähig)
+// Kennzahlen + KI-Auge, jetzt über die SICHERE Route /api/analyse-daten.
+// Jeder sieht nur seine eigenen Seiten (Umschalter); direkter DB-Zugriff aus
+// dem Browser ist gesperrt. Pfad: app/dashboard/analyse/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
@@ -24,8 +24,7 @@ type Uebersicht = { aufrufe: number; besucher: number; klicks: number };
 type Erweitert = { sitzungen: number; absprungrate: number; seiten_pro_sitzung: number; avg_verweil_sek: number };
 type Zeile = { label: string; wert: number; zusatz?: string };
 type ZeitPunkt = { tag: string; aufrufe: number; besucher: number };
-
-const SEITE = 'argonaut-os'; // Phase 1: eigene Seite. Später Auswahl je Kundenseite.
+type SeitenEintrag = { seite: string; name: string };
 
 const ZEITRAEUME: { tage: number; label: string }[] = [
   { tage: 1, label: 'Heute' }, { tage: 7, label: '7 Tage' }, { tage: 30, label: '30 Tage' }, { tage: 90, label: '90 Tage' },
@@ -45,6 +44,8 @@ export default function AnalysePage() {
   const [uid, setUid] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [tage, setTage] = useState(7);
+  const [seiten, setSeiten] = useState<SeitenEintrag[]>([]);
+  const [seite, setSeite] = useState<string>('');
 
   const [ueber, setUeber] = useState<Uebersicht | null>(null);
   const [erw, setErw] = useState<Erweitert | null>(null);
@@ -54,45 +55,38 @@ export default function AnalysePage() {
   const [klicks, setKlicks] = useState<Zeile[]>([]);
   const [verweil, setVerweil] = useState<Zeile[]>([]);
   const [geraete, setGeraete] = useState<Zeile[]>([]);
-  const [browser, setBrowser] = useState<Zeile[]>([]);
+  const [browserL, setBrowserL] = useState<Zeile[]>([]);
   const [laender, setLaender] = useState<Zeile[]>([]);
   const [herkunft, setHerkunft] = useState<Zeile[]>([]);
   const [zeitreihe, setZeitreihe] = useState<ZeitPunkt[]>([]);
 
-  // KI-Auge
   const [kiLaden, setKiLaden] = useState(false);
   const [kiBewertung, setKiBewertung] = useState<string | null>(null);
   const [kiEmpfehlungen, setKiEmpfehlungen] = useState<string[]>([]);
   const [kiFehler, setKiFehler] = useState<string | null>(null);
 
-  const ladeAlles = useCallback(async (t: number) => {
-    const seit = new Date(Date.now() - t * 86400000).toISOString();
-    const p = { seit, p_seite: SEITE };
-    const rpc = (fn: string) => supabase.rpc(fn, p);
-    const [ov, ex, ts, kn, kp, kl, vs, gg, br, ld, rf, zr] = await Promise.all([
-      rpc('web_stats_uebersicht'), rpc('web_stats_erweitert'), rpc('web_top_seiten'),
-      rpc('web_nach_kanal'), rpc('web_nach_kampagne'), rpc('web_top_klicks'),
-      rpc('web_verweil_je_seite'), rpc('web_nach_geraet'), rpc('web_nach_browser'),
-      rpc('web_nach_land'), rpc('web_nach_referrer'), rpc('web_zeitreihe'),
-    ]);
-    setUeber(((ov.data as Uebersicht[]) || [])[0] || { aufrufe: 0, besucher: 0, klicks: 0 });
-    setErw(((ex.data as Erweitert[]) || [])[0] || null);
-    setTopSeiten(((ts.data as Array<{ pfad: string; aufrufe: number; besucher: number }>) || []).map((r) => ({ label: r.pfad, wert: r.aufrufe, zusatz: `${fmtZahl(r.besucher)} Besucher` })));
-    setKanaele(((kn.data as Array<{ kanal: string; aufrufe: number }>) || []).map((r) => ({ label: r.kanal, wert: r.aufrufe })));
-    setKampagnen(((kp.data as Array<{ quelle: string; medium: string; kampagne: string; aufrufe: number }>) || []).map((r) => ({ label: `${r.quelle} · ${r.medium}${r.kampagne && r.kampagne !== '—' ? ' · ' + r.kampagne : ''}`, wert: r.aufrufe })));
-    setKlicks(((kl.data as Array<{ ziel: string; anzahl: number }>) || []).map((r) => ({ label: r.ziel, wert: r.anzahl })));
-    setVerweil(((vs.data as Array<{ pfad: string; avg_sek: number; messungen: number }>) || []).map((r) => ({ label: r.pfad, wert: Math.round(r.avg_sek), zusatz: fmtDauer(r.avg_sek) })));
-    setGeraete(((gg.data as Array<{ geraet: string; anzahl: number }>) || []).map((r) => ({ label: r.geraet, wert: r.anzahl })));
-    setBrowser(((br.data as Array<{ browser: string; anzahl: number }>) || []).map((r) => ({ label: r.browser, wert: r.anzahl })));
-    setLaender(((ld.data as Array<{ land: string; anzahl: number }>) || []).map((r) => ({ label: r.land, wert: r.anzahl })));
-    setHerkunft(((rf.data as Array<{ referrer: string; anzahl: number }>) || []).map((r) => ({ label: r.referrer, wert: r.anzahl })));
-    setZeitreihe(((zr.data as Array<{ tag: string; aufrufe: number; besucher: number }>) || []).map((r) => ({ tag: r.tag, aufrufe: r.aufrufe, besucher: r.besucher })));
+  const ladeDaten = useCallback(async (s: string, t: number) => {
+    const res = await fetch('/api/analyse-daten', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'daten', seite: s, tage: t }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    setUeber((d.ueber as Uebersicht) || { aufrufe: 0, besucher: 0, klicks: 0 });
+    setErw((d.erw as Erweitert) || null);
+    setTopSeiten(((d.topSeiten as Array<{ pfad: string; aufrufe: number; besucher: number }>) || []).map((r) => ({ label: r.pfad, wert: r.aufrufe, zusatz: `${fmtZahl(r.besucher)} Besucher` })));
+    setKanaele(((d.kanaele as Array<{ kanal: string; aufrufe: number }>) || []).map((r) => ({ label: r.kanal, wert: r.aufrufe })));
+    setKampagnen(((d.kampagnen as Array<{ quelle: string; medium: string; kampagne: string; aufrufe: number }>) || []).map((r) => ({ label: `${r.quelle} · ${r.medium}${r.kampagne && r.kampagne !== '—' ? ' · ' + r.kampagne : ''}`, wert: r.aufrufe })));
+    setKlicks(((d.klicks as Array<{ ziel: string; anzahl: number }>) || []).map((r) => ({ label: r.ziel, wert: r.anzahl })));
+    setVerweil(((d.verweil as Array<{ pfad: string; avg_sek: number }>) || []).map((r) => ({ label: r.pfad, wert: Math.round(r.avg_sek), zusatz: fmtDauer(r.avg_sek) })));
+    setGeraete(((d.geraete as Array<{ geraet: string; anzahl: number }>) || []).map((r) => ({ label: r.geraet, wert: r.anzahl })));
+    setBrowserL(((d.browser as Array<{ browser: string; anzahl: number }>) || []).map((r) => ({ label: r.browser, wert: r.anzahl })));
+    setLaender(((d.laender as Array<{ land: string; anzahl: number }>) || []).map((r) => ({ label: r.land, wert: r.anzahl })));
+    setHerkunft(((d.herkunft as Array<{ referrer: string; anzahl: number }>) || []).map((r) => ({ label: r.referrer, wert: r.anzahl })));
+    setZeitreihe(((d.zeitreihe as ZeitPunkt[]) || []).map((r) => ({ tag: r.tag, aufrufe: r.aufrufe, besucher: r.besucher })));
   }, []);
 
-  const frageKiAuge = useCallback(async (t: number) => {
+  const frageKiAuge = useCallback(async (s: string, t: number) => {
     setKiLaden(true); setKiFehler(null);
     try {
-      const res = await fetch('/api/analyse-ki', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tage: t, seite: SEITE }) });
+      const res = await fetch('/api/analyse-ki', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tage: t, seite: s }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error || 'Fehler');
       setKiBewertung(d.bewertung || null);
@@ -107,43 +101,68 @@ export default function AnalysePage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      setUid(data?.user?.id ?? null);
+      const id = data?.user?.id ?? null;
+      setUid(id);
+      if (id) {
+        const res = await fetch('/api/analyse-daten', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'liste' }) });
+        const d = await res.json().catch(() => ({}));
+        const liste = (d.seiten as SeitenEintrag[]) || [];
+        setSeiten(liste);
+        setSeite(liste[0]?.seite || '');
+      }
       setLaden(false);
     })();
   }, []);
 
   useEffect(() => {
-    if (!uid) return;
-    ladeAlles(tage);
-    setKiBewertung(null); setKiEmpfehlungen([]); setKiFehler(null); // KI-Ergebnis gehört zum alten Zeitraum
-  }, [uid, tage, ladeAlles]);
+    if (!uid || !seite) return;
+    ladeDaten(seite, tage);
+    setKiBewertung(null); setKiEmpfehlungen([]); setKiFehler(null);
+  }, [uid, seite, tage, ladeDaten]);
 
   const hatDaten = (ueber?.aufrufe || 0) > 0;
+  const seiteName = seiten.find((s) => s.seite === seite)?.name || seite;
   const wrap: CSSProperties = { background: C.navy, minHeight: '100vh', color: C.text, padding: 'clamp(16px,3vw,40px)', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' };
 
   if (laden) return <div style={wrap}>Lädt …</div>;
   if (!uid) return <div style={wrap}>Bitte einloggen, um die Website-Analyse zu sehen.</div>;
+  if (!seite) return (
+    <div style={wrap}>
+      <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800 }}>Website-Analyse</h1>
+      <p style={{ color: C.textDim, maxWidth: 620, lineHeight: 1.6 }}>
+        Für dein Konto ist noch keine Seite freigeschaltet. Sobald du eine Website veröffentlichst (oder als Betreiber die Betreiber-ID gesetzt ist), erscheint sie hier zur Auswahl.
+      </p>
+    </div>
+  );
 
   return (
     <div style={wrap}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 22 }}>
         <div>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 'clamp(24px,2.4vw,38px)', color: C.text }}>
-            Website-Analyse <span style={{ color: C.gold }}>·</span> argonaut-os.com
+            Website-Analyse <span style={{ color: C.gold }}>·</span> {seiteName}
           </h1>
           <p style={{ margin: '6px 0 0', color: C.textDim, fontSize: 14 }}>
             Cookiefrei &amp; anonym — wer kommt, wie lange bleibt er, woher kam er, wohin klickt er.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {ZEITRAEUME.map((z) => (
-            <button key={z.tage} onClick={() => setTage(z.tage)}
-              style={{ padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600,
-                background: tage === z.tage ? C.gold : 'transparent', color: tage === z.tage ? C.navy : C.textDim,
-                border: `1px solid ${tage === z.tage ? C.gold : C.border}` }}>
-              {z.label}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {seiten.length > 1 && (
+            <select value={seite} onChange={(e) => setSeite(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: 10, background: C.navy2, color: C.text, border: `1px solid ${C.border}`, fontSize: 14 }}>
+              {seiten.map((s) => <option key={s.seite} value={s.seite}>{s.name}</option>)}
+            </select>
+          )}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {ZEITRAEUME.map((z) => (
+              <button key={z.tage} onClick={() => setTage(z.tage)}
+                style={{ padding: '8px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                  background: tage === z.tage ? C.gold : 'transparent', color: tage === z.tage ? C.navy : C.textDim,
+                  border: `1px solid ${tage === z.tage ? C.gold : C.border}` }}>
+                {z.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -157,7 +176,7 @@ export default function AnalysePage() {
               <div style={{ fontSize: 12.5, color: C.textDim }}>Was heißt das gerade für mich?</div>
             </div>
           </div>
-          <button onClick={() => frageKiAuge(tage)} disabled={kiLaden}
+          <button onClick={() => frageKiAuge(seite, tage)} disabled={kiLaden}
             style={{ padding: '10px 18px', borderRadius: 12, cursor: kiLaden ? 'default' : 'pointer', fontWeight: 700, fontSize: 14,
               background: kiLaden ? 'transparent' : C.cyan, color: kiLaden ? C.cyan : C.navy, border: `1px solid ${C.cyan}` }}>
             {kiLaden ? 'Das KI-Auge schaut hin …' : (kiBewertung ? 'Neu bewerten' : 'Jetzt bewerten')}
@@ -190,11 +209,10 @@ export default function AnalysePage() {
 
       {!hatDaten && (
         <div style={{ padding: '18px 20px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.navy2, color: C.textDim, marginBottom: 22 }}>
-          Noch keine Daten in diesem Zeitraum. Öffne einmal <strong style={{ color: C.text }}>argonaut-os.com</strong>, klick dich durch ein paar Seiten — nach wenigen Sekunden erscheinen hier die ersten Zahlen.
+          Noch keine Daten in diesem Zeitraum für <strong style={{ color: C.text }}>{seiteName}</strong>. Sobald Besucher kommen, erscheinen hier die Zahlen.
         </div>
       )}
 
-      {/* KPI-Kacheln */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 22 }}>
         <Kachel label="Besucher" wert={fmtZahl(ueber?.besucher)} akzent={C.cyan} />
         <Kachel label="Seitenaufrufe" wert={fmtZahl(ueber?.aufrufe)} akzent={C.text} />
@@ -214,13 +232,13 @@ export default function AnalysePage() {
         {kampagnen.length > 0 && <Liste titel="Kampagnen & Anzeigen (UTM)" zeilen={kampagnen} akzent={C.warn} />}
         <Liste titel="Herkunft (verweisende Seiten)" zeilen={herkunft} akzent={C.cyan} />
         <Liste titel="Geräte" zeilen={geraete} akzent={C.text} />
-        <Liste titel="Browser" zeilen={browser} akzent={C.text} />
+        <Liste titel="Browser" zeilen={browserL} akzent={C.text} />
         <Liste titel="Länder" zeilen={laender} akzent={C.text} />
       </div>
 
       <p style={{ marginTop: 26, color: C.textDim, fontSize: 12.5, lineHeight: 1.6 }}>
         Anonyme Messung ohne Cookies — es wird keine IP gespeichert. „Besucher" zählt eindeutige Besucher je Tag.
-        Sitzungen/Absprungrate werden aus dem Besuchsverlauf (30-Minuten-Fenster) berechnet.
+        Zugriff serverseitig geprüft: jeder sieht nur seine eigenen Seiten.
       </p>
     </div>
   );
