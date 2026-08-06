@@ -93,7 +93,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     { titel: 'Rechnungen & SEPA-Einzug', sub: 'Abo-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },
     { titel: 'Branchen', sub: 'Branchen-Katalog & Module', href: '/admin/branchen' },
-    { titel: 'Belege & EÜR', sub: 'Beleg-Foto → KI sortiert & bucht', bald: true },
+    { titel: 'Belege & EÜR', sub: 'Beleg-Foto → KI sortiert & bucht', href: '/admin/command-center/belege' },
     { titel: 'Verträge & laufende Kosten', sub: 'System-Verträge, Anthropic, Break-even', bald: true },
     { titel: 'Marketing', sub: 'Kampagnen, Newsletter, Reichweite', bald: true },
     { titel: 'Vertrieb & Pipeline', sub: 'Deals & nächste Schritte', bald: true },
