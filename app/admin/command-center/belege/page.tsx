@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import Dreizack from '@/components/Dreizack';
+import UploadWidget from './UploadWidget';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · app/admin/command-center/belege/page.tsx
@@ -166,6 +167,9 @@ export default async function BelegePage({
             </div>
           ))}
         </div>
+
+        {/* Upload (B3b) */}
+        <UploadWidget ansicht={ansicht} />
 
         {/* Belege-Liste */}
         <h2 style={{ fontFamily: 'var(--font-syne), sans-serif', fontSize: '1.15rem', fontWeight: 700, margin: '0 0 1rem' }}>
