@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import Dreizack from '@/components/Dreizack';
 import UploadWidget from './UploadWidget';
+import BelegZeile from './BelegZeile';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · app/admin/command-center/belege/page.tsx
@@ -27,12 +28,6 @@ const C = {
 function eur(v: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v);
 }
-function datumDe(s: string | null): string {
-  if (!s) return '—';
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 type Beleg = {
   id: string;
   art: string | null;
@@ -177,47 +172,13 @@ export default async function BelegePage({
         </h2>
         {belege.length === 0 ? (
           <div style={{ background: C.card, border: `1px dashed ${C.border}`, borderRadius: 14, padding: '2rem', textAlign: 'center', color: C.dim }}>
-            Noch keine Belege in dieser Ansicht. Sobald der Upload steht, erscheinen sie hier mit KI-Vorschlag.
+            Noch keine Belege in dieser Ansicht. Lade oben einen Beleg hoch — er erscheint hier mit KI-Vorschlag zum Bestätigen.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {belege.map((b) => {
-              const bild = b.bild_pfad ? urlFuer[b.bild_pfad] : undefined;
-              const betrag = Number.isFinite(Number(b.betrag_brutto)) ? eur(Number(b.betrag_brutto)) : '—';
-              const istEinnahme = b.richtung === 'einnahme';
-              return (
-                <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', gap: '1rem', alignItems: 'center', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '0.85rem 1rem' }}>
-                  {/* Vorschau */}
-                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {bild
-                      ? <img src={bild} alt="Beleg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ color: C.dim, fontSize: '1.4rem' }}>🧾</span>}
-                  </div>
-                  {/* Mitte */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600 }}>{b.haendler || 'Ohne Händler'}</span>
-                      {b.kategorie && <span style={{ fontSize: '0.72rem', color: C.dim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '0.05rem 0.4rem' }}>{b.kategorie}</span>}
-                      {!b.bestaetigt && <span style={{ fontSize: '0.72rem', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 6, padding: '0.05rem 0.4rem' }}>KI-Vorschlag</span>}
-                    </div>
-                    <div style={{ color: C.dim, fontSize: '0.82rem', marginTop: '0.2rem' }}>
-                      {datumDe(b.datum)} · {istEinnahme ? 'Einnahme' : 'Ausgabe'}
-                      {!istEinnahme && ` · ${Number(b.absetzbar_prozent) || 0}% absetzbar`}
-                      {b.abschreibung === 'afa' && b.afa_jahre ? ` · AfA ${b.afa_jahre} J.` : b.abschreibung === 'afa' ? ' · AfA' : ''}
-                    </div>
-                  </div>
-                  {/* Rechts */}
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: '1.05rem', color: istEinnahme ? C.green : C.text }}>
-                      {istEinnahme ? '+' : '−'}{betrag.replace('-', '')}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: b.bestaetigt ? C.green : C.dim, marginTop: '0.2rem' }}>
-                      {b.bestaetigt ? '✓ bestätigt' : 'offen'}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {belege.map((b) => (
+              <BelegZeile key={b.id} beleg={b} bild={b.bild_pfad ? urlFuer[b.bild_pfad] : undefined} />
+            ))}
           </div>
         )}
 
