@@ -404,6 +404,14 @@ export default async function DashboardPage() {
               <KpiKachel href="/dashboard/zeiterfassung" icon="🕐" label="Jetzt eingestempelt" wert={eingestempelt} sub={eingestempelt === 1 ? 'Person im Dienst' : 'Personen im Dienst'} akzent="#00e5ff" />
             </div>
           </div>
+
+          {/* 🌐 Marketing / Website */}
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🌐 Marketing / Website</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+              <KpiKachel href="/dashboard/analyse" icon="📊" label="Website-Analyse" wert="Öffnen" sub="Besucher · KI-Auge" akzent="#00e5ff" />
+            </div>
+          </div>
         </section>
 
         {/* LIVE-FEED: Letzte 24 Stunden */}
