@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import { Syne, DM_Sans } from 'next/font/google'
 import './globals.css'
 const syne = Syne({
@@ -59,6 +60,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         {children}
+        {/* Cookiefreie Website-Analyse (eigene Seite = 'argonaut-os'). */}
+        <Script src="/analyse.js" strategy="afterInteractive" />
       </body>
     </html>
   )
