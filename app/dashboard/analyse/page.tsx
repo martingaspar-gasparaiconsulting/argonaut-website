@@ -1,11 +1,9 @@
 'use client';
 
 // ============================================================
-// ARGONAUT OS · Website-Analyse — Dashboard (Schritt 4b)
-// Zeigt die cookiefreien Kennzahlen aus web_ereignisse: Besucher,
-// Aufrufe, Verweildauer, Absprungrate, Kanäle/Anzeigen, Top-Seiten,
-// Wohin-geklickt, Geräte, Browser, Länder, Herkunft, Zeitverlauf.
-// Liest ausschließlich über die security-definer-Funktionen (Schritt 1 + 4a).
+// ARGONAUT OS · Website-Analyse — Dashboard (Paket 1: + KI-Auge & UI)
+// Cookiefreie Kennzahlen aus web_ereignisse + das KI-Auge, das die Zahlen
+// bewertet und 3 konkrete Handlungsempfehlungen gibt (/api/analyse-ki).
 // Pfad: app/dashboard/analyse/page.tsx
 // ============================================================
 
@@ -27,22 +25,17 @@ type Erweitert = { sitzungen: number; absprungrate: number; seiten_pro_sitzung: 
 type Zeile = { label: string; wert: number; zusatz?: string };
 type ZeitPunkt = { tag: string; aufrufe: number; besucher: number };
 
-const SEITE = 'argonaut-os'; // Phase 1: die eigene Seite. Später: Auswahl je Kundenseite.
+const SEITE = 'argonaut-os'; // Phase 1: eigene Seite. Später Auswahl je Kundenseite.
 
 const ZEITRAEUME: { tage: number; label: string }[] = [
-  { tage: 1, label: 'Heute' },
-  { tage: 7, label: '7 Tage' },
-  { tage: 30, label: '30 Tage' },
-  { tage: 90, label: '90 Tage' },
+  { tage: 1, label: 'Heute' }, { tage: 7, label: '7 Tage' }, { tage: 30, label: '30 Tage' }, { tage: 90, label: '90 Tage' },
 ];
 
 function fmtDauer(sek: number | null | undefined): string {
   const s = Math.round(Number(sek) || 0);
   if (s <= 0) return '–';
   if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}m ${r.toString().padStart(2, '0')}s`;
+  return `${Math.floor(s / 60)}m ${(s % 60).toString().padStart(2, '0')}s`;
 }
 function fmtZahl(n: number | null | undefined): string {
   return (Number(n) || 0).toLocaleString('de-DE');
@@ -51,7 +44,6 @@ function fmtZahl(n: number | null | undefined): string {
 export default function AnalysePage() {
   const [uid, setUid] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
-  const [aktualisiert, setAktualisiert] = useState(false);
   const [tage, setTage] = useState(7);
 
   const [ueber, setUeber] = useState<Uebersicht | null>(null);
@@ -67,8 +59,13 @@ export default function AnalysePage() {
   const [herkunft, setHerkunft] = useState<Zeile[]>([]);
   const [zeitreihe, setZeitreihe] = useState<ZeitPunkt[]>([]);
 
+  // KI-Auge
+  const [kiLaden, setKiLaden] = useState(false);
+  const [kiBewertung, setKiBewertung] = useState<string | null>(null);
+  const [kiEmpfehlungen, setKiEmpfehlungen] = useState<string[]>([]);
+  const [kiFehler, setKiFehler] = useState<string | null>(null);
+
   const ladeAlles = useCallback(async (t: number) => {
-    setAktualisiert(true);
     const seit = new Date(Date.now() - t * 86400000).toISOString();
     const p = { seit, p_seite: SEITE };
     const rpc = (fn: string) => supabase.rpc(fn, p);
@@ -90,7 +87,21 @@ export default function AnalysePage() {
     setLaender(((ld.data as Array<{ land: string; anzahl: number }>) || []).map((r) => ({ label: r.land, wert: r.anzahl })));
     setHerkunft(((rf.data as Array<{ referrer: string; anzahl: number }>) || []).map((r) => ({ label: r.referrer, wert: r.anzahl })));
     setZeitreihe(((zr.data as Array<{ tag: string; aufrufe: number; besucher: number }>) || []).map((r) => ({ tag: r.tag, aufrufe: r.aufrufe, besucher: r.besucher })));
-    setAktualisiert(false);
+  }, []);
+
+  const frageKiAuge = useCallback(async (t: number) => {
+    setKiLaden(true); setKiFehler(null);
+    try {
+      const res = await fetch('/api/analyse-ki', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tage: t, seite: SEITE }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Fehler');
+      setKiBewertung(d.bewertung || null);
+      setKiEmpfehlungen(Array.isArray(d.empfehlungen) ? d.empfehlungen : []);
+    } catch (e) {
+      setKiFehler(e instanceof Error ? e.message : 'Das KI-Auge ist gerade nicht erreichbar.');
+    } finally {
+      setKiLaden(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -101,10 +112,13 @@ export default function AnalysePage() {
     })();
   }, []);
 
-  useEffect(() => { if (uid) ladeAlles(tage); }, [uid, tage, ladeAlles]);
+  useEffect(() => {
+    if (!uid) return;
+    ladeAlles(tage);
+    setKiBewertung(null); setKiEmpfehlungen([]); setKiFehler(null); // KI-Ergebnis gehört zum alten Zeitraum
+  }, [uid, tage, ladeAlles]);
 
   const hatDaten = (ueber?.aufrufe || 0) > 0;
-
   const wrap: CSSProperties = { background: C.navy, minHeight: '100vh', color: C.text, padding: 'clamp(16px,3vw,40px)', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' };
 
   if (laden) return <div style={wrap}>Lädt …</div>;
@@ -112,7 +126,7 @@ export default function AnalysePage() {
 
   return (
     <div style={wrap}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 22 }}>
         <div>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 'clamp(24px,2.4vw,38px)', color: C.text }}>
             Website-Analyse <span style={{ color: C.gold }}>·</span> argonaut-os.com
@@ -133,14 +147,55 @@ export default function AnalysePage() {
         </div>
       </div>
 
+      {/* ---- KI-Auge ---- */}
+      <div style={{ position: 'relative', background: 'linear-gradient(180deg,#0d1a30,#0b1526)', border: `1px solid ${C.cyan}55`, borderRadius: 18, padding: '18px 20px', marginBottom: 22, boxShadow: `0 0 0 1px ${C.cyan}18, 0 10px 40px -20px ${C.cyan}` }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Auge />
+            <div>
+              <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, color: C.gold, letterSpacing: '.02em' }}>ARGONAUT · KI-Auge</div>
+              <div style={{ fontSize: 12.5, color: C.textDim }}>Was heißt das gerade für mich?</div>
+            </div>
+          </div>
+          <button onClick={() => frageKiAuge(tage)} disabled={kiLaden}
+            style={{ padding: '10px 18px', borderRadius: 12, cursor: kiLaden ? 'default' : 'pointer', fontWeight: 700, fontSize: 14,
+              background: kiLaden ? 'transparent' : C.cyan, color: kiLaden ? C.cyan : C.navy, border: `1px solid ${C.cyan}` }}>
+            {kiLaden ? 'Das KI-Auge schaut hin …' : (kiBewertung ? 'Neu bewerten' : 'Jetzt bewerten')}
+          </button>
+        </div>
+
+        {kiFehler && <div style={{ marginTop: 14, color: C.danger, fontSize: 13.5 }}>{kiFehler}</div>}
+
+        {kiBewertung && (
+          <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+            <p style={{ margin: 0, color: C.text, fontSize: 15.5, lineHeight: 1.55 }}>{kiBewertung}</p>
+            {kiEmpfehlungen.length > 0 && (
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {kiEmpfehlungen.map((e, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ color: C.cyan, fontWeight: 800, lineHeight: 1.5 }}>▸</span>
+                    <span style={{ color: C.text, fontSize: 14.5, lineHeight: 1.5 }}>{e}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {!kiBewertung && !kiFehler && !kiLaden && (
+          <div style={{ marginTop: 12, color: C.textDim, fontSize: 13.5 }}>
+            Ein Klick — und die KI liest deine Zahlen und sagt dir in Klartext, was gut läuft und was du als Nächstes tun solltest.
+          </div>
+        )}
+      </div>
+
       {!hatDaten && (
-        <div style={{ padding: '18px 20px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.navy2, color: C.textDim, marginBottom: 24 }}>
-          Noch keine Daten in diesem Zeitraum. Öffne einmal <strong style={{ color: C.text }}>argonaut-os.com</strong>, klick dich durch ein paar Seiten — nach wenigen Sekunden erscheinen hier die ersten Zahlen. {aktualisiert ? '(lädt …)' : ''}
+        <div style={{ padding: '18px 20px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.navy2, color: C.textDim, marginBottom: 22 }}>
+          Noch keine Daten in diesem Zeitraum. Öffne einmal <strong style={{ color: C.text }}>argonaut-os.com</strong>, klick dich durch ein paar Seiten — nach wenigen Sekunden erscheinen hier die ersten Zahlen.
         </div>
       )}
 
       {/* KPI-Kacheln */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 26 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 22 }}>
         <Kachel label="Besucher" wert={fmtZahl(ueber?.besucher)} akzent={C.cyan} />
         <Kachel label="Seitenaufrufe" wert={fmtZahl(ueber?.aufrufe)} akzent={C.text} />
         <Kachel label="Ø Verweildauer" wert={fmtDauer(erw?.avg_verweil_sek)} akzent={C.gold} />
@@ -149,12 +204,8 @@ export default function AnalysePage() {
         <Kachel label="Klicks erfasst" wert={fmtZahl(ueber?.klicks)} akzent={C.text} />
       </div>
 
-      {/* Zeitverlauf */}
-      <Karte titel="Zeitverlauf (Aufrufe pro Tag)">
-        <Verlauf punkte={zeitreihe} />
-      </Karte>
+      <Karte titel="Zeitverlauf (Aufrufe pro Tag)"><Verlauf punkte={zeitreihe} /></Karte>
 
-      {/* Tabellen-Raster */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 18, marginTop: 18 }}>
         <Liste titel="Kanäle — woher kam der Besucher" zeilen={kanaele} akzent={C.cyan} hinweis="direkt · organische Suche · bezahlt (Anzeige) · Social · Verweis-Link · E-Mail" />
         <Liste titel="Top-Seiten" zeilen={topSeiten} akzent={C.gold} />
@@ -167,10 +218,23 @@ export default function AnalysePage() {
         <Liste titel="Länder" zeilen={laender} akzent={C.text} />
       </div>
 
-      <p style={{ marginTop: 28, color: C.textDim, fontSize: 12.5, lineHeight: 1.6 }}>
+      <p style={{ marginTop: 26, color: C.textDim, fontSize: 12.5, lineHeight: 1.6 }}>
         Anonyme Messung ohne Cookies — es wird keine IP gespeichert. „Besucher" zählt eindeutige Besucher je Tag.
         Sitzungen/Absprungrate werden aus dem Besuchsverlauf (30-Minuten-Fenster) berechnet.
       </p>
+    </div>
+  );
+}
+
+function Auge() {
+  return (
+    <div style={{ width: 44, height: 44, borderRadius: 12, background: '#0b1526', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 22px -4px ${C.cyan}` }}>
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+        <ellipse cx="16" cy="16" rx="14" ry="9" fill="none" stroke={C.cyan} strokeWidth="2.4" />
+        <circle cx="16" cy="16" r="5.4" fill={C.cyan} />
+        <circle cx="16" cy="16" r="2.6" fill="#07121f" />
+        <circle cx="13.6" cy="13.6" r="1.2" fill="#EAF6FF" />
+      </svg>
     </div>
   );
 }
@@ -201,8 +265,7 @@ function Verlauf({ punkte }: { punkte: ZeitPunkt[] }) {
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
       {punkte.map((p) => (
         <div key={p.tag} title={`${p.tag}: ${p.aufrufe} Aufrufe · ${p.besucher} Besucher`}
-          style={{ flex: 1, minWidth: 4, background: C.cyan, opacity: 0.85, borderRadius: '4px 4px 0 0',
-            height: `${Math.max(4, (p.aufrufe / max) * 116)}px` }} />
+          style={{ flex: 1, minWidth: 4, background: C.cyan, opacity: 0.85, borderRadius: '4px 4px 0 0', height: `${Math.max(4, (p.aufrufe / max) * 116)}px` }} />
       ))}
     </div>
   );
