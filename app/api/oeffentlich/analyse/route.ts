@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
 
 // ============================================================================
@@ -116,6 +117,25 @@ export async function POST(req: Request) {
     const typRoh = String(b.typ || 'view');
     const typ = typRoh === 'click' || typRoh === 'verweil' ? typRoh : 'view';
     const pfad = str(b.pfad, 300) || '/';
+
+    // ── Eigene Aufrufe NIE mitzählen (Analyse-Genauigkeit für den Betreiber) ──
+    // 1) Admin/Control-Room-Pfade: dort landet nie ein echter Besucher.
+    if (pfad.startsWith('/admin')) {
+      return NextResponse.json({ ok: true, ignoriert: 'admin' }, { headers: CORS });
+    }
+    // 2) Der Betreiber selbst: wenn er eingeloggt ist, zählt keine seiner Berührungen.
+    //    (Anonyme Besucher haben kein Cookie → kein Netz-Call, kein Overhead.)
+    try {
+      const betreiber = process.env.ANALYSE_BETREIBER_ID;
+      if (betreiber) {
+        const sb = await createServerClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (user && user.id === betreiber) {
+          return NextResponse.json({ ok: true, ignoriert: 'betreiber' }, { headers: CORS });
+        }
+      }
+    } catch { /* Tracking darf die Besucher-Seite NIE stören → still weiter */ }
+
     const titel = str(b.titel, 300);
     const ziel = typ === 'click' ? str(b.ziel, 200) : null;
     const verweildauer_ms = typ === 'verweil' ? ganzzahl(b.verweildauer_ms, 1000 * 60 * 60) : null;
