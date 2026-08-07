@@ -328,6 +328,25 @@ export default function MarketingCockpit() {
             📊 Analytics-Board
           </a>
           <a
+            href="/dashboard/marketing/roi-verzahnung"
+            style={{
+              background: 'rgba(76,175,125,0.12)',
+              color: C.green,
+              border: `1px solid ${C.green}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+              fontWeight: 700,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            🔗 ROI-Verzahnung
+          </a>
+          <a
             href="/dashboard/marketing/cockpit"
             style={{
               background: C.gold,
