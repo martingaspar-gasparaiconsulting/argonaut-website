@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { fasseCockpit } from '@/lib/marketingCockpit';
 import { lagebericht, lageAmpel, type LageInput } from '@/lib/marketingLagebericht';
 import { funnelJeVariante, abSieger } from '@/lib/lpAnalytics';
+import { leadsJeBundesland } from '@/lib/plzBundesland';
 import { kiFetch } from '@/lib/ki';
 
 // ============================================================================
@@ -51,7 +52,7 @@ export async function GET() {
       hole(supabase, 'whatsapp_versand', 'status'),
       hole(supabase, 'ads_kampagne', 'status, tagesbudget'),
       hole(supabase, 'ads_ergebnis', 'ausgaben, umsatz, klicks, conversions'),
-      hole(supabase, 'leads', 'status, kampagne_id, quelle, created_at'),
+      hole(supabase, 'leads', 'status, kampagne_id, quelle, created_at, plz'),
     ]);
 
   const cockpit = fasseCockpit({
@@ -136,7 +137,20 @@ export async function GET() {
     lp, web,
   };
 
+  // Region (geschätzt aus PLZ) — nur Leads mit gültiger PLZ.
+  const regionen = leadsJeBundesland(leadsRoh as Array<{ plz?: unknown }>);
+
   const befunde = lagebericht(input);
+  if (regionen.length >= 2) {
+    const top = regionen[0];
+    const schwach = regionen[regionen.length - 1];
+    befunde.unshift({
+      schwere: 'hinweis',
+      titel: `Meiste Leads aus ${top.land}`,
+      kennzahl: `${top.anzahl} Leads`,
+      text: `Aus „${top.land}" kommen die meisten Anfragen (${top.anzahl}), aus „${schwach.land}" nur ${schwach.anzahl}. Werbung und Angebote stärker auf ${top.land} ausrichten (Region geschätzt aus der PLZ).`,
+    });
+  }
   const ampel = lageAmpel(befunde);
 
   // KI-Klartext (best effort — erfindet keine Zahlen, nur die Befunde).
@@ -168,6 +182,7 @@ export async function GET() {
       aktiveKanaele: cockpit.gesamt.aktive_kanaele,
     },
     kanaeleLeads: Object.entries(jeQuelle).map(([quelle, anzahl]) => ({ quelle, anzahl })).sort((a, b) => b.anzahl - a.anzahl),
+    regionen,
     befunde, klartext,
   });
 }

@@ -25,6 +25,7 @@ type Daten = {
   ampel: 'gut' | 'hinweis' | 'warnung';
   kpis: Kpis;
   kanaeleLeads: Array<{ quelle: string; anzahl: number }>;
+  regionen: Array<{ land: string; anzahl: number }>;
   befunde: Befund[];
   klartext: string;
 };
@@ -118,6 +119,30 @@ export default function LageberichtPage() {
                     <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 14 }}>{k.anzahl}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Region (geschätzt aus PLZ) */}
+          {daten.regionen.length > 0 && (
+            <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16 }}>Leads je Region</div>
+                <div style={{ color: C.textDim, fontSize: 12 }}>geschätzt aus der PLZ</div>
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {daten.regionen.map((r, i) => {
+                  const maxReg = Math.max(1, ...daten.regionen.map((x) => x.anzahl));
+                  return (
+                    <div key={r.land} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 44px', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 13.5, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.land}</span>
+                      <div style={{ height: 22, background: 'rgba(143,163,190,0.12)', borderRadius: 6, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.max(4, Math.round((r.anzahl / maxReg) * 100))}%`, background: i === 0 ? C.gold : C.cyan, borderRadius: 6 }} />
+                      </div>
+                      <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 14 }}>{r.anzahl}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
