@@ -108,7 +108,7 @@ export default function AboEinzug() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.gold, fontWeight: 600 }}>Betreiber</div>
-            <h1 style={{ fontSize: 'clamp(1.5rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: '4px 0 0', fontFamily: SYNE, letterSpacing: '-0.01em' }}>Abo-Einzug</h1>
+            <h1 style={{ fontSize: 'clamp(1.4rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: '4px 0 0', fontFamily: SYNE, letterSpacing: '-0.01em' }}>Abo-Einzug</h1>
           </div>
           <a href="/admin/command-center" style={{ fontSize: 13, color: C.dim, textDecoration: 'none' }}>← Zurück zum Command Center</a>
         </div>
