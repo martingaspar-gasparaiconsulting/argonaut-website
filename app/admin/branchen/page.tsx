@@ -22,8 +22,8 @@ import { ALLE_MODULE } from '../../../lib/rechte';
 
 const CYAN = '#00e5ff';
 const GOLD = '#C9A84C';
-const GRUEN = '#3ddc84';
-const mono = "'Share Tech Mono', 'DM Mono', ui-monospace, monospace";
+const GRUEN = '#4CAF7D';
+const mono = "var(--font-dm-sans), system-ui, sans-serif";
 
 const LABEL: Record<string, string> = Object.fromEntries(ALLE_MODULE.map((m) => [m.key, m.label]));
 LABEL['automatisierungen'] = LABEL['automatisierungen'] || '⚙️ Automatisierungen';
@@ -89,45 +89,45 @@ export default function AdminBranchen() {
     finally { setLaeuft(false); }
   }
 
-  const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', border: `1px solid ${CYAN}33`, borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
-  const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: `${CYAN}aa` };
+  const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 14, padding: '10px 12px', color: '#E8EDF4', fontSize: 14, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
+  const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' };
 
   const selModule = sel ? kategorieModule(sel.kategorie) : [];
   const selZusatz = sel ? kategorieZusatz(sel.kategorie) : [];
 
   return (
-    <main style={{ minHeight: '100vh', background: 'radial-gradient(circle at 50% -10%, #0d1f33 0%, #050810 60%)', color: '#fff', fontFamily: 'DM Sans, sans-serif', padding: '32px 28px' }}>
+    <main style={{ minHeight: '100vh', background: '#0A1628', color: '#E8EDF4', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', padding: '32px 28px' }}>
       {/* Kopf */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '0.3em', color: `${CYAN}aa`, fontFamily: mono }}>ARGONAUT · OPERATOR</div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, margin: '4px 0 0', letterSpacing: '0.05em', color: CYAN, fontFamily: mono }}>BRANCHEN-KATALOG</h1>
+          <div style={{ fontSize: 11, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', fontFamily: mono }}>ARGONAUT · OPERATOR</div>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: '4px 0 0', letterSpacing: '-0.01em', color: '#E8EDF4', fontFamily: 'var(--font-syne), sans-serif' }}>Branchen-Katalog</h1>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <a href="/admin/tenants" style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.1em', color: CYAN, border: `1px solid ${CYAN}66`, borderRadius: 6, padding: '8px 16px', textDecoration: 'none', background: `${CYAN}12` }}>‹ TENANTS</a>
-          <a href="/admin/command-center" style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.1em', color: GOLD, border: `1px solid ${GOLD}66`, borderRadius: 6, padding: '8px 16px', textDecoration: 'none', background: `${GOLD}12` }}>‹ COMMAND CENTER</a>
+          <a href="/admin/tenants" style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 14, padding: '8px 16px', textDecoration: 'none', background: 'rgba(255,255,255,0.04)' }}>TENANTS</a>
+          <a href="/admin/command-center" style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 14, padding: '8px 16px', textDecoration: 'none', background: 'rgba(255,255,255,0.04)' }}>COMMAND CENTER</a>
         </div>
       </div>
 
       {/* Einlade-Panel (ausgewählte Branche) */}
-      <section style={{ border: `1px solid ${GOLD}44`, background: `${GOLD}0c`, borderRadius: 12, padding: '18px 20px', marginBottom: 18 }}>
-        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${GOLD}dd`, textTransform: 'uppercase', marginBottom: 12 }}>
+      <section style={{ border: `1px solid rgba(201,168,76,0.16)`, background: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: '18px 20px', marginBottom: 18 }}>
+        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 12 }}>
           ＋ Kunde einladen — mit Branchen-Paket
         </div>
         {!sel ? (
-          <div style={{ fontFamily: mono, fontSize: 12.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
-            ‣ Unten eine Branche wählen (Knopf „Wählen"). Dann E-Mail eintragen → der Kunde bekommt seinen Login, setzt sein Passwort selbst und ist sofort mit genau diesem Branchen-Set online.
+          <div style={{ fontFamily: mono, fontSize: 12.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+            Unten eine Branche wählen (Knopf „Wählen"). Dann E-Mail eintragen → der Kunde bekommt seinen Login, setzt sein Passwort selbst und ist sofort mit genau diesem Branchen-Set online.
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-              <span style={{ fontFamily: 'DM Sans', fontWeight: 800, fontSize: 16, color: '#fff' }}>{sel.name}</span>
+              <span style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 700, fontSize: 16, color: '#E8EDF4' }}>{sel.name}</span>
               <span style={{ fontFamily: mono, fontSize: 11, color: `${CYAN}cc`, border: `1px solid ${CYAN}44`, borderRadius: 999, padding: '2px 10px' }}>{sel.kategorie}</span>
               <span style={{ fontFamily: mono, fontSize: 11, color: GRUEN }}>{selModule.length} Module scharf</span>
-              <button onClick={() => setSel(null)} style={{ marginLeft: 'auto', fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.6)', background: 'transparent', border: `1px solid rgba(255,255,255,0.2)`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>✕ abwählen</button>
+              <button onClick={() => setSel(null)} style={{ marginLeft: 'auto', fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.45)', background: 'transparent', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 14, padding: '4px 10px', cursor: 'pointer' }}>abwählen</button>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-              {selZusatz.map((k) => <span key={k} style={{ fontFamily: mono, fontSize: 10.5, color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, padding: '3px 8px' }}>{modLabel(k)}</span>)}
+              {selZusatz.map((k) => <span key={k} style={{ fontFamily: mono, fontSize: 10.5, color: '#E8EDF4', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 14, padding: '3px 8px' }}>{modLabel(k)}</span>)}
               <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>+ 12 Kernbausteine</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
@@ -139,21 +139,21 @@ export default function AdminBranchen() {
                 <label style={feldLabel}>Firma</label>
                 <input style={feldInput} value={firma} onChange={(e) => setFirma(e.target.value)} placeholder="Musterbetrieb GmbH" />
               </div>
-              <button onClick={einladen} disabled={laeuft} style={{ border: `1px solid ${GRUEN}88`, background: `${GRUEN}18`, color: '#eafff2', fontFamily: 'DM Sans', fontSize: 14, fontWeight: 800, padding: '11px 20px', borderRadius: 8, cursor: laeuft ? 'wait' : 'pointer', opacity: laeuft ? 0.55 : 1 }}>
-                {laeuft ? '‣ lädt …' : 'Einladen & freischalten'}
+              <button onClick={einladen} disabled={laeuft} style={{ border: `1px solid ${GOLD}`, background: GOLD, color: '#0A1628', fontFamily: 'var(--font-syne), sans-serif', fontSize: 14, fontWeight: 700, padding: '11px 20px', borderRadius: 14, cursor: laeuft ? 'wait' : 'pointer', opacity: laeuft ? 0.55 : 1 }}>
+                {laeuft ? 'lädt …' : 'Einladen & freischalten'}
               </button>
             </div>
           </>
         )}
         {meldung && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: GRUEN, lineHeight: 1.5 }}>{meldung}</div>}
-        {fehler && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: '#ff8a8a' }}>⚠ {fehler}</div>}
+        {fehler && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: '#e0a066' }}>{fehler}</div>}
       </section>
 
       {/* Suche + Summe */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16 }}>
         <input style={{ ...feldInput, maxWidth: 340 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Branche suchen …" />
-        <span style={{ fontFamily: mono, fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-          <span style={{ color: CYAN, fontWeight: 700 }}>{gesamt}</span> Branchen · <span style={{ color: CYAN, fontWeight: 700 }}>{kategorien.length}</span> Kategorien
+        <span style={{ fontFamily: mono, fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
+          <span style={{ color: GOLD, fontWeight: 700, fontFamily: 'var(--font-syne), sans-serif' }}>{gesamt}</span> Branchen · <span style={{ color: GOLD, fontWeight: 700, fontFamily: 'var(--font-syne), sans-serif' }}>{kategorien.length}</span> Kategorien
         </span>
       </div>
 
@@ -163,12 +163,12 @@ export default function AdminBranchen() {
           const auf = katOffen(k.kategorie);
           const zusatz = kategorieZusatz(k.kategorie);
           return (
-            <div key={k.kategorie} style={{ border: `1px solid ${CYAN}2b`, borderRadius: 12, background: 'rgba(5,12,22,0.55)', overflow: 'hidden' }}>
-              <div onClick={() => toggleKat(k.kategorie)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', cursor: 'pointer', background: auf ? `${CYAN}0c` : 'transparent' }}>
+            <div key={k.kategorie} style={{ border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 16, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+              <div onClick={() => toggleKat(k.kategorie)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', cursor: 'pointer', background: auf ? 'rgba(255,255,255,0.04)' : 'transparent' }}>
                 <span style={{ color: CYAN, fontFamily: mono }}>{auf ? '▾' : '▸'}</span>
-                <span style={{ fontWeight: 800, color: GOLD, fontSize: 15 }}>{k.kategorie}</span>
-                <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{k.branchen.length} Branchen</span>
-                <span style={{ marginLeft: 'auto', fontFamily: mono, fontSize: 11, color: `${CYAN}aa` }}>Set: {kategorieModule(k.kategorie).length} Module</span>
+                <span style={{ fontWeight: 700, color: GOLD, fontSize: 15, fontFamily: 'var(--font-syne), sans-serif' }}>{k.kategorie}</span>
+                <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{k.branchen.length} Branchen</span>
+                <span style={{ marginLeft: 'auto', fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Set: {kategorieModule(k.kategorie).length} Module</span>
               </div>
 
               {auf && (
@@ -177,7 +177,7 @@ export default function AdminBranchen() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '6px 0 14px' }}>
                     <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc`, marginRight: 4 }}>PAKET:</span>
                     <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>12 Kern</span>
-                    {zusatz.map((m) => <span key={m} style={{ fontFamily: mono, fontSize: 10.5, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 7px' }}>{modLabel(m)}</span>)}
+                    {zusatz.map((m) => <span key={m} style={{ fontFamily: mono, fontSize: 10.5, color: '#E8EDF4', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 14, padding: '2px 7px' }}>{modLabel(m)}</span>)}
                   </div>
 
                   {/* Branchen */}
@@ -186,21 +186,21 @@ export default function AdminBranchen() {
                       const bAuf = offeneBranche === b.slug;
                       const gewaehlt = sel?.slug === b.slug;
                       return (
-                        <div key={b.slug} style={{ border: `1px solid ${gewaehlt ? `${GRUEN}66` : 'rgba(255,255,255,0.08)'}`, borderRadius: 8, background: gewaehlt ? `${GRUEN}0e` : 'rgba(255,255,255,0.02)' }}>
+                        <div key={b.slug} style={{ border: `1px solid ${gewaehlt ? `${GRUEN}66` : 'rgba(201,168,76,0.16)'}`, borderRadius: 14, background: gewaehlt ? `${GRUEN}0e` : 'rgba(255,255,255,0.04)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, fontSize: 14 }}>{b.name}</span>
-                            <button onClick={() => setOffeneBranche(bAuf ? null : b.slug)} style={{ fontFamily: mono, fontSize: 11, color: `${CYAN}cc`, background: 'transparent', border: `1px solid ${CYAN}44`, borderRadius: 6, padding: '3px 9px', cursor: 'pointer' }}>{bAuf ? '▾ Wording' : '▸ Wording'}</button>
-                            <button onClick={() => waehlen(b)} style={{ marginLeft: 'auto', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 12.5, color: gewaehlt ? '#052' : '#eafff2', background: gewaehlt ? GRUEN : `${GRUEN}18`, border: `1px solid ${GRUEN}88`, borderRadius: 7, padding: '6px 14px', cursor: 'pointer' }}>{gewaehlt ? '✓ gewählt' : 'Wählen'}</button>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: '#E8EDF4' }}>{b.name}</span>
+                            <button onClick={() => setOffeneBranche(bAuf ? null : b.slug)} style={{ fontFamily: mono, fontSize: 11, color: `${CYAN}cc`, background: 'transparent', border: `1px solid ${CYAN}44`, borderRadius: 14, padding: '3px 9px', cursor: 'pointer' }}>{bAuf ? '▾ Wording' : '▸ Wording'}</button>
+                            <button onClick={() => waehlen(b)} style={{ marginLeft: 'auto', fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 12.5, color: gewaehlt ? '#0A1628' : '#E8EDF4', background: gewaehlt ? GRUEN : 'rgba(255,255,255,0.04)', border: `1px solid ${GRUEN}88`, borderRadius: 14, padding: '6px 14px', cursor: 'pointer' }}>{gewaehlt ? '✓ gewählt' : 'Wählen'}</button>
                           </div>
                           {bAuf && (
                             <div style={{ padding: '2px 14px 12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
                               <div>
-                                <div style={{ fontFamily: mono, fontSize: 10.5, color: '#ff9a9a', letterSpacing: '0.1em', marginBottom: 4 }}>SCHMERZEN</div>
-                                {(b.schmerzen || []).map((s, i) => <div key={i} style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>• {s}</div>)}
+                                <div style={{ fontFamily: mono, fontSize: 10.5, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', marginBottom: 4 }}>SCHMERZEN</div>
+                                {(b.schmerzen || []).map((s, i) => <div key={i} style={{ fontSize: 12.5, color: '#E8EDF4', lineHeight: 1.5 }}>• {s}</div>)}
                               </div>
                               <div>
-                                <div style={{ fontFamily: mono, fontSize: 10.5, color: GRUEN, letterSpacing: '0.1em', marginBottom: 4 }}>ERGEBNISSE</div>
-                                {(b.ergebnisse || []).map((s, i) => <div key={i} style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>✓ {s}</div>)}
+                                <div style={{ fontFamily: mono, fontSize: 10.5, color: GRUEN, letterSpacing: '0.06em', marginBottom: 4 }}>ERGEBNISSE</div>
+                                {(b.ergebnisse || []).map((s, i) => <div key={i} style={{ fontSize: 12.5, color: '#E8EDF4', lineHeight: 1.5 }}>✓ {s}</div>)}
                               </div>
                             </div>
                           )}
@@ -215,8 +215,8 @@ export default function AdminBranchen() {
         })}
       </div>
 
-      <p style={{ marginTop: 18, fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.4)', maxWidth: 820, lineHeight: 1.6 }}>
-        ‣ Ein Modul-Set je Kategorie, Wording je Branche. Wählen → Einladen → der Kunde ist sofort online mit genau diesem Set (Kern + Branchenmodule + Standard-Automation). Feinschliff je Kunde weiter unter „Tenants".
+      <p style={{ marginTop: 18, fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.45)', maxWidth: 820, lineHeight: 1.6 }}>
+        Ein Modul-Set je Kategorie, Wording je Branche. Wählen → Einladen → der Kunde ist sofort online mit genau diesem Set (Kern + Branchenmodule + Standard-Automation). Feinschliff je Kunde weiter unter „Tenants".
       </p>
     </main>
   );
