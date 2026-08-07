@@ -26,6 +26,8 @@ function service() {
   return createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 type ServiceClient = ReturnType<typeof service>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Sb = any;
 type Row = Record<string, unknown>;
 
 /** Cron-Secret ODER eingeloggter Admin. Ohne beides: 403. */
@@ -43,7 +45,7 @@ async function erlaubt(req: Request): Promise<boolean> {
   return (p as { role?: string } | null)?.role === 'admin';
 }
 
-async function hole(admin: ServiceClient, tabelle: string, spalten: string): Promise<Row[]> {
+async function hole(admin: Sb, tabelle: string, spalten: string): Promise<Row[]> {
   try {
     const { data, error } = await admin.from(tabelle).select(spalten).limit(20000);
     if (error) return [];
