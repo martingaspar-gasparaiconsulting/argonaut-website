@@ -5,13 +5,14 @@
 // Zeigt die echten KI-Kosten (aus ki_nutzung) — je Kunde und je Funktion.
 // Daten kommen admin-geschützt aus /api/admin/verbrauch.
 // Pfad: app/admin/verbrauch/page.tsx
+// Look: Command-Center-Marken-Design (Navy/Gold, Syne + DM Sans).
 // ============================================================
 
 import { useState, useEffect, CSSProperties } from 'react';
 
 const C = {
-  navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
-  text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666',
+  navy: '#0A1628', navy2: 'rgba(255,255,255,0.04)', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
+  text: '#E8EDF4', textDim: 'rgba(255,255,255,0.45)', border: 'rgba(201,168,76,0.16)', danger: '#e06666',
 };
 
 type KundeZeile = { name: string; anzahl: number; tokRein: number; tokRaus: number; kostenUsd: number };
@@ -60,7 +61,10 @@ export default function VerbrauchPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.h1}>⚡ KI-Verbrauch &amp; Kosten</h1>
+      <div style={styles.kopf}>
+        <h1 style={styles.h1}>KI-Verbrauch &amp; Kosten</h1>
+        <a href="/admin/command-center" style={styles.back}>← Zurück zum Command Center</a>
+      </div>
       <p style={styles.sub}>Echte Kosten aus jedem KI-Aufruf (Tokens × Modellpreis). Quelle: <code>ki_nutzung</code>. Preise in USD, EUR ist eine grobe Schätzung.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -152,27 +156,29 @@ export default function VerbrauchPage() {
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { maxWidth: 1040, margin: '0 auto', padding: '24px 20px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', minHeight: '100vh', background: C.navy },
-  h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 28, fontWeight: 800, margin: 0 },
+  page: { maxWidth: 1040, margin: '0 auto', padding: 'clamp(1rem, 3vw, 2.5rem)', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', minHeight: '100vh', background: C.navy },
+  kopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(1.4rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' },
+  back: { fontSize: 13, color: C.textDim, textDecoration: 'none' },
   sub: { color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 18px', maxWidth: 820 },
   kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 18 },
   kpi: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px' },
   kLabel: { color: C.textDim, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  kWert: { fontSize: 30, fontWeight: 800, lineHeight: 1.1, marginTop: 6 },
+  kWert: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 30, fontWeight: 700, lineHeight: 1.1, marginTop: 6 },
   kSub: { color: C.textDim, fontSize: 12.5, marginTop: 4 },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 },
-  cardTitel: { fontWeight: 800, fontSize: 16, marginBottom: 10 },
+  cardTitel: { fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 10 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 14 },
-  th: { textAlign: 'left', padding: '8px 10px', fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: `1px solid ${C.border}` },
-  thR: { textAlign: 'right', padding: '8px 10px', fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: `1px solid ${C.border}` },
-  td: { padding: '10px', borderBottom: '1px solid rgba(143,163,190,0.08)' },
-  tdR: { padding: '10px', borderBottom: '1px solid rgba(143,163,190,0.08)', textAlign: 'right' },
+  th: { textAlign: 'left', padding: '8px 10px', fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  thR: { textAlign: 'right', padding: '8px 10px', fontSize: 12, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+  tdR: { padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' },
   eurMini: { color: C.textDim, fontWeight: 400, fontSize: 12 },
   upg: { marginLeft: 8, color: C.danger, border: `1px solid ${C.danger}`, borderRadius: 999, padding: '1px 8px', fontSize: 11, fontWeight: 700 },
-  balken: { height: 8, background: 'rgba(143,163,190,0.15)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 },
+  balken: { height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 999, overflow: 'hidden', marginBottom: 4 },
   balkenFill: { height: '100%', borderRadius: 999 },
   dim: { color: C.textDim, fontSize: 14, marginTop: 6 },
-  info: { marginTop: 18, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.22)', borderRadius: 12, padding: '13px 16px', color: C.textDim, fontSize: 12.5, lineHeight: 1.55 },
+  info: { marginTop: 18, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px 16px', color: C.textDim, fontSize: 12.5, lineHeight: 1.55 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 14 },
   alarm: { color: C.danger, background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.danger}`, borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 14, fontWeight: 600 },
 };

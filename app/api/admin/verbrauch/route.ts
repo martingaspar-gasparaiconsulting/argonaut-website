@@ -81,7 +81,18 @@ export async function GET() {
       namen[String(p.id)] = (typeof p.firma_name === 'string' && p.firma_name) || (typeof p.full_name === 'string' && p.full_name) || '';
     });
   }
-  const nameFuer = (id: string | null) => (id ? (namen[id] || 'Kunde') : 'Öffentlich / ohne Login');
+  // E-Mail als Fallback, wenn kein Firmen-/Voller Name gepflegt ist. Abgesichert:
+  // fehlt die Spalte 'email' auf profiles, bleibt es einfach leer (kein Bruch).
+  const emails: Record<string, string> = {};
+  if (ids.length) {
+    const { data: mailRows, error: mailErr } = await admin.from('profiles').select('id, email').in('id', ids);
+    if (!mailErr && Array.isArray(mailRows)) {
+      (mailRows as Array<Record<string, unknown>>).forEach((p) => {
+        if (typeof p.email === 'string' && p.email) emails[String(p.id)] = p.email;
+      });
+    }
+  }
+  const nameFuer = (id: string | null) => (id ? (namen[id] || emails[id] || 'Kunde') : 'Öffentlich / ohne Login');
 
   const summe = (arr: KundeRow[]) => arr.reduce((s, r) => s + Number(r.kosten_usd || 0), 0);
   const calls = (arr: KundeRow[]) => arr.reduce((s, r) => s + Number(r.anzahl || 0), 0);
@@ -110,7 +121,7 @@ export async function GET() {
         const bytes = Number(r.bytes) || 0;
         const limitBytes = LIMIT_GB_DEFAULT * GB;
         return {
-          name: istUuid(r.owner_key) ? (namen[r.owner_key] || 'Kunde') : r.owner_key,
+          name: istUuid(r.owner_key) ? (namen[r.owner_key] || emails[r.owner_key] || 'Kunde') : r.owner_key,
           bytes, dateien: Number(r.dateien) || 0, limitBytes,
           prozent: Math.min(100, Math.round((bytes / limitBytes) * 1000) / 10),
           voll: bytes >= 0.8 * limitBytes,
