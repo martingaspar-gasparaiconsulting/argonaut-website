@@ -25,12 +25,12 @@ import { demoStatus } from '../../../lib/demo';
 // Anschalten baut also die Freigabe-Liste auf, es "versteckt" nicht einzeln.
 // Die gelbe Warnung im Panel weist aktiv darauf hin.
 //
-// Tron-Look passend zum Command-Center.
+// ARGONAUT Command-Center-Marken-Design.
 // ============================================================================
 
 const CYAN = '#00e5ff';
 const GOLD = '#C9A84C';
-const GRUEN = '#3ddc84';
+const GRUEN = '#4CAF7D';
 
 type Tenant = {
   id: string;
@@ -60,7 +60,7 @@ export default function AdminTenants() {
   // Welcher Tenant bekommt gerade ein ganzes Paket geschaltet? (= tenant.id)
   const [paketLaeuft, setPaketLaeuft] = useState<string | null>(null);
 
-  const mono = "'Share Tech Mono', 'DM Mono', ui-monospace, monospace";
+  const mono = "var(--font-dm-sans), system-ui, sans-serif";
 
   // --- Neuer Kunde: einladen & (optional) Branche freischalten (Baustein 2) ---
   const [einlEmail, setEinlEmail] = useState('');
@@ -69,8 +69,8 @@ export default function AdminTenants() {
   const [einlLaeuft, setEinlLaeuft] = useState(false);
   const [einlMeldung, setEinlMeldung] = useState<string | null>(null);
   const [einlFehler, setEinlFehler] = useState<string | null>(null);
-  const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', border: `1px solid ${CYAN}33`, borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
-  const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: `${CYAN}aa` };
+  const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 8, padding: '10px 12px', color: '#E8EDF4', fontSize: 14, fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
+  const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' };
 
   // --- Laden (mit optionalem Spinner) ---------------------------------------
   const laden = useCallback(async (zeigeSpinner = true) => {
@@ -211,10 +211,10 @@ export default function AdminTenants() {
     padding: '12px 16px',
     fontSize: '10px',
     fontWeight: 700,
-    letterSpacing: '0.14em',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
-    color: `${CYAN}aa`,
-    borderBottom: `1px solid ${CYAN}33`,
+    color: 'rgba(255,255,255,0.45)',
+    borderBottom: `1px solid rgba(201,168,76,0.16)`,
     whiteSpace: 'nowrap',
     fontFamily: mono,
   };
@@ -230,8 +230,8 @@ export default function AdminTenants() {
     <main
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(circle at 50% -10%, #0d1f33 0%, #050810 60%)',
-        color: '#fff',
+        background: '#0A1628',
+        color: '#E8EDF4',
         fontFamily: 'DM Sans, sans-serif',
         padding: '32px 28px',
       }}
@@ -239,10 +239,10 @@ export default function AdminTenants() {
       {/* Kopf */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 11, letterSpacing: '0.3em', color: `${CYAN}aa`, fontFamily: mono }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', fontFamily: mono }}>
             ARGONAUT · OPERATOR
           </div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, margin: '4px 0 0', letterSpacing: '0.05em', color: CYAN, fontFamily: mono }}>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: '4px 0 0', letterSpacing: '-0.01em', color: '#E8EDF4', fontFamily: 'var(--font-syne), sans-serif' }}>
             TENANTS &amp; MODULE
           </h1>
         </div>
@@ -252,10 +252,10 @@ export default function AdminTenants() {
             style={{
               fontFamily: mono,
               fontSize: 12,
-              letterSpacing: '0.1em',
+              letterSpacing: '0.06em',
               color: GRUEN,
               border: `1px solid ${GRUEN}66`,
-              borderRadius: 6,
+              borderRadius: 8,
               padding: '8px 16px',
               textDecoration: 'none',
               background: `${GRUEN}12`,
@@ -268,10 +268,10 @@ export default function AdminTenants() {
             style={{
               fontFamily: mono,
               fontSize: 12,
-              letterSpacing: '0.1em',
+              letterSpacing: '0.06em',
               color: CYAN,
               border: `1px solid ${CYAN}66`,
-              borderRadius: 6,
+              borderRadius: 8,
               padding: '8px 16px',
               textDecoration: 'none',
               background: `${CYAN}12`,
@@ -284,23 +284,23 @@ export default function AdminTenants() {
             style={{
               fontFamily: mono,
               fontSize: 12,
-              letterSpacing: '0.1em',
+              letterSpacing: '0.06em',
               color: GOLD,
               border: `1px solid ${GOLD}66`,
-              borderRadius: 6,
+              borderRadius: 8,
               padding: '8px 16px',
               textDecoration: 'none',
               background: `${GOLD}12`,
             }}
           >
-            ‹ COMMAND CENTER
+            COMMAND CENTER
           </a>
         </div>
       </div>
 
       {/* ---- Neuer Kunde: einladen & Branche freischalten (Baustein 2) ---- */}
-      <section style={{ border: `1px solid ${GOLD}44`, background: `${GOLD}0c`, borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
-        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${GOLD}dd`, textTransform: 'uppercase', marginBottom: 12 }}>
+      <section style={{ border: `1px solid rgba(201,168,76,0.16)`, background: `rgba(255,255,255,0.04)`, borderRadius: 14, padding: '18px 20px', marginBottom: 20 }}>
+        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: `${GOLD}dd`, textTransform: 'uppercase', marginBottom: 12 }}>
           ＋ Neuer Kunde — einladen &amp; freischalten
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
@@ -323,28 +323,28 @@ export default function AdminTenants() {
             onClick={einladen}
             disabled={einlLaeuft}
             style={{
-              border: `1px solid ${GRUEN}88`, background: `${GRUEN}18`, color: '#eafff2',
-              fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 800,
+              border: `1px solid ${GOLD}`, background: GOLD, color: '#0A1628',
+              fontFamily: 'var(--font-syne), sans-serif', fontSize: 14, fontWeight: 700,
               padding: '11px 20px', borderRadius: 8,
               cursor: einlLaeuft ? 'wait' : 'pointer', opacity: einlLaeuft ? 0.55 : 1,
             }}
           >
-            {einlLaeuft ? '‣ lädt …' : 'Einladen & freischalten'}
+            {einlLaeuft ? 'lädt …' : 'Einladen & freischalten'}
           </button>
         </div>
         {einlMeldung && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: GRUEN, lineHeight: 1.5 }}>{einlMeldung}</div>}
-        {einlFehler && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: '#ff8a8a' }}>⚠ {einlFehler}</div>}
+        {einlFehler && <div style={{ marginTop: 12, fontFamily: mono, fontSize: 13, color: '#e0a066' }}>{einlFehler}</div>}
         <div style={{ marginTop: 12, fontFamily: mono, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.55 }}>
-          ‣ Der Kunde bekommt sofort eine ARGONAUT-Mail und setzt sein Passwort selbst. Branche wählen = Kern + Branchenmodule direkt scharf. Feinheiten danach unten je Kunde.
+          Der Kunde bekommt sofort eine ARGONAUT-Mail und setzt sein Passwort selbst. Branche wählen = Kern + Branchenmodule direkt scharf. Feinheiten danach unten je Kunde.
         </div>
       </section>
 
       {ladend && (
-        <div style={{ fontFamily: mono, color: `${CYAN}cc` }}>‣ Lade Tenant-Matrix …</div>
+        <div style={{ fontFamily: mono, color: 'rgba(255,255,255,0.45)' }}>Lade Tenant-Matrix …</div>
       )}
 
       {!ladend && fehler && (
-        <div style={{ border: '1px solid rgba(255,90,90,0.5)', background: 'rgba(255,90,90,0.08)', borderRadius: 10, padding: 20, fontFamily: mono, color: '#ff8a8a' }}>
+        <div style={{ border: '1px solid rgba(224,160,102,0.4)', background: 'rgba(224,160,102,0.08)', borderRadius: 14, padding: 20, fontFamily: mono, color: '#e0a066' }}>
           FEHLER: {fehler}
         </div>
       )}
@@ -352,32 +352,32 @@ export default function AdminTenants() {
       {!ladend && !fehler && (
         <div
           style={{
-            border: `1px solid ${CYAN}33`,
-            borderRadius: 12,
-            background: 'rgba(5,12,22,0.6)',
-            boxShadow: `0 0 40px ${CYAN}12`,
+            border: `1px solid rgba(201,168,76,0.16)`,
+            borderRadius: 16,
+            background: 'rgba(255,255,255,0.04)',
+            boxShadow: 'none',
             overflow: 'hidden',
           }}
         >
           {/* Zähler-Leiste */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '18px 20px', borderBottom: `1px solid ${CYAN}22` }}>
-            <span style={{ fontSize: 34, fontWeight: 800, color: CYAN, fontFamily: mono, lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '18px 20px', borderBottom: `1px solid rgba(201,168,76,0.16)` }}>
+            <span style={{ fontSize: 34, fontWeight: 700, color: GOLD, fontFamily: 'var(--font-syne), sans-serif', lineHeight: 1 }}>
               {String(tenants.length).padStart(2, '0')}
             </span>
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, letterSpacing: '0.1em', fontFamily: mono }}>
+            <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, letterSpacing: '0.06em', fontFamily: mono }}>
               {tenants.length === 1 ? 'AKTIVER TENANT' : 'AKTIVE TENANTS'}
             </span>
           </div>
 
           {schaltFehler && (
-            <div style={{ padding: '12px 20px', background: 'rgba(255,90,90,0.08)', borderBottom: '1px solid rgba(255,90,90,0.3)', fontFamily: mono, color: '#ff8a8a', fontSize: 13 }}>
-              ⚠ {schaltFehler}
+            <div style={{ padding: '12px 20px', background: 'rgba(224,160,102,0.08)', borderBottom: '1px solid rgba(224,160,102,0.3)', fontFamily: mono, color: '#e0a066', fontSize: 13 }}>
+              {schaltFehler}
             </div>
           )}
 
           {tenants.length === 0 ? (
             <div style={{ padding: 24, color: 'rgba(255,255,255,0.55)', fontFamily: mono }}>
-              ‣ Noch keine Tenants erfasst.
+              Noch keine Tenants erfasst.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -410,7 +410,7 @@ export default function AdminTenants() {
                           <td style={{ ...td, fontWeight: 700, color: GOLD }}>
                             {t.firma}
                             {t.demo && (
-                              <span style={{ marginLeft: 8, fontFamily: mono, fontSize: 10, letterSpacing: '0.1em', color: CYAN, border: `1px solid ${CYAN}55`, borderRadius: 4, padding: '1px 5px' }}>
+                              <span style={{ marginLeft: 8, fontFamily: mono, fontSize: 10, letterSpacing: '0.06em', color: CYAN, border: `1px solid ${CYAN}55`, borderRadius: 4, padding: '1px 5px' }}>
                                 DEMO
                               </span>
                             )}
@@ -470,8 +470,8 @@ export default function AdminTenants() {
         </div>
       )}
 
-      <p style={{ marginTop: 18, fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.4)', maxWidth: 760, lineHeight: 1.6 }}>
-        ‣ Solange bei einem Kunden <b style={{ color: 'rgba(255,255,255,0.7)' }}>kein</b> Modul aktiv ist, sieht er <b style={{ color: GOLD }}>alle</b> Module (fail-open).
+      <p style={{ marginTop: 18, fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.45)', maxWidth: 760, lineHeight: 1.6 }}>
+        Solange bei einem Kunden <b style={{ color: 'rgba(255,255,255,0.7)' }}>kein</b> Modul aktiv ist, sieht er <b style={{ color: GOLD }}>alle</b> Module (fail-open).
         Ab dem <b style={{ color: GRUEN }}>ersten</b> aktivierten Modul sieht er <b style={{ color: CYAN }}>nur noch</b> die aktivierten.
       </p>
     </main>
@@ -515,8 +515,8 @@ function DemoPanel({ tenant, mono, onGesetzt }: { tenant: Tenant; mono: string; 
   }
 
   return (
-    <div style={{ padding: '16px 24px', background: 'rgba(5,12,22,0.35)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${CYAN}aa`, textTransform: 'uppercase', marginBottom: 10 }}>
+    <div style={{ padding: '16px 24px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 10 }}>
         Demo-Zugang
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -533,12 +533,12 @@ function DemoPanel({ tenant, mono, onGesetzt }: { tenant: Tenant; mono: string; 
           value={tage}
           onChange={(e) => setTage(e.target.value.replace(/[^0-9]/g, ''))}
           inputMode="numeric"
-          style={{ width: 64, padding: '6px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', fontFamily: mono }}
+          style={{ width: 64, padding: '6px 8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 6, color: '#E8EDF4', fontFamily: mono }}
         />
         <button
           onClick={() => setzen(false)}
           disabled={busy}
-          style={{ padding: '7px 14px', background: GRUEN, color: '#04121f', border: 'none', borderRadius: 6, fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}
+          style={{ padding: '7px 14px', background: GRUEN, color: '#0A1628', border: 'none', borderRadius: 8, fontWeight: 700, cursor: busy ? 'default' : 'pointer' }}
         >
           {busy ? '…' : status.istDemo ? 'Verlängern' : 'Demo starten'}
         </button>
@@ -546,13 +546,13 @@ function DemoPanel({ tenant, mono, onGesetzt }: { tenant: Tenant; mono: string; 
           <button
             onClick={() => setzen(true)}
             disabled={busy}
-            style={{ padding: '7px 14px', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, cursor: busy ? 'default' : 'pointer' }}
+            style={{ padding: '7px 14px', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, cursor: busy ? 'default' : 'pointer' }}
           >
             Demo beenden
           </button>
         )}
       </div>
-      {fehler && <div style={{ marginTop: 8, color: '#E06666', fontSize: 12 }}>{fehler}</div>}
+      {fehler && <div style={{ marginTop: 8, color: '#e0a066', fontSize: 12 }}>{fehler}</div>}
     </div>
   );
 }
@@ -580,10 +580,10 @@ function ModulPanel({
   const failOpen = anzahlAktiv === 0;
 
   return (
-    <div style={{ padding: '20px 24px 26px', background: 'rgba(5,12,22,0.5)' }}>
+    <div style={{ padding: '20px 24px 26px', background: 'rgba(255,255,255,0.04)' }}>
       {/* Panel-Kopf */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${CYAN}aa`, textTransform: 'uppercase' }}>
+        <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>
           Module für {tenant.firma}
         </div>
         <div style={{ fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>
@@ -597,7 +597,7 @@ function ModulPanel({
           style={{
             border: `1px solid ${GOLD}66`,
             background: `${GOLD}12`,
-            borderRadius: 8,
+            borderRadius: 10,
             padding: '12px 14px',
             marginBottom: 16,
             fontFamily: mono,
@@ -606,7 +606,7 @@ function ModulPanel({
             lineHeight: 1.55,
           }}
         >
-          ⚠ Dieser Kunde sieht aktuell <b>ALLE</b> Module (nichts scharfgeschaltet).
+          Dieser Kunde sieht aktuell <b>ALLE</b> Module (nichts scharfgeschaltet).
           Sobald du das <b>erste</b> Modul aktivierst, sieht er <b>nur noch</b> die aktivierten.
         </div>
       )}
@@ -614,18 +614,18 @@ function ModulPanel({
       {/* ---- PAKET-LEISTE: ein Klick = Kern + Branche scharfschalten ---- */}
       <div
         style={{
-          border: `1px solid ${GOLD}44`,
-          background: `${GOLD}0c`,
-          borderRadius: 10,
+          border: `1px solid rgba(201,168,76,0.16)`,
+          background: `rgba(255,255,255,0.04)`,
+          borderRadius: 14,
           padding: '14px 16px',
           marginBottom: 18,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.14em', color: `${GOLD}dd`, textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.06em', color: `${GOLD}dd`, textTransform: 'uppercase' }}>
             ⚡ Pakete — 1 Klick
           </div>
-          {paketLaeuft && <span style={{ fontFamily: mono, fontSize: 12, color: CYAN }}>‣ schalte Paket …</span>}
+          {paketLaeuft && <span style={{ fontFamily: mono, fontSize: 12, color: CYAN }}>schalte Paket …</span>}
         </div>
 
         {/* Kern-Knopf */}
@@ -636,7 +636,7 @@ function ModulPanel({
             display: 'inline-flex', alignItems: 'center', gap: 8,
             padding: '9px 16px', borderRadius: 8, marginBottom: 12,
             border: `1px solid ${GRUEN}88`, background: `${GRUEN}18`, color: '#eafff2',
-            fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, fontWeight: 800,
+            fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, fontWeight: 700,
             cursor: paketLaeuft ? 'wait' : 'pointer', opacity: paketLaeuft ? 0.55 : 1,
           }}
         >
@@ -644,7 +644,7 @@ function ModulPanel({
         </button>
 
         {/* Branchen-Pakete (Kern + Branche) */}
-        <div style={{ fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: '4px 0 8px', letterSpacing: '0.1em' }}>
+        <div style={{ fontFamily: mono, fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: '4px 0 8px', letterSpacing: '0.06em' }}>
           BRANCHE (= KERN + BRANCHEN-MODULE):
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -668,7 +668,7 @@ function ModulPanel({
         </div>
 
         <div style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(255,255,255,0.5)', marginTop: 12, lineHeight: 1.55 }}>
-          ‣ Paket wählen → Kern + Branche werden scharfgeschaltet. Extras danach unten
+          Paket wählen → Kern + Branche werden scharfgeschaltet. Extras danach unten
           einzeln zuklicken (z. B. KFZ + „Kasse" + „Lager-Scanner"). Paket-Klicks
           schalten nur AN — Ausschalten läuft weiter über die Einzel-Schalter.
         </div>
@@ -697,10 +697,10 @@ function ModulPanel({
                 justifyContent: 'space-between',
                 gap: 8,
                 padding: '10px 12px',
-                borderRadius: 8,
-                border: `1px solid ${an ? `${CYAN}88` : 'rgba(255,255,255,0.12)'}`,
-                background: an ? `${CYAN}18` : 'rgba(255,255,255,0.03)',
-                color: an ? '#fff' : 'rgba(255,255,255,0.7)',
+                borderRadius: 10,
+                border: `1px solid ${an ? `${CYAN}88` : 'rgba(201,168,76,0.16)'}`,
+                background: an ? `${CYAN}18` : 'rgba(255,255,255,0.04)',
+                color: an ? '#E8EDF4' : 'rgba(255,255,255,0.7)',
                 fontFamily: 'DM Sans, sans-serif',
                 fontSize: 13.5,
                 fontWeight: an ? 700 : 500,
@@ -718,11 +718,11 @@ function ModulPanel({
                   fontFamily: mono,
                   fontSize: 10,
                   fontWeight: 700,
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.06em',
                   padding: '2px 7px',
                   borderRadius: 4,
                   whiteSpace: 'nowrap',
-                  color: an ? '#052' : 'rgba(255,255,255,0.5)',
+                  color: an ? '#0A1628' : 'rgba(255,255,255,0.5)',
                   background: an ? GRUEN : 'rgba(255,255,255,0.08)',
                 }}
               >
