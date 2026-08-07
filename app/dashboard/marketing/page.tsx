@@ -290,6 +290,25 @@ export default function MarketingCockpit() {
             🤖 Autopilot
           </a>
           <a
+            href="/dashboard/marketing/content-fliessband"
+            style={{
+              background: C.gold,
+              color: C.navy,
+              border: `1px solid ${C.gold}`,
+              borderRadius: 10,
+              padding: '12px 20px',
+              fontFamily: 'var(--font-dm-sans), sans-serif',
+              fontWeight: 700,
+              fontSize: 'clamp(15px, 1.31vw, 21px)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            🏭 Content-Fließband
+          </a>
+          <a
             href="/dashboard/marketing/cockpit"
             style={{
               background: C.gold,
