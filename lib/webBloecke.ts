@@ -131,6 +131,10 @@ function anfrageFormular(oeffentlichId?: string, knopf?: string): string {
     '<div class="ao-feld"><label>E-Mail</label><input type="email" name="email"></div>',
     '<div class="ao-feld"><label>Telefon</label><input type="tel" name="telefon"></div>',
     '</div>',
+    '<div class="ao-zwei">',
+    '<div class="ao-feld"><label>PLZ</label><input type="text" name="plz" inputmode="numeric" maxlength="5" autocomplete="postal-code"></div>',
+    '<div class="ao-feld"><label>Ort</label><input type="text" name="ort"></div>',
+    '</div>',
     '<div class="ao-feld"><label>Ihre Nachricht</label><textarea name="nachricht" rows="4"></textarea></div>',
     '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
     '<button type="submit" class="btn">' + knopfText + '</button>',
@@ -142,7 +146,7 @@ function anfrageFormular(oeffentlichId?: string, knopf?: string): string {
 // Kleines, eigenständiges Skript für das Anfrage-Formular (läuft in der fertigen
 // Seite). Prüft die Felder, blockt Spam per Honeypot und sendet per fetch.
 function anfrageSkript(): string {
-  return '<script>(function(){var f=document.getElementById("ao-anfrage");if(!f)return;var el=f.elements;var m=document.getElementById("ao-anfrage-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var tel=(el.telefon.value||"").trim();if(!name||(!email&&!tel)){set("Bitte Name und E-Mail oder Telefon angeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihre Anfrage gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/web-anfrage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,email:email,telefon:tel,nachricht:el.nachricht.value,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Vielen Dank! Ihre Anfrage ist eingegangen \\u2014 wir melden uns zeitnah.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+  return '<script>(function(){var f=document.getElementById("ao-anfrage");if(!f)return;var el=f.elements;var m=document.getElementById("ao-anfrage-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var tel=(el.telefon.value||"").trim();if(!name||(!email&&!tel)){set("Bitte Name und E-Mail oder Telefon angeben.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihre Anfrage gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/web-anfrage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,email:email,telefon:tel,plz:(el.plz?el.plz.value:""),ort:(el.ort?el.ort.value:""),nachricht:el.nachricht.value,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Vielen Dank! Ihre Anfrage ist eingegangen \\u2014 wir melden uns zeitnah.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
 }
 
 // Newsletter-Anmeldung auf der Kundenseite. Sendet an
@@ -472,6 +476,11 @@ export function seiteHtml(
     anfrageSkript(),
     newsletterSkript(),
     terminSkript(),
+    // Cookiefreie Website-Analyse: nur auf veröffentlichten Seiten (mit oeffentlichId),
+    // nicht in der Editor-/Dashboard-Vorschau. Meldet an /api/oeffentlich/analyse.
+    opts.oeffentlichId
+      ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
+      : '',
     '</body></html>',
   ].join('\n');
 }

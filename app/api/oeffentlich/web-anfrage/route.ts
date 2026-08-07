@@ -50,6 +50,8 @@ export async function POST(req: Request) {
     const email = clean(b.email, 200);
     const telefon = clean(b.telefon, 60);
     const nachricht = clean(b.nachricht, 5000);
+    const plz = clean(b.plz, 10);
+    const ort = clean(b.ort, 120);
 
     if (!seite) return NextResponse.json({ error: 'Seite nicht erkannt.' }, { status: 400 });
     if (!name || (!email && !telefon)) {
@@ -80,6 +82,8 @@ export async function POST(req: Request) {
       email,
       telefon,
       nachricht,
+      plz,
+      ort,
       ist_bestand: false,
       werbung_einwilligung: false,
       status: 'neu',
