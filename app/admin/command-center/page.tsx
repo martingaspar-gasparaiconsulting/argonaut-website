@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import Dreizack from '@/components/Dreizack';
 import LogoutButton from '../LogoutButton';
+import { BESTELLSTRECKE_LIVE } from '@/lib/flags';
+import BestellstreckeFreischalten from './BestellstreckeFreischalten';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/command-center/page.tsx — Betreiber-Cockpit
@@ -142,6 +144,15 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
       </header>
 
       <main style={{ maxWidth: 1360, margin: '0 auto', padding: 'clamp(24px,4vw,48px) clamp(16px,3vw,32px) 80px' }}>
+        {!BESTELLSTRECKE_LIVE && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 12, padding: '12px 16px', marginBottom: 'clamp(16px,2vw,22px)' }}>
+            <span style={{ fontSize: 18 }}>🔒</span>
+            <span style={{ fontSize: 'clamp(12px,1vw,14px)', color: C.text }}>
+              <b>Bestellstrecke steht bereit — aber noch nicht scharf.</b>{' '}
+              <span style={{ color: C.dim }}>Freischalten, wenn du bereit bist (Ziel: erste Kunden / schuldenfrei). Checkliste weiter unten.</span>
+            </span>
+          </div>
+        )}
         <div style={{ marginBottom: 'clamp(16px,2vw,22px)' }}>
           <p style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 600 }}>Sofort-Überblick</p>
           <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 900, fontSize: 'clamp(28px,4vw,48px)', margin: 0 }}>Command Center</h1>
@@ -164,6 +175,9 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
             </div>
           ))}
         </section>
+
+        {/* Bestellstrecke — Freischalt-Kachel (nur solange dunkel) */}
+        {!BESTELLSTRECKE_LIVE && <BestellstreckeFreischalten />}
 
         {/* Bereiche */}
         <p style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 16px', fontWeight: 600 }}>
