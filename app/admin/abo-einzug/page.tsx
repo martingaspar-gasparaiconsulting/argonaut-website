@@ -8,12 +8,16 @@ import { useCallback, useEffect, useState } from 'react';
 // auswählen, EINE SEPA-Sammellastschrift herunterladen und als eingezogen
 // markieren. Nichts wird automatisch abgebucht — die Datei reichst DU bei
 // deiner Bank ein. Liegt unter /admin -> serverseitiges Admin-Schloss.
+// Look: Command-Center-Marken-Design (Navy/Gold, Syne + DM Sans).
 // ============================================================================
 
-const CYAN = '#00e5ff';
-const GOLD = '#C9A84C';
-const GRUEN = '#3ddc84';
-const mono = "'Share Tech Mono', 'DM Mono', ui-monospace, monospace";
+const C = {
+  navy: '#0A1628', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
+  text: '#E8EDF4', dim: 'rgba(255,255,255,0.45)', border: 'rgba(201,168,76,0.16)',
+  card: 'rgba(255,255,255,0.04)', rot: '#e0a066',
+};
+const SYNE = 'var(--font-syne), sans-serif';
+const SANS = 'var(--font-dm-sans), system-ui, sans-serif';
 
 type Abo = {
   id: string; firma: string; stufe: string; nettoMon: number; bruttoMon: number;
@@ -94,93 +98,95 @@ export default function AboEinzug() {
 
   function toggle(id: string) { setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
 
-  const th: React.CSSProperties = { textAlign: 'left', padding: '10px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: `${CYAN}aa`, borderBottom: `1px solid ${CYAN}33`, fontFamily: mono, whiteSpace: 'nowrap' };
-  const td: React.CSSProperties = { padding: '12px 14px', fontSize: 14, color: 'rgba(255,255,255,0.9)', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' };
-  const btn = (bg: string, bd: string, col: string): React.CSSProperties => ({ border: `1px solid ${bd}`, background: bg, color: col, fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, fontWeight: 800, padding: '10px 16px', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.55 : 1 });
+  const th: React.CSSProperties = { textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dim, borderBottom: `1px solid ${C.border}`, fontFamily: SANS, whiteSpace: 'nowrap' };
+  const td: React.CSSProperties = { padding: '12px 14px', fontSize: 14, color: C.text, borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'middle' };
+  const btn = (bg: string, bd: string, col: string): React.CSSProperties => ({ border: `1px solid ${bd}`, background: bg, color: col, fontFamily: SYNE, fontSize: 13.5, fontWeight: 700, padding: '10px 16px', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.55 : 1 });
 
   return (
-    <main style={{ minHeight: '100vh', background: 'radial-gradient(circle at 50% -10%, #0d1f33 0%, #050810 60%)', color: '#fff', fontFamily: 'DM Sans, sans-serif', padding: '32px 28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
-        <div>
-          <div style={{ fontSize: 11, letterSpacing: '0.3em', color: `${CYAN}aa`, fontFamily: mono }}>ARGONAUT · OPERATOR</div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, margin: '4px 0 0', letterSpacing: '0.05em', color: CYAN, fontFamily: mono }}>ABO-EINZUG</h1>
+    <main style={{ minHeight: '100vh', background: C.navy, color: C.text, fontFamily: SANS, padding: 'clamp(1rem, 3vw, 2.5rem)' }}>
+      <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.gold, fontWeight: 600 }}>Betreiber</div>
+            <h1 style={{ fontSize: 'clamp(1.5rem, 3.2vw, 2.1rem)', fontWeight: 700, margin: '4px 0 0', fontFamily: SYNE, letterSpacing: '-0.01em' }}>Abo-Einzug</h1>
+          </div>
+          <a href="/admin/command-center" style={{ fontSize: 13, color: C.dim, textDecoration: 'none' }}>← Zurück zum Command Center</a>
         </div>
-        <a href="/admin/command-center" style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.1em', color: GOLD, border: `1px solid ${GOLD}66`, borderRadius: 6, padding: '8px 16px', textDecoration: 'none', background: `${GOLD}12` }}>‹ COMMAND CENTER</a>
-      </div>
 
-      <p style={{ fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.45)', maxWidth: 760, lineHeight: 1.6, marginBottom: 20 }}>
-        ‣ Sammel-Lastschrift für ALLE ausgewählten Kunden in EINER Datei. Es wird nichts automatisch abgebucht — du lädst die Datei herunter und reichst sie in deinem Online-Banking ein. Erst-Einzug = FRST, danach RCUR (automatisch).
-      </p>
+        <p style={{ fontSize: 14, color: C.dim, maxWidth: 760, lineHeight: 1.6, marginBottom: 20 }}>
+          Sammel-Lastschrift für alle ausgewählten Kunden in einer Datei. Es wird nichts automatisch abgebucht — du lädst die Datei herunter und reichst sie in deinem Online-Banking ein. Erst-Einzug = FRST, danach RCUR (automatisch).
+        </p>
 
-      {meldung && <div style={{ padding: '12px 16px', background: 'rgba(61,220,132,0.08)', border: `1px solid ${GRUEN}55`, borderRadius: 10, fontFamily: mono, fontSize: 13, color: GRUEN, marginBottom: 16, lineHeight: 1.5 }}>{meldung}</div>}
-      {fehler && <div style={{ padding: '12px 16px', background: 'rgba(255,90,90,0.08)', border: '1px solid rgba(255,90,90,0.4)', borderRadius: 10, fontFamily: mono, fontSize: 13, color: '#ff8a8a', marginBottom: 16 }}>⚠ {fehler}</div>}
+        {meldung && <div style={{ padding: '12px 16px', background: 'rgba(76,175,125,0.08)', border: `1px solid rgba(76,175,125,0.4)`, borderRadius: 10, fontSize: 13.5, color: C.green, marginBottom: 16, lineHeight: 1.5 }}>{meldung}</div>}
+        {fehler && <div style={{ padding: '12px 16px', background: 'rgba(224,160,102,0.08)', border: '1px solid rgba(224,160,102,0.4)', borderRadius: 10, fontSize: 13.5, color: C.rot, marginBottom: 16 }}>{fehler}</div>}
 
-      {ladend ? <div style={{ fontFamily: mono, color: `${CYAN}cc` }}>‣ Lade Abos …</div> : (
-        <>
-          {/* Zur Freigabe */}
-          {neue.length > 0 && (
-            <section style={{ border: `1px solid ${GOLD}44`, background: `${GOLD}0c`, borderRadius: 12, marginBottom: 22, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', fontFamily: mono, fontSize: 12, letterSpacing: '0.12em', color: `${GOLD}dd`, textTransform: 'uppercase', borderBottom: `1px solid ${GOLD}33` }}>⚑ Neu gemeldet — zur Freigabe ({neue.length})</div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
-                  <thead><tr><th style={th}>Firma</th><th style={th}>Stufe</th><th style={th}>Brutto/Mon.</th><th style={th}>Mandat</th><th style={th}></th></tr></thead>
-                  <tbody>
-                    {neue.map((a) => (
-                      <tr key={a.id}>
-                        <td style={{ ...td, fontWeight: 700, color: GOLD }}>{a.firma}</td>
-                        <td style={td}>{a.stufe}</td>
-                        <td style={td}>{eur(a.bruttoMon)}</td>
-                        <td style={td}>{a.mandatErteilt ? <span style={{ color: GRUEN }}>erteilt</span> : <span style={{ color: '#ff8a8a' }}>fehlt</span>}</td>
-                        <td style={{ ...td, textAlign: 'right' }}><button disabled={busy} onClick={() => freigeben(a.id)} style={btn(`${GRUEN}18`, `${GRUEN}88`, '#eafff2')}>Freigeben</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {/* Einzugsbereit */}
-          <section style={{ border: `1px solid ${CYAN}33`, borderRadius: 12, background: 'rgba(5,12,22,0.6)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, padding: '16px 18px', borderBottom: `1px solid ${CYAN}22` }}>
-              <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.12em', color: `${CYAN}aa`, textTransform: 'uppercase' }}>Einzugsbereit ({aktive.length}) · ausgewählt: {selArr.length}</div>
-              <div style={{ fontFamily: mono, fontSize: 15, color: '#fff' }}>Summe: <b style={{ color: GOLD }}>{eur(summe)}</b></div>
-            </div>
-
-            {aktive.length === 0 ? (
-              <div style={{ padding: 22, color: 'rgba(255,255,255,0.55)', fontFamily: mono }}>‣ Keine einzugsbereiten Abos. Erst oben freigeben.</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
-                  <thead><tr><th style={th}></th><th style={th}>Firma</th><th style={th}>Stufe</th><th style={th}>Brutto/Mon.</th><th style={th}>Sequenz</th><th style={th}>IBAN</th><th style={th}>Referenz</th></tr></thead>
-                  <tbody>
-                    {aktive.map((a) => (
-                      <tr key={a.id} style={{ opacity: a.mandatErteilt ? 1 : 0.5 }}>
-                        <td style={{ ...td, width: 40, textAlign: 'center' }}><input type="checkbox" checked={sel.has(a.id)} disabled={!a.mandatErteilt} onChange={() => toggle(a.id)} style={{ accentColor: CYAN, width: 16, height: 16 }} /></td>
-                        <td style={{ ...td, fontWeight: 700, color: GOLD }}>{a.firma}</td>
-                        <td style={td}>{a.stufe}</td>
-                        <td style={td}>{eur(a.bruttoMon)}</td>
-                        <td style={td}><span style={{ fontFamily: mono, fontSize: 12, color: a.sequenz === 'FRST' ? GOLD : CYAN }}>{a.sequenz}</span></td>
-                        <td style={{ ...td, fontFamily: mono, fontSize: 12.5, color: 'rgba(255,255,255,0.6)' }}>{ibanMask(a.iban)}</td>
-                        <td style={{ ...td, fontFamily: mono, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{a.mandatsreferenz || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {ladend ? <div style={{ color: C.dim }}>Lade Abos …</div> : (
+          <>
+            {/* Zur Freigabe */}
+            {neue.length > 0 && (
+              <section style={{ border: `1px solid rgba(201,168,76,0.3)`, background: 'rgba(201,168,76,0.05)', borderRadius: 16, marginBottom: 22, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', fontSize: 12.5, fontWeight: 700, letterSpacing: '0.06em', color: C.gold, textTransform: 'uppercase', borderBottom: `1px solid ${C.border}` }}>Neu gemeldet — zur Freigabe ({neue.length})</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                    <thead><tr><th style={th}>Firma</th><th style={th}>Stufe</th><th style={th}>Brutto/Mon.</th><th style={th}>Mandat</th><th style={th}></th></tr></thead>
+                    <tbody>
+                      {neue.map((a) => (
+                        <tr key={a.id}>
+                          <td style={{ ...td, fontWeight: 600 }}>{a.firma}</td>
+                          <td style={td}>{a.stufe}</td>
+                          <td style={td}>{eur(a.bruttoMon)}</td>
+                          <td style={td}>{a.mandatErteilt ? <span style={{ color: C.green }}>erteilt</span> : <span style={{ color: C.rot }}>fehlt</span>}</td>
+                          <td style={{ ...td, textAlign: 'right' }}><button disabled={busy} onClick={() => freigeben(a.id)} style={btn('rgba(76,175,125,0.15)', 'rgba(76,175,125,0.55)', '#eafff2')}>Freigeben</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             )}
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '16px 18px', borderTop: `1px solid ${CYAN}22` }}>
-              <button disabled={busy || selArr.length === 0} onClick={dateiLaden} style={btn(GOLD, GOLD, '#0A1628')}>⤓ SEPA-Datei herunterladen ({selArr.length})</button>
-              <button disabled={busy || letzteDatei.length === 0} onClick={markieren} style={btn('transparent', `${GRUEN}88`, letzteDatei.length ? GRUEN : 'rgba(255,255,255,0.3)')}>✓ Als eingezogen markieren</button>
-            </div>
-          </section>
+            {/* Einzugsbereit */}
+            <section style={{ border: `1px solid ${C.border}`, borderRadius: 16, background: C.card, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, padding: '16px 18px', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: '0.06em', color: C.dim, textTransform: 'uppercase' }}>Einzugsbereit ({aktive.length}) · ausgewählt: {selArr.length}</div>
+                <div style={{ fontSize: 15 }}>Summe: <b style={{ color: C.gold, fontFamily: SYNE }}>{eur(summe)}</b></div>
+              </div>
 
-          <p style={{ marginTop: 16, fontFamily: mono, fontSize: 11.5, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, maxWidth: 760 }}>
-            ‣ Fehlen die Gläubiger-Daten (Env-Variablen), meldet der Download einen Hinweis — dann zuerst SEPA_CREDITOR_NAME/IBAN/GLAEUBIGER_ID in Vercel setzen.
-          </p>
-        </>
-      )}
+              {aktive.length === 0 ? (
+                <div style={{ padding: 22, color: C.dim }}>Keine einzugsbereiten Abos. Erst oben freigeben.</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                    <thead><tr><th style={th}></th><th style={th}>Firma</th><th style={th}>Stufe</th><th style={th}>Brutto/Mon.</th><th style={th}>Sequenz</th><th style={th}>IBAN</th><th style={th}>Referenz</th></tr></thead>
+                    <tbody>
+                      {aktive.map((a) => (
+                        <tr key={a.id} style={{ opacity: a.mandatErteilt ? 1 : 0.5 }}>
+                          <td style={{ ...td, width: 40, textAlign: 'center' }}><input type="checkbox" checked={sel.has(a.id)} disabled={!a.mandatErteilt} onChange={() => toggle(a.id)} style={{ accentColor: C.gold, width: 16, height: 16 }} /></td>
+                          <td style={{ ...td, fontWeight: 600 }}>{a.firma}</td>
+                          <td style={td}>{a.stufe}</td>
+                          <td style={td}>{eur(a.bruttoMon)}</td>
+                          <td style={td}><span style={{ fontSize: 12.5, fontWeight: 700, color: a.sequenz === 'FRST' ? C.gold : C.cyan }}>{a.sequenz}</span></td>
+                          <td style={{ ...td, fontSize: 13, color: C.dim }}>{ibanMask(a.iban)}</td>
+                          <td style={{ ...td, fontSize: 12.5, color: C.dim }}>{a.mandatsreferenz || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: '16px 18px', borderTop: `1px solid ${C.border}` }}>
+                <button disabled={busy || selArr.length === 0} onClick={dateiLaden} style={btn(C.gold, C.gold, '#0A1628')}>⤓ SEPA-Datei herunterladen ({selArr.length})</button>
+                <button disabled={busy || letzteDatei.length === 0} onClick={markieren} style={btn('transparent', 'rgba(76,175,125,0.55)', letzteDatei.length ? C.green : 'rgba(255,255,255,0.3)')}>✓ Als eingezogen markieren</button>
+              </div>
+            </section>
+
+            <p style={{ marginTop: 16, fontSize: 12.5, color: C.dim, lineHeight: 1.6, maxWidth: 760 }}>
+              Fehlen die Gläubiger-Daten (Env-Variablen), meldet der Download einen Hinweis — dann zuerst SEPA_CREDITOR_NAME/IBAN/GLAEUBIGER_ID in Vercel setzen.
+            </p>
+          </>
+        )}
+      </div>
     </main>
   );
 }
