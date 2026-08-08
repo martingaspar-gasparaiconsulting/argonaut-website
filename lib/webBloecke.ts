@@ -40,6 +40,7 @@ export type Block =
   | { typ: 'kontakt'; titel: string; text: string; knopf?: string }
   | { typ: 'newsletter'; titel: string; text: string; knopf?: string }
   | { typ: 'termin'; titel: string; text: string; knopf?: string }
+  | { typ: 'video'; titel?: string; url: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -54,6 +55,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'kontakt', icon: '✉️', name: 'Kontakt', beschreibung: 'Adresse, Telefon, Anfrage' },
   { typ: 'newsletter', icon: '📧', name: 'Newsletter', beschreibung: 'E-Mail-Anmeldung mit Bestätigung (DSGVO)' },
   { typ: 'termin', icon: '📅', name: 'Termin anfragen', beschreibung: 'Terminwunsch aufnehmen — landet im CRM' },
+  { typ: 'video', icon: '🎬', name: 'Video', beschreibung: 'YouTube-/Vimeo-Link einbetten — kein Upload, 0 Speicher' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -113,6 +115,17 @@ function kontaktAdresse(ci: CiWeb): string {
 }
 function sterne(): string {
   return '<span class="sterne">' + '★★★★★' + '</span>';
+}
+
+// Video-Link erkennen (YouTube/Vimeo) → Anbieter + ID. Nur Buchstaben/Zahlen aus
+// der ID werden weiterverwendet (kein Einschleusen möglich).
+function videoQuelle(url?: string): { art: 'youtube' | 'vimeo' | ''; id: string } {
+  const u = z(url);
+  let m = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  if (m) return { art: 'youtube', id: m[1] };
+  m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (m) return { art: 'vimeo', id: m[1] };
+  return { art: '', id: '' };
 }
 
 // Anfrage-Formular auf der veröffentlichten Kundenseite. Sendet an
@@ -317,6 +330,25 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         terminFormular(ctx.oeffentlichId, b.knopf),
         '</div></section>',
       ].join('');
+    case 'video': {
+      const v = videoQuelle(b.url);
+      let media = '';
+      if (v.art === 'youtube') {
+        const thumb = 'https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg';
+        const embed = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1';
+        media = '<button type="button" class="ao-video ao-video-facade" data-embed="' + embed + '" style="background-image:url(' + thumb + ')" aria-label="Video abspielen"><span class="ao-video-play">&#9654;</span></button>';
+      } else if (v.art === 'vimeo') {
+        media = '<div class="ao-video"><iframe src="https://player.vimeo.com/video/' + v.id + '" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>';
+      } else {
+        media = '<div class="ao-video ao-video-leer"><span>' + (ed ? 'Video-Link rechts einf&uuml;gen (YouTube/Vimeo)' : 'Video') + '</span></div>';
+      }
+      return [
+        '<section class="sec"><div class="wrap narrow">',
+        (b.titel || ed) ? '<h2' + ce('titel') + '>' + esc(b.titel || '') + '</h2>' : '',
+        media,
+        '</div></section>',
+      ].join('');
+    }
     default:
       return '';
   }
@@ -430,6 +462,14 @@ function seiteCss(ci: CiWeb): string {
     '.ao-news input[type=email]{flex:1;min-width:200px;font:inherit;font-size:15px;color:#1c2430;background:#fff;border:1px solid #d3dbe4;border-radius:10px;padding:12px 14px;box-sizing:border-box}',
     '.ao-news input[type=email]:focus{outline:none;border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 22%,transparent)}',
     '.ao-news .btn{border:none;cursor:pointer;white-space:nowrap}',
+    // Video (Link-Einbettung, tempo-sicher: 16/9-Fläche, Player erst nach Klick)
+    '.ao-video{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#0d141c;border:1px solid #e7ebf1}',
+    '.ao-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}',
+    '.ao-video-facade{cursor:pointer;background-size:cover;background-position:center}',
+    '.ao-video-facade:before{content:"";position:absolute;inset:0;background:rgba(10,15,25,.28);transition:background .15s}',
+    '.ao-video-facade:hover:before{background:rgba(10,15,25,.12)}',
+    '.ao-video-play{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;padding-left:5px}',
+    '.ao-video-leer{display:flex;align-items:center;justify-content:center;color:#9aa7b5;font-weight:700;border:1px dashed #c3ccd7;background:#f5f8fc}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -477,6 +517,12 @@ function editorSkript(): string {
     + '})();</script>';
 }
 
+// Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
+// sicher, kein Autoload). Nur auf Live-/Vorschau-Seiten, nicht im Editor.
+function videoSkript(): string {
+  return '<script>(function(){document.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".ao-video-facade"):null;if(!b)return;var src=b.getAttribute("data-embed");if(!src)return;var f=document.createElement("iframe");f.src=src;f.loading="lazy";f.setAttribute("allow","autoplay; fullscreen; picture-in-picture");f.setAttribute("allowfullscreen","");var w=document.createElement("div");w.className="ao-video";w.appendChild(f);if(b.parentNode){b.parentNode.replaceChild(w,b);}},false);})();</script>';
+}
+
 // --- Komplette, in sich geschlossene HTML-Seite -----------------------------
 export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
@@ -494,6 +540,7 @@ export function seiteHtml(
     const inner = blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId, editor: opts.editor });
     return opts.editor ? '<div class="ao-b" data-ao-i="' + i + '">' + inner + '</div>' : inner;
   }).join('\n');
+  const hatVideo = (seite.bloecke || []).some((b) => b.typ === 'video');
 
   return [
     '<!doctype html>',
@@ -519,6 +566,7 @@ export function seiteHtml(
     opts.oeffentlichId
       ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
       : '',
+    (!opts.editor && hatVideo) ? videoSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',
   ].join('\n');
