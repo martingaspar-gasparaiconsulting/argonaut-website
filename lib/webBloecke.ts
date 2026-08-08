@@ -43,6 +43,7 @@ export type Block =
   | { typ: 'termin'; titel: string; text: string; knopf?: string }
   | { typ: 'video'; titel?: string; url: string }
   | { typ: 'whatsapp'; nummer: string; text?: string }
+  | { typ: 'anfahrt'; eyebrow?: string; titel: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -60,6 +61,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'termin', icon: '📅', name: 'Termin anfragen', beschreibung: 'Terminwunsch aufnehmen — landet im CRM' },
   { typ: 'video', icon: '🎬', name: 'Video', beschreibung: 'YouTube-/Vimeo-Link einbetten — kein Upload, 0 Speicher' },
   { typ: 'whatsapp', icon: '💬', name: 'WhatsApp-Button', beschreibung: 'Schwebender Knopf — Besucher schreiben direkt per WhatsApp' },
+  { typ: 'anfahrt', icon: '📍', name: 'Öffnungszeiten & Anfahrt', beschreibung: 'Zeiten, Adresse und Karte — aus dem Webauftritt' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -381,6 +383,30 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
       const href = 'https://wa.me/' + num + (txt ? '?text=' + encodeURIComponent(txt) : '');
       return '<a class="ao-wa" href="' + href + '" target="_blank" rel="noopener" aria-label="Per WhatsApp schreiben">' + icon + '</a>';
     }
+    case 'anfahrt': {
+      const adr = kontaktAdresse(ci);
+      const oeff = z(ci.oeffnungszeiten);
+      const encAdr = encodeURIComponent(adr || z(ci.firma) || '');
+      const oeffHtml = oeff
+        ? '<div class="ao-oeff-text">' + esc(oeff).replace(/\n/g, '<br>') + '</div>'
+        : (ed ? '<div class="ao-oeff-text ao-leer">Im Webauftritt hinterlegen</div>' : '');
+      const adrHtml = adr
+        ? '<div>' + esc(adr) + '</div><a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=' + encAdr + '" target="_blank" rel="noopener">🗺️ Route planen</a>'
+        : (ed ? '<div class="ao-leer">Im Webauftritt hinterlegen</div>' : '');
+      const karte = adr
+        ? '<button type="button" class="ao-karte ao-karte-facade" data-embed="https://maps.google.com/maps?q=' + encAdr + '&amp;z=15&amp;output=embed"><span class="ao-karte-play">🗺️ Karte anzeigen</span></button>'
+        : (ed ? '<div class="ao-karte ao-karte-facade"><span class="ao-karte-play">Karte erscheint mit Adresse</span></div>' : '');
+      return [
+        '<section class="sec" id="anfahrt"><div class="wrap">',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        '<div class="ao-anfahrt"><div class="ao-anfahrt-info">',
+        (oeffHtml ? '<div class="ao-oeff"><h3>Öffnungszeiten</h3>' + oeffHtml + '</div>' : ''),
+        (adrHtml ? '<div class="ao-adr"><h3>Adresse</h3>' + adrHtml + '</div>' : ''),
+        '</div>', karte, '</div>',
+        '</div></section>',
+      ].join('');
+    }
     default:
       return '';
   }
@@ -509,6 +535,19 @@ function seiteCss(ci: CiWeb): string {
     '.ao-wa:hover{transform:translateY(-2px)}',
     '.ao-wa svg{width:32px;height:32px;fill:#fff;display:block}',
     '.ao-wa-hinweis{position:fixed;right:20px;bottom:20px;z-index:50;background:#0d141c;color:#25D366;border:1px dashed #25D366;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700}',
+    // Öffnungszeiten & Anfahrt
+    '.ao-anfahrt{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}',
+    '@media(min-width:760px){.ao-anfahrt{grid-template-columns:1fr 1.2fr}}',
+    '.ao-anfahrt-info h3{color:var(--p);font-size:18px;margin:0 0 6px}',
+    '.ao-oeff{margin-bottom:22px}',
+    '.ao-oeff-text{color:#41505f;line-height:1.75;font-size:16px}',
+    '.ao-adr>div{color:#41505f;font-size:16px}',
+    '.ao-adr .btn{margin-top:14px}',
+    '.ao-anfahrt .ao-leer{color:#9aa7b5;font-style:italic}',
+    '.ao-karte{position:relative;width:100%;aspect-ratio:4/3;min-height:260px;border-radius:14px;overflow:hidden;background:#eef2f7;border:1px solid #e7ebf1}',
+    '.ao-karte iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}',
+    '.ao-karte-facade{cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2f7,#dde5ee);border:none}',
+    '.ao-karte-play{background:var(--p);color:#fff;border-radius:10px;padding:12px 18px;font-weight:800;font-size:15px}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -544,7 +583,7 @@ function editorSkript(): string {
   return '<script>(function(){'
     + 'function post(o){parent.postMessage(o,"*");}'
     + 'function sel(el){var a=document.querySelectorAll(".ao-b.ao-sel");for(var i=0;i<a.length;i++){a[i].classList.remove("ao-sel");}if(el){el.classList.add("ao-sel");}}'
-    + 'document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest){return;}var f=t.closest("[data-ao-feld]");if(f){e.preventDefault();}var b=t.closest("[data-ao-i]");if(b){sel(b);post({ao:"select",index:parseInt(b.getAttribute("data-ao-i"),10)});}},true);'
+    + 'document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest){return;}var f=t.closest("[data-ao-feld]");if(f){e.preventDefault();}var a=t.closest("a,.ao-karte-facade,.ao-video-facade");if(a){e.preventDefault();}var b=t.closest("[data-ao-i]");if(b){sel(b);post({ao:"select",index:parseInt(b.getAttribute("data-ao-i"),10)});}},true);'
     + 'document.addEventListener("blur",function(e){var el=e.target;if(!el||!el.getAttribute||!el.hasAttribute("data-ao-feld")){return;}var b=el.closest("[data-ao-i]");if(!b){return;}post({ao:"edit",index:parseInt(b.getAttribute("data-ao-i"),10),feld:el.getAttribute("data-ao-feld"),wert:(el.textContent||"").trim()});},true);'
     + 'document.addEventListener("keydown",function(e){var t=e.target;if(e.key==="Enter"&&t&&t.hasAttribute&&t.hasAttribute("data-ao-feld")){e.preventDefault();t.blur();}},true);'
     // Bild vom PC auf einen Baustein ziehen: Baustein markieren + Datei an den Editor melden.
@@ -576,6 +615,12 @@ function videoSkript(): string {
   return '<script>(function(){document.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".ao-video-facade"):null;if(!b)return;var src=b.getAttribute("data-embed");if(!src)return;var f=document.createElement("iframe");f.src=src;f.loading="lazy";f.setAttribute("allow","autoplay; fullscreen; picture-in-picture");f.setAttribute("allowfullscreen","");var w=document.createElement("div");w.className="ao-video";w.appendChild(f);if(b.parentNode){b.parentNode.replaceChild(w,b);}},false);})();</script>';
 }
 
+// Karten-Facade: Karte (Google-Embed, kein Key) lädt erst nach Klick — tempo-sicher.
+// Nur auf Live-/Vorschau-Seiten, nicht im Editor.
+function karteSkript(): string {
+  return '<script>(function(){document.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".ao-karte-facade"):null;if(!b||!b.getAttribute("data-embed"))return;var src=b.getAttribute("data-embed");var f=document.createElement("iframe");f.src=src;f.loading="lazy";f.setAttribute("title","Karte");f.setAttribute("referrerpolicy","no-referrer-when-downgrade");var w=document.createElement("div");w.className="ao-karte";w.appendChild(f);if(b.parentNode){b.parentNode.replaceChild(w,b);}},false);})();</script>';
+}
+
 // --- Komplette, in sich geschlossene HTML-Seite -----------------------------
 export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
@@ -595,6 +640,7 @@ export function seiteHtml(
   }).join('\n');
   const hatVideo = (seite.bloecke || []).some((b) => b.typ === 'video');
   const hatBewertungen = (seite.bloecke || []).some((b) => b.typ === 'bewertungen');
+  const hatAnfahrt = (seite.bloecke || []).some((b) => b.typ === 'anfahrt');
 
   return [
     '<!doctype html>',
@@ -621,6 +667,7 @@ export function seiteHtml(
       ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
       : '',
     (!opts.editor && hatVideo) ? videoSkript() : '',
+    (!opts.editor && hatAnfahrt) ? karteSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',
