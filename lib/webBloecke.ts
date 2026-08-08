@@ -46,6 +46,7 @@ export type Block =
   | { typ: 'anfahrt'; eyebrow?: string; titel: string }
   | { typ: 'buchung'; eyebrow?: string; titel: string; text?: string }
   | { typ: 'produkte'; eyebrow?: string; titel: string }
+  | { typ: 'chatbot'; titel?: string; gruss?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -66,6 +67,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'anfahrt', icon: '📍', name: 'Öffnungszeiten & Anfahrt', beschreibung: 'Zeiten, Adresse und Karte — aus dem Webauftritt' },
   { typ: 'buchung', icon: '🗓️', name: 'Online-Terminbuchung', beschreibung: 'Echte Slot-Buchung — Kunde bucht selbst (aus dem Buchungs-Modul)' },
   { typ: 'produkte', icon: '🛍️', name: 'Shop-Produkte', beschreibung: 'Ihre Produkte als Kacheln mit Warenkorb (aus „Produkte in den Shop")' },
+  { typ: 'chatbot', icon: '🤖', name: 'KI-Verkaufsberater', beschreibung: 'Schwebender KI-Chat — berät, kennt Produkte, Preise & Bestand live' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -457,6 +459,15 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '</div></section>',
       ].join('');
     }
+    case 'chatbot': {
+      const oid = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
+      const titel = esc(z(b.titel) || 'Fragen? Ich berate Sie');
+      const gruss = esc(z(b.gruss) || 'Hallo! Ich helfe Ihnen gern weiter — wonach suchen Sie?');
+      if (ed) {
+        return '<section class="sec"><div class="wrap narrow"><div class="ao-chat-vorschau">🤖 <b>KI-Verkaufsberater</b> — erscheint auf der Live-Seite als schwebender Chat unten links. Er kennt Ihre Shop-Produkte, Preise und Bestand und ist als KI gekennzeichnet. Titel: &bdquo;' + titel + '&ldquo;.</div></div></section>';
+      }
+      return '<div class="ao-chat" data-seite="' + oid + '" data-titel="' + titel + '" data-gruss="' + gruss + '"></div>';
+    }
     default:
       return '';
   }
@@ -645,6 +656,24 @@ function seiteCss(ci: CiWeb): string {
     '.ao-prod-add{border:none;cursor:pointer;font-size:14px;padding:10px 14px}',
     '.ao-shop-lade,.ao-shop-leer,.ao-shop-hinweis{color:#8290a0;font-weight:600;padding:8px 0}',
     '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4);cursor:pointer}',
+    // KI-Verkaufsberater (schwebender Chat, unten links)
+    '.ao-chat-vorschau{background:#f5f8fc;border:1px dashed #c3ccd7;border-radius:12px;padding:16px 18px;color:#41505f;font-size:15px;line-height:1.6}',
+    '.ao-chat-fab{position:fixed;left:20px;bottom:20px;z-index:55;background:var(--p);color:#fff;border:none;border-radius:999px;padding:13px 20px;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 8px 24px -6px rgba(0,0,0,.45)}',
+    '.ao-chat-fab:hover{transform:translateY(-2px)}',
+    '.ao-chat-panel{position:fixed;left:20px;bottom:20px;z-index:56;width:min(360px,calc(100vw - 40px));height:min(520px,calc(100vh - 40px));background:#fff;border:1px solid #e7ebf1;border-radius:16px;box-shadow:0 20px 60px -12px rgba(0,0,0,.4);display:none;flex-direction:column;overflow:hidden}',
+    '.ao-chat-panel.auf{display:flex}',
+    '.ao-chat-kopf{background:var(--p);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}',
+    '.ao-chat-kopf b{font-size:15px}',
+    '.ao-chat-kopf small{display:block;opacity:.8;font-weight:400;font-size:11px}',
+    '.ao-chat-x{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1}',
+    '.ao-chat-log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f7fafc}',
+    '.ao-chat-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap}',
+    '.ao-chat-bot{align-self:flex-start;background:#fff;border:1px solid #e7ebf1;color:#1c2430;border-bottom-left-radius:4px}',
+    '.ao-chat-user{align-self:flex-end;background:var(--p);color:#fff;border-bottom-right-radius:4px}',
+    '.ao-chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid #eceff3;background:#fff}',
+    '.ao-chat-form input{flex:1;border:1px solid #d3dbe4;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;box-sizing:border-box}',
+    '.ao-chat-form button{border:none;background:var(--a);color:#fff;border-radius:10px;padding:0 16px;font-weight:800;cursor:pointer}',
+    '.ao-chat-hinweis{font-size:11px;color:#8290a0;text-align:center;padding:0 12px 8px;background:#fff}',
     // Warenkorb-Drawer + Kasse
     '.ao-wk-overlay{position:fixed;inset:0;background:rgba(5,10,20,.5);z-index:60;display:none;justify-content:flex-end}',
     '.ao-wk-overlay.auf{display:flex}',
@@ -754,6 +783,12 @@ function produkteSkript(): string {
   return '<script src="/shop.js" defer></script>';
 }
 
+// KI-Verkaufsberater: Widget-Logik (schwebender Chat) liegt in public/chat.js,
+// spricht mit /api/oeffentlich/chat. Nur auf veröffentlichten Seiten.
+function chatSkript(): string {
+  return '<script src="/chat.js" defer></script>';
+}
+
 // Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
 // sicher, kein Autoload). Nur auf Live-/Vorschau-Seiten, nicht im Editor.
 function videoSkript(): string {
@@ -788,6 +823,7 @@ export function seiteHtml(
   const hatAnfahrt = (seite.bloecke || []).some((b) => b.typ === 'anfahrt');
   const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
   const hatProdukte = (seite.bloecke || []).some((b) => b.typ === 'produkte');
+  const hatChatbot = (seite.bloecke || []).some((b) => b.typ === 'chatbot');
 
   return [
     '<!doctype html>',
@@ -818,6 +854,7 @@ export function seiteHtml(
     (!opts.editor && hatAnfahrt) ? karteSkript() : '',
     (opts.oeffentlichId && hatBuchung) ? buchungSkript() : '',
     (opts.oeffentlichId && hatProdukte) ? produkteSkript() : '',
+    (opts.oeffentlichId && hatChatbot) ? chatSkript() : '',
     hatProdukte ? widerrufSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
