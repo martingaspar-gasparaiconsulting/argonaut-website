@@ -8,7 +8,7 @@
 // Webauftritt (eine Quelle der Wahrheit) — von hier aus verlinkt.
 // ============================================================
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useState, useEffect, type DragEvent } from 'react';
 import { BAUSTEIN_KATALOG, type Block } from '@/lib/webBloecke';
 import FotoPicker from './FotoPicker';
 
@@ -44,6 +44,19 @@ export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; 
   // Bild-Auswahl: welcher Block, welches Ziel (Hero-Titelbild oder Galerie).
   const [picker, setPicker] = useState<{ index: number; ziel: 'hero' | 'galerie'; start: string } | null>(null);
 
+  // Drag & Drop: welcher Baustein wird gezogen, über welchem liegt er (vor/nach).
+  const [ziehIndex, setZiehIndex] = useState<number | null>(null);
+  const [ueberIndex, setUeberIndex] = useState<number | null>(null);
+  const [ueberPos, setUeberPos] = useState<'vor' | 'nach'>('vor');
+
+  // Nach jedem Zieh-Vorgang (egal wo losgelassen) die Markierungen leeren.
+  useEffect(() => {
+    const leeren = () => { setZiehIndex(null); setUeberIndex(null); };
+    window.addEventListener('dragend', leeren);
+    window.addEventListener('drop', leeren);
+    return () => { window.removeEventListener('dragend', leeren); window.removeEventListener('drop', leeren); };
+  }, []);
+
   function setBlock(i: number, patch: Record<string, unknown>) {
     const kopie = bloecke.map((b, idx) => (idx === i ? ({ ...b, ...patch } as Block) : b));
     onChange(kopie);
@@ -66,22 +79,89 @@ export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; 
   }
   function remove(i: number) { onChange(bloecke.filter((_, idx) => idx !== i)); }
   function add(typ: Block['typ']) { onChange([...bloecke, neuerBlock(typ)]); }
+  function duplicate(i: number) {
+    const kopie = JSON.parse(JSON.stringify(bloecke[i])) as Block;
+    onChange([...bloecke.slice(0, i + 1), kopie, ...bloecke.slice(i + 1)]);
+  }
+  function reorder(von: number, ziel: number) {
+    const arr = bloecke.slice();
+    const [item] = arr.splice(von, 1);
+    arr.splice(von < ziel ? ziel - 1 : ziel, 0, item);
+    onChange(arr);
+  }
+  function insertAt(typ: Block['typ'], at: number) {
+    onChange([...bloecke.slice(0, at), neuerBlock(typ), ...bloecke.slice(at)]);
+  }
+
+  // DnD-Helfer: erkennt Palette-Baustein (neuer Typ) vs. Umsortieren (Index).
+  function relevant(e: DragEvent<HTMLElement>) {
+    return e.dataTransfer.types.includes('application/x-ao-typ') || e.dataTransfer.types.includes('application/x-ao-index');
+  }
+  function ablegen(e: DragEvent<HTMLElement>, ziel: number) {
+    const typ = e.dataTransfer.getData('application/x-ao-typ');
+    if (typ) { insertAt(typ as Block['typ'], ziel); return; }
+    const von = parseInt(e.dataTransfer.getData('application/x-ao-index'), 10);
+    if (!Number.isNaN(von)) reorder(von, ziel);
+  }
+  function onCardOver(e: DragEvent<HTMLElement>, i: number) {
+    if (!relevant(e)) return;
+    e.preventDefault();
+    const r = e.currentTarget.getBoundingClientRect();
+    setUeberIndex(i);
+    setUeberPos(e.clientY < r.top + r.height / 2 ? 'vor' : 'nach');
+  }
+  function onCardDrop(e: DragEvent<HTMLElement>, i: number) {
+    if (!relevant(e)) return;
+    e.preventDefault();
+    ablegen(e, ueberPos === 'nach' ? i + 1 : i);
+    setZiehIndex(null); setUeberIndex(null);
+  }
+  function onEndeOver(e: DragEvent<HTMLElement>) {
+    if (!relevant(e)) return;
+    e.preventDefault(); setUeberIndex(bloecke.length); setUeberPos('vor');
+  }
+  function onEndeDrop(e: DragEvent<HTMLElement>) {
+    if (!relevant(e)) return;
+    e.preventDefault();
+    ablegen(e, bloecke.length);
+    setZiehIndex(null); setUeberIndex(null);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {bloecke.map((b, i) => (
-        <div key={i} style={styles.block}>
-          <div style={styles.kopf}>
-            <span style={styles.typName}>{NAME[b.typ] || b.typ}</span>
-            <div style={styles.kopfBtns}>
-              <button style={styles.miniBtn} title="Nach oben" onClick={() => move(i, -1)} disabled={i === 0}>↑</button>
-              <button style={styles.miniBtn} title="Nach unten" onClick={() => move(i, 1)} disabled={i === bloecke.length - 1}>↓</button>
-              <button style={styles.miniBtnDanger} title="Löschen" onClick={() => remove(i)}>✕</button>
+        <div key={i} style={styles.blockWrap} onDragOver={(e) => onCardOver(e, i)} onDrop={(e) => onCardDrop(e, i)}>
+          {ueberIndex === i && ueberPos === 'vor' && <div style={styles.dropLinie} />}
+          <div style={{ ...styles.block, ...(ziehIndex === i ? styles.blockZieht : null) }}>
+            <div style={styles.kopf}>
+              <div style={styles.kopfLinks}>
+                <span
+                  style={styles.grip}
+                  title="Zum Umsortieren ziehen"
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.setData('application/x-ao-index', String(i)); e.dataTransfer.effectAllowed = 'move'; setZiehIndex(i); }}
+                  onDragEnd={() => { setZiehIndex(null); setUeberIndex(null); }}
+                >⠿</span>
+                <span style={styles.typName}>{NAME[b.typ] || b.typ}</span>
+              </div>
+              <div style={styles.kopfBtns}>
+                <button style={styles.miniBtn} title="Nach oben" onClick={() => move(i, -1)} disabled={i === 0}>↑</button>
+                <button style={styles.miniBtn} title="Nach unten" onClick={() => move(i, 1)} disabled={i === bloecke.length - 1}>↓</button>
+                <button style={styles.miniBtn} title="Duplizieren" onClick={() => duplicate(i)}>⧉</button>
+                <button style={styles.miniBtnDanger} title="Löschen" onClick={() => remove(i)}>✕</button>
+              </div>
             </div>
+            <div style={styles.felder}>{felderFuer(b, i, setBlock, openPicker)}</div>
           </div>
-          <div style={styles.felder}>{felderFuer(b, i, setBlock, openPicker)}</div>
+          {ueberIndex === i && ueberPos === 'nach' && <div style={styles.dropLinie} />}
         </div>
       ))}
+
+      {/* Ablage am Ende — nimmt Palette-Bausteine und umsortierte Karten auf; auch bei leerer Seite. */}
+      <div style={styles.endeZone} onDragOver={onEndeOver} onDrop={onEndeDrop}>
+        {ueberIndex === bloecke.length && <div style={styles.dropLinie} />}
+        <span style={styles.endeText}>{bloecke.length === 0 ? '⬇ Baustein hierher ziehen' : '⬇ Hierher ziehen = ans Ende'}</span>
+      </div>
 
       <div style={styles.addBar}>
         <span style={styles.addLabel}>Baustein hinzufügen:</span>
@@ -244,8 +324,15 @@ function Liste({ titel, items, felder, onChange, leer }: { titel: string; items:
 }
 
 const styles: Record<string, CSSProperties> = {
+  blockWrap: { display: 'flex', flexDirection: 'column' },
   block: { background: C.navy3, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 },
+  blockZieht: { opacity: 0.4 },
   kopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  kopfLinks: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
+  grip: { cursor: 'grab', color: C.textDim, fontSize: FS.text, fontWeight: 800, padding: '0 2px', userSelect: 'none' },
+  dropLinie: { height: 3, background: C.cyan, borderRadius: 2, margin: '4px 0', boxShadow: `0 0 8px ${C.cyan}` },
+  endeZone: { display: 'flex', flexDirection: 'column', gap: 4, border: `1px dashed ${C.border}`, borderRadius: 10, padding: '12px 14px', textAlign: 'center' },
+  endeText: { fontSize: FS.mini, color: C.textDim, fontWeight: 600 },
   typName: { fontWeight: 800, fontSize: FS.klein, color: C.gold },
   kopfBtns: { display: 'flex', gap: 5 },
   miniBtn: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 10px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },

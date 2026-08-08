@@ -49,6 +49,7 @@ export default function VollbildEditor() {
   const [gespeichert, setGespeichert] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [paletteZieht, setPaletteZieht] = useState(false);
 
   // Eine Seite (slug) laden — gespeicherte Bausteine oder frische Vorlage.
   const ladeSeite = useCallback(async (userId: string, s: string, ciData: CiWeb | null) => {
@@ -196,10 +197,18 @@ export default function VollbildEditor() {
         {/* links · Palette */}
         <aside style={styles.spalteLinks}>
           <div style={styles.spalteTitel}>Bausteine</div>
-          <p style={styles.spalteHinweis}>Klicken fügt den Baustein unten an. (Ziehen &amp; Sortieren folgt.)</p>
+          <p style={styles.spalteHinweis}>Klicken fügt an — oder in die Seite ziehen. Reihenfolge rechts per ⠿ ziehen.</p>
           <div style={styles.paletteListe}>
             {BAUSTEIN_KATALOG.map((k) => (
-              <button key={k.typ} style={styles.paletteBtn} onClick={() => add(k.typ)} title={k.beschreibung}>
+              <button
+                key={k.typ}
+                style={styles.paletteBtn}
+                draggable
+                onDragStart={(e) => { e.dataTransfer.setData('application/x-ao-typ', k.typ); e.dataTransfer.effectAllowed = 'copy'; setPaletteZieht(true); }}
+                onDragEnd={() => setPaletteZieht(false)}
+                onClick={() => add(k.typ)}
+                title={k.beschreibung}
+              >
                 <span style={styles.paletteIcon}>{k.icon}</span>
                 <span style={styles.paletteText}>
                   <span style={styles.paletteName}>{k.name}</span>
@@ -212,10 +221,26 @@ export default function VollbildEditor() {
 
         {/* Mitte · Live-Leinwand */}
         <main style={styles.spalteMitte}>
-          <div style={styles.leinwandRahmen}>
-            <div style={{ width: breite ? breite : '100%', maxWidth: '100%', height: '100%', margin: '0 auto', transition: 'width .2s' }}>
-              <iframe title="Live-Vorschau" srcDoc={html} style={styles.iframe} />
+          <div style={styles.leinwandAussen}>
+            <div style={styles.leinwandRahmen}>
+              <div style={{ width: breite ? breite : '100%', maxWidth: '100%', height: '100%', margin: '0 auto', transition: 'width .2s' }}>
+                <iframe title="Live-Vorschau" srcDoc={html} style={styles.iframe} />
+              </div>
             </div>
+            {paletteZieht && (
+              <div
+                style={styles.dropOverlay}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const typ = e.dataTransfer.getData('application/x-ao-typ');
+                  if (typ) add(typ as Block['typ']);
+                  setPaletteZieht(false);
+                }}
+              >
+                <div style={styles.dropOverlayInner}>⬇ Baustein hier ablegen — wird ans Ende angefügt</div>
+              </div>
+            )}
           </div>
         </main>
 
@@ -271,7 +296,10 @@ const styles: Record<string, CSSProperties> = {
   paletteName: { fontWeight: 800, fontSize: FS.klein },
   paletteBesch: { fontSize: FS.mini, color: C.textDim, lineHeight: 1.4 },
 
+  leinwandAussen: { position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex' },
   leinwandRahmen: { flex: '1 1 auto', minHeight: 0, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: 10, overflow: 'auto', display: 'flex' },
+  dropOverlay: { position: 'absolute', inset: 0, background: 'rgba(0,229,255,0.10)', border: `2px dashed ${C.cyan}`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  dropOverlayInner: { background: C.navy2, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 10, padding: '12px 20px', fontWeight: 800, fontSize: FS.klein, boxShadow: '0 10px 30px rgba(0,0,0,0.4)' },
   iframe: { width: '100%', height: '100%', minHeight: 560, border: '1px solid rgba(143,163,190,0.25)', borderRadius: 8, background: '#fff', display: 'block' },
 
   zentrum: { position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.navy, color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', padding: 20 },
