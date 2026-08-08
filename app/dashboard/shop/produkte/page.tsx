@@ -52,6 +52,8 @@ export default function ShopProduktePage() {
   const [katFilter, setKatFilter] = useState('');
   const [nurShop, setNurShop] = useState(false);
   const [offen, setOffen] = useState<string | null>(null); // aufgeklappter Artikel (Beschreibung/Bild)
+  const [emoji, setEmoji] = useState(false);               // Emoji-Schalter je Branche (seriös/lebendig)
+  const [kiBusy, setKiBusy] = useState<string | null>(null); // Artikel-ID oder 'bulk'
 
   const lade = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -119,6 +121,36 @@ export default function ShopProduktePage() {
     await supabase.from('artikel').update({ [feld]: wert || null }).eq('id', a.id);
   }
 
+  // KI-Verkaufstext aus den echten Artikeldaten (Emoji-Schalter je Branche).
+  async function kiText(a: Artikel): Promise<string | null> {
+    try {
+      const res = await fetch('/api/shop-produkt-text', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ bezeichnung: a.bezeichnung, kategorie: a.kategorie, verkaufspreis: a.verkaufspreis, einheit: a.einheit, emoji }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.text) { setFehler(data?.error || 'KI-Text fehlgeschlagen.'); return null; }
+      return data.text as string;
+    } catch { setFehler('Verbindung zur KI fehlgeschlagen.'); return null; }
+  }
+  async function kiEinzeln(a: Artikel) {
+    setKiBusy(a.id); setFehler(null); setOk(null);
+    const t = await kiText(a);
+    if (t) { setListe((l) => l.map((x) => (x.id === a.id ? { ...x, shop_beschreibung: t } : x))); await supabase.from('artikel').update({ shop_beschreibung: t }).eq('id', a.id); }
+    setKiBusy(null);
+  }
+  async function kiKatalog() {
+    const ziel = gefiltert.filter((a) => a.im_shop && !(a.shop_beschreibung || '').trim()).slice(0, 30);
+    if (!ziel.length) { setOk('Alle sichtbaren Shop-Produkte haben bereits einen Text.'); return; }
+    setKiBusy('bulk'); setFehler(null); setOk(null);
+    let n = 0;
+    for (const a of ziel) {
+      const t = await kiText(a);
+      if (t) { n++; setListe((l) => l.map((x) => (x.id === a.id ? { ...x, shop_beschreibung: t } : x))); await supabase.from('artikel').update({ shop_beschreibung: t }).eq('id', a.id); }
+    }
+    setKiBusy(null); setOk(`${n} KI-Text(e) erstellt${ziel.length > n ? `, ${ziel.length - n} fehlgeschlagen` : ''}.`);
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.head}>
@@ -147,6 +179,12 @@ export default function ShopProduktePage() {
             ⬇ {katFilter ? `Kategorie „${katFilter}" übernehmen` : suche || nurShop ? 'Gefilterte übernehmen' : 'Alle übernehmen'} ({gefiltert.length})
           </button>
           <button style={styles.btnGhost} disabled={busy} onClick={() => sammel(false)}>Aus Shop entfernen</button>
+          <label style={styles.check} title="Verkaufstexte mit oder ohne Emojis (je nach Branche)">
+            <input type="checkbox" checked={emoji} onChange={(e) => setEmoji(e.target.checked)} /> Emojis im Text
+          </label>
+          <button style={{ ...styles.btnKi, opacity: kiBusy ? 0.6 : 1 }} disabled={!!kiBusy} onClick={kiKatalog}>
+            {kiBusy === 'bulk' ? '✨ Schreibt …' : '✨ KI-Texte (sichtbare ohne Text)'}
+          </button>
           <a href="/webseiten-editor" target="_blank" rel="noreferrer" style={styles.btnCyan}>🖥️ Produkt-Baustein im Editor →</a>
         </div>
         {ok && <div style={styles.ok}>{ok}</div>}
@@ -186,12 +224,18 @@ export default function ShopProduktePage() {
 
               {a.im_shop && offen === a.id && (
                 <div style={styles.detail}>
-                  <label style={styles.feldLabel}>Shop-Beschreibung <span style={styles.hint}>(KI-Verkaufstext folgt in Kapitel 6)</span></label>
+                  <div style={styles.beschKopf}>
+                    <label style={styles.feldLabel}>Shop-Beschreibung</label>
+                    <button style={{ ...styles.btnKiKlein, opacity: kiBusy ? 0.6 : 1 }} disabled={!!kiBusy} onClick={() => kiEinzeln(a)}>
+                      {kiBusy === a.id ? '✨ …' : '✨ KI-Verkaufstext'}
+                    </button>
+                  </div>
                   <textarea
                     style={styles.textarea}
-                    defaultValue={a.shop_beschreibung || ''}
+                    value={a.shop_beschreibung || ''}
+                    onChange={(e) => setListe((l) => l.map((x) => (x.id === a.id ? { ...x, shop_beschreibung: e.target.value } : x)))}
                     onBlur={(e) => feldSpeichern(a, 'shop_beschreibung', e.target.value)}
-                    placeholder="Kurzer Text, den Kunden im Shop sehen …"
+                    placeholder="Kurzer Text, den Kunden im Shop sehen … oder ✨ KI-Verkaufstext klicken."
                   />
                   <label style={styles.feldLabel}>Bild-Adresse (URL)</label>
                   <div style={styles.bildRow}>
@@ -230,6 +274,9 @@ const styles: Record<string, CSSProperties> = {
   sammelRow: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  btnKi: { background: `${C.gold}18`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  btnKiKlein: { background: `${C.gold}14`, color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: '5px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  beschKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
   btnCyan: { marginLeft: 'auto', background: `${C.cyan}14`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' },
 
   liste: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 },
