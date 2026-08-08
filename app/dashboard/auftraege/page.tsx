@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AuftraegeAuge from "./AuftraegeAuge";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
@@ -131,12 +133,15 @@ export default function AuftraegeCockpit() {
   async function laden() {
     setLoading(true);
     setFehler(null);
-    const { data, error } = await supabase
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Aufträge.
+    const sid = konkreterStandort(leseStandortCookie());
+    let q = supabase
       .from("auftraege")
       .select(
         "id, auftragsnummer, titel, status, auftragsdatum, netto_summe, brutto_summe, waehrung, created_at"
-      )
-      .order("created_at", { ascending: false });
+      );
+    if (sid) q = q.or(standortOrFilter(sid));
+    const { data, error } = await q.order("created_at", { ascending: false });
 
     if (error) {
       setFehler(error.message);
@@ -182,7 +187,7 @@ export default function AuftraegeCockpit() {
     setSpeichern(true);
     const { data, error } = await supabase
       .from("auftraege")
-      .insert({ titel, status: neuStatus, auftragsdatum: neuDatum || null })
+      .insert({ titel, status: neuStatus, auftragsdatum: neuDatum || null, standort_id: konkreterStandort(leseStandortCookie()) })
       .select("id")
       .single();
     setSpeichern(false);
@@ -287,6 +292,7 @@ export default function AuftraegeCockpit() {
         firma_id: f.firma_id || null,
         verkaufschance_id: f.id,
         waehrung,
+        standort_id: konkreterStandort(leseStandortCookie()),
       })
       .select("id")
       .single();
