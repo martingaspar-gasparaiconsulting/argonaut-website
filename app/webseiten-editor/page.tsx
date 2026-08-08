@@ -10,7 +10,7 @@
 // Pfad: app/webseiten-editor/page.tsx
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { seiteHtml, BAUSTEIN_KATALOG, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
@@ -35,6 +35,11 @@ const GERAETE: { key: string; label: string; icon: string; breite: number | null
 
 type SeitenRow = { bloecke: Block[] | null; status: string | null; oeffentlich_id: string | null };
 
+// Editor-Modus-HTML für die Leinwand: mit Klick-Auswahl + direkt editierbaren Texten.
+function baueDoc(bl: Block[], c: CiWeb): string {
+  return seiteHtml({ bloecke: bl }, c, new Date().getFullYear(), { editor: true });
+}
+
 export default function VollbildEditor() {
   const [uid, setUid] = useState<string | null>(null);
   const [ci, setCi] = useState<CiWeb | null>(null);
@@ -50,6 +55,8 @@ export default function VollbildEditor() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [paletteZieht, setPaletteZieht] = useState(false);
+  const [auswahl, setAuswahl] = useState<number | null>(null);
+  const [docHtml, setDocHtml] = useState('');
 
   // Eine Seite (slug) laden — gespeicherte Bausteine oder frische Vorlage.
   const ladeSeite = useCallback(async (userId: string, s: string, ciData: CiWeb | null) => {
@@ -57,15 +64,19 @@ export default function VollbildEditor() {
       .from('web_seiten').select('bloecke, status, oeffentlich_id')
       .eq('owner_user_id', userId).eq('slug', s).maybeSingle();
     const row = data as SeitenRow | null;
+    let neu: Block[];
     if (row && Array.isArray(row.bloecke) && row.bloecke.length > 0) {
-      setBloecke(row.bloecke);
+      neu = row.bloecke;
       setStatus(row.status || 'entwurf');
       setOeffentlichId(row.oeffentlich_id || null);
     } else {
-      setBloecke(ciData ? baueVorlage(ciData, s).bloecke : []);
+      neu = ciData ? baueVorlage(ciData, s).bloecke : [];
       setStatus('entwurf');
       setOeffentlichId(null);
     }
+    setBloecke(neu);
+    if (ciData) setDocHtml(baueDoc(neu, ciData));
+    setAuswahl(null);
     setDirty(false);
     setGespeichert(null);
   }, []);
@@ -94,8 +105,30 @@ export default function VollbildEditor() {
     return () => window.removeEventListener('beforeunload', warnen);
   }, [dirty]);
 
-  function setBloeckeDirty(b: Block[]) { setBloecke(b); setDirty(true); setGespeichert(null); }
-  function add(typ: Block['typ']) { setBloeckeDirty([...bloecke, neuerBlock(typ)]); }
+  // Struktur-Änderung (Palette, Umsortieren, Panel-Felder): Leinwand neu aufbauen.
+  function setBloeckeReflow(b: Block[]) {
+    setBloecke(b); setDirty(true); setGespeichert(null);
+    if (ci) setDocHtml(baueDoc(b, ci));
+  }
+  function add(typ: Block['typ']) { setBloeckeReflow([...bloecke, neuerBlock(typ)]); }
+
+  // Nachrichten aus der Leinwand (iframe): Baustein wählen + Text direkt bearbeiten.
+  useEffect(() => {
+    function onNachricht(e: MessageEvent) {
+      const d = e.data as { ao?: string; index?: number; feld?: string; wert?: string };
+      if (!d || typeof d !== 'object') return;
+      if (d.ao === 'select' && typeof d.index === 'number') {
+        setAuswahl(d.index);
+      } else if (d.ao === 'edit' && typeof d.index === 'number' && typeof d.feld === 'string') {
+        // In-Place-Text: die Leinwand zeigt es bereits — nur die Daten nachziehen (kein Neuaufbau).
+        const feld = d.feld, wert = d.wert ?? '';
+        setBloecke((prev) => prev.map((b, i) => (i === d.index ? ({ ...b, [feld]: wert } as Block) : b)));
+        setDirty(true); setGespeichert(null);
+      }
+    }
+    window.addEventListener('message', onNachricht);
+    return () => window.removeEventListener('message', onNachricht);
+  }, []);
 
   async function wechsleSeite(s: string) {
     if (s === slug) return;
@@ -127,7 +160,6 @@ export default function VollbildEditor() {
     setGespeichert('Gespeichert.'); setDirty(false); setSpeichert(false);
   }
 
-  const html = useMemo(() => (ci ? seiteHtml({ bloecke }, ci, new Date().getFullYear()) : ''), [ci, bloecke]);
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
   const hatFirma = !!(ci && (ci.firma ?? '').trim());
 
@@ -224,7 +256,7 @@ export default function VollbildEditor() {
           <div style={styles.leinwandAussen}>
             <div style={styles.leinwandRahmen}>
               <div style={{ width: breite ? breite : '100%', maxWidth: '100%', height: '100%', margin: '0 auto', transition: 'width .2s' }}>
-                <iframe title="Live-Vorschau" srcDoc={html} style={styles.iframe} />
+                <iframe title="Live-Vorschau" srcDoc={docHtml} style={styles.iframe} />
               </div>
             </div>
             {paletteZieht && (
@@ -247,9 +279,10 @@ export default function VollbildEditor() {
         {/* rechts · Eigenschaften */}
         <aside style={styles.spalteRechts}>
           <div style={styles.spalteTitel}>Eigenschaften</div>
+          <p style={styles.spalteHinweis}>Klicke einen Baustein auf der Seite an — der passende springt hier hoch. Überschriften &amp; Texte änderst du direkt auf der Seite.</p>
           {bloecke.length === 0
             ? <p style={styles.spalteHinweis}>Noch keine Bausteine — links einen hinzufügen.</p>
-            : <SeitenEditor bloecke={bloecke} onChange={setBloeckeDirty} />}
+            : <SeitenEditor bloecke={bloecke} onChange={setBloeckeReflow} auswahl={auswahl} onAuswahl={setAuswahl} />}
           <p style={styles.fussHinweis}>🎨 Farben &amp; Schrift ändern Sie im <a href="/dashboard/webauftritt" style={styles.link}>Webauftritt</a> — das gilt überall.</p>
         </aside>
       </div>

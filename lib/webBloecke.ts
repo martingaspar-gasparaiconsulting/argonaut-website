@@ -208,7 +208,11 @@ function terminSkript(): string {
 }
 
 // --- Ein Baustein → HTML ----------------------------------------------------
-export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } = {}): string {
+export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; editor?: boolean } = {}): string {
+  const ed = ctx.editor;
+  // Editor-Marker: nur im Vollbild-Editor gesetzt. Macht Text direkt anklick-/editierbar.
+  const ce = (feld: string) => (ed ? ' data-ao-feld="' + feld + '" contenteditable="true"' : '');
+  const ebHtml = (text?: string) => (ed ? '<div class="eyebrow"' + ce('eyebrow') + '>' + esc(text || '') + '</div>' : eyebrowHtml(text));
   switch (b.typ) {
     case 'hero': {
       const url = safeUrl(b.bild);
@@ -217,17 +221,17 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
         : '';
       return [
         '<section class="hero' + (url ? ' hero-bild' : '') + '"' + stil + '><div class="wrap">',
-        eyebrowHtml(b.eyebrow),
-        '<h1>' + esc(b.titel) + '</h1>',
-        b.unterzeile ? '<p class="lead">' + esc(b.unterzeile) + '</p>' : '',
-        b.knopf ? '<a class="btn" href="#kontakt">' + esc(b.knopf) + '</a>' : '',
+        ebHtml(b.eyebrow),
+        '<h1' + ce('titel') + '>' + esc(b.titel) + '</h1>',
+        b.unterzeile ? '<p class="lead"' + ce('unterzeile') + '>' + esc(b.unterzeile) + '</p>' : '',
+        b.knopf ? '<a class="btn" href="#kontakt"' + ce('knopf') + '>' + esc(b.knopf) + '</a>' : '',
         '</div></section>',
       ].join('');
     }
     case 'stats':
       return [
         '<section class="stats"><div class="wrap">',
-        b.titel ? '<h2 class="stats-titel">' + esc(b.titel) + '</h2>' : '',
+        b.titel ? '<h2 class="stats-titel"' + ce('titel') + '>' + esc(b.titel) + '</h2>' : '',
         '<div class="stats-grid">',
         b.zahlen.map((za) => '<div class="stat"><div class="stat-wert">' + esc(za.wert) + '</div><div class="stat-label">' + esc(za.label) + '</div></div>').join(''),
         '</div></div></section>',
@@ -235,8 +239,8 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
     case 'leistungen':
       return [
         '<section class="sec" id="leistungen"><div class="wrap">',
-        eyebrowHtml(b.eyebrow),
-        '<h2>' + esc(b.titel) + '</h2>',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
         '<div class="grid">',
         b.punkte.map((p) => '<div class="card"><h3>' + esc(p.titel) + '</h3>' + (p.text ? '<p>' + esc(p.text) + '</p>' : '') + '</div>').join(''),
         '</div></div></section>',
@@ -244,9 +248,9 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
     case 'ueber':
       return [
         '<section class="sec alt" id="ueber"><div class="wrap narrow">',
-        eyebrowHtml(b.eyebrow),
-        '<h2>' + esc(b.titel) + '</h2>',
-        '<p class="fliess">' + esc(b.text) + '</p>',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        '<p class="fliess"' + ce('text') + '>' + esc(b.text) + '</p>',
         '</div></section>',
       ].join('');
     case 'galerie': {
@@ -258,13 +262,13 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
         const n = Math.max(1, Math.min(12, b.anzahl || 3));
         for (let i = 0; i < n; i++) inner += '<div class="ph"><span>Bild</span></div>';
       }
-      return '<section class="sec"><div class="wrap"><h2>' + esc(b.titel) + '</h2><div class="gal">' + inner + '</div></div></section>';
+      return '<section class="sec"><div class="wrap"><h2' + ce('titel') + '>' + esc(b.titel) + '</h2><div class="gal">' + inner + '</div></div></section>';
     }
     case 'testimonials':
       return [
         '<section class="sec alt"><div class="wrap">',
-        eyebrowHtml(b.eyebrow),
-        '<h2>' + esc(b.titel) + '</h2>',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
         '<div class="grid">',
         b.stimmen.map((s) => '<figure class="stimme">' + sterne() + '<blockquote>' + esc(s.text) + '</blockquote><figcaption><b>' + esc(s.name) + '</b>' + (s.rolle ? '<span>' + esc(s.rolle) + '</span>' : '') + '</figcaption></figure>').join(''),
         '</div></div></section>',
@@ -272,8 +276,8 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
     case 'faq':
       return [
         '<section class="sec"><div class="wrap narrow">',
-        eyebrowHtml(b.eyebrow),
-        '<h2>' + esc(b.titel) + '</h2>',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
         '<div class="faq">',
         b.fragen.map((f) => '<details><summary>' + esc(f.frage) + '</summary><div class="faq-a">' + esc(f.antwort) + '</div></details>').join(''),
         '</div></div></section>',
@@ -287,8 +291,8 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
       if (oeff) li.push('<li>&#128336; ' + esc(oeff).replace(/\n/g, '<br>') + '</li>');
       return [
         '<section class="sec alt" id="kontakt"><div class="wrap narrow">',
-        '<h2>' + esc(b.titel) + '</h2>',
-        b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess"' + ce('text') + '>' + esc(b.text) + '</p>' : '',
         li.length
           ? '<div class="kontakt-grid"><ul class="kontakt">' + li.join('') + '</ul>' + anfrageFormular(ctx.oeffentlichId, b.knopf) + '</div>'
           : anfrageFormular(ctx.oeffentlichId, b.knopf),
@@ -296,20 +300,20 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string } =
       ].join('');
     }
     case 'cta':
-      return '<section class="cta"><div class="wrap"><h2>' + esc(b.titel) + '</h2><a class="btn btn-dunkel" href="#kontakt">' + esc(b.knopf) + '</a></div></section>';
+      return '<section class="cta"><div class="wrap"><h2' + ce('titel') + '>' + esc(b.titel) + '</h2><a class="btn btn-dunkel" href="#kontakt"' + ce('knopf') + '>' + esc(b.knopf) + '</a></div></section>';
     case 'newsletter':
       return [
         '<section class="sec" id="newsletter"><div class="wrap narrow">',
-        '<h2>' + esc(b.titel) + '</h2>',
-        b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess"' + ce('text') + '>' + esc(b.text) + '</p>' : '',
         newsletterFormular(ctx.oeffentlichId, b.knopf),
         '</div></section>',
       ].join('');
     case 'termin':
       return [
         '<section class="sec alt" id="termin"><div class="wrap narrow">',
-        '<h2>' + esc(b.titel) + '</h2>',
-        b.text ? '<p class="fliess">' + esc(b.text) + '</p>' : '',
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess"' + ce('text') + '>' + esc(b.text) + '</p>' : '',
         terminFormular(ctx.oeffentlichId, b.knopf),
         '</div></section>',
       ].join('');
@@ -442,12 +446,36 @@ function seiteCss(ci: CiWeb): string {
   ].join('');
 }
 
+// --- Editor-Modus: CSS + Skript (nur im Vollbild-Editor, nie auf Live-Seiten) ---
+// Klick auf einen Baustein wählt ihn (postMessage 'select'); direkt editierbare
+// Texte (data-ao-feld/contenteditable) melden ihren neuen Wert beim Verlassen
+// (postMessage 'edit') an den Editor. Veröffentlichte Seiten bekommen davon nichts.
+function editorCss(): string {
+  return [
+    '.ao-b{position:relative}',
+    '.ao-b:hover{outline:2px dashed rgba(43,143,255,.45);outline-offset:-2px}',
+    '.ao-b.ao-sel{outline:2px solid #2b8fff;outline-offset:-2px}',
+    '[data-ao-feld]{cursor:text;border-radius:3px;outline:1px dashed transparent;transition:outline-color .15s,background .15s}',
+    '[data-ao-feld]:hover{outline-color:rgba(43,143,255,.55)}',
+    '[data-ao-feld]:focus{outline:2px solid #2b8fff;outline-offset:2px;background:rgba(43,143,255,.08)}',
+  ].join('');
+}
+function editorSkript(): string {
+  return '<script>(function(){'
+    + 'function post(o){parent.postMessage(o,"*");}'
+    + 'function sel(el){var a=document.querySelectorAll(".ao-b.ao-sel");for(var i=0;i<a.length;i++){a[i].classList.remove("ao-sel");}if(el){el.classList.add("ao-sel");}}'
+    + 'document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest){return;}var f=t.closest("[data-ao-feld]");if(f){e.preventDefault();}var b=t.closest("[data-ao-i]");if(b){sel(b);post({ao:"select",index:parseInt(b.getAttribute("data-ao-i"),10)});}},true);'
+    + 'document.addEventListener("blur",function(e){var el=e.target;if(!el||!el.getAttribute||!el.hasAttribute("data-ao-feld")){return;}var b=el.closest("[data-ao-i]");if(!b){return;}post({ao:"edit",index:parseInt(b.getAttribute("data-ao-i"),10),feld:el.getAttribute("data-ao-feld"),wert:(el.textContent||"").trim()});},true);'
+    + 'document.addEventListener("keydown",function(e){var t=e.target;if(e.key==="Enter"&&t&&t.hasAttribute&&t.hasAttribute("data-ao-feld")){e.preventDefault();t.blur();}},true);'
+    + '})();</script>';
+}
+
 // --- Komplette, in sich geschlossene HTML-Seite -----------------------------
 export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string } = {},
+  opts: { oeffentlichId?: string; editor?: boolean } = {},
 ): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   const slogan = esc(z(ci.slogan));
@@ -455,7 +483,10 @@ export function seiteHtml(
     ? '<span class="logo"><img src="' + safeUrl(ci.logo_url) + '" alt="Logo"></span>'
     : '<span class="logo">' + esc((z(ci.firma) || 'A').charAt(0).toUpperCase()) + '</span>';
 
-  const koerper = (seite.bloecke || []).map((b) => blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId })).join('\n');
+  const koerper = (seite.bloecke || []).map((b, i) => {
+    const inner = blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId, editor: opts.editor });
+    return opts.editor ? '<div class="ao-b" data-ao-i="' + i + '">' + inner + '</div>' : inner;
+  }).join('\n');
 
   return [
     '<!doctype html>',
@@ -463,7 +494,7 @@ export function seiteHtml(
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<title>' + firma + '</title>',
     seoMeta(ci, firma),
-    '<style>' + seiteCss(ci) + '</style>',
+    '<style>' + seiteCss(ci) + (opts.editor ? editorCss() : '') + '</style>',
     '</head><body>',
     '<header class="top"><div class="trow">',
     logo,
@@ -481,6 +512,7 @@ export function seiteHtml(
     opts.oeffentlichId
       ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
       : '',
+    opts.editor ? editorSkript() : '',
     '</body></html>',
   ].join('\n');
 }

@@ -8,7 +8,7 @@
 // Webauftritt (eine Quelle der Wahrheit) — von hier aus verlinkt.
 // ============================================================
 
-import { CSSProperties, useState, useEffect, type DragEvent } from 'react';
+import { CSSProperties, useState, useEffect, useRef, type DragEvent } from 'react';
 import { BAUSTEIN_KATALOG, type Block } from '@/lib/webBloecke';
 import FotoPicker from './FotoPicker';
 
@@ -40,9 +40,20 @@ export function neuerBlock(typ: Block['typ']): Block {
   }
 }
 
-export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; onChange: (b: Block[]) => void }) {
+export default function SeitenEditor({ bloecke, onChange, auswahl, onAuswahl }: {
+  bloecke: Block[];
+  onChange: (b: Block[]) => void;
+  auswahl?: number | null;          // vom Vollbild-Editor: welcher Baustein ist auf der Leinwand gewählt
+  onAuswahl?: (i: number | null) => void;
+}) {
   // Bild-Auswahl: welcher Block, welches Ziel (Hero-Titelbild oder Galerie).
   const [picker, setPicker] = useState<{ index: number; ziel: 'hero' | 'galerie'; start: string } | null>(null);
+
+  // Karten-Referenzen, um bei Auswahl von der Leinwand zum passenden Baustein zu scrollen.
+  const kartenRef = useRef<Record<number, HTMLDivElement | null>>({});
+  useEffect(() => {
+    if (typeof auswahl === 'number') kartenRef.current[auswahl]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [auswahl]);
 
   // Drag & Drop: welcher Baustein wird gezogen, über welchem liegt er (vor/nach).
   const [ziehIndex, setZiehIndex] = useState<number | null>(null);
@@ -130,11 +141,11 @@ export default function SeitenEditor({ bloecke, onChange }: { bloecke: Block[]; 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {bloecke.map((b, i) => (
-        <div key={i} style={styles.blockWrap} onDragOver={(e) => onCardOver(e, i)} onDrop={(e) => onCardDrop(e, i)}>
+        <div key={i} ref={(el) => { kartenRef.current[i] = el; }} style={styles.blockWrap} onDragOver={(e) => onCardOver(e, i)} onDrop={(e) => onCardDrop(e, i)}>
           {ueberIndex === i && ueberPos === 'vor' && <div style={styles.dropLinie} />}
-          <div style={{ ...styles.block, ...(ziehIndex === i ? styles.blockZieht : null) }}>
+          <div style={{ ...styles.block, ...(ziehIndex === i ? styles.blockZieht : null), ...(auswahl === i ? styles.blockSel : null) }}>
             <div style={styles.kopf}>
-              <div style={styles.kopfLinks}>
+              <div style={styles.kopfLinks} onClick={() => onAuswahl?.(i)}>
                 <span
                   style={styles.grip}
                   title="Zum Umsortieren ziehen"
@@ -327,8 +338,9 @@ const styles: Record<string, CSSProperties> = {
   blockWrap: { display: 'flex', flexDirection: 'column' },
   block: { background: C.navy3, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 },
   blockZieht: { opacity: 0.4 },
+  blockSel: { borderColor: C.gold, boxShadow: `0 0 0 1px ${C.gold}66` },
   kopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  kopfLinks: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
+  kopfLinks: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, cursor: 'pointer' },
   grip: { cursor: 'grab', color: C.textDim, fontSize: FS.text, fontWeight: 800, padding: '0 2px', userSelect: 'none' },
   dropLinie: { height: 3, background: C.cyan, borderRadius: 2, margin: '4px 0', boxShadow: `0 0 8px ${C.cyan}` },
   endeZone: { display: 'flex', flexDirection: 'column', gap: 4, border: `1px dashed ${C.border}`, borderRadius: 10, padding: '12px 14px', textAlign: 'center' },
