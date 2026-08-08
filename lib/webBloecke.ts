@@ -45,6 +45,7 @@ export type Block =
   | { typ: 'whatsapp'; nummer: string; text?: string }
   | { typ: 'anfahrt'; eyebrow?: string; titel: string }
   | { typ: 'buchung'; eyebrow?: string; titel: string; text?: string }
+  | { typ: 'produkte'; eyebrow?: string; titel: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -64,6 +65,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'whatsapp', icon: '💬', name: 'WhatsApp-Button', beschreibung: 'Schwebender Knopf — Besucher schreiben direkt per WhatsApp' },
   { typ: 'anfahrt', icon: '📍', name: 'Öffnungszeiten & Anfahrt', beschreibung: 'Zeiten, Adresse und Karte — aus dem Webauftritt' },
   { typ: 'buchung', icon: '🗓️', name: 'Online-Terminbuchung', beschreibung: 'Echte Slot-Buchung — Kunde bucht selbst (aus dem Buchungs-Modul)' },
+  { typ: 'produkte', icon: '🛍️', name: 'Shop-Produkte', beschreibung: 'Ihre Produkte als Kacheln mit Warenkorb (aus „Produkte in den Shop")' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -426,6 +428,35 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '</div></section>',
       ].join('');
     }
+    case 'produkte': {
+      const oid = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
+      let inner: string;
+      if (oid) {
+        inner = '<div class="ao-wk-bar" style="display:none"><span class="ao-wk-text"></span></div>'
+          + '<div class="ao-shop-grid"><div class="ao-shop-lade">Produkte werden geladen &hellip;</div></div>';
+      } else if (ed) {
+        const bsp = [
+          { n: 'Beispiel-Produkt A', p: '19,90 €' },
+          { n: 'Beispiel-Produkt B', p: '34,00 €' },
+          { n: 'Beispiel-Produkt C', p: '9,50 €' },
+        ].map((x) =>
+          '<div class="ao-prod"><div class="ao-prod-bild ao-prod-kein"></div><div class="ao-prod-body">'
+          + '<div class="ao-prod-name">' + x.n + '</div>'
+          + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + x.p + '</span>'
+          + '<span class="btn ao-prod-add">In den Warenkorb</span></div></div></div>',
+        ).join('');
+        inner = '<div class="ao-shop-hinweis">Vorschau — echte Produkte übernehmen Sie unter „Produkte in den Shop".</div><div class="ao-shop-grid">' + bsp + '</div>';
+      } else {
+        inner = '<div class="ao-shop-grid"><div class="ao-shop-leer">Produkte folgen in Kürze.</div></div>';
+      }
+      return [
+        '<section class="sec" id="shop"><div class="wrap">',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        '<div class="ao-shop" data-seite="' + oid + '">' + inner + '</div>',
+        '</div></section>',
+      ].join('');
+    }
     default:
       return '';
   }
@@ -572,6 +603,19 @@ function seiteCss(ci: CiWeb): string {
     '.ao-buchung-btn{cursor:pointer}',
     '.ao-buchung-hinweis{color:#8290a0;font-size:14px}',
     '.ao-buchung .ao-leer{font-style:italic}',
+    // Shop-Produkte (Kachel-Raster + Warenkorb-Leiste)
+    '.ao-shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:8px}',
+    '.ao-prod{background:#fff;border:1px solid #e7ebf1;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px -22px rgba(20,40,70,.35);display:flex;flex-direction:column}',
+    '.ao-prod-bild{aspect-ratio:4/3;background-size:cover;background-position:center;background-color:#eef2f7}',
+    '.ao-prod-kein{background:linear-gradient(135deg,#eef2f7,#dde5ee)}',
+    '.ao-prod-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px;flex:1}',
+    '.ao-prod-name{font-weight:800;color:var(--p);font-size:17px}',
+    '.ao-prod-text{color:#51606f;font-size:14px;line-height:1.5;flex:1}',
+    '.ao-prod-fuss{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}',
+    '.ao-prod-preis{font-weight:900;color:#1c2430;font-size:18px}',
+    '.ao-prod-add{border:none;cursor:pointer;font-size:14px;padding:10px 14px}',
+    '.ao-shop-lade,.ao-shop-leer,.ao-shop-hinweis{color:#8290a0;font-weight:600;padding:8px 0}',
+    '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4)}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -646,6 +690,29 @@ function buchungSkript(): string {
     + '})();</script>';
 }
 
+// Shop-Produkte: lädt die freigeschalteten Artikel und zeigt sie als Kacheln.
+// Warenkorb liegt clientseitig in localStorage (Schlüssel je Seite); die Kasse
+// baut in Kapitel 3 darauf auf. Nur auf veröffentlichten Seiten.
+function produkteSkript(): string {
+  return '<script>(function(){'
+    + 'var c=document.querySelector(".ao-shop[data-seite]");if(!c)return;var seite=c.getAttribute("data-seite");if(!seite)return;var wkKey="ao_wk_"+seite;'
+    + 'function esc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'function eur(n){return (Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});}'
+    + 'function ladeWk(){try{return JSON.parse(localStorage.getItem(wkKey)||"[]");}catch(e){return [];}}'
+    + 'function saveWk(w){try{localStorage.setItem(wkKey,JSON.stringify(w));}catch(e){}}'
+    + 'var produkte=[];'
+    + 'function add(id){var p=null,i;for(i=0;i<produkte.length;i++){if(produkte[i].id===id){p=produkte[i];break;}}if(!p)return;var w=ladeWk(),f=null,j;for(j=0;j<w.length;j++){if(w[j].id===id){f=w[j];break;}}if(f){f.menge++;}else{w.push({id:p.id,name:p.name,preis:p.preis,menge:1});}saveWk(w);zeigeWk();}'
+    + 'function zeigeWk(){var w=ladeWk(),bar=c.querySelector(".ao-wk-bar");if(!bar)return;var anz=0,sum=0,i;for(i=0;i<w.length;i++){anz+=w[i].menge;sum+=w[i].menge*(Number(w[i].preis)||0);}if(anz>0){bar.style.display="";var t=bar.querySelector(".ao-wk-text");if(t){t.textContent="\\uD83D\\uDED2 "+anz+" Artikel im Warenkorb \\u00b7 "+eur(sum);}}else{bar.style.display="none";}}'
+    + 'fetch("/api/oeffentlich/shop-produkte?seite="+encodeURIComponent(seite)).then(function(r){return r.json();}).then(function(d){'
+    + 'produkte=(d&&d.produkte)||[];var grid=c.querySelector(".ao-shop-grid");if(!grid)return;'
+    + 'if(!produkte.length){grid.innerHTML="<div class=\\"ao-shop-leer\\">Noch keine Produkte im Shop.</div>";return;}'
+    + 'var h="",i;for(i=0;i<produkte.length;i++){var p=produkte[i];'
+    + 'h+="<div class=\\"ao-prod\\">"+(p.bild?"<div class=\\"ao-prod-bild\\" style=\\"background-image:url("+encodeURI(p.bild)+")\\"></div>":"<div class=\\"ao-prod-bild ao-prod-kein\\"></div>")+"<div class=\\"ao-prod-body\\"><div class=\\"ao-prod-name\\">"+esc(p.name)+"</div>"+(p.beschreibung?"<div class=\\"ao-prod-text\\">"+esc(p.beschreibung)+"</div>":"")+"<div class=\\"ao-prod-fuss\\"><span class=\\"ao-prod-preis\\">"+eur(p.preis)+"</span><button type=\\"button\\" class=\\"btn ao-prod-add\\" data-id=\\""+esc(p.id)+"\\">In den Warenkorb</button></div></div></div>";}'
+    + 'grid.innerHTML=h;grid.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".ao-prod-add"):null;if(b){add(b.getAttribute("data-id"));}});zeigeWk();'
+    + '}).catch(function(){});'
+    + '})();</script>';
+}
+
 // Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
 // sicher, kein Autoload). Nur auf Live-/Vorschau-Seiten, nicht im Editor.
 function videoSkript(): string {
@@ -679,6 +746,7 @@ export function seiteHtml(
   const hatBewertungen = (seite.bloecke || []).some((b) => b.typ === 'bewertungen');
   const hatAnfahrt = (seite.bloecke || []).some((b) => b.typ === 'anfahrt');
   const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
+  const hatProdukte = (seite.bloecke || []).some((b) => b.typ === 'produkte');
 
   return [
     '<!doctype html>',
@@ -707,6 +775,7 @@ export function seiteHtml(
     (!opts.editor && hatVideo) ? videoSkript() : '',
     (!opts.editor && hatAnfahrt) ? karteSkript() : '',
     (opts.oeffentlichId && hatBuchung) ? buchungSkript() : '',
+    (opts.oeffentlichId && hatProdukte) ? produkteSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',

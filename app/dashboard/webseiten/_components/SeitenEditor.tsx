@@ -40,6 +40,7 @@ export function neuerBlock(typ: Block['typ']): Block {
     case 'whatsapp': return { typ, nummer: '', text: 'Hallo, ich habe eine Frage zu …' };
     case 'anfahrt': return { typ, eyebrow: 'Besuchen Sie uns', titel: 'Öffnungszeiten & Anfahrt' };
     case 'buchung': return { typ, eyebrow: 'Termin', titel: 'Buchen Sie Ihren Termin online', text: 'Wählen Sie einfach einen freien Termin — Sie erhalten sofort eine Bestätigung.' };
+    case 'produkte': return { typ, eyebrow: 'Shop', titel: 'Unsere Produkte' };
     case 'cta': return { typ, titel: 'Bereit? Wir freuen uns auf Ihre Anfrage.', knopf: 'Jetzt anfragen' };
     default: return { typ: 'ueber', titel: 'Text', text: '' } as Block;
   }
@@ -231,6 +232,8 @@ function felderFuer(
       return [T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel)];
     case 'buchung':
       return [T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text || '', true)];
+    case 'produkte':
+      return [T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel)];
     case 'cta':
       return [T('Überschrift', 'titel', b.titel), T('Knopf-Text', 'knopf', b.knopf)];
     case 'galerie': {
