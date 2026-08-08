@@ -21,8 +21,9 @@ const FS = { titel: 'clamp(15px, 1.3vw, 20px)', text: 'clamp(14px, 1.2vw, 19px)'
 // Anzeigenamen der Bausteine (aus dem Katalog).
 const NAME: Record<string, string> = Object.fromEntries(BAUSTEIN_KATALOG.map((k) => [k.typ, k.name]));
 
-// Standard-Baustein beim Hinzufügen.
-function neuerBlock(typ: Block['typ']): Block {
+// Standard-Baustein beim Hinzufügen. Exportiert, damit auch der Vollbild-Editor
+// (Baustein-Palette) dieselben Vorgaben nutzt — eine Quelle der Wahrheit.
+export function neuerBlock(typ: Block['typ']): Block {
   switch (typ) {
     case 'hero': return { typ, eyebrow: 'Willkommen', titel: 'Überschrift', unterzeile: 'Kurzer Untertitel', knopf: 'Jetzt anfragen', bild: '' };
     case 'stats': return { typ, titel: 'Auf einen Blick', zahlen: [{ wert: '10+', label: 'Jahre' }, { wert: '500+', label: 'Kunden' }, { wert: '100%', label: 'Einsatz' }] };

@@ -238,7 +238,10 @@ export default function WebseitenPage() {
 
             {modus === 'editor' && editBloecke && (
               <div style={styles.editPanel}>
-                <div style={styles.feldLabel}>Bausteine bearbeiten — die Vorschau unten wandert live mit.</div>
+                <div style={styles.vollbildBar}>
+                  <div style={styles.feldLabel}>Bausteine bearbeiten — die Vorschau unten wandert live mit.</div>
+                  <a href={`/webseiten-editor?seite=${zweck}`} target="_blank" rel="noreferrer" style={styles.vollbildBtn}>🖥️ Im Vollbild-Editor öffnen ↗</a>
+                </div>
                 <SeitenEditor bloecke={editBloecke} onChange={setEditBloecke} />
                 <p style={styles.mini}>🎨 Farben &amp; Schrift ändern Sie im <a href="/dashboard/webauftritt" style={styles.link}>Webauftritt</a> — das gilt dann überall.</p>
               </div>
@@ -363,6 +366,8 @@ const styles: Record<string, CSSProperties> = {
 
   kiPanel: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
   editPanel: { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  vollbildBar: { display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
+  vollbildBtn: { background: `${C.cyan}14`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 9, padding: '9px 16px', fontSize: FS.klein, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' },
   feldLabel: { fontSize: FS.klein, color: C.textDim, fontWeight: 600 },
   textarea: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 13px', fontSize: FS.text, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', minHeight: 92, resize: 'vertical', lineHeight: 1.5 },
   kiBtnRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
