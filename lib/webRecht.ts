@@ -113,7 +113,7 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function fussHtml(ci: CiRecht, jahr: number): string {
+export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean } = {}): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   return [
     '<footer class="ao-fuss">',
@@ -123,10 +123,11 @@ export function fussHtml(ci: CiRecht, jahr: number): string {
     '      <a href="#impressum">Impressum</a>',
     '      <a href="#datenschutz">Datenschutz</a>',
     '      <a href="#agb">AGB</a>',
+    opts.widerruf ? '      <a href="#widerruf">Widerruf</a>' : '',
     '    </nav>',
     '  </div>',
     '</footer>',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 // Praktische Kurzform für die Oberfläche: alle drei Texte auf einmal.

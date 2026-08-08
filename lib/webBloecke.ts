@@ -473,6 +473,35 @@ export function rechtsSektionen(ci: CiWeb): string {
   ].join('');
 }
 
+// --- Widerruf (Shop-Pflicht: elektronischer Widerrufsbutton ab 19.06.2026) ---
+// Nur auf Shop-Seiten (mit Produkt-Baustein). In der Vorschau/Editor sichtbar
+// aber inert; auf der Live-Seite sendet das Formular an /api/oeffentlich/widerruf.
+function widerrufSektion(oeffentlichId?: string): string {
+  const seite = oeffentlichId ? esc(oeffentlichId) : '';
+  return [
+    '<section class="recht" id="widerruf"><div class="wrap narrow">',
+    '<h2>Widerruf</h2>',
+    '<div class="pretext">Verbraucher haben das Recht, binnen 14 Tagen ohne Angabe von Gr&uuml;nden diesen Vertrag zu widerrufen. Nutzen Sie dazu einfach das folgende Formular — wir best&auml;tigen den Eingang unverz&uuml;glich.</div>',
+    '<form class="ao-anfrage ao-widerruf" id="ao-widerruf" novalidate>',
+    '<input type="hidden" name="seite" value="' + seite + '">',
+    '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
+    '<div class="ao-feld"><label>Anschrift</label><input type="text" name="anschrift"></div>',
+    '<div class="ao-zwei"><div class="ao-feld"><label>E-Mail*</label><input type="email" name="email" required></div><div class="ao-feld"><label>Bestell-/Rechnungsnummer</label><input type="text" name="bestellung"></div></div>',
+    '<div class="ao-feld"><label>Bestellt / erhalten am</label><input type="text" name="datum" placeholder="z. B. 05.08.2026"></div>',
+    '<div class="ao-feld"><label>Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung*</label><textarea name="ware" rows="3" required></textarea></div>',
+    '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
+    '<button type="submit" class="btn">Widerruf absenden</button>',
+    '<div class="ao-msg" id="ao-widerruf-msg" role="status"></div>',
+    '</form>',
+    '<div class="pretext" style="margin-top:14px;font-size:13px;">Hinweis nach EU-KI-Verordnung (Art. 50): In diesem Shop k&ouml;nnen KI-gest&uuml;tzte Inhalte (z. B. Produktbeschreibungen) zum Einsatz kommen.</div>',
+    '</div></section>',
+  ].join('');
+}
+function widerrufSkript(): string {
+  return '<script>(function(){var f=document.getElementById("ao-widerruf");if(!f)return;var el=f.elements;var m=document.getElementById("ao-widerruf-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var ware=(el.ware.value||"").trim();if(!name){set("Bitte Ihren Namen angeben.",false);return;}if(!email){set("Bitte Ihre E-Mail angeben.",false);return;}if(!ware){set("Bitte angeben, was Sie widerrufen.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihr Widerruf gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/widerruf",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,anschrift:el.anschrift.value,email:email,bestellung:el.bestellung.value,datum:el.datum.value,ware:ware,privacy:true,firma_hp:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Ihr Widerruf ist eingegangen \\u2014 Sie erhalten eine Best\\u00e4tigung per E-Mail.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+}
+
 // --- CSS der erzeugten Seite ------------------------------------------------
 function seiteCss(ci: CiWeb): string {
   const p = z(ci.farbe_primaer) || '#1F3A5F';
@@ -775,7 +804,8 @@ export function seiteHtml(
     '</div></header>',
     koerper,
     rechtsSektionen(ci),
-    fussHtml(ci, jahr),
+    hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
+    fussHtml(ci, jahr, { widerruf: hatProdukte }),
     anfrageSkript(),
     newsletterSkript(),
     terminSkript(),
@@ -788,6 +818,7 @@ export function seiteHtml(
     (!opts.editor && hatAnfahrt) ? karteSkript() : '',
     (opts.oeffentlichId && hatBuchung) ? buchungSkript() : '',
     (opts.oeffentlichId && hatProdukte) ? produkteSkript() : '',
+    hatProdukte ? widerrufSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',
