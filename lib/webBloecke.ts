@@ -44,6 +44,7 @@ export type Block =
   | { typ: 'video'; titel?: string; url: string }
   | { typ: 'whatsapp'; nummer: string; text?: string }
   | { typ: 'anfahrt'; eyebrow?: string; titel: string }
+  | { typ: 'buchung'; eyebrow?: string; titel: string; text?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -62,6 +63,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'video', icon: '🎬', name: 'Video', beschreibung: 'YouTube-/Vimeo-Link einbetten — kein Upload, 0 Speicher' },
   { typ: 'whatsapp', icon: '💬', name: 'WhatsApp-Button', beschreibung: 'Schwebender Knopf — Besucher schreiben direkt per WhatsApp' },
   { typ: 'anfahrt', icon: '📍', name: 'Öffnungszeiten & Anfahrt', beschreibung: 'Zeiten, Adresse und Karte — aus dem Webauftritt' },
+  { typ: 'buchung', icon: '🗓️', name: 'Online-Terminbuchung', beschreibung: 'Echte Slot-Buchung — Kunde bucht selbst (aus dem Buchungs-Modul)' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -407,6 +409,23 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '</div></section>',
       ].join('');
     }
+    case 'buchung': {
+      const oid = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
+      const knopf = (!ed && oid)
+        ? '<a class="btn ao-buchung-btn" href="#" style="pointer-events:none;opacity:.6">&#128197; L&auml;dt &hellip;</a>'
+        : '<span class="btn ao-buchung-btn">&#128197; Termin online buchen</span>';
+      const hint = ed
+        ? '<div class="ao-buchung-hinweis ao-leer">Terminarten &amp; Zeiten richtest du im Buchungs-Modul ein. Der Knopf f&uuml;hrt Besucher zur Buchung.</div>'
+        : '<div class="ao-buchung-hinweis"></div>';
+      return [
+        '<section class="sec alt" id="termin-buchen"><div class="wrap narrow">',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        b.text ? '<p class="fliess"' + ce('text') + '>' + esc(b.text) + '</p>' : '',
+        '<div class="ao-buchung" data-seite="' + oid + '">' + knopf + hint + '</div>',
+        '</div></section>',
+      ].join('');
+    }
     default:
       return '';
   }
@@ -548,6 +567,11 @@ function seiteCss(ci: CiWeb): string {
     '.ao-karte iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}',
     '.ao-karte-facade{cursor:pointer;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#eef2f7,#dde5ee);border:none}',
     '.ao-karte-play{background:var(--p);color:#fff;border-radius:10px;padding:12px 18px;font-weight:800;font-size:15px}',
+    // Online-Terminbuchung
+    '.ao-buchung{margin-top:18px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}',
+    '.ao-buchung-btn{cursor:pointer}',
+    '.ao-buchung-hinweis{color:#8290a0;font-size:14px}',
+    '.ao-buchung .ao-leer{font-style:italic}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -609,6 +633,19 @@ function bewertungenSkript(): string {
     + '})();</script>';
 }
 
+// Online-Terminbuchung: prüft, ob der Inhaber die Buchung freigeschaltet hat, und
+// verlinkt den Knopf auf /buchen/<slug>. Nur auf veröffentlichten Seiten.
+function buchungSkript(): string {
+  return '<script>(function(){'
+    + 'var c=document.querySelector(".ao-buchung[data-seite]");if(!c)return;var seite=c.getAttribute("data-seite");if(!seite)return;'
+    + 'var btn=c.querySelector(".ao-buchung-btn");var hint=c.querySelector(".ao-buchung-hinweis");'
+    + 'fetch("/api/oeffentlich/buchung-info?seite="+encodeURIComponent(seite)).then(function(r){return r.json();}).then(function(d){'
+    + 'if(d&&d.aktiv&&d.slug){if(btn){btn.setAttribute("href","/buchen/"+encodeURIComponent(d.slug));btn.style.pointerEvents="";btn.style.opacity="";btn.textContent="\\uD83D\\uDCC5 Termin online buchen";}}'
+    + 'else{if(btn)btn.style.display="none";if(hint)hint.textContent="Online-Buchung ist noch nicht eingerichtet.";}'
+    + '}).catch(function(){if(btn)btn.style.display="none";});'
+    + '})();</script>';
+}
+
 // Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
 // sicher, kein Autoload). Nur auf Live-/Vorschau-Seiten, nicht im Editor.
 function videoSkript(): string {
@@ -641,6 +678,7 @@ export function seiteHtml(
   const hatVideo = (seite.bloecke || []).some((b) => b.typ === 'video');
   const hatBewertungen = (seite.bloecke || []).some((b) => b.typ === 'bewertungen');
   const hatAnfahrt = (seite.bloecke || []).some((b) => b.typ === 'anfahrt');
+  const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
 
   return [
     '<!doctype html>',
@@ -668,6 +706,7 @@ export function seiteHtml(
       : '',
     (!opts.editor && hatVideo) ? videoSkript() : '',
     (!opts.editor && hatAnfahrt) ? karteSkript() : '',
+    (opts.oeffentlichId && hatBuchung) ? buchungSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',
