@@ -11,6 +11,9 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import FilialZuordnung, { type FilialeLite } from '@/app/dashboard/_components/FilialZuordnung';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -55,6 +58,11 @@ export default function ShopProduktePage() {
   const [emoji, setEmoji] = useState(false);               // Emoji-Schalter je Branche (seriös/lebendig)
   const [kiBusy, setKiBusy] = useState<string | null>(null); // Artikel-ID oder 'bulk'
 
+  // Filialen (Block D · D3): Sortiment je Standort.
+  const [standorte, setStandorte] = useState<FilialeLite[]>([]);
+  const [zuord, setZuord] = useState<{ artikel_id: string; standort_id: string }[]>([]);
+  const [aktStandort, setAktStandort] = useState<string | null>(null);
+
   const lade = useCallback(async () => {
     setLaden(true); setFehler(null);
     const { data, error } = await supabase
@@ -72,9 +80,26 @@ export default function ShopProduktePage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      setAktStandort(konkreterStandort(leseStandortCookie()));
+      // Filialen + Sortiment-Zuordnungen laden (Tabelle evtl. noch nicht migriert -> leer).
+      const [{ data: st }, { data: zu }] = await Promise.all([
+        supabase.from('standorte').select('id, name, ist_hauptsitz').eq('aktiv', true)
+          .order('ist_hauptsitz', { ascending: false }).order('name', { ascending: true }),
+        supabase.from('artikel_standorte').select('artikel_id, standort_id'),
+      ]);
+      setStandorte((st as FilialeLite[]) ?? []);
+      setZuord((zu as { artikel_id: string; standort_id: string }[]) ?? []);
       await lade();
     })();
   }, [lade]);
+
+  // Neue Sortiment-Zuordnung eines Artikels in den lokalen State uebernehmen.
+  function setzeZuord(artikelId: string, ids: string[]) {
+    setZuord((prev) => [
+      ...prev.filter((z) => z.artikel_id !== artikelId),
+      ...ids.map((sid) => ({ artikel_id: artikelId, standort_id: sid })),
+    ]);
+  }
 
   const kategorien = useMemo(
     () => Array.from(new Set(liste.map((a) => (a.kategorie || '').trim()).filter(Boolean))).sort(),
@@ -87,9 +112,15 @@ export default function ShopProduktePage() {
       if (nurShop && !a.im_shop) return false;
       if (katFilter && (a.kategorie || '') !== katFilter) return false;
       if (s && !(`${a.bezeichnung} ${a.artikelnummer || ''} ${a.kategorie || ''}`.toLowerCase().includes(s))) return false;
+      // Fail-open-Zuschnitt: bei aktivem Standort nur Artikel ohne Zuordnung
+      // (ueberall) ODER die dieser Filiale zugeordneten.
+      if (aktStandort) {
+        const zug = zuord.filter((z) => z.artikel_id === a.id).map((z) => z.standort_id);
+        if (zug.length > 0 && !zug.includes(aktStandort)) return false;
+      }
       return true;
     });
-  }, [liste, suche, katFilter, nurShop]);
+  }, [liste, suche, katFilter, nurShop, zuord, aktStandort]);
 
   const imShopAnzahl = useMemo(() => liste.filter((a) => a.im_shop).length, [liste]);
 
@@ -215,6 +246,15 @@ export default function ShopProduktePage() {
                   </div>
                 </div>
                 <div style={styles.itemPreis}>{eur(a.verkaufspreis)}</div>
+                <FilialZuordnung
+                  tabelle="artikel_standorte"
+                  fkSpalte="artikel_id"
+                  recordId={a.id}
+                  ownerUserId={uid ?? ''}
+                  standorte={standorte}
+                  initial={zuord.filter((z) => z.artikel_id === a.id).map((z) => z.standort_id)}
+                  onChange={(ids) => setzeZuord(a.id, ids)}
+                />
                 {a.im_shop && (
                   <button style={styles.miniBtn} onClick={() => setOffen(offen === a.id ? null : a.id)}>
                     {offen === a.id ? 'Schließen' : '✎ Shop-Text & Bild'}
