@@ -15,3 +15,13 @@
 // ============================================================================
 
 export const BESTELLSTRECKE_LIVE = false;
+
+// ZAHLUNG_LIVE:
+//   false = Online-Kartenzahlung im Kunden-Shop ist „dunkel": Kunden bestellen
+//           (Bestellung landet im System, Betrieb rechnet ab / kassiert per
+//           Rechnung/Überweisung/Abholung). Die Einstellungsseite „Online-
+//           Zahlung" erklärt, was zum Scharfstellen fehlt (Stripe-/Mollie-Konto).
+//   true  = Kartenzahlung im Shop aktiv (setzt verbundenes Stripe/Mollie voraus).
+//
+// Zum Scharfstellen: Stripe/Mollie-Konto verbinden, dann hier true setzen.
+export const ZAHLUNG_LIVE = false;

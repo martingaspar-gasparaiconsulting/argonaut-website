@@ -235,6 +235,7 @@ export default function ShopPage() {
             {modus === 'live' ? `● Live · ${anbieter}` : '○ Manuell-Modus'}
           </span>
           <a href="/dashboard/shop/produkte" style={styles.produkteBtn}>🛍️ Produkte in den Shop übernehmen →</a>
+          <a href="/dashboard/shop/zahlung" style={styles.zahlungBtn}>💳 Online-Zahlung einrichten →</a>
         </div>
       </div>
 
@@ -351,6 +352,7 @@ const styles: Record<string, CSSProperties> = {
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 680 },
   badge: { display: 'inline-block', border: '1px solid', borderRadius: 999, padding: '5px 12px', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap' },
   produkteBtn: { background: `${C.gold}18`, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' },
+  zahlungBtn: { background: `${C.cyan}14`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 },
   hinweis: { background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 },
   textarea: { width: '100%', boxSizing: 'border-box', background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 14, fontFamily: 'monospace', minHeight: 120, resize: 'vertical' },
