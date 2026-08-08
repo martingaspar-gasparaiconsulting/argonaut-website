@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { NextRequest, NextResponse } from "next/server";
+import { STANDORT_COOKIE } from "@/lib/aktiverStandort";
+import { konkreterStandort } from "@/lib/standortDaten";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -36,6 +38,9 @@ export async function POST(req: NextRequest) {
 
   const hatEinwilligung = werbung_einwilligung === true;
 
+  // Aktiver Standort aus dem Filial-Umschalter-Cookie (null = kein Zuschnitt).
+  const standortId = konkreterStandort(req.cookies.get(STANDORT_COOKIE)?.value);
+
   // Lead einfuegen - owner_user_id sicher aus der Session
   const { data, error } = await supabase
     .from("leads")
@@ -51,6 +56,7 @@ export async function POST(req: NextRequest) {
       einwilligung_am: hatEinwilligung ? new Date().toISOString() : null,
       status: "neu",
       quelle: "Manuell",
+      standort_id: standortId,
     })
     .select()
     .single();

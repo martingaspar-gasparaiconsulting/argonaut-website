@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase-server'
+import { STANDORT_COOKIE } from '@/lib/aktiverStandort'
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten'
 import LeadsClient, { type Lead } from './LeadsClient'
 
 export default async function LeadsPage() {
@@ -7,10 +10,16 @@ export default async function LeadsPage() {
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (!user || userError) redirect('/auth/login')
 
-  const { data } = await supabase
+  // Filial-Zuschnitt (fail-open): bei aktivem Standort dessen Leads + Leads ohne
+  // Standort (Website-/Alt-Leads bleiben überall sichtbar). 'alle' = kein Filter.
+  const standortId = konkreterStandort((await cookies()).get(STANDORT_COOKIE)?.value)
+
+  let query = supabase
     .from('leads')
     .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand')
-    .order('created_at', { ascending: false })
+  if (standortId) query = query.or(standortOrFilter(standortId))
+
+  const { data } = await query.order('created_at', { ascending: false })
 
   const leads = (data ?? []) as Lead[]
 
