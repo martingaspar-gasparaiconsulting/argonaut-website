@@ -37,6 +37,7 @@ export function neuerBlock(typ: Block['typ']): Block {
     case 'newsletter': return { typ, titel: 'Newsletter', text: 'Bleiben Sie auf dem Laufenden — melden Sie sich für unseren Newsletter an.', knopf: 'Anmelden' };
     case 'termin': return { typ, titel: 'Termin anfragen', text: 'Wünschen Sie einen Termin? Nennen Sie uns Ihren Wunschtermin — wir bestätigen zeitnah.', knopf: 'Termin anfragen' };
     case 'video': return { typ, titel: 'Video', url: '' };
+    case 'whatsapp': return { typ, nummer: '', text: 'Hallo, ich habe eine Frage zu …' };
     case 'cta': return { typ, titel: 'Bereit? Wir freuen uns auf Ihre Anfrage.', knopf: 'Jetzt anfragen' };
     default: return { typ: 'ueber', titel: 'Text', text: '' } as Block;
   }
@@ -222,6 +223,8 @@ function felderFuer(
       return [T('Überschrift', 'titel', b.titel), T('Text', 'text', b.text, true), T('Knopf-Text', 'knopf', b.knopf || 'Termin anfragen')];
     case 'video':
       return [T('Überschrift (optional)', 'titel', b.titel || ''), T('Video-Link (YouTube/Vimeo)', 'url', b.url)];
+    case 'whatsapp':
+      return [T('WhatsApp-Nummer (mit Ländervorwahl, z. B. 4917012345678)', 'nummer', b.nummer), T('Vorausgefüllte Nachricht', 'text', b.text || '', true)];
     case 'cta':
       return [T('Überschrift', 'titel', b.titel), T('Knopf-Text', 'knopf', b.knopf)];
     case 'galerie': {

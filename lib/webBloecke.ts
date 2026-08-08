@@ -42,6 +42,7 @@ export type Block =
   | { typ: 'newsletter'; titel: string; text: string; knopf?: string }
   | { typ: 'termin'; titel: string; text: string; knopf?: string }
   | { typ: 'video'; titel?: string; url: string }
+  | { typ: 'whatsapp'; nummer: string; text?: string }
   | { typ: 'cta'; titel: string; knopf: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
@@ -58,6 +59,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'newsletter', icon: '📧', name: 'Newsletter', beschreibung: 'E-Mail-Anmeldung mit Bestätigung (DSGVO)' },
   { typ: 'termin', icon: '📅', name: 'Termin anfragen', beschreibung: 'Terminwunsch aufnehmen — landet im CRM' },
   { typ: 'video', icon: '🎬', name: 'Video', beschreibung: 'YouTube-/Vimeo-Link einbetten — kein Upload, 0 Speicher' },
+  { typ: 'whatsapp', icon: '💬', name: 'WhatsApp-Button', beschreibung: 'Schwebender Knopf — Besucher schreiben direkt per WhatsApp' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
 ];
 
@@ -366,6 +368,19 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '</div></section>',
       ].join('');
     }
+    case 'whatsapp': {
+      const num = z(b.nummer).replace(/[^\d]/g, '');
+      const txt = z(b.text);
+      const icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.15-1.7-.85-2-.95-.26-.1-.45-.15-.64.15-.19.28-.73.94-.9 1.13-.16.19-.33.21-.61.07-.3-.15-1.24-.46-2.36-1.46-.87-.78-1.46-1.74-1.63-2.03-.17-.29-.02-.45.13-.6.13-.13.3-.34.44-.51.15-.17.19-.29.29-.48.1-.19.05-.36-.02-.5-.08-.15-.64-1.55-.88-2.12-.23-.55-.47-.48-.64-.48h-.55c-.19 0-.5.07-.76.36-.26.29-1 .98-1 2.38s1.02 2.76 1.17 2.95c.14.19 2.02 3.08 4.9 4.32.68.29 1.22.47 1.63.6.69.22 1.31.19 1.8.12.55-.08 1.7-.69 1.94-1.36.24-.67.24-1.24.17-1.36-.07-.12-.26-.19-.55-.34zM12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.06L2 22l5.06-1.33C8.5 21.52 10.2 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>';
+      if (ed) {
+        return num
+          ? '<div class="ao-wa" title="WhatsApp (Vorschau) – im Live-Betrieb öffnet der Chat">' + icon + '</div>'
+          : '<div class="ao-wa-hinweis">💬 WhatsApp-Nummer rechts eintragen (mit Ländervorwahl)</div>';
+      }
+      if (!num) return '';
+      const href = 'https://wa.me/' + num + (txt ? '?text=' + encodeURIComponent(txt) : '');
+      return '<a class="ao-wa" href="' + href + '" target="_blank" rel="noopener" aria-label="Per WhatsApp schreiben">' + icon + '</a>';
+    }
     default:
       return '';
   }
@@ -489,6 +504,11 @@ function seiteCss(ci: CiWeb): string {
     '.ao-video-facade:hover:before{background:rgba(10,15,25,.12)}',
     '.ao-video-play{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;padding-left:5px}',
     '.ao-video-leer{display:flex;align-items:center;justify-content:center;color:#9aa7b5;font-weight:700;border:1px dashed #c3ccd7;background:#f5f8fc}',
+    // WhatsApp (schwebender Knopf, fest unten rechts)
+    '.ao-wa{position:fixed;right:20px;bottom:20px;z-index:50;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px -6px rgba(0,0,0,.45);cursor:pointer;text-decoration:none}',
+    '.ao-wa:hover{transform:translateY(-2px)}',
+    '.ao-wa svg{width:32px;height:32px;fill:#fff;display:block}',
+    '.ao-wa-hinweis{position:fixed;right:20px;bottom:20px;z-index:50;background:#0d141c;color:#25D366;border:1px dashed #25D366;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
