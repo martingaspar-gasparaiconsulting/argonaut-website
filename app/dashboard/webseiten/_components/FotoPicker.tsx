@@ -8,6 +8,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
+import { verkleinereBild } from '@/lib/bildKlein';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', navy3: '#0c1a2e', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -15,31 +16,6 @@ const C = {
 };
 
 type Foto = { url: string; thumb: string; autor: string; autorUrl: string; quelle: string };
-
-// Bild schon im Browser verkleinern, bevor es hochgeladen wird: längste Kante
-// auf maxKante begrenzen und als WebP speichern. Aus 8 MB werden so oft ~300 KB.
-// Fällt irgendetwas aus (altes Browser, GIF, kein Gewinn) → Original zurückgeben.
-async function verkleinereBild(datei: File, maxKante: number, qualitaet: number): Promise<Blob> {
-  if (datei.type === 'image/gif') return datei; // Animation nicht zerstören
-  try {
-    const bmp = await createImageBitmap(datei);
-    const skal = Math.min(1, maxKante / Math.max(bmp.width, bmp.height));
-    if (skal >= 1 && datei.size < 600 * 1024) { bmp.close?.(); return datei; } // schon klein
-    const w = Math.max(1, Math.round(bmp.width * skal));
-    const h = Math.max(1, Math.round(bmp.height * skal));
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) { bmp.close?.(); return datei; }
-    ctx.drawImage(bmp, 0, 0, w, h);
-    bmp.close?.();
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), 'image/webp', qualitaet));
-    if (!blob || blob.size >= datei.size) return datei; // kein Gewinn → Original
-    return blob;
-  } catch {
-    return datei;
-  }
-}
 
 export default function FotoPicker({ start, onPick, onClose }: { start?: string; onPick: (url: string) => void; onClose: () => void }) {
   const [q, setQ] = useState(start || 'business');

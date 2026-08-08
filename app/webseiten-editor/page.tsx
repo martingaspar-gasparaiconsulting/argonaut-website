@@ -15,6 +15,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { seiteHtml, BAUSTEIN_KATALOG, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
 import SeitenEditor, { neuerBlock } from '@/app/dashboard/webseiten/_components/SeitenEditor';
+import { verkleinereBild } from '@/lib/bildKlein';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -57,6 +58,7 @@ export default function VollbildEditor() {
   const [paletteZieht, setPaletteZieht] = useState(false);
   const [auswahl, setAuswahl] = useState<number | null>(null);
   const [docHtml, setDocHtml] = useState('');
+  const [bildLaedt, setBildLaedt] = useState(false);
 
   // Eine Seite (slug) laden — gespeicherte Bausteine oder frische Vorlage.
   const ladeSeite = useCallback(async (userId: string, s: string, ciData: CiWeb | null) => {
@@ -112,10 +114,10 @@ export default function VollbildEditor() {
   }
   function add(typ: Block['typ']) { setBloeckeReflow([...bloecke, neuerBlock(typ)]); }
 
-  // Nachrichten aus der Leinwand (iframe): Baustein wählen + Text direkt bearbeiten.
+  // Nachrichten aus der Leinwand (iframe): Baustein wählen · Text direkt bearbeiten · Bild ablegen.
   useEffect(() => {
     function onNachricht(e: MessageEvent) {
-      const d = e.data as { ao?: string; index?: number; feld?: string; wert?: string };
+      const d = e.data as { ao?: string; index?: number; feld?: string; wert?: string; datei?: File };
       if (!d || typeof d !== 'object') return;
       if (d.ao === 'select' && typeof d.index === 'number') {
         setAuswahl(d.index);
@@ -124,11 +126,57 @@ export default function VollbildEditor() {
         const feld = d.feld, wert = d.wert ?? '';
         setBloecke((prev) => prev.map((b, i) => (i === d.index ? ({ ...b, [feld]: wert } as Block) : b)));
         setDirty(true); setGespeichert(null);
+      } else if (d.ao === 'datei' && d.datei) {
+        void bildAblegen(typeof d.index === 'number' ? d.index : -1, d.datei);
       }
     }
     window.addEventListener('message', onNachricht);
     return () => window.removeEventListener('message', onNachricht);
+    // bildAblegen liest bloecke/ci über funktionale Updates bzw. aktuelle Closure via ref-freie Neubindung
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bloecke, ci]);
+
+  // Fallback: Datei-Drops außerhalb der Leinwand (auf den Panels) nicht zum Seiten-Wechsel führen lassen.
+  useEffect(() => {
+    const stop = (e: globalThis.DragEvent) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) e.preventDefault();
+    };
+    window.addEventListener('dragover', stop);
+    window.addEventListener('drop', stop);
+    return () => { window.removeEventListener('dragover', stop); window.removeEventListener('drop', stop); };
   }, []);
+
+  // Ein vom PC gezogenes Bild hochladen (verkleinert) und auf den Ziel-Baustein anwenden:
+  // Titelbereich → Hintergrund, Galerie → weiteres Bild.
+  async function bildAblegen(index: number, datei: File) {
+    if (!datei.type.startsWith('image/')) return;
+    const ziel = index >= 0 ? index : bloecke.findIndex((b) => b.typ === 'hero' || b.typ === 'galerie');
+    const b = ziel >= 0 ? bloecke[ziel] : null;
+    if (!b || (b.typ !== 'hero' && b.typ !== 'galerie')) {
+      setFehler('Bild auf den Titelbereich (wird Hintergrund) oder die Galerie ziehen.');
+      return;
+    }
+    setBildLaedt(true); setFehler(null); setGespeichert(null);
+    try {
+      const klein = await verkleinereBild(datei, 2000, 0.82);
+      const fd = new FormData();
+      fd.append('datei', klein, klein instanceof File ? klein.name : 'foto.webp');
+      const res = await fetch('/api/webseite-foto', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok || !data.url) { setFehler(data?.error || 'Upload fehlgeschlagen.'); setBildLaedt(false); return; }
+      const neu = bloecke.map((bl, i) => {
+        if (i !== ziel) return bl;
+        if (bl.typ === 'hero') return { ...bl, bild: data.url as string } as Block;
+        if (bl.typ === 'galerie') return { ...bl, bilder: [...(bl.bilder || []), data.url as string] } as Block;
+        return bl;
+      });
+      setBloeckeReflow(neu);
+      setAuswahl(ziel);
+    } catch {
+      setFehler('Upload fehlgeschlagen. Bitte erneut versuchen.');
+    }
+    setBildLaedt(false);
+  }
 
   async function wechsleSeite(s: string) {
     if (s === slug) return;
@@ -273,13 +321,18 @@ export default function VollbildEditor() {
                 <div style={styles.dropOverlayInner}>⬇ Baustein hier ablegen — wird ans Ende angefügt</div>
               </div>
             )}
+            {bildLaedt && (
+              <div style={styles.dropOverlay}>
+                <div style={styles.dropOverlayInner}>⬆ Bild wird hochgeladen …</div>
+              </div>
+            )}
           </div>
         </main>
 
         {/* rechts · Eigenschaften */}
         <aside style={styles.spalteRechts}>
           <div style={styles.spalteTitel}>Eigenschaften</div>
-          <p style={styles.spalteHinweis}>Klicke einen Baustein auf der Seite an — der passende springt hier hoch. Überschriften &amp; Texte änderst du direkt auf der Seite.</p>
+          <p style={styles.spalteHinweis}>Klicke einen Baustein auf der Seite an — der passende springt hier hoch. Überschriften &amp; Texte änderst du direkt auf der Seite. 🖼️ Ein Bild vom PC ziehst du direkt auf den Titelbereich (Hintergrund) oder die Galerie.</p>
           {bloecke.length === 0
             ? <p style={styles.spalteHinweis}>Noch keine Bausteine — links einen hinzufügen.</p>
             : <SeitenEditor bloecke={bloecke} onChange={setBloeckeReflow} auswahl={auswahl} onAuswahl={setAuswahl} />}

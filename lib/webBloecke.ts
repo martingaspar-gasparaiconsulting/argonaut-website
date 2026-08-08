@@ -455,6 +455,7 @@ function editorCss(): string {
     '.ao-b{position:relative}',
     '.ao-b:hover{outline:2px dashed rgba(43,143,255,.45);outline-offset:-2px}',
     '.ao-b.ao-sel{outline:2px solid #2b8fff;outline-offset:-2px}',
+    '.ao-b.ao-drop{outline:3px solid #4CAF7D;outline-offset:-2px;background:rgba(76,175,125,.08)}',
     '[data-ao-feld]{cursor:text;border-radius:3px;outline:1px dashed transparent;transition:outline-color .15s,background .15s}',
     '[data-ao-feld]:hover{outline-color:rgba(43,143,255,.55)}',
     '[data-ao-feld]:focus{outline:2px solid #2b8fff;outline-offset:2px;background:rgba(43,143,255,.08)}',
@@ -467,6 +468,12 @@ function editorSkript(): string {
     + 'document.addEventListener("click",function(e){var t=e.target;if(!t||!t.closest){return;}var f=t.closest("[data-ao-feld]");if(f){e.preventDefault();}var b=t.closest("[data-ao-i]");if(b){sel(b);post({ao:"select",index:parseInt(b.getAttribute("data-ao-i"),10)});}},true);'
     + 'document.addEventListener("blur",function(e){var el=e.target;if(!el||!el.getAttribute||!el.hasAttribute("data-ao-feld")){return;}var b=el.closest("[data-ao-i]");if(!b){return;}post({ao:"edit",index:parseInt(b.getAttribute("data-ao-i"),10),feld:el.getAttribute("data-ao-feld"),wert:(el.textContent||"").trim()});},true);'
     + 'document.addEventListener("keydown",function(e){var t=e.target;if(e.key==="Enter"&&t&&t.hasAttribute&&t.hasAttribute("data-ao-feld")){e.preventDefault();t.blur();}},true);'
+    // Bild vom PC auf einen Baustein ziehen: Baustein markieren + Datei an den Editor melden.
+    + 'function hatDatei(e){var ty=e.dataTransfer&&e.dataTransfer.types;if(!ty)return false;for(var i=0;i<ty.length;i++){if(ty[i]==="Files")return true;}return false;}'
+    + 'function markDrop(el){var a=document.querySelectorAll(".ao-b.ao-drop");for(var i=0;i<a.length;i++){a[i].classList.remove("ao-drop");}if(el){el.classList.add("ao-drop");}}'
+    + 'document.addEventListener("dragover",function(e){if(!hatDatei(e))return;e.preventDefault();var t=e.target;markDrop(t&&t.closest?t.closest("[data-ao-i]"):null);},true);'
+    + 'document.addEventListener("dragleave",function(e){if(!hatDatei(e))return;if(!e.relatedTarget)markDrop(null);},true);'
+    + 'document.addEventListener("drop",function(e){if(!hatDatei(e))return;e.preventDefault();markDrop(null);var t=e.target;var b=t&&t.closest?t.closest("[data-ao-i]"):null;var f=e.dataTransfer.files&&e.dataTransfer.files[0];if(!f||String(f.type).indexOf("image/")!==0)return;post({ao:"datei",index:b?parseInt(b.getAttribute("data-ao-i"),10):-1,datei:f});},true);'
     + '})();</script>';
 }
 
