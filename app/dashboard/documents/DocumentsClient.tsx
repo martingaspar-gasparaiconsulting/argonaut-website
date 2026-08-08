@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
+import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung'
 
 // ===== Typen =====
 interface Document {
@@ -22,11 +23,18 @@ interface DocumentAgent {
   agent_name: string
 }
 
+interface DocumentStandort {
+  document_id: string
+  standort_id: string
+}
+
 interface Props {
   userId: string
   paket: string
   initialDocuments: Document[]
   initialDocumentAgents: DocumentAgent[]
+  standorte: FilialeLite[]
+  initialDocumentStandorte: DocumentStandort[]
 }
 
 // ===== Konstanten =====
@@ -130,10 +138,11 @@ function statusBadge(status: string) {
 // ===== Hauptkomponente =====
 import ErstellteDokumente from './ErstellteDokumente'
 
-export default function DocumentsClient({ userId, paket, initialDocuments, initialDocumentAgents }: Props) {
+export default function DocumentsClient({ userId, paket, initialDocuments, initialDocumentAgents, standorte, initialDocumentStandorte }: Props) {
   const supabase = createClient()
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
   const [documentAgents, setDocumentAgents] = useState<DocumentAgent[]>(initialDocumentAgents)
+  const [documentStandorte, setDocumentStandorte] = useState<DocumentStandort[]>(initialDocumentStandorte)
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -208,6 +217,15 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     await supabase.from('documents').delete().eq('id', doc.id)
     setDocuments(prev => prev.filter(d => d.id !== doc.id))
     setDocumentAgents(prev => prev.filter(da => da.document_id !== doc.id))
+    setDocumentStandorte(prev => prev.filter(ds => ds.document_id !== doc.id))
+  }
+
+  // Neue Filial-Zuordnung eines Dokuments in den lokalen State uebernehmen.
+  const setzeDokumentStandorte = (docId: string, ids: string[]) => {
+    setDocumentStandorte(prev => [
+      ...prev.filter(ds => ds.document_id !== docId),
+      ...ids.map(sid => ({ document_id: docId, standort_id: sid })),
+    ])
   }
 
   // ===== Agenten-Modal =====
@@ -326,10 +344,19 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                       </p>
                     </div>
                     {statusBadge(doc.status)}
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                       <button onClick={() => openAgentModal(doc)} style={{ padding: '7px 14px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, cursor: 'pointer' }}>
                         🤖 Agenten
                       </button>
+                      <FilialZuordnung
+                        tabelle="document_standorte"
+                        fkSpalte="document_id"
+                        recordId={doc.id}
+                        ownerUserId={userId}
+                        standorte={standorte}
+                        initial={documentStandorte.filter(ds => ds.document_id === doc.id).map(ds => ds.standort_id)}
+                        onChange={(ids) => setzeDokumentStandorte(doc.id, ids)}
+                      />
                       <button onClick={() => handleDelete(doc)} style={{ padding: '7px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, cursor: 'pointer' }}>
                         🗑 Löschen
                       </button>

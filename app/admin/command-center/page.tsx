@@ -101,7 +101,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     { titel: 'Vertrieb & Pipeline', sub: 'Deals & nächste Schritte', href: '/admin/command-center/vertrieb' },
     { titel: 'E-Mail', sub: 'Schreiben & Verlauf', href: '/dashboard/korrespondenz' },
     { titel: 'Banking', sub: 'Konten & Bewegungen', href: '/dashboard/banking' },
-    { titel: 'Systeme / Infrastruktur', sub: 'Vercel, Supabase, DATEV, Google', bald: true },
+    { titel: 'Systeme / Infrastruktur', sub: 'Vercel, Supabase, DATEV, Google', href: '/admin/command-center/systeme' },
     { titel: 'Imperium', sub: 'Zukunftsperspektive', bald: true },
   ];
   const sektionenPrivat: Sektion[] = [

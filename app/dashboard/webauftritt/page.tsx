@@ -253,6 +253,7 @@ export default function WebauftrittPage() {
             <button style={{ ...styles.btnGold, opacity: speichert ? 0.6 : 1 }} disabled={speichert} onClick={speichern}>
               {speichert ? 'Speichert …' : '💾 Firmen-Auftritt speichern'}
             </button>
+            <a href="/dashboard/webseiten" style={styles.btnWeiter}>🖥️ Weiter zum Website-Bauer →</a>
           </div>
 
           <div style={styles.hinweis}>
@@ -326,6 +327,7 @@ const styles: Record<string, CSSProperties> = {
 
   saveBar: { display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: FS.btn, fontWeight: 800, cursor: 'pointer' },
+  btnWeiter: { background: C.green, color: C.navy, border: 'none', borderRadius: 10, padding: '12px 22px', fontSize: FS.btn, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' },
   btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 15px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer' },
 
   autoBadge: { background: `${C.cyan}1e`, color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 7, padding: '2px 8px', fontSize: FS.mini, fontWeight: 700, marginLeft: 8, verticalAlign: 'middle' },
