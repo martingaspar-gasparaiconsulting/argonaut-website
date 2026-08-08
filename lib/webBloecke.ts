@@ -615,7 +615,35 @@ function seiteCss(ci: CiWeb): string {
     '.ao-prod-preis{font-weight:900;color:#1c2430;font-size:18px}',
     '.ao-prod-add{border:none;cursor:pointer;font-size:14px;padding:10px 14px}',
     '.ao-shop-lade,.ao-shop-leer,.ao-shop-hinweis{color:#8290a0;font-weight:600;padding:8px 0}',
-    '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4)}',
+    '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4);cursor:pointer}',
+    // Warenkorb-Drawer + Kasse
+    '.ao-wk-overlay{position:fixed;inset:0;background:rgba(5,10,20,.5);z-index:60;display:none;justify-content:flex-end}',
+    '.ao-wk-overlay.auf{display:flex}',
+    '.ao-wk-drawer{background:#fff;color:#1c2430;width:min(430px,100%);height:100%;overflow:auto;padding:20px;box-shadow:-10px 0 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:12px}',
+    '.ao-wk-kopf{display:flex;align-items:center;justify-content:space-between;font-size:20px;font-weight:800;color:var(--p)}',
+    '.ao-wk-x{background:none;border:none;font-size:20px;cursor:pointer;color:#51606f;line-height:1}',
+    '.ao-wk-items{display:flex;flex-direction:column;gap:10px}',
+    '.ao-wk-item{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;border-bottom:1px solid #eceff3;padding-bottom:8px}',
+    '.ao-wk-item-name{font-weight:700;min-width:0}',
+    '.ao-wk-menge{display:flex;align-items:center;gap:6px}',
+    '.ao-wk-menge button{width:26px;height:26px;border:1px solid #d3dbe4;background:#f5f8fc;border-radius:6px;cursor:pointer;font-weight:800;line-height:1}',
+    '.ao-wk-item-preis{font-weight:800;white-space:nowrap}',
+    '.ao-wk-del{background:none;border:none;color:#c0392b;cursor:pointer;font-weight:800}',
+    '.ao-wk-summe{display:flex;justify-content:space-between;font-size:18px;padding:8px 0;border-top:2px solid #eceff3;color:var(--p)}',
+    '.ao-wk-kasse{display:flex;flex-direction:column;gap:10px;margin-top:4px}',
+    '.ao-wk-feld{display:flex;flex-direction:column;gap:4px}',
+    '.ao-wk-feld label{font-size:13px;font-weight:700;color:#41505f}',
+    '.ao-wk-kasse input,.ao-wk-kasse textarea{font:inherit;font-size:15px;color:#1c2430;border:1px solid #d3dbe4;border-radius:9px;padding:10px 12px;width:100%;box-sizing:border-box}',
+    '.ao-wk-zwei{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
+    '.ao-wk-dsgvo{flex-direction:row;display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#51606f}',
+    '.ao-wk-dsgvo a{color:var(--p);font-weight:700}',
+    '.ao-wk-hp{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important}',
+    '.ao-wk-senden{border:none;cursor:pointer;align-self:stretch;text-align:center}',
+    '.ao-wk-msg{font-size:14px;font-weight:600}',
+    '.ao-wk-msg.ok{color:#2e7d55}',
+    '.ao-wk-msg.err{color:#c0392b}',
+    '.ao-wk-leer{color:#51606f;padding:14px 0}',
+    '.ao-wk-danke{color:#2e7d55;font-weight:700;font-size:16px;padding:14px 0;line-height:1.5}',
     // CTA
     '.cta{background:var(--s);color:#1c2430;padding:64px 0;text-align:center}',
     '.cta h2{margin:0 0 24px;font-size:clamp(24px,3.2vw,36px)}',
@@ -690,27 +718,11 @@ function buchungSkript(): string {
     + '})();</script>';
 }
 
-// Shop-Produkte: lädt die freigeschalteten Artikel und zeigt sie als Kacheln.
-// Warenkorb liegt clientseitig in localStorage (Schlüssel je Seite); die Kasse
-// baut in Kapitel 3 darauf auf. Nur auf veröffentlichten Seiten.
+// Shop-Produkte: die komplette Storefront-Logik (Produkte laden, Warenkorb in
+// localStorage, Warenkorb-Drawer, schlanke Kasse → /api/oeffentlich/shop-bestellung)
+// liegt in public/shop.js — hier nur eingebunden. Nur auf veröffentlichten Seiten.
 function produkteSkript(): string {
-  return '<script>(function(){'
-    + 'var c=document.querySelector(".ao-shop[data-seite]");if(!c)return;var seite=c.getAttribute("data-seite");if(!seite)return;var wkKey="ao_wk_"+seite;'
-    + 'function esc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
-    + 'function eur(n){return (Number(n)||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"});}'
-    + 'function ladeWk(){try{return JSON.parse(localStorage.getItem(wkKey)||"[]");}catch(e){return [];}}'
-    + 'function saveWk(w){try{localStorage.setItem(wkKey,JSON.stringify(w));}catch(e){}}'
-    + 'var produkte=[];'
-    + 'function add(id){var p=null,i;for(i=0;i<produkte.length;i++){if(produkte[i].id===id){p=produkte[i];break;}}if(!p)return;var w=ladeWk(),f=null,j;for(j=0;j<w.length;j++){if(w[j].id===id){f=w[j];break;}}if(f){f.menge++;}else{w.push({id:p.id,name:p.name,preis:p.preis,menge:1});}saveWk(w);zeigeWk();}'
-    + 'function zeigeWk(){var w=ladeWk(),bar=c.querySelector(".ao-wk-bar");if(!bar)return;var anz=0,sum=0,i;for(i=0;i<w.length;i++){anz+=w[i].menge;sum+=w[i].menge*(Number(w[i].preis)||0);}if(anz>0){bar.style.display="";var t=bar.querySelector(".ao-wk-text");if(t){t.textContent="\\uD83D\\uDED2 "+anz+" Artikel im Warenkorb \\u00b7 "+eur(sum);}}else{bar.style.display="none";}}'
-    + 'fetch("/api/oeffentlich/shop-produkte?seite="+encodeURIComponent(seite)).then(function(r){return r.json();}).then(function(d){'
-    + 'produkte=(d&&d.produkte)||[];var grid=c.querySelector(".ao-shop-grid");if(!grid)return;'
-    + 'if(!produkte.length){grid.innerHTML="<div class=\\"ao-shop-leer\\">Noch keine Produkte im Shop.</div>";return;}'
-    + 'var h="",i;for(i=0;i<produkte.length;i++){var p=produkte[i];'
-    + 'h+="<div class=\\"ao-prod\\">"+(p.bild?"<div class=\\"ao-prod-bild\\" style=\\"background-image:url("+encodeURI(p.bild)+")\\"></div>":"<div class=\\"ao-prod-bild ao-prod-kein\\"></div>")+"<div class=\\"ao-prod-body\\"><div class=\\"ao-prod-name\\">"+esc(p.name)+"</div>"+(p.beschreibung?"<div class=\\"ao-prod-text\\">"+esc(p.beschreibung)+"</div>":"")+"<div class=\\"ao-prod-fuss\\"><span class=\\"ao-prod-preis\\">"+eur(p.preis)+"</span><button type=\\"button\\" class=\\"btn ao-prod-add\\" data-id=\\""+esc(p.id)+"\\">In den Warenkorb</button></div></div></div>";}'
-    + 'grid.innerHTML=h;grid.addEventListener("click",function(e){var b=e.target.closest?e.target.closest(".ao-prod-add"):null;if(b){add(b.getAttribute("data-id"));}});zeigeWk();'
-    + '}).catch(function(){});'
-    + '})();</script>';
+  return '<script src="/shop.js" defer></script>';
 }
 
 // Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
