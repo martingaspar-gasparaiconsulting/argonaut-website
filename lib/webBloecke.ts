@@ -653,6 +653,8 @@ function seiteCss(ci: CiWeb): string {
     '.ao-prod-text{color:#51606f;font-size:14px;line-height:1.5;flex:1}',
     '.ao-prod-fuss{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}',
     '.ao-prod-preis{font-weight:900;color:#1c2430;font-size:18px}',
+    '.ao-prod-mwst{display:block;font-size:11px;color:#8290a0;font-weight:600;margin-top:1px}',
+    '.ao-wk-rechtshinweis{font-size:12px;color:#8290a0;padding:2px 0 6px;line-height:1.4}',
     '.ao-prod-add{border:none;cursor:pointer;font-size:14px;padding:10px 14px}',
     '.ao-shop-lade,.ao-shop-leer,.ao-shop-hinweis{color:#8290a0;font-weight:600;padding:8px 0}',
     '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4);cursor:pointer}',

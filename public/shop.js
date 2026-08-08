@@ -71,13 +71,14 @@
         + '<button type="button" class="ao-wk-del" data-del="' + esc(it.id) + '" aria-label="Entfernen">✕</button></div>';
     }
     h += '</div><div class="ao-wk-summe"><span>Summe</span><b>' + eur(summe(w)) + '</b></div>';
+    h += '<div class="ao-wk-rechtshinweis">Alle Preise inkl. MwSt. Versandkosten &amp; Lieferzeit stimmt der Anbieter mit Ihnen ab.</div>';
     h += '<form class="ao-wk-kasse" novalidate>'
       + '<div class="ao-wk-feld"><label>Name*</label><input name="besteller" required></div>'
       + '<div class="ao-wk-zwei"><div class="ao-wk-feld"><label>E-Mail</label><input type="email" name="email"></div><div class="ao-wk-feld"><label>Telefon</label><input name="telefon"></div></div>'
       + '<div class="ao-wk-feld"><label>Anschrift / Nachricht</label><textarea name="nachricht" rows="2"></textarea></div>'
       + '<label class="ao-wk-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerklärung</a> gelesen und stimme zu.*</label>'
       + '<input type="text" name="firma_hp" class="ao-wk-hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
-      + '<button type="submit" class="btn ao-wk-senden">Bestellung absenden</button>'
+      + '<button type="submit" class="btn ao-wk-senden">Zahlungspflichtig bestellen</button>'
       + '<div class="ao-wk-msg" role="status"></div></form>';
     drawer.innerHTML = h;
     kopfWireX();
@@ -134,7 +135,7 @@
         + (p.bild ? '<div class="ao-prod-bild" style="background-image:url(' + encodeURI(p.bild) + ')"></div>' : '<div class="ao-prod-bild ao-prod-kein"></div>')
         + '<div class="ao-prod-body"><div class="ao-prod-name">' + esc(p.name) + '</div>'
         + (p.beschreibung ? '<div class="ao-prod-text">' + esc(p.beschreibung) + '</div>' : '')
-        + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + eur(p.preis) + '</span>'
+        + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + eur(p.preis) + '<span class="ao-prod-mwst">inkl. MwSt</span></span>'
         + '<button type="button" class="btn ao-prod-add" data-id="' + esc(p.id) + '">In den Warenkorb</button></div></div></div>';
     }
     grid.innerHTML = h;
