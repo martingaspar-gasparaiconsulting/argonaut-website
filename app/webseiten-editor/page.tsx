@@ -59,6 +59,10 @@ export default function VollbildEditor() {
   const [auswahl, setAuswahl] = useState<number | null>(null);
   const [docHtml, setDocHtml] = useState('');
   const [bildLaedt, setBildLaedt] = useState(false);
+  const [verlauf, setVerlauf] = useState<Block[][]>([]);   // Rückgängig-Stapel
+  const [zukunft, setZukunft] = useState<Block[][]>([]);    // Wiederherstellen-Stapel
+  const [autoAn, setAutoAn] = useState(true);               // Auto-Speichern an/aus
+  const [veroeffLaedt, setVeroeffLaedt] = useState(false);
 
   // Eine Seite (slug) laden — gespeicherte Bausteine oder frische Vorlage.
   const ladeSeite = useCallback(async (userId: string, s: string, ciData: CiWeb | null) => {
@@ -79,6 +83,7 @@ export default function VollbildEditor() {
     setBloecke(neu);
     if (ciData) setDocHtml(baueDoc(neu, ciData));
     setAuswahl(null);
+    setVerlauf([]); setZukunft([]);
     setDirty(false);
     setGespeichert(null);
   }, []);
@@ -107,12 +112,44 @@ export default function VollbildEditor() {
     return () => window.removeEventListener('beforeunload', warnen);
   }, [dirty]);
 
-  // Struktur-Änderung (Palette, Umsortieren, Panel-Felder): Leinwand neu aufbauen.
+  // Struktur-Änderung (Palette, Umsortieren, Panel-Felder): Leinwand neu aufbauen + Verlauf.
   function setBloeckeReflow(b: Block[]) {
+    setVerlauf((v) => [...v.slice(-49), bloecke]); setZukunft([]);
     setBloecke(b); setDirty(true); setGespeichert(null);
     if (ci) setDocHtml(baueDoc(b, ci));
   }
   function add(typ: Block['typ']) { setBloeckeReflow([...bloecke, neuerBlock(typ)]); }
+
+  // Rückgängig / Wiederherstellen (Block-Ebene). In-Place-Textänderungen zählen mit.
+  function undo() {
+    if (!verlauf.length) return;
+    const prev = verlauf[verlauf.length - 1];
+    setVerlauf((v) => v.slice(0, -1));
+    setZukunft((z) => [...z.slice(-49), bloecke]);
+    setBloecke(prev); setDirty(true); setGespeichert(null); setAuswahl(null);
+    if (ci) setDocHtml(baueDoc(prev, ci));
+  }
+  function wieder() {
+    if (!zukunft.length) return;
+    const next = zukunft[zukunft.length - 1];
+    setZukunft((z) => z.slice(0, -1));
+    setVerlauf((v) => [...v.slice(-49), bloecke]);
+    setBloecke(next); setDirty(true); setGespeichert(null); setAuswahl(null);
+    if (ci) setDocHtml(baueDoc(next, ci));
+  }
+
+  // Tastatur: Strg/Cmd+Z = rückgängig, Strg+Shift+Z / Strg+Y = wiederherstellen.
+  useEffect(() => {
+    function taste(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); wieder(); }
+    }
+    window.addEventListener('keydown', taste);
+    return () => window.removeEventListener('keydown', taste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verlauf, zukunft, bloecke, ci]);
 
   // Nachrichten aus der Leinwand (iframe): Baustein wählen · Text direkt bearbeiten · Bild ablegen.
   useEffect(() => {
@@ -122,9 +159,10 @@ export default function VollbildEditor() {
       if (d.ao === 'select' && typeof d.index === 'number') {
         setAuswahl(d.index);
       } else if (d.ao === 'edit' && typeof d.index === 'number' && typeof d.feld === 'string') {
-        // In-Place-Text: die Leinwand zeigt es bereits — nur die Daten nachziehen (kein Neuaufbau).
+        // In-Place-Text: die Leinwand zeigt es bereits — Daten nachziehen (kein Neuaufbau) + Verlauf.
         const feld = d.feld, wert = d.wert ?? '';
-        setBloecke((prev) => prev.map((b, i) => (i === d.index ? ({ ...b, [feld]: wert } as Block) : b)));
+        setVerlauf((v) => [...v.slice(-49), bloecke]); setZukunft([]);
+        setBloecke(bloecke.map((b, i) => (i === d.index ? ({ ...b, [feld]: wert } as Block) : b)));
         setDirty(true); setGespeichert(null);
       } else if (d.ao === 'datei' && d.datei) {
         void bildAblegen(typeof d.index === 'number' ? d.index : -1, d.datei);
@@ -208,6 +246,34 @@ export default function VollbildEditor() {
     setGespeichert('Gespeichert.'); setDirty(false); setSpeichert(false);
   }
 
+  // Auto-Speichern: 2,5 s nach der letzten Änderung sichern (wenn eingeschaltet).
+  useEffect(() => {
+    if (!autoAn || !dirty || !uid || !ci || speichert) return;
+    const t = setTimeout(() => { void speichern(); }, 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAn, dirty, bloecke, uid, ci]);
+
+  // Veröffentlichen / offline nehmen — sichert zuerst, dann die bestehende Route.
+  async function setzeLive(live: boolean) {
+    if (!uid || !ci) return;
+    setFehler(null); setVeroeffLaedt(true);
+    await speichern();
+    try {
+      const res = await fetch('/api/webseite-veroeffentlichen', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug, live }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFehler(data?.error || 'Konnte nicht veröffentlichen.'); setVeroeffLaedt(false); return; }
+      setStatus(data.status || (live ? 'live' : 'entwurf'));
+      setOeffentlichId(data.oeffentlich_id ?? oeffentlichId);
+    } catch {
+      setFehler('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
+    }
+    setVeroeffLaedt(false);
+  }
+
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
   const hatFirma = !!(ci && (ci.firma ?? '').trim());
 
@@ -256,17 +322,27 @@ export default function VollbildEditor() {
 
         <div style={styles.topRechts}>
           <div style={styles.geraeteRow}>
+            <button onClick={undo} disabled={!verlauf.length} style={{ ...styles.geraet, ...(verlauf.length ? null : styles.geraetAus) }} title="Rückgängig (Strg+Z)">↶</button>
+            <button onClick={wieder} disabled={!zukunft.length} style={{ ...styles.geraet, ...(zukunft.length ? null : styles.geraetAus) }} title="Wiederherstellen (Strg+Shift+Z)">↷</button>
+          </div>
+          <div style={styles.geraeteRow}>
             {GERAETE.map((g) => (
               <button key={g.key} onClick={() => setGeraet(g.key)} style={geraet === g.key ? styles.geraetAktiv : styles.geraet} title={g.label}>{g.icon}</button>
             ))}
           </div>
+          <label style={styles.autoLabel} title="Änderungen automatisch speichern">
+            <input type="checkbox" checked={autoAn} onChange={(e) => setAutoAn(e.target.checked)} /> Auto
+          </label>
           {oeffentlichId && status === 'live' && (
             <a href={`/p/${oeffentlichId}`} target="_blank" rel="noreferrer" style={styles.btnGhost}>↗ Live ansehen</a>
           )}
           {gespeichert && <span style={styles.okInline}>{gespeichert}</span>}
-          <button style={{ ...styles.btnGold, opacity: speichert ? 0.6 : 1 }} disabled={speichert} onClick={speichern}>
+          <button style={{ ...styles.btnGold, opacity: speichert ? 0.6 : 1 }} disabled={speichert} onClick={() => speichern()}>
             {speichert ? 'Speichert …' : '💾 Speichern'}
           </button>
+          {status === 'live'
+            ? <button style={styles.btnGhost} disabled={veroeffLaedt} onClick={() => setzeLive(false)}>{veroeffLaedt ? '…' : '⏸ Offline'}</button>
+            : <button style={{ ...styles.btnLive, opacity: veroeffLaedt ? 0.6 : 1 }} disabled={veroeffLaedt} onClick={() => setzeLive(true)}>{veroeffLaedt ? 'Veröffentlicht …' : '🌐 Veröffentlichen'}</button>}
         </div>
       </header>
 
@@ -359,7 +435,10 @@ const styles: Record<string, CSSProperties> = {
   geraeteRow: { display: 'flex', gap: 4, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: 3 },
   geraet: { background: 'transparent', color: C.textDim, border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 16, cursor: 'pointer' },
   geraetAktiv: { background: `${C.gold}22`, color: C.gold, border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 16, cursor: 'pointer' },
+  geraetAus: { opacity: 0.35, cursor: 'default' },
+  autoLabel: { display: 'flex', alignItems: 'center', gap: 5, fontSize: FS.mini, color: C.textDim, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
   btnGold: { background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: FS.klein, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' },
+  btnLive: { background: C.green, color: '#04110a', border: 'none', borderRadius: 9, padding: '9px 16px', fontSize: FS.klein, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' },
   btnGhost: { background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 9, padding: '8px 14px', fontSize: FS.klein, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' },
   okInline: { color: C.green, fontSize: FS.klein, fontWeight: 700 },
 
