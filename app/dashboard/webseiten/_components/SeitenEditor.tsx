@@ -31,6 +31,7 @@ export function neuerBlock(typ: Block['typ']): Block {
     case 'ueber': return { typ, eyebrow: 'Über uns', titel: 'Über uns', text: 'Zwei, drei Sätze über Ihren Betrieb.' };
     case 'galerie': return { typ, titel: 'Einblicke', anzahl: 3 };
     case 'testimonials': return { typ, eyebrow: 'Bewertungen', titel: 'Das sagen Kunden', stimmen: [{ text: 'Tolle Arbeit!', name: 'Zufriedener Kunde', rolle: 'Beispiel-Bewertung' }] };
+    case 'bewertungen': return { typ, eyebrow: 'Bewertungen', titel: 'Das sagen unsere Kunden' };
     case 'faq': return { typ, eyebrow: 'FAQ', titel: 'Häufige Fragen', fragen: [{ frage: 'Frage?', antwort: 'Antwort.' }] };
     case 'kontakt': return { typ, titel: 'Kontakt', text: 'Schreiben Sie uns — wir melden uns schnell zurück.', knopf: 'Anfrage senden' };
     case 'newsletter': return { typ, titel: 'Newsletter', text: 'Bleiben Sie auf dem Laufenden — melden Sie sich für unseren Newsletter an.', knopf: 'Anmelden' };
@@ -259,6 +260,8 @@ function felderFuer(
         <Liste key="stimmen" titel="Bewertungen (Beispiele)" items={b.stimmen} felder={[['text', 'Text'], ['name', 'Name']]}
           onChange={(arr) => setBlock(i, { stimmen: arr.map((s) => ({ ...s, rolle: 'Beispiel-Bewertung' })) })} leer={{ text: '', name: '', rolle: 'Beispiel-Bewertung' }} />,
       ];
+    case 'bewertungen':
+      return [T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel)];
     case 'faq':
       return [
         T('Label', 'eyebrow', b.eyebrow || ''), T('Überschrift', 'titel', b.titel),

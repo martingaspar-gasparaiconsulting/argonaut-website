@@ -36,6 +36,7 @@ export type Block =
   | { typ: 'ueber'; eyebrow?: string; titel: string; text: string }
   | { typ: 'galerie'; titel: string; anzahl: number; bilder?: string[] }
   | { typ: 'testimonials'; eyebrow?: string; titel: string; stimmen: { text: string; name: string; rolle: string }[] }
+  | { typ: 'bewertungen'; eyebrow?: string; titel: string }
   | { typ: 'faq'; eyebrow?: string; titel: string; fragen: { frage: string; antwort: string }[] }
   | { typ: 'kontakt'; titel: string; text: string; knopf?: string }
   | { typ: 'newsletter'; titel: string; text: string; knopf?: string }
@@ -50,7 +51,8 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'leistungen', icon: '🧩', name: 'Leistungen', beschreibung: 'Ihre Angebote in Kacheln' },
   { typ: 'ueber', icon: '🏢', name: 'Über uns', beschreibung: 'Ihre Geschichte und Stärken' },
   { typ: 'galerie', icon: '🖼️', name: 'Galerie', beschreibung: 'Platz für Bilder (Platzhalter)' },
-  { typ: 'testimonials', icon: '⭐', name: 'Bewertungen', beschreibung: 'Kundenstimmen mit Sternen' },
+  { typ: 'testimonials', icon: '⭐', name: 'Bewertungen (Beispiele)', beschreibung: 'Kundenstimmen mit Sternen — selbst gepflegt' },
+  { typ: 'bewertungen', icon: '🌟', name: 'Live-Bewertungen', beschreibung: 'Echte freigegebene Kundenbewertungen — automatisch aktuell' },
   { typ: 'faq', icon: '❓', name: 'FAQ', beschreibung: 'Häufige Fragen zum Aufklappen' },
   { typ: 'kontakt', icon: '✉️', name: 'Kontakt', beschreibung: 'Adresse, Telefon, Anfrage' },
   { typ: 'newsletter', icon: '📧', name: 'Newsletter', beschreibung: 'E-Mail-Anmeldung mit Bestätigung (DSGVO)' },
@@ -349,6 +351,21 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '</div></section>',
       ].join('');
     }
+    case 'bewertungen': {
+      const oid = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
+      const inhalt = oid
+        ? '<div class="ao-bew-lade">Bewertungen werden geladen &hellip;</div>'
+        : '<div class="ao-bew-platz">' + (ed
+            ? 'Hier erscheinen automatisch Ihre echten, freigegebenen Bewertungen. Freigeben im Modul &bdquo;Bewertungen&ldquo;.'
+            : 'Bewertungen folgen in K&uuml;rze.') + '</div>';
+      return [
+        '<section class="sec alt"><div class="wrap">',
+        ebHtml(b.eyebrow),
+        '<h2' + ce('titel') + '>' + esc(b.titel) + '</h2>',
+        '<div class="ao-bew grid" data-seite="' + oid + '">' + inhalt + '</div>',
+        '</div></section>',
+      ].join('');
+    }
     default:
       return '';
   }
@@ -428,6 +445,8 @@ function seiteCss(ci: CiWeb): string {
     '.stimme figcaption{display:flex;flex-direction:column}',
     '.stimme figcaption b{color:var(--p)}',
     '.stimme figcaption span{font-size:13px;color:#8290a0}',
+    // Live-Bewertungen (Lade-/Platzhalter-Zustand; Karten nutzen .stimme)
+    '.ao-bew-lade,.ao-bew-platz{grid-column:1/-1;color:#8290a0;font-size:15px;padding:8px 0;font-weight:600}',
     // FAQ
     '.faq details{border:1px solid #e7ebf1;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden}',
     '.faq summary{cursor:pointer;padding:16px 18px;font-weight:700;color:var(--p);list-style:none}',
@@ -517,6 +536,20 @@ function editorSkript(): string {
     + '})();</script>';
 }
 
+// Live-Bewertungen: holt die echten, freigegebenen Bewertungen des Seiten-Inhabers
+// und füllt den Baustein. Nur auf veröffentlichten Seiten (mit oeffentlichId).
+function bewertungenSkript(): string {
+  return '<script>(function(){'
+    + 'var c=document.querySelector(".ao-bew[data-seite]");if(!c)return;var seite=c.getAttribute("data-seite");if(!seite)return;'
+    + 'function esc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}'
+    + 'fetch("/api/oeffentlich/bewertungen?seite="+encodeURIComponent(seite)).then(function(r){return r.json();}).then(function(d){'
+    + 'var a=(d&&d.bewertungen)||[];if(!a.length){c.innerHTML="";return;}var h="";'
+    + 'for(var i=0;i<a.length;i++){var b=a[i];var st=Math.max(0,Math.min(5,b.sterne||0));var sterne="";for(var s=0;s<5;s++){sterne+=(s<st?"\\u2605":"\\u2606");}'
+    + 'h+="<figure class=\\"stimme\\"><span class=\\"sterne\\">"+sterne+"</span>"+(b.text?"<blockquote>"+esc(b.text)+"</blockquote>":"")+"<figcaption><b>"+esc(b.name||"Kunde")+"</b>"+(b.datum?"<span>"+esc(b.datum)+"</span>":"")+"</figcaption></figure>";}'
+    + 'c.innerHTML=h;}).catch(function(){c.innerHTML="";});'
+    + '})();</script>';
+}
+
 // Video-Facade: klick auf das Vorschaubild lädt erst dann den echten Player (tempo-
 // sicher, kein Autoload). Nur auf Live-/Vorschau-Seiten, nicht im Editor.
 function videoSkript(): string {
@@ -541,6 +574,7 @@ export function seiteHtml(
     return opts.editor ? '<div class="ao-b" data-ao-i="' + i + '">' + inner + '</div>' : inner;
   }).join('\n');
   const hatVideo = (seite.bloecke || []).some((b) => b.typ === 'video');
+  const hatBewertungen = (seite.bloecke || []).some((b) => b.typ === 'bewertungen');
 
   return [
     '<!doctype html>',
@@ -567,6 +601,7 @@ export function seiteHtml(
       ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
       : '',
     (!opts.editor && hatVideo) ? videoSkript() : '',
+    (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',
     '</body></html>',
   ].join('\n');
