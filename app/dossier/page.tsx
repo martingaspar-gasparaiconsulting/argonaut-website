@@ -100,8 +100,8 @@ export default function DossierPage() {
                   <input value={name} onChange={(e) => setName(e.target.value)} style={styles.input} />
                 </label>
                 <label style={styles.feld}>
-                  <span style={styles.feldLabel}>Branche (optional)</span>
-                  <input value={branche} onChange={(e) => setBranche(e.target.value)} style={styles.input} placeholder="z. B. Handwerk, Gastro …" />
+                  <span style={styles.feldLabel}>Branche *</span>
+                  <input required value={branche} onChange={(e) => setBranche(e.target.value)} style={styles.input} placeholder="z. B. Handwerk, Gastro …" />
                 </label>
                 {fehler && <div style={styles.err}>{fehler}</div>}
                 <button type="submit" disabled={sende} style={{ ...styles.btnGold, opacity: sende ? 0.6 : 1 }}>
