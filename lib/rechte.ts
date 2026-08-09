@@ -375,6 +375,22 @@ export function nurNachNutzerTyp(
   return links // 'voll' oder unbekannt -> nichts zusaetzlich verstecken
 }
 
+/**
+ * Pfad-Variante von nurNachNutzerTyp fuer den URL-Riegel im proxy: Darf ein
+ * Mitarbeiter mit diesem Sitz-Typ diesen konkreten Pfad direkt oeffnen?
+ * Spiegelt exakt die Nav-Logik (self_service = nur immer-Links; standard = ohne
+ * sensible / Ebene<=2). 'voll'/unbekannt und unbekannte Pfade -> fail-open (true).
+ * `exakt`-Links (die Uebersicht '/dashboard') matchen nur exakt, damit ein
+ * Unterpfad nicht faelschlich den Uebersichts-Eintrag trifft.
+ */
+export function pfadErlaubtFuerNutzerTyp(pfad: string, typ: string | null | undefined): boolean {
+  if (typ !== 'self_service' && typ !== 'standard') return true
+  const link = NAV_LINKS.find((l) => (l.exakt ? pfad === l.href : pfadPasst(pfad, l.href)))
+  if (!link) return true // kein Nav-Eintrag (Infra-Unterpfad) -> hier nicht blocken
+  if (typ === 'self_service') return link.immer === true
+  return !link.sensibel && (link.ebene === undefined || link.ebene >= 3)
+}
+
 // ---------------------------------------------------------------------------
 // Q2 · NAVBAR-GRUPPEN — nur Anzeige. Reihenfolge + Ueberschriften.
 // Leeres label = kein sichtbarer Titel (fuer 'start'/Uebersicht).

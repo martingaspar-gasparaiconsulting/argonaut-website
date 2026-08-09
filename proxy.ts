@@ -1,8 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { istNurChefPfad, mitarbeiterDarf, pfadPasst } from './lib/rechte'
-import { gebuchteModulKeys, pfadGebucht, type TenantModulRow } from './lib/tenantModule'
+import { istNurChefPfad, mitarbeiterDarf, pfadPasst, pfadErlaubtFuerNutzerTyp } from './lib/rechte'
+import { gebuchteModulKeys, pfadGebucht, modulKeyFuerPfad, type TenantModulRow } from './lib/tenantModule'
+import { aktiveModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
+import { STANDORT_COOKIE } from './lib/aktiverStandort'
+import { konkreterStandort } from './lib/standortDaten'
 
 // ============================================================================
 // ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard + Custom-Domains
@@ -108,6 +111,26 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // --- STANDORT-RIEGEL (Block D) · aktiver Filial-Standort ----------------
+  // Ist im Header ein konkreter Standort gewaehlt (Cookie argonaut_standort),
+  // wird der Direktaufruf eines Moduls, das an DIESEM Standort nicht aktiv ist,
+  // hart geblockt (bisher nur im Menue versteckt). Gilt fuer Chef UND Mitarbeiter.
+  // FAIL-OPEN: kein/'alle'-Standort ODER keine aktive standort_module-Zeile ->
+  // nichts einschraenken (kein Aussperren). Infra-Pfade ohne Modul immer erlaubt.
+  {
+    const sid = konkreterStandort(req.cookies.get(STANDORT_COOKIE)?.value)
+    if (sid) {
+      const { data: smRows } = await supabase
+        .from('standort_module')
+        .select('modul_key, aktiv')
+        .eq('standort_id', sid)
+      const aktive = aktiveModuleAmStandort((smRows as StandortModulRow[] | null) ?? null)
+      if (!istModulAmStandortAktiv(modulKeyFuerPfad(req.nextUrl.pathname), aktive)) {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
+  }
+
   // --- Rollen-Weiche -------------------------------------------------------
   const { data: customer } = await supabase
     .from('customers')
@@ -124,7 +147,7 @@ export async function proxy(req: NextRequest) {
     // KEIN Kunde -> pruefen, ob es ein eingeladener Mitarbeiter ist
     const { data: mitarbeiter } = await supabase
       .from('mitarbeiter')
-      .select('id, darf_verteilen')
+      .select('id, darf_verteilen, nutzer_typ')
       .eq('auth_user_id', session.user.id)
       .maybeSingle()
 
@@ -149,6 +172,13 @@ export async function proxy(req: NextRequest) {
       const module: string[] = (recht?.module as string[]) || []
 
       if (!mitarbeiterDarf(p, module)) {
+        return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
+      }
+
+      // BLOCK H · Sitz-Typ-Riegel: self_service/standard duerfen sensible bzw.
+      // nicht-immer Module auch per Direkt-URL nicht oeffnen (spiegelt das Menue).
+      const nutzerTyp = (mitarbeiter as { nutzer_typ?: string | null }).nutzer_typ ?? null
+      if (!pfadErlaubtFuerNutzerTyp(p, nutzerTyp)) {
         return NextResponse.redirect(new URL('/dashboard/mein-bereich', req.url))
       }
     }
