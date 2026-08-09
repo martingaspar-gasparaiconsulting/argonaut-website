@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import KiAuge from "../_components/KiAuge";
 import { augeChargen } from "@/lib/auge";
 import {
@@ -105,18 +107,28 @@ export default function ChargenSeite() {
 
   async function ladeAlles() {
     setLaden(true);
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Lose.
+    const sid = konkreterStandort(leseStandortCookie());
+    let lq = supabase.from("charge_los").select("*");
+    if (sid) lq = lq.or(standortOrFilter(sid));
     const [l, v, p, m, a] = await Promise.all([
-      supabase.from("charge_los").select("*").order("created_at", { ascending: false }),
+      lq.order("created_at", { ascending: false }),
       supabase.from("charge_verwendung").select("*").order("datum", { ascending: true }),
       supabase.from("charge_pruefung").select("*").order("datum", { ascending: true }),
       supabase.from("charge_merkmal").select("*").order("id", { ascending: true }),
       supabase.from("artikel").select("id, bezeichnung").eq("aktiv", true).order("bezeichnung", { ascending: true }),
     ]);
-    if (!l.error && l.data) setLos(l.data as Los[]);
-    { const rows = (l.data as Los[]) ?? []; setFelder(await ladeFelder(MODUL)); setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id))); }
-    if (!v.error && v.data) setVerwendungen(v.data as Verwendung[]);
-    if (!p.error && p.data) setPruefungen(p.data as Pruefung[]);
-    if (!m.error && m.data) setMerkmale(m.data as Merkmal[]);
+    const losRows = (l.data as Los[]) ?? [];
+    const losIds = new Set(losRows.map((r) => r.id));
+    if (!l.error) setLos(losRows);
+    { setFelder(await ladeFelder(MODUL)); setWerteMap(await ladeWerte(MODUL, losRows.map((r) => r.id))); }
+    // Kinder nur zu sichtbaren (Filial-)Losen — hält KPIs/Anzeige konsistent.
+    const vwRows = ((v.data as Verwendung[]) ?? []).filter((x) => losIds.has(x.los_id));
+    const pfRows = ((p.data as Pruefung[]) ?? []).filter((x) => losIds.has(x.los_id));
+    const pfIds = new Set(pfRows.map((x) => x.id));
+    if (!v.error) setVerwendungen(vwRows);
+    if (!p.error) setPruefungen(pfRows);
+    if (!m.error && m.data) setMerkmale((m.data as Merkmal[]).filter((x) => pfIds.has(x.pruefung_id)));
     if (!a.error && a.data) setArtikel(a.data as ArtikelKurz[]);
     setLaden(false);
   }
@@ -166,7 +178,7 @@ export default function ChargenSeite() {
     let datensatzId: string | null = editId;
     if (editId) { error = (await supabase.from("charge_los").update(payload).eq("id", editId)).error; }
     else {
-      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+      const ins = { ...payload, standort_id: konkreterStandort(leseStandortCookie()), ...(userId ? { owner_user_id: userId } : {}) };
       const res = await supabase.from("charge_los").insert(ins).select('id').single();
       error = res.error; datensatzId = res.data ? (res.data as { id: string }).id : null;
     }
