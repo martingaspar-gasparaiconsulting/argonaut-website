@@ -10,6 +10,8 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import PersonalAuge from "./PersonalAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -224,9 +226,12 @@ export default function PersonalPage() {
     setLoading(true); setError(null);
     try {
       if (tab === 'mitarbeiter') {
-        const { data, error } = await supabase.from('mitarbeiter')
-          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden,abteilung')
-          .order('created_at', { ascending: false });
+        // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Mitarbeiter.
+        const sidMa = konkreterStandort(leseStandortCookie());
+        let maq = supabase.from('mitarbeiter')
+          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden,abteilung');
+        if (sidMa) maq = maq.or(standortOrFilter(sidMa));
+        const { data, error } = await maq.order('created_at', { ascending: false });
         if (error) throw error;
         setMitarbeiter((data as Mitarbeiter[]) ?? []);
         setFelder(await ladeFelder(MODUL));
@@ -705,7 +710,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
       const ownerId = userData?.user?.id;
       if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); setHiring(false); return; }
       const { data: neu, error: insErr } = await supabase.from('mitarbeiter').insert({
-        owner_user_id: ownerId, vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null,
+        owner_user_id: ownerId, standort_id: konkreterStandort(leseStandortCookie()), vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null,
         telefon: telefon.trim() || null, position: position.trim() || null, status: 'aktiv',
         eintrittsdatum: new Date().toISOString().slice(0, 10),
       }).select('id').single();
@@ -1881,7 +1886,7 @@ function NeuModal({ tab, onClose, onSaved, felder, extra, setExtra }: { tab: Tab
       const ownerId = userData?.user?.id;
       if (!ownerId) { setErr('Keine aktive Sitzung gefunden. Bitte neu einloggen.'); setSaving(false); return; }
       if (istMA) {
-        const { data: neu, error } = await supabase.from('mitarbeiter').insert({ owner_user_id: ownerId, vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null, telefon: telefon.trim() || null, position: position.trim() || null, status }).select('id').single();
+        const { data: neu, error } = await supabase.from('mitarbeiter').insert({ owner_user_id: ownerId, standort_id: konkreterStandort(leseStandortCookie()), vorname: vorname.trim(), nachname: nachname.trim(), email: email.trim() || null, telefon: telefon.trim() || null, position: position.trim() || null, status }).select('id').single();
         if (error) throw error;
         try { await speichereWerte(MODUL, (neu as { id: string })?.id, ownerId, extra); } catch { /* eigene Felder optional */ }
         setExtra(() => ({}));
