@@ -11,6 +11,8 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties, ChangeEvent }
 import { createBrowserClient } from '@supabase/ssr';
 import { datevVorschlag, datevKontenListe, type DatevVorschlag } from '@/lib/datevKonten';
 import Leerzustand from '../_components/Leerzustand';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -48,7 +50,11 @@ export default function EingangsbelegePage() {
   const laden_ = useCallback(async () => {
     setLaden(true);
     try {
-      const { data } = await supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, netto, ust_betrag, ust_satz, brutto, kategorie, notiz, datei_pfad, status, datev_konto, datev_rahmen').order('belegdatum', { ascending: false }).order('created_at', { ascending: false });
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Belege.
+      const sid = konkreterStandort(leseStandortCookie());
+      let q = supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, netto, ust_betrag, ust_satz, brutto, kategorie, notiz, datei_pfad, status, datev_konto, datev_rahmen');
+      if (sid) q = q.or(standortOrFilter(sid));
+      const { data } = await q.order('belegdatum', { ascending: false }).order('created_at', { ascending: false });
       setBelege((data as Beleg[]) ?? []);
     } catch (e: unknown) { setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setLaden(false); }
@@ -119,7 +125,7 @@ export default function EingangsbelegePage() {
     };
     try {
       if (editId) { const { error } = await supabase.from('eingangsbelege').update(payload).eq('id', editId); if (error) throw error; }
-      else { const { error } = await supabase.from('eingangsbelege').insert(payload); if (error) throw error; }
+      else { const { error } = await supabase.from('eingangsbelege').insert({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }); if (error) throw error; }
       setOk('Beleg gespeichert.'); reset(); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
