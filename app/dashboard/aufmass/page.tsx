@@ -24,6 +24,8 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
 import { augeAufmass } from '@/lib/auge';
 import {
@@ -128,10 +130,12 @@ export default function AufmassPage() {
     if (!uid) return;
     setLaden(true); setFehler(null);
     try {
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Aufmaße.
+      const sid = konkreterStandort(leseStandortCookie());
+      let aq = supabase.from('aufmasse').select('*').eq('archiviert', false);
+      if (sid) aq = aq.or(standortOrFilter(sid));
       const [aRes, kRes] = await Promise.all([
-        supabase.from('aufmasse').select('*')
-          .eq('archiviert', false)
-          .order('aufmass_datum', { ascending: false }),
+        aq.order('aufmass_datum', { ascending: false }),
         supabase.from('leistungskatalog').select('*')
           .eq('aktiv', true)
           .order('bezeichnung', { ascending: true }),
@@ -192,7 +196,7 @@ export default function AufmassPage() {
         bearbeiter: form.bearbeiter.trim() || null, notiz: form.notiz.trim() || null,
       };
       if (istNeu) {
-        const { data, error } = await supabase.from('aufmasse').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('aufmasse').insert({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }).select('id').single();
         if (error) throw error;
         const neuId = (data as { id: string }).id;
         setForm((f) => ({ ...f, id: neuId }));
@@ -230,7 +234,7 @@ export default function AufmassPage() {
       if (!lv.positionen.length) { setFehler('In der GAEB-Datei wurden keine Positionen gefunden.'); return; }
       const titel = (lv.projekt || file.name.replace(/\.[^.]+$/, '') || 'GAEB-Import').slice(0, 200);
       const { data, error } = await supabase.from('aufmasse').insert({
-        owner_user_id: uid, titel, status: 'entwurf',
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), titel, status: 'entwurf',
         aufmass_datum: new Date().toISOString().slice(0, 10), notiz: 'Aus GAEB importiert',
       }).select('*').single();
       if (error) throw error;
