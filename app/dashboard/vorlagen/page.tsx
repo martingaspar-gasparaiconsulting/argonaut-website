@@ -5,7 +5,7 @@
 // Kennzeichnung; Chef + Filialleiter verwalten, alle Mitarbeiter nutzen.
 // Filial-Sichtbarkeit FAIL-OPEN (zentral = überall; Filiale = zusätzlich diese).
 // ============================================================
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -51,6 +51,7 @@ export default function VorlagenPoolPage() {
   const [suche, setSuche] = useState('');
   const [katFilter, setKatFilter] = useState<string>('alle');
   const [modal, setModal] = useState<Vorlage | 'neu' | null>(null);
+  const [importOffen, setImportOffen] = useState(false);
   const [kopiert, setKopiert] = useState<string | null>(null);
 
   const darfVerwalten = rolle === 'chef' || rolle === 'leitung';
@@ -124,6 +125,7 @@ export default function VorlagenPoolPage() {
   }
 
   const empfohlenCount = rows.filter((r) => r.empfohlen).length;
+  const vorhandeneKeys = useMemo(() => new Set(rows.map((r) => `${r.kategorie}|${r.titel.trim().toLowerCase()}`)), [rows]);
 
   return (
     <div style={styles.page}>
@@ -133,7 +135,12 @@ export default function VorlagenPoolPage() {
           <h1 style={styles.h1}>Vorlagen-Sammelbecken</h1>
           <p style={styles.sub}>Ein zentraler Pool, aus dem jede Filiale zieht. {darfVerwalten ? 'Du kannst Vorlagen anlegen und als „empfohlen" markieren.' : 'Vom Chef/der Leitung gepflegt — hier findest du die empfohlenen Vorlagen.'}</p>
         </div>
-        {darfVerwalten && <button style={styles.primaryBtn} onClick={() => setModal('neu')}>＋ Neue Vorlage</button>}
+        {darfVerwalten && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button style={styles.ghostBtn} onClick={() => setImportOffen(true)}>⇩ Aus Modulen importieren</button>
+            <button style={styles.primaryBtn} onClick={() => setModal('neu')}>＋ Neue Vorlage</button>
+          </div>
+        )}
       </div>
 
       <div style={styles.toolbar}>
@@ -197,6 +204,140 @@ export default function VorlagenPoolPage() {
           onSaved={() => { setModal(null); load(); }}
         />
       )}
+
+      {importOffen && darfVerwalten && chefId && (
+        <ImportModal
+          chefId={chefId}
+          uid={uid}
+          vorhandene={vorhandeneKeys}
+          onClose={() => setImportOffen(false)}
+          onImported={() => { setImportOffen(false); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// Import bestehender Modul-Vorlagen in den Pool (nur lesen aus den Modulen,
+// schreiben in vorlage_pool). Bestandsseiten bleiben unangetastet.
+// ------------------------------------------------------------
+type Kandidat = { key: string; quelleLabel: string; kategorie: string; titel: string; inhalt: string };
+
+function ImportModal({ chefId, uid, vorhandene, onClose, onImported }: {
+  chefId: string; uid: string | null; vorhandene: Set<string>; onClose: () => void; onImported: () => void;
+}) {
+  const [kandidaten, setKandidaten] = useState<Kandidat[]>([]);
+  const [auswahl, setAuswahl] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const [pv, va, cv] = await Promise.all([
+          supabase.from('projekt_vorlagen').select('id,name,beschreibung'),
+          supabase.from('vorlagen_aufgaben').select('vorlage_id,titel,sortierung'),
+          supabase.from('hr_checklisten_vorlagen').select('id,name,art,punkte'),
+        ]);
+        const aufgabenNach: Record<string, string[]> = {};
+        ((va.data as { vorlage_id: string; titel: string; sortierung: number | null }[]) ?? [])
+          .slice()
+          .sort((a, b) => (a.sortierung ?? 0) - (b.sortierung ?? 0))
+          .forEach((a) => { (aufgabenNach[a.vorlage_id] ||= []).push(a.titel); });
+
+        const liste: Kandidat[] = [];
+        ((pv.data as { id: string; name: string; beschreibung: string | null }[]) ?? []).forEach((p) => {
+          const aufg = aufgabenNach[p.id] ?? [];
+          const teile: string[] = [];
+          if (p.beschreibung && p.beschreibung.trim()) teile.push(p.beschreibung.trim());
+          if (aufg.length) teile.push('Aufgaben:\n' + aufg.map((t) => '• ' + t).join('\n'));
+          liste.push({ key: 'p_' + p.id, quelleLabel: 'Projekt-Vorlage', kategorie: 'projekt', titel: p.name || 'Ohne Titel', inhalt: teile.join('\n\n') });
+        });
+        ((cv.data as { id: string; name: string; art: string; punkte: string[] | null }[]) ?? []).forEach((c) => {
+          const punkte = Array.isArray(c.punkte) ? c.punkte : [];
+          liste.push({ key: 'c_' + c.id, quelleLabel: 'Checklisten-Vorlage' + (c.art ? ` (${c.art})` : ''), kategorie: 'checkliste', titel: c.name || 'Ohne Titel', inhalt: punkte.map((p) => '• ' + p).join('\n') });
+        });
+        setKandidaten(liste);
+        // Standard: alles auswählen, was noch nicht im Pool ist.
+        setAuswahl(new Set(liste.filter((k) => !vorhandene.has(`${k.kategorie}|${k.titel.trim().toLowerCase()}`)).map((k) => k.key)));
+      } catch (e: unknown) {
+        setMsg('Module konnten nicht gelesen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+      } finally { setLoading(false); }
+    })();
+  }, [vorhandene]);
+
+  const toggle = (key: string) => setAuswahl((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  const schonImPool = (k: Kandidat) => vorhandene.has(`${k.kategorie}|${k.titel.trim().toLowerCase()}`);
+
+  async function uebernehmen() {
+    const ausgewaehlt = kandidaten.filter((k) => auswahl.has(k.key));
+    if (ausgewaehlt.length === 0) { setMsg('Bitte mindestens eine Vorlage auswählen.'); return; }
+    setSaving(true); setMsg(null);
+    try {
+      const rows = ausgewaehlt.map((k) => ({
+        owner_user_id: chefId, kategorie: k.kategorie, titel: k.titel, inhalt: k.inhalt || null,
+        empfohlen: false, standort_id: null, erstellt_von: uid,
+      }));
+      const { error } = await supabase.from('vorlage_pool').insert(rows);
+      if (error) throw error;
+      onImported();
+    } catch (e: unknown) {
+      setMsg('Import fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSaving(false); }
+  }
+
+  const anzahlNeu = kandidaten.filter((k) => !schonImPool(k)).length;
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalHead}>
+          <h2 style={styles.modalTitle}>Aus Modulen importieren</h2>
+          <button style={styles.closeBtn} onClick={onClose} aria-label="Schließen">×</button>
+        </div>
+        <div style={styles.modalBody}>
+          <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1vw, 15px)' }}>
+            Übernimmt bestehende Vorlagen aus Projekten und Personal-Checklisten in den zentralen Pool (als „Zentral"). Die Ursprungs-Vorlagen bleiben unverändert.
+          </div>
+          {loading && <div style={styles.stateBox}>Lädt …</div>}
+          {!loading && kandidaten.length === 0 && <div style={styles.stateBox}>Keine Modul-Vorlagen gefunden.</div>}
+          {!loading && kandidaten.length > 0 && (
+            <>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button style={styles.ghostBtn} onClick={() => setAuswahl(new Set(kandidaten.filter((k) => !schonImPool(k)).map((k) => k.key)))}>Alle neuen</button>
+                <button style={styles.ghostBtn} onClick={() => setAuswahl(new Set())}>Keine</button>
+                <span style={{ color: C.textDim, fontSize: 13 }}>{auswahl.size} ausgewählt · {anzahlNeu} neu von {kandidaten.length}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflow: 'auto' }}>
+                {kandidaten.map((k) => {
+                  const drin = schonImPool(k);
+                  return (
+                    <label key={k.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.line}`, background: 'rgba(255,255,255,0.02)', cursor: drin ? 'default' : 'pointer', opacity: drin ? 0.55 : 1 }}>
+                      <input type="checkbox" checked={auswahl.has(k.key)} disabled={drin} onChange={() => toggle(k.key)} style={{ marginTop: 4 }} />
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={styles.katBadge}>{k.quelleLabel}</span>
+                          {drin && <span style={{ ...styles.katBadge, color: C.green }}>schon im Pool</span>}
+                        </span>
+                        <span style={{ display: 'block', fontWeight: 700, color: C.text, marginTop: 4 }}>{k.titel}</span>
+                        {k.inhalt && <span style={{ display: 'block', color: C.textDim, fontSize: 12, marginTop: 2, whiteSpace: 'pre-wrap', maxHeight: 54, overflow: 'hidden' }}>{k.inhalt}</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {msg && <div style={styles.infoMsg}>{msg}</div>}
+        </div>
+        <div style={styles.modalFoot}>
+          <button style={styles.ghostBtn} onClick={onClose}>Abbrechen</button>
+          <button style={{ ...styles.primaryBtn, opacity: saving || auswahl.size === 0 ? 0.6 : 1 }} onClick={uebernehmen} disabled={saving || auswahl.size === 0}>{saving ? 'Importiert …' : `${auswahl.size} übernehmen`}</button>
+        </div>
+      </div>
     </div>
   );
 }
