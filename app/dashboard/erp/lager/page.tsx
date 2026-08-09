@@ -23,6 +23,8 @@ type Standort = { id: string; name: string; ist_hauptsitz: boolean };
 type Artikel = { id: string; artikelnummer: string | null; bezeichnung: string; einheit: string | null; aktueller_bestand: number | null };
 type BestandRow = { id: string; artikel_id: string; standort_id: string; bestand: number };
 type Umlagerung = { id: string; artikel_id: string; von_standort_id: string; nach_standort_id: string; menge: number; datum: string; notiz: string | null };
+type Bewegung = { id: string; artikel_id: string; standort_id: string; typ: string; menge: number; grund: string | null; datum: string };
+const BEW_LABEL: Record<string, string> = { zugang: 'Zugang', abgang: 'Abgang', korrektur: 'Korrektur' };
 
 const zahl = (v: number | string | null | undefined): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const fmt = (n: number): string => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
@@ -36,12 +38,14 @@ export default function LagerJeFilialePage() {
   const [bestand, setBestand] = useState<Record<string, BestandRow>>({});
   const [werte, setWerte] = useState<Record<string, string>>({});
   const [umlagerungen, setUmlagerungen] = useState<Umlagerung[]>([]);
+  const [bewegungen, setBewegungen] = useState<Bewegung[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [suche, setSuche] = useState('');
   const [nurBestand, setNurBestand] = useState(false);
-  const [tab, setTab] = useState<'matrix' | 'verlauf'>('matrix');
+  const [tab, setTab] = useState<'matrix' | 'bewegungen' | 'verlauf'>('matrix');
   const [umlModal, setUmlModal] = useState(false);
+  const [bewModal, setBewModal] = useState(false);
   const [savingCell, setSavingCell] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,11 +61,12 @@ export default function LagerJeFilialePage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [st, ar, be, um] = await Promise.all([
+      const [st, ar, be, um, bw] = await Promise.all([
         supabase.from('standorte').select('id,name,ist_hauptsitz').eq('aktiv', true).order('ist_hauptsitz', { ascending: false }).order('name'),
         supabase.from('artikel').select('id,artikelnummer,bezeichnung,einheit,aktueller_bestand').eq('aktiv', true).order('bezeichnung'),
         supabase.from('artikel_bestand_standort').select('id,artikel_id,standort_id,bestand'),
         supabase.from('lager_umlagerung').select('id,artikel_id,von_standort_id,nach_standort_id,menge,datum,notiz').order('datum', { ascending: false }).limit(200),
+        supabase.from('lager_bewegung').select('id,artikel_id,standort_id,typ,menge,grund,datum').order('datum', { ascending: false }).limit(200),
       ]);
       if (st.error) throw st.error;
       if (ar.error) throw ar.error;
@@ -72,6 +77,7 @@ export default function LagerJeFilialePage() {
       ((be.data as BestandRow[]) ?? []).forEach((r) => { map[key(r.artikel_id, r.standort_id)] = r; w[key(r.artikel_id, r.standort_id)] = String(r.bestand); });
       setBestand(map); setWerte(w);
       setUmlagerungen((um.data as Umlagerung[]) ?? []);
+      setBewegungen((bw.data as Bewegung[]) ?? []);
     } catch (e: unknown) {
       setError('Lager-Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLoading(false); }
@@ -124,11 +130,17 @@ export default function LagerJeFilialePage() {
           <h1 style={styles.h1}>Lager je Filiale</h1>
           <p style={styles.sub}>Bestand pro Artikel und Filiale — direkt in der Tabelle bearbeitbar. Der globale Gesamtbestand bleibt als Referenz erhalten.</p>
         </div>
-        {standorte.length >= 2 && <button style={styles.primaryBtn} onClick={() => setUmlModal(true)}>↔ Umlagern</button>}
+        {standorte.length >= 1 && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button style={styles.ghostBtn} onClick={() => setBewModal(true)}>＋ Zu-/Abgang</button>
+            {standorte.length >= 2 && <button style={styles.primaryBtn} onClick={() => setUmlModal(true)}>↔ Umlagern</button>}
+          </div>
+        )}
       </div>
 
       <div style={styles.tabs}>
         <button style={tabBtn(tab === 'matrix')} onClick={() => setTab('matrix')}>Bestände</button>
+        <button style={tabBtn(tab === 'bewegungen')} onClick={() => setTab('bewegungen')}>Zu-/Abgänge ({bewegungen.length})</button>
         <button style={tabBtn(tab === 'verlauf')} onClick={() => setTab('verlauf')}>Umlagerungen ({umlagerungen.length})</button>
       </div>
 
@@ -198,6 +210,33 @@ export default function LagerJeFilialePage() {
         </>
       )}
 
+      {tab === 'bewegungen' && (
+        <div style={{ ...styles.card, padding: 0, overflowX: 'auto' }}>
+          {loading && <div style={styles.stateBox}>Lädt …</div>}
+          {!loading && bewegungen.length === 0 && <div style={styles.stateBox}>Noch keine Zu-/Abgänge erfasst. Über „＋ Zu-/Abgang" buchst du Wareneingang, Warenausgang oder eine Korrektur je Filiale.</div>}
+          {!loading && bewegungen.length > 0 && (
+            <table style={styles.table}>
+              <thead><tr><th style={{ ...styles.th, textAlign: 'left' }}>Datum</th><th style={{ ...styles.th, textAlign: 'left' }}>Artikel</th><th style={{ ...styles.th, textAlign: 'left' }}>Filiale</th><th style={{ ...styles.th, textAlign: 'left' }}>Typ</th><th style={styles.th}>Menge</th><th style={{ ...styles.th, textAlign: 'left' }}>Grund</th></tr></thead>
+              <tbody>
+                {bewegungen.map((b) => {
+                  const farbe = b.typ === 'zugang' ? C.green : b.typ === 'abgang' ? C.danger : C.gold;
+                  return (
+                    <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={styles.tdName}>{(() => { try { return new Date(b.datum).toLocaleDateString('de-DE'); } catch { return b.datum; } })()}</td>
+                      <td style={{ ...styles.tdName, color: C.text }}>{artikelName(b.artikel_id)}</td>
+                      <td style={styles.tdName}>{standortName(b.standort_id)}</td>
+                      <td style={styles.tdName}><span style={{ color: farbe, fontWeight: 700 }}>{BEW_LABEL[b.typ] || b.typ}</span></td>
+                      <td style={{ ...styles.tdCell, fontWeight: 700, color: C.text }}>{b.typ === 'abgang' ? '−' : b.typ === 'zugang' ? '+' : ''}{fmt(zahl(b.menge))}</td>
+                      <td style={styles.tdName}>{b.grund || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {tab === 'verlauf' && (
         <div style={{ ...styles.card, padding: 0, overflowX: 'auto' }}>
           {loading && <div style={styles.stateBox}>Lädt …</div>}
@@ -232,6 +271,99 @@ export default function LagerJeFilialePage() {
           onDone={() => { setUmlModal(false); load(); }}
         />
       )}
+
+      {bewModal && chefId && (
+        <BewegungModal
+          chefId={chefId}
+          uid={uid}
+          standorte={standorte}
+          artikel={artikel}
+          bestand={bestand}
+          onClose={() => setBewModal(false)}
+          onDone={() => { setBewModal(false); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BewegungModal({ chefId, uid, standorte, artikel, bestand, onClose, onDone }: {
+  chefId: string; uid: string | null; standorte: Standort[]; artikel: Artikel[];
+  bestand: Record<string, BestandRow>; onClose: () => void; onDone: () => void;
+}) {
+  const [artikelId, setArtikelId] = useState('');
+  const [standortId, setStandortId] = useState(standorte[0]?.id ?? '');
+  const [typ, setTyp] = useState<'zugang' | 'abgang' | 'korrektur'>('zugang');
+  const [menge, setMenge] = useState('');
+  const [grund, setGrund] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const aktuell = artikelId && standortId ? zahl(bestand[key(artikelId, standortId)]?.bestand) : 0;
+  const m = zahl(menge);
+  const neu = typ === 'zugang' ? aktuell + m : typ === 'abgang' ? aktuell - m : m;
+
+  async function buchen() {
+    if (!artikelId) { setMsg('Bitte einen Artikel wählen.'); return; }
+    if (!standortId) { setMsg('Bitte eine Filiale wählen.'); return; }
+    if (m <= 0) { setMsg('Bitte eine Menge größer 0 angeben.'); return; }
+    if (typ === 'abgang' && m > aktuell && !window.confirm(`Die Filiale hat nur ${fmt(aktuell)} auf Lager. Trotzdem ${fmt(m)} abbuchen? (Bestand wird negativ)`)) return;
+    setSaving(true); setMsg(null);
+    try {
+      const up = await supabase.from('artikel_bestand_standort')
+        .upsert({ owner_user_id: chefId, artikel_id: artikelId, standort_id: standortId, bestand: neu, aktualisiert_am: new Date().toISOString() }, { onConflict: 'artikel_id,standort_id' });
+      if (up.error) throw up.error;
+      const ins = await supabase.from('lager_bewegung').insert({
+        owner_user_id: chefId, artikel_id: artikelId, standort_id: standortId, typ, menge: m, grund: grund.trim() || null, erstellt_von: uid,
+      });
+      if (ins.error) throw ins.error;
+      onDone();
+    } catch (e: unknown) {
+      setMsg('Buchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalHead}>
+          <h2 style={styles.modalTitle}>Zu-/Abgang buchen</h2>
+          <button style={styles.closeBtn} onClick={onClose} aria-label="Schließen">×</button>
+        </div>
+        <div style={styles.modalBody}>
+          <div style={styles.formRow}>
+            <label style={styles.label}>Artikel *
+              <select style={styles.input} value={artikelId} onChange={(e) => setArtikelId(e.target.value)}>
+                <option value="">— wählen —</option>
+                {artikel.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}{a.artikelnummer ? ` (${a.artikelnummer})` : ''}</option>)}
+              </select>
+            </label>
+            <label style={styles.label}>Filiale *
+              <select style={styles.input} value={standortId} onChange={(e) => setStandortId(e.target.value)}>
+                <option value="">— wählen —</option>
+                {standorte.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <div style={styles.formRow}>
+            <label style={styles.label}>Art
+              <select style={styles.input} value={typ} onChange={(e) => setTyp(e.target.value as 'zugang' | 'abgang' | 'korrektur')}>
+                <option value="zugang">Zugang (Wareneingang) +</option>
+                <option value="abgang">Abgang (Warenausgang) −</option>
+                <option value="korrektur">Korrektur (neuer Bestand =)</option>
+              </select>
+            </label>
+            <label style={styles.label}>{typ === 'korrektur' ? 'Neuer Bestand *' : 'Menge *'}<input style={styles.input} inputMode="decimal" value={menge} onChange={(e) => setMenge(e.target.value)} placeholder="0" /></label>
+          </div>
+          {artikelId && standortId && <div style={{ color: C.textDim, fontSize: 13 }}>Aktuell: <b style={{ color: C.text }}>{fmt(aktuell)}</b>{menge ? <> → neuer Bestand: <b style={{ color: neu < 0 ? C.danger : C.green }}>{fmt(neu)}</b></> : null}</div>}
+          <label style={styles.label}>Grund<input style={styles.input} value={grund} onChange={(e) => setGrund(e.target.value)} placeholder="z. B. Lieferung, Bruch, Korrektur" /></label>
+          {msg && <div style={styles.infoMsg}>{msg}</div>}
+        </div>
+        <div style={styles.modalFoot}>
+          <button style={styles.ghostBtn} onClick={onClose}>Abbrechen</button>
+          <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={buchen} disabled={saving}>{saving ? 'Bucht …' : 'Buchen'}</button>
+        </div>
+      </div>
     </div>
   );
 }
