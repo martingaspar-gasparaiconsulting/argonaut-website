@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback, useMemo, Fragment, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import {
   BESTELL_STATUS, offeneMenge, bestellNetto, lieferStatus,
   kalkuliereVk, margenAusVk, bruttoAusNetto, zaehleEinkauf,
@@ -78,9 +80,13 @@ export default function EinkaufPage() {
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Bestellungen.
+      const sid = konkreterStandort(leseStandortCookie());
+      let bq = supabase.from('bestellung').select('*');
+      if (sid) bq = bq.or(standortOrFilter(sid));
       const [l, b, p, a] = await Promise.all([
         supabase.from('lieferant').select('*').order('name', { ascending: true }),
-        supabase.from('bestellung').select('*').order('datum', { ascending: false }),
+        bq.order('datum', { ascending: false }),
         supabase.from('bestellung_position').select('*'),
         supabase.from('artikel').select('id, bezeichnung, artikelnummer, einheit, aktueller_bestand').eq('aktiv', true).order('bezeichnung', { ascending: true }),
       ]);
@@ -150,7 +156,7 @@ export default function EinkaufPage() {
     setBusy('bestellung'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('bestellung').insert({
-        owner_user_id: uid, lieferant_id: nb.lieferant_id || null,
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), lieferant_id: nb.lieferant_id || null,
         bestell_nr: nb.bestell_nr.trim() || `BE-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000 + 1000)}`,
         datum: nb.datum, status: 'bestellt', notiz: nb.notiz.trim() || null,
       }).select('id').single();
