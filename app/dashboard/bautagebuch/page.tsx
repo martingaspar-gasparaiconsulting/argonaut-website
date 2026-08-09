@@ -13,6 +13,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -95,7 +97,11 @@ export default function BautagebuchPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
-      const { data: pr } = await supabase.from('projekte').select('id, name').eq('archiviert', false).order('name', { ascending: true });
+      // Filial-Zuschnitt (fail-open): nur Projekte des aktiven Standorts (+ Standort-lose) zur Auswahl.
+      const sid = konkreterStandort(leseStandortCookie());
+      let pq = supabase.from('projekte').select('id, name').eq('archiviert', false);
+      if (sid) pq = pq.or(standortOrFilter(sid));
+      const { data: pr } = await pq.order('name', { ascending: true });
       const liste = (pr as Projekt[]) ?? [];
       setProjekte(liste);
       if (liste.length) setProjektId(liste[0].id);
