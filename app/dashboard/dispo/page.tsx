@@ -13,6 +13,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -142,15 +144,17 @@ export default function DispoPage() {
     setLaden(true); setFehler(null);
     try {
       const heute = isoTag(new Date());
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Einsätze.
+      const sid = konkreterStandort(leseStandortCookie());
+      let eiq = supabase.from('einsaetze')
+        .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, rechnung_id, inhaber_einsatz');
+      if (sid) eiq = eiq.or(standortOrFilter(sid));
       const [maRes, eiRes] = await Promise.all([
         supabase.from('mitarbeiter')
           .select('id, vorname, nachname, position, status, wochenstunden')
           .or(`austrittsdatum.is.null,austrittsdatum.gt.${heute}`)
           .order('nachname', { ascending: true }),
-        supabase.from('einsaetze')
-          .select('id, mitarbeiter_id, termin_id, auftrag_id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, rechnung_id, inhaber_einsatz')
-          .order('beginn_am', { ascending: true })
-          .limit(1000),
+        eiq.order('beginn_am', { ascending: true }).limit(1000),
       ]);
       if (maRes.error) throw maRes.error;
       if (eiRes.error) throw eiRes.error;
@@ -261,7 +265,7 @@ export default function DispoPage() {
         if (error) throw error;
         setErfolg('Einsatz gespeichert.');
       } else {
-        const { error } = await supabase.from('einsaetze').insert({ owner_user_id: uid, quelle: 'dispo', ...daten });
+        const { error } = await supabase.from('einsaetze').insert({ owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), quelle: 'dispo', ...daten });
         if (error) throw error;
         setErfolg('Einsatz angelegt.');
       }

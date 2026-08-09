@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
     // 3) Einsatz anlegen (Feld-Mapping) — owner_user_id aus der Session!
     const neuerEinsatz: any = {
       owner_user_id: ownerId,
+      standort_id: termin.standort_id || null,
       termin_id: termin.id,
       titel: termin.titel || termin.terminart || 'Einsatz',
       beschreibung: termin.beschreibung || termin.notiz || null,
