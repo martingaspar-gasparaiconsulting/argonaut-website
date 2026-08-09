@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
 import ServiceAuge from "./ServiceAuge";
@@ -208,10 +210,11 @@ export default function ServicePage() {
       return;
     }
     setUid(userData.user.id);
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Tickets.
+    const sid = konkreterStandort(leseStandortCookie());
+    let q = supabase.from('tickets').select('*');
+    if (sid) q = q.or(standortOrFilter(sid));
+    const { data, error } = await q.order('created_at', { ascending: false });
     if (error) {
       setFehler(error.message);
       setLaden(false);
@@ -269,6 +272,7 @@ export default function ServicePage() {
 
     const insertObj = {
       owner_user_id: userData.user.id,
+      standort_id: konkreterStandort(leseStandortCookie()),
       ticket_nummer: nummer,
       betreff: form.betreff.trim(),
       beschreibung: form.beschreibung.trim() || null,
