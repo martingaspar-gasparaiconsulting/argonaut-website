@@ -39,7 +39,16 @@ type Mitarbeiter = {
   urlaubsanspruch_tage: number | null; auth_user_id: string | null;
   arbeitszeit_modell: string | null; wochenstunden: number | null;
   abteilung: string | null;
+  standort_id: string | null;
+  // Laufzeit-Markierung (kommt NICHT aus der DB): gesetzt, wenn die Person nicht
+  // zur aktiven Filiale gehört, sondern aktuell hierher entsandt ist (Gast).
+  gastAus?: string | null;   // Heimat-Standort-id des Gasts
+  gastBis?: string | null;   // Ende der Entsendung (null = offen)
 };
+// Multistandort · Personal-Entsendung (Block D)
+type StandortLite = { id: string; name: string; ist_hauptsitz: boolean };
+type EntsLite = { mitarbeiter_id: string | null; ziel_standort_id: string | null; von_datum: string | null; bis_datum: string | null };
+type Entsendung = { id: string; ziel_standort_id: string; von_datum: string; bis_datum: string | null; grund: string | null };
 type Bewerber = {
   id: string; vorname: string; nachname: string; email: string | null; telefon: string | null;
   position: string | null; quelle: string | null; status: string; bewerbungsdatum: string | null; mitarbeiter_id: string | null;
@@ -171,6 +180,7 @@ export default function PersonalPage() {
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [uid, setUid] = useState<string | null>(null);
+  const [standorte, setStandorte] = useState<StandortLite[]>([]);
 
   // Benachrichtigungen (Glocke)
   const [benach, setBenach] = useState<Benachrichtigung[]>([]);
@@ -189,6 +199,12 @@ export default function PersonalPage() {
   }, []);
   useEffect(() => { ladeBundesland(); }, [ladeBundesland]);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setUid(data?.user?.id ?? null)); }, []);
+  // Filialen einmalig laden (für Entsendung-Ziel + Gast-Anzeige "aus Filiale X").
+  useEffect(() => {
+    supabase.from('standorte').select('id,name,ist_hauptsitz').eq('aktiv', true)
+      .order('ist_hauptsitz', { ascending: false }).order('name', { ascending: true })
+      .then(({ data }) => setStandorte((data as StandortLite[]) ?? []));
+  }, []);
 
   async function bundeslandSpeichern(neu: string) {
     setBundesland(neu); setBlSaving(true);
@@ -228,12 +244,32 @@ export default function PersonalPage() {
       if (tab === 'mitarbeiter') {
         // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Mitarbeiter.
         const sidMa = konkreterStandort(leseStandortCookie());
-        let maq = supabase.from('mitarbeiter')
-          .select('id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden,abteilung');
+        const MA_COLS = 'id,vorname,nachname,email,telefon,position,status,eintrittsdatum,geburtsdatum,adresse,sv_nummer,steuer_id,iban,notfall_kontakt,urlaubsanspruch_tage,auth_user_id,arbeitszeit_modell,wochenstunden,abteilung,standort_id';
+        let maq = supabase.from('mitarbeiter').select(MA_COLS);
         if (sidMa) maq = maq.or(standortOrFilter(sidMa));
         const { data, error } = await maq.order('created_at', { ascending: false });
         if (error) throw error;
-        setMitarbeiter((data as Mitarbeiter[]) ?? []);
+        let liste = (data as Mitarbeiter[]) ?? [];
+        // Personal-Entsendung: bei aktiver Filiale zusätzlich die aktuell HIERHER
+        // entsandten Gäste anhängen (fail-open — es verschwindet nie jemand).
+        if (sidMa) {
+          const heute = heuteISO();
+          const { data: entsData } = await supabase.from('personal_entsendung')
+            .select('mitarbeiter_id,ziel_standort_id,von_datum,bis_datum')
+            .eq('ziel_standort_id', sidMa)
+            .lte('von_datum', heute);
+          const aktiv = ((entsData as EntsLite[]) ?? []).filter((e) => !e.bis_datum || e.bis_datum >= heute);
+          const schonDa = new Set(liste.map((m) => m.id));
+          const gastIds = [...new Set(aktiv.map((e) => e.mitarbeiter_id).filter((mid): mid is string => !!mid && !schonDa.has(mid)))];
+          if (gastIds.length > 0) {
+            const { data: gaeste } = await supabase.from('mitarbeiter').select(MA_COLS).in('id', gastIds);
+            const bisMap = new Map<string, string | null>();
+            aktiv.forEach((e) => { if (e.mitarbeiter_id && !bisMap.has(e.mitarbeiter_id)) bisMap.set(e.mitarbeiter_id, e.bis_datum); });
+            const gastRows = ((gaeste as Mitarbeiter[]) ?? []).map((g) => ({ ...g, gastAus: g.standort_id, gastBis: bisMap.get(g.id) ?? null }));
+            liste = [...liste, ...gastRows];
+          }
+        }
+        setMitarbeiter(liste);
         setFelder(await ladeFelder(MODUL));
         setWerteMap(await ladeWerte(MODUL, ((data as Mitarbeiter[]) ?? []).map((r) => r.id)));
         const { data: abwData } = await supabase.from('hr_abwesenheiten')
@@ -260,6 +296,7 @@ export default function PersonalPage() {
   useEffect(() => { load(); }, [load]);
 
   const count = tab === 'mitarbeiter' ? mitarbeiter.length : bewerber.length;
+  const standortNamen: Record<string, string> = Object.fromEntries(standorte.map((s) => [s.id, s.name]));
   const selectedMA = selected?.typ === 'mitarbeiter' ? mitarbeiter.find((m) => m.id === selected.id) ?? null : null;
   const selectedBW = selected?.typ === 'bewerber' ? bewerber.find((b) => b.id === selected.id) ?? null : null;
 
@@ -355,9 +392,9 @@ export default function PersonalPage() {
               <TabButton active={maAnsicht === 'hr'} onClick={() => setMaAnsicht('hr')}>HR-Kennzahlen</TabButton>
             </div>
             {maAnsicht === 'stamm' ? (
-              <MitarbeiterTabelle rows={mitarbeiter} felder={felder} werteMap={werteMap} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+              <MitarbeiterTabelle rows={mitarbeiter} felder={felder} werteMap={werteMap} standortNamen={standortNamen} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             ) : (
-              <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} chk={chkAlle} schul={schulAlle} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
+              <MitarbeiterHrTabelle rows={mitarbeiter} abw={abwAlle} chk={chkAlle} schul={schulAlle} standortNamen={standortNamen} onAdd={() => setModalOpen(true)} onSelect={(id) => setSelected({ typ: 'mitarbeiter', id })} />
             )}
           </>
         )}
@@ -368,7 +405,7 @@ export default function PersonalPage() {
 
       {uid && tab === 'mitarbeiter' && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={load} />}
       {modalOpen && <NeuModal tab={tab} felder={tab === 'mitarbeiter' ? felder : []} extra={nmExtra} setExtra={setNmExtra} onClose={() => { setModalOpen(false); setNmExtra({}); }} onSaved={() => { setModalOpen(false); setNmExtra({}); load(); }} />}
-      {selectedMA && <DetailDrawer typ="mitarbeiter" ma={selectedMA} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
+      {selectedMA && <DetailDrawer typ="mitarbeiter" ma={selectedMA} standorte={standorte} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
       {selectedBW && <DetailDrawer typ="bewerber" bw={selectedBW} bundesland={bundesland} onClose={() => setSelected(null)} onChanged={load} />}
     </div>
   );
@@ -385,14 +422,14 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 // ============================================================
 // Tabellen
 // ============================================================
-function MitarbeiterTabelle({ rows, onAdd, onSelect, felder, werteMap }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void; felder: EigenesFeld[]; werteMap: Record<string, Record<string, string>> }) {
+function MitarbeiterTabelle({ rows, onAdd, onSelect, felder, werteMap, standortNamen }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void; felder: EigenesFeld[]; werteMap: Record<string, Record<string, string>>; standortNamen: Record<string, string> }) {
   if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   return (
     <table style={styles.table}>
       <thead><tr><Th>Name</Th><Th>Position</Th><Th>Kontakt</Th><Th>Eintritt</Th><Th>Status</Th></tr></thead>
       <tbody>{rows.map((m) => (
         <ClickRow key={m.id} onClick={() => onSelect(m.id)}>
-          <Td><span style={styles.name}>{m.vorname} {m.nachname}</span><EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></Td>
+          <Td><span style={styles.name}>{m.vorname} {m.nachname}</span>{m.gastAus ? <GastBadge aus={standortNamen[m.gastAus]} bis={m.gastBis} /> : null}<EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></Td>
           <Td>{m.position || <Dim>—</Dim>}</Td>
           <Td><KontaktZelle email={m.email} telefon={m.telefon} /></Td>
           <Td>{formatDate(m.eintrittsdatum)}</Td>
@@ -431,7 +468,22 @@ function dabeiSeit(eintritt: string | null): string {
   return `${(Number.isInteger(jahre) ? String(jahre) : jahre.toFixed(1)).replace('.', ',')} J`;
 }
 
-function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect }: { rows: Mitarbeiter[]; abw: AbwLite[]; chk: ChkLite[]; schul: SchulLite[]; onAdd: () => void; onSelect: (id: string) => void }) {
+function GastBadge({ aus, bis }: { aus?: string; bis?: string | null }) {
+  return (
+    <span
+      title={`Aktuell aus ${aus || 'anderer Filiale'} hierher entsandt${bis ? ` — bis ${dStr(bis)}` : ' — offen'}`}
+      style={{
+        display: 'inline-block', marginLeft: 8, padding: '1px 8px', borderRadius: 999,
+        fontSize: 'clamp(10px, 0.9vw, 13px)', fontWeight: 700, whiteSpace: 'nowrap',
+        color: C.cyan, background: 'rgba(0,229,255,0.10)', border: `1px solid rgba(0,229,255,0.35)`,
+      }}
+    >
+      zu Gast aus {aus || 'Filiale'}{bis ? ` · bis ${dStr(bis)}` : ' · offen'}
+    </span>
+  );
+}
+
+function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect, standortNamen }: { rows: Mitarbeiter[]; abw: AbwLite[]; chk: ChkLite[]; schul: SchulLite[]; onAdd: () => void; onSelect: (id: string) => void; standortNamen: Record<string, string> }) {
   if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   const jahr = new Date().getFullYear();
   const jahrStr = String(jahr);
@@ -468,7 +520,7 @@ function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect }: { rows
         const schulOffen = meineSchul.filter((sc) => sc.status !== 'absolviert').length + schulAbgelaufen;
         return (
           <ClickRow key={m.id} onClick={() => onSelect(m.id)}>
-            <Td><span style={styles.name}>{m.vorname} {m.nachname}</span></Td>
+            <Td><span style={styles.name}>{m.vorname} {m.nachname}</span>{m.gastAus ? <GastBadge aus={standortNamen[m.gastAus]} bis={m.gastBis} /> : null}</Td>
             <Td>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: heuteFarbe, boxShadow: `0 0 7px ${heuteFarbe}`, display: 'inline-block' }} />
@@ -527,10 +579,10 @@ function ClickRow({ onClick, children }: { onClick: () => void; children: React.
 // ============================================================
 // DETAIL-DRAWER (Cockpit)
 // ============================================================
-type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'zeit' | 'check' | 'auswertung';
+type DetailTab = 'stamm' | 'docs' | 'abw' | 'schul' | 'zeit' | 'check' | 'auswertung' | 'entsendung';
 
-function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundesland: string; onClose: () => void; onChanged: () => void }) {
-  const { typ, ma, bw, bundesland, onClose, onChanged } = props;
+function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; standorte?: StandortLite[]; bundesland: string; onClose: () => void; onChanged: () => void }) {
+  const { typ, ma, bw, standorte, bundesland, onClose, onChanged } = props;
   const istMA = typ === 'mitarbeiter';
   const id = istMA ? ma!.id : bw!.id;
 
@@ -740,6 +792,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           {istMA && <DetailTabBtn active={detailTab === 'zeit'} onClick={() => setDetailTab('zeit')}>Zeiterfassung</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'check'} onClick={() => setDetailTab('check')}>Checklisten</DetailTabBtn>}
           {istMA && <DetailTabBtn active={detailTab === 'auswertung'} onClick={() => setDetailTab('auswertung')}>Auswertung</DetailTabBtn>}
+          {istMA && (standorte?.length ?? 0) >= 2 && <DetailTabBtn active={detailTab === 'entsendung'} onClick={() => setDetailTab('entsendung')}>Entsendung</DetailTabBtn>}
         </div>
 
         <div style={styles.drawerBody}>
@@ -835,6 +888,9 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; bundes
           {detailTab === 'auswertung' && (
             <AuswertungTab abw={abw} schul={schul} loading={listLoading} urlaubsanspruch={parseInt(urlaubsanspruch, 10) || 30} stammVollstaendig={!!(geburtsdatum && adresse && iban && svNummer)} />
           )}
+          {detailTab === 'entsendung' && istMA && (
+            <EntsendungBox maId={id} maName={`${vorname} ${nachname}`} heimatStandortId={ma?.standort_id ?? null} standorte={standorte ?? []} onChanged={onChanged} />
+          )}
         </div>
       </div>
     </div>
@@ -848,6 +904,146 @@ function DetailTabBtn({ active, onClick, children }: { active: boolean; onClick:
       fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
       color: active ? C.gold : C.textDim, borderBottom: active ? `2px solid ${C.gold}` : '2px solid transparent',
     }}>{children}</button>
+  );
+}
+
+// ============================================================
+// TAB: Entsendung (Multistandort · Personal in andere Filiale schicken)
+// Anlegen/Beenden von Entsendungen. Die Person erscheint für den Zeitraum als
+// Gast in der Personalliste der Ziel-Filiale; Arbeitszeit & Kosten werden im
+// Filialvergleich/Controlling automatisch der Ziel-Filiale zugerechnet
+// (Andockpunkt: personal_entsendung wird dort über den Zeitraum ausgewertet).
+// ============================================================
+function entsendungStatus(von: string, bis: string | null, heute: string): { text: string; farbe: string } {
+  if (von > heute) return { text: 'Geplant', farbe: C.gold };
+  if (bis && bis < heute) return { text: 'Beendet', farbe: C.textDim };
+  return { text: 'Aktiv', farbe: C.green };
+}
+
+function EntsendungBox({ maId, maName, heimatStandortId, standorte, onChanged }: {
+  maId: string; maName: string; heimatStandortId: string | null; standorte: StandortLite[]; onChanged: () => void;
+}) {
+  const [rows, setRows] = useState<Entsendung[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [ziel, setZiel] = useState('');
+  const [von, setVon] = useState(heuteISO());
+  const [bis, setBis] = useState('');
+  const [offen, setOffen] = useState(false);
+  const [grund, setGrund] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const laden = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('personal_entsendung')
+      .select('id,ziel_standort_id,von_datum,bis_datum,grund')
+      .eq('mitarbeiter_id', maId)
+      .order('von_datum', { ascending: false });
+    setRows((data as Entsendung[]) ?? []);
+    setLoading(false);
+  }, [maId]);
+  useEffect(() => { laden(); }, [laden]);
+
+  const heute = heuteISO();
+  const heimatName = heimatStandortId ? standorte.find((s) => s.id === heimatStandortId)?.name : null;
+  const zielOptionen = standorte.filter((s) => s.id !== heimatStandortId);
+  const nameVon = (sid: string) => standorte.find((s) => s.id === sid)?.name ?? 'Filiale';
+
+  async function entsenden() {
+    if (!ziel) { setMsg('Bitte eine Ziel-Filiale wählen.'); return; }
+    if (!von) { setMsg('Bitte ein Von-Datum angeben.'); return; }
+    if (!offen && bis && bis < von) { setMsg('Das Bis-Datum darf nicht vor dem Von-Datum liegen.'); return; }
+    setSaving(true); setMsg(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const ownerId = userData?.user?.id;
+      if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); setSaving(false); return; }
+      const { error } = await supabase.from('personal_entsendung').insert({
+        owner_user_id: ownerId, mitarbeiter_id: maId, ziel_standort_id: ziel,
+        von_datum: von, bis_datum: offen ? null : (bis || null), grund: grund.trim() || null,
+      });
+      if (error) throw error;
+      setMsg('Entsendung gespeichert.');
+      setZiel(''); setBis(''); setOffen(false); setGrund('');
+      await laden(); onChanged();
+    } catch (e: unknown) {
+      setMsg('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSaving(false); }
+  }
+
+  async function loeschen(eid: string) {
+    if (!window.confirm('Diese Entsendung wirklich löschen?')) return;
+    const { error } = await supabase.from('personal_entsendung').delete().eq('id', eid);
+    if (error) { setMsg('Löschen fehlgeschlagen: ' + error.message); return; }
+    await laden(); onChanged();
+  }
+
+  async function beenden(eid: string) {
+    const { error } = await supabase.from('personal_entsendung').update({ bis_datum: heute }).eq('id', eid);
+    if (error) { setMsg('Beenden fehlgeschlagen: ' + error.message); return; }
+    await laden(); onChanged();
+  }
+
+  if (standorte.length < 2) {
+    return <div style={styles.stateBox}>Entsendungen gibt es erst ab zwei Filialen. Lege weitere Standorte an, um Personal filialübergreifend einzusetzen.</div>;
+  }
+
+  return (
+    <>
+      <div style={{ ...styles.infoMsg, marginTop: 0 }}>
+        <b>{maName}</b> vorübergehend in eine andere Filiale schicken. {heimatName ? <>Heimat-Filiale: <b>{heimatName}</b>. </> : null}
+        Während der Entsendung erscheint die Person als Gast in der Ziel-Filiale; Arbeitszeit &amp; Kosten werden dort für den Zeitraum zugerechnet.
+      </div>
+
+      <div style={styles.sectionDivider}>Neue Entsendung</div>
+      <div style={styles.formGrid}>
+        <Field label="Ziel-Filiale *">
+          <select style={styles.input} value={ziel} onChange={(e) => setZiel(e.target.value)}>
+            <option value="">— wählen —</option>
+            {zielOptionen.map((s) => <option key={s.id} value={s.id}>{s.name}{s.ist_hauptsitz ? ' (Hauptsitz)' : ''}</option>)}
+          </select>
+        </Field>
+        <Field label="Von *"><input type="date" style={styles.input} value={von} onChange={(e) => setVon(e.target.value)} /></Field>
+        <Field label="Bis">
+          <input type="date" style={{ ...styles.input, opacity: offen ? 0.4 : 1 }} value={bis} onChange={(e) => setBis(e.target.value)} disabled={offen} />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 'clamp(12px, 1.06vw, 16px)', color: C.textDim, cursor: 'pointer' }}>
+            <input type="checkbox" checked={offen} onChange={(e) => setOffen(e.target.checked)} /> offen / unbefristet
+          </label>
+        </Field>
+        <Field label="Grund"><input style={styles.input} value={grund} onChange={(e) => setGrund(e.target.value)} placeholder="z. B. Aushilfe, Projekt, Krankheitsvertretung" /></Field>
+      </div>
+      {msg && <div style={styles.infoMsg}>{msg}</div>}
+      <div style={styles.drawerActions}>
+        <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={entsenden} disabled={saving}>{saving ? 'Speichert …' : '➜ Entsenden'}</button>
+      </div>
+
+      <div style={styles.sectionDivider}>Bisherige Entsendungen</div>
+      {loading && <div style={styles.stateBox}>Lädt …</div>}
+      {!loading && rows.length === 0 && <div style={styles.stateBox}>Noch keine Entsendungen erfasst.</div>}
+      {!loading && rows.length > 0 && (
+        <table style={styles.table}>
+          <thead><tr><Th>Ziel-Filiale</Th><Th>Zeitraum</Th><Th>Grund</Th><Th>Status</Th><Th>Aktion</Th></tr></thead>
+          <tbody>{rows.map((r) => {
+            const st = entsendungStatus(r.von_datum, r.bis_datum, heute);
+            const laufend = st.text === 'Aktiv';
+            return (
+              <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <Td><span style={styles.name}>{nameVon(r.ziel_standort_id)}</span></Td>
+                <Td>{dStr(r.von_datum)} – {r.bis_datum ? dStr(r.bis_datum) : <span style={{ color: C.gold }}>offen</span>}</Td>
+                <Td>{r.grund || <Dim>—</Dim>}</Td>
+                <Td><span style={{ color: st.farbe, fontWeight: 700 }}>{st.text}</span></Td>
+                <Td>
+                  <span style={{ display: 'inline-flex', gap: 8 }}>
+                    {laufend && <button style={styles.ghostBtn} onClick={() => beenden(r.id)} title="Jetzt beenden (Enddatum = heute)">Beenden</button>}
+                    <button style={{ ...styles.ghostBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(r.id)} title="Löschen">Löschen</button>
+                  </span>
+                </Td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+      )}
+    </>
   );
 }
 
