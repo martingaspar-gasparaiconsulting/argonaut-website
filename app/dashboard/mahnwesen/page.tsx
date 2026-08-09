@@ -6,6 +6,8 @@ import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../_components/KiKlartext";
 import KiAuge from "../_components/KiAuge";
 import { augeMahnwesen } from "@/lib/auge";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -136,11 +138,15 @@ export default function MahnwesenCockpit() {
           return;
         }
 
-        const { data: rData, error: rErr } = await supabase
+        // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Rechnungen.
+        const sid = konkreterStandort(leseStandortCookie());
+        let rq = supabase
           .from("rechnungen")
           .select(
-            "id,rechnungsnummer,titel,kontakt_id,firma_id,zahlungsstatus,faelligkeitsdatum,brutto_summe,bezahlter_betrag,waehrung,mahnstufe,letzte_mahnung_am"
-          )
+            "id,rechnungsnummer,titel,kontakt_id,firma_id,zahlungsstatus,faelligkeitsdatum,brutto_summe,bezahlter_betrag,waehrung,mahnstufe,letzte_mahnung_am,standort_id"
+          );
+        if (sid) rq = rq.or(standortOrFilter(sid));
+        const { data: rData, error: rErr } = await rq
           .order("faelligkeitsdatum", { ascending: true });
 
         if (rErr) throw rErr;
@@ -290,6 +296,7 @@ export default function MahnwesenCockpit() {
       // 1) GoBD-Nachweis
       const { error: hErr } = await supabase.from("mahnung_historie").insert({
         rechnung_id: r.id,
+        standort_id: (r as { standort_id?: string | null }).standort_id ?? null,
         stufe: neu,
         stufe_label: MAHN_META[neu].label,
         betrag_offen: offen,

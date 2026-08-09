@@ -370,6 +370,7 @@ export default function MahnungErstellen() {
     // 1) GoBD-Nachweis zuerst schreiben (append-only Historie)
     const { error: histErr } = await supabase.from("mahnung_historie").insert({
       rechnung_id: id,
+      standort_id: (rechnung as { standort_id?: string | null } | null)?.standort_id ?? null,
       stufe,
       stufe_label: STUFE_LABEL[stufe],
       betrag_offen: offenerRest,
