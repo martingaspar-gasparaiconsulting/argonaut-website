@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import {
   STOER_KATALOG, kategorieLabel, kennzahlBuchung, stoerungNachKategorie, zaehleBde,
   type BuchungLite, type StoerungLite,
@@ -69,13 +71,20 @@ export default function BdePage() {
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Maschinen.
+      const sid = konkreterStandort(leseStandortCookie());
+      let mq = supabase.from('bde_maschine').select('*');
+      if (sid) mq = mq.or(standortOrFilter(sid));
       const [m, b, s] = await Promise.all([
-        supabase.from('bde_maschine').select('*').order('bezeichnung', { ascending: true }),
+        mq.order('bezeichnung', { ascending: true }),
         supabase.from('bde_buchung').select('*').order('datum', { ascending: false }),
         supabase.from('bde_stoerung').select('*'),
       ]);
-      setMaschinen((m.data as Maschine[]) ?? []);
-      const bb = (b.data as Buchung[]) ?? [];
+      const mm = (m.data as Maschine[]) ?? [];
+      setMaschinen(mm);
+      const mIds = new Set(mm.map((x) => x.id));
+      // Buchungen nur zu sichtbaren (Filial-)Maschinen — hält KPIs/Anzeige konsistent.
+      const bb = ((b.data as Buchung[]) ?? []).filter((x) => mIds.has(x.maschine_id));
       setBuchungen(bb);
       setStoerungen((s.data as Stoerung[]) ?? []);
       setFelder(await ladeFelder(MODUL));
@@ -131,7 +140,7 @@ export default function BdePage() {
     setBusy('masch'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bde_maschine').insert({
-        owner_user_id: uid, bezeichnung: nMasch.bezeichnung.trim(), maschinen_nr: nMasch.maschinen_nr.trim() || null,
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: nMasch.bezeichnung.trim(), maschinen_nr: nMasch.maschinen_nr.trim() || null,
         standort: nMasch.standort.trim() || null, ideal_takt_sek: num(nMasch.ideal_takt_sek), status: nMasch.status,
       });
       if (error) throw error;
