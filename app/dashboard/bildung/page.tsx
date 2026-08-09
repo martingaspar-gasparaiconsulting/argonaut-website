@@ -10,6 +10,9 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
 import {
   freiePlaetze, istVoll, zaehleBelegt, wartelisteRang, istBelegend,
   zaehleKurse, zertifikatBerechtigt,
@@ -49,6 +52,9 @@ export default function BildungPage() {
   const [aktiv, setAktiv] = useState<Kurs | null>(null);
   const [detTab, setDetTab] = useState<'teilnehmer' | 'termine'>('teilnehmer');
   const [selTermin, setSelTermin] = useState<string | null>(null);
+  // Multistandort-Zuordnung (🏢 Filialen)
+  const [standorte, setStandorte] = useState<FilialeLite[]>([]);
+  const [zuord, setZuord] = useState<{ bildung_kurse_id: string; standort_id: string }[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -57,8 +63,25 @@ export default function BildungPage() {
   const [nt, setNt] = useState({ datum: heute(), von_uhr: '', bis_uhr: '', thema: '' });
 
   const laden_ = useCallback(async () => {
+    // Filialen + Zuordnungen laden (🏢-Knopf + fail-open-Filter der Kursliste)
+    const [{ data: st }, { data: zu }] = await Promise.all([
+      supabase.from('standorte').select('id, name, ist_hauptsitz').eq('aktiv', true).order('ist_hauptsitz', { ascending: false }).order('name', { ascending: true }),
+      supabase.from('bildung_kurse_standorte').select('bildung_kurse_id, standort_id'),
+    ]);
+    setStandorte((st as FilialeLite[]) ?? []);
+    const zuordRows = (zu as { bildung_kurse_id: string; standort_id: string }[]) ?? [];
+    setZuord(zuordRows);
+    const sid = konkreterStandort(leseStandortCookie());
     const { data: k } = await supabase.from('bildung_kurse').select('id, titel, start_am, ende_am, ort, plaetze, preis, status, art, dozent, zertifikat_aktiv').order('start_am', { ascending: true });
-    setKurse((k as Kurs[]) ?? []);
+    let kurseRows = (k as Kurs[]) ?? [];
+    if (sid) {
+      // Fail-open: Kurse ohne Zuordnung ODER dieser Filiale zugeordnet.
+      kurseRows = kurseRows.filter((kk) => {
+        const zug = zuordRows.filter((z) => z.bildung_kurse_id === kk.id).map((z) => z.standort_id);
+        return zug.length === 0 || zug.includes(sid);
+      });
+    }
+    setKurse(kurseRows);
     const { data: a } = await supabase.from('bildung_anmeldungen').select('id, kurs_id, name, email, status, abgerechnet, warteliste_seit, zertifikat_am');
     setAnm((a as Anmeldung[]) ?? []);
     const { data: t } = await supabase.from('bildung_termine').select('id, kurs_id, datum, von_uhr, bis_uhr, thema').order('datum', { ascending: true });
@@ -78,6 +101,10 @@ export default function BildungPage() {
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
+
+  function setzeZuord(id: string, ids: string[]) {
+    setZuord((prev) => [...prev.filter((z) => z.bildung_kurse_id !== id), ...ids.map((sid) => ({ bildung_kurse_id: id, standort_id: sid }))]);
+  }
 
   const anmFor = useCallback((kid: string) => anm.filter((a) => a.kurs_id === kid), [anm]);
   const belegt = useCallback((kid: string) => zaehleBelegt(anmFor(kid)), [anmFor]);
@@ -250,6 +277,12 @@ export default function BildungPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <div style={{ fontWeight: 800 }}>{aktiv.titel}{aktiv.dozent ? ` · ${aktiv.dozent}` : ''}</div>
                   <div style={{ color: C.gold, fontWeight: 800 }}>{belegt(aktiv.id)} / {aktiv.plaetze} · {eur(belegt(aktiv.id) * aktiv.preis)}</div>
+                  <FilialZuordnung
+                    tabelle="bildung_kurse_standorte" fkSpalte="bildung_kurse_id"
+                    recordId={aktiv.id} ownerUserId={uid ?? ''} standorte={standorte}
+                    initial={zuord.filter((z) => z.bildung_kurse_id === aktiv.id).map((z) => z.standort_id)}
+                    onChange={(ids) => setzeZuord(aktiv.id, ids)}
+                  />
                 </div>
 
                 <div style={styles.tabs}>

@@ -1,6 +1,8 @@
 "use client";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort } from "@/lib/standortDaten";
 import KiKlartext from "../../_components/KiKlartext";
 
 // ---------------------------------------------------------------------
@@ -110,6 +112,9 @@ export default function PreislisteCockpit() {
   const [histLaden, setHistLaden] = useState<Set<string>>(new Set());
 
   const [hinweis, setHinweis] = useState<string | null>(null);
+  // Multistandort: fail-open-Filter über artikel_standorte (aus D3 wiederverwendet)
+  const [zuord, setZuord] = useState<{ artikel_id: string; standort_id: string }[]>([]);
+  const [aktStandort, setAktStandort] = useState<string | null>(null);
 
   useEffect(() => {
     lade();
@@ -126,6 +131,9 @@ export default function PreislisteCockpit() {
       .eq("aktiv", true)
       .order("bezeichnung", { ascending: true });
     if (!error && data) setArtikel(data as Artikel[]);
+    const { data: zu } = await supabase.from("artikel_standorte").select("artikel_id, standort_id");
+    setZuord((zu as { artikel_id: string; standort_id: string }[]) ?? []);
+    setAktStandort(konkreterStandort(leseStandortCookie()));
     setLaden(false);
   }
 
@@ -141,6 +149,11 @@ export default function PreislisteCockpit() {
     const q = suche.trim().toLowerCase();
     return artikel.filter((a) => {
       if (katFilter && a.kategorie !== katFilter) return false;
+      // Fail-open-Zuschnitt: bei aktivem Standort nur Artikel ohne Zuordnung ODER dieser Filiale (artikel_standorte aus D3).
+      if (aktStandort) {
+        const zug = zuord.filter((z) => z.artikel_id === a.id).map((z) => z.standort_id);
+        if (zug.length > 0 && !zug.includes(aktStandort)) return false;
+      }
       if (nurProbleme) {
         const m = margeInfo(a.einkaufspreis, a.verkaufspreis);
         const problem =
@@ -159,7 +172,7 @@ export default function PreislisteCockpit() {
       }
       return true;
     });
-  }, [artikel, suche, katFilter, nurProbleme]);
+  }, [artikel, suche, katFilter, nurProbleme, aktStandort, zuord]);
 
   // KPIs
   const kpiGesamt = artikel.length;
