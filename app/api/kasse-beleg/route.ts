@@ -12,6 +12,7 @@ import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { signiereBeleg } from '@/lib/kasse-tse';
+import { standortAusCookieHeader } from '@/lib/standortDaten';
 
 export const runtime = 'nodejs';
 
@@ -87,8 +88,9 @@ export async function POST(req: Request) {
     const tse = await signiereBeleg(db, ownerId, belegNr, bruttoSumme);
 
     // 5) Beleg anlegen
+    const standortId = standortAusCookieHeader(req.headers.get('cookie'));
     const { data: beleg, error: bErr } = await db.from('kassen_belege').insert({
-      owner_user_id: ownerId, beleg_nr: belegNr, typ, zahlart,
+      owner_user_id: ownerId, standort_id: standortId, beleg_nr: belegNr, typ, zahlart,
       netto_summe: nettoSumme, mwst_summe: mwstSumme, brutto_summe: bruttoSumme,
       gegeben, rueckgeld, tse_modus: tse.modus, tse_anbieter: tse.anbieter,
       tse_signatur: tse.signatur, tse_seriennummer: tse.seriennummer, tse_zeit: tse.zeit,

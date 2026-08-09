@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -44,9 +46,13 @@ export default function KassePage() {
 
   const heuteBelege = useCallback(async () => {
     const heute = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase.from('kassen_belege')
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Belege.
+    const sid = konkreterStandort(leseStandortCookie());
+    let q = supabase.from('kassen_belege')
       .select('id, beleg_nr, brutto_summe, zahlart, erstellt_am, tse_modus')
-      .gte('erstellt_am', `${heute}T00:00:00`).order('erstellt_am', { ascending: false });
+      .gte('erstellt_am', `${heute}T00:00:00`);
+    if (sid) q = q.or(standortOrFilter(sid));
+    const { data } = await q.order('erstellt_am', { ascending: false });
     setBelege((data as Beleg[]) ?? []);
   }, []);
 
