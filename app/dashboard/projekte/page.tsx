@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import ProjekteAuge from "./ProjekteAuge";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -139,9 +141,12 @@ export default function ProjektePage() {
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
 
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Projekte.
+      const sid = konkreterStandort(leseStandortCookie());
+      let pq = supabase.from('projekte').select('*');
+      if (sid) pq = pq.or(standortOrFilter(sid));
       const [projRes, aufgRes, vorlRes, vAufgRes] = await Promise.all([
-        supabase.from('projekte').select('*')
-          .order('erstellt_am', { ascending: false }),
+        pq.order('erstellt_am', { ascending: false }),
         supabase.from('aufgaben').select('id,projekt_id,erledigt,status'),
         supabase.from('projekt_vorlagen').select('*')
           .order('erstellt_am', { ascending: false }),
@@ -212,7 +217,7 @@ export default function ProjektePage() {
         const res = await supabase.from('projekte').update(datensatz).eq('id', modal.id);
         if (res.error) throw res.error;
       } else {
-        const res = await supabase.from('projekte').insert(datensatz).select('id').single();
+        const res = await supabase.from('projekte').insert({ ...datensatz, standort_id: konkreterStandort(leseStandortCookie()) }).select('id').single();
         if (res.error) throw res.error;
         datensatzId = (res.data as { id: string }).id;
       }
@@ -254,6 +259,7 @@ export default function ProjektePage() {
       // 1) Projekt anlegen
       const pRes = await supabase.from('projekte').insert({
         owner_user_id: ownerId,
+        standort_id: konkreterStandort(leseStandortCookie()),
         name: ausVorlage.name.trim(),
         beschreibung: v.beschreibung || null,
         status: 'aktiv',
@@ -345,6 +351,7 @@ export default function ProjektePage() {
     try {
       const pRes = await supabase.from('projekte').insert({
         owner_user_id: ownerId,
+        standort_id: konkreterStandort(leseStandortCookie()),
         name: kiVorschlag.name.trim(),
         beschreibung: kiVorschlag.beschreibung || null,
         status: 'aktiv',
