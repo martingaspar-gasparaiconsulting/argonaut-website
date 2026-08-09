@@ -13,6 +13,8 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import Leerzustand from '../_components/Leerzustand';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import {
   RES_ARTEN, resArtInfo, PLATZ_ARTEN, STATUS_JE_ART, START_STATUS, statusInfo,
   konflikteTisch, lagerLage, betragBrutto, zaehleReservierung, dauerStunden,
@@ -89,13 +91,20 @@ export default function ReservierungPage() {
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Plätze.
+      const sid = konkreterStandort(leseStandortCookie());
+      let pq = supabase.from('reservierung_platz').select('*');
+      if (sid) pq = pq.or(standortOrFilter(sid));
       const [p, v, k] = await Promise.all([
-        supabase.from('reservierung_platz').select('*').order('bezeichnung', { ascending: true }),
+        pq.order('bezeichnung', { ascending: true }),
         supabase.from('reservierung_vorgang').select('*').order('von', { ascending: false }),
         supabase.from('kontakte').select('*'),
       ]);
-      setPlaetze((p.data as Platz[]) ?? []);
-      const vv = (v.data as Vorgang[]) ?? [];
+      const pRows = (p.data as Platz[]) ?? [];
+      setPlaetze(pRows);
+      const pIds = new Set(pRows.map((x) => x.id));
+      // Vorgänge nur zu sichtbaren (Filial-)Plätzen; platzlose bleiben sichtbar (fail-open).
+      const vv = ((v.data as Vorgang[]) ?? []).filter((x) => !x.platz_id || pIds.has(x.platz_id));
       setVorgaenge(vv);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, vv.map((r) => r.id)));
@@ -151,7 +160,7 @@ export default function ReservierungPage() {
     setBusy('platz'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('reservierung_platz').insert({
-        owner_user_id: uid, art: np.art, bezeichnung: np.bezeichnung.trim(),
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), art: np.art, bezeichnung: np.bezeichnung.trim(),
         standort: np.standort.trim() || null,
         kapazitaet: np.kapazitaet.trim() ? Math.round(num(np.kapazitaet)) : null,
         status: 'aktiv', notiz: np.notiz.trim() || null,

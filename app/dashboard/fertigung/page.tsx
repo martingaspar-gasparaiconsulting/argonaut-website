@@ -8,6 +8,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -64,7 +66,11 @@ export default function FertigungPage() {
     setPos((data as SLPos[]) ?? []);
   }, []);
   const ladeAuftraege = useCallback(async () => {
-    const { data } = await supabase.from('fertigung_auftraege').select('id, auftragsnr, produkt, stueckliste_id, menge, status, start_am, fertig_am').order('erstellt_am', { ascending: false });
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Fertigungsaufträge.
+    const sid = konkreterStandort(leseStandortCookie());
+    let q = supabase.from('fertigung_auftraege').select('id, auftragsnr, produkt, stueckliste_id, menge, status, start_am, fertig_am');
+    if (sid) q = q.or(standortOrFilter(sid));
+    const { data } = await q.order('erstellt_am', { ascending: false });
     const rows = (data as Auftrag[]) ?? [];
     setAuftraege(rows);
     setFelder(await ladeFelder(MODUL));
@@ -101,7 +107,7 @@ export default function FertigungPage() {
     if (!uid || !na.produkt.trim()) { setFehler('Bitte ein Produkt angeben.'); return; }
     setFehler(null); setOk(null);
     const { data: neu, error } = await supabase.from('fertigung_auftraege').insert({
-      owner_user_id: uid, auftragsnr: na.auftragsnr.trim() || null, produkt: na.produkt.trim(),
+      owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), auftragsnr: na.auftragsnr.trim() || null, produkt: na.produkt.trim(),
       stueckliste_id: na.stueckliste_id || null, menge: num(na.menge) || 1, start_am: na.start_am || null,
     }).select('id').single();
     if (error || !neu) { setFehler('Auftrag konnte nicht angelegt werden.'); return; }

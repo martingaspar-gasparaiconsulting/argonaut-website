@@ -11,6 +11,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -89,13 +91,20 @@ export default function BelegungPage() {
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
+      // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Einheiten.
+      const sid = konkreterStandort(leseStandortCookie());
+      let beq = supabase.from('belegung_einheit').select('*');
+      if (sid) beq = beq.or(standortOrFilter(sid));
       const [e, v, k] = await Promise.all([
-        supabase.from('belegung_einheit').select('*').order('bezeichnung', { ascending: true }),
+        beq.order('bezeichnung', { ascending: true }),
         supabase.from('belegung_vorgang').select('*').order('von', { ascending: false }),
         supabase.from('kontakte').select('*'),
       ]);
-      setEinheiten((e.data as Einheit[]) ?? []);
-      const vv = (v.data as Vorgang[]) ?? [];
+      const eRows = (e.data as Einheit[]) ?? [];
+      setEinheiten(eRows);
+      const eIds = new Set(eRows.map((x) => x.id));
+      // Vorgänge nur zu sichtbaren (Filial-)Einheiten — hält Belegt-Anzeige/KPIs konsistent.
+      const vv = ((v.data as Vorgang[]) ?? []).filter((x) => eIds.has(x.einheit_id));
       setVorgaenge(vv);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, vv.map((r) => r.id)));
@@ -149,7 +158,7 @@ export default function BelegungPage() {
     setBusy('einheit'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('belegung_einheit').insert({
-        owner_user_id: uid, bezeichnung: ne.bezeichnung.trim(), kategorie: ne.kategorie.trim() || null,
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: ne.bezeichnung.trim(), kategorie: ne.kategorie.trim() || null,
         einheit_nr: ne.einheit_nr.trim() || null, abrechnungsart: ne.abrechnungsart,
         preis_pro_einheit: num(ne.preis), grundgebuehr: num(ne.grundgebuehr), kaution: num(ne.kaution),
         max_belegung: ne.max_belegung.trim() ? Math.round(num(ne.max_belegung)) : null,
