@@ -24,6 +24,9 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import { augeLeistungskatalog } from '@/lib/auge';
 import Leerzustand from '../_components/Leerzustand';
+import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
 import { baueStartKatalog, hatStartKatalog } from '@/lib/startKatalog';
 import {
   nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
@@ -101,6 +104,10 @@ export default function LeistungskatalogPage() {
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [formExtra, setFormExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+  // Multistandort-Zuordnung (🏢 Filialen)
+  const [standorte, setStandorte] = useState<FilialeLite[]>([]);
+  const [zuord, setZuord] = useState<{ leistungskatalog_id: string; standort_id: string }[]>([]);
+  const [aktStandort, setAktStandort] = useState<string | null>(null);
 
   // CSV-Import
   const [impOffen, setImpOffen] = useState(false);
@@ -132,6 +139,14 @@ export default function LeistungskatalogPage() {
       setListe(rows);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
+      // Filialen + bestehende Zuordnungen laden (für den 🏢-Knopf + fail-open-Filter)
+      const [{ data: st }, { data: zu }] = await Promise.all([
+        supabase.from('standorte').select('id, name, ist_hauptsitz').eq('aktiv', true).order('ist_hauptsitz', { ascending: false }).order('name', { ascending: true }),
+        supabase.from('leistungskatalog_standorte').select('leistungskatalog_id, standort_id'),
+      ]);
+      setStandorte((st as FilialeLite[]) ?? []);
+      setZuord((zu as { leistungskatalog_id: string; standort_id: string }[]) ?? []);
+      setAktStandort(konkreterStandort(leseStandortCookie()));
     } catch (e: unknown) {
       setFehler('Katalog konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -146,9 +161,20 @@ export default function LeistungskatalogPage() {
   }, [liste]);
 
   const gefiltert = useMemo(() => {
-    if (kategorieFilter === 'alle') return liste;
-    return liste.filter((k) => (k.kategorie || '') === kategorieFilter);
-  }, [liste, kategorieFilter]);
+    let arr = kategorieFilter === 'alle' ? liste : liste.filter((k) => (k.kategorie || '') === kategorieFilter);
+    // Fail-open-Zuschnitt: bei aktivem Standort nur Leistungen ohne Zuordnung ODER dieser Filiale zugeordnet.
+    if (aktStandort) {
+      arr = arr.filter((k) => {
+        const zug = zuord.filter((z) => z.leistungskatalog_id === k.id).map((z) => z.standort_id);
+        return zug.length === 0 || zug.includes(aktStandort);
+      });
+    }
+    return arr;
+  }, [liste, kategorieFilter, aktStandort, zuord]);
+
+  function setzeZuord(id: string, ids: string[]) {
+    setZuord((prev) => [...prev.filter((z) => z.leistungskatalog_id !== id), ...ids.map((sid) => ({ leistungskatalog_id: id, standort_id: sid }))]);
+  }
 
   // --- Anlegen / Bearbeiten ---------------------------------------------
   function neu() { setForm(LEER); setFormExtra({}); setModalAuf(true); }
@@ -475,6 +501,12 @@ export default function LeistungskatalogPage() {
                         {k.aktiv
                           ? <button onClick={() => archivieren(k)} style={styles.miniBtnGhost}>Deaktivieren</button>
                           : <button onClick={() => aktivieren(k)} style={styles.miniBtnGhost}>Aktivieren</button>}
+                        <FilialZuordnung
+                          tabelle="leistungskatalog_standorte" fkSpalte="leistungskatalog_id"
+                          recordId={k.id} ownerUserId={uid ?? ''} standorte={standorte}
+                          initial={zuord.filter((z) => z.leistungskatalog_id === k.id).map((z) => z.standort_id)}
+                          onChange={(ids) => setzeZuord(k.id, ids)}
+                        />
                       </td>
                     </tr>
                   );
