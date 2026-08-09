@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import {
   positionsBetrag, positionsMinuten, minutenZuStunden, istMengenLeistung,
@@ -188,10 +189,12 @@ export async function POST(req: Request) {
       ? `${auftrag.titel || "Werkstatt-Auftrag"} · ${auftrag.kennzeichen}`
       : (auftrag.titel || "Werkstatt-Auftrag");
 
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
+        standort_id: standortId,
         auftrag_id: null,          // kein US-CORE-Auftrag; Werkstatt-Verknüpfung läuft über werkstatt_auftraege.rechnung_id
         kontakt_id: null,          // Werkstatt-Kunde ist Freitext -> siehe empfaenger_name
         firma_id: null,

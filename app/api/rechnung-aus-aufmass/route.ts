@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import {
   positionsBetrag, positionsSteuersatz, aufmassSumme,
@@ -152,10 +153,12 @@ export async function POST(req: Request) {
     const titelTeile = [aufmass.titel || "Aufmaß", aufmass.projekt || null].filter(Boolean);
     const titel = titelTeile.join(" · ");
 
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
+        standort_id: standortId,
         auftrag_id: null,
         kontakt_id: null,
         firma_id: null,

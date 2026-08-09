@@ -7,6 +7,22 @@
 
 ---
 
+## STAND 08.08.2026 — Multistandort (Block D) läuft (NEU — überschreibt ältere Multistandort-Notizen)
+
+> **Wichtig:** Frühere Aussagen wie „Multistandort existiert nur im Preisrechner, es gibt keine `standorte`-Tabelle / kein `standort_id`" sind **überholt.** Multistandort ist jetzt real und wird Modul für Modul ausgerollt.
+
+**Heute grün (alle live):**
+- Fundament: `standorte`-Tabelle, Filial-Umschalter (Cookie `argonaut_standort`), Filialleitung/Rollen, Filial-Module, Filialvergleich.
+- Wiederverwendbar: `lib/aktiverStandort.ts`, `lib/standortDaten.ts` (`konkreterStandort`, `standortOrFilter`), Baustein `app/dashboard/_components/FilialZuordnung.tsx`.
+- **D-Pilot Leads** (Stempel) · **D2 Dokumente** (`document_standorte`) · **D3 Sortiment** (`artikel_standorte`) · **D4 Aufträge** (`auftraege.standort_id`).
+- Modell-Kontrolle: alle KI-Aufrufe über `kiFetch`; 22 Routen Haiku, 9 gezielt Sonnet (bewusst so).
+
+**Muster (so jedes weitere Modul):** *Stempel* = `standort_id`-Spalte + beim Anlegen stempeln + Liste fail-open (`.or(standortOrFilter(sid))` **vor** `.order()`). *Zuordnung* = Join-Tabelle `<x>_standorte` + `FilialZuordnung`-Knopf + fail-open. Ohne Zuordnung bleibt alles überall sichtbar (nichts verschwindet).
+
+**Nächster Schritt:** Rechnungen (Stempel). **Voller Plan + Push-Liste (~15 Kern / ~25 alles):** siehe `docs/UEBERGABE-MULTISTANDORT.md` — das aktuelle Drehbuch für diesen Strang.
+
+---
+
 ## 0. Was ist ARGONAUT OS?
 
 Ein KI-Betriebssystem (SaaS) für den deutschen Mittelstand. Ein einziges System

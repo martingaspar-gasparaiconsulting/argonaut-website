@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 
@@ -89,8 +90,9 @@ export async function POST(req: Request) {
     const faellig = new Date(heute); faellig.setDate(faellig.getDate() + ZAHLUNGSZIEL_TAGE);
     const titel = b.extern_id ? `Online-Bestellung ${b.extern_id}` : "Online-Bestellung";
 
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: user.id, auftrag_id: null, kontakt_id: null, firma_id: null,
+      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
       titel, empfaenger_name: b.besteller || null, zahlungsstatus: "offen", kleinunternehmer,
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: ZAHLUNGSZIEL_TAGE, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",

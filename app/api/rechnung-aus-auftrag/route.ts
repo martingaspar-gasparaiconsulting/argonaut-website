@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
     const { data: auftrag, error: auftragErr } = await supabase
       .from("auftraege")
       .select(
-        "id, titel, kontakt_id, firma_id, netto_summe, mwst_summe, brutto_summe, waehrung, rechnung_id"
+        "id, titel, kontakt_id, firma_id, netto_summe, mwst_summe, brutto_summe, waehrung, rechnung_id, standort_id"
       )
       .eq("id", auftragId)
       .single();
@@ -76,10 +77,13 @@ export async function POST(req: Request) {
     faellig.setDate(faellig.getDate() + zahlungszielTage);
     const faelligkeitsdatum = faellig.toISOString().slice(0, 10);
 
+    // Filial-Stempel: bevorzugt der Standort des Auftrags, sonst der aktive Standort (Cookie). Fail-open: null.
+    const standortId = auftrag.standort_id ?? standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
+        standort_id: standortId,
         auftrag_id: auftrag.id,
         kontakt_id: auftrag.kontakt_id ?? null,
         firma_id: auftrag.firma_id ?? null,

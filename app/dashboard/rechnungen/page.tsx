@@ -6,6 +6,8 @@ import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
 import { augeRechnungen } from "@/lib/auge";
 import Leerzustand from "../_components/Leerzustand";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -128,11 +130,15 @@ export default function RechnungenCockpit() {
           return;
         }
 
-        const { data: rData, error: rErr } = await supabase
+        // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Rechnungen.
+        const sid = konkreterStandort(leseStandortCookie());
+        let q = supabase
           .from("rechnungen")
           .select(
             "id,rechnungsnummer,titel,kontakt_id,firma_id,auftrag_id,zahlungsstatus,rechnungsdatum,faelligkeitsdatum,bezahlt_am,netto_summe,mwst_summe,brutto_summe,bezahlter_betrag,waehrung,kleinunternehmer"
-          )
+          );
+        if (sid) q = q.or(standortOrFilter(sid));
+        const { data: rData, error: rErr } = await q
           .order("rechnungsdatum", { ascending: false })
           .order("created_at", { ascending: false });
 

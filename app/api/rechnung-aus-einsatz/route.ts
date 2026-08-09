@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 
@@ -108,10 +109,12 @@ export async function POST(req: Request) {
     faellig.setDate(faellig.getDate() + zahlungszielTage);
     const faelligkeitsdatum = faellig.toISOString().slice(0, 10);
 
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
+        standort_id: standortId,
         auftrag_id: einsatz.auftrag_id ?? null,
         kontakt_id: einsatz.kontakt_id ?? null,
         firma_id: null,

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { wartungPositionen, darfAbrechnen } from "@/lib/wiederkehr";
@@ -18,7 +19,7 @@ const MWST_STD = 19;
 
 type Sb = Awaited<ReturnType<typeof createClient>>;
 type Posten = { bezeichnung?: string; menge?: number; einheit?: string; einzelpreis?: number; mwst_satz?: number };
-type Kopf = { titel: string; empfaenger_name?: string | null; kontakt_id?: string | null };
+type Kopf = { titel: string; empfaenger_name?: string | null; kontakt_id?: string | null; standort_id?: string | null };
 type AnlageErgebnis = { error?: string; rechnungId?: string; netto?: number };
 type DetailEintrag = { quelle: "wartung" | "abo"; id: string; titel: string; rechnungId?: string; fehler?: string };
 
@@ -60,6 +61,7 @@ async function rechnungAnlegen(supabase: Sb, userId: string, kopf: Kopf, posten:
     .from("rechnungen")
     .insert({
       owner_user_id: userId,
+      standort_id: kopf.standort_id ?? null,
       auftrag_id: null,
       kontakt_id: kopf.kontakt_id || null,
       firma_id: null,
@@ -107,6 +109,9 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
+
+    // Filial-Stempel für alle in diesem Lauf erzeugten Rechnungen: aktiver Standort (Cookie), sonst je Quelle abgeleitet.
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
 
     const heute = new Date().toISOString().slice(0, 10);
 
@@ -156,7 +161,7 @@ export async function POST(req: Request) {
       const titel = String(w.titel || "Wartungsvertrag");
       const r = await rechnungAnlegen(
         supabase, user.id,
-        { titel, empfaenger_name: (w.kunde_name as string) ?? null, kontakt_id: (w.kontakt_id as string) ?? null },
+        { titel, empfaenger_name: (w.kunde_name as string) ?? null, kontakt_id: (w.kontakt_id as string) ?? null, standort_id: (w.standort_id as string) ?? standortId },
         wartungPositionen(w)
       );
       if (r.error || !r.rechnungId) {
@@ -178,7 +183,7 @@ export async function POST(req: Request) {
       const pos = posRoh.filter((p) => (Number(p?.einzelpreis) || 0) > 0 || (Number(p?.menge) || 0) > 0);
       const r = await rechnungAnlegen(
         supabase, user.id,
-        { titel, empfaenger_name: (a.empfaenger_name as string) ?? null, kontakt_id: (a.kontakt_id as string) ?? null },
+        { titel, empfaenger_name: (a.empfaenger_name as string) ?? null, kontakt_id: (a.kontakt_id as string) ?? null, standort_id: (a.standort_id as string) ?? standortId },
         pos
       );
       if (r.error || !r.rechnungId) {

@@ -34,3 +34,15 @@ export function konkreterStandort(wert: string | null | undefined): string | nul
 export function standortOrFilter(standortId: string): string {
   return `standort_id.eq.${standortId},standort_id.is.null`;
 }
+
+/**
+ * Server-Routen (kein next/headers nötig): liest den aktiven Standort aus dem
+ * rohen Cookie-Header einer Request — z. B. `req.headers.get('cookie')` — und
+ * gibt die uuid-geprüfte Standort-ID zurück, sonst null (Wert 'alle', leer oder
+ * ungültig => kein Zuschnitt, fail-open). Damit kann jede Insert-Route einen
+ * neuen Datensatz dem aktuell gewählten Standort zustempeln.
+ */
+export function standortAusCookieHeader(cookieHeader: string | null | undefined): string | null {
+  const m = (cookieHeader || '').match(/(?:^|;\s*)argonaut_standort=([^;]+)/);
+  return konkreterStandort(m ? decodeURIComponent(m[1]) : null);
+}

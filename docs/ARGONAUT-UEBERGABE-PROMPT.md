@@ -1,6 +1,12 @@
 # Übergabe-Prompt für den neuen Chat
 
-> **So benutzt du das:** Alles ab der Linie kopieren und als **erste Nachricht** in
+> **⚠️ AKTUELLER STRANG (ab 08.08.2026): Multistandort (Block D).**
+> Für die Fortsetzung zuerst `docs/UEBERGABE-MULTISTANDORT.md` lesen — dort stehen
+> aktueller Stand, Muster und der nächste Schritt (Rechnungen). Der Arbeitsstil unten
+> (Abschnitte 1–5) gilt unverändert weiter. Die Tages-Pläne in Abschnitt 6–8 stammen
+> vom 06.08 (Unternehmerfrühstück) und sind teils erledigt/überholt.
+
+> **So benutzt du das (alter Strang):** Alles ab der Linie kopieren und als **erste Nachricht** in
 > den neuen Chat einfügen. Danach `ARGONAUT-5-Bauen-heute.pdf` hochladen —
 > das ist der Arbeitsplan. Die anderen PDFs erst, wenn das Thema dran ist.
 

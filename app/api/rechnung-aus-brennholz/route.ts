@@ -35,6 +35,7 @@
 // ============================================================================
 
 import { createClient } from "@/lib/supabase-server";
+import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { summiere, cent, type Position } from "@/app/dashboard/_components/positionsLogik";
 import { istBearbeitbar, statusInfo } from "@/app/dashboard/_components/auftragLogik";
@@ -149,10 +150,12 @@ export async function POST(req: Request) {
       ? `Brennholzlieferung · ${auftrag.nummer}`
       : "Brennholzlieferung";
 
+    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
         owner_user_id: user.id,
+        standort_id: standortId,
         auftrag_id: null,                       // kein US-CORE-Auftrag
         kontakt_id: auftrag.kontakt_id,         // ⚠️ anders als Werkstatt: echter CRM-Kunde
         firma_id: auftrag.ziel_firma_id,
