@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getBrancheBySlug } from '@/lib/branchen'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -63,6 +63,14 @@ const PAKETE = [
 
 export default function BranchenPageClient({ slug }: { slug: string }) {
   const [selectedPaket, setSelectedPaket] = useState('PRO')
+  // Control-Room-Umschalter: 'termin' (Standard) oder 'bestellen'. Steuert den Haupt-Knopf.
+  const [ctaModus, setCtaModus] = useState<'termin' | 'bestellen'>('termin')
+  useEffect(() => {
+    fetch('/api/oeffentlich/cta-modus')
+      .then((r) => r.json())
+      .then((j) => { if (j?.modus === 'bestellen') setCtaModus('bestellen') })
+      .catch(() => {})
+  }, [])
   const branche = getBrancheBySlug(slug)
   if (!branche) return null
 
@@ -236,11 +244,20 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
 
         <div className="bg-[#0A1628] rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-6 mt-16">
           <div>
-            <h3 className="text-white text-xl font-bold mb-2">Bereit für KI-Automatisierung?</h3>
-            <p className="text-white/50 text-sm">Werde Früh-Kunde — exklusive Konditionen sichern.</p>
+            <h3 className="text-white text-xl font-bold mb-2">
+              {ctaModus === 'termin' ? 'Bereit für ARGONAUT? Lernen wir uns kennen.' : 'Bereit für KI-Automatisierung?'}
+            </h3>
+            <p className="text-white/50 text-sm">
+              {ctaModus === 'termin'
+                ? 'Kostenloses Erstgespräch — persönlich zu deinem Betrieb, unverbindlich.'
+                : 'Werde Früh-Kunde — exklusive Konditionen sichern.'}
+            </p>
           </div>
-          <a href="/#preise" className="bg-[#C9A84C] hover:bg-[#b8923e] text-white font-semibold px-8 py-3 rounded-full transition-colors whitespace-nowrap">
-            Jetzt starten →
+          <a
+            href={ctaModus === 'termin' ? '/demo' : '/#preise'}
+            className="bg-[#C9A84C] hover:bg-[#b8923e] text-white font-semibold px-8 py-3 rounded-full transition-colors whitespace-nowrap"
+          >
+            {ctaModus === 'termin' ? '📅 Termin vereinbaren →' : 'Jetzt starten →'}
           </a>
         </div>
 
