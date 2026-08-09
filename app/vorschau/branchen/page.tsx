@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
 import Footer from '../_components/Footer'
-import BranchenAccordion from '../_components/BranchenAccordion'
+import BranchenRaster from '../_components/BranchenRaster'
 import { websiteKategorien, websiteBranchen } from '../_lib/branchen-web'
 
 // ============================================================================
@@ -22,10 +22,21 @@ export const metadata: Metadata = {
 }
 
 export default function BranchenPage() {
-  const kategorien = websiteKategorien().map((k) => ({
+  const roh = websiteKategorien().map((k) => ({
     kategorie: k.kategorie,
     branchen: k.branchen.map((b) => ({ name: b.name, slug: b.slug })),
   }))
+  // „Handwerk & Bau" ist sehr groß → in I + II teilen, damit ein sauberes 4×5-Raster (20 Kacheln) entsteht.
+  const kategorien: { kategorie: string; branchen: { name: string; slug: string }[] }[] = []
+  for (const k of roh) {
+    if (k.kategorie === 'Handwerk & Bau' && k.branchen.length > 30) {
+      const mitte = Math.ceil(k.branchen.length / 2)
+      kategorien.push({ kategorie: 'Handwerk & Bau I', branchen: k.branchen.slice(0, mitte) })
+      kategorien.push({ kategorie: 'Handwerk & Bau II', branchen: k.branchen.slice(mitte) })
+    } else {
+      kategorien.push(k)
+    }
+  }
   const total = websiteBranchen().length
 
   return (
@@ -47,7 +58,7 @@ export default function BranchenPage() {
 
       {/* Aufklapp-Übersicht */}
       <section style={{ padding: '10px 0 40px' }}>
-        <BranchenAccordion kategorien={kategorien} total={total} />
+        <BranchenRaster kategorien={kategorien} total={total} />
       </section>
 
       {/* Abschluss */}
