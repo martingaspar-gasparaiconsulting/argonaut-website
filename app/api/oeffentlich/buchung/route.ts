@@ -186,8 +186,14 @@ export async function POST(req: NextRequest) {
     }
 
     const notiz = [notizIn, telefon ? `Tel.: ${telefon}` : ''].filter(Boolean).join('\n') || null;
+    // Filial-Stempel: Standort des gebuchten Mitarbeiters (falls gewählt), sonst null = fail-open.
+    let standortId: string | null = null;
+    if (mitarbeiterId) {
+      const { data: maRow } = await db.from('mitarbeiter').select('standort_id').eq('id', mitarbeiterId).maybeSingle();
+      standortId = ((maRow as { standort_id?: string | null } | null)?.standort_id) ?? null;
+    }
     const { error: insErr } = await db.from('termine').insert({
-      owner_user_id: betrieb.ownerId, termin_art_id: art.id,
+      owner_user_id: betrieb.ownerId, standort_id: standortId, termin_art_id: art.id,
       beginn_am: beginnD.toISOString(), ende_am: endeD.toISOString(),
       titel: `${art.name || 'Termin'} (online gebucht)`,
       kunde_name: kundeName, kunde_email: kundeMail, notiz,

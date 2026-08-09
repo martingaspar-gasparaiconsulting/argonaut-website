@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
     // 1) Angebot laden (RLS: nur eigene)
     const { data: ang, error: aErr } = await supabase.from("angebote")
-      .select("id, titel, kunde_name, kontakt_id, status, rechnung_id").eq("id", angebotId).single();
+      .select("id, titel, kunde_name, kontakt_id, status, rechnung_id, standort_id").eq("id", angebotId).single();
     if (aErr || !ang) return NextResponse.json({ error: "Angebot nicht gefunden." }, { status: 404 });
 
     // 2) Doppel-Schutz
@@ -74,7 +74,8 @@ export async function POST(req: Request) {
     const heute = new Date();
     const rechnungsdatum = heute.toISOString().slice(0, 10);
     const faellig = new Date(heute); faellig.setDate(faellig.getDate() + 14);
-    const standortId = standortAusCookieHeader(req.headers.get("cookie"));
+    // Filial-Stempel: bevorzugt der Standort des Angebots, sonst der aktive Standort (Cookie). Fail-open: null.
+    const standortId = ang.standort_id ?? standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
       owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: ang.kontakt_id ?? null, firma_id: null,
       titel: ang.titel || "Angebot", empfaenger_name: ang.kunde_name?.trim() || null, zahlungsstatus: "offen",

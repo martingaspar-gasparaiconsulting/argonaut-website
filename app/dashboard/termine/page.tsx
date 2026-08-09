@@ -14,6 +14,8 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { berechneSlots, type Slot, type VerfuegbarkeitRow, type TerminRow, type AbwesenheitRow, type TerminArt } from '../_components/slotLogik';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -278,7 +280,7 @@ export default function TerminePage() {
         }
       }
       const { data: ins, error } = await supabase.from('termine').insert({
-        owner_user_id: uid, termin_art_id: aktiveArt.id,
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), termin_art_id: aktiveArt.id,
         beginn_am: buchSlot.beginn.toISOString(), ende_am: buchSlot.ende.toISOString(),
         titel: buchForm.titel.trim() || aktiveArt.name,
         kunde_name: buchForm.kundeName.trim() || null, kunde_email: buchForm.kundeEmail.trim().toLowerCase() || null,

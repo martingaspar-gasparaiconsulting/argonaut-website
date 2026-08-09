@@ -13,6 +13,8 @@ import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -72,9 +74,12 @@ export default function AngebotePage() {
   const basisUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   const laden_ = useCallback(async () => {
-    const { data } = await supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id')
-      .order('erstellt_am', { ascending: false });
+    // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Angebote.
+    const sid = konkreterStandort(leseStandortCookie());
+    let q = supabase.from('angebote')
+      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id');
+    if (sid) q = q.or(standortOrFilter(sid));
+    const { data } = await q.order('erstellt_am', { ascending: false });
     setListe((data as Angebot[]) ?? []);
   }, []);
 
@@ -110,7 +115,7 @@ export default function AngebotePage() {
       const gewaehlt = kontakte.find((k) => k.id === kontaktId) || kontakte.find((k) => k.name === kunde.trim());
       const s = rechne(posClean);
       const { data: ang, error } = await supabase.from('angebote').insert({
-        owner_user_id: uid, kontakt_id: gewaehlt?.id ?? null, kunde_name: kunde.trim(), kunde_email: gewaehlt?.email || null,
+        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), kontakt_id: gewaehlt?.id ?? null, kunde_name: kunde.trim(), kunde_email: gewaehlt?.email || null,
         titel: titel.trim() || 'Angebot', status: 'entwurf', gueltig_bis: gueltig || null,
         netto_summe: s.netto, mwst_summe: s.mwst, brutto_summe: s.brutto, notiz: notiz.trim() || null,
       }).select('id, token').single();
