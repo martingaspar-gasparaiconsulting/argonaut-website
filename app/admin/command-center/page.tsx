@@ -6,6 +6,7 @@ import Dreizack from '@/components/Dreizack';
 import LogoutButton from '../LogoutButton';
 import { BESTELLSTRECKE_LIVE } from '@/lib/flags';
 import BestellstreckeFreischalten from './BestellstreckeFreischalten';
+import CtaModusSchalter from './CtaModusSchalter';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/command-center/page.tsx — Betreiber-Cockpit
@@ -73,6 +74,13 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     kiKostenUsd = ((ki as Array<{ kosten_usd?: number }>) || []).reduce((s, r) => s + (Number(r.kosten_usd) || 0), 0);
   } catch { /* still */ }
   const kiKostenEur = kiKostenUsd * 0.92;
+
+  // CTA-Modus (Control-Room-Umschalter): 'termin' (Standard) oder 'bestellen'.
+  let ctaModus: 'termin' | 'bestellen' = 'termin';
+  try {
+    const { data: f } = await db.from('betreiber_flags').select('wert').eq('schluessel', 'cta_modus').maybeSingle();
+    if ((f as { wert?: string } | null)?.wert === 'bestellen') ctaModus = 'bestellen';
+  } catch { /* still */ }
 
   const kpisGesch: Kpi[] = [
     { label: 'MRR / Monat', wert: eur(mrr), sub: 'wiederkehrend, aktive Kunden', akzent: C.gold },
@@ -175,6 +183,9 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
             </div>
           ))}
         </section>
+
+        {/* Control-Room-Umschalter: öffentliche Knöpfe Termin ↔ Bestellen */}
+        <CtaModusSchalter initial={ctaModus} />
 
         {/* Bestellstrecke — Freischalt-Kachel (nur solange dunkel) */}
         {!BESTELLSTRECKE_LIVE && <BestellstreckeFreischalten />}
