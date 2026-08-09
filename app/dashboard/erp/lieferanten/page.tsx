@@ -2,6 +2,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import LieferantenAuge from "./LieferantenAuge";
+import FilialZuordnung, { type FilialeLite } from "../../_components/FilialZuordnung";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort } from "@/lib/standortDaten";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E4 Lieferanten-Cockpit
@@ -78,6 +81,10 @@ export default function LieferantenCockpit() {
   const [form, setForm] = useState<FormState>(LEER_FORM);
   const [speichern, setSpeichern] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // Multistandort-Zuordnung (🏢 Filialen)
+  const [standorte, setStandorte] = useState<FilialeLite[]>([]);
+  const [zuord, setZuord] = useState<{ lieferant_id: string; standort_id: string }[]>([]);
+  const [aktStandort, setAktStandort] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -95,6 +102,14 @@ export default function LieferantenCockpit() {
       .select("*")
       .order("name", { ascending: true });
     if (!error && data) setLieferanten(data as Lieferant[]);
+    // Filialen + bestehende Zuordnungen laden (für den 🏢-Knopf + fail-open-Filter)
+    const [{ data: st }, { data: zu }] = await Promise.all([
+      supabase.from("standorte").select("id, name, ist_hauptsitz").eq("aktiv", true).order("ist_hauptsitz", { ascending: false }).order("name", { ascending: true }),
+      supabase.from("lieferanten_standorte").select("lieferant_id, standort_id"),
+    ]);
+    setStandorte((st as FilialeLite[]) ?? []);
+    setZuord((zu as { lieferant_id: string; standort_id: string }[]) ?? []);
+    setAktStandort(konkreterStandort(leseStandortCookie()));
     setLaden(false);
   }
 
@@ -102,6 +117,11 @@ export default function LieferantenCockpit() {
     const q = suche.trim().toLowerCase();
     return lieferanten.filter((l) => {
       if (nurAktiv && !l.aktiv) return false;
+      // Fail-open-Zuschnitt: bei aktivem Standort nur Lieferanten ohne Zuordnung ODER dieser Filiale.
+      if (aktStandort) {
+        const zug = zuord.filter((z) => z.lieferant_id === l.id).map((z) => z.standort_id);
+        if (zug.length > 0 && !zug.includes(aktStandort)) return false;
+      }
       if (q) {
         const hay = [l.name, l.ansprechpartner, l.email, l.telefon, l.kundennummer]
           .filter(Boolean)
@@ -111,7 +131,11 @@ export default function LieferantenCockpit() {
       }
       return true;
     });
-  }, [lieferanten, suche, nurAktiv]);
+  }, [lieferanten, suche, nurAktiv, aktStandort, zuord]);
+
+  function setzeZuord(id: string, ids: string[]) {
+    setZuord((prev) => [...prev.filter((z) => z.lieferant_id !== id), ...ids.map((sid) => ({ lieferant_id: id, standort_id: sid }))]);
+  }
 
   function oeffneNeu() {
     setBearbeiteId(null);
@@ -426,6 +450,14 @@ export default function LieferantenCockpit() {
                     >
                       Löschen
                     </button>
+                    <span style={{ display: "inline-block", marginLeft: 6 }}>
+                      <FilialZuordnung
+                        tabelle="lieferanten_standorte" fkSpalte="lieferant_id"
+                        recordId={l.id} ownerUserId={userId ?? ""} standorte={standorte}
+                        initial={zuord.filter((z) => z.lieferant_id === l.id).map((z) => z.standort_id)}
+                        onChange={(ids) => setzeZuord(l.id, ids)}
+                      />
+                    </span>
                   </td>
                 </tr>
               ))}
