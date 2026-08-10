@@ -12,11 +12,11 @@ const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
 export function dossierBestaetigenHtml(name: string | null, url: string): string {
   return mailLayout('Nur noch ein Klick', `
     <p>Guten Tag${name ? ' ' + name : ''},</p>
-    <p>bitte bestätige kurz deine E-Mail-Adresse — danach schicken wir dir dein Dossier:</p>
+    <p>bitte bestätigen Sie kurz Ihre E-Mail-Adresse — danach schicken wir Ihnen Ihr Dossier:</p>
     <p style="margin:24px 0;">
       <a href="${url}" style="display:inline-block;background:#C9A84C;color:#0A1628;text-decoration:none;font-weight:800;padding:13px 24px;border-radius:8px;">E-Mail bestätigen &amp; Dossier erhalten</a>
     </p>
-    <p style="color:#8FA3BE;font-size:13px;">Wenn du das nicht angefordert hast, ignoriere diese Mail einfach.<br>Link: ${url}</p>`);
+    <p style="color:#8FA3BE;font-size:13px;">Wenn Sie das nicht angefordert haben, ignorieren Sie diese Mail einfach.<br>Link: ${url}</p>`);
 }
 
 /** Auslieferungs-Mail mit dem Dossier-Link (nach Bestätigung). */

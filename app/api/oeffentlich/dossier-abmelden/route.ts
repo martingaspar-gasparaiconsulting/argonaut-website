@@ -27,14 +27,14 @@ function seite(titel: string, text: string): Response {
 
 export async function GET(req: Request) {
   const token = (new URL(req.url).searchParams.get('token') || '').trim();
-  if (!token) return seite('Link ungültig', 'Dieser Abmelde-Link ist nicht vollständig. Bitte nutze den Link aus der E-Mail.');
+  if (!token) return seite('Link ungültig', 'Dieser Abmelde-Link ist nicht vollständig. Bitte nutzen Sie den Link aus der E-Mail.');
   try {
     const db = admin();
     const { data } = await db.from('dossier_leads').select('id').eq('abmelde_token', token).maybeSingle();
     const l = data as { id: string } | null;
-    if (!l) return seite('Bereits erledigt', 'Wir konnten keinen aktiven Eintrag finden — vermutlich bist du schon abgemeldet. Alles gut.');
+    if (!l) return seite('Bereits erledigt', 'Wir konnten keinen aktiven Eintrag finden — vermutlich sind Sie schon abgemeldet. Alles gut.');
     await db.from('dossier_leads').update({ seq_status: 'abgemeldet' }).eq('id', l.id);
-    return seite('Abgemeldet', 'Du erhältst keine weiteren Mails zum Test. Dein Dossier bleibt gültig — und du kannst jederzeit wieder auf uns zukommen.');
+    return seite('Abgemeldet', 'Sie erhalten keine weiteren Mails zum Test. Ihr Dossier bleibt gültig — und Sie können jederzeit wieder auf uns zukommen.');
   } catch {
     return seite('Kleiner Fehler', 'Das hat gerade nicht geklappt. Bitte versuche es später noch einmal oder antworte kurz auf eine unserer Mails.');
   }
