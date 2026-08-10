@@ -18,6 +18,7 @@ import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sendeMail, mailLayout } from '@/lib/mail'
 import { escapeHtml } from '@/lib/newsletter'
+import { starteDossierOptin } from '@/lib/dossierFunnel'
 
 export const runtime = 'nodejs'
 
@@ -180,6 +181,13 @@ export async function POST(req: Request) {
     //    b) Bestätigung an den Interessenten (falls E-Mail vorhanden)
     const internOk = await benachrichtigeIntern(payload)
     await bestaetigeInteressent(payload)
+
+    // Automatischer Dossier-Double-Opt-in: Termin- UND Test-Route laufen hier
+    // durch. Best effort — ein Fehler hier darf die Anfrage nie scheitern lassen.
+    if (email) {
+      const quelle = (payload.angebot || '').toLowerCase().includes('test') ? 'test' : 'termin'
+      try { await starteDossierOptin(email, name, branche, quelle) } catch {}
+    }
 
     // Erfolg, sobald die Anfrage in der DB liegt ODER intern zugestellt wurde.
     if (!dbOk && !internOk) {
