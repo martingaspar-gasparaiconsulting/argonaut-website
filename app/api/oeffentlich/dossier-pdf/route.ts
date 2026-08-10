@@ -23,7 +23,9 @@ function admin() {
 
 export async function GET(req: Request) {
   const branche = (new URL(req.url).searchParams.get('branche') || '').trim();
-  const pfad = `${dossierKey(branche)}.pdf`;
+  // Versions-Suffix (eb1 = E-Book-Design): entwertet alte gecachte PDFs, sobald
+  // das Dossier-Layout aktualisiert wird. Bei Layout-Änderung Suffix hochzählen.
+  const pfad = `${dossierKey(branche)}-eb1.pdf`;
   const publicUrl = `${SUPA_URL}/storage/v1/object/public/dossiers/${pfad}`;
 
   try {
