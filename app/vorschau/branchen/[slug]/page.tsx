@@ -5,6 +5,7 @@ import Navbar from '../../_components/Navbar'
 import Footer from '../../_components/Footer'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
 import HeroCta from '../../_components/HeroCta'
+import BranchenChat from '../../_components/BranchenChat'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
 import { baukastenFor } from '../../_lib/branchen-bausteine'
@@ -290,6 +291,13 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
           </div>
         </section>
       )}
+
+      {/* Branchen-KI-Dialog (13.3) — Besucher fragt, KI antwortet branchenspezifisch */}
+      <section style={{ padding: '34px 0 10px' }}>
+        <div className="bd-wrap">
+          <BranchenChat slug={b.slug} name={b.name} />
+        </div>
+      </section>
 
       {/* Verkaufs-Claim direkt über dem Angebot/Anfrage-Block */}
       <section style={{ padding: '24px 0 0' }}>
