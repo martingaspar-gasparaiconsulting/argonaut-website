@@ -31,6 +31,8 @@ export default function DossierPage() {
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
+    const b = p.get('branche');
+    if (b) setBranche(b); // Vorbelegung, wenn von einer Branchen-Seite kommend.
     if (p.get('bestaetigt') === '1') setStatus('bestaetigt');
     else if (p.get('fehler') === '1') { setStatus('fehler'); setFehler('Der Bestätigungs-Link war ungültig oder ist abgelaufen.'); }
   }, []);
@@ -59,7 +61,7 @@ export default function DossierPage() {
         <div style={styles.grid}>
           {/* Werbe-Seite */}
           <div>
-            <div style={styles.kicker}>Kostenloses Dossier</div>
+            <div style={styles.kicker}>Kostenloses Dossier{branche ? ` · ${branche}` : ''}</div>
             <h1 style={styles.h1}>Wie <span style={{ color: C.gold }}>ein System</span> Ihren Betrieb steuert — statt zwölf.</h1>
             <p style={styles.sub}>
               Holen Sie sich das ARGONAUT-Dossier für Ihre Branche. Kompakt, konkret, in wenigen Minuten gelesen.

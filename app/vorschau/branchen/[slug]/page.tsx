@@ -129,6 +129,9 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             <HeroCta branche={b.name} />
             <Link href="/branchen" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>Alle Branchen</Link>
           </div>
+          <p style={{ marginTop: '16px', fontSize: '.92rem', color: '#9fb3bd' }}>
+            📄 Oder das kostenlose <a href={`/dossier?branche=${encodeURIComponent(b.name)}`} style={{ color: GOLD, textDecoration: 'none' }}>{b.name}-Dossier per E-Mail</a> anfordern →
+          </p>
         </div>
       </section>
 
