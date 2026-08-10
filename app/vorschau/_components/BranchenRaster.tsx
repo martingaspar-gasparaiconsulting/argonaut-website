@@ -2,7 +2,7 @@
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/_components/BranchenRaster.tsx
-// Branchen-Übersicht als sauberes 4×5-Raster (20 Kachel-Karten). Klick auf eine
+// Branchen-Übersicht als Kachel-Raster (Anzahl Kacheln = übergebene Bereiche). Klick auf eine
 // Kachel öffnet darunter ein Panel mit den Branchen der Kategorie (Chips →
 // Branchenseite). Suchfeld filtert live über alle Branchen. Navy/Gold-Look.
 // ============================================================================
@@ -19,7 +19,11 @@ const EMOJI: Record<string, string> = {
   'Handwerk & Bau': '🔨',
   'Industrie & Produktion': '🏭',
   'Handel & E-Commerce': '🛍️',
+  'Handel — Mode, Wohnen & Genuss': '🛍️',
+  'Handel — Technik, Bau, Garten & Freizeit': '🔧',
   'Fahrzeuge & Mobilität': '🚗',
+  'Auto & KFZ': '🚗',
+  'Zweirad, Nutzfahrzeug, Boot & Luft': '🏍️',
   'Gastronomie, Hotellerie & Tourismus': '🍽️',
   'Lebensmittel & Nahversorgung': '🥖',
   'Logistik & Transport': '🚚',
@@ -133,7 +137,7 @@ export default function BranchenRaster({ kategorien, total }: { kategorien: Kat[
         </>
       )}
 
-      <p className="br-hint">{total} Branchen · 20 Bereiche</p>
+      <p className="br-hint">{total} Branchen · {kategorien.length} Bereiche</p>
     </div>
   )
 }

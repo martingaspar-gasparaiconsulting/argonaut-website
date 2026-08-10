@@ -7,8 +7,9 @@ import { websiteKategorien, websiteBranchen } from '../_lib/branchen-web'
 
 // ============================================================================
 // ARGONAUT OS · app/branchen/page.tsx — Branchen-Übersicht (Aufklapp)
-// Server-Komponente: lädt die gefilterte 19-Kategorien-Struktur und übergibt sie
-// an die Client-Komponente <BranchenAccordion> (Aufklappen, Suche, Animation).
+// Server-Komponente: lädt die Kategorien-Struktur, teilt die großen Bereiche in
+// erzählbare Unter-Bereiche (22 Kacheln) und übergibt sie an <BranchenRaster>
+// (Aufklappen, Suche, Animation).
 // robots: noindex (Vorschau).
 // ============================================================================
 
@@ -21,18 +22,63 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
+// ---------------------------------------------------------------------------
+// Bereichs-Balance (Strategie 09.08.2026): die großen Bereiche in erzählbare
+// Unter-Bereiche teilen, damit keine Kachel deutlich über ~43 Branchen liegt.
+// Rein optische Gruppierung fürs Aufklapp-Raster — die kanonische Kategorie
+// (websiteKategorieOf/REMAP) und alle Detailseiten/SEO bleiben unangetastet.
+//   • „Handel & E-Commerce" (70) → thematisch nach Produktwelt in zwei Hälften.
+//     Reiner Online/Offline-Schnitt scheidet aus: fast alles ist stationärer
+//     Fachhandel. „Technik/Bau/Garten/Freizeit" ist explizit gelistet, der
+//     Rest (Mode/Wohnen/Genuss) ergibt sich automatisch — auch neue Nischen.
+//   • „Fahrzeuge & Mobilität" (52) → „Auto & KFZ" (Rest) + Zweirad/Nutzfahrzeug/
+//     Boot/Luft (explizit gelistet).
+//   • „Handwerk & Bau" (52) → wie gehabt hälftig in I + II.
+// ---------------------------------------------------------------------------
+const HANDEL_TECHNIK = new Set<string>([
+  'Großhandel', 'E-Commerce', 'Sportartikelhandel', 'Küchenstudios', 'Angelbedarf', 'Badstudios',
+  'Elektro- & Hausgerätehandel', 'Unterhaltungselektronik & HiFi', 'Computer- & IT-Hardwarehandel',
+  'Handy- & Telekommunikationsshops', 'Foto-Fachhandel', 'Bürobedarf & Bürotechnik', 'Baustoffhandel',
+  'Fliesen-, Sanitär- & Heizungshandel', 'Farben-, Lack- & Tapetenhandel', 'Eisenwaren-, Werkzeug- & Beschlaghandel',
+  'Baumärkte & Heimwerkerbedarf', 'Gartencenter & Gartenmärkte', 'Motorgeräte- & Gartentechnikhandel',
+  'Kaminofen- & Ofenstudios', 'Grill- & BBQ-Fachhandel', 'Pool- & Schwimmbadfachhandel', 'Outdoor- & Campingausrüstung',
+  'Spielwarenhandel', 'Modellbau- & RC-Fachhandel', 'Bastel- & Kreativbedarf', 'Brettspiel- & Hobbyläden',
+  'Videospiel- & Konsolenhandel', 'Nähmaschinen-Fachhandel', 'Landmaschinenhandel', 'Baumaschinenhandel',
+  'Jagdbedarf & Jagdausrüstung',
+])
+const FAHRZEUGE_SPEZIAL = new Set<string>([
+  'Motorradwerkstatt', 'Fahrradhandel & Werkstatt', 'Caravan & Wohnmobil', 'Boots- & Yachthandel',
+  'Transporter- & LKW-Vermietung', 'Wohnmobilvermietung', 'Nutzfahrzeug- & LKW-Werkstatt', 'Fahrzeug- & Aufbautenbau',
+  'Anhänger- & Wohnwagenbau', 'Landmaschinen-Werkstatt & -handel', 'Baumaschinen-Service & -handel',
+  'Kommunalfahrzeug- & Kehrmaschinentechnik', 'Gabelstapler- & Flurförderzeug-Service', 'Motorradhandel & -zubehör',
+  'Roller- & Mofawerkstatt', 'E-Bike- & Pedelec-Spezialist', 'Fahrradmanufaktur & Rahmenbau',
+  'Lastenrad- & Cargobike-Anbieter', 'Nutzfahrzeug- & Transporterhandel', 'Bootswerft & Bootsservice',
+  'Marina & Yachthafen', 'Bootsmotoren- & Antriebsservice', 'Segelmacherei & Bootszubehör',
+  'Wohnmobil- & Caravan-Stellplatz', 'Flugzeugwartung & Luftfahrttechnik', 'Flugschule & Luftsportbetrieb',
+  'Drohnen-Service & UAV', 'Schienenfahrzeug- & Bahntechnik',
+])
+
 export default function BranchenPage() {
   const roh = websiteKategorien().map((k) => ({
     kategorie: k.kategorie,
     branchen: k.branchen.map((b) => ({ name: b.name, slug: b.slug })),
   }))
-  // „Handwerk & Bau" ist sehr groß → in I + II teilen, damit ein sauberes 4×5-Raster (20 Kacheln) entsteht.
   const kategorien: { kategorie: string; branchen: { name: string; slug: string }[] }[] = []
   for (const k of roh) {
     if (k.kategorie === 'Handwerk & Bau' && k.branchen.length > 30) {
       const mitte = Math.ceil(k.branchen.length / 2)
       kategorien.push({ kategorie: 'Handwerk & Bau I', branchen: k.branchen.slice(0, mitte) })
       kategorien.push({ kategorie: 'Handwerk & Bau II', branchen: k.branchen.slice(mitte) })
+    } else if (k.kategorie === 'Handel & E-Commerce') {
+      const technik = k.branchen.filter((b) => HANDEL_TECHNIK.has(b.name))
+      const mode = k.branchen.filter((b) => !HANDEL_TECHNIK.has(b.name))
+      kategorien.push({ kategorie: 'Handel — Mode, Wohnen & Genuss', branchen: mode })
+      kategorien.push({ kategorie: 'Handel — Technik, Bau, Garten & Freizeit', branchen: technik })
+    } else if (k.kategorie === 'Fahrzeuge & Mobilität') {
+      const spezial = k.branchen.filter((b) => FAHRZEUGE_SPEZIAL.has(b.name))
+      const auto = k.branchen.filter((b) => !FAHRZEUGE_SPEZIAL.has(b.name))
+      kategorien.push({ kategorie: 'Auto & KFZ', branchen: auto })
+      kategorien.push({ kategorie: 'Zweirad, Nutzfahrzeug, Boot & Luft', branchen: spezial })
     } else {
       kategorien.push(k)
     }
