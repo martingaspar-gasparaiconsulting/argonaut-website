@@ -13,6 +13,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/termin-nachfass",
+      "schedule": "30 9 * * *"
+    },
+    {
       "path": "/api/cron/social-posten",
       "schedule": "*/6 * * * *"
     },
