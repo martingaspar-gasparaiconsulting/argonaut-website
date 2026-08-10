@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Navbar from '../../_components/Navbar'
 import Footer from '../../_components/Footer'
 import AngebotAnfrage from '../../_components/AngebotAnfrage'
+import HeroCta from '../../_components/HeroCta'
 import { websiteBranchen, websiteBrancheBySlug, websiteVerwandte } from '../../_lib/branchen-web'
 import { seoBySlug } from '../../_lib/branchen-seo'
 import { baukastenFor } from '../../_lib/branchen-bausteine'
@@ -125,7 +126,7 @@ export default async function BrancheDetail({ params }: { params: Promise<{ slug
             {fuelleText(vk.heroSub, b.name, b.kategorie)}
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '15px 30px', borderRadius: '10px', textDecoration: 'none' }}>Demo für {b.name} buchen →</a>
+            <HeroCta branche={b.name} />
             <Link href="/branchen" style={{ background: 'transparent', color: '#EAF1F6', fontWeight: 500, fontSize: '1rem', padding: '15px 26px', borderRadius: '10px', textDecoration: 'none', border: '1px solid rgba(234,241,246,0.22)' }}>Alle Branchen</Link>
           </div>
         </div>
