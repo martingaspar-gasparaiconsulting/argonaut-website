@@ -1,6 +1,6 @@
 // ============================================================
 // ARGONAUT OS · Admin-Route: CTA-Modus umschalten (nur Betreiber)
-// Setzt betreiber_flags.cta_modus = 'termin' | 'bestellen'. Auth: eingeloggt
+// Setzt betreiber_flags.cta_modus = 'termin' | 'beide' | 'bestellen'. Auth: eingeloggt
 // UND (falls gesetzt) user.id === ANALYSE_BETREIBER_ID. Schreiben via Service-Role.
 // ============================================================
 import { NextResponse } from 'next/server';
@@ -20,7 +20,8 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const modus = body?.modus === 'bestellen' ? 'bestellen' : 'termin';
+  const raw = body?.modus;
+  const modus = raw === 'bestellen' ? 'bestellen' : raw === 'beide' ? 'beide' : 'termin';
 
   const admin = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,

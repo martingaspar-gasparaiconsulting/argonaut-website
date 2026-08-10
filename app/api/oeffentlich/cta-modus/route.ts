@@ -1,7 +1,7 @@
 // ============================================================
 // ARGONAUT OS · Öffentliche Route: aktueller CTA-Modus
-// Liefert, ob die öffentlichen Knöpfe „Termin vereinbaren" (Standard) oder
-// „Sofort bestellen" zeigen sollen. Rein lesend, Service-Role, kein Login.
+// Liefert, welche öffentlichen Knöpfe gezeigt werden: 'termin' (Standard),
+// 'beide' (Termin + 7-Tage-Test) oder 'bestellen'. Rein lesend, Service-Role, kein Login.
 // ============================================================
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -23,7 +23,8 @@ export async function GET() {
       .select('wert')
       .eq('schluessel', 'cta_modus')
       .maybeSingle();
-    const modus = data?.wert === 'bestellen' ? 'bestellen' : 'termin';
+    const w = data?.wert;
+    const modus = w === 'bestellen' ? 'bestellen' : w === 'beide' ? 'beide' : 'termin';
     return NextResponse.json({ modus });
   } catch {
     return NextResponse.json({ modus: 'termin' });

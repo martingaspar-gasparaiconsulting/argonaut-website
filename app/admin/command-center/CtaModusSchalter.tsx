@@ -13,7 +13,7 @@ const C = {
   card: 'rgba(201,168,76,0.06)',
 };
 
-type Modus = 'termin' | 'bestellen';
+type Modus = 'termin' | 'beide' | 'bestellen';
 
 export default function CtaModusSchalter({ initial }: { initial: Modus }) {
   const [modus, setModus] = useState<Modus>(initial);
@@ -66,15 +66,16 @@ export default function CtaModusSchalter({ initial }: { initial: Modus }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <span style={{ fontSize: 24 }}>🎚️</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 'clamp(16px,1.6vw,20px)' }}>Öffentliche Knöpfe: Termin oder Bestellen</div>
+            <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 'clamp(16px,1.6vw,20px)' }}>Öffentliche Knöpfe: Termin · Test · Bestellen</div>
             <div style={{ color: C.dim, fontSize: 'clamp(12px,1vw,14px)', marginTop: 3 }}>
-              Steuert, wohin die Knöpfe auf den Branchen-/Dossier-Seiten führen. Standard: erst mal nur Termine sammeln.
+              Steuert, welche Knöpfe die Branchen-/Dossier-Seiten zeigen. Standard: erst mal nur Termine sammeln.
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {knopf('termin', '📅', 'Termin vereinbaren', 'Interessenten buchen ein Erstgespräch mit dir. Kein Kauf — du sammelst erst Erfahrung.', C.green)}
-          {knopf('bestellen', '🛒', 'Sofort bestellen', 'Knöpfe führen in die Bestellstrecke. Erst umlegen, wenn du bereit bist, öffentlich zu verkaufen.', C.gold)}
+          {knopf('termin', '📅', 'Nur Termin', 'Nur „Termin vereinbaren" — Interessenten buchen ein Erstgespräch. Kein Kauf, du sammelst erst Erfahrung.', C.green)}
+          {knopf('beide', '🔀', 'Termin + 7-Tage-Test', 'Beide Knöpfe nebeneinander: Erstgespräch UND „7 Tage kostenlos testen". So sortierst du heiße von vorsichtigen Interessenten.', C.cyan)}
+          {knopf('bestellen', '🛒', 'Nur Bestellen', 'Knöpfe führen in die Bestellstrecke. Erst umlegen, wenn du bereit bist, öffentlich zu verkaufen.', C.gold)}
         </div>
         {msg && <div style={{ marginTop: 12, fontSize: 13, color: msg.startsWith('Gespeichert') ? C.green : '#E06666' }}>{msg}</div>}
       </div>
