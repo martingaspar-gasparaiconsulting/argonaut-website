@@ -197,15 +197,50 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
   },
   {
     typ: 'versand', name: 'Versand / Etiketten', icon: '📦', kategorie: 'betrieb',
-    einrichten: { modus: 'geplant', anleitung: 'Vorgesehen über shipcloud: ein API-Key verbindet DHL, DPD, GLS, UPS & Hermes gebündelt für Versandetiketten. Feld folgt in einem nächsten Schritt.' },
-    beschreibung: 'Versandetiketten für mehrere Paketdienste über eine Anbindung (shipcloud).',
-    anbieter: [],
+    einrichten: { modus: 'inline' },
+    beschreibung: 'Versandetiketten für mehrere Paketdienste über eine Anbindung (shipcloud) — DHL, DPD, GLS, UPS & Hermes gebündelt.',
+    anbieter: [
+      { key: 'manuell', name: 'Manuell (Etiketten extern erstellen)', demo: true, felder: [], hinweis: 'Ohne Anbindung: Etiketten erstellen Sie direkt beim Paketdienst. Für den Anfang völlig ausreichend.' },
+      { key: 'shipcloud', name: 'shipcloud', felder: [
+        { key: 'api_key', label: 'shipcloud API-Key', typ: 'password' },
+      ], hinweis: '① Bei shipcloud.io registrieren → ② unter „Einstellungen → API-Keys" einen Key erzeugen → ③ hier einfügen. Ein Key deckt DHL, DPD, GLS, UPS & Hermes ab.' },
+    ],
   },
   {
     typ: 'mail', name: 'Mail & Kalender', icon: '✉️', kategorie: 'betrieb',
-    einrichten: { modus: 'geplant', anleitung: 'Vorgesehen für Google Workspace und Microsoft 365 (OAuth): Termine und Nachrichten synchronisieren. Felder folgen in einem nächsten Schritt.' },
-    beschreibung: 'Postfach und Kalender (Google / Microsoft) mit ARGONAUT synchronisieren.',
-    anbieter: [],
+    einrichten: { modus: 'inline' },
+    beschreibung: 'Postfach und Kalender (Google Workspace / Microsoft 365) mit ARGONAUT synchronisieren.',
+    anbieter: [
+      { key: 'manuell', name: 'Ohne Sync (manuell)', demo: true, felder: [], hinweis: 'E-Mails und Termine pflegen Sie wie bisher direkt in ARGONAUT.' },
+      { key: 'google', name: 'Google Workspace', felder: [
+        { key: 'client_id', label: 'OAuth Client-ID', typ: 'text' },
+        { key: 'client_secret', label: 'OAuth Client-Secret', typ: 'password' },
+      ], hinweis: '① In der Google Cloud Console ein Projekt anlegen → ② OAuth-Client-ID + Secret erstellen, die vorgegebene Redirect-URL eintragen → ③ hier einfügen. (Gmail + Kalender)' },
+      { key: 'microsoft', name: 'Microsoft 365', felder: [
+        { key: 'client_id', label: 'App (Client)-ID', typ: 'text' },
+        { key: 'client_secret', label: 'Client-Secret', typ: 'password' },
+        { key: 'tenant_id', label: 'Verzeichnis (Tenant)-ID', typ: 'text', hinweis: 'z. B. common oder Ihre Tenant-ID' },
+      ], hinweis: '① Im Azure-Portal unter „App-Registrierungen" eine App anlegen → ② Client-ID, ein Secret und die Tenant-ID holen, Redirect-URL eintragen → ③ hier einfügen. (Outlook + Kalender)' },
+    ],
+  },
+  {
+    typ: 'marktplatz', name: 'Marktplätze', icon: '🛍️', kategorie: 'betrieb',
+    einrichten: { modus: 'inline' },
+    beschreibung: 'Bestellungen und Bestand von Amazon & eBay abgleichen — zusätzlich zu Ihrem eigenen Shop.',
+    anbieter: [
+      { key: 'manuell', name: 'Manuell / CSV', demo: true, felder: [], hinweis: 'Bestellungen als CSV importieren, Bestand manuell pflegen — ohne externe Schnittstelle.' },
+      { key: 'amazon', name: 'Amazon (SP-API)', felder: [
+        { key: 'seller_id', label: 'Verkäufer-ID (Seller-ID)', typ: 'text' },
+        { key: 'lwa_client_id', label: 'LWA Client-ID', typ: 'text' },
+        { key: 'lwa_client_secret', label: 'LWA Client-Secret', typ: 'password' },
+        { key: 'refresh_token', label: 'Refresh-Token', typ: 'password' },
+      ], hinweis: '① Im Amazon Seller Central unter „Apps & Services → Develop Apps" eine App anlegen (SP-API) → ② LWA-Client-ID/Secret + Refresh-Token + Seller-ID holen → ③ hier einfügen.' },
+      { key: 'ebay', name: 'eBay', felder: [
+        { key: 'client_id', label: 'App-ID (Client-ID)', typ: 'text' },
+        { key: 'client_secret', label: 'Cert-ID (Client-Secret)', typ: 'password' },
+        { key: 'refresh_token', label: 'Refresh-Token', typ: 'password' },
+      ], hinweis: '① Im eBay Developer Program eine Anwendung anlegen → ② App-ID + Cert-ID + einen Refresh-Token (User-Token) erzeugen → ③ hier einfügen.' },
+    ],
   },
 ];
 
