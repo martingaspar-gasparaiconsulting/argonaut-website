@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { baueUstva, formatEuro, type UstvaErgebnis } from '@/lib/ustva';
+import { ustvaCsv, ustvaZeilen, euroText } from '@/lib/ustvaExport';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -82,6 +83,48 @@ export default function ElsterSeite() {
     } finally { setBusy(null); }
   }
 
+  function exportCsv() {
+    if (!erg) return;
+    const csv = ustvaCsv(erg, von, bis);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `UStVA_${von}_${bis}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportPdf() {
+    if (!erg) return;
+    setBusy('pdf');
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      doc.setFontSize(16); doc.text('Umsatzsteuer-Voranmeldung', 20, 22);
+      doc.setFontSize(10); doc.setTextColor(110);
+      doc.text(`Zeitraum: ${von} bis ${bis}`, 20, 29);
+      doc.text('Vorbereitung/Überblick — verbindliche Anmeldung über ELSTER-Online.', 20, 34);
+      doc.setTextColor(0);
+      let y = 48;
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+      doc.text('Kz', 20, y); doc.text('Position', 34, y); doc.text('Betrag', 190, y, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      y += 2; doc.line(20, y, 190, y); y += 7;
+      for (const r of ustvaZeilen(erg)) {
+        doc.text(r.kz, 20, y);
+        doc.text(r.position, 34, y);
+        doc.text(r.betrag, 190, y, { align: 'right' });
+        y += 7;
+      }
+      y += 1; doc.line(20, y, 190, y); y += 9;
+      doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+      doc.text(erg.zahllast >= 0 ? 'USt-Zahllast ans Finanzamt' : 'Erstattung vom Finanzamt', 20, y);
+      doc.text(euroText(Math.abs(erg.zahllast)), 190, y, { align: 'right' });
+      doc.save(`UStVA_${von}_${bis}.pdf`);
+    } catch {
+      setFehler('PDF konnte nicht erstellt werden.');
+    } finally { setBusy(null); }
+  }
+
   function monatSetzen(offset: number) { setVon(monatsStart(offset)); const d = new Date(); d.setMonth(d.getMonth() + offset + 1); d.setDate(0); setBis(d.toISOString().slice(0, 10)); }
 
   return (
@@ -143,8 +186,10 @@ export default function ElsterSeite() {
             </tbody>
           </table>
           <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button style={{ ...styles.primaer, opacity: 0.55, cursor: 'not-allowed' }} disabled title="Wird gerade finalisiert">📤 An ELSTER übermitteln <span style={styles.betaMini}>in Aufbau</span></button>
-            <span style={{ color: C.textDim, fontSize: 12.5 }}>Bis dahin: Werte oben in ELSTER-Online eintragen.</span>
+            <button style={{ ...styles.primaer, opacity: busy === 'pdf' ? 0.6 : 1 }} disabled={busy === 'pdf'} onClick={exportPdf}>{busy === 'pdf' ? 'Erstellt …' : '⬇ Als PDF'}</button>
+            <button style={styles.ghost} onClick={exportCsv}>⬇ Als CSV</button>
+            <button style={{ ...styles.ghost, opacity: 0.55, cursor: 'not-allowed' }} disabled title="Wird gerade finalisiert">📤 An ELSTER übermitteln <span style={styles.betaMini}>in Aufbau</span></button>
+            <span style={{ color: C.textDim, fontSize: 12.5 }}>PDF/CSV zum fehlerfreien Abtippen in ELSTER-Online.</span>
           </div>
           <p style={styles.disclaimer}>Automatische Zusammenstellung nach Zufluss (§ 11 EStG — nur bezahlte Rechnungen). Steuersätze je Rechnung anhand des ausgewiesenen USt-Betrags erkannt. Vorbereitung/Überblick — die verbindliche Voranmeldung erstellt bzw. prüft dein Steuerberater.</p>
         </div>
