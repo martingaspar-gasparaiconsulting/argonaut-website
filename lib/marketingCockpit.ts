@@ -107,3 +107,53 @@ export function fasseCockpit(roh: CockpitRoh) {
 }
 
 export type CockpitDaten = ReturnType<typeof fasseCockpit>;
+
+// ============================================================================
+// COCKPIT-TIEFE (Marketing-Tiefe · Abschnitt 14) — 8-Wochen-Verlauf je Kanal.
+// Reine, node-testbare Aggregation: zaehlt Ereignisse (created_at) je Woche in
+// einem gleitenden Fenster. Muster wie leadsProWoche im Analytics-Board, aber
+// generisch (eine created_at-Liste rein -> Sparkline-Daten raus). Die Route
+// liest die created_at-Spalten defensiv separat, damit fehlende Spalten NUR die
+// Sparkline nullen und nie die bestehenden Kennzahlen brechen.
+// ============================================================================
+
+function zeitMsCockpit(v: unknown): number {
+  const t = new Date(String(v ?? '')).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+export type CockpitVerlaufPunkt = { label: string; anzahl: number; istAktuell: boolean };
+export type CockpitVerlauf = {
+  punkte: CockpitVerlaufPunkt[];
+  summe: number;
+  letzte: number;
+  trendProzent: number | null; // null = neu (Vorwoche 0, aber diese Woche >0)
+};
+
+/**
+ * Ereignisse je Woche ueber ein gleitendes Fenster (Standard 8 Wochen), aeltestes
+ * zuerst. `created` = Liste von created_at-Werten (beliebige Datums-Strings/Zahlen).
+ * `jetztIso` wird uebergeben (node-testbar, kein Date.now()).
+ */
+export function wochenReihe(created: unknown[], jetztIso: string, wochen = 8): CockpitVerlauf {
+  const TAG = 86_400_000;
+  const woche = 7 * TAG;
+  const jetzt = zeitMsCockpit(jetztIso);
+  const n = Math.max(1, Math.min(26, Math.floor(wochen)));
+  const zeiten = (created || []).map(zeitMsCockpit).filter((t) => t > 0);
+
+  const punkte: CockpitVerlaufPunkt[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const ende = jetzt - i * woche;
+    const start = ende - woche;
+    const anzahl = jetzt > 0 ? zeiten.filter((t) => t > start && t <= ende).length : 0;
+    const d = new Date(start + TAG);
+    const label = `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`;
+    punkte.push({ label, anzahl, istAktuell: i === 0 });
+  }
+  const summe = punkte.reduce((s, p) => s + p.anzahl, 0);
+  const letzte = punkte.length ? punkte[punkte.length - 1].anzahl : 0;
+  const vor = punkte.length > 1 ? punkte[punkte.length - 2].anzahl : 0;
+  const trendProzent = vor > 0 ? Math.round(((letzte - vor) / vor) * 100) : (letzte > 0 ? null : 0);
+  return { punkte, summe, letzte, trendProzent };
+}

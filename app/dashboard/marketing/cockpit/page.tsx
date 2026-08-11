@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { formatEuro, formatZahl, roasAmpel } from '@/lib/adsAnalytics';
-import type { CockpitDaten } from '@/lib/marketingCockpit';
+import type { CockpitDaten, CockpitVerlauf } from '@/lib/marketingCockpit';
 
 // ============================================================
 // ARGONAUT OS · MARKETING · Kanalübergreifendes Cockpit
-// Newsletter, Social, WhatsApp, Ads und Leads auf einen Blick.
+// Newsletter, Social, WhatsApp, Ads und Leads auf einen Blick —
+// jetzt mit 8-Wochen-Verlauf (Sparkline + Trend) je Kanal.
 // ============================================================
 
 const C = {
@@ -14,6 +15,8 @@ const C = {
   green: '#4CAF7D', danger: '#E06666', warn: '#E0A24C', textDim: '#8FA3BE',
 };
 const AMPEL: Record<string, string> = { gut: C.green, mittel: C.warn, schwach: C.danger, neutral: C.textDim };
+
+type Verlaufe = Record<string, CockpitVerlauf>;
 
 function Zahl({ wert, label, farbe }: { wert: string | number; label: string; farbe: string }) {
   return (
@@ -24,7 +27,41 @@ function Zahl({ wert, label, farbe }: { wert: string | number; label: string; fa
   );
 }
 
-function Kanal({ icon, titel, href, farbe, children }: { icon: string; titel: string; href: string; farbe: string; children: React.ReactNode }) {
+/** Mini-Liniendiagramm (SVG) aus den Wochen-Werten. Alles 0 -> flache Linie. */
+function Sparkline({ verlauf, farbe }: { verlauf: CockpitVerlauf; farbe: string }) {
+  const w = 150, h = 34, pad = 3;
+  const werte = verlauf.punkte.map((p) => p.anzahl);
+  const max = Math.max(1, ...werte);
+  const n = werte.length;
+  const dx = n > 1 ? (w - pad * 2) / (n - 1) : 0;
+  const punkte = werte.map((v, i) => {
+    const x = pad + i * dx;
+    const y = h - pad - (v / max) * (h - pad * 2);
+    return `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`;
+  });
+  const linie = punkte.join(' ');
+  const flaeche = `${pad},${h - pad} ${linie} ${pad + (n - 1) * dx},${h - pad}`;
+  const letzter = punkte[punkte.length - 1]?.split(',') ?? null;
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', maxWidth: '100%' }}>
+      <polygon points={flaeche} fill={farbe} opacity={0.12} />
+      <polyline points={linie} fill="none" stroke={farbe} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      {letzter && <circle cx={letzter[0]} cy={letzter[1]} r={3} fill={farbe} />}
+    </svg>
+  );
+}
+
+/** Trend-Pfeil: ▲ grün / ▼ rot / • neu-oder-flach. */
+function Trend({ verlauf }: { verlauf: CockpitVerlauf }) {
+  const t = verlauf.trendProzent;
+  if (t === null) return <span style={{ color: C.cyan, fontSize: 'clamp(12px, 1.05vw, 16px)', fontFamily: 'DM Sans, sans-serif' }}>• neu</span>;
+  if (t > 0) return <span style={{ color: C.green, fontSize: 'clamp(12px, 1.05vw, 16px)', fontFamily: 'DM Sans, sans-serif', fontWeight: 700 }}>▲ +{t}%</span>;
+  if (t < 0) return <span style={{ color: C.danger, fontSize: 'clamp(12px, 1.05vw, 16px)', fontFamily: 'DM Sans, sans-serif', fontWeight: 700 }}>▼ {t}%</span>;
+  return <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.05vw, 16px)', fontFamily: 'DM Sans, sans-serif' }}>– stabil</span>;
+}
+
+function Kanal({ icon, titel, href, farbe, verlauf, children }: { icon: string; titel: string; href: string; farbe: string; verlauf?: CockpitVerlauf; children: React.ReactNode }) {
   return (
     <div style={{ background: C.navy2, borderRadius: 14, padding: '20px 22px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
@@ -32,12 +69,22 @@ function Kanal({ icon, titel, href, farbe, children }: { icon: string; titel: st
         <a href={href} style={{ fontFamily: 'DM Sans, sans-serif', color: farbe, border: `1px solid ${farbe}`, borderRadius: 8, padding: '5px 12px', fontSize: 'clamp(12px, 1.05vw, 16px)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Öffnen ›</a>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 14 }}>{children}</div>
+      {verlauf && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, marginTop: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(11px, 0.95vw, 15px)' }}>Verlauf · 8 Wochen ({formatZahl(verlauf.summe)})</span>
+            <Trend verlauf={verlauf} />
+          </div>
+          <Sparkline verlauf={verlauf} farbe={farbe} />
+        </div>
+      )}
     </div>
   );
 }
 
 export default function MarketingCockpit() {
   const [d, setD] = useState<CockpitDaten | null>(null);
+  const [v, setV] = useState<Verlaufe | null>(null);
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -47,7 +94,7 @@ export default function MarketingCockpit() {
         const res = await fetch('/api/marketing/cockpit');
         const j = await res.json();
         if (!res.ok || !j?.ok) setFehler(j?.error || 'Laden fehlgeschlagen.');
-        else setD(j.daten as CockpitDaten);
+        else { setD(j.daten as CockpitDaten); setV((j.verlauf ?? null) as Verlaufe | null); }
       } catch { setFehler('Verbindung fehlgeschlagen.'); }
       finally { setLoading(false); }
     })();
@@ -63,7 +110,7 @@ export default function MarketingCockpit() {
               🛰️ Marketing-Cockpit
             </h1>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0' }}>
-              Alle Marketing-Kanäle auf einen Blick — Newsletter, Social, WhatsApp, Ads und Leads.
+              Alle Marketing-Kanäle auf einen Blick — mit 8-Wochen-Verlauf je Kanal.
             </p>
           </div>
           <a href="/dashboard/marketing" style={{ background: 'transparent', color: C.textDim, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans, sans-serif', fontWeight: 700, textDecoration: 'none' }}>‹ Zurück zum Marketing</a>
@@ -93,32 +140,32 @@ export default function MarketingCockpit() {
 
             {/* Kanäle */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-              <Kanal icon="✉️" titel="Newsletter" href="/dashboard/marketing/newsletter" farbe={C.cyan}>
+              <Kanal icon="✉️" titel="Newsletter" href="/dashboard/marketing/newsletter" farbe={C.cyan} verlauf={v?.newsletter}>
                 <Zahl wert={formatZahl(d.newsletter.abonnenten)} label="Abonnenten" farbe={C.cyan} />
                 <Zahl wert={formatZahl(d.newsletter.kampagnen)} label="Versände" farbe="#fff" />
                 <Zahl wert={formatZahl(d.newsletter.mails_gesendet)} label="Mails gesendet" farbe="#fff" />
               </Kanal>
 
-              <Kanal icon="📣" titel="Social" href="/dashboard/marketing/social" farbe={C.green}>
+              <Kanal icon="📣" titel="Social" href="/dashboard/marketing/social" farbe={C.green} verlauf={v?.social}>
                 <Zahl wert={formatZahl(d.social.beitraege)} label="Beiträge" farbe={C.green} />
                 <Zahl wert={formatZahl(d.social.geplant)} label="Geplant" farbe="#fff" />
                 <Zahl wert={formatZahl(d.social.gesendet)} label="Gepostet" farbe="#fff" />
                 <Zahl wert={formatZahl(d.social.kanaele_verbunden)} label="Kanäle verbunden" farbe="#fff" />
               </Kanal>
 
-              <Kanal icon="💬" titel="WhatsApp" href="/dashboard/marketing/whatsapp" farbe={C.green}>
+              <Kanal icon="💬" titel="WhatsApp" href="/dashboard/marketing/whatsapp" farbe={C.green} verlauf={v?.whatsapp}>
                 <Zahl wert={formatZahl(d.whatsapp.kontakte)} label="Empfänger" farbe={C.green} />
                 <Zahl wert={formatZahl(d.whatsapp.gesendet)} label="Nachrichten gesendet" farbe="#fff" />
               </Kanal>
 
-              <Kanal icon="📢" titel="Ads" href="/dashboard/marketing/ads" farbe={C.gold}>
+              <Kanal icon="📢" titel="Ads" href="/dashboard/marketing/ads" farbe={C.gold} verlauf={v?.ads}>
                 <Zahl wert={formatZahl(d.ads.kampagnen)} label="Kampagnen" farbe={C.gold} />
                 <Zahl wert={formatZahl(d.ads.aktiv)} label="Aktiv" farbe="#fff" />
                 <Zahl wert={formatEuro(d.ads.ausgaben)} label="Ausgaben" farbe="#fff" />
                 <Zahl wert={d.ads.roas != null ? `${d.ads.roas.toLocaleString('de-DE')}×` : '—'} label="ROAS" farbe={AMPEL[roasAmpel(d.ads.roas)]} />
               </Kanal>
 
-              <Kanal icon="🧲" titel="Leads" href="/dashboard/marketing" farbe={C.warn}>
+              <Kanal icon="🧲" titel="Leads" href="/dashboard/marketing" farbe={C.warn} verlauf={v?.leads}>
                 <Zahl wert={formatZahl(d.leads.gesamt)} label="Leads gesamt" farbe={C.warn} />
                 <Zahl wert={formatZahl(d.leads.neu)} label="Neu" farbe="#fff" />
                 <Zahl wert={formatZahl(d.leads.ausKampagne)} label="Aus Kampagne" farbe="#fff" />
@@ -126,7 +173,7 @@ export default function MarketingCockpit() {
             </div>
 
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '20px 0 0', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
-              Die Zahlen aktualisieren sich live aus Ihren Kanälen. Ads-Ausgaben/Umsatz stammen aus der Ads-Auswertung — sobald die Werbekonten Insights liefern, fließen sie automatisch ein.
+              Die Zahlen und der Verlauf aktualisieren sich live aus Ihren Kanälen. Der Verlauf zählt Aktivität je Woche (neue Leads, Posts, Nachrichten, Versände, Ads-Ergebnisse) über die letzten 8 Wochen; der Pfeil vergleicht die aktuelle mit der Vorwoche.
             </p>
           </>
         ) : null}
