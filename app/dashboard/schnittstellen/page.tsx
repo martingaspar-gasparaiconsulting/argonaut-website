@@ -4,33 +4,28 @@
 // ARGONAUT OS · Schnittstellen-Zentrale (Dashboard)
 // EINE Übersicht für ALLE externen Anbindungen — nach Kategorie gruppiert,
 // „X von Y aktiv"-Überblick, pro Anbieter eine ①②③-Anleitung.
+// Speicherung jetzt über /api/schnittstellen: Geheimnisse werden serverseitig
+// verschlüsselt (AES-256-GCM) und NIE an den Client zurückgegeben.
 //   · inline  → Anbieter wählen, Zugangsdaten eintragen, aktiv schalten
-//   · verweis → Anleitung + „→ hier einrichten"-Sprung (wird später hereingezogen)
+//   · verweis → Anleitung + „→ hier einrichten"-Sprung
 //   · geplant → Anbindung vorgesehen, Feld folgt
-// Nur für den Chef sichtbar (enthält Geheimnisse).
+// Nur für den Chef sichtbar.
 // ============================================================
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import {
   KONNEKTOR_KATALOG, KATEGORIEN, bereicheNachKategorie, anbieterVon, istInline,
   type IntegrationTyp, type KonnektorBereich,
 } from '@/lib/konnektoren';
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type Intg = { typ: string; anbieter: string; config: Record<string, string>; aktiv: boolean };
+type Intg = { typ: string; anbieter: string; config: Record<string, string>; aktiv: boolean; gesetzt: string[] };
 
 export default function SchnittstellenPage() {
-  const [uid, setUid] = useState<string | null>(null);
   const [intg, setIntg] = useState<Record<string, Intg>>({});
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -38,26 +33,21 @@ export default function SchnittstellenPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const laden_ = useCallback(async () => {
-    const { data } = await supabase.from('betrieb_integrationen').select('typ, anbieter, config, aktiv');
-    const map: Record<string, Intg> = {};
-    ((data as Intg[]) ?? []).forEach((r) => { map[r.typ] = { ...r, config: (r.config || {}) as Record<string, string> }; });
-    setIntg(map);
+    try {
+      const res = await fetch('/api/schnittstellen');
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setFehler(j?.error || 'Laden fehlgeschlagen.'); return; }
+      const map: Record<string, Intg> = {};
+      (j.integrationen as Intg[]).forEach((r) => { map[r.typ] = { ...r, config: r.config || {}, gesetzt: r.gesetzt || [] }; });
+      setIntg(map);
+    } catch { setFehler('Verbindung fehlgeschlagen.'); }
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      const id = data?.user?.id ?? null;
-      if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id);
-      await laden_();
-      setLaden(false);
-    })();
-  }, [laden_]);
+  useEffect(() => { (async () => { await laden_(); setLaden(false); })(); }, [laden_]);
 
   function aktuell(typ: string): Intg {
     const b = KONNEKTOR_KATALOG.find((x) => x.typ === typ);
-    return intg[typ] || { typ, anbieter: b?.anbieter[0]?.key || 'demo', config: {}, aktiv: false };
+    return intg[typ] || { typ, anbieter: b?.anbieter[0]?.key || 'demo', config: {}, aktiv: false, gesetzt: [] };
   }
   function setFeld(typ: string, patch: Partial<Intg>) {
     setIntg((m) => ({ ...m, [typ]: { ...aktuell(typ), ...patch } }));
@@ -68,28 +58,21 @@ export default function SchnittstellenPage() {
   }
 
   async function speichern(typ: IntegrationTyp) {
-    if (!uid) return;
     const a = aktuell(typ);
-    const anb = anbieterVon(typ, a.anbieter);
-    const istDemo = !!anb?.demo;
-    if (a.aktiv && !istDemo) {
-      const fehlt = (anb?.felder || []).filter((f) => !(a.config[f.key] || '').trim());
-      if (fehlt.length) { setFehler(`Bitte alle Felder ausfüllen: ${fehlt.map((f) => f.label).join(', ')}`); return; }
-    }
     setBusy(typ); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('betrieb_integrationen')
-        .upsert({
-          owner_user_id: uid, typ, anbieter: a.anbieter, config: a.config,
-          aktiv: istDemo ? false : a.aktiv, aktualisiert_am: new Date().toISOString(),
-        }, { onConflict: 'owner_user_id,typ' });
-      if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
+      const res = await fetch('/api/schnittstellen', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ typ, anbieter: a.anbieter, config: a.config, aktiv: a.aktiv }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setFehler(j?.error || 'Speichern fehlgeschlagen.'); return; }
       await laden_();
       setOk(`„${KONNEKTOR_KATALOG.find((b) => b.typ === typ)?.name}" gespeichert.`);
-    } finally { setBusy(null); }
+    } catch { setFehler('Verbindung fehlgeschlagen.'); }
+    finally { setBusy(null); }
   }
 
-  // Überblick: wie viele echte Anbieter sind aktiv?
   const inlineBereiche = KONNEKTOR_KATALOG.filter(istInline);
   const aktivAnzahl = inlineBereiche.filter((b) => {
     const a = aktuell(b.typ);
@@ -104,10 +87,9 @@ export default function SchnittstellenPage() {
       <p style={styles.sub}>
         Alle externen Dienste an einem Ort. Solange kein echter Anbieter aktiv ist, läuft jedes Modul im
         <strong> Demo-/Manuell-Modus</strong> — voll nutzbar. Zum Live-Schalten: Anbieter wählen, Zugangsdaten eintragen,
-        aktivieren. <strong>Nur Sie als Inhaber</strong> sehen diese Daten.
+        aktivieren. Geheimnisse werden <strong>verschlüsselt</strong> gespeichert und nie zurück angezeigt.
       </p>
 
-      {/* Überblick */}
       {!laden && (
         <div style={styles.ueberblick}>
           <div style={styles.ueberblickKopf}>
@@ -146,9 +128,9 @@ export default function SchnittstellenPage() {
       )}
 
       <div style={styles.disclaimer}>
-        Sicherheitshinweis: Zugangsdaten werden ausschließlich serverseitig für die jeweilige Schnittstelle verwendet und
-        sind für Mitarbeiter nicht sichtbar. Die verschlüsselte Ablage und das direkte Befüllen der noch als „→ einrichten"
-        verlinkten Dienste werden in den nächsten Schritten in diese Zentrale hereingezogen.
+        Sicherheitshinweis: Geheime Zugangsdaten werden mit AES-256-GCM verschlüsselt gespeichert, nur serverseitig
+        entschlüsselt und für Mitarbeiter nie sichtbar. Die als „→ einrichten" verlinkten Dienste werden in den
+        nächsten Schritten direkt in diese Zentrale hereingezogen.
       </div>
     </div>
   );
@@ -187,14 +169,17 @@ function BereichKarte({
             </select>
           </label>
           {anb?.hinweis && <div style={styles.hinweis}>{anb.hinweis}</div>}
-          {(anb?.felder || []).map((f) => (
-            <label key={f.key} style={styles.lab}>{f.label}
-              <input style={styles.inp} type={f.typ === 'password' ? 'password' : 'text'}
-                value={a.config[f.key] || ''} onChange={(e) => onConfig(f.key, e.target.value)}
-                placeholder={f.hinweis || ''} autoComplete="off" />
-              {f.hinweis && <span style={styles.feldHinweis}>{f.hinweis}</span>}
-            </label>
-          ))}
+          {(anb?.felder || []).map((f) => {
+            const geheimGesetzt = f.typ === 'password' && a.gesetzt.includes(f.key);
+            return (
+              <label key={f.key} style={styles.lab}>{f.label}
+                <input style={styles.inp} type={f.typ === 'password' ? 'password' : 'text'}
+                  value={a.config[f.key] || ''} onChange={(e) => onConfig(f.key, e.target.value)}
+                  placeholder={geheimGesetzt ? '✓ gespeichert – zum Ändern neu eingeben' : (f.hinweis || '')} autoComplete="off" />
+                {f.hinweis && <span style={styles.feldHinweis}>{f.hinweis}</span>}
+              </label>
+            );
+          })}
           {!istDemo && (
             <label style={styles.check}>
               <input type="checkbox" checked={a.aktiv} onChange={(e) => onAktiv(e.target.checked)} />
