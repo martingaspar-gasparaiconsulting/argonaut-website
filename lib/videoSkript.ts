@@ -2,17 +2,19 @@
 // ARGONAUT OS · lib/videoSkript.ts — reine Logik fuers Video-Skript-Studio
 // (Marketing-Tiefe · Abschnitt 14 — "Kanaele + Video")
 //
-// Ziel: EIN Thema/Anlass -> fertige, drehreife KURZVIDEO-Skripte je Kanal
-// (Instagram Reel, TikTok, YouTube Shorts, Facebook Reel, LinkedIn Video):
-// Hook, Szenen/Shotlist (Zeit · Bild/Einstellung · Text), On-Screen-Text,
-// Untertitel-Block, Call-to-Action und Hashtags — passend zu Format & Dauer.
+// Ziel: EIN Thema/Anlass -> fertige, drehreife KURZVIDEO-Skripte je Kanal.
+// Zwei Modi:
+//   · "detail"    — 1 ausfuehrliches Skript je Kanal mit Shotlist (14.1).
+//   · "varianten" — je Kanal N eigenstaendige Kurz-Skript-Varianten (Fliessband:
+//                   "gib mir 30 Wege, X zu erklaeren"). Deckel 30 je Kanal.
+//
+// Dauer-Steuerung ueber Woerter: aus der Ziel-Sekundenzahl wird ein Wort-Budget
+// berechnet (deutsche Vorlese-Geschwindigkeit), damit ein Skript beim Vorlesen
+// die Ziel-Laenge trifft. Jede Variante zeigt ihre geschaetzte Vorlese-Zeit.
 //
 // KEINE Netzwerk-/Supabase-Aufrufe, KEINE React-Hooks, KEINE Imports — nur
 // pure, node-testbare Funktionen. Der KI-Aufruf (kiFetch/haiku) passiert in der
-// Route, die Oberflaeche auf der Seite. Hier liegen nur:
-//   · der Video-Kanal-Katalog (Format, Dauer, Ton je Kanal),
-//   · die Prompt-Bausteine (System + Nutzer),
-//   · das robuste Parsen der KI-Antwort in saubere Skripte.
+// Route, die Oberflaeche auf der Seite.
 //
 // Bewusst OHNE Video-Erzeugung/Avatar/Stimme — das ist Abschnitt 7. Hier
 // entsteht nur der drehreife TEXT: null neue Abhaengigkeiten, ~0 Kosten (Haiku).
@@ -36,8 +38,6 @@ export type VideoKanal = {
 
 /**
  * Video-Kanal-Katalog (Stand 08/2026). Reihenfolge = Anzeige-Reihenfolge.
- * Dauer-Limits konservativ: Reels/Shorts sind kurz-optimiert, TikTok/LinkedIn
- * lassen mehr Laenge zu. Alle Hochformat 9:16 ausser LinkedIn (quadratisch).
  */
 export const VIDEO_KANAELE: VideoKanal[] = [
   {
@@ -87,9 +87,45 @@ export function bereinigeVideoKanaele(roh: unknown): string[] {
   return VIDEO_KANAELE.filter((k) => set.has(k.id)).map((k) => k.id);
 }
 
+// --- Dauer / Woerter --------------------------------------------------------
+
+/** Deutsche Vorlese-Geschwindigkeit (Woerter je Sekunde, ~138 WpM). */
+export const WORTE_PRO_SEKUNDE = 2.3;
+
+/** Hoechstzahl Varianten je Kanal (Martin-Deckel = ein Monat taeglich). */
+export const MAX_VARIANTEN = 30;
+
+/** Waehlbare Varianten-Stufen (Oberflaeche). */
+export const VARIANTEN_STUFEN = [1, 2, 3, 5, 10, 20, 30];
+
 /** Zeichen zaehlen — emoji-/umlaut-sicher (Unicode-Zeichen, nicht Bytes). */
 export function zaehleZeichen(text: string | null | undefined): number {
   return Array.from(text || '').length;
+}
+
+/** Woerter zaehlen (durch Leerraum getrennt, leere weg). */
+export function zaehleWoerter(text: string | null | undefined): number {
+  const t = (text || '').trim();
+  if (!t) return 0;
+  return t.split(/\s+/).filter(Boolean).length;
+}
+
+/** Wort-Budget fuer eine Ziel-Dauer (gerundet, mind. 1). */
+export function wortBudget(sekunden: number): number {
+  const s = Number.isFinite(sekunden) ? sekunden : 0;
+  return Math.max(1, Math.round(s * WORTE_PRO_SEKUNDE));
+}
+
+/** Geschaetzte Vorlese-Dauer eines Textes in Sekunden (gerundet). */
+export function vorleseSekunden(text: string | null | undefined): number {
+  return Math.round(zaehleWoerter(text) / WORTE_PRO_SEKUNDE);
+}
+
+/** Liegt die geschaetzte Dauer im Zielfenster (±25 %)? */
+export function imZielfenster(istSekunden: number, zielSekunden: number): boolean {
+  if (!zielSekunden) return false;
+  const abw = Math.abs(istSekunden - zielSekunden) / zielSekunden;
+  return abw <= 0.25;
 }
 
 /** Thema saeubern + auf sinnvolle Laenge begrenzen. */
@@ -100,7 +136,6 @@ export function saeubereThema(roh: unknown): string {
 /**
  * Gewuenschte Video-Dauer auf einen sinnvollen Wert begrenzen.
  * Untergrenze 10 s, Obergrenze das Kanal-Maximum (oder 180 s ohne Kanal).
- * Ungueltige Eingabe -> Fallback (Kanal-Standard oder 30 s).
  */
 export function saeubereDauer(roh: unknown, kanal?: VideoKanal | null): number {
   const max = kanal ? kanal.maxSekunden : 180;
@@ -110,6 +145,18 @@ export function saeubereDauer(roh: unknown, kanal?: VideoKanal | null): number {
   return Math.max(10, Math.min(Math.round(n), max));
 }
 
+/** Anzahl Varianten auf 1..MAX_VARIANTEN begrenzen (Fallback 1). */
+export function saeubereAnzahl(roh: unknown): number {
+  const n = typeof roh === 'number' ? roh : Number(roh);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(Math.round(n), MAX_VARIANTEN);
+}
+
+/** Modus normalisieren. */
+export function saeubereModus(roh: unknown): 'detail' | 'varianten' {
+  return roh === 'varianten' ? 'varianten' : 'detail';
+}
+
 /** Optionale Firmen-/CI-Angaben, die die KI beim Texten beruecksichtigt. */
 export type CIAngaben = {
   firma?: string | null;
@@ -117,9 +164,24 @@ export type CIAngaben = {
   ton?: string | null;
 };
 
+function ciZeilen(ci?: CIAngaben): string[] {
+  const zeilen: string[] = [];
+  const firma = (ci?.firma || '').trim();
+  const branche = (ci?.branche || '').trim();
+  const ton = (ci?.ton || '').trim();
+  if (firma) zeilen.push(`Betrieb/Firma: ${firma}`);
+  if (branche) zeilen.push(`Branche: ${branche}`);
+  if (ton) zeilen.push(`Gewünschter Grundton: ${ton}`);
+  return zeilen;
+}
+
+// ============================================================================
+// MODUS "DETAIL" — 1 ausfuehrliches Skript je Kanal (mit Shotlist)
+// ============================================================================
+
 /**
- * System-Prompt: erfahrener Kurzvideo-/Reel-Autor. Reines JSON, kein Markdown,
- * keine erfundenen Fakten. Wirkt fuer Kunde UND Betreiber gleich.
+ * System-Prompt (Detail): erfahrener Kurzvideo-Autor. Reines JSON, kein
+ * Markdown, keine erfundenen Fakten. Wirkt fuer Kunde UND Betreiber gleich.
  */
 export function baueVideoSystemPrompt(): string {
   return [
@@ -135,8 +197,8 @@ export function baueVideoSystemPrompt(): string {
 }
 
 /**
- * Nutzer-Prompt: Thema + CI + Zieldauer + die exakt angeforderten Kanaele mit
- * Format/Dauer-Regeln und den geforderten JSON-Feldern.
+ * Nutzer-Prompt (Detail): Thema + CI + Zieldauer + die exakt angeforderten
+ * Kanaele mit Format/Dauer-Regeln und den geforderten JSON-Feldern.
  */
 export function baueVideoNutzerPrompt(
   thema: string,
@@ -145,24 +207,18 @@ export function baueVideoNutzerPrompt(
   ci?: CIAngaben,
 ): string {
   const ids = bereinigeVideoKanaele(kanaele);
-  const ciZeilen: string[] = [];
-  const firma = (ci?.firma || '').trim();
-  const branche = (ci?.branche || '').trim();
-  const ton = (ci?.ton || '').trim();
-  if (firma) ciZeilen.push(`Betrieb/Firma: ${firma}`);
-  if (branche) ciZeilen.push(`Branche: ${branche}`);
-  if (ton) ciZeilen.push(`Gewünschter Grundton: ${ton}`);
+  const cz = ciZeilen(ci);
 
   const kanalZeilen = ids.map((id) => {
     const k = videoKanalFuer(id)!;
     const sek = saeubereDauer(dauer, k);
-    return `- Schlüssel "${k.id}" (${k.name}, ${k.plattform}, Format ${k.format}, Dauer ~${sek} Sekunden): ${k.tonHinweis}.`;
+    return `- Schlüssel "${k.id}" (${k.name}, ${k.plattform}, Format ${k.format}, Dauer ~${sek} Sekunden ≈ ${wortBudget(sek)} gesprochene Wörter): ${k.tonHinweis}.`;
   }).join('\n');
 
   return [
     `THEMA/ANLASS:\n${(thema || '').trim()}`,
-    ciZeilen.length ? `\nCORPORATE IDENTITY:\n${ciZeilen.join('\n')}` : '',
-    `\nGEWÜNSCHTE VIDEO-DAUER (Richtwert): ~${saeubereDauer(dauer)} Sekunden. Je Kanal gilt zusätzlich das oben genannte Kanal-Limit.`,
+    cz.length ? `\nCORPORATE IDENTITY:\n${cz.join('\n')}` : '',
+    `\nGEWÜNSCHTE VIDEO-DAUER (Richtwert): ~${saeubereDauer(dauer)} Sekunden. Je Kanal gilt zusätzlich das oben genannte Kanal-Limit und Wort-Budget.`,
     `\nERZEUGE JE KANAL EIN KURZVIDEO-SKRIPT:\n${kanalZeilen}`,
     [
       '\nGib genau ein JSON-Objekt zurück, dessen Schlüssel exakt diese Kanal-Schlüssel sind: ' + ids.map((i) => `"${i}"`).join(', ') + '.',
@@ -185,7 +241,7 @@ export type VideoSzene = {
   text: string;
 };
 
-/** Ein fertiges, geprueftes Video-Skript fuer die Oberflaeche. */
+/** Ein fertiges, geprueftes Video-Skript (Detail-Modus). */
 export type VideoSkript = {
   kanal: string;
   name: string;
@@ -199,11 +255,16 @@ export type VideoSkript = {
   untertitel: string;
   cta: string;
   hashtags: string[];
+  /** Geschaetzte Vorlese-Dauer des Untertitels in Sekunden. */
+  vorleseSekunden: number;
+  /** Liegt die Vorlese-Dauer im Zielfenster? */
+  imZiel: boolean;
 };
 
+// --- gemeinsame JSON-Helfer -------------------------------------------------
+
 /**
- * Holt das JSON-Objekt aus der KI-Rohantwort — auch wenn Code-Zaeune oder ein
- * Vor-/Nachsatz drumherum stehen. Gibt null zurueck, wenn nichts Brauchbares da.
+ * Holt das JSON-OBJEKT aus der KI-Rohantwort — auch mit Code-Zaeunen/Prosa.
  */
 export function extrahiereJson(roh: string | null | undefined): Record<string, unknown> | null {
   if (!roh) return null;
@@ -215,6 +276,22 @@ export function extrahiereJson(roh: string | null | undefined): Record<string, u
   try {
     const obj = JSON.parse(s.slice(a, b + 1));
     return obj && typeof obj === 'object' && !Array.isArray(obj) ? (obj as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Holt ein JSON-ARRAY aus der KI-Rohantwort (fuer bare Varianten-Listen). */
+export function extrahiereArray(roh: string | null | undefined): unknown[] | null {
+  if (!roh) return null;
+  let s = String(roh).trim();
+  s = s.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const a = s.indexOf('[');
+  const b = s.lastIndexOf(']');
+  if (a < 0 || b < 0 || b <= a) return null;
+  try {
+    const arr = JSON.parse(s.slice(a, b + 1));
+    return Array.isArray(arr) ? arr : null;
   } catch {
     return null;
   }
@@ -261,9 +338,8 @@ function parseSzene(roh: unknown): VideoSzene | null {
 }
 
 /**
- * Baut aus der KI-Rohantwort saubere Skripte — nur fuer die angeforderten
- * Kanaele, in Katalog-Reihenfolge. Ein Skript wird ausgelassen, wenn weder Hook
- * noch Untertitel noch Szenen brauchbaren Inhalt haben (kein leeres Skript).
+ * Baut aus der KI-Rohantwort saubere Detail-Skripte — nur fuer die
+ * angeforderten Kanaele, in Katalog-Reihenfolge.
  */
 export function parseVideoSkripte(
   rohText: string | null | undefined,
@@ -292,19 +368,141 @@ export function parseVideoSkripte(
 
     if (!hook && !untertitel && szenen.length === 0) continue;
 
+    const zielSek = saeubereDauer(dauer, k);
+    const vs = vorleseSekunden(untertitel);
     out.push({
-      kanal: k.id,
-      name: k.name,
-      icon: k.icon,
-      plattform: k.plattform,
-      format: k.format,
-      dauerSekunden: saeubereDauer(dauer, k),
-      hook,
-      szenen,
-      onScreenText,
-      untertitel,
-      cta,
-      hashtags,
+      kanal: k.id, name: k.name, icon: k.icon, plattform: k.plattform, format: k.format,
+      dauerSekunden: zielSek,
+      hook, szenen, onScreenText, untertitel, cta, hashtags,
+      vorleseSekunden: vs,
+      imZiel: imZielfenster(vs, zielSek),
+    });
+  }
+  return out;
+}
+
+// ============================================================================
+// MODUS "VARIANTEN" — je Kanal N eigenstaendige Kurz-Skripte (Fliessband)
+// ============================================================================
+
+/**
+ * System-Prompt (Varianten): viele UNTERSCHIEDLICHE Kurz-Skripte desselben
+ * Konzepts, jede ein anderer Aufhaenger/Blickwinkel, auf Dauer getrimmt.
+ */
+export function baueVariantenSystemPrompt(): string {
+  return [
+    'Du bist ein erfahrener Kurzvideo-Autor (Reels, TikTok, Shorts) für einen deutschen Mittelstandsbetrieb.',
+    'Du lieferst zu EINEM Thema VIELE eigenständige Varianten desselben Kurzvideos für EINEN Kanal — jede mit einem anderen Aufhänger/Blickwinkel/Einstieg. KEINE Wiederholungen, keine bloßen Umformulierungen.',
+    'Jede Variante ist drehreif und besteht aus: einem starken Hook (erste ~3 Sekunden), einem zusammenhängenden Sprecher-/Untertitel-Skript, einem klaren Call-to-Action und passenden Hashtags.',
+    'WICHTIG: Das Skript jeder Variante muss beim Vorlesen die geforderte Dauer treffen — halte dich eng an das vorgegebene Wort-Budget.',
+    'ERFINDE KEINE Fakten: keine Preise, Rabatte, Zahlen, Termine, Öffnungszeiten, Auszeichnungen oder Zitate, die nicht im Thema stehen. Bleib beim Thema, konkret und glaubwürdig. Schreibe fehlerfreies Deutsch.',
+    'Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt der Form {"varianten":[ … ]} — ohne Einleitung, ohne Erklärung, ohne Markdown, ohne Code-Zäune.',
+  ].join(' ');
+}
+
+/**
+ * Nutzer-Prompt (Varianten): EIN Kanal, Thema + CI + Zieldauer + Anzahl +
+ * Wort-Budget. Fordert exakt `anzahl` Varianten fuer diesen Kanal.
+ */
+export function baueVariantenNutzerPrompt(
+  thema: string,
+  kanalId: string,
+  anzahl: number,
+  dauer: number,
+  ci?: CIAngaben,
+): string {
+  const k = videoKanalFuer(kanalId);
+  const n = saeubereAnzahl(anzahl);
+  const cz = ciZeilen(ci);
+  const sek = saeubereDauer(dauer, k);
+  const budget = wortBudget(sek);
+  const kanalName = k ? `${k.name} (${k.plattform}, Format ${k.format})` : 'Kurzvideo';
+  const ton = k ? k.tonHinweis : 'nahbar, mit starkem Hook';
+
+  return [
+    `THEMA/ANLASS:\n${(thema || '').trim()}`,
+    cz.length ? `\nCORPORATE IDENTITY:\n${cz.join('\n')}` : '',
+    `\nKANAL: ${kanalName}. Ton: ${ton}.`,
+    `\nDAUER JE VARIANTE: ~${sek} Sekunden. Das Sprecher-/Untertitel-Skript soll dafür ungefähr ${budget} Wörter haben (±15 %).`,
+    `\nERZEUGE GENAU ${n} UNTERSCHIEDLICHE VARIANTEN. Jede Variante muss einen klar anderen Aufhänger/Blickwinkel haben als die übrigen.`,
+    [
+      '\nGib genau ein JSON-Objekt {"varianten":[ … ]} zurück mit exakt ' + n + ' Einträgen.',
+      'Jeder Eintrag ist ein Objekt mit den Feldern:',
+      '"hook" (String, Aufhänger der ersten ~3 Sekunden),',
+      '"skript" (String, zusammenhängender Sprecher-/Untertitel-Text, ~' + budget + ' Wörter),',
+      '"cta" (String, Handlungsaufforderung am Ende),',
+      '"hashtags" (Array von Hashtags ohne Leerzeichen).',
+      'Beispielform: {"varianten":[{"hook":"…","skript":"…","cta":"…","hashtags":["#…"]}]}.',
+    ].join(' '),
+  ].filter(Boolean).join('\n');
+}
+
+/** Eine fertige, geprueften Kurz-Skript-Variante. */
+export type VideoVariante = {
+  nummer: number;
+  hook: string;
+  skript: string;
+  cta: string;
+  hashtags: string[];
+  woerter: number;
+  vorleseSekunden: number;
+  imZiel: boolean;
+};
+
+/** Alle Varianten eines Kanals fuer die Oberflaeche. */
+export type VariantenGruppe = {
+  kanal: string;
+  name: string;
+  icon: string;
+  plattform: string;
+  format: string;
+  dauerSekunden: number;
+  varianten: VideoVariante[];
+};
+
+/**
+ * Parst die KI-Rohantwort eines Kanals in saubere Varianten. Akzeptiert
+ * {"varianten":[…]} ODER eine bare Array-Antwort. Leere (weder Hook noch
+ * Skript) werden ausgelassen; auf `anzahl` gedeckelt.
+ */
+export function parseVarianten(
+  rohText: string | null | undefined,
+  anzahl: number,
+  zielSekunden: number,
+): VideoVariante[] {
+  const n = saeubereAnzahl(anzahl);
+  let liste: unknown[] | null = null;
+
+  const obj = extrahiereJson(rohText);
+  if (obj && Array.isArray(obj.varianten)) liste = obj.varianten as unknown[];
+  else if (obj && Array.isArray((obj as Record<string, unknown>).items)) liste = (obj as Record<string, unknown>).items as unknown[];
+  if (!liste) liste = extrahiereArray(rohText);
+  if (!liste) return [];
+
+  const out: VideoVariante[] = [];
+  for (const roh of liste) {
+    if (out.length >= n) break;
+    let hook = '';
+    let skript = '';
+    let cta = '';
+    let hashtags: string[] = [];
+    if (typeof roh === 'string') {
+      skript = roh.trim();
+    } else if (roh && typeof roh === 'object') {
+      const r = roh as Record<string, unknown>;
+      hook = alsText(r.hook ?? r.aufhaenger);
+      skript = alsText(r.skript ?? r.script ?? r.untertitel ?? r.text ?? r.inhalt);
+      cta = alsText(r.cta ?? r.handlungsaufforderung ?? r.aufruf);
+      hashtags = alsHashtags(r.hashtags ?? r.tags);
+    }
+    if (!hook && !skript) continue;
+    const vs = vorleseSekunden(skript);
+    out.push({
+      nummer: out.length + 1,
+      hook, skript, cta, hashtags,
+      woerter: zaehleWoerter(skript),
+      vorleseSekunden: vs,
+      imZiel: imZielfenster(vs, zielSekunden),
     });
   }
   return out;

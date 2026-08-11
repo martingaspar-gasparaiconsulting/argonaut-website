@@ -4,28 +4,45 @@ import { kiFetch } from '@/lib/ki';
 import {
   saeubereThema,
   saeubereDauer,
+  saeubereAnzahl,
+  saeubereModus,
   bereinigeVideoKanaele,
+  videoKanalFuer,
   baueVideoSystemPrompt,
   baueVideoNutzerPrompt,
   parseVideoSkripte,
+  baueVariantenSystemPrompt,
+  baueVariantenNutzerPrompt,
+  parseVarianten,
   type CIAngaben,
+  type VariantenGruppe,
 } from '@/lib/videoSkript';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/video-skript/route.ts
 // (Marketing-Tiefe · Abschnitt 14 — "Kanaele + Video")
 //
-// EIN Thema/Anlass + gewaehlte Video-Kanaele + Zieldauer -> die KI (haiku, ueber
-// kiFetch mit Kosten-Protokoll) erzeugt je Kanal ein drehreifes Kurzvideo-Skript
-// (Hook, Shotlist, On-Screen-Text, Untertitel, CTA, Hashtags). Es wird NICHTS
-// gespeichert und NICHTS erfunden — der Kunde kopiert das fertige Skript.
-//   POST { thema, kanaele[], dauer?, firma?, branche?, ton? }
-//        -> { ok, thema, dauer, skripte } | { ok:false, error }
+// EIN Thema/Anlass -> je Kanal Kurzvideo-Skript(e), ueber kiFetch (haiku,
+// Kosten-Protokoll). Zwei Modi:
+//   · "detail"    -> 1 ausfuehrliches Skript je Kanal (EIN KI-Aufruf).
+//   · "varianten" -> je Kanal N Kurz-Skript-Varianten, auf Dauer/Woerter
+//                    getrimmt (EIN KI-Aufruf JE KANAL, parallel; robust bei
+//                    Teil-Ausfall). Deckel 30 je Kanal.
+// Es wird NICHTS gespeichert und NICHTS erfunden — der Kunde kopiert das Skript.
+//   POST { thema, kanaele[], dauer?, modus?, anzahl?, firma?, branche?, ton? }
 // Nur eingeloggt. RLS-neutral (liest keine Kundendaten, erzeugt nur Text).
 // ============================================================================
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** Text-Bloecke aus einer Anthropic-Antwort zusammenfuegen. */
+function textAus(d: unknown): string {
+  const blocks = Array.isArray((d as { content?: unknown }).content)
+    ? ((d as { content: Array<{ type?: string; text?: string }> }).content)
+    : [];
+  return blocks.filter((x) => x.type === 'text').map((x) => x.text || '').join('').trim();
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -41,6 +58,8 @@ export async function POST(req: Request) {
   const thema = saeubereThema(roh.thema);
   const kanaele = bereinigeVideoKanaele(roh.kanaele);
   const dauer = saeubereDauer(roh.dauer);
+  const modus = saeubereModus(roh.modus);
+  const anzahl = saeubereAnzahl(roh.anzahl);
   if (!thema) return NextResponse.json({ ok: false, error: 'Bitte ein Thema oder einen Anlass eingeben.' }, { status: 400 });
   if (kanaele.length === 0) return NextResponse.json({ ok: false, error: 'Bitte mindestens einen Video-Kanal auswählen.' }, { status: 400 });
 
@@ -54,19 +73,55 @@ export async function POST(req: Request) {
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: 'Die KI ist gerade nicht verfügbar. Bitte später erneut versuchen.' }, { status: 503 });
   }
+  const kopf = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
 
+  // -------------------------------------------------------------- VARIANTEN --
+  if (modus === 'varianten' && anzahl >= 2) {
+    // Je Kanal ein eigener, schlanker Aufruf — parallel, robust bei Teil-Ausfall.
+    const sys = baueVariantenSystemPrompt();
+    const maxTok = Math.min(8000, 500 + anzahl * 260);
+
+    const gruppen = await Promise.all(kanaele.map(async (id): Promise<VariantenGruppe | null> => {
+      const k = videoKanalFuer(id)!;
+      const zielSek = saeubereDauer(dauer, k);
+      const nutzer = baueVariantenNutzerPrompt(thema, id, anzahl, dauer, ci);
+      try {
+        const kiRes = await kiFetch('marketing-video-skript-varianten', {
+          method: 'POST', headers: kopf,
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5', max_tokens: maxTok, system: sys,
+            messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
+          }),
+        });
+        if (!kiRes.ok) return null;
+        const varianten = parseVarianten(textAus(await kiRes.json()), anzahl, zielSek);
+        if (varianten.length === 0) return null;
+        return {
+          kanal: k.id, name: k.name, icon: k.icon, plattform: k.plattform, format: k.format,
+          dauerSekunden: zielSek, varianten,
+        };
+      } catch {
+        return null;
+      }
+    }));
+
+    const fertig = gruppen.filter((g): g is VariantenGruppe => g !== null);
+    if (fertig.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Die Varianten konnten gerade nicht erzeugt werden. Bitte das Thema etwas konkreter formulieren oder in einem Moment erneut versuchen.' }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true, modus: 'varianten', thema, dauer, anzahl, gruppen: fertig });
+  }
+
+  // ----------------------------------------------------------------- DETAIL --
   const sys = baueVideoSystemPrompt();
   const nutzer = baueVideoNutzerPrompt(thema, kanaele, dauer, ci);
 
   let rohText = '';
   try {
     const kiRes = await kiFetch('marketing-video-skript', {
-      method: 'POST',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      method: 'POST', headers: kopf,
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2600,
-        system: sys,
+        model: 'claude-haiku-4-5', max_tokens: 2600, system: sys,
         messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
       }),
     });
@@ -75,9 +130,7 @@ export async function POST(req: Request) {
       try { const e = await kiRes.json(); if (e && typeof e.error === 'string') msg = e.error; } catch { /* egal */ }
       return NextResponse.json({ ok: false, error: msg }, { status: 502 });
     }
-    const d = await kiRes.json();
-    const blocks: Array<{ type?: string; text?: string }> = Array.isArray(d.content) ? d.content : [];
-    rohText = blocks.filter((x) => x.type === 'text').map((x) => x.text || '').join('').trim();
+    rohText = textAus(await kiRes.json());
   } catch {
     return NextResponse.json({ ok: false, error: 'Die KI ist gerade nicht erreichbar. Bitte später erneut versuchen.' }, { status: 502 });
   }
@@ -87,5 +140,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Die Skripte konnten nicht verarbeitet werden. Bitte das Thema etwas konkreter formulieren und erneut versuchen.' }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true, thema, dauer, skripte });
+  return NextResponse.json({ ok: true, modus: 'detail', thema, dauer, skripte });
 }
