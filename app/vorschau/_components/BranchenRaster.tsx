@@ -7,7 +7,7 @@
 // Branchenseite). Suchfeld filtert live über alle Branchen. Navy/Gold-Look.
 // ============================================================================
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
 const GOLD = '#c9a84c'
@@ -54,6 +54,14 @@ export default function BranchenRaster({ kategorien, total }: { kategorien: Kat[
   const [offen, setOffen] = useState<string | null>(null)
   const q = norm(query.trim())
 
+  // Beim Aufklappen automatisch zum Branchen-Panel springen (kein Runterscrollen).
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (offen && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [offen])
+
   // Suche: alle passenden Branchen flach (mit Kategorie-Label).
   const treffer = useMemo(() => {
     if (!q) return []
@@ -81,7 +89,7 @@ export default function BranchenRaster({ kategorien, total }: { kategorien: Kat[
         .br-emoji { font-size: 1.7rem; line-height: 1; }
         .br-name { font-family: var(--font-dm-sans), sans-serif; font-weight: 700; font-size: 1.02rem; line-height: 1.25; }
         .br-count { color: ${GOLD}; font-size: .8rem; font-weight: 600; background: rgba(201,168,76,0.12); border-radius: 999px; padding: 3px 11px; align-self: flex-start; }
-        .br-panel { margin-top: 18px; background: rgba(10,22,40,0.7); border: 1px solid rgba(201,168,76,0.34); border-radius: 18px; padding: 22px 24px; }
+        .br-panel { margin-top: 18px; background: rgba(10,22,40,0.7); border: 1px solid rgba(201,168,76,0.34); border-radius: 18px; padding: 22px 24px; scroll-margin-top: 88px; }
         .br-panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
         .br-panel-title { flex: 1; font-family: var(--font-syne), sans-serif; font-weight: 700; font-size: 1.2rem; }
         .br-close { background: none; border: 1px solid rgba(234,241,246,0.22); color: #c4d3db; border-radius: 999px; width: 34px; height: 34px; cursor: pointer; font-size: 1.1rem; }
@@ -121,7 +129,7 @@ export default function BranchenRaster({ kategorien, total }: { kategorien: Kat[
           </div>
 
           {aktiv && (
-            <div className="br-panel">
+            <div className="br-panel" ref={panelRef}>
               <div className="br-panel-head">
                 <span className="br-emoji" aria-hidden="true">{emojiFuer(aktiv.kategorie)}</span>
                 <span className="br-panel-title">{aktiv.kategorie}</span>
