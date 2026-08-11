@@ -63,15 +63,16 @@ export default function DatevPage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>📊 DATEV & E-Rechnung</h1>
       <p style={styles.sub}>
-        Exportieren Sie Ihre Ausgangsrechnungen als DATEV-Buchungsstapel für den Steuerberater und sehen Sie eine
-        Vorschau Ihrer Umsatzsteuer-Zahllast. XRechnung/ZUGFeRD versenden Sie weiterhin direkt aus dem Rechnungsmodul.
+        Exportieren Sie Ausgangsrechnungen (Erlöse) <strong>und</strong> Ihre erfassten Eingangsbelege (Aufwand + Vorsteuer)
+        als echten <strong>DATEV-EXTF-Buchungsstapel</strong> für den Steuerberater und sehen Sie eine Vorschau Ihrer
+        Umsatzsteuer-Zahllast. XRechnung/ZUGFeRD versenden Sie weiterhin direkt aus dem Rechnungsmodul.
       </p>
 
       <div style={styles.card}>
         <div style={styles.row}>
           <label style={styles.lab}>Von<input type="date" style={styles.inp} value={von} onChange={(e) => setVon(e.target.value)} /></label>
           <label style={styles.lab}>Bis<input type="date" style={styles.inp} value={bis} onChange={(e) => setBis(e.target.value)} /></label>
-          <a href={`/api/datev-export?von=${von}&bis=${bis}`} target="_blank" rel="noreferrer" style={styles.exportBtn}>⬇ DATEV-Buchungsstapel (CSV)</a>
+          <a href={`/api/datev-export?von=${von}&bis=${bis}`} target="_blank" rel="noreferrer" style={styles.exportBtn}>⬇ DATEV-EXTF-Buchungsstapel</a>
         </div>
         {!datevKonfig && (
           <div style={styles.hinweis}>
