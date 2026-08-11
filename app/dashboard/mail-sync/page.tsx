@@ -3,7 +3,7 @@
 // ============================================================
 // ARGONAUT OS · Mail-/Kalender-Sync (Punkt 14 · A14)
 // Outlook/Google/IMAP/CalDAV anschlussfertig verbinden (verschlüsselte
-// Zugangsdaten). Der eigentliche Postfach-/Kalender-Abgleich ist „in Aufbau".
+// Zugangsdaten). IMAP zusätzlich mit Server-Host → Posteingang-Abruf möglich.
 // Pfad: app/dashboard/mail-sync/page.tsx
 // ============================================================
 
@@ -22,6 +22,7 @@ const C = {
 };
 
 type Status = Record<string, { verbunden: boolean; konto_id: string }>;
+type Entwurf = { konto_id: string; token: string; extra: Record<string, string> };
 
 export default function MailSyncSeite() {
   const [status, setStatus] = useState<Status>({});
@@ -30,8 +31,10 @@ export default function MailSyncSeite() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [offen, setOffen] = useState<string | null>(null); // welche Karte im Bearbeiten-Modus
-  const [entwurf, setEntwurf] = useState<Record<string, { konto_id: string; token: string }>>({});
+  const [offen, setOffen] = useState<string | null>(null);
+  const [entwurf, setEntwurf] = useState<Record<string, Entwurf>>({});
+
+  const leer = (): Entwurf => ({ konto_id: '', token: '', extra: {} });
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -48,19 +51,28 @@ export default function MailSyncSeite() {
   useEffect(() => { void laden_(); }, [laden_]);
 
   function feld(key: string, f: 'konto_id' | 'token', v: string) {
-    setEntwurf((e) => ({ ...e, [key]: { ...(e[key] ?? { konto_id: '', token: '' }), [f]: v } }));
+    setEntwurf((e) => ({ ...e, [key]: { ...(e[key] ?? leer()), [f]: v } }));
+  }
+  function extraFeld(key: string, fk: string, v: string) {
+    setEntwurf((e) => {
+      const cur = e[key] ?? leer();
+      return { ...e, [key]: { ...cur, extra: { ...cur.extra, [fk]: v } } };
+    });
   }
 
   async function verbinden(key: string) {
-    const e = entwurf[key] ?? { konto_id: '', token: '' };
+    const e = entwurf[key] ?? leer();
     if (!e.konto_id.trim() || !e.token.trim()) { setFehler('Bitte Konto-Kennung und Passwort/Secret eingeben.'); return; }
     setBusy(key); setFehler(null); setOk(null);
     try {
-      const r = await fetch('/api/mail/verbindung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ anbieter: key, konto_id: e.konto_id.trim(), token: e.token.trim() }) });
+      const r = await fetch('/api/mail/verbindung', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anbieter: key, konto_id: e.konto_id.trim(), token: e.token.trim(), extra: e.extra }),
+      });
       const j = await r.json();
       if (!j?.ok) { setFehler(j?.error || 'Verbinden fehlgeschlagen.'); return; }
-      setEntwurf((x) => ({ ...x, [key]: { konto_id: '', token: '' } })); setOffen(null);
-      setOk('Zugang gespeichert. Der Sync wird gerade finalisiert.');
+      setEntwurf((x) => ({ ...x, [key]: leer() })); setOffen(null);
+      setOk('Zugang gespeichert. IMAP-Postfächer erscheinen jetzt im Posteingang.');
       await laden_();
     } finally { setBusy(null); }
   }
@@ -81,9 +93,9 @@ export default function MailSyncSeite() {
       <div style={styles.eyebrow}>ARGONAUT OS · Kommunikation</div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <h1 style={styles.h1}>📬 Mail & Kalender</h1>
-        <span style={styles.beta}>Sync in Aufbau</span>
+        <a href="/dashboard/posteingang" style={styles.posteingangBtn}>→ Posteingang öffnen</a>
       </div>
-      <p style={styles.sub}>Verbinde dein Postfach und deinen Kalender — die Zugänge kannst du schon jetzt sicher hinterlegen. Der automatische Abgleich (E-Mails zum Kontakt, Termine beidseitig synchron) wird gerade finalisiert.</p>
+      <p style={styles.sub}>Verbinde dein Postfach — bei <b style={{ color: C.text }}>IMAP</b> (IONOS, GMX, Strato …) siehst du deine E-Mails direkt im Posteingang. Microsoft 365 & Gmail kannst du sicher hinterlegen; deren Abruf (OAuth) folgt. Zugangsdaten werden verschlüsselt gespeichert, nie im Browser sichtbar.</p>
 
       {!encKeyBereit && <div style={styles.warn}>Hinweis: Der Sicherheits-Schlüssel (APP_ENC_KEY) ist noch nicht gesetzt — das Speichern klappt erst danach.</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -93,7 +105,7 @@ export default function MailSyncSeite() {
         <div style={styles.grid}>
           {MAIL_ANBIETER.map((a) => {
             const st = status[a.key] || { verbunden: false, konto_id: '' };
-            const e = entwurf[a.key] ?? { konto_id: '', token: '' };
+            const e = entwurf[a.key] ?? leer();
             return (
               <div key={a.key} style={styles.card}>
                 <div style={styles.kopf}>
@@ -107,6 +119,7 @@ export default function MailSyncSeite() {
 
                 <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {a.bereiche.map((b) => <span key={b} style={styles.chip}>{b}</span>)}
+                  {a.abrufbar && <span style={{ ...styles.chip, color: C.cyan, background: 'rgba(0,229,255,0.1)' }}>Posteingang</span>}
                 </div>
 
                 {st.verbunden ? (
@@ -125,6 +138,13 @@ export default function MailSyncSeite() {
                   <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <label style={styles.lab}>{a.idLabel}<input style={styles.inp} value={e.konto_id} onChange={(ev) => feld(a.key, 'konto_id', ev.target.value)} /></label>
                     <label style={styles.lab}>{a.tokenLabel}<input style={styles.inp} type="password" value={e.token} onChange={(ev) => feld(a.key, 'token', ev.target.value)} /></label>
+                    {(a.extraFelder || []).map((xf) => (
+                      <label key={xf.key} style={styles.lab}>{xf.label}
+                        <input style={styles.inp} type={xf.typ === 'password' ? 'password' : 'text'}
+                          value={e.extra[xf.key] || ''} placeholder={xf.hinweis || ''}
+                          onChange={(ev) => extraFeld(a.key, xf.key, ev.target.value)} />
+                      </label>
+                    ))}
                     <button style={{ ...styles.primaer, opacity: busy === a.key ? 0.6 : 1 }} disabled={busy === a.key} onClick={() => verbinden(a.key)}>🔗 Speichern</button>
                     <div style={{ color: C.textDim, fontSize: 12 }}>{a.hinweis} Verschlüsselt gespeichert, nie im Browser sichtbar.</div>
                   </div>
@@ -142,7 +162,7 @@ const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: C.navy, color: C.text, fontFamily: "'DM Sans', system-ui, sans-serif", padding: '28px 24px 64px', maxWidth: 960, margin: '0 auto' },
   eyebrow: { fontSize: 'clamp(12px, 1.06vw, 17px)', letterSpacing: 2, textTransform: 'uppercase', color: C.gold, fontWeight: 600, marginBottom: 6 },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(28px, 2.5vw, 40px)', fontWeight: 800, margin: 0 },
-  beta: { background: 'rgba(0,229,255,0.12)', color: C.cyan, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  posteingangBtn: { background: 'rgba(0,229,255,0.12)', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 999, padding: '7px 16px', fontSize: 14, fontWeight: 800, textDecoration: 'none' },
   sub: { color: C.textDim, margin: '8px 0 18px', fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 820, lineHeight: 1.5 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 },
