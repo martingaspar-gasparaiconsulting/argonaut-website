@@ -241,3 +241,172 @@ export function parseVorschlaege(rohText: string | null | undefined, kanaele: st
   }
   return out;
 }
+
+// ============================================================================
+// VARIANTEN-MODUS (Marketing-Tiefe · Abschnitt 14) — je Kanal N eigenstaendige
+// Beitrags-Varianten desselben Themas (Fliessband: "gib mir 30 Wege, X zu
+// sagen"). Nutzt die bestehenden Helfer (kanalFuer, alsText, zaehleZeichen,
+// extrahiereJson) desselben Moduls. Deckel 30 je Kanal.
+// ============================================================================
+
+/** Hoechstzahl Varianten je Kanal (= ein Monat taeglich). */
+export const MAX_VARIANTEN = 30;
+
+/** Waehlbare Varianten-Stufen (Oberflaeche). */
+export const VARIANTEN_STUFEN = [1, 2, 3, 5, 10, 20, 30];
+
+/** Anzahl Varianten auf 1..MAX_VARIANTEN begrenzen (Fallback 1). */
+export function saeubereAnzahl(roh: unknown): number {
+  const n = typeof roh === 'number' ? roh : Number(roh);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(Math.round(n), MAX_VARIANTEN);
+}
+
+/** Modus normalisieren. */
+export function saeubereModus(roh: unknown): 'einzeln' | 'varianten' {
+  return roh === 'varianten' ? 'varianten' : 'einzeln';
+}
+
+/** Holt ein JSON-ARRAY aus der KI-Rohantwort (fuer bare Varianten-Listen). */
+export function extrahiereArray(roh: string | null | undefined): unknown[] | null {
+  if (!roh) return null;
+  let s = String(roh).trim();
+  s = s.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const a = s.indexOf('[');
+  const b = s.lastIndexOf(']');
+  if (a < 0 || b < 0 || b <= a) return null;
+  try {
+    const arr = JSON.parse(s.slice(a, b + 1));
+    return Array.isArray(arr) ? arr : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * System-Prompt (Varianten): viele UNTERSCHIEDLICHE Beitraege desselben Themas
+ * fuer EINEN Kanal, jede mit anderem Aufhaenger/Blickwinkel.
+ */
+export function baueVariantenSystemPrompt(): string {
+  return [
+    'Du bist ein erfahrener Marketing-Texter für einen deutschen Mittelstandsbetrieb.',
+    'Du lieferst zu EINEM Thema VIELE eigenständige Beitrags-Varianten für EINEN Kanal — jede mit einem anderen Aufhänger/Blickwinkel/Einstieg. KEINE Wiederholungen, keine bloßen Umformulierungen.',
+    'Jede Variante ist veröffentlichungsreif, genau im geforderten Ton und in der Corporate Identity des Betriebs, und hält das Zeichenlimit des Kanals ein.',
+    'ERFINDE KEINE Fakten: keine Preise, Rabatte, Zahlen, Termine, Öffnungszeiten, Auszeichnungen oder Zitate, die nicht im Thema stehen. Bleib beim Thema, konkret und glaubwürdig. Schreibe fehlerfreies Deutsch.',
+    'Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt der Form {"varianten":[ … ]} — ohne Einleitung, ohne Erklärung, ohne Markdown, ohne Code-Zäune.',
+  ].join(' ');
+}
+
+/**
+ * Nutzer-Prompt (Varianten): EIN Kanal, Thema + CI + Anzahl. Fordert exakt
+ * `anzahl` Varianten mit den kanalgerechten Feldern.
+ */
+export function baueVariantenNutzerPrompt(
+  thema: string,
+  kanalId: string,
+  anzahl: number,
+  ci?: CIAngaben,
+): string {
+  const k = kanalFuer(kanalId);
+  const n = saeubereAnzahl(anzahl);
+  const ciZeilen: string[] = [];
+  const firma = (ci?.firma || '').trim();
+  const branche = (ci?.branche || '').trim();
+  const ton = (ci?.ton || '').trim();
+  if (firma) ciZeilen.push(`Betrieb/Firma: ${firma}`);
+  if (branche) ciZeilen.push(`Branche: ${branche}`);
+  if (ton) ciZeilen.push(`Gewünschter Grundton: ${ton}`);
+
+  const kanalName = k ? k.name : 'Beitrag';
+  const tonHinweis = k ? k.tonHinweis : 'nahbar und konkret';
+  const limit = k ? k.zeichenLimit : 2000;
+  const richtwert = k ? k.richtwert : 600;
+  const felder = k && k.mitBetreff ? '"betreff", "text", "bild"' : '"text", "bild"';
+
+  return [
+    `THEMA/ANLASS:\n${(thema || '').trim()}`,
+    ciZeilen.length ? `\nCORPORATE IDENTITY:\n${ciZeilen.join('\n')}` : '',
+    `\nKANAL: ${kanalName}. Ton: ${tonHinweis}. Ziel-Länge ~${richtwert} Zeichen, maximal ${limit} Zeichen je Variante.`,
+    `\nERZEUGE GENAU ${n} UNTERSCHIEDLICHE VARIANTEN. Jede Variante muss einen klar anderen Aufhänger/Blickwinkel haben als die übrigen.`,
+    [
+      '\nGib genau ein JSON-Objekt {"varianten":[ … ]} zurück mit exakt ' + n + ' Einträgen.',
+      'Jeder Eintrag ist ein Objekt mit den Feldern: ' + felder + '.',
+      '"text" = der fertige Beitrag; ' + (k && k.mitBetreff ? '"betreff" = Betreffzeile; ' : '') + '"bild" = 2–4 Wörter für eine passende, lizenzfreie Foto-Suche.',
+      'Beispielform: {"varianten":[{"text":"…","bild":"…"}]}.',
+    ].join(' '),
+  ].filter(Boolean).join('\n');
+}
+
+/** Eine fertige Beitrags-Variante fuer die Oberflaeche. */
+export type TextVariante = {
+  nummer: number;
+  betreff: string | null;
+  text: string;
+  bildStichwort: string | null;
+  zeichen: number;
+  zeichenLimit: number;
+  zuLang: boolean;
+};
+
+/** Alle Varianten eines Kanals fuer die Oberflaeche. */
+export type TextVariantenGruppe = {
+  kanal: string;
+  name: string;
+  icon: string;
+  ziel: FliessbandZiel;
+  plattformId: string | null;
+  zeichenLimit: number;
+  bildPflicht: boolean;
+  varianten: TextVariante[];
+};
+
+/**
+ * Parst die KI-Rohantwort eines Kanals in saubere Text-Varianten. Akzeptiert
+ * {"varianten":[…]} ODER eine bare Array-Antwort. Leere (kein Text) werden
+ * ausgelassen; auf `anzahl` gedeckelt.
+ */
+export function parseTextVarianten(
+  rohText: string | null | undefined,
+  kanalId: string,
+  anzahl: number,
+): TextVariante[] {
+  const k = kanalFuer(kanalId);
+  if (!k) return [];
+  const n = saeubereAnzahl(anzahl);
+
+  let liste: unknown[] | null = null;
+  const obj = extrahiereJson(rohText);
+  if (obj && Array.isArray((obj as Record<string, unknown>).varianten)) {
+    liste = (obj as Record<string, unknown>).varianten as unknown[];
+  }
+  if (!liste) liste = extrahiereArray(rohText);
+  if (!liste) return [];
+
+  const out: TextVariante[] = [];
+  for (const roh of liste) {
+    if (out.length >= n) break;
+    let text = '';
+    let betreff = '';
+    let bild = '';
+    if (typeof roh === 'string') {
+      text = roh.trim();
+    } else if (roh && typeof roh === 'object') {
+      const r = roh as Record<string, unknown>;
+      text = alsText(r.text ?? r.inhalt ?? r.beitrag);
+      betreff = alsText(r.betreff ?? r.titel ?? r.subject);
+      bild = alsText(r.bild ?? r.bildmotiv ?? r.foto ?? r.motiv);
+    }
+    if (!text) continue;
+    const zeichen = zaehleZeichen(text);
+    out.push({
+      nummer: out.length + 1,
+      betreff: k.mitBetreff ? (betreff || null) : null,
+      text,
+      bildStichwort: k.mitBild ? (bild || null) : null,
+      zeichen,
+      zeichenLimit: k.zeichenLimit,
+      zuLang: zeichen > k.zeichenLimit,
+    });
+  }
+  return out;
+}
