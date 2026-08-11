@@ -251,367 +251,6 @@ export default function MarketingCockpit() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <a
-            href="/dashboard/marketing/lagebericht"
-            style={{
-              background: C.gold,
-              color: C.navy,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📊 KI-Lagebericht
-          </a>
-          <a
-            href="/dashboard/marketing/autopilot"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🤖 Autopilot
-          </a>
-          <a
-            href="/dashboard/marketing/content-fliessband"
-            style={{
-              background: C.gold,
-              color: C.navy,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🏭 Content-Fließband
-          </a>
-          <a
-            href="/dashboard/marketing/video-skript"
-            style={{
-              background: 'rgba(0,229,255,0.12)',
-              color: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🎬 Video-Skripte
-          </a>
-          <a
-            href="/dashboard/marketing/analytics-board"
-            style={{
-              background: 'rgba(0,229,255,0.12)',
-              color: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📊 Analytics-Board
-          </a>
-          <a
-            href="/dashboard/marketing/roi-verzahnung"
-            style={{
-              background: 'rgba(76,175,125,0.12)',
-              color: C.green,
-              border: `1px solid ${C.green}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🔗 ROI-Verzahnung
-          </a>
-          <a
-            href="/dashboard/marketing/seo"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🔍 SEO-Modul
-          </a>
-          <a
-            href="/dashboard/marketing/bewertung-kampagne"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            ⭐ Bewertungs-Kampagne
-          </a>
-          <a
-            href="/dashboard/marketing/cockpit"
-            style={{
-              background: C.gold,
-              color: C.navy,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🛰️ Cockpit
-          </a>
-          <a
-            href="/dashboard/marketing/stratege"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🧠 KI-Stratege
-          </a>
-          <a
-            href="/dashboard/marketing/studio"
-            style={{
-              background: 'transparent',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            ✨ KI-Content-Studio
-          </a>
-          <a
-            href="/dashboard/marketing/kalender"
-            style={{
-              background: 'transparent',
-              color: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📅 Redaktionskalender
-          </a>
-          <a
-            href="/dashboard/marketing/bibliothek"
-            style={{
-              background: 'transparent',
-              color: C.textDim,
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📚 Bibliothek
-          </a>
-          <a
-            href="/dashboard/marketing/newsletter"
-            style={{
-              background: 'rgba(0,229,255,0.12)',
-              color: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            ✉️ Newsletter
-          </a>
-          <a
-            href="/dashboard/marketing/autoresponder"
-            style={{
-              background: 'rgba(0,229,255,0.12)',
-              color: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🔄 Autoresponder
-          </a>
-          <a
-            href="/dashboard/marketing/landingpages"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            🖼️ Landingpages
-          </a>
-          <a
-            href="/dashboard/marketing/whatsapp"
-            style={{
-              background: 'rgba(76,175,125,0.12)',
-              color: C.green,
-              border: `1px solid ${C.green}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            💬 WhatsApp
-          </a>
-          <a
-            href="/dashboard/marketing/social"
-            style={{
-              background: 'rgba(76,175,125,0.12)',
-              color: C.green,
-              border: `1px solid ${C.green}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📣 Social
-          </a>
-          <a
-            href="/dashboard/marketing/ads"
-            style={{
-              background: 'rgba(201,168,76,0.12)',
-              color: C.gold,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 10,
-              padding: '12px 20px',
-              fontFamily: 'var(--font-dm-sans), sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(15px, 1.31vw, 21px)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            📢 Ads
-          </a>
           <button
             onClick={dialogNeu}
             style={{
@@ -630,6 +269,76 @@ export default function MarketingCockpit() {
           </button>
         </div>
       </div>
+
+      {/* Werkzeuge — logisch nach Aufgabe gruppiert, je Gruppe eine Farbe */}
+      {[
+        {
+          titel: 'Analysieren & entscheiden',
+          farbe: C.gold, tint: 'rgba(201,168,76,0.12)',
+          items: [
+            { href: '/dashboard/marketing/lagebericht', label: '📊 KI-Lagebericht' },
+            { href: '/dashboard/marketing/cockpit', label: '🛰️ Cockpit' },
+            { href: '/dashboard/marketing/analytics-board', label: '📈 Analytics-Board' },
+            { href: '/dashboard/marketing/roi-verzahnung', label: '🔗 ROI-Verzahnung' },
+            { href: '/dashboard/marketing/autopilot', label: '🤖 Autopilot' },
+            { href: '/dashboard/marketing/stratege', label: '🧠 KI-Stratege' },
+            { href: '/dashboard/marketing/seo', label: '🔍 SEO-Modul' },
+          ],
+        },
+        {
+          titel: 'Inhalte erstellen',
+          farbe: C.cyan, tint: 'rgba(0,229,255,0.12)',
+          items: [
+            { href: '/dashboard/marketing/content-fliessband', label: '🏭 Content-Fließband' },
+            { href: '/dashboard/marketing/video-skript', label: '🎬 Video-Skripte' },
+            { href: '/dashboard/marketing/studio', label: '✨ KI-Content-Studio' },
+            { href: '/dashboard/marketing/kalender', label: '📅 Redaktionskalender' },
+            { href: '/dashboard/marketing/bibliothek', label: '📚 Bibliothek' },
+          ],
+        },
+        {
+          titel: 'Kanäle & ausspielen',
+          farbe: C.green, tint: 'rgba(76,175,125,0.12)',
+          items: [
+            { href: '/dashboard/marketing/social', label: '📣 Social' },
+            { href: '/dashboard/marketing/whatsapp', label: '💬 WhatsApp' },
+            { href: '/dashboard/marketing/newsletter', label: '✉️ Newsletter' },
+            { href: '/dashboard/marketing/autoresponder', label: '🔄 Autoresponder' },
+            { href: '/dashboard/marketing/ads', label: '📢 Ads' },
+            { href: '/dashboard/marketing/landingpages', label: '🖼️ Landingpages' },
+            { href: '/dashboard/marketing/bewertung-kampagne', label: '⭐ Bewertungs-Kampagne' },
+          ],
+        },
+      ].map((gruppe) => (
+        <div key={gruppe.titel} style={{ marginBottom: 22 }}>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: gruppe.farbe, marginBottom: 10, opacity: 0.85 }}>
+            {gruppe.titel}
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {gruppe.items.map((it) => (
+              <a
+                key={it.href}
+                href={it.href}
+                style={{
+                  background: gruppe.tint,
+                  color: gruppe.farbe,
+                  border: `1px solid ${gruppe.farbe}`,
+                  borderRadius: 10,
+                  padding: '11px 18px',
+                  fontFamily: 'var(--font-dm-sans), sans-serif',
+                  fontWeight: 700,
+                  fontSize: 'clamp(14px, 1.2vw, 19px)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                {it.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* KPI-Strip */}
       <div
