@@ -13,6 +13,7 @@ import { datevVorschlag, datevKontenListe, type DatevVorschlag } from '@/lib/dat
 import Leerzustand from '../_components/Leerzustand';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
+import { pruefeKonsistenz, istDublette } from '@/lib/belegCheck';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -160,6 +161,10 @@ export default function EingangsbelegePage() {
     return { anzahl: belege.length, brutto, ust };
   }, [belege]);
 
+  const kons = pruefeKonsistenz(num(form.netto), num(form.ust_betrag), num(form.brutto));
+  const dublette = istDublette({ belegnummer: form.belegnummer, lieferant: form.lieferant }, belege, editId);
+  function bruttoKorrigieren() { setF('brutto', kons.bruttoSoll.toFixed(2).replace('.', ',')); }
+
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>📥 Beleg-Inbox · Eingangsrechnungen</h1>
@@ -218,6 +223,17 @@ export default function EingangsbelegePage() {
         </div>
 
         <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
+
+        {kons.geprueft && !kons.stimmt && (
+          <div style={styles.checkWarn}>
+            ⚠️ Netto + USt ergibt <b>{eur(kons.bruttoSoll)}</b>, eingetragen ist Brutto {eur(num(form.brutto))} (Differenz {eur(kons.differenz)}).
+            <button type="button" style={styles.fix} onClick={bruttoKorrigieren}>Brutto auf {eur(kons.bruttoSoll)} setzen</button>
+          </div>
+        )}
+        {dublette && (
+          <div style={styles.checkWarn}>⚠️ Es gibt bereits einen Beleg mit dieser Belegnummer und diesem Lieferanten — mögliche Dublette. Bitte prüfen.</div>
+        )}
+
         {dateiPfad && <div style={styles.pfad}>📎 Datei abgelegt: {dateiPfad}</div>}
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
           <button style={styles.primaer} onClick={speichern}>💾 {editId ? 'Änderungen speichern' : 'Beleg speichern'}</button>
@@ -293,4 +309,6 @@ const styles: Record<string, CSSProperties> = {
   dim: { color: C.textDim, fontSize: 14, marginTop: 8 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
+  checkWarn: { color: C.gold, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 13.5, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', lineHeight: 1.5 },
+  fix: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 8, padding: '4px 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
 };
