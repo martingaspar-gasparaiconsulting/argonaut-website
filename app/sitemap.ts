@@ -13,6 +13,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const statisch: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE}/branchen`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE}/demo`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/testen`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/dossier`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/vergleich`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/uber-uns`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/impressum`, changeFrequency: 'yearly', priority: 0.2 },
