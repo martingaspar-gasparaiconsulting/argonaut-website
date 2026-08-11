@@ -1,7 +1,8 @@
 // ============================================================================
 // ARGONAUT OS · lib/dossierMail.ts — Mail-Bausteine für den Dossier-Funnel (I4)
-// Serverseitig (nutzt mailLayout). Der Dossier-Link zeigt vorerst auf die
-// Vorschau; mit I5 (698 Branchen-PDFs) wird daraus der branchengenaue PDF-Link.
+// Serverseitig (nutzt mailLayout). Der Dossier-Link zeigt auf unsere eigene
+// Domain (/api/oeffentlich/dossier-pdf) und liefert das branchengenaue PDF als
+// Download aus — der Kunde sieht nie eine Supabase-Adresse.
 // ============================================================================
 
 import { mailLayout } from './mail';
@@ -24,9 +25,9 @@ export function dossierAusliefernHtml(name: string | null, branche: string | nul
   const link = `${BASIS_URL}/api/oeffentlich/dossier-pdf?branche=${encodeURIComponent(branche || '')}`;
   return mailLayout('Ihr ARGONAUT-Dossier', `
     <p>Guten Tag${name ? ' ' + name : ''},</p>
-    <p>vielen Dank für Ihr Interesse. Hier ist Ihr persönliches Dossier${branche ? ` für „${branche}"` : ''}:</p>
+    <p>vielen Dank für Ihr Interesse. Hier ist Ihr persönliches Dossier${branche ? ` für „${branche}"` : ''} — als PDF zum Herunterladen:</p>
     <p style="margin:24px 0;">
-      <a href="${link}" style="display:inline-block;background:#C9A84C;color:#0A1628;text-decoration:none;font-weight:800;padding:13px 24px;border-radius:8px;">Dossier ansehen</a>
+      <a href="${link}" style="display:inline-block;background:#C9A84C;color:#0A1628;text-decoration:none;font-weight:800;padding:13px 24px;border-radius:8px;">📄 Dossier herunterladen (PDF)</a>
     </p>
     <p style="color:#8FA3BE;font-size:13px;">Fragen? Antworten Sie einfach auf diese E-Mail.</p>`);
 }
