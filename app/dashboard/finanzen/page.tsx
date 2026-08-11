@@ -145,6 +145,7 @@ export default function FinanzCockpit() {
     { icon: "📊", titel: "EÜR", text: "Einnahmen minus Ausgaben (netto)", href: "/dashboard/finanzen/euer", farbe: C.green },
     { icon: "📈", titel: "BWA", text: "Monatsverlauf & Gewinn", href: "/dashboard/finanzen/bwa", farbe: C.gold },
     { icon: "📤", titel: "Export", text: "CSV für den Steuerberater", href: "/dashboard/finanzen/export", farbe: C.cyan },
+    { icon: "💧", titel: "Cashflow", text: "Liquiditäts-Vorschau 12 Wochen", href: "/dashboard/finanzen/cashflow", farbe: C.lila },
   ];
 
   return (
