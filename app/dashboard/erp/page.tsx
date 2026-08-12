@@ -5,6 +5,7 @@ import KiAuge from "../_components/KiAuge";
 import { augeLager } from "@/lib/auge";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'artikel';
@@ -739,6 +740,7 @@ export default function LagerCockpit() {
                   placeholder="0"
                 />
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>Mindestbestand</label>
                 <input
@@ -749,6 +751,7 @@ export default function LagerCockpit() {
                   placeholder="0"
                 />
               </div>
+              </NurVoll>
 
               <div>
                 <label style={labelStil}>Einheit</label>
@@ -764,6 +767,7 @@ export default function LagerCockpit() {
                   ))}
                 </select>
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>Lagerort</label>
                 <input
@@ -789,17 +793,8 @@ export default function LagerCockpit() {
                   ))}
                 </select>
               </div>
+              </NurVoll>
 
-              <div>
-                <label style={labelStil}>Einkaufspreis (€)</label>
-                <input
-                  style={inputStil}
-                  value={form.einkaufspreis}
-                  onChange={(e) => setF("einkaufspreis", e.target.value)}
-                  inputMode="decimal"
-                  placeholder="0,00"
-                />
-              </div>
               <div>
                 <label style={labelStil}>Verkaufspreis (€)</label>
                 <input
@@ -811,6 +806,20 @@ export default function LagerCockpit() {
                 />
               </div>
 
+              <NurVoll>
+              <div>
+                <label style={labelStil}>Einkaufspreis (€)</label>
+                <input
+                  style={inputStil}
+                  value={form.einkaufspreis}
+                  onChange={(e) => setF("einkaufspreis", e.target.value)}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                />
+              </div>
+              </NurVoll>
+
+              <NurVoll>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStil}>Beschreibung</label>
                 <textarea
@@ -838,6 +847,7 @@ export default function LagerCockpit() {
                   />
                 </div>
               )}
+              </NurVoll>
 
               <div style={{ gridColumn: "1 / -1" }}>
                 <label
