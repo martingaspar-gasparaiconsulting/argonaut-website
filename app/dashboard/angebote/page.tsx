@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 import { augeAmpel } from '@/lib/auge';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -218,9 +219,11 @@ export default function AngebotePage() {
           <label style={styles.lab}>Titel
             <input style={styles.inp} value={titel} onChange={(e) => setTitel(e.target.value)} />
           </label>
-          <label style={styles.lab}>Gültig bis
-            <input type="date" style={styles.inp} value={gueltig} onChange={(e) => setGueltig(e.target.value)} />
-          </label>
+          <NurVoll>
+            <label style={styles.lab}>Gültig bis
+              <input type="date" style={styles.inp} value={gueltig} onChange={(e) => setGueltig(e.target.value)} />
+            </label>
+          </NurVoll>
         </div>
 
         <div style={styles.posKopf}>
@@ -239,9 +242,11 @@ export default function AngebotePage() {
         ))}
         <button type="button" style={styles.dazuBtn} onClick={posDazu}>＋ Position</button>
 
-        <label style={styles.lab}>Anmerkung (optional)
-          <input style={styles.inp} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="z. B. Lieferzeit, Zahlungsbedingungen" />
-        </label>
+        <NurVoll>
+          <label style={styles.lab}>Anmerkung (optional)
+            <input style={styles.inp} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="z. B. Lieferzeit, Zahlungsbedingungen" />
+          </label>
+        </NurVoll>
 
         <div style={styles.summe}>
           <div><span style={styles.sk}>Netto</span> {eur(summe.netto)}</div>
