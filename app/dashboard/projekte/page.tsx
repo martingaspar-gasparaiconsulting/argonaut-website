@@ -8,6 +8,7 @@ import ProjekteAuge from "./ProjekteAuge";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 
 const MODUL = 'projekte';
 
@@ -600,12 +601,14 @@ export default function ProjektePage() {
                   {Object.keys(STATUS_META).map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
                 </select>
               </div>
+              <NurVoll>
               <div style={{ flex: 1 }}>
                 <label style={labelStil}>Priorität</label>
                 <select style={inputStil} value={modal.prioritaet} onChange={(e) => setModal({ ...modal, prioritaet: e.target.value })}>
                   {Object.keys(PRIO_META).map((s) => <option key={s} value={s}>{PRIO_META[s].label}</option>)}
                 </select>
               </div>
+              </NurVoll>
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
@@ -624,12 +627,15 @@ export default function ProjektePage() {
                 <label style={labelStil}>Verantwortlich</label>
                 <input style={inputStil} value={modal.verantwortlich} onChange={(e) => setModal({ ...modal, verantwortlich: e.target.value })} placeholder="Name" />
               </div>
+              <NurVoll>
               <div style={{ width: 140 }}>
                 <label style={labelStil}>Budget (€)</label>
                 <input type="number" min={0} style={inputStil} value={modal.budget} onChange={(e) => setModal({ ...modal, budget: e.target.value })} />
               </div>
+              </NurVoll>
             </div>
 
+            <NurVoll>
             <div style={{ marginBottom: 18 }}>
               <label style={labelStil}>Farbe</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -645,6 +651,7 @@ export default function ProjektePage() {
                 <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
               </div>
             )}
+            </NurVoll>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button style={btnGhost} onClick={() => setModal(null)} disabled={speichern}>Abbrechen</button>
