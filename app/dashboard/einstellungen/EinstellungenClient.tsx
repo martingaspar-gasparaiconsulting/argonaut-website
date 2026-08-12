@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import PruefAuge from './PruefAuge'
+import { AnsichtSchalter } from '../_components/Ansicht'
 
 export type FirmaProfil = {
   firma_name?: string | null
@@ -142,6 +143,12 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
   return (
     <form onSubmit={speichern}>
       <PruefAuge daten={werte} />
+
+      <section style={card}>
+        <h2 style={gruppenTitel}>Ansicht · Einfach oder Voll</h2>
+        <p style={hinweisStil}>Bestimmen Sie, wie viel angezeigt wird. „Einfach" zeigt nur das Nötigste — ideal für den Start. Sobald Sie mehr möchten, schalten Sie auf „Voll" und sehen alle Felder und Experten-Funktionen. Gilt für Sie persönlich und lässt sich jederzeit ändern.</p>
+        <AnsichtSchalter />
+      </section>
 
       {GRUPPEN.map((g) => (
         <section key={g.titel} style={card}>
