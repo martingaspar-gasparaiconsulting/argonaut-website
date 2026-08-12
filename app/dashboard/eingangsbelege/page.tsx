@@ -14,6 +14,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { pruefeKonsistenz, istDublette } from '@/lib/belegCheck';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -198,6 +199,7 @@ export default function EingangsbelegePage() {
           <label style={styles.lab}>Brutto €<input style={styles.inp} value={form.brutto} onChange={(e) => setF('brutto', e.target.value)} inputMode="decimal" /></label>
         </div>
 
+        <NurVoll>
         <div style={styles.datevBox}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 700, fontSize: 14 }}>📊 DATEV-Konto</span>
@@ -223,6 +225,7 @@ export default function EingangsbelegePage() {
         </div>
 
         <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
+        </NurVoll>
 
         {kons.geprueft && !kons.stimmt && (
           <div style={styles.checkWarn}>
