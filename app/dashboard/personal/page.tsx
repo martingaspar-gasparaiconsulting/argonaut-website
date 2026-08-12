@@ -14,6 +14,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import PersonalAuge from "./PersonalAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const supabase = createBrowserClient(
@@ -2113,7 +2114,7 @@ function NeuModal({ tab, onClose, onSaved, felder, extra, setExtra }: { tab: Tab
               {(istMA ? MA_STATUS : BW_STATUS).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
           </Field>
-          {istMA && <EigeneFelderInputs felder={felder} werte={extra} setWert={(fid, w) => setExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.field} />}
+          {istMA && <NurVoll><EigeneFelderInputs felder={felder} werte={extra} setWert={(fid, w) => setExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.field} /></NurVoll>}
         </div>
         {err && <div style={styles.formError}>{err}</div>}
         <div style={styles.modalFoot}>
