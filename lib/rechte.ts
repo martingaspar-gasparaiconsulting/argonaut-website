@@ -88,9 +88,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🚀 Erste Schritte', href: '/dashboard/onboarding', immer: true, ebene: 4, gruppe: 'start' },
 
   // --- Mein Bereich (Selbstbedienung, seit Q1 auch fuer den Chef) -----------
-  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', immer: true, ebene: 4, gruppe: 'mein' },
-  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', immer: true, ebene: 4, gruppe: 'mein' },
-  { label: '🔧 Meine Einsätze', href: '/dashboard/meine-einsaetze', immer: true, ebene: 4, gruppe: 'mein' },
+  { label: '🙋 Mein Bereich', href: '/dashboard/mein-bereich', immer: true, ebene: 4, gruppe: 'mein', kern: true },
+  { label: '⏱ Zeiterfassung', href: '/dashboard/zeiterfassung', immer: true, ebene: 4, gruppe: 'mein', kern: true },
+  { label: '🔧 Meine Einsätze', href: '/dashboard/meine-einsaetze', immer: true, ebene: 4, gruppe: 'mein', kern: true },
 
   // --- Kommunikation & Wissen (Ebene 4, Grundausstattung) -------------------
   { label: '🎓 Academy', href: '/dashboard/academy', modul: 'academy', ebene: 4, gruppe: 'komm' },
