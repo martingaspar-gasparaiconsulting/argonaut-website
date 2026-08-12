@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { liquiditaetsVorschau, type OffeneRechnung } from '@/lib/cashflow';
+import { NurVoll } from '../../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -144,7 +145,8 @@ export default function CashflowSeite() {
               </div>
             </div>
 
-            {/* Wochen-Tabelle */}
+            {/* Wochen-Tabelle — Detail, im Voll-Modus */}
+            <NurVoll>
             <div style={styles.card}>
               <div style={styles.zeileKopf}>
                 <span>Woche</span><span style={{ textAlign: 'right' }}>Zufluss</span><span style={{ textAlign: 'right' }}>Fixkosten</span><span style={{ textAlign: 'right' }}>Saldo</span>
@@ -158,6 +160,7 @@ export default function CashflowSeite() {
                 </div>
               ))}
             </div>
+            </NurVoll>
 
             {v.offeneOhneTermin > 0 && (
               <p style={{ color: C.textDim, fontSize: 13, marginTop: 12 }}>
