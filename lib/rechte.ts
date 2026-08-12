@@ -93,6 +93,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz', ebene: 4, gruppe: 'komm' },
   { label: '🗂 Vorlagen-Pool', href: '/dashboard/vorlagen', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', ebene: 4, gruppe: 'komm' },
+  { label: '📥 Posteingang', href: '/dashboard/posteingang', modul: 'mail-sync', ebene: 4, gruppe: 'komm' },
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },

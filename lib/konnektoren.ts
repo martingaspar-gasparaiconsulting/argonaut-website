@@ -208,20 +208,9 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
   },
   {
     typ: 'mail', name: 'Mail & Kalender', icon: '✉️', kategorie: 'betrieb',
-    einrichten: { modus: 'inline' },
-    beschreibung: 'Postfach und Kalender (Google Workspace / Microsoft 365) mit ARGONAUT synchronisieren.',
-    anbieter: [
-      { key: 'manuell', name: 'Ohne Sync (manuell)', demo: true, felder: [], hinweis: 'E-Mails und Termine pflegen Sie wie bisher direkt in ARGONAUT.' },
-      { key: 'google', name: 'Google Workspace', felder: [
-        { key: 'client_id', label: 'OAuth Client-ID', typ: 'text' },
-        { key: 'client_secret', label: 'OAuth Client-Secret', typ: 'password' },
-      ], hinweis: '① In der Google Cloud Console ein Projekt anlegen → ② OAuth-Client-ID + Secret erstellen, die vorgegebene Redirect-URL eintragen → ③ hier einfügen. (Gmail + Kalender)' },
-      { key: 'microsoft', name: 'Microsoft 365', felder: [
-        { key: 'client_id', label: 'App (Client)-ID', typ: 'text' },
-        { key: 'client_secret', label: 'Client-Secret', typ: 'password' },
-        { key: 'tenant_id', label: 'Verzeichnis (Tenant)-ID', typ: 'text', hinweis: 'z. B. common oder Ihre Tenant-ID' },
-      ], hinweis: '① Im Azure-Portal unter „App-Registrierungen" eine App anlegen → ② Client-ID, ein Secret und die Tenant-ID holen, Redirect-URL eintragen → ③ hier einfügen. (Outlook + Kalender)' },
-    ],
+    einrichten: { modus: 'verweis', link: '/dashboard/mail-sync', anleitung: 'Postfächer werden pro Mitarbeiter direkt im Menü „Mail & Kalender" verbunden — jede/r hinterlegt das eigene Geschäftspostfach. ① Menü „Mail & Kalender" öffnen → ② Anbieter wählen (IMAP mit E-Mail + App-Passwort; Google/Microsoft-Anmeldung folgt) → ③ verbinden. Die Nachrichten erscheinen danach unter „Posteingang".' },
+    beschreibung: 'Postfach und Kalender (Google Workspace / Microsoft 365 / IMAP) mit ARGONAUT verbinden — pro Mitarbeiter das eigene Geschäftspostfach.',
+    anbieter: [],
   },
   {
     typ: 'marktplatz', name: 'Marktplätze', icon: '🛍️', kategorie: 'betrieb',
