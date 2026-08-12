@@ -12,6 +12,7 @@ import KiAuge from '../_components/KiAuge';
 import { augeBelegung } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 
 const MODUL = 'gastro_reservierungen';
 
@@ -164,8 +165,10 @@ export default function GastroPage() {
               <label style={styles.lab}>Zeit<input style={{ ...styles.inp, width: 90 }} value={nr.uhrzeit} onChange={(e) => setNr({ ...nr, uhrzeit: e.target.value })} placeholder="19:00" /></label>
               <label style={styles.lab}>Pers.<input style={{ ...styles.inp, width: 60 }} value={nr.personen} onChange={(e) => setNr({ ...nr, personen: e.target.value })} inputMode="numeric" /></label>
               <input style={{ ...styles.inp, flex: 1, minWidth: 140 }} value={nr.gast_name} onChange={(e) => setNr({ ...nr, gast_name: e.target.value })} placeholder="Gast" />
+              <NurVoll>
               <input style={{ ...styles.inp, width: 100 }} value={nr.tisch} onChange={(e) => setNr({ ...nr, tisch: e.target.value })} placeholder="Tisch" />
               <EigeneFelderInputs felder={felder} werte={nrExtra} setWert={(fid, w) => setNrExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              </NurVoll>
               <button style={styles.primaer} onClick={resSpeichern}>＋ Reservieren</button>
             </div>
           </div>
