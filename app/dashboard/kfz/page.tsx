@@ -11,6 +11,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'kfz_fahrzeuge';
@@ -163,12 +164,12 @@ export default function KfzPage() {
               <input style={styles.inp} value={fz.halter} onChange={(e) => setFz({ ...fz, halter: e.target.value })} placeholder="Halter" />
               <input style={styles.inp} value={fz.marke} onChange={(e) => setFz({ ...fz, marke: e.target.value })} placeholder="Marke" />
               <input style={styles.inp} value={fz.modell} onChange={(e) => setFz({ ...fz, modell: e.target.value })} placeholder="Modell" />
-              <input style={styles.inp} value={fz.vin} onChange={(e) => setFz({ ...fz, vin: e.target.value })} placeholder="FIN / VIN" />
+              <NurVoll><input style={styles.inp} value={fz.vin} onChange={(e) => setFz({ ...fz, vin: e.target.value })} placeholder="FIN / VIN" /></NurVoll>
               <input style={styles.inp} value={fz.km_stand} onChange={(e) => setFz({ ...fz, km_stand: e.target.value })} placeholder="km-Stand" inputMode="numeric" />
-              <label style={styles.lab}>Erstzulassung<input type="date" style={styles.inp} value={fz.erstzulassung} onChange={(e) => setFz({ ...fz, erstzulassung: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Erstzulassung<input type="date" style={styles.inp} value={fz.erstzulassung} onChange={(e) => setFz({ ...fz, erstzulassung: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>HU fällig<input type="date" style={styles.inp} value={fz.hu_faellig} onChange={(e) => setFz({ ...fz, hu_faellig: e.target.value })} /></label>
               <label style={styles.lab}>AU fällig<input type="date" style={styles.inp} value={fz.au_faellig} onChange={(e) => setFz({ ...fz, au_faellig: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={fzSpeichern}>💾 Fahrzeug speichern</button>
           </div>
