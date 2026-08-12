@@ -7,6 +7,7 @@ import EinsatzNachweis from "../../_components/EinsatzNachweis";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import ERechnungDialog from "../../_components/ERechnungDialog";
 import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
+import { NurVoll } from "../../_components/Ansicht";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
@@ -1029,14 +1030,18 @@ export default function RechnungDetail() {
               <label style={labelStyle}>Rechnungsdatum</label>
               <input type="date" value={rechnungsdatum} onChange={(e) => aendern(setRechnungsdatum, e.target.value)} style={inputStyle} />
             </div>
-            <div>
-              <label style={labelStyle}>Leistungsdatum</label>
-              <input type="date" value={leistungsdatum} onChange={(e) => aendern(setLeistungsdatum, e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Zahlungsziel (Tage)</label>
-              <input value={zahlungszielTage} onChange={(e) => aendern(setZahlungszielTage, e.target.value)} inputMode="numeric" style={inputStyle} />
-            </div>
+            <NurVoll>
+              <div>
+                <label style={labelStyle}>Leistungsdatum</label>
+                <input type="date" value={leistungsdatum} onChange={(e) => aendern(setLeistungsdatum, e.target.value)} style={inputStyle} />
+              </div>
+            </NurVoll>
+            <NurVoll>
+              <div>
+                <label style={labelStyle}>Zahlungsziel (Tage)</label>
+                <input value={zahlungszielTage} onChange={(e) => aendern(setZahlungszielTage, e.target.value)} inputMode="numeric" style={inputStyle} />
+              </div>
+            </NurVoll>
             <div>
               <label style={labelStyle}>Fälligkeit</label>
               <div style={{ ...inputStyle, display: "flex", alignItems: "center", color: C.textDim }}>
@@ -1199,6 +1204,7 @@ export default function RechnungDetail() {
       </Karte>
 
       <EinsatzNachweis rechnungId={id} />
+      <NurVoll>
       <div style={{ marginTop: 20 }}>
         <Karte titel="Notizen">
           <textarea
@@ -1210,6 +1216,7 @@ export default function RechnungDetail() {
           />
         </Karte>
       </div>
+      </NurVoll>
 
       {fehler && (
         <div
