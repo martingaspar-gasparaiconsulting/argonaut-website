@@ -48,9 +48,9 @@ function ausliefern(pdf: Buffer, branche: string): NextResponse {
 
 export async function GET(req: Request) {
   const branche = (new URL(req.url).searchParams.get('branche') || '').trim();
-  // Versions-Suffix: eb2 = dunkles Layout (printBackground). Entwertet die alten,
-  // fälschlich weißen eb1-Dateien. Bei Layout-Änderung Suffix hochzählen.
-  const pfad = `${dossierKey(branche)}-eb2.pdf`;
+  // Versions-Suffix: eb3 = dunkles Layout + saubere Seitenumbrüche. Entwertet die
+  // alten eb1 (weiß) und eb2 (schlechte Umbrüche). Bei Layout-Änderung hochzählen.
+  const pfad = `${dossierKey(branche)}-eb3.pdf`;
 
   try {
     const db = admin();

@@ -218,6 +218,12 @@ export function dossierHtml(input: string): string {
   .cta-gold{background:${GOLD};color:${NAVY}}.cta-line{background:transparent;color:${GOLD};border:1px solid rgba(201,168,76,.55)}
   .assure{margin-top:14px;color:#8fa9b6;font-size:11px;text-align:center}
   .foot{padding:20px 0 34px;text-align:center;color:#7f97a4;font-size:11px}
+  /* Saubere Seitenumbrüche für den PDF-Druck — nie mitten durch Inhalt trennen. */
+  .card,.tile,.whyc,.faq,.weg,.col,.summary,.badge,.split,.wege,.why,.row{page-break-inside:avoid;break-inside:avoid}
+  .kick,h1,h2,h3,.sub2{page-break-after:avoid;break-after:avoid}
+  .cover{page-break-after:avoid}
+  .sec{padding-top:26px}
+  p{orphans:3;widows:3}
 </style></head>
 <body>
 <div class="cover"><div class="wrap">
