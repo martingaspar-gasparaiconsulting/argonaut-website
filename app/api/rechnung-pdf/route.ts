@@ -69,10 +69,28 @@ function positionNetto(p: any): number {
   return (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0);
 }
 
-function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null): string {
+/** Gut lesbare Textfarbe (weiß/dunkel) für einen farbigen Hintergrund. */
+function lesbarerText(hex: string): string {
+  const h = String(hex || '').replace('#', '');
+  if (h.length < 6) return '#ffffff';
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return '#ffffff';
+  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return L > 0.6 ? '#0A1628' : '#ffffff';
+}
+
+function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null, ci: any = null): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const klein = !!rechnung?.kleinunternehmer;
+
+  // White-Label: Marke des Betriebs (Logo + Farben aus dem CI-Speicher web_ci).
+  // Ohne hinterlegtes CI fällt alles auf das neutrale Standardlayout zurück.
+  const markePrimaer = (ci?.farbe_primaer && String(ci.farbe_primaer).trim()) || '#0A1628';
+  const markeAkzent = (ci?.farbe_akzent && String(ci.farbe_akzent).trim()) || '#C9A84C';
+  const markeLogo = (ci?.logo_url && String(ci.logo_url).trim()) || '';
+  const markeName = (ci?.firma && String(ci.firma).trim()) || (aussteller?.name && String(aussteller.name).trim()) || '';
+  const theadText = lesbarerText(markePrimaer);
 
   // Steuernummer ODER USt-IdNr genügt (§14) — wir zeigen, was vorhanden ist.
   const steuerZeile =
@@ -206,14 +224,15 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .absender-mini { font-size: 10px; color: #5b6b80; border-bottom: 1px solid #e1e6ee; padding-bottom: 6px; margin-bottom: 20px; }
 
   .kopf { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .marke { color: #C9A84C; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+  .marke { color: ${markeAkzent}; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+  .logo { max-height: 52px; max-width: 210px; margin-bottom: 10px; display: block; }
   .aussteller { font-size: 11.5px; color: #0A1628; }
   .aussteller .name { font-weight: bold; font-size: 13px; }
   .aussteller .dim { color: #5b6b80; }
   h1 { font-size: 24px; margin: 4px 0 2px; color: #0A1628; }
   .nummer { color: #5b6b80; font-size: 13px; font-family: 'DejaVu Sans Mono', monospace; }
 
-  .empf-zeile { display: flex; justify-content: space-between; gap: 24px; border-top: 3px solid #C9A84C; padding-top: 20px; margin-top: 12px; margin-bottom: 24px; }
+  .empf-zeile { display: flex; justify-content: space-between; gap: 24px; border-top: 3px solid ${markeAkzent}; padding-top: 20px; margin-top: 12px; margin-bottom: 24px; }
   .block { flex: 1; }
   .block .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #8a99ad; font-weight: bold; margin-bottom: 6px; }
   .block .inhalt { border: 1px solid #e1e6ee; border-radius: 8px; padding: 12px 14px; min-height: 74px; }
@@ -221,7 +240,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .dim { color: #8a99ad; }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  thead th { background: #0A1628; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 9px 10px; text-align: left; }
+  thead th { background: ${markePrimaer}; color: ${theadText}; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 9px 10px; text-align: left; }
   thead th.r { text-align: right; } thead th.c { text-align: center; }
   tbody td { padding: 9px 10px; border-bottom: 1px solid #e8ecf3; vertical-align: top; }
   tbody td.r { text-align: right; } tbody td.c { text-align: center; } tbody td.nr { color: #8a99ad; width: 30px; }
@@ -229,7 +248,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   .summen { margin-left: auto; width: 340px; margin-top: 14px; }
   .summen .zeile { display: flex; justify-content: space-between; padding: 6px 4px; font-size: 13px; }
-  .summen .zeile.brutto { border-top: 2px solid #C9A84C; margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: bold; color: #0A1628; }
+  .summen .zeile.brutto { border-top: 2px solid ${markeAkzent}; margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: bold; color: #0A1628; }
   .summen .label { color: #5b6b80; }
 
   .steuerblock { background: #f4f6fa; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
@@ -239,7 +258,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   .abweichung { clear: both; margin-top: 14px; background: #fdf6e3; border-left: 4px solid #b8860b; padding: 10px 14px; border-radius: 6px; font-size: 11.5px; color: #6b5200; }
 
-  .hinweis { clear: both; margin-top: 22px; background: #f4f6fa; border-left: 4px solid #C9A84C; padding: 10px 14px; border-radius: 6px; font-size: 12px; }
+  .hinweis { clear: both; margin-top: 22px; background: #f4f6fa; border-left: 4px solid ${markeAkzent}; padding: 10px 14px; border-radius: 6px; font-size: 12px; }
   .zahlung { margin-top: 22px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; font-size: 12px; }
   .zahlung .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #5b6b80; font-weight: bold; margin-bottom: 4px; }
   .zahlung .inhalt { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
@@ -263,6 +282,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   <div class="kopf">
     <div class="aussteller">
+      ${markeLogo ? `<img src="${esc(markeLogo)}" alt="Logo" class="logo">` : ''}
       <div class="marke">Rechnung</div>
       <div class="name">${pflicht(aussteller?.name, 'Firmenname ergänzen')}</div>
       <div class="dim">${pflichtMehrzeilig(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
@@ -327,7 +347,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   ${rechnung?.notizen ? `<div class="notizen">${esc(rechnung.notizen)}</div>` : ''}
 
-  <div class="fuss">Erstellt mit ARGONAUT OS &middot; ${heute}</div>
+  <div class="fuss">${markeName ? esc(markeName) + ' &middot; ' : ''}${heute}</div>
 </body></html>`;
 }
 
@@ -359,7 +379,20 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* Bezahllink optional */ }
 
-    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller, bezahllink);
+    // White-Label: CI des Betriebs (Logo + Farben) serverseitig laden (RLS-scoped).
+    let ci: any = null;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('web_ci')
+          .select('firma, logo_url, farbe_primaer, farbe_sekundaer, farbe_akzent')
+          .limit(1);
+        ci = (Array.isArray(data) && data[0]) || null;
+      }
+    } catch { /* CI optional — ohne CI neutrales Standardlayout */ }
+
+    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller, bezahllink, ci);
 
     const gotenbergUrl = process.env.GOTENBERG_URL;
     const gUser = process.env.GOTENBERG_USER;
@@ -370,6 +403,7 @@ export async function POST(req: NextRequest) {
     form.append('files', new Blob([html], { type: 'text/html' }), 'index.html');
     form.append('marginTop', '0.5');
     form.append('marginBottom', '0.5');
+    form.append('printBackground', 'true'); // Marken-Hintergründe (Tabellenkopf, Farben) mitdrucken
   if (wantPdfa) form.append('pdfa', 'PDF/A-3b');
 
     const authHeader = (gUser && gPass) ? 'Basic ' + Buffer.from(`${gUser}:${gPass}`).toString('base64') : '';
