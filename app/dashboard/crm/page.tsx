@@ -7,6 +7,7 @@ import KiAuge from "../_components/KiAuge";
 import { augeCrm } from "@/lib/auge";
 import KundenAuge from "./KundenAuge";
 import Leerzustand from "../_components/Leerzustand";
+import { NurVoll } from "../_components/Ansicht";
 import {
   EigeneFelderManager,
   EigeneFelderInputs,
@@ -1240,38 +1241,41 @@ export default function CrmCockpitPage() {
               <Feld label="Firma">
                 <input style={inp} value={form.firma} onChange={(e) => feld("firma", e.target.value)} />
               </Feld>
-              <Feld label="Position / Rolle">
-                <input style={inp} value={form.position} onChange={(e) => feld("position", e.target.value)} />
-              </Feld>
-              <Feld label="Status">
-                <select style={inp} value={form.status} onChange={(e) => feld("status", e.target.value)}>
-                  {STATUS_OPTIONEN.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </Feld>
-              <Feld label="Quelle">
-                <select style={inp} value={form.quelle} onChange={(e) => feld("quelle", e.target.value)}>
-                  <option value="">— wählen —</option>
-                  {QUELLE_OPTIONEN.map((q) => (
-                    <option key={q} value={q}>
-                      {q}
-                    </option>
-                  ))}
-                </select>
-              </Feld>
-              <Feld label="Betreuungs-Intervall (Tage, für Ampel)">
-                <input
-                  style={inp}
-                  type="number"
-                  value={form.betreuungs_intervall_tage}
-                  onChange={(e) => feld("betreuungs_intervall_tage", e.target.value)}
-                />
-              </Feld>
+              <NurVoll>
+                <Feld label="Position / Rolle">
+                  <input style={inp} value={form.position} onChange={(e) => feld("position", e.target.value)} />
+                </Feld>
+                <Feld label="Status">
+                  <select style={inp} value={form.status} onChange={(e) => feld("status", e.target.value)}>
+                    {STATUS_OPTIONEN.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </Feld>
+                <Feld label="Quelle">
+                  <select style={inp} value={form.quelle} onChange={(e) => feld("quelle", e.target.value)}>
+                    <option value="">— wählen —</option>
+                    {QUELLE_OPTIONEN.map((q) => (
+                      <option key={q} value={q}>
+                        {q}
+                      </option>
+                    ))}
+                  </select>
+                </Feld>
+                <Feld label="Betreuungs-Intervall (Tage, für Ampel)">
+                  <input
+                    style={inp}
+                    type="number"
+                    value={form.betreuungs_intervall_tage}
+                    onChange={(e) => feld("betreuungs_intervall_tage", e.target.value)}
+                  />
+                </Feld>
+              </NurVoll>
             </div>
 
+            <NurVoll>
             <Feld label="Notizen">
               <textarea
                 style={{ ...inp, minHeight: 80, resize: "vertical" }}
@@ -1279,7 +1283,9 @@ export default function CrmCockpitPage() {
                 onChange={(e) => feld("notizen", e.target.value)}
               />
             </Feld>
+            </NurVoll>
 
+            <NurVoll>
             <EigeneFelderInputs
               felder={felder}
               werte={nmExtra}
@@ -1295,6 +1301,7 @@ export default function CrmCockpitPage() {
                 marginBottom: 12,
               }}
             />
+            </NurVoll>
 
             {!bearbeite && (
               <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>
