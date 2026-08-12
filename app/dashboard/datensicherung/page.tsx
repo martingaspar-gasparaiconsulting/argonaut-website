@@ -13,6 +13,7 @@
 
 import { useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -160,9 +161,11 @@ export default function DatensicherungPage() {
           <button style={{ ...styles.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={alsExcel}>
             {busy ? 'Bitte warten …' : '⬇ Komplett-Backup als Excel'}
           </button>
-          <button style={{ ...styles.line, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={alsJson}>
-            ⬇ Als JSON
-          </button>
+          <NurVoll>
+            <button style={{ ...styles.line, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={alsJson}>
+              ⬇ Als JSON
+            </button>
+          </NurVoll>
         </div>
 
         {busy && status && <div style={styles.hint}>{status}</div>}
