@@ -58,6 +58,26 @@ const C = {
   text: '#E8EDF4', textDim: 'rgba(255,255,255,0.6)', border: 'rgba(255,255,255,0.12)',
 };
 
+/** Kompakter Schalter für die Kopfleiste — immer griffbereit, ein Tipp genügt. */
+export function AnsichtUmschalter() {
+  const a = useAnsicht();
+  const btn = (wert: Ansicht): CSSProperties => ({
+    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+    padding: '5px 11px', borderRadius: 7, fontSize: 13, fontWeight: 700,
+    background: a === wert ? C.gold : 'transparent',
+    color: a === wert ? '#0A1628' : 'rgba(255,255,255,0.7)',
+  });
+  return (
+    <div
+      title={'Ansicht — Einfach zeigt nur das Nötigste, Voll alle Experten-Funktionen. Jederzeit umschaltbar.'}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 2, background: 'rgba(10,22,40,0.6)', border: `1px solid ${C.border}`, borderRadius: 9, padding: 2, flexShrink: 0 }}
+    >
+      <button type="button" onClick={() => setzeAnsicht('einfach')} style={btn('einfach')} aria-pressed={a === 'einfach'}>Einfach</button>
+      <button type="button" onClick={() => setzeAnsicht('voll')} style={btn('voll')} aria-pressed={a === 'voll'}>Voll</button>
+    </div>
+  );
+}
+
 /** Der Umschalter für die Einstellungen — mit kleiner Live-Vorschau. */
 export function AnsichtSchalter() {
   const a = useAnsicht();
