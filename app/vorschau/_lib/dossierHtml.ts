@@ -220,7 +220,7 @@ export function dossierHtml(input: string): string {
   .foot{padding:20px 0 34px;text-align:center;color:#7f97a4;font-size:11px}
   /* Saubere Seitenumbrüche für den PDF-Druck — nie mitten durch Inhalt trennen. */
   .card,.tile,.whyc,.faq,.weg,.col,.summary,.badge,.split,.wege,.why,.row{page-break-inside:avoid;break-inside:avoid}
-  .kick,h1,h2,h3,.sub2{page-break-after:avoid;break-after:avoid}
+  .kick,h1,h2,h3,.sub2,.introkeep{page-break-after:avoid;break-after:avoid}
   .cover{page-break-after:avoid}
   .sec{padding-top:26px}
   p{orphans:3;widows:3}
@@ -257,7 +257,7 @@ ${ergebnisse.length ? `<div class="sec">
 <div class="sec">
   <div class="kick">Das ist Ihr System</div>
   <h2>Alles verzahnt — <span class="g">ein Login</span>.</h2>
-  <p>Diese Programme bekommt <strong style="color:#EAF1F6">jeder Betrieb</strong> ab Tag 1 — statt zwölf Einzel-Tools, die nicht miteinander reden.</p>
+  <p class="introkeep">Diese Programme bekommt <strong style="color:#EAF1F6">jeder Betrieb</strong> ab Tag 1 — statt zwölf Einzel-Tools, die nicht miteinander reden.</p>
   <div class="tiles">${stack.map((m) => tileHtml(m)).join('')}</div>
   ${spezial.length ? `<div class="sub2"><span class="t">Speziell für ${esc(titel)}</span><span class="l"></span></div>
   <div class="tiles">${spezial.map((m) => tileHtml(m, true)).join('')}</div>` : ''}

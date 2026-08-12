@@ -48,9 +48,10 @@ function ausliefern(pdf: Buffer, branche: string): NextResponse {
 
 export async function GET(req: Request) {
   const branche = (new URL(req.url).searchParams.get('branche') || '').trim();
-  // Versions-Suffix: eb3 = dunkles Layout + saubere Seitenumbrüche. Entwertet die
-  // alten eb1 (weiß) und eb2 (schlechte Umbrüche). Bei Layout-Änderung hochzählen.
-  const pfad = `${dossierKey(branche)}-eb3.pdf`;
+  // Versions-Suffix: eb4 = dunkel + saubere Umbrüche + Überschrift bleibt bei ihrem
+  // Kachel-Block (keine verwaiste Überschrift). Entwertet eb1/eb2/eb3. Bei Layout-
+  // Änderung hochzählen.
+  const pfad = `${dossierKey(branche)}-eb4.pdf`;
 
   try {
     const db = admin();
