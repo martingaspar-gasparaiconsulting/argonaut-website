@@ -6,6 +6,7 @@ import { sichtbareNavLinks, gruppiereNavLinks, nurNachNutzerTyp } from '../../li
 import { gebuchteModulKeys, nurGebuchteLinks, type TenantModulRow } from '../../lib/tenantModule';
 import { aktiveModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
 import { leseStandortCookie, istStandortAktiv } from '../../lib/aktiverStandort';
+import { useAnsicht } from './_components/Ansicht';
 
 // ============================================================
 // ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
@@ -42,6 +43,10 @@ const supabase = createBrowserClient(
 
 export default function DashboardNav() {
   const pathname = usePathname();
+  // Einfach/Voll: im Einfach-Modus zeigt das Menue nur die Kern-Knoepfe.
+  const ansicht = useAnsicht();
+  // „＋ Alle Bereiche" — im Einfach-Modus alles einblenden, ohne den Modus zu wechseln.
+  const [alleBereiche, setAlleBereiche] = useState(false);
   const [geladen, setGeladen] = useState(false);
   const [istChef, setIstChef] = useState(false);
   const [erlaubt, setErlaubt] = useState<Set<string>>(new Set());
@@ -167,8 +172,20 @@ export default function DashboardNav() {
   // reicht die Liste unveraendert durch.
   const sichtbarStandort = nurStandortAktiveLinks(sichtbarGebucht, standortAktiv);
 
+  // Einfach-Modus: nur Kern-Knoepfe zeigen, der Rest steckt hinter „＋ Alle
+  // Bereiche". REIN KOSMETISCH — es wird nichts freigegeben oder gesperrt, nur
+  // ausgeblendet. Fail-safe: gibt es (wider Erwarten) keinen einzigen Kern-Link,
+  // zeigen wir die volle Liste, damit nie ein leeres Menue entsteht.
+  const einfachAktiv = ansicht === 'einfach' && !alleBereiche;
+  const kernLinks = sichtbarStandort.filter((l) => l.kern);
+  const angezeigt =
+    einfachAktiv && kernLinks.length > 0 ? kernLinks : sichtbarStandort;
+  // Schalter nur zeigen, wenn Einfach-Modus UND es tatsaechlich mehr zu sehen gibt.
+  const zeigeAlleBereicheSchalter =
+    ansicht === 'einfach' && kernLinks.length > 0 && kernLinks.length < sichtbarStandort.length;
+
   // Q2: sichtbare Links in Gruppen-Bloecke ordnen (leere Gruppen fallen raus).
-  const gruppen = gruppiereNavLinks(sichtbarStandort);
+  const gruppen = gruppiereNavLinks(angezeigt);
 
   return (
     <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -243,6 +260,32 @@ export default function DashboardNav() {
           </div>
         </div>
       ))}
+
+      {zeigeAlleBereicheSchalter && (
+        <button
+          type="button"
+          onClick={() => setAlleBereiche((v) => !v)}
+          title={alleBereiche
+            ? 'Nur die wichtigsten Bereiche zeigen'
+            : 'Alle Bereiche einblenden — der Einfach-Modus bleibt an'}
+          style={{
+            marginTop: 6,
+            padding: '7px 14px',
+            borderRadius: 8,
+            fontSize: 'clamp(13px, 1.13vw, 18px)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            textAlign: 'left',
+            color: '#C9A84C',
+            background: 'rgba(201,168,76,0.10)',
+            border: '1px dashed rgba(201,168,76,0.4)',
+            fontFamily: 'inherit',
+            width: 'fit-content',
+          }}
+        >
+          {alleBereiche ? '－ Weniger anzeigen' : '＋ Alle Bereiche'}
+        </button>
+      )}
     </nav>
   );
 }

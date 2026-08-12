@@ -68,6 +68,13 @@ export type NavLink = {
    * und Beschriftung. Keine Rechte-Logik haengt daran.
    */
   gruppe?: string
+  /**
+   * Kern-Eintrag — bleibt im „Einfach"-Modus sichtbar. REIN KOSMETISCH: steuert
+   * nur die Menue-Anzeige, keinerlei Rechte-/Sperr-Logik haengt daran (wie
+   * `gruppe`). Alles OHNE `kern` wandert im Einfach-Modus hinter
+   * „＋ Alle Bereiche" und ist im „Voll"-Modus wie gewohnt sofort da.
+   */
+  kern?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -75,8 +82,8 @@ export type NavLink = {
 // ---------------------------------------------------------------------------
 export const NAV_LINKS: NavLink[] = [
   // --- Start ----------------------------------------------------------------
-  { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4, gruppe: 'start' },
-  { label: '📌 Heute', href: '/dashboard/heute', immer: true, ebene: 4, gruppe: 'start' },
+  { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4, gruppe: 'start', kern: true },
+  { label: '📌 Heute', href: '/dashboard/heute', immer: true, ebene: 4, gruppe: 'start', kern: true },
   { label: '🔎 Suche', href: '/dashboard/suche', immer: true, ebene: 4, gruppe: 'start' },
   { label: '🚀 Erste Schritte', href: '/dashboard/onboarding', immer: true, ebene: 4, gruppe: 'start' },
 
@@ -100,14 +107,14 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
   { label: '✅ Freigaben & Proofing', href: '/dashboard/freigaben', modul: 'freigaben', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
-  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb' },
+  { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb', kern: true },
   { label: '📊 Deal-Pipeline', href: '/dashboard/pipeline', modul: 'pipeline', ebene: 3, gruppe: 'vertrieb' },
   { label: '💰 Provisionen', href: '/dashboard/provisionen', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
   { label: '🧭 Kunden-Akte', href: '/dashboard/kunde-akte', modul: 'kundenakte', ebene: 3, gruppe: 'vertrieb' },
   { label: '🕒 Aktivität', href: '/dashboard/aktivitaet', modul: 'aktivitaet', ebene: 3, gruppe: 'vertrieb' },
-  { label: '🧾 Angebote', href: '/dashboard/angebote', modul: 'angebote', ebene: 3, gruppe: 'vertrieb' },
+  { label: '🧾 Angebote', href: '/dashboard/angebote', modul: 'angebote', ebene: 3, gruppe: 'vertrieb', kern: true },
   { label: '✍️ Signaturen', href: '/dashboard/signaturen', modul: 'signaturen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
-  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb' },
+  { label: '📋 Aufträge', href: '/dashboard/auftraege', modul: 'auftraege', ebene: 3, gruppe: 'vertrieb', kern: true },
   { label: '📦 Versand', href: '/dashboard/versand', modul: 'versand', ebene: 3, gruppe: 'vertrieb' },
   { label: '🛒 Marktplätze', href: '/dashboard/marktplaetze', modul: 'marktplaetze', ebene: 3, gruppe: 'vertrieb' },
   { label: '📁 Projekte', href: '/dashboard/projekte', modul: 'projekte', ebene: 3, gruppe: 'vertrieb' },
@@ -116,7 +123,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '👤 Kunden-Portal', href: '/dashboard/portal', modul: 'kundenportal', ebene: 3, gruppe: 'vertrieb' },
 
   // --- Termine & Einsätze (Ebene 3, operativ) -------------------------------
-  { label: '🗓 Termine', href: '/dashboard/termine', modul: 'termine', ebene: 3, gruppe: 'termine' },
+  { label: '🗓 Termine', href: '/dashboard/termine', modul: 'termine', ebene: 3, gruppe: 'termine', kern: true },
   { label: '🌐 Online-Buchung', href: '/dashboard/online-buchung', modul: 'online-buchung', ebene: 3, gruppe: 'termine' },
   { label: '🗺 Dispo-Board', href: '/dashboard/dispo', modul: 'einsaetze', ebene: 3, gruppe: 'termine' },
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan', ebene: 3, gruppe: 'termine' },
@@ -196,16 +203,16 @@ export const NAV_LINKS: NavLink[] = [
   // sie ohne ausdrueckliche Freigabe fuer jeden offen sind.
   // Agenten: aus der Navigation genommen (Schaufenster ohne echte Funktion). Code bleibt geparkt.
   { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', ebene: 2, sensibel: true, gruppe: 'finanzen' },
-  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
-  { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '🧳 Reisekosten', href: '/dashboard/reisekosten', modul: 'reisekosten', ebene: 3, gruppe: 'finanzen' },
   { label: '🏗️ Anlagen & AfA', href: '/dashboard/anlagen', modul: 'anlagen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📈 Controlling', href: '/dashboard/controlling', modul: 'controlling', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📗 EÜR', href: '/dashboard/euer', modul: 'euer', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '⚠️ Mahnwesen', href: '/dashboard/mahnwesen', modul: 'mahnwesen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💸 Zahlungen', href: '/dashboard/zahlungen', modul: 'zahlungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
-  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '💶 Finanzen', href: '/dashboard/finanzen', modul: 'finanzen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🚪 Vertrag kündigen', href: '/dashboard/vertrag-kuendigen', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '👥 Mitglieder & Abos', href: '/dashboard/mitglieder', modul: 'mitglieder', ebene: 2, sensibel: true, gruppe: 'finanzen' },
@@ -238,7 +245,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔌 Schnittstellen', href: '/dashboard/schnittstellen', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🗄 Datensicherung', href: '/dashboard/datensicherung', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '📥 Import-Center', href: '/dashboard/import', modul: 'import', ebene: 3, gruppe: 'verwaltung' },
-  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4, gruppe: 'verwaltung' },
+  { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4, gruppe: 'verwaltung', kern: true },
 ]
 
 // ---------------------------------------------------------------------------
