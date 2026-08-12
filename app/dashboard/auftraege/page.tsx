@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import AuftraegeAuge from "./AuftraegeAuge";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
+import { NurVoll } from "../_components/Ansicht";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
@@ -650,17 +651,19 @@ export default function AuftraegeCockpit() {
               style={inputStyle}
             />
 
-            <label style={labelStyle}>Status</label>
-            <select value={neuStatus} onChange={(e) => setNeuStatus(e.target.value as StatusKey)} style={inputStyle}>
-              {STATUS_REIHENFOLGE.map((s) => (
-                <option key={s} value={s} style={{ background: C.navy2 }}>
-                  {STATUS[s].label}
-                </option>
-              ))}
-            </select>
+            <NurVoll>
+              <label style={labelStyle}>Status</label>
+              <select value={neuStatus} onChange={(e) => setNeuStatus(e.target.value as StatusKey)} style={inputStyle}>
+                {STATUS_REIHENFOLGE.map((s) => (
+                  <option key={s} value={s} style={{ background: C.navy2 }}>
+                    {STATUS[s].label}
+                  </option>
+                ))}
+              </select>
 
-            <label style={labelStyle}>Auftragsdatum</label>
-            <input type="date" value={neuDatum} onChange={(e) => setNeuDatum(e.target.value)} style={inputStyle} />
+              <label style={labelStyle}>Auftragsdatum</label>
+              <input type="date" value={neuDatum} onChange={(e) => setNeuDatum(e.target.value)} style={inputStyle} />
+            </NurVoll>
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 24 }}>
               <button
