@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import PruefAuge from './PruefAuge'
-import { AnsichtSchalter } from '../_components/Ansicht'
+import { AnsichtSchalter, NurVoll } from '../_components/Ansicht'
 
 export type FirmaProfil = {
   firma_name?: string | null
@@ -27,7 +27,7 @@ export type FirmaProfil = {
 
 type FeldKey = keyof FirmaProfil
 type FeldDef = { key: FeldKey; label: string; placeholder?: string; breit?: boolean }
-type Gruppe = { titel: string; hinweis?: string; felder: FeldDef[] }
+type Gruppe = { titel: string; hinweis?: string; felder: FeldDef[]; nurVoll?: boolean }
 
 const GRUPPEN: Gruppe[] = [
   {
@@ -49,6 +49,7 @@ const GRUPPEN: Gruppe[] = [
   },
   {
     titel: 'Registerdaten',
+    nurVoll: true,
     hinweis: 'Pflichtangaben für Geschäftsbriefe bei GmbH/UG (§ 35a GmbHG). Einzelunternehmen/Kleingewerbe lassen nicht zutreffende Felder leer.',
     felder: [
       { key: 'firma_rechtsform', label: 'Rechtsform', placeholder: 'GmbH / Einzelunternehmen' },
@@ -150,26 +151,29 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
         <AnsichtSchalter />
       </section>
 
-      {GRUPPEN.map((g) => (
-        <section key={g.titel} style={card}>
-          <h2 style={gruppenTitel}>{g.titel}</h2>
-          {g.hinweis ? <p style={hinweisStil}>{g.hinweis}</p> : <div style={{ height: '12px' }} />}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {g.felder.map((f) => (
-              <div key={f.key} style={f.breit ? { gridColumn: '1 / -1' } : undefined}>
-                <label style={labelStil} htmlFor={f.key}>{f.label}</label>
-                <input
-                  id={f.key}
-                  value={werte[f.key]}
-                  onChange={(e) => aendern(f.key, e.target.value)}
-                  placeholder={f.placeholder}
-                  style={inputStil}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
+      {GRUPPEN.map((g) => {
+        const sektion = (
+          <section key={g.titel} style={card}>
+            <h2 style={gruppenTitel}>{g.titel}</h2>
+            {g.hinweis ? <p style={hinweisStil}>{g.hinweis}</p> : <div style={{ height: '12px' }} />}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {g.felder.map((f) => (
+                <div key={f.key} style={f.breit ? { gridColumn: '1 / -1' } : undefined}>
+                  <label style={labelStil} htmlFor={f.key}>{f.label}</label>
+                  <input
+                    id={f.key}
+                    value={werte[f.key]}
+                    onChange={(e) => aendern(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    style={inputStil}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+        return g.nurVoll ? <NurVoll key={g.titel}>{sektion}</NurVoll> : sektion
+      })}
 
       <section style={card}>
         <h2 style={gruppenTitel}>Steuer · Kleinunternehmerregelung</h2>
@@ -185,7 +189,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
         </label>
       </section>
 
-      <section style={card}>
+      <NurVoll><section style={card}>
         <h2 style={gruppenTitel}>Dokument-Branding</h2>
         <p style={hinweisStil}>Akzentfarbe für Überschriften und Linien in Ihren PDF-Dokumenten. Der Text bleibt schwarz/weiß. (Logo-Upload folgt.)</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -203,7 +207,7 @@ export default function EinstellungenClient({ profil }: { profil: FirmaProfil })
           />
           <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>z. B. Dunkelgrün für einen Gärtnerbetrieb</span>
         </div>
-      </section>
+      </section></NurVoll>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
         <button
