@@ -9,6 +9,7 @@ import { augeAmpel } from '@/lib/auge';
 import ServiceAuge from "./ServiceAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 
 const MODUL = 'tickets';
 
@@ -767,6 +768,7 @@ export default function ServicePage() {
               </div>
             </div>
 
+            <NurVoll>
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStil}>Kanal</label>
               <select
@@ -800,6 +802,7 @@ export default function ServicePage() {
                 />
               </div>
             )}
+            </NurVoll>
 
             <div
               style={{
