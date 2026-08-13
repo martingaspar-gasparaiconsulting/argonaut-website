@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 import { augeAmpel } from '@/lib/auge';
 
 const supabase = createBrowserClient(
@@ -124,7 +125,7 @@ export default function ItMspPage() {
               <input style={{ ...styles.inp, flex: 1 }} value={nv.kunde_name} onChange={(e) => setNv({ ...nv, kunde_name: e.target.value })} placeholder="Kunde" />
               <input style={{ ...styles.inp, flex: 1 }} value={nv.bezeichnung} onChange={(e) => setNv({ ...nv, bezeichnung: e.target.value })} placeholder="Leistung (z. B. Server-Betreuung)" />
               <label style={styles.lab}>€/Monat<input style={{ ...styles.inp, width: 80 }} value={nv.monatspauschale} onChange={(e) => setNv({ ...nv, monatspauschale: e.target.value })} inputMode="decimal" /></label>
-              <label style={styles.lab}>Intervall (T)<input style={{ ...styles.inp, width: 70 }} value={nv.intervall_tage} onChange={(e) => setNv({ ...nv, intervall_tage: e.target.value })} inputMode="numeric" /></label>
+              <NurVoll><label style={styles.lab}>Intervall (T)<input style={{ ...styles.inp, width: 70 }} value={nv.intervall_tage} onChange={(e) => setNv({ ...nv, intervall_tage: e.target.value })} inputMode="numeric" /></label></NurVoll>
               <label style={styles.lab}>Nächste Wartung<input type="date" style={styles.inp} value={nv.naechste_wartung} onChange={(e) => setNv({ ...nv, naechste_wartung: e.target.value })} /></label>
               <button style={styles.primaer} onClick={vertragAnlegen}>＋ Vertrag</button>
             </div>
@@ -158,9 +159,9 @@ export default function ItMspPage() {
               <select style={styles.inp} value={na.typ} onChange={(e) => setNa({ ...na, typ: e.target.value })}>
                 <option>Server</option><option>Client</option><option>Netzwerk</option><option>Drucker</option><option>Lizenz</option><option>Sonstige</option>
               </select>
-              <input style={{ ...styles.inp, width: 120 }} value={na.hersteller} onChange={(e) => setNa({ ...na, hersteller: e.target.value })} placeholder="Hersteller" />
-              <input style={{ ...styles.inp, width: 130 }} value={na.seriennummer} onChange={(e) => setNa({ ...na, seriennummer: e.target.value })} placeholder="Seriennr." />
-              <label style={styles.lab}>Garantie bis<input type="date" style={styles.inp} value={na.garantie_bis} onChange={(e) => setNa({ ...na, garantie_bis: e.target.value })} /></label>
+              <NurVoll><input style={{ ...styles.inp, width: 120 }} value={na.hersteller} onChange={(e) => setNa({ ...na, hersteller: e.target.value })} placeholder="Hersteller" /></NurVoll>
+              <NurVoll><input style={{ ...styles.inp, width: 130 }} value={na.seriennummer} onChange={(e) => setNa({ ...na, seriennummer: e.target.value })} placeholder="Seriennr." /></NurVoll>
+              <NurVoll><label style={styles.lab}>Garantie bis<input type="date" style={styles.inp} value={na.garantie_bis} onChange={(e) => setNa({ ...na, garantie_bis: e.target.value })} /></label></NurVoll>
               <button style={styles.primaer} onClick={assetAnlegen}>＋ Asset</button>
             </div>
           </div>

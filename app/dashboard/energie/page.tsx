@@ -12,6 +12,7 @@ import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'energie_anlagen';
@@ -131,10 +132,10 @@ export default function EnergiePage() {
             <option>PV</option><option>Waermepumpe</option><option>BHKW</option><option>Speicher</option><option>Sonstige</option>
           </select>
           <input style={{ ...styles.inp, width: 130 }} value={na.standort} onChange={(e) => setNa({ ...na, standort: e.target.value })} placeholder="Standort" />
-          <label style={styles.lab}>kW<input style={{ ...styles.inp, width: 70 }} value={na.leistung_kw} onChange={(e) => setNa({ ...na, leistung_kw: e.target.value })} inputMode="decimal" /></label>
-          <label style={styles.lab}>Inbetriebn.<input type="date" style={styles.inp} value={na.inbetriebnahme} onChange={(e) => setNa({ ...na, inbetriebnahme: e.target.value })} /></label>
+          <NurVoll><label style={styles.lab}>kW<input style={{ ...styles.inp, width: 70 }} value={na.leistung_kw} onChange={(e) => setNa({ ...na, leistung_kw: e.target.value })} inputMode="decimal" /></label></NurVoll>
+          <NurVoll><label style={styles.lab}>Inbetriebn.<input type="date" style={styles.inp} value={na.inbetriebnahme} onChange={(e) => setNa({ ...na, inbetriebnahme: e.target.value })} /></label></NurVoll>
           <label style={styles.lab}>Wartung fällig<input type="date" style={styles.inp} value={na.wartung_faellig} onChange={(e) => setNa({ ...na, wartung_faellig: e.target.value })} /></label>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
           <button style={styles.primaer} onClick={anlageAnlegen}>＋ Anlage</button>
         </div>
       </div>
