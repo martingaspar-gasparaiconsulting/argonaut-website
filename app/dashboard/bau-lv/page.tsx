@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'bau_lv';
@@ -182,7 +183,7 @@ export default function BauLvPage() {
             <div style={styles.row}>
               <input style={styles.inp} value={neuLv.titel} onChange={(e) => setNeuLv({ ...neuLv, titel: e.target.value })} placeholder="Titel (z. B. Rohbau Haus Müller)" />
               <input style={styles.inp} value={neuLv.kunde} onChange={(e) => setNeuLv({ ...neuLv, kunde: e.target.value })} placeholder="Kunde" />
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
               <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={lvAnlegen}>＋ Anlegen</button>
             </div>
           </div>
@@ -224,7 +225,7 @@ export default function BauLvPage() {
                     ))}
 
                     <div style={styles.posForm}>
-                      <input style={{ ...styles.inp, width: 78 }} value={pos.ordnungszahl} onChange={(e) => setPos({ ...pos, ordnungszahl: e.target.value })} placeholder="OZ" />
+                      <NurVoll><input style={{ ...styles.inp, width: 78 }} value={pos.ordnungszahl} onChange={(e) => setPos({ ...pos, ordnungszahl: e.target.value })} placeholder="OZ" /></NurVoll>
                       <input style={{ ...styles.inp, flex: 1, minWidth: 120 }} value={pos.kurztext} onChange={(e) => setPos({ ...pos, kurztext: e.target.value })} placeholder="Kurztext" />
                       <input style={{ ...styles.inp, width: 60 }} value={pos.menge} onChange={(e) => setPos({ ...pos, menge: e.target.value })} placeholder="Menge" inputMode="decimal" />
                       <input style={{ ...styles.inp, width: 56 }} value={pos.einheit} onChange={(e) => setPos({ ...pos, einheit: e.target.value })} placeholder="Einh." />
@@ -232,7 +233,7 @@ export default function BauLvPage() {
                       <select style={{ ...styles.inp, width: 56 }} value={pos.mwst_satz} onChange={(e) => setPos({ ...pos, mwst_satz: e.target.value })}><option value="19">19%</option><option value="7">7%</option></select>
                     </div>
                     <div style={styles.ntRow}>
-                      <label style={styles.check}><input type="checkbox" checked={pos.ist_nachtrag} onChange={(e) => setPos({ ...pos, ist_nachtrag: e.target.checked })} /> Nachtrag</label>
+                      <NurVoll><label style={styles.check}><input type="checkbox" checked={pos.ist_nachtrag} onChange={(e) => setPos({ ...pos, ist_nachtrag: e.target.checked })} /> Nachtrag</label></NurVoll>
                       {pos.ist_nachtrag && <input style={{ ...styles.inp, flex: 1 }} value={pos.nachtrag_grund} onChange={(e) => setPos({ ...pos, nachtrag_grund: e.target.value })} placeholder="Grund des Nachtrags" />}
                       <button style={styles.dazuBtn} disabled={busy} onClick={posAnlegen}>＋ Position</button>
                     </div>

@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'immo_einheiten';
@@ -124,11 +125,11 @@ export default function ImmobilienPage() {
             <div style={styles.row}>
               <input style={{ ...styles.inp, flex: 1 }} value={ne.objekt} onChange={(e) => setNe({ ...ne, objekt: e.target.value })} placeholder="Objekt / Adresse" />
               <input style={{ ...styles.inp, flex: 1 }} value={ne.bezeichnung} onChange={(e) => setNe({ ...ne, bezeichnung: e.target.value })} placeholder="Einheit (z. B. 1. OG links)" />
-              <label style={styles.lab}>m²<input style={{ ...styles.inp, width: 70 }} value={ne.flaeche_qm} onChange={(e) => setNe({ ...ne, flaeche_qm: e.target.value })} inputMode="decimal" /></label>
-              <label style={styles.lab}>Zi.<input style={{ ...styles.inp, width: 56 }} value={ne.zimmer} onChange={(e) => setNe({ ...ne, zimmer: e.target.value })} inputMode="decimal" /></label>
+              <NurVoll><label style={styles.lab}>m²<input style={{ ...styles.inp, width: 70 }} value={ne.flaeche_qm} onChange={(e) => setNe({ ...ne, flaeche_qm: e.target.value })} inputMode="decimal" /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Zi.<input style={{ ...styles.inp, width: 56 }} value={ne.zimmer} onChange={(e) => setNe({ ...ne, zimmer: e.target.value })} inputMode="decimal" /></label></NurVoll>
               <label style={styles.lab}>Kalt €<input style={{ ...styles.inp, width: 80 }} value={ne.kaltmiete} onChange={(e) => setNe({ ...ne, kaltmiete: e.target.value })} inputMode="decimal" /></label>
               <label style={styles.lab}>NK €<input style={{ ...styles.inp, width: 70 }} value={ne.nebenkosten} onChange={(e) => setNe({ ...ne, nebenkosten: e.target.value })} inputMode="decimal" /></label>
-              <EigeneFelderInputs felder={felder} werte={neExtra} setWert={(fid, w) => setNeExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={neExtra} setWert={(fid, w) => setNeExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
               <button style={styles.primaer} onClick={einheitAnlegen}>＋ Einheit</button>
             </div>
           </div>
@@ -167,7 +168,7 @@ export default function ImmobilienPage() {
               <label style={styles.lab}>Beginn<input type="date" style={styles.inp} value={nv.beginn} onChange={(e) => setNv({ ...nv, beginn: e.target.value })} /></label>
               <label style={styles.lab}>Kalt €<input style={{ ...styles.inp, width: 80 }} value={nv.kaltmiete} onChange={(e) => setNv({ ...nv, kaltmiete: e.target.value })} inputMode="decimal" /></label>
               <label style={styles.lab}>NK €<input style={{ ...styles.inp, width: 70 }} value={nv.nebenkosten} onChange={(e) => setNv({ ...nv, nebenkosten: e.target.value })} inputMode="decimal" /></label>
-              <label style={styles.lab}>Kaution €<input style={{ ...styles.inp, width: 80 }} value={nv.kaution} onChange={(e) => setNv({ ...nv, kaution: e.target.value })} inputMode="decimal" /></label>
+              <NurVoll><label style={styles.lab}>Kaution €<input style={{ ...styles.inp, width: 80 }} value={nv.kaution} onChange={(e) => setNv({ ...nv, kaution: e.target.value })} inputMode="decimal" /></label></NurVoll>
               <button style={styles.primaer} onClick={vertragAnlegen}>＋ Vertrag</button>
             </div>
           </div>
