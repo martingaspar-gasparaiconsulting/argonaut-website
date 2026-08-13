@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 import { augeKanzlei } from '@/lib/auge';
 
 const supabase = createBrowserClient(
@@ -111,10 +112,12 @@ export default function KanzleiPage() {
           <div style={styles.card}>
             <div style={{ fontWeight: 800 }}>Frist anlegen</div>
             <div style={styles.row}>
-              <select style={{ ...styles.inp, minWidth: 150 }} value={nf.mandat_id} onChange={(e) => setNf({ ...nf, mandat_id: e.target.value })}>
-                <option value="">Mandat (optional)</option>
-                {mandate.map((m) => <option key={m.id} value={m.id}>{m.mandant}</option>)}
-              </select>
+              <NurVoll>
+                <select style={{ ...styles.inp, minWidth: 150 }} value={nf.mandat_id} onChange={(e) => setNf({ ...nf, mandat_id: e.target.value })}>
+                  <option value="">Mandat (optional)</option>
+                  {mandate.map((m) => <option key={m.id} value={m.id}>{m.mandant}</option>)}
+                </select>
+              </NurVoll>
               <input style={{ ...styles.inp, flex: 1 }} value={nf.bezeichnung} onChange={(e) => setNf({ ...nf, bezeichnung: e.target.value })} placeholder="z. B. USt-Voranmeldung Q1" />
               <label style={styles.lab}>Frist<input type="date" style={styles.inp} value={nf.frist} onChange={(e) => setNf({ ...nf, frist: e.target.value })} /></label>
               <button style={styles.primaer} onClick={fristAnlegen}>＋ Frist</button>
@@ -146,7 +149,9 @@ export default function KanzleiPage() {
             <div style={styles.row}>
               <input style={{ ...styles.inp, flex: 1 }} value={nm.mandant} onChange={(e) => setNm({ ...nm, mandant: e.target.value })} placeholder="Mandant" />
               <select style={styles.inp} value={nm.art} onChange={(e) => setNm({ ...nm, art: e.target.value })}><option>Steuer</option><option>Recht</option><option>Buchhaltung</option><option>Sonstige</option></select>
-              <input style={{ ...styles.inp, width: 140 }} value={nm.aktenzeichen} onChange={(e) => setNm({ ...nm, aktenzeichen: e.target.value })} placeholder="Aktenzeichen" />
+              <NurVoll>
+                <input style={{ ...styles.inp, width: 140 }} value={nm.aktenzeichen} onChange={(e) => setNm({ ...nm, aktenzeichen: e.target.value })} placeholder="Aktenzeichen" />
+              </NurVoll>
               <button style={styles.primaer} onClick={mandatAnlegen}>＋ Mandat</button>
             </div>
           </div>

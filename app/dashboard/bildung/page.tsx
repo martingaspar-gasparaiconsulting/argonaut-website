@@ -20,6 +20,7 @@ import {
 import { augeKurse } from '@/lib/auge';
 import { teilnahmebescheinigungPdf } from '@/lib/zertifikat';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -247,10 +248,14 @@ export default function BildungPage() {
           <label style={styles.lab}>Start<input type="date" style={styles.inp} value={nk.start_am} onChange={(e) => setNk({ ...nk, start_am: e.target.value })} /></label>
           {nk.art === 'serie' && <label style={styles.lab}>Ende<input type="date" style={styles.inp} value={nk.ende_am} onChange={(e) => setNk({ ...nk, ende_am: e.target.value })} /></label>}
           <input style={{ ...styles.inp, width: 130 }} value={nk.ort} onChange={(e) => setNk({ ...nk, ort: e.target.value })} placeholder="Ort" />
-          <input style={{ ...styles.inp, width: 140 }} value={nk.dozent} onChange={(e) => setNk({ ...nk, dozent: e.target.value })} placeholder="Dozent (optional)" />
+          <NurVoll>
+            <input style={{ ...styles.inp, width: 140 }} value={nk.dozent} onChange={(e) => setNk({ ...nk, dozent: e.target.value })} placeholder="Dozent (optional)" />
+          </NurVoll>
           <label style={styles.lab}>Plätze<input style={{ ...styles.inp, width: 66 }} value={nk.plaetze} onChange={(e) => setNk({ ...nk, plaetze: e.target.value })} inputMode="numeric" /></label>
           <label style={styles.lab}>Preis €<input style={{ ...styles.inp, width: 76 }} value={nk.preis} onChange={(e) => setNk({ ...nk, preis: e.target.value })} inputMode="decimal" /></label>
-          <label style={{ ...styles.lab, flexDirection: 'row', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={nk.zertifikat_aktiv} onChange={(e) => setNk({ ...nk, zertifikat_aktiv: e.target.checked })} /> Zertifikat</label>
+          <NurVoll>
+            <label style={{ ...styles.lab, flexDirection: 'row', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={nk.zertifikat_aktiv} onChange={(e) => setNk({ ...nk, zertifikat_aktiv: e.target.checked })} /> Zertifikat</label>
+          </NurVoll>
           <button style={styles.primaer} onClick={kursAnlegen}>＋ Kurs</button>
         </div>
       </div>
@@ -340,7 +345,9 @@ export default function BildungPage() {
                       <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nt.datum} onChange={(e) => setNt({ ...nt, datum: e.target.value })} /></label>
                       <label style={styles.lab}>von<input style={{ ...styles.inp, width: 84 }} value={nt.von_uhr} onChange={(e) => setNt({ ...nt, von_uhr: e.target.value })} placeholder="09:00" /></label>
                       <label style={styles.lab}>bis<input style={{ ...styles.inp, width: 84 }} value={nt.bis_uhr} onChange={(e) => setNt({ ...nt, bis_uhr: e.target.value })} placeholder="12:00" /></label>
-                      <input style={{ ...styles.inp, flex: 1, minWidth: 120 }} value={nt.thema} onChange={(e) => setNt({ ...nt, thema: e.target.value })} placeholder="Thema (optional)" />
+                      <NurVoll>
+                        <input style={{ ...styles.inp, flex: 1, minWidth: 120 }} value={nt.thema} onChange={(e) => setNt({ ...nt, thema: e.target.value })} placeholder="Thema (optional)" />
+                      </NurVoll>
                       <button style={styles.dazuBtn} onClick={terminAnlegen}>＋ Termin</button>
                     </div>
                     {!aktivTermine.length ? <p style={styles.dim}>Noch keine Termine. Leg oben den ersten an.</p> : (
