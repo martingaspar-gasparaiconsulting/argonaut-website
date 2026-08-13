@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -118,8 +119,8 @@ export default function WellnessPage() {
           <input style={{ ...styles.inp, flex: 1 }} value={nk.name} onChange={(e) => setNk({ ...nk, name: e.target.value })} placeholder="Name" />
           <input style={{ ...styles.inp, width: 130 }} value={nk.telefon} onChange={(e) => setNk({ ...nk, telefon: e.target.value })} placeholder="Telefon" />
           <input style={{ ...styles.inp, width: 160 }} value={nk.email} onChange={(e) => setNk({ ...nk, email: e.target.value })} placeholder="E-Mail" />
-          <label style={styles.lab}>Geburtstag<input type="date" style={styles.inp} value={nk.geburtsdatum} onChange={(e) => setNk({ ...nk, geburtsdatum: e.target.value })} /></label>
-          <input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder="Hinweise (Allergien, Wünsche …)" />
+          <NurVoll><label style={styles.lab}>Geburtstag<input type="date" style={styles.inp} value={nk.geburtsdatum} onChange={(e) => setNk({ ...nk, geburtsdatum: e.target.value })} /></label></NurVoll>
+          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder="Hinweise (Allergien, Wünsche …)" /></NurVoll>
           <button style={styles.primaer} onClick={kundeAnlegen}>＋ Kunde</button>
         </div>
       </div>
@@ -146,7 +147,7 @@ export default function WellnessPage() {
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
                   <input style={{ ...styles.inp, flex: 1 }} value={nb.behandlung} onChange={(e) => setNb({ ...nb, behandlung: e.target.value })} placeholder="Behandlung" />
-                  <label style={styles.lab}>Min<input style={{ ...styles.inp, width: 60 }} value={nb.dauer_min} onChange={(e) => setNb({ ...nb, dauer_min: e.target.value })} inputMode="numeric" /></label>
+                  <NurVoll><label style={styles.lab}>Min<input style={{ ...styles.inp, width: 60 }} value={nb.dauer_min} onChange={(e) => setNb({ ...nb, dauer_min: e.target.value })} inputMode="numeric" /></label></NurVoll>
                   <label style={styles.lab}>€<input style={{ ...styles.inp, width: 70 }} value={nb.preis} onChange={(e) => setNb({ ...nb, preis: e.target.value })} inputMode="decimal" /></label>
                   <button style={styles.dazuBtn} onClick={behAnlegen}>＋</button>
                 </div>

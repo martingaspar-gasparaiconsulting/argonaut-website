@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'agrar_schlaege';
@@ -104,7 +105,7 @@ export default function LandwirtschaftPage() {
           <label style={styles.lab}>ha<input style={{ ...styles.inp, width: 80 }} value={ns.flaeche_ha} onChange={(e) => setNs({ ...ns, flaeche_ha: e.target.value })} inputMode="decimal" /></label>
           <input style={{ ...styles.inp, width: 140 }} value={ns.kultur} onChange={(e) => setNs({ ...ns, kultur: e.target.value })} placeholder="Kultur (z. B. Weizen)" />
           <input style={{ ...styles.inp, width: 140 }} value={ns.standort} onChange={(e) => setNs({ ...ns, standort: e.target.value })} placeholder="Standort" />
-          <EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
           <button style={styles.primaer} onClick={schlagAnlegen}>＋ Schlag</button>
         </div>
       </div>
