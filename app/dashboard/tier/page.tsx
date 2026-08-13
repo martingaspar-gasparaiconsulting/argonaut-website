@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -123,9 +124,9 @@ export default function TierPage() {
         <div style={styles.row}>
           <input style={{ ...styles.inp, flex: 1 }} value={nt.name} onChange={(e) => setNt({ ...nt, name: e.target.value })} placeholder="Name des Tiers" />
           <select style={styles.inp} value={nt.art} onChange={(e) => setNt({ ...nt, art: e.target.value })}><option>Hund</option><option>Katze</option><option>Pferd</option><option>Rind</option><option>Kleintier</option><option>Sonstige</option></select>
-          <input style={{ ...styles.inp, width: 130 }} value={nt.rasse} onChange={(e) => setNt({ ...nt, rasse: e.target.value })} placeholder="Rasse" />
+          <NurVoll><input style={{ ...styles.inp, width: 130 }} value={nt.rasse} onChange={(e) => setNt({ ...nt, rasse: e.target.value })} placeholder="Rasse" /></NurVoll>
           <input style={{ ...styles.inp, flex: 1 }} value={nt.halter} onChange={(e) => setNt({ ...nt, halter: e.target.value })} placeholder="Halter" />
-          <input style={{ ...styles.inp, width: 130 }} value={nt.chip_nr} onChange={(e) => setNt({ ...nt, chip_nr: e.target.value })} placeholder="Chip-Nr." />
+          <NurVoll><input style={{ ...styles.inp, width: 130 }} value={nt.chip_nr} onChange={(e) => setNt({ ...nt, chip_nr: e.target.value })} placeholder="Chip-Nr." /></NurVoll>
           <button style={styles.primaer} onClick={tierAnlegen}>＋ Tier</button>
         </div>
       </div>
@@ -154,7 +155,7 @@ export default function TierPage() {
                     {Object.keys(ART_LABEL).map((k) => <option key={k} value={k}>{ART_LABEL[k]}</option>)}
                   </select>
                   <input style={{ ...styles.inp, flex: 1 }} value={nb.bezeichnung} onChange={(e) => setNb({ ...nb, bezeichnung: e.target.value })} placeholder="Bezeichnung" />
-                  <label style={styles.lab}>Wdh. fällig<input type="date" style={styles.inp} value={nb.naechste_faellig} onChange={(e) => setNb({ ...nb, naechste_faellig: e.target.value })} /></label>
+                  <NurVoll><label style={styles.lab}>Wdh. fällig<input type="date" style={styles.inp} value={nb.naechste_faellig} onChange={(e) => setNb({ ...nb, naechste_faellig: e.target.value })} /></label></NurVoll>
                   <label style={styles.lab}>€<input style={{ ...styles.inp, width: 66 }} value={nb.preis} onChange={(e) => setNb({ ...nb, preis: e.target.value })} inputMode="decimal" /></label>
                   <button style={styles.dazuBtn} onClick={behAnlegen}>＋</button>
                 </div>

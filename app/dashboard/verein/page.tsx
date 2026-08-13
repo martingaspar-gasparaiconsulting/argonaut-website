@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'verein_mitglieder';
@@ -114,8 +115,8 @@ export default function VereinPage() {
               <input style={{ ...styles.inp, width: 170 }} value={nm.email} onChange={(e) => setNm({ ...nm, email: e.target.value })} placeholder="E-Mail" />
               <label style={styles.lab}>Beitrag €<input style={{ ...styles.inp, width: 76 }} value={nm.beitrag} onChange={(e) => setNm({ ...nm, beitrag: e.target.value })} inputMode="decimal" /></label>
               <select style={styles.inp} value={nm.intervall} onChange={(e) => setNm({ ...nm, intervall: e.target.value })}><option value="monat">monatl.</option><option value="quartal">quartal</option><option value="jahr">jährl.</option></select>
-              <input style={{ ...styles.inp, width: 120 }} value={nm.rolle} onChange={(e) => setNm({ ...nm, rolle: e.target.value })} placeholder="Rolle" />
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><input style={{ ...styles.inp, width: 120 }} value={nm.rolle} onChange={(e) => setNm({ ...nm, rolle: e.target.value })} placeholder="Rolle" /></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
               <button style={styles.primaer} onClick={mitgliedAnlegen}>＋ Mitglied</button>
             </div>
             <div style={{ color: C.textDim, fontSize: 12.5 }}>💡 Beitrags-Einzug per SEPA läuft über das Modul „👥 Mitglieder & Abos".</div>
@@ -148,8 +149,8 @@ export default function VereinPage() {
             <div style={styles.row}>
               <input style={{ ...styles.inp, flex: 1 }} value={nv.titel} onChange={(e) => setNv({ ...nv, titel: e.target.value })} placeholder="Titel" />
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nv.datum} onChange={(e) => setNv({ ...nv, datum: e.target.value })} /></label>
-              <input style={{ ...styles.inp, width: 130 }} value={nv.ort} onChange={(e) => setNv({ ...nv, ort: e.target.value })} placeholder="Ort" />
-              <label style={styles.lab}>Teiln.<input style={{ ...styles.inp, width: 66 }} value={nv.teilnehmer} onChange={(e) => setNv({ ...nv, teilnehmer: e.target.value })} inputMode="numeric" /></label>
+              <NurVoll><input style={{ ...styles.inp, width: 130 }} value={nv.ort} onChange={(e) => setNv({ ...nv, ort: e.target.value })} placeholder="Ort" /></NurVoll>
+              <NurVoll><label style={styles.lab}>Teiln.<input style={{ ...styles.inp, width: 66 }} value={nv.teilnehmer} onChange={(e) => setNv({ ...nv, teilnehmer: e.target.value })} inputMode="numeric" /></label></NurVoll>
               <label style={styles.lab}>Ehrenamt h<input style={{ ...styles.inp, width: 76 }} value={nv.ehrenamt_stunden} onChange={(e) => setNv({ ...nv, ehrenamt_stunden: e.target.value })} inputMode="decimal" /></label>
               <button style={styles.primaer} onClick={veranstAnlegen}>＋ Veranstaltung</button>
             </div>

@@ -16,6 +16,7 @@ import {
 } from '@/lib/haccp';
 import { augeHaccp } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -181,7 +182,7 @@ export default function LebensmittelPage() {
             <div style={{ fontWeight: 800 }}>Charge erfassen</div>
             <div style={styles.row}>
               <input style={{ ...styles.inp, flex: 1, minWidth: 130 }} value={nc.bezeichnung} onChange={(e) => setNc({ ...nc, bezeichnung: e.target.value })} placeholder="Produkt" />
-              <input style={{ ...styles.inp, width: 120 }} value={nc.charge_nr} onChange={(e) => setNc({ ...nc, charge_nr: e.target.value })} placeholder="Charge-Nr." />
+              <NurVoll><input style={{ ...styles.inp, width: 120 }} value={nc.charge_nr} onChange={(e) => setNc({ ...nc, charge_nr: e.target.value })} placeholder="Charge-Nr." /></NurVoll>
               <label style={styles.lab}>MHD<input type="date" style={styles.inp} value={nc.mhd} onChange={(e) => setNc({ ...nc, mhd: e.target.value })} /></label>
               <label style={styles.lab}>Menge<input style={{ ...styles.inp, width: 70 }} value={nc.menge} onChange={(e) => setNc({ ...nc, menge: e.target.value })} inputMode="decimal" /></label>
               <input style={{ ...styles.inp, width: 56 }} value={nc.einheit} onChange={(e) => setNc({ ...nc, einheit: e.target.value })} />
@@ -267,7 +268,7 @@ export default function LebensmittelPage() {
               <input style={{ ...styles.inp, flex: 1, minWidth: 130 }} value={nh.kontrollpunkt} onChange={(e) => setNh({ ...nh, kontrollpunkt: e.target.value })} placeholder="Kontrollpunkt" />
               <input style={{ ...styles.inp, width: 100 }} value={nh.messwert} onChange={(e) => setNh({ ...nh, messwert: e.target.value })} placeholder="z. B. 4 °C" />
               <label style={styles.check}><input type="checkbox" checked={nh.in_ordnung} onChange={(e) => setNh({ ...nh, in_ordnung: e.target.checked })} /> i. O.</label>
-              <input style={{ ...styles.inp, width: 110 }} value={nh.pruefer} onChange={(e) => setNh({ ...nh, pruefer: e.target.value })} placeholder="Prüfer" />
+              <NurVoll><input style={{ ...styles.inp, width: 110 }} value={nh.pruefer} onChange={(e) => setNh({ ...nh, pruefer: e.target.value })} placeholder="Prüfer" /></NurVoll>
               <button style={styles.primaer} onClick={haccpAnlegen}>＋ Kontrolle</button>
             </div>
             {!nh.in_ordnung && <input style={styles.inp} value={nh.massnahme} onChange={(e) => setNh({ ...nh, massnahme: e.target.value })} placeholder="Korrekturmaßnahme bei Abweichung" />}
