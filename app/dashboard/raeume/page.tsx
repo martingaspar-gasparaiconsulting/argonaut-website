@@ -15,6 +15,7 @@ import {
 } from "@/lib/raeume";
 import { belegungsplanPdf } from "@/lib/belegungsplanPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
 
 const MODUL = "raum_ressource";
@@ -384,10 +385,14 @@ export default function RaeumeSeite() {
               <div><label style={label}>Standort</label><input style={input} value={rForm.standort} onChange={(e) => setRForm({ ...rForm, standort: e.target.value })} placeholder="z. B. 1. OG" /></div>
               <div><label style={label}>Ausstattung</label><input style={input} value={rForm.ausstattung} onChange={(e) => setRForm({ ...rForm, ausstattung: e.target.value })} placeholder="Beamer, Whiteboard…" /></div>
               <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8 }}><label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}><input type="checkbox" checked={rForm.buchbar} onChange={(e) => setRForm({ ...rForm, buchbar: e.target.checked })} /> buchbar</label></div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={rForm.notiz} onChange={(e) => setRForm({ ...rForm, notiz: e.target.value })} /></div>
-              <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
-              </div>
+              <NurVoll>
+                <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={rForm.notiz} onChange={(e) => setRForm({ ...rForm, notiz: e.target.value })} /></div>
+              </NurVoll>
+              <NurVoll>
+                <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
+                </div>
+              </NurVoll>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>

@@ -16,6 +16,7 @@ import { augeTour } from '@/lib/auge';
 import { ablieferPdf } from '@/lib/ablieferPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'tour';
@@ -242,7 +243,9 @@ export default function TourPage() {
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nt.datum} onChange={(e) => setNt({ ...nt, datum: e.target.value })} /></label>
               <label style={styles.lab}>Fahrer<input style={styles.inp} value={nt.fahrer} onChange={(e) => setNt({ ...nt, fahrer: e.target.value })} /></label>
               <label style={styles.lab}>Fahrzeug<input style={styles.inp} value={nt.fahrzeug} onChange={(e) => setNt({ ...nt, fahrzeug: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              </NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'tour' ? 0.6 : 1 }} disabled={busy === 'tour'} onClick={tourAnlegen}>＋ Anlegen & öffnen</button>
           </div>

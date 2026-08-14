@@ -4,6 +4,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import VertraegeAuge from "./VertraegeAuge";
 import { signaturStarten } from "@/lib/signaturStart";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'vertraege';
@@ -904,14 +905,16 @@ export default function VertraegeCockpit() {
                   onChange={(e) => setF("vertragspartner", e.target.value)}
                 />
               </div>
-              <div>
-                <label style={labelStil}>Vertragsnummer</label>
-                <input
-                  style={inputStil}
-                  value={form.vertragsnummer}
-                  onChange={(e) => setF("vertragsnummer", e.target.value)}
-                />
-              </div>
+              <NurVoll>
+                <div>
+                  <label style={labelStil}>Vertragsnummer</label>
+                  <input
+                    style={inputStil}
+                    value={form.vertragsnummer}
+                    onChange={(e) => setF("vertragsnummer", e.target.value)}
+                  />
+                </div>
+              </NurVoll>
               <div>
                 <label style={labelStil}>Status</label>
                 <select
@@ -1019,17 +1022,21 @@ export default function VertraegeCockpit() {
                 )}
               </div>
 
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStil}>Notizen</label>
-                <textarea
-                  style={{ ...inputStil, minHeight: 70, resize: "vertical" }}
-                  value={form.notizen}
-                  onChange={(e) => setF("notizen", e.target.value)}
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
-              </div>
+              <NurVoll>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStil}>Notizen</label>
+                  <textarea
+                    style={{ ...inputStil, minHeight: 70, resize: "vertical" }}
+                    value={form.notizen}
+                    onChange={(e) => setF("notizen", e.target.value)}
+                  />
+                </div>
+              </NurVoll>
+              <NurVoll>
+                <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
+                </div>
+              </NurVoll>
             </div>
 
             {fehler && (
