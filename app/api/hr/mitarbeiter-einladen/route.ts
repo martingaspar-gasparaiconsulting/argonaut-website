@@ -131,6 +131,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Zugang erstellt, aber Verknuepfung fehlgeschlagen. Bitte erneut versuchen." }, { status: 500 });
     }
 
+    // Neuen Mitarbeiter automatisch in die Team-Kanaele des Chefs aufnehmen.
+    // Sonst ist er Mitglied in KEINEM Kanal -> die per RLS auf die eigene
+    // Mitgliedschaft gefilterte Kanal-Liste kommt leer zurueck und er sieht
+    // gar keinen Team-Chat. Wir schreiben mit dem Admin-Client (Service-Role),
+    // damit RLS hier nicht im Weg steht, und nur in Kanaele, die der Chef
+    // (der eingeloggte Aufrufer) selbst erstellt hat. Best effort: schlaegt
+    // das fehl, bleibt der Zugang trotzdem gueltig.
+    try {
+      const anzeige = `${ma.vorname ?? ""} ${ma.nachname ?? ""}`.trim() || null;
+      const { data: chefKanaele } = await admin
+        .from("chat_kanaele")
+        .select("id")
+        .eq("erstellt_von", user.id);
+      const mitgliedschaften = (chefKanaele ?? []).map((k: { id: string }) => ({
+        kanal_id: k.id,
+        user_id: authUserId,
+        anzeigename: anzeige,
+      }));
+      if (mitgliedschaften.length > 0) {
+        await admin
+          .from("chat_mitglieder")
+          .upsert(mitgliedschaften, { onConflict: "kanal_id,user_id", ignoreDuplicates: true });
+      }
+    } catch (chatErr) {
+      console.error("Team-Chat Auto-Beitritt fehlgeschlagen (unkritisch):", chatErr);
+    }
+
     const loginUrl = new URL(req.url).origin + "/auth/login";
 
     return NextResponse.json({
