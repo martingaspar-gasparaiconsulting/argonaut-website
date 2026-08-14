@@ -20,6 +20,7 @@ import { augeSchlagkartei } from '@/lib/auge';
 import { schlagNachweisPdf } from '@/lib/schlagNachweisPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'schlag';
@@ -241,13 +242,13 @@ export default function SchlagkarteiPage() {
             <div style={styles.cardTitel}>Schlag anlegen</div>
             <div style={styles.grid}>
               <label style={styles.lab}>Bezeichnung<input style={styles.inp} value={nsch.bezeichnung} onChange={(e) => setNsch({ ...nsch, bezeichnung: e.target.value })} placeholder="z. B. Acker am Bach" /></label>
-              <label style={styles.lab}>Flurstück / FID<input style={styles.inp} value={nsch.flurstueck} onChange={(e) => setNsch({ ...nsch, flurstueck: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Flurstück / FID<input style={styles.inp} value={nsch.flurstueck} onChange={(e) => setNsch({ ...nsch, flurstueck: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Fläche (ha)<input style={styles.inp} inputMode="decimal" value={nsch.flaeche_ha} onChange={(e) => setNsch({ ...nsch, flaeche_ha: e.target.value })} /></label>
               <label style={styles.lab}>Kultur<input style={styles.inp} value={nsch.kultur} onChange={(e) => setNsch({ ...nsch, kultur: e.target.value })} placeholder="z. B. Winterweizen" /></label>
-              <label style={styles.lab}>Aussaat<input type="date" style={styles.inp} value={nsch.aussaat_am} onChange={(e) => setNsch({ ...nsch, aussaat_am: e.target.value })} /></label>
-              <label style={styles.lab}>Ernte<input type="date" style={styles.inp} value={nsch.ernte_am} onChange={(e) => setNsch({ ...nsch, ernte_am: e.target.value })} /></label>
-              <label style={styles.lab}>Standort / GPS<input style={styles.inp} value={nsch.standort} onChange={(e) => setNsch({ ...nsch, standort: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Aussaat<input type="date" style={styles.inp} value={nsch.aussaat_am} onChange={(e) => setNsch({ ...nsch, aussaat_am: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Ernte<input type="date" style={styles.inp} value={nsch.ernte_am} onChange={(e) => setNsch({ ...nsch, ernte_am: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Standort / GPS<input style={styles.inp} value={nsch.standort} onChange={(e) => setNsch({ ...nsch, standort: e.target.value })} /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'schlag' ? 0.6 : 1 }} disabled={busy === 'schlag'} onClick={schlagAnlegen}>＋ Anlegen</button>
           </div>
@@ -305,8 +306,8 @@ export default function SchlagkarteiPage() {
                   </label>
                   <label style={styles.lab}>Gesamt-N (kg N/ha)<input style={styles.inp} inputMode="decimal" value={ndue.n_gesamt} onChange={(e) => setNdue({ ...ndue, n_gesamt: e.target.value })} /></label>
                   {ndue.art === 'organisch' && <label style={styles.lab}>verfügbarer N (kg N/ha)<input style={styles.inp} inputMode="decimal" value={ndue.n_verfuegbar} onChange={(e) => setNdue({ ...ndue, n_verfuegbar: e.target.value })} /></label>}
-                  <label style={styles.lab}>P₂O₅ (kg/ha)<input style={styles.inp} inputMode="decimal" value={ndue.p2o5} onChange={(e) => setNdue({ ...ndue, p2o5: e.target.value })} /></label>
-                  <label style={styles.lab}>Anwender<input style={styles.inp} value={ndue.anwender} onChange={(e) => setNdue({ ...ndue, anwender: e.target.value })} /></label>
+                  <NurVoll><label style={styles.lab}>P₂O₅ (kg/ha)<input style={styles.inp} inputMode="decimal" value={ndue.p2o5} onChange={(e) => setNdue({ ...ndue, p2o5: e.target.value })} /></label></NurVoll>
+                  <NurVoll><label style={styles.lab}>Anwender<input style={styles.inp} value={ndue.anwender} onChange={(e) => setNdue({ ...ndue, anwender: e.target.value })} /></label></NurVoll>
                 </div>
                 {nInfo && (
                   <div style={{ ...styles.vorschau, borderColor: nInfo.bedarf == null ? C.warn : (nInfo.rest! < 0 ? C.danger : C.border) }}>
@@ -358,7 +359,7 @@ export default function SchlagkarteiPage() {
                     </select>
                   </label>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={npsm.datum} onChange={(e) => setNpsm({ ...npsm, datum: e.target.value })} /></label>
-                  <label style={styles.lab}>Startzeit (nur bei Auflage)<input style={styles.inp} value={npsm.startzeit} onChange={(e) => setNpsm({ ...npsm, startzeit: e.target.value })} placeholder="z. B. 06:30" /></label>
+                  <NurVoll><label style={styles.lab}>Startzeit (nur bei Auflage)<input style={styles.inp} value={npsm.startzeit} onChange={(e) => setNpsm({ ...npsm, startzeit: e.target.value })} placeholder="z. B. 06:30" /></label></NurVoll>
                   <label style={styles.lab}>Verwendungsart
                     <select style={styles.inp} value={npsm.verwendungsart} onChange={(e) => setNpsm({ ...npsm, verwendungsart: e.target.value })}>
                       {PSM_VERWENDUNGSART.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -374,11 +375,11 @@ export default function SchlagkarteiPage() {
                   </label>
                   <label style={styles.lab}>Kultur<input style={styles.inp} value={npsm.kultur} onChange={(e) => setNpsm({ ...npsm, kultur: e.target.value })} placeholder="leer = Schlag-Kultur" /></label>
                   <label style={styles.lab}>Behandelte Fläche (ha)<input style={styles.inp} inputMode="decimal" value={npsm.flaeche_ha} onChange={(e) => setNpsm({ ...npsm, flaeche_ha: e.target.value })} placeholder="leer = Schlag-Fläche" /></label>
-                  <label style={styles.lab}>EPPO-Code<input style={styles.inp} value={npsm.eppo_code} onChange={(e) => setNpsm({ ...npsm, eppo_code: e.target.value })} placeholder="z. B. TRZAW" /></label>
-                  <label style={styles.lab}>BBCH (nur bei Auflage)<input style={styles.inp} value={npsm.bbch_stadium} onChange={(e) => setNpsm({ ...npsm, bbch_stadium: e.target.value })} /></label>
+                  <NurVoll><label style={styles.lab}>EPPO-Code<input style={styles.inp} value={npsm.eppo_code} onChange={(e) => setNpsm({ ...npsm, eppo_code: e.target.value })} placeholder="z. B. TRZAW" /></label></NurVoll>
+                  <NurVoll><label style={styles.lab}>BBCH (nur bei Auflage)<input style={styles.inp} value={npsm.bbch_stadium} onChange={(e) => setNpsm({ ...npsm, bbch_stadium: e.target.value })} /></label></NurVoll>
                   <label style={styles.lab}>Anwendungsgebiet / Indikation<input style={styles.inp} value={npsm.anwendungsgebiet} onChange={(e) => setNpsm({ ...npsm, anwendungsgebiet: e.target.value })} /></label>
-                  <label style={styles.lab}>Wartezeit (Tage)<input style={styles.inp} inputMode="numeric" value={npsm.wartezeit_tage} onChange={(e) => setNpsm({ ...npsm, wartezeit_tage: e.target.value })} /></label>
-                  <label style={styles.lab}>Anwender<input style={styles.inp} value={npsm.anwender} onChange={(e) => setNpsm({ ...npsm, anwender: e.target.value })} /></label>
+                  <NurVoll><label style={styles.lab}>Wartezeit (Tage)<input style={styles.inp} inputMode="numeric" value={npsm.wartezeit_tage} onChange={(e) => setNpsm({ ...npsm, wartezeit_tage: e.target.value })} /></label></NurVoll>
+                  <NurVoll><label style={styles.lab}>Anwender<input style={styles.inp} value={npsm.anwender} onChange={(e) => setNpsm({ ...npsm, anwender: e.target.value })} /></label></NurVoll>
                 </div>
                 <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'psm' ? 0.6 : 1 }} disabled={busy === 'psm'} onClick={psmAnlegen}>＋ Dokumentieren</button>
               </>
@@ -423,8 +424,8 @@ export default function SchlagkarteiPage() {
                     </select>
                   </label>
                   <label style={styles.lab}>Jahr<input style={styles.inp} inputMode="numeric" value={nbed.jahr} onChange={(e) => setNbed({ ...nbed, jahr: e.target.value })} /></label>
-                  <label style={styles.lab}>Kultur<input style={styles.inp} value={nbed.kultur} onChange={(e) => setNbed({ ...nbed, kultur: e.target.value })} /></label>
-                  <label style={styles.lab}>Ertragserwartung (dt/ha)<input style={styles.inp} inputMode="decimal" value={nbed.ertragserwartung} onChange={(e) => setNbed({ ...nbed, ertragserwartung: e.target.value })} /></label>
+                  <NurVoll><label style={styles.lab}>Kultur<input style={styles.inp} value={nbed.kultur} onChange={(e) => setNbed({ ...nbed, kultur: e.target.value })} /></label></NurVoll>
+                  <NurVoll><label style={styles.lab}>Ertragserwartung (dt/ha)<input style={styles.inp} inputMode="decimal" value={nbed.ertragserwartung} onChange={(e) => setNbed({ ...nbed, ertragserwartung: e.target.value })} /></label></NurVoll>
                   <label style={styles.lab}>N-Bedarf (kg N/ha)<input style={styles.inp} inputMode="decimal" value={nbed.n_bedarf} onChange={(e) => setNbed({ ...nbed, n_bedarf: e.target.value })} /></label>
                   <label style={styles.lab}>P-Bedarf (kg P₂O₅/ha)<input style={styles.inp} inputMode="decimal" value={nbed.p_bedarf} onChange={(e) => setNbed({ ...nbed, p_bedarf: e.target.value })} /></label>
                 </div>

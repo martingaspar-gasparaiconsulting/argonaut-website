@@ -25,6 +25,7 @@ import {
 import { augeObjekte } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'assets';
@@ -369,16 +370,16 @@ export default function ObjekteRegister() {
               </Feld>
               <Feld label="Zustand"><select style={styles.input} value={form.zustand} onChange={(e) => setF('zustand', e.target.value as Zustand)}><option value="gut">🟢 Gut</option><option value="beobachten">🟠 Beobachten</option><option value="kritisch">🔴 Kritisch</option></select></Feld>
               <Feld label="Gruppe / Standort"><select style={styles.input} value={form.gruppe_id} onChange={(e) => setF('gruppe_id', e.target.value)}><option value="">— keine —</option>{gruppen.map((g) => <option key={g.id} value={g.id}>{g.bezeichnung}</option>)}</select></Feld>
-              <Feld label="… oder neue Gruppe anlegen"><input style={styles.input} value={form.neueGruppe} onChange={(e) => setF('neueGruppe', e.target.value)} placeholder="Name (optional)" /></Feld>
-              <Feld label="Standort (frei)"><input style={styles.input} value={form.standort} onChange={(e) => setF('standort', e.target.value)} placeholder="Halle 2 / Adresse" /></Feld>
-              <Feld label="Hersteller"><input style={styles.input} value={form.hersteller} onChange={(e) => setF('hersteller', e.target.value)} /></Feld>
-              <Feld label="Kennung (Seriennr./Kennzeichen)"><input style={styles.input} value={form.kennung} onChange={(e) => setF('kennung', e.target.value)} /></Feld>
+              <NurVoll><Feld label="… oder neue Gruppe anlegen"><input style={styles.input} value={form.neueGruppe} onChange={(e) => setF('neueGruppe', e.target.value)} placeholder="Name (optional)" /></Feld></NurVoll>
+              <NurVoll><Feld label="Standort (frei)"><input style={styles.input} value={form.standort} onChange={(e) => setF('standort', e.target.value)} placeholder="Halle 2 / Adresse" /></Feld></NurVoll>
+              <NurVoll><Feld label="Hersteller"><input style={styles.input} value={form.hersteller} onChange={(e) => setF('hersteller', e.target.value)} /></Feld></NurVoll>
+              <NurVoll><Feld label="Kennung (Seriennr./Kennzeichen)"><input style={styles.input} value={form.kennung} onChange={(e) => setF('kennung', e.target.value)} /></Feld></NurVoll>
               <Feld label="Kontrollintervall (Monate)"><input type="number" min={0} style={styles.input} value={form.kontrollintervall_monate} onChange={(e) => setF('kontrollintervall_monate', e.target.value)} /></Feld>
-              <Feld label="Letzte Kontrolle"><input type="date" style={styles.input} value={form.letzte_kontrolle} onChange={(e) => setF('letzte_kontrolle', e.target.value)} /></Feld>
-              <Feld label="Anschaffungsdatum"><input type="date" style={styles.input} value={form.anschaffungsdatum} onChange={(e) => setF('anschaffungsdatum', e.target.value)} /></Feld>
+              <NurVoll><Feld label="Letzte Kontrolle"><input type="date" style={styles.input} value={form.letzte_kontrolle} onChange={(e) => setF('letzte_kontrolle', e.target.value)} /></Feld></NurVoll>
+              <NurVoll><Feld label="Anschaffungsdatum"><input type="date" style={styles.input} value={form.anschaffungsdatum} onChange={(e) => setF('anschaffungsdatum', e.target.value)} /></Feld></NurVoll>
               <Feld label="Anschaffungswert (€)"><input style={styles.input} value={form.anschaffungswert} onChange={(e) => setF('anschaffungswert', e.target.value)} inputMode="decimal" placeholder="0,00" /></Feld>
-              <Feld label="Notiz" voll><textarea style={{ ...styles.input, minHeight: 56, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></Feld>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              <NurVoll><Feld label="Notiz" voll><textarea style={{ ...styles.input, minHeight: 56, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></Feld></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} /></NurVoll>
             </div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setModalAuf(false)} disabled={speichert} style={styles.ghostBtn}>Abbrechen</button>

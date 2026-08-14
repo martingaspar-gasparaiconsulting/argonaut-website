@@ -17,6 +17,7 @@ import { zuwendungPdf } from '@/lib/zuwendungPdf';
 import { ladeMeineUnterschrift } from '@/lib/meineUnterschrift';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'spende';
@@ -175,7 +176,7 @@ export default function SpendenPage() {
             <div style={styles.grid}>
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={ns.datum} onChange={(e) => setNs({ ...ns, datum: e.target.value })} /></label>
               <label style={styles.lab}>Spender<input style={styles.inp} value={ns.spender_name} onChange={(e) => setNs({ ...ns, spender_name: e.target.value })} /></label>
-              <label style={styles.lab}>Anschrift<input style={styles.inp} value={ns.spender_anschrift} onChange={(e) => setNs({ ...ns, spender_anschrift: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Anschrift<input style={styles.inp} value={ns.spender_anschrift} onChange={(e) => setNs({ ...ns, spender_anschrift: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Art
                 <select style={styles.inp} value={ns.art} onChange={(e) => setNs({ ...ns, art: e.target.value })}>
                   {SPENDE_ARTEN.map((a) => <option key={a} value={a}>{ART_LABEL[a]}</option>)}
@@ -183,8 +184,8 @@ export default function SpendenPage() {
               </label>
               <label style={styles.lab}>Betrag / Wert (€)<input style={styles.inp} inputMode="decimal" value={ns.betrag} onChange={(e) => setNs({ ...ns, betrag: e.target.value })} /></label>
               {ns.art === 'sachzuwendung' && <label style={styles.lab}>Sachwert-Beschreibung<input style={styles.inp} value={ns.sachwert_text} onChange={(e) => setNs({ ...ns, sachwert_text: e.target.value })} /></label>}
-              <label style={styles.lab}>Zweck<input style={styles.inp} value={ns.zweck} onChange={(e) => setNs({ ...ns, zweck: e.target.value })} placeholder="z. B. Jugendarbeit" /></label>
-              <EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Zweck<input style={styles.inp} value={ns.zweck} onChange={(e) => setNs({ ...ns, zweck: e.target.value })} placeholder="z. B. Jugendarbeit" /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nsExtra} setWert={(fid, w) => setNsExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             {vorschauWorte && (
               <div style={{ ...styles.vorschau, marginTop: 12 }}>
