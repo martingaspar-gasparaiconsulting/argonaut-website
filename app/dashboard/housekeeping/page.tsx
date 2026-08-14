@@ -19,6 +19,7 @@ import {
 import { ALLERGENE, parseAllergene, allergenNamen } from "@/lib/etiketten";
 import { speisekartePdf } from "@/lib/speisekartePdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
 
 const MODUL = "hk_zimmer";
@@ -396,11 +397,11 @@ export default function HousekeepingSeite() {
               <div><label style={label}>Kategorie</label><input style={input} value={zForm.kategorie} onChange={(e) => setZF("kategorie", e.target.value)} placeholder="Doppelzimmer / Suite" /></div>
               <div><label style={label}>Status</label><select style={input} value={zForm.status} onChange={(e) => setZF("status", e.target.value)}>{HK_STATUS.map((s) => <option key={s} value={s}>{HK_LABEL[s].text}</option>)}</select></div>
               <div><label style={label}>Priorität</label><select style={input} value={zForm.prio} onChange={(e) => setZF("prio", e.target.value)}>{HK_PRIO.map((p) => <option key={p} value={p}>{PRIO_LABEL[p]}</option>)}</select></div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Zuständig</label><input style={input} value={zForm.zustaendig} onChange={(e) => setZF("zustaendig", e.target.value)} /></div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={zForm.notiz} onChange={(e) => setZF("notiz", e.target.value)} /></div>
-              <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 12 }}>
+              <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Zuständig</label><input style={input} value={zForm.zustaendig} onChange={(e) => setZF("zustaendig", e.target.value)} /></div></NurVoll>
+              <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={zForm.notiz} onChange={(e) => setZF("notiz", e.target.value)} /></div></NurVoll>
+              <NurVoll><div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 12 }}>
                 <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
-              </div>
+              </div></NurVoll>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
@@ -421,7 +422,7 @@ export default function HousekeepingSeite() {
               <div><label style={label}>Kategorie</label><select style={input} value={gForm.kategorie} onChange={(e) => setGF("kategorie", e.target.value)}>{MENU_KATEGORIEN.map((k) => <option key={k} value={k}>{k}</option>)}</select></div>
               <div><label style={label}>Preis (€)</label><input style={input} value={gForm.preis} onChange={(e) => setGF("preis", e.target.value)} inputMode="decimal" placeholder="0,00" /></div>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Beschreibung</label><input style={input} value={gForm.beschreibung} onChange={(e) => setGF("beschreibung", e.target.value)} placeholder="mit Pommes und Salat" /></div>
-              <div><label style={label}>Reihenfolge</label><input style={input} value={gForm.reihenfolge} onChange={(e) => setGF("reihenfolge", e.target.value)} inputMode="numeric" placeholder="0" /></div>
+              <NurVoll><div><label style={label}>Reihenfolge</label><input style={input} value={gForm.reihenfolge} onChange={(e) => setGF("reihenfolge", e.target.value)} inputMode="numeric" placeholder="0" /></div></NurVoll>
               <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}><input type="checkbox" checked={gForm.verfuegbar} onChange={(e) => setGF("verfuegbar", e.target.checked)} /> verfügbar</label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}><input type="checkbox" checked={gForm.hervorgehoben} onChange={(e) => setGF("hervorgehoben", e.target.checked)} /> ★ Empfehlung</label>

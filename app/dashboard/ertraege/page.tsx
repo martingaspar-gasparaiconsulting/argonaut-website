@@ -18,6 +18,7 @@ import { augeErtraege } from '@/lib/auge';
 import { ertraegePdf } from '@/lib/ertraegePdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'ertrag_anlage';
@@ -222,7 +223,7 @@ export default function ErtraegePage() {
                 {ANLAGEN_TYPEN.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
               </select>
             </label>
-            <label style={styles.lab}>Standort<input style={styles.inp} value={nAnl.standort} onChange={(e) => setNAnl({ ...nAnl, standort: e.target.value })} /></label>
+            <NurVoll><label style={styles.lab}>Standort<input style={styles.inp} value={nAnl.standort} onChange={(e) => setNAnl({ ...nAnl, standort: e.target.value })} /></label></NurVoll>
             <label style={styles.lab}>Nennleistung ({typEinheit(nAnl.typ)})<input style={styles.inp} inputMode="decimal" value={nAnl.nennleistung_kwp} onChange={(e) => setNAnl({ ...nAnl, nennleistung_kwp: e.target.value })} placeholder="z. B. 10" /></label>
             <label style={styles.lab}>Jahres-Soll (kWh/{typEinheit(nAnl.typ)}·a)<input style={styles.inp} inputMode="decimal" value={nAnl.soll_spezifisch} onChange={(e) => setNAnl({ ...nAnl, soll_spezifisch: e.target.value })} /></label>
             <label style={styles.lab}>Einspeisevergütung (ct/kWh)<input style={styles.inp} inputMode="decimal" value={nAnl.verguetung_ct} onChange={(e) => setNAnl({ ...nAnl, verguetung_ct: e.target.value })} placeholder="z. B. 8,0" /></label>
@@ -232,7 +233,7 @@ export default function ErtraegePage() {
                 <option value="aktiv">aktiv</option><option value="wartung">in Wartung</option><option value="stillgelegt">stillgelegt</option>
               </select>
             </label>
-            <EigeneFelderInputs felder={felder} werte={nAnlExtra} setWert={(fid, w) => setNAnlExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+            <NurVoll><EigeneFelderInputs felder={felder} werte={nAnlExtra} setWert={(fid, w) => setNAnlExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
           </div>
           {nAnl.typ === 'pv' && <div style={{ marginTop: 6, color: C.textDim, fontSize: 13 }}>Orientierung PV Deutschland: 800–1.200 kWh/kWp·a (Norden ~900, Süden ~1.100+).</div>}
           <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'anl' ? 0.6 : 1 }} disabled={busy === 'anl'} onClick={anlageAnlegen}>＋ Anlage</button>

@@ -18,6 +18,7 @@ import { augePruef } from '@/lib/auge';
 import { pruefprotokollPdf } from '@/lib/pruefPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'pruef_protokoll';
@@ -201,7 +202,7 @@ export default function PruefprotokollePage() {
               {assets.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}</option>)}
             </select>
           </label>
-          <label style={styles.lab}>Objekt (Freitext)<input style={styles.inp} value={nk.objekt_bezeichnung} onChange={(e) => setNk({ ...nk, objekt_bezeichnung: e.target.value })} placeholder="z. B. Leiter Werkstatt Nr. 3" /></label>
+          <NurVoll><label style={styles.lab}>Objekt (Freitext)<input style={styles.inp} value={nk.objekt_bezeichnung} onChange={(e) => setNk({ ...nk, objekt_bezeichnung: e.target.value })} placeholder="z. B. Leiter Werkstatt Nr. 3" /></label></NurVoll>
           <label style={styles.lab}>Prüfdatum<input type="date" style={styles.inp} value={nk.datum} onChange={(e) => setNk({ ...nk, datum: e.target.value })} /></label>
           <label style={styles.lab}>Prüfer<input style={styles.inp} value={nk.pruefer} onChange={(e) => setNk({ ...nk, pruefer: e.target.value })} placeholder="Name der befähigten Person" /></label>
           {nk.pruef_key === 'sonstige' && <>
@@ -209,7 +210,7 @@ export default function PruefprotokollePage() {
             <label style={styles.lab}>Norm (frei)<input style={styles.inp} value={nk.norm_custom} onChange={(e) => setNk({ ...nk, norm_custom: e.target.value })} placeholder="z. B. DIN EN 12453" /></label>
             <label style={styles.lab}>Intervall (Monate)<input style={styles.inp} inputMode="numeric" value={nk.intervall_custom} onChange={(e) => setNk({ ...nk, intervall_custom: e.target.value })} /></label>
           </>}
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
 
         {nk.pruef_key && (
@@ -239,7 +240,7 @@ export default function PruefprotokollePage() {
                 <input type="checkbox" checked={nk.durchgefallen} onChange={(e) => setNk({ ...nk, durchgefallen: e.target.checked })} /> als „durchgefallen" werten
               </label>
             </div>
-            <label style={{ ...styles.lab, marginTop: 8 }}>Bemerkung<input style={styles.inp} value={nk.bemerkung} onChange={(e) => setNk({ ...nk, bemerkung: e.target.value })} placeholder="optional" /></label>
+            <NurVoll><label style={{ ...styles.lab, marginTop: 8 }}>Bemerkung<input style={styles.inp} value={nk.bemerkung} onChange={(e) => setNk({ ...nk, bemerkung: e.target.value })} placeholder="optional" /></label></NurVoll>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={speichern}>✓ Protokoll speichern</button>
           </>
         )}
