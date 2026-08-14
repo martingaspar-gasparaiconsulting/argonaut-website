@@ -15,7 +15,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
 import {
   baueKalkulation, summeKalk,
-  type ProjektRoh, type LeistungRoh, type ProjektKalk, type KalkStatus,
+  type ProjektRoh, type LeistungRoh, type KostenRoh, type ProjektKalk, type KalkStatus,
 } from '@/lib/nachkalkulation';
 
 const supabase = createBrowserClient(
@@ -42,18 +42,26 @@ export default function NachkalkulationSeite() {
   const [kalk, setKalk] = useState<ProjektKalk[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [projektListe, setProjektListe] = useState<{ id: string; name: string }[]>([]);
+  const [kf, setKf] = useState({ projekt_id: '', art: 'material', bezeichnung: '', betrag: '' });
+  const [ok, setOk] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
-      const [pr, pl] = await Promise.all([
+      const [pr, pl, pk] = await Promise.all([
         supabase.from('projekte').select('id, name, budget'),
         supabase.from('projektleistungen').select('projekt_id, stunden, stundensatz, abgerechnet'),
+        supabase.from('projekt_kosten').select('projekt_id, betrag'),
       ]);
       if (pr.error) throw pr.error;
       const projekte = (pr.data as unknown as ProjektRoh[]) ?? [];
       const leistungen = (pl.error ? [] : (pl.data as unknown as LeistungRoh[])) ?? [];
-      setKalk(baueKalkulation(projekte, leistungen));
+      const kosten = (pk.error ? [] : (pk.data as unknown as KostenRoh[])) ?? [];
+      setProjektListe(projekte.map((p) => ({ id: String(p.id), name: (p.name && String(p.name).trim()) || 'Projekt' })));
+      setKalk(baueKalkulation(projekte, leistungen, kosten));
     } catch (e: unknown) {
       setFehler('Nachkalkulation konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -63,9 +71,31 @@ export default function NachkalkulationSeite() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!data?.user?.id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      setUid(data.user.id);
       await laden_();
     })();
   }, [laden_]);
+
+  async function kostenErfassen() {
+    if (!uid) return;
+    if (!kf.projekt_id) { setFehler('Bitte ein Projekt wählen.'); return; }
+    const betrag = Number((kf.betrag || '').replace(',', '.'));
+    if (!Number.isFinite(betrag) || betrag <= 0) { setFehler('Bitte einen Betrag größer 0 eingeben.'); return; }
+    setBusy(true); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.from('projekt_kosten').insert({
+        owner_user_id: uid,
+        projekt_id: kf.projekt_id,
+        art: kf.art,
+        bezeichnung: kf.bezeichnung.trim() || null,
+        betrag,
+      });
+      if (error) { setFehler('Kosten konnten nicht gespeichert werden: ' + error.message); return; }
+      setKf({ projekt_id: kf.projekt_id, art: 'material', bezeichnung: '', betrag: '' });
+      setOk('Kostenposten erfasst.');
+      await laden_();
+    } finally { setBusy(false); }
+  }
 
   const s = useMemo(() => summeKalk(kalk), [kalk]);
 
@@ -81,13 +111,37 @@ export default function NachkalkulationSeite() {
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {ok && <div style={styles.ok}>{ok}</div>}
 
       <div style={styles.kpiGrid}>
         <Kpi label="Budget gesamt" value={eur(s.budget)} accent={C.cyan} />
         <Kpi label="Erbracht (Ist)" value={eur(s.erbracht)} accent={C.gold} gross />
+        <Kpi label="Material/Kosten" value={eur(s.kosten)} accent={s.kosten > 0 ? C.warn : C.textDim} />
+        <Kpi label={`Deckungsbeitrag${s.erbracht > 0 ? ` · ${s.marge.toLocaleString('de-DE', { maximumFractionDigits: 0 })} % Marge` : ''}`} value={eur(s.deckungsbeitrag)} accent={s.deckungsbeitrag >= 0 ? C.green : C.danger} gross />
         <Kpi label="Offen zum Abrechnen" value={eur(s.offen)} accent={s.offen > 0 ? C.warn : C.green} />
         <Kpi label="Über Budget" value={`${s.ueberBudget} Projekt${s.ueberBudget === 1 ? '' : 'e'}`} accent={s.ueberBudget > 0 ? C.danger : C.green} />
       </div>
+
+      {/* Material-/Fremdkosten je Projekt erfassen (echter Deckungsbeitrag). Nur „Voll". */}
+      <NurVoll>
+        <div style={styles.erfassen}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>Material-/Fremdkosten erfassen</div>
+          <div style={styles.erfassenRow}>
+            <select style={styles.inp} value={kf.projekt_id} onChange={(e) => setKf({ ...kf, projekt_id: e.target.value })}>
+              <option value="">Projekt wählen …</option>
+              {projektListe.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select style={{ ...styles.inp, maxWidth: 160 }} value={kf.art} onChange={(e) => setKf({ ...kf, art: e.target.value })}>
+              <option value="material">Material</option>
+              <option value="fremd">Fremdleistung</option>
+              <option value="sonstige">Sonstiges</option>
+            </select>
+            <input style={{ ...styles.inp, flex: 1, minWidth: 140 }} value={kf.bezeichnung} onChange={(e) => setKf({ ...kf, bezeichnung: e.target.value })} placeholder="Bezeichnung (z. B. Blech, Fremdmontage)" />
+            <input style={{ ...styles.inp, maxWidth: 120 }} value={kf.betrag} onChange={(e) => setKf({ ...kf, betrag: e.target.value })} placeholder="Betrag €" inputMode="decimal" />
+            <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={kostenErfassen}>＋ Erfassen</button>
+          </div>
+        </div>
+      </NurVoll>
 
       <div style={{ ...styles.card, marginTop: 18 }}>
         {laden ? (
@@ -105,6 +159,9 @@ export default function NachkalkulationSeite() {
                   <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Stunden</th></NurVoll>
                   <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Auslastung</th></NurVoll>
                   <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Offen</th></NurVoll>
+                  <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Material</th></NurVoll>
+                  <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Deckungsbeitrag</th></NurVoll>
+                  <NurVoll><th style={{ ...styles.th, textAlign: 'right' }}>Marge</th></NurVoll>
                   <th style={{ ...styles.th, textAlign: 'right' }}>Status</th>
                 </tr>
               </thead>
@@ -119,6 +176,9 @@ export default function NachkalkulationSeite() {
                       <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{k.stunden > 0 ? std(k.stunden) : '—'}</td></NurVoll>
                       <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: k.status === 'ueber_budget' ? C.danger : C.text }}>{k.budget > 0 ? `${k.auslastung.toLocaleString('de-DE', { maximumFractionDigits: 0 })} %` : '—'}</td></NurVoll>
                       <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: k.offen > 0 ? C.warn : C.textDim }}>{k.offen > 0 ? eur(k.offen) : '—'}</td></NurVoll>
+                      <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: k.kosten > 0 ? C.warn : C.textDim }}>{k.kosten > 0 ? eur(k.kosten) : '—'}</td></NurVoll>
+                      <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: k.deckungsbeitrag >= 0 ? C.green : C.danger, fontWeight: 700 }}>{k.erbracht > 0 || k.kosten > 0 ? eur(k.deckungsbeitrag) : '—'}</td></NurVoll>
+                      <NurVoll><td style={{ ...styles.td, textAlign: 'right', color: k.marge >= 0 ? C.text : C.danger }}>{k.erbracht > 0 ? `${k.marge.toLocaleString('de-DE', { maximumFractionDigits: 0 })} %` : '—'}</td></NurVoll>
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <span style={{ color: meta.farbe, fontWeight: 700, fontSize: 'clamp(12px, 1.06vw, 17px)', whiteSpace: 'nowrap' }}>{meta.label}</span>
                       </td>
@@ -132,8 +192,9 @@ export default function NachkalkulationSeite() {
       </div>
 
       <div style={styles.rechtHinweis}>
-        „Erbracht" ist die gebuchte, abrechenbare Leistung (Stunden × Satz). Material- und Fremdkosten für einen vollen
-        Deckungsbeitrag lassen sich später ergänzen. Auf „Voll" (Einstellungen) erscheinen zusätzlich Stunden, Auslastung und offener Betrag.
+        „Erbracht" ist die gebuchte, abrechenbare Leistung (Stunden × Satz). Der <b>Deckungsbeitrag</b> = Erbracht − erfasste Material-/Fremdkosten,
+        die <b>Marge</b> = Deckungsbeitrag ÷ Erbracht. Kosten erfasst du oben je Projekt (im „Voll"-Modus). Später lassen sich die Kosten auch
+        automatisch aus zugeordneten Belegen ziehen — sie fließen in dieselbe Struktur. Auf „Voll" erscheinen zusätzlich Stunden, Auslastung, offener Betrag, Material, Deckungsbeitrag und Marge.
       </div>
     </div>
   );
@@ -159,5 +220,10 @@ const styles: Record<string, CSSProperties> = {
   td: { padding: '11px 10px', fontSize: 'clamp(14px, 1.25vw, 20px)', borderBottom: '1px solid rgba(143,163,190,0.08)', verticalAlign: 'middle' },
   hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '16px 0' },
+  ok: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '16px 0' },
+  erfassen: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '16px 18px', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 },
+  erfassenRow: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
+  inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '10px 12px', fontSize: 'clamp(14px, 1.1vw, 18px)', fontFamily: 'inherit', minWidth: 150 },
+  primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 'clamp(14px, 1.1vw, 18px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   rechtHinweis: { marginTop: 16, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, maxWidth: 780 },
 };
