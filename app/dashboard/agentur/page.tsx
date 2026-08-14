@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -87,7 +88,7 @@ export default function AgenturPage() {
         <div style={{ fontWeight: 800 }}>Retainer anlegen</div>
         <div style={styles.row}>
           <input style={{ ...styles.inp, flex: 1 }} value={nr.kunde_name} onChange={(e) => setNr({ ...nr, kunde_name: e.target.value })} placeholder="Kunde" />
-          <input style={{ ...styles.inp, flex: 1 }} value={nr.bezeichnung} onChange={(e) => setNr({ ...nr, bezeichnung: e.target.value })} placeholder="Bezeichnung" />
+          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nr.bezeichnung} onChange={(e) => setNr({ ...nr, bezeichnung: e.target.value })} placeholder="Bezeichnung" /></NurVoll>
           <label style={styles.lab}>Std/Monat<input style={{ ...styles.inp, width: 80 }} value={nr.monatsstunden} onChange={(e) => setNr({ ...nr, monatsstunden: e.target.value })} inputMode="decimal" /></label>
           <label style={styles.lab}>€/Std<input style={{ ...styles.inp, width: 70 }} value={nr.stundensatz} onChange={(e) => setNr({ ...nr, stundensatz: e.target.value })} inputMode="decimal" /></label>
           <button style={styles.primaer} onClick={retainerAnlegen}>＋ Retainer</button>
@@ -120,7 +121,7 @@ export default function AgenturPage() {
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nz.datum} onChange={(e) => setNz({ ...nz, datum: e.target.value })} /></label>
                   <label style={styles.lab}>Std<input style={{ ...styles.inp, width: 70 }} value={nz.stunden} onChange={(e) => setNz({ ...nz, stunden: e.target.value })} inputMode="decimal" /></label>
-                  <input style={{ ...styles.inp, flex: 1 }} value={nz.beschreibung} onChange={(e) => setNz({ ...nz, beschreibung: e.target.value })} placeholder="Tätigkeit" />
+                  <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nz.beschreibung} onChange={(e) => setNz({ ...nz, beschreibung: e.target.value })} placeholder="Tätigkeit" /></NurVoll>
                   <button style={styles.dazuBtn} onClick={zeitBuchen}>＋ Buchen</button>
                 </div>
                 {aktivZeiten.map((z) => (

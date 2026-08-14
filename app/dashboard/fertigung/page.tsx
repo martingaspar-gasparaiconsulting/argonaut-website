@@ -11,6 +11,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'fertigung_auftraege';
@@ -139,7 +140,7 @@ export default function FertigungPage() {
             <div style={{ fontWeight: 800 }}>Neue Stückliste</div>
             <div style={styles.row}>
               <input style={{ ...styles.inp, flex: 1 }} value={nsl.name} onChange={(e) => setNsl({ ...nsl, name: e.target.value })} placeholder="Name (z. B. Tisch Modell A)" />
-              <input style={{ ...styles.inp, flex: 1 }} value={nsl.produkt} onChange={(e) => setNsl({ ...nsl, produkt: e.target.value })} placeholder="Produkt / Artikel-Nr." />
+              <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nsl.produkt} onChange={(e) => setNsl({ ...nsl, produkt: e.target.value })} placeholder="Produkt / Artikel-Nr." /></NurVoll>
               <button style={styles.primaer} onClick={slAnlegen}>＋ Anlegen</button>
             </div>
           </div>
@@ -182,15 +183,15 @@ export default function FertigungPage() {
           <div style={styles.card}>
             <div style={{ fontWeight: 800 }}>Neuer Fertigungsauftrag</div>
             <div style={styles.row}>
-              <input style={{ ...styles.inp, width: 110 }} value={na.auftragsnr} onChange={(e) => setNa({ ...na, auftragsnr: e.target.value })} placeholder="Auftrags-Nr." />
+              <NurVoll><input style={{ ...styles.inp, width: 110 }} value={na.auftragsnr} onChange={(e) => setNa({ ...na, auftragsnr: e.target.value })} placeholder="Auftrags-Nr." /></NurVoll>
               <input style={{ ...styles.inp, flex: 1 }} value={na.produkt} onChange={(e) => setNa({ ...na, produkt: e.target.value })} placeholder="Produkt" />
               <select style={{ ...styles.inp, minWidth: 140 }} value={na.stueckliste_id} onChange={(e) => setNa({ ...na, stueckliste_id: e.target.value })}>
                 <option value="">Stückliste (optional)</option>
                 {sls.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <label style={styles.lab}>Menge<input style={{ ...styles.inp, width: 70 }} value={na.menge} onChange={(e) => setNa({ ...na, menge: e.target.value })} inputMode="decimal" /></label>
-              <label style={styles.lab}>Start<input type="date" style={styles.inp} value={na.start_am} onChange={(e) => setNa({ ...na, start_am: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Start<input type="date" style={styles.inp} value={na.start_am} onChange={(e) => setNa({ ...na, start_am: e.target.value })} /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
               <button style={styles.primaer} onClick={auftragAnlegen}>＋ Auftrag</button>
             </div>
           </div>

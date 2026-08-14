@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 import { augeTour } from '@/lib/auge';
 
 const supabase = createBrowserClient(
@@ -108,7 +109,7 @@ export default function LogistikPage() {
         <div style={styles.row}>
           <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nt.datum} onChange={(e) => setNt({ ...nt, datum: e.target.value })} /></label>
           <input style={{ ...styles.inp, flex: 1 }} value={nt.fahrer} onChange={(e) => setNt({ ...nt, fahrer: e.target.value })} placeholder="Fahrer" />
-          <input style={{ ...styles.inp, width: 140 }} value={nt.fahrzeug} onChange={(e) => setNt({ ...nt, fahrzeug: e.target.value })} placeholder="Fahrzeug / Kennz." />
+          <NurVoll><input style={{ ...styles.inp, width: 140 }} value={nt.fahrzeug} onChange={(e) => setNt({ ...nt, fahrzeug: e.target.value })} placeholder="Fahrzeug / Kennz." /></NurVoll>
           <button style={styles.primaer} onClick={tourAnlegen}>＋ Tour</button>
         </div>
       </div>
@@ -137,7 +138,7 @@ export default function LogistikPage() {
                   </select>
                 </div>
                 <div style={styles.row}>
-                  <input style={{ ...styles.inp, width: 120 }} value={ns.sendungsnr} onChange={(e) => setNs({ ...ns, sendungsnr: e.target.value })} placeholder="Sendungs-Nr." />
+                  <NurVoll><input style={{ ...styles.inp, width: 120 }} value={ns.sendungsnr} onChange={(e) => setNs({ ...ns, sendungsnr: e.target.value })} placeholder="Sendungs-Nr." /></NurVoll>
                   <input style={{ ...styles.inp, flex: 1 }} value={ns.empfaenger} onChange={(e) => setNs({ ...ns, empfaenger: e.target.value })} placeholder="Empfänger" />
                   <input style={{ ...styles.inp, flex: 1 }} value={ns.adresse} onChange={(e) => setNs({ ...ns, adresse: e.target.value })} placeholder="Adresse" />
                   <button style={styles.dazuBtn} onClick={sendungAnlegen}>＋ Stopp</button>
