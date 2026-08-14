@@ -18,6 +18,7 @@ import {
 import { augeVerleih } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'verleih_artikel';
@@ -322,7 +323,9 @@ export default function VerleihPage() {
               <label style={styles.lab}>Wochensatz (€, optional)<input style={styles.inp} inputMode="decimal" value={na.wochensatz} onChange={(e) => setNa({ ...na, wochensatz: e.target.value })} /></label>
               <label style={styles.lab}>Kaution (€)<input style={styles.inp} inputMode="decimal" value={na.kaution} onChange={(e) => setNa({ ...na, kaution: e.target.value })} /></label>
               <label style={styles.lab}>Exemplare<input style={styles.inp} inputMode="numeric" value={na.anzahl} onChange={(e) => setNa({ ...na, anzahl: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={naExtra} setWert={(fid, w) => setNaExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll>
+                <EigeneFelderInputs felder={felder} werte={naExtra} setWert={(fid, w) => setNaExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              </NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'artikel' ? 0.6 : 1 }} disabled={busy === 'artikel'} onClick={artikelAnlegen}>＋ Anlegen</button>
           </div>

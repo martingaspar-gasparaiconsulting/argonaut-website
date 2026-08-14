@@ -21,6 +21,7 @@ import { augeExpose } from '@/lib/auge';
 import { exposePdf } from '@/lib/exposePdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'expose';
@@ -254,8 +255,10 @@ export default function ExposePage() {
           <label style={styles.lab}>Grundstück (m², optional)<input style={styles.inp} inputMode="decimal" value={f.grundstuecksflaeche} onChange={(e) => setF({ ...f, grundstuecksflaeche: e.target.value })} /></label>
           <label style={styles.lab}>Zimmer<input style={styles.inp} inputMode="decimal" value={f.zimmer} onChange={(e) => setF({ ...f, zimmer: e.target.value })} /></label>
           <label style={styles.lab}>Baujahr<input style={styles.inp} inputMode="numeric" value={f.baujahr} onChange={(e) => setF({ ...f, baujahr: e.target.value })} /></label>
-          <label style={styles.lab}>Etage (optional)<input style={styles.inp} value={f.etage} onChange={(e) => setF({ ...f, etage: e.target.value })} /></label>
-          <label style={styles.lab}>Verfügbar ab (optional)<input type="date" style={styles.inp} value={f.verfuegbar_ab} onChange={(e) => setF({ ...f, verfuegbar_ab: e.target.value })} /></label>
+          <NurVoll>
+            <label style={styles.lab}>Etage (optional)<input style={styles.inp} value={f.etage} onChange={(e) => setF({ ...f, etage: e.target.value })} /></label>
+            <label style={styles.lab}>Verfügbar ab (optional)<input type="date" style={styles.inp} value={f.verfuegbar_ab} onChange={(e) => setF({ ...f, verfuegbar_ab: e.target.value })} /></label>
+          </NurVoll>
         </div>
 
         {/* Energie / GEG */}
@@ -294,7 +297,9 @@ export default function ExposePage() {
         </div>
 
         <div style={{ ...styles.grid, marginTop: 12 }}>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll>
+            <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          </NurVoll>
         </div>
 
         <div style={styles.hintBox}>
@@ -370,7 +375,9 @@ export default function ExposePage() {
                   {INTERESSENT_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
               </label>
-              <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz<input style={styles.inp} value={nInter.notiz} onChange={(e) => setNInter({ ...nInter, notiz: e.target.value })} placeholder="z. B. Wunschtermin Besichtigung" /></label>
+              <NurVoll>
+                <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz<input style={styles.inp} value={nInter.notiz} onChange={(e) => setNInter({ ...nInter, notiz: e.target.value })} placeholder="z. B. Wunschtermin Besichtigung" /></label>
+              </NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'inter' ? 0.6 : 1 }} disabled={busy === 'inter'} onClick={interessentAnlegen}>＋ Interessent</button>
 

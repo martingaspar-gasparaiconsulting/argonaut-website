@@ -15,6 +15,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import {
   ABRECHNUNGSARTEN, berechneVorgang, konflikte, zaehleBelegung, istAktuellBelegt,
@@ -287,8 +288,10 @@ export default function BelegungPage() {
                   <label style={styles.lab}>{selArt === 'stunde' ? 'Bis (Datum + Zeit)' : selArt === 'tag' ? 'Bis (Folgetag, exkl.)' : 'Abreise'}
                     <input type={selArt === 'stunde' ? 'datetime-local' : 'date'} style={styles.inp} value={nv.bis} onChange={(e) => setNv({ ...nv, bis: e.target.value })} />
                   </label>
-                  <label style={styles.lab}>Personen (optional)<input style={styles.inp} inputMode="numeric" value={nv.anzahl_gaeste} onChange={(e) => setNv({ ...nv, anzahl_gaeste: e.target.value })} /></label>
-                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+                  <NurVoll>
+                    <label style={styles.lab}>Personen (optional)<input style={styles.inp} inputMode="numeric" value={nv.anzahl_gaeste} onChange={(e) => setNv({ ...nv, anzahl_gaeste: e.target.value })} /></label>
+                    <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+                  </NurVoll>
                 </div>
                 {vorschau && (
                   <div style={{ ...styles.vorschau, borderColor: vorschau.frei ? C.border : C.danger }}>
@@ -353,7 +356,9 @@ export default function BelegungPage() {
             <div style={styles.grid}>
               <label style={styles.lab}>Bezeichnung<input style={styles.inp} value={ne.bezeichnung} onChange={(e) => setNe({ ...ne, bezeichnung: e.target.value })} placeholder="z. B. Ferienwohnung Seeblick" /></label>
               <label style={styles.lab}>Kategorie<input style={styles.inp} value={ne.kategorie} onChange={(e) => setNe({ ...ne, kategorie: e.target.value })} placeholder="z. B. Ferienwohnung, Stellplatz, Halle" /></label>
-              <label style={styles.lab}>Interne Nr. (optional)<input style={styles.inp} value={ne.einheit_nr} onChange={(e) => setNe({ ...ne, einheit_nr: e.target.value })} /></label>
+              <NurVoll>
+                <label style={styles.lab}>Interne Nr. (optional)<input style={styles.inp} value={ne.einheit_nr} onChange={(e) => setNe({ ...ne, einheit_nr: e.target.value })} /></label>
+              </NurVoll>
               <label style={styles.lab}>Abrechnung
                 <select style={styles.inp} value={ne.abrechnungsart} onChange={(e) => setNe({ ...ne, abrechnungsart: e.target.value as Abrechnungsart })}>
                   {ABRECHNUNGSARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
@@ -362,7 +367,9 @@ export default function BelegungPage() {
               <label style={styles.lab}>Preis pro {ne.abrechnungsart === 'stunde' ? 'Stunde' : ne.abrechnungsart === 'tag' ? 'Tag' : 'Nacht'} (€, netto)<input style={styles.inp} inputMode="decimal" value={ne.preis} onChange={(e) => setNe({ ...ne, preis: e.target.value })} /></label>
               <label style={styles.lab}>Grundgebühr (€, netto, optional)<input style={styles.inp} inputMode="decimal" value={ne.grundgebuehr} onChange={(e) => setNe({ ...ne, grundgebuehr: e.target.value })} placeholder="z. B. Endreinigung" /></label>
               <label style={styles.lab}>Kaution (€)<input style={styles.inp} inputMode="decimal" value={ne.kaution} onChange={(e) => setNe({ ...ne, kaution: e.target.value })} /></label>
-              <label style={styles.lab}>Max. Personen (optional)<input style={styles.inp} inputMode="numeric" value={ne.max_belegung} onChange={(e) => setNe({ ...ne, max_belegung: e.target.value })} /></label>
+              <NurVoll>
+                <label style={styles.lab}>Max. Personen (optional)<input style={styles.inp} inputMode="numeric" value={ne.max_belegung} onChange={(e) => setNe({ ...ne, max_belegung: e.target.value })} /></label>
+              </NurVoll>
               <label style={styles.lab}>MwSt.-Satz
                 <select style={styles.inp} value={ne.mwst_satz} onChange={(e) => setNe({ ...ne, mwst_satz: e.target.value })}>
                   <option value="7">7 % — Beherbergung (Übernachtung)</option>

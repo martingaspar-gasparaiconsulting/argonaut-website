@@ -24,6 +24,7 @@ import { augeReservierung } from '@/lib/auge';
 import { verwahrProtokollPdf } from '@/lib/verwahrProtokollPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'reservierung_vorgang';
@@ -294,7 +295,9 @@ export default function ReservierungPage() {
                 </select>
               </label>
               <label style={styles.lab}>Kunde (Freitext)<input style={styles.inp} value={nv.kunde_name} onChange={(e) => setNv({ ...nv, kunde_name: e.target.value })} /></label>
-              <label style={styles.lab}>Telefon (optional)<input style={styles.inp} value={nv.kunde_tel} onChange={(e) => setNv({ ...nv, kunde_tel: e.target.value })} /></label>
+              <NurVoll>
+                <label style={styles.lab}>Telefon (optional)<input style={styles.inp} value={nv.kunde_tel} onChange={(e) => setNv({ ...nv, kunde_tel: e.target.value })} /></label>
+              </NurVoll>
 
               <label style={styles.lab}>{info.hatZeitfenster ? 'Von (Datum + Zeit)' : info.zeitLabel}
                 <input type={nv.art === 'einlagerung' ? 'date' : 'datetime-local'} style={styles.inp} value={nv.von} onChange={(e) => setNv({ ...nv, von: e.target.value })} />
@@ -331,7 +334,9 @@ export default function ReservierungPage() {
                   </label>
                 </>
               )}
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              </NurVoll>
             </div>
 
             {(vorschau.b || (nv.art === 'tischreservierung' && nv.platz_id && nv.bis > nv.von && nv.von)) && (
@@ -422,7 +427,9 @@ export default function ReservierungPage() {
               <label style={styles.lab}>Bezeichnung<input style={styles.inp} value={np.bezeichnung} onChange={(e) => setNp({ ...np, bezeichnung: e.target.value })} placeholder="z. B. Tisch 5, Regal A-12, Theke 1" /></label>
               <label style={styles.lab}>Standort (optional)<input style={styles.inp} value={np.standort} onChange={(e) => setNp({ ...np, standort: e.target.value })} placeholder="z. B. Terrasse, Lagerhalle Nord" /></label>
               <label style={styles.lab}>{np.art === 'tisch' ? 'Sitzplätze' : 'Kapazität'} (optional)<input style={styles.inp} inputMode="numeric" value={np.kapazitaet} onChange={(e) => setNp({ ...np, kapazitaet: e.target.value })} /></label>
-              <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz (optional)<input style={styles.inp} value={np.notiz} onChange={(e) => setNp({ ...np, notiz: e.target.value })} /></label>
+              <NurVoll>
+                <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz (optional)<input style={styles.inp} value={np.notiz} onChange={(e) => setNp({ ...np, notiz: e.target.value })} /></label>
+              </NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'platz' ? 0.6 : 1 }} disabled={busy === 'platz'} onClick={platzAnlegen}>＋ Anlegen</button>
           </div>
