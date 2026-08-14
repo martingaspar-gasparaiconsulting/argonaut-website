@@ -16,6 +16,7 @@ import { gutachtenPdf } from '@/lib/gutachtenPdf';
 import { ladeMeineUnterschrift } from '@/lib/meineUnterschrift';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'gutachten';
@@ -192,7 +193,7 @@ export default function GutachtenPage() {
               <label style={styles.lab}>Auftraggeber<input style={styles.inp} value={ng.auftraggeber} onChange={(e) => setNg({ ...ng, auftraggeber: e.target.value })} /></label>
               <label style={styles.lab}>Objekt<input style={styles.inp} value={ng.objekt} onChange={(e) => setNg({ ...ng, objekt: e.target.value })} placeholder="z. B. Pkw, Kennzeichen …" /></label>
               <label style={styles.lab}>Art<input style={styles.inp} value={ng.art} onChange={(e) => setNg({ ...ng, art: e.target.value })} placeholder="Schaden / Wert / Bau …" /></label>
-              <label style={styles.lab}>Aktenzeichen<input style={styles.inp} value={ng.aktenzeichen} onChange={(e) => setNg({ ...ng, aktenzeichen: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Aktenzeichen<input style={styles.inp} value={ng.aktenzeichen} onChange={(e) => setNg({ ...ng, aktenzeichen: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={ng.datum} onChange={(e) => setNg({ ...ng, datum: e.target.value })} /></label>
               <label style={styles.lab}>Gutachter<input style={styles.inp} value={ng.gutachter} onChange={(e) => setNg({ ...ng, gutachter: e.target.value })} /></label>
               <label style={styles.lab}>JVEG-Honorargruppe
@@ -202,7 +203,7 @@ export default function GutachtenPage() {
                 </select>
               </label>
               <label style={styles.lab}>Stunden<input style={styles.inp} inputMode="decimal" value={ng.stunden} onChange={(e) => setNg({ ...ng, stunden: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <label style={{ ...styles.lab, marginTop: 12 }}>Zusammenfassung / Fazit<textarea style={{ ...styles.inp, minHeight: 60, resize: 'vertical' }} value={ng.zusammenfassung} onChange={(e) => setNg({ ...ng, zusammenfassung: e.target.value })} /></label>
             {ngHonorar != null && <div style={{ ...styles.vorschau, marginTop: 12 }}><span>JVEG-Honorar: <b style={{ color: C.gold }}>{eur(ngHonorar)}</b> <span style={{ color: C.textDim }}>({honorarsatz(ng.honorargruppe)} €/h × {num(ng.stunden)} h)</span></span></div>}

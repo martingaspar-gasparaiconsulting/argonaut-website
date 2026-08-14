@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import { NurVoll } from '../_components/Ansicht';
 import { augeEtiketten } from "@/lib/auge";
 import {
   ALLERGENE,
@@ -462,9 +463,9 @@ export default function EtikettenSeite() {
               <div><label style={label}>Nettofüllmenge</label><input style={input} value={form.nettomenge} onChange={(e) => setF("nettomenge", e.target.value)} placeholder="z. B. 200 g" /></div>
               <div><label style={label}>Mindesthaltbarkeitsdatum</label><input style={input} value={form.mhd} onChange={(e) => setF("mhd", e.target.value)} placeholder="z. B. siehe Deckel" /></div>
               <div><label style={label}>Aufbewahrung</label><input style={input} value={form.aufbewahrung} onChange={(e) => setF("aufbewahrung", e.target.value)} placeholder="z. B. kühl & trocken" /></div>
-              <div><label style={label}>Ursprungsland (optional)</label><input style={input} value={form.ursprung} onChange={(e) => setF("ursprung", e.target.value)} /></div>
-              <div><label style={label}>Alkohol (% vol, optional)</label><input style={input} value={form.alkohol} onChange={(e) => setF("alkohol", e.target.value)} inputMode="decimal" /></div>
-              <div><label style={label}>Los-/Chargennummer (optional)</label><input style={input} value={form.charge} onChange={(e) => setF("charge", e.target.value)} /></div>
+              <NurVoll><div><label style={label}>Ursprungsland (optional)</label><input style={input} value={form.ursprung} onChange={(e) => setF("ursprung", e.target.value)} /></div></NurVoll>
+              <NurVoll><div><label style={label}>Alkohol (% vol, optional)</label><input style={input} value={form.alkohol} onChange={(e) => setF("alkohol", e.target.value)} inputMode="decimal" /></div></NurVoll>
+              <NurVoll><div><label style={label}>Los-/Chargennummer (optional)</label><input style={input} value={form.charge} onChange={(e) => setF("charge", e.target.value)} /></div></NurVoll>
               <div style={{ gridColumn: "1 / -1" }}><label style={label}>Verantwortlicher Lebensmittelunternehmer (Name + Anschrift)</label><input style={input} value={form.verantwortlicher} onChange={(e) => setF("verantwortlicher", e.target.value)} placeholder="Firma, Straße, PLZ Ort" /></div>
             </div>
 

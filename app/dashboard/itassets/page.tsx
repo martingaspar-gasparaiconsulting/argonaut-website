@@ -16,6 +16,7 @@ import {
 } from "@/lib/itassets";
 import { itBerichtPdf, type Ampel } from "@/lib/itBerichtPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
 
 const MODUL = "it_asset";
@@ -340,13 +341,13 @@ export default function ItAssetsSeite() {
                 <div><label style={label}>Typ</label><select style={input} value={aForm.typ} onChange={(e) => setAForm({ ...aForm, typ: e.target.value })}>{ASSET_TYP.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
                 <div><label style={label}>Hersteller</label><input style={input} value={aForm.hersteller} onChange={(e) => setAForm({ ...aForm, hersteller: e.target.value })} /></div>
                 <div><label style={label}>Modell</label><input style={input} value={aForm.modell} onChange={(e) => setAForm({ ...aForm, modell: e.target.value })} /></div>
-                <div><label style={label}>Seriennummer</label><input style={input} value={aForm.seriennr} onChange={(e) => setAForm({ ...aForm, seriennr: e.target.value })} /></div>
+                <NurVoll><div><label style={label}>Seriennummer</label><input style={input} value={aForm.seriennr} onChange={(e) => setAForm({ ...aForm, seriennr: e.target.value })} /></div></NurVoll>
                 <div><label style={label}>Standort</label><input style={input} value={aForm.standort} onChange={(e) => setAForm({ ...aForm, standort: e.target.value })} /></div>
                 <div><label style={label}>Status</label><select style={input} value={aForm.status} onChange={(e) => setAForm({ ...aForm, status: e.target.value })}>{ASSET_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-                <div><label style={label}>Anschaffung</label><input type="date" style={input} value={aForm.anschaffung} onChange={(e) => setAForm({ ...aForm, anschaffung: e.target.value })} /></div>
+                <NurVoll><div><label style={label}>Anschaffung</label><input type="date" style={input} value={aForm.anschaffung} onChange={(e) => setAForm({ ...aForm, anschaffung: e.target.value })} /></div></NurVoll>
                 <div><label style={label}>Garantie bis</label><input type="date" style={input} value={aForm.garantie_bis} onChange={(e) => setAForm({ ...aForm, garantie_bis: e.target.value })} /></div>
-                <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={aForm.notiz} onChange={(e) => setAForm({ ...aForm, notiz: e.target.value })} /></div>
-                {felder.length > 0 && <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></div>}
+                <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={aForm.notiz} onChange={(e) => setAForm({ ...aForm, notiz: e.target.value })} /></div></NurVoll>
+                {felder.length > 0 && <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}><NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></NurVoll></div>}
               </div>
             )}
 
@@ -359,11 +360,11 @@ export default function ItAssetsSeite() {
                 <div><label style={label}>Status</label><input style={input} value={lForm.status} onChange={(e) => setLForm({ ...lForm, status: e.target.value })} /></div>
                 <div><label style={label}>Plätze (Seats)</label><input style={input} value={lForm.plaetze} onChange={(e) => setLForm({ ...lForm, plaetze: e.target.value })} inputMode="numeric" /></div>
                 <div><label style={label}>Belegt</label><input style={input} value={lForm.belegt} onChange={(e) => setLForm({ ...lForm, belegt: e.target.value })} inputMode="numeric" /></div>
-                <div><label style={label}>Start</label><input type="date" style={input} value={lForm.start} onChange={(e) => setLForm({ ...lForm, start: e.target.value })} /></div>
+                <NurVoll><div><label style={label}>Start</label><input type="date" style={input} value={lForm.start} onChange={(e) => setLForm({ ...lForm, start: e.target.value })} /></div></NurVoll>
                 <div><label style={label}>Ablauf</label><input type="date" style={input} value={lForm.ablauf} onChange={(e) => setLForm({ ...lForm, ablauf: e.target.value })} /></div>
                 <div><label style={label}>Kosten / Jahr (€)</label><input style={input} value={lForm.kosten_jahr} onChange={(e) => setLForm({ ...lForm, kosten_jahr: e.target.value })} inputMode="decimal" /></div>
-                <div><label style={label}>Lizenzschlüssel</label><input style={input} value={lForm.schluessel} onChange={(e) => setLForm({ ...lForm, schluessel: e.target.value })} /></div>
-                <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={lForm.notiz} onChange={(e) => setLForm({ ...lForm, notiz: e.target.value })} /></div>
+                <NurVoll><div><label style={label}>Lizenzschlüssel</label><input style={input} value={lForm.schluessel} onChange={(e) => setLForm({ ...lForm, schluessel: e.target.value })} /></div></NurVoll>
+                <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={lForm.notiz} onChange={(e) => setLForm({ ...lForm, notiz: e.target.value })} /></div></NurVoll>
               </div>
             )}
 
@@ -376,7 +377,7 @@ export default function ItAssetsSeite() {
                 <div><label style={label}>Wiederherstellung (Std.)</label><input style={input} value={sForm.wiederherstell_std} onChange={(e) => setSForm({ ...sForm, wiederherstell_std: e.target.value })} inputMode="decimal" placeholder="z. B. 24" /></div>
                 <div><label style={label}>Verfügbarkeit (%)</label><input style={input} value={sForm.verfuegbarkeit} onChange={(e) => setSForm({ ...sForm, verfuegbarkeit: e.target.value })} inputMode="decimal" placeholder="z. B. 99,5" /></div>
                 <div><label style={label}>Gültig bis</label><input type="date" style={input} value={sForm.gueltig_bis} onChange={(e) => setSForm({ ...sForm, gueltig_bis: e.target.value })} /></div>
-                <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={sForm.notiz} onChange={(e) => setSForm({ ...sForm, notiz: e.target.value })} /></div>
+                <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={sForm.notiz} onChange={(e) => setSForm({ ...sForm, notiz: e.target.value })} /></div></NurVoll>
               </div>
             )}
 
