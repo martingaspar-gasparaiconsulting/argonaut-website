@@ -20,6 +20,7 @@ import { offeneBuchungen } from '@/lib/umsatzBuchung';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'event_veranstaltung';
@@ -253,9 +254,9 @@ export default function VeranstaltungenPage() {
               {EVENT_ARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
             </select>
           </label>
-          <label style={styles.lab}>Ort<input style={styles.inp} value={nEvent.ort} onChange={(e) => setNEvent({ ...nEvent, ort: e.target.value })} /></label>
+          <NurVoll><label style={styles.lab}>Ort<input style={styles.inp} value={nEvent.ort} onChange={(e) => setNEvent({ ...nEvent, ort: e.target.value })} /></label></NurVoll>
           <label style={styles.lab}>Beginn<input type="datetime-local" style={styles.inp} value={nEvent.beginn} onChange={(e) => setNEvent({ ...nEvent, beginn: e.target.value })} /></label>
-          <label style={styles.lab}>Ende<input type="datetime-local" style={styles.inp} value={nEvent.ende} onChange={(e) => setNEvent({ ...nEvent, ende: e.target.value })} /></label>
+          <NurVoll><label style={styles.lab}>Ende<input type="datetime-local" style={styles.inp} value={nEvent.ende} onChange={(e) => setNEvent({ ...nEvent, ende: e.target.value })} /></label></NurVoll>
           <label style={styles.lab}>Kapazität (Plätze)<input style={styles.inp} inputMode="numeric" value={nEvent.kapazitaet} onChange={(e) => setNEvent({ ...nEvent, kapazitaet: e.target.value })} placeholder="0 = unbegrenzt" /></label>
           <label style={styles.lab}>Ticketpreis (€)<input style={styles.inp} inputMode="decimal" value={nEvent.preis} onChange={(e) => setNEvent({ ...nEvent, preis: e.target.value })} placeholder="0 = kostenlos" /></label>
           <label style={styles.lab}>Status
@@ -263,7 +264,7 @@ export default function VeranstaltungenPage() {
               {E_STATUS.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
             </select>
           </label>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
         <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'event' ? 0.6 : 1 }} disabled={busy === 'event'} onClick={eventAnlegen}>＋ Veranstaltung</button>
       </div>

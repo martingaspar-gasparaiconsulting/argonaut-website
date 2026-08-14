@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'mitglieder';
@@ -314,18 +315,18 @@ export default function MitgliederPage() {
             <div style={styles.formGrid}>
               <div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Name *</label><input style={styles.input} value={form.name} onChange={(e) => setF('name', e.target.value)} /></div>
               <div><label style={styles.lbl}>E-Mail</label><input style={styles.input} value={form.email} onChange={(e) => setF('email', e.target.value)} /></div>
-              <div><label style={styles.lbl}>Telefon</label><input style={styles.input} value={form.telefon} onChange={(e) => setF('telefon', e.target.value)} /></div>
+              <NurVoll><div><label style={styles.lbl}>Telefon</label><input style={styles.input} value={form.telefon} onChange={(e) => setF('telefon', e.target.value)} /></div></NurVoll>
               <div><label style={styles.lbl}>Beitrag (€)</label><input style={styles.input} value={form.betrag} onChange={(e) => setF('betrag', e.target.value)} placeholder="z. B. 29,90" /></div>
               <div><label style={styles.lbl}>Intervall</label><select style={styles.input} value={form.intervall} onChange={(e) => setF('intervall', e.target.value)}>{INTERVALLE.map((i) => <option key={i.w} value={i.w}>{i.l}</option>)}</select></div>
               <div><label style={styles.lbl}>Status</label><select style={styles.input} value={form.status} onChange={(e) => setF('status', e.target.value)}>{STATUS.map((s) => <option key={s.w} value={s.w}>{s.l}</option>)}</select></div>
               <div><label style={styles.lbl}>Beginn</label><input type="date" style={styles.input} value={form.beginn_am} onChange={(e) => setF('beginn_am', e.target.value)} /></div>
               <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, color: C.gold, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>SEPA-Mandat</div>
               <div><label style={styles.lbl}>IBAN</label><input style={styles.input} value={form.iban} onChange={(e) => setF('iban', e.target.value)} placeholder="DE.." /></div>
-              <div><label style={styles.lbl}>BIC (optional)</label><input style={styles.input} value={form.bic} onChange={(e) => setF('bic', e.target.value)} /></div>
-              <div><label style={styles.lbl}>Mandatsreferenz</label><input style={styles.input} value={form.mandatsreferenz} onChange={(e) => setF('mandatsreferenz', e.target.value)} placeholder="eindeutig, z. B. M-2025-001" /></div>
-              <div><label style={styles.lbl}>Mandat unterschrieben am</label><input type="date" style={styles.input} value={form.mandat_datum} onChange={(e) => setF('mandat_datum', e.target.value)} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Notiz</label><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></div>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              <NurVoll><div><label style={styles.lbl}>BIC (optional)</label><input style={styles.input} value={form.bic} onChange={(e) => setF('bic', e.target.value)} /></div></NurVoll>
+              <NurVoll><div><label style={styles.lbl}>Mandatsreferenz</label><input style={styles.input} value={form.mandatsreferenz} onChange={(e) => setF('mandatsreferenz', e.target.value)} placeholder="eindeutig, z. B. M-2025-001" /></div></NurVoll>
+              <NurVoll><div><label style={styles.lbl}>Mandat unterschrieben am</label><input type="date" style={styles.input} value={form.mandat_datum} onChange={(e) => setF('mandat_datum', e.target.value)} /></div></NurVoll>
+              <NurVoll><div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Notiz</label><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></div></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} /></NurVoll>
             </div>
             <div style={styles.modalAktionen}>
               {form.id && <button onClick={() => loeschen(liste.find((x) => x.id === form.id) as Mitglied)} disabled={speichert} style={{ ...styles.ghostBtn, color: C.danger, borderColor: C.danger, marginRight: 'auto' }}>Löschen</button>}

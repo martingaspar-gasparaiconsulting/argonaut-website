@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
+import { NurVoll } from '../_components/Ansicht';
 import { augeVarianten } from "@/lib/auge";
 import {
   parseWerte,
@@ -676,10 +677,12 @@ export default function VariantenSeite() {
                 <label style={labelStil}>Bezeichnung *</label>
                 <input style={inputStil} value={gForm.bezeichnung} onChange={(e) => setGF("bezeichnung", e.target.value)} placeholder="z. B. T-Shirt Basic" />
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>SKU-Basis</label>
                 <input style={inputStil} value={gForm.sku_basis} onChange={(e) => setGF("sku_basis", e.target.value)} placeholder="z. B. TSH" />
               </div>
+              </NurVoll>
               <div>
                 <label style={labelStil}>Basis-Verkaufspreis (€)</label>
                 <input style={inputStil} value={gForm.basis_vk} onChange={(e) => setGF("basis_vk", e.target.value)} inputMode="decimal" placeholder="0,00" />
@@ -692,14 +695,18 @@ export default function VariantenSeite() {
                 <label style={labelStil}>{gForm.achse1_name || "Achse 1"} — Werte *</label>
                 <input style={inputStil} value={gForm.achse1_werte} onChange={(e) => setGF("achse1_werte", e.target.value)} placeholder="S, M, L, XL" />
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>Achse 2 — Name (optional)</label>
                 <input style={inputStil} value={gForm.achse2_name} onChange={(e) => setGF("achse2_name", e.target.value)} placeholder="Farbe" />
               </div>
+              </NurVoll>
+              <NurVoll>
               <div>
                 <label style={labelStil}>Achse 2 — Werte (optional)</label>
                 <input style={inputStil} value={gForm.achse2_werte} onChange={(e) => setGF("achse2_werte", e.target.value)} placeholder="Schwarz, Weiß, Rot" />
               </div>
+              </NurVoll>
               <div>
                 <label style={labelStil}>MwSt-Satz (%)</label>
                 <input style={inputStil} value={gForm.mwst_satz} onChange={(e) => setGF("mwst_satz", e.target.value)} inputMode="decimal" placeholder="19" />
@@ -746,14 +753,18 @@ export default function VariantenSeite() {
                 <label style={labelStil}>{gruppeById.get(vGruppeId ?? "")?.achse2_name || "Achse 2"}</label>
                 <input style={inputStil} value={vForm.achse2_wert} onChange={(e) => setVF("achse2_wert", e.target.value)} placeholder="z. B. Rot" />
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>SKU (leer = automatisch)</label>
                 <input style={inputStil} value={vForm.sku} onChange={(e) => setVF("sku", e.target.value)} placeholder="automatisch" />
               </div>
+              </NurVoll>
+              <NurVoll>
               <div>
                 <label style={labelStil}>EAN / Barcode</label>
                 <input style={inputStil} value={vForm.ean} onChange={(e) => setVF("ean", e.target.value)} />
               </div>
+              </NurVoll>
               <div>
                 <label style={labelStil}>Aufpreis auf Basis-VK (€)</label>
                 <input style={inputStil} value={vForm.aufpreis} onChange={(e) => setVF("aufpreis", e.target.value)} inputMode="decimal" placeholder="0,00" />
@@ -762,10 +773,12 @@ export default function VariantenSeite() {
                 <label style={labelStil}>Bestand</label>
                 <input style={inputStil} value={vForm.bestand} onChange={(e) => setVF("bestand", e.target.value)} inputMode="decimal" placeholder="0" />
               </div>
+              <NurVoll>
               <div>
                 <label style={labelStil}>Mindestbestand</label>
                 <input style={inputStil} value={vForm.mindestbestand} onChange={(e) => setVF("mindestbestand", e.target.value)} inputMode="decimal" placeholder="0" />
               </div>
+              </NurVoll>
               <div style={{ display: "flex", alignItems: "flex-end" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "clamp(14px,1.25vw,20px)", cursor: "pointer", userSelect: "none" }}>
                   <input type="checkbox" checked={vForm.aktiv} onChange={(e) => setVF("aktiv", e.target.checked)} /> aktiv
