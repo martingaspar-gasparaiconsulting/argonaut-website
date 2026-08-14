@@ -16,6 +16,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import Leerzustand from '../_components/Leerzustand';
+import { NurVoll } from '../_components/Ansicht';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -388,13 +389,23 @@ export default function BautagebuchPage() {
             <h2 style={styles.modalTitel}>Neuer Regiebericht</h2>
             <div style={styles.formGrid}>
               <Feld label="Datum"><input type="date" style={styles.input} value={eintragForm.datum} onChange={(e) => setEintragForm((f) => ({ ...f, datum: e.target.value }))} /></Feld>
-              <Feld label="Wetter"><input style={styles.input} value={eintragForm.wetter} onChange={(e) => setEintragForm((f) => ({ ...f, wetter: e.target.value }))} placeholder="z. B. bewölkt, trocken" /></Feld>
-              <Feld label="Temperatur"><input style={styles.input} value={eintragForm.temperatur} onChange={(e) => setEintragForm((f) => ({ ...f, temperatur: e.target.value }))} placeholder="z. B. 12 °C" /></Feld>
+              <NurVoll>
+                <Feld label="Wetter"><input style={styles.input} value={eintragForm.wetter} onChange={(e) => setEintragForm((f) => ({ ...f, wetter: e.target.value }))} placeholder="z. B. bewölkt, trocken" /></Feld>
+              </NurVoll>
+              <NurVoll>
+                <Feld label="Temperatur"><input style={styles.input} value={eintragForm.temperatur} onChange={(e) => setEintragForm((f) => ({ ...f, temperatur: e.target.value }))} placeholder="z. B. 12 °C" /></Feld>
+              </NurVoll>
               <Feld label="Mannschaft / Gewerke" voll><input style={styles.input} value={eintragForm.anwesende} onChange={(e) => setEintragForm((f) => ({ ...f, anwesende: e.target.value }))} placeholder="wer war vor Ort" /></Feld>
               <Feld label="Geleistete Arbeiten" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={eintragForm.arbeiten} onChange={(e) => setEintragForm((f) => ({ ...f, arbeiten: e.target.value }))} /></Feld>
-              <Feld label="Material" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.material} onChange={(e) => setEintragForm((f) => ({ ...f, material: e.target.value }))} /></Feld>
-              <Feld label="Besondere Vorkommnisse / Behinderungen" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.vorkommnisse} onChange={(e) => setEintragForm((f) => ({ ...f, vorkommnisse: e.target.value }))} placeholder="Verzögerungen, Nachträge, Anweisungen …" /></Feld>
-              <EigeneFelderInputs felder={felder} werte={eintragExtra} setWert={(fid, w) => setEintragExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              <NurVoll>
+                <Feld label="Material" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.material} onChange={(e) => setEintragForm((f) => ({ ...f, material: e.target.value }))} /></Feld>
+              </NurVoll>
+              <NurVoll>
+                <Feld label="Besondere Vorkommnisse / Behinderungen" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.vorkommnisse} onChange={(e) => setEintragForm((f) => ({ ...f, vorkommnisse: e.target.value }))} placeholder="Verzögerungen, Nachträge, Anweisungen …" /></Feld>
+              </NurVoll>
+              <NurVoll>
+                <EigeneFelderInputs felder={felder} werte={eintragExtra} setWert={(fid, w) => setEintragExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              </NurVoll>
             </div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setEintragModal(false)} disabled={eintragBusy} style={styles.ghostBtn}>Abbrechen</button>
@@ -412,7 +423,9 @@ export default function BautagebuchPage() {
             <div style={styles.formGrid}>
               <Feld label="Titel *" voll><input style={styles.input} value={mangelForm.titel} onChange={(e) => setMangelForm((f) => ({ ...f, titel: e.target.value }))} placeholder="z. B. Fuge Bad unvollständig" /></Feld>
               <Feld label="Beschreibung" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={mangelForm.beschreibung} onChange={(e) => setMangelForm((f) => ({ ...f, beschreibung: e.target.value }))} /></Feld>
-              <Feld label="Frist zur Behebung"><input type="date" style={styles.input} value={mangelForm.frist} onChange={(e) => setMangelForm((f) => ({ ...f, frist: e.target.value }))} /></Feld>
+              <NurVoll>
+                <Feld label="Frist zur Behebung"><input type="date" style={styles.input} value={mangelForm.frist} onChange={(e) => setMangelForm((f) => ({ ...f, frist: e.target.value }))} /></Feld>
+              </NurVoll>
             </div>
             <div style={styles.modalAktionen}>
               <button onClick={() => setMangelModal(false)} disabled={mangelBusy} style={styles.ghostBtn}>Abbrechen</button>

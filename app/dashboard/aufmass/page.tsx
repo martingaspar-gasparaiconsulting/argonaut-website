@@ -27,6 +27,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 import { augeAufmass } from '@/lib/auge';
 import {
   EINHEITEN, STATUS_LISTE, statusDef, istGesperrt, aufmassSumme, positionsBetrag,
@@ -527,9 +528,11 @@ export default function AufmassPage() {
               <Feld label="Ort / Adresse">
                 <input style={styles.input} value={form.ort} onChange={(e) => setF('ort', e.target.value)} />
               </Feld>
-              <Feld label="Aufmaß-Nr.">
-                <input style={styles.input} value={form.nummer} onChange={(e) => setF('nummer', e.target.value)} />
-              </Feld>
+              <NurVoll>
+                <Feld label="Aufmaß-Nr.">
+                  <input style={styles.input} value={form.nummer} onChange={(e) => setF('nummer', e.target.value)} />
+                </Feld>
+              </NurVoll>
               <Feld label="Datum">
                 <input type="date" style={styles.input} value={form.aufmass_datum} onChange={(e) => setF('aufmass_datum', e.target.value)} />
               </Feld>
@@ -538,15 +541,21 @@ export default function AufmassPage() {
                   {STATUS_LISTE.map((s) => <option key={s.wert} value={s.wert}>{s.label}</option>)}
                 </select>
               </Feld>
-              <Feld label="Bearbeiter">
-                <input style={styles.input} value={form.bearbeiter} onChange={(e) => setF('bearbeiter', e.target.value)} placeholder="wer hat aufgemessen" />
-              </Feld>
-              <Feld label="Notiz" voll>
-                <textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
-              </Feld>
-              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} />
-              </div>
+              <NurVoll>
+                <Feld label="Bearbeiter">
+                  <input style={styles.input} value={form.bearbeiter} onChange={(e) => setF('bearbeiter', e.target.value)} placeholder="wer hat aufgemessen" />
+                </Feld>
+              </NurVoll>
+              <NurVoll>
+                <Feld label="Notiz" voll>
+                  <textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
+                </Feld>
+              </NurVoll>
+              <NurVoll>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} />
+                </div>
+              </NurVoll>
             </div>
 
             {!form.id ? (

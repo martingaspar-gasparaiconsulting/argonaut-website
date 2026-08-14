@@ -18,6 +18,7 @@ import {
 } from '@/lib/rezeptur';
 import { augeRezeptur } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -243,9 +244,15 @@ export default function RezepturRechner() {
                   <input style={{ ...styles.inp, maxWidth: 70 }} value={eck.basis_einheit ?? ''} onChange={(e) => setEckF('basis_einheit', e.target.value)} placeholder="kg" />
                 </div>
               </label>
-              <label style={styles.lab}>Portionen<input style={styles.inp} inputMode="numeric" value={eck.portionen ?? ''} onChange={(e) => setEckF('portionen', e.target.value === '' ? null : Math.round(num(e.target.value)))} placeholder="optional" /></label>
-              <label style={styles.lab}>Backverlust %<input style={styles.inp} inputMode="decimal" value={eck.backverlust_prozent ?? ''} onChange={(e) => setEckF('backverlust_prozent', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 12" /></label>
-              <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eck.foodcost_ziel ?? ''} onChange={(e) => setEckF('foodcost_ziel', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 30" /></label>
+              <NurVoll>
+                <label style={styles.lab}>Portionen<input style={styles.inp} inputMode="numeric" value={eck.portionen ?? ''} onChange={(e) => setEckF('portionen', e.target.value === '' ? null : Math.round(num(e.target.value)))} placeholder="optional" /></label>
+              </NurVoll>
+              <NurVoll>
+                <label style={styles.lab}>Backverlust %<input style={styles.inp} inputMode="decimal" value={eck.backverlust_prozent ?? ''} onChange={(e) => setEckF('backverlust_prozent', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 12" /></label>
+              </NurVoll>
+              <NurVoll>
+                <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eck.foodcost_ziel ?? ''} onChange={(e) => setEckF('foodcost_ziel', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 30" /></label>
+              </NurVoll>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
               <button onClick={eckSpeichern} disabled={busy} style={styles.primaer}>💾 Eckdaten speichern</button>
