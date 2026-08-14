@@ -16,6 +16,11 @@ import {
 import { fristBucket, restVerwendung, verwendungsQuote, zaehleFoerder } from '@/lib/foerder';
 import { augeFoerder } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
+
+const MODUL = 'foerdermittel';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -66,6 +71,9 @@ export default function FoerdermittelPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
   // Fragebogen
   const [kats, setKats] = useState<Set<FoerderKategorie>>(new Set());
@@ -76,9 +84,12 @@ export default function FoerdermittelPage() {
   const laden_ = useCallback(async () => {
     const { data } = await supabase.from('foerder_vorhaben')
       .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status');
+    const rows = (data as Vorhaben[]) ?? [];
     const map: Record<string, Vorhaben> = {};
-    ((data as Vorhaben[]) ?? []).forEach((v) => { map[v.programm_key] = v; });
+    rows.forEach((v) => { map[v.programm_key] = v; });
     setVorhaben(map);
+    setFelder(await ladeFelder(MODUL));
+    setWerteMap(await ladeWerte(MODUL, rows.map((x) => x.id)));
   }, []);
 
   useEffect(() => {
@@ -120,7 +131,10 @@ export default function FoerdermittelPage() {
         .insert({ owner_user_id: uid, programm_key: p.key, programm_name: p.name, status: 'interessiert' })
         .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status').single();
       if (error) { await laden_(); setFehler('Steht bereits auf Ihrer Merkliste.'); return; }
+      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       setVorhaben((m) => ({ ...m, [p.key]: data as Vorhaben }));
+      setNmExtra({});
+      setWerteMap((w) => ({ ...w, [(data as { id: string }).id]: { ...nmExtra } }));
       setOk(`„${p.name}" auf die Merkliste gesetzt.`);
     } finally { setBusy(null); }
   }
@@ -207,7 +221,20 @@ export default function FoerdermittelPage() {
           <option value="">— bitte wählen —</option>
           {BUNDESLAENDER.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
+
+        <NurVoll>
+          {felder.length > 0 && (
+            <>
+              <div style={styles.frageTitel}>Eigene Felder <span style={{ color: C.textDim, fontWeight: 400 }}>(werden beim Verfolgen gespeichert)</span></div>
+              <div style={styles.vhRow}>
+                <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.miniSelect} labStyle={styles.miniLabel} />
+              </div>
+            </>
+          )}
+        </NurVoll>
       </div>
+
+      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -278,6 +305,8 @@ export default function FoerdermittelPage() {
                   <div style={{ fontWeight: 700 }}>{v.programm_name}</div>
                   {amp && <span style={{ ...styles.tag, color: amp.farbe, borderColor: amp.farbe }}>⏰ {amp.txt}</span>}
                 </div>
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[v.id]} />
+
                 <div style={styles.vhRow}>
                   <label style={styles.miniLabel}>Status
                     <select style={styles.miniSelect} value={v.status} onChange={(e) => aktualisieren(v, { status: e.target.value })}>
