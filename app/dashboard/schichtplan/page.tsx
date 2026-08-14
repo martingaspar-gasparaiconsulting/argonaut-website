@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'hr_schicht_vorlagen';
@@ -1362,6 +1363,7 @@ export default function SchichtplanPage() {
               />
             </div>
 
+            <NurVoll>
             <div style={{ marginBottom: 12 }}>
               <label style={labelStil}>Notiz (optional)</label>
               <textarea
@@ -1370,7 +1372,9 @@ export default function SchichtplanPage() {
                 onChange={(e) => setSchichtModal({ ...schichtModal, notiz: e.target.value })}
               />
             </div>
+            </NurVoll>
 
+            <NurVoll>
             <div style={{ marginBottom: 18 }}>
               <label style={labelStil}>Farbe</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1388,6 +1392,7 @@ export default function SchichtplanPage() {
                 ))}
               </div>
             </div>
+            </NurVoll>
 
             {schichtModal.id && (
               <div style={{
@@ -1674,7 +1679,7 @@ export default function SchichtplanPage() {
                   ))}
                 </div>
               </div>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={inputStil} labStyle={labelStil} /></NurVoll>
               <button style={btn} onClick={speichereVorlage}>+ Schichtart speichern</button>
             </div>
 

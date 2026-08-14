@@ -33,6 +33,7 @@ import {
   type KatalogEintrag,
 } from '../_components/leistungLogik';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'leistungskatalog';
@@ -528,9 +529,11 @@ export default function LeistungskatalogPage() {
               <Feld label="Bezeichnung *" voll>
                 <input style={styles.input} value={form.bezeichnung} onChange={(e) => setF('bezeichnung', e.target.value)} placeholder="z. B. Kleiner Service / Durchforstung / Wurzelstockfräsen" />
               </Feld>
+              <NurVoll>
               <Feld label="Kürzel">
                 <input style={styles.input} value={form.kuerzel} onChange={(e) => setF('kuerzel', e.target.value)} placeholder="z. B. SVC-K" />
               </Feld>
+              </NurVoll>
               <Feld label="Kategorie">
                 <input style={styles.input} value={form.kategorie} onChange={(e) => setF('kategorie', e.target.value)} placeholder="z. B. Service, Reifen, Forstarbeit" />
               </Feld>
@@ -574,10 +577,12 @@ export default function LeistungskatalogPage() {
               <Feld label="Umsatzsteuer (%)">
                 <input style={styles.input} value={form.mwst_satz} onChange={(e) => setF('mwst_satz', e.target.value)} placeholder="19" />
               </Feld>
+              <NurVoll>
               <Feld label="Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
               </Feld>
-              <EigeneFelderInputs felder={felder} werte={formExtra} setWert={(fid, w) => setFormExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              </NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={formExtra} setWert={(fid, w) => setFormExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} /></NurVoll>
             </div>
 
             {/* Pauschale gewinnt — das muss dastehen, sonst sucht jemand den Fehler */}
