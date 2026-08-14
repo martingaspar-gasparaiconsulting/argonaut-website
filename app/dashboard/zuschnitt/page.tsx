@@ -16,6 +16,7 @@ import { augeZuschnitt } from '@/lib/auge';
 import { zuschnittplanPdf } from '@/lib/zuschnittplanPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'zuschnitt_projekt';
@@ -192,7 +193,7 @@ export default function ZuschnittPage() {
                 </select>
               </label>
               <label style={styles.lab}>Querschnitt (mm², für Gewicht)<input style={styles.inp} inputMode="decimal" value={np.querschnitt_mm2} onChange={(e) => setNp({ ...np, querschnitt_mm2: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'projekt' ? 0.6 : 1 }} disabled={busy === 'projekt'} onClick={projektAnlegen}>＋ Anlegen & öffnen</button>
           </div>

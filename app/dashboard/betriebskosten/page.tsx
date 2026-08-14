@@ -19,6 +19,7 @@ import { augeBk } from '@/lib/auge';
 import { betriebskostenPdf } from '@/lib/betriebskostenPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'bk_kostenart';
@@ -263,9 +264,11 @@ export default function BetriebskostenPage() {
               <button style={{ ...styles.primaer, opacity: busy === 'kost' ? 0.6 : 1 }} disabled={busy === 'kost'} onClick={kostenartAnlegen}>＋</button>
             </div>
             {felder.length > 0 && (
-              <div style={styles.grid}>
-                <EigeneFelderInputs felder={felder} werte={nKostExtra} setWert={(fid, w) => setNKostExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
-              </div>
+              <NurVoll>
+                <div style={styles.grid}>
+                  <EigeneFelderInputs felder={felder} werte={nKostExtra} setWert={(fid, w) => setNKostExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+                </div>
+              </NurVoll>
             )}
             {BETRKV_KATALOG.find((x) => String(x.nr) === nKost.katalog)?.heiz && !heizAnteilGueltig(num(nKost.verbrauch_anteil)) && (
               <div style={{ marginTop: 6, color: C.warn, fontSize: 13 }}>⚠ HeizkostenV: Verbrauchsanteil muss zwischen 50 % und 70 % liegen.</div>

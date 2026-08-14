@@ -19,6 +19,7 @@ import {
 } from "@/lib/chargen";
 import { chargenPdf } from "@/lib/chargenPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 const MODUL = 'charge_los';
 
@@ -504,12 +505,12 @@ export default function ChargenSeite() {
               <div><label style={label}>Menge</label><input style={input} value={form.menge} onChange={(e) => setF("menge", e.target.value)} inputMode="decimal" /></div>
               <div><label style={label}>Einheit</label><input style={input} value={form.einheit} onChange={(e) => setF("einheit", e.target.value)} /></div>
               <div><label style={label}>Herstelldatum</label><input type="date" style={input} value={form.herstell_datum} onChange={(e) => setF("herstell_datum", e.target.value)} /></div>
-              <div><label style={label}>MHD / Verfall (optional)</label><input type="date" style={input} value={form.mhd} onChange={(e) => setF("mhd", e.target.value)} /></div>
-              <div><label style={label}>Herkunft (Lieferant/Vor-Charge)</label><input style={input} value={form.herkunft} onChange={(e) => setF("herkunft", e.target.value)} /></div>
-              <div><label style={label}>Auftrag / Los</label><input style={input} value={form.auftrag} onChange={(e) => setF("auftrag", e.target.value)} /></div>
+              <NurVoll><div><label style={label}>MHD / Verfall (optional)</label><input type="date" style={input} value={form.mhd} onChange={(e) => setF("mhd", e.target.value)} /></div></NurVoll>
+              <NurVoll><div><label style={label}>Herkunft (Lieferant/Vor-Charge)</label><input style={input} value={form.herkunft} onChange={(e) => setF("herkunft", e.target.value)} /></div></NurVoll>
+              <NurVoll><div><label style={label}>Auftrag / Los</label><input style={input} value={form.auftrag} onChange={(e) => setF("auftrag", e.target.value)} /></div></NurVoll>
               <div><label style={label}>Status</label><select style={input} value={form.status} onChange={(e) => setF("status", e.target.value)}>{CHARGE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s].text}</option>)}</select></div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Bemerkung</label><input style={input} value={form.bemerkung} onChange={(e) => setF("bemerkung", e.target.value)} /></div>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
+              <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Bemerkung</label><input style={input} value={form.bemerkung} onChange={(e) => setF("bemerkung", e.target.value)} /></div></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></NurVoll>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
