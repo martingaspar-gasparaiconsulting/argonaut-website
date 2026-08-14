@@ -19,6 +19,7 @@ import { augeTierbestand } from '@/lib/auge';
 import { hitMeldelistePdf } from '@/lib/hitMeldelistePdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'tier_gruppe';
@@ -226,11 +227,11 @@ export default function TierbestandPage() {
                 </select>
               </label>
               <label style={styles.lab}>Bezeichnung<input style={styles.inp} value={ng.bezeichnung} onChange={(e) => setNg({ ...ng, bezeichnung: e.target.value })} placeholder="z. B. Milchvieh Stall 1" /></label>
-              <label style={styles.lab}>VVVO-/Betriebsnummer<input style={styles.inp} value={ng.betriebsnummer} onChange={(e) => setNg({ ...ng, betriebsnummer: e.target.value })} /></label>
-              <label style={styles.lab}>Standort<input style={styles.inp} value={ng.standort} onChange={(e) => setNg({ ...ng, standort: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>VVVO-/Betriebsnummer<input style={styles.inp} value={ng.betriebsnummer} onChange={(e) => setNg({ ...ng, betriebsnummer: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Standort<input style={styles.inp} value={ng.standort} onChange={(e) => setNg({ ...ng, standort: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Aktueller Bestand (Stück)<input style={styles.inp} inputMode="numeric" value={ng.aktueller_bestand} onChange={(e) => setNg({ ...ng, aktueller_bestand: e.target.value })} /></label>
-              <label style={styles.lab}>Meldefrist (Tage)<input style={styles.inp} inputMode="numeric" value={ng.meldefrist_tage} onChange={(e) => setNg({ ...ng, meldefrist_tage: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Meldefrist (Tage)<input style={styles.inp} inputMode="numeric" value={ng.meldefrist_tage} onChange={(e) => setNg({ ...ng, meldefrist_tage: e.target.value })} /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'gruppe' ? 0.6 : 1 }} disabled={busy === 'gruppe'} onClick={gruppeAnlegen}>＋ Anlegen</button>
           </div>
@@ -281,8 +282,8 @@ export default function TierbestandPage() {
                   </label>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
                   <label style={styles.lab}>Anzahl<input style={styles.inp} inputMode="numeric" value={nb.anzahl} onChange={(e) => setNb({ ...nb, anzahl: e.target.value })} /></label>
-                  <label style={styles.lab}>Ohrmarke (optional)<input style={styles.inp} value={nb.ohrmarke} onChange={(e) => setNb({ ...nb, ohrmarke: e.target.value })} /></label>
-                  <label style={styles.lab}>Herkunft / Ziel<input style={styles.inp} value={nb.partner} onChange={(e) => setNb({ ...nb, partner: e.target.value })} placeholder="Betrieb, Händler, TBA" /></label>
+                  <NurVoll><label style={styles.lab}>Ohrmarke (optional)<input style={styles.inp} value={nb.ohrmarke} onChange={(e) => setNb({ ...nb, ohrmarke: e.target.value })} /></label></NurVoll>
+                  <NurVoll><label style={styles.lab}>Herkunft / Ziel<input style={styles.inp} value={nb.partner} onChange={(e) => setNb({ ...nb, partner: e.target.value })} placeholder="Betrieb, Händler, TBA" /></label></NurVoll>
                 </div>
                 <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'bewegung' ? 0.6 : 1 }} disabled={busy === 'bewegung'} onClick={bewegungAnlegen}>＋ Erfassen</button>
               </>

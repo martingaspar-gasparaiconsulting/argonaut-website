@@ -16,6 +16,7 @@ import { augeHilfsmittel } from '@/lib/auge';
 import { kvPdf } from '@/lib/kvPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'hilfsmittel_versorgung';
@@ -196,12 +197,12 @@ export default function HilfsmittelPage() {
             <div style={styles.cardTitel}>Versorgung anlegen</div>
             <div style={styles.grid}>
               <label style={styles.lab}>Versicherter<input style={styles.inp} value={nv.versicherter} onChange={(e) => setNv({ ...nv, versicherter: e.target.value })} /></label>
-              <label style={styles.lab}>Versicherten-Nr.<input style={styles.inp} value={nv.versicherten_nr} onChange={(e) => setNv({ ...nv, versicherten_nr: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Versicherten-Nr.<input style={styles.inp} value={nv.versicherten_nr} onChange={(e) => setNv({ ...nv, versicherten_nr: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Krankenkasse<input style={styles.inp} value={nv.krankenkasse} onChange={(e) => setNv({ ...nv, krankenkasse: e.target.value })} /></label>
-              <label style={styles.lab}>Verordnender Arzt<input style={styles.inp} value={nv.arzt} onChange={(e) => setNv({ ...nv, arzt: e.target.value })} /></label>
-              <label style={styles.lab}>Verordnung vom<input type="date" style={styles.inp} value={nv.verordnung_datum} onChange={(e) => setNv({ ...nv, verordnung_datum: e.target.value })} /></label>
-              <label style={styles.lab}>Diagnose<input style={styles.inp} value={nv.diagnose} onChange={(e) => setNv({ ...nv, diagnose: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Verordnender Arzt<input style={styles.inp} value={nv.arzt} onChange={(e) => setNv({ ...nv, arzt: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Verordnung vom<input type="date" style={styles.inp} value={nv.verordnung_datum} onChange={(e) => setNv({ ...nv, verordnung_datum: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={styles.lab}>Diagnose<input style={styles.inp} value={nv.diagnose} onChange={(e) => setNv({ ...nv, diagnose: e.target.value })} /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'versorgung' ? 0.6 : 1 }} disabled={busy === 'versorgung'} onClick={versorgungAnlegen}>＋ Anlegen & öffnen</button>
           </div>

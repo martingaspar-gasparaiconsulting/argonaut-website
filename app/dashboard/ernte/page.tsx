@@ -16,6 +16,7 @@ import { offeneBuchungen } from "@/lib/umsatzBuchung";
 import { findeArtikelId, artikelStammAusErnte, neuerBestand } from "@/lib/lagerZugang";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 const MODUL = 'ernte_ernte';
 
@@ -463,14 +464,14 @@ export default function ErnteSeite() {
               <div><label style={label}>Datum</label><input type="date" style={input} value={eForm.datum} onChange={(e) => setEForm({ ...eForm, datum: e.target.value })} /></div>
               <div><label style={label}>Menge</label><input style={input} value={eForm.menge} onChange={(e) => setEForm({ ...eForm, menge: e.target.value })} inputMode="decimal" /></div>
               <div><label style={label}>Einheit</label><input style={input} value={eForm.einheit} onChange={(e) => setEForm({ ...eForm, einheit: e.target.value })} /></div>
-              <div><label style={label}>Qualität / Handelsklasse</label><input style={input} value={eForm.qualitaet} onChange={(e) => setEForm({ ...eForm, qualitaet: e.target.value })} placeholder="z. B. Klasse I" /></div>
-              <div><label style={label}>Lagerort</label><input style={input} value={eForm.lagerort} onChange={(e) => setEForm({ ...eForm, lagerort: e.target.value })} /></div>
-              <div><label style={label}>Schlag (aus Schlagkartei)</label>
+              <NurVoll><div><label style={label}>Qualität / Handelsklasse</label><input style={input} value={eForm.qualitaet} onChange={(e) => setEForm({ ...eForm, qualitaet: e.target.value })} placeholder="z. B. Klasse I" /></div></NurVoll>
+              <NurVoll><div><label style={label}>Lagerort</label><input style={input} value={eForm.lagerort} onChange={(e) => setEForm({ ...eForm, lagerort: e.target.value })} /></div></NurVoll>
+              <NurVoll><div><label style={label}>Schlag (aus Schlagkartei)</label>
                 <select style={input} value={eForm.schlag_id} onChange={(e) => setEForm({ ...eForm, schlag_id: e.target.value })}><option value="">— optional —</option>{schlaege.map((s) => <option key={s.id} value={s.id}>{s.bezeichnung}</option>)}</select>
-              </div>
+              </div></NurVoll>
               <div><label style={label}>Status</label><select style={input} value={eForm.status} onChange={(e) => setEForm({ ...eForm, status: e.target.value })}>{ERNTE_STATUS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={eForm.notiz} onChange={(e) => setEForm({ ...eForm, notiz: e.target.value })} /></div>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} />
+              <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={eForm.notiz} onChange={(e) => setEForm({ ...eForm, notiz: e.target.value })} /></div></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></NurVoll>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
@@ -497,7 +498,7 @@ export default function ErnteSeite() {
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}><input type="checkbox" checked={pForm.bio} onChange={(e) => setPForm({ ...pForm, bio: e.target.checked })} /> Bio</label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}><input type="checkbox" checked={pForm.verfuegbar} onChange={(e) => setPForm({ ...pForm, verfuegbar: e.target.checked })} /> verfügbar</label>
               </div>
-              <div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={pForm.notiz} onChange={(e) => setPForm({ ...pForm, notiz: e.target.value })} /></div>
+              <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Notiz</label><input style={input} value={pForm.notiz} onChange={(e) => setPForm({ ...pForm, notiz: e.target.value })} /></div></NurVoll>
             </div>
             {fehler && <div style={{ marginTop: 12, color: C.danger, fontWeight: 600 }}>{fehler}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
