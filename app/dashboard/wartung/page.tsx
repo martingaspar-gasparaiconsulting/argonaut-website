@@ -31,6 +31,7 @@ import {
 } from '../_components/wartungsLogik';
 import { WARTUNG_VORLAGEN, wartungVorlage } from '@/lib/wiederkehr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'wartungsvertraege';
@@ -621,9 +622,9 @@ export default function WartungPage() {
               <Feld label="Kundenname (Freitext)">
                 <input style={styles.input} value={form.kunde_name} onChange={(e) => setF('kunde_name', e.target.value)} placeholder="Name (frei)" />
               </Feld>
-              <Feld label="Vertragsnummer">
+              <NurVoll><Feld label="Vertragsnummer">
                 <input style={styles.input} value={form.vertragsnummer} onChange={(e) => setF('vertragsnummer', e.target.value)} />
-              </Feld>
+              </Feld></NurVoll>
               <Feld label="Status">
                 <select style={styles.input} value={form.status} onChange={(e) => setF('status', e.target.value)}>
                   {STATUS_OPTIONEN.map((o) => <option key={o.wert} value={o.wert}>{o.label}</option>)}
@@ -638,19 +639,19 @@ export default function WartungPage() {
               <Feld label="Letzte Wartung">
                 <input type="date" style={styles.input} value={form.letzte_wartung_am} onChange={(e) => setF('letzte_wartung_am', e.target.value)} />
               </Feld>
-              <Feld label="Erinnerung (Tage vorher)">
+              <NurVoll><Feld label="Erinnerung (Tage vorher)">
                 <input type="number" min={0} style={styles.input} value={form.erinnerung_tage_vorher} onChange={(e) => setF('erinnerung_tage_vorher', e.target.value)} />
-              </Feld>
+              </Feld></NurVoll>
               <Feld label="Betrag netto (€)">
                 <input style={styles.input} value={form.betrag_netto} onChange={(e) => setF('betrag_netto', e.target.value)} placeholder="z. B. 1200" />
               </Feld>
               <Feld label="Beschreibung" voll>
                 <textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={form.beschreibung} onChange={(e) => setF('beschreibung', e.target.value)} />
               </Feld>
-              <Feld label="Interne Notiz" voll>
+              <NurVoll><Feld label="Interne Notiz" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} />
-              </Feld>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} />
+              </Feld></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} /></NurVoll>
             </div>
 
             <div style={styles.modalAktionen}>

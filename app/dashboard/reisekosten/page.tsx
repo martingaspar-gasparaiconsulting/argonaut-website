@@ -13,6 +13,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { verpflegung, fahrtkosten, round2, type Fahrzeug } from '@/lib/reisekosten';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'reisekosten';
@@ -189,7 +190,7 @@ export default function ReisekostenPage() {
           <label style={styles.lab}>Gefahrene km<input style={styles.inp} value={form.km} onChange={(e) => setF('km', e.target.value)} inputMode="decimal" placeholder="0" /></label>
           <label style={styles.lab}>Übernachtung €<input style={styles.inp} value={form.uebernachtung} onChange={(e) => setF('uebernachtung', e.target.value)} inputMode="decimal" placeholder="tatsächliche Kosten" /></label>
           <label style={styles.lab}>Sonstiges € (Bahn, Parken …)<input style={styles.inp} value={form.sonstige} onChange={(e) => setF('sonstige', e.target.value)} inputMode="decimal" placeholder="0" /></label>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
 
         <div style={styles.mahlzeiten}>
@@ -212,7 +213,7 @@ export default function ReisekostenPage() {
           {rechnung.vp.hinweis && <div style={styles.hinweis}>ℹ️ {rechnung.vp.hinweis}</div>}
         </div>
 
-        <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
+        <NurVoll><label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label></NurVoll>
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
           <button style={styles.primaer} onClick={speichern}>💾 {editId ? 'Änderungen speichern' : 'Reise speichern'}</button>
           {editId && <button style={styles.ghost} onClick={reset}>Abbrechen</button>}

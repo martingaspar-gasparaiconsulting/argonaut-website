@@ -53,6 +53,7 @@ import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'werkstatt_auftraege';
@@ -964,9 +965,9 @@ export default function WerkstattPage() {
               <Feld label="Kunde">
                 <input style={styles.input} value={form.kunde_name} onChange={(e) => setF('kunde_name', e.target.value)} />
               </Feld>
-              <Feld label="Auftrags-Nr.">
+              <NurVoll><Feld label="Auftrags-Nr.">
                 <input style={styles.input} value={form.nummer} onChange={(e) => setF('nummer', e.target.value)} />
-              </Feld>
+              </Feld></NurVoll>
               <Feld label="Priorität">
                 <select style={styles.input} value={form.prioritaet} onChange={(e) => setF('prioritaet', e.target.value)}>
                   {PRIO_OPTIONEN.map((o) => <option key={o.wert} value={o.wert}>{o.label}</option>)}
@@ -978,7 +979,7 @@ export default function WerkstattPage() {
               <Feld label="Beschreibung" voll>
                 <textarea style={{ ...styles.input, minHeight: 50, resize: 'vertical' }} value={form.beschreibung} onChange={(e) => setF('beschreibung', e.target.value)} />
               </Feld>
-              <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} /></NurVoll>
             </div>
 
             {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
