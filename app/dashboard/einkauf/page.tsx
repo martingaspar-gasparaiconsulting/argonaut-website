@@ -21,6 +21,7 @@ import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'bestellung';
@@ -298,10 +299,10 @@ export default function EinkaufPage() {
                   {lieferanten.filter((l) => l.status === 'aktiv').map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </label>
-              <label style={styles.lab}>Bestell-Nr. (optional)<input style={styles.inp} value={nb.bestell_nr} onChange={(e) => setNb({ ...nb, bestell_nr: e.target.value })} placeholder="automatisch" /></label>
+              <NurVoll><label style={styles.lab}>Bestell-Nr. (optional)<input style={styles.inp} value={nb.bestell_nr} onChange={(e) => setNb({ ...nb, bestell_nr: e.target.value })} placeholder="automatisch" /></label></NurVoll>
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
-              <label style={styles.lab}>Notiz (optional)<input style={styles.inp} value={nb.notiz} onChange={(e) => setNb({ ...nb, notiz: e.target.value })} /></label>
-              <EigeneFelderInputs felder={felder} werte={nbExtra} setWert={(fid, w) => setNbExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+              <NurVoll><label style={styles.lab}>Notiz (optional)<input style={styles.inp} value={nb.notiz} onChange={(e) => setNb({ ...nb, notiz: e.target.value })} /></label></NurVoll>
+              <NurVoll><EigeneFelderInputs felder={felder} werte={nbExtra} setWert={(fid, w) => setNbExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
             </div>
 
             <div style={{ ...styles.subCard, marginTop: 12 }}>
@@ -405,12 +406,12 @@ export default function EinkaufPage() {
             <div style={styles.cardTitel}>Lieferant anlegen</div>
             <div style={styles.grid}>
               <label style={styles.lab}>Name<input style={styles.inp} value={nl.name} onChange={(e) => setNl({ ...nl, name: e.target.value })} /></label>
-              <label style={styles.lab}>Kundennr. bei Lieferant<input style={styles.inp} value={nl.kundennummer} onChange={(e) => setNl({ ...nl, kundennummer: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Kundennr. bei Lieferant<input style={styles.inp} value={nl.kundennummer} onChange={(e) => setNl({ ...nl, kundennummer: e.target.value })} /></label></NurVoll>
               <label style={styles.lab}>Ansprechpartner<input style={styles.inp} value={nl.ansprechpartner} onChange={(e) => setNl({ ...nl, ansprechpartner: e.target.value })} /></label>
               <label style={styles.lab}>E-Mail<input style={styles.inp} value={nl.email} onChange={(e) => setNl({ ...nl, email: e.target.value })} /></label>
               <label style={styles.lab}>Telefon<input style={styles.inp} value={nl.telefon} onChange={(e) => setNl({ ...nl, telefon: e.target.value })} /></label>
-              <label style={styles.lab}>Zahlungsziel (Tage)<input style={styles.inp} inputMode="numeric" value={nl.zahlungsziel_tage} onChange={(e) => setNl({ ...nl, zahlungsziel_tage: e.target.value })} /></label>
-              <label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz<input style={styles.inp} value={nl.notiz} onChange={(e) => setNl({ ...nl, notiz: e.target.value })} /></label>
+              <NurVoll><label style={styles.lab}>Zahlungsziel (Tage)<input style={styles.inp} inputMode="numeric" value={nl.zahlungsziel_tage} onChange={(e) => setNl({ ...nl, zahlungsziel_tage: e.target.value })} /></label></NurVoll>
+              <NurVoll><label style={{ ...styles.lab, gridColumn: '1 / -1' }}>Notiz<input style={styles.inp} value={nl.notiz} onChange={(e) => setNl({ ...nl, notiz: e.target.value })} /></label></NurVoll>
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'lieferant' ? 0.6 : 1 }} disabled={busy === 'lieferant'} onClick={lieferantAnlegen}>＋ Anlegen</button>
           </div>

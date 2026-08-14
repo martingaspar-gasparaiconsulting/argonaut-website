@@ -23,6 +23,7 @@ import { augeGutscheine } from '@/lib/auge';
 import { gutscheinPdf } from '@/lib/gutscheinPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'gutschein';
@@ -307,10 +308,10 @@ export default function GutscheinePage() {
               </select>
             </label>
           )}
-          <label style={styles.lab}>Anlass (optional)<input style={styles.inp} value={ng.anlass} onChange={(e) => setNg({ ...ng, anlass: e.target.value })} placeholder="z. B. Geburtstag" /></label>
+          <NurVoll><label style={styles.lab}>Anlass (optional)<input style={styles.inp} value={ng.anlass} onChange={(e) => setNg({ ...ng, anlass: e.target.value })} placeholder="z. B. Geburtstag" /></label></NurVoll>
           <label style={styles.lab}>Ausgestellt am<input type="date" style={styles.inp} value={ng.ausgestellt_am} onChange={(e) => ausstellDatum(e.target.value)} /></label>
-          <label style={styles.lab}>Gültig bis (§195 BGB)<input type="date" style={styles.inp} value={ng.gueltig_bis} onChange={(e) => setNg({ ...ng, gueltig_bis: e.target.value })} /></label>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          <NurVoll><label style={styles.lab}>Gültig bis (§195 BGB)<input type="date" style={styles.inp} value={ng.gueltig_bis} onChange={(e) => setNg({ ...ng, gueltig_bis: e.target.value })} /></label></NurVoll>
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
 
         <div style={styles.hintBox}>

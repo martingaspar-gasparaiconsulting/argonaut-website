@@ -13,6 +13,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan, GWG_GRENZE } from '@/lib/afa';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
+import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'anlagegueter';
@@ -171,14 +172,14 @@ export default function AnlagenPage() {
           <label style={styles.lab}>Nutzungsdauer (Jahre)
             <input style={styles.inp} value={form.nutzungsdauer_jahre} onChange={(e) => setF('nutzungsdauer_jahre', e.target.value)} inputMode="numeric" list="nd-hilfe" placeholder="z. B. 6" />
           </label>
-          <label style={styles.lab}>Status
+          <NurVoll><label style={styles.lab}>Status
             <select style={styles.inp} value={form.status} onChange={(e) => setF('status', e.target.value)}>
               <option value="aktiv">aktiv</option>
               <option value="verkauft">verkauft</option>
               <option value="ausgemustert">ausgemustert</option>
             </select>
-          </label>
-          <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />
+          </label></NurVoll>
+          <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
         <div style={styles.ndHilfe}>
           <span style={{ color: C.textDim, fontSize: 12.5 }}>Übliche Nutzungsdauer:</span>
@@ -219,7 +220,7 @@ export default function AnlagenPage() {
           </div>
         )}
 
-        <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
+        <NurVoll><label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label></NurVoll>
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
           <button style={styles.primaer} onClick={speichern}>💾 {editId ? 'Änderungen speichern' : 'Anlagegut speichern'}</button>
           {editId && <button style={styles.ghost} onClick={reset}>Abbrechen</button>}
