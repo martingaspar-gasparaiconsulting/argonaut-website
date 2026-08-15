@@ -33,6 +33,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/automationen",
+      "schedule": "30 7 * * *"
+    },
+    {
       "path": "/api/cron/ki-bericht",
       "schedule": "0 8 1 * *"
     },
