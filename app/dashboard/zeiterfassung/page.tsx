@@ -6,10 +6,27 @@
 // Jeder stempelt SEINE eigene Zeit (ueber sein mitarbeiter-Profil).
 // Manipulationssicher: nach "Gehen" sperrt die RLS die Zeile fuer den MA.
 // Pfad: app/dashboard/zeiterfassung/page.tsx
+//
+// 15.08.26 · OFFLINE-FAEHIG (Thema 3, Schritt 4)
+// Gestempelt wird im Keller, im Aufzug, in der Tiefgarage — also genau dort,
+// wo kein Netz ist. Deshalb:
+//   · Jede Buchung wird ZUERST auf dem Geraet festgehalten und dann gesendet.
+//     Scheitert das Senden, wandert sie in die Warteschlange (lib/offline-
+//     Warteschlange) und geht automatisch raus, sobald wieder Empfang da ist.
+//   · Die Uhrzeit entsteht beim STEMPELN, nie beim Senden. Wer um 7:12 im
+//     Funkloch kommt und um 9:40 Empfang hat, bucht 7:12.
+//   · Neue Sitzungen bekommen ihre id schon hier (nicht von der Datenbank) —
+//     nur so lassen sich Pause und Gehen einer noch nicht uebertragenen
+//     Sitzung ueberhaupt zuordnen.
+//   · Die Tagesliste wird lokal gespiegelt, damit die Seite auch ohne Netz
+//     den richtigen Stand zeigt.
+// Nichts davon aendert die Buchungslogik selbst: online laeuft alles wie bisher.
 // ============================================================
 
 import { useState, useEffect, useCallback, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { browserSpeicher, einreihen, neueId } from '@/lib/offlineWarteschlange';
+import { WARTESCHLANGE_EVENT } from '../_components/OfflineSync';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -57,6 +74,51 @@ function monatsStart(): string {
   return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-01';
 }
 
+// ---------------------------------------------------------------------------
+// Lokaler Spiegel der heutigen Buchungen — damit die Seite auch ohne Netz den
+// richtigen Stand zeigt und der Mitarbeiter sieht, dass sein Stempeln ankam.
+// ---------------------------------------------------------------------------
+const SPIEGEL_KEY = 'argonaut-zeiterfassung-';
+
+function spiegelLesen(datum: string): Sitzung[] {
+  try {
+    const roh = window.localStorage.getItem(SPIEGEL_KEY + datum);
+    if (!roh) return [];
+    const daten = JSON.parse(roh);
+    return Array.isArray(daten) ? (daten as Sitzung[]) : [];
+  } catch { return []; }
+}
+
+function spiegelSchreiben(datum: string, liste: Sitzung[]): void {
+  try { window.localStorage.setItem(SPIEGEL_KEY + datum, JSON.stringify(liste)); } catch { /* voll oder gesperrt */ }
+}
+
+/** Meldet der Sync-Komponente, dass etwas Neues in der Warteschlange liegt. */
+function warteschlangeGeweckt(): void {
+  try { window.dispatchEvent(new CustomEvent(WARTESCHLANGE_EVENT)); } catch { /* egal */ }
+}
+
+/** Kein Netz? Dann gar nicht erst versuchen — das spart dem Nutzer die Wartezeit. */
+function sichtbarOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+/**
+ * Netzproblem oder echte Ablehnung? Das ist der entscheidende Unterschied:
+ * Ein Netzproblem gehoert in die Warteschlange, eine Ablehnung durch den Server
+ * (fehlende Berechtigung, ungueltiger Wert) muss der Nutzer sofort erfahren.
+ */
+function istNetzfehler(meldung: string): boolean {
+  const t = (meldung || '').toLowerCase();
+  return t.includes('failed to fetch')
+    || t.includes('fetch failed')
+    || t.includes('networkerror')
+    || t.includes('network request failed')
+    || t.includes('load failed')
+    || t.includes('timeout')
+    || t.includes('err_internet_disconnected');
+}
+
 export default function ZeiterfassungPage() {
   const [ma, setMa] = useState<Mitarbeiter | null>(null);
   const [kontoOhneProfil, setKontoOhneProfil] = useState(false);
@@ -67,6 +129,8 @@ export default function ZeiterfassungPage() {
   const [offen, setOffen] = useState<Sitzung | null>(null);
   const [heute, setHeute] = useState<Sitzung[]>([]);
   const [monatMin, setMonatMin] = useState(0);
+  const [ohneNetz, setOhneNetz] = useState(false);
+  const [wartet, setWartet] = useState(0);
 
   // Live-Uhr (Tick jede Sekunde, nur fuer Anzeige)
   const [now, setNow] = useState(Date.now());
@@ -74,6 +138,14 @@ export default function ZeiterfassungPage() {
   useEffect(() => {
     tickRef.current = setInterval(() => setNow(Date.now()), 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, []);
+
+  /** Übernimmt eine Tagesliste in die Anzeige und in den lokalen Spiegel. */
+  const uebernehmen = useCallback((liste: Sitzung[], spiegeln = true) => {
+    const sortiert = [...liste].sort((a, b) => a.kommen_um.localeCompare(b.kommen_um));
+    setHeute(sortiert);
+    setOffen(sortiert.find((s) => !s.gehen_um) ?? null);
+    if (spiegeln) spiegelSchreiben(heuteISO(), sortiert);
   }, []);
 
   const ladeAlles = useCallback(async () => {
@@ -91,13 +163,13 @@ export default function ZeiterfassungPage() {
       setMa(m);
 
       // Heutige Sitzungen
-      const { data: heuteRows } = await supabase.from('hr_zeiterfassung')
+      const { data: heuteRows, error: heuteFehler } = await supabase.from('hr_zeiterfassung')
         .select('id,datum,kommen_um,gehen_um,pause_minuten,pause_offen_seit,notiz')
         .eq('mitarbeiter_id', m.id).eq('datum', heuteISO())
         .order('kommen_um', { ascending: true });
-      const liste = (heuteRows as Sitzung[]) ?? [];
-      setHeute(liste);
-      setOffen(liste.find((s) => !s.gehen_um) ?? null);
+      if (heuteFehler) throw heuteFehler;
+      uebernehmen((heuteRows as Sitzung[]) ?? []);
+      setOhneNetz(false);
 
       // Monatssumme (alle Sitzungen ab Monatsanfang)
       const { data: monatRows } = await supabase.from('hr_zeiterfassung')
@@ -106,54 +178,144 @@ export default function ZeiterfassungPage() {
       const summe = ((monatRows as Sitzung[]) ?? []).reduce((s, r) => s + nettoMin(r, Date.now()), 0);
       setMonatMin(summe);
     } catch {
-      setMsg('Daten konnten nicht geladen werden.');
+      // Ohne Netz: den lokalen Spiegel zeigen statt einer leeren Seite. Der
+      // Mitarbeiter sieht dann genau das, was er heute selbst gestempelt hat.
+      const gespiegelt = spiegelLesen(heuteISO());
+      if (gespiegelt.length > 0) {
+        uebernehmen(gespiegelt, false);
+        setOhneNetz(true);
+      } else {
+        setMsg('Daten konnten nicht geladen werden.');
+      }
     } finally { setLoading(false); }
-  }, []);
+  }, [uebernehmen]);
 
   useEffect(() => { ladeAlles(); }, [ladeAlles]);
+
+  // Wenn die Verbindung zurückkommt, den echten Stand nachladen.
+  useEffect(() => {
+    const beiOnline = () => { setOhneNetz(false); ladeAlles(); };
+    const beiOffline = () => setOhneNetz(true);
+    window.addEventListener('online', beiOnline);
+    window.addEventListener('offline', beiOffline);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) setOhneNetz(true);
+    return () => {
+      window.removeEventListener('online', beiOnline);
+      window.removeEventListener('offline', beiOffline);
+    };
+  }, [ladeAlles]);
 
   async function abmelden() {
     await supabase.auth.signOut();
     window.location.href = '/auth/login';
   }
 
+  // -------------------------------------------------------------------------
+  // Buchen — immer zuerst lokal, dann senden.
+  //
+  // Drei moegliche Ausgaenge:
+  //   gesendet → die Datenbank hat es angenommen
+  //   wartet   → kein Netz, liegt in der Warteschlange und geht spaeter raus
+  //   fehler   → der Server hat geantwortet und abgelehnt (z.B. keine
+  //              Berechtigung). Das gehoert NICHT in die Warteschlange, sonst
+  //              wuerde es acht Mal vergeblich wiederholt.
+  // -------------------------------------------------------------------------
+  type Ausgang = { art: 'gesendet' } | { art: 'wartet' } | { art: 'fehler'; meldung: string };
+
+  async function buchen(
+    art: 'insert' | 'update',
+    werte: Record<string, unknown>,
+    beschreibung: string,
+    jetzt: Date,
+    zielId?: string,
+  ): Promise<Ausgang> {
+    const inSchlange = (): Ausgang => {
+      einreihen(browserSpeicher(), { art, tabelle: 'hr_zeiterfassung', werte, zielId, beschreibung, jetzt });
+      warteschlangeGeweckt();
+      setWartet((n) => n + 1);
+      setOhneNetz(true);
+      return { art: 'wartet' };
+    };
+
+    if (sichtbarOffline()) return inSchlange();
+
+    try {
+      const { error } = art === 'insert'
+        ? await supabase.from('hr_zeiterfassung').insert(werte)
+        : await supabase.from('hr_zeiterfassung').update(werte).eq('id', String(zielId));
+      if (!error) return { art: 'gesendet' };
+      if (istNetzfehler(error.message)) return inSchlange();
+      return { art: 'fehler', meldung: error.message };
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : '';
+      if (istNetzfehler(m) || m === '') return inSchlange();
+      return { art: 'fehler', meldung: m };
+    }
+  }
+
   async function kommen() {
     if (!ma || offen) return;
     setBusy(true); setMsg(null);
     try {
-      const { error } = await supabase.from('hr_zeiterfassung').insert({
-        owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id,
-        datum: heuteISO(), kommen_um: new Date().toISOString(),
-      });
-      if (error) throw error;
-      setMsg('Eingestempelt. Guten Start!');
-      await ladeAlles();
-    } catch (e: unknown) { setMsg('Einstempeln fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+      const jetzt = new Date();
+      const zeitpunkt = jetzt.toISOString();
+      // Eigene id: nur so lassen sich Pause und Gehen einer noch nicht
+      // uebertragenen Sitzung spaeter zuordnen.
+      const id = neueId();
+      const satz = {
+        id, owner_user_id: ma.owner_user_id, mitarbeiter_id: ma.id,
+        datum: heuteISO(), kommen_um: zeitpunkt,
+      };
+
+      // Sofort sichtbar machen — der Mitarbeiter soll nicht warten muessen.
+      uebernehmen([...heute, {
+        id, datum: heuteISO(), kommen_um: zeitpunkt, gehen_um: null,
+        pause_minuten: 0, pause_offen_seit: null, notiz: null,
+      }]);
+
+      const aus = await buchen('insert', satz, `Kommen ${uhrzeit(zeitpunkt)}`, jetzt);
+      if (aus.art === 'fehler') { setMsg('Einstempeln fehlgeschlagen: ' + aus.meldung); await ladeAlles(); return; }
+      setMsg(aus.art === 'wartet'
+        ? `Eingestempelt um ${uhrzeit(zeitpunkt)} — gespeichert, wird bei Verbindung übertragen.`
+        : 'Eingestempelt. Guten Start!');
+      if (aus.art === 'gesendet') await ladeAlles();
+    } finally { setBusy(false); }
   }
 
   async function pauseStart() {
     if (!ma || !offen || offen.pause_offen_seit) return;
     setBusy(true); setMsg(null);
     try {
-      const { error } = await supabase.from('hr_zeiterfassung')
-        .update({ pause_offen_seit: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq('id', offen.id);
-      if (error) throw error;
-      await ladeAlles();
-    } catch (e: unknown) { setMsg('Pause starten fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+      const jetzt = new Date();
+      const zeitpunkt = jetzt.toISOString();
+      uebernehmen(heute.map((s) => (s.id === offen.id ? { ...s, pause_offen_seit: zeitpunkt } : s)));
+
+      const aus = await buchen('update',
+        { pause_offen_seit: zeitpunkt, updated_at: zeitpunkt },
+        `Pause ab ${uhrzeit(zeitpunkt)}`, jetzt, offen.id);
+      if (aus.art === 'fehler') { setMsg('Pause starten fehlgeschlagen: ' + aus.meldung); await ladeAlles(); return; }
+      if (aus.art === 'wartet') setMsg(`Pause seit ${uhrzeit(zeitpunkt)} — gespeichert, wird bei Verbindung übertragen.`);
+      else await ladeAlles();
+    } finally { setBusy(false); }
   }
 
   async function pauseEnde() {
     if (!ma || !offen || !offen.pause_offen_seit) return;
     setBusy(true); setMsg(null);
     try {
-      const zusatz = Math.round((Date.now() - new Date(offen.pause_offen_seit).getTime()) / 60000);
-      const { error } = await supabase.from('hr_zeiterfassung')
-        .update({ pause_minuten: offen.pause_minuten + zusatz, pause_offen_seit: null, updated_at: new Date().toISOString() })
-        .eq('id', offen.id);
-      if (error) throw error;
-      await ladeAlles();
-    } catch (e: unknown) { setMsg('Pause beenden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+      const jetzt = new Date();
+      const zeitpunkt = jetzt.toISOString();
+      const zusatz = Math.round((jetzt.getTime() - new Date(offen.pause_offen_seit).getTime()) / 60000);
+      const gesamt = offen.pause_minuten + zusatz;
+      uebernehmen(heute.map((s) => (s.id === offen.id ? { ...s, pause_minuten: gesamt, pause_offen_seit: null } : s)));
+
+      const aus = await buchen('update',
+        { pause_minuten: gesamt, pause_offen_seit: null, updated_at: zeitpunkt },
+        `Pause beendet ${uhrzeit(zeitpunkt)} (${zusatz} Min)`, jetzt, offen.id);
+      if (aus.art === 'fehler') { setMsg('Pause beenden fehlgeschlagen: ' + aus.meldung); await ladeAlles(); return; }
+      if (aus.art === 'wartet') setMsg(`Pause beendet — ${zusatz} Minuten gespeichert, wird bei Verbindung übertragen.`);
+      else await ladeAlles();
+    } finally { setBusy(false); }
   }
 
   async function gehen() {
@@ -161,18 +323,26 @@ export default function ZeiterfassungPage() {
     if (!window.confirm('Jetzt ausstempeln? Danach kann diese Sitzung nur noch der Chef korrigieren.')) return;
     setBusy(true); setMsg(null);
     try {
+      const jetzt = new Date();
+      const zeitpunkt = jetzt.toISOString();
       // Falls noch in Pause: Pause sauber abschliessen
       let pauseGesamt = offen.pause_minuten;
       if (offen.pause_offen_seit) {
-        pauseGesamt += Math.round((Date.now() - new Date(offen.pause_offen_seit).getTime()) / 60000);
+        pauseGesamt += Math.round((jetzt.getTime() - new Date(offen.pause_offen_seit).getTime()) / 60000);
       }
-      const { error } = await supabase.from('hr_zeiterfassung')
-        .update({ gehen_um: new Date().toISOString(), pause_minuten: pauseGesamt, pause_offen_seit: null, updated_at: new Date().toISOString() })
-        .eq('id', offen.id);
-      if (error) throw error;
-      setMsg('Ausgestempelt. Schönen Feierabend!');
-      await ladeAlles();
-    } catch (e: unknown) { setMsg('Ausstempeln fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setBusy(false); }
+      uebernehmen(heute.map((s) => (s.id === offen.id
+        ? { ...s, gehen_um: zeitpunkt, pause_minuten: pauseGesamt, pause_offen_seit: null }
+        : s)));
+
+      const aus = await buchen('update',
+        { gehen_um: zeitpunkt, pause_minuten: pauseGesamt, pause_offen_seit: null, updated_at: zeitpunkt },
+        `Gehen ${uhrzeit(zeitpunkt)}`, jetzt, offen.id);
+      if (aus.art === 'fehler') { setMsg('Ausstempeln fehlgeschlagen: ' + aus.meldung); await ladeAlles(); return; }
+      setMsg(aus.art === 'wartet'
+        ? `Ausgestempelt um ${uhrzeit(zeitpunkt)} — gespeichert, wird bei Verbindung übertragen. Schönen Feierabend!`
+        : 'Ausgestempelt. Schönen Feierabend!');
+      if (aus.art === 'gesendet') await ladeAlles();
+    } finally { setBusy(false); }
   }
 
   // Anzeige-Status
@@ -211,6 +381,14 @@ export default function ZeiterfassungPage() {
             </div>
 
             {msg && <div style={styles.infoMsg}>{msg}</div>}
+
+            {(ohneNetz || wartet > 0) && (
+              <div style={styles.offlineMsg}>
+                <b style={{ color: C.warn }}>Ohne Verbindung</b> — Sie können trotzdem stempeln.
+                {wartet > 0 && ` ${wartet} ${wartet === 1 ? 'Buchung wartet' : 'Buchungen warten'} auf die Übertragung.`}
+                {' '}Die Uhrzeit wird beim Stempeln festgehalten, nicht erst beim Senden — es wird also genau die Zeit gebucht, zu der Sie gedrückt haben.
+              </div>
+            )}
 
             {/* Live-Status */}
             <section style={styles.clockCard}>
@@ -284,6 +462,8 @@ export default function ZeiterfassungPage() {
             <div style={styles.hinweis}>
               Hinweis: Buchungen werden täglich erfasst (Beginn, Ende, Dauer, Pausen) und für ca. 2 Jahre aufbewahrt.
               Eine abgeschlossene Sitzung kann nur noch über den Chef korrigiert werden.
+              Ohne Verbindung wird auf dem Gerät gespeichert und automatisch nachgetragen, sobald wieder Empfang da ist —
+              maßgeblich ist immer die Uhrzeit, zu der Sie gestempelt haben.
             </div>
           </>
         )}
@@ -338,6 +518,7 @@ const styles: Record<string, CSSProperties> = {
   rowDauer: { fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 700, color: C.cyan },
 
   infoMsg: { marginBottom: 18, color: C.text, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px' },
+  offlineMsg: { marginBottom: 18, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.55, background: 'rgba(224,162,76,0.09)', border: '1px solid rgba(224,162,76,0.35)', borderRadius: 10, padding: '12px 14px' },
   ghostBtn: { background: 'transparent', color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '8px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" },
   hinweis: { marginTop: 18, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.5, padding: '0 4px' },
 };
