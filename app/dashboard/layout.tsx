@@ -5,6 +5,7 @@ import DashboardNav from './DashboardNav'
 import DashboardChat from './DashboardChat'
 import Glocke from './Glocke'
 import SwRegister from './_components/SwRegister'
+import AppInstallieren from './_components/AppInstallieren'
 import { demoStatus, demoRestText } from '@/lib/demo'
 import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 import PraesentationsModus from './_components/PraesentationsModus'
@@ -199,6 +200,10 @@ export default async function DashboardLayout({
 
       {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
       <SwRegister />
+
+      {/* Einladung, ARGONAUT auf den Startbildschirm zu legen (zeigt sich nur,
+          wenn die App noch nicht installiert ist und der Nutzer nicht "Später" gewählt hat) */}
+      <AppInstallieren />
 
       {/* Read-only-Sperre fuer abgelaufene Demo-Konten (Punkt 26b) */}
       <DemoReadonlyGuard readonly={demoInfo.abgelaufen} />
