@@ -14,11 +14,12 @@
 // mit aktivem RLS — jeder Betrieb schreibt ausschließlich in seine eigenen Daten.
 // ============================================================
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, useEffect, useCallback, type CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { importQuellen, sucheImporte, gruppiereImporte, zaehleImporte } from '@/lib/importKatalog';
 import {
   ZIELE, zielDef, errateMapping, fehlendePflichtfelder, pruefeAlles,
+  baueMustervorlage, passtZuordnung,
   type Mapping, type PruefBericht, type ZeilenFehler,
 } from '@/lib/importParser';
 
@@ -53,6 +54,20 @@ type ImportErgebnis = {
   fehler: ZeilenFehler[];
 };
 
+type Job = {
+  id: string; ziel: string; dateiname: string | null; status: string;
+  kopfzeilen: string[] | null; mapping: Mapping | null;
+  zeilen_gesamt: number; zeilen_ok: number; zeilen_fehler: number;
+  als_vorlage: boolean; vorlage_name: string | null; erstellt_am: string;
+};
+
+function fmtZeit(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export default function ImportCenterPage() {
   // --- Stufe 1: Katalog (unveraendert) -------------------------------------
   const [suche, setSuche] = useState('');
@@ -71,9 +86,36 @@ export default function ImportCenterPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  const [merken, setMerken] = useState(true);
+  const [verlauf, setVerlauf] = useState<Job[]>([]);
 
   const ziel = useMemo(() => (zielKey ? zielDef(zielKey) : undefined), [zielKey]);
   const offenePflicht = useMemo(() => (zielKey ? fehlendePflichtfelder(mapping, zielKey) : []), [mapping, zielKey]);
+
+  const verlaufLaden = useCallback(async () => {
+    const { data } = await supabase
+      .from('import_jobs')
+      .select('id,ziel,dateiname,status,kopfzeilen,mapping,zeilen_gesamt,zeilen_ok,zeilen_fehler,als_vorlage,vorlage_name,erstellt_am')
+      .order('erstellt_am', { ascending: false })
+      .limit(40);
+    setVerlauf((data as Job[]) ?? []);
+  }, []);
+
+  useEffect(() => { verlaufLaden(); }, [verlaufLaden]);
+
+  /** Die eigene Mustervorlage als CSV herunterladen — passt garantiert. */
+  function vorlageHerunterladen() {
+    if (!ziel) return;
+    const csv = baueMustervorlage(ziel.key);
+    if (!csv) return;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `argonaut-vorlage-${ziel.key}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function zuruecksetzen(behalteZiel = false) {
     if (!behalteZiel) setZielKey('');
@@ -106,10 +148,22 @@ export default function ImportCenterPage() {
         abgeschnitten: daten.abgeschnitten ?? 0,
       };
       setDatei(neu);
-      setMapping(errateMapping(neu.kopf, zielKey));
 
-      const erkannt = Object.values(errateMapping(neu.kopf, zielKey)).filter(Boolean).length;
-      setHinweis(`${neu.zeilen.length} Zeilen gelesen · ${erkannt} von ${neu.kopf.length} Spalten automatisch erkannt. Bitte kurz prüfen.`);
+      // Gab es fuer genau diesen Datei-Aufbau schon einmal eine Zuordnung?
+      // Dann die gemerkte nehmen — die ist von Hand geprueft und schlaegt jedes Raten.
+      const gemerkt = verlauf.find(
+        (j) => j.als_vorlage && j.ziel === zielKey && passtZuordnung(j.kopfzeilen ?? [], neu.kopf) && j.mapping
+      );
+
+      if (gemerkt?.mapping) {
+        setMapping(gemerkt.mapping);
+        setHinweis(`${neu.zeilen.length} Zeilen gelesen · gespeicherte Zuordnung von „${gemerkt.vorlage_name || gemerkt.dateiname || 'früherem Import'}" übernommen.`);
+      } else {
+        const geraten = errateMapping(neu.kopf, zielKey);
+        setMapping(geraten);
+        const erkannt = Object.values(geraten).filter(Boolean).length;
+        setHinweis(`${neu.zeilen.length} Zeilen gelesen · ${erkannt} von ${neu.kopf.length} Spalten automatisch erkannt. Bitte kurz prüfen.`);
+      }
       if (neu.abgeschnitten > 0) {
         setHinweis((h) => `${h ?? ''} Achtung: ${neu.abgeschnitten} weitere Zeilen wurden abgeschnitten — bitte in einem zweiten Durchgang importieren.`);
       }
@@ -222,10 +276,13 @@ export default function ImportCenterPage() {
         zeilen_ok: erg.angelegt + erg.aktualisiert,
         zeilen_fehler: erg.fehlgeschlagen + bericht.schlecht,
         fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
+        als_vorlage: merken,
+        vorlage_name: merken ? datei.dateiname : null,
         beendet_am: new Date().toISOString(),
       });
 
       setErgebnis(erg);
+      await verlaufLaden();
       setHinweis(`Import abgeschlossen in ${Math.max(1, Math.round((Date.now() - start.getTime()) / 1000))} Sekunden.`);
     } catch (err: unknown) {
       setFehler('Import fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
@@ -293,6 +350,15 @@ export default function ImportCenterPage() {
               Excel (.xlsx) oder CSV. Die erste Zeile muss die Spaltenüberschriften enthalten.
               Ihre Datei wird nur gelesen und <b style={{ color: C.text }}>nicht gespeichert</b>.
             </p>
+            <div style={styles.vorlagenLeiste}>
+              <span style={{ color: C.dim, fontSize: 13 }}>Noch keine passende Datei zur Hand?</span>
+              <button type="button" onClick={vorlageHerunterladen} style={{ ...styles.btnRand, fontSize: 13, padding: '8px 13px' }}>
+                ⬇ Mustervorlage „{ziel.label}"
+              </button>
+              <span style={{ color: C.dim, fontSize: 12.5 }}>
+                Enthält alle Felder und zwei ausgefüllte Beispielzeilen — einfach überschreiben.
+              </span>
+            </div>
             <input
               type="file" accept=".csv,.txt,.xlsx,.xlsm,.xls"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) dateiLesen(f); e.target.value = ''; }}
@@ -444,6 +510,14 @@ export default function ImportCenterPage() {
               </div>
             )}
 
+            <label style={styles.merkenZeile}>
+              <input type="checkbox" checked={merken} onChange={(e) => setMerken(e.target.checked)} style={{ width: 17, height: 17, cursor: 'pointer' }} />
+              <span>
+                <b>Diese Spalten-Zuordnung merken.</b>{' '}
+                <span style={{ color: C.dim }}>Beim nächsten Import mit demselben Datei-Aufbau wird sie automatisch übernommen — dann entfällt Stufe 3.</span>
+              </span>
+            </label>
+
             <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
               <button
                 type="button" onClick={importieren}
@@ -490,6 +564,46 @@ export default function ImportCenterPage() {
 
         {fehler && <div style={styles.fehlerKasten}>⚠️ {fehler}</div>}
         {hinweis && !fehler && <div style={styles.hinweisKasten}>{hinweis}</div>}
+
+        {/* --- Verlauf --- */}
+        {verlauf.length > 0 && (
+          <div style={styles.stufe}>
+            <div style={styles.stufenTitel}>Bisherige Importe</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={styles.tabelle}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Wann</th>
+                    <th style={styles.th}>Was</th>
+                    <th style={styles.th}>Datei</th>
+                    <th style={styles.th}>Übernommen</th>
+                    <th style={styles.th}>Zuordnung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {verlauf.slice(0, 12).map((j) => {
+                    const z = zielDef(j.ziel);
+                    return (
+                      <tr key={j.id}>
+                        <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{fmtZeit(j.erstellt_am)}</td>
+                        <td style={styles.td}>{z ? `${z.icon} ${z.label}` : j.ziel}</td>
+                        <td style={{ ...styles.td, color: C.dim, fontSize: 12.5 }}>{j.dateiname ?? '—'}</td>
+                        <td style={styles.td}>
+                          <b style={{ color: j.zeilen_fehler > 0 ? C.warn : C.green }}>{j.zeilen_ok}</b>
+                          <span style={{ color: C.dim }}> von {j.zeilen_gesamt}</span>
+                          {j.zeilen_fehler > 0 && <span style={{ color: C.danger, fontSize: 12.5 }}> · {j.zeilen_fehler} Probleme</span>}
+                        </td>
+                        <td style={{ ...styles.td, fontSize: 12.5, color: j.als_vorlage ? C.cyan : C.dim }}>
+                          {j.als_vorlage ? '✓ gemerkt' : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= Katalog (Stufe 1) ================= */}
@@ -589,6 +703,8 @@ const styles: Record<string, CSSProperties> = {
   zielGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 11 },
   zielKarte: { textAlign: 'left', cursor: 'pointer', border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, color: C.text, fontFamily: 'inherit' },
 
+  vorlagenLeiste: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)' },
+  merkenZeile: { display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14, fontSize: 13.5, lineHeight: 1.55, cursor: 'pointer' },
   dateiFeld: { width: '100%', boxSizing: 'border-box', background: 'rgba(10,22,40,0.7)', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '14px', color: C.text, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
   dateiInfo: { marginTop: 10, color: C.dim, fontSize: 13 },
 

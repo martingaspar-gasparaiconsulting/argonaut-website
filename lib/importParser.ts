@@ -279,6 +279,96 @@ export function zielDef(key: string): ImportZiel | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// 3b) Mustervorlagen — eine CSV, die garantiert passt
+//
+// Statt fuer jede Branche eine eigene Datei zu pflegen, wird die Vorlage aus
+// dem Ziel-Katalog GEBAUT. Neues Feld im Katalog = neue Spalte in der Vorlage,
+// ohne dass irgendwo eine Datei nachgezogen werden muss.
+// ---------------------------------------------------------------------------
+
+const BEISPIELE: Record<string, Record<string, string>> = {
+  kontakte: {
+    firma: 'Muster GmbH|Beispiel Handwerk e.K.',
+    vorname: 'Anna|Thomas',
+    nachname: 'Berger|Klein',
+    email: 'a.berger@muster.de|info@beispiel-handwerk.de',
+    telefon: '0201 1234567|0170 9876543',
+    position: 'Einkauf|Inhaber',
+    status: 'kunde|interessent',
+    quelle: 'Empfehlung|Messe',
+    notizen: 'Zahlt immer puenktlich|Ueber Kollegen gekommen',
+  },
+  artikel: {
+    bezeichnung: 'Sechskantschraube M8x40|Dichtungsband 10m',
+    artikelnummer: 'A-1001|A-1002',
+    beschreibung: 'verzinkt, DIN 933|selbstklebend, grau',
+    kategorie: 'Verbindungstechnik|Dichtstoffe',
+    einheit: 'Stk|Rolle',
+    einkaufspreis: '0,45|3,90',
+    verkaufspreis: '1,20|8,50',
+    aktueller_bestand: '250|40',
+    mindestbestand: '50|10',
+    lagerort: 'Regal A3|Regal B1',
+    ean: '4012345678901|4012345678902',
+    aktiv: 'ja|ja',
+  },
+  lieferanten: {
+    name: 'Grosshandel Nord GmbH|Werkzeug Sued AG',
+    ansprechpartner: 'Frau Meier|Herr Bauer',
+    email: 'bestellung@grosshandel-nord.de|vertrieb@werkzeug-sued.de',
+    telefon: '040 1234567|089 7654321',
+    adresse: 'Hafenstrasse 12, 20457 Hamburg|Industriering 4, 80939 Muenchen',
+    website: 'www.grosshandel-nord.de|www.werkzeug-sued.de',
+    kundennummer: 'K-88123|4711',
+    notizen: 'Lieferung Di und Do|Ab 500 EUR frei Haus',
+  },
+  rechnungen: {
+    rechnungsnummer: 'RE-2025-0142|RE-2025-0143',
+    titel: 'Wartung Anlage Halle 2|Montage Tuerelement',
+    rechnungsdatum: '12.05.2025|28.05.2025',
+    faelligkeitsdatum: '26.05.2025|11.06.2025',
+    netto_summe: '1250,00|480,00',
+    mwst_summe: '237,50|91,20',
+    brutto_summe: '1487,50|571,20',
+    bezahlter_betrag: '0,00|200,00',
+    zahlungsstatus: 'offen|teilbezahlt',
+    notizen: 'Aus Altsystem uebernommen|Anzahlung erhalten',
+  },
+};
+
+/**
+ * Baut eine Muster-CSV fuer ein Import-Ziel: Kopfzeile mit allen Feldern
+ * (Pflichtfelder mit *) und zwei ausgefuellten Beispielzeilen. Semikolon als
+ * Trennzeichen und BOM voran — damit deutsches Excel sie beim Doppelklick
+ * korrekt in Spalten legt und Umlaute richtig zeigt.
+ */
+export function baueMustervorlage(zielKey: string): string {
+  const ziel = zielDef(zielKey);
+  if (!ziel) return '';
+
+  const beispiel = BEISPIELE[zielKey] ?? {};
+  const kopf = ziel.felder.map((f) => f.label + (f.pflicht ? ' *' : ''));
+
+  const zeilen: string[][] = [[], []];
+  for (const f of ziel.felder) {
+    const paar = (beispiel[f.key] ?? '').split('|');
+    zeilen[0]?.push(paar[0] ?? '');
+    zeilen[1]?.push(paar[1] ?? paar[0] ?? '');
+  }
+
+  const feldRaus = (s: string) => (/[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+  return '﻿' + [kopf, ...zeilen].map((z) => z.map(feldRaus).join(';')).join('\r\n') + '\r\n';
+}
+
+/** Passt eine gespeicherte Zuordnung zu dieser Datei? Vergleicht die Kopfzeilen. */
+export function passtZuordnung(gespeichert: string[], aktuell: string[]): boolean {
+  if (!Array.isArray(gespeichert) || gespeichert.length === 0) return false;
+  const a = gespeichert.map(normal).filter(Boolean).sort().join('|');
+  const b = aktuell.map(normal).filter(Boolean).sort().join('|');
+  return a === b;
+}
+
+// ---------------------------------------------------------------------------
 // 4) Spalten erraten
 // ---------------------------------------------------------------------------
 
