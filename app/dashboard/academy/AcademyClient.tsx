@@ -26,6 +26,7 @@ import {
   prozentAus, istAbgeschlossen, startpunkt, sollSpeichern, dauerText,
   type Fortschritt, type KursQuelle,
 } from '@/lib/academy';
+import { textZuVtt, baueUntertitel, pruefeText, zaehleWoerter } from '@/lib/academyText';
 
 /** Eigene ID für den Dateinamen im Speicher. */
 function neueId(): string {
@@ -64,6 +65,8 @@ export type Kurs = {
   /** Nur bei eigenen Kursen: Pfad im Bucket academy-videos. */
   video_pfad?: string | null;
   pflicht?: boolean;
+  transkript?: string | null;
+  untertitel_vtt?: string | null;
 };
 
 const KAT_ORDER = ['Erste Schritte', 'Agenten meistern', 'Vertrieb & CRM', 'Automatisierungen'];
@@ -97,6 +100,12 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
   const [busy, setBusy] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
+  // Untertitel/Transkript
+  const [untertitelFuer, setUntertitelFuer] = useState<Kurs | null>(null);
+  const [rohText, setRohText] = useState('');
+  const [zusammenfassung, setZusammenfassung] = useState('');
+  const [lernziele, setLernziele] = useState<string[]>([]);
+
   const schluessel = (k: Kurs) => `${k.quelle}:${k.id}`;
 
   // --- Laden ---------------------------------------------------------------
@@ -116,7 +125,7 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
 
       const [eig, fort] = await Promise.all([
         supabase.from('academy_kurse_eigen')
-          .select('id,titel,beschreibung,kategorie,video_pfad,video_url,dauer_minuten,icon,sortierung,pflicht')
+          .select('id,titel,beschreibung,kategorie,video_pfad,video_url,dauer_minuten,icon,sortierung,pflicht,transkript,untertitel_vtt')
           .eq('aktiv', true).order('sortierung'),
         supabase.from('academy_fortschritt')
           .select('kurs_id,kurs_quelle,sekunden,laenge_sekunden,prozent,abgeschlossen,abgeschlossen_am')
@@ -276,6 +285,67 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
       await alles();
     } catch (err: unknown) {
       setFehler('Anlegen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  // --- Untertitel und Transkript --------------------------------------------
+
+  async function textAufbereiten() {
+    if (!untertitelFuer) return;
+    setBusy('ki'); setFehler(null); setOk(null);
+    try {
+      const antwort = await fetch('/api/academy/aufbereiten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: rohText,
+          titel: untertitelFuer.titel,
+          laenge_sekunden: (untertitelFuer.dauer_minuten ?? 0) * 60,
+        }),
+      });
+      const daten = await antwort.json() as {
+        ok: boolean; error?: string; text?: string; zusammenfassung?: string;
+        lernziele?: string[]; hinweis?: string; hinweise?: string[];
+      };
+      if (!antwort.ok || !daten.ok) throw new Error(daten.error || 'Aufbereitung fehlgeschlagen');
+
+      setRohText(daten.text ?? rohText);
+      setZusammenfassung(daten.zusammenfassung ?? '');
+      setLernziele(daten.lernziele ?? []);
+      setOk(daten.hinweis
+        ? daten.hinweis
+        : 'Text aufbereitet — bitte einmal durchlesen, dann speichern.');
+    } catch (err: unknown) {
+      setFehler('Aufbereitung fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  async function untertitelSpeichern() {
+    if (!untertitelFuer || !uid) return;
+    const laenge = (untertitelFuer.dauer_minuten ?? 0) * 60;
+    const probe = pruefeText(rohText, laenge);
+    if (probe.fehler.length > 0) { setFehler(probe.fehler.join(' ')); return; }
+
+    setBusy('untertitel'); setFehler(null); setOk(null);
+    try {
+      const vtt = textZuVtt(rohText, laenge);
+      const transkript = [
+        zusammenfassung ? `ZUSAMMENFASSUNG\n${zusammenfassung}\n` : '',
+        lernziele.length > 0 ? `DANACH KÖNNEN SIE\n${lernziele.map((z) => `· ${z}`).join('\n')}\n` : '',
+        `TEXT\n${rohText}`,
+      ].filter(Boolean).join('\n');
+
+      const { error } = await supabase.from('academy_kurse_eigen')
+        .update({ untertitel_vtt: vtt, transkript, aktualisiert_am: new Date().toISOString() })
+        .eq('id', untertitelFuer.id);
+      if (error) throw error;
+
+      const anzahl = baueUntertitel(rohText, laenge).length;
+      setOk(`${anzahl} Untertitel gespeichert. Sie erscheinen ab sofort im Video.`);
+      setUntertitelFuer(null);
+      await alles();
+    } catch (err: unknown) {
+      setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
   }
 
@@ -453,6 +523,17 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
                         style={{ ...s.kleinKnopf, borderColor: k.pflicht ? 'rgba(224,162,76,0.5)' : C.border, color: k.pflicht ? C.warn : C.text }}>
                         {k.pflicht ? '● Pflicht' : '○ Pflicht'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUntertitelFuer(k);
+                          setRohText(k.transkript ? (k.transkript.split('TEXT\n')[1] ?? '') : '');
+                          setZusammenfassung(''); setLernziele([]); setFehler(null); setOk(null);
+                        }}
+                        disabled={busy !== null}
+                        style={{ ...s.kleinKnopf, borderColor: k.untertitel_vtt ? 'rgba(76,175,125,0.5)' : C.border, color: k.untertitel_vtt ? C.green : C.text }}>
+                        {k.untertitel_vtt ? '✓ Untertitel' : 'Untertitel'}
+                      </button>
                       <button type="button" onClick={() => kursLoeschen(k)} disabled={busy !== null}
                         style={{ ...s.kleinKnopf, color: '#E06666', borderColor: 'rgba(224,102,102,0.4)' }}>
                         Löschen
@@ -463,6 +544,82 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* --- Untertitel & Transkript --- */}
+      {untertitelFuer && (
+        <div style={s.overlay} onClick={(ev) => { if (ev.target === ev.currentTarget) setUntertitelFuer(null); }}>
+          <div style={{ ...s.playerKasten, maxWidth: 760, maxHeight: '92vh', overflowY: 'auto' }}>
+            <div style={s.playerKopf}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Untertitel &amp; Transkript</div>
+                <div style={{ color: C.dim, fontSize: 12.5, marginTop: 3 }}>{untertitelFuer.titel}</div>
+              </div>
+              <button type="button" onClick={() => setUntertitelFuer(null)} style={s.schliessen}>✕</button>
+            </div>
+
+            <div style={{ padding: '0 16px 16px' }}>
+              <div style={s.ehrlichKasten}>
+                <b style={{ color: C.text }}>So läuft das:</b> Der gesprochene Text wird hier eingegeben — abgetippt,
+                aus Ihren Notizen oder aus dem Drehbuch. Die KI räumt ihn auf (Versprecher, Füllwörter, Satzzeichen)
+                und lässt Inhalt und Fachbegriffe unangetastet. Daraus entstehen dann Untertitel mit Zeitmarken.
+                <br /><br />
+                <b style={{ color: C.warn }}>Was ARGONAUT nicht kann:</b> sich das Video selbst anhören. Automatische
+                Spracherkennung bräuchte einen zusätzlichen Dienst — das ist eine Konto-Frage, keine Sache des Systems.
+                Der Anschluss dafür ist vorbereitet.
+              </div>
+
+              <label style={{ ...s.label, marginTop: 14 }}>
+                Gesprochener Text {zaehleWoerter(rohText) > 0 && (
+                  <span style={{ color: C.dim, fontWeight: 400 }}>
+                    · {zaehleWoerter(rohText)} Wörter
+                    {untertitelFuer.dauer_minuten ? ` · Video ${untertitelFuer.dauer_minuten} Min` : ''}
+                  </span>
+                )}
+              </label>
+              <textarea
+                value={rohText}
+                onChange={(ev) => setRohText(ev.target.value)}
+                rows={12}
+                placeholder="Also, bevor ihr die Kettensäge anwerft, äh, schaut ihr zuerst beim Ölstand …"
+                style={{ ...s.feld, resize: 'vertical', lineHeight: 1.55 }}
+              />
+
+              {zusammenfassung && (
+                <div style={s.ergebnisKasten}>
+                  <div style={{ fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: C.green, fontWeight: 800, marginBottom: 6 }}>Zusammenfassung</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6 }}>{zusammenfassung}</div>
+                  {lernziele.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: C.green, fontWeight: 800, margin: '12px 0 6px' }}>Danach können Sie</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7 }}>
+                        {lernziele.map((z, i) => <li key={i}>{z}</li>)}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {rohText.trim().length > 0 && (
+                <div style={{ color: C.dim, fontSize: 12.5, marginTop: 10 }}>
+                  Ergibt <b style={{ color: C.text }}>{baueUntertitel(rohText, (untertitelFuer.dauer_minuten ?? 0) * 60).length} Untertitel</b>.
+                  Die Zeitmarken werden aus Wortzahl und Videolänge geschätzt — genau genug zum Mitlesen.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <button type="button" onClick={textAufbereiten} disabled={busy !== null || rohText.trim().length < 20}
+                  style={{ ...s.randKnopf, opacity: busy !== null || rohText.trim().length < 20 ? 0.5 : 1 }}>
+                  {busy === 'ki' ? 'Räumt auf …' : '✨ Text aufräumen lassen'}
+                </button>
+                <button type="button" onClick={untertitelSpeichern} disabled={busy !== null || rohText.trim().length < 20}
+                  style={{ ...s.goldKnopf, opacity: busy !== null || rohText.trim().length < 20 ? 0.5 : 1 }}>
+                  {busy === 'untertitel' ? 'Speichert …' : 'Untertitel speichern'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -543,6 +700,7 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
                 controls
                 playsInline
                 preload="metadata"
+                crossOrigin="anonymous"
                 style={{ width: '100%', maxHeight: '65vh', background: '#000', display: 'block' }}
                 onLoadedMetadata={(ev) => {
                   const v = ev.currentTarget;
@@ -624,6 +782,8 @@ const s: Record<string, CSSProperties> = {
   },
   goldKnopf: { padding: '11px 17px', borderRadius: 9, border: 'none', background: C.gold, color: C.navy, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
   randKnopf: { padding: '10px 15px', borderRadius: 9, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' },
+  ehrlichKasten: { border: '1px solid rgba(0,229,255,0.25)', borderRadius: 10, padding: '12px 14px', background: 'rgba(0,229,255,0.05)', color: C.dim, fontSize: 12.5, lineHeight: 1.6 },
+  ergebnisKasten: { marginTop: 12, border: '1px solid rgba(76,175,125,0.35)', borderRadius: 10, padding: '12px 14px', background: 'rgba(76,175,125,0.06)' },
   kleinKnopf: { padding: '6px 11px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
 
   katTitel: { fontSize: 'clamp(17px, 1.5vw, 22px)', fontWeight: 800, margin: '0 0 16px', letterSpacing: '0.02em' },
