@@ -192,7 +192,11 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
   { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, gruppe: 'lager' },
   { label: '🛒 Shop / Marktplatz', href: '/dashboard/shop', modul: 'shop', ebene: 3, gruppe: 'lager' },
-  // Automatisierungen: aus der Navigation genommen (Punkt „Agenten/Automatisierungen").
+  // Alt-Hinweis (15.07.26): Der Punkt „Agenten/Automatisierungen" war ein Schaufenster
+  // ohne Funktion und flog raus. Seit 15.08.26 gibt es unter „Verwaltung" den echten
+  // Automations-Bauer (/dashboard/automationen) — Regel-Engine mit Cron-Motor und
+  // Protokoll. Das ist keine Wiederbelebung des alten Punktes, sondern eine neue,
+  // arbeitende Funktion. Kunden-E-Mail-Kampagnen bleiben weiterhin im Marketing.
   // Die Automatisierung steckt im integrierten Ökosystem (Module reichen Daten selbst weiter),
   // nicht in einem Extra-Layer. Seite bleibt als Code geparkt. Echte Kunden-E-Mail-Workflows -> Marketing.
 
@@ -245,6 +249,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔌 Schnittstellen', href: '/dashboard/schnittstellen', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🗄 Datensicherung', href: '/dashboard/datensicherung', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '📥 Import-Center', href: '/dashboard/import', modul: 'import', ebene: 3, gruppe: 'verwaltung' },
+  // Automationen loesen Mahnungen, Mails und Statuswechsel aus — das bleibt Chefsache.
+  { label: '⚡ Automationen', href: '/dashboard/automationen', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4, gruppe: 'verwaltung', kern: true },
 ]
 
