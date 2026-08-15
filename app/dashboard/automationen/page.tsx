@@ -32,6 +32,12 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
+type ProbeRegel = {
+  id: string; name: string; aktiv: boolean; ausloeser: string; aktion: string;
+  geprueft: number; faellig: number; wuerde_laufen: number; zurueckgestellt: number;
+  schon_erledigt: number; beispiele: string[]; hinweis?: string;
+};
+
 type LogZeile = {
   id: string; regel_id: string | null; ziel_typ: string | null; ziel_id: string | null;
   ergebnis: string; meldung: string | null; ausgefuehrt_am: string;
@@ -86,6 +92,8 @@ export default function AutomationenPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [f, setF] = useState<Formular>({ ...LEER });
   const [formOffen, setFormOffen] = useState(false);
+  const [probe, setProbe] = useState<ProbeRegel[] | null>(null);
+  const [probeZeit, setProbeZeit] = useState<string | null>(null);
 
   const alles = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -97,6 +105,7 @@ export default function AutomationenPage() {
       if (r.error) throw r.error;
       setRegeln((r.data as AutomationRegel[]) ?? []);
       setLog((l.data as LogZeile[]) ?? []);
+      setProbe(null); setProbeZeit(null);   // nach jeder Änderung ist ein alter Probelauf hinfällig
     } catch (err: unknown) {
       setFehler('Laden fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -191,6 +200,21 @@ export default function AutomationenPage() {
     });
     setFormOffen(true); setFehler(null); setOk(null);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // --- Probelauf: zeigt, was passieren wuerde. Fuehrt nichts aus. ----------
+
+  async function probelauf() {
+    setBusy('probe'); setFehler(null); setOk(null);
+    try {
+      const antwort = await fetch('/api/automationen/probe', { cache: 'no-store' });
+      const daten = await antwort.json() as { ok: boolean; error?: string; zeitpunkt?: string; regeln?: ProbeRegel[] };
+      if (!antwort.ok || !daten.ok) throw new Error(daten.error || 'Probelauf fehlgeschlagen');
+      setProbe(daten.regeln ?? []);
+      setProbeZeit(daten.zeitpunkt ?? null);
+    } catch (err: unknown) {
+      setFehler('Probelauf fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
   }
 
   // --- Speichern / Schalten / Loeschen --------------------------------------
@@ -459,7 +483,54 @@ export default function AutomationenPage() {
 
       {/* Liste */}
       <div style={karte}>
-        <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 12px' }}>Ihre Automationen</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>Ihre Automationen</h2>
+          {regeln.length > 0 && (
+            <button type="button" onClick={probelauf} disabled={busy === 'probe'} style={{ ...knopf('rand'), opacity: busy === 'probe' ? 0.6 : 1 }}>
+              {busy === 'probe' ? 'Prüft …' : '🔍 Probelauf — was würde jetzt passieren?'}
+            </button>
+          )}
+        </div>
+
+        {/* Ergebnis des Probelaufs */}
+        {probe && (
+          <div style={{ marginBottom: 16, border: '1px solid rgba(0,229,255,0.3)', borderRadius: 11, padding: 14, background: 'rgba(0,229,255,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: C.cyan }}>Probelauf — es wurde nichts ausgeführt</div>
+              <button type="button" onClick={() => { setProbe(null); setProbeZeit(null); }} style={{ ...knopf('rand'), padding: '6px 11px', fontSize: 13 }}>Schließen</button>
+            </div>
+            <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 12 }}>
+              Stand {fmtZeit(probeZeit)} · Es wurde nur gerechnet: keine Mail verschickt, keine Aufgabe angelegt, kein Status geändert.
+            </div>
+            {probe.length === 0 ? (
+              <div style={{ color: C.textDim, fontSize: 13.5 }}>Keine Automationen zum Prüfen.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 9 }}>
+                {probe.map((p) => (
+                  <div key={p.id} style={{ border: `1px solid ${C.border}`, borderRadius: 9, padding: 11, background: 'rgba(10,22,40,0.5)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                      <span style={{ fontWeight: 800, fontSize: 14 }}>{p.name}</span>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: p.wuerde_laufen > 0 ? C.gold : C.textDim }}>
+                        {p.wuerde_laufen > 0 ? `${p.wuerde_laufen}× würde laufen` : 'nichts zu tun'}
+                      </span>
+                    </div>
+                    <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 5 }}>
+                      {p.geprueft} geprüft · {p.faellig} fällig · {p.schon_erledigt} bereits erledigt
+                      {p.zurueckgestellt > 0 && <span style={{ color: C.warn }}> · {p.zurueckgestellt} auf morgen verschoben (Tages-Deckel)</span>}
+                    </div>
+                    {p.hinweis && <div style={{ color: C.warn, fontSize: 12.5, marginTop: 5 }}>{p.hinweis}</div>}
+                    {p.beispiele.length > 0 && (
+                      <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: C.text, fontSize: 12.5, lineHeight: 1.7 }}>
+                        {p.beispiele.map((b, i) => <li key={i}>{b}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {laden ? (
           <div style={{ color: C.textDim, fontSize: 14 }}>Lädt …</div>
         ) : regeln.length === 0 ? (
