@@ -27,6 +27,19 @@ import {
   type Fortschritt, type KursQuelle,
 } from '@/lib/academy';
 
+/** Eigene ID für den Dateinamen im Speicher. */
+function neueId(): string {
+  try {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+  } catch { /* Rückfall */ }
+  return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function mb(bytes: number): string {
+  return (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB';
+}
+
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
@@ -75,6 +88,14 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
   const video = useRef<HTMLVideoElement | null>(null);
   const zuletztGespeichert = useRef(0);
   const aktuellerStand = useRef({ sekunden: 0, laenge: 0 });
+
+  // Eigene Schulungen anlegen (nur der Chef)
+  const [verwaltung, setVerwaltung] = useState(false);
+  const [neu, setNeu] = useState({ titel: '', beschreibung: '', kategorie: 'Eigene Schulungen', pflicht: false, video_url: '' });
+  const [datei, setDatei] = useState<File | null>(null);
+  const [dateiDauer, setDateiDauer] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
   const schluessel = (k: Kurs) => `${k.quelle}:${k.id}`;
 
@@ -189,6 +210,101 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
     return () => window.removeEventListener('pagehide', beiVerlassen);
   }, [offen, sichern]);
 
+  // --- Eigene Schulungen anlegen (nur der Chef) ------------------------------
+
+  const istChef = !!uid && uid === chefId;
+
+  /** Länge des Videos schon im Browser messen — dann steht sie in der Kachel,
+   *  bevor irgendjemand den Kurs geöffnet hat. */
+  function dateiWaehlen(f: File) {
+    setDatei(f);
+    setDateiDauer(0);
+    setOk(null); setFehler(null);
+    try {
+      const url = URL.createObjectURL(f);
+      const probe = document.createElement('video');
+      probe.preload = 'metadata';
+      probe.onloadedmetadata = () => {
+        setDateiDauer(probe.duration || 0);
+        URL.revokeObjectURL(url);
+      };
+      probe.onerror = () => URL.revokeObjectURL(url);
+      probe.src = url;
+    } catch { /* Dauer ist nett, aber nicht nötig */ }
+  }
+
+  async function kursAnlegen() {
+    if (!uid) return;
+    if (!neu.titel.trim()) { setFehler('Bitte einen Titel vergeben.'); return; }
+    if (!datei && !neu.video_url.trim()) { setFehler('Bitte ein Video hochladen oder einen Link angeben.'); return; }
+
+    setBusy('anlegen'); setFehler(null); setOk(null);
+    let hochgeladenerPfad: string | null = null;
+
+    try {
+      if (datei) {
+        const endung = (datei.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '');
+        // Der erste Pfadteil MUSS die eigene Benutzer-ID sein — so verlangt es
+        // die Storage-Policy, und so kann niemand in fremden Ordnern landen.
+        const pfad = `${uid}/${neueId()}.${endung}`;
+        const { error: upFehler } = await supabase.storage.from('academy-videos')
+          .upload(pfad, datei, { cacheControl: '3600', upsert: false, contentType: datei.type || 'video/mp4' });
+        if (upFehler) throw upFehler;
+        hochgeladenerPfad = pfad;
+      }
+
+      const { error } = await supabase.from('academy_kurse_eigen').insert({
+        owner_user_id: uid,
+        titel: neu.titel.trim(),
+        beschreibung: neu.beschreibung.trim() || null,
+        kategorie: neu.kategorie.trim() || 'Eigene Schulungen',
+        video_pfad: hochgeladenerPfad,
+        video_url: hochgeladenerPfad ? null : (neu.video_url.trim() || null),
+        dauer_minuten: dateiDauer > 0 ? Math.max(1, Math.round(dateiDauer / 60)) : 0,
+        pflicht: neu.pflicht,
+        aktiv: true,
+      });
+      if (error) {
+        // Kein verwaistes Video im Speicher zurücklassen.
+        if (hochgeladenerPfad) await supabase.storage.from('academy-videos').remove([hochgeladenerPfad]);
+        throw error;
+      }
+
+      setOk(`„${neu.titel.trim()}" ist angelegt${neu.pflicht ? ' — als Pflichtschulung für alle' : ''}.`);
+      setNeu({ titel: '', beschreibung: '', kategorie: 'Eigene Schulungen', pflicht: false, video_url: '' });
+      setDatei(null); setDateiDauer(0);
+      await alles();
+    } catch (err: unknown) {
+      setFehler('Anlegen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  async function kursUmschalten(k: Kurs, feld: 'pflicht' | 'aktiv', wert: boolean) {
+    if (!istChef) return;
+    setBusy(k.id);
+    try {
+      await supabase.from('academy_kurse_eigen').update({ [feld]: wert, aktualisiert_am: new Date().toISOString() }).eq('id', k.id);
+      await alles();
+    } finally { setBusy(null); }
+  }
+
+  async function kursLoeschen(k: Kurs) {
+    if (!istChef) return;
+    if (typeof window !== 'undefined' && !window.confirm(
+      `Schulung „${k.titel}" löschen? Das Video wird mit entfernt, der Fortschritt der Mitarbeiter geht verloren.`
+    )) return;
+    setBusy(k.id); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.from('academy_kurse_eigen').delete().eq('id', k.id);
+      if (error) throw error;
+      if (k.video_pfad) await supabase.storage.from('academy-videos').remove([k.video_pfad]);
+      setOk('Schulung gelöscht.');
+      await alles();
+    } catch (err: unknown) {
+      setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
   // --- Gruppierung ----------------------------------------------------------
   const alleKurse = useMemo(() => [...globaleKurse, ...eigene], [globaleKurse, eigene]);
 
@@ -224,6 +340,131 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
       </div>
 
       {fehler && <div style={s.fehler}>⚠️ {fehler}</div>}
+      {ok && <div style={s.erfolg}>✓ {ok}</div>}
+
+      {/* --- Eigene Schulungen (nur der Chef) --- */}
+      {istChef && (
+        <div style={s.verwaltungKasten}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15.5 }}>🎬 Eigene Schulungen</div>
+              <div style={{ color: C.dim, fontSize: 13, marginTop: 3, lineHeight: 1.5 }}>
+                Das Wissen aus Ihrem Betrieb festhalten: einmal aufnehmen, statt es jedem Neuen einzeln zu erklären.
+              </div>
+            </div>
+            <button type="button" onClick={() => { setVerwaltung((v) => !v); setFehler(null); setOk(null); }} style={s.randKnopf}>
+              {verwaltung ? 'Schließen' : '＋ Schulung anlegen'}
+            </button>
+          </div>
+
+          {verwaltung && (
+            <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+              <div>
+                <label style={s.label}>Titel *</label>
+                <input value={neu.titel} onChange={(ev) => setNeu({ ...neu, titel: ev.target.value })}
+                  placeholder="z.B. Kettensäge warten — Schritt für Schritt" style={s.feld} />
+              </div>
+
+              <div>
+                <label style={s.label}>Worum geht es?</label>
+                <input value={neu.beschreibung} onChange={(ev) => setNeu({ ...neu, beschreibung: ev.target.value })}
+                  placeholder="Ein Satz, der erklärt, was der Kollege danach kann" style={s.feld} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 220px' }}>
+                  <label style={s.label}>Bereich</label>
+                  <input value={neu.kategorie} onChange={(ev) => setNeu({ ...neu, kategorie: ev.target.value })} style={s.feld} />
+                </div>
+              </div>
+
+              <div>
+                <label style={s.label}>Video hochladen</label>
+                <input
+                  type="file" accept="video/*"
+                  onChange={(ev) => { const f = ev.target.files?.[0]; if (f) dateiWaehlen(f); }}
+                  disabled={busy !== null}
+                  style={s.dateiFeld}
+                />
+                {datei && (
+                  <div style={{ color: C.dim, fontSize: 12.5, marginTop: 7 }}>
+                    <b style={{ color: C.text }}>{datei.name}</b> · {mb(datei.size)}
+                    {dateiDauer > 0 && ` · ${dauerText(dateiDauer)}`}
+                    {datei.size > 314572800 && (
+                      <span style={{ color: C.warn }}> — größer als 300 MB, das nimmt der Speicher nicht an. Bitte in Kapitel teilen.</span>
+                    )}
+                  </div>
+                )}
+                <div style={{ color: C.dim, fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>
+                  Mit dem Handy quer aufnehmen reicht völlig. Bis 300 MB je Datei — das sind rund 10 Minuten
+                  in guter Qualität. Die Videos sind <b style={{ color: C.text }}>nicht öffentlich</b> und nur für Ihren Betrieb sichtbar.
+                </div>
+              </div>
+
+              <div>
+                <label style={s.label}>… oder ein Link zu einem Video</label>
+                <input value={neu.video_url} onChange={(ev) => setNeu({ ...neu, video_url: ev.target.value })}
+                  placeholder="https://…" style={s.feld} disabled={!!datei} />
+              </div>
+
+              <label style={s.pflichtZeile}>
+                <input type="checkbox" checked={neu.pflicht} onChange={(ev) => setNeu({ ...neu, pflicht: ev.target.checked })}
+                  style={{ width: 17, height: 17, cursor: 'pointer' }} />
+                <span>
+                  <b>Pflichtschulung</b>{' '}
+                  <span style={{ color: C.dim }}>— erscheint bei allen Mitarbeitern hervorgehoben und zählt in der Chef-Übersicht als offen, bis sie gesehen wurde.</span>
+                </span>
+              </label>
+
+              <div>
+                <button type="button" onClick={kursAnlegen} disabled={busy !== null}
+                  style={{ ...s.goldKnopf, opacity: busy !== null ? 0.6 : 1 }}>
+                  {busy === 'anlegen' ? (datei ? 'Video wird hochgeladen …' : 'Legt an …') : 'Schulung anlegen'}
+                </button>
+                {busy === 'anlegen' && datei && (
+                  <div style={{ color: C.dim, fontSize: 12.5, marginTop: 8 }}>
+                    Das kann bei {mb(datei.size)} einen Moment dauern — bitte die Seite nicht schließen.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Liste der eigenen Schulungen */}
+          {eigene.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: C.dim, fontWeight: 800, marginBottom: 9 }}>
+                Ihre {eigene.length} {eigene.length === 1 ? 'Schulung' : 'Schulungen'}
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {eigene.map((k) => (
+                  <div key={k.id} style={s.eigenZeile}>
+                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{k.icon} {k.titel}</div>
+                      <div style={{ color: C.dim, fontSize: 12, marginTop: 2 }}>
+                        {k.kategorie}
+                        {k.dauer_minuten ? ` · ${k.dauer_minuten} Min` : ''}
+                        {k.video_pfad ? ' · eigenes Video' : k.video_url ? ' · Link' : ' · noch ohne Video'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => kursUmschalten(k, 'pflicht', !k.pflicht)}
+                        disabled={busy !== null}
+                        style={{ ...s.kleinKnopf, borderColor: k.pflicht ? 'rgba(224,162,76,0.5)' : C.border, color: k.pflicht ? C.warn : C.text }}>
+                        {k.pflicht ? '● Pflicht' : '○ Pflicht'}
+                      </button>
+                      <button type="button" onClick={() => kursLoeschen(k)} disabled={busy !== null}
+                        style={{ ...s.kleinKnopf, color: '#E06666', borderColor: 'rgba(224,102,102,0.4)' }}>
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {laden && <div style={{ color: C.dim, fontSize: 15, padding: '20px 0' }}>Lädt …</div>}
 
@@ -359,6 +600,31 @@ const s: Record<string, CSSProperties> = {
     borderRadius: 14, padding: '14px 18px', marginBottom: 32,
   },
   fehler: { border: '1px solid rgba(224,102,102,0.5)', borderRadius: 12, padding: '12px 14px', background: 'rgba(224,102,102,0.07)', color: '#E06666', fontSize: 14, marginBottom: 20 },
+  erfolg: { border: '1px solid rgba(76,175,125,0.5)', borderRadius: 12, padding: '12px 14px', background: 'rgba(76,175,125,0.07)', color: C.green, fontSize: 14, marginBottom: 20 },
+
+  verwaltungKasten: {
+    background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
+    borderRadius: 16, padding: '16px 18px', marginBottom: 32,
+  },
+  label: { display: 'block', fontSize: 12, color: C.dim, fontWeight: 700, marginBottom: 5 },
+  feld: {
+    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 9,
+    border: `1px solid ${C.border}`, background: 'rgba(10,22,40,0.7)', color: C.text,
+    fontSize: 14, fontFamily: 'inherit',
+  },
+  dateiFeld: {
+    width: '100%', boxSizing: 'border-box', padding: '13px', borderRadius: 10,
+    border: `1px dashed ${C.border}`, background: 'rgba(10,22,40,0.7)', color: C.text,
+    fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
+  },
+  pflichtZeile: { display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13.5, lineHeight: 1.55, cursor: 'pointer' },
+  eigenZeile: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+    border: `1px solid ${C.border}`, borderRadius: 11, padding: '11px 13px', background: 'rgba(10,22,40,0.4)',
+  },
+  goldKnopf: { padding: '11px 17px', borderRadius: 9, border: 'none', background: C.gold, color: C.navy, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
+  randKnopf: { padding: '10px 15px', borderRadius: 9, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' },
+  kleinKnopf: { padding: '6px 11px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
 
   katTitel: { fontSize: 'clamp(17px, 1.5vw, 22px)', fontWeight: 800, margin: '0 0 16px', letterSpacing: '0.02em' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 18 },
