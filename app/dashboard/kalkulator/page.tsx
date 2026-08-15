@@ -26,6 +26,11 @@ import {
 import {
   alsAngebotsposition, alsKatalogEintrag, angebotsSummen, positionsHinweis,
 } from '@/lib/kalkulatorUebergabe';
+import {
+  ausKalkulationen, ausZuschnitt, lernStand, nennenswert,
+  type Vorschlag, type ZuschnittBefund,
+} from '@/lib/kalkulatorLernen';
+import { optimiereZuschnitt } from '@/lib/zuschnitt';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort } from '@/lib/standortDaten';
 import { NurVoll } from '../_components/Ansicht';
@@ -107,10 +112,11 @@ export default function KalkulatorPage() {
   const [angebote, setAngebote] = useState<OffenesAngebot[]>([]);
   const [zielAngebot, setZielAngebot] = useState<string>('neu');
   const [kundeName, setKundeName] = useState('');
+  const [zuschnitte, setZuschnitte] = useState<ZuschnittBefund[]>([]);
 
   const laden = useCallback(async () => {
     const [kalk, norm, ang] = await Promise.all([
-      supabase.from('kalkulationen').select('*').order('erstellt_am', { ascending: false }).limit(30),
+      supabase.from('kalkulationen').select('*').order('erstellt_am', { ascending: false }).limit(200),
       supabase.from('kalkulator_normen').select('*').limit(500),
       supabase.from('angebote').select('id,titel,kunde_name,status,brutto_summe')
         .in('status', ['entwurf', 'gesendet']).order('erstellt_am', { ascending: false }).limit(25),
@@ -120,13 +126,75 @@ export default function KalkulatorPage() {
     setAngebote((ang.data as OffenesAngebot[]) ?? []);
   }, []);
 
+  /**
+   * Echter Verschnitt aus abgeschlossenen Zuschnitt-Projekten. Das ist die
+   * ehrlichste Zahl im System: sie kommt nicht aus einer Schaetzung, sondern
+   * aus dem, was am Ende im Container lag. Faellt lautlos aus, wenn das Modul
+   * nicht genutzt wird — der Kalkulator funktioniert auch ohne.
+   */
+  const zuschnittLaden = useCallback(async () => {
+    try {
+      const { data: projekte } = await supabase.from('zuschnitt_projekt')
+        .select('id,material,stangenlaenge,saegeblatt_mm,erstellt_am')
+        .order('erstellt_am', { ascending: false }).limit(60);
+      const liste = (projekte as Array<{ id: string; material: string | null; stangenlaenge: number; saegeblatt_mm: number; erstellt_am: string }>) ?? [];
+      if (liste.length === 0) { setZuschnitte([]); return; }
+
+      const { data: teile } = await supabase.from('zuschnitt_teil')
+        .select('projekt_id,laenge,anzahl').in('projekt_id', liste.map((p) => p.id));
+      const alleTeile = (teile as Array<{ projekt_id: string; laenge: number; anzahl: number }>) ?? [];
+
+      const befunde: ZuschnittBefund[] = [];
+      for (const p of liste) {
+        const meine = alleTeile.filter((t) => t.projekt_id === p.id)
+          .map((t) => ({ laenge: Number(t.laenge), anzahl: Number(t.anzahl) }));
+        if (meine.length === 0 || !p.material) continue;
+        const erg = optimiereZuschnitt(meine, Number(p.stangenlaenge), Number(p.saegeblatt_mm));
+        if (erg.stangen > 0) {
+          befunde.push({ material: p.material, verschnitt_prozent: erg.verschnittProzent, datum: p.erstellt_am });
+        }
+      }
+      setZuschnitte(befunde);
+    } catch {
+      setZuschnitte([]);   // Modul nicht in Benutzung — kein Grund für eine Fehlermeldung
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
       setUid(data?.user?.id ?? null);
       await laden();
+      await zuschnittLaden();
     })();
-  }, [laden]);
+  }, [laden, zuschnittLaden]);
+
+  // --- Was die eigene Praxis sagt -------------------------------------------
+  const bisherige = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const n of normen) if (!gewerk || n.gewerk === gewerk) map[n.schluessel] = Number(n.wert);
+    return map;
+  }, [normen, gewerk]);
+
+  const gelernt = useMemo<Vorschlag[]>(() => {
+    if (!gewerk) return [];
+    const ausEigenen = ausKalkulationen(
+      gespeichert.map((g) => ({
+        gewerk: g.gewerk, einheit: g.einheit,
+        posten: (Array.isArray(g.posten) ? g.posten : []).map((p) => ({
+          art: p.art, bezeichnung: p.bezeichnung,
+          menge_je_einheit: Number(p.menge_je_einheit), einheit: p.einheit,
+          preis_je_einheit: Number(p.preis_je_einheit),
+        })),
+        erstellt_am: g.erstellt_am,
+      })),
+      gewerk, bisherige,
+    );
+    const ausSaege = ausZuschnitt(zuschnitte, bisherige);
+    return [...ausEigenen, ...ausSaege];
+  }, [gespeichert, zuschnitte, gewerk, bisherige]);
+
+  const lern = useMemo(() => lernStand(gelernt), [gelernt]);
 
   // --- Live-Ergebnis ---------------------------------------------------------
   const e = useMemo(() => (k ? rechne(k) : null), [k]);
@@ -338,6 +406,26 @@ export default function KalkulatorPage() {
       await laden();
     } catch (err: unknown) {
       setFehler('Übernahme ins Angebot fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  /** Einen gelernten Wert als eigenen Normwert übernehmen — nur auf Klick. */
+  async function vorschlagUebernehmen(v: Vorschlag) {
+    if (!uid || !gewerk) return;
+    setBusy('lernen'); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.from('kalkulator_normen').upsert({
+        owner_user_id: uid, gewerk,
+        schluessel: v.schluessel, bezeichnung: v.bezeichnung, art: v.art,
+        wert: v.vorschlag, einheit: v.einheit, bezug: v.bezug,
+        quelle: 'gelernt', aktualisiert_am: new Date().toISOString(),
+        notiz: `Aus ${v.anzahl} Vorgängen (${v.kleinster}–${v.groesster})`,
+      }, { onConflict: 'owner_user_id,gewerk,schluessel' });
+      if (error) throw error;
+      setOk(`„${v.bezeichnung}" steht jetzt auf ${v.vorschlag} ${v.einheit} — aus Ihrer eigenen Praxis.`);
+      await laden();
+    } catch (err: unknown) {
+      setFehler('Übernahme fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
   }
 
@@ -765,6 +853,100 @@ export default function KalkulatorPage() {
         </>
       )}
 
+      {/* --- Aus der eigenen Praxis gelernt --- */}
+      {gewerk && (
+        <div style={s.block}>
+          <div style={s.blockTitel}>Aus Ihrer Praxis gelernt</div>
+          <p style={s.hinweisText}>{lern.text}</p>
+
+          {gelernt.length > 0 && (
+            <>
+              <div style={s.lernHinweis}>
+                Vorgeschlagen wird immer der <b style={{ color: C.text }}>mittlere</b> Wert, nicht der Durchschnitt.
+                Der eine Auftrag mit dem verhunzten Untergrund soll Ihre Norm nicht dauerhaft teurer machen —
+                der mittlere Wert bleibt davon unbeeindruckt. <b style={{ color: C.text }}>Übernommen wird nichts von allein</b>,
+                jeder Wert braucht Ihren Klick.
+              </div>
+
+              <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                <table style={s.tabelle}>
+                  <thead>
+                    <tr>
+                      <th style={s.th}>Position</th>
+                      <th style={{ ...s.th, textAlign: 'right' }}>Hinterlegt</th>
+                      <th style={{ ...s.th, textAlign: 'right' }}>Ihre Praxis</th>
+                      <th style={s.th}>Grundlage</th>
+                      <th style={s.th}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gelernt.map((v) => {
+                      const wichtig = nennenswert(v);
+                      return (
+                        <tr key={v.schluessel} style={{ opacity: wichtig ? 1 : 0.6 }}>
+                          <td style={{ ...s.td, fontWeight: 700 }}>
+                            {v.bezeichnung}
+                            <div style={{ color: C.dim, fontSize: 11.5, fontWeight: 400 }}>in {v.einheit} je {v.bezug}</div>
+                          </td>
+                          <td style={{ ...s.td, textAlign: 'right', color: C.dim }}>
+                            {v.bisher !== undefined ? v.bisher : '—'}
+                          </td>
+                          <td style={{ ...s.td, textAlign: 'right', fontWeight: 800, color: wichtig ? C.gold : C.text }}>
+                            {v.vorschlag}
+                            {v.abweichung_prozent !== undefined && Math.abs(v.abweichung_prozent) >= 5 && (
+                              <div style={{ fontSize: 11.5, fontWeight: 400, color: v.abweichung_prozent > 0 ? C.warn : C.green }}>
+                                {v.abweichung_prozent > 0 ? '+' : ''}{v.abweichung_prozent} %
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ ...s.td, fontSize: 12, color: C.dim, maxWidth: 320 }}>
+                            <span style={{
+                              color: v.guete === 'gut' ? C.green : v.guete === 'mittel' ? C.warn : C.dim,
+                              fontWeight: 700,
+                            }}>
+                              {v.guete === 'gut' ? '●●●' : v.guete === 'mittel' ? '●●○' : '●○○'}
+                            </span>{' '}
+                            {v.hinweis}
+                          </td>
+                          <td style={{ ...s.td, textAlign: 'right' }}>
+                            <button type="button" onClick={() => vorschlagUebernehmen(v)}
+                              disabled={busy !== null || v.guete === 'duenn'}
+                              style={{ ...s.knopfRand, padding: '6px 11px', fontSize: 12.5, opacity: busy !== null || v.guete === 'duenn' ? 0.4 : 1 }}>
+                              Übernehmen
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* Was aktuell hinterlegt ist */}
+          <NurVoll>
+            {normen.filter((n) => n.gewerk === gewerk).length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: C.dim, fontWeight: 800, marginBottom: 8 }}>
+                  Ihre hinterlegten Normwerte
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {normen.filter((n) => n.gewerk === gewerk).map((n) => (
+                    <span key={n.id} style={s.normChip}>
+                      {n.bezeichnung}: <b>{n.wert} {n.einheit}</b>
+                      <span style={{ color: n.quelle === 'gelernt' ? C.green : C.dim, marginLeft: 6, fontSize: 11 }}>
+                        {n.quelle === 'gelernt' ? 'gelernt' : n.quelle === 'eigen' ? 'eigen' : 'Vorlage'}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </NurVoll>
+        </div>
+      )}
+
       {/* --- Gespeicherte --- */}
       {gespeichert.length > 0 && (
         <div style={s.block}>
@@ -858,6 +1040,8 @@ const s: Record<string, CSSProperties> = {
   grossWert: { fontSize: 25, fontWeight: 800, marginTop: 5, lineHeight: 1.1 },
   grossUnter: { color: C.dim, fontSize: 12, marginTop: 4 },
 
+  lernHinweis: { border: '1px solid rgba(0,229,255,0.25)', borderRadius: 10, padding: '11px 13px', background: 'rgba(0,229,255,0.05)', color: C.dim, fontSize: 12.5, lineHeight: 1.6 },
+  normChip: { display: 'inline-block', border: `1px solid ${C.border}`, borderRadius: 20, padding: '5px 11px', fontSize: 12, background: 'rgba(10,22,40,0.5)' },
   uebernahmeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 12 },
   uebernahmeKarte: { border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', background: 'rgba(10,22,40,0.5)' },
   kennzahlReihe: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(165px,1fr))', gap: 10, marginTop: 14 },
