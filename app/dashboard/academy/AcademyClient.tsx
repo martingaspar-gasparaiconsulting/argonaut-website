@@ -24,7 +24,9 @@ import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties }
 import { createBrowserClient } from '@supabase/ssr';
 import {
   prozentAus, istAbgeschlossen, startpunkt, sollSpeichern, dauerText,
-  type Fortschritt, type KursQuelle,
+  neueMedaillen, verdienteMedaillen, bisNaechsteMedaille, teamStand, sortiereTeam,
+  MEDAILLEN,
+  type Fortschritt, type KursQuelle, type Medaille, type LernStandPerson,
 } from '@/lib/academy';
 import { textZuVtt, baueUntertitel, pruefeText, zaehleWoerter } from '@/lib/academyText';
 
@@ -100,6 +102,12 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
   const [busy, setBusy] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
+  // Medaillen und Team
+  const [meineMedaillen, setMeineMedaillen] = useState<string[]>([]);
+  const [frischeMedaille, setFrischeMedaille] = useState<Medaille | null>(null);
+  const [team, setTeam] = useState<LernStandPerson[]>([]);
+  const [teamOffen, setTeamOffen] = useState(false);
+
   // Untertitel/Transkript
   const [untertitelFuer, setUntertitelFuer] = useState<Kurs | null>(null);
   const [rohText, setRohText] = useState('');
@@ -107,6 +115,10 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
   const [lernziele, setLernziele] = useState<string[]>([]);
 
   const schluessel = (k: Kurs) => `${k.quelle}:${k.id}`;
+
+  // Ueber eine Ref, damit die Speicher-Funktion nicht bei jeder
+  // Medaillen-Aenderung neu gebaut wird (das wuerde den Player stoeren).
+  const medaillenPruefenRef = useRef<((n: number) => void) | null>(null);
 
   // --- Laden ---------------------------------------------------------------
   const alles = useCallback(async () => {
@@ -123,14 +135,17 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
       const chef = (ma as { owner_user_id?: string } | null)?.owner_user_id ?? id;
       setChefId(chef);
 
-      const [eig, fort] = await Promise.all([
+      const [eig, fort, med] = await Promise.all([
         supabase.from('academy_kurse_eigen')
           .select('id,titel,beschreibung,kategorie,video_pfad,video_url,dauer_minuten,icon,sortierung,pflicht,transkript,untertitel_vtt')
           .eq('aktiv', true).order('sortierung'),
         supabase.from('academy_fortschritt')
           .select('kurs_id,kurs_quelle,sekunden,laenge_sekunden,prozent,abgeschlossen,abgeschlossen_am')
           .eq('user_id', id),
+        supabase.from('academy_medaillen').select('medaille_key').eq('user_id', id),
       ]);
+
+      setMeineMedaillen(((med.data as Array<{ medaille_key: string }>) ?? []).map((m) => m.medaille_key));
 
       setEigene(((eig.data as Array<Omit<Kurs, 'quelle'>>) ?? []).map((k) => ({ ...k, quelle: 'eigen' as KursQuelle })));
 
@@ -168,9 +183,87 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
       const { error } = await supabase.from('academy_fortschritt')
         .upsert(satz, { onConflict: 'user_id,kurs_id,kurs_quelle' });
       if (error) return;
-      setFortschritt((v) => ({ ...v, [schluessel(kurs)]: { ...satz } as Fortschritt }));
+      setFortschritt((v) => {
+        const neuStand = { ...v, [schluessel(kurs)]: { ...satz } as Fortschritt };
+        // Erst jetzt zaehlen — mit dem gerade gespeicherten Stand.
+        if (fertig) {
+          const anzahl = Object.values(neuStand).filter((f) => f.abgeschlossen).length;
+          medaillenPruefenRef.current?.(anzahl);
+        }
+        return neuStand;
+      });
     } catch { /* Fortschritt ist nett, aber nichts, wofuer man den Kurs abbricht */ }
   }, [uid, chefId]);
+
+  // --- Medaillen ------------------------------------------------------------
+
+  /**
+   * Nach jedem abgeschlossenen Kurs pruefen, ob ein neuer Rang faellig ist.
+   * Verliehen wird EINMAL — die Datenbank haelt mit einem Unique-Index dagegen,
+   * dass derselbe Rang bei jedem Geraetewechsel neu "verliehen" wird.
+   */
+  const medaillenPruefen = useCallback(async (abgeschlossene: number) => {
+    if (!uid) return;
+    const neue = neueMedaillen(abgeschlossene, meineMedaillen);
+    if (neue.length === 0) return;
+
+    try {
+      await supabase.from('academy_medaillen').upsert(
+        neue.map((m) => ({
+          owner_user_id: chefId ?? uid,
+          user_id: uid,
+          medaille_key: m.key,
+          notiz: `${abgeschlossene} abgeschlossene Kurse`,
+        })),
+        { onConflict: 'user_id,medaille_key' },
+      );
+      setMeineMedaillen((v) => [...v, ...neue.map((m) => m.key)]);
+      // Den hoechsten neuen Rang feiern — nicht drei Fenster nacheinander.
+      setFrischeMedaille(neue[neue.length - 1] ?? null);
+    } catch { /* Auszeichnung ist schoen, aber nichts, wofuer man stolpert */ }
+  }, [uid, chefId, meineMedaillen]);
+
+  // --- Chef-Übersicht -------------------------------------------------------
+
+  const teamLaden = useCallback(async () => {
+    if (!uid || uid !== chefId) return;
+    try {
+      const [ma, fort] = await Promise.all([
+        supabase.from('mitarbeiter').select('id,auth_user_id,vorname,nachname').eq('owner_user_id', uid),
+        supabase.from('academy_fortschritt')
+          .select('user_id,abgeschlossen,sekunden,kurs_id,kurs_quelle,zuletzt_am')
+          .eq('owner_user_id', uid),
+      ]);
+
+      const leute = (ma.data as Array<{ auth_user_id: string | null; vorname: string | null; nachname: string | null }>) ?? [];
+      const stand = (fort.data as Array<{ user_id: string; abgeschlossen: boolean; sekunden: number; kurs_id: string; kurs_quelle: string; zuletzt_am: string }>) ?? [];
+
+      // Welche Pflichtschulungen gibt es und wer hat sie schon gesehen?
+      const pflichtIds = eigene.filter((k) => k.pflicht).map((k) => k.id);
+
+      const liste: LernStandPerson[] = leute
+        .filter((p) => p.auth_user_id)
+        .map((p) => {
+          const meine = stand.filter((f) => f.user_id === p.auth_user_id);
+          const fertigeIds = new Set(meine.filter((f) => f.abgeschlossen).map((f) => f.kurs_id));
+          const letzte = meine.map((f) => f.zuletzt_am).sort().pop();
+          return {
+            user_id: String(p.auth_user_id),
+            name: [p.vorname, p.nachname].filter(Boolean).join(' ').trim() || 'Mitarbeiter',
+            abgeschlossen: meine.filter((f) => f.abgeschlossen).length,
+            angefangen: meine.filter((f) => !f.abgeschlossen && f.sekunden > 5).length,
+            pflicht_offen: pflichtIds.filter((id) => !fertigeIds.has(id)).length,
+            zuletzt_am: letzte ?? null,
+          };
+        });
+
+      setTeam(sortiereTeam(liste));
+    } catch { /* Uebersicht ist Beiwerk */ }
+  }, [uid, chefId, eigene]);
+
+  useEffect(() => { medaillenPruefenRef.current = medaillenPruefen; }, [medaillenPruefen]);
+
+  useEffect(() => { if (teamOffen) teamLaden(); }, [teamOffen, teamLaden]);
 
   // --- Kurs öffnen ----------------------------------------------------------
   async function oeffnen(k: Kurs) {
@@ -409,6 +502,107 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
         {zahlen.angefangen > 0 && <Zahl wert={zahlen.angefangen} label="angefangen" farbe={C.warn} />}
       </div>
 
+      {/* Medaillen */}
+      {(() => {
+        const fertig = zahlen.fertig;
+        const verdient = verdienteMedaillen(fertig);
+        const naechste = bisNaechsteMedaille(fertig);
+        if (fertig === 0 && verdient.length === 0) {
+          return (
+            <div style={s.medaillenLeiste}>
+              <span style={{ fontSize: 22, opacity: 0.4 }}>⚓</span>
+              <span style={{ color: C.dim, fontSize: 13.5 }}>
+                Noch keine Auszeichnung — der erste abgeschlossene Kurs bringt <b style={{ color: C.text }}>Erste Fahrt</b>.
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div style={s.medaillenLeiste}>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+              {MEDAILLEN.map((m) => {
+                const hat = verdient.some((v) => v.key === m.key);
+                return (
+                  <span key={m.key} title={hat ? `${m.rang} — ${m.spruch}` : `${m.rang} ab ${m.abKursen} Kursen`}
+                    style={{
+                      ...s.medaillenChip,
+                      opacity: hat ? 1 : 0.28,
+                      borderColor: hat ? m.farbe : C.border,
+                      color: hat ? m.farbe : C.dim,
+                    }}>
+                    {m.icon} {m.rang}
+                  </span>
+                );
+              })}
+            </div>
+            {naechste && (
+              <span style={{ color: C.dim, fontSize: 12.5 }}>
+                Noch {naechste.fehlen} {naechste.fehlen === 1 ? 'Kurs' : 'Kurse'} bis <b style={{ color: C.text }}>{naechste.medaille.rang}</b>
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Chef-Übersicht */}
+      {istChef && (
+        <div style={s.teamKasten}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15.5 }}>👥 Lernstand im Team</div>
+              <div style={{ color: C.dim, fontSize: 13, marginTop: 3 }}>{teamStand(team).text}</div>
+            </div>
+            <button type="button" onClick={() => setTeamOffen((v) => !v)} style={s.randKnopf}>
+              {teamOffen ? 'Schließen' : 'Anzeigen'}
+            </button>
+          </div>
+
+          {teamOffen && (
+            team.length === 0 ? (
+              <div style={{ color: C.dim, fontSize: 13.5, marginTop: 14 }}>
+                Noch niemand aus dem Team hat die Academy geöffnet.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', marginTop: 14 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+                  <thead>
+                    <tr>
+                      <th style={s.th}>Mitarbeiter</th>
+                      <th style={{ ...s.th, textAlign: 'right' }}>Abgeschlossen</th>
+                      <th style={{ ...s.th, textAlign: 'right' }}>Angefangen</th>
+                      <th style={{ ...s.th, textAlign: 'right' }}>Pflicht offen</th>
+                      <th style={s.th}>Rang</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.map((p) => {
+                      const rang = verdienteMedaillen(p.abgeschlossen).slice(-1)[0];
+                      return (
+                        <tr key={p.user_id}>
+                          <td style={{ ...s.td, fontWeight: 700 }}>{p.name}</td>
+                          <td style={{ ...s.td, textAlign: 'right', color: C.green }}>{p.abgeschlossen}</td>
+                          <td style={{ ...s.td, textAlign: 'right', color: C.dim }}>{p.angefangen}</td>
+                          <td style={{ ...s.td, textAlign: 'right', color: p.pflicht_offen > 0 ? C.warn : C.dim, fontWeight: p.pflicht_offen > 0 ? 800 : 400 }}>
+                            {p.pflicht_offen > 0 ? p.pflicht_offen : '—'}
+                          </td>
+                          <td style={{ ...s.td, color: rang ? rang.farbe : C.dim }}>
+                            {rang ? `${rang.icon} ${rang.rang}` : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ color: C.dim, fontSize: 12, marginTop: 10, lineHeight: 1.55 }}>
+                  Sie sehen, WAS gelernt wurde — nicht, wann jemand wie lange vor dem Video saß.
+                  Mitarbeiter sehen untereinander nichts davon.
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
+
       {fehler && <div style={s.fehler}>⚠️ {fehler}</div>}
       {ok && <div style={s.erfolg}>✓ {ok}</div>}
 
@@ -623,6 +817,26 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
         </div>
       )}
 
+      {/* --- Neue Auszeichnung --- */}
+      {frischeMedaille && (
+        <div style={s.overlay} onClick={() => setFrischeMedaille(null)}>
+          <div style={{ ...s.playerKasten, maxWidth: 420, textAlign: 'center', padding: '32px 26px' }}
+            onClick={(ev) => ev.stopPropagation()}>
+            <div style={{ fontSize: 64, lineHeight: 1, marginBottom: 14 }}>{frischeMedaille.icon}</div>
+            <div style={{ fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: C.dim, fontWeight: 700, marginBottom: 6 }}>
+              Neuer Rang
+            </div>
+            <div style={{ fontSize: 27, fontWeight: 800, color: frischeMedaille.farbe, marginBottom: 12 }}>
+              {frischeMedaille.rang}
+            </div>
+            <div style={{ fontSize: 14.5, lineHeight: 1.6, color: C.text, marginBottom: 22 }}>
+              {frischeMedaille.spruch}
+            </div>
+            <button type="button" onClick={() => setFrischeMedaille(null)} style={s.goldKnopf}>Weiter</button>
+          </div>
+        </div>
+      )}
+
       {laden && <div style={{ color: C.dim, fontSize: 15, padding: '20px 0' }}>Lädt …</div>}
 
       {gruppen.map(({ kat, kurse }) => (
@@ -782,6 +996,22 @@ const s: Record<string, CSSProperties> = {
   },
   goldKnopf: { padding: '11px 17px', borderRadius: 9, border: 'none', background: C.gold, color: C.navy, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
   randKnopf: { padding: '10px 15px', borderRadius: 9, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' },
+  medaillenLeiste: {
+    display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+    background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`,
+    borderRadius: 14, padding: '12px 16px', marginBottom: 20,
+  },
+  medaillenChip: {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    border: '1px solid', borderRadius: 20, padding: '4px 10px',
+    fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+  },
+  teamKasten: {
+    background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
+    borderRadius: 16, padding: '16px 18px', marginBottom: 32,
+  },
+  th: { textAlign: 'left', color: C.dim, fontWeight: 700, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.6, padding: '7px 8px', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '9px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
   ehrlichKasten: { border: '1px solid rgba(0,229,255,0.25)', borderRadius: 10, padding: '12px 14px', background: 'rgba(0,229,255,0.05)', color: C.dim, fontSize: 12.5, lineHeight: 1.6 },
   ergebnisKasten: { marginTop: 12, border: '1px solid rgba(76,175,125,0.35)', borderRadius: 10, padding: '12px 14px', background: 'rgba(76,175,125,0.06)' },
   kleinKnopf: { padding: '6px 11px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
