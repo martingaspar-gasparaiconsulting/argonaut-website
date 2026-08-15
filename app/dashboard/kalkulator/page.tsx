@@ -23,6 +23,11 @@ import {
   euro, zahl, ZUSCHLAEGE_STANDARD,
   type Kalkulation, type Posten, type PostenArt,
 } from '@/lib/kalkulator';
+import {
+  alsAngebotsposition, alsKatalogEintrag, angebotsSummen, positionsHinweis,
+} from '@/lib/kalkulatorUebergabe';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
 import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
@@ -52,6 +57,10 @@ type GespeicherteKalkulation = {
 type Norm = {
   id: string; gewerk: string; schluessel: string; bezeichnung: string; art: string;
   wert: number; einheit: string; bezug: string; preis_je_einheit: number | null; quelle: string;
+};
+
+type OffenesAngebot = {
+  id: string; titel: string | null; kunde_name: string | null; status: string; brutto_summe: number;
 };
 
 function neueId(): string {
@@ -94,13 +103,21 @@ export default function KalkulatorPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
+  // Übernahme ins Geschäft
+  const [angebote, setAngebote] = useState<OffenesAngebot[]>([]);
+  const [zielAngebot, setZielAngebot] = useState<string>('neu');
+  const [kundeName, setKundeName] = useState('');
+
   const laden = useCallback(async () => {
-    const [kalk, norm] = await Promise.all([
+    const [kalk, norm, ang] = await Promise.all([
       supabase.from('kalkulationen').select('*').order('erstellt_am', { ascending: false }).limit(30),
       supabase.from('kalkulator_normen').select('*').limit(500),
+      supabase.from('angebote').select('id,titel,kunde_name,status,brutto_summe')
+        .in('status', ['entwurf', 'gesendet']).order('erstellt_am', { ascending: false }).limit(25),
     ]);
     setGespeichert((kalk.data as GespeicherteKalkulation[]) ?? []);
     setNormen((norm.data as Norm[]) ?? []);
+    setAngebote((ang.data as OffenesAngebot[]) ?? []);
   }, []);
 
   useEffect(() => {
@@ -229,6 +246,98 @@ export default function KalkulatorPage() {
       await laden();
     } catch (err: unknown) {
       setFehler('Merken fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  // --- Übernahme ins Geschäft ------------------------------------------------
+
+  /** Was der Kalkulator an das Angebot/den Katalog weitergibt. */
+  function uebergabeQuelle() {
+    if (!k || !e) return null;
+    return {
+      name: name.trim() || 'Leistung',
+      menge: k.menge,
+      einheit: k.einheit,
+      preisJeEinheit: e.je_einheit.angebotspreis_netto,
+      mwstSatz: k.zuschlaege.mwst_satz,
+    };
+  }
+
+  async function inKatalog() {
+    const q = uebergabeQuelle();
+    if (!uid || !q) return;
+    setBusy('katalog'); setFehler(null); setOk(null);
+    try {
+      const eintrag = alsKatalogEintrag({ ...q, kategorie: gewerk ? (gewerkDef(gewerk)?.label ?? 'Kalkuliert') : 'Kalkuliert' });
+      const { error } = await supabase.from('leistungskatalog').insert({ owner_user_id: uid, ...eintrag });
+      if (error) throw error;
+      setOk(`„${eintrag.bezeichnung}" liegt jetzt im Leistungskatalog — ${euro(q.preisJeEinheit)} je ${eintrag.einheit}.`);
+    } catch (err: unknown) {
+      setFehler('Übernahme in den Katalog fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
+  async function insAngebot() {
+    const q = uebergabeQuelle();
+    if (!uid || !q || !k || !e) return;
+    setBusy('angebot'); setFehler(null); setOk(null);
+    try {
+      const pos = alsAngebotsposition({
+        ...q,
+        hinweis: positionsHinweis(e.zeit_minuten_je_einheit, e.energie_kwh_je_einheit),
+      });
+
+      if (zielAngebot === 'neu') {
+        // Neues Angebot mit genau dieser einen Position.
+        const summen = angebotsSummen([pos]);
+        const { data: neu, error } = await supabase.from('angebote').insert({
+          owner_user_id: uid,
+          standort_id: konkreterStandort(leseStandortCookie()),
+          kunde_name: kundeName.trim() || 'Kunde',
+          titel: q.name,
+          status: 'entwurf',
+          netto_summe: summen.netto, mwst_summe: summen.mwst, brutto_summe: summen.brutto,
+        }).select('id').single();
+        if (error) throw error;
+
+        const angebotId = (neu as { id: string }).id;
+        const { error: posFehler } = await supabase.from('angebot_positionen').insert({
+          owner_user_id: uid, angebot_id: angebotId, position: 1, ...pos,
+        });
+        if (posFehler) {
+          // Kein halbfertiges Angebot stehen lassen.
+          await supabase.from('angebote').delete().eq('id', angebotId);
+          throw posFehler;
+        }
+        setOk(`Neues Angebot „${q.name}" angelegt — ${euro(summen.brutto)} brutto. Sie finden es unter Angebote.`);
+      } else {
+        // An ein bestehendes Angebot anhängen und die Summen neu rechnen.
+        const { data: alte, error: leseFehler } = await supabase.from('angebot_positionen')
+          .select('position,menge,einzelpreis,mwst_satz').eq('angebot_id', zielAngebot);
+        if (leseFehler) throw leseFehler;
+
+        const bestehende = (alte as Array<{ position: number; menge: number; einzelpreis: number; mwst_satz: number }>) ?? [];
+        const naechste = bestehende.reduce((max, p) => Math.max(max, Number(p.position) || 0), 0) + 1;
+
+        const { error: posFehler } = await supabase.from('angebot_positionen').insert({
+          owner_user_id: uid, angebot_id: zielAngebot, position: naechste, ...pos,
+        });
+        if (posFehler) throw posFehler;
+
+        // Summen aus ALLEN Positionen neu bilden — nie ein Delta draufrechnen,
+        // sonst laufen Angebot und Positionen mit der Zeit auseinander.
+        const summen = angebotsSummen([...bestehende, pos]);
+        const { error: summenFehler } = await supabase.from('angebote')
+          .update({ netto_summe: summen.netto, mwst_summe: summen.mwst, brutto_summe: summen.brutto })
+          .eq('id', zielAngebot);
+        if (summenFehler) throw summenFehler;
+
+        const ziel = angebote.find((a) => a.id === zielAngebot);
+        setOk(`Position an „${ziel?.titel ?? 'Angebot'}" angehängt — neue Summe ${euro(summen.brutto)} brutto.`);
+      }
+      await laden();
+    } catch (err: unknown) {
+      setFehler('Übernahme ins Angebot fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
   }
 
@@ -585,6 +694,74 @@ export default function KalkulatorPage() {
               </div>
             </div>
           )}
+
+          {/* --- 5 Übernehmen --- */}
+          {e && probe.length === 0 && (
+            <div style={s.block}>
+              <div style={s.blockTitel}>5 · Ergebnis übernehmen</div>
+              <p style={s.hinweisText}>
+                Der gerechnete Preis wandert direkt weiter — als wiederverwendbare Leistung in den Katalog
+                oder als fertige Position in ein Angebot. Übernommen wird immer
+                <b style={{ color: C.text }}> {euro(e.je_einheit.angebotspreis_netto)} je {k.einheit}</b>, netto.
+              </p>
+
+              <div style={s.uebernahmeGrid}>
+
+                {/* In den Leistungskatalog */}
+                <div style={s.uebernahmeKarte}>
+                  <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 5 }}>🧰 In den Leistungskatalog</div>
+                  <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.55, marginBottom: 11 }}>
+                    Für Leistungen, die immer wieder vorkommen. Danach ist der Preis bei jedem Auftrag
+                    mit einem Klick zur Hand.
+                  </div>
+                  <button type="button" onClick={inKatalog} disabled={busy !== null}
+                    style={{ ...s.knopfRand, opacity: busy !== null ? 0.5 : 1 }}>
+                    {busy === 'katalog' ? 'Legt an …' : 'Als Leistung anlegen'}
+                  </button>
+                </div>
+
+                {/* Ins Angebot */}
+                <div style={s.uebernahmeKarte}>
+                  <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 5 }}>🧾 In ein Angebot</div>
+                  <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.55, marginBottom: 11 }}>
+                    Als Position mit Menge, Einheit und Preis. Die Angebotssumme wird dabei
+                    aus allen Positionen neu gerechnet.
+                  </div>
+
+                  <label style={s.label}>Wohin?</label>
+                  <select value={zielAngebot} onChange={(ev) => setZielAngebot(ev.target.value)} style={{ ...s.feld, marginBottom: 9 }}>
+                    <option value="neu">＋ Neues Angebot anlegen</option>
+                    {angebote.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.titel || 'Angebot'}{a.kunde_name ? ` · ${a.kunde_name}` : ''} ({euro(zahl(a.brutto_summe))})
+                      </option>
+                    ))}
+                  </select>
+
+                  {zielAngebot === 'neu' && (
+                    <div style={{ marginBottom: 9 }}>
+                      <label style={s.label}>Für welchen Kunden?</label>
+                      <input value={kundeName} onChange={(ev) => setKundeName(ev.target.value)}
+                        placeholder="Name des Kunden" style={s.feld} />
+                    </div>
+                  )}
+
+                  <button type="button" onClick={insAngebot} disabled={busy !== null}
+                    style={{ ...s.knopfGold, opacity: busy !== null ? 0.5 : 1 }}>
+                    {busy === 'angebot' ? 'Überträgt …' : zielAngebot === 'neu' ? 'Angebot anlegen' : 'Position anhängen'}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ color: C.dim, fontSize: 12, marginTop: 11, lineHeight: 1.55 }}>
+                In der Angebotsposition steht als Erläuterung mit dabei, was in einer Einheit steckt
+                {e.zeit_minuten_je_einheit > 0 && ` (${e.zeit_minuten_je_einheit} Min Arbeitszeit`}
+                {e.zeit_minuten_je_einheit > 0 && e.energie_kwh_je_einheit > 0 && `, ${e.energie_kwh_je_einheit} kWh`}
+                {e.zeit_minuten_je_einheit > 0 && ')'}
+                {' '}— das können Sie im Angebot jederzeit überschreiben.
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -681,6 +858,8 @@ const s: Record<string, CSSProperties> = {
   grossWert: { fontSize: 25, fontWeight: 800, marginTop: 5, lineHeight: 1.1 },
   grossUnter: { color: C.dim, fontSize: 12, marginTop: 4 },
 
+  uebernahmeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 12 },
+  uebernahmeKarte: { border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', background: 'rgba(10,22,40,0.5)' },
   kennzahlReihe: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(165px,1fr))', gap: 10, marginTop: 14 },
   kennzahl: { border: `1px solid ${C.border}`, borderRadius: 10, padding: '11px 13px', background: 'rgba(10,22,40,0.45)' },
 
