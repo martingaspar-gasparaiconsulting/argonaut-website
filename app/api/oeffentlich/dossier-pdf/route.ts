@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { dossierHtml, dossierKey, brancheAufloesen } from '../../../vorschau/_lib/dossierHtml';
 import { dossierPdf } from '@/lib/dossierPdf';
+import { dossierDateiPfad } from '@/lib/dossierDatei';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/dossier-pdf  (I5)
@@ -48,10 +49,11 @@ function ausliefern(pdf: Buffer, branche: string): NextResponse {
 
 export async function GET(req: Request) {
   const branche = (new URL(req.url).searchParams.get('branche') || '').trim();
-  // Versions-Suffix: eb4 = dunkel + saubere Umbrüche + Überschrift bleibt bei ihrem
-  // Kachel-Block (keine verwaiste Überschrift). Entwertet eb1/eb2/eb3. Bei Layout-
-  // Änderung hochzählen.
-  const pfad = `${dossierKey(branche)}-eb4.pdf`;
+  // Das Versions-Suffix liegt jetzt in lib/dossierDatei.ts — dieselbe Quelle,
+  // die der Control-Room beim Vorab-Erzeugen benutzt. Zwei getrennte Suffixe
+  // waeren frueher oder spaeter auseinandergelaufen: der Control-Room haette
+  // Dateien erzeugt, die diese Route nie findet.
+  const pfad = dossierDateiPfad(dossierKey(branche));
 
   try {
     const db = admin();
