@@ -122,7 +122,9 @@ export default function ExportSeite() {
             .from("rechnungen")
             .select("id,rechnungsnummer,netto_summe,mwst_summe,brutto_summe,kontakt_id,firma_id"),
           supabase
-            .from("ausgaben")
+            // Sicht statt Tabelle: enthaelt zusaetzlich die per Foto erfassten Belege
+            // aus der Beleg-Inbox. Ohne sie fehlten diese Ausgaben in der Auswertung (Thema 9).
+            .from("ausgaben_alle")
             .select("bezeichnung,kategorie,betrag_brutto,mwst_satz,ausgabedatum,lieferant,zahlungsart"),
         ]);
         if (zRes.error) throw zRes.error;

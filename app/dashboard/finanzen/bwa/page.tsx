@@ -94,7 +94,9 @@ export default function BwaReport() {
         const [zRes, rRes, aRes] = await Promise.all([
           supabase.from("zahlungen").select("betrag,zahlungsdatum,rechnung_id"),
           supabase.from("rechnungen").select("id,netto_summe,mwst_summe,brutto_summe"),
-          supabase.from("ausgaben").select("betrag_brutto,mwst_satz,ausgabedatum"),
+          // Sicht statt Tabelle: enthaelt zusaetzlich die per Foto erfassten Belege
+          // aus der Beleg-Inbox. Ohne sie fehlten diese Ausgaben in der Auswertung (Thema 9).
+          supabase.from("ausgaben_alle").select("betrag_brutto,mwst_satz,ausgabedatum"),
         ]);
         if (zRes.error) throw zRes.error;
         if (aRes.error) throw aRes.error;
