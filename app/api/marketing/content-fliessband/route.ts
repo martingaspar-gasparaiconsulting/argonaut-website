@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { kiFetch } from '@/lib/ki';
+import { bereiteVor, absenden } from '@/lib/kiBatch';
 import {
   saeubereThema,
   bereinigeKanaele,
@@ -27,8 +28,16 @@ import {
 //   · "varianten" -> je Kanal N Beitrags-Varianten (EIN KI-Aufruf JE KANAL,
 //                    parallel, robust bei Teil-Ausfall). Deckel 30 je Kanal.
 // Es wird NICHTS gespeichert und NICHTS erfunden.
-//   POST { thema, kanaele[], modus?, anzahl?, firma?, branche?, ton? }
+//   POST { thema, kanaele[], modus?, anzahl?, firma?, branche?, ton?, stapel? }
 // Nur eingeloggt. RLS-neutral (liest keine Kundendaten, erzeugt nur Text).
+//
+// 15.08.26 · STAPEL-MODUS (Thema 6): Mit `stapel: true` gehen die Anfragen
+// nicht sofort raus, sondern ueber die Stapel-Schnittstelle — HALBER PREIS,
+// dafuer kommt das Ergebnis spaeter (meist unter einer Stunde, garantiert
+// binnen 24 Stunden). Der Motor /api/cron/ki-batch-abholen legt die fertigen
+// Texte dann als ENTWUERFE in social_beitrag ab. Wer 50 Beitraege fuer den
+// Monat plant, spart damit die Haelfte; wer jemanden am Telefon hat, nicht.
+// Ohne `stapel` bleibt alles exakt wie bisher.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -70,6 +79,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Die KI ist gerade nicht verfügbar. Bitte später erneut versuchen.' }, { status: 503 });
   }
   const kopf = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+
+  const alsStapel = roh.stapel === true;
+
+  // ----------------------------------------------------------------- STAPEL --
+  // Nur im Varianten-Modus sinnvoll: dort entstehen viele Texte auf einmal.
+  if (alsStapel && modus === 'varianten' && anzahl >= 2) {
+    const sys = baueVariantenSystemPrompt();
+    const maxTok = Math.min(8000, 500 + anzahl * 300);
+
+    const vorbereitet = bereiteVor(
+      kanaele.map((id) => ({
+        kennung: id,
+        system: sys,
+        frage: baueVariantenNutzerPrompt(thema, id, anzahl, ci),
+        ziel: { kanal: id, anzahl, thema },
+      })),
+      'claude-haiku-4-5',
+      maxTok,
+    );
+
+    const geschickt = await absenden(vorbereitet.anfragen);
+    if (!geschickt.ok) {
+      return NextResponse.json({ ok: false, error: `Der Stapel konnte nicht abgeschickt werden: ${geschickt.fehler}` }, { status: 502 });
+    }
+
+    const { data: eintrag, error: dbFehler } = await supabase.from('ki_batch').insert({
+      owner_user_id: user.id,
+      route: 'content-fliessband',
+      zweck: `${kanaele.length} Kanäle · ${anzahl} Varianten · „${thema.slice(0, 60)}"`,
+      extern_id: geschickt.extern_id,
+      status: 'wartet',
+      anzahl: vorbereitet.anfragen.length,
+      zuordnung: vorbereitet.zuordnung,
+    }).select('id').single();
+
+    if (dbFehler) {
+      // Der Stapel laeuft bereits und kostet — das darf der Betrieb erfahren.
+      return NextResponse.json({
+        ok: false,
+        error: 'Der Stapel läuft, konnte aber nicht vermerkt werden. Bitte an den Betreiber wenden.',
+        extern_id: geschickt.extern_id,
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      modus: 'stapel',
+      thema,
+      stapel_id: (eintrag as { id: string }).id,
+      anfragen: vorbereitet.anfragen.length,
+      erwartet: kanaele.length * anzahl,
+      hinweis: 'Der Stapel läuft. Die fertigen Beiträge liegen später als Entwürfe bereit — meist innerhalb einer Stunde, spätestens am nächsten Tag.',
+    });
+  }
 
   // -------------------------------------------------------------- VARIANTEN --
   if (modus === 'varianten' && anzahl >= 2) {
