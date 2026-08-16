@@ -24,7 +24,7 @@
 // oder das Buch findet ein vorhandenes Kapitel nicht wieder.
 // ============================================================================
 
-import { NAV_LINKS } from './rechte';
+import { NAV_LINKS, GRUPPEN } from './rechte';
 import { KATEGORIE_MODULE, kategorieModule, kategorieZusatz } from './branchenkatalog';
 import { KERN_MODULE } from './pakete';
 
@@ -163,6 +163,19 @@ export function alleModulKapitel(): ModulKapitel[] {
 /** Ein einzelnes Modul-Kapitel nachschlagen. */
 export function modulKapitel(modulKey: string): ModulKapitel | undefined {
   return alleModulKapitel().find((m) => m.modul === modulKey);
+}
+
+/**
+ * Der lesbare Name einer Menue-Gruppe ('komm' -> 'Kommunikation & Wissen').
+ * Wichtig fuer den Prompt: „Bereich im Programm: komm" sagt einem Modell
+ * nichts, „Kommunikation & Wissen" schon. Zeichen fallen weg, leere Labels
+ * (die Gruppe 'start' hat keines) fallen auf den Schluessel zurueck.
+ */
+export function gruppeLabel(key: string): string {
+  const treffer = GRUPPEN.find((g) => g.key === key);
+  const roh = String(treffer?.label ?? '').trim();
+  if (!roh) return String(key ?? '');
+  return zerlegeLabel(roh).titel || roh;
 }
 
 // ---------------------------------------------------------------------------
@@ -405,7 +418,7 @@ export function offeneKapitel(zeilen: BausteinZeile[]): OffenerBaustein[] {
       typ: 'modul_kapitel',
       schluessel: m.schluessel,
       ueberschrift: m.titel,
-      kontext: { modul: m.modul, gruppe: m.gruppe, auch: m.auch.join(', ') },
+      kontext: { modul: m.modul, gruppe: gruppeLabel(m.gruppe), auch: m.auch.join(', ') },
     });
   }
 

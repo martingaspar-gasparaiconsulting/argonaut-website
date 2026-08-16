@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { nachsehen, abholen, fasseZusammen, istAbgelaufen, type BatchErgebnis } from '@/lib/kiBatch';
 import { parseTextVarianten } from '@/lib/contentFliessband';
+import { istBausteinTyp, type BausteinTyp } from '@/lib/inhaltBaustein';
+import { pruefeEntwurf } from '@/lib/inhaltPrompt';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/ki-batch-abholen
@@ -95,6 +97,70 @@ async function verarbeiteFliessband(
   return { angelegt, fehler };
 }
 
+/**
+ * Ergebnisse eines Inhalts-Werkstatt-Stapels als ENTWUERFE ablegen.
+ *
+ * DREI ENTSCHEIDUNGEN, DIE HIER WICHTIG SIND:
+ *
+ * 1. `ignoreDuplicates` statt Ueberschreiben. Gibt es das Kapitel schon,
+ *    bleibt es unangetastet — auch wenn Martin es laengst redigiert hat.
+ *    Ein zweiter Stapel darf niemals Handarbeit ueberbuegeln. Der Rohtext
+ *    geht dabei nicht verloren: er steht ohnehin in ki_batch.ergebnis.
+ *
+ * 2. Beanstandete Texte werden NICHT verworfen, sondern mit einer Notiz
+ *    abgelegt. Sie sind bezahlt, und ein Mensch entscheidet besser als eine
+ *    Regel. Die Notiz steht in der Redaktionsliste — Martin sieht sofort,
+ *    welche Kapitel er zuerst ansehen muss.
+ *
+ * 3. In Haeppchen einfuegen. Ein einzelnes INSERT mit ueber hundert langen
+ *    Texten laeuft sonst in eine Groessengrenze und nimmt alle anderen mit.
+ */
+async function verarbeiteInhaltWerkstatt(
+  admin: AdminClient, stapel: Stapel, ergebnisse: BatchErgebnis[],
+): Promise<{ angelegt: number; fehler: number; beanstandet: number }> {
+  const HAEPPCHEN = 40;
+  let angelegt = 0, fehler = 0, beanstandet = 0;
+
+  const zeilen: Array<Record<string, unknown>> = [];
+  const jetzt = new Date().toISOString();
+
+  for (const e of ergebnisse) {
+    if (!e.ok) { fehler++; continue; }
+
+    const ziel = stapel.zuordnung?.[e.custom_id] ?? {};
+    const typRoh = typeof ziel.typ === 'string' ? ziel.typ : '';
+    const key = typeof ziel.schluessel === 'string' ? ziel.schluessel.trim() : '';
+    if (!istBausteinTyp(typRoh) || !key) { fehler++; continue; }
+
+    const geprueft = pruefeEntwurf(e.text, typRoh as BausteinTyp);
+    if (geprueft.text.length === 0) { fehler++; continue; }
+    if (!geprueft.sauber) beanstandet++;
+
+    zeilen.push({
+      owner_user_id: stapel.owner_user_id,
+      typ: typRoh,
+      schluessel: key,
+      titel: typeof ziel.ueberschrift === 'string' ? ziel.ueberschrift : null,
+      text: geprueft.text,
+      notiz: geprueft.hinweise.length > 0 ? geprueft.hinweise.join(' · ') : null,
+      quelle: 'stapel',
+      freigegeben: false,
+      batch_id: stapel.id,
+      aktualisiert_am: jetzt,
+    });
+  }
+
+  for (let i = 0; i < zeilen.length; i += HAEPPCHEN) {
+    const teil = zeilen.slice(i, i + HAEPPCHEN);
+    const { error } = await admin
+      .from('inhalt_baustein')
+      .upsert(teil, { onConflict: 'owner_user_id,typ,schluessel', ignoreDuplicates: true });
+    if (error) fehler += teil.length; else angelegt += teil.length;
+  }
+
+  return { angelegt, fehler, beanstandet };
+}
+
 async function lauf(req: Request) {
   if (!(await erlaubt(req))) {
     return NextResponse.json({ ok: false, error: 'kein Zugriff' }, { status: 403 });
@@ -163,10 +229,12 @@ async function lauf(req: Request) {
     }
 
     const zusammen = fasseZusammen(geholt.ergebnisse, stapel.anzahl);
-    let verarbeitet = { angelegt: 0, fehler: 0 };
+    let verarbeitet: { angelegt: number; fehler: number; beanstandet?: number } = { angelegt: 0, fehler: 0 };
 
     if (stapel.route === 'content-fliessband') {
       verarbeitet = await verarbeiteFliessband(admin, stapel, geholt.ergebnisse);
+    } else if (stapel.route === 'inhalt-werkstatt') {
+      verarbeitet = await verarbeiteInhaltWerkstatt(admin, stapel, geholt.ergebnisse);
     }
 
     // Die Rohtexte bleiben erhalten — falls die Weiterverarbeitung hakt,
@@ -188,6 +256,9 @@ async function lauf(req: Request) {
       stapel: stapel.zweck ?? stapel.route,
       ergebnis: zusammen.text,
       ...(stapel.route === 'content-fliessband' ? { entwuerfe_angelegt: verarbeitet.angelegt } : {}),
+      ...(stapel.route === 'inhalt-werkstatt'
+        ? { kapitel_angelegt: verarbeitet.angelegt, zu_pruefen: verarbeitet.beanstandet ?? 0 }
+        : {}),
     });
   }
 
