@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import DsgvoWerkzeuge from './_Werkzeuge';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -164,6 +165,9 @@ export default function DsgvoPage() {
               </div>
             )}
           </section>
+
+          {/* ---- Auskunft und Loeschung durchfuehren (Art. 15 / Art. 17) ---- */}
+          <DsgvoWerkzeuge />
 
           {/* ---- Verzeichnis von Verarbeitungstaetigkeiten ---- */}
           <section style={styles.card}>
