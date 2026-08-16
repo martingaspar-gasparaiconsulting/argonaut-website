@@ -5,6 +5,7 @@ import { getBrancheBySlug } from '@/lib/branchen'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ROIRechner from '@/components/ROIRechner'
+import DossierFreebie from './DossierFreebie'
 
 function normalizeStr(s: string): string {
   return s
@@ -241,6 +242,11 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
         </div>
 
         <ROIRechner stundenProWoche={branche.stundenProWoche} selectedPaket={selectedPaket} />
+
+        {/* Freebie: E-Mail -> Bestaetigung -> Branchen-Dossier als PDF.
+            Steht bewusst VOR dem Termin-Block: wer sich fuer ein Gespraech
+            noch nicht bereit fuehlt, nimmt wenigstens das Dossier mit. */}
+        <DossierFreebie slug={slug} branche={branche.name} />
 
         <div className="bg-[#0A1628] rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-6 mt-16">
           <div>
