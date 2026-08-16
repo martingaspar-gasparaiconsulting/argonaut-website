@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGONAUT OS · Gesamtabgleich aller Listen (16.08.2026)</title>
+<style>
+  :root{
+    --navy:#0A1628; --navy2:#0F2036; --navy3:#16294a;
+    --gold:#C9A84C; --cyan:#00e5ff; --gruen:#4CAF7D;
+    --warn:#E0A24C; --rot:#E06666; --lila:#A98CE0;
+    --text:#E8EDF4; --dim:#8FA3BE; --rand:rgba(143,163,190,.18);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--text);
+    font-family:'DM Sans',system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.6;font-size:15px}
+  .wrap{max-width:1000px;margin:0 auto;padding:44px 22px 90px}
+
+  header{border-bottom:1px solid var(--rand);padding-bottom:24px}
+  .kick{color:var(--gold);letter-spacing:.18em;text-transform:uppercase;font-size:11px;font-weight:700}
+  h1{font-size:32px;font-weight:800;margin:10px 0 8px;line-height:1.15}
+  .lead{color:var(--dim);max-width:74ch;margin:0}
+
+  .quellen{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px}
+  .q{background:var(--navy2);border:1px solid var(--rand);border-radius:8px;
+     padding:5px 11px;font-size:12.5px;color:var(--dim)}
+  .q b{color:var(--text);font-weight:600}
+
+  h2{font-size:22px;font-weight:800;margin:42px 0 4px;display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+  h2 .nr{background:var(--gold);color:var(--navy);border-radius:8px;min-width:30px;height:30px;padding:0 7px;
+        display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex:0 0 auto}
+  .h2sub{color:var(--dim);font-size:14px;margin:0 0 16px}
+
+  .p{background:var(--navy2);border:1px solid var(--rand);border-radius:13px;
+     padding:15px 19px;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid}
+  .p.gross{border-color:rgba(201,168,76,.4)}
+  .kopf{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+  .titel{font-weight:700;font-size:16px;flex:1;min-width:210px}
+  .p p{margin:0 0 6px;color:#cfdae6;font-size:14.5px}
+  .p p:last-child{margin-bottom:0}
+  .beleg{color:var(--dim);font-size:13px;border-left:2px solid var(--rand);padding-left:11px;margin-top:8px}
+
+  .chip{border:1px solid;border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .c-rot{color:var(--rot);border-color:var(--rot)}
+  .c-warn{color:var(--warn);border-color:var(--warn)}
+  .c-dim{color:var(--dim);border-color:var(--rand)}
+  .c-gruen{color:var(--gruen);border-color:var(--gruen)}
+  .c-cyan{color:var(--cyan);border-color:rgba(0,229,255,.5)}
+  .c-lila{color:var(--lila);border-color:rgba(169,140,224,.5)}
+
+  code{background:rgba(0,229,255,.07);border-radius:4px;padding:1px 5px;font-size:13px;
+       font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#a9dced}
+
+  .hinweis{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);
+           border-radius:11px;padding:14px 18px;margin:16px 0}
+  .hinweis b{color:var(--gold)}
+  .achtung{background:rgba(224,102,102,.08);border-color:rgba(224,102,102,.35)}
+  .achtung b{color:var(--rot)}
+  .gut{background:rgba(76,175,125,.07);border-color:rgba(76,175,125,.32)}
+  .gut b{color:var(--gruen)}
+
+  table{width:100%;border-collapse:collapse;margin-top:11px;font-size:14px}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;
+     letter-spacing:.06em;padding:7px 10px 7px 0;border-bottom:1px solid var(--rand)}
+  td{padding:8px 10px 8px 0;border-bottom:1px solid rgba(143,163,190,.08);vertical-align:top}
+  td:last-child,th:last-child{padding-right:0}
+  ul{margin:6px 0 0;padding-left:19px;color:#cfdae6}
+  li{margin-bottom:4px}
+
+  footer{margin-top:52px;padding-top:22px;border-top:1px solid var(--rand);color:var(--dim);font-size:13px}
+  @media print{ body{background:#fff;color:#111} .p,.q{background:#fafbfc;border-color:#dde3ea} .p p{color:#333} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kick">ARGONAUT OS · Gesamtabgleich</div>
+  <h1>Alle Listen zusammengeführt</h1>
+  <p class="lead">
+    Du hattest recht: Der KI-Telefonassistent stand in <b>vier</b> Listen und wurde nie gebaut.
+    Meine Offen-Liste von heute Vormittag war unvollständig — sie stützte sich nur auf die
+    Übergabe vom 14.08. Hier ist der vollständige Abgleich aller Listen im Repo gegen den
+    heutigen Code-Stand.
+  </p>
+  <div class="quellen">
+    <div class="q"><b>ABHAKLISTE</b> · 09.08. · 20 Abschnitte</div>
+    <div class="q"><b>GESAMTLISTE</b> · 02.08. · 27 KB</div>
+    <div class="q"><b>CHECKLISTE-ENDSPURT</b> · 03.08.</div>
+    <div class="q"><b>UEBERGABE-AKTUELL</b> · 09.08.</div>
+    <div class="q"><b>GROSSE-BROECKEN</b> · 14.08.</div>
+  </div>
+</header>
+
+<div class="hinweis gut">
+  <b>Zuerst die gute Nachricht:</b> Der größte Teil der alten Listen ist inzwischen erledigt —
+  Multistandort, Sitz-Typ als Rechteschicht, Einfach/Voll auf 67 Modulen, KI-Auge auf 71 Seiten,
+  Prompt-Caching, Batch-API, Automations-Bauer, Import-Center, PWA, Kalkulator, Academy,
+  DSGVO-Center, Provisionssystem, Tech-Schulden, Dossier-Funnel. Die alten Listen sind
+  <em>veraltet</em>, nicht <em>unerledigt</em>. Was unten steht, habe ich gegen den Code geprüft.
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">1</span> Handelnde KI — der ganze Abschnitt fehlt</h2>
+<p class="h2sub">Abschnitt 7 der Abhakliste. Ein Punkt davon ist gebaut, drei nicht.</p>
+
+<div class="p gross">
+  <div class="kopf">
+    <span class="titel">KI-Telefonassistent</span>
+    <span class="chip c-rot">nie gebaut</span>
+    <span class="chip c-dim">braucht Partner</span>
+  </div>
+  <p>
+    Dein digitaler Mitarbeiter am Telefon. Steht in vier Listen, überall unangetastet.
+    Aus der Gesamtliste sind die Vorentscheidungen schon dokumentiert:
+  </p>
+  <ul>
+    <li><b>Anbieter:</b> Retell oder Vapi</li>
+    <li><b>Stimme:</b> selbst betrieben (XTTS, StyleTTS2, F5-TTS) oder Cartesia / PlayHT</li>
+    <li><b>Abrechnung pro Minute</b> — passt zur SEPA-Lastschrift</li>
+    <li><b>Daran hängt die Gesprächsanalyse</b> — Anruf → Zusammenfassung → CRM-Eintrag</li>
+  </ul>
+  <p style="margin-top:9px">
+    <b>Was ARGONAUT dafür schon mitbringt:</b> CRM, Termine, Aufgaben und die Automations-Engine
+    aus Thema 1. Ein Anruf, der einen Termin einträgt und eine Aufgabe erzeugt, hätte alle
+    Andockpunkte. Was fehlt, ist die Telefonie-Seite und ein Modul, das Gespräche entgegennimmt,
+    protokolliert und weiterreicht.
+  </p>
+  <div class="beleg">
+    <code>docs/ARGONAUT-ABHAKLISTE.md:49</code> · <code>GESAMTLISTE.md:347</code> ·
+    <code>CHECKLISTE-ENDSPURT.md:74</code> · <code>MASTER-BRIEFING.md:705</code>.
+    Im Code: kein <code>/dashboard/telefon</code>, kein Voice-Modul, keine Telefonie-Route.
+  </div>
+</div>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel">Avatar &amp; Stimme — Stufe 2 bis 4</span>
+    <span class="chip c-warn">Stufe 1 läuft</span>
+  </div>
+  <p>
+    Stufe 1 (leuchtende Gestalt mit Text) läuft seit 03.08. <code>KiGuide</code> hat
+    <code>avatarUrl</code> und <code>onVorlesen</code> bereits vorgesehen — Stufe 2 und 3
+    brauchen keinen Umbau, nur die Inhalte.
+  </p>
+  <ul>
+    <li><b>Gesicht:</b> HeyGen/Synthesia (vorgerendert) oder Simli/Anam/Tavus (Echtzeit)</li>
+    <li><b>Stimme:</b> ElevenLabs ab ca. 22 USD/Monat</li>
+    <li><b>Offene Entscheidung:</b> geklonte oder neutrale Stimme?</li>
+  </ul>
+  <p style="margin-top:8px">
+    Aus der Übergabe vom 09.08.: ein Avatar, der <em>von Modul zu Modul springt und die Texte
+    spricht — einmal aufnehmen, für immer gleich</em>. Die Texte wolltest du liefern.
+  </p>
+</div>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel">WhatsApp / SMS scharfschalten</span>
+    <span class="chip c-dim">Code da, Konto fehlt</span>
+  </div>
+  <p>Versandcode und Opt-in stehen (<code>lib/whatsappVersand.ts</code>). SMS ist in den Listen
+    genannt, aber nirgends gebaut — das wäre echte Arbeit, kein Schalter.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">2</span> KI-Kostenschutz — eine Hälfte fehlt noch</h2>
+<p class="h2sub">Am Code geprüft: die Checkliste vom 03.08. ist hier teilweise überholt.</p>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel">Kostenalarm</span>
+    <span class="chip c-gruen">erledigt</span>
+  </div>
+  <p>
+    Die alte Liste sagt, <code>kostenAlarmTagUsd</code> sei „nirgends ausgewertet". Das stimmt
+    nicht mehr: <code>lib/ki.ts:455</code> wertet ihn aus und schickt eine Warnung,
+    <code>/api/admin/verbrauch</code> zeigt Alarme im Command Center.
+  </p>
+</div>
+
+<div class="p gross">
+  <div class="kopf">
+    <span class="titel">Tagesgrenze für <em>zahlende</em> Kunden</span>
+    <span class="chip c-rot">weiterhin offen</span>
+  </div>
+  <p>
+    Demo-Konten haben eine harte Tagesobergrenze. Zahlende Kunden haben <b>nur</b> das
+    Minuten-Limit von 20 Aufrufen — rechnerisch bis zu <b>28.800 Aufrufe am Tag</b>. Der Alarm
+    warnt dich, bremst aber nichts.
+  </p>
+  <p>
+    Die AGB decken die Lösung bereits ab: § 9.3 erlaubt Kontaktaufnahme und im Wiederholungsfall
+    eine vorübergehende Begrenzung. Nötig wäre eine zweite Stufe — Warnung, dann Kontakt, dann
+    Deckel. Bei „KI unbegrenzt inklusive" ist das der einzige Schutz gegen einen einzelnen
+    Kunden, der die Monatsrechnung sprengt.
+  </p>
+  <div class="beleg">
+    <code>lib/ki.ts</code>: <code>demoKiProTag</code> existiert, ein Gegenstück für Vollkunden nicht.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">3</span> Datenbank-Altlasten, die nie geklärt wurden</h2>
+<p class="h2sub">In der Gesamtliste mit 🔍 markiert — „konnte nicht geprüft werden".</p>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel"><code>termine.kontakt_id</code> — Termine nur per E-Mail zugeordnet</span>
+    <span class="chip c-warn">ungeprüft</span>
+  </div>
+  <p>
+    Die Gesamtliste notiert: Termine sind <em>nur per E-Mail gescoped</em>. Wenn das stimmt,
+    hängen Termine nicht am Kontakt, sondern an einer Zeichenkette — mit allen Folgen für
+    Umbenennungen, Dubletten und die DSGVO-Löschung aus Thema 7.
+  </p>
+  <div class="beleg">Damals nicht prüfbar („Rechner offline"). Eine Abfrage klärt es in einer Minute.</div>
+</div>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel">Mehrbank-Migration <code>bank_zugang</code></span>
+    <span class="chip c-warn">Ausführung nie bestätigt</span>
+  </div>
+  <p>
+    SQL wurde geliefert, ob es lief, weiß niemand. <b>Achtung aus der Liste:</b> Die Übungswelt
+    schreibt seit einer Reparatur <code>aggregator = 'demo'</code> in diese Tabelle — vor einer
+    Migration also erst nachsehen, was drinsteht.
+  </p>
+</div>
+
+<div class="p">
+  <div class="kopf">
+    <span class="titel">Connector-SQL bei jedem neuen Demo-Konto</span>
+    <span class="chip c-dim">Handgriff, der vergessen wird</span>
+  </div>
+  <p>Ein manueller Schritt, der bei jedem Demo-Konto wiederholt werden muss. Kandidat für
+    Automatisierung, sonst fällt er irgendwann aus.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">4</span> Kleine Schulden mit spürbarer Wirkung</h2>
+
+<div class="p">
+  <div class="kopf"><span class="titel">„Angemeldet bleiben"-Häkchen im Login</span><span class="chip c-cyan">Komfort</span></div>
+  <p>Fehlt. Greift in die Sitzungs-Cookies — deshalb steht es auf der Liste und nicht einfach im Code.
+     Für Handwerker am Telefon, die sich täglich neu anmelden, ist das kein Detail.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Eigene Absender-Domain je Kunde</span><span class="chip c-warn">Zustellbarkeit</span></div>
+  <p>Heute versenden alle Kunden über dieselbe Absenderadresse. Das drückt die Zustellrate und
+     wirkt bei Empfängern unprofessionell.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Lager-Zuordnung über Namensvergleich</span><span class="chip c-warn">Fehlerquelle</span></div>
+  <p>Im Shop- und Ernte-Weg wird per <em>Namensvergleich</em> zugeordnet statt über den echten
+     Katalog. Ein Tippfehler im Artikelnamen bucht auf den falschen Bestand oder auf gar keinen.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Autoresponder-Grenzen prüfen</span><span class="chip c-dim">nachrechnen</span></div>
+  <p><code>SOFORT_MAX=50</code>, <code>MAX_PRO_DURCHGANG=300</code> — nie gegen echte Mengen geprüft.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">5</span> Modul-Tiefe und Marketing</h2>
+<p class="h2sub">Aus M4, M6 und M7 der Gesamtliste. Nichts davon blockiert einen Verkauf — es ist Tiefe.</p>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Eigene Felder auf den Rest-Modulen</span><span class="chip c-cyan">7 Module</span></div>
+  <p>Leads, Dokumente, Fahrzeugakte, Kasse, Academy, Mahnwesen, Fördermittel. Das Muster ist
+     gebaut (Referenz <code>app/dashboard/kfz/page.tsx</code>) — es muss nur nachgezogen werden.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Report-Baukasten: gespeicherte und geplante Reports</span><span class="chip c-warn">teilweise</span></div>
+  <p><code>lib/reportBaukasten.ts</code> existiert. Ob Speichern und Zeitplan drin sind, habe ich
+     nicht geprüft — steht in der Liste als offen.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Marketing-Tiefe</span><span class="chip c-dim">Komfort, kein Blocker</span></div>
+  <p>Der Kern steht (Meta, Google, LinkedIn, TikTok, Social-Cron). Offen laut Liste:</p>
+  <ul>
+    <li>Organische Kanäle: YouTube, Pinterest, X, Threads, Bluesky, Mastodon</li>
+    <li>Video-Upload-Paket: Bucket <code>social-video</code>, Aufräum-Cron, Speicher-Quota je Tarif</li>
+    <li>Status-Abfrage für Instagram-/Facebook-Video-Container</li>
+    <li>Native Lead-Formulare, Pixel- und Conversion-Optimierung, Zielgruppen-Feinsteuerung</li>
+    <li>Marketing-Cockpit: Zeitverlauf, Öffnungs- und Klickraten</li>
+    <li>Zielgruppen direkt aus dem CRM wählen · Asset-Bibliothek mit Bild-KI</li>
+    <li>SMS, Retargeting, Google-Rezensionen · Landingpages: Branche vorbelegen</li>
+  </ul>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Geräte im Außendienst</span><span class="chip c-dim">Hardware</span></div>
+  <p>Nur der Scanner ist live. Etikettendrucker, TSE und Waage fehlen — jeweils mit Gerät und Konto.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">6</span> Inhalt, Vertrauen und Strategie</h2>
+
+<div class="p">
+  <div class="kopf"><span class="titel">698 KI-Dialoge</span><span class="chip c-lila">Inhalt</span></div>
+  <p>Steht in Abschnitt 13 der Abhakliste, direkt neben den E-Books. Je Branche ein
+     vorbereiteter Gesprächseinstieg. <b>Derselbe Weg wie bei den E-Books:</b> Batch-API,
+     Entwürfe, Freigabe-Haken.</p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Bereichs-Verteilung der 698 Branchen</span><span class="chip c-gold">deine Entscheidung</span></div>
+  <p>
+    Aus der Übergabe vom 09.08., ausdrücklich als „erst gemeinsam durchdenken" markiert:
+    „Handwerk &amp; Bau" ist sinnvoll in I und II geteilt, aber <b>„Handel &amp; E-Commerce" hat 70
+    Branchen in einem Bereich</b>. Idee war: in „Handel" und „E-Commerce" trennen und die
+    Bereiche neu ausbalancieren.
+  </p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Dossier-Look auf die Branchenseiten</span><span class="chip c-warn">war Schritt 3</span></div>
+  <p>
+    Der aufklappbare Stil von <code>/vorschau/branchen</code> sollte auf die echten Branchenseiten
+    übertragen werden. Inhalt bleibt, nur optisch aufgeräumt. <b>Das passt zusammen mit dem
+    Wording-Push aus Block A</b> — dieselbe Datei.
+  </p>
+</div>
+
+<div class="p">
+  <div class="kopf"><span class="titel">Brand-Story, Trust-Layer, Enterprise-Slot</span><span class="chip c-lila">Inhalt</span></div>
+  <ul>
+    <li>„Die Geschichte vom Argonaut" als Markengeschichte</li>
+    <li>Trust-Layer: Sicherheits- und Compliance-Nachweise, AVV-Vorlage, Referenzen</li>
+    <li>Enterprise-Slot im Control Room</li>
+    <li>Freebie auch auf der Vergleichsseite verlinken</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="nr">7</span> Betrieb — kein Code, aber Blocker</h2>
+
+<table>
+  <tr><th>Punkt</th><th>Warum es klemmt</th></tr>
+  <tr><td>Vier SEPA-Variablen in Vercel</td><td><code>SEPA_CREDITOR_NAME / IBAN / BIC / GLAEUBIGER_ID</code> — die Gläubiger-ID hast du seit 03.08.</td></tr>
+  <tr><td>Inkassovereinbarung Kreissparkasse Böblingen</td><td>ohne sie kein SEPA-Basislastschrifteinzug</td></tr>
+  <tr><td>Probe-Einzug über <code>/admin/abo-einzug</code></td><td>einmal echt durchspielen, bevor Kunden dranhängen</td></tr>
+  <tr><td>Resend auf Pro</td><td><b>harter Blocker:</b> 100 E-Mails am Tag im Free-Tarif — der Dossier-Versand sprengt das sofort</td></tr>
+  <tr><td>Demo-Ablauf auf 7 Tage</td><td>plus 7 Tage Kulanz ergibt die versprochenen 14</td></tr>
+  <tr><td>Hostinger-Stufe prüfen</td><td>n8n ist stillgelegt, es läuft nur noch Gotenberg — Verlängerung kostet das 2,2- bis 2,6-Fache</td></tr>
+  <tr><td>AGB-Häkchen aus dem Anfrageformular</td><td>bei einer Kontaktanfrage wird kein Vertrag geschlossen</td></tr>
+  <tr><td>Master-Fahrplan neu durchnummerieren</td><td>zwei parallele Zählungen („Baustein 1–6" und „A1–A12") stiften Verwirrung</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="nr">8</span> Ganz nach hinten — deine Ansage</h2>
+
+<div class="p">
+  <div class="kopf"><span class="titel">finAPI-Bankabruf und ELSTER-Übertragung</span><span class="chip c-dim">zuletzt</span></div>
+  <p>
+    Beide Zugänge werden gespeichert, der eigentliche Abruf beziehungsweise die Übermittlung
+    fehlt. CSV-Abgleich und UStVA-Berechnung laufen ohne. ELSTER braucht zusätzlich eine
+    Grundsatzentscheidung (eigener Server für ERiC, Dienstleister, oder Abtippen im Portal).
+  </p>
+</div>
+
+<div class="hinweis achtung">
+  <b>Was ich nicht verifizieren konnte:</b> Report-Baukasten-Tiefe, der genaue Stand der
+  Marketing-Restbausteine, <code>termine.kontakt_id</code> und die <code>bank_zugang</code>-Migration.
+  Diese vier stehen oben als „ungeprüft" — ich habe sie nicht als erledigt gezählt und nicht als
+  offen behauptet.
+</div>
+
+<footer>
+  <p>
+    <b>Vorschlag für die Reihenfolge:</b> Erst die vier Blöcke aus dem Bauplan (Wording,
+    Nummernkreise, Dossiers, E-Books) — die laufen ohne Wartezeit. Parallel dazu die vier
+    ungeprüften Punkte klären, das kostet vier Abfragen. Der KI-Telefonassistent ist ein eigenes
+    Thema in der Größenordnung eines der zehn Brocken und gehört als Block <b>J</b> hinter den
+    Testtag, weil er einen Partnervertrag braucht.
+  </p>
+  <p>Erstellt am 16.08.2026 · fünf Listen abgeglichen · Code-Stand <code>feb2e2b</code></p>
+</footer>
+
+</div>
+</body>
+</html>
