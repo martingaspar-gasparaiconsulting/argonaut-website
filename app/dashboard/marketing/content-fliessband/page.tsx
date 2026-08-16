@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import { VARIANTEN_STUFEN, type TextVariante, type TextVariantenGruppe } from '@/lib/contentFliessband';
 
 // ============================================================
@@ -32,6 +33,19 @@ type Antwort = {
 
 type Foto = { url: string; thumb: string; autor: string };
 
+const supabaseBrowser = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
+
+function wartetSeitText(iso: string): string {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return 'gerade abgeschickt';
+  if (min < 60) return `seit ${min} Min`;
+  const std = Math.floor(min / 60);
+  return std < 24 ? `seit ${std} Std` : `seit ${Math.floor(std / 24)} Tagen`;
+}
+
 const KANAELE: { id: string; name: string; icon: string }[] = [
   { id: 'instagram', name: 'Instagram', icon: '📸' },
   { id: 'facebook', name: 'Facebook', icon: '📘' },
@@ -55,6 +69,10 @@ export default function ContentFliessbandPage() {
   const [ciOffen, setCiOffen] = useState(false);
   const [modus, setModus] = useState<'einzeln' | 'varianten'>('einzeln');
   const [anzahl, setAnzahl] = useState(10);
+  // Stapel-Verarbeitung: halber Preis, dafuer spaeter (Thema 6)
+  const [ueberNacht, setUeberNacht] = useState(false);
+  const [stapelHinweis, setStapelHinweis] = useState<string | null>(null);
+  const [offeneStapel, setOffeneStapel] = useState<Array<{ id: string; zweck: string | null; status: string; erstellt_am: string; anzahl: number }>>([]);
 
   const [laden, setLaden] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -64,6 +82,19 @@ export default function ContentFliessbandPage() {
   function toggle(id: string) {
     setGewaehlt((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   }
+
+  async function stapelListe() {
+    try {
+      const { data } = await supabaseBrowser.from('ki_batch')
+        .select('id,zweck,status,erstellt_am,anzahl')
+        .eq('route', 'content-fliessband')
+        .in('status', ['wartet', 'laeuft'])
+        .order('erstellt_am', { ascending: false }).limit(10);
+      setOffeneStapel((data as Array<{ id: string; zweck: string | null; status: string; erstellt_am: string; anzahl: number }>) ?? []);
+    } catch { /* Uebersicht ist Beiwerk */ }
+  }
+
+  useEffect(() => { stapelListe(); }, []);
 
   async function erzeugen() {
     setFehler(null);
@@ -76,10 +107,17 @@ export default function ContentFliessbandPage() {
       const res = await fetch('/api/marketing/content-fliessband', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ thema, kanaele: gewaehlt, modus, anzahl, firma, branche, ton }),
+        body: JSON.stringify({ thema, kanaele: gewaehlt, modus, anzahl, firma, branche, ton, stapel: ueberNacht && modus === 'varianten' }),
       });
       const j = (await res.json()) as Antwort;
       if (!j.ok) { setFehler(j.error || 'Es konnten keine Vorschläge erzeugt werden.'); setLaden(false); return; }
+      if ((j as { modus?: string }).modus === 'stapel') {
+        const st = j as unknown as { hinweis?: string; erwartet?: number };
+        setStapelHinweis(st.hinweis ?? 'Der Stapel läuft.');
+        setGruppen(null); setVorschlaege(null);
+        stapelListe();
+        return;
+      }
       if (j.modus === 'varianten') setGruppen(j.gruppen ?? []);
       else setVorschlaege(j.vorschlaege ?? []);
     } catch {
@@ -174,6 +212,29 @@ export default function ContentFliessbandPage() {
           </div>
         )}
 
+        {/* Sofort oder über Nacht — halber Preis (Thema 6) */}
+        {modus === 'varianten' && (
+          <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {([
+              [false, '⚡ Jetzt sofort', 'Die Texte stehen in etwa einer Minute hier.'],
+              [true, '🌙 Über Nacht — halber Preis', 'Meist in unter einer Stunde fertig, spätestens am nächsten Tag. Liegt dann als Entwurf bereit.'],
+            ] as const).map(([wert, titel, text]) => (
+              <button
+                key={String(wert)} type="button" onClick={() => setUeberNacht(wert)}
+                style={{
+                  flex: '1 1 260px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${ueberNacht === wert ? C.gold : 'rgba(143,163,190,0.2)'}`,
+                  background: ueberNacht === wert ? 'rgba(201,168,76,0.12)' : 'rgba(10,22,40,0.4)',
+                  borderRadius: 11, padding: '11px 13px', color: C.text,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 14 }}>{ueberNacht === wert ? '● ' : '○ '}{titel}</div>
+                <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 3, lineHeight: 1.5 }}>{text}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={() => setCiOffen((o) => !o)}
           style={{ background: 'none', border: 'none', color: C.cyan, cursor: 'pointer', fontSize: 13, marginTop: 14, padding: 0, fontFamily: 'inherit' }}
@@ -207,9 +268,41 @@ export default function ContentFliessbandPage() {
               opacity: laden ? 0.7 : 1, fontFamily: 'var(--font-syne), sans-serif',
             }}
           >
-            {laden ? 'Die KI schreibt …' : modus === 'varianten' ? '🏭 Varianten erzeugen' : '✨ Vorschläge erzeugen'}
+            {laden
+              ? (ueberNacht && modus === 'varianten' ? 'Stapel wird abgeschickt …' : 'Die KI schreibt …')
+              : modus === 'varianten'
+                ? (ueberNacht ? '🌙 Über Nacht erzeugen lassen' : '🏭 Varianten erzeugen')
+                : '✨ Vorschläge erzeugen'}
           </button>
         </div>
+
+        {stapelHinweis && (
+          <div style={{ color: C.text, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 10, padding: '12px 14px', fontSize: 14, marginTop: 14, lineHeight: 1.55 }}>
+            🌙 <b>{stapelHinweis}</b>
+            <div style={{ color: C.textDim, fontSize: 13, marginTop: 5 }}>
+              Sie können die Seite schließen. Die fertigen Beiträge finden Sie danach unter <b style={{ color: C.text }}>Social</b> als Entwürfe.
+            </div>
+          </div>
+        )}
+
+        {offeneStapel.length > 0 && (
+          <div style={{ marginTop: 14, border: '1px solid rgba(143,163,190,0.2)', borderRadius: 10, padding: '11px 13px', background: 'rgba(10,22,40,0.4)' }}>
+            <div style={{ fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', color: C.textDim, fontWeight: 800, marginBottom: 8 }}>
+              {offeneStapel.length} {offeneStapel.length === 1 ? 'Stapel unterwegs' : 'Stapel unterwegs'}
+            </div>
+            {offeneStapel.map((st) => (
+              <div key={st.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontSize: 13, padding: '4px 0' }}>
+                <span>{st.zweck ?? 'Stapel'}</span>
+                <span style={{ color: C.textDim }}>
+                  {st.status === 'wartet' ? 'wartet' : 'läuft'} · {wartetSeitText(st.erstellt_am)}
+                </span>
+              </div>
+            ))}
+            <div style={{ color: C.textDim, fontSize: 12, marginTop: 7, lineHeight: 1.5 }}>
+              Wird alle 15 Minuten geprüft. Fertige Texte landen als Entwurf unter Social.
+            </div>
+          </div>
+        )}
 
         {fehler && (
           <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14, marginTop: 14 }}>
