@@ -5,7 +5,6 @@ import { getBrancheBySlug } from '@/lib/branchen'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ROIRechner from '@/components/ROIRechner'
-import DossierFreebie from './DossierFreebie'
 
 function normalizeStr(s: string): string {
   return s
@@ -131,7 +130,7 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
               <div className="text-white/40 text-xs mt-1">Arbeitszeit gespart / Jahr</div>
             </div>
             <div>
-              <div className="text-[#C9A84C] text-2xl font-bold">{paket.agenten} Agenten</div>
+              <div className="text-[#C9A84C] text-2xl font-bold">{paket.agenten} Bausteine</div>
               <div className="text-white/40 text-xs mt-1">im {paket.label}-Paket verfügbar</div>
             </div>
           </div>
@@ -178,13 +177,13 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
         {/* AGENTEN-RANKING */}
         <div className="mb-16">
           <div className="flex items-baseline gap-3 mb-4">
-            <h2 className="text-2xl font-bold text-[#0A1628]">Empfohlene KI-Agenten</h2>
+            <h2 className="text-2xl font-bold text-[#0A1628]">Empfohlene Bausteine</h2>
             <span style={{ fontSize: '11px', fontWeight: 700, color: paket.color, background: `${paket.color}15`, border: `1px solid ${paket.color}40`, borderRadius: '999px', padding: '3px 12px' }}>
               {agentenVerfuegbar.length} sofort aktiv
             </span>
           </div>
           <p className="text-gray-500 text-sm mb-8 max-w-2xl">
-            Speziell für <strong>{branche.name}</strong> optimiert. Im {paket.label}-Paket sind {agentenVerfuegbar.length} der {agentenAll.length} empfohlenen Agenten sofort aktiv.
+            Speziell für <strong>{branche.name}</strong> optimiert. Im {paket.label}-Paket sind {agentenVerfuegbar.length} der {agentenAll.length} empfohlenen Bausteine sofort aktiv.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -228,11 +227,11 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
             <div>
               <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#0A1628' }}>
                 {agentenAll.length - agentenVerfuegbar.length > 0
-                  ? `${agentenAll.length - agentenVerfuegbar.length} weitere Agenten mit Upgrade freischaltbar`
-                  : `Alle ${agentenAll.length} Agenten im ${paket.label}-Paket aktiv`}
+                  ? `${agentenAll.length - agentenVerfuegbar.length} weitere Bausteine mit Upgrade freischaltbar`
+                  : `Alle ${agentenAll.length} Bausteine im ${paket.label}-Paket aktiv`}
               </p>
               <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
-                Mit jedem höheren Paket schaltest du mehr Agenten frei — bis zu allen 24 Agenten und 128 Automationen im ENTERPRISE-Paket.
+                Mit jedem höheren Paket schalten Sie mehr Bausteine frei — bis zu allen 24 Bausteinen und 128 Automationen im ENTERPRISE-Paket.
               </p>
             </div>
             <a href="/#preise" style={{ padding: '10px 24px', background: '#C9A84C', color: '#0A1628', borderRadius: '8px', fontWeight: 700, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
@@ -243,11 +242,6 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
 
         <ROIRechner stundenProWoche={branche.stundenProWoche} selectedPaket={selectedPaket} />
 
-        {/* Freebie: E-Mail -> Bestaetigung -> Branchen-Dossier als PDF.
-            Steht bewusst VOR dem Termin-Block: wer sich fuer ein Gespraech
-            noch nicht bereit fuehlt, nimmt wenigstens das Dossier mit. */}
-        <DossierFreebie slug={slug} branche={branche.name} />
-
         <div className="bg-[#0A1628] rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-6 mt-16">
           <div>
             <h3 className="text-white text-xl font-bold mb-2">
@@ -255,8 +249,8 @@ export default function BranchenPageClient({ slug }: { slug: string }) {
             </h3>
             <p className="text-white/50 text-sm">
               {ctaModus === 'termin'
-                ? 'Kostenloses Erstgespräch — persönlich zu deinem Betrieb, unverbindlich.'
-                : 'Werde Früh-Kunde — exklusive Konditionen sichern.'}
+                ? 'Kostenloses Erstgespräch — persönlich zu Ihrem Betrieb, unverbindlich.'
+                : 'Werden Sie Früh-Kunde — exklusive Konditionen sichern.'}
             </p>
           </div>
           <a
