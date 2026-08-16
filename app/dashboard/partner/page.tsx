@@ -24,6 +24,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
+import PartnerProvisionen from './_Provisionen';
 import {
   ART_LABEL, ART_ERKLAERUNG, MODELL_LABEL, STATUS_LABEL,
   proPartner, pruefePartner, gegengeschaeftStand, erwartetGeld,
@@ -41,7 +42,11 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type PartnerZeileDb = Partner & { id: string; erstellt_am?: string | null; notiz?: string | null; telefon?: string | null };
+type PartnerZeileDb = Partner & {
+  id: string; erstellt_am?: string | null; notiz?: string | null; telefon?: string | null;
+  strasse?: string | null; plz?: string | null; ort?: string | null;
+  steuernummer?: string | null; ust_id?: string | null;
+};
 
 const LEER = {
   name: '', firma: '', email: '', telefon: '',
@@ -412,6 +417,41 @@ export default function PartnerSeite() {
                       )}
                     </div>
 
+                    {/* ---- Angaben für die Gutschrift ----
+                        Eine Provisionsgutschrift ist umsatzsteuerlich eine
+                        Rechnung (§ 14 Abs. 2 UStG). Anschrift und Steuernummer
+                        des Partners sind darauf Pflicht — ohne sie ist der
+                        Vorsteuerabzug angreifbar. */}
+                    {erwartetGeld(p) && (
+                      <div style={s.gegenBlock}>
+                        <div style={{ fontWeight: 700, marginBottom: 4 }}>Angaben für die Gutschrift</div>
+                        <p style={s.hint}>
+                          Die Provisionsgutschrift ist steuerlich eine Rechnung — nur stellen Sie sie aus,
+                          nicht der Partner. Anschrift und Steuernummer gehören deshalb darauf.
+                        </p>
+                        <div style={{ ...s.gitter, marginTop: 8 }}>
+                          <Feld label="Straße und Hausnummer">
+                            <input style={s.in} defaultValue={p.strasse ?? ''} onBlur={(e) => feldSetzen(p.id, 'strasse', e.target.value.trim() || null)} />
+                          </Feld>
+                          <Feld label="PLZ">
+                            <input style={s.in} defaultValue={p.plz ?? ''} onBlur={(e) => feldSetzen(p.id, 'plz', e.target.value.trim() || null)} />
+                          </Feld>
+                          <Feld label="Ort">
+                            <input style={s.in} defaultValue={p.ort ?? ''} onBlur={(e) => feldSetzen(p.id, 'ort', e.target.value.trim() || null)} />
+                          </Feld>
+                          <Feld label="Steuernummer">
+                            <input style={s.in} defaultValue={p.steuernummer ?? ''} onBlur={(e) => feldSetzen(p.id, 'steuernummer', e.target.value.trim() || null)} />
+                          </Feld>
+                          <Feld label="USt-IdNr. (falls vorhanden)">
+                            <input style={s.in} defaultValue={p.ust_id ?? ''} onBlur={(e) => feldSetzen(p.id, 'ust_id', e.target.value.trim() || null)} />
+                          </Feld>
+                          <Feld label="Kontoinhaber">
+                            <input style={s.in} defaultValue={p.kontoinhaber ?? ''} onBlur={(e) => feldSetzen(p.id, 'kontoinhaber', e.target.value.trim() || null)} />
+                          </Feld>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ---- Gegengeschäft ---- */}
                     <div style={s.gegenBlock}>
                       <div style={{ fontWeight: 700, marginBottom: 8 }}>Gegengeschäft</div>
@@ -456,6 +496,9 @@ export default function PartnerSeite() {
           })}
         </section>
       )}
+
+      {/* ---------- Provisionen und Auszahlung ---------- */}
+      <PartnerProvisionen />
     </div>
   );
 }
