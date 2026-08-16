@@ -22,7 +22,11 @@ export const KERN: Baustein[] = [
   { icon: '👥', name: 'Personal & Zeiten', sub: 'Stunden, Urlaub, Lohn-Brücke' },
   { icon: '📄', name: 'Dokumente & Verträge', tag: 'DMS', sub: 'Alles digital, DSGVO-konform' },
   { icon: '📊', name: 'Auswertungen & Dashboard', tag: 'BI', sub: 'Ihre Zahlen in Echtzeit' },
-  { icon: '🧭', name: 'Ihre KI-Crew', sub: 'Nimmt Routine ab und denkt mit' },
+  // 16.08.26: „Ihre KI-Crew" ersetzt. Das Wort stand noch aus der Agentur-Zeit
+  // hier und erschien auf allen 698 Branchenseiten — die Umstellung auf
+  // „Bausteine" hatte nur „KI-Agenten" erwischt. In einer Liste von Bausteinen
+  // waere „KI-Bausteine" doppelt gemoppelt, deshalb der Funktionsname.
+  { icon: '🧭', name: 'KI-Assistent & Automatik', sub: 'Nimmt Ihnen Routine ab und denkt mit' },
   { icon: '🔒', name: 'EU-Hosting & DSGVO', sub: 'Sicher und rechtskonform' },
 ]
 
