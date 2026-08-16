@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
+import UstErsatzSatz from "../_components/UstErsatzSatz";
+import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
 import KiKlartext from "../../_components/KiKlartext";
 
 // ============================================================
@@ -119,6 +121,16 @@ export default function FinanzKennzahlen() {
   }, []);
 
   // --- Einnahmen / Ausgaben / Gewinn — EXAKT wie in der Übersicht ----------
+  // Steuersatz fuer Zahlungen ohne Rechnungsbezug — eingestellt in der EUER.
+  const [ersatzSatz, setErsatzSatz] = useState<number>(0);
+  const uebernehmeSatz = useCallback((satz: number) => setErsatzSatz(satz), []);
+
+  const zSummen = useMemo(() => {
+    const rMap: Record<string, Rechnung> = {};
+    rechnungen.forEach((r) => (rMap[r.id] = r));
+    return summiereZahlungen(zahlungen, rMap, ersatzSatz, `${jahr}-01-01`, `${jahr}-12-31`);
+  }, [zahlungen, rechnungen, ersatzSatz, jahr]);
+
   const basis = useMemo(() => {
     const rMap: Record<string, Rechnung> = {};
     rechnungen.forEach((r) => (rMap[r.id] = r));
@@ -126,13 +138,9 @@ export default function FinanzKennzahlen() {
     let einnahmenNetto = 0;
     for (const z of zahlungen) {
       if (jahrVon(z.zahlungsdatum) !== jahr) continue;
-      const betrag = Number(z.betrag) || 0;
       const r = z.rechnung_id ? rMap[z.rechnung_id] : undefined;
-      if (r && Number(r.brutto_summe) > 0) {
-        einnahmenNetto += betrag * (Number(r.netto_summe) / Number(r.brutto_summe));
-      } else {
-        einnahmenNetto += betrag;
-      }
+      // Ohne Rechnungsbezug greift der Ersatzsatz (lib/zahlungAufteilung.ts).
+      einnahmenNetto += teileZahlung(z.betrag, r, ersatzSatz).netto;
     }
 
     let ausgabenNetto = 0;
@@ -147,7 +155,7 @@ export default function FinanzKennzahlen() {
     const kosten = r2(ausgabenNetto);
     const gewinn = r2(einnahmenNetto - ausgabenNetto);
     return { umsatz, kosten, gewinn };
-  }, [zahlungen, rechnungen, ausgaben, jahr]);
+  }, [zahlungen, rechnungen, ausgaben, jahr, ersatzSatz]);
 
   // --- Automatische Kennzahlen ---------------------------------------------
   const umsatzrendite = basis.umsatz > 0 ? r2((basis.gewinn / basis.umsatz) * 100) : null;
@@ -178,6 +186,12 @@ export default function FinanzKennzahlen() {
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <FinanzTabs />
+
+        <UstErsatzSatz
+          rechnungen={rechnungen}
+          onSatz={uebernehmeSatz}
+          summen={zSummen}
+        />
 
         <div style={{ marginBottom: 24 }}>
           <h1

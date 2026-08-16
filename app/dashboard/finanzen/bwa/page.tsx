@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -15,6 +15,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import FinanzTabs from "../_components/FinanzTabs";
+import UstErsatzSatz from "../_components/UstErsatzSatz";
+import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-4 — BWA-REPORT
@@ -121,17 +123,27 @@ export default function BwaReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Steuersatz fuer Zahlungen ohne Rechnungsbezug. Eingestellt wird er in
+  // der EUER; hier wird er nur angewendet und angezeigt.
+  const [ersatzSatz, setErsatzSatz] = useState<number>(0);
+  const uebernehmeSatz = useCallback((satz: number) => setErsatzSatz(satz), []);
+
+  // Nur fuer den Hinweis: wie viel des Jahres ist nicht zugeordnet?
+  const zSummen = useMemo(
+    () => summiereZahlungen(zahlungen, rechnungMap, ersatzSatz, `${jahr}-01-01`, `${jahr}-12-31`),
+    [zahlungen, rechnungMap, ersatzSatz, jahr],
+  );
+
   const daten = useMemo(() => {
     const monate = MONATE.map((m) => ({ monat: m, einnahmen: 0, ausgaben: 0, gewinn: 0 }));
 
     for (const z of zahlungen) {
       const jm = jahrMonat(z.zahlungsdatum);
       if (!jm || jm.jahr !== jahr) continue;
-      const betrag = Number(z.betrag) || 0;
       const r = z.rechnung_id ? rechnungMap[z.rechnung_id] : undefined;
-      let netto = betrag;
-      if (r && r.brutto_summe > 0) netto = betrag * (r.netto_summe / r.brutto_summe);
-      monate[jm.monat].einnahmen += netto;
+      // Ohne Rechnungsbezug wird der Ersatzsatz herausgerechnet, statt den
+      // vollen Betrag als Netto zu zaehlen (siehe lib/zahlungAufteilung.ts).
+      monate[jm.monat].einnahmen += teileZahlung(z.betrag, r, ersatzSatz).netto;
     }
 
     for (const a of ausgaben) {
@@ -148,7 +160,7 @@ export default function BwaReport() {
       x.gewinn = r2(x.einnahmen - x.ausgaben);
     });
     return monate;
-  }, [zahlungen, rechnungMap, ausgaben, jahr]);
+  }, [zahlungen, rechnungMap, ausgaben, jahr, ersatzSatz]);
 
   const summen = useMemo(() => {
     let e = 0;
@@ -175,6 +187,12 @@ export default function BwaReport() {
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <FinanzTabs />
+
+        <UstErsatzSatz
+          rechnungen={Object.values(rechnungMap)}
+          onSatz={uebernehmeSatz}
+          summen={zSummen}
+        />
 
         {/* Kopfzeile */}
         <div style={{ marginBottom: 20 }}>

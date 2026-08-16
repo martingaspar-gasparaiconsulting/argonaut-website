@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
+import UstErsatzSatz from "../_components/UstErsatzSatz";
+import { summiereZahlungen, type ErsatzSatz } from "@/lib/zahlungAufteilung";
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-3 — EÜR-REPORT
@@ -131,29 +133,27 @@ export default function EuerReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Welcher Steuersatz gilt fuer Zahlungen ohne Rechnungsbezug? Kommt aus
+  // dem Schalter weiter unten — dort steht auch, warum das der Kunde
+  // entscheiden muss und nicht das System.
+  const [ersatzSatz, setErsatzSatz] = useState<number>(0);
+  const uebernehmeSatz = useCallback((satz: number, _info: ErsatzSatz) => {
+    setErsatzSatz(satz);
+  }, []);
+
   const bereich = useMemo(() => bereichFuer(zeitraum, vonFrei, bisFrei), [zeitraum, vonFrei, bisFrei]);
 
   const ergebnis = useMemo(() => {
     const { von, bis } = bereich;
 
-    // EINNAHMEN aus Zahlungen (Netto/USt über die Rechnung aufteilen)
-    let einnahmenNetto = 0;
-    let vereinnahmteUst = 0;
-    let einnahmenBrutto = 0;
-    for (const z of zahlungen) {
-      const d = z.zahlungsdatum;
-      if (!d || d < von || d > bis) continue;
-      const betrag = Number(z.betrag) || 0;
-      einnahmenBrutto += betrag;
-      const r = z.rechnung_id ? rechnungMap[z.rechnung_id] : undefined;
-      if (r && r.brutto_summe > 0) {
-        einnahmenNetto += betrag * (r.netto_summe / r.brutto_summe);
-        vereinnahmteUst += betrag * (r.mwst_summe / r.brutto_summe);
-      } else {
-        // Keine Rechnungsinfo -> vorsichtig als Netto behandeln
-        einnahmenNetto += betrag;
-      }
-    }
+    // EINNAHMEN aus Zahlungen. Die Aufteilung in Netto und Umsatzsteuer
+    // liegt in lib/zahlungAufteilung.ts — dort auch der Fall, dass eine
+    // Zahlung keiner Rechnung zugeordnet ist. Frueher wurde sie schlicht
+    // als Netto gezaehlt: der Gewinn zu hoch, die vereinnahmte Steuer weg.
+    const zSummen = summiereZahlungen(zahlungen, rechnungMap, ersatzSatz, von, bis);
+    const einnahmenNetto = zSummen.netto;
+    const vereinnahmteUst = zSummen.ust;
+    const einnahmenBrutto = zSummen.brutto;
 
     // AUSGABEN (Netto + Vorsteuer herausrechnen), zusätzlich nach Kategorie
     let ausgabenNetto = 0;
@@ -187,8 +187,9 @@ export default function EuerReport() {
       gewinn: r2(einnahmenNetto - ausgabenNetto),
       ustZahllast: r2(vereinnahmteUst - vorsteuer),
       kategorien,
+      zSummen,
     };
-  }, [zahlungen, rechnungMap, ausgaben, bereich]);
+  }, [zahlungen, rechnungMap, ausgaben, bereich, ersatzSatz]);
 
   const gewinnPositiv = ergebnis.gewinn >= 0;
   const ausgabenSummeNetto = ergebnis.ausgabenNetto || 1;
@@ -274,6 +275,16 @@ export default function EuerReport() {
           Zeitraum: {new Date(bereich.von).toLocaleDateString("de-DE")} –{" "}
           {new Date(bereich.bis).toLocaleDateString("de-DE")}
         </p>
+
+        {/* Der Umschalter fuer Zahlungen ohne Rechnungsbezug. Hier steht er
+            MIT Auswahlfeld — die Wahl wirkt auch auf BWA, Kennzahlen und
+            Export, die denselben Baustein nur als Anzeige einbinden. */}
+        <UstErsatzSatz
+          rechnungen={Object.values(rechnungMap)}
+          onSatz={uebernehmeSatz}
+          summen={laden ? null : ergebnis.zSummen}
+          schalter
+        />
 
         {laden ? (
           <div style={{ color: C.textDim, padding: "40px 0", textAlign: "center" }}>

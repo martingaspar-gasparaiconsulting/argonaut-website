@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
+import UstErsatzSatz from "../_components/UstErsatzSatz";
+import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-5a — EXPORT (CSV)
@@ -182,6 +184,15 @@ export default function ExportSeite() {
   const bereich = useMemo(() => bereichFuer(zeitraum, vonFrei, bisFrei), [zeitraum, vonFrei, bisFrei]);
 
   // Zeilen für Export + Zusammenfassung
+  // Steuersatz fuer Zahlungen ohne Rechnungsbezug — eingestellt in der EUER.
+  const [ersatzSatz, setErsatzSatz] = useState<number>(0);
+  const uebernehmeSatz = useCallback((satz: number) => setErsatzSatz(satz), []);
+
+  const zSummen = useMemo(
+    () => summiereZahlungen(zahlungen, rechnungMap, ersatzSatz, bereich.von, bereich.bis),
+    [zahlungen, rechnungMap, ersatzSatz, bereich],
+  );
+
   const zeilen = useMemo(() => {
     const { von, bis } = bereich;
     const out: {
@@ -205,18 +216,17 @@ export default function ExportSeite() {
       if (!d || d < von || d > bis) continue;
       const betrag = Number(z.betrag) || 0;
       const r = z.rechnung_id ? rechnungMap[z.rechnung_id] : undefined;
-      let netto = betrag;
-      let ust = 0;
-      let satz = 0;
+      // Ohne Rechnungsbezug stand hier frueher ust = 0 und satz = 0 — der
+      // Beleg behauptete also ausdruecklich, es sei keine Umsatzsteuer
+      // angefallen. Jetzt greift der Ersatzsatz (lib/zahlungAufteilung.ts).
+      const auf = teileZahlung(betrag, r, ersatzSatz);
+      const netto = auf.netto;
+      const ust = auf.ust;
+      const satz = auf.satz;
       let belegNr = "";
       let partner = "";
       if (r) {
         belegNr = r.rechnungsnummer || "";
-        if (r.brutto_summe > 0) {
-          netto = betrag * (r.netto_summe / r.brutto_summe);
-          ust = betrag * (r.mwst_summe / r.brutto_summe);
-        }
-        if (r.netto_summe > 0) satz = Math.round((r.mwst_summe / r.netto_summe) * 100);
         partner = (r.firma_id && firmaMap[r.firma_id]) || (r.kontakt_id && kontaktMap[r.kontakt_id]) || "";
       }
       out.push({
@@ -261,7 +271,7 @@ export default function ExportSeite() {
 
     out.sort((x, y) => (x.sort < y.sort ? -1 : x.sort > y.sort ? 1 : 0));
     return out;
-  }, [zahlungen, rechnungMap, kontaktMap, firmaMap, ausgaben, bereich]);
+  }, [zahlungen, rechnungMap, kontaktMap, firmaMap, ausgaben, bereich, ersatzSatz]);
 
   const zusammenfassung = useMemo(() => {
     let einnahmen = 0;
@@ -337,6 +347,12 @@ export default function ExportSeite() {
     >
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <FinanzTabs />
+
+        <UstErsatzSatz
+          rechnungen={Object.values(rechnungMap)}
+          onSatz={uebernehmeSatz}
+          summen={zSummen}
+        />
 
         <div style={{ marginBottom: 20 }}>
           <h1
