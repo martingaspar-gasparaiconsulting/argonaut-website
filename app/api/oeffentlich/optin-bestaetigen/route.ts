@@ -96,7 +96,7 @@ export async function GET(req: Request) {
 
     // Funnel P1: stammt der Kontakt von einer Landingpage, Bestaetigung zaehlen
     // (A-B: mit der Variante, die der Kontakt bei der Anmeldung gesehen hat).
-    await protokolliereLpEreignis(admin, ab.owner_user_id, ab.landingpage_id, 'bestaetigung', ab.variante);
+    await protokolliereLpEreignis(admin, ab.owner_user_id, ab.landingpage_id, 'bestaetigung', ab.variante, req.headers);
 
     // Verzahnung (Paket 2c): Ist beim Betrieb eine Willkommens-Sequenz
     // hinterlegt (optin_sequenz_id) und aktiv, tritt der frisch bestaetigte

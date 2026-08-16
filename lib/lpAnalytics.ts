@@ -12,6 +12,8 @@ export type LpEreignisTyp = 'aufruf' | 'anmeldung' | 'bestaetigung';
 export type LpEreignis = {
   landingpage_id: string | null;
   typ: string | null;
+  /** Anonyme Tageskennung; NULL bei Altdaten (dann zaehlt jede Zeile einzeln). */
+  besucher_hash?: string | null;
 };
 
 export type LpFunnel = {
@@ -31,6 +33,42 @@ export type LpFunnelGesamt = {
   quoteBestaetigung: number;
 };
 
+// ---------------------------------------------------------------------------
+// ENTDOPPELUNG
+//
+// Ohne sie zaehlt jeder Reload als neuer Aufruf. Das druckt die
+// Conversion-Quote UND blaeht die Fallzahl im A-B-Signifikanztest auf — der
+// meldet dann zu frueh ein Ergebnis und fuehrt zur falschen Variante.
+//
+// Die Regel ist rueckwaertskompatibel: hat ein Ereignis eine Besucherkennung,
+// zaehlt dieselbe Kennung je Gruppe und Ereignistyp nur EINMAL. Hat es keine
+// (Altdaten vor dem 16.08.26), zaehlt die Zeile wie bisher einzeln. So
+// verschwinden keine alten Zahlen ruecklings aus den Auswertungen.
+// ---------------------------------------------------------------------------
+
+/** Sammelt entdoppelte Zaehlerstaende je Gruppe. */
+export class EindeutigZaehler {
+  private gesehen = new Set<string>();
+  private stand = new Map<string, number>();
+
+  /** @returns true, wenn das Ereignis gezaehlt wurde (also kein Duplikat war). */
+  zaehle(gruppe: string, typ: string, besucherHash?: string | null): boolean {
+    const hash = (besucherHash ?? '').trim();
+    if (hash) {
+      const schluessel = `${gruppe}|${typ}|${hash}`;
+      if (this.gesehen.has(schluessel)) return false;
+      this.gesehen.add(schluessel);
+    }
+    const k = `${gruppe}|${typ}`;
+    this.stand.set(k, (this.stand.get(k) ?? 0) + 1);
+    return true;
+  }
+
+  wert(gruppe: string, typ: string): number {
+    return this.stand.get(`${gruppe}|${typ}`) ?? 0;
+  }
+}
+
 /** Prozent mit einer Nachkommastelle; Nenner <= 0 -> 0. */
 export function prozent(zaehler: number, nenner: number): number {
   if (!nenner || nenner <= 0) return 0;
@@ -47,28 +85,25 @@ export function funnelJeLandingpage(
   ereignisse: LpEreignis[],
   landingpageIds: string[],
 ): LpFunnel[] {
-  const zaehler = new Map<string, { aufrufe: number; anmeldungen: number; bestaetigungen: number }>();
-  for (const id of landingpageIds) {
-    zaehler.set(id, { aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 });
-  }
+  const bekannt = new Set(landingpageIds);
+  const z = new EindeutigZaehler();
   for (const e of ereignisse || []) {
     const id = e?.landingpage_id;
-    if (!id) continue;
-    const eintrag = zaehler.get(id);
-    if (!eintrag) continue;
-    if (e.typ === 'aufruf') eintrag.aufrufe++;
-    else if (e.typ === 'anmeldung') eintrag.anmeldungen++;
-    else if (e.typ === 'bestaetigung') eintrag.bestaetigungen++;
+    if (!id || !bekannt.has(id)) continue;
+    if (e.typ !== 'aufruf' && e.typ !== 'anmeldung' && e.typ !== 'bestaetigung') continue;
+    z.zaehle(id, e.typ, e.besucher_hash);
   }
   return landingpageIds.map((id) => {
-    const z = zaehler.get(id) as { aufrufe: number; anmeldungen: number; bestaetigungen: number };
+    const aufrufe = z.wert(id, 'aufruf');
+    const anmeldungen = z.wert(id, 'anmeldung');
+    const bestaetigungen = z.wert(id, 'bestaetigung');
     return {
       landingpage_id: id,
-      aufrufe: z.aufrufe,
-      anmeldungen: z.anmeldungen,
-      bestaetigungen: z.bestaetigungen,
-      quoteAnmeldung: prozent(z.anmeldungen, z.aufrufe),
-      quoteBestaetigung: prozent(z.bestaetigungen, z.anmeldungen),
+      aufrufe,
+      anmeldungen,
+      bestaetigungen,
+      quoteAnmeldung: prozent(anmeldungen, aufrufe),
+      quoteBestaetigung: prozent(bestaetigungen, anmeldungen),
     };
   });
 }
@@ -98,7 +133,7 @@ export function berlinTag(iso: string): string {
  * Pure + node-testbar (Referenzdatum wird uebergeben).
  */
 export function tagesreihe(
-  ereignisse: { typ: string | null; created_at?: string | null }[],
+  ereignisse: { typ: string | null; created_at?: string | null; besucher_hash?: string | null }[],
   bisDatumIso: string,
   tage = 30,
 ): TagPunkt[] {
@@ -112,22 +147,24 @@ export function tagesreihe(
     d.setUTCDate(d.getUTCDate() - i);
     tageListe.push(d.toISOString().slice(0, 10));
   }
-  const map = new Map<string, { aufrufe: number; anmeldungen: number; bestaetigungen: number }>();
-  for (const t of tageListe) map.set(t, { aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 });
+  // Entdoppelt wird JE TAG: wer an drei Tagen wiederkommt, zaehlt dreimal —
+  // das ist gewollt. Nur der fuenfte Reload am selben Tag faellt weg.
+  const bekannt = new Set(tageListe);
+  const z = new EindeutigZaehler();
   for (const e of ereignisse || []) {
     const roh = e?.created_at;
     if (!roh) continue;
     const tag = berlinTag(String(roh));
-    const eintrag = map.get(tag);
-    if (!eintrag) continue;
-    if (e.typ === 'aufruf') eintrag.aufrufe++;
-    else if (e.typ === 'anmeldung') eintrag.anmeldungen++;
-    else if (e.typ === 'bestaetigung') eintrag.bestaetigungen++;
+    if (!bekannt.has(tag)) continue;
+    if (e.typ !== 'aufruf' && e.typ !== 'anmeldung' && e.typ !== 'bestaetigung') continue;
+    z.zaehle(tag, e.typ, e.besucher_hash);
   }
-  return tageListe.map((t) => {
-    const z = map.get(t) as { aufrufe: number; anmeldungen: number; bestaetigungen: number };
-    return { datum: t, aufrufe: z.aufrufe, anmeldungen: z.anmeldungen, bestaetigungen: z.bestaetigungen };
-  });
+  return tageListe.map((t) => ({
+    datum: t,
+    aufrufe: z.wert(t, 'aufruf'),
+    anmeldungen: z.wert(t, 'anmeldung'),
+    bestaetigungen: z.wert(t, 'bestaetigung'),
+  }));
 }
 
 /** Summiert mehrere Funnel zu einer Gesamt-Uebersicht. */
@@ -160,20 +197,23 @@ export type VariantenFunnel = {
   quoteGesamt: number;         // Bestaetigungen / Aufrufe (%) — End-to-End-Conversion
 };
 
-export type VariantenEreignis = { typ: string | null; variante?: string | null };
+export type VariantenEreignis = { typ: string | null; variante?: string | null; besucher_hash?: string | null };
 
 /** Zaehlt die Ereignisse EINER Landingpage getrennt nach Variante A und B. */
 export function funnelJeVariante(ereignisse: VariantenEreignis[]): { A: VariantenFunnel; B: VariantenFunnel } {
-  const mk = () => ({ aufrufe: 0, anmeldungen: 0, bestaetigungen: 0 });
-  const a = mk();
-  const b = mk();
+  // HIER ist die Entdoppelung am wichtigsten: der Signifikanztest weiter
+  // unten rechnet mit diesen Zahlen als Fallzahl. Mehrfach gezaehlte Reloads
+  // taeuschen ihm mehr Stichprobe vor, als es gibt — er meldet dann zu frueh
+  // einen Sieger.
+  const z = new EindeutigZaehler();
   for (const e of ereignisse || []) {
-    const ziel = e?.variante === 'A' ? a : e?.variante === 'B' ? b : null;
-    if (!ziel) continue;
-    if (e.typ === 'aufruf') ziel.aufrufe++;
-    else if (e.typ === 'anmeldung') ziel.anmeldungen++;
-    else if (e.typ === 'bestaetigung') ziel.bestaetigungen++;
+    const v = e?.variante === 'A' ? 'A' : e?.variante === 'B' ? 'B' : null;
+    if (!v) continue;
+    if (e.typ !== 'aufruf' && e.typ !== 'anmeldung' && e.typ !== 'bestaetigung') continue;
+    z.zaehle(v, e.typ, e.besucher_hash);
   }
+  const a = { aufrufe: z.wert('A', 'aufruf'), anmeldungen: z.wert('A', 'anmeldung'), bestaetigungen: z.wert('A', 'bestaetigung') };
+  const b = { aufrufe: z.wert('B', 'aufruf'), anmeldungen: z.wert('B', 'anmeldung'), bestaetigungen: z.wert('B', 'bestaetigung') };
   const fin = (z: { aufrufe: number; anmeldungen: number; bestaetigungen: number }): VariantenFunnel => ({
     ...z,
     quoteAnmeldung: prozent(z.anmeldungen, z.aufrufe),

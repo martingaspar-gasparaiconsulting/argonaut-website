@@ -100,7 +100,9 @@ export async function GET(req: Request) {
     // damit Reloads die Aufrufe nicht künstlich hochzählen. Cookie lpa_<id> unten.
     const schonGezaehlt = schonAlsAufrufGezaehlt(req, lp.id);
     if (!schonGezaehlt) {
-      await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf', variante);
+      // req.headers: Grundlage der anonymen Tageskennung — ohne sie zaehlt
+      // jeder Reload als neuer Aufruf (siehe lib/besucherKennung.ts).
+      await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'aufruf', variante, req.headers);
     }
 
     const { data: prof } = await db
@@ -206,7 +208,7 @@ export async function POST(req: Request) {
     });
 
     // Funnel: Anmeldung (Opt-in gestartet) zaehlen (nicht-blockierend, mit variante).
-    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'anmeldung', variante);
+    await protokolliereLpEreignis(db, lp.owner_user_id, lp.id, 'anmeldung', variante, req.headers);
 
     return NextResponse.json({ ok: true, status: 'bestaetigung_gesendet' });
   } catch (e: unknown) {
