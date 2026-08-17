@@ -33,7 +33,7 @@ export default async function LeadsPage() {
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.31vw, 21px)', margin: 0 }}>Alle eingehenden Anfragen und Ihr Bestand an einem Ort - vom ersten Kontakt bis zum gewonnenen Auftrag.</p>
         </section>
 
-        <LeadsClient leads={leads} />
+        <LeadsClient leads={leads} userId={user.id} />
       </main>
     </div>
   )

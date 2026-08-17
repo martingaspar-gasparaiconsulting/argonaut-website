@@ -1,8 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, useEffect, type CSSProperties, type FormEvent } from 'react'
 import FristAmpel from '../_components/FristAmpel'
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder'
+import { NurVoll } from '../_components/Ansicht'
+import type { EigenesFeld } from '@/lib/eigeneFelder'
 import LeadsAuge from './LeadsAuge'
 
 export type Lead = {
@@ -86,13 +89,36 @@ const labelStyle: CSSProperties = { fontSize: 'clamp(12px, 1.06vw, 17px)', textT
 const cardStyle: CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: '14px', padding: '18px 20px' }
 const inputStyle: CSSProperties = { width: '100%', padding: '10px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', marginBottom: '12px', background: 'rgba(255,255,255,0.06)', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)' }
 
-export default function LeadsClient({ leads }: { leads: Lead[] }) {
+// Der Modul-Schluessel fuer die eigenen Felder — identisch mit dem
+// Tabellennamen, wie bei allen anderen Modulen (siehe kfz: 'kfz_fahrzeuge').
+const MODUL = 'leads'
+
+export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: string }) {
   const [status, setStatus] = useState<'alle' | StatusKey>('alle')
   const [herkunft, setHerkunft] = useState<'alle' | 'neu' | 'bestand'>('alle')
   const [modalOpen, setModalOpen] = useState(false)
   const [speichert, setSpeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
+  // Eigene Felder: die Definitionen des Betriebs und die Werte je Lead.
+  const [felder, setFelder] = useState<EigenesFeld[]>([])
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({})
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({})
   const router = useRouter()
+
+  // Die Seite laedt die Leads serverseitig — die eigenen Felder kommen hier
+  // nach. Faellt das aus, bleibt die Liste vollstaendig; nur die Zusatzfelder
+  // fehlen. Deshalb bewusst ohne Fehleranzeige.
+  useEffect(() => {
+    let abgebrochen = false
+    ;(async () => {
+      try {
+        const f = await ladeFelder(MODUL)
+        const w = await ladeWerte(MODUL, leads.map((l) => l.id))
+        if (!abgebrochen) { setFelder(f); setWerteMap(w) }
+      } catch { /* eigene Felder sind optional */ }
+    })()
+    return () => { abgebrochen = true }
+  }, [leads])
 
   const nachHerkunft = leads.filter((l) =>
     herkunft === 'alle' ? true : herkunft === 'bestand' ? l.ist_bestand === true : l.ist_bestand !== true
@@ -134,6 +160,17 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
         body: JSON.stringify(body),
       })
       if (res.ok) {
+        // Die Route gibt den angelegten Lead zurueck. Ohne seine ID koennten
+        // die eingegebenen Zusatzfelder nirgends haengen — sie waeren still
+        // verloren, und der Nutzer haette sie umsonst ausgefuellt.
+        try {
+          const angelegt = await res.json().catch(() => null)
+          const neueId = Array.isArray(angelegt?.data) ? angelegt.data[0]?.id : angelegt?.data?.id
+          if (neueId && Object.keys(nmExtra).length > 0) {
+            await speichereWerte(MODUL, String(neueId), userId, nmExtra)
+          }
+        } catch { /* eigene Felder sind optional */ }
+        setNmExtra({})
         setModalOpen(false)
         router.refresh()
       } else {
@@ -152,6 +189,10 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
       <style>{css}</style>
 
       <LeadsAuge leads={leads} />
+
+      {/* Eigene Felder anlegen und benennen — dieselbe Stelle wie in allen
+          anderen Modulen, damit man sie dort sucht, wo man sie kennt. */}
+      <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={() => router.refresh()} />
 
       <div style={{ marginBottom: '22px' }}>
         <p style={labelStyle}>Herkunft</p>
@@ -207,6 +248,8 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
                   {l.email ? <span>E-Mail: {l.email}</span> : null}
                 </div>
 
+                <EigeneFelderAnzeige felder={felder} werte={werteMap[l.id]} />
+
                 <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '8px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>
                   {l.dienstleistung ? <span>Leistung: {l.dienstleistung}</span> : null}
                   {(l.menge || l.einheit) ? <span>Menge: {(l.menge || '') + ' ' + (l.einheit || '')}</span> : null}
@@ -256,6 +299,10 @@ export default function LeadsClient({ leads }: { leads: Lead[] }) {
 
                 <p style={labelStyle}>Nachricht / Notiz</p>
                 <textarea name="nachricht" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+
+                <NurVoll>
+                  <EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((alt) => ({ ...alt, [fid]: w }))} inpStyle={inputStyle} labStyle={labelStyle} />
+                </NurVoll>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '8px 0 20px' }}>
                   <label style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '8px', alignItems: 'center', cursor: 'pointer' }}>
