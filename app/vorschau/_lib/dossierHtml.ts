@@ -151,6 +151,12 @@ export function dossierHtml(input: string): string {
   const kat = b ? b.kategorie : '';
   const slug = b ? b.slug : '';
   const bau = b ? baukastenFor(kat) : { stack: KERN, spezial: [] as Baustein[], rollen: { voll: '', std: '', self: '' } };
+  // 16.08.26: Der Kern-Baustein hiess bis heute „Ihre KI-Crew" und wurde von
+  // diesem Filter aus dem Dossier gehalten. Seit der Umbenennung in
+  // „KI-Assistent & Automatik" greift der Filter bei ihm nicht mehr — der
+  // Baustein erscheint jetzt im Dossier, und das ist richtig so: er gehoert
+  // zum Angebot. Der Filter bleibt als Sicherung stehen, falls irgendwo doch
+  // noch ein altes Wording auftaucht.
   const stack = bau.stack.filter((m) => !/KI[- ]?Crew|Agent/i.test(m.name));
   const spezial = bau.spezial;
   const schmerzen = b?.schmerzen ?? [];

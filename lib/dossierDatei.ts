@@ -23,8 +23,15 @@
 /**
  * eb1–eb3: frueherer heller Stand.
  * eb4: dunkel, saubere Seitenumbrueche, Ueberschrift bleibt bei ihrem Block.
+ * eb5 (16.08.26): Der Kern-Baustein heisst nicht mehr „Ihre KI-Crew", sondern
+ *   „KI-Assistent & Automatik" — und faellt damit nicht mehr durch den
+ *   Wording-Filter in dossierHtml. Der Inhalt der Dossiers aendert sich also,
+ *   ohne dass am Layout etwas anders waere. Ohne diese neue Nummer laegen die
+ *   alten Dateien weiter im Bucket und niemand bekaeme die Aenderung je zu
+ *   sehen. Bereits erzeugte eb4-Dateien bleiben liegen, stoeren nicht und
+ *   werden nicht mehr ausgeliefert.
  */
-export const DOSSIER_VERSION = 'eb4';
+export const DOSSIER_VERSION = 'eb5';
 
 /** Der Dateiname im Bucket `dossiers` fuer einen Branchen-Schluessel. */
 export function dossierDateiPfad(key: string): string {

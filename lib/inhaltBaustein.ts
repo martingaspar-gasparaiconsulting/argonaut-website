@@ -252,12 +252,17 @@ export type EbookAbschnitt = {
   pflicht: boolean;
 };
 
+/**
+ * ACHTUNG: Diese Texte stehen im fertigen Kunden-PDF — hier gehoeren echte
+ * Umlaute hin, keine ae/oe/ue-Umschrift. (Am 16.08. im Probedruck aufgefallen:
+ * im Inhaltsverzeichnis stand „Speziell FUER Ihre Branche".)
+ */
 export const ABSCHNITT_UEBERSCHRIFT: Record<AbschnittArt, string> = {
   vorwort: 'Vorwort',
   kategorie: 'Ihre Branche',
   kern: 'Was jeder Betrieb bekommt',
-  branche: 'Speziell fuer Ihre Branche',
-  extra: 'Was Sie zusaetzlich dazubuchen koennen',
+  branche: 'Speziell für Ihre Branche',
+  extra: 'Was Sie zusätzlich dazubuchen können',
 };
 
 /**
