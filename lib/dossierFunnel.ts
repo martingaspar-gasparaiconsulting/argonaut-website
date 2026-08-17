@@ -57,8 +57,10 @@ export async function starteDossierOptin(
       await db.from('dossier_leads').insert({ email, name, branche, status: 'unbestaetigt', token, quelle });
     }
 
+    // 16.08.26: Der Betreff duzte als einziger Text der ganzen Strecke — der
+    // Mail-Inhalt siezt seit jeher. Kundentexte siezen durchgaengig.
     const url = `${BASIS_URL}/api/oeffentlich/dossier-bestaetigen?token=${token}`;
-    await sendeMail({ an: email, betreff: 'Bitte bestätige deine Anfrage — ARGONAUT OS', html: dossierBestaetigenHtml(name, url) });
+    await sendeMail({ an: email, betreff: 'Bitte bestätigen Sie Ihre Anfrage — ARGONAUT OS', html: dossierBestaetigenHtml(name, url) });
     return 'bestaetigung_gesendet';
   } catch {
     return 'fehler';

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
 import Footer from '../_components/Footer'
+import DossierFreebie from '@/components/DossierFreebie'
 
 // ============================================================================
 // ARGONAUT OS · app/vergleich/page.tsx — FUNKTIONEN-Showcase
@@ -217,6 +218,17 @@ export default function FunktionenPage() {
               greift ineinander. Eine Oberfläche, ein Login, ein Ansprechpartner. Und es wird laufend mehr.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Freebie — dieselbe Double-Opt-in-Strecke wie auf den Branchenseiten.
+          Ohne Branche wird das allgemeine Dossier angefordert. */}
+      <section style={{ padding: '10px 0 0' }}>
+        <div className="fk-wrap">
+          <DossierFreebie
+            titel="Alles auf einen Blick — als PDF"
+            text="Was ARGONAUT übernimmt, was Sie noch selbst tun und was das im Jahr ausmacht. Kein Verkaufsgespräch, keine Kosten."
+          />
         </div>
       </section>
 
