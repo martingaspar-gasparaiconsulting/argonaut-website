@@ -13,7 +13,7 @@ import {
 } from "@/lib/ernte";
 import { markttagPdf } from "@/lib/markttagPdf";
 import { offeneBuchungen } from "@/lib/umsatzBuchung";
-import { findeArtikelId, artikelStammAusErnte, neuerBestand } from "@/lib/lagerZugang";
+import { ordneArtikelZu, darfBuchen, istSicher, artikelStammAusErnte, neuerBestand, type ArtikelLite } from "@/lib/lagerZugang";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -37,7 +37,7 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-interface Ernte { id: string; schlag_id: string | null; kultur: string; datum: string | null; menge: number | null; einheit: string | null; qualitaet: string | null; lagerort: string | null; status: string; notiz: string | null; lager_gebucht: boolean; }
+interface Ernte { id: string; schlag_id: string | null; artikel_id: string | null; kultur: string; datum: string | null; menge: number | null; einheit: string | null; qualitaet: string | null; lagerort: string | null; status: string; notiz: string | null; lager_gebucht: boolean; }
 interface Produkt { id: string; bezeichnung: string; kategorie: string | null; einheit: string; preis: number | null; mwst_satz: number | null; bio: boolean; herkunft: string; verfuegbar: boolean; notiz: string | null; }
 interface Verkauf { id: string; produkt_id: string | null; bezeichnung: string | null; datum: string | null; ort: string | null; menge: number | null; einzelpreis: number | null; mwst_satz: number | null; }
 interface SchlagKurz { id: string; bezeichnung: string; }
@@ -48,8 +48,8 @@ function num(x: number | null): string { return (Number(x) || 0).toLocaleString(
 function eur(x: number | null): string { return (Number(x) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" }); }
 function dstr(s: string | null): string { return s ? new Date(s).toLocaleDateString("de-DE") : "—"; }
 
-type EForm = { schlag_id: string; kultur: string; datum: string; menge: string; einheit: string; qualitaet: string; lagerort: string; status: string; notiz: string };
-const LEER_E: EForm = { schlag_id: "", kultur: "", datum: heute(), menge: "", einheit: "kg", qualitaet: "", lagerort: "", status: "gelagert", notiz: "" };
+type EForm = { schlag_id: string; artikel_id: string; kultur: string; datum: string; menge: string; einheit: string; qualitaet: string; lagerort: string; status: string; notiz: string };
+const LEER_E: EForm = { schlag_id: "", artikel_id: "", kultur: "", datum: heute(), menge: "", einheit: "kg", qualitaet: "", lagerort: "", status: "gelagert", notiz: "" };
 type PForm = { bezeichnung: string; kategorie: string; einheit: string; preis: string; mwst_satz: string; bio: boolean; herkunft: string; verfuegbar: boolean; notiz: string };
 const LEER_P: PForm = { bezeichnung: "", kategorie: "Gemüse", einheit: "kg", preis: "", mwst_satz: "7", bio: false, herkunft: "eigen", verfuegbar: true, notiz: "" };
 
@@ -66,6 +66,9 @@ export default function ErnteSeite() {
   const [eModal, setEModal] = useState(false);
   const [eEdit, setEEdit] = useState<string | null>(null);
   const [eForm, setEForm] = useState<EForm>(LEER_E);
+  // Die Lager-Artikel fuer das Zuordnungs-Feld. Frueher wurden sie erst
+  // beim Buchen geladen — fuer eine Auswahl braucht die Maske sie vorher.
+  const [artikelListe, setArtikelListe] = useState<ArtikelLite[]>([]);
   const [pModal, setPModal] = useState(false);
   const [pEdit, setPEdit] = useState<string | null>(null);
   const [pForm, setPForm] = useState<PForm>(LEER_P);
@@ -90,16 +93,18 @@ export default function ErnteSeite() {
 
   async function ladeAlles() {
     setLaden(true);
-    const [e, p, v, s] = await Promise.all([
+    const [e, p, v, s, ar] = await Promise.all([
       supabase.from("ernte_ernte").select("*").order("datum", { ascending: false }),
       supabase.from("markt_produkt").select("*").order("bezeichnung", { ascending: true }),
       supabase.from("markt_verkauf").select("*").order("datum", { ascending: false }),
       supabase.from("schlag").select("id, bezeichnung").order("bezeichnung", { ascending: true }),
+      supabase.from("artikel").select("id, bezeichnung, artikelnummer").order("bezeichnung", { ascending: true }),
     ]);
     if (!e.error && e.data) setErnten(e.data as Ernte[]);
     if (!p.error && p.data) setProdukte(p.data as Produkt[]);
     if (!v.error && v.data) setVerkaeufe(v.data as Verkauf[]);
     if (!s.error && s.data) setSchlaege(s.data as SchlagKurz[]); // Schlagkartei optional
+    if (!ar.error && ar.data) setArtikelListe(ar.data as ArtikelLite[]); // Lager optional
     const erRows = (!e.error && e.data ? e.data : []) as Ernte[];
     setFelder(await ladeFelder(MODUL));
     setWerteMap(await ladeWerte(MODUL, erRows.map((r) => r.id)));
@@ -139,9 +144,15 @@ export default function ErnteSeite() {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id ?? userId;
       if (!uid) { setFehler("Nicht eingeloggt."); setBusy(false); return; }
-      const { data: artsRaw } = await supabase.from("artikel").select("id, bezeichnung, aktueller_bestand");
-      const arts = (artsRaw ?? []) as { id: string; bezeichnung: string | null; aktueller_bestand: number | null }[];
-      const treffer = findeArtikelId(e.kultur, arts);
+      const { data: artsRaw } = await supabase.from("artikel").select("id, bezeichnung, artikelnummer, aktueller_bestand");
+      const arts = (artsRaw ?? []) as { id: string; bezeichnung: string | null; artikelnummer: string | null; aktueller_bestand: number | null }[];
+
+      // Rangfolge: gewaehlter Artikel > Artikelnummer > Name. Ein gewaehlter
+      // Artikel, den es nicht mehr gibt, faellt NICHT auf den Namen zurueck —
+      // die Ernte landete sonst auf einem Artikel, den niemand gemeint hat.
+      const zuordnung = ordneArtikelZu({ artikel_id: e.artikel_id, kultur: e.kultur }, arts);
+      if (!darfBuchen(zuordnung)) { setFehler(zuordnung.hinweis); setBusy(false); return; }
+      const treffer = zuordnung.artikelId;
       if (treffer) {
         const alt = arts.find((a) => a.id === treffer)?.aktueller_bestand ?? 0;
         const { error } = await supabase.from("artikel").update({ aktueller_bestand: neuerBestand(alt, menge) }).eq("id", treffer);
@@ -154,7 +165,10 @@ export default function ErnteSeite() {
       }
       const { error: uErr } = await supabase.from("ernte_ernte").update({ lager_gebucht: true }).eq("id", e.id);
       if (uErr) { setFehler("Markieren fehlgeschlagen: " + uErr.message); setBusy(false); return; }
-      setHinweis(`${num(menge)} ${e.einheit ?? ""} „${e.kultur}" ins Lager gebucht${treffer ? " (Bestand erhöht)" : " (neuer Artikel angelegt)"}.`);
+      // Der Weg der Zuordnung wird mitgesagt: „ueber den Namen gefunden" ist
+      // eine Vermutung, „gewaehlter Artikel" eine Entscheidung. Der Betrieb
+      // soll den Unterschied sehen, statt ihn bei der Inventur zu entdecken.
+      setHinweis(`${num(menge)} ${e.einheit ?? ""} „${e.kultur}" ins Lager gebucht${treffer ? (istSicher(zuordnung) ? " (Bestand erhöht)" : " — " + zuordnung.hinweis) : " (neuer Artikel angelegt)"}.`);
       await ladeAlles();
     } catch (err: any) {
       setFehler("Fehler: " + (err?.message || "unbekannt"));
@@ -170,14 +184,14 @@ export default function ErnteSeite() {
   // ---------- Ernte ----------
   function openErnte(e?: Ernte) {
     setEEdit(e?.id ?? null);
-    setEForm(e ? { schlag_id: e.schlag_id ?? "", kultur: e.kultur ?? "", datum: e.datum ?? heute(), menge: e.menge != null ? String(e.menge) : "", einheit: e.einheit ?? "kg", qualitaet: e.qualitaet ?? "", lagerort: e.lagerort ?? "", status: e.status ?? "gelagert", notiz: e.notiz ?? "" } : LEER_E);
+    setEForm(e ? { schlag_id: e.schlag_id ?? "", artikel_id: e.artikel_id ?? "", kultur: e.kultur ?? "", datum: e.datum ?? heute(), menge: e.menge != null ? String(e.menge) : "", einheit: e.einheit ?? "kg", qualitaet: e.qualitaet ?? "", lagerort: e.lagerort ?? "", status: e.status ?? "gelagert", notiz: e.notiz ?? "" } : LEER_E);
     setNmExtra(e ? (werteMap[e.id] ?? {}) : {});
     setFehler(null); setEModal(true);
   }
   async function speichereErnte() {
     if (!eForm.kultur.trim()) { setFehler("Kultur ist Pflicht."); return; }
     setBusy(true); setFehler(null);
-    const payload = { schlag_id: eForm.schlag_id || null, kultur: eForm.kultur.trim(), datum: eForm.datum || null, menge: zahl(eForm.menge), einheit: eForm.einheit.trim() || null, qualitaet: eForm.qualitaet.trim() || null, lagerort: eForm.lagerort.trim() || null, status: eForm.status, notiz: eForm.notiz.trim() || null };
+    const payload = { schlag_id: eForm.schlag_id || null, artikel_id: eForm.artikel_id || null, kultur: eForm.kultur.trim(), datum: eForm.datum || null, menge: zahl(eForm.menge), einheit: eForm.einheit.trim() || null, qualitaet: eForm.qualitaet.trim() || null, lagerort: eForm.lagerort.trim() || null, status: eForm.status, notiz: eForm.notiz.trim() || null };
     let error = null as { message: string } | null;
     if (eEdit) {
       error = (await supabase.from("ernte_ernte").update(payload).eq("id", eEdit)).error;
@@ -465,6 +479,20 @@ export default function ErnteSeite() {
               <div><label style={label}>Menge</label><input style={input} value={eForm.menge} onChange={(e) => setEForm({ ...eForm, menge: e.target.value })} inputMode="decimal" /></div>
               <div><label style={label}>Einheit</label><input style={input} value={eForm.einheit} onChange={(e) => setEForm({ ...eForm, einheit: e.target.value })} /></div>
               <NurVoll><div><label style={label}>Qualität / Handelsklasse</label><input style={input} value={eForm.qualitaet} onChange={(e) => setEForm({ ...eForm, qualitaet: e.target.value })} placeholder="z. B. Klasse I" /></div></NurVoll>
+              <div>
+                <label style={label}>Lager-Artikel</label>
+                <select style={input} value={eForm.artikel_id} onChange={(ev) => setEForm({ ...eForm, artikel_id: ev.target.value })}>
+                  <option value="">— über den Namen suchen —</option>
+                  {artikelListe.map((a) => (
+                    <option key={a.id} value={a.id}>{a.bezeichnung ?? a.id}{a.artikelnummer ? ` (${a.artikelnummer})` : ""}</option>
+                  ))}
+                </select>
+                <div style={{ fontSize: 11.5, color: "#8FA3BE", marginTop: 4, lineHeight: 1.45 }}>
+                  Wohin die Menge beim Einlagern gebucht wird. Ohne Auswahl wird über den
+                  Namen gesucht — „Kartoffeln" findet dann aber keine „Speisekartoffeln",
+                  und es entsteht ein zweiter Artikel mit eigenem Bestand.
+                </div>
+              </div>
               <NurVoll><div><label style={label}>Lagerort</label><input style={input} value={eForm.lagerort} onChange={(e) => setEForm({ ...eForm, lagerort: e.target.value })} /></div></NurVoll>
               <NurVoll><div><label style={label}>Schlag (aus Schlagkartei)</label>
                 <select style={input} value={eForm.schlag_id} onChange={(e) => setEForm({ ...eForm, schlag_id: e.target.value })}><option value="">— optional —</option>{schlaege.map((s) => <option key={s.id} value={s.id}>{s.bezeichnung}</option>)}</select>
