@@ -11,7 +11,9 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
-import { QUELLEN, quelle, zahlFelder, textFelder, baueReport, formatWert, reportCsv, type ReportErgebnis } from '@/lib/reportBaukasten';
+import { QUELLEN, quelle, zahlFelder, textFelder, baueReport, formatWert, reportCsv,
+  ZEITRAEUME, zeitraumSpanne, pruefeGespeicherten, reportName,
+  type ReportErgebnis, type ZeitraumKey, type GespeicherterReport } from '@/lib/reportBaukasten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -35,6 +37,13 @@ export default function ReportsSeite() {
   const [erg, setErg] = useState<ReportErgebnis | null>(null);
   const [laden, setLaden] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+
+  // --- Gespeicherte Auswertungen ---
+  const [zeitraum, setZeitraum] = useState<ZeitraumKey>('quartal');
+  const [gespeicherte, setGespeicherte] = useState<GespeicherterReport[]>([]);
+  const [name, setName] = useState('');
+  const [speichert, setSpeichert] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
 
   const q = quelle(quelleKey);
 
@@ -69,6 +78,79 @@ export default function ReportsSeite() {
   useEffect(() => { void auswerten(); /* Erstauswertung mit Defaults */ // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Die gespeicherten Auswertungen holen. Faellt das aus, bleibt der Baukasten
+  // voll benutzbar — nur die Liste fehlt. Deshalb ohne Fehleranzeige.
+  const ladeGespeicherte = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('report_gespeichert')
+        .select('id, name, quelle, metrik, summe_feld, gruppe_feld, zeitraum')
+        .order('name', { ascending: true });
+      setGespeicherte((data as GespeicherterReport[]) ?? []);
+    } catch { /* gespeicherte Auswertungen sind Beiwerk */ }
+  }, []);
+
+  useEffect(() => { void ladeGespeicherte(); }, [ladeGespeicherte]);
+
+  /** Den Zeitraum als Schnellwahl auf Von/Bis anwenden. */
+  function zeitraumWaehlen(key: ZeitraumKey) {
+    setZeitraum(key);
+    const sp = zeitraumSpanne(key, new Date());
+    setVon(sp.von); setBis(sp.bis);
+  }
+
+  async function speichern() {
+    setSpeichert(true); setFehler(null); setMeldung(null);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) { setFehler('Nicht angemeldet.'); setSpeichert(false); return; }
+      const titel = reportName(name, quelleKey, metrik);
+      const { error } = await supabase.from('report_gespeichert').insert({
+        owner_user_id: uid,
+        name: titel,
+        quelle: quelleKey,
+        metrik,
+        summe_feld: metrik === 'summe' ? summeFeld : null,
+        gruppe_feld: gruppeFeld || null,
+        zeitraum,
+      });
+      if (error) throw error;
+      setMeldung(`„${titel}" gespeichert.`);
+      setName('');
+      await ladeGespeicherte();
+    } catch (e) {
+      setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setSpeichert(false); }
+  }
+
+  /**
+   * Eine gespeicherte Auswertung anwenden.
+   * Zeigt sie auf ein Feld, das es nicht mehr gibt, wird das GEMELDET statt
+   * still mit Nullwerten weiterzurechnen — eine Summe von 0 EUR sieht aus wie
+   * ein schlechter Monat, nicht wie ein Fehler.
+   */
+  function anwenden(r: GespeicherterReport) {
+    const pr = pruefeGespeicherten(r);
+    setQuelleKey(pr.konfig.quelleKey);
+    setMetrik(pr.konfig.metrik);
+    setSummeFeld(pr.konfig.summeFeld ?? '');
+    setGruppeFeld(pr.konfig.gruppeFeld ?? '');
+    zeitraumWaehlen(pr.konfig.zeitraum);
+    setErg(null);
+    setFehler(pr.ok ? null : `„${r.name}" wurde angepasst: ${pr.fehler.join(' ')}`);
+    setMeldung(pr.ok ? `„${r.name}" geladen — jetzt auf „Auswerten" klicken.` : null);
+  }
+
+  async function loeschen(r: GespeicherterReport) {
+    if (!window.confirm(`„${r.name}" wirklich löschen?`)) return;
+    try {
+      await supabase.from('report_gespeichert').delete().eq('id', r.id);
+      await ladeGespeicherte();
+      setMeldung(`„${r.name}" gelöscht.`);
+    } catch { setFehler('Löschen fehlgeschlagen.'); }
+  }
+
   const gruppeLabel = q?.felder.find((f) => f.key === gruppeFeld)?.label ?? 'Gesamt';
   const metrikLabel = metrik === 'anzahl' ? 'Anzahl' : `Summe ${q?.felder.find((f) => f.key === summeFeld)?.label ?? ''}`.trim();
 
@@ -86,9 +168,10 @@ export default function ReportsSeite() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Auswertungen</div>
       <h1 style={styles.h1}>🧮 Report-Baukasten</h1>
-      <p style={styles.sub}>Bau dir deine eigene Auswertung: Quelle, Kennzahl, Gruppierung und Zeitraum wählen — ARGONAUT rechnet sofort und du kannst als CSV exportieren.</p>
+      <p style={styles.sub}>Bauen Sie sich Ihre eigene Auswertung: Quelle, Kennzahl, Gruppierung und Zeitraum wählen — ARGONAUT rechnet sofort, exportiert als CSV und merkt sich die Einstellung auf Wunsch unter einem Namen.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {meldung && <div style={styles.ok}>{meldung}</div>}
 
       <div style={styles.card}>
         <div style={styles.grid}>
@@ -116,6 +199,11 @@ export default function ReportsSeite() {
               {textFelder(q).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
             </select>
           </label>
+          <label style={styles.lab}>Zeitraum
+            <select style={styles.inp} value={zeitraum} onChange={(e) => zeitraumWaehlen(e.target.value as ZeitraumKey)}>
+              {ZEITRAEUME.map((z) => <option key={z.key} value={z.key}>{z.label}</option>)}
+            </select>
+          </label>
           <label style={styles.lab}>Von<input type="date" style={styles.inp} value={von} onChange={(e) => setVon(e.target.value)} /></label>
           <label style={styles.lab}>Bis<input type="date" style={styles.inp} value={bis} onChange={(e) => setBis(e.target.value)} /></label>
         </div>
@@ -123,11 +211,47 @@ export default function ReportsSeite() {
           <button style={styles.primaer} disabled={laden} onClick={() => auswerten()}>{laden ? 'Rechnet …' : '📊 Auswerten'}</button>
           {erg && erg.zeilen.length > 0 && <button style={styles.ghost} onClick={csvLaden}>⬇ CSV</button>}
         </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            style={{ ...styles.inp, flex: 1, minWidth: 200 }}
+            placeholder="Name für diese Auswertung (z. B. Offene Posten je Status)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button style={styles.ghost} disabled={speichert} onClick={speichern}>
+            {speichert ? 'Speichert …' : '💾 Merken'}
+          </button>
+        </div>
+        <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 6, lineHeight: 1.45 }}>
+          Gespeichert wird die Einstellung, nicht das Ergebnis — beim nächsten Öffnen
+          rechnet die Auswertung mit den dann aktuellen Zahlen.
+        </div>
       </div>
+
+      {gespeicherte.length > 0 && (
+        <div style={{ ...styles.card, marginTop: 16 }}>
+          <div style={{ color: C.textDim, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 10 }}>
+            Gespeicherte Auswertungen
+          </div>
+          {gespeicherte.map((r) => (
+            <div key={r.id} style={styles.gzeile}>
+              <button style={styles.gname} onClick={() => anwenden(r)}>
+                {r.name}
+                <span style={{ color: C.textDim, fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
+                  {quelle(r.quelle)?.name ?? r.quelle} · {r.metrik === 'summe' ? 'Summe' : 'Anzahl'}
+                  {r.gruppe_feld ? ' · gruppiert' : ''}
+                </span>
+              </button>
+              <button style={styles.gdel} onClick={() => loeschen(r)} title="Löschen">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {erg && (
         erg.zeilen.length === 0 ? (
-          <Leerzustand icon="🧮" titel="Keine Daten im Zeitraum" text="Für diese Quelle und diesen Zeitraum gibt es nichts auszuwerten. Wähle einen anderen Zeitraum oder eine andere Quelle." />
+          <Leerzustand icon="🧮" titel="Keine Daten im Zeitraum" text="Für diese Quelle und diesen Zeitraum gibt es nichts auszuwerten. Wählen Sie einen anderen Zeitraum oder eine andere Quelle." />
         ) : (
           <div style={{ ...styles.card, marginTop: 16 }}>
             <div style={styles.gesamtZeile}>
@@ -175,5 +299,9 @@ const styles: Record<string, CSSProperties> = {
   td: { padding: '10px', verticalAlign: 'middle' },
   balken: { height: 8, borderRadius: 4, background: C.navy, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'inline-block', width: 'calc(100% - 48px)', marginRight: 8, verticalAlign: 'middle' },
   balkenFill: { height: '100%', background: C.gold },
+  ok: { color: C.green, fontSize: 14, background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '4px 0 12px' },
+  gzeile: { display: 'flex', gap: 10, alignItems: 'center', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', marginBottom: 6 },
+  gname: { flex: 1, minWidth: 0, textAlign: 'left', background: 'transparent', border: 'none', color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: 0 },
+  gdel: { background: 'transparent', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: 15, padding: '0 4px' },
   err: { color: C.danger, fontSize: 14, background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', margin: '4px 0 12px' },
 };

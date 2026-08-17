@@ -103,3 +103,126 @@ export function reportCsv(erg: ReportErgebnis, gruppeLabel: string, metrikLabel:
   const zeilen = erg.zeilen.map((z2) => `${String(z2.gruppe).replace(/;/g, ',')};${z2.wert};${z2.anteil}`);
   return [head, ...zeilen, `Gesamt;${erg.gesamt};100`].join('\n');
 }
+
+// ============================================================================
+// GESPEICHERTE AUSWERTUNGEN (16.08.26)
+//
+// Bisher war jede Auswertung nach dem Verlassen der Seite weg. Wer „unsere
+// Monatsauswertung" wollte, klickte sie jedes Mal neu zusammen.
+//
+// Gespeichert wird die EINSTELLUNG, nie das Ergebnis. Sonst zeigte ein Report
+// von gestern die Zahlen von gestern, und niemand wuesste, warum sie nicht zum
+// Cockpit passen.
+//
+// Der Zeitraum wird RELATIV gespeichert („letzte 90 Tage"), nicht als festes
+// Datumspaar. Ein gespeicherter Report soll beim naechsten Oeffnen die
+// aktuellen Zahlen zeigen — ein eingefrorenes Von-Bis waere in drei Monaten
+// wertlos und faellt niemandem auf, weil die Zahlen ja plausibel aussehen.
+// ============================================================================
+
+export type ZeitraumKey = 'monat' | 'quartal' | 'jahr' | 'alles';
+
+export const ZEITRAEUME: Array<{ key: ZeitraumKey; label: string; tage: number | null }> = [
+  { key: 'monat', label: 'Letzte 30 Tage', tage: 30 },
+  { key: 'quartal', label: 'Letzte 90 Tage', tage: 90 },
+  { key: 'jahr', label: 'Letzte 365 Tage', tage: 365 },
+  { key: 'alles', label: 'Ohne Zeitgrenze', tage: null },
+];
+
+export function istZeitraumKey(x: unknown): x is ZeitraumKey {
+  return typeof x === 'string' && ZEITRAEUME.some((z) => z.key === x);
+}
+
+/** Wieviele Tage zurueck? null = keine Grenze. Unbekanntes faellt auf ein Jahr. */
+export function zeitraumTage(key: string | null | undefined): number | null {
+  const t = ZEITRAEUME.find((z) => z.key === key);
+  return t ? t.tage : 365;
+}
+
+/**
+ * Aus einem relativen Zeitraum ein Von-Bis machen.
+ * `heute` wird uebergeben statt hier gelesen — sonst waere die Funktion nicht
+ * testbar und das Ergebnis haenge davon ab, wann jemand hinsieht.
+ */
+export function zeitraumSpanne(key: string | null | undefined, heute: Date): { von: string; bis: string } {
+  const bis = heute.toISOString().slice(0, 10);
+  const tage = zeitraumTage(key);
+  if (tage === null) return { von: '', bis };
+  const von = new Date(heute.getTime() - tage * 86400000).toISOString().slice(0, 10);
+  return { von, bis };
+}
+
+/** Eine Zeile aus `report_gespeichert`. */
+export interface GespeicherterReport {
+  id: string;
+  name: string;
+  quelle: string;
+  metrik: string;
+  summe_feld?: string | null;
+  gruppe_feld?: string | null;
+  zeitraum?: string | null;
+}
+
+export interface KonfigPruefung {
+  ok: boolean;
+  /** Klartext-Beanstandungen — leer heisst brauchbar. */
+  fehler: string[];
+  /** Die bereinigte Konfiguration, so weit sie traegt. */
+  konfig: ReportKonfig & { quelleKey: string; zeitraum: ZeitraumKey };
+}
+
+/**
+ * Ist ein gespeicherter Report noch gueltig?
+ *
+ * DER GRUND, WARUM ES DIESE FUNKTION GIBT: Ein gespeicherter Report zeigt auf
+ * Felder einer Quelle. Faellt spaeter ein Feld aus QUELLEN weg oder wird
+ * umbenannt, rechnet der Report sonst klaglos weiter — nur eben mit
+ * Nullwerten, weil das Feld nicht mehr existiert. Eine Summe von 0 EUR sieht
+ * aus wie ein schlechter Monat, nicht wie ein Fehler. Deshalb wird lieber
+ * laut beanstandet als leise falsch gerechnet.
+ */
+export function pruefeGespeicherten(r: GespeicherterReport | null | undefined): KonfigPruefung {
+  const fehler: string[] = [];
+  const q = quelle(r?.quelle);
+
+  if (!q) {
+    fehler.push(`Die Quelle „${r?.quelle ?? '—'}" gibt es nicht mehr.`);
+    return {
+      ok: false, fehler,
+      konfig: { quelleKey: QUELLEN[0].key, metrik: 'anzahl', summeFeld: null, gruppeFeld: null, zeitraum: 'jahr' },
+    };
+  }
+
+  const metrik: MetrikTyp = r?.metrik === 'summe' ? 'summe' : 'anzahl';
+
+  let summeFeld: string | null = null;
+  if (metrik === 'summe') {
+    const gewuenscht = String(r?.summe_feld ?? '');
+    const treffer = zahlFelder(q).find((f) => f.key === gewuenscht);
+    if (treffer) summeFeld = treffer.key;
+    else {
+      fehler.push(`Das Summen-Feld „${gewuenscht || '—'}" gibt es in „${q.name}" nicht mehr.`);
+      summeFeld = zahlFelder(q)[0]?.key ?? null;
+    }
+  }
+
+  let gruppeFeld: string | null = null;
+  const gWunsch = String(r?.gruppe_feld ?? '');
+  if (gWunsch) {
+    const treffer = textFelder(q).find((f) => f.key === gWunsch);
+    if (treffer) gruppeFeld = treffer.key;
+    else fehler.push(`Die Gruppierung „${gWunsch}" gibt es in „${q.name}" nicht mehr.`);
+  }
+
+  const zeitraum: ZeitraumKey = istZeitraumKey(r?.zeitraum) ? r.zeitraum : 'jahr';
+
+  return { ok: fehler.length === 0, fehler, konfig: { quelleKey: q.key, metrik, summeFeld, gruppeFeld, zeitraum } };
+}
+
+/** Ein Name, der in einer Liste wiederzufinden ist. Leer -> Vorschlag aus der Quelle. */
+export function reportName(roh: string | null | undefined, quelleKey: string, metrik: string): string {
+  const n = String(roh ?? '').trim().slice(0, 120);
+  if (n) return n;
+  const q = quelle(quelleKey);
+  return `${q?.name ?? 'Auswertung'} — ${metrik === 'summe' ? 'Summe' : 'Anzahl'}`;
+}
