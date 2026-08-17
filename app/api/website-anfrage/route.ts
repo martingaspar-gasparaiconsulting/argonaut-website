@@ -142,12 +142,20 @@ export async function POST(req: Request) {
     if (!name || (!email && !telefon)) {
       return NextResponse.json({ error: 'Name und E-Mail oder Telefon erforderlich.' }, { status: 400 })
     }
-    if ((body as any).privacy !== true) {
-      return NextResponse.json({ error: 'Zustimmung zur Datenschutzerklärung erforderlich.' }, { status: 400 })
-    }
-    if ((body as any).agb !== true) {
-      return NextResponse.json({ error: 'Zustimmung zu den AGB erforderlich.' }, { status: 400 })
-    }
+    // 16.08.26: Die beiden Pflicht-Haekchen (Datenschutz + AGB) sind entfallen.
+    //
+    // AGB: Bei einer Anfrage kommt kein Vertrag zustande — AGB werden nach
+    // § 305 Abs. 2 BGB erst beim Vertragsschluss einbezogen. Beim spaeteren
+    // Bestellvorgang gehoeren sie wieder hin, zusammen mit dem § 312j-Button.
+    //
+    // Datenschutz: Die Verarbeitung der Kontaktdaten stuetzt sich auf
+    // Art. 6 Abs. 1 lit. b DSGVO (vorvertragliche Massnahme), nicht auf eine
+    // Einwilligung. Als Einwilligung war das Haekchen zudem unwirksam, weil es
+    // nirgends gespeichert wurde — Art. 7 Abs. 1 DSGVO verlangt den Nachweis.
+    // Pflicht ist die Information nach Art. 13 DSGVO; die steht im Formular.
+    //
+    // Aeltere, noch offene Seiten schicken die Felder womoeglich weiter mit.
+    // Das stoert nicht: sie werden schlicht ignoriert.
 
     const supabase = getSupabase()
 

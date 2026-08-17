@@ -26,7 +26,7 @@ const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', 
 export default function AnfrageFormular({ branche }: { branche?: string }) {
   const [f, setF] = useState({
     name: '', unternehmen: '', email: '', telefon: '', mitarbeiter: '',
-    kontaktwunsch: '', wunschtermin: '', wunschterminKey: '', nachricht: '', privacy: false, agb: false,
+    kontaktwunsch: '', wunschtermin: '', wunschterminKey: '', nachricht: '',
   })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -42,8 +42,6 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
     if (!f.name.trim()) { setError('Bitte Ihren Namen angeben.'); return }
     if (!f.email.trim() && !f.telefon.trim()) { setError('Bitte E-Mail oder Telefon angeben.'); return }
     if (!f.kontaktwunsch) { setError('Bitte wählen: Anruf oder E-Mail.'); return }
-    if (!f.privacy) { setError('Bitte der Datenschutzerklärung zustimmen.'); return }
-    if (!f.agb) { setError('Bitte den AGB zustimmen.'); return }
     setStatus('sending')
     try {
       const res = await fetch('/api/website-anfrage', {
@@ -144,19 +142,20 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
               </div>
             </div>
 
-            <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', margin: '16px 0 0', cursor: 'pointer' }}>
-              <input type="checkbox" checked={f.privacy} onChange={(e) => set('privacy', e.target.checked)} style={{ marginTop: '3px', accentColor: GOLD }} />
-              <span style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5 }}>
-                Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage verwendet werden. Details in der{' '}
-                <a href="/datenschutz" style={{ color: TEAL }}>Datenschutzerklärung</a>. *
-              </span>
-            </label>
-            <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', margin: '10px 0 0', cursor: 'pointer' }}>
-              <input type="checkbox" checked={f.agb} onChange={(e) => set('agb', e.target.checked)} style={{ marginTop: '3px', accentColor: GOLD }} />
-              <span style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5 }}>
-                Ich akzeptiere die <a href="/agb" style={{ color: TEAL }}>AGB</a>. *
-              </span>
-            </label>
+            {/* Kein Einwilligungs-Haekchen: Bei einer Anfrage entsteht kein Vertrag,
+                deshalb sind AGB hier gegenstandslos (§ 305 Abs. 2 BGB greift erst beim
+                Vertragsschluss). Und die Verarbeitung der Kontaktdaten stuetzt sich auf
+                Art. 6 Abs. 1 lit. b DSGVO (vorvertragliche Massnahme), nicht auf eine
+                Einwilligung — ein Haekchen wuerde eine Rechtsgrundlage vortaeuschen, die
+                gar nicht einschlaegig ist, und war ohne gespeicherten Nachweis nach
+                Art. 7 Abs. 1 DSGVO ohnehin unwirksam. Pflicht ist die INFORMATION nach
+                Art. 13 DSGVO — die steht hier. Beim spaeteren Bestellvorgang gehoert das
+                AGB-Haekchen wieder hin, zusammen mit dem § 312j-Button. */}
+            <p style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5, margin: '16px 0 0' }}>
+              Ihre Angaben verwenden wir ausschließlich, um Ihre Anfrage zu bearbeiten. Wie wir mit
+              Ihren Daten umgehen, steht in der{' '}
+              <a href="/datenschutz" style={{ color: TEAL }}>Datenschutzerklärung</a>.
+            </p>
 
             {error && <p style={{ color: '#f0a3a3', fontSize: '.85rem', margin: '14px 0 0' }}>{error}</p>}
 
