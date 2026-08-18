@@ -1,29 +1,28 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 // ---------------------------------------------------------------------
-// ARGONAUT OS · KI-GUIDE „Silhouette" · Stufe 1
+// ARGONAUT OS · KI-GUIDE · Stufe 2 (Gestalt)
 //
-// Martins Idee: nicht mehr nur der „Stern"/das Auge, sondern eine
-// menschliche GESTALT, die den Kunden an die Hand nimmt. Stufe 1 = neutrale
-// Silhouette in einem leuchtenden Ring (CSS-Puls, 0 Token) + Sprechblase mit
-// Klartext, nächsten Schritten und einem Handlungs-Button.
+// Martins Idee: nicht der „Stern"/das Auge, sondern eine GESTALT, die den
+// Kunden an die Hand nimmt. Sprechblase mit Klartext, nächsten Schritten und
+// einem Handlungs-Knopf, daneben die Figur in einem leuchtenden Ring.
 //
-// EVOLUTION ohne Umbau — die Bühne steht schon:
-//   • Stufe 2 (Gesicht): prop `avatarUrl` setzen → statt Silhouette erscheint
-//     Martins Foto im selben Ring. Keine weitere Änderung nötig.
-//   • Stufe 3 (Stimme): prop `onVorlesen` übergeben → der 🔊-Knopf wird sichtbar
-//     und ruft z. B. eine TTS-Route. Ohne den Prop bleibt er unsichtbar
-//     (kein toter Code, keine leere Schaltfläche).
+// DIE FIGUR IST GEZEICHNET, KEIN BILD.
+// Ein Argonaut — Helm mit Busch, Kompass-Stern auf der Brust — als reines SVG
+// in den Markenfarben. Das hat drei Gründe: keine Datei zu laden, bei jeder
+// Bildschirmgröße gestochen scharf, und die Farbe folgt der Stimmung (grün =
+// alles gut, Gold = Achtung). Bewegung kommt aus CSS: ein ruhiges Wippen und
+// ein Blinzeln. Kein Video, kein fremder Dienst, keine Gebühr.
 //
-// EINSATZ (Beispiel Onboarding):
-//   <KiGuide
-//     begruessung="Willkommen bei ARGONAUT, Martin."
-//     nachricht="Lass uns dein System startklar machen. Als Nächstes:"
-//     schritte={["Firmendaten hinterlegen"]}
-//     aktionText="Jetzt hinterlegen" aktionHref="/dashboard/einstellungen"
-//     fortschritt={20}
-//   />
+// AUSTAUSCHBAR: Wer lieber ein eigenes Bild möchte, setzt `avatarUrl` — dann
+// erscheint es im selben Ring, ohne dass sonst etwas geändert werden muss.
+//
+// STIMME: `onVorlesen` übergeben → der 🔊-Knopf wird sichtbar. Ohne den Prop
+// bleibt er unsichtbar (kein toter Code, keine leere Schaltfläche). Die
+// Sprachausgabe steckt in lib/vorlesen.ts und läuft im Browser des Nutzers.
+//
+// EINSATZ: siehe KiGuideStelle.tsx — dort ist der Guide fertig verdrahtet.
 // ---------------------------------------------------------------------
 
 const A = {
@@ -70,21 +69,58 @@ function auraFarbe(s: Stimmung): string {
   return A.cyan;
 }
 
-function Silhouette({ farbe }: { farbe: string }) {
-  // Kopf + Schultern als weiche, leuchtende Gestalt (reines SVG, skaliert mit).
+/**
+ * Der Argonaut. Reines SVG, keine Datei.
+ *
+ * Die IDs der Farbverläufe tragen eine je Instanz eindeutige Kennung. Ohne das
+ * würden zwei Guides auf derselben Seite dieselbe ID benutzen — der zweite
+ * bekäme die Farbe des ersten, auch wenn seine Stimmung eine andere ist.
+ */
+function Argonaut({ farbe, kennung }: { farbe: string; kennung: string }) {
+  const koerper = `argoKoerper-${kennung}`;
+  const aura = `argoAura-${kennung}`;
   return (
     <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true" style={{ display: "block" }}>
       <defs>
-        <radialGradient id="argoGuideFill" cx="50%" cy="38%" r="75%">
-          <stop offset="0%" stopColor={farbe} stopOpacity="0.95" />
-          <stop offset="60%" stopColor={farbe} stopOpacity="0.55" />
-          <stop offset="100%" stopColor={farbe} stopOpacity="0.20" />
+        <linearGradient id={koerper} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={farbe} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={farbe} stopOpacity="0.35" />
+        </linearGradient>
+        <radialGradient id={aura} cx="50%" cy="36%" r="62%">
+          <stop offset="0%" stopColor={farbe} stopOpacity="0.32" />
+          <stop offset="100%" stopColor={farbe} stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* Schultern */}
-      <path d="M18 100 C18 74 34 64 50 64 C66 64 82 74 82 100 Z" fill="url(#argoGuideFill)" />
-      {/* Kopf */}
-      <circle cx="50" cy="38" r="20" fill="url(#argoGuideFill)" />
+
+      <circle cx="50" cy="46" r="46" fill={`url(#${aura})`} />
+
+      <g style={{ animation: "argoWippen 5.5s ease-in-out infinite", transformBox: "fill-box", transformOrigin: "50% 100%" }}>
+        {/* Schultern */}
+        <path d="M14 100 C14 77 30 67 50 67 C70 67 86 77 86 100 Z" fill={`url(#${koerper})`} />
+        {/* Kompass-Stern auf der Brust — das Zeichen des Argonauten */}
+        <path
+          d="M50 75 L52.6 82.4 L60 85 L52.6 87.6 L50 95 L47.4 87.6 L40 85 L47.4 82.4 Z"
+          fill={A.gold}
+          opacity="0.92"
+        />
+        {/* Kopf */}
+        <circle cx="50" cy="43" r="19" fill={`url(#${koerper})`} />
+        {/* Helm: Kalotte mit Wangenklappen */}
+        <path
+          d="M31 44 C31 28 39 21 50 21 C61 21 69 28 69 44 L69 49 L63.5 49 L63.5 41 C63.5 33 58 29 50 29 C42 29 36.5 33 36.5 41 L36.5 49 L31 49 Z"
+          fill={A.gold}
+          opacity="0.88"
+        />
+        {/* Nasensteg */}
+        <rect x="48.4" y="35" width="3.2" height="17" rx="1.6" fill={A.gold} opacity="0.88" />
+        {/* Helmbusch */}
+        <path d="M50 21 C50 12.5 55.5 6 63 4 C58.5 10 57 15.5 57 21 Z" fill={A.gold} opacity="0.7" />
+        {/* Augen — sie blinzeln. Die Animation sitzt an JEDEM Auge einzeln:
+            am Gruppen-Element wuerde das Zusammendruecken die Augen zur Mitte
+            der Gruppe ziehen statt sie an Ort und Stelle schliessen zu lassen. */}
+        <circle cx="43" cy="43" r="2.7" fill={A.cyan} style={augeStil} />
+        <circle cx="57" cy="43" r="2.7" fill={A.cyan} style={augeStil} />
+      </g>
     </svg>
   );
 }
@@ -103,6 +139,7 @@ export default function KiGuide({
   name = "ARGONAUT",
 }: KiGuideProps) {
   const [zu, setZu] = useState(false);
+  const kennung = useId().replace(/[^a-zA-Z0-9]/g, "");
   const farbe = auraFarbe(stimmung);
   const zeigeRing = typeof fortschritt === "number" && fortschritt >= 0;
   const p = Math.min(Math.max(fortschritt ?? 0, 0), 100);
@@ -114,6 +151,22 @@ export default function KiGuide({
           0%   { box-shadow: 0 0 0 0 ${farbe}55; }
           70%  { box-shadow: 0 0 0 14px ${farbe}00; }
           100% { box-shadow: 0 0 0 0 ${farbe}00; }
+        }
+        @keyframes argoWippen {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50%      { transform: translateY(-1.6px) rotate(-0.7deg); }
+        }
+        @keyframes argoBlinzeln {
+          0%, 92%, 100% { transform: scaleY(1); }
+          95%           { transform: scaleY(0.12); }
+        }
+        /* Wer im Betriebssystem "Bewegung reduzieren" eingestellt hat, bekommt
+           eine ruhige Figur. Das ist eine Barrierefreiheits-Vorgabe, keine
+           Geschmacksfrage: Bewegung kann Schwindel und Uebelkeit ausloesen. */
+        @media (prefers-reduced-motion: reduce) {
+          .argo-guide-figur *, .argo-guide-ring {
+            animation: none !important;
+          }
         }
       `}</style>
 
@@ -128,11 +181,12 @@ export default function KiGuide({
               : farbe + "22",
           }}
         >
-          <div style={{ ...avatarInner, animation: "argoGuidePuls 2.6s ease-out infinite" }}>
+          <div className="argo-guide-ring argo-guide-figur" style={{ ...avatarInner, animation: "argoGuidePuls 2.6s ease-out infinite" }}>
             {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             ) : (
-              <Silhouette farbe={farbe} />
+              <Argonaut farbe={farbe} kennung={kennung} />
             )}
           </div>
         </div>
@@ -286,6 +340,12 @@ const aktionBtn: React.CSSProperties = {
   textDecoration: "none",
   cursor: "pointer",
   fontFamily: "inherit",
+};
+
+const augeStil: React.CSSProperties = {
+  transformBox: "fill-box",
+  transformOrigin: "center",
+  animation: "argoBlinzeln 6.5s ease-in-out infinite",
 };
 
 const vorlesenBtn: React.CSSProperties = {

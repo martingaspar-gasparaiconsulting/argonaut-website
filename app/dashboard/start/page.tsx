@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import OnboardingProgress from '../OnboardingProgress'
+import KiGuideStelle from '../_components/KiGuideStelle'
+import { startGuide, kiAnteil } from '@/lib/kiGuideTexte'
 
 // ============================================================
 // ARGONAUT OS · EINRICHTUNG & VERWALTUNG (/dashboard/start)
@@ -75,6 +77,17 @@ export default async function StartPage() {
 
   return (
     <main style={{ maxWidth: SHELL_MAX, margin: '0 auto', padding: `clamp(32px, 4vw, 56px) ${SHELL_PAD} 80px` }}>
+
+      {/* KI-GUIDE — die Gestalt, die durch die Einrichtung fuehrt.
+          Was sie sagt, steht in lib/kiGuideTexte.ts; vorgelesen wird ueber die
+          Sprachausgabe des Browsers (lib/vorlesen.ts) — ohne fremden Dienst. */}
+      <KiGuideStelle
+        inhalt={startGuide({
+          onboardingFertig: onboardingCompleted,
+          hatZugaenge: hasApiKeys,
+          kiAnteilProzent: kiAnteil(kiUsed, kiLimit),
+        })}
+      />
 
       <section style={{ marginBottom: '32px' }}>
         <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#C9A84C', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>Einrichtung & Verwaltung</p>
