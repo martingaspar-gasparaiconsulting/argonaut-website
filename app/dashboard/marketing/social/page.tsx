@@ -2,11 +2,15 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import {
-  SOCIAL_PLATTFORMEN, SOCIAL_STATUS, plattformFuer, plattformenNachGruppe,
+  SOCIAL_PLATTFORMEN, plattformFuer, plattformenNachGruppe,
   bindendesLimit, zaehleZeichen, validiereBeitrag, zaehleBeitraege, zaehleKanaele,
   META_PLATTFORMEN, metaVerbindungFeld, verbindungFeld,
   VERBINDBARE_PLATTFORMEN, POSTBARE_PLATTFORMEN,
 } from '@/lib/social';
+import {
+  klartext, statusLabel, darfWiederholen, letzterVersuchJeKanal,
+  protokollFuerBeitrag, zeitpunktVon, type ProtokollZeile,
+} from '@/lib/socialProtokoll';
 
 // Die Meta-Kanaele haben oben einen eigenen Kasten — hier stehen alle uebrigen.
 const WEITERE_VERBINDBAR: string[] = VERBINDBARE_PLATTFORMEN.filter((id) => !META_PLATTFORMEN.includes(id));
@@ -91,17 +95,26 @@ export default function SocialSeite() {
   const [sendBusyId, setSendBusyId] = useState<string | null>(null);
   const [sendMeldung, setSendMeldung] = useState<string | null>(null);
 
+  // Versandprotokoll (Social P8)
+  const [protokoll, setProtokoll] = useState<ProtokollZeile[]>([]);
+  const [protokollOffen, setProtokollOffen] = useState<Record<string, boolean>>({});
+  const [wiederBusyId, setWiederBusyId] = useState<string | null>(null);
+
   async function laden() {
     setLoading(true); setFehler(null);
     try {
-      const [rB, rK, rV] = await Promise.all([
+      const [rB, rK, rV, rP] = await Promise.all([
         fetch('/api/marketing/social-beitraege'),
         fetch('/api/marketing/social-kanaele'),
         fetch('/api/marketing/social-verbindung'),
+        fetch('/api/marketing/social-protokoll'),
       ]);
       const jB = await rB.json();
       const jK = await rK.json();
       const jV = await rV.json();
+      // Das Protokoll ist Beiwerk: faellt es aus, soll die Seite trotzdem stehen.
+      const jP = await rP.json().catch(() => null);
+      if (jP?.ok) setProtokoll((jP.zeilen as ProtokollZeile[]) || []);
       if (jK?.ok) setKanaele((jK.liste as KanalRow[]) || []);
       if (jV?.ok) {
         const st = (k: string) => (jV[k] as VStatus) || V_LEER;
@@ -264,6 +277,22 @@ export default function SocialSeite() {
       laden();
     } catch { setSendMeldung('Posten fehlgeschlagen.'); }
     finally { setSendBusyId(null); }
+  }
+
+  /** Einen gescheiterten Beitrag wieder einplanen (Social P8). */
+  async function nochmalVersuchen(b: Beitrag) {
+    setWiederBusyId(b.id); setSendMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/social-protokoll', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ beitrag_id: b.id }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) setSendMeldung(j?.error || 'Erneutes Einplanen fehlgeschlagen.');
+      else setSendMeldung(`✓ ${j.hinweis || 'Der Beitrag steht wieder auf „Geplant".'}`);
+      laden();
+    } catch { setSendMeldung('Erneutes Einplanen fehlgeschlagen.'); }
+    finally { setWiederBusyId(null); }
   }
 
   const vorschauKanaele = eKanaele.map((id) => plattformFuer(id)).filter(Boolean);
@@ -613,8 +642,13 @@ export default function SocialSeite() {
               const urls = Array.isArray(b.medien_urls) ? b.medien_urls : [];
               const bild = urls.find((u) => !videoEinbettung(u).embedUrl);
               const hatPostbaren = (b.kanaele || []).some((k) => POSTBARE.includes(k));
-              const statusLabel = SOCIAL_STATUS.find((s) => s.id === b.status)?.label || 'Entwurf';
-              const statusFarbe = b.status === 'gesendet' ? C.green : b.status === 'geplant' ? C.cyan : C.textDim;
+              const label = statusLabel(b.status);
+              const statusFarbe = b.status === 'gesendet' ? C.green
+                : b.status === 'fehler' ? C.danger
+                : b.status === 'geplant' ? C.cyan : C.textDim;
+              const eigene = protokollFuerBeitrag(protokoll, b.id);
+              const letzte = letzterVersuchJeKanal(eigene);
+              const offen = protokollOffen[b.id] === true;
               return (
                 <div key={b.id} style={{ background: C.navy2, borderRadius: 14, padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   {bild && (
@@ -623,7 +657,7 @@ export default function SocialSeite() {
                   )}
                   <div style={{ flex: 1, minWidth: 220 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: statusFarbe, border: `1px solid ${statusFarbe}`, borderRadius: 10, padding: '1px 10px' }}>{statusLabel}</span>
+                      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: statusFarbe, border: `1px solid ${statusFarbe}`, borderRadius: 10, padding: '1px 10px' }}>{label}</span>
                       {b.status === 'geplant' && b.geplant_am && (
                         <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.textDim }}>🕒 {fmtDatum(b.geplant_am)}</span>
                       )}
@@ -634,11 +668,56 @@ export default function SocialSeite() {
                     <div style={{ fontFamily: 'DM Sans, sans-serif', color: '#dbe4f0', fontSize: 'clamp(13px, 1.1vw, 17px)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {b.text || <span style={{ color: C.textDim }}>(kein Text)</span>}
                     </div>
+
+                    {/* Versandprotokoll — was ist beim Senden wirklich passiert? */}
+                    {letzte.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <button
+                          onClick={() => setProtokollOffen((v) => ({ ...v, [b.id]: !offen }))}
+                          style={protokollKnopf}
+                        >
+                          {offen ? '▴' : '▾'} Versandprotokoll ({letzte.length} {letzte.length === 1 ? 'Kanal' : 'Kanäle'})
+                        </button>
+
+                        {offen && (
+                          <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                            {letzte.map((z, i) => {
+                              const p = plattformFuer(String(z.plattform ?? ''));
+                              const gut = z.status === 'gesendet';
+                              const grund = klartext(typeof z.fehler_text === 'string' ? z.fehler_text : '');
+                              const wann = zeitpunktVon(z);
+                              return (
+                                <div key={String(z.id ?? i)} style={{ ...protokollZeile, borderColor: gut ? 'rgba(76,175,125,0.35)' : 'rgba(224,102,102,0.35)' }}>
+                                  <span style={{ fontSize: 15, flexShrink: 0 }}>{p?.icon ?? '•'}</span>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                                      <strong style={{ color: '#fff', fontWeight: 700 }}>{p?.name ?? String(z.plattform ?? 'Kanal')}</strong>
+                                      <span style={{ color: gut ? C.green : C.danger, fontWeight: 700 }}>
+                                        {gut ? '✓ gesendet' : '✕ nicht gesendet'}
+                                      </span>
+                                      {wann && <span style={{ color: C.textDim }}>{fmtDatum(wann)}</span>}
+                                    </div>
+                                    {grund && (
+                                      <div style={{ color: gut ? C.textDim : '#f0c4c4', marginTop: 2 }}>{grund}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                     {hatPostbaren && b.status !== 'gesendet' && (
                       <button onClick={() => jetztPosten(b)} disabled={sendBusyId === b.id} style={{ ...btn(C.green), opacity: sendBusyId === b.id ? 0.5 : 1, cursor: sendBusyId === b.id ? 'wait' : 'pointer' }}>
                         {sendBusyId === b.id ? 'Poste…' : '📤 Jetzt posten'}
+                      </button>
+                    )}
+                    {darfWiederholen(b.status) && (
+                      <button onClick={() => nochmalVersuchen(b)} disabled={wiederBusyId === b.id} style={{ ...btn(C.cyan), opacity: wiederBusyId === b.id ? 0.5 : 1, cursor: wiederBusyId === b.id ? 'wait' : 'pointer' }}>
+                        {wiederBusyId === b.id ? 'Plane ein…' : '↻ Nochmal versuchen'}
                       </button>
                     )}
                     <button onClick={() => bearbeiten(b)} style={btn(C.gold)}>Bearbeiten</button>
@@ -662,6 +741,30 @@ const lbl: React.CSSProperties = { display: 'block', fontFamily: 'DM Sans, sans-
 const input: React.CSSProperties = { width: '100%', background: '#0F1F33', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '10px 12px', color: '#fff', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', boxSizing: 'border-box' };
 const btnGold: React.CSSProperties = { background: '#C9A84C', color: '#0A1628', border: 'none', borderRadius: 10, padding: '11px 24px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.2vw, 19px)' };
 const btnGhost: React.CSSProperties = { background: 'transparent', color: '#8FA3BE', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '11px 20px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' };
+
+// --- Versandprotokoll (Social P8) ---
+const protokollKnopf: React.CSSProperties = {
+  background: 'transparent',
+  color: '#8FA3BE',
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: 9,
+  padding: '5px 12px',
+  fontFamily: 'DM Sans, sans-serif',
+  fontSize: 'clamp(12px, 1vw, 15px)',
+  cursor: 'pointer',
+};
+
+const protokollZeile: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  alignItems: 'flex-start',
+  background: '#0A1628',
+  border: '1px solid',
+  borderRadius: 10,
+  padding: '8px 12px',
+  fontFamily: 'DM Sans, sans-serif',
+  fontSize: 'clamp(12px, 1.02vw, 16px)',
+};
 function btn(farbe: string): React.CSSProperties {
   return { background: 'transparent', color: farbe, border: `1px solid ${farbe}`, borderRadius: 8, padding: '7px 13px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.13vw, 18px)', cursor: 'pointer' };
 }
