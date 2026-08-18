@@ -50,6 +50,11 @@ type Bestand = {
   kostenUsd: number;
   kostenHinweis: string;
   laufenderStapel: Stapel;
+  laufendeStapel?: Array<{ id: string; zweck: string | null; status: string; anzahl: number; erstellt_am: string }>;
+  /** Wieviele Bausteine stecken gerade in laufenden Stapeln. */
+  inArbeit?: number;
+  branchen?: number;
+  maxJeStapel?: number;
   schluesselVorhanden: boolean;
 };
 
@@ -128,12 +133,32 @@ export default function AdminInhalte() {
   }, [bestand?.laufenderStapel, holeBestand, holeListe]);
 
   // ---- Erzeugen ------------------------------------------------------------
-  const erzeugen = async () => {
-    if (!bestand || bestand.offen.anzahl === 0) return;
+  /**
+   * Einen Stapel abschicken — wahlweise nur für einen Typ.
+   *
+   * WARUM JE TYP: 698 Vorworte und 698 Dialoge passen zusammen mit den
+   * Modul-Kapiteln nicht in einen Stapel (die Schnittstelle nimmt höchstens
+   * 1000 auf einmal). Ein Knopf je Typ macht sichtbar, was gerade bestellt
+   * wird — und was es kostet.
+   */
+  const erzeugen = async (typ?: string, anzahl?: number) => {
+    if (!bestand) return;
+    const menge = anzahl ?? bestand.offen.anzahl;
+    if (menge === 0) return;
+    const grenze = bestand.maxJeStapel ?? 1000;
+    const jetzt = Math.min(menge, grenze);
+    const was = typ ? (TYP_LABEL[typ] ?? typ) : 'Bausteine';
+    const anteilKosten = bestand.offen.anzahl > 0
+      ? bestand.kostenUsd * (jetzt / bestand.offen.anzahl)
+      : 0;
+
     const frage =
-      `${bestand.offen.anzahl} fehlende Kapitel erzeugen lassen?\n\n` +
+      `${jetzt} ${was} erzeugen lassen?\n\n` +
       `Modell: ${bestand.modell}\n` +
-      `Geschätzte Kosten: ${bestand.kostenUsd.toFixed(2)} USD (halber Preis über die Stapel-Schnittstelle)\n\n` +
+      `Geschätzte Kosten: ${anteilKosten.toFixed(2)} USD (halber Preis über die Stapel-Schnittstelle)\n\n` +
+      (menge > jetzt
+        ? `Ein Stapel fasst höchstens ${grenze}. Die restlichen ${menge - jetzt} bestellen Sie danach mit demselben Knopf.\n\n`
+        : '') +
       `Das Ergebnis kommt meist innerhalb einer Stunde, spätestens nach 24 Stunden, ` +
       `und landet als Entwurf in dieser Liste.`;
     if (!window.confirm(frage)) return;
@@ -143,7 +168,7 @@ export default function AdminInhalte() {
       const r = await fetch('/api/admin/inhalte', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bestaetigt: true }),
+        body: JSON.stringify({ bestaetigt: true, ...(typ ? { typen: [typ] } : {}) }),
       });
       const j = await r.json();
       if (!r.ok || !j.ok) setFehler(j.error || 'Der Stapel wurde nicht angenommen.');
@@ -241,36 +266,46 @@ export default function AdminInhalte() {
       <section style={s.karte}>
         <h2 style={s.h2}>Fehlende Kapitel erzeugen</h2>
 
-        {stapel ? (
+        {(bestand?.laufendeStapel?.length ?? 0) > 0 && (
           <>
             <p style={s.hint}>
-              Ein Stapel läuft gerade: <b>{stapel.zweck ?? 'Inhalts-Werkstatt'}</b> ({stapel.anzahl} Kapitel,
-              Stand „{stapel.status}"). Der Abhol-Dienst sieht alle 15 Minuten nach. Diese Seite frischt sich
-              alle 30 Sekunden selbst auf — Sie können sie auch schließen, das ändert nichts.
+              {bestand?.laufendeStapel?.length === 1 ? 'Ein Stapel läuft gerade' : `${bestand?.laufendeStapel?.length} Stapel laufen gerade`}
+              {' '}— zusammen <b>{bestand?.inArbeit ?? 0} Bausteine</b> unterwegs. Der Abhol-Dienst sieht alle
+              15 Minuten nach. Diese Seite frischt sich alle 30 Sekunden selbst auf; Sie können sie auch
+              schließen, das ändert nichts.
             </p>
+            {bestand?.laufendeStapel?.map((st) => (
+              <div key={st.id} style={{ color: DIM, fontSize: 12.5, marginTop: 4 }}>
+                · {st.zweck ?? 'Inhalts-Werkstatt'} — Stand „{st.status}"
+              </div>
+            ))}
             <div style={s.balkenAussen}><div style={{ ...s.balkenInnen, width: '100%', opacity: 0.5 }} /></div>
           </>
-        ) : (
-          <>
-            <p style={s.hint}>
-              {bestand?.offen.anzahl ?? 0} Kapitel gibt es noch nicht.
-              {bestand ? ` Modell: ${bestand.modell} · geschätzt ${bestand.kostenUsd.toFixed(2)} USD für alle zusammen.` : ''}
-              {' '}Bestellt wird nur, was fehlt — an einem Entwurf, den Sie schon bearbeitet haben, rührt der Stapel nichts.
-            </p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              <button
-                style={(bestand?.offen.anzahl ?? 0) > 0 && bestand?.schluesselVorhanden ? s.knopfGold : s.knopfAus}
-                disabled={beschaeftigt || (bestand?.offen.anzahl ?? 0) === 0 || !bestand?.schluesselVorhanden}
-                onClick={erzeugen}
-              >
-                {bestand?.offen.anzahl ?? 0} fehlende erzeugen
-              </button>
-              <button style={s.knopfGrau} onClick={() => { holeBestand(); holeListe(); }} disabled={laden}>
-                Neu einlesen
-              </button>
-            </div>
-          </>
         )}
+
+        <p style={s.hint}>
+          {bestand?.offen.anzahl ?? 0} Bausteine gibt es noch nicht
+          {bestand?.branchen ? ` (bei ${bestand.branchen} Branchen)` : ''}.
+          {bestand ? ` Modell: ${bestand.modell} · geschätzt ${bestand.kostenUsd.toFixed(2)} USD für alle zusammen.` : ''}
+          {' '}Bestellt wird nur, was fehlt — an einem Entwurf, den Sie schon bearbeitet haben, rührt der
+          Stapel nichts, und was gerade unterwegs ist, wird kein zweites Mal bestellt.
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          {(bestand?.offen.jeTyp ?? []).filter((t) => t.anzahl > 0).map((t) => (
+            <button
+              key={t.typ}
+              style={bestand?.schluesselVorhanden ? s.knopfGold : s.knopfAus}
+              disabled={beschaeftigt || !bestand?.schluesselVorhanden}
+              onClick={() => erzeugen(t.typ, t.anzahl)}
+            >
+              {t.anzahl}× {TYP_LABEL[t.typ] ?? t.typ}
+            </button>
+          ))}
+          <button style={s.knopfGrau} onClick={() => { holeBestand(); holeListe(); }} disabled={laden}>
+            Neu einlesen
+          </button>
+        </div>
       </section>
 
       {/* ---------- Filter ---------- */}

@@ -408,12 +408,27 @@ export type OffenerBaustein = {
 };
 
 /**
+ * Eine Branche, so weit sie fuer Vorwort und Dialog zaehlt.
+ * Bewusst als PARAMETER statt als Import: die Branchendaten liegen in
+ * app/vorschau/_lib/branchen-web.ts und ziehen ueber eine Megabyte
+ * SEO-Texte nach. Diese Datei bleibt dadurch node-testbar und ohne
+ * Abhaengigkeit zur Website-Ebene.
+ */
+export type BrancheLite = {
+  slug: string;
+  name: string;
+  kategorie: string;
+  schmerzen?: string[];
+  ergebnisse?: string[];
+};
+
+/**
  * Welche Modul- und Kategorie-Kapitel gibt es noch gar nicht?
  * Bewusst NICHT „noch nicht freigegeben": ein Entwurf, der auf Redaktion
  * wartet, darf nicht ein zweites Mal erzeugt werden — das kostet Geld und
  * ueberschreibt Martins Korrekturen.
  */
-export function offeneKapitel(zeilen: BausteinZeile[]): OffenerBaustein[] {
+export function offeneKapitel(zeilen: BausteinZeile[], branchen: BrancheLite[] = []): OffenerBaustein[] {
   const vorhanden = schluesselIndex(zeilen);
   const offen: OffenerBaustein[] = [];
 
@@ -436,6 +451,31 @@ export function offeneKapitel(zeilen: BausteinZeile[]): OffenerBaustein[] {
       ueberschrift: kat,
       kontext: { kategorie: kat, module: kategorieKapitel(kat).map((m) => m.titel).join(', ') },
     });
+  }
+
+  // --- Vorwort und Dialog je Branche ---------------------------------------
+  // Beide brauchen dieselben Angaben, deshalb in einem Durchlauf. Eine Branche
+  // ohne Schmerzen und Ergebnisse bekommt trotzdem einen Auftrag — der Prompt
+  // kommt mit dem Namen und der Kategorie allein aus, nur weniger konkret.
+  const gesehen = new Set<string>();
+  for (const b of branchen ?? []) {
+    const key = schluessel(b?.slug || b?.name);
+    if (!key || key === 'unbekannt') continue;
+    if (gesehen.has(key)) continue;          // doppelte Slugs waeren sonst doppelt bestellt
+    gesehen.add(key);
+
+    const kontext: Record<string, string> = {
+      kategorie: String(b?.kategorie ?? ''),
+      schmerzen: (b?.schmerzen ?? []).slice(0, 6).join(' · '),
+      ergebnisse: (b?.ergebnisse ?? []).slice(0, 6).join(' · '),
+    };
+
+    if (!vorhanden.has(bausteinId('branchen_vorwort', key))) {
+      offen.push({ typ: 'branchen_vorwort', schluessel: key, ueberschrift: b.name, kontext });
+    }
+    if (!vorhanden.has(bausteinId('ki_dialog', key))) {
+      offen.push({ typ: 'ki_dialog', schluessel: key, ueberschrift: b.name, kontext });
+    }
   }
 
   return offen;

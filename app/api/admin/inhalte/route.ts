@@ -4,6 +4,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js';
 import { offeneKapitel, mengen, KATEGORIEN, istBausteinTyp, type BausteinTyp, type BausteinZeile } from '@/lib/inhaltBaustein';
 import { SYSTEM_PROMPT, frageFuer, modellWahl, MAX_TOKENS, schaetzeKosten } from '@/lib/inhaltPrompt';
 import { bereiteVor, absenden, MAX_JE_STAPEL, type Auftrag } from '@/lib/kiBatch';
+import { websiteBranchen } from '../../../vorschau/_lib/branchen-web';
 
 // ============================================================================
 // ARGONAUT OS · /api/admin/inhalte  (Inhalts-Werkstatt · Erzeugung)
@@ -34,9 +35,24 @@ export const maxDuration = 60;
 
 const ROUTE = 'inhalt-werkstatt';
 
-/** Diese Typen kann die Werkstatt heute erzeugen. Vorworte und Dialoge
- *  brauchen Branchendaten und kommen in einem eigenen Schritt. */
-const ERZEUGBAR: BausteinTyp[] = ['modul_kapitel', 'kategorie_kapitel'];
+/**
+ * Alle vier Typen sind erzeugbar. Vorworte und Dialoge kamen am 17.08. dazu —
+ * die Branchendaten werden aus branchen-web geladen und an offeneKapitel()
+ * uebergeben, statt sie in lib/inhaltBaustein.ts zu importieren (dort haengen
+ * sonst ueber ein Megabyte SEO-Texte am node-testbaren Kern).
+ */
+const ERZEUGBAR: BausteinTyp[] = ['modul_kapitel', 'kategorie_kapitel', 'branchen_vorwort', 'ki_dialog'];
+
+/** Wieviele Stapel gleichzeitig offen sein duerfen. */
+const MAX_OFFENE_STAPEL = 5;
+
+/** Die Branchen fuer Vorwort und Dialog — nur die Felder, die zaehlen. */
+function branchenListe() {
+  return websiteBranchen().map((b) => ({
+    slug: b.slug, name: b.name, kategorie: b.kategorie,
+    schmerzen: b.schmerzen, ergebnisse: b.ergebnisse,
+  }));
+}
 
 function adminDb() {
   return createAdmin(
@@ -82,18 +98,44 @@ async function ladeBestand(db: ReturnType<typeof adminDb>, userId: string): Prom
   return alle;
 }
 
-/** Laeuft gerade ein Stapel der Werkstatt? */
-async function offenerStapel(db: ReturnType<typeof adminDb>, userId: string) {
+type OffenerStapel = { id: string; zweck: string | null; status: string; anzahl: number; erstellt_am: string; zuordnung: Record<string, Record<string, unknown>> };
+
+/** Alle Stapel der Werkstatt, die noch unterwegs sind. */
+async function offeneStapel(db: ReturnType<typeof adminDb>, userId: string): Promise<OffenerStapel[]> {
   const { data } = await db
     .from('ki_batch')
-    .select('id,zweck,status,anzahl,erstellt_am')
+    .select('id,zweck,status,anzahl,erstellt_am,zuordnung')
     .eq('owner_user_id', userId)
     .eq('route', ROUTE)
     .in('status', ['wartet', 'laeuft'])
-    .order('erstellt_am', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data as { id: string; zweck: string | null; status: string; anzahl: number; erstellt_am: string } | null) ?? null;
+    .order('erstellt_am', { ascending: false });
+  return (data as OffenerStapel[] | null) ?? [];
+}
+
+/**
+ * Welche Bausteine sind in laufenden Stapeln schon bestellt?
+ *
+ * DAS IST DER RIEGEL GEGEN DOPPELTES BEZAHLEN. Ein laufender Stapel hat noch
+ * keine Zeilen in inhalt_baustein angelegt — offeneKapitel() sieht die Kapitel
+ * also weiterhin als offen. Wer waehrend des Wartens erneut auf „erzeugen"
+ * klickt, bestellte sie ein zweites Mal und zahlte doppelt.
+ *
+ * Der frueher hier stehende Riegel „nur EIN Stapel gleichzeitig" war zu grob:
+ * 698 Vorworte und 698 Dialoge passen zusammen mit den Modul-Kapiteln nicht in
+ * einen Stapel (Grenze 1000). Jetzt zaehlt der konkrete Schluessel, nicht die
+ * Anzahl der Stapel — mehrere Stapel duerfen parallel laufen, aber kein
+ * Baustein wird zweimal bestellt.
+ */
+function bereitsBestellt(stapel: OffenerStapel[]): Set<string> {
+  const raus = new Set<string>();
+  for (const s of stapel) {
+    for (const ziel of Object.values(s.zuordnung ?? {})) {
+      const typ = typeof ziel?.typ === 'string' ? ziel.typ : '';
+      const key = typeof ziel?.schluessel === 'string' ? ziel.schluessel : '';
+      if (typ && key) raus.add(`${typ}::${key}`);
+    }
+  }
+  return raus;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,7 +156,13 @@ export async function GET() {
     if (z.freigegeben === true) jeTyp[t].freigegeben++;
   }
 
-  const offen = offeneKapitel(bestand).filter((o) => ERZEUGBAR.indexOf(o.typ) >= 0);
+  const laufende = await offeneStapel(db, wache.userId);
+  const schonBestellt = bereitsBestellt(laufende);
+
+  const offen = offeneKapitel(bestand, branchenListe())
+    .filter((o) => ERZEUGBAR.indexOf(o.typ) >= 0)
+    .filter((o) => !schonBestellt.has(`${o.typ}::${o.schluessel}`));
+
   const modell = modellWahl(process.env.INHALT_MODELL);
   const kosten = schaetzeKosten(offen.length, modell);
 
@@ -130,7 +178,10 @@ export async function GET() {
     modell,
     kostenUsd: Number(kosten.usd.toFixed(2)),
     kostenHinweis: kosten.hinweis,
-    laufenderStapel: await offenerStapel(db, wache.userId),
+    laufendeStapel: laufende.map((s) => ({ id: s.id, zweck: s.zweck, status: s.status, anzahl: s.anzahl, erstellt_am: s.erstellt_am })),
+    laufenderStapel: laufende[0] ? { id: laufende[0].id, zweck: laufende[0].zweck, status: laufende[0].status, anzahl: laufende[0].anzahl, erstellt_am: laufende[0].erstellt_am } : null,
+    inArbeit: schonBestellt.size,
+    branchen: branchenListe().length,
     schluesselVorhanden: Boolean(process.env.ANTHROPIC_API_KEY),
     maxJeStapel: MAX_JE_STAPEL,
   });
@@ -173,20 +224,21 @@ export async function POST(req: Request) {
 
   const db = adminDb();
 
-  // GELAENDER 1: nur ein offener Stapel.
-  const laeuft = await offenerStapel(db, wache.userId);
-  if (laeuft) {
+  // GELAENDER 1: nicht beliebig viele Stapel gleichzeitig.
+  const laufende = await offeneStapel(db, wache.userId);
+  if (laufende.length >= MAX_OFFENE_STAPEL) {
     return NextResponse.json({
       ok: false,
-      error: `Es läuft bereits ein Stapel („${laeuft.zweck ?? ROUTE}", ${laeuft.anzahl} Kapitel). Bitte abwarten — der Abhol-Dienst meldet sich, sobald er fertig ist.`,
-      laufenderStapel: laeuft,
+      error: `Es laufen bereits ${laufende.length} Stapel. Bitte abwarten — der Abhol-Dienst sieht alle 15 Minuten nach.`,
     }, { status: 409 });
   }
 
-  // GELAENDER 3: nur bestellen, was es noch nicht gibt.
+  // GELAENDER 3: nur bestellen, was es noch nicht gibt UND noch nicht unterwegs ist.
+  const schonBestellt = bereitsBestellt(laufende);
   const bestand = await ladeBestand(db, wache.userId);
-  const offen = offeneKapitel(bestand)
+  const offen = offeneKapitel(bestand, branchenListe())
     .filter((o) => nurTypen.indexOf(o.typ) >= 0)
+    .filter((o) => !schonBestellt.has(`${o.typ}::${o.schluessel}`))
     .slice(0, grenze);
 
   if (offen.length === 0) {
@@ -211,7 +263,10 @@ export async function POST(req: Request) {
   }
 
   const kosten = schaetzeKosten(vorbereitet.anfragen.length, modell);
-  const zweck = `Inhalts-Werkstatt: ${vorbereitet.anfragen.length} Kapitel`;
+  // Der Zweck nennt die Typen — bei mehreren parallelen Stapeln waere
+  // „Inhalts-Werkstatt: 698 Kapitel" sonst nicht unterscheidbar.
+  const typenImStapel = [...new Set(offen.map((o) => o.typ))].join(' + ');
+  const zweck = `Inhalts-Werkstatt: ${vorbereitet.anfragen.length}× ${typenImStapel}`;
 
   // ZUERST die Zeile, DANN absenden. Scheitert das Absenden, bleibt eine Zeile
   // ohne extern_id zurueck — die schliesst der Abhol-Cron sauber als „nie

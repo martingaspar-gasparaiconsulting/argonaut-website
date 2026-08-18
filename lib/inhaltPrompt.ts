@@ -156,7 +156,8 @@ export function frageFuer(offen: OffenerBaustein): string {
     return (
       `Schreibe das Vorwort des Handbuchs für die Branche „${offen.ueberschrift}".\n\n` +
       zeile('Branchengruppe', k.kategorie) +
-      zeile('Typische Aufgaben dieser Branche', k.schmerzen) +
+      zeile('Was in dieser Branche Zeit frisst', k.schmerzen) +
+      zeile('Was sich mit ARGONAUT ändert', k.ergebnisse) +
       `\nDas Vorwort spricht den Leser direkt an, benennt zwei bis drei Dinge, die in genau dieser Branche Zeit fressen, ` +
       `und sagt in einem Satz, was er auf den nächsten Seiten findet.\n` +
       `Kein Verkaufstext. Länge: 150 bis 220 Wörter.`
@@ -167,7 +168,8 @@ export function frageFuer(offen: OffenerBaustein): string {
     return (
       `Schreibe den Gesprächseinstieg, mit dem sich ARGONAUT einem Betrieb der Branche „${offen.ueberschrift}" vorstellt.\n\n` +
       zeile('Branchengruppe', k.kategorie) +
-      zeile('Typische Aufgaben dieser Branche', k.schmerzen) +
+      zeile('Was in dieser Branche Zeit frisst', k.schmerzen) +
+      zeile('Was sich mit ARGONAUT ändert', k.ergebnisse) +
       `\nZwei kurze Absätze, dann drei Fragen, die der Betrieb sich selbst stellen sollte. ` +
       `Die Fragen sind echte Fragen, keine verkappten Behauptungen.\n` +
       `Länge: 180 bis 260 Wörter.`
