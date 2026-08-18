@@ -3,13 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '../../../../lib/supabase-server';
 import { entschluessele, encKeyBereit } from '../../../../lib/crypto';
 import { posteBeitrag, type BeitragLite, type MetaZugang } from '../../../../lib/socialVersand';
+import { VERBINDBARE_PLATTFORMEN } from '../../../../lib/social';
 
 // ============================================================================
 // ARGONAUT OS · app/api/cron/social-posten/route.ts  (Social P3 · Auto-Posten)
 //
 // Der Takt-MOTOR der Postingzentrale. Holt alle FAELLIGEN geplanten Beitraege
 // (status='geplant', geplant_am <= jetzt) und postet sie automatisch auf die
-// verbundenen Meta-Kanaele des jeweiligen Betriebs. Protokoll in social_versand.
+// verbundenen Kanaele des jeweiligen Betriebs. Protokoll in social_versand.
+//
+// ACHTUNG BESITZER-FILTER: Diese Route liest mit der Service-Rolle, die RLS
+// umgeht. Der Zugang wird deshalb je owner_user_id geholt (metaZugaenge) und
+// der Status nur mit .eq('owner_user_id', ...) zurueckgeschrieben. Ohne das
+// koennte ein Betrieb mit dem Token eines anderen posten.
 //
 // Ausloesung: Vercel Cron (Bearer CRON_SECRET) ODER eingeloggter Admin (Test).
 // Service-Role umgeht RLS. Demo-Konten posten NICHT. Token wird serverseitig
@@ -45,7 +51,7 @@ async function metaZugaenge(admin: ReturnType<typeof service>, uid: string): Pro
     .from('social_zugang')
     .select('plattform, ziel_id, token_verschluesselt, verbunden')
     .eq('owner_user_id', uid)
-    .in('plattform', ['facebook', 'instagram', 'google_business', 'linkedin']);
+    .in('plattform', VERBINDBARE_PLATTFORMEN);
   const map: Record<string, MetaZugang> = {};
   for (const r of (data ?? []) as { plattform: string; ziel_id: string | null; token_verschluesselt: string | null; verbunden: boolean | null }[]) {
     if (r.verbunden !== true || !r.token_verschluesselt || !r.ziel_id) continue;

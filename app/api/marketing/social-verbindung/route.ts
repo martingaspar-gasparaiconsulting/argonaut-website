@@ -2,20 +2,24 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { verschluessele, encKeyBereit } from '@/lib/crypto';
-import { istVerbindbar } from '@/lib/social';
+import { istVerbindbar, VERBINDBARE_PLATTFORMEN } from '@/lib/social';
 
 // ============================================================================
-// ARGONAUT OS · app/api/marketing/social-verbindung/route.ts  (Social P2)
+// ARGONAUT OS · app/api/marketing/social-verbindung/route.ts  (Social P2/P6/P7)
 //
-// Sichere Ablage der Meta-Zugaenge (Facebook-Seite + Instagram) je Betrieb.
-//   GET               -> { facebook, instagram, encKeyBereit }
+// Sichere Ablage der Kanal-Zugaenge je Betrieb.
+//   GET               -> je Kanal { verbunden, ziel_id, konto_name, hatToken } + encKeyBereit
 //   POST {plattform,ziel_id,konto_name,token} -> Token AES-256-GCM verschluesselt
 //                        in social_zugang + verbunden=true; social_kanal mitgepflegt
 //   DELETE ?plattform=.. -> Verbindung trennen (Token entfernen)
 //
 // Der Token wird NIE an den Client zurueckgegeben. social_zugang ist per RLS
-// nur der Service-Role zugaenglich. Das echte Posten (P3) liest + entschluesselt
-// den Token serverseitig. Nur Meta-Kanaele ('facebook'|'instagram') erlaubt.
+// nur der Service-Role zugaenglich. Das echte Posten liest + entschluesselt den
+// Token serverseitig.
+//
+// WELCHE KANAELE ERLAUBT SIND, steht ausschliesslich in VERBINDBARE_PLATTFORMEN
+// (lib/social.ts). Hier wird die Liste nicht noch einmal aufgeschrieben —
+// sonst laesst sich ein Kanal verbinden, den der Motor gar nicht posten kann.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -47,17 +51,14 @@ export async function GET() {
     .from('social_zugang')
     .select('plattform, ziel_id, konto_name, token_verschluesselt, verbunden')
     .eq('owner_user_id', uid)
-    .in('plattform', ['facebook', 'instagram', 'google_business', 'linkedin']);
+    .in('plattform', VERBINDBARE_PLATTFORMEN);
   const rows = (data ?? []) as ZugangRow[];
 
-  return NextResponse.json({
-    ok: true,
-    facebook: status(rows.find((r) => r.plattform === 'facebook')),
-    instagram: status(rows.find((r) => r.plattform === 'instagram')),
-    google_business: status(rows.find((r) => r.plattform === 'google_business')),
-    linkedin: status(rows.find((r) => r.plattform === 'linkedin')),
-    encKeyBereit: encKeyBereit(),
-  });
+  const antwort: Record<string, unknown> = { ok: true, encKeyBereit: encKeyBereit() };
+  for (const id of VERBINDBARE_PLATTFORMEN) {
+    antwort[id] = status(rows.find((r) => r.plattform === id));
+  }
+  return NextResponse.json(antwort);
 }
 
 export async function POST(req: Request) {
@@ -80,8 +81,8 @@ export async function POST(req: Request) {
   const ziel_id = (body.ziel_id || '').toString().trim().slice(0, 200);
   const konto_name = (body.konto_name || '').toString().trim().slice(0, 200) || null;
   const token = (body.token || '').toString().trim();
-  if (!ziel_id) return NextResponse.json({ ok: false, error: 'Bitte die Ziel-ID (z. B. Seiten-/Standort-ID oder URN) eingeben.' }, { status: 400 });
-  if (!token) return NextResponse.json({ ok: false, error: 'Bitte den Zugangs-Token eingeben.' }, { status: 400 });
+  if (!ziel_id) return NextResponse.json({ ok: false, error: 'Bitte das Ziel eingeben (Seiten-/Standort-ID, URN, Instanz-Adresse oder Handle).' }, { status: 400 });
+  if (!token) return NextResponse.json({ ok: false, error: 'Bitte den Zugangs-Token bzw. das App-Passwort eingeben.' }, { status: 400 });
 
   let token_verschluesselt: string;
   try {

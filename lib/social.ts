@@ -373,14 +373,37 @@ export function metaVerbindungFeld(id: string | null | undefined): MetaVerbindun
 // Generische, token-basierte Verbindung (wie Meta). social_zugang bleibt generisch.
 // ============================================================================
 
-/** Alle Kanaele, die per Token-Verbindung direkt anbindbar sind. */
-export const VERBINDBARE_PLATTFORMEN: SocialPlattformId[] = ['facebook', 'instagram', 'google_business', 'linkedin'];
+/**
+ * Alle Kanaele, die per Token-Verbindung direkt anbindbar sind.
+ *
+ * DIESE LISTE IST DIE EINZIGE QUELLE. Routen und Oberflaeche muessen sie
+ * benutzen statt eigene Aufzaehlungen zu fuehren — sonst laesst sich ein Kanal
+ * verbinden, den der Motor gar nicht kennt (oder umgekehrt).
+ */
+export const VERBINDBARE_PLATTFORMEN: SocialPlattformId[] = [
+  'facebook', 'instagram', 'google_business', 'linkedin', 'mastodon', 'bluesky',
+];
 
 export function istVerbindbar(id: string | null | undefined): boolean {
   return VERBINDBARE_PLATTFORMEN.includes(id as SocialPlattformId);
 }
 
-export type VerbindungFeld = { zielLabel: string; zielHinweis: string; tokenLabel: string };
+/**
+ * Kanaele, auf die der Motor tatsaechlich posten kann.
+ *
+ * Steht bewusst HIER und nicht in lib/socialVersand.ts: socialVersand ist
+ * server-only, diese Liste braucht aber auch die Oberflaeche. lib/social.ts
+ * ist rein und darf im Browser landen. socialVersand reicht sie nur weiter.
+ */
+export const POSTBARE_PLATTFORMEN: string[] = VERBINDBARE_PLATTFORMEN.slice();
+
+export type VerbindungFeld = {
+  zielLabel: string;
+  zielHinweis: string;
+  tokenLabel: string;
+  /** Beispieltext im Eingabefeld. Optional — aeltere Kanaele haben ihn im UI fest. */
+  platzhalter?: string;
+};
 
 /** Welche Felder der Betrieb je verbindbarem Kanal eintraegt (UI-getrieben). */
 export const VERBINDUNG_FELDER: Record<string, VerbindungFeld> = {
@@ -390,14 +413,53 @@ export const VERBINDUNG_FELDER: Record<string, VerbindungFeld> = {
     zielLabel: 'Standort-Ressourcenname',
     zielHinweis: 'Form „accounts/…/locations/…“ aus Ihrem Google-Unternehmensprofil (Standort-ID).',
     tokenLabel: 'Google-Zugangs-Token (OAuth)',
+    platzhalter: 'accounts/…/locations/…',
   },
   linkedin: {
     zielLabel: 'Autor-URN',
     zielHinweis: 'urn:li:person:… (persönlich) oder urn:li:organization:… (Unternehmensseite).',
     tokenLabel: 'LinkedIn-Zugangs-Token',
+    platzhalter: 'urn:li:person:…',
+  },
+  mastodon: {
+    zielLabel: 'Adresse Ihrer Mastodon-Instanz',
+    zielHinweis:
+      'Die Adresse des Servers, auf dem Ihr Konto liegt — z. B. mastodon.social oder ' +
+      'social.anbieter.de. Den Zugangs-Token erzeugen Sie dort unter ' +
+      'Einstellungen → Entwicklung → Neue Anwendung, mit der Berechtigung „write:statuses“.',
+    tokenLabel: 'Zugangs-Token (Zugriffstoken der Anwendung)',
+    platzhalter: 'mastodon.social',
+  },
+  bluesky: {
+    zielLabel: 'Ihr Bluesky-Handle',
+    zielHinweis:
+      'Ihr Benutzername inklusive Endung, z. B. baeckerei-sonne.bsky.social. Als Passwort ' +
+      'tragen Sie bitte NICHT Ihr Konto-Passwort ein, sondern ein App-Passwort aus ' +
+      'Einstellungen → Datenschutz und Sicherheit → App-Passwörter.',
+    tokenLabel: 'App-Passwort',
+    platzhalter: 'name.bsky.social',
   },
 };
 
 export function verbindungFeld(id: string | null | undefined): VerbindungFeld | null {
   return (id && VERBINDUNG_FELDER[id]) || null;
+}
+
+// ============================================================================
+// OFFENE NETZE (Mastodon + Bluesky) — Social P7
+//
+// WARUM GERADE DIESE ZWEI: Sie sind die einzigen Kanaele im Katalog, die ohne
+// App-Review, ohne Audit und ohne Gebuehren direkt beschreibbar sind. Konto
+// anlegen, Token bzw. App-Passwort erzeugen, eintragen — mehr braucht es nicht.
+//
+// WAS SIE (NOCH) NICHT KOENNEN: Bilder und Videos. Beide Netze verlangen dafuer
+// einen zweistufigen Binaer-Upload; das ist ein eigenes Paket. Text und Links
+// gehen — bei 500 bzw. 300 Zeichen ist das genau ihr Einsatzzweck.
+// ============================================================================
+
+/** Kanaele, die nur Text und Links koennen (noch keine Medien). */
+export const NUR_TEXT_PLATTFORMEN: SocialPlattformId[] = ['mastodon', 'bluesky'];
+
+export function istNurText(id: string | null | undefined): boolean {
+  return NUR_TEXT_PLATTFORMEN.includes(id as SocialPlattformId);
 }

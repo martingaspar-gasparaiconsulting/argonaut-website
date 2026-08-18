@@ -5,10 +5,12 @@ import {
   SOCIAL_PLATTFORMEN, SOCIAL_STATUS, plattformFuer, plattformenNachGruppe,
   bindendesLimit, zaehleZeichen, validiereBeitrag, zaehleBeitraege, zaehleKanaele,
   META_PLATTFORMEN, metaVerbindungFeld, verbindungFeld,
+  VERBINDBARE_PLATTFORMEN, POSTBARE_PLATTFORMEN,
 } from '@/lib/social';
 
-const WEITERE_VERBINDBAR = ['google_business', 'linkedin'];
-const POSTBARE = ['facebook', 'instagram', 'google_business', 'linkedin'];
+// Die Meta-Kanaele haben oben einen eigenen Kasten — hier stehen alle uebrigen.
+const WEITERE_VERBINDBAR: string[] = VERBINDBARE_PLATTFORMEN.filter((id) => !META_PLATTFORMEN.includes(id));
+const POSTBARE: string[] = POSTBARE_PLATTFORMEN;
 import { videoEinbettung, videoHinweis, sichereMedienUrl } from '@/lib/landingpages';
 
 // ============================================================
@@ -103,7 +105,7 @@ export default function SocialSeite() {
       if (jK?.ok) setKanaele((jK.liste as KanalRow[]) || []);
       if (jV?.ok) {
         const st = (k: string) => (jV[k] as VStatus) || V_LEER;
-        const alle = ['facebook', 'instagram', 'google_business', 'linkedin'];
+        const alle: string[] = VERBINDBARE_PLATTFORMEN;
         const neu: Record<string, VStatus> = {};
         alle.forEach((k) => { neu[k] = st(k); });
         setVerb(neu);
@@ -243,7 +245,11 @@ export default function SocialSeite() {
 
   async function jetztPosten(b: Beitrag) {
     const kanaele = (b.kanaele || []).filter((k) => POSTBARE.includes(k));
-    if (kanaele.length === 0) { setSendMeldung('Für das automatische Posten sind aktuell Facebook, Instagram, Google Unternehmensprofil und LinkedIn möglich — weitere Kanäle folgen.'); return; }
+    if (kanaele.length === 0) {
+      const moeglich = POSTBARE.map((k) => plattformFuer(k)?.name || k).join(', ');
+      setSendMeldung(`Für das automatische Posten sind aktuell möglich: ${moeglich} — weitere Kanäle folgen.`);
+      return;
+    }
     const namen = kanaele.map((k) => plattformFuer(k)?.name || k).join(' + ');
     if (!confirm(`Diesen Beitrag jetzt auf ${namen} posten?`)) return;
     setSendBusyId(b.id); setSendMeldung(null);
@@ -508,15 +514,18 @@ export default function SocialSeite() {
             })}
           </div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '14px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
-            Sobald verbunden, kann ARGONAUT direkt auf diese Kanäle posten (nächster Schritt). Weitere Kanäle wie Google Unternehmensprofil und LinkedIn folgen einzeln.
+            Sobald verbunden, postet ARGONAUT direkt auf diese Kanäle — sofort oder nach Plan. Alle weiteren Kanäle richten Sie im nächsten Kasten ein.
           </p>
         </div>
 
-        {/* Verbindungen — Google Unternehmensprofil + LinkedIn */}
+        {/* Verbindungen — alle weiteren Kanäle */}
         <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
-          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Verbindungen — Google Unternehmensprofil &amp; LinkedIn</div>
+          <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Weitere Verbindungen</div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
-            Auch hier gilt: Zugangs-Token wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt. Die genaue Einrichtung erhalten Sie separat.
+            Auch hier gilt: Der Zugang wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt.
+            Bei <strong style={{ color: '#fff' }}>Mastodon</strong> und <strong style={{ color: '#fff' }}>Bluesky</strong> genügen ein Konto und ein
+            selbst erzeugter Zugang — kein Antrag, keine Prüfung, keine Gebühren. Diese beiden Kanäle übertragen bislang
+            nur Text und Links; ein angehängtes Bild bleibt bei ihnen außen vor.
           </p>
           <div style={{ display: 'grid', gap: 14 }}>
             {WEITERE_VERBINDBAR.map((id) => {
@@ -532,7 +541,7 @@ export default function SocialSeite() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
                     <div>
                       <label style={lbl}>{feld.zielLabel}</label>
-                      <input value={vZiel[id] ?? ''} onChange={(e) => setVZiel((v) => ({ ...v, [id]: e.target.value }))} placeholder={id === 'linkedin' ? 'urn:li:person:…' : 'accounts/…/locations/…'} style={input} />
+                      <input value={vZiel[id] ?? ''} onChange={(e) => setVZiel((v) => ({ ...v, [id]: e.target.value }))} placeholder={feld.platzhalter ?? ''} style={input} />
                     </div>
                     <div>
                       <label style={lbl}>Anzeigename (optional)</label>
@@ -557,7 +566,7 @@ export default function SocialSeite() {
         <div style={{ background: C.navy2, borderRadius: 14, padding: '22px 24px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Kanal-Verwaltung</div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
-            Merken Sie vor, welche Plattformen Sie nutzen möchten. Das eigentliche Verbinden (einmalige Anmeldung je Kanal) kommt im nächsten Schritt.
+            Merken Sie vor, welche Plattformen Sie nutzen möchten. Kanäle mit grünem Haken sind verbunden und werden automatisch bespielt; bei allen übrigen dient der Eintrag bislang nur der Planung.
           </p>
           {(['kern', 'schwanz'] as const).map((g) => (
             <div key={g} style={{ marginBottom: 10 }}>
@@ -603,7 +612,7 @@ export default function SocialSeite() {
             {liste.map((b) => {
               const urls = Array.isArray(b.medien_urls) ? b.medien_urls : [];
               const bild = urls.find((u) => !videoEinbettung(u).embedUrl);
-              const hatMeta = (b.kanaele || []).some((k) => POSTBARE.includes(k));
+              const hatPostbaren = (b.kanaele || []).some((k) => POSTBARE.includes(k));
               const statusLabel = SOCIAL_STATUS.find((s) => s.id === b.status)?.label || 'Entwurf';
               const statusFarbe = b.status === 'gesendet' ? C.green : b.status === 'geplant' ? C.cyan : C.textDim;
               return (
@@ -627,7 +636,7 @@ export default function SocialSeite() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                    {hatMeta && b.status !== 'gesendet' && (
+                    {hatPostbaren && b.status !== 'gesendet' && (
                       <button onClick={() => jetztPosten(b)} disabled={sendBusyId === b.id} style={{ ...btn(C.green), opacity: sendBusyId === b.id ? 0.5 : 1, cursor: sendBusyId === b.id ? 'wait' : 'pointer' }}>
                         {sendBusyId === b.id ? 'Poste…' : '📤 Jetzt posten'}
                       </button>

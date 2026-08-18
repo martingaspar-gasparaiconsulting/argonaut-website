@@ -104,8 +104,8 @@ export const BESTE_ZEITEN: Partial<Record<SocialPlattformId, BesteZeit>> = {
   telegram:        { fenster: [{ von: '09:00', bis: '11:00' }, { von: '18:00', bis: '20:00' }], beitragstyp: 'Text, Bilder & Links' },
   x:               { fenster: [{ von: '08:00', bis: '10:00' }, { von: '12:00', bis: '13:00' }], beitragstyp: 'Kurztext & Links' },
   threads:         { fenster: [{ von: '09:00', bis: '11:00' }, { von: '19:00', bis: '21:00' }], beitragstyp: 'Kurztext & Bilder' },
-  bluesky:         { fenster: [{ von: '09:00', bis: '11:00' }], beitragstyp: 'Kurztext & Bilder' },
-  mastodon:        { fenster: [{ von: '09:00', bis: '11:00' }], beitragstyp: 'Kurztext & Bilder' },
+  bluesky:         { fenster: [{ von: '09:00', bis: '11:00' }], beitragstyp: 'Kurztext & Links' },
+  mastodon:        { fenster: [{ von: '09:00', bis: '11:00' }], beitragstyp: 'Kurztext & Links' },
 };
 
 export function besteZeitFuer(id: string | null | undefined): BesteZeit | null {

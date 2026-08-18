@@ -2,17 +2,20 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele, encKeyBereit } from '@/lib/crypto';
-import { posteBeitrag, type BeitragLite, type MetaZugang } from '@/lib/socialVersand';
+import { posteBeitrag, POSTBARE_PLATTFORMEN, type BeitragLite, type MetaZugang } from '@/lib/socialVersand';
+import { VERBINDBARE_PLATTFORMEN, plattformFuer } from '@/lib/social';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/social-senden/route.ts  (Social P3)
 //
-// POST { beitrag_id } -> postet den Beitrag SOFORT auf die verbundenen
-// Meta-Kanaele (Facebook/Instagram) und protokolliert in social_versand.
-// Bei Erfolg wird der Beitrag auf status='gesendet' gesetzt.
+// POST { beitrag_id } -> postet den Beitrag SOFORT auf die verbundenen Kanaele
+// und protokolliert in social_versand. Bei Erfolg wird der Beitrag auf
+// status='gesendet' gesetzt.
 //
 // Demo-Konten posten NICHT. Token wird serverseitig entschluesselt; er verlaesst
-// den Server nie. Weitere Kanaele (Google Business, LinkedIn ...) folgen einzeln.
+// den Server nie. Welche Kanaele moeglich sind, sagen VERBINDBARE_PLATTFORMEN
+// (lib/social.ts) und POSTBARE_PLATTFORMEN (lib/socialVersand.ts) — hier steht
+// die Liste bewusst nicht noch einmal.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -30,7 +33,7 @@ async function metaZugaenge(admin: ReturnType<typeof createAdminClient>, uid: st
     .from('social_zugang')
     .select('plattform, ziel_id, token_verschluesselt, verbunden')
     .eq('owner_user_id', uid)
-    .in('plattform', ['facebook', 'instagram', 'google_business', 'linkedin']);
+    .in('plattform', VERBINDBARE_PLATTFORMEN);
   const map: Record<string, MetaZugang> = {};
   for (const r of (data ?? []) as { plattform: string; ziel_id: string | null; token_verschluesselt: string | null; verbunden: boolean | null }[]) {
     if (r.verbunden !== true || !r.token_verschluesselt || !r.ziel_id) continue;
@@ -66,16 +69,16 @@ export async function POST(req: Request) {
   const beitrag = bt as BeitragLite | null;
   if (!beitrag) return NextResponse.json({ ok: false, error: 'Beitrag nicht gefunden.' }, { status: 404 });
 
-  const POSTBAR = ['facebook', 'instagram', 'google_business', 'linkedin'];
-  const postbareKanaele = (beitrag.kanaele || []).filter((k) => POSTBAR.includes(k));
+  const postbareKanaele = (beitrag.kanaele || []).filter((k) => POSTBARE_PLATTFORMEN.includes(k));
   if (postbareKanaele.length === 0) {
-    return NextResponse.json({ ok: false, error: 'Für das automatische Posten sind aktuell Facebook, Instagram, Google Unternehmensprofil und LinkedIn möglich. Weitere Kanäle folgen einzeln.' }, { status: 400 });
+    const namen = POSTBARE_PLATTFORMEN.map((k) => plattformFuer(k)?.name ?? k).join(', ');
+    return NextResponse.json({ ok: false, error: `Für das automatische Posten sind aktuell möglich: ${namen}. Weitere Kanäle folgen einzeln.` }, { status: 400 });
   }
   if (!encKeyBereit()) return NextResponse.json({ ok: false, error: 'Sicherheits-Schlüssel (APP_ENC_KEY) fehlt.' }, { status: 400 });
 
   const zugaenge = await metaZugaenge(admin, uid);
   if (Object.keys(zugaenge).length === 0) {
-    return NextResponse.json({ ok: false, error: 'Kein verbundener Kanal. Bitte oben einen Kanal (Facebook, Instagram, Google Unternehmensprofil oder LinkedIn) verbinden.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Kein verbundener Kanal. Bitte oben zuerst einen Kanal verbinden.' }, { status: 400 });
   }
 
   const { ergebnisse, gesendet, fehler } = await posteBeitrag(admin, { ownerId: uid, beitrag, zugaenge });
