@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/marketing-lagebericht",
       "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/reports-versand",
+      "schedule": "0 6 * * *"
     }
   ]
 }

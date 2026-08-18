@@ -161,6 +161,8 @@ export interface GespeicherterReport {
   summe_feld?: string | null;
   gruppe_feld?: string | null;
   zeitraum?: string | null;
+  plan?: string | null;
+  plan_empfaenger?: string | null;
 }
 
 export interface KonfigPruefung {
@@ -225,4 +227,94 @@ export function reportName(roh: string | null | undefined, quelleKey: string, me
   if (n) return n;
   const q = quelle(quelleKey);
   return `${q?.name ?? 'Auswertung'} — ${metrik === 'summe' ? 'Summe' : 'Anzahl'}`;
+}
+
+// ============================================================================
+// GEPLANTE AUSWERTUNGEN (18.08.26)
+//
+// Eine gespeicherte Auswertung kann sich regelmaessig selbst per Mail melden.
+// Die Faelligkeit wird hier gerechnet, nicht im Cron: so ist sie node-testbar
+// und haengt nicht davon ab, wann jemand hinsieht.
+//
+// WARUM DER LETZTE VERSAND ZAEHLT UND NICHT DER WOCHENTAG
+// „Jeden Montag" klingt einfach, ist es aber nicht: faellt ein Cron-Lauf aus
+// (Wartung, Fehler), waere der Bericht fuer diese Woche fuer immer verloren —
+// am Dienstag ist ja nicht Montag. Gerechnet wird deshalb der ABSTAND zum
+// letzten tatsaechlichen Versand. Ein ausgefallener Lauf holt sich beim
+// naechsten Durchgang selbst nach, und niemand merkt etwas.
+//
+// UND WARUM NICHT OEFTER ALS GEPLANT
+// Der Cron laeuft taeglich. Ohne Abstandspruefung bekaeme der Betrieb seinen
+// „monatlichen" Bericht jeden Tag — 30 Mails statt einer. Bei Resend im
+// Free-Tarif waere das Tageskontingent nach drei Kunden aufgebraucht.
+// ============================================================================
+
+export type PlanKey = 'keiner' | 'woechentlich' | 'monatlich';
+
+export const PLAENE: Array<{ key: PlanKey; label: string; tage: number | null }> = [
+  { key: 'keiner', label: 'Nicht automatisch senden', tage: null },
+  { key: 'woechentlich', label: 'Wöchentlich per E-Mail', tage: 7 },
+  { key: 'monatlich', label: 'Monatlich per E-Mail', tage: 30 },
+];
+
+export function istPlanKey(x: unknown): x is PlanKey {
+  return typeof x === 'string' && PLAENE.some((p) => p.key === x);
+}
+
+/** Abstand in Tagen. null = gar nicht senden. Unbekanntes sendet NICHT. */
+export function planTage(key: string | null | undefined): number | null {
+  const p = PLAENE.find((x) => x.key === key);
+  return p ? p.tage : null;
+}
+
+/**
+ * Ist dieser geplante Report jetzt faellig?
+ *
+ * Bewusst streng: Im Zweifel wird NICHT gesendet. Eine ausgefallene Mail
+ * bemerkt der Betrieb und fragt nach; eine Mail zu viel — jeden Tag dieselbe —
+ * kostet Vertrauen und Kontingent.
+ */
+export function istFaellig(
+  plan: string | null | undefined,
+  zuletztGesendet: string | null | undefined,
+  jetzt: Date,
+): boolean {
+  const tage = planTage(plan);
+  if (tage === null) return false;
+
+  const roh = String(zuletztGesendet ?? '').trim();
+  if (!roh) return true;                       // noch nie gesendet -> jetzt
+
+  const letzte = new Date(roh).getTime();
+  if (isNaN(letzte)) return true;              // unlesbares Datum -> lieber senden
+  if (letzte > jetzt.getTime()) return false;  // Datum in der Zukunft -> nichts tun
+
+  return jetzt.getTime() - letzte >= tage * 86400000;
+}
+
+/** Wann ist der naechste Versand faellig? null = kein Plan. Fuer die Anzeige. */
+export function naechsterVersand(
+  plan: string | null | undefined,
+  zuletztGesendet: string | null | undefined,
+): Date | null {
+  const tage = planTage(plan);
+  if (tage === null) return null;
+  const roh = String(zuletztGesendet ?? '').trim();
+  const letzte = roh ? new Date(roh).getTime() : NaN;
+  if (isNaN(letzte)) return null;              // noch nie gesendet -> beim naechsten Lauf
+  return new Date(letzte + tage * 86400000);
+}
+
+/**
+ * Empfaenger aus einem Freitextfeld holen.
+ * Mehrere durch Komma, Semikolon oder Zeilenumbruch getrennt. Doppelte fallen
+ * raus — sonst bekommt jemand denselben Bericht zweimal, und das Kontingent
+ * zahlt es doppelt.
+ */
+export function empfaengerListe(roh: string | null | undefined, grenze = 10): string[] {
+  const teile = String(roh ?? '')
+    .split(/[,;\n]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+  return [...new Set(teile)].slice(0, grenze);
 }

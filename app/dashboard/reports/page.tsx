@@ -13,7 +13,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import { QUELLEN, quelle, zahlFelder, textFelder, baueReport, formatWert, reportCsv,
   ZEITRAEUME, zeitraumSpanne, pruefeGespeicherten, reportName,
-  type ReportErgebnis, type ZeitraumKey, type GespeicherterReport } from '@/lib/reportBaukasten';
+  PLAENE, planTage, empfaengerListe,
+  type ReportErgebnis, type ZeitraumKey, type PlanKey, type GespeicherterReport } from '@/lib/reportBaukasten';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -42,6 +43,8 @@ export default function ReportsSeite() {
   const [zeitraum, setZeitraum] = useState<ZeitraumKey>('quartal');
   const [gespeicherte, setGespeicherte] = useState<GespeicherterReport[]>([]);
   const [name, setName] = useState('');
+  const [plan, setPlan] = useState<PlanKey>('keiner');
+  const [empfaenger, setEmpfaenger] = useState('');
   const [speichert, setSpeichert] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
 
@@ -84,7 +87,7 @@ export default function ReportsSeite() {
     try {
       const { data } = await supabase
         .from('report_gespeichert')
-        .select('id, name, quelle, metrik, summe_feld, gruppe_feld, zeitraum')
+        .select('id, name, quelle, metrik, summe_feld, gruppe_feld, zeitraum, plan, plan_empfaenger')
         .order('name', { ascending: true });
       setGespeicherte((data as GespeicherterReport[]) ?? []);
     } catch { /* gespeicherte Auswertungen sind Beiwerk */ }
@@ -114,9 +117,16 @@ export default function ReportsSeite() {
         summe_feld: metrik === 'summe' ? summeFeld : null,
         gruppe_feld: gruppeFeld || null,
         zeitraum,
+        plan,
+        plan_empfaenger: plan === 'keiner' ? null : empfaengerListe(empfaenger).join(', '),
       });
       if (error) throw error;
-      setMeldung(`„${titel}" gespeichert.`);
+      const wohin = empfaengerListe(empfaenger);
+      setMeldung(
+        plan === 'keiner'
+          ? `„${titel}" gespeichert.`
+          : `„${titel}" gespeichert — geht ab jetzt ${planTage(plan) === 7 ? 'wöchentlich' : 'monatlich'} an ${wohin.join(', ')}.`,
+      );
       setName('');
       await ladeGespeicherte();
     } catch (e) {
@@ -223,6 +233,23 @@ export default function ReportsSeite() {
             {speichert ? 'Speichert …' : '💾 Merken'}
           </button>
         </div>
+
+        {/* Automatischer Versand. Bewusst beim Speichern und nicht als eigener
+            Bildschirm: wer eine Auswertung benennt, weiss in dem Moment auch,
+            ob er sie regelmässig braucht. */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select style={styles.inp} value={plan} onChange={(e) => setPlan(e.target.value as PlanKey)}>
+            {PLAENE.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+          </select>
+          {plan !== 'keiner' && (
+            <input
+              style={{ ...styles.inp, flex: 1, minWidth: 200 }}
+              placeholder="Empfänger, mehrere mit Komma"
+              value={empfaenger}
+              onChange={(e) => setEmpfaenger(e.target.value)}
+            />
+          )}
+        </div>
         <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 6, lineHeight: 1.45 }}>
           Gespeichert wird die Einstellung, nicht das Ergebnis — beim nächsten Öffnen
           rechnet die Auswertung mit den dann aktuellen Zahlen.
@@ -241,6 +268,7 @@ export default function ReportsSeite() {
                 <span style={{ color: C.textDim, fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
                   {quelle(r.quelle)?.name ?? r.quelle} · {r.metrik === 'summe' ? 'Summe' : 'Anzahl'}
                   {r.gruppe_feld ? ' · gruppiert' : ''}
+                  {r.plan && r.plan !== 'keiner' ? ` · 📧 ${r.plan === 'woechentlich' ? 'wöchentlich' : 'monatlich'}` : ''}
                 </span>
               </button>
               <button style={styles.gdel} onClick={() => loeschen(r)} title="Löschen">✕</button>
