@@ -381,7 +381,8 @@ export function metaVerbindungFeld(id: string | null | undefined): MetaVerbindun
  * verbinden, den der Motor gar nicht kennt (oder umgekehrt).
  */
 export const VERBINDBARE_PLATTFORMEN: SocialPlattformId[] = [
-  'facebook', 'instagram', 'google_business', 'linkedin', 'mastodon', 'bluesky', 'telegram',
+  'facebook', 'instagram', 'google_business', 'linkedin',
+  'mastodon', 'bluesky', 'telegram', 'threads',
 ];
 
 export function istVerbindbar(id: string | null | undefined): boolean {
@@ -429,6 +430,15 @@ export const VERBINDUNG_FELDER: Record<string, VerbindungFeld> = {
       'Einstellungen → Entwicklung → Neue Anwendung, mit der Berechtigung „write:statuses“.',
     tokenLabel: 'Zugangs-Token (Zugriffstoken der Anwendung)',
     platzhalter: 'mastodon.social',
+  },
+  threads: {
+    zielLabel: 'Threads-Benutzerkennung',
+    zielHinweis:
+      'Die Kennung Ihres Threads-Profils (eine Zahlenfolge), nicht Ihr @-Name. Sie steht in der ' +
+      'Meta-Entwicklerkonsole bei der Threads-Anwendung. Der Zugang ist ein eigener — der Token ' +
+      'Ihrer Facebook-Seite gilt hier nicht.',
+    tokenLabel: 'Threads-Zugangs-Token',
+    platzhalter: '1784….',
   },
   telegram: {
     zielLabel: 'Ihr Telegram-Kanal',

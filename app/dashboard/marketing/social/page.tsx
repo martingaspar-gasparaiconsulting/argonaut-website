@@ -555,7 +555,8 @@ export default function SocialSeite() {
             Bei <strong style={{ color: '#fff' }}>Telegram</strong>, <strong style={{ color: '#fff' }}>Mastodon</strong> und <strong style={{ color: '#fff' }}>Bluesky</strong> genügen
             ein Konto und ein selbst erzeugter Zugang — kein Antrag, keine Prüfung, keine Gebühren.
             Telegram überträgt auch Bilder und Videos; Mastodon und Bluesky bislang nur Text und Links,
-            dort bleibt ein angehängtes Bild außen vor.
+            dort bleibt ein angehängtes Bild außen vor. <strong style={{ color: '#fff' }}>Threads</strong> gehört zu Meta
+            und braucht dieselbe Anwendung wie Facebook, aber einen eigenen Zugang — dort gehen Text und Bilder.
           </p>
           <div style={{ display: 'grid', gap: 14 }}>
             {WEITERE_VERBINDBAR.map((id) => {

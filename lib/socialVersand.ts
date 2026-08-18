@@ -8,6 +8,7 @@
 //   - Mastodon (api/v1/statuses)                [P7]
 //   - Bluesky (AT-Protokoll, zweistufig)        [P7]
 //   - Telegram (Bot-API, Kanal-Nachricht)       [P9]
+//   - Threads (Meta, zweistufig)                [P10]
 //
 // Erwartet einen Supabase-Client mit Service-Role (Protokoll-Inserts setzen owner
 // explizit). SPEICHER-PRINZIP: Videos werden NUR VERLINKT, nie bei uns gelagert.
@@ -30,6 +31,8 @@ const LINKEDIN = 'https://api.linkedin.com/v2/ugcPosts';
 /** Der oeffentliche Einstiegs-Server des AT-Protokolls. */
 const BSKY = 'https://bsky.social';
 const TELEGRAM = 'https://api.telegram.org';
+/** Threads hat einen EIGENEN Host — nicht graph.facebook.com. */
+const THREADS = 'https://graph.threads.net/v1.0';
 
 /**
  * Hoechstlaenge einer Telegram-BILDUNTERSCHRIFT.
@@ -164,6 +167,21 @@ export function postbarkeit(plattform: string, inhalt: { text?: string | null; k
     }
     if (p && zaehleZeichen(voll) > p.zeichenlimit) {
       return { ok: false, grund: `${p.name}: Text zu lang (${zaehleZeichen(voll)}/${p.zeichenlimit} Zeichen).` };
+    }
+    return { ok: true, grund: null };
+  }
+
+  // Threads: Text oder Bild. Videos koennen wir hier (noch) nicht — Meta
+  // verarbeitet sie asynchron, das Veroeffentlichen muesste warten und
+  // nachfragen. Ein Beitrag mit Video geht als Text raus, mit Vermerk.
+  if (plattform === 'threads') {
+    const p = plattformFuer('threads');
+    const voll = textFuerOffeneNetze(text, inhalt.klassen);
+    if (!voll && bildUrls.length === 0) {
+      return { ok: false, grund: 'Threads braucht einen Text oder ein Bild.' };
+    }
+    if (p && zaehleZeichen(voll) > p.zeichenlimit) {
+      return { ok: false, grund: `Threads: Text zu lang (${zaehleZeichen(voll)}/${p.zeichenlimit} Zeichen).` };
     }
     return { ok: true, grund: null };
   }
@@ -329,6 +347,38 @@ export function baueBlueskyPost(
   };
 }
 
+// ---------- Threads (Meta, zwei Schritte wie Instagram) ----------
+
+/**
+ * Schritt 1: den Beitrag anlegen, aber noch nicht veroeffentlichen.
+ *
+ * media_type MUSS gesetzt sein. Ohne Bild ist es 'TEXT' — schickt man dann
+ * trotzdem eine image_url mit, weist Meta den ganzen Aufruf ab.
+ */
+export function baueThreadsContainer(
+  benutzerId: string,
+  token: string,
+  inhalt: { text?: string | null; klassen: MedienKlassen },
+): Anfrage {
+  const id = (benutzerId || '').trim();
+  const bild = inhalt.klassen.bildUrls[0];
+  const body: Record<string, unknown> = {
+    text: textFuerOffeneNetze(inhalt.text, inhalt.klassen),
+    access_token: token,
+    media_type: bild ? 'IMAGE' : 'TEXT',
+  };
+  if (bild) body.image_url = bild;
+  return { url: `${THREADS}/${id}/threads`, body };
+}
+
+/** Schritt 2: veroeffentlichen. */
+export function baueThreadsPublish(benutzerId: string, token: string, creationId: string): Anfrage {
+  return {
+    url: `${THREADS}/${(benutzerId || '').trim()}/threads_publish`,
+    body: { creation_id: creationId, access_token: token },
+  };
+}
+
 // ---------- Telegram (Bot-API) ----------
 
 /**
@@ -458,14 +508,20 @@ export async function posteKanal(
   if (!post.ok) return { plattform, ok: false, extern_id: null, fehler: post.grund };
   const inhalt = { text, klassen };
 
-  // Bild/Video kann in den offenen Netzen noch nicht mit. Das ist kein Fehler —
-  // der Text geht raus — aber es wird im Protokoll vermerkt, damit niemand
-  // raetselt, wo das Foto geblieben ist.
-  const medienHinweis =
-    (plattform === 'mastodon' || plattform === 'bluesky') &&
-    (klassen.bildUrls.length > 0 || klassen.videoDateiUrls.length > 0)
-      ? 'Hinweis: Nur der Text wurde übertragen — Bilder und Videos kann dieser Kanal noch nicht.'
-      : null;
+  // Nicht jeder Kanal kann jedes Medium. Das ist kein Fehler — der Text geht
+  // raus — aber es wird im Protokoll vermerkt, damit niemand raetselt, wo das
+  // Foto geblieben ist.
+  const medienHinweis = (() => {
+    const hatBild = klassen.bildUrls.length > 0;
+    const hatVideo = klassen.videoDateiUrls.length > 0;
+    if ((plattform === 'mastodon' || plattform === 'bluesky') && (hatBild || hatVideo)) {
+      return 'Hinweis: Nur der Text wurde übertragen — Bilder und Videos kann dieser Kanal noch nicht.';
+    }
+    if (plattform === 'threads' && hatVideo) {
+      return 'Hinweis: Das Video wurde nicht übertragen — auf Threads gehen bislang nur Text und Bilder.';
+    }
+    return null;
+  })();
 
   if (plattform === 'facebook') {
     const r = await sendeAnfrage(baueFacebookAnfrage(zugang.ziel_id, zugang.token, inhalt));
@@ -491,6 +547,14 @@ export async function posteKanal(
     }
     const r = await sendeAnfrage(baueMastodonAnfrage(zugang.ziel_id, zugang.token, inhalt, beitragId));
     return { plattform, ok: r.ok, extern_id: r.id, fehler: r.ok ? medienHinweis : r.fehler };
+  }
+  if (plattform === 'threads') {
+    const c = await sendeAnfrage(baueThreadsContainer(zugang.ziel_id, zugang.token, inhalt));
+    if (!c.ok || !c.id) {
+      return { plattform, ok: false, extern_id: null, fehler: c.fehler || 'Threads hat den Beitrag nicht angenommen.' };
+    }
+    const v = await sendeAnfrage(baueThreadsPublish(zugang.ziel_id, zugang.token, c.id));
+    return { plattform, ok: v.ok, extern_id: v.id, fehler: v.ok ? medienHinweis : v.fehler };
   }
   if (plattform === 'telegram') {
     if (!telegramChatId(zugang.ziel_id)) {
