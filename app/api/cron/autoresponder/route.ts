@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '../../../../lib/supabase-server';
 import { verschickeFaellige, type LaufRow } from '../../../../lib/autoresponderVersand';
+import { tagesBudget, mengeFuerWerbelauf, begruendung } from '../../../../lib/mailBudget';
 
 // ============================================================================
 // ARGONAUT OS · app/api/cron/autoresponder/route.ts  (Paket 2 / 2a)
@@ -10,6 +11,14 @@ import { verschickeFaellige, type LaufRow } from '../../../../lib/autoresponderV
 // naechster_versand_am <= jetzt) und verschickt je Lauf den faelligen Schritt
 // ueber den gemeinsamen Baustein lib/autoresponderVersand.
 //
+// ▄▄▄ WARUM HIER EIN BUDGET-DECKEL SITZT ▄▄▄
+// Diese Route lief um 05:00 und durfte bis zu 300 Mails verschicken — bei
+// Resend im kostenlosen Tarif (100 Mails/Tag) also das Dreifache des ganzen
+// Tageskontingents. An einem starken Tag waren die Mahnungen um 07:00 und die
+// Terminerinnerungen um 06:00 damit tot, ohne dass jemand etwas merkt.
+// Der Deckel kommt jetzt aus lib/mailBudget und laesst die Haelfte des
+// Tagesbudgets fuer Betriebspost stehen. Siehe MAIL_TAGESBUDGET.
+//
 // Ausloesung: Vercel Cron (Bearer CRON_SECRET) ODER eingeloggter Admin (Test).
 // Service-Role umgeht RLS. Demo-Konten senden NICHT (im Baustein geprueft).
 // ============================================================================
@@ -17,7 +26,6 @@ import { verschickeFaellige, type LaufRow } from '../../../../lib/autoresponderV
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_PRO_DURCHGANG = 300;
 const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
 
 function service() {
@@ -45,6 +53,9 @@ async function lauf(req: Request) {
   const admin = service();
   const jetzt = new Date().toISOString();
 
+  const budget = tagesBudget(process.env.MAIL_TAGESBUDGET);
+  const MAX_PRO_DURCHGANG = mengeFuerWerbelauf(budget);
+
   const { data: laeufeD, error } = await admin
     .from('autoresponder_lauf')
     .select('id, owner_user_id, sequenz_id, email, name, abmelde_token, naechste_position, gestartet_am')
@@ -57,21 +68,20 @@ async function lauf(req: Request) {
   const laeufe = (laeufeD ?? []) as LaufRow[];
   const res = await verschickeFaellige(admin, laeufe, BASIS_URL);
 
-  // D1-Härtung: Deckel sichtbar machen. Ist MAX_PRO_DURCHGANG voll ausgeschöpft,
-  // warten evtl. weitere fällige Läufe — der nächste Cron-Lauf holt sie nach.
+  // Deckel sichtbar machen. Ist er voll ausgeschöpft, warten evtl. weitere
+  // fällige Läufe — der nächste Durchgang holt sie nach.
   const gedeckelt = laeufe.length >= MAX_PRO_DURCHGANG;
-  if (gedeckelt) {
-    console.warn(
-      `[autoresponder] Deckel erreicht: ${MAX_PRO_DURCHGANG} Läufe in diesem Durchgang verarbeitet — ` +
-        `es könnten weitere fällige Läufe warten (werden im nächsten Lauf nachgeholt).`,
-    );
-  }
+  const hinweis = begruendung(budget, MAX_PRO_DURCHGANG, laeufe.length);
+  if (gedeckelt) console.warn(`[autoresponder] ${hinweis}`);
 
   return NextResponse.json({
     ok: true,
     geprueft: laeufe.length,
     ...res,
     gedeckelt,
+    tagesbudget: budget,
+    deckel: MAX_PRO_DURCHGANG,
+    hinweis,
   });
 }
 

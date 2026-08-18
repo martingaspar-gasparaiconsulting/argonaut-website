@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { sendeMail } from '@/lib/mail';
 import { TEST_STEPS, naechsterSchrittIndex } from '@/lib/dossierSequenz';
+import { tagesBudget, mengeFuerWerbelauf, begruendung } from '@/lib/mailBudget';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/dossier-sequenz
@@ -10,13 +11,18 @@ import { TEST_STEPS, naechsterSchrittIndex } from '@/lib/dossierSequenz';
 // (seq_quelle='test', seq_status='aktiv', seq_naechster_am <= jetzt), verschickt
 // den fälligen Schritt und schaltet weiter. Auslösung: Vercel-Cron (CRON_SECRET)
 // oder eingeloggter Admin (Test). Service-Role umgeht RLS.
+//
+// ▄▄▄ BUDGET-DECKEL ▄▄▄
+// Diese Route durfte bis zu 300 Mails je Durchgang verschicken — bei Resend
+// im kostenlosen Tarif (100/Tag) das Dreifache des ganzen Tageskontingents.
+// Werbepost darf die Betriebspost (Mahnungen, Termine, Auswertungen) nicht
+// verdraengen; der Deckel kommt deshalb aus lib/mailBudget.
 // ============================================================================
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const BASIS_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com';
-const MAX_PRO_DURCHGANG = 300;
 
 function service() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -44,6 +50,9 @@ async function lauf(req: Request) {
   }
   const admin = service();
   const jetzt = new Date();
+
+  const budget = tagesBudget(process.env.MAIL_TAGESBUDGET);
+  const MAX_PRO_DURCHGANG = mengeFuerWerbelauf(budget);
 
   const { data, error } = await admin
     .from('dossier_leads')
@@ -91,7 +100,14 @@ async function lauf(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, geprueft: leads.length, gesendet, fertig, fehler });
+  const gedeckelt = leads.length >= MAX_PRO_DURCHGANG;
+  const hinweis = begruendung(budget, MAX_PRO_DURCHGANG, leads.length);
+  if (gedeckelt) console.warn(`[dossier-sequenz] ${hinweis}`);
+
+  return NextResponse.json({
+    ok: true, geprueft: leads.length, gesendet, fertig, fehler,
+    gedeckelt, tagesbudget: budget, deckel: MAX_PRO_DURCHGANG, hinweis,
+  });
 }
 
 export async function GET(req: Request) { return lauf(req); }
