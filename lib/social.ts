@@ -381,7 +381,7 @@ export function metaVerbindungFeld(id: string | null | undefined): MetaVerbindun
  * verbinden, den der Motor gar nicht kennt (oder umgekehrt).
  */
 export const VERBINDBARE_PLATTFORMEN: SocialPlattformId[] = [
-  'facebook', 'instagram', 'google_business', 'linkedin', 'mastodon', 'bluesky',
+  'facebook', 'instagram', 'google_business', 'linkedin', 'mastodon', 'bluesky', 'telegram',
 ];
 
 export function istVerbindbar(id: string | null | undefined): boolean {
@@ -429,6 +429,15 @@ export const VERBINDUNG_FELDER: Record<string, VerbindungFeld> = {
       'Einstellungen → Entwicklung → Neue Anwendung, mit der Berechtigung „write:statuses“.',
     tokenLabel: 'Zugangs-Token (Zugriffstoken der Anwendung)',
     platzhalter: 'mastodon.social',
+  },
+  telegram: {
+    zielLabel: 'Ihr Telegram-Kanal',
+    zielHinweis:
+      'Der öffentliche Name Ihres Kanals mit @ davor, z. B. @baeckerei-sonne. Das Zugangs-Kennwort ' +
+      'erzeugen Sie in Telegram bei @BotFather über „/newbot“. Den fertigen Bot fügen Sie dann in ' +
+      'Ihrem Kanal als Administrator hinzu — sonst darf er dort nichts schreiben.',
+    tokenLabel: 'Bot-Kennwort (Token von @BotFather)',
+    platzhalter: '@meinkanal',
   },
   bluesky: {
     zielLabel: 'Ihr Bluesky-Handle',

@@ -7,6 +7,7 @@
 //   - LinkedIn (ugcPosts)                       [P6]
 //   - Mastodon (api/v1/statuses)                [P7]
 //   - Bluesky (AT-Protokoll, zweistufig)        [P7]
+//   - Telegram (Bot-API, Kanal-Nachricht)       [P9]
 //
 // Erwartet einen Supabase-Client mit Service-Role (Protokoll-Inserts setzen owner
 // explizit). SPEICHER-PRINZIP: Videos werden NUR VERLINKT, nie bei uns gelagert.
@@ -28,6 +29,17 @@ const GBP = 'https://mybusiness.googleapis.com/v4';
 const LINKEDIN = 'https://api.linkedin.com/v2/ugcPosts';
 /** Der oeffentliche Einstiegs-Server des AT-Protokolls. */
 const BSKY = 'https://bsky.social';
+const TELEGRAM = 'https://api.telegram.org';
+
+/**
+ * Hoechstlaenge einer Telegram-BILDUNTERSCHRIFT.
+ *
+ * DIE FALLE: Eine reine Textnachricht darf 4096 Zeichen haben — haengt aber
+ * ein Bild oder Video dran, sind es nur noch 1024. Der Editor kennt nur die
+ * 4096 aus dem Katalog. Ohne diese Grenze wuerde ein langer Beitrag mit Foto
+ * beim Senden abgewiesen, ohne dass jemand versteht warum.
+ */
+export const TELEGRAM_BILDUNTERSCHRIFT_MAX = 1024;
 
 
 export type Anfrage = { url: string; body: Record<string, unknown>; headers?: Record<string, string> };
@@ -98,6 +110,43 @@ export function textFuerOffeneNetze(text: string | null | undefined, klassen: Me
   return t ? `${t}\n\n${link}` : link;
 }
 
+// ---------- Telegram: Kanal-Adresse und Geheimnisschutz ----------
+
+/**
+ * Macht aus dem, was ein Betrieb eintippt, eine gueltige Telegram-Adresse.
+ * „meinkanal“, „@meinkanal“ und „https://t.me/meinkanal“ fuehren alle zu
+ * „@meinkanal“. Eine reine Zahl (die interne Kanal-Id) bleibt eine Zahl —
+ * private Kanaele haben keinen @-Namen, nur eine Id wie -1001234567890.
+ */
+export function telegramChatId(roh: string | null | undefined): string {
+  let s = String(roh ?? '').trim();
+  if (!s) return '';
+  s = s.replace(/^https?:\/\/(www\.)?t\.me\//i, '');
+  s = s.replace(/^https?:\/\//i, '');
+  s = s.split('/')[0].split('?')[0].trim();
+  s = s.replace(/^@+/, '');
+  if (!s) return '';
+  if (/^-?\d+$/.test(s)) return s;
+  return `@${s}`;
+}
+
+/**
+ * Entfernt Zugangsdaten aus einem Fehlertext.
+ *
+ * WARUM DAS HIER STEHT UND NICHT WEGGELASSEN WERDEN DARF: Telegram ist der
+ * einzige Kanal, bei dem das Kennwort IN DER ADRESSE steht
+ * (api.telegram.org/bot<KENNWORT>/sendMessage). Scheitert der Aufruf auf
+ * Netzwerkebene, schreibt Node die ganze Adresse in die Fehlermeldung — und
+ * die landet bei uns in social_versand.fehler_text, also dauerhaft in der
+ * Datenbank und sichtbar in der Oberflaeche. Ohne diese Zeile waere das
+ * Bot-Kennwort jedes Kunden im Klartext gespeichert.
+ */
+export function entferneGeheimnisse(text: string | null | undefined): string {
+  return String(text ?? '')
+    .replace(/\/bot[0-9]+:[A-Za-z0-9_-]+/g, '/bot***')
+    .replace(/([?&](access_token|password|token)=)[^&\s]+/gi, '$1***');
+}
+
 /** Kann dieser Kanal mit diesem Inhalt gepostet werden? */
 export function postbarkeit(plattform: string, inhalt: { text?: string | null; klassen: MedienKlassen }): { ok: boolean; grund: string | null } {
   const text = (inhalt.text || '').trim();
@@ -115,6 +164,25 @@ export function postbarkeit(plattform: string, inhalt: { text?: string | null; k
     }
     if (p && zaehleZeichen(voll) > p.zeichenlimit) {
       return { ok: false, grund: `${p.name}: Text zu lang (${zaehleZeichen(voll)}/${p.zeichenlimit} Zeichen).` };
+    }
+    return { ok: true, grund: null };
+  }
+
+  // Telegram: Text ODER Medium genuegt — aber mit Bild gilt die kurze Grenze.
+  if (plattform === 'telegram') {
+    const p = plattformFuer('telegram');
+    if (!text && !hatDirektMedium && embedLinks.length === 0) {
+      return { ok: false, grund: 'Telegram: kein Inhalt zum Posten.' };
+    }
+    const grenze = hatDirektMedium ? TELEGRAM_BILDUNTERSCHRIFT_MAX : (p?.zeichenlimit ?? 4096);
+    const voll = hatDirektMedium ? text : textFuerOffeneNetze(text, inhalt.klassen);
+    if (zaehleZeichen(voll) > grenze) {
+      return {
+        ok: false,
+        grund: hatDirektMedium
+          ? `Telegram: Mit Bild oder Video sind höchstens ${grenze} Zeichen erlaubt (aktuell ${zaehleZeichen(voll)}). Bitte kürzen oder das Medium weglassen.`
+          : `Telegram: Text zu lang (${zaehleZeichen(voll)}/${grenze} Zeichen).`,
+      };
     }
     return { ok: true, grund: null };
   }
@@ -261,6 +329,49 @@ export function baueBlueskyPost(
   };
 }
 
+// ---------- Telegram (Bot-API) ----------
+
+/**
+ * Der passende Aufruf fuer den Inhalt: Bild, Video oder reiner Text.
+ *
+ * Anders als bei Mastodon/Bluesky kann Telegram Medien per URL holen — wir
+ * muessen nichts hochladen. Ein YouTube-Link kommt in den Text, Telegram baut
+ * die Vorschau selbst.
+ */
+export function baueTelegramAnfrage(
+  kanal: string,
+  token: string,
+  inhalt: { text?: string | null; klassen: MedienKlassen },
+): Anfrage {
+  const chat = telegramChatId(kanal);
+  const basis = `${TELEGRAM}/bot${(token || '').trim()}`;
+  const { bildUrls, videoDateiUrls } = inhalt.klassen;
+  const text = String(inhalt.text ?? '').trim();
+
+  if (bildUrls[0]) {
+    return { url: `${basis}/sendPhoto`, body: { chat_id: chat, photo: bildUrls[0], caption: text } };
+  }
+  if (videoDateiUrls[0]) {
+    return { url: `${basis}/sendVideo`, body: { chat_id: chat, video: videoDateiUrls[0], caption: text } };
+  }
+  return {
+    url: `${basis}/sendMessage`,
+    body: { chat_id: chat, text: textFuerOffeneNetze(inhalt.text, inhalt.klassen) },
+  };
+}
+
+/**
+ * Die Nummer der veroeffentlichten Nachricht aus Telegrams Antwort.
+ * Telegram antwortet {ok:true, result:{message_id:…}} — es gibt kein Feld
+ * „id“ auf oberster Ebene, das sendeAnfrage() sonst nimmt.
+ */
+export function telegramNachrichtId(json: Record<string, unknown> | null): string | null {
+  const r = json?.result;
+  if (!r || typeof r !== 'object') return null;
+  const id = (r as { message_id?: unknown }).message_id;
+  return (typeof id === 'number' || typeof id === 'string') ? String(id) : null;
+}
+
 export type RohAntwort = {
   ok: boolean;
   json: Record<string, unknown> | null;
@@ -280,22 +391,34 @@ export async function sendeAnfrageRoh(a: Anfrage): Promise<RohAntwort> {
     try { json = txt ? JSON.parse(txt) : null; } catch { /* kein JSON */ }
     const restliId = res.headers.get('x-restli-id');
     const objekt = (json && typeof json === 'object') ? (json as Record<string, unknown>) : null;
-    if (!res.ok) {
+
+    // Telegram antwortet manchmal mit HTTP 200 und {ok:false} im Rumpf.
+    // Ohne diese Zeile gaelte so ein Fehlschlag als Erfolg.
+    const rumpfSagtNein = objekt?.ok === false;
+
+    if (!res.ok || rumpfSagtNein) {
       // Meta/Google melden {error:{message}}, LinkedIn {message},
-      // Mastodon und Bluesky {error:"Text"} bzw. {message:"Text"}.
+      // Mastodon und Bluesky {error:"Text"}, Telegram {description:"Text"}.
       const roherFehler = objekt?.error;
-      const fehler =
+      const fehler = entferneGeheimnisse(
         (typeof roherFehler === 'object' && roherFehler !== null
           ? (roherFehler as { message?: string }).message
           : undefined) ||
         (typeof objekt?.message === 'string' ? (objekt.message as string) : undefined) ||
         (typeof roherFehler === 'string' ? roherFehler : undefined) ||
-        txt.slice(0, 300) || `HTTP ${res.status}`;
+        (typeof objekt?.description === 'string' ? (objekt.description as string) : undefined) ||
+        txt.slice(0, 300) || `HTTP ${res.status}`,
+      );
       return { ok: false, json: objekt, restliId, fehler };
     }
     return { ok: true, json: objekt, restliId, fehler: null };
   } catch (e) {
-    return { ok: false, json: null, restliId: null, fehler: e instanceof Error ? e.message : 'Netzwerkfehler.' };
+    // entferneGeheimnisse ist hier PFLICHT: Node schreibt die vollstaendige
+    // Adresse in die Fehlermeldung — bei Telegram steht das Bot-Kennwort darin.
+    return {
+      ok: false, json: null, restliId: null,
+      fehler: entferneGeheimnisse(e instanceof Error ? e.message : 'Netzwerkfehler.'),
+    };
   }
 }
 
@@ -368,6 +491,13 @@ export async function posteKanal(
     }
     const r = await sendeAnfrage(baueMastodonAnfrage(zugang.ziel_id, zugang.token, inhalt, beitragId));
     return { plattform, ok: r.ok, extern_id: r.id, fehler: r.ok ? medienHinweis : r.fehler };
+  }
+  if (plattform === 'telegram') {
+    if (!telegramChatId(zugang.ziel_id)) {
+      return { plattform, ok: false, extern_id: null, fehler: 'Der Telegram-Kanal fehlt oder ist unbrauchbar.' };
+    }
+    const r = await sendeAnfrageRoh(baueTelegramAnfrage(zugang.ziel_id, zugang.token, inhalt));
+    return { plattform, ok: r.ok, extern_id: telegramNachrichtId(r.json), fehler: r.fehler };
   }
   if (plattform === 'bluesky') {
     if (!bskyHandle(zugang.ziel_id)) {

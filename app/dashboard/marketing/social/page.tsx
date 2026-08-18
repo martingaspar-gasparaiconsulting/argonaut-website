@@ -552,9 +552,10 @@ export default function SocialSeite() {
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(18px, 1.6vw, 26px)', marginBottom: 6 }}>Weitere Verbindungen</div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(13px, 1.1vw, 17px)' }}>
             Auch hier gilt: Der Zugang wird <strong style={{ color: '#fff' }}>verschlüsselt</strong> gespeichert und nie wieder angezeigt.
-            Bei <strong style={{ color: '#fff' }}>Mastodon</strong> und <strong style={{ color: '#fff' }}>Bluesky</strong> genügen ein Konto und ein
-            selbst erzeugter Zugang — kein Antrag, keine Prüfung, keine Gebühren. Diese beiden Kanäle übertragen bislang
-            nur Text und Links; ein angehängtes Bild bleibt bei ihnen außen vor.
+            Bei <strong style={{ color: '#fff' }}>Telegram</strong>, <strong style={{ color: '#fff' }}>Mastodon</strong> und <strong style={{ color: '#fff' }}>Bluesky</strong> genügen
+            ein Konto und ein selbst erzeugter Zugang — kein Antrag, keine Prüfung, keine Gebühren.
+            Telegram überträgt auch Bilder und Videos; Mastodon und Bluesky bislang nur Text und Links,
+            dort bleibt ein angehängtes Bild außen vor.
           </p>
           <div style={{ display: 'grid', gap: 14 }}>
             {WEITERE_VERBINDBAR.map((id) => {
