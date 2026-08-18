@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung'
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder'
+import { NurVoll } from '../_components/Ansicht'
+import type { EigenesFeld } from '@/lib/eigeneFelder'
 
 // ===== Typen =====
 interface Document {
@@ -138,6 +141,9 @@ function statusBadge(status: string) {
 // ===== Hauptkomponente =====
 import ErstellteDokumente from './ErstellteDokumente'
 
+// Der Modul-Schluessel fuer die eigenen Felder — wie ueberall der Tabellenname.
+const MODUL = 'documents'
+
 export default function DocumentsClient({ userId, paket, initialDocuments, initialDocumentAgents, standorte, initialDocumentStandorte }: Props) {
   const supabase = createClient()
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
@@ -147,6 +153,12 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [agentModal, setAgentModal] = useState<Document | null>(null)
+  // Eigene Felder am Dokument. Dokumente entstehen per Datei-Upload — es gibt
+  // also kein Anlege-Formular, in das sie passen wuerden. Das Modal, das
+  // ohnehin je Dokument geoeffnet wird, ist der einzige sinnvolle Ort.
+  const [felder, setFelder] = useState<EigenesFeld[]>([])
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({})
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({})
   const [agentToggles, setAgentToggles] = useState<Record<string, boolean>>({})
   const [savingAgents, setSavingAgents] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -228,12 +240,27 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     ])
   }
 
-  // ===== Agenten-Modal =====
+  // Eigene Felder nachladen. Faellt das aus, bleibt die Dokumentenliste voll
+  // benutzbar — deshalb ohne Fehleranzeige.
+  useEffect(() => {
+    let abgebrochen = false
+    ;(async () => {
+      try {
+        const f = await ladeFelder(MODUL)
+        const w = await ladeWerte(MODUL, documents.map((d) => d.id))
+        if (!abgebrochen) { setFelder(f); setWerteMap(w) }
+      } catch { /* eigene Felder sind optional */ }
+    })()
+    return () => { abgebrochen = true }
+  }, [documents])
+
+  // ===== Details-Modal (Agenten + eigene Felder) =====
   const openAgentModal = (doc: Document) => {
     const current = documentAgents.filter(da => da.document_id === doc.id).map(da => da.agent_name)
     const toggles: Record<string, boolean> = {}
     availableAgents.forEach(a => { toggles[a.name] = current.includes(a.name) })
     setAgentToggles(toggles)
+    setNmExtra(werteMap[doc.id] ?? {})
     setAgentModal(doc)
   }
 
@@ -249,6 +276,13 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     } else {
       setDocumentAgents(prev => prev.filter(da => da.document_id !== agentModal.id))
     }
+    // Die eigenen Felder mitspeichern. Bewusst NACH den Agenten und in einem
+    // eigenen try: schlaegt es fehl, sind die Agenten trotzdem gesichert.
+    try {
+      await speichereWerte(MODUL, agentModal.id, userId, nmExtra)
+      setWerteMap((alt) => ({ ...alt, [agentModal.id]: { ...nmExtra } }))
+    } catch { /* eigene Felder sind optional */ }
+
     setSavingAgents(false)
     setAgentModal(null)
   }
@@ -344,9 +378,10 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                       </p>
                     </div>
                     {statusBadge(doc.status)}
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[doc.id]} />
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                       <button onClick={() => openAgentModal(doc)} style={{ padding: '7px 14px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, cursor: 'pointer' }}>
-                        🤖 Agenten
+                        ⚙ Details
                       </button>
                       <FilialZuordnung
                         tabelle="document_standorte"
@@ -379,7 +414,7 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
       {agentModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: 24 }}>
           <div style={{ background: '#0D1E35', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 18, padding: 32, width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Agenten zuweisen</h3>
+            <h3 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}>Dokument-Details</h3>
             <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.45)', margin: '0 0 24px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agentModal.file_name}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
@@ -393,6 +428,18 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
                 </div>
               ))}
             </div>
+
+            <NurVoll>
+              <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <EigeneFelderInputs
+                  felder={felder}
+                  werte={nmExtra}
+                  setWert={(fid, w) => setNmExtra((alt) => ({ ...alt, [fid]: w }))}
+                  inpStyle={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: 14, marginBottom: 10 }}
+                  labStyle={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
+                />
+              </div>
+            </NurVoll>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setAgentModal(null)} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
