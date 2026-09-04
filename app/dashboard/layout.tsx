@@ -10,6 +10,7 @@ import OfflineSync from './_components/OfflineSync'
 import { demoStatus, demoRestText } from '@/lib/demo'
 import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 import PraesentationsModus from './_components/PraesentationsModus'
+import KiGuideBegleiter from './_components/KiGuideBegleiter'
 import UnterschriftLoader from './_components/UnterschriftLoader'
 import FilialUmschalter from './_components/FilialUmschalter'
 import { AnsichtUmschalter } from './_components/Ansicht'
@@ -198,6 +199,10 @@ export default async function DashboardLayout({
 
       {/* Präsentations-Modus — Auto-Loop (Abdunkeln + Gold), Start-Knopf unten links */}
       <PraesentationsModus />
+
+      {/* KI-Guide Stufe 3 — wandert von Baustein zu Baustein mit, unten links
+          ueber dem Praesentations-Knopf. Standard zugeklappt. */}
+      <KiGuideBegleiter />
 
       {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
       <SwRegister />
