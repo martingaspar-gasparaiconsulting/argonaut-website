@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,15 @@ export async function GET(req: NextRequest) {
     const mail = pick(p, ['rechnung_email', 'email', 'kontakt_email']);
     const tel = pick(p, ['telefon', 'phone', 'tel']);
 
+    // White-Label: Logo und Farben des Betriebs aus dem CI-Speicher (web_ci,
+    // RLS-scoped). Ohne hinterlegtes CI bleibt alles beim Standardlayout.
+    let ciRoh: CiRoh = null;
+    try {
+      const { data: ciData } = await supabase.from('web_ci').select(CI_SPALTEN).limit(1);
+      ciRoh = ((Array.isArray(ciData) && ciData[0]) || null) as unknown as CiRoh;
+    } catch { /* CI ist optional */ }
+    const marke = baueMarke(ciRoh, firma);
+
     const zeilen = positionen.map((x) => {
       const rab = Number(x.rabatt_prozent) || 0;
       const origNetto = (Number(x.menge) || 0) * (Number(x.einzelpreis) || 0);
@@ -74,12 +84,13 @@ export async function GET(req: NextRequest) {
   @page { size: A4; margin: 20mm 18mm; }
   * { box-sizing: border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #14202e; font-size: 12px; line-height: 1.55; margin: 0; }
-  .kopf { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0A1628; padding-bottom: 14px; margin-bottom: 24px; }
-  .firma { font-size: 20px; font-weight: 800; color: #0A1628; }
+  .kopf { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid ${marke.primaer}; padding-bottom: 14px; margin-bottom: 24px; }
+  .firma { font-size: 20px; font-weight: 800; color: ${marke.primaer}; }
+  .logo { max-height: 46px; max-width: 210px; margin-bottom: 8px; display: block; }
   .absender { color: #55606b; font-size: 11px; margin-top: 4px; }
   .meta { text-align: right; font-size: 11px; color: #55606b; }
   .meta b { color: #14202e; }
-  h1 { font-size: 22px; margin: 0 0 4px; color: #0A1628; }
+  h1 { font-size: 22px; margin: 0 0 4px; color: ${marke.primaer}; }
   .empf { margin: 6px 0 22px; }
   .empf .label { color: #8a949e; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
   table.pos { width: 100%; border-collapse: collapse; margin-top: 6px; }
@@ -88,12 +99,13 @@ export async function GET(req: NextRequest) {
   table.pos td.r, table.pos th.r { text-align: right; }
   .summe { width: 100%; border-collapse: collapse; margin-top: 6px; }
   .summe td { padding: 4px 8px; } .summe td.r { text-align: right; }
-  .summe .brutto td { font-size: 15px; font-weight: 800; color: #0A1628; border-top: 2px solid #0A1628; padding-top: 8px; }
+  .summe .brutto td { font-size: 15px; font-weight: 800; color: ${marke.primaer}; border-top: 2px solid ${marke.akzent}; padding-top: 8px; }
   .hinweis { margin-top: 18px; color: #55606b; font-size: 11px; }
   .fuss { margin-top: 26px; padding-top: 12px; border-top: 1px solid #cdd5dd; color: #8a949e; font-size: 10px; }
 </style></head><body>
   <div class="kopf">
     <div>
+      ${marke.logo ? `<img src="${esc(marke.logo)}" alt="Logo" class="logo">` : ''}
       <div class="firma">${esc(firma)}</div>
       <div class="absender">${esc(strasse)}${strasse ? '<br>' : ''}${esc(plzOrt)}${mail ? `<br>${esc(mail)}` : ''}${tel ? ` · ${esc(tel)}` : ''}</div>
     </div>
@@ -117,10 +129,10 @@ export async function GET(req: NextRequest) {
     <tr class="brutto"><td colspan="5"></td><td class="r">Gesamtbetrag</td><td class="r">${eur(a.brutto_summe)}</td></tr>
   </table>
   <div class="hinweis">Dieses Angebot ist freibleibend${a.gueltig_bis ? ` und gültig bis zum ${datum(a.gueltig_bis)}` : ''}. ${a.notiz ? esc(a.notiz) : ''}</div>
-  <div class="fuss">${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''} · Angebot erstellt mit ARGONAUT OS</div>
+  <div class="fuss">${esc(marke.name || firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''}</div>
 </body></html>`;
 
-    const dateiName = `Angebot-${String(a.angebotsnummer || a.kunde_name || 'ARGONAUT').replace(/[^A-Za-z0-9._-]/g, '_')}.pdf`;
+    const dateiName = `Angebot-${String(a.angebotsnummer || a.kunde_name || 'Angebot').replace(/[^A-Za-z0-9._-]/g, '_')}.pdf`;
     const gUrl = (process.env.GOTENBERG_URL || '').replace(/\/+$/, '');
     if (gUrl) {
       try {

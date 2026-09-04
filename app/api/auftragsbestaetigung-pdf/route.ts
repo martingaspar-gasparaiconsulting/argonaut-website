@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase-server';
+import { baueMarke, CI_SPALTEN, type CiRoh, type Marke } from '@/lib/markeCi';
 
 // ============================================================
 // ARGONAUT OS · MODUL 5 (Vertrag/Auftrag) · A7 — Auftragsbestätigung als PDF
@@ -43,7 +45,7 @@ function datumDe(d: any): string {
   }
 }
 
-function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaName: string): string {
+function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaName: string, marke: Marke): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = auftrag?.waehrung || 'EUR';
   const statusLabel = STATUS_LABEL[auftrag?.status] || esc(auftrag?.status) || '—';
@@ -70,9 +72,10 @@ function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaNam
 <html lang="de"><head><meta charset="utf-8"><style>
   * { box-sizing: border-box; }
   body { font-family: 'DejaVu Sans', Arial, sans-serif; color: #0A1628; margin: 0; padding: 48px 56px; font-size: 13px; line-height: 1.55; }
-  .kopf { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #C9A84C; padding-bottom: 18px; margin-bottom: 26px; }
-  .marke { color: #C9A84C; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
-  h1 { font-size: 24px; margin: 6px 0 4px; color: #0A1628; }
+  .kopf { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid ${marke.akzent}; padding-bottom: 18px; margin-bottom: 26px; }
+  .logo { max-height: 46px; max-width: 210px; margin-bottom: 8px; display: block; }
+  .marke { color: ${marke.akzent}; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+  h1 { font-size: 24px; margin: 6px 0 4px; color: ${marke.primaer}; }
   .nummer { color: #5b6b80; font-size: 13px; font-family: 'DejaVu Sans Mono', monospace; }
   .kopf-rechts { text-align: right; color: #5b6b80; font-size: 12px; }
   .badge { display: inline-block; background: #f4f6fa; border: 1px solid #d7deea; border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: bold; color: #0A1628; margin-top: 6px; }
@@ -82,14 +85,14 @@ function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaNam
   .block .inhalt { border: 1px solid #e1e6ee; border-radius: 8px; padding: 12px 14px; }
   .dim { color: #8a99ad; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  thead th { background: #0A1628; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 9px 10px; text-align: left; }
+  thead th { background: ${marke.primaer}; color: ${marke.theadText}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 9px 10px; text-align: left; }
   thead th.r { text-align: right; } thead th.c { text-align: center; }
   tbody td { padding: 9px 10px; border-bottom: 1px solid #e8ecf3; vertical-align: top; }
   tbody td.r { text-align: right; } tbody td.c { text-align: center; } tbody td.nr { color: #8a99ad; width: 30px; }
   tbody td.stark { font-weight: bold; }
   .summen { margin-left: auto; width: 300px; margin-top: 14px; }
   .summen .zeile { display: flex; justify-content: space-between; padding: 6px 4px; font-size: 13px; }
-  .summen .zeile.brutto { border-top: 2px solid #C9A84C; margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: bold; color: #0A1628; }
+  .summen .zeile.brutto { border-top: 2px solid ${marke.akzent}; margin-top: 4px; padding-top: 10px; font-size: 16px; font-weight: bold; color: ${marke.primaer}; }
   .summen .label { color: #5b6b80; }
   .notizen { margin-top: 30px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; }
   .notizen .titel { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #5b6b80; font-weight: bold; margin-bottom: 4px; }
@@ -97,7 +100,8 @@ function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaNam
 </style></head><body>
   <div class="kopf">
     <div>
-      <div class="marke">ARGONAUT OS · Auftragsbestätigung</div>
+      ${marke.logo ? `<img src="${esc(marke.logo)}" alt="Logo" class="logo">` : ''}
+      <div class="marke">${marke.name ? esc(marke.name) + ' · ' : ''}Auftragsbestätigung</div>
       <h1>${esc(auftrag?.titel) || 'Auftrag'}</h1>
       <div class="nummer">${esc(auftrag?.auftragsnummer) || '—'}</div>
     </div>
@@ -147,7 +151,7 @@ function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaNam
 
   ${auftrag?.notizen ? `<div class="notizen"><div class="titel">Anmerkungen</div><div>${esc(auftrag.notizen)}</div></div>` : ''}
 
-  <div class="fuss">Erstellt mit ARGONAUT OS &middot; ${heute}</div>
+  <div class="fuss">${marke.name ? esc(marke.name) + ' &middot; ' : ''}${heute}</div>
 </body></html>`;
 }
 
@@ -163,8 +167,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Auftragsdaten fehlen.' }, { status: 400 });
     }
 
+    // White-Label: Logo und Farben des Betriebs (web_ci, RLS-scoped).
+    let ciRoh: CiRoh = null;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: ciData } = await supabase.from('web_ci').select(CI_SPALTEN).limit(1);
+        ciRoh = ((Array.isArray(ciData) && ciData[0]) || null) as unknown as CiRoh;
+      }
+    } catch { /* CI ist optional — ohne CI neutrales Standardlayout */ }
+    const marke = baueMarke(ciRoh, firmaName);
+
     // HTML bauen
-    const html = baueHtml(auftrag, positionen, kontaktName, firmaName);
+    const html = baueHtml(auftrag, positionen, kontaktName, firmaName, marke);
 
     // Gotenberg: HTML -> PDF
     const gotenbergUrl = process.env.GOTENBERG_URL;
@@ -176,6 +192,7 @@ export async function POST(req: NextRequest) {
     form.append('files', new Blob([html], { type: 'text/html' }), 'index.html');
     form.append('marginTop', '0.5');
     form.append('marginBottom', '0.5');
+    form.append('printBackground', 'true'); // Marken-Farbflaechen mitdrucken
 
     const authHeader = (gUser && gPass) ? 'Basic ' + Buffer.from(`${gUser}:${gPass}`).toString('base64') : '';
     const pdfResp = await fetch(`${gotenbergUrl.replace(/\/$/, '')}/forms/chromium/convert/html`, {

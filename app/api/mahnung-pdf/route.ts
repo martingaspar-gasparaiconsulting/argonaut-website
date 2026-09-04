@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase-server';
+import { baueMarke, CI_SPALTEN, type CiRoh, type Marke } from '@/lib/markeCi';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4 — Mahnung-PDF (DIN 5008)
@@ -56,7 +58,7 @@ function stufeTitel(stufe: number): string {
   return 'Zahlungserinnerung';
 }
 
-function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName: string, aussteller: any): string {
+function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName: string, aussteller: any, marke: Marke): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const stufe = Number(mahnung?.stufe) || 1;
@@ -132,14 +134,15 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
   .absender-mini { font-size: 10px; color: #5b6b80; border-bottom: 1px solid #e1e6ee; padding-bottom: 6px; margin-bottom: 20px; }
 
   .kopf { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .marke { color: #C9A84C; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+  .marke { color: ${marke.akzent}; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+  .logo { max-height: 44px; max-width: 200px; margin-bottom: 8px; display: block; }
   .aussteller { font-size: 11.5px; color: #0A1628; }
   .aussteller .name { font-weight: bold; font-size: 13px; }
   .aussteller .dim { color: #5b6b80; }
   h1 { font-size: 24px; margin: 4px 0 2px; color: #0A1628; }
   .nummer { color: #5b6b80; font-size: 13px; font-family: 'DejaVu Sans Mono', monospace; }
 
-  .empf-zeile { display: flex; justify-content: space-between; gap: 24px; border-top: 3px solid #C9A84C; padding-top: 20px; margin-top: 12px; margin-bottom: 24px; }
+  .empf-zeile { display: flex; justify-content: space-between; gap: 24px; border-top: 3px solid ${marke.akzent}; padding-top: 20px; margin-top: 12px; margin-bottom: 24px; }
   .block { flex: 1; }
   .block .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #8a99ad; font-weight: bold; margin-bottom: 6px; }
   .block .inhalt { border: 1px solid #e1e6ee; border-radius: 8px; padding: 12px 14px; min-height: 74px; }
@@ -154,7 +157,7 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
   .aufstellung table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .aufstellung td { padding: 5px 0; }
   .aufstellung td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .aufstellung tr.summe td { border-top: 2px solid #C9A84C; padding-top: 9px; font-weight: bold; font-size: 14px; color: #0A1628; }
+  .aufstellung tr.summe td { border-top: 2px solid ${marke.akzent}; padding-top: 9px; font-weight: bold; font-size: 14px; color: ${marke.primaer}; }
 
   .zahlung { margin-top: 24px; background: #f4f6fa; border-left: 4px solid #00b3cc; padding: 12px 16px; border-radius: 6px; font-size: 12px; }
   .zahlung .titel { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #5b6b80; font-weight: bold; margin-bottom: 4px; }
@@ -169,6 +172,7 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
 
   <div class="kopf">
     <div class="aussteller">
+      ${marke.logo ? `<img src="${esc(marke.logo)}" alt="Logo" class="logo">` : ''}
       <div class="marke">${esc(titel)}</div>
       <div class="name">${pflicht(aussteller?.name, 'Firmenname ergänzen')}</div>
       <div class="dim">${pflichtMehrzeilig(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
@@ -208,7 +212,7 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
     ${bank}
   </div>
 
-  <div class="fuss">Erstellt mit ARGONAUT OS &middot; ${heute}</div>
+  <div class="fuss">${marke.name ? esc(marke.name) + ' &middot; ' : ''}${heute}</div>
 </body></html>`;
 }
 
@@ -228,7 +232,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mahntext fehlt.' }, { status: 400 });
     }
 
-    const html = baueHtml(mahnung, rechnung, empfaengerName, firmaName, aussteller);
+    // White-Label: Logo und Farben des Betriebs (web_ci, RLS-scoped).
+    let ciRoh: CiRoh = null;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: ciData } = await supabase.from('web_ci').select(CI_SPALTEN).limit(1);
+        ciRoh = ((Array.isArray(ciData) && ciData[0]) || null) as unknown as CiRoh;
+      }
+    } catch { /* CI ist optional — ohne CI neutrales Standardlayout */ }
+    const marke = baueMarke(ciRoh, aussteller?.name || firmaName);
+
+    const html = baueHtml(mahnung, rechnung, empfaengerName, firmaName, aussteller, marke);
 
     const gotenbergUrl = process.env.GOTENBERG_URL;
     const gUser = process.env.GOTENBERG_USER;
@@ -239,6 +255,7 @@ export async function POST(req: NextRequest) {
     form.append('files', new Blob([html], { type: 'text/html' }), 'index.html');
     form.append('marginTop', '0.5');
     form.append('marginBottom', '0.5');
+    form.append('printBackground', 'true'); // Marken-Farbflaechen mitdrucken
 
     const authHeader = (gUser && gPass) ? 'Basic ' + Buffer.from(`${gUser}:${gPass}`).toString('base64') : '';
     const pdfResp = await fetch(`${gotenbergUrl.replace(/\/$/, '')}/forms/chromium/convert/html`, {
