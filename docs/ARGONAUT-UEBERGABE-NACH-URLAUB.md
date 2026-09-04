@@ -1,105 +1,106 @@
-# ARGONAUT OS — Übergabe für die Rückkehr (Stand 18.08.2026)
+# ARGONAUT OS — Übergabe für die Rückkehr
 
-Martin ist zehn Tage weg. Diese Datei ist der Einstieg danach — sie ersetzt die
-Übergabe vom 16.08. für alles, was seither passiert ist.
+**Stand 18.08.2026, abends. Martin ist zwei Wochen weg.**
 
-**Wer immer hier weitermacht: erst lesen, dann Abschnitt 6 abarbeiten.**
-
----
-
-## 1) Arbeitsweise (unverändert gültig)
-
-Es gilt weiterhin alles aus `docs/ARGONAUT-UEBERGABE-GROSSE-BROECKEN.md`,
-Abschnitt 1. Die wichtigsten Punkte in Kurzform:
-
-- **Deutsch**, alles copy-paste-fertig, Schritt für Schritt. **Niemals PowerShell — immer CMD.**
-- **SQL immer vollständig in den Chat**, nie nur als Dateiverweis.
-- **Blockweise**: erst das komplette SQL, dann die Pushes einzeln. Nicht auf
-  „erledigt" warten — der Reihe nach liefern.
-- **Ein Push darf mehrere Dateien enthalten.** Was zusammengehört, kommt zusammen.
-- **Kontrollieren vor bauen**: jede Datei zuerst frisch vom Gerät stagen.
-- **esbuild + tsc + Node-Tests vor jedem Push**, jeweils mit **Gegenprobe**
-  (absichtlich einen Fehler einbauen und sehen, dass die Prüfung anschlägt).
-- **SQL additiv und idempotent.** Bestehendes nie umbauen.
-- **„Sie" in allen Kundentexten.** Nie „KI-Agenten" oder „KI-Crew" — es heißt **Bausteine**.
-- **GEMEINSAM-Regel**: Kern-Geld-Formulare, Zahlungs-/Bank-Integrationen und
-  alles rund um Auth/Login nur gemeinsam und abgesegnet.
-
-### Zwei Regeln, die am 17./18.08. dazugekommen sind
-
-**Dateien zählen.** Nach jedem `device_commit_files` die Zahl der geschriebenen
-Dateien mit der Zahl im `git add`-Befehl vergleichen. Am 17.08. sind zwei von
-vier Dateien nicht im Repo gelandet, und der Commit meldete nur „2 files
-changed" — Martin hat es gemerkt, nicht die Prüfkette. Die Zeile
-**„N files changed"** in der Git-Ausgabe ist die beste Kontrolle.
-
-**Umlaute in Kundentexten.** Quelltext-Kommentare dürfen `ae/oe/ue` schreiben,
-**sichtbarer Text niemals**. Das ist zweimal passiert (E-Book-Inhaltsverzeichnis,
-Formular-Hinweis) und beide Male erst im Probedruck aufgefallen.
+Diese Datei ist der Einstieg danach. Der vollständige Fahrplan steht in
+`ARGONAUT-MASTER-FAHRPLAN.md` (Zählung **M1–M18**); hier steht nur, was für den
+Wiedereinstieg zählt.
 
 ---
 
-## 2) Was am 17./18.08. gebaut wurde — alles in Production
+## 1) Zuerst: der Startprompt
+
+Nach zwei Wochen ist der alte Chat kalt. In
+**`ARGONAUT-STARTPROMPT-NACH-URLAUB.md`** liegt ein fertiger Text zum Kopieren —
+damit beginnt ein neuer Chat ohne Kontextverlust. Das ist der erste Griff, nicht
+das Suchen im alten Verlauf.
+
+---
+
+## 2) Was während des Urlaubs von allein läuft
+
+- **Dreizehn Crons** laufen weiter: Automationen, Dossier-Sequenz,
+  Batch-Abholung alle 15 Minuten, Social-Posten alle 6 Minuten,
+  Report-Versand um 6 Uhr.
+- **Die KI-Bremse** aus AGB § 9.3 schützt vor Kostenexplosion, ohne dass jemand
+  hinsieht: Warnung ab 70 % des Firmen-Topfs, stiller Puffer bis zum Doppelten,
+  dann harte Sperre.
+- **Der Post-Deckel** (neu, 18.08.) sorgt dafür, dass Werbepost das
+  Tageskontingent nicht mehr aufbrauchen kann. Mahnungen und
+  Terminerinnerungen haben Vorrang.
+- **Bestellte KI-Stapel** holen sich selbst ab. Ein Stapel ohne Ergebnis wird
+  nach 24 Stunden sauber als Fehler abgeschlossen statt ewig zu hängen.
+
+**Was NICHT von allein läuft:** Resend steht weiter im Free-Tarif bei 100 Mails
+am Tag. Der Post-Deckel verhindert jetzt, dass eine Info-Serie alles wegfrisst —
+aber das Kontingent bleibt klein.
+
+---
+
+## 3) Die drei harten Blocker
+
+Nichts davon ist Code. Alles davon hält etwas anderes auf.
+
+| | Was | Hält auf | Vorlauf |
+|---|---|---|---|
+| **B1** | **AVV nach Art. 28 DSGVO** (Anwalt) | M15 Bestellstrecke · jeder Kundenbetrieb | ~3 Wochen |
+| **B2** | **Resend auf Pro** | jeder Mailversand über 100/Tag · eigene Absender-Domain | 5 Minuten |
+| **B3** | **Stripe prüfen** (Schlüssel liegen seit 05.05. in Vercel) | M15 Bestellstrecke | offen |
+
+**B2 dauert fünf Minuten und sollte der erste Handgriff sein.** Danach in Vercel
+`MAIL_TAGESBUDGET` auf das tatsächliche Tageskontingent setzen — dann wächst der
+Post-Deckel mit. Ohne die Variable gilt weiter der sichere Wert 100.
+
+---
+
+## 4) Was am 17./18.08. gebaut wurde — alles in Production
 
 | Commit | Was |
 |---|---|
-| `c7e71f6` | Inhalts-Werkstatt Push 1 — Logik der Bausteine, Wording „KI-Crew" raus |
-| `df6dd47` | Push 2 — Erzeugung über die Batch-API, Wording-Wächter, Abhol-Zweig |
-| `897bd24` | Push 3 — Redaktion unter `/admin/inhalte`, Kachel im Command Center |
-| `0166ba2` | Push 4 — E-Book bauen und ausliefern, Dossier-Wording auf `eb5` |
-| `ea9b0f7` + `9e840a0` | Freebie auf der Vergleichsseite, `DossierFreebie` nach `components/`, Duz-Betreff raus |
+| `c7e71f6` `df6dd47` `897bd24` `0166ba2` | Inhalts-Werkstatt (Logik, Erzeugung, Redaktion, E-Book) |
+| `ea9b0f7` `9e840a0` | Freebie auf der Vergleichsseite |
 | `0c0410e` | AGB- und Einwilligungs-Häkchen aus den Anfrageformularen |
-| `fd50dc4` | Ernte-Lager-Zuordnung über gewählten Artikel statt Namensvergleich |
+| `fd50dc4` | Ernte-Lager-Zuordnung über den gewählten Artikel |
 | `9c1c375` | Eigene Felder für Leads |
-| `89a5ddd` | Gespeicherte Auswertungen im Report-Baukasten |
+| `89a5ddd` `7a8c884` | Gespeicherte und geplante Auswertungen, täglicher Cron |
 | `fc9b91a` | 698 Branchen-Vorworte und 698 KI-Dialoge, Stapel je Typ |
-| `7a8c884` | Geplante Auswertungen per Mail, täglicher Cron |
-| (offen) | Dokument-Details mit eigenen Feldern |
+| `9fb5f21` | Dokument-Details mit eigenen Feldern |
+| `13edccd` | **Mastodon und Bluesky** direkt bespielbar |
+| `ce8fd05` | **Versandprotokoll sichtbar**, gescheiterte Beiträge wiederholbar |
+| `35663fa` | **Telegram** als siebter Kanal, Bot-Kennwort geschützt |
+| `1f5e425` | **Threads** als achter Kanal |
+| `106711e` | **Post-Deckel** — Werbepost verdrängt keine Betriebspost |
+| `6823bc1` | **Master-Fahrplan M1–M18** statt drei paralleler Zählungen |
+| `bda5f99` | Liegengebliebene Doc-Dateien nachgetragen |
+| `e4ca3bf` | **Avatar Stufe 2** — gezeichnete Figur, Browser-Stimme, eingebaut |
 
 **SQL eingespielt:** Bucket `ebooks`, Spalte `ernte_ernte.artikel_id` mit
-Fremdschlüssel, Tabelle `report_gespeichert`.
+Fremdschlüssel, Tabelle `report_gespeichert`. Für alles vom 18.08. abends war
+**kein SQL nötig.**
 
-**Node-Tests: 176 grün** (vorher rund 690 im Gesamtsystem, die neuen kommen dazu).
-
----
-
-## 3) Vier Annahmen der alten Übergabe, die sich als falsch erwiesen haben
-
-Das ist der wichtigste Abschnitt für die Planung — **die Restliste ist kürzer,
-als sie aussieht.**
-
-**Block E (KI-Deckel) war längst gebaut.** `lib/ki.ts` hat die dreistufige
-Bremse aus AGB § 9.3 bereits: Warnung ab 70 % des Firmen-Topfs, stiller Puffer
-bis zum Doppelten, dann harte Sperre mit HTTP 429. Ein Push und ein SQL weniger.
-
-**`CRON_SECRET` war seit dem 3. August gesetzt.** Die Sorge „kein Cron läuft"
-war unbegründet. Alle zwölf (jetzt dreizehn) Crons laufen.
-
-**Block F war zu 90 % nicht das, was in der Liste stand.** Von sieben Seiten für
-„eigene Felder nachziehen" hatten drei es schon (`kfz`, `foerdermittel`,
-`ernte`), drei sind fachlich fragwürdig (Kasse ist GoBD/TSE-relevant, Mahnwesen
-ist abgeleitet, Academy-Kurse sind global), und die Fahrzeugakte hat **null
-Schreibvorgänge** — sie zeigt nur an. Übrig blieben Leads und Dokumente.
-
-**Der Report-Baukasten konnte weder speichern noch planen.** Beides ist jetzt da.
+**Node-Tests: 302 grün.**
 
 ---
 
-## 4) Drei Dinge, die während des Urlaubs von allein laufen
+## 5) Zwei Funde, die im Betrieb wehgetan hätten
 
-- **Die zwölf Crons** laufen weiter (Automationen, Dossier-Sequenz,
-  Batch-Abholung alle 15 Minuten, ab jetzt auch der Report-Versand um 6 Uhr).
-- **Die KI-Bremse** schützt vor Kostenexplosion, ohne dass jemand hinsieht.
-- **Bestellte KI-Stapel** holen sich selbst ab. Ein Stapel, der nach 24 Stunden
-  kein Ergebnis liefert, wird sauber als Fehler abgeschlossen statt ewig zu hängen.
+**Das Telegram-Bot-Kennwort steht in der Adresse.** `api.telegram.org/bot<KENNWORT>/…`
+— bei keinem anderen Kanal ist das so. Scheitert der Aufruf auf Netzwerkebene,
+schreibt Node die komplette Adresse in die Fehlermeldung, und die landet in
+`social_versand.fehler_text` — dauerhaft in der Datenbank und sichtbar im neuen
+Versandprotokoll. Fehlermeldungen werden jetzt gefiltert, bevor sie gespeichert
+werden (`entferneGeheimnisse` in `lib/socialVersand.ts`).
 
-**Was NICHT von allein läuft:** Resend steht weiter im Free-Tarif bei 100 Mails
-am Tag. Wenn in den zehn Tagen viel über die Double-Opt-in-Strecke reinkommt,
-ist das Kontingent irgendwann erreicht und Mails fallen aus.
+**Werbepost konnte die Betriebspost aushungern.** Der Autoresponder lief um 05:00
+und durfte bis zu 300 Mails verschicken — das Dreifache des ganzen
+Tageskontingents. An einem starken Tag wären die Mahnungen um 07:00 still
+ausgefallen. `lib/mailBudget.ts` gibt Werbepost jetzt höchstens die Hälfte.
+
+Beides hätte ein Klicktest nie gefunden. Man sieht es erst, wenn etwas schiefgeht.
 
 ---
 
-## 5) Der kritischste Codepunkt im ganzen System
+## 6) Der kritischste Codepunkt im ganzen System
 
 `app/api/cron/reports-versand/route.ts` liest mit der **Service-Rolle**, die RLS
 vollständig umgeht. Jede Abfrage auf eine Quell-Tabelle **muss**
@@ -115,89 +116,65 @@ Besitzer-Feld vorher genauso geprüft werden.** Fehlt der Filter, bekommt ein
 Kunde per Mail die Zahlen eines anderen — eine meldepflichtige Datenpanne, die
 niemandem auffällt, weil die Zahlen plausibel aussehen.
 
----
-
-## 6) HIER STARTEN nach dem Urlaub
-
-### Zuerst: Der Testtag (Block L)
-
-Die Prüfliste liegt als Artefakt „argonaut-testtag-pruefliste" bereit —
-33 Punkte mit Klickweg, Soll-Ergebnis und Warnzeichen. **Rund 690 grüne Tests
-sind eine Sache, ein Mensch der auf einen Knopf drückt eine andere.**
-Keine der neuen Oberflächen wurde je im Browser bedient.
-
-Reihenfolge: erst die drei Geldstellen (DSGVO-Löschung, Provisions-Gutschrift,
-EÜR/DATEV), dann das Rechtesystem mit zwei Personen gleichzeitig.
-
-### Dann: Was Vorlauf braucht
-
-1. **Anwaltstermin** — der AVV nach Art. 28 DSGVO ist der harte Blocker.
-   Rund drei Wochen. Ohne ihn darf kein Kunde ARGONAUT einsetzen.
-2. **Resend auf Pro** — fünf Minuten, harter Blocker bei 100 Mails/Tag.
-3. **Stripe prüfen** — die drei Schlüssel liegen seit dem 5. Mai in Vercel.
-   Ungeprüft ist, was davon schon verdrahtet ist.
-
-### Dann: Code
-
-| Block | Pushes | SQL | Anmerkung |
-|---|---|---|---|
-| **G** Marketing-Tiefe | 4 | ~1 | ⚠ X/Twitter-API kostet ~100 USD/Monat |
-| **I+** Absender-Domain je Kunde | 1 | 1 | erst nach Resend Pro |
-| **J** Bestellstrecke | 2 | 0 | ⚠ ZWINGEND erst nach I **und** K |
-| **M** Telefonassistent | 3 | ~1 | braucht Partnervertrag (Retell/Vapi) |
-| **N** Avatar | 1–2 | 0 | `KiGuide` ist fertig, wird aber **nirgends eingesetzt** |
-| **O** finAPI + ELSTER | 2 | ~1 | Martins Ansage: ganz zuletzt |
-| Kleinkram | ~2 | 0 | Connector-SQL, Master-Fahrplan, Brand-Story |
-
-**Zwei Blöcke dürfen nicht vorgezogen werden:** J braucht den AVV, M braucht den
-Partnervertrag.
-
-### Liegengeblieben, bewusst nicht gebaut
-
-- **Landingpage: Branche vorbelegen** — `LP_KATEGORIEN` in `lib/landingpages.ts`
-  ist definiert, aber **nirgends verwendet**; die Tabelle hat keine
-  Kategorie-Spalte. Das ist ein Neubau (SQL + Editor + öffentliche Seite), kein
-  Nachziehen. Nutzen greift erst, wenn Landingpages im Einsatz sind.
-- **Eigene Felder an Fahrzeugen** — die Werkstatt hat ein Fahrzeug-Formular, aber
-  auch schon `EigeneFelder` für `werkstatt_auftraege`. Ein zweites Modul in einer
-  89-KB-Datei mit 1518 Zeilen ist viel Risiko für „Zusatzfeld am Fahrzeug".
-- **Kasse, Mahnwesen, Academy** — eigene Felder dort sind fachlich falsch
-  (GoBD-Unveränderbarkeit / abgeleiteter Vorgang / globale Datensätze).
+Dasselbe Muster gilt in `app/api/marketing/social-protokoll/route.ts` und
+`app/api/cron/social-posten/route.ts`. In allen dreien steht ein auffälliger
+Kommentar an der Stelle.
 
 ---
 
-## 7) Die Inhalts-Werkstatt — so wird sie benutzt
+## 7) Arbeitsweise — drei Regeln, die am 17./18.08. dazukamen
 
-Command Center → **Inhalts-Werkstatt** (`/admin/inhalte`).
+**Dateien zählen, und zwar eindeutig.** Nach jedem Push die Zeile
+**„N files changed"** gegen die Zahl im `git add` halten. Am 17.08. hat eine
+*mehrdeutige* Erwartung („1 oder 2, beides ist richtig") dazu geführt, dass eine
+Datei tagelang unbemerkt nicht im Repo war. **Nie eine Spanne nennen — immer
+genau eine Zahl.**
 
-Vier Knöpfe, einer je Typ. Alles zusammen kostet **2,40 USD** über die
-Stapel-Schnittstelle (halber Preis):
+**Umlaute in Kundentexten.** Quelltext-Kommentare dürfen `ae/oe/ue` schreiben,
+**sichtbarer Text niemals**. Das ist dreimal passiert und jedes Mal erst spät
+aufgefallen. Es gibt inzwischen Tests, die genau darauf anschlagen.
 
-```
-113× Modul-Kapitel        0,38 USD
- 19× Kategorie-Kapitel    0,06 USD
-698× Branchen-Vorwort     0,98 USD
-698× KI-Dialog            0,98 USD
-```
-
-Jeder Typ geht als eigener Stapel — zusammen wären es 1528 und damit über der
-Grenze von 1000 je Absendung. Was gerade unterwegs ist, wird kein zweites Mal
-bestellt (die Route liest die `zuordnung` der laufenden Stapel).
-
-Ergebnis kommt meist unter einer Stunde, spätestens nach 24 Stunden, und landet
-als **Entwurf**. Ohne Haken erscheint nichts in einem E-Book. Beanstandete
-Entwürfe stehen oben mit rotem Rand.
-
-**Wenn der Ton nicht gefällt:** nicht einzeln redigieren. Den System-Prompt in
-`lib/inhaltPrompt.ts` ändern, Entwürfe löschen, für weitere 2,40 USD neu
-schreiben lassen. Das ist billiger als ein Abend Handarbeit.
+**Zählungen gehören in die jeweils neueste Testdatei.** Eine Zusicherung wie
+„es gibt acht Kanäle" in jeder Datei führt dazu, dass ein neuer Kanal überall
+gleichzeitig anschlägt. Und ein Test darf nie über die Liste laufen, die er
+prüfen soll — sonst schrumpft er stillschweigend mit.
 
 ---
 
-## 8) Referenzen
+## 8) HIER STARTEN nach dem Urlaub
 
-- `docs/ARGONAUT-UEBERGABE-GROSSE-BROECKEN.md` — Themen 1–10 (14.08.)
-- `docs/ARGONAUT-ABHAKLISTE.md` — 20 Abschnitte (09.08.)
-- `docs/ARGONAUT-GESAMTLISTE.md` — enthält den Telefonassistenten (02.08.)
+### Reihenfolge
+
+1. **Resend auf Pro** (B2) — fünf Minuten, danach `MAIL_TAGESBUDGET` in Vercel.
+2. **Anwaltstermin anfragen** (B1) — die drei Wochen laufen sonst erst danach.
+3. **Der Testtag (M18).** Martins Ansage vom 18.08.: **jedes Modul einzeln**,
+   nicht nur eine Auswahl. Ein kompletter eigener Tag.
+   Die Prüfliste liegt als Artefakt „argonaut-testtag-pruefliste" bereit.
+   Die drei Geldstellen zuerst: DSGVO-Löschung mit einem Testkontakt
+   (unumkehrbar) · Provisions-Gutschrift auf Pflichtangaben · EÜR und
+   DATEV-Export gegen den alten Stand.
+   Dann das Rechtesystem mit zwei Personen gleichzeitig.
+
+### Erst danach: Code
+
+**Zwei Dinge liegen bereit und sind klein:**
+
+- **Avatar Stufe 3** — den Guide ins Dashboard-**Layout** hängen statt auf eine
+  Seite, Pfad auslesen, Text zum Modul zeigen. Dann wandert er mit. Ein Push,
+  kein SQL. Die Texte kommen aus den 113 Modul-Kapiteln der Inhalts-Werkstatt.
+- **Die 1528 Texte bestellen** — vier Knöpfe unter `/admin/inhalte`,
+  zusammen **2,40 USD**. Ergebnis landet als Entwurf; ohne Haken erscheint
+  nichts. Das kann sogar vor dem Testtag laufen, es stört nichts.
+
+Alles Weitere steht im Master-Fahrplan, M1 bis M18, mit Status und Begründung.
+
+---
+
+## 9) Referenzen
+
+- `ARGONAUT-MASTER-FAHRPLAN.md` — **die eine Zählung M1–M18**, Status je Punkt
+- `ARGONAUT-STARTPROMPT-NACH-URLAUB.md` — Text zum Kopieren für den neuen Chat
+- `ARGONAUT-UEBERGABE-LETZTE-BAUSTEINE.md` — Blöcke A–O im Detail (16.08.)
+- `ARGONAUT-UEBERGABE-GROSSE-BROECKEN.md` — Themen 1–10 (14.08.)
+- `team-chat-bug.md` — bekannter Fehler, **bewusst nicht blind gefixt**
 - `supabase-sql/` — alle eingespielten SQL-Dateien
-- Artefakte in Cowork: „argonaut-abhakliste" und „argonaut-testtag-pruefliste"
