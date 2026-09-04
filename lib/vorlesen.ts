@@ -89,6 +89,130 @@ export function kuerzeFuerStimme(text: string | null | undefined, max = 600): st
   return (grenze > max * 0.5 ? roh.slice(0, grenze + 1) : roh.trimEnd()).trim();
 }
 
+// ===========================================================================
+// STIMM-WAHL (04.09.2026) — eine ruhige, souveraene MAENNERSTIMME
+//
+// Die alte Wahl nahm einfach die erste deutsche Stimme, die der Browser nannte.
+// Unter Windows ist das meistens „Microsoft Hedda" oder „Katja" — also weiblich
+// und recht hoch. Martin wollte das Gegenteil: maennlich, ruhig, souveraen.
+//
+// Wir koennen die Stimmen NICHT anhoeren und pruefen, ob sie maennlich klingen —
+// wir haben nur ihren Namen. Deshalb eine Rangliste bekannter Stimmen, danach
+// die Vornamen-Erkennung, und ganz zum Schluss irgendeine deutsche Stimme.
+// Welche Stimmen ein Rechner wirklich hat, entscheidet Windows, nicht wir —
+// deshalb kann der Nutzer im Guide selbst waehlen und Probe hoeren.
+//
+// Alles hier ist reine Rechenlogik und mit `node --test` pruefbar.
+// ===========================================================================
+
+/** Die Wunschliste, beste zuerst. Klein geschrieben, Teiltreffer genuegt. */
+export const STIMMEN_RANGLISTE: string[] = [
+  'conrad',      // Edge/Windows, neuronal, tief und ruhig — die beste Wahl
+  'christoph',   // Edge, neuronal, sachlich
+  'bernd',       // Edge, neuronal
+  'kasper',      // Edge, neuronal
+  'killian',     // Edge (Oesterreich), sehr ruhig
+  'jan',         // Edge (Schweiz)
+  'stefan',      // klassische Windows-Stimme, maennlich
+  'markus',      // macOS
+  'yannick',     // macOS
+];
+
+/** Vornamen, die auf eine Maennerstimme hindeuten. */
+export const MAENNER_NAMEN: string[] = [
+  'conrad', 'christoph', 'bernd', 'kasper', 'killian', 'jan', 'stefan', 'markus',
+  'yannick', 'eddy', 'reed', 'klaus', 'hans', 'michael', 'andreas', 'florian',
+  'ralf', 'daniel', 'thomas', 'male', 'mann',
+];
+
+/** Vornamen, die auf eine Frauenstimme hindeuten — nur zum Aussortieren. */
+export const FRAUEN_NAMEN: string[] = [
+  'hedda', 'katja', 'marlene', 'amala', 'louisa', 'seraphina', 'vicki', 'gisela',
+  'petra', 'anna', 'sabine', 'female', 'frau', 'ingrid', 'maja', 'elke',
+];
+
+/** Ruhig und souveraen: etwas langsamer und eine Spur tiefer als die Vorgabe. */
+export const STIMME_STANDARD: StimmProfil = { stimmName: null, tempo: 0.9, tonhoehe: 0.9 };
+
+/** Speicherort im Browser. */
+export const STIMME_SPEICHER = 'argonaut_guide_stimme';
+
+export type StimmProfil = {
+  /** Genauer Name der gewaehlten Stimme, oder null fuer „automatisch". */
+  stimmName: string | null;
+  /** 0,6 bis 1,4 — kleiner ist langsamer. */
+  tempo: number;
+  /** 0,6 bis 1,4 — kleiner ist tiefer. */
+  tonhoehe: number;
+};
+
+/** Grenzen einhalten, kaputte Werte still auf den Standard zurueckholen. */
+export function saubereProfil(p: Partial<StimmProfil> | null | undefined): StimmProfil {
+  const zahl = (wert: unknown, standard: number): number => {
+    const n = Number(wert);
+    if (!Number.isFinite(n)) return standard;
+    return Math.min(1.4, Math.max(0.6, Math.round(n * 100) / 100));
+  };
+  const name = typeof p?.stimmName === 'string' && p.stimmName.trim() ? p.stimmName.trim() : null;
+  return {
+    stimmName: name,
+    tempo: zahl(p?.tempo, STIMME_STANDARD.tempo),
+    tonhoehe: zahl(p?.tonhoehe, STIMME_STANDARD.tonhoehe),
+  };
+}
+
+/** Nur die deutschen Stimmen — de-DE, de-AT, de-CH. */
+export function nurDeutsch<T extends Stimme>(stimmen: T[] | null | undefined): T[] {
+  const liste = Array.isArray(stimmen) ? stimmen.filter((s) => s && typeof s.lang === 'string') : [];
+  return liste.filter((s) => s.lang.toLowerCase().replace('_', '-').startsWith('de'));
+}
+
+/** Klingt dieser Name nach einer Maennerstimme? */
+export function klingtMaennlich(name: string | null | undefined): boolean {
+  const n = String(name ?? '').toLowerCase();
+  if (!n) return false;
+  if (FRAUEN_NAMEN.some((w) => n.includes(w))) return false;
+  return MAENNER_NAMEN.some((w) => n.includes(w));
+}
+
+/**
+ * Punkte fuer eine Stimme — je hoeher, desto lieber. Rein zum Sortieren.
+ *   1000+ Rangliste (je weiter vorn, desto mehr) · 500 klingt maennlich ·
+ *   +40 de-DE statt de-AT/de-CH · −300 klingt weiblich
+ */
+export function punkteFuerStimme(s: Stimme | null | undefined): number {
+  const name = String(s?.name ?? '').toLowerCase();
+  const lang = String(s?.lang ?? '').toLowerCase().replace('_', '-');
+  if (!name) return -1000;
+  let punkte = 0;
+  const rang = STIMMEN_RANGLISTE.findIndex((w) => name.includes(w));
+  if (rang >= 0) punkte += 1000 + (STIMMEN_RANGLISTE.length - rang) * 10;
+  if (klingtMaennlich(name)) punkte += 500;
+  if (FRAUEN_NAMEN.some((w) => name.includes(w))) punkte -= 300;
+  if (lang === 'de-de') punkte += 40;
+  return punkte;
+}
+
+/**
+ * Die Stimme, die gesprochen werden soll.
+ * Erst der ausdrueckliche Wunsch des Nutzers (exakter Name), sonst die beste
+ * nach Punkten. Ist gar nichts Deutsches da, gibt es keine Stimme — eine
+ * englische Stimme auf deutschem Text klingt schlimmer als die Standardstimme.
+ */
+export function waehleStimme<T extends Stimme>(
+  stimmen: T[] | null | undefined,
+  wunschName?: string | null,
+): T | null {
+  const deutsche = nurDeutsch(stimmen);
+  if (deutsche.length === 0) return null;
+  const wunsch = String(wunschName ?? '').trim();
+  if (wunsch) {
+    const genau = deutsche.find((s) => s.name === wunsch);
+    if (genau) return genau;
+  }
+  return [...deutsche].sort((a, b) => punkteFuerStimme(b) - punkteFuerStimme(a))[0] ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Ab hier wird der Browser angefasst. Alles darunter ist NICHT node-testbar.
 // ---------------------------------------------------------------------------
@@ -117,7 +241,7 @@ export function istVorlesenMoeglich(): boolean {
  * Vorlesen. Gibt false zurueck, wenn der Browser nicht kann oder nichts da ist —
  * die Oberflaeche zeigt den Knopf dann gar nicht erst an.
  */
-export function sprich(text: string | null | undefined): boolean {
+export function sprich(text: string | null | undefined, profil?: StimmProfil | null): boolean {
   const syn = ausgabe();
   if (!syn || !istVorlesenMoeglich()) return false;
   const inhalt = kuerzeFuerStimme(text);
@@ -127,17 +251,47 @@ export function sprich(text: string | null | undefined): boolean {
   // der Nutzer hoert minutenlang Altes.
   syn.cancel();
 
+  const p = saubereProfil(profil ?? leseStimmProfil());
   const W = (window as unknown as { SpeechSynthesisUtterance: new (t: string) => Record<string, unknown> });
   const spruch = new W.SpeechSynthesisUtterance(inhalt);
   spruch.lang = 'de-DE';
-  spruch.rate = 0.95;   // eine Spur langsamer als Vorgabe — verstaendlicher
-  spruch.pitch = 1;
+  spruch.rate = p.tempo;
+  spruch.pitch = p.tonhoehe;
 
-  const stimme = waehleDeutscheStimme(syn.getVoices());
+  // Erst die ausdrueckliche Wahl des Nutzers, sonst die beste maennliche Stimme.
+  const stimme = waehleStimme(syn.getVoices(), p.stimmName);
   if (stimme) spruch.voice = stimme;
 
   syn.speak(spruch);
   return true;
+}
+
+/** Alle deutschen Stimmen dieses Geraets — fuer die Auswahlliste. */
+export function deutscheStimmen(): Stimme[] {
+  const syn = ausgabe();
+  if (!syn) return [];
+  return nurDeutsch(syn.getVoices());
+}
+
+/** Gewaehltes Profil aus dem Browser lesen (nur Anzeige-Komfort, keine Daten). */
+export function leseStimmProfil(): StimmProfil {
+  if (typeof window === 'undefined') return { ...STIMME_STANDARD };
+  try {
+    const roh = window.localStorage.getItem(STIMME_SPEICHER);
+    if (!roh) return { ...STIMME_STANDARD };
+    return saubereProfil(JSON.parse(roh) as StimmProfil);
+  } catch {
+    return { ...STIMME_STANDARD };
+  }
+}
+
+/** Profil merken. Gibt das bereinigte Profil zurueck. */
+export function speichereStimmProfil(profil: StimmProfil | null | undefined): StimmProfil {
+  const p = saubereProfil(profil);
+  if (typeof window !== 'undefined') {
+    try { window.localStorage.setItem(STIMME_SPEICHER, JSON.stringify(p)); } catch { /* egal */ }
+  }
+  return p;
 }
 
 /** Vorlesen abbrechen (z. B. beim Verlassen der Seite). */
