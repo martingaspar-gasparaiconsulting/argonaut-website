@@ -16,7 +16,9 @@
 
 import { useMemo, useState, useEffect, useCallback, type CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { importQuellen, sucheImporte, gruppiereImporte, zaehleImporte } from '@/lib/importKatalog';
+import { importQuellen, sucheImporte, gruppiereImporte, zaehleImporte, quellenFuerModule } from '@/lib/importKatalog';
+import { BRANCHEN_PAKETE, KERN_MODULE, paketModule } from '@/lib/pakete';
+import { MODUL_PFAD } from '@/lib/rechte';
 import {
   ZIELE, zielDef, errateMapping, fehlendePflichtfelder, pruefeAlles,
   baueMustervorlage, passtZuordnung,
@@ -68,13 +70,35 @@ function fmtZeit(iso: string | null): string {
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Merkt die gewaehlte Branche im Browser (nur Anzeige-Komfort, keine Daten). */
+const BRANCHE_SPEICHER = 'argonaut_import_branche';
+
 export default function ImportCenterPage() {
   // --- Stufe 1: Katalog (unveraendert) -------------------------------------
   const [suche, setSuche] = useState('');
   const alle = useMemo(() => importQuellen(), []);
-  const gefiltert = useMemo(() => sucheImporte(alle, suche), [alle, suche]);
+
+  // Branchen-Filter: zeigt nur die Vorlagen, die dieser Betrieb wirklich braucht.
+  // Die Wahl bleibt im Browser gemerkt — kein Datenbankfeld, keine Migration.
+  const [branche, setBranche] = useState('');
+  useEffect(() => {
+    try {
+      const b = window.localStorage.getItem(BRANCHE_SPEICHER);
+      if (b) setBranche(b);
+    } catch { /* privater Modus: dann eben ohne Gedaechtnis */ }
+  }, []);
+  function waehleBranche(key: string) {
+    setBranche(key);
+    try { window.localStorage.setItem(BRANCHE_SPEICHER, key); } catch { /* egal */ }
+  }
+  const brancheQuellen = useMemo(
+    () => (branche ? quellenFuerModule([...KERN_MODULE, ...paketModule(branche)], MODUL_PFAD, alle) : alle),
+    [alle, branche],
+  );
+
+  const gefiltert = useMemo(() => sucheImporte(brancheQuellen, suche), [brancheQuellen, suche]);
   const gruppen = useMemo(() => gruppiereImporte(gefiltert), [gefiltert]);
-  const kpi = useMemo(() => zaehleImporte(alle), [alle]);
+  const kpi = useMemo(() => zaehleImporte(brancheQuellen), [brancheQuellen]);
 
   // --- Stufe 2: Assistent ---------------------------------------------------
   const [zielKey, setZielKey] = useState<string>('');
@@ -621,6 +645,29 @@ export default function ImportCenterPage() {
         <Kpi wert={kpi.gruppen} label="Bereiche" farbe={C.green} />
       </div>
 
+      <div style={styles.branchenLeiste}>
+        <span style={styles.branchenLabel}>Ihre Branche</span>
+        <button type="button" onClick={() => waehleBranche('')} style={branche === '' ? styles.chipAktiv : styles.chip}>
+          Alle Bereiche
+        </button>
+        {BRANCHEN_PAKETE.map((b) => (
+          <button
+            key={b.key}
+            type="button"
+            onClick={() => waehleBranche(b.key)}
+            style={branche === b.key ? styles.chipAktiv : styles.chip}
+          >
+            {b.icon} {b.name}
+          </button>
+        ))}
+      </div>
+      {branche ? (
+        <p style={styles.branchenHinweis}>
+          Sie sehen die Vorlagen, die zu Ihrer Branche und den Kernbausteinen gehören.
+          Über „Alle Bereiche" bekommen Sie jederzeit die vollständige Liste zurück.
+        </p>
+      ) : null}
+
       <input
         value={suche}
         onChange={(e) => setSuche(e.target.value)}
@@ -629,7 +676,9 @@ export default function ImportCenterPage() {
       />
 
       {gruppen.length === 0 ? (
-        <div style={styles.leer}>Keine Import-Quelle passt zur Suche.</div>
+        <div style={styles.leer}>
+          Keine Import-Quelle passt zur Suche{branche ? ' und zur gewählten Branche' : ''}.
+        </div>
       ) : (
         gruppen.map((g) => (
           <div key={g.key} style={{ marginTop: 26 }}>
@@ -703,6 +752,11 @@ const styles: Record<string, CSSProperties> = {
   zielGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 11 },
   zielKarte: { textAlign: 'left', cursor: 'pointer', border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, color: C.text, fontFamily: 'inherit' },
 
+  branchenLeiste: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', margin: '18px 0 10px' },
+  branchenLabel: { fontSize: 12.5, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: C.dim, marginRight: 4 },
+  chip: { background: 'transparent', border: '1px solid rgba(255,255,255,0.16)', color: C.dim, borderRadius: 999, padding: '6px 13px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  chipAktiv: { background: 'rgba(201,168,76,0.16)', border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 999, padding: '6px 13px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  branchenHinweis: { margin: '0 0 12px', fontSize: 13, color: C.dim, lineHeight: 1.55 },
   vorlagenLeiste: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)' },
   merkenZeile: { display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14, fontSize: 13.5, lineHeight: 1.55, cursor: 'pointer' },
   dateiFeld: { width: '100%', boxSizing: 'border-box', background: 'rgba(10,22,40,0.7)', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '14px', color: C.text, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },

@@ -115,3 +115,67 @@ export function zaehleImporte(quellen: ImportQuelle[]): { gesamt: number; mitVor
   const gruppen = gruppiereImporte(quellen).length;
   return { gesamt, mitVorlage, gruppen };
 }
+
+// ============================================================================
+// BRANCHEN-FILTER (04.09.2026) — „welche Vorlage brauche ICH?"
+//
+// Der Katalog listet gut drei Dutzend Import-Quellen. Fuer einen einzelnen
+// Betrieb sind davon selten mehr als acht interessant: ein Dachdecker braucht
+// kein Speisekarten-Muster, eine Baeckerei kein Aufmass.
+//
+// Zuordnung ueber den ZIELPFAD statt ueber ein neues Feld: jede Quelle zeigt
+// ohnehin auf ihre Modulseite, und lib/rechte.ts weiss, welcher Modul-Schluessel
+// hinter einem Pfad steckt. So bleibt der Katalog unveraendert — eine neue
+// Quelle wird automatisch mitzugeordnet, ohne dass hier jemand nachpflegen muss.
+//
+// Die Pfad-Tabelle kommt als PARAMETER herein (lib/rechte.ts MODUL_PFAD), nicht
+// als Import: damit bleibt diese Datei ohne Abhaengigkeiten und mit
+// `node --test` pruefbar.
+// ============================================================================
+
+/**
+ * Welcher Modul-Schluessel steckt hinter einem Zielpfad?
+ * Der laengste passende Pfad gewinnt, damit '/dashboard/erp/lieferanten' nicht
+ * bei '/dashboard/erp' haengen bleibt, wenn es einen genaueren Eintrag gibt.
+ */
+export function modulAusZiel(zielHref: string, modulPfade: Record<string, string>): string | undefined {
+  const ziel = String(zielHref || '').trim();
+  if (!ziel) return undefined;
+  let treffer: string | undefined;
+  let laenge = -1;
+  for (const [modul, pfad] of Object.entries(modulPfade || {})) {
+    const p = String(pfad || '');
+    if (!p) continue;
+    if (ziel !== p && !ziel.startsWith(p + '/')) continue;
+    if (p.length > laenge) { laenge = p.length; treffer = modul; }
+  }
+  return treffer;
+}
+
+/**
+ * Die Quellen, die zu den Modulen eines Betriebs passen.
+ * Eine Quelle, deren Ziel zu keinem bekannten Modul gehoert (Infrastruktur),
+ * bleibt bewusst drin — lieber eine Vorlage zu viel anbieten als eine zu wenig.
+ */
+export function quellenFuerModule(
+  module: readonly string[] | null | undefined,
+  modulPfade: Record<string, string>,
+  quellen: readonly ImportQuelle[] = IMPORT_QUELLEN,
+): ImportQuelle[] {
+  const menge = new Set((module || []).filter(Boolean));
+  if (menge.size === 0) return [...quellen];
+  return quellen.filter((s) => {
+    const modul = modulAusZiel(s.zielHref, modulPfade);
+    return !modul || menge.has(modul);
+  });
+}
+
+/** Die Gegenprobe: alles, was NICHT zu diesen Modulen gehoert. */
+export function quellenAusserhalb(
+  module: readonly string[] | null | undefined,
+  modulPfade: Record<string, string>,
+  quellen: readonly ImportQuelle[] = IMPORT_QUELLEN,
+): ImportQuelle[] {
+  const drin = new Set(quellenFuerModule(module, modulPfade, quellen).map((s) => s.key));
+  return quellen.filter((s) => !drin.has(s.key));
+}
