@@ -45,12 +45,14 @@
     var sichtbarSeit = Date.now();
     var sichtbarSumme = 0;
     var aktuellerPfad = pfad();
+    var verweilGesendet = false;
 
     function seitenaufruf() {
       start = Date.now();
       sichtbarSeit = Date.now();
       sichtbarSumme = 0;
       aktuellerPfad = pfad();
+      verweilGesendet = false;
       senden({
         typ: 'view',
         pfad: aktuellerPfad,
@@ -61,12 +63,18 @@
     }
 
     function verweilSenden() {
+      // Je Seitenaufruf genau EINE Verweil-Meldung. Ohne diese Sperre feuern
+      // visibilitychange (versteckt) UND pagehide nacheinander — dieselbe
+      // Dauer landete zweimal in der Datenbank. Nach einer SPA-Navigation
+      // setzt seitenaufruf() die Sperre wieder zurueck.
+      if (verweilGesendet) return;
       if (document.visibilityState === 'visible') {
         sichtbarSumme += Date.now() - sichtbarSeit;
         sichtbarSeit = Date.now();
       }
       var ms = sichtbarSumme > 0 ? sichtbarSumme : Date.now() - start;
       if (ms < 300) return; // Ministips ignorieren
+      verweilGesendet = true;
       senden({ typ: 'verweil', pfad: aktuellerPfad, verweildauer_ms: ms });
     }
 
