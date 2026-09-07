@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { fasseAnalytics } from '@/lib/marketingAnalytics';
+import { fasseAnalytics, fensterTage, imFenster } from '@/lib/marketingAnalytics';
 import { leadsJeBundesland } from '@/lib/plzBundesland';
 
 // ============================================================================
@@ -32,10 +32,13 @@ async function hole(sb: Sb, tabelle: string, spalten: string): Promise<Row[]> {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+
+  // Betrachtungsfenster (Attribution): ?tage=30|60|90|180, ohne Angabe alles.
+  const tage = fensterTage(new URL(req.url).searchParams.get('tage'));
 
   const [leadsRoh, adsErgebnisse] = await Promise.all([
     hole(supabase, 'leads', 'status, quelle, created_at, kampagne_id, plz'),
@@ -43,10 +46,11 @@ export async function GET() {
   ]);
 
   const jetztIso = new Date().toISOString();
-  const board = fasseAnalytics({ leads: leadsRoh, adsErgebnisse, jetztIso, wochen: 8 });
+  const board = fasseAnalytics({ leads: leadsRoh, adsErgebnisse, jetztIso, tage });
 
-  // Regions-Verteilung (geschätzt aus PLZ) — nur Leads mit gültiger PLZ.
-  const regionenRoh = leadsJeBundesland(leadsRoh as Array<{ plz?: unknown }>);
+  // Regions-Verteilung (geschätzt aus PLZ) — nur Leads im gewählten Fenster.
+  const leadsFenster = imFenster(leadsRoh as Array<{ created_at?: unknown }>, jetztIso, tage);
+  const regionenRoh = leadsJeBundesland(leadsFenster as Array<{ plz?: unknown }>);
   const regionMax = regionenRoh.reduce((m, r) => Math.max(m, r.anzahl), 0);
   const regionen = regionenRoh.map((r) => ({
     ...r,
@@ -60,6 +64,7 @@ export async function GET() {
     zeitReihe: board.zeitReihe,
     quellen: board.quellen,
     ads: board.ads,
+    fenster: board.fenster,
     regionen,
     regionMitPlz: regionenRoh.reduce((s, r) => s + r.anzahl, 0),
   });

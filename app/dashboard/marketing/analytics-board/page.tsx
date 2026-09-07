@@ -22,11 +22,24 @@ type ZeitPunkt = { start: string; label: string; anzahl: number; istAktuell: boo
 type QuelleAnteil = { quelle: string; anzahl: number; anteil: number };
 type Region = { land: string; anzahl: number; anteil: number };
 type Ads = { ausgaben: number; umsatz: number; klicks: number; conversions: number; roas: number | null; cpl: number | null };
+type Fenster = { tage: number | null; label: string; warnung: string | null; leadsImFenster: number; leadsGesamt: number };
 type Daten = {
   ok: boolean; error?: string;
   kpis: Kpis; funnel: FunnelStufe[]; zeitReihe: ZeitPunkt[];
   quellen: QuelleAnteil[]; ads: Ads; regionen: Region[]; regionMitPlz: number;
+  fenster?: Fenster;
 };
+
+// Betrachtungsfenster: hochpreisiges B2B schliesst oft erst nach Wochen ab.
+// Wer nach sieben Tagen bewertet, schaltet die profitablen Kampagnen ab.
+const FENSTER: Array<{ wert: string; label: string }> = [
+  { wert: '30', label: '30 Tage' },
+  { wert: '60', label: '60 Tage' },
+  { wert: '90', label: '90 Tage' },
+  { wert: '180', label: '180 Tage' },
+  { wert: 'alle', label: 'Alles' },
+];
+const FENSTER_SPEICHER = 'argonaut_analytics_fenster';
 
 function euro(n: number): string {
   return (n || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -36,18 +49,38 @@ export default function AnalyticsBoardPage() {
   const [daten, setDaten] = useState<Daten | null>(null);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [fenster, setFenster] = useState('90');
+
+  // Zuletzt gewaehltes Fenster merken (nur im Browser des Nutzers).
+  useEffect(() => {
+    try {
+      const gemerkt = window.localStorage.getItem(FENSTER_SPEICHER);
+      if (gemerkt && FENSTER.some((f) => f.wert === gemerkt)) setFenster(gemerkt);
+    } catch { /* kein Speicher — dann eben der Standard */ }
+  }, []);
 
   useEffect(() => {
+    let abgebrochen = false;
     (async () => {
+      setLaden(true);
+      setFehler(null);
       try {
-        const res = await fetch('/api/marketing/analytics-board');
+        const res = await fetch(`/api/marketing/analytics-board?tage=${encodeURIComponent(fenster)}`);
+        if (abgebrochen) return;
         if (res.status === 401 || res.status === 403) { setFehler('Bitte einloggen.'); setLaden(false); return; }
         const j = (await res.json()) as Daten;
+        if (abgebrochen) return;
         if (!j.ok) { setFehler(j.error || 'Das Board konnte nicht geladen werden.'); setLaden(false); return; }
         setDaten(j);
-      } catch { setFehler('Das Board konnte nicht geladen werden.'); } finally { setLaden(false); }
+      } catch { if (!abgebrochen) setFehler('Das Board konnte nicht geladen werden.'); } finally { if (!abgebrochen) setLaden(false); }
     })();
-  }, []);
+    return () => { abgebrochen = true; };
+  }, [fenster]);
+
+  const fensterWaehlen = (wert: string) => {
+    setFenster(wert);
+    try { window.localStorage.setItem(FENSTER_SPEICHER, wert); } catch { /* egal */ }
+  };
 
   const keineLeads = daten && daten.kpis.leadsGesamt === 0;
 
@@ -57,15 +90,52 @@ export default function AnalyticsBoardPage() {
         📊 Analytics-Board
       </h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 780 }}>
-        Alle Marketing-Zahlen auf einen Blick — visuell aufbereitet: wie sich deine Anfragen entwickeln, in welcher Phase sie stecken, woher sie kommen, aus welcher Region, und was deine Werbung bringt.
+        Alle Marketing-Zahlen auf einen Blick — visuell aufbereitet: wie sich deine Anfragen entwickeln, in welcher Phase sie stecken, woher sie kommen, aus welcher Region, und was deine Werbung bringt. Das Betrachtungsfenster oben gilt für alle Zahlen außer der Werbe-Auswertung — die zählt immer alles.
       </p>
+
+      {/* Betrachtungsfenster */}
+      <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>Betrachtungsfenster</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {FENSTER.map((f) => {
+              const aktiv = f.wert === fenster;
+              return (
+                <button
+                  key={f.wert}
+                  onClick={() => fensterWaehlen(f.wert)}
+                  style={{
+                    background: aktiv ? C.gold : 'transparent',
+                    color: aktiv ? C.navy : C.textDim,
+                    border: `1px solid ${aktiv ? C.gold : C.border}`,
+                    borderRadius: 8, padding: '6px 12px', fontSize: 13,
+                    fontFamily: 'inherit', fontWeight: aktiv ? 700 : 400, cursor: 'pointer',
+                  }}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+          {daten?.fenster && (
+            <span style={{ color: C.textDim, fontSize: 12.5, marginLeft: 'auto' }}>
+              {daten.fenster.leadsImFenster} von {daten.fenster.leadsGesamt} Anfragen
+            </span>
+          )}
+        </div>
+        {daten?.fenster?.warnung && (
+          <div style={{ color: C.warn, fontSize: 12.5, lineHeight: 1.55, marginTop: 10, paddingLeft: 10, borderLeft: `2px solid ${C.warn}` }}>
+            {daten.fenster.warnung}
+          </div>
+        )}
+      </div>
 
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>{fehler}</div>}
       {laden ? <p style={{ color: C.textDim }}>Zahlen werden geladen …</p> : daten && (
         <>
           {/* KPI-Kacheln */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, marginBottom: 24 }}>
-            <KpiTile label="Leads gesamt" wert={String(daten.kpis.leadsGesamt)} farbe={C.cyan} />
+            <KpiTile label={daten.fenster && daten.fenster.tage != null ? `Anfragen in ${daten.fenster.label}` : 'Anfragen gesamt'} wert={String(daten.kpis.leadsGesamt)} farbe={C.cyan} />
             <KpiTile label="Diese Woche" wert={String(daten.kpis.dieseWoche)} farbe={C.gold} trend={daten.kpis.trendProzent} />
             <KpiTile label="Aus Kampagne" wert={String(daten.kpis.ausKampagne)} farbe={C.text} />
             <KpiTile label="Werbe-ROAS" wert={daten.ads.roas != null ? `${daten.ads.roas.toLocaleString('de-DE')}×` : '—'} farbe={daten.ads.roas != null && daten.ads.roas >= 1 ? C.green : C.textDim} />
@@ -78,7 +148,7 @@ export default function AnalyticsBoardPage() {
           )}
 
           {/* Zeit-Trend */}
-          <Sektion titel="Anfragen je Woche" hinweis="gleitendes 8-Wochen-Fenster">
+          <Sektion titel="Anfragen je Woche" hinweis={`gleitendes ${daten.zeitReihe.length}-Wochen-Fenster`}>
             <SaeulenTrend punkte={daten.zeitReihe} />
           </Sektion>
 

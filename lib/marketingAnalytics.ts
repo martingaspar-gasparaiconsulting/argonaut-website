@@ -184,22 +184,102 @@ export function analyticsKpis(leads: LeadRoh[], jetztIso: string): AnalyticsKpis
   };
 }
 
+// --- Betrachtungsfenster (Attribution) --------------------------------------
+// Hochpreisiges B2B braucht Zeit: zwischen Erstkontakt und Abschluss liegen
+// ueblicherweise 30 bis 120 Tage. Wer Kampagnen nach sieben Tagen bewertet,
+// schaltet genau die profitablen ab. Darum ist das Fenster waehlbar — und die
+// Seite sagt es, wenn es zu kurz steht.
+
+export type FensterWahl = { tage: number; label: string };
+
+export const FENSTER_WAHL: FensterWahl[] = [
+  { tage: 30, label: '30 Tage' },
+  { tage: 60, label: '60 Tage' },
+  { tage: 90, label: '90 Tage' },
+  { tage: 180, label: '180 Tage' },
+];
+
+/** Uebliche Dauer eines B2B-Kaufzyklus in Tagen — Grundlage der Warnung. */
+export const KAUFZYKLUS_TAGE = 60;
+
+/**
+ * Fenster aus einer Eingabe lesen: null heisst „alles", sonst 1..730 Tage.
+ * Unsinn wird zu null (alles) statt zu einer erfundenen Zahl.
+ */
+export function fensterTage(v: unknown): number | null {
+  if (v == null || v === '' || v === 'alle') return null;
+  const n = Math.floor(Number(String(v).trim()));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(730, n);
+}
+
+/** Leads auf das Fenster begrenzen. tage=null laesst alles durch. */
+export function imFenster(leads: LeadRoh[] | null | undefined, jetztIso: string, tage: number | null): LeadRoh[] {
+  const rows = leads || [];
+  if (tage == null) return rows;
+  const jetzt = zeitMs(jetztIso) || Date.now();
+  const ab = jetzt - tage * TAG;
+  return rows.filter((l) => {
+    const t = zeitMs(l?.created_at);
+    return t > 0 && t > ab && t <= jetzt;
+  });
+}
+
+/**
+ * Ehrlicher Hinweis, wenn das gewaehlte Fenster kuerzer ist als der uebliche
+ * Kaufzyklus. Sonst null — kein Hinweis um des Hinweises willen.
+ */
+export function fensterWarnung(tage: number | null): string | null {
+  if (tage == null || tage >= KAUFZYKLUS_TAGE) return null;
+  return 'Ihr Fenster ist kürzer als ein üblicher B2B-Kaufzyklus (30 bis 120 Tage). '
+    + 'Kampagnen, deren Kunden erst nach Wochen abschließen, sehen darin schlechter aus, als sie sind.';
+}
+
+/** Passende Anzahl Wochen fuer den Zeit-Trend im gewaehlten Fenster. */
+export function wochenFuerFenster(tage: number | null): number {
+  if (tage == null) return 8;
+  return Math.max(4, Math.min(26, Math.ceil(tage / 7)));
+}
+
 export type AnalyticsInput = {
   leads?: LeadRoh[] | null;
   adsErgebnisse?: AdsErgebnisRoh[] | null;
   jetztIso: string;
   wochen?: number;
+  /** null oder weglassen = alles (bisheriges Verhalten). */
+  tage?: number | null;
+};
+
+export type FensterInfo = {
+  tage: number | null;
+  label: string;
+  warnung: string | null;
+  leadsImFenster: number;
+  leadsGesamt: number;
 };
 
 /** Alles fuers Board auf einmal (Region liefert die Route separat). */
 export function fasseAnalytics(input: AnalyticsInput) {
-  const leads = input.leads || [];
+  const alle = input.leads || [];
   const ads = input.adsErgebnisse || [];
+  const tage = input.tage ?? null;
+  const leads = imFenster(alle, input.jetztIso, tage);
+  const wochen = input.wochen ?? wochenFuerFenster(tage);
+
+  const fenster: FensterInfo = {
+    tage,
+    label: tage == null ? 'Alles' : `${tage} Tage`,
+    warnung: fensterWarnung(tage),
+    leadsImFenster: leads.length,
+    leadsGesamt: alle.length,
+  };
+
   return {
     kpis: analyticsKpis(leads, input.jetztIso),
     funnel: leadFunnel(leads),
-    zeitReihe: leadsProWoche(leads, input.jetztIso, input.wochen ?? 8),
+    zeitReihe: leadsProWoche(leads, input.jetztIso, wochen),
     quellen: leadsJeQuelle(leads),
     ads: adsEffizienz(ads),
+    fenster,
   };
 }
