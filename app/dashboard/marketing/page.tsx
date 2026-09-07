@@ -280,6 +280,7 @@ export default function MarketingCockpit() {
             { href: '/dashboard/marketing/cockpit', label: '🛰️ Cockpit' },
             { href: '/dashboard/marketing/analytics-board', label: '📈 Analytics-Board' },
             { href: '/dashboard/marketing/roi-verzahnung', label: '🔗 ROI-Verzahnung' },
+            { href: '/dashboard/marketing/termin-wert', label: '🎯 Termin-Wert-Rechner' },
             { href: '/dashboard/marketing/autopilot', label: '🤖 Autopilot' },
             { href: '/dashboard/marketing/stratege', label: '🧠 KI-Stratege' },
             { href: '/dashboard/marketing/seo', label: '🔍 SEO-Modul' },
