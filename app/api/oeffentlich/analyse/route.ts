@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
+import { berlinTag } from '@/lib/lpAnalytics';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/analyse  (cookiefreies Website-Tracking)
@@ -168,7 +169,10 @@ export async function POST(req: Request) {
 
     // Anonymer Tages-Schlüssel: Hash aus Datum + IP + UA + Server-Geheimnis.
     // Die IP selbst wird NICHT gespeichert; der Schlüssel wechselt täglich.
-    const tag = new Date().toISOString().slice(0, 10);
+    // Der Tag ist der KALENDERTAG IN EUROPE/BERLIN (nicht UTC): sonst wechselt
+    // der Schlüssel im Sommer erst um 02:00 Ortszeit, und ein Besucher, der um
+    // 00:30 kommt und um 02:30 wiederkommt, zählt als zwei Besucher.
+    const tag = berlinTag(new Date().toISOString()) || new Date().toISOString().slice(0, 10);
     const geheim = process.env.SUPABASE_SERVICE_ROLE_KEY || 'argonaut-salt';
     const besucher_tag = createHash('sha256')
       .update(`${tag}|${ipRoh}|${ua}|${geheim}`)
