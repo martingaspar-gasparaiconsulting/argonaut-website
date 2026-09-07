@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
+import BelegErfassen from './BelegErfassen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -635,12 +636,16 @@ export default function MeineEinsaetzePage() {
                     <div style={styles.fotoBereich}>
                       <div style={styles.fotoKopf}>
                         <span style={{ fontWeight: 700 }}>📷 Fotos {efotos.length > 0 ? `(${efotos.length})` : ''}</span>
-                        <label style={{ ...styles.fotoAddBtn, opacity: fotoBusy === e.id ? 0.6 : 1 }}>
-                          {fotoBusy === e.id ? 'Lädt …' : '+ Foto'}
-                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                            disabled={fotoBusy === e.id}
-                            onChange={(ev) => { const f = ev.target.files?.[0]; if (f) { void fotoHochladen(e, f); } ev.target.value = ''; }} />
-                        </label>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <label style={{ ...styles.fotoAddBtn, opacity: fotoBusy === e.id ? 0.6 : 1 }}>
+                            {fotoBusy === e.id ? 'Lädt …' : '+ Foto'}
+                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                              disabled={fotoBusy === e.id}
+                              onChange={(ev) => { const f = ev.target.files?.[0]; if (f) { void fotoHochladen(e, f); } ev.target.value = ''; }} />
+                          </label>
+                          {/* Beleg vom Einsatz: Foto -> Beleg-KI -> Ausgaben UND Einsatz. */}
+                          <BelegErfassen einsatzId={e.id} ownerUserId={e.owner_user_id} />
+                        </div>
                       </div>
                       {efotos.length > 0 && (
                         <div style={styles.fotoGrid}>
