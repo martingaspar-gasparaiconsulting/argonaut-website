@@ -7,6 +7,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht'
 import type { EigenesFeld } from '@/lib/eigeneFelder'
 import LeadsAuge from './LeadsAuge'
+import { STUFEN_INFO, istStufe, stufeAusStatus, stufenTrichter, type Stufe } from '@/lib/leadStufen'
 
 export type Lead = {
   id: string
@@ -26,6 +27,11 @@ export type Lead = {
   ki_naechster_schritt: string | null
   quelle: string | null
   ist_bestand: boolean | null
+  stufe: string | null
+  stufe_geaendert_am: string | null
+  termin_gebucht_am: string | null
+  termin_gehalten_am: string | null
+  kunde_seit: string | null
 }
 
 type StatusKey = 'neu' | 'offen' | 'gewonnen' | 'verloren'
@@ -95,6 +101,7 @@ const MODUL = 'leads'
 
 export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: string }) {
   const [status, setStatus] = useState<'alle' | StatusKey>('alle')
+  const [stufe, setStufe] = useState<'alle' | Stufe>('alle')
   const [herkunft, setHerkunft] = useState<'alle' | 'neu' | 'bestand'>('alle')
   const [modalOpen, setModalOpen] = useState(false)
   const [speichert, setSpeichert] = useState(false)
@@ -123,8 +130,14 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
   const nachHerkunft = leads.filter((l) =>
     herkunft === 'alle' ? true : herkunft === 'bestand' ? l.ist_bestand === true : l.ist_bestand !== true
   )
+  // Die Stufe einer Anfrage: gesetzt, sonst aus dem alten Status abgeleitet —
+  // so faellt kein Bestandslead aus Filter und Trichter.
+  const stufeVon = (l: Lead): Stufe => (istStufe(l.stufe) ? l.stufe : stufeAusStatus(l.status))
+  const trichter = stufenTrichter(nachHerkunft)
+
   const gefiltert = nachHerkunft
     .filter((l) => (status === 'alle' ? true : l.status === status))
+    .filter((l) => (stufe === 'alle' ? true : stufeVon(l) === stufe))
     .slice()
     .sort((a, b) => {
       const sa = a.score ?? -1
@@ -202,6 +215,17 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
           <button onClick={() => setHerkunft('bestand')} style={pillStyle(herkunft === 'bestand', '#C9A84C')}>Bestand ({anzahlBestand})</button>
         </div>
 
+        <p style={labelStyle}>Stufe</p>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+          <button onClick={() => setStufe('alle')} style={pillStyle(stufe === 'alle', '#C9A84C')}>Alle ({nachHerkunft.length})</button>
+          {trichter.zeilen.map((z) => (
+            <button key={z.stufe} onClick={() => setStufe(z.stufe)} style={pillStyle(stufe === z.stufe, z.farbe)}>{z.label} ({z.anzahl})</button>
+          ))}
+          <button onClick={() => setStufe('verloren')} style={pillStyle(stufe === 'verloren', STUFEN_INFO.verloren.farbe)}>{STUFEN_INFO.verloren.label} ({trichter.verloren})</button>
+        </div>
+
+        <StufenTrichterBlock trichter={trichter} />
+
         <p style={labelStyle}>Status</p>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button onClick={() => setStatus('alle')} style={pillStyle(status === 'alle', '#C9A84C')}>Alle ({nachHerkunft.length})</button>
@@ -226,6 +250,9 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 'clamp(16px, 1.38vw, 22px)', fontWeight: 800, color: '#FFFFFF' }}>{l.name || 'Ohne Namen'}</span>
                     <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: si.color, background: si.color + '22', border: '1px solid ' + si.color + '55', borderRadius: '999px', padding: '3px 10px' }}>{si.label}</span>
+                    {(() => { const st = STUFEN_INFO[stufeVon(l)]; return (
+                      <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: st.farbe, background: st.farbe + '1f', border: '1px solid ' + st.farbe + '55', borderRadius: '999px', padding: '3px 10px' }}>{st.kurz}</span>
+                    ) })()}
                     {(() => { const pi = scoreInfo(l.score); return pi ? (
                       <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 800, letterSpacing: '0.04em', color: pi.color, background: pi.color + '22', border: '1px solid ' + pi.color + '66', borderRadius: '999px', padding: '3px 10px' }}>{'\u2605 ' + l.score + ' - ' + pi.label.split(' - ')[1]}</span>
                     ) : null })()}
@@ -325,6 +352,48 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
           </div>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Der Stufen-Trichter: die drei Quoten, aus denen Planbarkeit entsteht.
+// Genau diese drei Zahlen gehoeren in den Termin-Wert-Rechner — deshalb steht
+// der Hinweis darunter. Fehlt die Grundlage, bleibt die Quote leer statt 0.
+// ---------------------------------------------------------------------------
+function StufenTrichterBlock({ trichter }: { trichter: ReturnType<typeof stufenTrichter> }) {
+  if (trichter.gesamt === 0) return null
+  const q = (w: number | null) => (w == null ? '—' : w.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %')
+  const breite = (erreicht: number) => (trichter.gesamt > 0 ? Math.max(2, Math.round((erreicht / trichter.gesamt) * 100)) : 0)
+
+  return (
+    <div style={{ ...cardStyle, marginBottom: '18px' }}>
+      <p style={{ ...labelStyle, margin: '0 0 14px' }}>Ihr Trichter</p>
+
+      <div style={{ display: 'grid', gap: '8px' }}>
+        {trichter.zeilen.map((z) => (
+          <div key={z.stufe} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ width: '128px', flexShrink: 0, fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.7)' }}>{z.label}</span>
+            <span style={{ flex: 1, height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
+              <span style={{ display: 'block', height: '100%', width: breite(z.erreicht) + '%', background: z.farbe, borderRadius: '999px' }} />
+            </span>
+            <span style={{ width: '52px', textAlign: 'right', flexShrink: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 800, color: z.farbe }}>{z.erreicht}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '22px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>Anfrage {'→'} Termin: <strong style={{ color: '#FFFFFF' }}>{q(trichter.quoteAnfrageZuTermin)}</strong></span>
+        <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>Termin gehalten: <strong style={{ color: '#FFFFFF' }}>{q(trichter.quoteTerminGehalten)}</strong></span>
+        <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.6)' }}>Abschluss: <strong style={{ color: '#FFFFFF' }}>{q(trichter.quoteAbschluss)}</strong></span>
+        {trichter.verloren > 0 ? (
+          <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)' }}>Verloren: {trichter.verloren}</span>
+        ) : null}
+      </div>
+
+      <p style={{ margin: '10px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+        Diese drei Quoten koennen Sie im Termin-Wert-Rechner eintragen — dann wissen Sie, was eine Anfrage bei Ihnen wert ist.
+      </p>
     </div>
   )
 }

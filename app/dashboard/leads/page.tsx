@@ -16,7 +16,7 @@ export default async function LeadsPage() {
 
   let query = supabase
     .from('leads')
-    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand')
+    .select('id, created_at, name, telefon, email, dienstleistung, menge, einheit, wunschtermin, nachricht, status, score, ki_intent, ki_zusammenfassung, ki_naechster_schritt, quelle, ist_bestand, stufe, stufe_geaendert_am, termin_gebucht_am, termin_gehalten_am, kunde_seit')
   if (standortId) query = query.or(standortOrFilter(standortId))
 
   const { data } = await query.order('created_at', { ascending: false })

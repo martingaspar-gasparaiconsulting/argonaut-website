@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { kontaktAusLead } from '@/lib/leadKontakt'
+import { STUFEN_ALLE, STUFEN_INFO, istStufe, stufeAusStatus, feldwerteFuerStufe, type Stufe } from '@/lib/leadStufen'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -33,6 +34,11 @@ export type LeadDetail = {
   angebot_status: string | null
   angebot_erstellt_am: string | null
   angebot_versendet_am: string | null
+  stufe: string | null
+  stufe_geaendert_am: string | null
+  termin_gebucht_am: string | null
+  termin_gehalten_am: string | null
+  kunde_seit: string | null
 }
 
 const card = {
@@ -83,6 +89,16 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [kampagneId, setKampagneId] = useState<string>(lead.kampagne_id ?? '')
   const [kampMeldung, setKampMeldung] = useState<string | null>(null)
 
+  // Vertriebsstufe — die Leiter, aus der die Quoten entstehen.
+  const [stufe, setStufe] = useState<Stufe>(istStufe(lead.stufe) ? lead.stufe : stufeAusStatus(lead.status))
+  const [meilen, setMeilen] = useState({
+    termin_gebucht_am: lead.termin_gebucht_am,
+    termin_gehalten_am: lead.termin_gehalten_am,
+    kunde_seit: lead.kunde_seit,
+  })
+  const [stufeBusy, setStufeBusy] = useState(false)
+  const [stufeMeldung, setStufeMeldung] = useState<string | null>(null)
+
   const [kontaktId, setKontaktId] = useState<string | null>(lead.kontakt_id ?? null)
   const [crmBusy, setCrmBusy] = useState(false)
   const [crmMeldung, setCrmMeldung] = useState<string | null>(null)
@@ -94,6 +110,31 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
       .order('created_at', { ascending: false })
       .then(({ data }: { data: { id: string; name: string }[] | null }) => setKampagnen(data ?? []))
   }, [])
+
+  /**
+   * Stufe setzen. Die Meilenstein-Zeitstempel der Stufen davor werden
+   * mitgesetzt, aber nie ueberschrieben — ein vorhandenes Datum ist die
+   * Grundlage aller spaeteren Auswertungen und darf nicht verlorengehen.
+   */
+  async function setzeStufe(neu: Stufe) {
+    if (neu === stufe || stufeBusy) return
+    setStufeBusy(true)
+    setStufeMeldung(null)
+    const felder = feldwerteFuerStufe(neu, new Date().toISOString(), meilen)
+    const { error } = await supabase.from('leads').update(felder).eq('id', lead.id)
+    if (error) {
+      setStufeMeldung('Konnte nicht gespeichert werden.')
+    } else {
+      setStufe(neu)
+      setMeilen((alt) => ({
+        termin_gebucht_am: (felder.termin_gebucht_am as string | undefined) ?? alt.termin_gebucht_am,
+        termin_gehalten_am: (felder.termin_gehalten_am as string | undefined) ?? alt.termin_gehalten_am,
+        kunde_seit: (felder.kunde_seit as string | undefined) ?? alt.kunde_seit,
+      }))
+      setStufeMeldung('Stufe gespeichert.')
+    }
+    setStufeBusy(false)
+  }
 
   async function setzeKampagne(id: string) {
     setKampagneId(id)
@@ -241,6 +282,43 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
                 {lead.status}
               </span>
             )}
+          </div>
+
+          {/* Vertriebsstufe — hier entsteht die Zahl, aus der Quoten werden. */}
+          <div style={{ marginBottom: '20px', paddingBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', margin: '0 0 10px', fontWeight: 700 }}>Stufe</p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {STUFEN_ALLE.map((s) => {
+                const info = STUFEN_INFO[s]
+                const aktiv = s === stufe
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setzeStufe(s)}
+                    disabled={stufeBusy}
+                    style={{
+                      background: aktiv ? info.farbe : 'transparent',
+                      color: aktiv ? '#0A1628' : 'rgba(255,255,255,0.7)',
+                      border: '1px solid ' + (aktiv ? info.farbe : 'rgba(255,255,255,0.15)'),
+                      borderRadius: '999px', padding: '6px 14px',
+                      fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: aktiv ? 800 : 600,
+                      fontFamily: 'inherit', cursor: stufeBusy ? 'default' : 'pointer',
+                      opacity: stufeBusy ? 0.6 : 1,
+                    }}
+                  >
+                    {info.label}
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '10px', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)' }}>
+              {meilen.termin_gebucht_am ? <span>Termin gebucht: {formatDatum(meilen.termin_gebucht_am)}</span> : null}
+              {meilen.termin_gehalten_am ? <span>Termin gehalten: {formatDatum(meilen.termin_gehalten_am)}</span> : null}
+              {meilen.kunde_seit ? <span>Kunde seit: {formatDatum(meilen.kunde_seit)}</span> : null}
+            </div>
+            {stufeMeldung ? (
+              <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)' }}>{stufeMeldung}</p>
+            ) : null}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
