@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { kontaktAusLead } from '@/lib/leadKontakt'
 import { STUFEN_ALLE, STUFEN_INFO, istStufe, stufeAusStatus, feldwerteFuerStufe, type Stufe } from '@/lib/leadStufen'
+import { startWerte, stoppWerte, sollStoppen, NACHFASS_SCHRITTE } from '@/lib/leadNachfass'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -39,6 +40,9 @@ export type LeadDetail = {
   termin_gebucht_am: string | null
   termin_gehalten_am: string | null
   kunde_seit: string | null
+  nachfass_status: string | null
+  nachfass_schritt: number | null
+  nachfass_faellig_am: string | null
 }
 
 const card = {
@@ -99,6 +103,13 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
   const [stufeBusy, setStufeBusy] = useState(false)
   const [stufeMeldung, setStufeMeldung] = useState<string | null>(null)
 
+  // Nachfass-Kette (Tag 2 / 7 / 21) — laeuft nur, solange keine Reaktion kam.
+  const [nachfass, setNachfass] = useState<string | null>(lead.nachfass_status)
+  const [nachfassFaellig, setNachfassFaellig] = useState<string | null>(lead.nachfass_faellig_am)
+  const [nachfassSchritt, setNachfassSchritt] = useState<number>(lead.nachfass_schritt ?? 0)
+  const [nachfassBusy, setNachfassBusy] = useState(false)
+  const [nachfassMeldung, setNachfassMeldung] = useState<string | null>(null)
+
   const [kontaktId, setKontaktId] = useState<string | null>(lead.kontakt_id ?? null)
   const [crmBusy, setCrmBusy] = useState(false)
   const [crmMeldung, setCrmMeldung] = useState<string | null>(null)
@@ -121,7 +132,13 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
     setStufeBusy(true)
     setStufeMeldung(null)
     const felder = feldwerteFuerStufe(neu, new Date().toISOString(), meilen)
-    const { error } = await supabase.from('leads').update(felder).eq('id', lead.id)
+    // Sobald ein Termin steht, schweigt der Automat — sonst schreibt er
+    // jemandem hinterher, mit dem gerade gesprochen wird.
+    const stoppt = sollStoppen(neu) && nachfass === 'aktiv'
+    const { error } = await supabase
+      .from('leads')
+      .update(stoppt ? { ...felder, ...stoppWerte('gestoppt') } : felder)
+      .eq('id', lead.id)
     if (error) {
       setStufeMeldung('Konnte nicht gespeichert werden.')
     } else {
@@ -131,9 +148,48 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         termin_gehalten_am: (felder.termin_gehalten_am as string | undefined) ?? alt.termin_gehalten_am,
         kunde_seit: (felder.kunde_seit as string | undefined) ?? alt.kunde_seit,
       }))
-      setStufeMeldung('Stufe gespeichert.')
+      if (stoppt) {
+        setNachfass('gestoppt')
+        setNachfassFaellig(null)
+        setStufeMeldung('Stufe gespeichert. Das Nachfassen wurde beendet.')
+      } else {
+        setStufeMeldung('Stufe gespeichert.')
+      }
     }
     setStufeBusy(false)
+  }
+
+  async function nachfassStarten() {
+    if (nachfassBusy) return
+    const werte = startWerte(lead.created_at)
+    if (!werte) { setNachfassMeldung('Ohne Eingangsdatum laesst sich nichts takten.'); return }
+    setNachfassBusy(true)
+    setNachfassMeldung(null)
+    const { error } = await supabase.from('leads').update(werte).eq('id', lead.id)
+    if (error) {
+      setNachfassMeldung('Konnte nicht gespeichert werden.')
+    } else {
+      setNachfass('aktiv')
+      setNachfassSchritt(0)
+      setNachfassFaellig(String(werte.nachfass_faellig_am ?? ''))
+      setNachfassMeldung('Nachfassen gestartet.')
+    }
+    setNachfassBusy(false)
+  }
+
+  async function nachfassPausieren() {
+    if (nachfassBusy) return
+    setNachfassBusy(true)
+    setNachfassMeldung(null)
+    const { error } = await supabase.from('leads').update(stoppWerte('pausiert')).eq('id', lead.id)
+    if (error) {
+      setNachfassMeldung('Konnte nicht gespeichert werden.')
+    } else {
+      setNachfass('pausiert')
+      setNachfassFaellig(null)
+      setNachfassMeldung('Nachfassen pausiert.')
+    }
+    setNachfassBusy(false)
   }
 
   async function setzeKampagne(id: string) {
@@ -319,6 +375,31 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
             {stufeMeldung ? (
               <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)' }}>{stufeMeldung}</p>
             ) : null}
+
+            {/* Nachfassen: keine Reaktion ist kein Nein. */}
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.75)' }}>
+                  Nachfassen{' '}
+                  <strong style={{ color: nachfass === 'aktiv' ? '#4CAF7D' : 'rgba(255,255,255,0.5)' }}>
+                    {nachfass === 'aktiv' ? 'laeuft' : nachfass === 'fertig' ? 'abgeschlossen' : nachfass === 'pausiert' ? 'pausiert' : nachfass === 'gestoppt' ? 'beendet' : 'aus'}
+                  </strong>
+                </span>
+                {nachfass === 'aktiv' ? (
+                  <button onClick={nachfassPausieren} disabled={nachfassBusy} style={knopfKlein(false)}>Pausieren</button>
+                ) : (
+                  <button onClick={nachfassStarten} disabled={nachfassBusy} style={knopfKlein(true)}>Nachfassen starten</button>
+                )}
+              </div>
+              <p style={{ margin: '6px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                {nachfass === 'aktiv' && nachfassFaellig
+                  ? 'Naechste Nachricht am ' + formatDatum(nachfassFaellig) + ' (Schritt ' + (nachfassSchritt + 1) + ' von ' + NACHFASS_SCHRITTE.length + ').'
+                  : 'Drei kurze Nachrichten an Tag 2, 7 und 21 nach der Anfrage. Sobald ein Termin steht, hoert das Nachfassen von selbst auf.'}
+              </p>
+              {nachfassMeldung ? (
+                <p style={{ margin: '6px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)' }}>{nachfassMeldung}</p>
+              ) : null}
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
@@ -571,4 +652,19 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
       </section>
     </div>
   )
+}
+
+/** Kleiner Knopf im Kartenkopf — gold fuer die Haupt-Aktion, sonst neutral. */
+function knopfKlein(betont: boolean) {
+  return {
+    background: betont ? '#C9A84C' : 'transparent',
+    color: betont ? '#0A1628' : 'rgba(255,255,255,0.7)',
+    border: '1px solid ' + (betont ? '#C9A84C' : 'rgba(255,255,255,0.15)'),
+    borderRadius: '999px',
+    padding: '5px 14px',
+    fontSize: 'clamp(12px, 1.06vw, 17px)',
+    fontWeight: betont ? 800 : 600,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+  } as const
 }

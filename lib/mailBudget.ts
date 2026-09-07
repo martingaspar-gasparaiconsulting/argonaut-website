@@ -11,6 +11,7 @@
 //   06:15  Wartungs-Erinnerung
 //   07:00  Ueberfaellige Rechnungen
 //   09:00  Dossier-Sequenz      bis 300 Mails
+//   10:00  Lead-Nachfass        (Tag 2 / 7 / 21 je Anfrage)
 //
 // Der Autoresponter laeuft ZUERST und durfte bis zu 300 Mails verschicken —
 // also das Dreifache des ganzen Tageskontingents. An einem starken Tag war
@@ -40,11 +41,11 @@ export const HOECHSTES_TAGESBUDGET = 50_000;
 export const WERBE_ANTEIL = 0.5;
 
 /**
- * So viele Crons teilen sich den Werbe-Anteil: Autoresponder und
- * Dossier-Sequenz. Kommt einer dazu, gehoert die Zahl hier erhoeht — sonst
- * reissen beide zusammen den Anteil.
+ * So viele Crons teilen sich den Werbe-Anteil: Autoresponder, Dossier-Sequenz
+ * und seit dem 07.09.26 die Lead-Nachfass-Kette. Kommt einer dazu, gehoert die
+ * Zahl hier erhoeht — sonst reissen sie zusammen den Anteil.
  */
-export const WERBE_CRONS = 2;
+export const WERBE_CRONS = 3;
 
 /**
  * Untergrenze je Durchgang. Auch bei einem winzigen Budget soll ein Durchgang
