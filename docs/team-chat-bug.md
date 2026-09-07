@@ -1,55 +1,57 @@
 # Team-Chat — Untersuchungsnotiz (bekanntes Problem)
 
-Status: **dokumentiert, noch nicht behoben.** Bewusste Entscheidung: nicht blind
-fixen, sondern erst am laufenden System reproduzieren, weil ein Blind-Fix an
-RLS/Realtime mehr kaputt machen als heilen kann.
+Status: **am Code nachgeprüft am 07.09.2026 — die ursprüngliche Verdachtsliste war
+falsch.** Die Notiz stand seit dem 25.07. unverändert; seither wurde der Chat am
+02./04.08. überarbeitet. Wer die alte Liste abarbeitet, sucht an der falschen
+Stelle und baut im schlimmsten Fall die Rechte um, die heute korrekt sind.
 
 Betroffen: `app/dashboard/team-chat/page.tsx` und `app/api/team-chat-ki`.
 
-## So reproduzieren
+## Was der Code heute wirklich macht
 
-1. Als Chef eine Nachricht schreiben → erscheint sie sofort?
-2. Als eingeladener Mitarbeiter (zweiter Login, gleicher Betrieb) dieselbe
-   Unterhaltung öffnen → sieht er die Nachricht des Chefs? Und umgekehrt?
-3. Browser-Konsole (F12) offen lassen und auf rote Fehler / 401 / 403 / 42501
-   (RLS) achten. Diese Meldung an die Entwicklung geben — sie zeigt die Ursache.
+Der Team-Chat ist **nicht** nach `owner_user_id` getrennt, sondern nach
+**Kanal-Mitgliedschaft**. Drei Tabellen: `chat_kanaele`, `chat_mitglieder`,
+`chat_nachrichten`.
 
-## Wahrscheinlichste Ursachen (in dieser Reihenfolge prüfen)
+| Punkt | Stand |
+|---|---|
+| SELECT auf `chat_nachrichten` | `ist_chat_mitglied(kanal_id, auth.uid())` — greift für Chef **und** Mitarbeiter gleich |
+| INSERT | `ist_chat_mitglied(...)` **und** (`absender_id = auth.uid()` oder `ist_ki = true`) |
+| Betriebsgrenze beim Einladen | seit 04.08. in `chat_betrieb_von()`, siehe `supabase-sql/team-chat-mandantentrennung.sql` |
+| Realtime | `supabase.channel('teamchat-<kanal>')` mit `postgres_changes`-Abo auf INSERT, gefiltert auf `kanal_id` |
+| Ausfallsicherung | zusätzlich ein 8-Sekunden-Takt, der nachlädt, falls die Live-Verbindung nicht steht |
 
-1. **RLS trennt Chef und Mitarbeiter falsch.**
-   Der Team-Chat muss für *alle* im selben Betrieb sichtbar sein. Prüfen, ob die
-   `select`-Policy der Chat-Tabelle auf `owner_user_id = mein_chef_id()` läuft
-   (Tenant), NICHT auf `auth.uid() = owner_user_id` (dann sieht nur der Chef
-   seine eigenen Zeilen und der Mitarbeiter gar nichts).
-   → Gegenprobe: kurz RLS testweise in einer Kopie lockern; erscheinen dann alle
-   Nachrichten, ist es zu 90 % die Policy.
+## Damit sind die alten Verdachtspunkte 1 bis 4 erledigt
 
-2. **`mein_chef_id()` liefert für den Chef nicht seine eigene ID.**
-   Beim Chef muss der Helfer die *eigene* User-ID zurückgeben, beim Mitarbeiter
-   die ID seines Chefs. Gibt er beim Chef `null` zurück, matcht keine Zeile.
+Sie gingen alle von einem Mandantenmodell über `owner_user_id` /
+`mein_chef_id()` aus. Dieses Modell benutzt der Chat nicht.
+**Nicht danach umbauen.**
 
-3. **Insert schreibt ein falsches/leeres `owner_user_id`.**
-   Schreibt ein Mitarbeiter, muss `owner_user_id` = Chef-ID gesetzt werden (nicht
-   die eigene), sonst landet die Nachricht in einem „fremden" Tenant und ist für
-   die anderen unsichtbar. Insert-Payload prüfen.
+## Was als Erklärung übrig bleibt
 
-4. **Realtime-Subscription ohne Tenant-Filter oder gar nicht abonniert.**
-   Wenn Nachrichten erst nach manuellem Neuladen erscheinen, fehlt das
-   `supabase.channel(...).on('postgres_changes', …)`-Abo oder es filtert nicht
-   auf den Betrieb. Neu eintreffende Zeilen kommen dann nicht live an.
+**Der Mitarbeiter ist kein Mitglied des Kanals.** Wer nicht in
+`chat_mitglieder` steht, sieht den Kanal nicht und keine einzige Nachricht darin
+— völlig korrekt nach der Policy, aber von außen sieht es aus wie ein Fehler.
+Genau das passt zum beobachteten Bild.
 
-5. **Sender-Name/-Zuordnung leer.** Wenn Nachrichten da sind, aber „Unbekannt"
-   als Absender zeigen, fehlt das Auflösen der Absender-ID auf den Namen
-   (Kontakt-/Mitarbeiter-Map), analog zu CRM/Mahnwesen.
+Das ist keine Code-Frage, sondern eine Datenfrage. Sie lässt sich nur mit zwei
+echten Logins beantworten — **gehört damit in den Testtag (M18)**, nicht in
+einen Push.
 
-## Nicht die Ursache (bereits ausgeschlossen bzw. unwahrscheinlich)
+## Prüfschritte am Testtag
 
-- Die zentrale KI-Absicherung (`lib/ki.ts`, Rate-Limit) betrifft nur
-  `/api/team-chat-ki` (den KI-Assistenten im Chat), nicht das reine
-  Senden/Empfangen von Nachrichten. Ein KI-Fehler legt den Chat selbst nicht lahm.
+1. Als Chef einen Kanal anlegen, Mitarbeiter über „Kollegen einladen" hinzufügen.
+2. Als Mitarbeiter (zweiter Login) einloggen: erscheint der Kanal in der Liste?
+   - **Nein** → er steht nicht in `chat_mitglieder`. Der Einlade-Weg ist die
+     Ursache, nicht die Anzeige.
+   - **Ja, aber leer** → dann und nur dann ist es die Policy.
+3. Beide Fenster nebeneinander, eine Nachricht schreiben: kommt sie beim anderen
+   binnen 8 Sekunden an? Wenn ja, arbeitet der Nachlade-Takt und die
+   Live-Verbindung steht nicht — kein Datenverlust, nur Verzögerung.
+4. Browser-Konsole offen lassen und auf `42501` (RLS), 401 oder 403 achten.
 
-## Nächster Schritt
+## Nicht die Ursache
 
-Am Live-System Schritt 1–3 durchspielen, die konkrete Konsolen-/DB-Fehlermeldung
-festhalten, dann gezielt die passende Ursache oben beheben und mit zwei echten
-Logins (Chef + Mitarbeiter) gegenprüfen.
+Die KI-Absicherung (`lib/ki.ts`, Rate-Limit) betrifft nur `/api/team-chat-ki`,
+also den Assistenten im Chat. Ein KI-Fehler legt das Senden und Empfangen nicht
+lahm.
