@@ -65,13 +65,34 @@ export default function EuerPage() {
       });
     });
 
-    // Ausgaben aus Eingangsbelegen (Belegdatum im Jahr)
+    // ▄▄▄ AUSGABEN KOMMEN AUS ausgaben_alle, NICHT DIREKT AUS eingangsbelege ▄▄▄
+    // Umgestellt am 08.09.26 (B6). Vorher las diese Seite `eingangsbelege`
+    // roh — mit zwei Folgen:
+    //
+    //  1. Der alte Topf `ausgaben` fiel unter den Tisch. Dort lag ein echter
+    //     Beleg mit hinterlegter Datei (450 EUR brutto, Bueromaterial), der
+    //     in dieser EUeR seit jeher fehlte.
+    //  2. Es gab KEINEN Statusfilter. Ein Beleg, den jemand bewusst in den
+    //     Papierkorb legt oder als Entwurf stehen laesst, zaehlte trotzdem
+    //     als Betriebsausgabe. Am 08.09.26 traf das zufaellig auf keine
+    //     einzige Zeile zu (alle 92 auf `erfasst`) — aber das ist Glueck,
+    //     kein Schutz.
+    //
+    // `ausgaben_alle` vereint beide Toepfe, rechnet netto/USt in beide
+    // Richtungen aus und schliesst verworfen/geloescht/Papierkorb/Entwurf
+    // aus. Die Seite /dashboard/finanzen/euer liest sie schon immer — beide
+    // EUeR-Bildschirme zeigen ab jetzt DIESELBE Zahl. Genau das war der
+    // Punkt: Zwei Bildschirme, die sich beim Gewinn widersprechen, sind
+    // schlimmer als einer, der fehlt.
+    //
+    // Achtung bei den Spaltennamen: Die Sicht heisst `betrag_brutto` und
+    // `ausgabedatum`, nicht `brutto` und `belegdatum`.
     const katMap: Record<string, number> = {};
     await versuch(async () => {
-      const { data } = await supabase.from('eingangsbelege').select('netto, ust_betrag, brutto, kategorie, belegdatum');
+      const { data } = await supabase.from('ausgaben_alle').select('netto, ust_betrag, betrag_brutto, kategorie, ausgabedatum');
       (data as Record<string, unknown>[] || []).forEach((be) => {
-        if (!imJahr(be.belegdatum as string, j)) return;
-        const netto = Number(be.netto) || ((Number(be.brutto) || 0) - (Number(be.ust_betrag) || 0));
+        if (!imJahr(be.ausgabedatum as string, j)) return;
+        const netto = Number(be.netto) || ((Number(be.betrag_brutto) || 0) - (Number(be.ust_betrag) || 0));
         a.belegeNetto += netto; a.vorsteuer += Number(be.ust_betrag) || 0; a.belegeAnzahl += 1;
         const k = (be.kategorie as string)?.trim() || 'Ohne Kategorie';
         katMap[k] = (katMap[k] || 0) + netto;
