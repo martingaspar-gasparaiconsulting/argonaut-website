@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { signiereBeleg } from '@/lib/kasse-tse';
 import { standortAusCookieHeader } from '@/lib/standortDaten';
+import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 
 export const runtime = 'nodejs';
 
@@ -51,7 +52,22 @@ export async function POST(req: Request) {
       else return NextResponse.json({ error: 'Betrieb konnte nicht ermittelt werden.' }, { status: 403 });
     }
 
-    // 2) Positionen normalisieren + Summen (BRUTTO, je Steuersatz)
+    // 2) Auf WELCHE Filiale wird gebucht? Bewusst hier, VOR dem ersten
+    //    Schreibvorgang — noch ist nichts passiert, also darf abgebrochen
+    //    werden. Nach der TSE-Signatur waere das nicht mehr sauber: dann
+    //    gaebe es einen Beleg, dessen Ware nirgends abgebucht ist.
+    //
+    //    Betriebe ohne Filiale (am 08.09.26 waren das ALLE) buchen wie
+    //    bisher auf einen einzigen Topf — standortId bleibt null.
+    const { data: standorte } = await db.from('standorte')
+      .select('id').eq('owner_user_id', ownerId).eq('aktiv', true);
+    const wahl = standortFuerBuchung(standortAusCookieHeader(req.headers.get('cookie')), standorte);
+    if (!wahl.ok) {
+      return NextResponse.json({ error: wahl.fehler }, { status: 400 });
+    }
+    const standortId = wahl.standortId;
+
+    // 3) Positionen normalisieren + Summen (BRUTTO, je Steuersatz)
     const vz = typ === 'retoure' ? -1 : 1;
     const posten = posIn.map((p, i) => {
       const menge = Number(p.menge) || 0;
@@ -78,17 +94,16 @@ export async function POST(req: Request) {
     const mwstSumme = r2(bruttoSumme - nettoSumme);
     const rueckgeld = gegeben != null && zahlart === 'bar' ? r2(gegeben - bruttoSumme) : null;
 
-    // 3) Beleg-Nr (fortlaufend je Jahr/Betrieb)
+    // 4) Beleg-Nr (fortlaufend je Jahr/Betrieb)
     const jahr = new Date().getFullYear();
     const { count } = await db.from('kassen_belege').select('id', { count: 'exact', head: true })
       .eq('owner_user_id', ownerId).gte('erstellt_am', `${jahr}-01-01`);
     const belegNr = `B-${jahr}-${String((count || 0) + 1).padStart(4, '0')}`;
 
-    // 4) Signieren (TSE-Konnektor)
+    // 5) Signieren (TSE-Konnektor)
     const tse = await signiereBeleg(db, ownerId, belegNr, bruttoSumme);
 
-    // 5) Beleg anlegen
-    const standortId = standortAusCookieHeader(req.headers.get('cookie'));
+    // 6) Beleg anlegen
     const { data: beleg, error: bErr } = await db.from('kassen_belege').insert({
       owner_user_id: ownerId, standort_id: standortId, beleg_nr: belegNr, typ, zahlart,
       netto_summe: nettoSumme, mwst_summe: mwstSumme, brutto_summe: bruttoSumme,
@@ -102,7 +117,7 @@ export async function POST(req: Request) {
     }
     const belegId = beleg.id;
 
-    // 6) Positionen schreiben
+    // 7) Positionen schreiben
     const posRows = posten.map(({ _mengeAbs, ...p }) => ({ ...p, beleg_id: belegId }));
     const { error: pErr } = await db.from('kassen_positionen').insert(posRows);
     if (pErr) {
@@ -110,22 +125,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Positionen konnten nicht gespeichert werden. Beleg storniert.' }, { status: 500 });
     }
 
-    // 7) Bestand abbuchen (nur Artikel-Positionen). Verkauf -> raus, Retoure -> rein.
+    // 8) Bestand abbuchen (nur Artikel-Positionen). Verkauf -> raus, Retoure -> rein.
+    //
+    // ▄▄▄ WAS SICH AM 08.09.26 HIER GEAENDERT HAT (D1) ▄▄▄
+    // Vorher waren das drei einzelne Schreibvorgaenge je Position: Bestand
+    // lesen, Bestand schreiben, Bewegung schreiben. Bricht die Verbindung
+    // dazwischen ab, ist der Bestand veraendert, aber kein Nachweis da —
+    // oder umgekehrt. Ausserdem lief alles auf EINE globale Zahl: Zwei
+    // Filialen konnten sich gegenseitig ueberschreiben.
+    //
+    // Jetzt macht `lager_buchen` alles drei in einem einzigen Vorgang, je
+    // Filiale, und setzt `artikel.aktueller_bestand` auf die SUMME. Was
+    // schiefgeht, geht ganz schief — nicht halb.
+    //
+    // Ein Abgang wird NIE blockiert: Was an der Kasse verkauft wurde, ist
+    // verkauft. Schlaegt eine Buchung dennoch fehl, wird das protokolliert
+    // und im Ergebnis gemeldet — der Beleg selbst bleibt gueltig, denn er
+    // ist bereits signiert und darf nicht verschwinden.
+    const bestandsFehler: string[] = [];
     for (const p of posten) {
       if (!p.artikel_id || !p._mengeAbs) continue;
-      const { data: art } = await db.from('artikel').select('aktueller_bestand').eq('id', p.artikel_id).eq('owner_user_id', ownerId).maybeSingle();
-      if (!art) continue;
-      const delta = typ === 'retoure' ? p._mengeAbs : -p._mengeAbs;
-      const neuerBestand = r2((Number(art.aktueller_bestand) || 0) + delta);
-      await db.from('artikel').update({ aktueller_bestand: neuerBestand, updated_at: new Date().toISOString() }).eq('id', p.artikel_id).eq('owner_user_id', ownerId);
-      await db.from('lagerbewegungen').insert({
-        owner_user_id: ownerId, artikel_id: p.artikel_id,
-        typ: typ === 'retoure' ? 'eingang' : 'ausgang', menge: delta,
-        grund: typ === 'retoure' ? 'Kassen-Retoure' : 'Kassenverkauf', referenz: belegNr,
-      });
+      const { error: lErr } = await db.rpc(RPC_BUCHEN, buchenArgumente({
+        artikelId: p.artikel_id,
+        standortId,
+        art: typ === 'retoure' ? 'zugang' : 'abgang',
+        menge: p._mengeAbs,
+        herkunft: 'kasse',
+        notiz: `${typ === 'retoure' ? 'Kassen-Retoure' : 'Kassenverkauf'} ${belegNr}`,
+      }));
+      if (lErr) {
+        console.error('Lagerbuchung fehlgeschlagen:', p.artikel_id, lErr.message);
+        bestandsFehler.push(p.bezeichnung);
+      }
     }
 
-    return NextResponse.json({ belegId, belegNr, tse, brutto: bruttoSumme, rueckgeld });
+    return NextResponse.json({
+      belegId, belegNr, tse, brutto: bruttoSumme, rueckgeld,
+      // Nur gesetzt, wenn wirklich etwas schiefging — die Kasse zeigt es an,
+      // damit niemand erst bei der Inventur davon erfaehrt.
+      bestandsHinweis: bestandsFehler.length
+        ? `Der Beleg ist gebucht. Der Lagerbestand konnte für ${bestandsFehler.join(', ')} `
+          + 'nicht fortgeschrieben werden — bitte später nachzählen.'
+        : undefined,
+    });
   } catch (e: unknown) {
     console.error('Kasse-Beleg Fehler:', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'Interner Fehler.' }, { status: 500 });

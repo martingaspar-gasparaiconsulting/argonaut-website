@@ -4,6 +4,7 @@ import {
   standortFuerBuchung, vorzeichen, sichereMenge, bucheBestand, reichtBestand,
   planeUmlagerung, gesamtBestand, bestandIn, verteilung, unterMindest,
   artText, herkunftText, buchungsSatz,
+  RPC_BUCHEN, RPC_UMLAGERN, DB_ARTEN, dbArt, buchenArgumente, umlagernArgumente,
 } from '../out/lagerBuchung.js';
 
 const S = (...ids) => ids.map((id) => ({ id }));
@@ -137,6 +138,69 @@ test('Umlagerung ohne Menge oder Ziel wird abgewiesen', () => {
   assert.equal(planeUmlagerung('a1', { vonId: 'f1', nachId: 'f2', menge: 0 }).ok, false);
   assert.equal(planeUmlagerung('a1', { vonId: 'f1', nachId: '', menge: 4 }).ok, false);
   assert.equal(planeUmlagerung('', { vonId: 'f1', nachId: 'f2', menge: 4 }).ok, false);
+});
+
+// ---------- Die Brücke zur Datenbank ----------
+//
+// Diese Tests halten die am 08.09.26 aus Supabase ausgelesenen Signaturen
+// fest. Ein falscher Name fällt sonst erst bei einer echten Buchung auf.
+
+test('die Funktionsnamen stimmen mit der Datenbank überein', () => {
+  assert.equal(RPC_BUCHEN, 'lager_buchen');
+  assert.equal(RPC_UMLAGERN, 'lager_umlagern');
+});
+
+test('die Datenbank kennt KEINE Buchungsart „umlagerung"', () => {
+  // lager_buchen: if p_typ not in ('zugang','abgang','korrektur') -> Fehler.
+  assert.deepEqual([...DB_ARTEN], ['zugang', 'abgang', 'korrektur']);
+  assert.ok(!DB_ARTEN.includes('umlagerung'));
+});
+
+test('der Abgang einer Umlagerung wird als Abgang gebucht', () => {
+  assert.equal(dbArt('umlagerung'), 'abgang');
+  assert.equal(dbArt('zugang'), 'zugang');
+  assert.equal(dbArt('abgang'), 'abgang');
+  assert.equal(dbArt('korrektur'), 'korrektur');
+});
+
+test('buchenArgumente heißen exakt wie die Parameter der Funktion', () => {
+  const a = buchenArgumente({
+    artikelId: 'a1', standortId: 'f1', art: 'abgang', menge: 3,
+    herkunft: 'kasse', notiz: 'Kassenverkauf',
+  });
+  assert.deepEqual(Object.keys(a).sort(),
+    ['p_artikel', 'p_grund', 'p_herkunft', 'p_menge', 'p_standort', 'p_typ']);
+  assert.equal(a.p_artikel, 'a1');
+  assert.equal(a.p_standort, 'f1');
+  assert.equal(a.p_typ, 'abgang');
+  assert.equal(a.p_menge, 3);
+  assert.equal(a.p_grund, 'Kassenverkauf');
+  assert.equal(a.p_herkunft, 'kasse');
+});
+
+test('die Menge geht IMMER positiv raus — die Richtung steckt in p_typ', () => {
+  // Die Funktion rechnet abs(p_menge). Ein Minus hier würde aus einem
+  // Abgang klammheimlich einen Zugang machen.
+  const a = buchenArgumente({ artikelId: 'a1', standortId: null, art: 'abgang', menge: -7, herkunft: 'scanner' });
+  assert.equal(a.p_menge, 7);
+  assert.equal(a.p_typ, 'abgang');
+});
+
+test('ohne Filiale wird null übergeben, nicht ein leerer Text', () => {
+  // p_standort ist uuid. '' würde die Datenbank mit einem Typfehler abweisen.
+  const a = buchenArgumente({ artikelId: 'a1', standortId: null, art: 'zugang', menge: 1, herkunft: 'einkauf' });
+  assert.equal(a.p_standort, null);
+  assert.equal(a.p_grund, null, 'auch ein fehlender Grund ist null, nicht ""');
+});
+
+test('umlagernArgumente heißen exakt wie die Parameter der Funktion', () => {
+  const a = umlagernArgumente('a1', { vonId: 'f1', nachId: 'f2', menge: 4 }, ' Regal geräumt ');
+  assert.deepEqual(Object.keys(a).sort(),
+    ['p_artikel', 'p_menge', 'p_nach', 'p_notiz', 'p_von']);
+  assert.equal(a.p_von, 'f1');
+  assert.equal(a.p_nach, 'f2');
+  assert.equal(a.p_menge, 4);
+  assert.equal(a.p_notiz, 'Regal geräumt');
 });
 
 // ---------- Zusammenzählen ----------

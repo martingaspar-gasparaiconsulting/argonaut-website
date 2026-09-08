@@ -163,6 +163,67 @@ export function reichtBestand(bestand: unknown, menge: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Die Bruecke zur Datenbank
+//
+// ▄▄▄ WARUM DIESE NAMEN HIER STEHEN ▄▄▄
+// `supabase.rpc('lager_buchen', { ... })` uebergibt die Werte NAMENTLICH.
+// Ein Tippfehler faellt deshalb nicht beim Bauen auf, sondern erst bei einer
+// echten Buchung — im schlimmsten Fall mitten an der Kasse. Deshalb stehen
+// die Namen genau einmal hier und werden von Tests gegen die geprueften
+// Signaturen vom 08.09.26 gehalten:
+//
+//   lager_buchen  (p_artikel uuid, p_standort uuid, p_typ text,
+//                  p_menge numeric, p_grund text, p_herkunft text)
+//   lager_umlagern(p_artikel uuid, p_von uuid, p_nach uuid,
+//                  p_menge numeric, p_notiz text)
+// ---------------------------------------------------------------------------
+
+export const RPC_BUCHEN = 'lager_buchen' as const;
+export const RPC_UMLAGERN = 'lager_umlagern' as const;
+
+/**
+ * Die Buchungsarten, die die Datenbank annimmt — `umlagerung` ist NICHT
+ * dabei. Wer Ware zwischen Filialen bewegt, ruft `lager_umlagern` auf; die
+ * Funktion macht daraus intern zwei Buchungen. Schickt jemand trotzdem
+ * 'umlagerung' als Art, weist die Datenbank die Buchung ab.
+ */
+export const DB_ARTEN = ['zugang', 'abgang', 'korrektur'] as const;
+export type DbArt = (typeof DB_ARTEN)[number];
+
+/** Uebersetzt eine Buchungsart in das, was die Datenbank kennt. */
+export function dbArt(art: BuchungsArt): DbArt {
+  // Der Abgang einer Umlagerung IST ein Abgang — nur mit anderer Herkunft.
+  if (art === 'umlagerung') return 'abgang';
+  return art;
+}
+
+export type BuchenArgumente = {
+  p_artikel: string;
+  p_standort: string | null;
+  p_typ: DbArt;
+  p_menge: number;
+  p_grund: string | null;
+  p_herkunft: Herkunft;
+};
+
+/**
+ * Baut die Argumente fuer `lager_buchen`. Die Menge ist immer positiv — die
+ * Richtung steckt ausschliesslich in `p_typ`. Wer hier ein Minus durchreicht,
+ * bekaeme bei einem Abgang einen Zugang, weil die Funktion `abs()` rechnet.
+ */
+export function buchenArgumente(b: Buchung): BuchenArgumente {
+  const notiz = String(b?.notiz ?? '').trim();
+  return {
+    p_artikel: String(b.artikelId),
+    p_standort: b.standortId ?? null,
+    p_typ: dbArt(b.art),
+    p_menge: sichereMenge(b.menge),
+    p_grund: notiz || null,
+    p_herkunft: b.herkunft,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Umlagerung
 // ---------------------------------------------------------------------------
 
@@ -198,6 +259,30 @@ export function planeUmlagerung(
     ok: true,
     abgang: { artikelId, standortId: von, art: 'umlagerung', menge, herkunft: 'umlagerung', notiz: notiz ?? null },
     zugang: { artikelId, standortId: nach, art: 'zugang', menge, herkunft: 'umlagerung', notiz: notiz ?? null },
+  };
+}
+
+export type UmlagernArgumente = {
+  p_artikel: string;
+  p_von: string;
+  p_nach: string;
+  p_menge: number;
+  p_notiz: string | null;
+};
+
+/** Argumente fuer `lager_umlagern` — die Funktion bucht beide Seiten selbst. */
+export function umlagernArgumente(
+  artikelId: string,
+  u: Umlagerung,
+  notiz?: string | null,
+): UmlagernArgumente {
+  const n = String(notiz ?? '').trim();
+  return {
+    p_artikel: String(artikelId),
+    p_von: String(u?.vonId ?? ''),
+    p_nach: String(u?.nachId ?? ''),
+    p_menge: sichereMenge(u?.menge),
+    p_notiz: n || null,
   };
 }
 

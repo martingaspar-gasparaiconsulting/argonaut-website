@@ -3,14 +3,28 @@
 // ============================================================
 // ARGONAUT OS · Modul D+ · Block D+.8 · MaterialEntnahme (Lager-Brücke)
 // Verknüpft eine Werkstatt-Material-Position mit einem Lager-Artikel und
-// bucht die Entnahme als 'ausgang' in lagerbewegungen (ERP-Format), reduziert
-// aktueller_bestand und merkt die Verknüpfung in werkstatt_material_buchungen.
+// bucht die Entnahme aus dem Lager — je Filiale.
 // Alles NUR auf ausdrücklichen Klick + Bestätigung. Zurückbuchen möglich.
 // Pfad: app/dashboard/_components/MaterialEntnahme.tsx
+//
+// ▄▄▄ WAS SICH AM 08.09.26 GEÄNDERT HAT (D1) ▄▄▄
+// Vorher wurden hier drei Dinge nacheinander geschrieben: eine Bewegung, der
+// neue Bestand und die Verknüpfung. Bricht etwas dazwischen ab, stimmt der
+// Bestand nicht mehr mit den Bewegungen überein. Jetzt erledigt
+// `lager_buchen` Bewegung + Bestand + Gesamtsumme in EINEM Vorgang.
+//
+// Nebenbei behoben: Die Rückbuchung schrieb die Art als 'Zugang' (großes Z),
+// die Entnahme als 'ausgang' (klein). Zwei Schreibweisen für dieselbe Sache
+// in derselben Datei — jede Auswertung darüber war schief.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseStandortCookie } from '@/lib/aktiverStandort';
+import { konkreterStandort } from '@/lib/standortDaten';
+import {
+  standortFuerBuchung, buchenArgumente, bestandIn, RPC_BUCHEN,
+} from '@/lib/lagerBuchung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -29,6 +43,8 @@ type ArtikelRow = {
 type BuchungRow = {
   id: string; artikel_id: string; menge: number; storniert: boolean; bewegung_id: string | null;
 };
+type StandortRow = { id: string; name: string };
+type BestandRow = { artikel_id: string; standort_id: string | null; bestand: number | null };
 
 type Props = {
   positionId: string;
@@ -43,6 +59,8 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
   const [uid, setUid] = useState<string | null>(null);
   const [offen, setOffen] = useState(false);
   const [artikel, setArtikel] = useState<ArtikelRow[]>([]);
+  const [standorte, setStandorte] = useState<StandortRow[]>([]);
+  const [bestandZeilen, setBestandZeilen] = useState<BestandRow[]>([]);
   const [buchungen, setBuchungen] = useState<BuchungRow[]>([]);
   const [suche, setSuche] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
@@ -67,16 +85,45 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
 
   async function ladeArtikel() {
     if (!uid) return;
-    const { data } = await supabase.from('artikel')
-      .select('id, artikelnummer, bezeichnung, einheit, aktueller_bestand, einkaufspreis')
-      .eq('owner_user_id', uid).eq('aktiv', true)
-      .order('bezeichnung', { ascending: true });
-    setArtikel((data as ArtikelRow[]) ?? []);
+    const [a, s, b] = await Promise.all([
+      supabase.from('artikel')
+        .select('id, artikelnummer, bezeichnung, einheit, aktueller_bestand, einkaufspreis')
+        .eq('owner_user_id', uid).eq('aktiv', true)
+        .order('bezeichnung', { ascending: true }),
+      supabase.from('standorte')
+        .select('id, name').eq('owner_user_id', uid).eq('aktiv', true).order('name'),
+      supabase.from('artikel_bestand_standort')
+        .select('artikel_id, standort_id, bestand').eq('owner_user_id', uid),
+    ]);
+    setArtikel((a.data as ArtikelRow[]) ?? []);
+    setStandorte((s.data as StandortRow[]) ?? []);
+    setBestandZeilen((b.data as BestandRow[]) ?? []);
   }
 
   function panelOeffnen() {
     setOffen(true); setFehler(null);
     if (artikel.length === 0) void ladeArtikel();
+  }
+
+  /**
+   * Auf welche Filiale wird gebucht? Bei einem Betrieb ohne oder mit genau
+   * einer Filiale gibt es nichts zu wählen. Stehen mehrere zur Auswahl und
+   * oben ist „Alle" aktiv, wird NICHT geraten — sonst verschwindet Material
+   * aus einer Filiale, in der es nie lag.
+   */
+  const wahl = useMemo(
+    () => standortFuerBuchung(konkreterStandort(leseStandortCookie()), standorte),
+    [standorte],
+  );
+  const filialName = wahl.ok && wahl.standortId
+    ? (standorte.find((s) => s.id === wahl.standortId)?.name ?? 'Filiale')
+    : null;
+
+  /** Bestand am Buchungsort — null heißt „hier noch nie gezählt", nicht 0. */
+  function bestandHier(artikelId: string): number | null {
+    if (!wahl.ok) return null;
+    if (bestandZeilen.length === 0) return null;
+    return bestandIn(bestandZeilen, artikelId, wahl.standortId);
   }
 
   const treffer = useMemo(() => {
@@ -90,36 +137,48 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
   // --- Entnahme buchen (ausgang) ---------------------------------------
   async function entnehmen(a: ArtikelRow) {
     if (!uid || busy) return;
-    const bestand = a.aktueller_bestand ?? 0;
+
+    // Erst die Filiale klären — sonst fragt man den Menschen und weist ihn
+    // danach ab. Das ist die eine Stelle, an der geraten werden könnte.
+    if (!wahl.ok) { setFehler(wahl.fehler); return; }
+
+    const hier = bestandHier(a.id);
+    const bestand = hier ?? (a.aktueller_bestand ?? 0);
     const neuBestand = Math.round((bestand - menge) * 100) / 100;
-    let frage = `Material entnehmen?\n\n• ${a.bezeichnung}\n• Menge: ${menge} ${a.einheit || ''}\n• Bestand: ${bestand} → ${neuBestand}`;
+    const wo = filialName ? `\n• Filiale: ${filialName}` : '';
+    const bestandZeile = hier === null && filialName
+      ? `\n• In dieser Filiale wurde noch nie gezählt — der Bestand startet bei ${neuBestand}.`
+      : `\n• Bestand: ${bestand} → ${neuBestand}`;
+    let frage = `Material entnehmen?\n\n• ${a.bezeichnung}\n• Menge: ${menge} ${a.einheit || ''}${wo}${bestandZeile}`;
     if (neuBestand < 0) frage += `\n\n⚠ ACHTUNG: Bestand würde negativ (${neuBestand}). Trotzdem buchen?`;
     if (!window.confirm(frage)) return;
 
     setBusy(true); setFehler(null);
     try {
-      // 1) Lagerbewegung 'ausgang' (ERP-Format)
-      const { data: bew, error: e1 } = await supabase.from('lagerbewegungen').insert({
-        owner_user_id: uid, artikel_id: a.id, typ: 'ausgang', menge,
-        grund: 'Werkstatt-Entnahme', referenz: `WA:${auftragId}`,
-      }).select('id').single();
+      // 1) Bewegung + Bestand + Gesamtsumme in EINEM Vorgang.
+      const { error: e1 } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+        artikelId: a.id,
+        standortId: wahl.standortId,
+        art: 'abgang',
+        menge,
+        herkunft: 'entnahme',
+        notiz: `Werkstatt-Entnahme WA:${auftragId}`,
+      }));
       if (e1) throw e1;
-      const bewegungId = (bew as { id: string }).id;
 
-      // 2) Bestand reduzieren
-      const { error: e2 } = await supabase.from('artikel')
-        .update({ aktueller_bestand: neuBestand, updated_at: new Date().toISOString() }).eq('id', a.id);
+      // 2) Verknüpfung merken, damit die Position weiß, was sie gekostet hat.
+      //    bewegung_id bleibt leer: Die Datenbank-Funktion gibt den neuen
+      //    Bestand zurück, nicht die Zeilen-Kennung. Zurückgebucht wird über
+      //    Artikel und Menge, nicht über diese Kennung — die Rückbuchung
+      //    funktioniert also unverändert.
+      const { error: e2 } = await supabase.from('werkstatt_material_buchungen').insert({
+        owner_user_id: uid, position_id: positionId, auftrag_id: auftragId,
+        artikel_id: a.id, menge, bewegung_id: null,
+      });
       if (e2) throw e2;
 
-      // 3) Verknüpfung merken
-      const { error: e3 } = await supabase.from('werkstatt_material_buchungen').insert({
-        owner_user_id: uid, position_id: positionId, auftrag_id: auftragId,
-        artikel_id: a.id, menge, bewegung_id: bewegungId,
-      });
-      if (e3) throw e3;
-
       setOffen(false); setSuche('');
-      await ladeBuchungen();
+      await Promise.all([ladeBuchungen(), ladeArtikel()]);
       onGebucht?.();
     } catch (e: unknown) {
       setFehler('Entnahme fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -129,33 +188,31 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
   // --- Zurückbuchen (Gegenbuchung zugang) ------------------------------
   async function zurueckbuchen(b: BuchungRow) {
     if (!uid || busy) return;
+    if (!wahl.ok) { setFehler(wahl.fehler); return; }
     const art = artikel.find((a) => a.id === b.artikel_id);
     const name = art?.bezeichnung || 'Artikel';
-    if (!window.confirm(`Entnahme zurückbuchen?\n\n• ${name}\n• Menge: ${b.menge} kommt zurück ins Lager.`)) return;
+    const wo = filialName ? ` in ${filialName}` : '';
+    if (!window.confirm(`Entnahme zurückbuchen?\n\n• ${name}\n• Menge: ${b.menge} kommt zurück ins Lager${wo}.`)) return;
 
     setBusy(true); setFehler(null);
     try {
-      // aktuellen Bestand frisch holen (falls artikel nicht geladen)
-      const { data: aData } = await supabase.from('artikel').select('aktueller_bestand').eq('id', b.artikel_id).single();
-      const bestand = (aData as { aktueller_bestand: number | null } | null)?.aktueller_bestand ?? 0;
-
-      // 1) Gegenbuchung 'Zugang' (großes Z, exakt wie ERP)
-      const { error: e1 } = await supabase.from('lagerbewegungen').insert({
-        owner_user_id: uid, artikel_id: b.artikel_id, typ: 'Zugang', menge: b.menge,
-        grund: 'Werkstatt-Rückbuchung', referenz: `WA:${auftragId}`,
-      });
+      // 1) Gegenbuchung — Bewegung, Bestand und Gesamtsumme in einem Vorgang.
+      const { error: e1 } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+        artikelId: b.artikel_id,
+        standortId: wahl.standortId,
+        art: 'zugang',
+        menge: b.menge,
+        herkunft: 'entnahme',
+        notiz: `Werkstatt-Rückbuchung WA:${auftragId}`,
+      }));
       if (e1) throw e1;
-      // 2) Bestand erhöhen
-      const { error: e2 } = await supabase.from('artikel')
-        .update({ aktueller_bestand: Math.round((bestand + b.menge) * 100) / 100, updated_at: new Date().toISOString() })
-        .eq('id', b.artikel_id);
-      if (e2) throw e2;
-      // 3) Verknüpfung stornieren
-      const { error: e3 } = await supabase.from('werkstatt_material_buchungen')
-        .update({ storniert: true, storniert_am: new Date().toISOString() }).eq('id', b.id);
-      if (e3) throw e3;
 
-      await ladeBuchungen();
+      // 2) Verknüpfung stornieren
+      const { error: e2 } = await supabase.from('werkstatt_material_buchungen')
+        .update({ storniert: true, storniert_am: new Date().toISOString() }).eq('id', b.id);
+      if (e2) throw e2;
+
+      await Promise.all([ladeBuchungen(), ladeArtikel()]);
       onGebucht?.();
     } catch (e: unknown) {
       setFehler('Zurückbuchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -193,16 +250,28 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
               <button onClick={() => setOffen(false)} style={styles.zurueckBtn}>✕</button>
             </div>
             <input style={styles.input} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Artikel suchen …" autoFocus />
+            {!wahl.ok ? (
+              <div style={styles.hinweisWarn}>{wahl.fehler}</div>
+            ) : filialName ? (
+              <div style={styles.hinweis}>Wird aus <b>{filialName}</b> entnommen.</div>
+            ) : null}
             <div style={styles.liste}>
               {treffer.length === 0 ? (
                 <div style={{ padding: '10px 12px', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{artikel.length === 0 ? 'Lade Lager …' : 'Kein Treffer.'}</div>
               ) : treffer.map((a) => {
-                const b = a.aktueller_bestand ?? 0;
-                const knapp = b < menge;
+                // Bei mehreren Filialen zählt der Bestand DIESER Filiale —
+                // die Gesamtzahl würde vortäuschen, dass Ware hier liegt.
+                const hier = bestandHier(a.id);
+                const zeigen = hier ?? (filialName ? null : (a.aktueller_bestand ?? 0));
+                const knapp = zeigen !== null && zeigen < menge;
                 return (
-                  <button key={a.id} onClick={() => entnehmen(a)} disabled={busy} style={styles.artItem}>
+                  <button key={a.id} onClick={() => entnehmen(a)} disabled={busy || !wahl.ok} style={styles.artItem}>
                     <span style={{ fontWeight: 600 }}>{a.bezeichnung}</span>
-                    <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}> · Bestand {b} {a.einheit || ''}{knapp ? ' ⚠' : ''}</span>
+                    <span style={{ color: knapp ? C.warn : C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)' }}>
+                      {zeigen === null
+                        ? ' · hier noch nicht gezählt'
+                        : ` · Bestand ${zeigen} ${a.einheit || ''}${knapp ? ' ⚠' : ''}`}
+                    </span>
                   </button>
                 );
               })}
@@ -228,4 +297,6 @@ const styles: Record<string, CSSProperties> = {
   artItem: { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: `1px solid rgba(143,163,190,0.08)`, color: C.text, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'clamp(14px, 1.25vw, 20px)' },
 
   err: { color: C.danger, fontSize: 'clamp(11.5px, 1vw, 16px)', padding: '6px 10px' },
+  hinweis: { color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', padding: '8px 14px', borderBottom: `1px solid ${C.border}` },
+  hinweisWarn: { color: C.warn, fontSize: 'clamp(11.5px, 1vw, 16px)', padding: '10px 14px', borderBottom: `1px solid ${C.border}`, lineHeight: 1.45 },
 };
