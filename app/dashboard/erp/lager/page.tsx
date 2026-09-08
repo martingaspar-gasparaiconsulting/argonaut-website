@@ -1,12 +1,31 @@
 'use client';
 // ============================================================
 // ARGONAUT OS · Lager je Filiale (Block D · #4)
-// Bestand JE (Artikel, Standort) als additive Ebene neben dem globalen
-// artikel.aktueller_bestand. Matrix-Editor + Umlagerung zwischen Filialen +
-// Verlauf. Der globale Bestand bleibt unangetastet (Gesamt-Referenz).
+// Bestand JE (Artikel, Standort). Matrix-Editor + Umlagerung + Verlauf.
+//
+// ▄▄▄ WAS SICH AM 08.09.26 GEÄNDERT HAT (D1) ▄▄▄
+// Diese Seite war die einzige, die je Filiale rechnete — sie schrieb aber
+// direkt in die Tabellen. Drei Dinge waren dadurch offen:
+//
+// 1. Der Kopf sagte „Der globale Bestand bleibt unangetastet". Genau das war
+//    das Problem: Wer hier buchte, änderte den Filialbestand, während
+//    artikel.aktueller_bestand stehenblieb. Zwei Zahlen über dasselbe Regal,
+//    die auseinanderliefen. Jetzt ist der globale Bestand die SUMME der
+//    Filialen und wird von der Datenbank mitgeführt.
+// 2. Eine Umlagerung schrieb ÜBERHAUPT KEINE Bewegung — nur die zwei neuen
+//    Bestände und einen Umlagerungs-Eintrag. Im Verlauf war die Ware
+//    lautlos von A nach B gesprungen.
+// 3. Eine Zahl direkt in der Tabelle zu ändern schrieb ebenfalls keine
+//    Bewegung. Der Bestand änderte sich, ohne dass irgendwo stand, warum.
+//    Das ist jetzt eine Korrektur mit Eintrag im Verlauf.
+//
+// Alles läuft über lager_buchen / lager_umlagern — ein Vorgang, nicht drei.
 // ============================================================
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import {
+  buchenArgumente, umlagernArgumente, RPC_BUCHEN, RPC_UMLAGERN,
+} from '@/lib/lagerBuchung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -32,7 +51,6 @@ const key = (a: string, s: string) => `${a}|${s}`;
 
 export default function LagerJeFilialePage() {
   const [chefId, setChefId] = useState<string | null>(null);
-  const [uid, setUid] = useState<string | null>(null);
   const [standorte, setStandorte] = useState<Standort[]>([]);
   const [artikel, setArtikel] = useState<Artikel[]>([]);
   const [bestand, setBestand] = useState<Record<string, BestandRow>>({});
@@ -51,7 +69,6 @@ export default function LagerJeFilialePage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUid(user?.id ?? null);
       if (!user) return;
       const { data: ma } = await supabase.from('mitarbeiter').select('owner_user_id').eq('auth_user_id', user.id).maybeSingle();
       setChefId(ma ? (ma as { owner_user_id: string }).owner_user_id : user.id);
@@ -95,13 +112,21 @@ export default function LagerJeFilialePage() {
     if (alt !== undefined && alt === neu) return;            // nichts geändert
     setSavingCell(k);
     try {
-      const { data, error } = await supabase.from('artikel_bestand_standort')
-        .upsert({ owner_user_id: chefId, artikel_id: artikelId, standort_id: standortId, bestand: neu, aktualisiert_am: new Date().toISOString() }, { onConflict: 'artikel_id,standort_id' })
-        .select('id,artikel_id,standort_id,bestand').single();
+      // Eine Zahl in der Tabelle zu ändern IST eine Korrektur — und sie
+      // gehört in den Verlauf. Vorher wurde der Bestand still überschrieben:
+      // Wer später nach dem Grund suchte, fand nichts.
+      const { data, error } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+        artikelId, standortId, art: 'korrektur', menge: neu,
+        herkunft: 'inventur', notiz: 'Korrektur in der Bestandstabelle',
+      }));
       if (error) throw error;
-      const row = data as BestandRow;
-      setBestand((m) => ({ ...m, [k]: row }));
-      setWerte((w) => ({ ...w, [k]: String(row.bestand) }));
+      const gebucht = Number(data);
+      const wert = Number.isFinite(gebucht) ? gebucht : neu;
+      setBestand((m) => ({
+        ...m,
+        [k]: { id: m[k]?.id ?? '', artikel_id: artikelId, standort_id: standortId, bestand: wert },
+      }));
+      setWerte((w) => ({ ...w, [k]: String(wert) }));
     } catch (e: unknown) {
       setError('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
       setWerte((w) => ({ ...w, [k]: alt !== undefined ? String(alt) : '' }));
@@ -128,7 +153,7 @@ export default function LagerJeFilialePage() {
         <div>
           <div style={styles.eyebrow}>ARGONAUT OS · Multistandort · Lager</div>
           <h1 style={styles.h1}>Lager je Filiale</h1>
-          <p style={styles.sub}>Bestand pro Artikel und Filiale — direkt in der Tabelle bearbeitbar. Der globale Gesamtbestand bleibt als Referenz erhalten.</p>
+          <p style={styles.sub}>Bestand pro Artikel und Filiale — direkt in der Tabelle bearbeitbar. Jede Änderung steht im Verlauf, und der Gesamtbestand ist immer die Summe der Filialen.</p>
         </div>
         {standorte.length >= 1 && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -262,8 +287,6 @@ export default function LagerJeFilialePage() {
 
       {umlModal && chefId && (
         <UmlagernModal
-          chefId={chefId}
-          uid={uid}
           standorte={standorte}
           artikel={artikel}
           bestand={bestand}
@@ -274,8 +297,6 @@ export default function LagerJeFilialePage() {
 
       {bewModal && chefId && (
         <BewegungModal
-          chefId={chefId}
-          uid={uid}
           standorte={standorte}
           artikel={artikel}
           bestand={bestand}
@@ -287,8 +308,10 @@ export default function LagerJeFilialePage() {
   );
 }
 
-function BewegungModal({ chefId, uid, standorte, artikel, bestand, onClose, onDone }: {
-  chefId: string; uid: string | null; standorte: Standort[]; artikel: Artikel[];
+function BewegungModal({ standorte, artikel, bestand, onClose, onDone }: {
+  // chefId/uid werden nicht mehr gebraucht: Die Datenbank-Funktion ermittelt
+  // den Betrieb selbst aus dem Artikel und den Menschen aus der Anmeldung.
+  standorte: Standort[]; artikel: Artikel[];
   bestand: Record<string, BestandRow>; onClose: () => void; onDone: () => void;
 }) {
   const [artikelId, setArtikelId] = useState('');
@@ -310,13 +333,15 @@ function BewegungModal({ chefId, uid, standorte, artikel, bestand, onClose, onDo
     if (typ === 'abgang' && m > aktuell && !window.confirm(`Die Filiale hat nur ${fmt(aktuell)} auf Lager. Trotzdem ${fmt(m)} abbuchen? (Bestand wird negativ)`)) return;
     setSaving(true); setMsg(null);
     try {
-      const up = await supabase.from('artikel_bestand_standort')
-        .upsert({ owner_user_id: chefId, artikel_id: artikelId, standort_id: standortId, bestand: neu, aktualisiert_am: new Date().toISOString() }, { onConflict: 'artikel_id,standort_id' });
-      if (up.error) throw up.error;
-      const ins = await supabase.from('lager_bewegung').insert({
-        owner_user_id: chefId, artikel_id: artikelId, standort_id: standortId, typ, menge: m, grund: grund.trim() || null, erstellt_von: uid,
-      });
-      if (ins.error) throw ins.error;
+      // Bestand, Bewegung und Gesamtsumme in EINEM Vorgang. Vorher waren es
+      // zwei Schreibvorgänge — schlug der zweite fehl, stand der neue Bestand
+      // ohne jeden Nachweis da.
+      const { error } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+        artikelId, standortId, art: typ, menge: m,
+        herkunft: typ === 'korrektur' ? 'inventur' : 'artikel',
+        notiz: grund.trim() || null,
+      }));
+      if (error) throw error;
       onDone();
     } catch (e: unknown) {
       setMsg('Buchen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -368,8 +393,8 @@ function BewegungModal({ chefId, uid, standorte, artikel, bestand, onClose, onDo
   );
 }
 
-function UmlagernModal({ chefId, uid, standorte, artikel, bestand, onClose, onDone }: {
-  chefId: string; uid: string | null; standorte: Standort[]; artikel: Artikel[];
+function UmlagernModal({ standorte, artikel, bestand, onClose, onDone }: {
+  standorte: Standort[]; artikel: Artikel[];
   bestand: Record<string, BestandRow>; onClose: () => void; onDone: () => void;
 }) {
   const [artikelId, setArtikelId] = useState('');
@@ -391,20 +416,16 @@ function UmlagernModal({ chefId, uid, standorte, artikel, bestand, onClose, onDo
     if (m > vonBestand && !window.confirm(`Die Quell-Filiale hat nur ${fmt(vonBestand)} auf Lager. Trotzdem ${fmt(m)} umlagern? (Bestand wird negativ)`)) return;
     setSaving(true); setMsg(null);
     try {
-      const kVon = key(artikelId, von), kNach = key(artikelId, nach);
-      const neuVon = vonBestand - m;
-      const neuNach = zahl(bestand[kNach]?.bestand) + m;
-      const upserts = [
-        { owner_user_id: chefId, artikel_id: artikelId, standort_id: von, bestand: neuVon, aktualisiert_am: new Date().toISOString() },
-        { owner_user_id: chefId, artikel_id: artikelId, standort_id: nach, bestand: neuNach, aktualisiert_am: new Date().toISOString() },
-      ];
-      const up = await supabase.from('artikel_bestand_standort').upsert(upserts, { onConflict: 'artikel_id,standort_id' });
-      if (up.error) throw up.error;
-      const ins = await supabase.from('lager_umlagerung').insert({
-        owner_user_id: chefId, artikel_id: artikelId, von_standort_id: von, nach_standort_id: nach,
-        menge: m, notiz: notiz.trim() || null, erstellt_von: uid,
-      });
-      if (ins.error) throw ins.error;
+      // Abgang, Zugang und der Umlagerungs-Eintrag laufen in EINEM Vorgang.
+      // Vorher wurden nur die zwei Bestände überschrieben — im Verlauf war
+      // die Ware lautlos von A nach B gesprungen, ohne eine einzige Bewegung.
+      // Und bricht es zwischen den zwei Schreibvorgängen ab, liegt Ware
+      // nirgends: bei A abgezogen, bei B nie angekommen.
+      const { error } = await supabase.rpc(
+        RPC_UMLAGERN,
+        umlagernArgumente(artikelId, { vonId: von, nachId: nach, menge: m }, notiz),
+      );
+      if (error) throw error;
       onDone();
     } catch (e: unknown) {
       setMsg('Umlagern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
