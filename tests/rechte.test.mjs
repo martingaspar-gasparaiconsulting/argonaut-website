@@ -48,3 +48,24 @@ test('Präfix-Treffer bleiben scharf abgegrenzt', () => {
   assert.equal(pfadPasst('/dashboard/akquise/x', '/dashboard/akquise'), true);
   assert.equal(pfadPasst('/dashboard/akquisexyz', '/dashboard/akquise'), false);
 });
+
+test('der Freebie-Baukasten überschreibt den Marketing-Pfad nicht', () => {
+  const treffer = NAV_LINKS.filter((l) => l.href === '/dashboard/marketing/freebies');
+  assert.equal(treffer.length, 1);
+  assert.equal(treffer[0].modul, undefined, 'kein Modul-Schlüssel — sonst kippt MODUL_PFAD');
+  assert.equal(MODUL_PFAD['marketing'], '/dashboard/marketing');
+});
+
+test('der Freebie-Baukasten erbt die Rechte von /dashboard/marketing', () => {
+  // Nicht-sensible Module stehen Mitarbeitern ohnehin offen — die Modul-Rechte
+  // greifen erst bei den sensiblen. Der Baukasten liegt UNTER /dashboard/marketing
+  // und darf deshalb genau dasselbe wie die Marketing-Seite selbst, nicht mehr.
+  assert.equal(
+    mitarbeiterDarf('/dashboard/marketing/freebies', []),
+    mitarbeiterDarf('/dashboard/marketing', []),
+  );
+  assert.equal(mitarbeiterDarf('/dashboard/marketing/freebies', ['marketing']), true);
+  // Und er reisst nichts Sensibles auf.
+  assert.equal(mitarbeiterDarf('/dashboard/finanzen', []), false);
+  assert.equal(istNurChefPfad('/dashboard/marketing/freebies'), istNurChefPfad('/dashboard/marketing'));
+});

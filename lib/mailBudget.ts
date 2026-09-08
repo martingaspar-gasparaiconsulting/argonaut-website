@@ -41,11 +41,12 @@ export const HOECHSTES_TAGESBUDGET = 50_000;
 export const WERBE_ANTEIL = 0.5;
 
 /**
- * So viele Crons teilen sich den Werbe-Anteil: Autoresponder, Dossier-Sequenz
- * und seit dem 07.09.26 die Lead-Nachfass-Kette. Kommt einer dazu, gehoert die
- * Zahl hier erhoeht — sonst reissen sie zusammen den Anteil.
+ * So viele Crons teilen sich den Werbe-Anteil: Autoresponder, Dossier-Sequenz,
+ * die Lead-Nachfass-Kette (07.09.26) und die Freebie-Strecke (08.09.26).
+ * Kommt einer dazu, gehoert die Zahl hier erhoeht — sonst reissen sie
+ * zusammen den Anteil und draengen die Betriebspost aus dem Kontingent.
  */
-export const WERBE_CRONS = 3;
+export const WERBE_CRONS = 4;
 
 /**
  * Untergrenze je Durchgang. Auch bei einem winzigen Budget soll ein Durchgang
@@ -69,7 +70,7 @@ export function tagesBudget(roh?: string | number | null | undefined): number {
 /**
  * Wie viele Mails ein WERBE-Durchgang hoechstens verschicken darf.
  *
- * Beispiel kostenloser Tarif (100/Tag): 100 × 0,5 ÷ 2 Crons = 50 je Cron —
+ * Beispiel kostenloser Tarif (100/Tag): 100 × 0,5 ÷ 4 Crons = 12 je Cron —
  * die anderen 50 bleiben fuer Rechnungen, Termine und Auswertungen.
  */
 export function mengeFuerWerbelauf(budget: number, crons: number = WERBE_CRONS): number {

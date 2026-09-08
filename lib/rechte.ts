@@ -110,6 +110,11 @@ export const NAV_LINKS: NavLink[] = [
   // wie bei „Meine Einsaetze". Wer was sieht, entscheidet RLS.
   { label: '📞 Akquise-Cockpit', href: '/dashboard/akquise', immer: true, ebene: 4, gruppe: 'vertrieb' },
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
+  // Freebie-Baukasten: haengt am Marketing-Recht, bekommt aber KEINEN eigenen
+  // Modul-Schluessel — sonst wuerde er in MODUL_PFAD den Pfad von
+  // /dashboard/marketing ueberschreiben (Fund vom 08.09.26, siehe MODUL_PFADE).
+  // Als Unterpfad von /dashboard/marketing ist er ohnehin schon mit abgedeckt.
+  { label: '🎁 Freebie-Baukasten', href: '/dashboard/marketing/freebies', ebene: 3, gruppe: 'vertrieb' },
   { label: '✅ Freigaben & Proofing', href: '/dashboard/freigaben', modul: 'freigaben', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb', kern: true },
