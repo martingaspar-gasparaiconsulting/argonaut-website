@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { merkCookieText, dauerText, HAEKCHEN_HINWEIS } from '@/lib/anmeldedauer'
 import Dreizack from '@/components/Dreizack';
 
 // ---------------------------------------------------------------------------
@@ -22,6 +23,10 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'magic'>('login')
   const [magicSent, setMagicSent] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  // Voreinstellung: gesetzt. Fuer heutige Nutzer aendert sich damit nichts
+  // Spuerbares — sie bleiben angemeldet, nur 30 statt 400 Tage. Wer an
+  // einem fremden Rechner sitzt, nimmt den Haken bewusst weg.
+  const [bleiben, setBleiben] = useState(true)
 
   const supabase = createClient()
 
@@ -32,11 +37,26 @@ export default function LoginPage() {
     }
   }, [])
 
+  /**
+   * Die Wahl MUSS vor dem Anmelden im Cookie stehen.
+   *
+   * `createClient()` liest sie beim Erzeugen, und beim Anmelden schreibt
+   * Supabase das Sitzungs-Cookie mit genau dieser Dauer. Wer erst danach
+   * setzt, bekommt beim ersten Mal noch die alte Vorgabe — und merkt es nicht.
+   */
+  function merkeWahl() {
+    try { document.cookie = merkCookieText(bleiben) } catch { /* ohne Cookies bleibt die Vorgabe */ }
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    merkeWahl()
+    // Nach dem Merken einen frischen Client holen — der alte trägt noch die
+    // Dauer, die beim Laden der Seite galt.
+    const client = createClient()
+    const { error } = await client.auth.signInWithPassword({ email, password })
     if (error) {
       setError('E-Mail oder Passwort falsch.')
       setLoading(false)
@@ -50,6 +70,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    merkeWahl()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -226,7 +247,25 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {mode === 'magic' && <div style={{ marginBottom: '24px' }} />}
+              {/* „Angemeldet bleiben" — gilt für beide Anmeldewege. */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'flex', gap: '10px', alignItems: 'flex-start', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.75)', fontSize: '13.5px', lineHeight: 1.5,
+                }}>
+                  <input
+                    type="checkbox" checked={bleiben}
+                    onChange={(e) => setBleiben(e.target.checked)}
+                    style={{ marginTop: '3px', width: '16px', height: '16px', flexShrink: 0, accentColor: '#C9A84C' }}
+                  />
+                  <span>Angemeldet bleiben</span>
+                </label>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', lineHeight: 1.5, marginTop: '6px', paddingLeft: '26px' }}>
+                  {dauerText(bleiben)} {!bleiben ? '' : HAEKCHEN_HINWEIS}
+                </div>
+              </div>
+
+              {mode === 'magic' && <div style={{ marginBottom: '4px' }} />}
 
               {error && (
                 <div style={{

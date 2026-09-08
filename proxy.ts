@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { MERK_COOKIE, dauerFuer, wunschAusWert } from './lib/anmeldedauer'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { istNurChefPfad, mitarbeiterDarf, pfadPasst, pfadErlaubtFuerNutzerTyp } from './lib/rechte'
@@ -82,13 +83,31 @@ export async function proxy(req: NextRequest) {
 
   const res = NextResponse.next()
 
+  // ▄▄▄ DIE ENTSCHEIDUNG DES MENSCHEN MUSS HIER MITGELESEN WERDEN ▄▄▄
+  // Diese Stelle schreibt bei JEDER Sitzungsauffrischung die Cookies neu.
+  // Ohne die naechsten drei Zeilen bekaeme jemand, der „Angemeldet bleiben"
+  // abgewaehlt hat, beim ersten Seitenwechsel wieder die 400-Tage-Vorgabe der
+  // Bibliothek — das Haekchen auf der Anmeldeseite taete dann nichts.
+  // Ein Haekchen, das nichts tut, ist schlimmer als keines. (B9, 08.09.26)
+  const bleiben = wunschAusWert(req.cookies.get(MERK_COOKIE)?.value)
+  const dauer = dauerFuer(bleiben)
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: dauer,
       cookies: {
         get(name: string) { return req.cookies.get(name)?.value },
-        set(name: string, value: string, options: any) { res.cookies.set({ name, value, ...options }) },
+        set(name: string, value: string, options: any) {
+          // `dauer` NACH options: Supabase reicht hier seine Vorgabe mit, und
+          // die soll die Wahl des Menschen nicht ueberschreiben. Ohne Haken
+          // ist `dauer` leer — dann muss maxAge ausdruecklich weg, sonst
+          // bleibt der Wert aus options stehen.
+          const zusammen = { ...options, ...dauer }
+          if (!bleiben) { delete zusammen.maxAge; delete zusammen.expires }
+          res.cookies.set({ name, value, ...zusammen })
+        },
         remove(name: string, options: any) { res.cookies.set({ name, value: '', ...options }) },
       },
     }
