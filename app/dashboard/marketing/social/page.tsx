@@ -77,6 +77,10 @@ export default function SocialSeite() {
   const [eBusy, setEBusy] = useState(false);
   const [eMeldung, setEMeldung] = useState<string | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
+  // Eigenes Video hochladen (C5): der Server prueft und stellt eine
+  // signierte Adresse aus, die Datei geht direkt in den Speicher.
+  const [videoBusy, setVideoBusy] = useState(false);
+  const videoRef = useRef<HTMLInputElement | null>(null);
   const dateiRef = useRef<HTMLInputElement>(null);
 
   // Kanal-Verwaltung
@@ -182,6 +186,49 @@ export default function SocialSeite() {
       else setEBilder((prev) => [...prev, j.url].slice(0, 10));
     } catch { setEMeldung('Upload fehlgeschlagen.'); }
     finally { setUploadBusy(false); if (dateiRef.current) dateiRef.current.value = ''; }
+  }
+
+  /**
+   * Eigenes Video hochladen. Drei Schritte, bewusst in dieser Reihenfolge:
+   * 1. Der Server prueft Format, Groesse und Speicher-Kontingent.
+   * 2. Er stellt eine signierte Adresse fuer genau einen Pfad aus.
+   * 3. Der Browser legt die Datei direkt dort ab — an dieser Seite vorbei,
+   *    weil eine Serverless-Funktion keine 150 MB entgegennimmt.
+   * Erst danach steht die Adresse im Feld und der Eintrag in der Videothek.
+   */
+  async function videoHochladen(datei: File) {
+    setVideoBusy(true); setEMeldung(null);
+    try {
+      const res = await fetch('/api/marketing/social-video', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dateiname: datei.name, typ: datei.type, groesse: datei.size }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) { setEMeldung(j?.error || 'Video konnte nicht vorbereitet werden.'); return; }
+
+      const hoch = await fetch(j.signedUrl, {
+        method: 'PUT',
+        headers: { 'content-type': datei.type || 'video/mp4', 'x-upsert': 'false' },
+        body: datei,
+      });
+      if (!hoch.ok) { setEMeldung('Das Hochladen wurde abgebrochen. Bitte noch einmal versuchen.'); return; }
+
+      // Eintrag in der Videothek — daran haengt spaeter das Aufraeumen.
+      await fetch('/api/marketing/social-video/eintrag', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pfad: j.pfad, url: j.url, dateiname: datei.name, groesse: datei.size }),
+      }).catch(() => { /* Eintrag ist Buchhaltung, das Video liegt schon */ });
+
+      setEVideo(j.url);
+      setEMeldung('Video hochgeladen.');
+    } catch {
+      setEMeldung('Das Hochladen ist fehlgeschlagen.');
+    } finally {
+      setVideoBusy(false);
+      if (videoRef.current) videoRef.current.value = '';
+    }
   }
 
   async function speichereBeitrag() {
@@ -412,10 +459,18 @@ export default function SocialSeite() {
           </div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 16px', fontSize: 'clamp(11px, 1vw, 14px)' }}>JPG, PNG, WebP oder GIF, bis 6 MB je Bild.</p>
 
-          <label style={lbl}>Video-Link (optional)</label>
+          <label style={lbl}>Video (optional)</label>
           <input value={eVideo} onChange={(e) => setEVideo(e.target.value)} placeholder="YouTube-, Vimeo- oder .mp4-Link" style={input} />
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
-            🔒 Videos werden nur <strong style={{ color: '#fff' }}>verlinkt</strong> und nicht bei uns gespeichert. Später hochgeladene Videos werden <strong style={{ color: '#fff' }}>nach dem Posten automatisch von unseren Servern gelöscht</strong>.
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', margin: '8px 0 0' }}>
+            <button onClick={() => videoRef.current?.click()} disabled={videoBusy}
+              style={{ background: 'transparent', border: `1px solid ${C.gold}`, color: C.gold, borderRadius: 999, padding: '7px 16px', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.05vw, 16px)', fontWeight: 700, cursor: videoBusy ? 'wait' : 'pointer' }}>
+              {videoBusy ? 'Wird hochgeladen …' : '⬆ Eigenes Video hochladen'}
+            </button>
+            <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/ogg" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) videoHochladen(f); }} />
+          </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '8px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>
+            Verlinken oder hochladen — beides geht. Hochgeladene Videos (MP4, WebM oder OGG, bis 200 MB) liegen in <strong style={{ color: '#fff' }}>Ihrem</strong> Speicher und zählen auf Ihr Kontingent. Was nach <strong style={{ color: '#fff' }}>30 Tagen</strong> in keinem Beitrag verwendet wird, räumt das System von selbst weg.
           </p>
           {eVideo.trim() && (
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: videoInfo.embedUrl ? C.green : C.warn, margin: '6px 0 16px', fontSize: 'clamp(12px, 1.05vw, 16px)' }}>{videoHinweis(eVideo)}</p>
