@@ -2,6 +2,24 @@
 
 **Stand 18.08.2026 · Diese Datei ersetzt die parallelen Zählungen.**
 
+> ⚠️ **ACHTUNG — die STATUSANGABEN unten sind teilweise überholt (Stand 08.09.2026).**
+> Gültig bleiben die **M1–M18-Zählung** und die **Umrechnungstabelle alt → neu** ganz unten.
+> Für den tatsächlichen Stand gilt: **`ARGONAUT-UEBERGABE-08-09-2026.md`** und
+> **`ARGONAUT-BAULISTE-AKTUELL.md`**.
+>
+> Konkret überholt:
+> - **M6** steht hier als offen — Kunde-360°-Akte, „Heute"-Zentrale, globale Suche,
+>   White-Label und Verbrauch je Kunde **existieren bereits**. Prüfen, nicht neu bauen.
+> - **M7 Avatar:** „KiGuide wird nirgends eingesetzt" stimmt seit dem 04.09. nicht mehr —
+>   `KiGuideBegleiter` hängt im Dashboard-Layout und wandert über alle Modulseiten mit.
+>   Es fehlt nur die Stimmquelle.
+> - **M1 Multistandort:** Lager je Filiale ist seit dem 08.09. vollständig umgestellt
+>   (acht Buchungswege, zwei Datenbank-Funktionen, sechs behobene Fehler).
+> - **M17:** Analytics gehärtet, Team-Chat-Frage geklärt, `ausgaben_alle` in der EÜR im
+>   Einsatz — alles am 04./08.09. erledigt.
+> - **Neu hinzugekommen und hier noch nicht enthalten:** der Dialog-Block G1–G5
+>   (Chatbot-Einbettung, WhatsApp-Eingang, Setter/Closer, Social-Eingang, KI-Telefonie).
+
 ---
 
 ## Warum es diese Datei gibt
