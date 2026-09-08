@@ -4,6 +4,7 @@ import { girocodeVonDaten } from '../../../lib/girocode';
 import { createClient } from '@/lib/supabase-server';
 import { baueBezahllink } from '@/lib/bezahllink';
 import type { IntegrationDatensatz } from '@/lib/konnektoren';
+import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
 
 export const runtime = 'nodejs';
 
@@ -69,28 +70,30 @@ function positionNetto(p: any): number {
   return (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0);
 }
 
-/** Gut lesbare Textfarbe (weiß/dunkel) für einen farbigen Hintergrund. */
-function lesbarerText(hex: string): string {
-  const h = String(hex || '').replace('#', '');
-  if (h.length < 6) return '#ffffff';
-  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return '#ffffff';
-  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return L > 0.6 ? '#0A1628' : '#ffffff';
-}
-
 function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null, ci: any = null): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const klein = !!rechnung?.kleinunternehmer;
 
   // White-Label: Marke des Betriebs (Logo + Farben aus dem CI-Speicher web_ci).
-  // Ohne hinterlegtes CI fällt alles auf das neutrale Standardlayout zurück.
-  const markePrimaer = (ci?.farbe_primaer && String(ci.farbe_primaer).trim()) || '#0A1628';
-  const markeAkzent = (ci?.farbe_akzent && String(ci.farbe_akzent).trim()) || '#C9A84C';
-  const markeLogo = (ci?.logo_url && String(ci.logo_url).trim()) || '';
-  const markeName = (ci?.firma && String(ci.firma).trim()) || (aussteller?.name && String(aussteller.name).trim()) || '';
-  const theadText = lesbarerText(markePrimaer);
+  //
+  // ▄▄▄ WARUM DAS SEIT 08.09.26 UEBER baueMarke LAEUFT ▄▄▄
+  // Vorher landete hier ungeprueft, was im CI-Feld stand. Die Farben gehen in
+  // einen <style>-Block und die Logo-Adresse in ein <img src="…"> — wer dort
+  // etwas anderes als eine Hex-Farbe oder eine http-Adresse eintraegt, sieht
+  // das auf der Rechnung. Beim Pruefen gefunden: ein Betrieb hatte seine
+  // Strassenadresse im Logo-Feld stehen, was auf jeder seiner Rechnungen ein
+  // kaputtes Bild-Symbol erzeugte.
+  // Angebot, Mahnung und Auftragsbestaetigung nutzen baueMarke seit dem
+  // 04.09. — ausgerechnet die Rechnung war die letzte ohne diesen Schutz.
+  // Unbrauchbare Werte fallen jetzt still auf den Standard zurueck: das
+  // Dokument sieht neutral aus statt kaputt.
+  const marke = baueMarke(ci as CiRoh, aussteller?.name);
+  const markePrimaer = marke.primaer;
+  const markeAkzent = marke.akzent;
+  const markeLogo = marke.logo;
+  const markeName = marke.name;
+  const theadText = marke.theadText;
 
   // Steuernummer ODER USt-IdNr genügt (§14) — wir zeigen, was vorhanden ist.
   const steuerZeile =
@@ -386,7 +389,7 @@ export async function POST(req: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase.from('web_ci')
-          .select('firma, logo_url, farbe_primaer, farbe_sekundaer, farbe_akzent')
+          .select(CI_SPALTEN)
           .limit(1);
         ci = (Array.isArray(data) && data[0]) || null;
       }
