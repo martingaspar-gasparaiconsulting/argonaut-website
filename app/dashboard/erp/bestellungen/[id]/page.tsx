@@ -2,6 +2,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort } from "@/lib/standortDaten";
+import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from "@/lib/lagerBuchung";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E5 Bestellung-Detailseite
@@ -84,6 +87,7 @@ export default function BestellungDetail() {
   const [positionen, setPositionen] = useState<PosEdit[]>([]);
   const [lieferanten, setLieferanten] = useState<LieferantKurz[]>([]);
   const [artikelListe, setArtikelListe] = useState<ArtikelKurz[]>([]);
+  const [standorte, setStandorte] = useState<{ id: string; name: string }[]>([]);
   const [laden, setLaden] = useState(true);
   const [notizen, setNotizen] = useState("");
 
@@ -143,6 +147,13 @@ export default function BestellungDetail() {
       .select("id, bezeichnung, einheit, einkaufspreis")
       .order("bezeichnung", { ascending: true });
     setArtikelListe((art as ArtikelKurz[]) ?? []);
+
+    const { data: st } = await supabase
+      .from("standorte")
+      .select("id, name")
+      .eq("aktiv", true)
+      .order("name");
+    setStandorte((st as { id: string; name: string }[]) ?? []);
 
     setLaden(false);
   }
@@ -275,6 +286,15 @@ export default function BestellungDetail() {
       setWeFehler("Bitte mindestens eine Menge > 0 eingeben.");
       return;
     }
+
+    // In welche Filiale kommt die Ware? Vor dem ersten Schreibvorgang klaeren —
+    // danach steht der Wareneingang schon in der Datenbank.
+    const wahl = standortFuerBuchung(konkreterStandort(leseStandortCookie()), standorte);
+    if (!wahl.ok) {
+      setWeFehler(wahl.fehler);
+      return;
+    }
+
     setWeBuchen(true);
     setWeFehler(null);
 
@@ -313,25 +333,20 @@ export default function BestellungDetail() {
       });
 
       // 3) Bestand hochbuchen (nur wenn Artikel verknuepft)
+      //
+      // Ab dem 08.09.26 (D1) in EINEM Vorgang, je Filiale. Vorher waren es
+      // drei Schritte: Bestand lesen, Bewegung schreiben, Bestand schreiben.
+      // Brach es dazwischen ab, stand die Ware in der Bewegung, aber nicht
+      // im Bestand — und niemand haette gewusst, welche der Zahlen stimmt.
       if (p.artikel_id) {
-        const { data: artRow } = await supabase
-          .from("artikel")
-          .select("aktueller_bestand")
-          .eq("id", p.artikel_id)
-          .single();
-        const alt = Number(artRow?.aktueller_bestand) || 0;
-        await supabase.from("lagerbewegungen").insert({
-          artikel_id: p.artikel_id,
-          typ: "eingang",
+        await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+          artikelId: p.artikel_id,
+          standortId: wahl.standortId,
+          art: "zugang",
           menge: jetzt,
-          grund: "Wareneingang " + referenz,
-          referenz: weKopf.id,
-          ...(uid ? { owner_user_id: uid } : {}),
-        });
-        await supabase
-          .from("artikel")
-          .update({ aktueller_bestand: alt + jetzt })
-          .eq("id", p.artikel_id);
+          herkunft: "bestellung",
+          notiz: "Wareneingang " + referenz,
+        }));
       }
 
       // 4) menge_geliefert erhoehen
