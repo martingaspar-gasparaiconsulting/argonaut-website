@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { sendeMail } from '@/lib/mail';
 import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
+import { messeMit } from '@/lib/mailMessung';
 
 // ============================================================================
 // ARGONAUT OS · app/api/newsletter-versand/route.ts  (Punkt 29b/29c)
@@ -16,6 +17,14 @@ import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 // Versand-Domain bleibt technisch die verifizierte argonaut-os.com.
 //
 // Demo-Konten dürfen NICHT verschicken (Spam-/Kostenschutz).
+//
+// D5 Teil 3 (08.09.26): Die Protokollzeile entsteht jetzt VOR dem Versand.
+// Grund: Zählbild und Klick-Umleitung brauchen die Versand-Kennung und den
+// Mess-Schlüssel — die gibt es erst, wenn die Zeile steht. Nebenwirkung, die
+// tatsächlich ein Gewinn ist: Bricht der Lauf mittendrin ab, steht der
+// Versand trotzdem im Protokoll, statt spurlos zu verschwinden.
+//
+// Gemessen werden nur SUMMEN, nie einzelne Empfänger — siehe lib/mailMessung.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -70,7 +79,10 @@ export async function POST(req: Request) {
       .eq('status', 'aktiv');
     if (ladeFehler) return NextResponse.json({ ok: false, error: ladeFehler.message }, { status: 500 });
 
-    const empfaenger = (abos ?? []).filter((a) => a.email);
+    // Typ ausgeschrieben statt abgeleitet: macht unten die Casts überflüssig
+    // und zeigt auf einen Blick, womit gearbeitet wird.
+    type Abo = { email: string | null; abmelde_token: string | null };
+    const empfaenger = ((abos ?? []) as Abo[]).filter((a): a is Abo & { email: string } => !!a.email);
     if (empfaenger.length === 0) {
       return NextResponse.json({ ok: false, error: 'Es gibt keine aktiven Abonnenten.' }, { status: 400 });
     }
@@ -81,20 +93,46 @@ export async function POST(req: Request) {
       );
     }
 
-    const origin = new URL(req.url).origin;
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin).replace(/\/+$/, '');
+
+    // Protokollzeile ZUERST — sie liefert Kennung und Mess-Schlüssel.
+    const { data: protokollRoh, error: protokollFehler } = await supabase
+      .from('newsletter_versand')
+      .insert({
+        betreff,
+        inhalt,
+        empfaenger_anzahl: empfaenger.length,
+        erfolg_anzahl: 0,
+        fehler_anzahl: 0,
+      })
+      .select('id, mess_schluessel')
+      .maybeSingle();
+    if (protokollFehler || !protokollRoh) {
+      return NextResponse.json(
+        { ok: false, error: 'Der Versand konnte nicht vorbereitet werden.' },
+        { status: 500 },
+      );
+    }
+    const protokoll = protokollRoh as { id: string; mess_schluessel: string | null };
+    const messSchluessel = protokoll.mess_schluessel || '';
 
     let erfolg = 0;
     let fehler = 0;
     for (const a of empfaenger) {
-      const html = newsletterMailHtml(
+      const roh = newsletterMailHtml(
         firmaName,
         betreff,
         inhalt,
-        abmeldeUrl(origin, a.abmelde_token as string),
+        abmeldeUrl(origin, a.abmelde_token || ''),
         p.firma_akzentfarbe,
       );
+      // Ohne Mess-Schlüssel wird NICHT gemessen — die Mail geht trotzdem
+      // raus. Eine fehlende Statistik ist kein Grund, niemandem zu schreiben.
+      const html = messSchluessel
+        ? messeMit(roh, origin, protokoll.id, messSchluessel)
+        : roh;
       const r = await sendeMail({
-        an: a.email as string,
+        an: a.email,
         betreff,
         html,
         absenderName: firmaName,
@@ -104,14 +142,9 @@ export async function POST(req: Request) {
       else fehler++;
     }
 
-    // Protokoll schreiben (owner_user_id setzt der Trigger).
-    await supabase.from('newsletter_versand').insert({
-      betreff,
-      inhalt,
-      empfaenger_anzahl: empfaenger.length,
-      erfolg_anzahl: erfolg,
-      fehler_anzahl: fehler,
-    });
+    await supabase.from('newsletter_versand')
+      .update({ erfolg_anzahl: erfolg, fehler_anzahl: fehler })
+      .eq('id', protokoll.id);
 
     return NextResponse.json({ ok: true, gesendet: erfolg, fehler, gesamt: empfaenger.length });
   } catch (e: unknown) {

@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { emailNormalisieren, istEmailGueltig, zaehleAbonnenten } from '@/lib/newsletter';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { quoten, messHinweis } from '@/lib/mailMessung';
 
 const MODUL = 'newsletter_abonnenten';
 
@@ -47,6 +48,8 @@ type Versand = {
   erfolg_anzahl: number;
   fehler_anzahl: number;
   gesendet_am: string;
+  geoeffnet_anzahl: number | null;
+  geklickt_anzahl: number | null;
 };
 
 function fmtDatum(d: string | null): string {
@@ -171,7 +174,7 @@ export default function NewsletterAbonnenten() {
     }
     const { data: vData } = await supabase
       .from('newsletter_versand')
-      .select('id, betreff, empfaenger_anzahl, erfolg_anzahl, fehler_anzahl, gesendet_am')
+      .select('id, betreff, empfaenger_anzahl, erfolg_anzahl, fehler_anzahl, gesendet_am, geoeffnet_anzahl, geklickt_anzahl')
       .order('gesendet_am', { ascending: false })
       .limit(10);
     setVersandListe((vData ?? []) as Versand[]);
@@ -508,6 +511,12 @@ export default function NewsletterAbonnenten() {
             <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)', marginBottom: 14 }}>
               Letzte Versände
             </div>
+            {/* Die Einordnung gehört neben die Zahl, nicht ins Kleingedruckte:
+                Ohne sie zieht jemand aus „8 % geöffnet" den falschen Schluss. */}
+            <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 15px)', lineHeight: 1.55, marginBottom: 14, maxWidth: '72ch' }}>
+              {messHinweis(versandListe[0])} Gezählt werden nur Summen — <b style={{ color: '#fff' }}>wer</b> geöffnet
+              hat, wird bewusst nicht gespeichert.
+            </div>
             <div style={{ display: 'grid', gap: 8 }}>
               {versandListe.map((v) => (
                 <div key={v.id} style={{ background: C.navy2, borderRadius: 10, padding: '12px 16px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -517,6 +526,20 @@ export default function NewsletterAbonnenten() {
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: C.textDim }}>
                     <span style={{ color: C.green }}>{v.erfolg_anzahl} gesendet</span>
                     {v.fehler_anzahl > 0 && <span style={{ color: C.danger }}>{v.fehler_anzahl} Fehler</span>}
+                    {(() => {
+                      const q = quoten(v);
+                      return (
+                        <>
+                          <span title="Öffnungen, nicht Öffner — siehe Hinweis unten">
+                            {q.oeffnung == null ? '— geöffnet' : `${q.oeffnung} % geöffnet`}
+                          </span>
+                          <span style={{ color: q.klick != null && q.klick > 0 ? C.green : undefined }}
+                                title="Klicks sind belastbar: Da hat wirklich jemand gedrückt.">
+                            {q.klick == null ? '— geklickt' : `${q.klick} % geklickt`}
+                          </span>
+                        </>
+                      );
+                    })()}
                     <span>{fmtDatumZeit(v.gesendet_am)}</span>
                   </div>
                 </div>
