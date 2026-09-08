@@ -170,6 +170,8 @@ function baueHtml(body: {
   .sig-meta { font-size: 11px; color: #5b6b80; margin-top: 5px; }
 
   .beschreibung { background: #f4f6fa; border-left: 4px solid #C9A84C; padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 14px; }
+  .arbeitsbericht { background: #ffffff; border: 1px solid #d9dee7; border-left: 4px solid #4CAF7D; padding: 12px 14px; border-radius: 6px; font-size: 12px; line-height: 1.55; margin-bottom: 14px; white-space: pre-wrap; }
+  .arbeitsbericht b { display: block; margin-bottom: 5px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #5a6577; }
   .fuss { margin-top: 40px; border-top: 1px solid #e1e6ee; padding-top: 12px; color: #8a99ad; font-size: 10.5px; text-align: center; }
 </style></head><body>
 
@@ -215,6 +217,10 @@ function baueHtml(body: {
   ${zeitenHtml}
 
   ${e.beschreibung ? `<div class="beschreibung">${esc(e.beschreibung)}</div>` : ''}
+
+  <!-- Was vor Ort getan wurde. Steht bewusst VOR den Positionen: Der Kunde
+       liest zuerst, was passiert ist, und danach, was es kostet. -->
+  ${e.arbeitsbericht ? `<div class="arbeitsbericht"><b>Durchgeführte Arbeiten</b>${esc(e.arbeitsbericht)}</div>` : ''}
 
   <div class="abschnitt-titel">Erbrachte Leistungen</div>
   <table>

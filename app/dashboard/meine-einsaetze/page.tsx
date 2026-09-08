@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from
 import { createBrowserClient } from '@supabase/ssr';
 import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
 import BelegErfassen from './BelegErfassen';
+import Diktat from '../_components/Diktat';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -88,6 +89,7 @@ type EinsatzRow = {
   owner_user_id: string | null;
   unterschrift_pfad: string | null; unterschrift_name: string | null; unterschrift_am: string | null;
   bericht_pfad: string | null; bericht_am: string | null;
+  arbeitsbericht: string | null; arbeitsbericht_am: string | null;
 };
 type FotoRow = { id: string; einsatz_id: string; pfad: string; dateiname: string | null };
 type KatalogItem = { id: string; bezeichnung: string; einheit: string | null; einheitspreis_netto: number | null; festpreis_netto: number | null; stundensatz_netto: number | null; mwst_satz: number | null };
@@ -115,6 +117,10 @@ export default function MeineEinsaetzePage() {
   const [sigName, setSigName] = useState('');
   const [sigBusy, setSigBusy] = useState(false);
   const [berichtBusy, setBerichtBusy] = useState<string | null>(null);
+  // Arbeitsbericht je Einsatz — der Text lebt im Feld, bis gespeichert wird.
+  const [arbeit, setArbeit] = useState<Record<string, string>>({});
+  const [arbeitBusy, setArbeitBusy] = useState<string | null>(null);
+  const [arbeitOk, setArbeitOk] = useState<string | null>(null);
   const [tourBusy, setTourBusy] = useState(false);
   const [tour, setTour] = useState<{
     stops: { reihenfolge: number; titel: string; adresse: string; kunde: string | null }[];
@@ -160,7 +166,7 @@ export default function MeineEinsaetzePage() {
       // (mitarbeiter_id ist null) — Team-Einsätze plant er im Dispo-Board.
       const basis = supabase
         .from('einsaetze')
-        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, unterwegs_lat, unterwegs_lon, vor_ort_lat, vor_ort_lon, erledigt_lat, erledigt_lon, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am')
+        .select('id, titel, beschreibung, einsatzort, beginn_am, ende_am, status, kunde_name, kunde_email, kunde_telefon, unterwegs_am, vor_ort_am, erledigt_am, unterwegs_lat, unterwegs_lon, vor_ort_lat, vor_ort_lon, erledigt_lat, erledigt_lon, owner_user_id, unterschrift_pfad, unterschrift_name, unterschrift_am, bericht_pfad, bericht_am, arbeitsbericht, arbeitsbericht_am')
         .gte('beginn_am', start.toISOString())
         .lte('beginn_am', ende.toISOString());
       const gefiltert = mitarbeiter
@@ -411,6 +417,23 @@ export default function MeineEinsaetzePage() {
     } finally { setSigBusy(false); }
   }
 
+  // ----- Arbeitsbericht speichern -----
+  // Eigener Knopf statt Speichern beim Tippen: Auf einer Baustelle ist die
+  // Verbindung unzuverlaessig, und ein stiller Fehlschlag waere schlimmer als
+  // ein Knopf. Wer den Bericht diktiert hat, will sehen, dass er ankam.
+  async function arbeitSpeichern(e: EinsatzRow) {
+    const text = (arbeit[e.id] ?? e.arbeitsbericht ?? '').trim();
+    setArbeitBusy(e.id); setFehler(null); setArbeitOk(null);
+    const { error } = await supabase.from('einsaetze').update({
+      arbeitsbericht: text || null,
+      arbeitsbericht_am: text ? new Date().toISOString() : null,
+    }).eq('id', e.id);
+    setArbeitBusy(null);
+    if (error) { setFehler('Bericht nicht gespeichert: ' + error.message); return; }
+    setArbeitOk(e.id);
+    await laden_();
+  }
+
   // ----- Einsatzbericht-PDF erstellen -----
   async function berichtErstellen(e: EinsatzRow) {
     if (!e.owner_user_id) { setFehler('Einsatz ohne Betriebszuordnung.'); return; }
@@ -434,6 +457,7 @@ export default function MeineEinsaetzePage() {
             kunde_name: e.kunde_name, kunde_email: e.kunde_email, kunde_telefon: e.kunde_telefon,
             beginn_am: e.beginn_am, ende_am: e.ende_am, status: e.status,
             unterwegs_am: e.unterwegs_am, vor_ort_am: e.vor_ort_am, erledigt_am: e.erledigt_am,
+            arbeitsbericht: (arbeit[e.id] ?? e.arbeitsbericht ?? '').trim() || null,
           },
           aussteller,
           positionen: poss.map((p) => ({ bezeichnung: p.bezeichnung, menge: p.menge, einheit: p.einheit, einzelpreis_netto: p.einzelpreis_netto, mwst_satz: p.mwst_satz })),
@@ -669,6 +693,35 @@ export default function MeineEinsaetzePage() {
                 })()}
 
                 {(() => {
+                  const text = arbeit[e.id] ?? e.arbeitsbericht ?? '';
+                  return (
+                    <div style={styles.arbeitBereich}>
+                      <div style={styles.arbeitTitel}>Was wurde gemacht?</div>
+                      <textarea
+                        value={text}
+                        onChange={(ev) => { setArbeit((a) => ({ ...a, [e.id]: ev.target.value })); setArbeitOk(null); }}
+                        placeholder={'Kurz beschreiben — oder auf „Diktieren“ tippen.'}
+                        style={styles.arbeitFeld}
+                      />
+                      <Diktat
+                        wert={text}
+                        onWert={(neu) => { setArbeit((a) => ({ ...a, [e.id]: neu })); setArbeitOk(null); }}
+                      />
+                      <button
+                        onClick={() => arbeitSpeichern(e)}
+                        disabled={arbeitBusy === e.id}
+                        style={{ ...styles.arbeitBtn, opacity: arbeitBusy === e.id ? 0.6 : 1 }}
+                      >
+                        {arbeitBusy === e.id ? 'Speichert …' : 'Bericht speichern'}
+                      </button>
+                      {arbeitOk === e.id && (
+                        <div style={styles.arbeitOk}>Gespeichert — der Text steht jetzt im Einsatzbericht.</div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {(() => {
                   const hat = !!e.bericht_pfad;
                   return (
                     <div style={styles.berichtBereich}>
@@ -893,6 +946,11 @@ const styles: Record<string, CSSProperties> = {
   sigPreview: { width: '100%', maxWidth: 260, marginTop: 8, borderRadius: 10, border: `1px solid ${C.border}`, background: '#fff', display: 'block' },
   canvas: { width: '100%', aspectRatio: '3 / 1', background: '#ffffff', border: `2px solid ${C.gold}`, borderRadius: 12, display: 'block', touchAction: 'none', cursor: 'crosshair' },
 
+  arbeitBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
+  arbeitTitel: { fontSize: 'clamp(14px, 1.19vw, 19px)', fontWeight: 700, color: C.text },
+  arbeitFeld: { width: '100%', minHeight: 110, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, color: C.text, padding: '12px 14px', fontSize: 'clamp(15px, 1.25vw, 20px)', lineHeight: 1.5, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' },
+  arbeitBtn: { width: '100%', background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, padding: '13px', fontSize: 'clamp(14.5px, 1.25vw, 20px)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  arbeitOk: { color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)', textAlign: 'center' },
   berichtBereich: { marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
   berichtBtn: { width: '100%', background: C.gold, color: '#0A1628', border: 'none', borderRadius: 12, padding: '15px', fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   berichtLink: { textAlign: 'center', color: C.cyan, fontSize: 'clamp(13.5px, 1.19vw, 19px)', fontWeight: 600, textDecoration: 'none' },

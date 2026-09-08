@@ -636,7 +636,7 @@ export default function CrmDetailPage() {
       null;
     if (!SR) {
       setVoiceFehler(
-        "Spracherkennung wird von diesem Browser nicht unterstützt (am besten Chrome). Du kannst den Text unten auch eintippen."
+        "Ihr Browser kann noch nicht zuhören (am besten klappt es mit Chrome). Tippen Sie den Text unten einfach ein — das Feld funktioniert genauso."
       );
       return;
     }
@@ -1450,7 +1450,7 @@ export default function CrmDetailPage() {
                   </div>
 
                   <div style={{ color: C.textDim, fontSize: 'clamp(11px, 0.94vw, 15px)', marginTop: 14 }}>
-                    KI-Entwurf – bitte prüfen. Versand erfolgt manuell über dein Mail-Programm (Auto-Versand kommt später).
+                    KI-Entwurf – bitte prüfen. Versand erfolgt manuell über Ihr Mail-Programm (Auto-Versand kommt später).
                   </div>
                 </div>
               )}
