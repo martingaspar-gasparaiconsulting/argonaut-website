@@ -53,7 +53,7 @@ const AMPEL_FARBE: Record<KostenAmpel, string> = {
   gut: C.green, knapp: C.warn, verlust: C.danger, offen: C.textDim,
 };
 const AMPEL_TEXT: Record<KostenAmpel, string> = {
-  gut: 'Gut — es bleibt reichlich uebrig',
+  gut: 'Gut — es bleibt reichlich übrig',
   knapp: 'Knapp — Sie verdienen noch, aber wenig',
   verlust: 'Verlust — die Gewinnung kostet mehr, als der Kunde bringt',
   offen: 'Noch keine eigenen Kosten eingetragen',
@@ -109,24 +109,24 @@ export default function TerminWertPage() {
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 820 }}>
         Bevor Sie Geld in Werbung stecken, brauchen Sie eine einzige Zahl:{' '}
         <b style={{ color: C.text }}>Was darf eine Anfrage kosten?</b> Diese Seite rechnet sie
-        rueckwaerts aus Ihrem Kundenwert und Ihren Quoten. Alles geschieht in Ihrem Browser —
-        nichts wird gespeichert oder uebertragen, und es entstehen keine Kosten.
+        rückwärts aus Ihrem Kundenwert und Ihren Quoten. Alles geschieht in Ihrem Browser —
+        nichts wird gespeichert oder übertragen, und es entstehen keine Kosten.
       </p>
 
       {/* ---------- Eingaben ---------- */}
       <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: '20px', marginBottom: 18 }}>
         <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>Ihre Zahlen</div>
         <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 16 }}>
-          Voreingetragen sind Beispielwerte. Ueberschreiben Sie sie mit Ihren eigenen — die Seite rechnet sofort mit.
+          Voreingetragen sind Beispielwerte. Überschreiben Sie sie mit Ihren eigenen — die Seite rechnet sofort mit.
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
           <Feld label="Wiederkehrend je Monat" einheit="€" wert={f.monatlich} onChange={setzen('monatlich')}
                 hinweis="Wartungsvertrag, Abo, Betreuung — sonst 0" />
           <Feld label="Betrachtete Laufzeit" einheit="Monate" wert={f.monate} onChange={setzen('monate')}
-                hinweis="Wie lange bleibt ein Kunde ueblicherweise?" />
+                hinweis="Wie lange bleibt ein Kunde üblicherweise?" />
           <Feld label="Einmalig je Auftrag" einheit="€" wert={f.einmalig} onChange={setzen('einmalig')}
-                hinweis="Der uebliche Auftragswert beim ersten Mal" />
+                hinweis="Der übliche Auftragswert beim ersten Mal" />
         </div>
 
         <div style={{ height: 1, background: C.border, margin: '18px 0' }} />
@@ -143,7 +143,7 @@ export default function TerminWertPage() {
 
       {/* ---------- Ergebnis ---------- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
-        <KpiTile label="Kundenwert" wert={euro(wert)} farbe={C.cyan} sub="ueber die betrachtete Laufzeit" />
+        <KpiTile label="Kundenwert" wert={euro(wert)} farbe={C.cyan} sub="über die betrachtete Laufzeit" />
         <KpiTile label="Wert je Anfrage" wert={euro(t.wertJeEintragung)} farbe={C.gold} sub="das ist Ihre Obergrenze" />
         <KpiTile label="Wert je gebuchtem Termin" wert={euro(t.wertJeGebuchtem)} farbe={C.gold} sub={t.gebuchteTermine != null ? `${anzahl(t.gebuchteTermine)} Termine je Kunde` : undefined} />
         <KpiTile label="Wert je gehaltenem Termin" wert={euro(t.wertJeGehaltenem)} farbe={C.green} sub={t.gehalteneTermine != null ? `${anzahl(t.gehalteneTermine)} davon finden statt` : undefined} />
@@ -161,7 +161,7 @@ export default function TerminWertPage() {
           <Kettenglied icon="📅" titel="Gebuchte Termine" wert={anzahl(t.gebuchteTermine)} farbe={C.gold} unterzeile={t.wertJeGebuchtem != null ? `${euro(t.wertJeGebuchtem)} wert` : 'Quote fehlt'} />
           <Pfeil label={`${f.erscheinen || '—'} % erscheinen`} />
           <Kettenglied icon="🤝" titel="Gehaltene Termine" wert={anzahl(t.gehalteneTermine)} farbe={C.gold} unterzeile={t.wertJeGehaltenem != null ? `${euro(t.wertJeGehaltenem)} wert` : 'Quote fehlt'} />
-          <Pfeil label={`${f.abschluss || '—'} % schliessen ab`} />
+          <Pfeil label={`${f.abschluss || '—'} % schließen ab`} />
           <Kettenglied icon="💰" titel="Kunde" wert="1" farbe={C.green} unterzeile={euro(wert)} />
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function TerminWertPage() {
         <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>Was Sie ausgeben sollten</div>
         <div style={{ color: C.textDim, fontSize: 13.5, lineHeight: 1.6, marginBottom: 16, maxWidth: 780 }}>
           Die Obergrenze ist nicht Ihr Zielpreis: Wer genau den vollen Wert ausgibt, arbeitet umsonst.
-          Ein Drittel fuer die Gewinnung ist eine gesunde Faustregel — zwei Drittel bleiben fuer
+          Ein Drittel für die Gewinnung ist eine gesunde Faustregel — zwei Drittel bleiben für
           Leistung und Gewinn.
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 16 }}>
@@ -202,7 +202,7 @@ export default function TerminWertPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
         <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: '20px' }}>
           <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>Was Ihr Umsatzziel bedeutet</div>
-          <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 14 }}>Die Gegenrichtung: vom Ziel zurueck auf die noetige Arbeit.</div>
+          <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 14 }}>Die Gegenrichtung: vom Ziel zurück auf die nötige Arbeit.</div>
           <Feld label="Umsatzziel im Monat" einheit="€" wert={f.ziel} onChange={setzen('ziel')} hinweis="" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 14 }}>
             <MiniWert zahl={anzahl(bedarf.kunden)} text="Kunden" />

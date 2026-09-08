@@ -104,6 +104,11 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
+  // Akquise-Cockpit: bewusst OHNE `modul`-Schluessel. Ein zweiter Eintrag mit
+  // `modul: 'leads'` wuerde in MODUL_PFAD den Pfad von /dashboard/leads
+  // ueberschreiben. `immer: true` heisst: jeder erfasst seine eigene Arbeit —
+  // wie bei „Meine Einsaetze". Wer was sieht, entscheidet RLS.
+  { label: '📞 Akquise-Cockpit', href: '/dashboard/akquise', immer: true, ebene: 4, gruppe: 'vertrieb' },
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
   { label: '✅ Freigaben & Proofing', href: '/dashboard/freigaben', modul: 'freigaben', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
@@ -300,6 +305,25 @@ export const MODUL_PFAD: Record<string, string> = Object.fromEntries(
 )
 
 /**
+ * Modul-Schluessel -> ALLE Pfade dieses Moduls.
+ *
+ * WARUM ES DAS BRAUCHT: Mehrere Knoepfe duerfen sich einen Modul-Schluessel
+ * teilen (z. B. 'provisionen' fuer „Provisionen" UND „Partner"). MODUL_PFAD
+ * behaelt bei so einem Paar nur den LETZTEN Pfad — der erste war damit fuer
+ * Mitarbeiter gesperrt, obwohl das Recht vergeben war. Gefunden am 08.09.26
+ * bei /dashboard/provisionen: freigeschaltete Mitarbeiter landeten dort auf
+ * der Sperre, weil MODUL_PFAD['provisionen'] auf /dashboard/partner zeigte.
+ * Der Compiler kann das nicht sehen — es ist ein Datenfehler, kein Typfehler.
+ */
+export const MODUL_PFADE: Record<string, string[]> = NAV_LINKS
+  .filter((l) => l.modul)
+  .reduce<Record<string, string[]>>((acc, l) => {
+    const k = l.modul as string
+    ;(acc[k] ||= []).push(l.href)
+    return acc
+  }, {})
+
+/**
  * Vollstaendiger Modul-Katalog — Schluessel + Anzeige-Label. Quelle: NAV_LINKS.
  * Ein neues Modul mit `modul`-Schluessel erscheint hier automatisch. Damit muss
  * die Rechte-Oberflaeche nie wieder von Hand nachgepflegt werden.
@@ -334,7 +358,8 @@ export function mitarbeiterDarf(pfad: string, module: readonly string[]): boolea
 
   const erlaubtePfade = [
     ...MITARBEITER_ERLAUBT,
-    ...module.map((k) => MODUL_PFAD[k]).filter(Boolean),
+    // ALLE Pfade je Modul — nicht nur den letzten. Siehe MODUL_PFADE.
+    ...module.flatMap((k) => MODUL_PFADE[k] || []),
   ]
   return erlaubtePfade.some((b) => pfadPasst(pfad, b))
 }
