@@ -69,3 +69,14 @@ test('der Freebie-Baukasten erbt die Rechte von /dashboard/marketing', () => {
   assert.equal(mitarbeiterDarf('/dashboard/finanzen', []), false);
   assert.equal(istNurChefPfad('/dashboard/marketing/freebies'), istNurChefPfad('/dashboard/marketing'));
 });
+
+test('Zielgruppen hängen unter Marketing und kippen keinen Modul-Pfad', () => {
+  const treffer = NAV_LINKS.filter((l) => l.href === '/dashboard/marketing/zielgruppen');
+  assert.equal(treffer.length, 1);
+  assert.equal(treffer[0].modul, undefined);
+  assert.equal(MODUL_PFAD['marketing'], '/dashboard/marketing');
+  assert.equal(
+    mitarbeiterDarf('/dashboard/marketing/zielgruppen', []),
+    mitarbeiterDarf('/dashboard/marketing', []),
+  );
+});

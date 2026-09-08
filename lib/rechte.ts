@@ -115,6 +115,9 @@ export const NAV_LINKS: NavLink[] = [
   // /dashboard/marketing ueberschreiben (Fund vom 08.09.26, siehe MODUL_PFADE).
   // Als Unterpfad von /dashboard/marketing ist er ohnehin schon mit abgedeckt.
   { label: '🎁 Freebie-Baukasten', href: '/dashboard/marketing/freebies', ebene: 3, gruppe: 'vertrieb' },
+  // Zielgruppen: ebenfalls Unterpfad von /dashboard/marketing, deshalb ohne
+  // eigenen Modul-Schluessel (siehe MODUL_PFADE).
+  { label: '🎯 Zielgruppen', href: '/dashboard/marketing/zielgruppen', ebene: 3, gruppe: 'vertrieb' },
   { label: '✅ Freigaben & Proofing', href: '/dashboard/freigaben', modul: 'freigaben', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb', kern: true },
