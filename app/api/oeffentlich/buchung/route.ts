@@ -25,6 +25,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { berechneSlots, type VerfuegbarkeitRow, type TerminRow, type AbwesenheitRow, type TerminArt } from '@/app/dashboard/_components/slotLogik';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
+import { kontaktIdPerEmail } from '@/lib/kontaktZuordnung';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -192,11 +193,25 @@ export async function POST(req: NextRequest) {
       const { data: maRow } = await db.from('mitarbeiter').select('standort_id').eq('id', mitarbeiterId).maybeSingle();
       standortId = ((maRow as { standort_id?: string | null } | null)?.standort_id) ?? null;
     }
+    // Termin am Kunden festmachen, wenn es ihn im CRM schon gibt. Die Suche
+    // laeuft AUSDRUECKLICH nur in den Kontakten DIESES Betriebs — die
+    // Service-Rolle umgeht RLS, der Filter ist hier die einzige Grenze.
+    // Kein Treffer heisst null: lieber keine Zuordnung als eine falsche.
+    let kontaktId: string | null = null;
+    try {
+      const { data: kontakte } = await db
+        .from('kontakte')
+        .select('id, email')
+        .eq('owner_user_id', betrieb.ownerId)
+        .limit(2000);
+      kontaktId = kontaktIdPerEmail((kontakte ?? []) as Array<{ id?: unknown; email?: unknown }>, kundeMail);
+    } catch { /* Zuordnung ist Komfort, keine Bedingung fuer die Buchung */ }
+
     const { error: insErr } = await db.from('termine').insert({
       owner_user_id: betrieb.ownerId, standort_id: standortId, termin_art_id: art.id,
       beginn_am: beginnD.toISOString(), ende_am: endeD.toISOString(),
       titel: `${art.name || 'Termin'} (online gebucht)`,
-      kunde_name: kundeName, kunde_email: kundeMail, notiz,
+      kunde_name: kundeName, kunde_email: kundeMail, notiz, kontakt_id: kontaktId,
       mitarbeiter_id: mitarbeiterId, status: 'geplant', quelle: 'online',
     });
     if (insErr) throw insErr;

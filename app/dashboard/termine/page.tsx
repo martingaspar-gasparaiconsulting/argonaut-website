@@ -89,6 +89,9 @@ export default function TermineCockpit() {
   const [titel, setTitel] = useState("");
   const [beginn, setBeginn] = useState(jetztLokalInput());
   const [wer, setWer] = useState("");
+  // Kunde aus dem CRM: haengt den Termin fest an den Kontakt.
+  const [kontaktId, setKontaktId] = useState("");
+  const [kontakte, setKontakte] = useState<{ id: string; anzeigename: string | null; email: string | null }[]>([]);
   const [ende, setEnde] = useState("");
   const [ort, setOrt] = useState("");
   const [erinnerung, setErinnerung] = useState("");
@@ -122,6 +125,16 @@ export default function TermineCockpit() {
       const { data } = await supabase.auth.getUser();
       setUid(data?.user?.id ?? null);
       await laden();
+      // Kontakte nachladen — faellt das aus, bleibt der Termin trotzdem
+      // anlegbar, nur ohne Kunden-Auswahl.
+      try {
+        const { data: k } = await supabase
+          .from("kontakte")
+          .select("id, anzeigename, email")
+          .order("anzeigename", { ascending: true })
+          .limit(500);
+        setKontakte((k as { id: string; anzeigename: string | null; email: string | null }[]) ?? []);
+      } catch { /* Auswahl ist optional */ }
     })();
   }, [laden]);
 
@@ -129,6 +142,7 @@ export default function TermineCockpit() {
     setTitel("");
     setBeginn(jetztLokalInput());
     setWer("");
+    setKontaktId("");
     setEnde("");
     setOrt("");
     setErinnerung("");
@@ -150,6 +164,10 @@ export default function TermineCockpit() {
         ort: ort.trim() || null,
         status: "geplant",
         kunde_email: wer.trim() || null,
+        // Am Kunden festmachen, wenn einer gewaehlt wurde — dann findet ihn
+        // die Kunden-Akte auch, wenn er spaeter von einer anderen Adresse
+        // schreibt.
+        kontakt_id: kontaktId || null,
         notiz: notiz.trim() || null,
         erinnerung_min: erinnerung ? Number(erinnerung) : null,
         ressource: ressource.trim() || null,
@@ -372,6 +390,29 @@ export default function TermineCockpit() {
 
             <label style={labelStyle}>Beginn *</label>
             <input type="datetime-local" value={beginn} onChange={(e) => setBeginn(e.target.value)} style={inputStyle} />
+
+            {kontakte.length > 0 && (
+              <>
+                <label style={labelStyle}>Kunde aus dem CRM (optional)</label>
+                <select
+                  value={kontaktId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setKontaktId(id);
+                    const k = kontakte.find((x) => x.id === id);
+                    if (k?.email) setWer(k.email);
+                  }}
+                  style={inputStyle}
+                >
+                  <option value="">— kein Kunde ausgewählt —</option>
+                  {kontakte.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {(k.anzeigename || k.email || 'Ohne Namen') + (k.anzeigename && k.email ? ` · ${k.email}` : '')}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
 
             <label style={labelStyle}>Mit wem (Kunden-E-Mail, optional)</label>
             <input

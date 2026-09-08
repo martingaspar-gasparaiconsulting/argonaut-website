@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { vereineTermine, zuordnungsWeg, naechsterTermin as findeNaechsten } from '@/lib/kontaktZuordnung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,7 +26,7 @@ const C = {
 type Kontakt = { id: string; anzeigename?: string | null; vorname?: string | null; nachname?: string | null; name?: string | null; email?: string | null; telefon?: string | null; firma_name?: string | null };
 type Rechnung = { id: string; rechnungsnummer: string | null; titel: string | null; brutto_summe: number; zahlungsstatus: string; rechnungsdatum: string | null; faelligkeitsdatum: string | null; bezahlt_am: string | null };
 type Angebot = { id: string; angebotsnummer: string | null; titel: string; brutto_summe: number; status: string; gueltig_bis: string | null };
-type Termin = { titel: string | null; beginn_am: string | null; status: string | null };
+type Termin = { id?: string; titel: string | null; beginn_am: string | null; status: string | null; kunde_email?: string | null; kontakt_id?: string | null };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('T')[0].split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -68,11 +69,21 @@ export default function KundeAktePage() {
     ]);
     setRechnungen((r as Rechnung[]) ?? []);
     setAngebote((a as Angebot[]) ?? []);
+    // Zwei Wege, eine Liste: fest am Kunden (kontakt_id) UND ueber seine
+    // E-Mail. So faellt kein Alt-Termin aus der Akte, waehrend neue Termine
+    // sauber am Kunden haengen.
+    const spalten = 'id, titel, beginn_am, status, kunde_email, kontakt_id';
     const mail = (k.email || '').trim().toLowerCase();
-    if (mail) {
-      const { data: t } = await supabase.from('termine').select('titel, beginn_am, status, kunde_email').eq('kunde_email', mail).order('beginn_am', { ascending: false }).limit(30);
-      setTermine((t as Termin[]) ?? []);
-    } else setTermine([]);
+    const [ueberKunde, ueberMail] = await Promise.all([
+      supabase.from('termine').select(spalten).eq('kontakt_id', k.id).order('beginn_am', { ascending: false }).limit(30),
+      mail
+        ? supabase.from('termine').select(spalten).eq('kunde_email', mail).order('beginn_am', { ascending: false }).limit(30)
+        : Promise.resolve({ data: [] as unknown[] }),
+    ]);
+    setTermine(vereineTermine(
+      (ueberKunde.data as Termin[]) ?? [],
+      (ueberMail.data as Termin[]) ?? [],
+    ) as Termin[]);
     setLadenAkte(false);
   }, []);
 
@@ -84,7 +95,7 @@ export default function KundeAktePage() {
 
   const umsatz = rechnungen.filter((r) => r.zahlungsstatus !== 'storniert').reduce((s, r) => s + (Number(r.brutto_summe) || 0), 0);
   const offen = rechnungen.filter((r) => !bezahlt(r) && r.zahlungsstatus !== 'storniert').reduce((s, r) => s + (Number(r.brutto_summe) || 0), 0);
-  const naechsterTermin = termine.filter((t) => t.beginn_am && new Date(t.beginn_am) >= new Date()).sort((a, b) => (a.beginn_am || '').localeCompare(b.beginn_am || ''))[0];
+  const naechsterTermin = findeNaechsten(termine, new Date().toISOString()) as Termin | null;
 
   return (
     <div style={styles.page}>
@@ -169,11 +180,11 @@ export default function KundeAktePage() {
                   </Sektion>
 
                   <Sektion titel="🗓 Termine">
-                    {termine.length === 0 ? <p style={styles.dim}>Keine Termine (Match über die Kunden-E-Mail).</p> : termine.map((t, i) => (
-                      <Zeile key={i}
+                    {termine.length === 0 ? <p style={styles.dim}>Keine Termine für diesen Kunden.</p> : termine.map((t, i) => (
+                      <Zeile key={t.id || i}
                         links={<strong>{t.titel || 'Termin'}</strong>}
                         mitte={d(t.beginn_am)}
-                        rechts=""
+                        rechts={zuordnungsWeg(t) === 'kunde' ? '' : 'über E-Mail gefunden'}
                         badge={{ t: t.status || 'geplant', f: C.cyan }} />
                     ))}
                   </Sektion>
