@@ -65,7 +65,7 @@ export default function LandingpageSeite() {
   async function absenden() {
     setFormFehler(null);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormFehler('Bitte eine gültige E-Mail-Adresse eingeben.'); return; }
-    if (!einwilligung) { setFormFehler('Bitte bestätige die Einwilligung, damit wir dir schreiben dürfen.'); return; }
+    if (!einwilligung) { setFormFehler('Bitte bestätigen Sie die Einwilligung — ohne sie dürfen wir Ihnen nicht schreiben.'); return; }
     setSenden(true);
     try {
       const res = await fetch('/api/oeffentlich/lp', {
@@ -154,11 +154,11 @@ export default function LandingpageSeite() {
           {fertig ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 40, marginBottom: 8 }}>{fertig === 'bereits' ? '👍' : '📩'}</div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>{fertig === 'bereits' ? 'Du bist schon dabei' : 'Fast geschafft!'}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>{fertig === 'bereits' ? 'Sie sind bereits angemeldet' : 'Fast geschafft'}</h2>
               <p style={{ color: '#6b7280', fontSize: 16, lineHeight: 1.55, margin: 0 }}>
                 {fertig === 'bereits'
-                  ? `Deine Adresse ist bereits bei ${d.betrieb} bestätigt.`
-                  : `Wir haben dir eine E-Mail geschickt. Bitte öffne sie und klicke auf „Anmeldung bestätigen“ — erst danach bist du dabei.`}
+                  ? `Ihre Adresse ist bei ${d.betrieb} bereits bestätigt.`
+                  : `Wir haben Ihnen eine E-Mail geschickt. Bitte öffnen Sie sie und klicken Sie auf „Anmeldung bestätigen“ — erst danach sind Sie angemeldet.`}
               </p>
             </div>
           ) : (
