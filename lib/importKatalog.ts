@@ -28,6 +28,16 @@ export type ImportQuelle = {
   /** Oeffentlicher Pfad der CSV-Vorlage (/vorlagen/...). Fehlt, wenn das Modul
    *  einen eigenen Import ohne Vorlagen-Datei hat. */
   vorlage?: string;
+  /**
+   * Schluessel eines Ziels aus lib/importParser (ZIELE) — dann wird die Vorlage
+   * NICHT aus einer Datei geladen, sondern mit baueMustervorlage() aus dem
+   * Feld-Katalog erzeugt. Vorteil: neues Feld im Parser = neue Spalte in der
+   * Vorlage, ohne dass jemand eine CSV nachzieht.
+   *
+   * Bewusst nur ein String und kein Import: diese Datei bleibt ohne
+   * Abhaengigkeiten und mit `node --test` pruefbar.
+   */
+  musterZiel?: string;
   /** Wohin der eigentliche Import fuehrt (Modul-Seite). */
   zielHref: string;
   gruppe: ImportGruppeKey;
@@ -44,8 +54,8 @@ const V = '/vorlagen/';
 
 export const IMPORT_QUELLEN: ImportQuelle[] = [
   // --- Stammdaten -----------------------------------------------------------
-  { key: 'kontakte', label: 'Kontakte / CRM', icon: '🤝', beschreibung: 'Kunden und Firmen ins CRM übernehmen.', zielHref: '/dashboard/crm/import', gruppe: 'stammdaten' },
-  { key: 'artikel', label: 'Artikel & Preise (Lager)', icon: '📦', beschreibung: 'Sortiment und Preisliste ins ERP/Lager laden.', zielHref: '/dashboard/erp/preisliste', gruppe: 'stammdaten' },
+  { key: 'kontakte', label: 'Kontakte / CRM', icon: '🤝', beschreibung: 'Kunden und Firmen ins CRM übernehmen.', musterZiel: 'kontakte', zielHref: '/dashboard/crm/import', gruppe: 'stammdaten' },
+  { key: 'artikel', label: 'Artikel & Preise (Lager)', icon: '📦', beschreibung: 'Sortiment und Preisliste ins ERP/Lager laden.', musterZiel: 'artikel', zielHref: '/dashboard/erp/preisliste', gruppe: 'stammdaten' },
   { key: 'lieferanten', label: 'Lieferanten', icon: '🏭', beschreibung: 'Lieferanten-Stammdaten für Einkauf und ERP.', vorlage: V + 'lieferanten-import-vorlage.csv', zielHref: '/dashboard/erp/lieferanten', gruppe: 'stammdaten' },
   { key: 'varianten', label: 'Artikel-Varianten & Matrix', icon: '🧩', beschreibung: 'Varianten-Gruppen (Größe/Farbe) für den Handel.', vorlage: V + 'varianten-import-vorlage.csv', zielHref: '/dashboard/varianten', gruppe: 'stammdaten' },
 
@@ -60,6 +70,7 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'aufwand', label: 'Aufwand / Leistungen', icon: '⏱', beschreibung: 'Erfasste Leistungen und Zeiten zum Abrechnen.', vorlage: V + 'aufwand-import-vorlage.csv', zielHref: '/dashboard/aufwand', gruppe: 'betrieb' },
   { key: 'bde', label: 'Maschinen (BDE/MDE)', icon: '📟', beschreibung: 'Maschinenstammdaten für die Betriebsdatenerfassung.', vorlage: V + 'bde-maschinen-import-vorlage.csv', zielHref: '/dashboard/bde', gruppe: 'betrieb' },
   { key: 'chargen', label: 'Chargen & Serien', icon: '🔬', beschreibung: 'Chargen-/Serien-Lose mit Rückverfolgbarkeit.', vorlage: V + 'chargen-import-vorlage.csv', zielHref: '/dashboard/chargen', gruppe: 'betrieb' },
+  { key: 'zuschnitt', label: 'Zuschnitt-Teile', icon: '📐', beschreibung: 'Teilelisten mit Länge und Stückzahl für die Zuschnitt-Optimierung.', vorlage: V + 'zuschnitt-teile-import-vorlage.csv', zielHref: '/dashboard/zuschnitt', gruppe: 'betrieb' },
   { key: 'etiketten', label: 'Etiketten & LMIV', icon: '🏷️', beschreibung: 'Produkte mit Zutaten, Allergenen, Nährwerten.', vorlage: V + 'etiketten-import-vorlage.csv', zielHref: '/dashboard/etiketten', gruppe: 'betrieb' },
   { key: 'speisekarte', label: 'Speisekarte / Menü', icon: '🍽', beschreibung: 'Gerichte mit Preis, Allergenen, Zusatzstoffen.', vorlage: V + 'speisekarte-import-vorlage.csv', zielHref: '/dashboard/housekeeping', gruppe: 'betrieb' },
   { key: 'rezeptur', label: 'Rezepturen', icon: '🧮', beschreibung: 'Rezepturen und Zutaten für den Ausbeute-Rechner.', vorlage: V + 'rezeptur-import-vorlage.csv', zielHref: '/dashboard/rezeptur', gruppe: 'betrieb' },
@@ -83,6 +94,7 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'freigaben', label: 'Freigaben & Assets', icon: '✅', beschreibung: 'Kreativ-Assets für Freigaben & Proofing.', vorlage: V + 'freigaben-assets-import-vorlage.csv', zielHref: '/dashboard/freigaben', gruppe: 'betrieb' },
 
   // --- Finanzen & Förderung -------------------------------------------------
+  { key: 'rechnungen', label: 'Offene Rechnungen (Altsystem)', icon: '🧾', beschreibung: 'Bestehende Rechnungen mit Zahlungsstand aus dem alten System übernehmen.', musterZiel: 'rechnungen', zielHref: '/dashboard/rechnungen', gruppe: 'finanzen' },
   { key: 'foerdervorhaben', label: 'Fördervorhaben', icon: '💰', beschreibung: 'Fördervorhaben mit Nachweis-Fristen.', vorlage: V + 'foerdervorhaben-import-vorlage.csv', zielHref: '/dashboard/foerdermittel', gruppe: 'finanzen' },
   { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial).', vorlage: V + 'spenden-import-vorlage.csv', zielHref: '/dashboard/spenden', gruppe: 'finanzen' },
 ];
@@ -90,6 +102,16 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
 /** Alle Quellen (Kopie, damit Aufrufer nicht die Konstante mutieren). */
 export function importQuellen(): ImportQuelle[] {
   return [...IMPORT_QUELLEN];
+}
+
+/**
+ * Gibt es fuer diese Quelle ueberhaupt eine Vorlage zum Herunterladen?
+ * Entweder eine fertige Datei unter /vorlagen/ oder eine, die aus dem
+ * Feld-Katalog erzeugt wird. Nur wenn beides fehlt, ist es ein reiner
+ * „eigener Import" ohne Muster.
+ */
+export function hatVorlage(quelle: ImportQuelle): boolean {
+  return !!quelle.vorlage || !!quelle.musterZiel;
 }
 
 /** Freitext-Filter über Label + Beschreibung (case-insensitive). Leerer Text = alle. */
@@ -111,7 +133,7 @@ export function gruppiereImporte(
 /** KPI-Zahlen fürs Cockpit. */
 export function zaehleImporte(quellen: ImportQuelle[]): { gesamt: number; mitVorlage: number; gruppen: number } {
   const gesamt = quellen.length;
-  const mitVorlage = quellen.filter((s) => !!s.vorlage).length;
+  const mitVorlage = quellen.filter(hatVorlage).length;
   const gruppen = gruppiereImporte(quellen).length;
   return { gesamt, mitVorlage, gruppen };
 }

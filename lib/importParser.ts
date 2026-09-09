@@ -288,59 +288,69 @@ export function zielDef(key: string): ImportZiel | undefined {
 
 const BEISPIELE: Record<string, Record<string, string>> = {
   kontakte: {
-    firma: 'Muster GmbH|Beispiel Handwerk e.K.',
-    vorname: 'Anna|Thomas',
-    nachname: 'Berger|Klein',
-    email: 'a.berger@muster.de|info@beispiel-handwerk.de',
-    telefon: '0201 1234567|0170 9876543',
-    position: 'Einkauf|Inhaber',
-    status: 'kunde|interessent',
-    quelle: 'Empfehlung|Messe',
-    notizen: 'Zahlt immer puenktlich|Ueber Kollegen gekommen',
+    firma: 'Muster GmbH|Beispiel Handwerk e.K.|',
+    vorname: 'Anna|Thomas|Petra',
+    nachname: 'Berger|Klein|Wagner',
+    email: 'a.berger@muster.de|info@beispiel-handwerk.de|p.wagner@web.de',
+    telefon: '0201 1234567|0170 9876543|0711 4455667',
+    position: 'Einkauf|Inhaber|',
+    status: 'kunde|interessent|interessent',
+    quelle: 'Empfehlung|Messe|Website',
+    notizen: 'Zahlt immer puenktlich|Ueber Kollegen gekommen|Privatkunde, keine Firma',
   },
   artikel: {
-    bezeichnung: 'Sechskantschraube M8x40|Dichtungsband 10m',
-    artikelnummer: 'A-1001|A-1002',
-    beschreibung: 'verzinkt, DIN 933|selbstklebend, grau',
-    kategorie: 'Verbindungstechnik|Dichtstoffe',
-    einheit: 'Stk|Rolle',
-    einkaufspreis: '0,45|3,90',
-    verkaufspreis: '1,20|8,50',
-    aktueller_bestand: '250|40',
-    mindestbestand: '50|10',
-    lagerort: 'Regal A3|Regal B1',
-    ean: '4012345678901|4012345678902',
-    aktiv: 'ja|ja',
+    bezeichnung: 'Sechskantschraube M8x40|Dichtungsband 10m|Arbeitsstunde Monteur',
+    artikelnummer: 'A-1001|A-1002|L-500',
+    beschreibung: 'verzinkt, DIN 933|selbstklebend, grau|Regelarbeitszeit',
+    kategorie: 'Verbindungstechnik|Dichtstoffe|Leistungen',
+    einheit: 'Stk|Rolle|Std',
+    einkaufspreis: '0,45|3,90|0,00',
+    verkaufspreis: '1,20|8,50|68,00',
+    aktueller_bestand: '250|40|0',
+    mindestbestand: '50|10|0',
+    lagerort: 'Regal A3|Regal B1|',
+    ean: '4012345678901|4012345678902|',
+    aktiv: 'ja|ja|ja',
   },
   lieferanten: {
-    name: 'Grosshandel Nord GmbH|Werkzeug Sued AG',
-    ansprechpartner: 'Frau Meier|Herr Bauer',
-    email: 'bestellung@grosshandel-nord.de|vertrieb@werkzeug-sued.de',
-    telefon: '040 1234567|089 7654321',
-    adresse: 'Hafenstrasse 12, 20457 Hamburg|Industriering 4, 80939 Muenchen',
-    website: 'www.grosshandel-nord.de|www.werkzeug-sued.de',
-    kundennummer: 'K-88123|4711',
-    notizen: 'Lieferung Di und Do|Ab 500 EUR frei Haus',
+    name: 'Grosshandel Nord GmbH|Werkzeug Sued AG|Elektro Mitte KG',
+    ansprechpartner: 'Frau Meier|Herr Bauer|',
+    email: 'bestellung@grosshandel-nord.de|vertrieb@werkzeug-sued.de|info@elektro-mitte.de',
+    telefon: '040 1234567|089 7654321|',
+    adresse: 'Hafenstrasse 12, 20457 Hamburg|Industriering 4, 80939 Muenchen|Am Kanal 7, 34117 Kassel',
+    website: 'www.grosshandel-nord.de|www.werkzeug-sued.de|',
+    kundennummer: 'K-88123|4711|',
+    notizen: 'Lieferung Di und Do|Ab 500 EUR frei Haus|Nur Abholung',
   },
   rechnungen: {
-    rechnungsnummer: 'RE-2025-0142|RE-2025-0143',
-    titel: 'Wartung Anlage Halle 2|Montage Tuerelement',
-    rechnungsdatum: '12.05.2025|28.05.2025',
-    faelligkeitsdatum: '26.05.2025|11.06.2025',
-    netto_summe: '1250,00|480,00',
-    mwst_summe: '237,50|91,20',
-    brutto_summe: '1487,50|571,20',
-    bezahlter_betrag: '0,00|200,00',
-    zahlungsstatus: 'offen|teilbezahlt',
-    notizen: 'Aus Altsystem uebernommen|Anzahlung erhalten',
+    rechnungsnummer: 'RE-2025-0142|RE-2025-0143|RE-2025-0144',
+    titel: 'Wartung Anlage Halle 2|Montage Tuerelement|Materiallieferung KW 22',
+    rechnungsdatum: '12.05.2025|28.05.2025|02.06.2025',
+    faelligkeitsdatum: '26.05.2025|11.06.2025|16.06.2025',
+    netto_summe: '1250,00|480,00|318,50',
+    mwst_summe: '237,50|91,20|60,52',
+    brutto_summe: '1487,50|571,20|379,02',
+    bezahlter_betrag: '0,00|200,00|379,02',
+    zahlungsstatus: 'offen|teilbezahlt|bezahlt',
+    notizen: 'Aus Altsystem uebernommen|Anzahlung erhalten|',
   },
 };
 
 /**
+ * Wie viele Beispielzeilen eine Mustervorlage bekommt. Drei Zeilen zeigen
+ * mehr als zwei: eine gefuellte, eine abweichende und eine mit bewusst
+ * leeren Feldern — damit sieht der Kunde, was Pflicht ist und was nicht.
+ */
+export const ZEILEN_JE_MUSTERVORLAGE = 3;
+
+/**
  * Baut eine Muster-CSV fuer ein Import-Ziel: Kopfzeile mit allen Feldern
- * (Pflichtfelder mit *) und zwei ausgefuellten Beispielzeilen. Semikolon als
+ * (Pflichtfelder mit *) und drei ausgefuellten Beispielzeilen. Semikolon als
  * Trennzeichen und BOM voran — damit deutsches Excel sie beim Doppelklick
  * korrekt in Spalten legt und Umlaute richtig zeigt.
+ *
+ * Fehlt zu einem Feld ein Beispielwert, bleibt die Zelle leer — nie undefined,
+ * nie eine Spalte weniger als in der Kopfzeile.
  */
 export function baueMustervorlage(zielKey: string): string {
   const ziel = zielDef(zielKey);
@@ -349,11 +359,12 @@ export function baueMustervorlage(zielKey: string): string {
   const beispiel = BEISPIELE[zielKey] ?? {};
   const kopf = ziel.felder.map((f) => f.label + (f.pflicht ? ' *' : ''));
 
-  const zeilen: string[][] = [[], []];
+  const zeilen: string[][] = Array.from({ length: ZEILEN_JE_MUSTERVORLAGE }, () => [] as string[]);
   for (const f of ziel.felder) {
-    const paar = (beispiel[f.key] ?? '').split('|');
-    zeilen[0]?.push(paar[0] ?? '');
-    zeilen[1]?.push(paar[1] ?? paar[0] ?? '');
+    const teile = (beispiel[f.key] ?? '').split('|');
+    for (let i = 0; i < ZEILEN_JE_MUSTERVORLAGE; i++) {
+      zeilen[i]?.push(teile[i] ?? '');
+    }
   }
 
   const feldRaus = (s: string) => (/[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);

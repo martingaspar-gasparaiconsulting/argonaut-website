@@ -16,7 +16,10 @@
 
 import { useMemo, useState, useEffect, useCallback, type CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { importQuellen, sucheImporte, gruppiereImporte, zaehleImporte, quellenFuerModule } from '@/lib/importKatalog';
+import {
+  importQuellen, sucheImporte, gruppiereImporte, zaehleImporte, quellenFuerModule,
+  type ImportQuelle,
+} from '@/lib/importKatalog';
 import { BRANCHEN_PAKETE, KERN_MODULE, paketModule } from '@/lib/pakete';
 import { MODUL_PFAD } from '@/lib/rechte';
 import {
@@ -72,6 +75,44 @@ function fmtZeit(iso: string | null): string {
 
 /** Merkt die gewaehlte Branche im Browser (nur Anzeige-Komfort, keine Daten). */
 const BRANCHE_SPEICHER = 'argonaut_import_branche';
+
+/**
+ * Laedt die aus dem Feld-Katalog erzeugte Mustervorlage als CSV herunter.
+ * Wird an zwei Stellen gebraucht: im Assistenten (Stufe 2) und auf den
+ * Katalogkarten unten, die keine fertige Datei unter /vorlagen/ haben.
+ */
+function musterHerunterladen(zielKey: string) {
+  const csv = baueMustervorlage(zielKey);
+  if (!csv) return;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `argonaut-vorlage-${zielKey}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Der Vorlagen-Knopf einer Katalogkarte: fertige Datei, erzeugte Vorlage oder nichts. */
+function VorlagenKnopf({ quelle }: { quelle: ImportQuelle }) {
+  if (quelle.vorlage) {
+    return <a href={quelle.vorlage} download style={styles.btnVorlage}>⬇ Vorlage</a>;
+  }
+  if (quelle.musterZiel) {
+    const zielKey = quelle.musterZiel;
+    return (
+      <button
+        type="button"
+        onClick={() => musterHerunterladen(zielKey)}
+        style={{ ...styles.btnVorlage, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.2 }}
+        title="Beispieldatei mit den richtigen Spalten und drei ausgefüllten Zeilen"
+      >
+        ⬇ Vorlage
+      </button>
+    );
+  }
+  return <span style={styles.keineVorlage}>eigener Import</span>;
+}
 
 export default function ImportCenterPage() {
   // --- Stufe 1: Katalog (unveraendert) -------------------------------------
@@ -130,15 +171,7 @@ export default function ImportCenterPage() {
   /** Die eigene Mustervorlage als CSV herunterladen — passt garantiert. */
   function vorlageHerunterladen() {
     if (!ziel) return;
-    const csv = baueMustervorlage(ziel.key);
-    if (!csv) return;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `argonaut-vorlage-${ziel.key}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    musterHerunterladen(ziel.key);
   }
 
   function zuruecksetzen(behalteZiel = false) {
@@ -692,11 +725,7 @@ export default function ImportCenterPage() {
                   </div>
                   <div style={styles.karteText}>{s.beschreibung}</div>
                   <div style={styles.karteAktionen}>
-                    {s.vorlage ? (
-                      <a href={s.vorlage} download style={styles.btnVorlage}>⬇ Vorlage</a>
-                    ) : (
-                      <span style={styles.keineVorlage}>eigener Import</span>
-                    )}
+                    <VorlagenKnopf quelle={s} />
                     <a href={s.zielHref} style={styles.btnZiel}>Zum Import ›</a>
                   </div>
                 </div>
