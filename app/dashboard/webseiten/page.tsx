@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
+import { leseDomainListe, baueEinbettSchnipsel, MAX_DOMAINS } from '@/lib/chatEinbetten';
 import SeitenEditor from './_components/SeitenEditor';
 
 const supabase = createBrowserClient(
@@ -61,6 +62,11 @@ export default function WebseitenPage() {
   const [domain, setDomain] = useState('');
   const [domainMsg, setDomainMsg] = useState<string | null>(null);
   const [domainSpeichert, setDomainSpeichert] = useState(false);
+  // G1 · Berater auf der eigenen Website: Freigabe-Domains und Schnipsel
+  const [chatDomains, setChatDomains] = useState('');
+  const [chatMsg, setChatMsg] = useState<string | null>(null);
+  const [chatSpeichert, setChatSpeichert] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data } = await supabase.from('web_ci').select('*').eq('owner_user_id', userId).maybeSingle();
@@ -68,10 +74,11 @@ export default function WebseitenPage() {
   }, []);
 
   const ladeLive = useCallback(async (userId: string, slug: string) => {
-    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status, domain').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
-    const d = data as { oeffentlich_id: string | null; status: string; domain: string | null } | null;
+    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status, domain, chat_domains').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
+    const d = data as { oeffentlich_id: string | null; status: string; domain: string | null; chat_domains: string[] | null } | null;
     setLiveInfo(d ? { oeffentlich_id: d.oeffentlich_id, status: d.status } : null);
     setDomain(d?.domain || '');
+    setChatDomains((d?.chat_domains ?? []).join('\n'));
   }, []);
 
   useEffect(() => {
@@ -179,6 +186,48 @@ export default function WebseitenPage() {
     setDomainMsg(norm ? 'Domain gespeichert. Jetzt die DNS-Einträge setzen und die Domain im Hoster hinterlegen.' : 'Domain entfernt.');
     setDomainSpeichert(false);
   }
+
+  /**
+   * G1 · Welche fremden Websites dürfen den Berater einbetten?
+   * Ohne Eintrag antwortet der Berater dort nicht — das ist Absicht: sonst
+   * könnte jede beliebige Seite ihn auf Kosten des Betriebs laufen lassen.
+   */
+  async function chatDomainsSpeichern() {
+    if (!uid) return;
+    setChatMsg(null); setChatSpeichert(true);
+    const liste = leseDomainListe(chatDomains);
+    await speichern(); // Zeile sicherstellen
+    const { error } = await supabase.from('web_seiten')
+      .update({ chat_domains: liste, aktualisiert_am: new Date().toISOString() })
+      .eq('owner_user_id', uid).eq('slug', zweck);
+    if (error) {
+      setChatMsg('Konnte die Freigabe nicht speichern.');
+      setChatSpeichert(false); return;
+    }
+    setChatDomains(liste.join('\n'));
+    setChatMsg(liste.length
+      ? `Freigegeben für ${liste.length === 1 ? 'eine Adresse' : liste.length + ' Adressen'}: ${liste.join(', ')}`
+      : 'Keine Adresse freigegeben — der Berater läuft nur auf Ihrer ARGONAUT-Seite.');
+    setChatSpeichert(false);
+  }
+
+  async function schnipselKopieren() {
+    const text = einbettSchnipsel;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setKopiert(true);
+      window.setTimeout(() => setKopiert(false), 2200);
+    } catch {
+      setChatMsg('Das Kopieren hat der Browser abgelehnt — bitte den Text von Hand markieren.');
+    }
+  }
+
+  const einbettSchnipsel = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    if (!liveInfo?.oeffentlich_id || liveInfo.status !== 'live') return '';
+    return baueEinbettSchnipsel({ basis: window.location.origin, oeffentlichId: liveInfo.oeffentlich_id });
+  }, [liveInfo]);
 
   const breite = GERAETE.find((g) => g.key === geraet)?.breite ?? null;
   const zweckInfo = ZWECKE.find((z) => z.key === zweck);
@@ -332,6 +381,65 @@ export default function WebseitenPage() {
             </div>
           </div>
 
+          {/* 7 · Der Berater auf Ihrer eigenen Website */}
+          <div style={styles.card}>
+            <div style={styles.cardTitel}>7 · Berater auf Ihrer eigenen Website <span style={styles.optional}>optional</span></div>
+            <p style={styles.mini}>
+              Sie haben schon eine Website — bei WordPress, Wix, Jimdo oder sonstwo? Dann muss sie nicht umziehen.
+              Zwei Zeilen genügen, und der KI-Berater steht dort unten links, kennt Ihre Produkte, Preise und Bestände.
+            </p>
+
+            {liveInfo?.status === 'live' && liveInfo.oeffentlich_id ? (
+              <>
+                <div style={styles.feldTitel}>Welche Adressen dürfen ihn einbetten?</div>
+                <p style={styles.mini}>
+                  Eine je Zeile, höchstens {MAX_DOMAINS}. <b>Ohne Eintrag läuft er nur auf Ihrer ARGONAUT-Seite</b> —
+                  das schützt Sie davor, dass eine fremde Seite ihn auf Ihre Kosten laufen lässt.
+                  „www.“ brauchen Sie nicht mitzuschreiben, eine Unteradresse wie <code style={styles.code}>shop.ihre-firma.de</code> dagegen schon.
+                </p>
+                <textarea
+                  style={{ ...styles.eingabe, minHeight: 84, resize: 'vertical', fontFamily: 'inherit' }}
+                  value={chatDomains}
+                  onChange={(e) => setChatDomains(e.target.value)}
+                  placeholder={'ihre-firma.de\nshop.ihre-firma.de'}
+                />
+                <div style={styles.saveBar}>
+                  <button
+                    style={{ ...styles.btnGold, opacity: chatSpeichert ? 0.6 : 1 }}
+                    disabled={chatSpeichert}
+                    onClick={chatDomainsSpeichern}
+                  >
+                    {chatSpeichert ? '…' : 'Freigabe speichern'}
+                  </button>
+                </div>
+                {chatMsg && <div style={styles.liveBox}>{chatMsg}</div>}
+
+                <div style={styles.feldTitel}>Diese zwei Zeilen kopieren</div>
+                <p style={styles.mini}>
+                  Einfügen, wo der Chat erscheinen soll — bei den meisten Baukästen ins Feld „eigener HTML-Code“
+                  oder kurz vor das schließende <code style={styles.code}>&lt;/body&gt;</code>.
+                </p>
+                <pre style={styles.schnipsel}>{einbettSchnipsel}</pre>
+                <div style={styles.saveBar}>
+                  <button style={styles.btnGold} onClick={schnipselKopieren}>
+                    {kopiert ? '✅ Kopiert' : '📋 Schnipsel kopieren'}
+                  </button>
+                </div>
+                <div style={styles.dnsBox}>
+                  <b>Gut zu wissen:</b>
+                  <div style={{ marginTop: 6 }}>Der Berater ist als KI gekennzeichnet — sichtbar im Kopf und unter dem Eingabefeld. Das verlangt die EU-KI-Verordnung, und es ist nicht abschaltbar.</div>
+                  <div style={{ marginTop: 4 }}>Er nennt nur Produkte und Preise, die in Ihrem Shop hinterlegt sind, und erfindet nichts dazu.</div>
+                  <div style={{ marginTop: 4 }}>Er bringt sein Aussehen selbst mit und stört das Design Ihrer Seite nicht.</div>
+                </div>
+              </>
+            ) : (
+              <div style={styles.liveBox}>
+                Dafür muss die Seite zuerst veröffentlicht sein — sie liefert die Kennung, über die der Berater
+                Ihren Betrieb erkennt. Schritt 5 erledigt das mit einem Klick.
+              </div>
+            )}
+          </div>
+
           <div style={styles.hinweis}>
             ℹ️ Sobald jemand auf Ihrer Seite eine Anfrage schickt, landet der Kontakt automatisch in Ihrem CRM —
             Website und Vertrieb sind dieselbe Maschine.
@@ -385,6 +493,8 @@ const styles: Record<string, CSSProperties> = {
   eingabe: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '11px 13px', fontSize: FS.text, fontFamily: 'inherit', flex: 1, minWidth: 200, maxWidth: 360, boxSizing: 'border-box' },
   dnsBox: { fontSize: FS.klein, color: C.textDim, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', lineHeight: 1.6 },
   code: { background: 'rgba(0,229,255,0.1)', color: C.cyan, borderRadius: 5, padding: '1px 6px', fontFamily: 'ui-monospace, monospace', fontSize: '0.92em' },
+  feldTitel: { marginTop: 16, marginBottom: 6, fontSize: FS.text, fontWeight: 700, color: C.text },
+  schnipsel: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px', fontFamily: 'ui-monospace, monospace', fontSize: FS.mini, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', overflowX: 'auto', margin: 0 },
 
   warnBox: { marginTop: 14, fontSize: FS.text, color: C.text, background: `${C.warn}18`, border: `1px solid ${C.warn}55`, borderRadius: 12, padding: '14px 16px', lineHeight: 1.6 },
   link: { color: C.gold, fontWeight: 700 },

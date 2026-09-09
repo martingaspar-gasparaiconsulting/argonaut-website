@@ -8,14 +8,58 @@
 // AI-Act: der Bot ist im Widget klar als KI gekennzeichnet.
 // Body: { seite, frage, verlauf?: [{role:'user'|'assistant', text}] }
 // Antwort: { antwort } | { error }
+//
+// G1 (09.09.2026): laeuft jetzt AUCH auf fremden Kundenwebsites. Dafuer eine
+// Herkunftspruefung gegen `web_seiten.chat_domains` — ohne sie koennte jede
+// beliebige Seite den Bot auf unsere Rechnung laufen lassen. Der Browser-CORS
+// ist dabei nur die sichtbare Folge; die Kostenbremse ist die Pruefung selbst,
+// die auch greift, wenn jemand die Anfrage ohne Browser stellt.
+// Aufrufe OHNE Origin (gleiche Herkunft, also unsere eigenen /p/-Seiten)
+// bleiben unveraendert erlaubt.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { kiFetch } from '@/lib/ki';
+import { originErlaubt } from '@/lib/chatEinbetten';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** CORS-Kopfzeilen fuer genau EINEN erlaubten Ursprung. Nie '*'. */
+function corsKopf(origin: string): Record<string, string> {
+  return {
+    'access-control-allow-origin': origin,
+    'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-allow-headers': 'content-type',
+    'access-control-max-age': '86400',
+    vary: 'Origin',
+  };
+}
+
+/**
+ * Der Vorab-Aufruf des Browsers (Preflight). Er kommt vor dem eigentlichen
+ * POST und ohne Body — die Seiten-Kennung steckt hier nur im Query-Teil.
+ * Ohne bekannte Kennung antworten wir freundlich mit 204 ohne CORS-Kopf:
+ * der Browser bricht dann ab, und wir haben keine Datenbank angefasst.
+ */
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const seite = new URL(req.url).searchParams.get('seite') || '';
+  if (!origin || !seite) return new Response(null, { status: 204 });
+
+  try {
+    const db = admin();
+    const { data } = await db.from('web_seiten').select('chat_domains, status').eq('oeffentlich_id', seite).maybeSingle();
+    const row = data as { chat_domains?: string[] | null; status?: string } | null;
+    if (!row || row.status !== 'live' || !originErlaubt(origin, row.chat_domains)) {
+      return new Response(null, { status: 204 });
+    }
+    return new Response(null, { status: 204, headers: corsKopf(origin) });
+  } catch {
+    return new Response(null, { status: 204 });
+  }
+}
 
 function admin() {
   return createClient(
@@ -32,6 +76,11 @@ type ArtikelRow = { bezeichnung: string | null; verkaufspreis: number | null; sh
 type VerlaufItem = { role?: string; text?: string };
 
 export async function POST(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  // Wird gesetzt, sobald die Herkunft geprueft ist. Ab da traegt JEDE Antwort
+  // die Kopfzeilen — auch die Fehler, sonst sieht der Besucher auf der fremden
+  // Seite statt der echten Meldung nur „Verbindung fehlgeschlagen“.
+  let kopf: Record<string, string> = {};
   try {
     const body = await req.json().catch(() => ({}));
     const seite = (typeof body?.seite === 'string' ? body.seite : '').trim();
@@ -43,12 +92,24 @@ export async function POST(req: Request) {
     if (!apiKey) return NextResponse.json({ error: 'Der Berater ist gerade nicht verfügbar.' }, { status: 500 });
 
     const db = admin();
-    const { data: s } = await db.from('web_seiten').select('owner_user_id, status').eq('oeffentlich_id', seite).maybeSingle();
-    const inh = s as { owner_user_id?: string; status?: string } | null;
+    const { data: s } = await db.from('web_seiten').select('owner_user_id, status, chat_domains').eq('oeffentlich_id', seite).maybeSingle();
+    const inh = s as { owner_user_id?: string; status?: string; chat_domains?: string[] | null } | null;
     if (!inh || inh.status !== 'live' || !inh.owner_user_id) {
       return NextResponse.json({ error: 'Der Berater ist auf dieser Seite nicht aktiv.' }, { status: 404 });
     }
     const ownerId = inh.owner_user_id;
+
+    // Fremde Herkunft? Dann muss sie eingetragen sein — sonst kostet uns eine
+    // beliebige Seite bares Geld. Ohne Origin ist es unsere eigene Seite.
+    if (origin) {
+      if (!originErlaubt(origin, inh.chat_domains)) {
+        return NextResponse.json(
+          { error: 'Diese Website ist für den Berater nicht freigeschaltet.' },
+          { status: 403 },
+        );
+      }
+      kopf = corsKopf(origin);
+    }
 
     const { data: ciRow } = await db.from('web_ci').select('firma, slogan, ueber_uns').eq('owner_user_id', ownerId).maybeSingle();
     const ci = ciRow as { firma?: string; slogan?: string; ueber_uns?: string } | null;
@@ -100,17 +161,17 @@ Regeln:
     if (!kiRes.ok) {
       const t = await kiRes.text();
       console.error('oeffentlich/chat Fehler:', kiRes.status, t.slice(0, 200));
-      return NextResponse.json({ error: 'Der Berater ist gerade überlastet. Bitte kurz später erneut.' }, { status: 502 });
+      return NextResponse.json({ error: 'Der Berater ist gerade überlastet. Bitte kurz später erneut.' }, { status: 502, headers: kopf });
     }
 
     const kiData = await kiRes.json();
     const blocks: Array<{ type?: string; text?: string }> = Array.isArray(kiData.content) ? kiData.content : [];
     const antwort = blocks.filter((b) => b.type === 'text').map((b) => b.text || '').join('').trim();
-    if (!antwort) return NextResponse.json({ error: 'Keine Antwort erhalten. Bitte erneut versuchen.' }, { status: 502 });
+    if (!antwort) return NextResponse.json({ error: 'Keine Antwort erhalten. Bitte erneut versuchen.' }, { status: 502, headers: kopf });
 
-    return NextResponse.json({ antwort });
+    return NextResponse.json({ antwort }, { headers: kopf });
   } catch (e: unknown) {
     console.error('oeffentlich/chat interner Fehler:', e instanceof Error ? e.message : e);
-    return NextResponse.json({ error: 'Interner Fehler.' }, { status: 500 });
+    return NextResponse.json({ error: 'Interner Fehler.' }, { status: 500, headers: kopf });
   }
 }
