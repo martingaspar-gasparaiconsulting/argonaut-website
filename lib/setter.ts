@@ -100,6 +100,34 @@ function leseMarke(inhalt: string): Record<string, string> {
   return raus;
 }
 
+/**
+ * Baut eine Markierung aus dem, was bisher bekannt ist.
+ *
+ * WARUM DIE SERVERSEITE SIE NEU SCHREIBT
+ * Der Chat lebt im Browser; sein Verlauf ist die einzige Erinnerung. Die
+ * Markierung, die die KI anhaengt, wird vor der Auslieferung entfernt — sonst
+ * saehe der Besucher sie. Also schickt der Server sie getrennt zurueck, und
+ * das Widget haengt sie an den gemerkten Text (nicht an den angezeigten).
+ *
+ * Dabei wird sie NEU aufgebaut statt durchgereicht: Semikolon und Klammern
+ * fliegen aus den Werten, die Zahl der Schluessel ist gedeckelt. Ein Besucher
+ * kann seinen Verlauf manipulieren — er soll damit hoechstens das erreichen,
+ * was er auch durch Tippen erreicht haette, und keine Marke sprengen.
+ */
+export const MARKE_MAX_SCHLUESSEL = 25;
+
+export function baueMarke(erfasst: Record<string, string> | null | undefined): string {
+  const teile: string[] = [];
+  for (const [k, v] of Object.entries(erfasst || {})) {
+    const s = String(k ?? '').trim().toLowerCase().replace(/[;=[\]]/g, '');
+    const w = String(v ?? '').replace(/[;[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!s || !w) continue;
+    teile.push(`${s}=${w}`);
+    if (teile.length >= MARKE_MAX_SCHLUESSEL) break;
+  }
+  return teile.length ? `[[ERFASST: ${teile.join('; ')}]]` : '';
+}
+
 export type VerlaufItem = { role?: string; text?: string };
 
 /**
@@ -114,6 +142,76 @@ export function leseErfasst(verlauf: readonly VerlaufItem[] | null | undefined):
     for (const treffer of text.matchAll(new RegExp(MARKE.source, 'gi'))) {
       Object.assign(raus, leseMarke(treffer[1] ?? ''));
     }
+  }
+  return raus;
+}
+
+// ---------------------------------------------------------------------------
+// 1b) Die Einstellung aus der Datenbank
+// ---------------------------------------------------------------------------
+
+/**
+ * Liest eine Zeile aus `dialog_einstellung` in eine SetterEinstellung.
+ *
+ * Bewusst wehrhaft: `fragen` und `uebergabe_bei` koennen als Liste (jsonb,
+ * text[]) ODER als Text ankommen — je nachdem, was der Treiber liefert und was
+ * jemand in die Zeile geschrieben hat. Nichts davon darf die oeffentliche Route
+ * zum Absturz bringen; im Zweifel gilt die Standard-Einstellung.
+ *
+ * `fragen` ist danach IMMER gefuellt (notfalls mit STANDARD_FRAGEN). Damit
+ * braucht keine aufrufende Stelle mehr einen eigenen Notnagel — und es kann
+ * auch keine vergessen.
+ */
+export function leseEinstellung(zeile: unknown): SetterEinstellung {
+  const z = (zeile ?? {}) as Record<string, unknown>;
+
+  const rolle: Rolle = String(z.rolle ?? '').trim().toLowerCase() === 'setter' ? 'setter' : 'auskunft';
+
+  const zielRoh = String(z.ziel ?? '').trim().toLowerCase();
+  const ziel: Ziel = zielRoh === 'termin' || zielRoh === 'rueckruf' ? zielRoh : 'anfrage';
+
+  const fragen = leseFragen(z.fragen);
+
+  const slugRoh = String(z.buchung_slug ?? z.buchungSlug ?? '').trim().toLowerCase();
+
+  return {
+    rolle,
+    ziel,
+    fragen: fragen.length ? fragen : STANDARD_FRAGEN,
+    uebergabeBei: leseListe(z.uebergabe_bei ?? z.uebergabeBei),
+    buchungSlug: slugRoh || null,
+  };
+}
+
+/** Aus jsonb, Text oder Unsinn eine Liste von Zeichenketten machen. */
+function leseListe(wert: unknown): string[] {
+  let roh: unknown = wert;
+  if (typeof roh === 'string') {
+    const t = roh.trim();
+    if (!t) return [];
+    try { roh = JSON.parse(t); } catch { roh = t.split(','); }
+  }
+  if (!Array.isArray(roh)) return [];
+  return roh.map((x) => String(x ?? '').trim()).filter(Boolean).slice(0, 60);
+}
+
+/** Dasselbe fuer die Fragenliste — ohne Schluessel ist eine Frage wertlos. */
+function leseFragen(wert: unknown): Frage[] {
+  let roh: unknown = wert;
+  if (typeof roh === 'string') {
+    const t = roh.trim();
+    if (!t) return [];
+    try { roh = JSON.parse(t); } catch { return []; }
+  }
+  if (!Array.isArray(roh)) return [];
+  const raus: Frage[] = [];
+  for (const x of roh) {
+    const f = (x ?? {}) as Record<string, unknown>;
+    const schluessel = String(f.schluessel ?? f.key ?? '').trim().toLowerCase();
+    const frage = String(f.frage ?? f.text ?? '').trim();
+    if (!schluessel || !frage) continue;
+    raus.push({ schluessel, frage, pflicht: f.pflicht === true || f.pflicht === 'true' });
+    if (raus.length >= 12) break;
   }
   return raus;
 }

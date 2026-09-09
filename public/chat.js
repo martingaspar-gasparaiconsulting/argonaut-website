@@ -13,6 +13,11 @@
  *     Seiten-CSS existiert, gewinnt weiterhin dieses.
  *   · Die Seiten-Kennung hängt zusätzlich am URL, damit der Vorab-Aufruf des
  *     Browsers (Preflight) weiß, welche Seite gemeint ist.
+ *
+ * G3 (09.09.2026) — der Bot kann jetzt auch SETTER sein (führt ein Gespräch
+ * auf ein Ziel hin). Dafür schickt der Server neben der Antwort ein Feld
+ * `merk`: die unsichtbare Notiz, was er sich gemerkt hat. Angezeigt wird sie
+ * nie, gemerkt schon — sonst fängt jede Runde wieder bei null an.
  */
 (function () {
   /* Die eigene Adresse MUSS gelesen werden, solange das Skript läuft —
@@ -99,7 +104,11 @@
           if (tip.parentNode) tip.parentNode.removeChild(tip);
           var a = (x.ok && x.d && x.d.antwort) ? x.d.antwort : ((x.d && x.d.error) || 'Entschuldigung, das hat gerade nicht geklappt.');
           add('assistant', a);
-          if (x.ok) verlauf.push({ role: 'assistant', text: a });
+          /* G3: `merk` ist die unsichtbare Notiz des Setters (was er im Gespraech
+             schon erfahren hat). Sie wird ANGEZEIGT nie, nur GEMERKT — beim
+             naechsten Aufruf liest der Server sie daraus zurueck. Fehlt sie
+             (Auskunfts-Bot), bleibt alles wie bisher. */
+          if (x.ok) verlauf.push({ role: 'assistant', text: a + ((x.d && x.d.merk) || '') });
         }).catch(function () {
           if (tip.parentNode) tip.parentNode.removeChild(tip);
           add('assistant', 'Verbindung fehlgeschlagen. Bitte später erneut.');

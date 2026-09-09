@@ -5,6 +5,13 @@
 // /buchen/<slug> — Kunde wählt Terminart + freien Slot und bucht selbst.
 // Liest & schreibt ausschließlich über /api/oeffentlich/buchung (Service-Role,
 // betriebsscharf, serverseitige Kapazitätsprüfung). Kein Supabase im Client.
+//
+// G3 (09.09.2026): Der KI-Setter schickt Besucher hierher und haengt an, was
+// er im Gespraech schon erfahren hat (?name=…&email=…&telefon=…&notiz=…).
+// Die Angaben werden NUR ins Formular vorgetragen — geprueft und gebucht wird
+// weiterhin ausschliesslich serverseitig. Gelesen wird bewusst aus
+// window.location.search statt mit useSearchParams: das braucht keine
+// Suspense-Grenze und kann den Build nicht kippen.
 // ============================================================
 
 import { useEffect, useMemo, useState, CSSProperties } from 'react';
@@ -62,6 +69,27 @@ export default function BuchenSeite() {
 
   useEffect(() => { if (slug) void ladeSlots(); /* eslint-disable-next-line */ }, [slug]);
 
+  // Vorbelegung aus dem Setter-Link. Laeuft genau einmal und ueberschreibt
+  // nichts, was der Besucher schon selbst getippt hat.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search);
+    const hol = (k: string, max: number) => (q.get(k) || '').toString().trim().slice(0, max);
+    const vor = {
+      name: hol('name', 120),
+      email: hol('email', 160),
+      telefon: hol('telefon', 60),
+      notiz: hol('notiz', 500),
+    };
+    if (!vor.name && !vor.email && !vor.telefon && !vor.notiz) return;
+    setForm((f) => ({
+      name: f.name || vor.name,
+      email: f.email || vor.email,
+      telefon: f.telefon || vor.telefon,
+      notiz: f.notiz || vor.notiz,
+    }));
+  }, []);
+
   const proTag = useMemo(() => {
     const m = new Map<string, SlotDto[]>();
     for (const s of slots) { const a = m.get(s.datum) ?? []; a.push(s); m.set(s.datum, a); }
@@ -70,7 +98,7 @@ export default function BuchenSeite() {
 
   async function buchen() {
     if (!gewaehlt) return;
-    if (!form.name.trim()) { setFehler('Bitte deinen Namen angeben.'); return; }
+    if (!form.name.trim()) { setFehler('Bitte Ihren Namen angeben.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setFehler('Bitte eine gültige E-Mail angeben.'); return; }
     setSenden(true); setFehler(null);
     try {

@@ -16,12 +16,30 @@
 // die auch greift, wenn jemand die Anfrage ohne Browser stellt.
 // Aufrufe OHNE Origin (gleiche Herkunft, also unsere eigenen /p/-Seiten)
 // bleiben unveraendert erlaubt.
+//
+// G3 (09.09.2026): der Betrieb waehlt in `dialog_einstellung` je Kanal, ob der
+// Bot AUSKUNFT gibt (alles wie bisher, Zeile fuer Zeile unveraendert) oder als
+// SETTER ein Ziel verfolgt. Ohne Zeile, bei Unsinn in der Zeile oder bei
+// rolle='auskunft' laeuft exakt der alte Weg — der Setter ist ein Zusatz,
+// nie ein Umbau.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { kiFetch } from '@/lib/ki';
 import { originErlaubt } from '@/lib/chatEinbetten';
+import {
+  leseEinstellung,
+  gespraechsStand,
+  baueSetterSystemtext,
+  bereinigeAntwort,
+  leseErfasst,
+  baueMarke,
+  istVollstaendig,
+  baueAusbeute,
+  lohntLead,
+} from '@/lib/setter';
+import { baueLead, buchungsLink, abschlussText } from '@/lib/setterHandeln';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -134,7 +152,32 @@ export async function POST(req: Request) {
 
     const kontext = [ci?.slogan, ci?.ueber_uns].filter(Boolean).map((x) => String(x).slice(0, 300)).join(' ');
 
-    const system = `Du bist ein freundlicher, ehrlicher Verkaufsberater im Onlineshop von ${firma}.${kontext ? ' Über den Betrieb: ' + kontext : ''}
+    // --- Auskunft oder Setter? --------------------------------------------
+    // Eine fehlende Zeile ist der Normalfall, kein Fehler: dann bleibt es beim
+    // Auskunftsgeber. Genauso bei jedem Datenbank-Zucken — der oeffentliche
+    // Berater darf daran nicht sterben.
+    let einstZeile: unknown = null;
+    try {
+      const { data } = await db
+        .from('dialog_einstellung')
+        .select('rolle, ziel, fragen, uebergabe_bei, buchung_slug')
+        .eq('owner_user_id', ownerId)
+        .eq('kanal', 'website')
+        .eq('aktiv', true)
+        .maybeSingle();
+      einstZeile = data ?? null;
+    } catch (e) {
+      console.error('oeffentlich/chat dialog_einstellung nicht lesbar:', e);
+    }
+    const einst = leseEinstellung(einstZeile);
+    const istSetter = einst.rolle === 'setter';
+    const stand = istSetter ? gespraechsStand(verlaufRoh, einst, frage) : null;
+
+    const system = istSetter && stand
+      // Ohne Artikel KEINE Produktliste an den Setter: „(zurzeit keine Produkte
+      // hinterlegt)" ist fuer einen Dachdecker keine Information, sondern Rauschen.
+      ? baueSetterSystemtext({ firma, einst, stand, produktText: artikel.length ? produktText : undefined, kontext })
+      : `Du bist ein freundlicher, ehrlicher Verkaufsberater im Onlineshop von ${firma}.${kontext ? ' Über den Betrieb: ' + kontext : ''}
 
 Diese Produkte sind im Shop (Name — Preis — Bestand — Kurzinfo):
 ${produktText}
@@ -149,7 +192,13 @@ Regeln:
     const messages = verlaufRoh
       .slice(-8)
       .filter((m) => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
-      .map((m) => ({ role: m.role as 'user' | 'assistant', content: [{ type: 'text', text: String(m.text).slice(0, 800) }] }));
+      // Beim Setter fliegen die unsichtbaren Markierungen hier raus: Was er
+      // schon weiss, steht ohnehin im Systemtext unter „Schon bekannt". Zweimal
+      // dasselbe kostet nur Zeichen — und wuerde bei 800 die echte Antwort
+      // abschneiden statt die Notiz.
+      .map((m) => ({ role: m.role as 'user' | 'assistant', text: (istSetter ? bereinigeAntwort(m.text) : String(m.text)).slice(0, 800) }))
+      .filter((m) => m.text.trim() !== '')
+      .map((m) => ({ role: m.role, content: [{ type: 'text', text: m.text }] }));
     messages.push({ role: 'user', content: [{ type: 'text', text: frage }] });
 
     const kiRes = await kiFetch('oeffentlich-chat', {
@@ -169,7 +218,60 @@ Regeln:
     const antwort = blocks.filter((b) => b.type === 'text').map((b) => b.text || '').join('').trim();
     if (!antwort) return NextResponse.json({ error: 'Keine Antwort erhalten. Bitte erneut versuchen.' }, { status: 502, headers: kopf });
 
-    return NextResponse.json({ antwort }, { headers: kopf });
+    if (!istSetter || !stand) return NextResponse.json({ antwort }, { headers: kopf });
+
+    // ------------------------------------------------------------------
+    // Setter-Nachlauf: merken, abschliessen, Lead anlegen
+    // ------------------------------------------------------------------
+    // Was die KI unsichtbar angehaengt hat, plus alles aus dem bisherigen
+    // Verlauf. Der Besucher bekommt die Markierung nie zu sehen — sie geht als
+    // eigenes Feld `merk` zurueck und haengt im Widget nur am GEMERKTEN Text.
+    const gesamt = leseErfasst([...verlaufRoh, { role: 'assistant', text: antwort }]);
+
+    // Interne Notiz, dass der Lead schon steht — sie darf nicht in der
+    // Nachricht des Leads landen, deshalb raus, bevor sortiert wird.
+    const schonNotiert = gesamt._lead === 'ja';
+    delete gesamt._lead;
+
+    const ausbeute = baueAusbeute(gesamt);
+    const vollstaendig = istVollstaendig(einst.fragen, gesamt);
+    // Nur beim UEBERGANG auf vollstaendig — sonst haenge der Abschlusssatz ab
+    // jetzt an jeder weiteren Antwort.
+    const geradeFertig = vollstaendig && !stand.vollstaendig;
+
+    let sichtbar = bereinigeAntwort(antwort);
+
+    // Der Weg in die echte Online-Buchung. Der Setter bucht NICHT selbst —
+    // siehe die Begruendung in lib/setterHandeln.ts.
+    if (geradeFertig && einst.ziel === 'termin') {
+      const link = buchungsLink({ basis: new URL(req.url).origin, slug: einst.buchungSlug, ausbeute });
+      // Nur wenn es den Link wirklich gibt. Ohne ihn hat die KI ihr Gespraech
+      // schon selbst abgeschlossen — ein zweiter Schlusssatz waere Gestammel.
+      if (link) {
+        const satz = abschlussText({ ziel: 'termin', link, hatKontakt: lohntLead(ausbeute) });
+        if (!sichtbar.includes(link)) sichtbar = `${sichtbar}\n\n${satz}`.trim();
+      }
+    }
+
+    // Der Lead — einmal je Gespraech, und nur wenn ein Weg zurueck bekannt ist.
+    // Auch bei der Uebergabe an einen Menschen: gerade dann darf die Anfrage
+    // nicht im Chatfenster liegen bleiben.
+    let notiert = schonNotiert;
+    if (!schonNotiert && lohntLead(ausbeute) && (geradeFertig || stand.phase === 'uebergabe')) {
+      const lead = baueLead({ ownerId, ausbeute, kanal: 'website' });
+      lead.nachricht = lead.nachricht.slice(0, 5000);
+      const { error: leadErr } = await db.from('leads').insert(lead);
+      if (leadErr) {
+        // Der Besucher hat trotzdem eine gute Antwort bekommen — der Chat darf
+        // daran nicht scheitern. Aber es muss im Protokoll stehen.
+        console.error('oeffentlich/chat Setter-Lead konnte nicht angelegt werden:', leadErr);
+      } else {
+        notiert = true;
+      }
+    }
+    if (notiert) gesamt._lead = 'ja';
+
+    return NextResponse.json({ antwort: sichtbar, merk: baueMarke(gesamt) }, { headers: kopf });
   } catch (e: unknown) {
     console.error('oeffentlich/chat interner Fehler:', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'Interner Fehler.' }, { status: 500, headers: kopf });
