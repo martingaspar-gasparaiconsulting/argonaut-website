@@ -197,7 +197,7 @@ export default function KiGuide({
       {/* Sprechblase */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={bubbleKopf}>
-          <span>👋 {begruessung || "Dein KI-Guide"}</span>
+          <span>👋 {begruessung || "Ihr KI-Guide"}</span>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {onVorlesen && (
               <button onClick={onVorlesen} style={vorlesenBtn} title="Vorlesen">🔊</button>
@@ -206,6 +206,16 @@ export default function KiGuide({
               {zu ? "▾" : "▴"}
             </button>
           </div>
+        </div>
+
+        {/* KI-KENNZEICHNUNG · AI Act Art. 50, in Kraft seit dem 02.08.2026.
+            Die Offenlegung muss FUER MENSCHEN WAHRNEHMBAR sein — eine rein
+            maschinenlesbare Markierung reicht laut EU-Kommission nicht.
+            Deshalb steht der Hinweis fest in der Sprechblase und bleibt auch
+            sichtbar, wenn der Guide eingeklappt ist. Nicht entfernen. */}
+        <div style={kiHinweis}>
+          <span aria-hidden="true">🤖</span>
+          <span>Dieser Guide ist eine KI. Texte und Sprachausgabe werden automatisch erzeugt.</span>
         </div>
 
         {!zu && (
@@ -291,6 +301,17 @@ const bubbleKopf: React.CSSProperties = {
   fontSize: "clamp(15px, 1.4vw, 22px)",
   fontWeight: 800,
   color: A.gold,
+};
+
+const kiHinweis: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  marginTop: 7,
+  fontSize: 11.5,
+  lineHeight: 1.45,
+  color: A.textDim,
+  fontWeight: 600,
 };
 
 const nachrichtStil: React.CSSProperties = {

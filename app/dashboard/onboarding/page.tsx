@@ -33,17 +33,17 @@ type UniSchritt = { key: string; icon: string; titel: string; text: string; tipp
 type RenderSchritt = { key: string; icon: string; titel: string; text: string; tipp: string; link: string; optional?: boolean; autoDone: boolean };
 
 const SCHRITTE: UniSchritt[] = [
-  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Geh in Einstellungen und trag deine Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
-  { key: 'ansicht', icon: '🎚️', titel: 'Ansicht wählen: Einfach oder Voll', text: 'Erst ruhig starten — später das volle Potenzial freischalten.', tipp: 'In den Einstellungen gibt es den Schalter „Einfach ↔ Voll". Am Anfang steht er auf Einfach: Du siehst nur das Nötigste, ohne Feld-Dschungel. Sobald du dich sicher fühlst, schaltest du auf Voll und siehst alle Experten-Funktionen. Jederzeit umstellbar.', link: '/dashboard/einstellungen', auto: () => false, optional: true },
-  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Lade dein Logo hoch und wähle deine Farbe. Damit sehen deine PDFs und dein Kundenportal nach dir aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', auto: () => false },
-  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Trag deine IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
-  { key: 'import', icon: '📥', titel: 'Bestehende Daten importieren', text: 'Kunden, Lieferanten, Artikel & Co. aus deinem alten System übernehmen.', tipp: 'Hast du schon Daten in Excel oder einem alten Programm? Im Import-Center lädst du je Bereich eine fertige CSV-Vorlage, füllst sie mit deinen Daten und spielst sie ein — so ist dein ARGONAUT in Minuten gefüllt, statt alles einzeln abzutippen.', link: '/dashboard/import', auto: () => false, optional: true },
-  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Leg deinen ersten Kunden im CRM an — oder importiere gleich deine ganze Kundenliste über das Import-Center. Danach kannst du Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
+  { key: 'firma', icon: '🏢', titel: 'Firmendaten hinterlegen', text: 'Name, Anschrift, Steuernummer/USt-IdNr — steht auf jeder Rechnung.', tipp: 'Gehen Sie in die Einstellungen und tragen Sie Ihre Firmendaten ein. Sie erscheinen automatisch auf jeder Rechnung und jedem Angebot — also einmal richtig, danach nie wieder tippen.', link: '/dashboard/einstellungen', auto: (l) => l.firma },
+  { key: 'ansicht', icon: '🎚️', titel: 'Ansicht wählen: Einfach oder Voll', text: 'Erst ruhig starten — später das volle Potenzial freischalten.', tipp: 'In den Einstellungen gibt es den Schalter „Einfach ↔ Voll". Am Anfang steht er auf Einfach: Sie sehen nur das Nötigste, ohne Feld-Dschungel. Sobald Sie sich sicher fühlen, schalten Sie auf Voll und sehen alle Experten-Funktionen. Jederzeit umstellbar.', link: '/dashboard/einstellungen', auto: () => false, optional: true },
+  { key: 'logo', icon: '🎨', titel: 'Logo & Farben', text: 'Corporate Design für PDFs, Angebote und das Kundenportal.', tipp: 'Laden Sie Ihr Logo hoch und wählen Sie Ihre Farbe. Damit sehen Ihre PDFs und Ihr Kundenportal nach Ihnen aus, nicht nach Software von der Stange.', link: '/dashboard/einstellungen', auto: () => false },
+  { key: 'bank', icon: '🏦', titel: 'Bankverbindung & SEPA', text: 'IBAN + Gläubiger-ID — für Rechnung, GiroCode und Lastschrift.', tipp: 'Tragen Sie Ihre IBAN ein. Dann kann ARGONAUT auf jede Rechnung einen GiroCode zum Scannen setzen und später auch Lastschriften einziehen.', link: '/dashboard/sepa-einzug', auto: (l) => l.iban },
+  { key: 'import', icon: '📥', titel: 'Bestehende Daten importieren', text: 'Kunden, Lieferanten, Artikel & Co. aus Ihrem alten System übernehmen.', tipp: 'Haben Sie schon Daten in Excel oder einem alten Programm? Im Import-Center laden Sie je Bereich eine fertige CSV-Vorlage, füllen sie mit Ihren Daten und spielen sie ein — so ist Ihr ARGONAUT in Minuten gefüllt, statt alles einzeln abzutippen.', link: '/dashboard/import', auto: () => false, optional: true },
+  { key: 'kontakt', icon: '🤝', titel: 'Ersten Kontakt anlegen', text: 'Kunde oder Firma im CRM erfassen.', tipp: 'Legen Sie Ihren ersten Kunden im CRM an — oder importieren Sie gleich Ihre ganze Kundenliste über das Import-Center. Danach können Sie Angebote und Rechnungen an ihn schreiben.', link: '/dashboard/crm', auto: (l) => l.kontakte > 0 },
   { key: 'angebot', icon: '📝', titel: 'Erstes Angebot erstellen', text: 'Angebot mit Online-Zusage und „→ zur Unterschrift".', tipp: 'Erstelle ein Angebot und schick es raus. Der Kunde kann online zusagen und unterschreiben — aus dem Angebot wird per Klick ein Auftrag oder eine Rechnung.', link: '/dashboard/angebote', auto: (l) => l.angebote > 0 },
-  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreib deine erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
-  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', tipp: 'Optional: Verbinde einen Bezahldienst, damit Kunden per Klick online zahlen können. Kannst du auch später machen.', link: '/dashboard/schnittstellen', auto: (l) => l.zahlungAktiv, optional: true },
-  { key: 'anschluesse', icon: '🔌', titel: 'Schnittstellen verbinden', text: 'Postfach & Kalender, Bank, Marktplätze, ELSTER — sicher hinterlegen.', tipp: 'In der Schnittstellen-Zentrale verbindest du an einem Ort dein Postfach & Kalender (Outlook/Google), deine Bank, deine Marktplätze und ELSTER. Alle Zugänge werden verschlüsselt gespeichert und sind nie im Browser sichtbar. Du kannst sie schon jetzt eintragen — der automatische Abgleich wird gerade finalisiert.', link: '/dashboard/schnittstellen', auto: () => false, optional: true },
-  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', tipp: 'Lade deine Mitarbeiter ein und gib ihnen nur die Bereiche frei, die sie brauchen. Jeder sieht dann genau seinen Ausschnitt.', link: '/dashboard/einstellungen', auto: () => false },
+  { key: 'rechnung', icon: '🧾', titel: 'Erste Rechnung erstellen', text: 'Mit GiroCode und optionalem Online-Bezahllink.', tipp: 'Schreiben Sie Ihre erste Rechnung. Sie ist §14-konform, bekommt eine fortlaufende Nummer und einen GiroCode — der Kunde zahlt per Handy-Scan.', link: '/dashboard/rechnungen', auto: (l) => l.rechnungen > 0 },
+  { key: 'zahlung', icon: '💳', titel: 'Zahlungsanbieter verbinden', text: 'Eigenen Bezahllink für „Jetzt online bezahlen" (optional).', tipp: 'Optional: Verbinden Sie einen Bezahldienst, damit Kunden per Klick online zahlen können. Das können Sie auch später machen.', link: '/dashboard/schnittstellen', auto: (l) => l.zahlungAktiv, optional: true },
+  { key: 'anschluesse', icon: '🔌', titel: 'Schnittstellen verbinden', text: 'Postfach & Kalender, Bank, Marktplätze, ELSTER — sicher hinterlegen.', tipp: 'In der Schnittstellen-Zentrale verbinden Sie an einem Ort Ihr Postfach & Kalender (Outlook/Google), Ihre Bank, Ihre Marktplätze und ELSTER. Alle Zugänge werden verschlüsselt gespeichert und sind nie im Browser sichtbar. Sie können sie schon jetzt eintragen — der automatische Abgleich wird gerade finalisiert.', link: '/dashboard/schnittstellen', auto: () => false, optional: true },
+  { key: 'module', icon: '🧩', titel: 'Module & Team einrichten', text: 'Passende Module aktivieren, Mitarbeiter einladen.', tipp: 'Laden Sie Ihre Mitarbeiter ein und geben Sie ihnen nur die Bereiche frei, die sie brauchen. Jeder sieht dann genau seinen Ausschnitt.', link: '/dashboard/einstellungen', auto: () => false },
 ];
 
 /**
@@ -305,12 +305,12 @@ export default function OnboardingPage() {
         @media (prefers-reduced-motion: reduce) { .arg-auge-an::before, .arg-auge-an svg { animation: none; } }
       `}</style>
       <h1 style={styles.h1}>🚀 Erste Schritte mit ARGONAUT</h1>
-      <p style={styles.sub}>Deine geführte Startstrecke. Vieles erkennt ARGONAUT automatisch — den Rest hakst du selbst ab.</p>
+      <p style={styles.sub}>Ihre geführte Startstrecke. Vieles erkennt ARGONAUT automatisch — den Rest haken Sie selbst ab.</p>
 
       {!laden && (
         <div style={{ marginTop: 18 }}>
           <KiGuide
-            begruessung={prozent >= 100 ? 'Geschafft — du führst deinen Betrieb mit ARGONAUT.' : `Dein Rang: ${stufe.rang}`}
+            begruessung={prozent >= 100 ? 'Geschafft — Sie führen Ihren Betrieb mit ARGONAUT.' : `Ihr Rang: ${stufe.rang}`}
             nachricht={prozent >= 100 ? stufe.spruch : `${stufe.spruch} ${stufe.ausblick}`}
             schritte={offeneSchritte.slice(0, 3).map((x) => x.titel)}
             aktionText={naechsterSchritt ? `${naechsterSchritt.titel} öffnen` : undefined}
@@ -328,15 +328,15 @@ export default function OnboardingPage() {
       <GefuehrteTour offen={tourOffen} onFertig={() => setTourOffen(false)} />
 
       <div style={styles.anleitung}>
-        <b>Zwei Wege — such dir aus, wie du starten willst:</b><br />
-        <b>1 · Gefahrlos üben:</b> Lade dir unten die <b>Übungswelt</b> mit Beispieldaten und klick dich durch alles durch — nichts vermischt sich mit echten Daten, ein Klick entfernt es wieder.<br />
-        <b>2 · Echt einrichten:</b> Arbeite die Schritte von oben nach unten ab. Was ARGONAUT schon erkennt, ist grün abgehakt; bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
+        <b>Zwei Wege — suchen Sie sich aus, wie Sie starten wollen:</b><br />
+        <b>1 · Gefahrlos üben:</b> Laden Sie sich unten die <b>Übungswelt</b> mit Beispieldaten und klicken Sie sich durch alles durch — nichts vermischt sich mit echten Daten, ein Klick entfernt es wieder.<br />
+        <b>2 · Echt einrichten:</b> Arbeiten Sie die Schritte von oben nach unten ab. Was ARGONAUT schon erkennt, ist grün abgehakt; bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
       </div>
 
       <a href="/dashboard/import" style={styles.importBanner}>
         <span style={styles.importBannerIcon}>📥</span>
         <span style={styles.importBannerText}>
-          <b>Schon Daten aus deinem alten System?</b> Kunden, Artikel, Lieferanten & Co. per fertiger CSV-Vorlage in Minuten übernehmen — statt alles einzeln abzutippen.
+          <b>Schon Daten aus Ihrem alten System?</b> Kunden, Artikel, Lieferanten & Co. per fertiger CSV-Vorlage in Minuten übernehmen — statt alles einzeln abzutippen.
         </span>
         <span style={styles.importBannerCta}>Zum Import-Center ›</span>
       </a>
@@ -349,8 +349,8 @@ export default function OnboardingPage() {
               <div style={{ fontWeight: 700 }}>Übungswelt · Beispieldaten zum Ausprobieren</div>
               <div style={{ color: C.textDim, fontSize: 13, lineHeight: 1.5 }}>
                 {weltGeladen
-                  ? `Deine Übungswelt ist geladen: ${weltAnzahl} Beispiel-Datensätze in ${weltBereiche.length} Bereichen. Klick dich unten direkt hinein — und entferne alles mit einem Klick, wenn du mit deinen echten Daten startest.`
-                  : 'Lade dir eine Übungswelt mit branchentypischen Beispieldaten und probiere ARGONAUT völlig gefahrlos aus. Nichts davon vermischt sich mit echten Daten — ein Klick lädt alles, ein Klick entfernt es restlos.'}
+                  ? `Ihre Übungswelt ist geladen: ${weltAnzahl} Beispiel-Datensätze in ${weltBereiche.length} Bereichen. Klicken Sie sich unten direkt hinein — und entfernen Sie alles mit einem Klick, wenn Sie mit Ihren echten Daten starten.`
+                  : 'Laden Sie sich eine Übungswelt mit branchentypischen Beispieldaten und probieren Sie ARGONAUT völlig gefahrlos aus. Nichts davon vermischt sich mit echten Daten — ein Klick lädt alles, ein Klick entfernt es restlos.'}
               </div>
             </div>
           </div>
@@ -423,13 +423,13 @@ export default function OnboardingPage() {
           <Auge farbe={stufe.farbe} leuchtet={aufstieg} />
           <div style={{ flex: 1, minWidth: 0 }}>
             {aufstieg && <div style={{ ...styles.aufstiegChip, color: stufe.farbe, borderColor: stufe.farbe }}>Neuer Rang erreicht</div>}
-            <div style={styles.rangKlein}>Dein Rang</div>
+            <div style={styles.rangKlein}>Ihr Rang</div>
             <div style={{ ...styles.rangGross, color: stufe.farbe }}>{stufe.rang}</div>
             <div style={styles.spruch}>{stufe.spruch}</div>
             <div style={styles.ausblick}>{stufe.ausblick}</div>
             {naechste ? (
               <div style={styles.naechsteZeile}>
-                Du hast <b style={{ color: C.text }}>{prozent} von 100 Prozent</b> geschafft — noch{' '}
+                Sie haben <b style={{ color: C.text }}>{prozent} von 100 Prozent</b> geschafft — noch{' '}
                 <b style={{ color: C.gold }}>{bisNaechste} Prozent</b> bis <b style={{ color: C.text }}>{naechste.rang}</b>.
               </div>
             ) : (
@@ -444,9 +444,9 @@ export default function OnboardingPage() {
       {prozent === 100 && (
         <div style={styles.zertBox}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={styles.zertTitel}>🏅 Dein Abschluss-Zertifikat</div>
+            <div style={styles.zertTitel}>🏅 Ihr Abschluss-Zertifikat</div>
             <div style={styles.zertText}>
-              Du hast die komplette Startstrecke durchlaufen — vom Matrosen zum Kapitän. Dein persönliches
+              Sie haben die komplette Startstrecke durchlaufen — vom Matrosen zum Kapitän. Ihr persönliches
               Zertifikat mit Stempel und Unterschrift steht bereit, ausgestellt auf{' '}
               <b style={{ color: C.text }}>{personName}</b>{firmaName ? <> · {firmaName}</> : null}.
             </div>
@@ -464,7 +464,7 @@ export default function OnboardingPage() {
           {branchRender.length > 0 && (
             <>
               <div style={styles.branchenTitel}>
-                <span style={{ color: C.gold }}>Speziell für deine Branche</span>
+                <span style={{ color: C.gold }}>Speziell für Ihre Branche</span>
                 {kategorie && <span style={styles.branchenChip}>{kategorie}</span>}
               </div>
               <div style={styles.liste}>{branchRender.map(zeile)}</div>
@@ -473,7 +473,7 @@ export default function OnboardingPage() {
 
           {branchRender.length === 0 && !laden && (
             <div style={styles.branchHinweis}>
-              Für noch mehr Starthilfe hinterlege deine Branche in den Einstellungen — dann zeigt ARGONAUT dir hier zusätzliche, passgenaue Schritte.
+              Für noch mehr Starthilfe hinterlegen Sie Ihre Branche in den Einstellungen — dann zeigt ARGONAUT Ihnen hier zusätzliche, passgenaue Schritte.
             </div>
           )}
         </>

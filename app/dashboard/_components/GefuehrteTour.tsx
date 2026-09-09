@@ -8,7 +8,7 @@ import { STANDARD_TOUR, begrenzeIndex, tourFortschritt, istLetzter, type TourSch
 // Martins Bild: Der Guide redet nicht nur — er ZEIGT. Ein Scheinwerfer legt
 // sich über den Bildschirm, NUR das Ziel (z. B. der CRM-Menüpunkt) bleibt hell
 // und bekommt einen leuchtenden Ring, eine 👉-Hand zeigt drauf, und die
-// Sprechblase erklärt „Hier ist dein CRM …". „Weiter" springt zum nächsten Ziel.
+// Sprechblase erklärt „Hier ist Ihr CRM …". „Weiter" springt zum nächsten Ziel.
 //
 // Kein Umbau der Navigation nötig: die Menüpunkte sind <a href="/dashboard/…">,
 // die Tour trifft sie per href-Selektor (siehe lib/gefuehrteTour STANDARD_TOUR).
@@ -205,7 +205,7 @@ export default function GefuehrteTour({ offen, onFertig, schritte = STANDARD_TOU
 
         {fehlt && (
           <p style={{ margin: "8px 0 0", color: A.textDim, fontSize: 13 }}>
-            Diesen Bereich hast du gerade nicht aktiv — mit „Weiter" geht’s zum nächsten.
+            Diesen Bereich haben Sie gerade nicht aktiv — mit „Weiter" geht’s zum nächsten.
           </p>
         )}
 
@@ -222,7 +222,7 @@ export default function GefuehrteTour({ offen, onFertig, schritte = STANDARD_TOU
           </div>
         </div>
 
-        <div style={{ marginTop: 8, color: A.textDim, fontSize: 11, textAlign: "right" }}>{name} führt dich · ESC beendet</div>
+        <div style={{ marginTop: 8, color: A.textDim, fontSize: 11, textAlign: "right" }}>{name} führt Sie · ESC beendet</div>
       </div>
     </div>
   );
