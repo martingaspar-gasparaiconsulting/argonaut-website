@@ -2,12 +2,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { leseStandortCookie } from "@/lib/aktiverStandort";
+import { konkreterStandort } from "@/lib/standortDaten";
+import {
+  standortFuerBuchung, buchenArgumente, vereineBewegungen, abgangImZeitraum,
+  artText, RPC_BUCHEN, type BewegungAnzeige,
+} from "@/lib/lagerBuchung";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E3 Artikel-Detailseite
 // Stammdaten (Bearbeiten-Modal) · manuelle Bestand-Buchung · Historie.
-// Jede Buchung schreibt in lagerbewegungen (Audit-Trail) UND aktualisiert
-// artikel.aktueller_bestand.
+//
+// ▄▄▄ WAS SICH AM 08.09.26 GEÄNDERT HAT (D1) ▄▄▄
+// Gebucht wird über `lager_buchen`: Bewegung, Filialbestand und Gesamtsumme
+// in einem Vorgang. Vorher waren es zwei Schreibvorgänge — der alte Code
+// meldete im Fehlerfall wörtlich „Bestand-Update fehlgeschlagen (Buchung
+// wurde gespeichert)". Genau dieser halbe Zustand kann jetzt nicht mehr
+// entstehen.
+//
+// Die Historie liest BEIDE Tabellen: die alte `lagerbewegungen` und die neue
+// `lager_bewegung`. Ohne das stünde ab heute jede neue Buchung nicht mehr in
+// der Liste — die Seite sähe aus, als sei nichts passiert.
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -51,15 +66,6 @@ interface LieferantKurz {
   name: string;
 }
 
-interface Bewegung {
-  id: string;
-  typ: string;
-  menge: number;
-  grund: string | null;
-  referenz: string | null;
-  bewegung_am: string;
-}
-
 type FormState = {
   artikelnummer: string;
   bezeichnung: string;
@@ -75,13 +81,6 @@ type FormState = {
 };
 
 type BuchModus = "eingang" | "ausgang" | "inventur";
-
-const TYP_LABEL: Record<string, string> = {
-  eingang: "Zugang",
-  ausgang: "Abgang",
-  inventur: "Inventur",
-  korrektur: "Korrektur",
-};
 
 function ampel(bestand: number, min: number): { farbe: string; text: string } {
   if (bestand <= 0) return { farbe: C.danger, text: "Leer" };
@@ -111,7 +110,10 @@ export default function ArtikelDetail() {
     : (params.id as string);
 
   const [artikel, setArtikel] = useState<Artikel | null>(null);
-  const [bewegungen, setBewegungen] = useState<Bewegung[]>([]);
+  const [bewegungen, setBewegungen] = useState<BewegungAnzeige[]>([]);
+  const [standorte, setStandorte] = useState<{ id: string; name: string }[]>([]);
+  /** Bestand an dem Ort, auf den gebucht wird. null = hier noch nie gezählt. */
+  const [bestandHier, setBestandHier] = useState<number | null>(null);
   const [lieferanten, setLieferanten] = useState<LieferantKurz[]>([]);
   const [laden, setLaden] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -147,22 +149,40 @@ export default function ArtikelDetail() {
       .maybeSingle();
     setArtikel((art as Artikel) ?? null);
 
-    const { data: bew } = await supabase
-      .from("lagerbewegungen")
-      .select("*")
-      .eq("artikel_id", artikelId)
-      .order("bewegung_am", { ascending: false });
-    setBewegungen((bew as Bewegung[]) ?? []);
+    // Beide Bewegungstabellen — die alte ohne Filiale, die neue mit.
+    const [bewAlt, bewNeu, lief, st, bz] = await Promise.all([
+      supabase.from("lagerbewegungen").select("*").eq("artikel_id", artikelId)
+        .order("bewegung_am", { ascending: false }),
+      supabase.from("lager_bewegung").select("*").eq("artikel_id", artikelId)
+        .order("erstellt_am", { ascending: false }),
+      supabase.from("lieferanten").select("id, name").order("name", { ascending: true }),
+      supabase.from("standorte").select("id, name").eq("aktiv", true).order("name"),
+      supabase.from("artikel_bestand_standort")
+        .select("artikel_id, standort_id, bestand").eq("artikel_id", artikelId),
+    ]);
+    setBewegungen(vereineBewegungen(
+      (bewAlt.data as Record<string, unknown>[]) ?? [],
+      (bewNeu.data as Record<string, unknown>[]) ?? [],
+    ));
+    setLieferanten((lief.data as LieferantKurz[]) ?? []);
+    const stListe = (st.data as { id: string; name: string }[]) ?? [];
+    setStandorte(stListe);
 
-    const { data: lief } = await supabase
-      .from("lieferanten")
-      .select("id, name")
-      .order("name", { ascending: true });
-    setLieferanten((lief as LieferantKurz[]) ?? []);
+    // Bestand an dem Ort, auf den gebucht würde.
+    const wahlJetzt = standortFuerBuchung(konkreterStandort(leseStandortCookie()), stListe);
+    if (wahlJetzt.ok) {
+      const zeilen = (bz.data as { standort_id: string | null; bestand: number | null }[]) ?? [];
+      const treffer = zeilen.find((z) => (z.standort_id ?? null) === wahlJetzt.standortId);
+      const roh = Number(treffer?.bestand);
+      setBestandHier(treffer && Number.isFinite(roh) ? roh : null);
+    } else {
+      setBestandHier(null);
+    }
 
     setLaden(false);
   }
 
+  // Der Gesamtbestand über alle Filialen — für Ampel und Anzeige.
   const bestand = Number(artikel?.aktueller_bestand) || 0;
   const min = Number(artikel?.mindestbestand) || 0;
   const am = ampel(bestand, min);
@@ -170,14 +190,29 @@ export default function ArtikelDetail() {
     ? lieferanten.find((l) => l.id === artikel.lieferant_id)?.name ?? null
     : null;
 
-  // Vorschau des neuen Bestands
+  const wahl = useMemo(
+    () => standortFuerBuchung(konkreterStandort(leseStandortCookie()), standorte),
+    [standorte],
+  );
+  const filialName = wahl.ok && wahl.standortId
+    ? (standorte.find((s) => s.id === wahl.standortId)?.name ?? "Filiale")
+    : null;
+
+  /**
+   * Gerechnet wird auf dem Bestand DES BUCHUNGSORTS, nicht auf der Summe.
+   * Sonst würde eine Inventur in einer Filiale den Gesamtbestand setzen und
+   * die anderen Filialen stillschweigend leeren.
+   */
+  const basisBestand = filialName ? (bestandHier ?? 0) : bestand;
+
+  // Vorschau des neuen Bestands (am Buchungsort)
   const vorschau = useMemo(() => {
     const m = buchMenge.trim() === "" ? 0 : Number(buchMenge.replace(",", "."));
     if (isNaN(m)) return null;
-    if (modus === "eingang") return bestand + m;
-    if (modus === "ausgang") return bestand - m;
+    if (modus === "eingang") return basisBestand + m;
+    if (modus === "ausgang") return basisBestand - m;
     return m; // inventur: absoluter Zielwert
-  }, [buchMenge, modus, bestand]);
+  }, [buchMenge, modus, basisBestand]);
 
   async function bucheBestand() {
     setBuchFehler(null);
@@ -187,50 +222,23 @@ export default function ArtikelDetail() {
       return;
     }
     if (!artikel) return;
-
-    let delta: number;
-    let neuerBestand: number;
-    if (modus === "eingang") {
-      delta = m;
-      neuerBestand = bestand + m;
-    } else if (modus === "ausgang") {
-      delta = -m;
-      neuerBestand = bestand - m;
-    } else {
-      // inventur: m ist der gezählte Zielbestand
-      neuerBestand = m;
-      delta = m - bestand;
-    }
+    if (!wahl.ok) { setBuchFehler(wahl.fehler); return; }
 
     setBuchen(true);
 
-    const bewegung = {
-      artikel_id: artikel.id,
-      typ: modus,
-      menge: delta,
-      grund: buchGrund.trim() || null,
-      referenz: "manuell",
-      ...(userId ? { owner_user_id: userId } : {}),
-    };
-
-    const { error: e1 } = await supabase
-      .from("lagerbewegungen")
-      .insert(bewegung);
-    if (e1) {
+    // Ein einziger Vorgang. Der frühere zweite Schritt (Bestand schreiben)
+    // konnte fehlschlagen, nachdem die Bewegung schon stand.
+    const { error } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+      artikelId: artikel.id,
+      standortId: wahl.standortId,
+      art: modus === "eingang" ? "zugang" : modus === "ausgang" ? "abgang" : "korrektur",
+      menge: m,
+      herkunft: modus === "inventur" ? "inventur" : "artikel",
+      notiz: buchGrund.trim() || null,
+    }));
+    if (error) {
       setBuchen(false);
-      setBuchFehler("Buchung fehlgeschlagen: " + e1.message);
-      return;
-    }
-
-    const { error: e2 } = await supabase
-      .from("artikel")
-      .update({ aktueller_bestand: neuerBestand })
-      .eq("id", artikel.id);
-    if (e2) {
-      setBuchen(false);
-      setBuchFehler(
-        "Bestand-Update fehlgeschlagen: " + e2.message + " (Buchung wurde gespeichert)"
-      );
+      setBuchFehler("Buchung fehlgeschlagen: " + error.message);
       return;
     }
 
@@ -635,24 +643,34 @@ export default function ArtikelDetail() {
               </tr>
             </thead>
             <tbody>
-              {bewegungen.map((b) => {
-                const positiv = Number(b.menge) >= 0;
+              {bewegungen.map((b, i) => {
+                // Eine Zählung hat keine Veränderung, sondern einen Stand.
+                // „auf 7 gesetzt" und „+7" sind zwei verschiedene Aussagen.
+                const zaehlung = b.veraenderung === null;
+                const positiv = (b.veraenderung ?? 0) >= 0;
+                const wo = b.standortId
+                  ? (standorte.find((s) => s.id === b.standortId)?.name ?? null)
+                  : null;
                 return (
-                  <tr key={b.id}>
+                  <tr key={b.id || `${b.quelle}-${i}`}>
                     <td style={{ ...tdStil, color: C.textDim, whiteSpace: "nowrap" }}>
-                      {datum(b.bewegung_am)}
+                      {b.zeit ? datum(b.zeit) : "—"}
                     </td>
-                    <td style={tdStil}>{TYP_LABEL[b.typ] || b.typ}</td>
+                    <td style={tdStil}>
+                      {b.art === "unbekannt" ? "Bewegung" : artText(b.art)}
+                      {wo ? <span style={{ color: C.textDim }}> · {wo}</span> : null}
+                    </td>
                     <td
                       style={{
                         ...tdStil,
                         textAlign: "right",
                         fontWeight: 700,
-                        color: positiv ? C.green : C.danger,
+                        color: zaehlung ? C.cyan : positiv ? C.green : C.danger,
                       }}
                     >
-                      {positiv ? "+" : ""}
-                      {num(b.menge)} {artikel.einheit}
+                      {zaehlung
+                        ? `auf ${num(b.zaehlstand ?? 0)} ${artikel.einheit}`
+                        : `${positiv ? "+" : ""}${num(b.veraenderung ?? 0)} ${artikel.einheit}`}
                     </td>
                     <td style={{ ...tdStil, color: C.textDim }}>
                       {b.grund || "—"}
@@ -860,7 +878,7 @@ function EoqKarte({
   inputStil,
   labelStil,
 }: {
-  bewegungen: Bewegung[];
+  bewegungen: BewegungAnzeige[];
   einkaufspreis: number;
   einheit: string;
   card: React.CSSProperties;
@@ -876,20 +894,14 @@ function EoqKarte({
     border: "rgba(255,255,255,0.08)",
   };
 
-  // Jahresbedarf automatisch: Summe der Abgangs-Beträge der letzten 12 Monate.
-  // Abgänge sind in lagerbewegungen als NEGATIVE Menge gespeichert -> Betrag nehmen.
-  const autoJahresbedarf = useMemo(() => {
-    const jetzt = Date.now();
-    const grenze = jetzt - 365 * 24 * 60 * 60 * 1000;
-    let summe = 0;
-    for (const b of bewegungen) {
-      if (b.typ !== "ausgang") continue;
-      const t = new Date(b.bewegung_am).getTime();
-      if (isNaN(t) || t < grenze) continue;
-      summe += Math.abs(Number(b.menge) || 0);
-    }
-    return Math.round(summe * 100) / 100;
-  }, [bewegungen]);
+  // Jahresbedarf automatisch: Summe der Abgänge der letzten 12 Monate, aus
+  // BEIDEN Bewegungstabellen. Eine Inventur zählt nicht mit — eine Zählung
+  // nach unten ist eine Berichtigung, kein Verbrauch, und würde den
+  // Bestellvorschlag sonst ohne Grund nach oben treiben.
+  const autoJahresbedarf = useMemo(
+    () => abgangImZeitraum(bewegungen, 365),
+    [bewegungen],
+  );
 
   // Eingaben (mit sinnvollen Standardwerten). Jahresbedarf ist überschreibbar.
   const [bedarfText, setBedarfText] = useState<string>("");

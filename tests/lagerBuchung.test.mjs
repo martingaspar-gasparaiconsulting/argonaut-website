@@ -5,6 +5,8 @@ import {
   planeUmlagerung, gesamtBestand, bestandIn, verteilung, unterMindest,
   artText, herkunftText, buchungsSatz,
   RPC_BUCHEN, RPC_UMLAGERN, DB_ARTEN, dbArt, buchenArgumente, umlagernArgumente,
+  normArt, ausAlterBewegung, ausNeuerBewegung, vereineBewegungen,
+  abgangImZeitraum, zaehleNachArt, mengeNachArt,
 } from '../out/lagerBuchung.js';
 
 const S = (...ids) => ids.map((id) => ({ id }));
@@ -238,6 +240,138 @@ test('unterMindest prüft die SUMME, nicht die einzelne Filiale', () => {
   assert.equal(unterMindest(gesamtBestand(ZEILEN, 'a1'), 10), false);
   assert.equal(unterMindest(5, 0), false, 'ohne Mindestbestand keine Warnung');
   assert.equal(unterMindest(5, null), false);
+});
+
+// ---------- Zwei Bewegungstabellen, eine Liste ----------
+
+test('normArt räumt die gewachsenen Schreibweisen auf', () => {
+  // In der alten Tabelle steht alles davon nebeneinander — echte Altdaten.
+  assert.equal(normArt('eingang'), 'zugang');
+  assert.equal(normArt('Zugang'), 'zugang', 'Einkauf schrieb großes Z');
+  assert.equal(normArt('zugang'), 'zugang');
+  assert.equal(normArt('ausgang'), 'abgang');
+  assert.equal(normArt('abgang'), 'abgang');
+  assert.equal(normArt('inventur'), 'korrektur');
+  assert.equal(normArt('korrektur'), 'korrektur');
+  assert.equal(normArt('quatsch'), 'unbekannt');
+  assert.equal(normArt(null), 'unbekannt');
+});
+
+test('die Richtung kommt aus der ART, nie aus dem Vorzeichen', () => {
+  // Die Material-Entnahme schrieb einen Abgang mit POSITIVER Menge. In der
+  // Anzeige stand deshalb „+3" für etwas, das aus dem Lager ging.
+  const entnahme = ausAlterBewegung({ id: '1', typ: 'ausgang', menge: 3, bewegung_am: '2026-09-01T10:00:00Z' });
+  assert.equal(entnahme.veraenderung, -3);
+
+  // Die Kasse schrieb denselben Vorgang mit NEGATIVER Menge.
+  const kasse = ausAlterBewegung({ id: '2', typ: 'ausgang', menge: -3, bewegung_am: '2026-09-01T10:00:00Z' });
+  assert.equal(kasse.veraenderung, -3, 'beide Schreibweisen ergeben dasselbe');
+
+  const einkauf = ausAlterBewegung({ id: '3', typ: 'Zugang', menge: 5, bewegung_am: '2026-09-01T10:00:00Z' });
+  assert.equal(einkauf.veraenderung, 5);
+});
+
+test('eine alte Inventur ist eine Veränderung, eine neue eine Zählung', () => {
+  // Der Unterschied darf NICHT eingeebnet werden: „+7" und „auf 7 gezählt"
+  // sind zwei verschiedene Aussagen über dasselbe Regal.
+  const alt = ausAlterBewegung({ id: 'a', typ: 'inventur', menge: -2, bewegung_am: '2026-09-01T10:00:00Z' });
+  assert.equal(alt.veraenderung, -2);
+  assert.equal(alt.zaehlstand, null);
+
+  const neu = ausNeuerBewegung({ id: 'n', typ: 'korrektur', menge: 7, erstellt_am: '2026-09-08T10:00:00Z' });
+  assert.equal(neu.veraenderung, null, 'eine Zählung hat keine Veränderung');
+  assert.equal(neu.zaehlstand, 7);
+});
+
+test('neue Zeilen bringen die Filiale mit, alte nicht', () => {
+  const neu = ausNeuerBewegung({ id: 'n', typ: 'abgang', menge: 2, standort_id: 'f1', erstellt_am: '2026-09-08T10:00:00Z' });
+  assert.equal(neu.standortId, 'f1');
+  assert.equal(neu.quelle, 'neu');
+  const alt = ausAlterBewegung({ id: 'a', typ: 'ausgang', menge: 2, bewegung_am: '2026-09-01T10:00:00Z' });
+  assert.equal(alt.standortId, null);
+  assert.equal(alt.quelle, 'alt');
+});
+
+test('vereineBewegungen mischt beide Tabellen, neueste zuerst', () => {
+  const l = vereineBewegungen(
+    [{ id: 'a1', typ: 'ausgang', menge: 1, bewegung_am: '2026-09-01T10:00:00Z' },
+     { id: 'a2', typ: 'eingang', menge: 5, bewegung_am: '2026-09-05T10:00:00Z' }],
+    [{ id: 'n1', typ: 'abgang', menge: 2, erstellt_am: '2026-09-08T10:00:00Z' }],
+  );
+  assert.deepEqual(l.map((x) => x.id), ['n1', 'a2', 'a1']);
+});
+
+test('Zeilen ohne Zeitstempel kippen die Reihenfolge nicht um', () => {
+  const l = vereineBewegungen(
+    [{ id: 'ohne', typ: 'eingang', menge: 1 }],
+    [{ id: 'mit', typ: 'abgang', menge: 1, erstellt_am: '2026-09-08T10:00:00Z' }],
+  );
+  assert.equal(l[0].id, 'mit', 'datierte Zeilen zuerst');
+  assert.equal(l[1].id, 'ohne');
+});
+
+test('vereineBewegungen verträgt leer und null', () => {
+  assert.deepEqual(vereineBewegungen(null, null), []);
+  assert.deepEqual(vereineBewegungen([], undefined), []);
+});
+
+test('abgangImZeitraum zählt nur echte Abgänge im Fenster', () => {
+  const jetzt = Date.parse('2026-09-08T12:00:00Z');
+  const liste = vereineBewegungen(
+    [{ id: 'a', typ: 'ausgang', menge: 4, bewegung_am: '2026-08-01T10:00:00Z' },
+     { id: 'b', typ: 'ausgang', menge: 6, bewegung_am: '2024-01-01T10:00:00Z' },
+     { id: 'c', typ: 'inventur', menge: -9, bewegung_am: '2026-09-01T10:00:00Z' }],
+    [{ id: 'd', typ: 'abgang', menge: 3, erstellt_am: '2026-09-07T10:00:00Z' },
+     { id: 'e', typ: 'zugang', menge: 99, erstellt_am: '2026-09-07T10:00:00Z' }],
+  );
+  assert.equal(abgangImZeitraum(liste, 365, jetzt), 7, '4 + 3; die alte Zeile ist zu alt');
+  assert.equal(abgangImZeitraum(liste, 2, jetzt), 3, 'nur die von gestern');
+});
+
+test('eine Inventur ist kein Verbrauch', () => {
+  // Sonst wuerde eine Berichtigung nach unten als Bedarf gezaehlt und der
+  // Bestellvorschlag stiege ohne Grund.
+  const jetzt = Date.parse('2026-09-08T12:00:00Z');
+  const nur = vereineBewegungen([], [{ id: 'k', typ: 'korrektur', menge: 2, erstellt_am: '2026-09-07T10:00:00Z' }]);
+  assert.equal(abgangImZeitraum(nur, 365, jetzt), 0);
+});
+
+test('mengeNachArt hebt Abgänge nicht mehr gegenseitig auf', () => {
+  // Die alte Auswertung addierte die Mengen MIT Vorzeichen. Ein Abgang von
+  // -3 (Kasse) und einer von +3 (Entnahme) ergaben zusammen 0 — als hätte
+  // sich nichts bewegt.
+  const liste = vereineBewegungen(
+    [{ id: '1', typ: 'ausgang', menge: -3, bewegung_am: '2026-09-01T10:00:00Z' },
+     { id: '2', typ: 'ausgang', menge: 3, bewegung_am: '2026-09-02T10:00:00Z' },
+     { id: '3', typ: 'Zugang', menge: 10, bewegung_am: '2026-09-03T10:00:00Z' }],
+    [],
+  );
+  assert.deepEqual(mengeNachArt(liste), [
+    { name: 'Zugang', wert: 10 },
+    { name: 'Abgang', wert: 6 },
+  ]);
+});
+
+test('eine Zählung erscheint nicht als bewegte Menge', () => {
+  // „auf 40 gezählt" ist ein Stand, kein Zugang von 40.
+  const liste = vereineBewegungen([], [
+    { id: 'k', typ: 'korrektur', menge: 40, erstellt_am: '2026-09-08T10:00:00Z' },
+    { id: 'z', typ: 'zugang', menge: 2, erstellt_am: '2026-09-08T11:00:00Z' },
+  ]);
+  assert.deepEqual(mengeNachArt(liste), [{ name: 'Zugang', wert: 2 }]);
+});
+
+test('zaehleNachArt fasst die Schreibweisen zusammen', () => {
+  // Vorher ergaben 'Zugang', 'zugang' und 'eingang' drei getrennte Balken.
+  const liste = vereineBewegungen(
+    [{ id: '1', typ: 'Zugang', menge: 1, bewegung_am: '2026-09-01T10:00:00Z' },
+     { id: '2', typ: 'zugang', menge: 1, bewegung_am: '2026-09-02T10:00:00Z' },
+     { id: '3', typ: 'eingang', menge: 1, bewegung_am: '2026-09-03T10:00:00Z' },
+     { id: '4', typ: 'ausgang', menge: 1, bewegung_am: '2026-09-04T10:00:00Z' }],
+    [],
+  );
+  const z = zaehleNachArt(liste);
+  assert.deepEqual(z, [{ name: 'Zugang', wert: 3 }, { name: 'Abgang', wert: 1 }]);
 });
 
 // ---------- Klartext ----------

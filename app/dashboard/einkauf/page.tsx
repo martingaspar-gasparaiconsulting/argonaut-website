@@ -16,6 +16,7 @@ import {
   kalkuliereVk, margenAusVk, bruttoAusNetto, zaehleEinkauf,
   type PositionLite,
 } from '@/lib/einkauf';
+import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { augeEinkauf } from '@/lib/auge';
 import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
@@ -59,6 +60,7 @@ export default function EinkaufPage() {
   const [bestellungen, setBestellungen] = useState<Bestellung[]>([]);
   const [positionen, setPositionen] = useState<Position[]>([]);
   const [artikel, setArtikel] = useState<LagerArtikel[]>([]);
+  const [standorte, setStandorte] = useState<{ id: string; name: string }[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -85,12 +87,14 @@ export default function EinkaufPage() {
       const sid = konkreterStandort(leseStandortCookie());
       let bq = supabase.from('bestellung').select('*');
       if (sid) bq = bq.or(standortOrFilter(sid));
-      const [l, b, p, a] = await Promise.all([
+      const [l, b, p, a, st] = await Promise.all([
         supabase.from('lieferant').select('*').order('name', { ascending: true }),
         bq.order('datum', { ascending: false }),
         supabase.from('bestellung_position').select('*'),
         supabase.from('artikel').select('id, bezeichnung, artikelnummer, einheit, aktueller_bestand').eq('aktiv', true).order('bezeichnung', { ascending: true }),
+        supabase.from('standorte').select('id, name').eq('aktiv', true).order('name'),
       ]);
+      setStandorte((st.data as { id: string; name: string }[]) ?? []);
       setLieferanten((l.data as Lieferant[]) ?? []);
       const bestRows = (b.data as Bestellung[]) ?? [];
       setBestellungen(bestRows);
@@ -197,6 +201,14 @@ export default function EinkaufPage() {
 
   async function wareneingangSpeichern(b: Bestellung) {
     if (!uid) return;
+
+    // In welche Filiale kommt die Ware? Vor dem ersten Schreibvorgang klären —
+    // danach steht der Wareneingang schon halb in der Bestellung.
+    const wahl = standortFuerBuchung(konkreterStandort(leseStandortCookie()), standorte);
+    if (!wahl.ok) { setFehler(wahl.fehler); return; }
+    const filialName = wahl.standortId
+      ? (standorte.find((s) => s.id === wahl.standortId)?.name ?? 'Filiale') : null;
+
     setBusy('we'); setFehler(null); setOk(null);
     try {
       const ps = posByBest(b.id);
@@ -214,14 +226,20 @@ export default function EinkaufPage() {
         const schonGebucht = Number(p.lager_gebucht) || 0;
         const delta = Math.round((erhalten - schonGebucht) * 100) / 100;
         if (artikelId && delta > 0) {
-          const { data: aData } = await supabase.from('artikel').select('aktueller_bestand').eq('id', artikelId).single();
-          const bestand = (aData as { aktueller_bestand: number | null } | null)?.aktueller_bestand ?? 0;
-          const { error: eb } = await supabase.from('lagerbewegungen').insert({
-            owner_user_id: uid, artikel_id: artikelId, typ: 'Zugang', menge: delta,
-            grund: 'Wareneingang', referenz: `BE:${b.bestell_nr || b.id}`,
-          });
+          // Bewegung, Filialbestand und Gesamtsumme in EINEM Vorgang.
+          // Vorher waren es drei Schreibvorgänge; brach es dazwischen ab,
+          // stand die Ware in der Bewegung, aber nicht im Bestand.
+          const { error: eb } = await supabase.rpc(RPC_BUCHEN, buchenArgumente({
+            artikelId,
+            standortId: wahl.standortId,
+            art: 'zugang',
+            menge: delta,
+            herkunft: 'einkauf',
+            notiz: `Wareneingang BE:${b.bestell_nr || b.id}`,
+          }));
           if (!eb) {
-            await supabase.from('artikel').update({ aktueller_bestand: Math.round((bestand + delta) * 100) / 100, updated_at: new Date().toISOString() }).eq('id', artikelId);
+            // Erst nach erfolgreicher Buchung merken, wie viel gebucht ist —
+            // sonst verschwindet die Menge bei einem erneuten Speichern.
             await supabase.from('bestellung_position').update({ lager_gebucht: erhalten }).eq('id', p.id);
             lagerDelta += delta;
           }
@@ -234,7 +252,10 @@ export default function EinkaufPage() {
         const st = grad === 'geliefert' ? 'geliefert' : grad === 'teilgeliefert' ? 'teilgeliefert' : 'bestellt';
         await supabase.from('bestellung').update({ status: st, liefer_datum: st === 'geliefert' ? heuteLokal() : null }).eq('id', b.id);
       }
-      setOk(lagerDelta > 0 ? `Wareneingang gespeichert · ${lagerDelta} ins Lager gebucht.` : 'Wareneingang gespeichert.'); await laden_();
+      setOk(lagerDelta > 0
+        ? `Wareneingang gespeichert · ${lagerDelta} ins Lager gebucht${filialName ? ` (${filialName})` : ''}.`
+        : 'Wareneingang gespeichert.');
+      await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }

@@ -352,6 +352,174 @@ export function unterMindest(gesamt: unknown, mindest: unknown): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Zwei Bewegungstabellen, eine Liste
+//
+// ▄▄▄ WARUM DAS HIER STEHEN MUSS ▄▄▄
+// Es gibt zwei Tabellen: die alte `lagerbewegungen` (ohne Filiale) und die
+// neue `lager_bewegung` (mit Filiale). Ab dem 08.09.26 schreiben alle Wege in
+// die neue. Wer nur die alte liest, sieht ab sofort KEINE neuen Buchungen mehr
+// — die Artikelseite saehe aus, als waere nichts passiert. Deshalb werden
+// beide gelesen und hier zusammengefuehrt.
+//
+// Die alte Tabelle ist in sich uneinheitlich — gewachsen, nicht geplant:
+//   · `typ` kam als 'eingang', 'zugang', 'Zugang', 'ausgang', 'inventur'
+//   · `menge` war mal mit Vorzeichen (Kasse, Scanner), mal ohne (Entnahme)
+// Eine Entnahme von 3 Stueck stand dort als „+3" in der Anzeige. Deshalb wird
+// die Richtung hier IMMER aus der Art abgeleitet, nie aus dem Vorzeichen.
+//
+// Ein Unterschied bleibt bestehen und darf nicht eingeebnet werden: Eine alte
+// `inventur`-Zeile enthaelt die VERAENDERUNG, eine neue `korrektur`-Zeile den
+// GEZAEHLTEN STAND. Beides als „+7" zu zeigen waere schlicht falsch.
+// ---------------------------------------------------------------------------
+
+/** Bringt die gewachsenen Schreibweisen der alten Tabelle auf einen Nenner. */
+export function normArt(typ: unknown): BuchungsArt | 'unbekannt' {
+  const t = String(typ ?? '').trim().toLowerCase();
+  if (t === 'zugang' || t === 'eingang') return 'zugang';
+  if (t === 'abgang' || t === 'ausgang') return 'abgang';
+  if (t === 'korrektur' || t === 'inventur') return 'korrektur';
+  if (t === 'umlagerung') return 'umlagerung';
+  return 'unbekannt';
+}
+
+export type BewegungAnzeige = {
+  id: string;
+  /** Zeitpunkt als ISO-Text — leer, wenn keiner gespeichert war. */
+  zeit: string;
+  art: BuchungsArt | 'unbekannt';
+  /** Menge mit Vorzeichen. null nur bei einer Zaehlung (neue Korrektur). */
+  veraenderung: number | null;
+  /** Der gezaehlte Stand — nur bei einer neuen Korrektur, sonst null. */
+  zaehlstand: number | null;
+  grund: string | null;
+  standortId: string | null;
+  /** 'alt' = ohne Filiale (vor dem 08.09.26), 'neu' = mit Filiale. */
+  quelle: 'alt' | 'neu';
+};
+
+function zahlOderNull(x: unknown): number {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function zeitText(x: unknown): string {
+  const s = String(x ?? '').trim();
+  return s;
+}
+
+/** Eine Zeile aus der alten Tabelle `lagerbewegungen`. */
+export function ausAlterBewegung(z: Record<string, unknown>): BewegungAnzeige {
+  const art = normArt(z?.typ);
+  const roh = zahlOderNull(z?.menge);
+  let veraenderung: number;
+  if (art === 'zugang') veraenderung = Math.abs(roh);
+  else if (art === 'abgang' || art === 'umlagerung') veraenderung = -Math.abs(roh);
+  else veraenderung = roh; // Korrektur/unbekannt: so, wie es dasteht.
+  return {
+    id: String(z?.id ?? ''),
+    zeit: zeitText(z?.bewegung_am ?? z?.erstellt_am),
+    art,
+    veraenderung,
+    zaehlstand: null,
+    grund: z?.grund == null ? null : String(z.grund),
+    standortId: null,
+    quelle: 'alt',
+  };
+}
+
+/** Eine Zeile aus der neuen Tabelle `lager_bewegung`. Menge ist dort positiv. */
+export function ausNeuerBewegung(z: Record<string, unknown>): BewegungAnzeige {
+  const art = normArt(z?.typ);
+  const m = Math.abs(zahlOderNull(z?.menge));
+  const istZaehlung = art === 'korrektur';
+  return {
+    id: String(z?.id ?? ''),
+    zeit: zeitText(z?.erstellt_am ?? z?.datum),
+    art,
+    veraenderung: istZaehlung ? null : (art === 'zugang' ? m : -m),
+    zaehlstand: istZaehlung ? m : null,
+    grund: z?.grund == null ? null : String(z.grund),
+    standortId: z?.standort_id == null ? null : String(z.standort_id),
+    quelle: 'neu',
+  };
+}
+
+/** Beide Tabellen zu EINER Liste, neueste zuerst. */
+export function vereineBewegungen(
+  alt: Record<string, unknown>[] | null | undefined,
+  neu: Record<string, unknown>[] | null | undefined,
+): BewegungAnzeige[] {
+  const liste = [
+    ...(alt || []).map(ausAlterBewegung),
+    ...(neu || []).map(ausNeuerBewegung),
+  ];
+  return liste.sort((a, b) => {
+    const ta = Date.parse(a.zeit);
+    const tb = Date.parse(b.zeit);
+    // Zeilen ohne Zeitstempel wandern ans Ende, statt die Reihenfolge zu kippen.
+    if (!Number.isFinite(ta) && !Number.isFinite(tb)) return 0;
+    if (!Number.isFinite(ta)) return 1;
+    if (!Number.isFinite(tb)) return -1;
+    return tb - ta;
+  });
+}
+
+/**
+ * Wie viel ist in den letzten `tage` Tagen abgegangen? Grundlage fuer den
+ * Jahresbedarf. Zaehlungen bleiben aussen vor — eine Inventur ist kein
+ * Verbrauch, sondern eine Berichtigung.
+ */
+export function abgangImZeitraum(
+  liste: BewegungAnzeige[] | null | undefined,
+  tage: number,
+  jetztMs: number = Date.now(),
+): number {
+  const grenze = jetztMs - Math.max(0, tage) * 24 * 60 * 60 * 1000;
+  let summe = 0;
+  for (const b of liste || []) {
+    if (b.art !== 'abgang' && b.art !== 'umlagerung') continue;
+    const t = Date.parse(b.zeit);
+    if (!Number.isFinite(t) || t < grenze) continue;
+    summe += Math.abs(b.veraenderung ?? 0);
+  }
+  return Math.round(summe * 1000) / 1000;
+}
+
+/**
+ * Bewegte MENGE je Art — fuer die Auswertung, immer als positiver Betrag.
+ *
+ * Korrekturen bleiben bewusst draussen: Dort steht ein Zaehlstand, keine
+ * bewegte Menge. Sie mit Zu- und Abgaengen in einen Balken zu werfen, waere
+ * ein Vergleich von zwei verschiedenen Dingen. Die alte Fassung addierte
+ * ausserdem die Mengen MIT Vorzeichen — bei gemischten Schreibweisen hoben
+ * sich Abgaenge dort gegenseitig auf.
+ */
+export function mengeNachArt(
+  liste: BewegungAnzeige[] | null | undefined,
+): { name: string; wert: number }[] {
+  const map = new Map<BuchungsArt, number>();
+  for (const b of liste || []) {
+    if (b.veraenderung === null) continue;
+    if (b.art !== 'zugang' && b.art !== 'abgang' && b.art !== 'umlagerung') continue;
+    map.set(b.art, (map.get(b.art) ?? 0) + Math.abs(b.veraenderung));
+  }
+  return Array.from(map.entries())
+    .map(([art, wert]) => ({ name: artText(art), wert: Math.round(wert * 100) / 100 }))
+    .sort((a, b) => b.wert - a.wert);
+}
+
+/** Zaehlt die Bewegungen je Art — fuer die Auswertung. */
+export function zaehleNachArt(
+  liste: BewegungAnzeige[] | null | undefined,
+): { name: string; wert: number }[] {
+  const map = new Map<BuchungsArt | 'unbekannt', number>();
+  for (const b of liste || []) map.set(b.art, (map.get(b.art) ?? 0) + 1);
+  return Array.from(map.entries())
+    .map(([art, wert]) => ({ name: art === 'unbekannt' ? 'Unbekannt' : artText(art), wert }))
+    .sort((a, b) => b.wert - a.wert);
+}
+
+// ---------------------------------------------------------------------------
 // Klartext
 // ---------------------------------------------------------------------------
 

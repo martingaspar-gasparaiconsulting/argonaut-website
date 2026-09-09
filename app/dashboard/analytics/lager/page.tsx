@@ -22,6 +22,7 @@ import {
   DiagrammKarte,
   type DiagrammPunkt,
 } from '../../_components/ReportBausteine';
+import { vereineBewegungen, mengeNachArt, type BewegungAnzeige } from '@/lib/lagerBuchung';
 
 type Artikel = {
   id: string;
@@ -37,11 +38,7 @@ type Bestellung = {
   status: string | null;
 };
 
-type Bewegung = {
-  id: string;
-  typ: string | null;
-  menge: number | null;
-};
+
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,24 +58,28 @@ function euro(n: number): string {
 export default function LagerReport() {
   const [artikel, setArtikel] = useState<Artikel[]>([]);
   const [bestellungen, setBestellungen] = useState<Bestellung[]>([]);
-  const [bewegungen, setBewegungen] = useState<Bewegung[]>([]);
+  const [bewegungen, setBewegungen] = useState<BewegungAnzeige[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
     let aktiv = true;
     (async () => {
-      const [aRes, bRes, mRes] = await Promise.all([
+      const [aRes, bRes, mRes, nRes] = await Promise.all([
         supabase
           .from('artikel')
           .select(
             'id, kategorie, einkaufspreis, aktueller_bestand, mindestbestand, aktiv',
           ),
         supabase.from('bestellungen').select('id, status'),
-        supabase.from('lagerbewegungen').select('id, typ, menge'),
+        // BEIDE Bewegungstabellen: die alte ohne Filiale, die neue mit.
+        // Wer nur die alte liest, sieht ab dem 08.09.26 keine neue Bewegung
+        // mehr — der Balken bliebe auf dem Stand von gestern stehen.
+        supabase.from('lagerbewegungen').select('id, typ, menge, bewegung_am'),
+        supabase.from('lager_bewegung').select('id, typ, menge, standort_id, erstellt_am'),
       ]);
       if (!aktiv) return;
-      const err = aRes.error ?? bRes.error ?? mRes.error;
+      const err = aRes.error ?? bRes.error ?? mRes.error ?? nRes.error;
       if (err) {
         setFehler(err.message);
         setLaden(false);
@@ -86,7 +87,10 @@ export default function LagerReport() {
       }
       setArtikel((aRes.data ?? []) as Artikel[]);
       setBestellungen((bRes.data ?? []) as Bestellung[]);
-      setBewegungen((mRes.data ?? []) as Bewegung[]);
+      setBewegungen(vereineBewegungen(
+        (mRes.data ?? []) as Record<string, unknown>[],
+        (nRes.data ?? []) as Record<string, unknown>[],
+      ));
       setLaden(false);
     })();
     return () => {
@@ -136,15 +140,12 @@ export default function LagerReport() {
       bestellStatusMap.entries(),
     ).map(([name, wert]) => ({ name, wert }));
 
-    // ── Lagerbewegungen nach Typ (Balken) ──
-    const bewegTypMap = new Map<string, number>();
-    for (const m of bewegungen) {
-      const t = m.typ ?? 'unbekannt';
-      bewegTypMap.set(t, (bewegTypMap.get(t) ?? 0) + Number(m.menge ?? 0));
-    }
-    const bewegungenNachTyp: DiagrammPunkt[] = Array.from(
-      bewegTypMap.entries(),
-    ).map(([name, wert]) => ({ name, wert: Math.round(wert * 100) / 100 }));
+    // ── Bewegte Menge nach Art (Balken) ──
+    // Vorher wurden hier die Mengen MIT Vorzeichen addiert, über beide
+    // Schreibweisen hinweg: Ein Abgang von -3 (Kasse) und einer von +3
+    // (Werkstatt-Entnahme) ergaben zusammen 0 — als hätte sich nichts bewegt.
+    // Jetzt zählt der Betrag, und die Schreibweisen sind zusammengefasst.
+    const bewegungenNachTyp: DiagrammPunkt[] = mengeNachArt(bewegungen);
 
     return {
       artikelAktiv,
@@ -264,7 +265,7 @@ export default function LagerReport() {
 
           <div style={{ marginTop: 16 }}>
             <DiagrammKarte
-              titel="Lagerbewegungen nach Typ (Menge)"
+              titel="Bewegte Menge nach Art"
               typ="balken"
               daten={a.bewegungenNachTyp}
               farbe="#00e5ff"
