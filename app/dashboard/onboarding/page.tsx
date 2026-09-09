@@ -17,6 +17,7 @@ import { STUFEN, stufeFuer, naechsteStufe, bisNaechsteStufe } from '@/lib/onboar
 import { bereicheAus } from '@/lib/onboardingBereiche';
 import KiGuide from '../_components/KiGuide';
 import GefuehrteTour from '../_components/GefuehrteTour';
+import { pruefeFirma, type PruefBericht } from '../einstellungen/firmaPruefung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -68,6 +69,37 @@ function Auge({ farbe, leuchtet }: { farbe: string; leuchtet: boolean }) {
   );
 }
 
+/**
+ * Die profiles-Spalten so aufbereiten, wie pruefeFirma() sie erwartet.
+ *
+ * WARUM EIN ADAPTER: profiles ist historisch gewachsen. Der Firmenname liegt je
+ * nach Alter des Kontos in firma_name, firma, company_name oder company; die
+ * Bankverbindung mal in firma_iban, mal in sepa_iban. Ohne die Fallbacks bekaeme
+ * ein Betrieb, bei dem alles gepflegt ist, faelschlich „Firmenname fehlt".
+ * Es wird NUR gelesen — nichts umgeschrieben, nichts gespeichert.
+ */
+function firmaFelderAus(p: Record<string, unknown> | null): Record<string, string> {
+  const w = (keys: string[]) => ersteTextSpalte(p, keys);
+  return {
+    firma_name: w(['firma_name', 'firma', 'company_name', 'company']),
+    firma_rechtsform: w(['firma_rechtsform', 'rechtsform']),
+    firma_strasse: w(['firma_strasse', 'strasse', 'adresse']),
+    firma_plz: w(['firma_plz', 'plz']),
+    firma_ort: w(['firma_ort', 'ort', 'stadt']),
+    firma_email: w(['firma_email', 'email', 'kontakt_email']),
+    firma_telefon: w(['firma_telefon', 'telefon']),
+    firma_website: w(['firma_website', 'website']),
+    firma_ust_id: w(['firma_ust_id', 'ust_id', 'ustid']),
+    firma_steuernummer: w(['firma_steuernummer', 'steuernummer']),
+    firma_iban: w(['firma_iban', 'sepa_iban', 'iban']),
+    firma_bic: w(['firma_bic', 'bic']),
+    firma_bank: w(['firma_bank', 'bank']),
+    firma_geschaeftsfuehrer: w(['firma_geschaeftsfuehrer', 'geschaeftsfuehrer', 'inhaber']),
+    firma_registergericht: w(['firma_registergericht', 'registergericht']),
+    firma_hrb: w(['firma_hrb', 'hrb']),
+  };
+}
+
 /** Erste gefüllte Textspalte aus einem Datensatz — die profiles-Tabelle ist historisch gewachsen. */
 function ersteTextSpalte(p: Record<string, unknown> | null, keys: string[]): string {
   if (!p) return '';
@@ -95,6 +127,7 @@ export default function OnboardingPage() {
   const [aufstieg, setAufstieg] = useState(false);
   const [zertBusy, setZertBusy] = useState(false);
   const [tourOffen, setTourOffen] = useState(false);
+  const [firmaBericht, setFirmaBericht] = useState<PruefBericht | null>(null);
 
   const laden_ = useCallback(async (id: string) => {
     const { data: pRoh } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -112,9 +145,16 @@ export default function OnboardingPage() {
       const { data: zi } = await supabase.from('betrieb_integrationen').select('anbieter, aktiv').eq('typ', 'zahlung').maybeSingle();
       zahlungAktiv = !!zi && zi.aktiv === true && zi.anbieter !== 'kein';
     } catch { /* optional */ }
+    // PUNKT 1.3: Die Firmendaten werden jetzt richtig geprueft — nicht mehr nur
+    // „ist irgendein Name gefuellt". pruefeFirma() ist dieselbe Funktion, die auf
+    // der Einstellungsseite laeuft; sie kennt die Rechnungs-Pflichtfelder.
+    // Gruen wird der Haken nur ohne FEHLER. Warnungen (z. B. fehlende IBAN)
+    // blockieren bewusst nicht — sonst kaeme kein Betrieb je auf 100 %.
+    const bericht = pruefeFirma(firmaFelderAus(p));
+    setFirmaBericht(bericht);
     setLage({
-      firma: !!ersteTextSpalte(p, ['firma_name', 'firma', 'company_name', 'company']),
-      iban: !!ersteTextSpalte(p, ['sepa_iban']),
+      firma: bericht.anzahlFehler === 0,
+      iban: !!ersteTextSpalte(p, ['firma_iban', 'sepa_iban', 'iban']),
       kontakte, rechnungen, angebote, zahlungAktiv,
     });
 
@@ -333,6 +373,36 @@ export default function OnboardingPage() {
         <b>2 · Echt einrichten:</b> Arbeiten Sie die Schritte von oben nach unten ab. Was ARGONAUT schon erkennt, ist grün abgehakt; bei jedem Schritt öffnet <b>▸ So geht’s</b> eine kurze Anleitung. Dann „Öffnen" klicken, erledigen — fertig.
       </div>
 
+      {/* PUNKT 1.3 · Sackgassen-Bremse
+          Frueher merkte der Betrieb erst beim Erzeugen der ERSTEN RECHNUNG, dass
+          ein Pflichtfeld fehlt — mitten in der Arbeit, mit dem Kunden am Telefon.
+          Jetzt steht es hier, am ersten Tag, im Klartext. */}
+      {!laden && firmaBericht && (firmaBericht.anzahlFehler > 0 || firmaBericht.anzahlWarnung > 0) && (
+        <div style={{ ...styles.firmaBox, borderLeftColor: firmaBericht.anzahlFehler > 0 ? '#E06666' : C.gold }}>
+          <div style={styles.firmaKopf}>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>{firmaBericht.anzahlFehler > 0 ? '🧾' : '💡'}</span>
+            <b>
+              {firmaBericht.anzahlFehler > 0
+                ? 'Das fehlt noch, bevor Sie die erste Rechnung schreiben können'
+                : 'Für Rechnungen empfohlen'}
+            </b>
+          </div>
+          <ul style={styles.firmaListe}>
+            {firmaBericht.ergebnisse
+              .filter((r) => r.status !== 'ok')
+              .map((r) => (
+                <li key={r.feld} style={styles.firmaZeile}>
+                  <span style={{ color: r.status === 'fehler' ? '#E06666' : C.gold, flexShrink: 0 }}>
+                    {r.status === 'fehler' ? '●' : '○'}
+                  </span>
+                  <span><b>{r.label}:</b> {r.text}</span>
+                </li>
+              ))}
+          </ul>
+          <a href="/dashboard/einstellungen" style={styles.firmaCta}>Firmendaten ergänzen ›</a>
+        </div>
+      )}
+
       <a href="/dashboard/import" style={styles.importBanner}>
         <span style={styles.importBannerIcon}>📥</span>
         <span style={styles.importBannerText}>
@@ -488,6 +558,11 @@ const styles: Record<string, CSSProperties> = {
   sub: { color: C.textDim, fontSize: 15, lineHeight: 1.5, margin: '8px 0 0', maxWidth: 760 },
   anleitung: { marginTop: 14, background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 16px', color: C.textDim, fontSize: 13.5, lineHeight: 1.55 },
   importBanner: { display: 'flex', alignItems: 'center', gap: 14, marginTop: 14, background: 'linear-gradient(90deg, rgba(201,168,76,0.12), rgba(0,229,255,0.06))', border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: 12, padding: '13px 16px', textDecoration: 'none', color: C.text },
+  firmaBox: { marginTop: 14, background: C.navy2, border: `1px solid ${C.border}`, borderLeft: '3px solid', borderRadius: 12, padding: '13px 16px' },
+  firmaKopf: { display: 'flex', alignItems: 'center', gap: 9, fontSize: 14.5, color: C.text, marginBottom: 8 },
+  firmaListe: { listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 },
+  firmaZeile: { display: 'flex', gap: 9, alignItems: 'flex-start', color: C.textDim, fontSize: 13.5, lineHeight: 1.5 },
+  firmaCta: { display: 'inline-block', marginTop: 11, color: C.cyan, fontWeight: 700, fontSize: 13.5, textDecoration: 'none' },
   importBannerIcon: { fontSize: 24, lineHeight: 1, flexShrink: 0 },
   importBannerText: { flex: 1, fontSize: 13.5, lineHeight: 1.5, color: C.text },
   importBannerCta: { color: C.cyan, fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', flexShrink: 0 },
