@@ -355,7 +355,7 @@ export default function BuchungenPage() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : ressourcen.length === 0 ? (
-          <div style={styles.hint}>Noch keine Ressourcen. Leg oben rechts die erste an (z. B. „Harvester", „Werkstatt-Bühne 1", „Techniker Müller").</div>
+          <div style={styles.hint}>Noch keine Ressourcen. Legen Sie oben rechts die erste an — zum Beispiel „Harvester“, „Werkstatt-Bühne 1“ oder „Techniker Müller“. Danach lässt sich alles davon belegen und im Kalender sehen.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {spuren.map(({ ressource, buchungen: bl }) => {

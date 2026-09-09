@@ -279,7 +279,7 @@ export default function ShopPage() {
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : liste.length === 0 ? (
-        <p style={styles.sub}>Noch keine Bestellungen. Oben eine CSV importieren.</p>
+        <p style={styles.sub}>Noch keine Bestellungen — importieren Sie oben eine CSV aus Ihrem Shop-System. Danach laufen Bestellungen, Bestand und Rechnung zusammen.</p>
       ) : (
         <div style={styles.liste}>
           {liste.map((b) => {

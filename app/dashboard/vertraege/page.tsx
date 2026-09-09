@@ -5,6 +5,7 @@ import VertraegeAuge from "./VertraegeAuge";
 import { signaturStarten } from "@/lib/signaturStart";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+import Leerzustand from '../_components/Leerzustand';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'vertraege';
@@ -643,11 +644,18 @@ export default function VertraegeCockpit() {
         {laden ? (
           <div style={{ padding: 30, color: C.textDim }}>Lade Verträge…</div>
         ) : gefiltert.length === 0 ? (
-          <div style={{ padding: 30, color: C.textDim }}>
-            {vertraege.length === 0
-              ? "Noch keine Verträge angelegt. Lege oben rechts deinen ersten Vertrag an."
-              : "Keine Verträge für diese Filter gefunden."}
-          </div>
+          vertraege.length === 0 ? (
+            <div style={{ padding: 24 }}>
+              <Leerzustand
+                icon="📑"
+                titel="Noch keine Verträge angelegt"
+                text="Versicherung, Leasing, Wartung, Software-Abo: Hier stehen Ihre laufenden Kosten mit Laufzeit und Kündigungsfrist — damit keine Frist mehr ungenutzt verstreicht."
+                schritte={["Oben rechts einen Vertrag anlegen", "Kosten, Laufzeit und Kündigungsfrist eintragen", "ARGONAUT erinnert Sie rechtzeitig vor dem Stichtag"]}
+              />
+            </div>
+          ) : (
+            <div style={{ padding: 30, color: C.textDim }}>Keine Verträge für diese Filter gefunden.</div>
+          )
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
             <thead>

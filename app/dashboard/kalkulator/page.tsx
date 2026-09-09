@@ -564,7 +564,7 @@ export default function KalkulatorPage() {
                     );
                   })}
                   {k.posten.length === 0 && (
-                    <tr><td colSpan={7} style={{ ...s.td, color: C.dim }}>Noch keine Position — unten hinzufügen oder oben ein Gewerk wählen.</td></tr>
+                    <tr><td colSpan={7} style={{ ...s.td, color: C.dim }}>Noch keine Position — fügen Sie unten eine hinzu oder wählen Sie oben ein Gewerk. Der Kalkulator rechnet Ihnen daraus Material, Lohn und Deckungsbeitrag aus.</td></tr>
                   )}
                 </tbody>
               </table>

@@ -302,7 +302,7 @@ export default function ErtraegePage() {
 
           {/* Anlagen-Karten mit Aggregat + Ablesungen */}
           {anlagenMitDaten.length === 0 ? (
-            <div style={styles.hint}>Noch keine Ablesungen{filterAnlage ? ' für diese Anlage' : ''}.</div>
+            <div style={styles.hint}>Noch keine Ablesungen{filterAnlage ? ' für diese Anlage' : ''} — tragen Sie oben den ersten Zählerstand ein. Ab der zweiten Ablesung rechnet ARGONAUT Ertrag und Vergütung aus.</div>
           ) : anlagenMitDaten.map((a) => {
             const abs = sichtbareAblesungen.filter((ab) => ab.anlage_id === a.id).slice().sort((x, y) => (y.von || '').localeCompare(x.von || ''));
             const agg = aggregat(abs.map((ab) => ({ a: a as AnlageLite, ab: ab as AblesungLite })));

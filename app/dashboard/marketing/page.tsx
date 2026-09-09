@@ -436,7 +436,7 @@ export default function MarketingCockpit() {
         >
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
             {filter === 'alle'
-              ? 'Noch keine Kampagne angelegt. Leg deine erste an.'
+              ? 'Noch keine Kampagne angelegt. Legen Sie die erste an — danach zeigt ARGONAUT je Kampagne, wie viele Anfragen daraus entstanden sind und was sie gekostet hat.'
               : 'Keine Kampagne in diesem Status.'}
           </p>
         </div>

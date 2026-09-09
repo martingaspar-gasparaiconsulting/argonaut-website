@@ -6,6 +6,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
+import Leerzustand from '../_components/Leerzustand';
 import ServiceAuge from "./ServiceAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -540,13 +541,18 @@ export default function ServicePage() {
           Lädt …
         </div>
       ) : gefiltert.length === 0 ? (
-        <div style={{ ...karte, textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.6)' }}>
-            {tickets.length === 0
-              ? 'Noch keine Tickets. Lege das erste über „+ Neues Ticket" an.'
-              : 'Keine Tickets für diese Filter.'}
+        tickets.length === 0 ? (
+          <Leerzustand
+            icon="🎫"
+            titel="Noch keine Tickets"
+            text="Jede Kundenanfrage bekommt hier ein Ticket mit Frist-Ampel — so sehen Sie auf einen Blick, was drängt."
+            schritte={["Oben „+ Neues Ticket“ anlegen", "Kunde, Anliegen und Dringlichkeit erfassen", "Ticket zuweisen und bis zur Lösung verfolgen"]}
+          />
+        ) : (
+          <div style={{ ...karte, textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.6)' }}>Keine Tickets für diese Filter.</div>
           </div>
-        </div>
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {gefiltert.map((t) => {

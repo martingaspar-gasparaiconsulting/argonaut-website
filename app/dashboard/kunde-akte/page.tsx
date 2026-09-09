@@ -115,7 +115,7 @@ export default function KundeAktePage() {
                   <div style={{ color: C.textDim, fontSize: 13 }}>{k.email || k.telefon || '—'}</div>
                 </button>
               ))}
-              {!gefiltert.length && <p style={styles.dim}>Keine Kontakte gefunden.</p>}
+              {!gefiltert.length && <p style={styles.dim}>Keine Kontakte gefunden — die Akte zeigt zu jedem Kunden Angebote, Aufträge, Rechnungen und Termine an einer Stelle. Legen Sie zuerst Kontakte im Vertrieb/CRM an.</p>}
             </div>
           )}
         </div>

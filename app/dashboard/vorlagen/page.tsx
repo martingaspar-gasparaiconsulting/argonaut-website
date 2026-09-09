@@ -161,7 +161,7 @@ export default function VorlagenPoolPage() {
         )}
         {!loading && !error && gefiltert.length === 0 && (
           <div style={styles.stateBox}>
-            {rows.length === 0 ? 'Noch keine Vorlagen im Pool.' : 'Keine Vorlage passt zur Suche.'}
+            {rows.length === 0 ? 'Noch keine Vorlagen im Pool — legen Sie oben die erste an. Vorlagen sparen bei jedem Angebot, jeder Mail und jedem Brief das Tippen von vorn.' : 'Keine Vorlage passt zur Suche.'}
             {darfVerwalten && rows.length === 0 && <div><button style={styles.ghostBtn} onClick={() => setModal('neu')}>Erste Vorlage anlegen</button></div>}
           </div>
         )}

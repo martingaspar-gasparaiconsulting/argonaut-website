@@ -5,6 +5,7 @@ import LieferantenAuge from "./LieferantenAuge";
 import FilialZuordnung, { type FilialeLite } from "../../_components/FilialZuordnung";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort } from "@/lib/standortDaten";
+import Leerzustand from "../../_components/Leerzustand";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E4 Lieferanten-Cockpit
@@ -364,11 +365,20 @@ export default function LieferantenCockpit() {
         {laden ? (
           <div style={{ padding: 30, color: C.textDim }}>Lade Lieferanten…</div>
         ) : gefiltert.length === 0 ? (
-          <div style={{ padding: 30, color: C.textDim }}>
-            {lieferanten.length === 0
-              ? "Noch keine Lieferanten angelegt. Lege oben rechts deinen ersten Lieferanten an."
-              : "Keine Lieferanten für diese Suche gefunden."}
-          </div>
+          lieferanten.length === 0 ? (
+            <div style={{ padding: 24 }}>
+              <Leerzustand
+                icon="🏭"
+                titel="Noch keine Lieferanten angelegt"
+                text="Lieferanten sind die Grundlage für Bestellungen und Wareneingang. Sie können sie einzeln anlegen — oder Ihre bestehende Liste auf einmal einlesen."
+                schritte={["Oben rechts einen Lieferanten anlegen", "Oder im Import-Center die Vorlage „Lieferanten“ holen", "Ausgefüllte Datei hochladen — die Spalten ordnet ARGONAUT selbst zu"]}
+                aktionText="Zum Import-Center"
+                aktionHref="/dashboard/import"
+              />
+            </div>
+          ) : (
+            <div style={{ padding: 30, color: C.textDim }}>Keine Lieferanten für diese Suche gefunden.</div>
+          )
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

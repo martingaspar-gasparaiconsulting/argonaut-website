@@ -105,7 +105,7 @@ export default function AktivitaetPage() {
             {!aktiv ? <p style={styles.dim}>Links einen Kunden wählen.</p> : ladenT ? <p style={styles.dim}>Sammle die Chronik …</p> : (
               <div>
                 <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 12 }}>{aktiv.name}</div>
-                {ereignisse.length === 0 ? <p style={styles.dim}>Noch keine Vorgänge für diesen Kunden.</p> : (
+                {ereignisse.length === 0 ? <p style={styles.dim}>Noch keine Vorgänge für diesen Kunden — sobald Angebote, Aufträge, Rechnungen oder Termine entstehen, erscheinen sie hier als Verlauf.</p> : (
                   <div style={{ position: 'relative', paddingLeft: 22 }}>
                     <div style={styles.linie} />
                     {ereignisse.map((e, i) => (

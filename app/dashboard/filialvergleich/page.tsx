@@ -136,7 +136,7 @@ export default function FilialvergleichPage() {
       {fehler && <div style={styles.err}>{fehler}</div>}
 
       {!laden && zeilen.length === 0 ? (
-        <div style={styles.warnBox}>⚠️ Noch keine Standorte angelegt. Lege sie unter <b>🏢 Standorte &amp; Filialen</b> an.</div>
+        <div style={styles.warnBox}>⚠️ Noch keine Standorte angelegt. Legen Sie sie unter <b>🏢 Standorte &amp; Filialen</b> an — danach vergleicht diese Seite Umsatz und Auslastung Ihrer Filialen nebeneinander.</div>
       ) : laden ? <p style={styles.dim}>Lädt …</p> : (
         <>
           <div style={styles.kpiGrid}>

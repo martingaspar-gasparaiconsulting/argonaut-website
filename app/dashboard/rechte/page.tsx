@@ -507,7 +507,7 @@ export default function RechtePage() {
           >
             <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>👥</div>
             <div style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', color: "#fff", marginBottom: 6 }}>Noch keine Mitarbeiter</div>
-            <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Lege im Personal-Bereich Mitarbeiter an, dann kannst du hier Rechte vergeben.</div>
+            <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Legen Sie im Personal-Bereich Mitarbeiter an — danach vergeben Sie hier je Person, welche Bausteine sie sehen und bearbeiten darf.</div>
           </div>
         ) : (
           mitarbeiter.map((m) => {

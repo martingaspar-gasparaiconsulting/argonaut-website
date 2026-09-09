@@ -499,13 +499,13 @@ export default function MeineEinsaetzePage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Field Service</div>
       <h1 style={styles.h1}>Meine Einsätze</h1>
       {mitarbeiter && (
-        <p style={styles.sub}>Hallo {mitarbeiter.vorname ?? ''} – hier sind deine Einsätze.</p>
+        <p style={styles.sub}>Hallo {mitarbeiter.vorname ?? ''} – hier sind Ihre Einsätze.</p>
       )}
       {istChef && (
         <p style={styles.sub}>
-          Deine eigenen Einsätze – im{' '}
+          Ihre eigenen Einsätze – im{' '}
           <a href="/dashboard/dispo" style={{ color: C.cyan, fontWeight: 700 }}>Dispo-Board</a>{' '}
-          der Zeile „Ich (Chef)" zugewiesen. Team-Einsätze planst du dort für deine Monteure.
+          der Zeile „Ich (Chef)" zugewiesen. Team-Einsätze planen Sie dort für Ihre Monteure.
         </p>
       )}
 
@@ -543,7 +543,7 @@ export default function MeineEinsaetzePage() {
           <div style={{ fontSize: 'clamp(32px, 2.81vw, 45px)', marginBottom: 8 }}>✅</div>
           <div style={{ fontWeight: 700, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Keine Einsätze eingeplant</div>
           <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginTop: 6 }}>
-            Für {tagOffset === 0 ? 'heute' : 'diesen Tag'} ist nichts für dich eingeplant.
+            Für {tagOffset === 0 ? 'heute' : 'diesen Tag'} ist nichts für Sie eingeplant.
           </div>
         </div>
       ) : (
@@ -759,7 +759,7 @@ export default function MeineEinsaetzePage() {
               {me && <div style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 14 }}>{me.titel || 'Einsatz'}{me.kunde_name ? ` · ${me.kunde_name}` : ''}</div>}
 
               {poss.length === 0 ? (
-                <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '4px 0 12px' }}>Noch keine Leistungen erfasst.</div>
+                <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '4px 0 12px' }}>Noch keine Leistungen erfasst — tragen Sie Arbeitszeit und Material direkt beim Einsatz ein. Daraus entsteht später die Rechnung.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
                   {poss.map((p) => (

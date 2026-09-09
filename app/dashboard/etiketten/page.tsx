@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiAuge from "../_components/KiAuge";
 import { NurVoll } from '../_components/Ansicht';
+import Leerzustand from '../_components/Leerzustand';
 import { augeEtiketten } from "@/lib/auge";
 import {
   ALLERGENE,
@@ -343,7 +344,12 @@ export default function EtikettenSeite() {
       {laden ? (
         <div style={{ ...card, color: C.textDim }}>Lade Etiketten…</div>
       ) : gefiltert.length === 0 ? (
-        <div style={{ ...card, color: C.textDim }}>Noch keine Etiketten. Lege oben rechts dein erstes Produkt an — Allergene ankreuzen, Nährwerte eintragen, Etikett drucken.</div>
+        <Leerzustand
+          icon="🏷️"
+          titel="Noch keine Etiketten"
+          text="Für jedes Produkt ein LMIV-gerechtes Etikett — Zutaten, Allergene und Nährwerte in der vorgeschriebenen Form."
+          schritte={["Oben rechts ein Produkt anlegen", "Allergene ankreuzen und Nährwerte eintragen", "Etikett drucken oder als PDF ausgeben"]}
+        />
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {gefiltert.map((p) => {

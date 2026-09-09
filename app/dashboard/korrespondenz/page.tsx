@@ -418,7 +418,7 @@ export default function KorrespondenzPage() {
         <div style={{ ...karte, textAlign: 'center', padding: '40px 20px' }}>
           <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', color: 'rgba(255,255,255,0.6)' }}>
             {briefe.length === 0
-              ? 'Noch keine Briefe. Lege den ersten über „+ Neuer Brief" an.'
+              ? 'Noch keine Briefe. Legen Sie den ersten über „+ Neuer Brief“ an — Briefkopf und Anschrift zieht ARGONAUT aus Ihren Firmendaten.'
               : 'Keine Briefe für diese Filter.'}
           </div>
         </div>
