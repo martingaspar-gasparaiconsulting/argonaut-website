@@ -25,13 +25,7 @@ type Vorlage = {
 export default function WhatsappSeite() {
   const [infoOffen, setInfoOffen] = useState(false);
 
-  // G2 · Eingang: Webhook-Adresse, Pruef-Token und App-Secret
-  const [ehToken, setEhToken] = useState('');
-  const [ehSecret, setEhSecret] = useState('');
-  const [ehHatSecret, setEhHatSecret] = useState(false);
-  const [ehBusy, setEhBusy] = useState(false);
-  const [ehMeldung, setEhMeldung] = useState<string | null>(null);
-  const [ehKopiert, setEhKopiert] = useState('');
+  // G2 · nur der Zähler — die Einrichtung liegt im Command Center.
   const [ungelesen, setUngelesen] = useState(0);
 
   const [anbieter, setAnbieter] = useState<string>('');
@@ -80,12 +74,7 @@ export default function WhatsappSeite() {
       const jK = await rK.json();
       if (jE?.ok) { setAnbieter(jE.anbieter || ''); setAbsender(jE.absender || ''); }
       if (jB?.ok) { setVVerbunden(!!jB.verbunden); setVHatToken(!!jB.hatToken); setVPhoneId(jB.meta_phone_number_id || ''); setVEncKey(jB.encKeyBereit !== false); setVToken(''); }
-      // G2: Eingangs-Einrichtung und ungelesene Nachrichten nachziehen.
-      try {
-        const rE = await fetch('/api/marketing/whatsapp-eingang');
-        const jE = await rE.json();
-        if (jE?.ok) { setEhToken(jE.webhook_token || ''); setEhHatSecret(!!jE.hatAppSecret); }
-      } catch { /* Eingang ist optional */ }
+      // G2: nur die ungelesenen Nachrichten nachziehen.
       try {
         const rP = await fetch('/api/marketing/whatsapp-posteingang');
         const jP = await rP.json();
@@ -129,40 +118,6 @@ export default function WhatsappSeite() {
     } catch { setVMeldung('Speichern fehlgeschlagen.'); }
     finally { setVBusy(false); }
   }
-  /** G2 · Prüf-Token erzeugen lassen und App-Secret hinterlegen. */
-  async function speichereEingang(neuerToken: boolean) {
-    setEhBusy(true); setEhMeldung(null);
-    try {
-      const res = await fetch('/api/marketing/whatsapp-eingang', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ neuerToken, app_secret: ehSecret }),
-      });
-      const j = await res.json();
-      if (j?.ok) {
-        setEhToken(j.webhook_token || '');
-        setEhHatSecret(!!j.hatAppSecret);
-        setEhSecret('');
-        setEhMeldung('✓ Gespeichert.');
-      } else {
-        setEhMeldung(j?.error || 'Speichern fehlgeschlagen.');
-      }
-    } catch {
-      setEhMeldung('Verbindung fehlgeschlagen.');
-    }
-    setEhBusy(false);
-  }
-
-  async function kopiere(text: string, was: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setEhKopiert(was);
-      window.setTimeout(() => setEhKopiert(''), 2000);
-    } catch {
-      setEhMeldung('Das Kopieren hat der Browser abgelehnt — bitte von Hand markieren.');
-    }
-  }
-
   async function trenneVerbindung() {
     if (!confirm('Verbindung wirklich trennen? Der gespeicherte Zugang wird entfernt.')) return;
     setVBusy(true); setVMeldung(null);
@@ -345,71 +300,21 @@ export default function WhatsappSeite() {
           </p>
         </div>
 
-        {/* Eingang (G2) — ohne diese drei Angaben hört WhatsApp nicht zu. */}
-        <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: `1px solid ${(ehToken && ehHatSecret) ? C.green : 'rgba(255,255,255,0.08)'}`, marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(16px, 1.4vw, 22px)' }}>Eingang — Antworten empfangen</div>
-            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1.06vw, 16px)', color: (ehToken && ehHatSecret) ? C.green : C.textDim, border: `1px solid ${(ehToken && ehHatSecret) ? C.green : C.textDim}`, borderRadius: 12, padding: '2px 12px' }}>
-              {(ehToken && ehHatSecret) ? '✓ Eingerichtet' : 'Nicht eingerichtet'}
-            </span>
-          </div>
-
-          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 'clamp(12px, 1.05vw, 16px)', lineHeight: 1.6 }}>
-            Bisher konnte ARGONAUT nur senden. Mit diesen drei Angaben kommen die <b style={{ color: '#fff' }}>Antworten Ihrer Kunden</b> im Posteingang an — und Sie können direkt hier antworten.
-          </p>
-
-          <div style={{ marginBottom: 12 }}>
-            <label style={lbl}>1 · Diese Adresse bei Meta als Webhook eintragen</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <code style={{ background: C.navy, color: C.cyan, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', fontFamily: 'ui-monospace, monospace', fontSize: 13, wordBreak: 'break-all' }}>
-                {typeof window !== 'undefined' ? window.location.origin : ''}/api/whatsapp/webhook
-              </code>
-              <button onClick={() => kopiere(`${window.location.origin}/api/whatsapp/webhook`, 'adresse')} style={btn(C.cyan)}>
-                {ehKopiert === 'adresse' ? '✓ Kopiert' : 'Kopieren'}
-              </button>
+        {/* Eingang (G2) — die technische Einrichtung macht ARGONAUT, nicht der Betrieb. */}
+        <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(16px, 1.4vw, 22px)', marginBottom: 4 }}>
+                Antworten Ihrer Kunden
+              </div>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(12px, 1.05vw, 16px)', lineHeight: 1.6 }}>
+                Was Ihre Kunden auf WhatsApp zurückschreiben, landet im Posteingang — dort antworten Sie direkt.
+                Um die Technik dahinter kümmern wir uns.
+              </p>
             </div>
-          </div>
-
-          <div style={{ marginBottom: 12 }}>
-            <label style={lbl}>2 · Prüf-Token (bei Meta als „Verify Token" eintragen)</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              {ehToken ? (
-                <>
-                  <code style={{ background: C.navy, color: C.gold, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>{ehToken}</code>
-                  <button onClick={() => kopiere(ehToken, 'token')} style={btn(C.cyan)}>{ehKopiert === 'token' ? '✓ Kopiert' : 'Kopieren'}</button>
-                  <button onClick={() => speichereEingang(true)} disabled={ehBusy} style={btn(C.textDim)}>Neu erzeugen</button>
-                </>
-              ) : (
-                <button onClick={() => speichereEingang(true)} disabled={ehBusy} style={{ ...btnGold, opacity: ehBusy ? 0.6 : 1 }}>
-                  {ehBusy ? 'Erzeuge…' : 'Prüf-Token erzeugen'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 12 }}>
-            <label style={lbl}>3 · App-Secret aus Ihrem Meta-Konto</label>
-            <input
-              type="password"
-              value={ehSecret}
-              onChange={(e) => setEhSecret(e.target.value)}
-              placeholder={ehHatSecret ? '•••••••• (gespeichert — zum Ändern neu eingeben)' : 'hier einfügen'}
-              style={{ ...input, maxWidth: 420 }}
-            />
-            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(11px, 1vw, 14px)', lineHeight: 1.55 }}>
-              Damit prüft ARGONAUT bei <b style={{ color: '#fff' }}>jeder</b> eingehenden Nachricht, dass sie wirklich von Meta stammt.
-              Ohne dieses Secret wird nichts gespeichert — die Webhook-Adresse ist öffentlich, und ein untergeschobener Posteingang wäre schlimmer als ein leerer.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => speichereEingang(false)} disabled={ehBusy || !ehSecret.trim()} style={{ ...btnGold, opacity: (ehBusy || !ehSecret.trim()) ? 0.6 : 1 }}>
-              {ehBusy ? 'Speichere…' : 'App-Secret speichern'}
-            </button>
-            <a href="/dashboard/marketing/whatsapp/posteingang" style={{ ...btn(C.green), textDecoration: 'none', display: 'inline-block' }}>
+            <a href="/dashboard/marketing/whatsapp/posteingang" style={{ ...btn(C.green), textDecoration: 'none', display: 'inline-block', whiteSpace: 'nowrap' }}>
               📥 Zum Posteingang{ungelesen > 0 ? ` (${ungelesen} neu)` : ''}
             </a>
-            {ehMeldung && <span style={{ fontFamily: 'DM Sans, sans-serif', color: ehMeldung.startsWith('✓') ? C.green : C.danger, fontSize: 'clamp(13px, 1.1vw, 17px)' }}>{ehMeldung}</span>}
           </div>
         </div>
 
