@@ -342,7 +342,7 @@ export default function BdePage() {
 
           {/* Buchungs-Karten */}
           {sichtbareBuchungen.length === 0 ? (
-            <div style={styles.hint}>Noch keine Buchungen{filterMaschine ? ' für diese Maschine' : ''}.</div>
+            <div style={styles.hint}>Noch keine Buchungen{filterMaschine ? ' für diese Maschine' : ''} — starten Sie oben eine Laufzeit oder buchen Sie eine Menge. Erst dann rechnen sich Auslastung und Stückkosten.</div>
           ) : sichtbareBuchungen.map((b) => {
             const k = kennzahlBuchung(b as BuchungLite, stzMap.get(b.id) || 0);
             const st = stoerProBuchung.get(b.id) || [];
@@ -387,7 +387,7 @@ export default function BdePage() {
                       <span>{kategorieLabel(s.kategorie)}<span style={{ color: C.textDim }}>{s.grund ? ` · ${s.grund}` : ''}</span></span>
                       <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}><b>{s.dauer_min} min</b><button style={styles.miniX} disabled={busy === s.id} onClick={() => loesche('bde_stoerung', s.id)}>✕</button></span>
                     </div>
-                  )) : <div style={{ color: C.textDim, fontSize: 13 }}>Keine Störungen erfasst.</div>}
+                  )) : <div style={{ color: C.textDim, fontSize: 13 }}>Keine Störungen erfasst — das ist die gute Nachricht. Melden Sie eine, sobald eine Maschine steht.</div>}
 
                   {pareto.length > 1 && (
                     <div style={{ marginTop: 6, color: C.textDim, fontSize: 12.5 }}>Verteilung: {pareto.map((p) => `${p.label} ${p.min} min`).join(' · ')}</div>

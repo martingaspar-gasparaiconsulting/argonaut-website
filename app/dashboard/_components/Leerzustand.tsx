@@ -19,6 +19,12 @@ import React from "react";
 // Wo eine Filterung leer laeuft, gehoert KEIN Leerzustand hin, sondern der
 // Hinweis „Keine Treffer fuer diese Filter" — sonst liest sich ein voller
 // Baustein wie ein leerer.
+//
+// WO NICHT: In den Branchen-Cockpits stehen zwei, drei schmale Spalten
+// nebeneinander. Ein Kasten je Spalte zerreisst die Seite — dort bleibt es
+// bei der schlichten Zeile, die aber sagen muss, WO angelegt wird
+// („Noch keine Kunden — legen Sie oben den ersten an."). Faustregel:
+// eigene Modulseite mit Hauptliste → Kasten. Spalte in einer Uebersicht → Satz.
 // ---------------------------------------------------------------------
 
 const C = {

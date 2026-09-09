@@ -216,7 +216,7 @@ export default function LebensmittelPage() {
                   </div>
                 );
               })}
-              {!chargen.length && <p style={styles.dim}>Noch keine Chargen.</p>}
+              {!chargen.length && <p style={styles.dim}>Noch keine Chargen — legen Sie oben die erste an. Sie ist die Grundlage der Rückverfolgbarkeit.</p>}
             </div>
           )}
         </>
@@ -286,7 +286,7 @@ export default function LebensmittelPage() {
                   <span style={{ ...styles.badge, color: h.in_ordnung ? C.green : C.danger, borderColor: h.in_ordnung ? C.green : C.danger }}>{h.in_ordnung ? '✓ i. O.' : '✕ Abweichung'}</span>
                 </div>
               ))}
-              {!haccp.length && <p style={styles.dim}>Noch keine Kontrollen.</p>}
+              {!haccp.length && <p style={styles.dim}>Noch keine Kontrollen — tragen Sie oben die erste HACCP-Messung ein. Lückenlose Dokumentation ist Pflicht, nicht Kür.</p>}
             </div>
           )}
         </>

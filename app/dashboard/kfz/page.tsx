@@ -175,7 +175,7 @@ export default function KfzPage() {
           </div>
           {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
-          {laden ? <p style={styles.dim}>Lädt …</p> : fahrzeuge.length === 0 ? <p style={styles.dim}>Noch keine Fahrzeuge.</p> : (
+          {laden ? <p style={styles.dim}>Lädt …</p> : fahrzeuge.length === 0 ? <p style={styles.dim}>Noch keine Fahrzeuge — legen Sie oben das erste mit Kennzeichen und Halter an.</p> : (
             <div style={styles.liste}>
               {fahrzeuge.map((f) => {
                 const a = ampel(f.hu_faellig);

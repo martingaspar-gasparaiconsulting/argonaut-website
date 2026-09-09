@@ -138,7 +138,7 @@ export default function KanzleiPage() {
                   </div>
                 );
               })}
-              {!fristen.length && <p style={styles.dim}>Noch keine Fristen.</p>}
+              {!fristen.length && <p style={styles.dim}>Noch keine Fristen — legen Sie oben die erste an. ARGONAUT meldet sich, bevor sie abläuft.</p>}
             </div>
           )}
         </>
@@ -166,7 +166,7 @@ export default function KanzleiPage() {
                   <span style={{ ...styles.badge, color: C.cyan, borderColor: C.cyan }}>{m.status}</span>
                 </div>
               ))}
-              {!mandate.length && <p style={styles.dim}>Noch keine Mandate.</p>}
+              {!mandate.length && <p style={styles.dim}>Noch keine Mandate — legen Sie oben das erste an.</p>}
             </div>
           )}
         </>

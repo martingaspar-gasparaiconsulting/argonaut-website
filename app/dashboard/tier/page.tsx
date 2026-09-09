@@ -140,7 +140,7 @@ export default function TierPage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>{t.halter || '—'}{t.rasse ? ` · ${t.rasse}` : ''}</div>
               </button>
             ))}
-            {!tiere.length && <Leerzustand icon="🐾" titel="Noch keine Tiere" text="Führe eine Tierkartei mit Behandlungen und Impfungen." schritte={["Tier oben anlegen", "Stammdaten erfassen", "Behandlungen und Impfungen dokumentieren"]} />}
+            {!tiere.length && <Leerzustand icon="🐾" titel="Noch keine Tiere" text="Führen Sie eine Tierkartei mit Behandlungen und Impfungen — jederzeit nachweisbar." schritte={["Tier oben anlegen", "Stammdaten erfassen", "Behandlungen und Impfungen dokumentieren"]} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links ein Tier wählen.</p> : (
@@ -171,7 +171,7 @@ export default function TierPage() {
                     </div>
                   );
                 })}
-                {!beh.length && <p style={styles.dim}>Noch keine Einträge.</p>}
+                {!beh.length && <p style={styles.dim}>Noch keine Einträge — tragen Sie oben die erste Behandlung oder Impfung ein.</p>}
               </div>
             )}
           </div>

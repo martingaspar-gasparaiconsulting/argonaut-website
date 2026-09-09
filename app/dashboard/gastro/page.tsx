@@ -205,7 +205,7 @@ export default function GastroPage() {
             </div>
             <div style={styles.zimmerRow}>
               {zimmer.map((z) => <span key={z.id} style={styles.zimmerChip}>{z.nummer} · {z.typ} · {eur(z.preis_nacht)}</span>)}
-              {!zimmer.length && <span style={styles.dim}>Noch keine Zimmer.</span>}
+              {!zimmer.length && <span style={styles.dim}>Noch keine Zimmer — legen Sie oben das erste an, danach lässt es sich belegen.</span>}
             </div>
           </div>
 

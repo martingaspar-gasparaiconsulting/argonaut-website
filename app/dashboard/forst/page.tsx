@@ -189,7 +189,7 @@ export default function ForstPage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>{o.adresse || '—'}</div>
               </button>
             ))}
-            {!objekte.length && <p style={styles.dim}>Noch keine Objekte.</p>}
+            {!objekte.length && <p style={styles.dim}>Noch keine Objekte — legen Sie oben das erste an, zum Beispiel eine Allee oder einen Bestand.</p>}
           </div>
 
           {/* Baum-Detail */}
@@ -232,7 +232,7 @@ export default function ForstPage() {
                     </div>
                   );
                 })}
-                {!baeume.length && <p style={styles.dim}>Noch keine Bäume in diesem Objekt.</p>}
+                {!baeume.length && <p style={styles.dim}>Noch keine Bäume in diesem Objekt — erfassen Sie oben den ersten mit Art und Standort.</p>}
               </div>
             )}
           </div>

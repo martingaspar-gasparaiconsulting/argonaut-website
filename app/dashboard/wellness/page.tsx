@@ -134,10 +134,10 @@ export default function WellnessPage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>{k.telefon || k.email || '—'}</div>
               </button>
             ))}
-            {!kunden.length && <p style={styles.dim}>Noch keine Kunden.</p>}
+            {!kunden.length && <p style={styles.dim}>Noch keine Kunden — legen Sie oben den ersten an.</p>}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            {!aktiv ? <p style={styles.dim}>Links einen Kunden wählen.</p> : (
+            {!aktiv ? <p style={styles.dim}>Wählen Sie links einen Kunden — dann sehen Sie hier seine Behandlungen.</p> : (
               <div style={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div style={{ fontWeight: 800 }}>{aktiv.name}</div>
@@ -159,7 +159,7 @@ export default function WellnessPage() {
                     <span style={{ color: C.textDim }}>{b.dauer_min ? `${b.dauer_min}′ · ` : ''}{eur(b.preis)}</span>
                   </div>
                 ))}
-                {!beh.length && <p style={styles.dim}>Noch keine Behandlungen.</p>}
+                {!beh.length && <p style={styles.dim}>Noch keine Behandlungen — tragen Sie oben Datum, Behandlung und Preis ein. Aus den offenen Behandlungen entsteht später die Rechnung.</p>}
               </div>
             )}
           </div>

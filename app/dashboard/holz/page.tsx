@@ -459,7 +459,7 @@ export default function HolzSortimentPage() {
           <div style={styles.hint}>Lädt …</div>
         ) : liste.length === 0 ? (
           <div style={styles.hint}>
-            Noch keine Varianten. Fang mit deinem Standardartikel an — z. B. Buche, 33 cm, lufttrocken.
+            Noch keine Varianten. Fangen Sie mit Ihrem Standardartikel an — zum Beispiel Buche, 33 cm, lufttrocken.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

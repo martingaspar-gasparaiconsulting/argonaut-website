@@ -184,7 +184,7 @@ export default function FahrzeugaktePage() {
             {laden ? (
               <div style={styles.hint}>Lädt …</div>
             ) : gefiltert.length === 0 ? (
-              <div style={styles.hint}>{fahrzeuge.length === 0 ? 'Noch keine Fahrzeuge. Lege sie beim Werkstatt-Auftrag an.' : 'Kein Treffer.'}</div>
+              <div style={styles.hint}>{fahrzeuge.length === 0 ? 'Noch keine Fahrzeuge. Sie entstehen von selbst, sobald Sie einen Werkstatt-Auftrag mit Kennzeichen anlegen.' : 'Kein Treffer.'}</div>
             ) : (
               gefiltert.map((f) => (
                 <button key={f.id} onClick={() => setGewaehlt(f.id)}
@@ -259,7 +259,7 @@ export default function FahrzeugaktePage() {
               <div style={{ ...styles.card, marginTop: 12 }}>
                 <h2 style={styles.cardTitle}>Werkstatt-Historie {detailLaden ? '· lädt …' : ''}</h2>
                 {auftraege.length === 0 ? (
-                  <div style={styles.hint}>Noch keine Werkstattaufträge für dieses Fahrzeug.</div>
+                  <div style={styles.hint}>Noch keine Werkstattaufträge für dieses Fahrzeug — sobald einer in der Werkstatt angelegt wird, erscheint er hier mit Positionen und Kosten.</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {auftraege.map((a) => {
@@ -287,7 +287,7 @@ export default function FahrzeugaktePage() {
                           {auf && (
                             <div style={styles.aufDetail}>
                               {pos.length === 0 ? (
-                                <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Keine Positionen erfasst.</div>
+                                <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Keine Positionen erfasst — Arbeitszeit und Material trägt die Werkstatt beim Auftrag ein.</div>
                               ) : (
                                 <table style={styles.posTable}>
                                   <tbody>

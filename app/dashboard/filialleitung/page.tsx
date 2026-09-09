@@ -180,7 +180,7 @@ export default function FilialleitungPage() {
       <div style={styles.card}>
         <div style={{ fontWeight: 800 }}>Mitarbeiter</div>
         {laden ? <p style={styles.dim}>Lädt …</p> : mas.length === 0 ? (
-          <p style={styles.dim}>Noch keine Mitarbeiter angelegt (unter „Rechte" bzw. „Personal").</p>
+          <p style={styles.dim}>Noch keine Mitarbeiter angelegt — legen Sie sie unter „Personal" an und geben Sie ihnen unter „Rechte" den Zugang zu dieser Filiale.</p>
         ) : mas.map((m) => {
           const zug = scope[m.id] ?? [];
           const gebiet = istGebietsrolle(m.leitungsrolle);

@@ -627,7 +627,7 @@ export default function MeinBereichPage() {
             {/* Meine Anträge */}
             <section style={{ ...styles.card, marginTop: 18 }}>
               <h2 style={styles.cardTitle}>Meine Anträge & Meldungen</h2>
-              {abw.length === 0 && <div style={styles.listHint}>Noch keine Einträge.</div>}
+              {abw.length === 0 && <div style={styles.listHint}>Noch keine Einträge — Urlaub und Krankmeldungen erscheinen hier, sobald sie erfasst sind.</div>}
               {abw.map((r) => (
                 <div key={r.id} style={styles.row}>
                   <div>

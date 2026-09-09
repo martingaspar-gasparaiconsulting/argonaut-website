@@ -153,7 +153,7 @@ export default function FertigungPage() {
                     <div style={{ color: C.textDim, fontSize: 13 }}>{s.produkt || '—'}</div>
                   </button>
                 ))}
-                {!sls.length && <p style={styles.dim}>Noch keine Stücklisten.</p>}
+                {!sls.length && <p style={styles.dim}>Noch keine Stücklisten — legen Sie oben die erste an. Sie sagt, was in ein Erzeugnis hineingeht.</p>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {!aktivSl ? <p style={styles.dim}>Links eine Stückliste wählen.</p> : (
@@ -214,7 +214,7 @@ export default function FertigungPage() {
                   </div>
                 );
               })}
-              {!auftraege.length && <p style={styles.dim}>Noch keine Fertigungsaufträge.</p>}
+              {!auftraege.length && <p style={styles.dim}>Noch keine Fertigungsaufträge — legen Sie oben den ersten an, sobald eine Stückliste steht.</p>}
             </div>
           )}
         </>

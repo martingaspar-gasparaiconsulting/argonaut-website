@@ -273,7 +273,7 @@ export default function BildungPage() {
                 </button>
               );
             })}
-            {!kurse.length && <p style={styles.dim}>Noch keine Kurse.</p>}
+            {!kurse.length && <p style={styles.dim}>Noch keine Kurse — legen Sie oben den ersten an. Termine und Anmeldungen hängen daran.</p>}
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -335,7 +335,7 @@ export default function BildungPage() {
                         ))}
                       </div>
                     )}
-                    {!aktivAnm.length && <p style={styles.dim}>Noch keine Anmeldungen.</p>}
+                    {!aktivAnm.length && <p style={styles.dim}>Noch keine Anmeldungen — tragen Sie oben Teilnehmer ein oder lassen Sie sich über die Online-Buchung anmelden.</p>}
                   </>
                 )}
 
@@ -350,7 +350,7 @@ export default function BildungPage() {
                       </NurVoll>
                       <button style={styles.dazuBtn} onClick={terminAnlegen}>＋ Termin</button>
                     </div>
-                    {!aktivTermine.length ? <p style={styles.dim}>Noch keine Termine. Leg oben den ersten an.</p> : (
+                    {!aktivTermine.length ? <p style={styles.dim}>Noch keine Termine — legen Sie oben den ersten an.</p> : (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
                         {aktivTermine.map((t) => (
                           <button key={t.id} style={{ ...styles.terminChip, ...(selTermin === t.id ? styles.terminChipAn : {}) }} onClick={() => setSelTermin(selTermin === t.id ? null : t.id)}>

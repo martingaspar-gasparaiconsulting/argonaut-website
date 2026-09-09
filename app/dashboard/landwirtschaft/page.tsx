@@ -121,7 +121,7 @@ export default function LandwirtschaftPage() {
                 <EigeneFelderAnzeige felder={felder} werte={sWerte[s.id]} />
               </button>
             ))}
-            {!schlaege.length && <p style={styles.dim}>Noch keine Schläge.</p>}
+            {!schlaege.length && <p style={styles.dim}>Noch keine Schläge — legen Sie oben das erste Feldstück an. Düngung, Pflanzenschutz und N-Saldo hängen daran.</p>}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links einen Schlag wählen.</p> : (
@@ -144,7 +144,7 @@ export default function LandwirtschaftPage() {
                     <span style={{ flex: 1, color: C.textDim }}>{m.mittel || '—'}{m.menge != null ? ` · ${m.menge} ${m.einheit || ''}` : ''}{m.ertrag != null ? ` · Ertrag ${m.ertrag}` : ''}</span>
                   </div>
                 ))}
-                {!massnahmen.length && <p style={styles.dim}>Noch keine Maßnahmen.</p>}
+                {!massnahmen.length && <p style={styles.dim}>Noch keine Maßnahmen — tragen Sie oben Düngung oder Pflanzenschutz für diesen Schlag ein.</p>}
               </div>
             )}
           </div>

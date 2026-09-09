@@ -134,7 +134,7 @@ export default function VereinPage() {
                   <span style={{ ...styles.badge, color: m.status === 'aktiv' ? C.green : C.textDim, borderColor: m.status === 'aktiv' ? C.green : C.border }}>{m.status}</span>
                 </div>
               ))}
-              {!mitglieder.length && <p style={styles.dim}>Noch keine Mitglieder.</p>}
+              {!mitglieder.length && <p style={styles.dim}>Noch keine Mitglieder — legen Sie oben das erste an. Beiträge und Spendenquittungen bauen darauf auf.</p>}
             </div>
           )}
         </>
@@ -165,7 +165,7 @@ export default function VereinPage() {
                   </div>
                 </div>
               ))}
-              {!veranst.length && <p style={styles.dim}>Noch keine Veranstaltungen.</p>}
+              {!veranst.length && <p style={styles.dim}>Noch keine Veranstaltungen — legen Sie oben die erste an.</p>}
             </div>
           )}
         </>

@@ -126,7 +126,7 @@ export default function LogistikPage() {
                 </button>
               );
             })}
-            {!touren.length && <p style={styles.dim}>Noch keine Touren.</p>}
+            {!touren.length && <p style={styles.dim}>Noch keine Touren — legen Sie oben die erste an, danach hängen Sie Sendungen daran.</p>}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links eine Tour wählen.</p> : (
@@ -155,7 +155,7 @@ export default function LogistikPage() {
                     </select>
                   </div>
                 ))}
-                {!tourSendungen.length && <p style={styles.dim}>Noch keine Sendungen auf dieser Tour.</p>}
+                {!tourSendungen.length && <p style={styles.dim}>Noch keine Sendungen auf dieser Tour — fügen Sie oben Stopps mit Adresse hinzu.</p>}
               </div>
             )}
           </div>

@@ -146,7 +146,7 @@ export default function ImmobilienPage() {
                   <span style={{ ...styles.badge, color: e.status === 'vermietet' ? C.green : C.warn, borderColor: e.status === 'vermietet' ? C.green : C.warn }}>{e.status}</span>
                 </div>
               ))}
-              {!einheiten.length && <p style={styles.dim}>Noch keine Einheiten.</p>}
+              {!einheiten.length && <p style={styles.dim}>Noch keine Einheiten — legen Sie oben die erste Wohnung oder Gewerbefläche an.</p>}
             </div>
           )}
         </>
@@ -187,7 +187,7 @@ export default function ImmobilienPage() {
                   </div>
                 );
               })}
-              {!vertraege.length && <p style={styles.dim}>Noch keine Mietverträge.</p>}
+              {!vertraege.length && <p style={styles.dim}>Noch keine Mietverträge — legen Sie oben den ersten an. Die Betriebskostenabrechnung baut darauf auf.</p>}
             </div>
           )}
         </>

@@ -99,7 +99,7 @@ export default function WerSiehtWasPage() {
       {fehler && <div style={styles.err}>{fehler}</div>}
       {loading && <div style={styles.stateBox}>Lädt …</div>}
       {!loading && !fehler && personen.length === 0 && (
-        <div style={styles.stateBox}>Noch keine Mitarbeitenden angelegt. Sobald du Personen einlädst und ihnen Rechte gibst, erscheinen sie hier.</div>
+        <div style={styles.stateBox}>Noch keine Mitarbeitenden angelegt. Sobald Sie Personen einladen und ihnen Rechte geben, sehen Sie hier auf einen Blick, wer welchen Baustein öffnen darf.</div>
       )}
 
       {!loading && !fehler && personen.length > 0 && (

@@ -109,7 +109,7 @@ export default function AgenturPage() {
                 </button>
               );
             })}
-            {!retainer.length && <p style={styles.dim}>Noch keine Retainer.</p>}
+            {!retainer.length && <p style={styles.dim}>Noch keine Retainer — legen Sie oben den ersten an. Wiederkehrende Erlöse erscheinen danach automatisch im Wiederkehr-Cockpit.</p>}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links einen Retainer wählen, um Zeit zu buchen.</p> : (

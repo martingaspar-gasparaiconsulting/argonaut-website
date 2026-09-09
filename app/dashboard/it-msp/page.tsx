@@ -145,7 +145,7 @@ export default function ItMspPage() {
                   </div>
                 );
               })}
-              {!vertraege.length && <p style={styles.dim}>Noch keine Verträge.</p>}
+              {!vertraege.length && <p style={styles.dim}>Noch keine Verträge — legen Sie oben den ersten Servicevertrag an.</p>}
             </div>
           )}
         </>
@@ -175,7 +175,7 @@ export default function ItMspPage() {
                   </div>
                 </div>
               ))}
-              {!assets.length && <p style={styles.dim}>Noch keine Assets.</p>}
+              {!assets.length && <p style={styles.dim}>Noch keine Assets — erfassen Sie oben Geräte und Lizenzen des Kunden.</p>}
             </div>
           )}
         </>

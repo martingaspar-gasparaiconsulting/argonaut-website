@@ -4,6 +4,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort } from "@/lib/standortDaten";
 import KiKlartext from "../../_components/KiKlartext";
+import Leerzustand from "../../_components/Leerzustand";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · ERP · Preisliste (Etappe 1: die "lebende Preistabelle")
@@ -631,11 +632,20 @@ export default function PreislisteCockpit() {
         {laden ? (
           <div style={{ padding: 30, color: C.textDim }}>Lade Preisliste…</div>
         ) : gefiltert.length === 0 ? (
-          <div style={{ padding: 30, color: C.textDim }}>
-            {artikel.length === 0
-              ? "Noch keine Artikel angelegt. Artikel entstehen im ERP – später kannst du sie hier auch per Import einlesen."
-              : "Keine Artikel für diese Filter gefunden."}
-          </div>
+          artikel.length === 0 ? (
+            <div style={{ padding: 24 }}>
+              <Leerzustand
+                icon="📦"
+                titel="Noch keine Artikel angelegt"
+                text="Die Preisliste zeigt Ihr Sortiment mit Ein- und Verkaufspreis. Sie können Artikel einzeln im ERP anlegen — oder eine ganze Liste auf einmal einlesen."
+                schritte={["Im Import-Center die Vorlage „Artikel & Preise“ herunterladen", "Ihr Sortiment in die Spalten eintragen", "Datei hochladen — ARGONAUT ordnet die Spalten selbst zu"]}
+                aktionText="Zum Import-Center"
+                aktionHref="/dashboard/import"
+              />
+            </div>
+          ) : (
+            <div style={{ padding: 30, color: C.textDim }}>Keine Artikel für diese Filter gefunden.</div>
+          )
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
