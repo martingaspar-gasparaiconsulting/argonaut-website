@@ -23,6 +23,7 @@ import {
   type AssetBasis,
 } from '@/lib/assets';
 import { augeObjekte } from '@/lib/auge';
+import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -293,7 +294,16 @@ export default function ObjekteRegister() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : gefiltert.length === 0 ? (
-          <div style={styles.hint}>{assets.length === 0 ? 'Noch keine Objekte erfasst. Leg oben rechts das erste an.' : 'Keine Objekte für diese Filter.'}</div>
+          assets.length === 0 ? (
+            <Leerzustand
+              icon="🏛"
+              titel="Noch keine Objekte erfasst"
+              text="Anlagen, Geräte und Fahrzeuge mit Prüffristen an einer Stelle — ARGONAUT meldet sich, bevor eine Frist abläuft."
+              schritte={["Oben rechts ein Objekt anlegen", "Typ, Baujahr und Zustand eintragen", "Prüfintervall setzen — die Erinnerung läuft von allein"]}
+            />
+          ) : (
+            <div style={styles.hint}>Keine Objekte für diese Filter.</div>
+          )
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

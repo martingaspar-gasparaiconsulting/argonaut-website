@@ -190,7 +190,7 @@ export default function PipelineSeite() {
       {laden ? (
         <div style={styles.hint}>Lädt …</div>
       ) : deals.length === 0 ? (
-        <Leerzustand icon="📊" titel="Noch keine Deals" text="Leg deine erste Vertriebschance an — ARGONAUT zeigt dir Pipeline-Wert und gewichteten Forecast." schritte={["Oben „＋ Neuer Deal“ anlegen", "Wert und Stufe erfassen", "Deal durch die Stufen ziehen bis „Gewonnen“"]} aktionText="＋ Neuer Deal" onAktion={() => setFormAuf(true)} />
+        <Leerzustand icon="📊" titel="Noch keine Deals" text="Legen Sie die erste Vertriebschance an — ARGONAUT zeigt Ihnen Pipeline-Wert und gewichteten Forecast." schritte={["Oben „＋ Neuer Deal“ anlegen", "Wert und Stufe erfassen", "Deal durch die Stufen ziehen bis „Gewonnen“"]} aktionText="＋ Neuer Deal" onAktion={() => setFormAuf(true)} />
       ) : (
         <div style={styles.board}>
           {OFFENE_STUFEN.map((s) => {

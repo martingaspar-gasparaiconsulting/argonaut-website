@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 import {
   normalisiereWartung,
   normalisiereAbo,
@@ -228,10 +229,14 @@ export default function WiederkehrCockpit() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : liste.length === 0 ? (
-          <div style={styles.hint}>
-            Noch nichts Wiederkehrendes erfasst. Lege Wartungsverträge, Abo-Rechnungen, Mitglieder oder Verträge an —
-            sie erscheinen dann automatisch hier.
-          </div>
+          <Leerzustand
+            icon="🔁"
+            titel="Noch nichts Wiederkehrendes erfasst"
+            text="Diese Seite sammelt von allein alles, was regelmäßig wiederkommt — Sie legen hier nichts direkt an."
+            schritte={["Wartungsverträge, Abo-Rechnungen, Mitglieder oder Verträge im jeweiligen Baustein anlegen", "Turnus und Betrag dort eintragen", "Alles erscheint hier automatisch als eine Übersicht"]}
+            aktionText="Zu den Wartungsverträgen"
+            aktionHref="/dashboard/wartung"
+          />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

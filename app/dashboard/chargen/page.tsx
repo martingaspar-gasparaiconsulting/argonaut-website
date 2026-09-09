@@ -328,7 +328,7 @@ export default function ChargenSeite() {
       {laden ? (
         <div style={{ ...card, color: C.textDim }}>Lade Chargen…</div>
       ) : gefiltert.length === 0 ? (
-        <div style={{ ...card, color: C.textDim }}>Noch keine Chargen. Lege oben rechts deine erste Charge/Serie an — dann Rückverfolgbarkeit und Prüfplan pflegen.</div>
+        <div style={{ ...card, color: C.textDim }}>Noch keine Chargen. Legen Sie oben rechts die erste Charge oder Serie an — danach pflegen Sie Rückverfolgbarkeit und Prüfplan dazu.</div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {gefiltert.map((l) => {

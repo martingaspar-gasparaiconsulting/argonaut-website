@@ -7,6 +7,7 @@ import AuftraegeAuge from "./AuftraegeAuge";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { NurVoll } from "../_components/Ansicht";
+import Leerzustand from "../_components/Leerzustand";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
@@ -521,14 +522,21 @@ export default function AuftraegeCockpit() {
               ARGONAUT lädt die Aufträge…
             </div>
           ) : gefiltert.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center" }}>
-              <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>📄</div>
-              <div style={{ color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-                {auftraege.length === 0
-                  ? "Noch keine Aufträge. Leg oben rechts deinen ersten an."
-                  : "Keine Aufträge passen zu Suche/Filter."}
+            auftraege.length === 0 ? (
+              <Leerzustand
+                icon="📄"
+                titel="Noch keine Aufträge"
+                text="Der Auftrag ist die Mitte Ihres Betriebs: Aus ihm entstehen Termine, Material, Zeiten und am Ende die Rechnung."
+                schritte={["Oben rechts einen Auftrag anlegen", "Kunde und Leistung eintragen", "Aus dem fertigen Auftrag die Rechnung erzeugen"]}
+              />
+            ) : (
+              <div style={{ padding: 48, textAlign: "center" }}>
+                <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🔍</div>
+                <div style={{ color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
+                  Keine Aufträge passen zu Suche und Filter.
+                </div>
               </div>
-            </div>
+            )
           ) : (
             gefiltert.map((a) => {
               const s = (STATUS[a.status as StatusKey] || STATUS.entwurf) as (typeof STATUS)[StatusKey];

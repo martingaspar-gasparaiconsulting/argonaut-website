@@ -460,7 +460,7 @@ export default function RechnungenCockpit() {
             <Leerzustand
               icon="🧾"
               titel="Noch keine Rechnungen"
-              text="Rechnungen entstehen aus einem Auftrag — mit einem Klick als PDF, danach behältst du den Zahlungsstatus im Blick."
+              text="Rechnungen entstehen aus einem Auftrag — mit einem Klick als PDF, danach behalten Sie den Zahlungsstatus im Blick."
               schritte={["Auftrag öffnen", "Auf 'Rechnung erstellen' klicken", "Als PDF versenden und Zahlungseingang verfolgen"]}
             />
           ) : (

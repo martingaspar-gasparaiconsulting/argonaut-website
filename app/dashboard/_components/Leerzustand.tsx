@@ -9,10 +9,16 @@ import React from "react";
 // EINBAU: statt der grauen „Noch keine …"-Zeile:
 //   {liste.length === 0 ? (
 //     <Leerzustand icon="📄" titel="Noch keine Angebote"
-//       text="Hier entstehen deine Angebote …"
+//       text="Hier entstehen Ihre Angebote …"
 //       schritte={["Kunde wählen", "Positionen erfassen", "Als PDF senden"]}
 //       aktionText="Erstes Angebot" aktionHref="/dashboard/angebote/neu" />
 //   ) : ( … Liste … )}
+//
+// SPRACHE: Kundentexte immer mit „Sie". Der Text sagt, WOZU die Seite da ist,
+// die Schritte sagen, was als Erstes zu tun ist — nicht bloss „noch nichts da".
+// Wo eine Filterung leer laeuft, gehoert KEIN Leerzustand hin, sondern der
+// Hinweis „Keine Treffer fuer diese Filter" — sonst liest sich ein voller
+// Baustein wie ein leerer.
 // ---------------------------------------------------------------------
 
 const C = {

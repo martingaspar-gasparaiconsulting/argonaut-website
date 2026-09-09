@@ -522,7 +522,7 @@ export default function VariantenSeite() {
       ) : tab === "matrizen" ? (
         // ============ MATRIZEN ============
         gruppen.length === 0 ? (
-          <div style={{ ...card, color: C.textDim }}>Noch keine Matrix angelegt. Lege oben rechts deine erste Varianten-Matrix an (z. B. Größe × Farbe).</div>
+          <div style={{ ...card, color: C.textDim }}>Noch keine Matrix angelegt. Legen Sie oben rechts die erste Varianten-Matrix an (zum Beispiel Größe × Farbe).</div>
         ) : (
           <div style={{ display: "grid", gap: 14 }}>
             {gruppen.map((g) => {

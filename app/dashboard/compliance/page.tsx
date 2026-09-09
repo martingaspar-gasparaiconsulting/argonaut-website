@@ -80,7 +80,7 @@ export default function CompliancePage() {
       });
       if (error) throw error;
       setSf({ mitarbeiter_name: '', sv_nummer: '', geburtsdatum: '', betriebsnummer: '', beschaeftigung_ab: heute(), notiz: '' });
-      setOk('Sofortmeldung erfasst. Jetzt über sv.net oder deine systemgeprüfte Software melden.'); await laden_();
+      setOk('Sofortmeldung erfasst. Melden Sie sie jetzt über sv.net oder Ihre systemgeprüfte Software.'); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }
   async function sofortGemeldet(s: Sofort) {
@@ -150,7 +150,7 @@ export default function CompliancePage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>⚖️ Compliance-Center</h1>
-      <p style={styles.sub}>Zwei Pflichten mit echten Folgen: die Sofortmeldung neuer Beschäftigter und die §48b-Freistellungsbescheinigung. ARGONAUT bereitet alles vor und erinnert dich rechtzeitig.</p>
+      <p style={styles.sub}>Zwei Pflichten mit echten Folgen: die Sofortmeldung neuer Beschäftigter und die §48b-Freistellungsbescheinigung. ARGONAUT bereitet alles vor und erinnert Sie rechtzeitig.</p>
       {!laden && (
         <div style={{ marginTop: 14 }}>
           <KiAuge modul="Compliance" aktionHref="/dashboard/compliance" aktionText="Zu den Pflichten"
@@ -174,7 +174,7 @@ export default function CompliancePage() {
         <div style={styles.info}>
           In bestimmten Branchen (u. a. Bau, Gaststätten, Fleisch- &amp; <b>Forstwirtschaft</b>, Gebäudereinigung, Spedition/Logistik) müssen neue Beschäftigte
           <b> spätestens bei Beschäftigungsaufnahme</b> an die Rentenversicherung gemeldet werden. Erfasse die Daten hier, dann melde über
-          <b> sv.net</b> oder deine systemgeprüfte Lohnsoftware — ARGONAUT erinnert dich, solange eine Meldung offen ist.
+          <b> sv.net</b> oder Ihre systemgeprüfte Lohnsoftware — ARGONAUT erinnert Sie, solange eine Meldung offen ist.
         </div>
         <div style={styles.grid}>
           <label style={styles.lab}>Name *<input style={inp} value={sf.mitarbeiter_name} onChange={(e) => setSf((x) => ({ ...x, mitarbeiter_name: e.target.value }))} /></label>
@@ -215,7 +215,7 @@ export default function CompliancePage() {
         <div style={styles.cardTitel}>🏗 §48b Freistellungsbescheinigung (Bauabzugsteuer)</div>
         <div style={styles.info}>
           Bei Bauleistungen muss der Auftraggeber <b>15 % Bauabzugsteuer einbehalten</b> — es sei denn, es liegt eine gültige Freistellungsbescheinigung
-          nach §48b EStG vor. Hinterlege deine <b>eigene</b> (die du Kunden vorlegst) und die deiner <b>Subunternehmer</b> (damit du nicht einbehalten musst).
+          nach §48b EStG vor. Hinterlegen Sie Ihre <b>eigene</b> (die Sie Kunden vorlegen) und die Ihrer <b>Subunternehmer</b> (damit Sie nichts einbehalten müssen).
           ARGONAUT warnt, wenn eine abläuft.
         </div>
         <div style={styles.grid}>
@@ -247,7 +247,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!frei.length && <Leerzustand icon="📄" titel="Noch keine Bescheinigungen" text="Freistellungsbescheinigungen (§48b) für dich und Subunternehmer." schritte={["Bescheinigung hinterlegen", "Gültigkeit erfassen", "Vor Ablauf erinnern lassen"]} />}
+          {!frei.length && <Leerzustand icon="📄" titel="Noch keine Bescheinigungen" text="Freistellungsbescheinigungen (§48b) für Sie selbst und Ihre Subunternehmer." schritte={["Bescheinigung hinterlegen", "Gültigkeit erfassen", "Vor Ablauf erinnern lassen"]} />}
         </div>
       </div>
 

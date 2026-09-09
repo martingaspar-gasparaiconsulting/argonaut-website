@@ -349,7 +349,7 @@ export default function HousekeepingSeite() {
           </div>
 
           {gerichte.length === 0 ? (
-            <Leerzustand icon="🍽️" titel="Noch keine Gerichte" text="Baue deine Speisekarte mit Preis, Allergenen und Zusatzstoffen." schritte={["Gericht oben anlegen", "Allergene und Zusatzstoffe ankreuzen", "Speisekarte als PDF ausgeben"]} />
+            <Leerzustand icon="🍽️" titel="Noch keine Gerichte" text="Bauen Sie Ihre Speisekarte auf — mit Preis, Allergenen und Zusatzstoffen." schritte={["Gericht oben anlegen", "Allergene und Zusatzstoffe ankreuzen", "Speisekarte als PDF ausgeben"]} />
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {gruppiert.map(([kat, gs]) => (

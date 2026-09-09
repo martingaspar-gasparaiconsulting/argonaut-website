@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -162,7 +163,14 @@ export default function PortalVerwaltung() {
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : gefiltert.length === 0 ? (
-        <p style={styles.sub}>Keine Kontakte gefunden. Legen Sie zuerst unter „🤝 Vertrieb/CRM" Kunden an.</p>
+        <Leerzustand
+          icon="👤"
+          titel="Noch keine Kontakte für das Kunden-Portal"
+          text="Das Portal gibt Ihren Kunden einen eigenen Zugang zu ihren Angeboten, Rechnungen und Terminen. Dafür braucht es zuerst Kontakte im CRM."
+          schritte={["Kunden im Vertrieb/CRM anlegen", "E-Mail-Adresse hinterlegen", "Portal-Zugang von hier aus einladen"]}
+          aktionText="Zum Vertrieb/CRM"
+          aktionHref="/dashboard/crm"
+        />
       ) : (
         <div style={styles.liste}>
           {gefiltert.map((k) => {

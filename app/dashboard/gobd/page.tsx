@@ -228,7 +228,7 @@ export default function GobdPage() {
       <style>{`input::placeholder, textarea::placeholder { color: rgba(143,163,190,0.5); }`}</style>
       <div style={styles.eyebrow}>ARGONAUT OS · Compliance</div>
       <h1 style={styles.h1}>GoBD-Verfahrensdokumentation</h1>
-      <p style={styles.sub}>Beschreibt, wie dein Betrieb Belege, Buchführung, Datensicherung und Zugriffsrechte handhabt — das Pflicht-Dokument für die Betriebsprüfung. Firmendaten sind vorbelegt; ergänze deine Specifics und speichere.</p>
+      <p style={styles.sub}>Beschreibt, wie Ihr Betrieb Belege, Buchführung, Datensicherung und Zugriffsrechte handhabt — das Pflicht-Dokument für die Betriebsprüfung. Ihre Firmendaten sind vorbelegt; ergänzen Sie die Besonderheiten Ihres Betriebs und speichern Sie.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
 
@@ -308,7 +308,10 @@ export default function GobdPage() {
             ))}
           </div>
         ) : (
-          <div style={{ marginTop: 14, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Noch keine finale Version festgeschrieben.</div>
+          <div style={{ marginTop: 14, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+            Noch keine finale Version festgeschrieben. Sobald Sie die Verfahrensdokumentation oben festschreiben,
+            entsteht hier eine unveränderliche Fassung mit Datum — genau das, was eine Betriebsprüfung sehen will.
+          </div>
         )}
       </div>
     </div>

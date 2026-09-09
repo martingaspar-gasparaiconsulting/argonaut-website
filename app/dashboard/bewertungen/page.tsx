@@ -100,7 +100,7 @@ export default function BewertungenPage() {
         body: JSON.stringify({ an: email.trim(), kundeName: name.trim(), betrieb: firma, link }),
       });
       const j = await res.json().catch(() => null);
-      if (!res.ok) { setOk('Anfrage angelegt — Mail-Versand meldete: ' + (j?.error || 'Fehler') + '. Link kannst du manuell teilen.'); }
+      if (!res.ok) { setOk('Anfrage angelegt — Mail-Versand meldete: ' + (j?.error || 'Fehler') + '. Den Link können Sie von Hand weitergeben.'); }
       else setOk('Einladung an ' + email.trim() + ' gesendet.');
       setName(''); setEmail('');
       await laden_();
@@ -176,7 +176,7 @@ export default function BewertungenPage() {
       <div style={{ ...styles.card, marginTop: 16 }}>
         <h2 style={styles.cardTitel}>Abgegebene Bewertungen</h2>
         {laden ? <div style={styles.hint}>Lädt …</div> : abgegebene.length === 0 ? (
-          <div style={styles.hint}>Noch keine Bewertungen. Lade oben deinen ersten Kunden ein.</div>
+          <div style={styles.hint}>Noch keine Bewertungen. Laden Sie oben den ersten Kunden ein — die Anfrage geht als Mail mit Bewertungslink hinaus.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {abgegebene.map((a) => (

@@ -202,14 +202,14 @@ export default function AnalysePage() {
         )}
         {!kiBewertung && !kiFehler && !kiLaden && (
           <div style={{ marginTop: 12, color: C.textDim, fontSize: 13.5 }}>
-            Ein Klick — und die KI liest deine Zahlen und sagt dir in Klartext, was gut läuft und was du als Nächstes tun solltest.
+            Ein Klick — und die KI liest Ihre Zahlen und sagt Ihnen in Klartext, was gut läuft und was Sie als Nächstes tun sollten.
           </div>
         )}
       </div>
 
       {!hatDaten && (
         <div style={{ padding: '18px 20px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.navy2, color: C.textDim, marginBottom: 22 }}>
-          Noch keine Daten in diesem Zeitraum für <strong style={{ color: C.text }}>{seiteName}</strong>. Sobald Besucher kommen, erscheinen hier die Zahlen.
+          Noch keine Daten in diesem Zeitraum für <strong style={{ color: C.text }}>{seiteName}</strong>. Sobald die ersten Besucher kommen, erscheinen hier Besucherzahl, Verweildauer und die meistbesuchten Seiten. Bis dahin lohnt sich ein Blick in den Webauftritt: Ist die Seite veröffentlicht und in der Suchmaschine angemeldet?
         </div>
       )}
 

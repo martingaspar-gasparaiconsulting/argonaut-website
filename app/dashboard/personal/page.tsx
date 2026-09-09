@@ -15,6 +15,7 @@ import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import PersonalAuge from "./PersonalAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+import Leerzustand from '../_components/Leerzustand';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const supabase = createBrowserClient(
@@ -424,7 +425,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 // Tabellen
 // ============================================================
 function MitarbeiterTabelle({ rows, onAdd, onSelect, felder, werteMap, standortNamen }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void; felder: EigenesFeld[]; werteMap: Record<string, Record<string, string>>; standortNamen: Record<string, string> }) {
-  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
+  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt, Stunden und Standort ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   return (
     <table style={styles.table}>
       <thead><tr><Th>Name</Th><Th>Position</Th><Th>Kontakt</Th><Th>Eintritt</Th><Th>Status</Th></tr></thead>
@@ -485,7 +486,7 @@ function GastBadge({ aus, bis }: { aus?: string; bis?: string | null }) {
 }
 
 function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect, standortNamen }: { rows: Mitarbeiter[]; abw: AbwLite[]; chk: ChkLite[]; schul: SchulLite[]; onAdd: () => void; onSelect: (id: string) => void; standortNamen: Record<string, string> }) {
-  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Leg die erste Person an — Name genügt, der Rest später." onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
+  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt, Stunden und Standort ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   const jahr = new Date().getFullYear();
   const jahrStr = String(jahr);
   const heute = heuteISO();
@@ -550,7 +551,7 @@ function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect, standort
 }
 
 function BewerberTabelle({ rows, onAdd, onSelect }: { rows: Bewerber[]; onAdd: () => void; onSelect: (id: string) => void }) {
-  if (rows.length === 0) return <EmptyState title="Noch keine Bewerbungen" text="Trag die erste Bewerbung ein, um die Pipeline zu starten." onAdd={onAdd} addLabel="Bewerber anlegen" />;
+  if (rows.length === 0) return <EmptyState title="Noch keine Bewerbungen" text="Tragen Sie die erste Bewerbung ein — danach sehen Sie auf einen Blick, wer in welcher Stufe steckt." icon="📨" schritte={["Bewerbung mit Name und Stelle eintragen", "Stufe setzen: gesichtet, Gespräch, Zusage", "Aus der Zusage wird ein Mitarbeiter-Eintrag"]} onAdd={onAdd} addLabel="Bewerber anlegen" />;
   return (
     <table style={styles.table}>
       <thead><tr><Th>Name</Th><Th>Beworben als</Th><Th>Kontakt</Th><Th>Quelle</Th><Th>Eingegangen</Th><Th>Status</Th></tr></thead>
@@ -2150,13 +2151,24 @@ function KontaktZelle({ email, telefon }: { email: string | null; telefon: strin
     </div>
   );
 }
-function EmptyState({ title, text, onAdd, addLabel }: { title: string; text: string; onAdd: () => void; addLabel: string }) {
+/**
+ * Leere Personal-Listen. Nutzt seit 09.09.2026 den systemweiten Leerzustand —
+ * vorher war das hier eine zweite, eigene Umsetzung derselben Sache. Die
+ * Aufrufe bleiben unveraendert; `schritte` ist optional dazugekommen.
+ */
+function EmptyState({ title, text, onAdd, addLabel, icon, schritte }: {
+  title: string; text: string; onAdd: () => void; addLabel: string;
+  icon?: string; schritte?: string[];
+}) {
   return (
-    <div style={styles.empty}>
-      <div style={styles.emptyTitle}>{title}</div>
-      <div style={styles.emptyText}>{text}</div>
-      <button style={styles.primaryBtn} onClick={onAdd}>+ {addLabel}</button>
-    </div>
+    <Leerzustand
+      icon={icon ?? '👥'}
+      titel={title}
+      text={text}
+      schritte={schritte}
+      aktionText={`+ ${addLabel}`}
+      onAktion={onAdd}
+    />
   );
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

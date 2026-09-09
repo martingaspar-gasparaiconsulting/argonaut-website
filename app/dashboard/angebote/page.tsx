@@ -269,7 +269,7 @@ export default function AngebotePage() {
         <Leerzustand
           icon="📄"
           titel="Noch keine Angebote"
-          text="Hier entstehen deine Angebote — vom Entwurf bis zum versendeten PDF."
+          text="Hier entstehen Ihre Angebote — vom Entwurf bis zum versendeten PDF."
           schritte={["Kunde und Positionen wählen", "Preise und Text prüfen", "Als PDF speichern oder direkt an den Kunden senden"]}
         />
       ) : (

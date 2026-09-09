@@ -28,6 +28,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
+import Leerzustand from '../_components/Leerzustand';
 import { augeAufmass } from '@/lib/auge';
 import {
   EINHEITEN, STATUS_LISTE, statusDef, istGesperrt, aufmassSumme, positionsBetrag,
@@ -457,7 +458,12 @@ export default function AufmassPage() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : aufmasse.length === 0 ? (
-          <div style={styles.hint}>Noch keine Aufmaße. Leg oben rechts das erste an.</div>
+          <Leerzustand
+            icon="📐"
+            titel="Noch keine Aufmaße"
+            text="Am Objekt gemessen, im Büro abgerechnet: Aus dem Aufmaß werden Positionen, aus den Positionen wird das Angebot."
+            schritte={["Oben rechts ein Aufmaß anlegen", "Positionen mit Maßen erfassen", "Aufmaß in ein Angebot übernehmen"]}
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {aufmasse.map((a) => {
@@ -598,7 +604,9 @@ export default function AufmassPage() {
                 )}
 
                 {positionen.length === 0 ? (
-                  <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 12 }}>Noch keine Positionen.</div>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', marginTop: 12 }}>
+                    Noch keine Positionen. Fügen Sie oben eine Position aus dem Leistungskatalog hinzu oder erfassen Sie eine freie Zeile — die Summe rechnet sich von selbst.
+                  </div>
                 ) : (
                   <div style={{ overflowX: 'auto', marginTop: 12 }}>
                     <table style={styles.posTable}>

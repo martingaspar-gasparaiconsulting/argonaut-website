@@ -255,7 +255,7 @@ export default function SchlagkarteiPage() {
           {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {schlaege.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Schläge" text="Lege deine Feldstücke an — Basis für Düngung, Pflanzenschutz und N-Saldo." schritte={["Schlag oben anlegen", "Fläche und Kultur erfassen", "Düngung und Pflanzenschutz dokumentieren"]} /> : (
+              {schlaege.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Schläge" text="Legen Sie Ihre Feldstücke an — die Basis für Düngung, Pflanzenschutz und N-Saldo." schritte={["Schlag oben anlegen", "Fläche und Kultur erfassen", "Düngung und Pflanzenschutz dokumentieren"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Schlag</th><th style={styles.th}>Flurstück</th><th style={{ ...styles.th, textAlign: 'right' }}>Fläche</th><th style={styles.th}>Kultur</th><th style={styles.th}>Aussaat–Ernte</th><th style={{ ...styles.th, textAlign: 'right' }}>Nachweis</th></tr></thead>
                   <tbody>

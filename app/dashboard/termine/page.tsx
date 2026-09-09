@@ -12,6 +12,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { NurVoll } from "../_components/Ansicht";
+import Leerzustand from "../_components/Leerzustand";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -321,20 +322,12 @@ export default function TermineCockpit() {
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: C.textDim }}>ARGONAUT lädt die Termine…</div>
       ) : termine.length === 0 ? (
-        <div
-          style={{
-            background: C.navy2,
-            border: `1px solid ${C.border}`,
-            borderRadius: 14,
-            padding: 48,
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: "clamp(40px, 3.5vw, 56px)", marginBottom: 12 }}>🗓</div>
-          <div style={{ color: C.textDim, fontSize: "clamp(15px, 1.31vw, 21px)" }}>
-            Noch keine Termine. Leg oben rechts deinen ersten an.
-          </div>
-        </div>
+        <Leerzustand
+          icon="🗓"
+          titel="Noch keine Termine"
+          text="Hier laufen alle Termine zusammen — selbst angelegte, aus Aufträgen entstandene und online gebuchte."
+          schritte={["Oben rechts einen Termin anlegen", "Kunde und Uhrzeit eintragen", "Termin im Schichtplan wiederfinden"]}
+        />
       ) : (
         <>
           <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." />
