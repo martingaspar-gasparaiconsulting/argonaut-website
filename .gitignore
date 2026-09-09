@@ -62,3 +62,6 @@ fix_agb.js
 *.backup2
 *.bak
 *.bak-*
+
+# Ablage der Bridge-Auslieferungen — gehoert nicht ins Repo
+Claude outputs/
