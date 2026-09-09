@@ -64,6 +64,25 @@ export function baueTemplatePayload(
   };
 }
 
+/**
+ * Freitext-Nachricht (G2, 09.09.2026).
+ *
+ * Nur INNERHALB des 24-Stunden-Fensters erlaubt: WhatsApp lässt freien Text
+ * ausschliesslich als Antwort auf eine Kundennachricht zu, gerechnet ab deren
+ * letzter. Danach nimmt Meta nur noch freigegebene Vorlagen an — ein Freitext
+ * wird dann mit Fehler abgewiesen, nicht etwa still verworfen.
+ * Das Fenster rechnet `fensterStand()` in lib/whatsappEingang.
+ */
+export function baueTextPayload(to: string, text: string): Record<string, unknown> {
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to.replace(/[^\d+]/g, '').replace(/^\+/, ''),
+    type: 'text',
+    text: { preview_url: false, body: String(text ?? '').slice(0, 4096) },
+  };
+}
+
 /** Führt EINEN Sende-Aufruf aus (Netzwerk). Wirft nie — gibt {ok, id?, fehler?}. */
 export async function sendeEineNachricht(
   anbieter: WaAnbieter,
