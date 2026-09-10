@@ -3,11 +3,15 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { verschluessele, encKeyBereit } from '@/lib/crypto';
 import { istMailAnbieter, MAIL_ANBIETER, imapPort } from '@/lib/mailKalender';
+import { smtpHost, smtpPort } from '@/lib/mailSmtp';
 
 // ============================================================================
 // ARGONAUT OS · Mail-/Kalender 14 · app/api/mail/verbindung/route.ts
 // Speichert die Mail-/Kalender-Zugänge (Outlook/Google/IMAP/CalDAV) je Betrieb.
 // IMAP zusätzlich mit Server-Host (+ Port) → Posteingang-Abruf möglich.
+// Seit 10.09.2026 zusätzlich der VERSAND-Server (SMTP): Was der Mensch tippt,
+// geht über sein eigenes Postfach. Bleibt das Feld leer, wird der Server aus
+// dem IMAP-Server abgeleitet — der Kunde muss nichts wissen, was er nicht weiß.
 //   GET    -> { status: {imap:{verbunden,konto_id}, ...}, encKeyBereit }
 //   POST {anbieter, konto_id, token, extra?} -> Geheimnis verschlüsselt in mail_zugang
 //   DELETE ?anbieter=.. -> trennen
@@ -29,15 +33,24 @@ export async function GET() {
   if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
   const admin = createAdminClient();
   const { data } = await admin.from('mail_zugang')
-    .select('anbieter, konto_id, token_verschluesselt, verbunden')
+    .select('anbieter, konto_id, token_verschluesselt, verbunden, imap_host, imap_port, smtp_host, smtp_port')
     .eq('owner_user_id', uid);
   const rows = (data as unknown as Array<Record<string, unknown>>) ?? [];
-  const status: Record<string, { verbunden: boolean; konto_id: string }> = {};
+  // Die Server-Angaben gehen mit hinaus, das Geheimnis NIE: Ein Host ist keine
+  // Zugangsberechtigung, und die Oberfläche soll anzeigen können, worüber
+  // tatsächlich empfangen und verschickt wird.
+  const status: Record<string, { verbunden: boolean; konto_id: string; extra: Record<string, string> }> = {};
   for (const a of MAIL_ANBIETER) {
     const r = rows.find((x) => x.anbieter === a.key);
     status[a.key] = {
       verbunden: r?.verbunden === true && !!r?.token_verschluesselt,
       konto_id: (r?.konto_id as string) || '',
+      extra: {
+        imap_host: (r?.imap_host as string) || '',
+        imap_port: r?.imap_port ? String(r.imap_port) : '',
+        smtp_host: (r?.smtp_host as string) || '',
+        smtp_port: r?.smtp_port ? String(r.smtp_port) : '',
+      },
     };
   }
   return NextResponse.json({ ok: true, status, encKeyBereit: encKeyBereit() });
@@ -62,10 +75,17 @@ export async function POST(req: Request) {
   const extra = (body.extra && typeof body.extra === 'object') ? body.extra as Record<string, unknown> : {};
   let imap_host: string | null = null;
   let imap_port: number | null = null;
+  let smtp_host: string | null = null;
+  let smtp_port: number | null = null;
   if (anbieter === 'imap') {
     imap_host = (extra.imap_host || '').toString().trim().slice(0, 200) || null;
     imap_port = imapPort(extra.imap_port);
     if (!imap_host) return NextResponse.json({ ok: false, error: 'Bitte den IMAP-Server angeben (z. B. imap.ionos.de).' }, { status: 400 });
+    // Leer gelassen? Dann wird abgeleitet und gleich mitgespeichert — so steht
+    // im Datensatz, worüber tatsächlich verschickt wird, und niemand muss
+    // später raten, ob geraten wurde.
+    smtp_host = smtpHost((extra.smtp_host || '').toString().trim().slice(0, 200), imap_host) || null;
+    smtp_port = smtpPort(extra.smtp_port);
   }
 
   let token_verschluesselt: string;
@@ -74,7 +94,7 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
   const { error } = await admin.from('mail_zugang').upsert(
-    { owner_user_id: uid, anbieter, konto_id, token_verschluesselt, verbunden: true, geprueft_am: new Date().toISOString(), imap_host, imap_port },
+    { owner_user_id: uid, anbieter, konto_id, token_verschluesselt, verbunden: true, geprueft_am: new Date().toISOString(), imap_host, imap_port, smtp_host, smtp_port },
     { onConflict: 'owner_user_id,anbieter' },
   );
   if (error) return NextResponse.json({ ok: false, error: 'Speichern fehlgeschlagen.' }, { status: 500 });

@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Lese-Bibliotheken serverseitig laden statt bündeln (Vercel-sicher):
-  serverExternalPackages: ["unpdf", "mammoth", "exceljs"],
+  // Lese-Bibliotheken serverseitig laden statt bündeln (Vercel-sicher).
+  // nodemailer + mailparser (10.09.2026) gehören dazu: reine Node-Bibliotheken
+  // mit Sockets und Zeichensatz-Tabellen. Gebündelt wirft der Build Warnungen
+  // und im Betrieb fehlen einzelne Zeichensätze — extern geladen läuft beides.
+  serverExternalPackages: ["unpdf", "mammoth", "exceljs", "nodemailer", "mailparser"],
 
   // Go-Live: die alten /vorschau-URLs dauerhaft auf die sauberen Root-URLs
   // umleiten (SEO-Konsolidierung, keine Dubletten). Die alte Demo-Seite
