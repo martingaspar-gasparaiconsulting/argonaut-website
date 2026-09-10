@@ -46,6 +46,39 @@ Zu bauen unter `/admin/command-center/betrieb/[id]`:
 Muster für den Betreiber-Endpunkt: `app/api/admin/whatsapp-eingang/route.ts` — zwei Schlösser (`profiles.role === 'admin'` **und** `ANALYSE_BETREIBER_ID`), streng, kein Durchlassen bei fehlender Umgebungsvariable.
 Muster für die Seite: `app/admin/command-center/whatsapp/page.tsx`.
 
+### Schritt 3 — E-Mail: der Kunde arbeitet mit seinem eigenen Postfach
+
+**Entscheidung vom 09.09. abends.** Es gilt eine klare Trennlinie:
+
+> **Was die Maschine verschickt, geht über uns. Was der Mensch tippt, geht über ihn.**
+
+| Über uns (Resend, `noreply@argonaut-os.com`) | Über das Postfach des Kunden (SMTP) |
+|---|---|
+| Rechnungen, Mahnungen | Der Chef antwortet einem Kunden |
+| Terminbestätigung und -erinnerung | Er schreibt jemanden neu an |
+| Newsletter, Autoresponder, Nachfass | Alles, was er selbst tippt |
+
+Grund: Postfächer bei IONOS/Strato haben Tageslimits von einigen hundert Mails. Massenversand darüber sperrt das Konto des Kunden.
+
+**Bestandsaufnahme am echten Code (09.09.):** Die Hälfte steht schon.
+- `imapflow ^1.6.6` ist in `package.json`
+- `/dashboard/mail-sync` — Kunde trägt IMAP-Zugang ein, verschlüsselt in `mail_zugang`
+- `/api/mail/posteingang/route.ts` — holt Nachrichten per IMAP
+- `/dashboard/posteingang` — zeigt sie an
+- `lib/mailKalender.ts` kennt Microsoft 365, Google, IMAP/SMTP, CalDAV
+
+**Was fehlt:**
+1. **`nodemailer` fehlt komplett** — nur `resend` ist installiert. Deshalb kann heute niemand mit seiner eigenen Adresse senden.
+2. Der Posteingang liest nur `envelope` (Absender, Betreff, Datum, gelesen) — **keinen Mailtext**.
+3. Antworten, Ordner, Anhänge, Suche.
+4. Gmail/Microsoft 365 brauchen OAuth; Google verlangt dafür ein jährliches Sicherheitsaudit — **vor der Planung die aktuellen Bedingungen nachlesen, nicht aus dem Gedächtnis annehmen**. Deutsche Handwerksbetriebe sind meist bei IONOS/Strato/Telekom/GMX — die gehen sofort mit Adresse + Passwort.
+
+**Nächster Push:** `nodemailer` + SMTP-Versand + Mailtext lesen. Damit springt der Posteingang von „ich sehe, dass da was ist" auf „ich arbeite hier".
+
+**Folge für D6:** Bei der Systempost steht schon heute die Kundenadresse als Antwortadresse drin. Der Kreis schließt sich also von selbst — Rechnung raus über uns, Antwort landet im echten Postfach des Kunden, er sieht sie in ARGONAUT und antwortet über sein SMTP. **D6 (eigene Absender-Domain je Kunde) wird damit deutlich weniger wichtig** und sollte danach neu bewertet werden: Standard bleibt `argonaut-os.com`, eigene Domain nur als Angebot für Kunden, die es wollen. Die DNS-Einträge (DKIM/SPF/DMARC) müssen sonst je Kunde von Hand in einem fremden DNS-Panel gesetzt werden — nicht automatisierbar.
+
+**Resend-Tarife (09.09. geprüft):** Free 3.000/Monat, **100/Tag**, 3 Domains · Pro 20 $ 50.000/Monat, **kein Tageslimit**, 10 Domains · Domain-Add-on 20 $ für 100 weitere · Scale 90 $ mit 1.000 Domains. Für A1 zählt vor allem: **der Tagesdeckel fällt weg** — `lib/mailBudget.ts` wird von der Notbremse zur Höflichkeitsregel.
+
 ### Danach, in dieser Reihenfolge
 
 **1.3** Stammdaten-Prüfung ins Onboarding vorziehen — die Datei liegt in `app/dashboard/_components/stammdatenPruefung.ts` (nicht in `lib/`, die Bauliste sagt es nicht dazu).

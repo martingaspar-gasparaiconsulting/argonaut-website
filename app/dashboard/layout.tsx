@@ -12,6 +12,7 @@ import DemoReadonlyGuard from './_components/DemoReadonlyGuard'
 import PraesentationsModus from './_components/PraesentationsModus'
 import KiGuideBegleiter from './_components/KiGuideBegleiter'
 import UnterschriftLoader from './_components/UnterschriftLoader'
+import NutzungMelder from './_components/NutzungMelder'
 import FilialUmschalter from './_components/FilialUmschalter'
 import { AnsichtUmschalter } from './_components/Ansicht'
 
@@ -219,6 +220,10 @@ export default async function DashboardLayout({
 
       {/* Q2d: Lädt die gespeicherte Unterschrift einmal in den Cache (rendert nichts) */}
       <UnterschriftLoader />
+
+      {/* 6.4: Zählt je Betrieb und Tag, WELCHES Modul geöffnet wurde — nie, wer
+          es geöffnet hat. Rendert nichts. Siehe lib/nutzung.ts. */}
+      <NutzungMelder />
     </div>
   )
 }

@@ -104,6 +104,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     { titel: 'Website-Anfragen', sub: 'Eingehende Anfragen & Leads', href: '/admin/anfragen' },
     { titel: 'Rechnungen & SEPA-Einzug', sub: 'Abo-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },
+    { titel: 'Nutzung', sub: 'Was wird benutzt · wo bricht das Onboarding ab', href: '/admin/command-center/nutzung' },
     { titel: 'Branchen', sub: 'Branchen-Katalog & Module', href: '/admin/branchen' },
     { titel: 'Branchen-Dossiers', sub: 'PDFs vorab erzeugen · Interessenten', href: '/admin/dossiers' },
     { titel: 'Inhalts-Werkstatt', sub: 'Handbuch-Kapitel erzeugen · lesen · freigeben', href: '/admin/inhalte' },
