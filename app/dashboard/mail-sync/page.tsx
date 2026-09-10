@@ -21,7 +21,7 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type Status = Record<string, { verbunden: boolean; konto_id: string }>;
+type Status = Record<string, { verbunden: boolean; konto_id: string; extra?: Record<string, string> }>;
 type Entwurf = { konto_id: string; token: string; extra: Record<string, string> };
 
 export default function MailSyncSeite() {
@@ -58,6 +58,19 @@ export default function MailSyncSeite() {
       const cur = e[key] ?? leer();
       return { ...e, [key]: { ...cur, extra: { ...cur.extra, [fk]: v } } };
     });
+  }
+
+  /**
+   * Der Wert, der im Feld steht: was gerade getippt wird, sonst das
+   * Gespeicherte. Ohne das stünde beim Bearbeiten eines verbundenen Postfachs
+   * ein leeres Server-Feld — und würde beim Speichern den echten Wert
+   * überschreiben. Das Passwort ist bewusst NICHT dabei; es verlässt den
+   * Server nie.
+   */
+  function extraWert(key: string, fk: string): string {
+    const getippt = entwurf[key]?.extra?.[fk];
+    if (getippt !== undefined) return getippt;
+    return status[key]?.extra?.[fk] ?? '';
   }
 
   async function verbinden(key: string) {
@@ -141,7 +154,7 @@ export default function MailSyncSeite() {
                     {(a.extraFelder || []).map((xf) => (
                       <label key={xf.key} style={styles.lab}>{xf.label}
                         <input style={styles.inp} type={xf.typ === 'password' ? 'password' : 'text'}
-                          value={e.extra[xf.key] || ''} placeholder={xf.hinweis || ''}
+                          value={extraWert(a.key, xf.key)} placeholder={xf.hinweis || ''}
                           onChange={(ev) => extraFeld(a.key, xf.key, ev.target.value)} />
                       </label>
                     ))}
