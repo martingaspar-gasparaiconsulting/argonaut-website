@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · KI-GUIDE · Stufe 2 (Gestalt)
@@ -61,7 +61,21 @@ export type KiGuideProps = {
   onVorlesen?: () => void;
   /** Anzeigename unter dem Avatar. */
   name?: string;
+  /**
+   * Klappt der eingeklappte Guide nach längerem Stillstand einmal von selbst
+   * auf? Standard: ja. Auf `false` setzen, wo das stört — etwa im
+   * Vorführ-/Kiosk-Modus, in dem niemand hängt, sondern zugesehen wird.
+   */
+  autoAufklappen?: boolean;
 };
+
+/**
+ * Wie lange jemand nichts tun darf, bevor der Guide sich meldet.
+ *
+ * 45 Sekunden sind bewusst lang. Wer liest, tippt nicht — und ein Kasten, der
+ * beim Lesen aufspringt, ist eine Störung, keine Hilfe.
+ */
+export const STILLSTAND_MS = 45_000;
 
 function auraFarbe(s: Stimmung): string {
   if (s === "achtung") return A.warn;
@@ -137,12 +151,58 @@ export default function KiGuide({
   avatarUrl,
   onVorlesen,
   name = "ARGONAUT",
+  autoAufklappen = true,
 }: KiGuideProps) {
   const [zu, setZu] = useState(false);
   const kennung = useId().replace(/[^a-zA-Z0-9]/g, "");
   const farbe = auraFarbe(stimmung);
   const zeigeRing = typeof fortschritt === "number" && fortschritt >= 0;
   const p = Math.min(Math.max(fortschritt ?? 0, 0), 100);
+
+  // ---------------------------------------------------------------------
+  // Der Guide merkt, wenn jemand hängt (Punkt 2.3)
+  //
+  // Passiert 45 Sekunden lang nichts und der Guide ist eingeklappt, klappt er
+  // EINMAL von selbst auf. Genau einmal: Wer ihn danach wieder zuklappt, hat
+  // sich entschieden, und diese Entscheidung wird nicht überstimmt. Ein Kasten,
+  // der immer wieder aufspringt, ist kein Helfer, sondern ein Ärgernis.
+  //
+  // Gezählt wird echte Untätigkeit — jede Maus-, Tasten-, Scroll- oder
+  // Tippbewegung stellt die Uhr zurück. Wer liest, tippt nicht; deshalb sind
+  // es 45 Sekunden und nicht zehn.
+  // ---------------------------------------------------------------------
+  const schonAufgeklappt = useRef(false);
+
+  useEffect(() => {
+    if (!autoAufklappen || !zu || schonAufgeklappt.current) return;
+    if (typeof window === "undefined") return;
+
+    let uhr: number | undefined;
+
+    const ausloesen = () => {
+      if (schonAufgeklappt.current) return;
+      schonAufgeklappt.current = true;
+      setZu(false);
+    };
+
+    const neuStarten = () => {
+      if (uhr !== undefined) window.clearTimeout(uhr);
+      uhr = window.setTimeout(ausloesen, STILLSTAND_MS);
+    };
+
+    const ereignisse: Array<keyof WindowEventMap> = [
+      "mousemove", "mousedown", "keydown", "wheel", "scroll", "touchstart",
+    ];
+    // passive: true — diese Zuhörer sollen das Scrollen unter keinen Umständen
+    // ausbremsen; sie stellen nur eine Uhr zurück.
+    for (const e of ereignisse) window.addEventListener(e, neuStarten, { passive: true });
+    neuStarten();
+
+    return () => {
+      if (uhr !== undefined) window.clearTimeout(uhr);
+      for (const e of ereignisse) window.removeEventListener(e, neuStarten);
+    };
+  }, [autoAufklappen, zu]);
 
   return (
     <div style={{ ...wrap, borderColor: farbe + "44" }}>
