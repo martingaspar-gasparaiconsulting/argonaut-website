@@ -76,7 +76,7 @@ export const PUNKTE: Punkt[] = [
     zustaendig: 'betreiber',
     feld: 'setterEingerichtet',
     braucht: 'web_live',
-    wo: '/admin/command-center/setter',
+    wo: '#setter',
   },
   {
     id: 'chat_domain',
@@ -85,7 +85,7 @@ export const PUNKTE: Punkt[] = [
     zustaendig: 'betreiber',
     feld: 'chatDomain',
     braucht: 'web_live',
-    wo: '/admin/command-center/setter',
+    wo: '/dashboard/webseiten',
   },
 
   // --- WhatsApp ------------------------------------------------------------
@@ -137,7 +137,7 @@ export const PUNKTE: Punkt[] = [
     feld: 'buchungSlug',
     modul: 'online-buchung',
     braucht: 'termin_arten',
-    wo: '/admin/command-center/setter',
+    wo: '#setter',
   },
 
   // --- Shop ----------------------------------------------------------------
@@ -151,17 +151,16 @@ export const PUNKTE: Punkt[] = [
     wo: '/dashboard/artikel',
   },
 
-  // --- Kommunikation -------------------------------------------------------
+  // --- Noch nicht gebaut ---------------------------------------------------
   {
     id: 'mail_absender',
     name: 'E-Mail-Absender verifiziert',
-    warum: 'Ohne verifizierte Absenderadresse landen Bestätigungen im Spam oder gar nicht.',
+    warum: 'Wird ein Punkt je Betrieb, sobald D6 steht. Solange alle Betriebe über dieselbe Absenderadresse versenden, ist das EIN Punkt auf der Systeme-Seite und keiner in jeder Kundenakte.',
     zustaendig: 'betreiber',
     feld: 'mailAbsender',
     wo: '/admin/command-center/systeme',
+    geplant: true,
   },
-
-  // --- Noch nicht gebaut ---------------------------------------------------
   {
     id: 'bank_zugang',
     name: 'Bankzugang eingerichtet',

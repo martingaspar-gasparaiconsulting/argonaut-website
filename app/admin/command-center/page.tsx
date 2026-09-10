@@ -99,6 +99,8 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
   const sektionenGesch: Sektion[] = [
     { titel: 'Website-Analyse', sub: 'Besucher · Klicks · Kanäle · Termine', href: '/dashboard/analyse' },
     { titel: 'Kunden & Module', sub: 'Tenants, Onboarding, Freischaltung', href: '/admin/tenants' },
+    { titel: 'Betriebe einrichten', sub: 'Kunden-Akte · Checkliste · KI-Berater', href: '/admin/command-center/betrieb' },
+    { titel: 'WhatsApp', sub: 'Webhook, Prüf-Token & App-Secret je Betrieb', href: '/admin/command-center/whatsapp' },
     { titel: 'Website-Anfragen', sub: 'Eingehende Anfragen & Leads', href: '/admin/anfragen' },
     { titel: 'Rechnungen & SEPA-Einzug', sub: 'Abo-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },
