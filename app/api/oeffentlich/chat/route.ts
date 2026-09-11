@@ -27,6 +27,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { kiFetch } from '@/lib/ki';
+import { pruefeDeckel, monatsSchluessel } from '@/lib/chatDeckel';
 import { originErlaubt } from '@/lib/chatEinbetten';
 import {
   leseEinstellung,
@@ -129,6 +130,42 @@ export async function POST(req: Request) {
       kopf = corsKopf(origin);
     }
 
+    // ---- MENGENGRENZE (11.09.2026) ---------------------------------------
+    // Bis hierher hat dieser Aufruf noch nichts gekostet. Ab der naechsten
+    // Zeile wuerde er es — deshalb steht die Pruefung genau hier.
+    //
+    // Best effort: Faellt die Zaehlung aus (Netz, Tabelle fehlt), laeuft der
+    // Berater WEITER. Ein kaputter Zaehler darf keinen Kunden aussperren —
+    // das waere ein groesserer Schaden als ein paar Cent zu viel.
+    const monat = monatsSchluessel(new Date());
+    let deckel = pruefeDeckel(0, 'klein');
+    try {
+      const { data: tarifRow } = await db
+        .from('chat_tarif').select('stufe').eq('owner_user_id', ownerId).maybeSingle();
+      const { data: verbrauchRow } = await db
+        .from('chat_verbrauch').select('anzahl').eq('owner_user_id', ownerId).eq('monat', monat).maybeSingle();
+
+      deckel = pruefeDeckel(
+        Number((verbrauchRow as { anzahl?: number } | null)?.anzahl) || 0,
+        (tarifRow as { stufe?: string } | null)?.stufe,
+      );
+
+      if (deckel.warnen || !deckel.erlaubt) {
+        await db.rpc('chat_verbrauch_merker', {
+          p_owner: ownerId, p_monat: monat,
+          p_gewarnt: deckel.warnen, p_gesperrt: !deckel.erlaubt,
+        });
+      }
+    } catch (e) {
+      console.error('[chat-deckel] Pruefung fehlgeschlagen (Berater laeuft weiter):', e);
+    }
+
+    if (!deckel.erlaubt) {
+      // Bewusst Status 200: Fuer den Besucher ist das keine Stoerung, sondern
+      // eine Antwort. Das Widget zeigt sie wie jede andere an.
+      return NextResponse.json({ antwort: deckel.besucherText }, { headers: kopf });
+    }
+
     const { data: ciRow } = await db.from('web_ci').select('firma, slogan, ueber_uns').eq('owner_user_id', ownerId).maybeSingle();
     const ci = ciRow as { firma?: string; slogan?: string; ueber_uns?: string } | null;
     const firma = (ci?.firma || 'unser Betrieb').toString().trim();
@@ -200,6 +237,13 @@ Regeln:
       .filter((m) => m.text.trim() !== '')
       .map((m) => ({ role: m.role, content: [{ type: 'text', text: m.text }] }));
     messages.push({ role: 'user', content: [{ type: 'text', text: frage }] });
+
+    // Erst jetzt hochzaehlen: gezaehlt wird, was wirklich Kosten verursacht.
+    try {
+      await db.rpc('chat_verbrauch_hoch', { p_owner: ownerId, p_monat: monat });
+    } catch (e) {
+      console.error('[chat-deckel] Hochzaehlen fehlgeschlagen:', e);
+    }
 
     const kiRes = await kiFetch('oeffentlich-chat', {
       method: 'POST',
