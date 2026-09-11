@@ -1094,3 +1094,102 @@ export function augeGesamt(
   }
   return { klartext: 'Alles im grünen Bereich — nichts Dringendes. Sauber.', punkte: [], stimmung: 'gut' };
 }
+
+// ---------------------------------------------------------------------------
+// PUNKT 6.5 · Wachendes Auge auf weiteren Übersichten
+// Die Zahlen kommen aus lib/augeZaehler.ts. Hier wird nur formuliert.
+// Alle Texte siezen — siehe die Korrektur vom 11.09.2026.
+// ---------------------------------------------------------------------------
+
+/** Termine: was heute ansteht — und was liegen geblieben ist. */
+export function augeTermine(d: {
+  heute: number; morgen: number; dieseWoche: number; vergangenOffen: number;
+  naechsterTitel: string | null; naechsterInStunden: number | null;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+
+  if (d.dieseWoche === 0 && d.vergangenOffen === 0) {
+    return { klartext: 'Diese Woche steht kein Termin an — ein guter Moment, um aktiv Termine zu setzen.', punkte: [], stimmung: 'neutral' };
+  }
+
+  // Liegengebliebenes wiegt schwerer als Bevorstehendes: dort wartet jemand auf Antwort.
+  if (d.vergangenOffen > 0) {
+    punkte.push(`${d.vergangenOffen} Termin${d.vergangenOffen === 1 ? '' : 'e'} liegt zeitlich hinter Ihnen und steht noch auf „geplant" — bitte abschließen oder nachfassen`);
+  }
+  if (d.heute > 0) punkte.push(`Heute: ${d.heute} Termin${d.heute === 1 ? '' : 'e'}`);
+  if (d.morgen > 0) punkte.push(`Morgen: ${d.morgen} Termin${d.morgen === 1 ? '' : 'e'}`);
+  if (d.naechsterInStunden != null && d.naechsterInStunden <= 48) {
+    const wann = d.naechsterInStunden <= 1 ? 'in weniger als einer Stunde' : `in rund ${d.naechsterInStunden} Stunden`;
+    punkte.push(`Als Nächstes ${wann}${d.naechsterTitel ? ': ' + d.naechsterTitel : ''}`);
+  }
+
+  if (d.vergangenOffen > 0) {
+    return { klartext: `${d.vergangenOffen} vergangene Termin${d.vergangenOffen === 1 ? '' : 'e'} ${d.vergangenOffen === 1 ? 'ist' : 'sind'} nie abgeschlossen worden — dahinter steckt meist eine offene Zusage.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.heute > 0) {
+    return { klartext: `${d.heute} Termin${d.heute === 1 ? '' : 'e'} heute — der Tag ist verplant.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `Heute ist frei, diese Woche stehen ${d.dieseWoche} Termine an.`, punkte, stimmung: 'gut' };
+}
+
+/** Zahlungen: was hereinkommt, was hinausgeht — und was auf einen Klick wartet. */
+export function augeZahlungen(d: {
+  gemeldetOffen: number; gemeldetBetrag: number;
+  offeneRechnungen: number; offenerBetrag: number;
+  offeneBelege: number; offenerBelegBetrag: number;
+  aeltesterBelegTage: number | null;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+
+  // Gemeldete Zahlungen zuerst: Der Kunde hat bezahlt und wartet darauf, dass
+  // es ankommt. Wer hier nicht nachschaut, mahnt am Ende jemanden, der zahlt.
+  if (d.gemeldetOffen > 0) {
+    punkte.push(`${d.gemeldetOffen} Kunde${d.gemeldetOffen === 1 ? '' : 'n'} ${d.gemeldetOffen === 1 ? 'hat' : 'haben'} eine Zahlung über ${eur(d.gemeldetBetrag)} gemeldet — bitte auf dem Konto prüfen und freigeben`);
+  }
+  if (d.offeneRechnungen > 0) punkte.push(`${d.offeneRechnungen} Rechnung${d.offeneRechnungen === 1 ? '' : 'en'} ohne Zahlungseingang: ${eur(d.offenerBetrag)}`);
+  if (d.offeneBelege > 0) {
+    const alt = d.aeltesterBelegTage != null && d.aeltesterBelegTage > 30 ? `, der älteste seit ${d.aeltesterBelegTage} Tagen` : '';
+    punkte.push(`${d.offeneBelege} eigene Rechnung${d.offeneBelege === 1 ? '' : 'en'} noch nicht bezahlt: ${eur(d.offenerBelegBetrag)}${alt}`);
+  }
+
+  if (d.gemeldetOffen > 0) {
+    return { klartext: `${d.gemeldetOffen} gemeldete Zahlung${d.gemeldetOffen === 1 ? '' : 'en'} über ${eur(d.gemeldetBetrag)} ${d.gemeldetOffen === 1 ? 'wartet' : 'warten'} auf Ihre Bestätigung — das ist der schnellste Handgriff hier.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.aeltesterBelegTage != null && d.aeltesterBelegTage > 30 && d.offeneBelege > 0) {
+    return { klartext: `Eine eigene Rechnung liegt seit ${d.aeltesterBelegTage} Tagen unbezahlt — hier drohen Mahngebühren.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.offenerBetrag > 0) {
+    return { klartext: `${eur(d.offenerBetrag)} stehen noch aus, ${eur(d.offenerBelegBetrag)} sind selbst zu zahlen.`, punkte, stimmung: 'neutral' };
+  }
+  if (d.offeneBelege > 0) {
+    return { klartext: `Alle Rechnungen sind bezahlt. Offen sind nur ${eur(d.offenerBelegBetrag)} an eigenen Rechnungen.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: 'Nichts offen — in beide Richtungen ist alles beglichen.', punkte: [], stimmung: 'gut' };
+}
+
+/** Eingangsbelege: was der Prüfung nicht standhielte und was liegen bleibt. */
+export function augeEingangsbelege(d: {
+  gesamt: number; ohneDatei: number; ohneKonto: number;
+  unbezahlt: number; unbezahltBetrag: number; aeltesterUnbezahltTage: number | null;
+}): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Noch keine Eingangsbelege erfasst — laden Sie die erste Lieferantenrechnung hoch, die Erkennung füllt die Felder selbst aus.', punkte: [], stimmung: 'neutral' };
+  }
+
+  const punkte: string[] = [];
+  // Ein Beleg ohne Datei ist bei einer Prüfung kein Beleg. Das wiegt am schwersten.
+  if (d.ohneDatei > 0) punkte.push(`${d.ohneDatei} Beleg${d.ohneDatei === 1 ? '' : 'e'} ohne hinterlegte Datei — bei einer Prüfung fehlt der Nachweis`);
+  if (d.ohneKonto > 0) punkte.push(`${d.ohneKonto} Beleg${d.ohneKonto === 1 ? '' : 'e'} noch nicht kontiert — die bleiben in der Steuerberatung liegen`);
+  if (d.unbezahlt > 0) punkte.push(`${d.unbezahlt} unbezahlt: ${eur(d.unbezahltBetrag)}`);
+
+  if (d.ohneDatei > 0) {
+    return { klartext: `${d.ohneDatei} von ${d.gesamt} Belegen haben keine Datei — das ist die Lücke, die bei einer Betriebsprüfung auffällt.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.aeltesterUnbezahltTage != null && d.aeltesterUnbezahltTage > 30) {
+    return { klartext: `Ein Beleg ist seit ${d.aeltesterUnbezahltTage} Tagen offen — bitte zahlen oder klären, bevor gemahnt wird.`, punkte, stimmung: 'achtung' };
+  }
+  if (d.ohneKonto > 0) {
+    return { klartext: `${d.ohneKonto} Beleg${d.ohneKonto === 1 ? '' : 'e'} ${d.ohneKonto === 1 ? 'wartet' : 'warten'} noch auf ein Konto — danach läuft der DATEV-Export glatt durch.`, punkte, stimmung: 'neutral' };
+  }
+  return { klartext: `${d.gesamt} Belege, alle mit Datei und Konto. Sauber abgelegt.`, punkte, stimmung: 'gut' };
+}

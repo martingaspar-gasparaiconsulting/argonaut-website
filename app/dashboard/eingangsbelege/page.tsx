@@ -14,6 +14,9 @@ import Leerzustand from '../_components/Leerzustand';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { pruefeKonsistenz, istDublette } from '@/lib/belegCheck';
+import KiAuge from '../_components/KiAuge';
+import { augeEingangsbelege } from '@/lib/auge';
+import { zaehleEingangsbelege } from '@/lib/augeZaehler';
 import { NurVoll } from '../_components/Ansicht';
 
 const supabase = createBrowserClient(
@@ -179,6 +182,12 @@ export default function EingangsbelegePage() {
         <div style={styles.kpi}><div style={{ ...styles.kWert, color: C.gold }}>{eur(kpi.brutto)}</div><div style={styles.kLabel}>Summe brutto</div></div>
         <div style={styles.kpi}><div style={{ ...styles.kWert, color: C.green }}>{eur(kpi.ust)}</div><div style={styles.kLabel}>Vorsteuer (USt)</div></div>
       </div>
+
+      {!laden && (
+        <div style={{ marginBottom: 14 }}>
+          <KiAuge modul="Beleg-Inbox" regel={augeEingangsbelege(zaehleEingangsbelege(belege, new Date()))} />
+        </div>
+      )}
 
       <div style={styles.card}>
         <div style={styles.cardTitel}>{editId ? '✏️ Beleg bearbeiten' : '📷 Beleg hochladen & auslesen'}</div>

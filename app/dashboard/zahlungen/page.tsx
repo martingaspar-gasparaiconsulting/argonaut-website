@@ -14,6 +14,9 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import KiAuge from '../_components/KiAuge';
+import { augeZahlungen } from '@/lib/auge';
+import { zaehleZahlungen } from '@/lib/augeZaehler';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -89,6 +92,9 @@ export default function ZahlungenPage() {
     finally { setBusy(null); }
   }
 
+  // Punkt 6.5 — Wachendes Auge: rechnet aus den schon geladenen Listen.
+  const augeZahlen = useMemo(() => zaehleZahlungen(rechnungen, belege, new Date()), [rechnungen, belege]);
+
   const gemeldet = useMemo(() => rechnungen.filter((r) => r.zahlung_gemeldet_am && !r.bezahlt_am), [rechnungen]);
   const erhalten = useMemo(() => rechnungen.filter((r) => r.bezahlt_am).sort((a, b) => (b.bezahlt_am || '').localeCompare(a.bezahlt_am || '')), [rechnungen]);
   const offeneBelege = useMemo(() => belege.filter((b) => !b.bezahlt_am), [belege]);
@@ -115,6 +121,10 @@ export default function ZahlungenPage() {
           <div style={styles.kpis}>
             <div style={styles.kpi}><div style={{ ...styles.kWert, color: C.green }}>{eur(kEin.erhalten)}</div><div style={styles.kLabel}>erhalten (bezahlt)</div></div>
             <div style={{ ...styles.kpi, borderColor: kEin.zuBestaetigen ? `${C.gold}66` : C.border }}><div style={{ ...styles.kWert, color: kEin.zuBestaetigen ? C.gold : C.text }}>{kEin.zuBestaetigen}</div><div style={styles.kLabel}>vom Kunden gemeldet</div></div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <KiAuge modul="Zahlungen" regel={augeZahlungen(augeZahlen)} />
           </div>
 
           <section style={styles.card}>

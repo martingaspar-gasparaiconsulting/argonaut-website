@@ -13,6 +13,9 @@ import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { NurVoll } from "../_components/Ansicht";
 import Leerzustand from "../_components/Leerzustand";
+import KiAuge from "../_components/KiAuge";
+import { augeTermine } from "@/lib/auge";
+import { zaehleTermine } from "@/lib/augeZaehler";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -198,6 +201,9 @@ export default function TermineCockpit() {
     }
   }
 
+  // Punkt 6.5 — Wachendes Auge: zaehlt aus der schon geladenen Liste, laedt nichts nach.
+  const augeZahlen = useMemo(() => zaehleTermine(termine, new Date()), [termine]);
+
   const { kommend, vergangen } = useMemo(() => {
     const now = Date.now();
     const kommend: Termin[] = [];
@@ -287,6 +293,12 @@ export default function TermineCockpit() {
         <KpiKarte label="Diese Woche" wert={String(kpi.woche)} hint="in den nächsten 7 Tagen" farbe={C.green} />
         <KpiKarte label="Kommende" wert={String(kpi.kommend)} hint="alle bevorstehenden" farbe={C.gold} />
       </div>
+
+      {!loading && (
+        <div style={{ marginBottom: 18 }}>
+          <KiAuge modul="Termine" regel={augeTermine(augeZahlen)} />
+        </div>
+      )}
 
       {fehler && (
         <div
