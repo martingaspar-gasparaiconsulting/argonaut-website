@@ -1193,3 +1193,140 @@ export function augeEingangsbelege(d: {
   }
   return { klartext: `${d.gesamt} Belege, alle mit Datei und Konto. Sauber abgelegt.`, punkte, stimmung: 'gut' };
 }
+
+/** Posteingang: was ungelesen liegt — und wie lange schon. */
+export function augePosteingang(d: {
+  gesamt: number; ungelesen: number; aeltesteUngeleseneTage: number | null; ungelesenHeute: number;
+}): AugeErgebnis {
+  if (d.gesamt === 0) {
+    return { klartext: 'Der Posteingang ist leer oder noch nicht verbunden — hinterlegen Sie den Mail-Zugang, dann landet die Kundenpost hier.', punkte: [], stimmung: 'neutral' };
+  }
+  if (d.ungelesen === 0) {
+    return { klartext: `Alle ${d.gesamt} Nachrichten sind gelesen. Nichts liegt liegen.`, punkte: [], stimmung: 'gut' };
+  }
+
+  const punkte: string[] = [`${d.ungelesen} von ${d.gesamt} Nachrichten ungelesen`];
+  if (d.ungelesenHeute > 0) punkte.push(`${d.ungelesenHeute} davon heute hereingekommen`);
+
+  // Eine drei Tage alte ungelesene Kundenmail ist etwas anderes als eine von
+  // heute Morgen. Erst das Alter macht aus einem Posteingang ein Problem.
+  if (d.aeltesteUngeleseneTage != null && d.aeltesteUngeleseneTage >= 3) {
+    punkte.push(`Die älteste liegt seit ${d.aeltesteUngeleseneTage} Tagen ungeöffnet da`);
+    return { klartext: `Eine Nachricht wartet seit ${d.aeltesteUngeleseneTage} Tagen auf eine Antwort — so lange lässt man keinen Kunden warten.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `${d.ungelesen} Nachricht${d.ungelesen === 1 ? '' : 'en'} ungelesen, nichts davon älter als zwei Tage.`, punkte, stimmung: 'neutral' };
+}
+
+/** Dispo: welcher Einsatz hat noch niemanden, der ihn fährt. */
+export function augeDispo(d: {
+  unzugeordnetGesamt: number; unzugeordnetHeute: number; unzugeordnetMorgen: number;
+  einsaetzeHeute: number; naechsterOhneMonteur: string | null;
+}): AugeErgebnis {
+  if (d.unzugeordnetGesamt === 0) {
+    if (d.einsaetzeHeute === 0) {
+      return { klartext: 'Heute steht kein Einsatz an und nichts ist unzugeordnet.', punkte: [], stimmung: 'gut' };
+    }
+    return { klartext: `${d.einsaetzeHeute} Einsätze heute, alle haben einen Monteur. Die Woche ist verplant.`, punkte: [], stimmung: 'gut' };
+  }
+
+  const punkte: string[] = [];
+  if (d.unzugeordnetHeute > 0) punkte.push(`${d.unzugeordnetHeute} davon HEUTE — die brauchen sofort jemanden`);
+  if (d.unzugeordnetMorgen > 0) punkte.push(`${d.unzugeordnetMorgen} morgen`);
+  if (d.naechsterOhneMonteur) punkte.push(`Als Nächstes offen: ${d.naechsterOhneMonteur}`);
+  punkte.push(`${d.unzugeordnetGesamt} unzugeordnet insgesamt`);
+
+  // Ein Einsatz heute ohne Monteur ist ein Termin, zu dem niemand fährt.
+  if (d.unzugeordnetHeute > 0) {
+    return { klartext: `${d.unzugeordnetHeute} Einsatz${d.unzugeordnetHeute === 1 ? '' : 'e'} heute hat noch keinen Monteur — dort fährt sonst niemand hin.`, punkte, stimmung: 'achtung' };
+  }
+  return { klartext: `${d.unzugeordnetGesamt} Einsätze warten auf einen Monteur — je früher zugewiesen, desto besser plant das Team.`, punkte, stimmung: 'neutral' };
+}
+
+/** Banking: lohnt sich jetzt ein Kontoabgleich? */
+export function augeBanking(d: {
+  offeneRechnungen: number; offenerBetrag: number; bankenVerbunden: number;
+}): AugeErgebnis {
+  if (d.offeneRechnungen === 0) {
+    return { klartext: 'Keine offenen Rechnungen — es gibt nichts abzugleichen.', punkte: [], stimmung: 'gut' };
+  }
+
+  const punkte: string[] = [`${d.offeneRechnungen} offene Rechnung${d.offeneRechnungen === 1 ? '' : 'en'} über ${eur(d.offenerBetrag)}`];
+  if (d.bankenVerbunden === 0) {
+    punkte.push('Noch keine Bank verbunden — bis dahin den Umsatz-Export als Datei hochladen');
+  } else {
+    punkte.push(`${d.bankenVerbunden} Bankzugang${d.bankenVerbunden === 1 ? '' : 'änge'} verbunden`);
+  }
+
+  return {
+    klartext: `${eur(d.offenerBetrag)} stehen offen — ein Kontoabgleich zeigt in einem Durchgang, was davon schon bezahlt ist.`,
+    punkte,
+    stimmung: 'neutral',
+  };
+}
+
+/** Zeiterfassung: Selbstauskunft fuer den, der stempelt. Keine Bewertung. */
+export function augeZeiterfassung(d: {
+  eingestempelt: boolean; laufendMinuten: number | null; pauseOffenMinuten: number | null;
+  buchungenHeute: number;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+  const std = (m: number) => `${Math.floor(m / 60)} Std. ${String(m % 60).padStart(2, '0')} Min.`;
+
+  // KEIN Hinweis auf die Warteschlange: die Seite zeigt ihn bereits selbst,
+  // prominenter und mit mehr Erklaerung („Ohne Verbindung — Sie können
+  // trotzdem stempeln"). Zwei Stellen, die dasselbe sagen, sind schlimmer
+  // als eine — spaetestens wenn sie sich einmal widersprechen.
+
+  if (d.pauseOffenMinuten != null && d.pauseOffenMinuten >= 90) {
+    return {
+      klartext: `Die Pause läuft seit ${std(d.pauseOffenMinuten)} — falls Sie längst zurück sind, bitte die Pause beenden.`,
+      punkte: [`Sonst wird die Zeit als Pause gerechnet`], stimmung: 'achtung',
+    };
+  }
+
+  // Arbeitszeitgesetz § 3: werktäglich höchstens 10 Stunden.
+  if (d.eingestempelt && d.laufendMinuten != null && d.laufendMinuten >= 600) {
+    return {
+      klartext: `Sie sind seit ${std(d.laufendMinuten)} eingestempelt — über zehn Stunden lässt das Arbeitszeitgesetz nur in Ausnahmen zu.`,
+      punkte: ['Falls das Ausstempeln vergessen wurde, jetzt nachtragen'], stimmung: 'achtung',
+    };
+  }
+
+  if (d.eingestempelt && d.laufendMinuten != null) {
+    return { klartext: `Sie sind seit ${std(d.laufendMinuten)} eingestempelt. Alles erfasst.`, punkte: [], stimmung: 'gut' };
+  }
+  if (d.buchungenHeute > 0) {
+    return { klartext: `Heute ${d.buchungenHeute} Buchung${d.buchungenHeute === 1 ? '' : 'en'} erfasst, aktuell nicht eingestempelt.`, punkte: [], stimmung: 'gut' };
+  }
+  return { klartext: 'Heute noch nicht gestempelt.', punkte: [], stimmung: 'neutral' };
+}
+
+/**
+ * Schichtplan: ausschliesslich Summen. Nie ein Name, nie eine Kennung.
+ * Siehe die Begruendung im Kopf von zaehleSchichtplan (§ 87 BetrVG).
+ */
+export function augeSchichtplan(d: {
+  offeneTauschantraege: number; minijobUeber: number; minijobKnapp: number; unbestaetigt: number;
+}): AugeErgebnis {
+  const punkte: string[] = [];
+  if (d.minijobUeber > 0) punkte.push(`${d.minijobUeber} Minijob-Konto über der Geringfügigkeitsgrenze`);
+  if (d.minijobKnapp > 0) punkte.push(`${d.minijobKnapp} weitere${d.minijobKnapp === 1 ? 's' : ''} knapp darunter`);
+  if (d.offeneTauschantraege > 0) punkte.push(`${d.offeneTauschantraege} Tauschantrag${d.offeneTauschantraege === 1 ? '' : 'anträge'} wartet auf Antwort`);
+  if (d.unbestaetigt > 0) punkte.push(`${d.unbestaetigt} Schicht${d.unbestaetigt === 1 ? '' : 'en'} noch nicht bestätigt`);
+
+  // Die gerissene Geringfügigkeitsgrenze kostet echtes Geld: Die
+  // Beschäftigung wird rückwirkend sozialversicherungspflichtig.
+  if (d.minijobUeber > 0) {
+    return {
+      klartext: `${d.minijobUeber} Minijob-Konto${d.minijobUeber === 1 ? '' : 'en'} liegt über der Geringfügigkeitsgrenze — das wird rückwirkend sozialversicherungspflichtig, wenn es so bleibt.`,
+      punkte, stimmung: 'achtung',
+    };
+  }
+  if (d.offeneTauschantraege > 0) {
+    return { klartext: `${d.offeneTauschantraege} Tauschantrag${d.offeneTauschantraege === 1 ? '' : 'anträge'} wartet auf Ihre Antwort — bis dahin steht die Schicht auf wackligen Füßen.`, punkte, stimmung: 'neutral' };
+  }
+  if (d.minijobKnapp > 0 || d.unbestaetigt > 0) {
+    return { klartext: 'Der Plan steht, ein paar Punkte sind noch offen.', punkte, stimmung: 'neutral' };
+  }
+  return { klartext: 'Der Schichtplan ist sauber: nichts offen, keine Grenze in Sicht.', punkte: [], stimmung: 'gut' };
+}

@@ -11,6 +11,9 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { parseUmsaetzeCsv, matchAlle, zaehleMatches, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
+import KiAuge from '../_components/KiAuge';
+import { augeBanking } from '@/lib/auge';
+import { zaehleBanking } from '@/lib/augeZaehler';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -73,7 +76,7 @@ export default function BankingSeite() {
   function abgleichen() {
     setFehler(null); setOk(null); setErledigt(new Set());
     const tx = parseUmsaetzeCsv(csv);
-    if (tx.length === 0) { setFehler('Keine Umsätze erkannt. Bitte den CSV-Export deiner Bank einfügen (mit Kopfzeile).'); setMatches(null); return; }
+    if (tx.length === 0) { setFehler('Keine Umsätze erkannt. Bitte den CSV-Export Ihrer Bank einfügen (mit Kopfzeile).'); setMatches(null); return; }
     setMatches(matchAlle(tx, offene));
   }
 
@@ -129,10 +132,17 @@ export default function BankingSeite() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Finanzen</div>
       <h1 style={styles.h1}>🏦 Banking-Abgleich</h1>
-      <p style={styles.sub}>Lade den CSV-Export deiner Kontoumsätze hoch — ARGONAUT gleicht sie automatisch gegen deine offenen Rechnungen ab und du markierst Zahlungseingänge mit einem Klick.</p>
+      <p style={styles.sub}>Laden Sie den CSV-Export Ihrer Kontoumsätze hoch — ARGONAUT gleicht sie automatisch gegen Ihre offenen Rechnungen ab, und Sie markieren Zahlungseingänge mit einem Klick.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
+
+      {/* Punkt 6.5 — stoesst den Abgleich an, statt einen Missstand zu melden. */}
+      {!laden && (
+        <div style={{ margin: '4px 0 14px' }}>
+          <KiAuge modul="Banking" regel={augeBanking(zaehleBanking(offene, verbindungen))} />
+        </div>
+      )}
 
       {/* Bankverbindungen (Mehrbank, in Aufbau) */}
       <div style={styles.verbBox}>
@@ -163,14 +173,14 @@ export default function BankingSeite() {
             <label style={styles.lab}>finAPI Secret<input style={styles.inp} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} /></label>
           </div>
           <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={bankVerbinden}>🔗 Bank speichern</button>
-          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. Du kannst beliebig viele Banken hinterlegen. Bis der Auto-Abruf live ist, nutze den CSV-Import unten — der funktioniert sofort.</div>
+          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. Sie können beliebig viele Banken hinterlegen. Bis der Auto-Abruf live ist, nutzen Sie den CSV-Import unten — der funktioniert sofort.</div>
         </div>
       )}
 
       {/* CSV-Import */}
       <div style={styles.card}>
         <div style={styles.cardTitel}>Kontoumsätze abgleichen</div>
-        <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 10px' }}>Exportiere deine Umsätze im Online-Banking als CSV und füge sie hier ein (oder lade die Datei). ARGONAUT erkennt Datum, Betrag und Verwendungszweck automatisch.</p>
+        <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 10px' }}>Exportieren Sie Ihre Umsätze im Online-Banking als CSV und fügen Sie sie hier ein (oder laden Sie die Datei). ARGONAUT erkennt Datum, Betrag und Verwendungszweck automatisch.</p>
         <textarea style={styles.area} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={'Buchungstag;Name;Verwendungszweck;Betrag\n20.07.2026;Stadtwerke Böblingen;Rechnung RE-2026-0001;1926,00'} />
         <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button style={styles.primaer} onClick={abgleichen}>🔍 Abgleichen</button>

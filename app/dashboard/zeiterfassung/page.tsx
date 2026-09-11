@@ -27,6 +27,9 @@ import { useState, useEffect, useCallback, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { browserSpeicher, einreihen, neueId } from '@/lib/offlineWarteschlange';
 import { WARTESCHLANGE_EVENT } from '../_components/OfflineSync';
+import KiAuge from '../_components/KiAuge';
+import { augeZeiterfassung } from '@/lib/auge';
+import { zaehleZeiterfassung } from '@/lib/augeZaehler';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -378,6 +381,14 @@ export default function ZeiterfassungPage() {
               <div style={styles.eyebrow}>Stempeluhr</div>
               <h1 style={styles.h1}>{ma.vorname} {ma.nachname}</h1>
               <p style={styles.sub}>{ma.position || 'Mitarbeiter'} · {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            </div>
+
+            {/* Punkt 6.5 — SELBSTAUSKUNFT: der Nutzer sieht hier nur seine
+                eigenen Buchungen ("Jeder stempelt SEINE eigene Zeit"), also
+                keine Fremdueberwachung. Kein Wort ueber die Warteschlange —
+                die zeigt der Offline-Hinweis darunter bereits. */}
+            <div style={{ margin: '4px 0 12px' }}>
+              <KiAuge modul="Zeiterfassung" regel={augeZeiterfassung(zaehleZeiterfassung(offen, heute, new Date()))} />
             </div>
 
             {msg && <div style={styles.infoMsg}>{msg}</div>}

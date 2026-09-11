@@ -6,6 +6,9 @@ import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import KiAuge from '../_components/KiAuge';
+import { augeSchichtplan } from '@/lib/auge';
+import { zaehleSchichtplan } from '@/lib/augeZaehler';
 
 const MODUL = 'hr_schicht_vorlagen';
 
@@ -963,6 +966,15 @@ export default function SchichtplanPage() {
           ...card, borderColor: BRAND.danger, color: BRAND.danger, marginBottom: 16,
         }}>
           {fehler}
+        </div>
+      )}
+
+      {/* Punkt 6.5 — NUR SUMMEN, nie eine Person. Ein Satz wie „Mitarbeiter X
+          hat nicht bestätigt" waere nach § 87 Abs. 1 Nr. 6 BetrVG mitbestimmungs-
+          pflichtig, weil er dafuer GEEIGNET ist; auf die Absicht kommt es nicht an. */}
+      {!laden && (
+        <div style={{ marginBottom: 16 }}>
+          <KiAuge modul="Schichtplan" regel={augeSchichtplan(zaehleSchichtplan(tauschAntraege, minijobWarnung, bestaetigungen))} />
         </div>
       )}
 

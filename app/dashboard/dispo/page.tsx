@@ -13,6 +13,9 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import KiAuge from '../_components/KiAuge';
+import { augeDispo } from '@/lib/auge';
+import { zaehleDispo } from '@/lib/augeZaehler';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 
@@ -186,6 +189,9 @@ export default function DispoPage() {
     return m;
   }, [einsaetze, wochenStart, wochenEnde]);
 
+  // Punkt 6.5 — Wachendes Auge. Nimmt BEWUSST die Liste `unzugeordnet` von
+  // unten, statt selbst zu filtern: sonst koennten Panel und Auge verschiedene
+  // Zahlen zeigen.
   // Unzugeordnet: Einsätze ohne Monteur (alle, nicht abgesagt), nach Datum
   const unzugeordnet = useMemo(() => {
     return einsaetze
@@ -331,6 +337,13 @@ export default function DispoPage() {
         <button style={styles.navBtn} onClick={() => setWochenStart(addDays(wochenStart, 7))}>›</button>
         <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, marginLeft: 6 }}>Woche: {wochenTitel}</span>
       </div>
+
+      {/* Punkt 6.5 — steht bewusst VOR dem Panel: erst der Satz, dann die Liste. */}
+      {!laden && (
+        <div style={{ marginBottom: 14 }}>
+          <KiAuge modul="Dispo" regel={augeDispo(zaehleDispo(unzugeordnet, einsaetze, new Date()))} />
+        </div>
+      )}
 
       {/* ===== Unzugeordnet-Panel ===== */}
       <div style={styles.unzuCard}>

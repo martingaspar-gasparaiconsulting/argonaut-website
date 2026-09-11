@@ -23,6 +23,9 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { antwortBetreff, baueAntwortText, zitiere, MAX_EMPFAENGER } from '@/lib/mailSmtp';
+import KiAuge from '../_components/KiAuge';
+import { augePosteingang } from '@/lib/auge';
+import { zaehlePosteingang } from '@/lib/augeZaehler';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -175,6 +178,13 @@ export default function PosteingangSeite() {
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {erfolg && <div style={styles.ok}>{erfolg}</div>}
+
+      {/* Punkt 6.5 — nur in der Listenansicht, im Detail stoert es nur. */}
+      {!inDetail && !laden && verbunden && (
+        <div style={{ margin: '4px 0 14px' }}>
+          <KiAuge modul="Posteingang" regel={augePosteingang(zaehlePosteingang(mails, new Date()))} />
+        </div>
+      )}
 
       {/* --- Schreiben ------------------------------------------------------ */}
       {entwurf && (

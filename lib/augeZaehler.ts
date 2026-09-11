@@ -225,3 +225,227 @@ export function zaehleEingangsbelege(belege: EingangsbelegZeile[], jetzt: Date):
     aeltesterUnbezahltTage,
   };
 }
+
+// ---------------------------------------------------------------------------
+// POSTEINGANG
+//
+// Die Mails kommen ueber IMAP, nicht aus der Datenbank. Ein „beantwortet"-
+// Merkmal gibt es deshalb NICHT — nur „gelesen". Das Auge sagt darum genau
+// das und nicht mehr: ungelesen und wie alt die aelteste davon ist. Wer hier
+// „unbeantwortet" behauptet, behauptet etwas, das die Daten nicht hergeben.
+// ---------------------------------------------------------------------------
+
+export type MailZeileZaehl = { datumIso?: string | null; gelesen?: boolean };
+
+export type PosteingangZahlen = {
+  gesamt: number;
+  ungelesen: number;
+  /** Alter der aeltesten ungelesenen Nachricht in Tagen. */
+  aeltesteUngeleseneTage: number | null;
+  /** Ungelesene, die heute hereingekommen sind. */
+  ungelesenHeute: number;
+};
+
+export function zaehlePosteingang(mails: MailZeileZaehl[], jetzt: Date): PosteingangZahlen {
+  let gesamt = 0, ungelesen = 0, ungelesenHeute = 0;
+  let aeltesteUngeleseneTage: number | null = null;
+
+  for (const m of mails || []) {
+    if (!m) continue;
+    gesamt++;
+    if (m.gelesen) continue;
+    ungelesen++;
+    const tage = tageDazwischen(m.datumIso, jetzt);
+    if (tage === 0) ungelesenHeute++;
+    if (tage !== null && tage >= 0 && (aeltesteUngeleseneTage === null || tage > aeltesteUngeleseneTage)) {
+      aeltesteUngeleseneTage = tage;
+    }
+  }
+
+  return { gesamt, ungelesen, aeltesteUngeleseneTage, ungelesenHeute };
+}
+
+// ---------------------------------------------------------------------------
+// DISPO
+//
+// WICHTIG: Die Liste `unzugeordnet` wird von der Seite hereingereicht, nicht
+// hier neu gefiltert. Die Seite kennt die Regel bereits
+// (kein Monteur, kein Inhaber-Einsatz, nicht abgesagt) und zeigt sie im
+// „Unzugeordnet"-Panel an. Wuerde hier zum zweiten Mal gefiltert, koennten
+// Panel und Auge verschiedene Zahlen zeigen — das ist der schlimmste Fehler,
+// den ein Auge machen kann: sich selbst auf derselben Seite widersprechen.
+// ---------------------------------------------------------------------------
+
+export type EinsatzZeile = { beginn_am?: string | null; titel?: string | null; einsatzort?: string | null };
+
+export type DispoZahlen = {
+  unzugeordnetGesamt: number;
+  unzugeordnetHeute: number;
+  unzugeordnetMorgen: number;
+  /** Einsaetze heute insgesamt, auch die zugewiesenen. */
+  einsaetzeHeute: number;
+  /** Titel des naechsten Einsatzes ohne Monteur. */
+  naechsterOhneMonteur: string | null;
+};
+
+export function zaehleDispo(
+  unzugeordnet: EinsatzZeile[],
+  alleEinsaetze: EinsatzZeile[],
+  jetzt: Date,
+): DispoZahlen {
+  const heute0 = tagStart(jetzt);
+  const morgen0 = heute0 + TAG_MS;
+  const uebermorgen0 = heute0 + 2 * TAG_MS;
+
+  let unzugeordnetHeute = 0, unzugeordnetMorgen = 0;
+  let naechsterMs: number | null = null;
+  let naechsterOhneMonteur: string | null = null;
+
+  for (const e of unzugeordnet || []) {
+    if (!e || !e.beginn_am) continue;
+    const ms = new Date(e.beginn_am).getTime();
+    if (Number.isNaN(ms)) continue;
+    if (ms >= heute0 && ms < morgen0) unzugeordnetHeute++;
+    if (ms >= morgen0 && ms < uebermorgen0) unzugeordnetMorgen++;
+    if (ms >= heute0 && (naechsterMs === null || ms < naechsterMs)) {
+      naechsterMs = ms;
+      naechsterOhneMonteur = (e.titel || '').trim() || (e.einsatzort || '').trim() || null;
+    }
+  }
+
+  let einsaetzeHeute = 0;
+  for (const e of alleEinsaetze || []) {
+    if (!e || !e.beginn_am) continue;
+    const ms = new Date(e.beginn_am).getTime();
+    if (!Number.isNaN(ms) && ms >= heute0 && ms < morgen0) einsaetzeHeute++;
+  }
+
+  return {
+    unzugeordnetGesamt: (unzugeordnet || []).length,
+    unzugeordnetHeute,
+    unzugeordnetMorgen,
+    einsaetzeHeute,
+    naechsterOhneMonteur,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// BANKING
+//
+// Das Auge stoesst hier eine HANDLUNG an, es meldet keinen Missstand: Solange
+// offene Rechnungen daliegen, lohnt sich ein Kontoabgleich. Es ist deshalb
+// bewusst nicht dieselbe Aussage wie beim Zahlungen-Auge — dort geht es um
+// den Betrag, hier um den naechsten Handgriff.
+// ---------------------------------------------------------------------------
+
+export type OffeneRechnungZeile = { brutto?: number | null };
+
+export type BankingZahlen = {
+  offeneRechnungen: number;
+  offenerBetrag: number;
+  /** Zahl der eingerichteten und verbundenen Bankzugaenge. */
+  bankenVerbunden: number;
+};
+
+export function zaehleBanking(
+  offene: OffeneRechnungZeile[],
+  verbindungen: { verbunden?: boolean }[],
+  _jetzt?: Date,
+): BankingZahlen {
+  let offeneRechnungen = 0, offenerBetrag = 0;
+  for (const r of offene || []) {
+    if (!r) continue;
+    offeneRechnungen++;
+    offenerBetrag += zahl(r.brutto);
+  }
+  const bankenVerbunden = (verbindungen || []).filter((v) => v && v.verbunden).length;
+  return { offeneRechnungen, offenerBetrag: Math.round(offenerBetrag * 100) / 100, bankenVerbunden };
+}
+
+// ---------------------------------------------------------------------------
+// ZEITERFASSUNG — die persoenliche Stempeluhr
+//
+// WICHTIG FUERS VERSTAENDNIS: Diese Seite ist NICHT die Chef-Uebersicht.
+// Im Kopf der Seite steht: „Jeder stempelt SEINE eigene Zeit." Der Nutzer
+// sieht dort ausschliesslich seine eigenen Buchungen. Ein Auge zeigt ihm
+// deshalb SELBSTAUSKUNFT, keine Fremdueberwachung — § 87 Abs. 1 Nr. 6 BetrVG
+// ist hier nicht beruehrt, weil niemand ueber jemand anderen etwas erfaehrt.
+//
+// Trotzdem gilt: keine Bewertung, kein „zu spaet", kein „zu wenig". Nur
+// Zustand und Datenqualitaet.
+// ---------------------------------------------------------------------------
+
+export type SitzungZeile = {
+  kommen_um?: string | null;
+  gehen_um?: string | null;
+  pause_minuten?: number | null;
+  pause_offen_seit?: string | null;
+};
+
+export type ZeiterfassungZahlen = {
+  /** Laeuft gerade eine Sitzung? */
+  eingestempelt: boolean;
+  /** Minuten seit dem Einstempeln der laufenden Sitzung. */
+  laufendMinuten: number | null;
+  /** Minuten, seit die aktuelle Pause offen ist. */
+  pauseOffenMinuten: number | null;
+  buchungenHeute: number;
+};
+
+export function zaehleZeiterfassung(
+  offen: SitzungZeile | null | undefined,
+  heute: SitzungZeile[],
+  jetzt: Date,
+): ZeiterfassungZahlen {
+  const jetztMs = jetzt.getTime();
+  const min = (iso: string | null | undefined): number | null => {
+    if (!iso) return null;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return null;
+    return Math.max(0, Math.floor((jetztMs - t) / 60000));
+  };
+
+  return {
+    eingestempelt: !!(offen && offen.kommen_um && !offen.gehen_um),
+    laufendMinuten: offen && !offen.gehen_um ? min(offen.kommen_um) : null,
+    pauseOffenMinuten: offen ? min(offen.pause_offen_seit) : null,
+    buchungenHeute: (heute || []).length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SCHICHTPLAN — Chef-Seite, deshalb bewusst nur Summen
+//
+// Hier waere ein Satz wie „Mitarbeiter X hat 3 Schichten nicht bestaetigt"
+// eine Aussage ueber das Verhalten einer einzelnen Person — und damit nach
+// § 87 Abs. 1 Nr. 6 BetrVG mitbestimmungspflichtig, weil es dafuer GEEIGNET
+// ist; auf die Absicht kommt es nicht an.
+//
+// Gezaehlt wird deshalb ausschliesslich, WIE VIELE. Kein Name, keine Kennung,
+// keine Rangfolge. Die Minijob-Warnung ist davon unberuehrt: dass die
+// Geringfuegigkeitsgrenze gerissen wird, MUSS der Arbeitgeber wissen — sonst
+// wird die Beschaeftigung rueckwirkend sozialversicherungspflichtig. Auch die
+// wird als blosse Anzahl gefuehrt.
+// ---------------------------------------------------------------------------
+
+export type SchichtplanZahlen = {
+  offeneTauschantraege: number;
+  minijobUeber: number;
+  minijobKnapp: number;
+  unbestaetigt: number;
+};
+
+export function zaehleSchichtplan(
+  tauschAntraege: unknown[],
+  minijobWarnung: Record<string, { status?: string }>,
+  bestaetigungen: Record<string, { status?: string }>,
+): SchichtplanZahlen {
+  const warn = Object.values(minijobWarnung || {});
+  const best = Object.values(bestaetigungen || {});
+  return {
+    offeneTauschantraege: (tauschAntraege || []).length,
+    minijobUeber: warn.filter((w) => w && w.status === 'ueber').length,
+    minijobKnapp: warn.filter((w) => w && w.status === 'knapp').length,
+    unbestaetigt: best.filter((b) => b && b.status && b.status !== 'bestaetigt').length,
+  };
+}
