@@ -104,17 +104,51 @@ comment on function public.chat_verbrauch_merker(uuid, date, boolean, boolean) i
 
 
 -- ============================================================
--- FERTIG. Zum Nachsehen, wer wie viel verbraucht:
+-- FERTIG.
 --
---   select t.stufe, v.*
---     from public.chat_verbrauch v
---     left join public.chat_tarif t on t.owner_user_id = v.owner_user_id
---    where v.monat = date_trunc('month', now())::date
---    order by v.anzahl desc;
+-- SEIT DEM 11.09.2026 BRAUCHT MAN DAFUER KEIN SQL MEHR
+-- Stufe und Verbrauch stehen im Command Center in der Betriebs-Akte:
+--   /admin/command-center/betrieb/<uuid>  ->  Reiter „Menge & Domains"
+-- Dort sieht man auch, was ein Herunterstufen mitten im Monat bedeuten wuerde,
+-- BEVOR gespeichert wird. Die Abfragen unten bleiben als Notweg stehen.
 --
--- Eine Stufe setzen:
---   insert into public.chat_tarif (owner_user_id, stufe)
---   values ('<uuid>', 'gross')
+-- ACHTUNG BEIM KOPIEREN: Die UUID in Abfrage 2 ist ein BEISPIEL. Sie muss durch
+-- eine echte ersetzt werden — sonst kommt
+--   ERROR: 22P02: invalid input syntax for type uuid
+-- Die echten UUIDs liefert Abfrage 1.
+-- ============================================================
+
+
+-- 1) WER IST WER, UND WER VERBRAUCHT WIE VIEL  (liest nur) -------------------
+-- In der ersten Spalte steht die UUID, die in Abfrage 2 eingesetzt wird.
+-- EINE Abfrage, damit der Supabase-Editor auch das richtige Ergebnis zeigt —
+-- bei mehreren hintereinander zeigt er nur das letzte.
+--
+--   select
+--     p.id                                             as betriebs_uuid,
+--     coalesce(p.firma, p.company_name, p.email, '—')  as betrieb,
+--     coalesce(t.stufe, 'klein (Vorgabe)')             as stufe,
+--     coalesce(v.anzahl, 0)                            as gespraeche_diesen_monat,
+--     s.slug                                           as seite,
+--     s.status                                         as seiten_status,
+--     s.chat_domains                                   as freigegebene_domains
+--   from public.profiles p
+--   left join public.web_seiten      s on s.owner_user_id = p.id
+--   left join public.chat_tarif      t on t.owner_user_id = p.id
+--   left join public.chat_verbrauch  v on v.owner_user_id = p.id
+--                                     and v.monat = date_trunc('month', now())::date
+--   order by coalesce(v.anzahl, 0) desc, 2;
+
+
+-- 2) EINE STUFE SETZEN  (schreibt) ------------------------------------------
+-- Nur noetig fuer 'gross' oder 'individuell'. Ohne Zeile gilt automatisch
+-- 'klein' — wer klein bleiben soll, braucht hier gar nichts.
+-- Erlaubt sind ausschliesslich: klein, gross, individuell.
+--
+--   insert into public.chat_tarif (owner_user_id, stufe, notiz)
+--   values ('8f3c0000-0000-0000-0000-000000000000', 'gross', 'gebucht am 11.09.2026')
 --   on conflict (owner_user_id) do update
---     set stufe = excluded.stufe, geaendert_am = now();
+--     set stufe = excluded.stufe,
+--         notiz = excluded.notiz,
+--         geaendert_am = now();
 -- ============================================================

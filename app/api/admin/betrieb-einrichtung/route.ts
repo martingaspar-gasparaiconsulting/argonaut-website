@@ -26,7 +26,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase-server';
+import { betreiberGuard } from '@/lib/betreiberGuard';
 import { baueCheckliste, fortschritt, type Bestand } from '@/lib/einrichtung';
 import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 import { leseEinstellung, type Frage } from '@/lib/setter';
@@ -48,27 +48,10 @@ function adminDb() {
   );
 }
 
-/** Beide Schlösser. null = erlaubt, sonst die fertige Absage. */
-async function betreiberGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 });
-
-  const { data: profil } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profil || (profil as { role?: string }).role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
-
-  const betreiber = process.env.ANALYSE_BETREIBER_ID;
-  if (!betreiber || user.id !== betreiber) {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
-  return null;
-}
+// Das Doppelschloss stand bis zum 11.09.2026 hier wortgleich im Code. Es liegt
+// jetzt in lib/betreiberGuard.ts — an EINER Stelle, weil eine Sicherheitsprüfung,
+// die es mehrfach gibt, irgendwann auseinanderläuft. Unverändert übernommen:
+// role === 'admin' UND ANALYSE_BETREIBER_ID gesetzt UND identisch.
 
 type ProfilRow = {
   id: string;

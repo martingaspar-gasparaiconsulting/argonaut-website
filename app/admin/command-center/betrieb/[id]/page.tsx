@@ -13,9 +13,14 @@ import { VORLAGEN, MAX_FRAGEN } from '@/lib/setterVorlagen';
 // WhatsApp, Meta, Mail, später Bank — macht der Betreiber, nicht der Kunde.
 // Der Handwerker versteht das nicht, und genau dafür wird ARGONAUT bezahlt.
 //
-// Zwei Reiter:
+// Drei Reiter:
 //   · Checkliste — der Ist-Zustand aus der Datenbank, nicht aus Häkchen
 //   · KI-Berater — Rolle, Ziel, Fragen, Übergabe, Buchungsseite
+//   · Menge & Domains (11.09.2026) — welche Stufe der Betrieb gebucht hat, wie
+//     viele Gespräche sein öffentlicher Berater diesen Monat geführt hat, und
+//     auf welchen fremden Websites er überhaupt antworten darf. Beides ging
+//     vorher nur mit SQL bzw. nur im Kunden-Dashboard — also an einer Stelle,
+//     an die der Betreiber gar nicht kommt.
 //
 // DIE ZWEI GRENZEN werden hier nur ANGEZEIGT, nicht eingestellt: kein Preis,
 // der nicht in den Stammdaten steht, und der Berater behauptet nie, ein Mensch
@@ -59,11 +64,13 @@ type Kopf = {
 
 type Fortschritt = { erledigt: number; offen: number; gesamt: number; prozent: number };
 
+type Reiter = 'checkliste' | 'setter' | 'menge';
+
 export default function BetriebsAkte() {
   const params = useParams<{ id: string }>();
   const id = String(params?.id ?? '');
 
-  const [reiter, setReiter] = useState<'checkliste' | 'setter'>('checkliste');
+  const [reiter, setReiter] = useState<Reiter>('checkliste');
   const [kopf, setKopf] = useState<Kopf | null>(null);
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [stand, setStand] = useState<Fortschritt | null>(null);
@@ -172,7 +179,7 @@ export default function BetriebsAkte() {
     setBusy(false);
   }
 
-  const tab = (key: 'checkliste' | 'setter', text: string) => (
+  const tab = (key: Reiter, text: string) => (
     <button
       onClick={() => setReiter(key)}
       style={{
@@ -233,10 +240,13 @@ export default function BetriebsAkte() {
             <div style={s.tabZeile}>
               {tab('checkliste', 'Checkliste')}
               {tab('setter', 'KI-Berater')}
+              {tab('menge', 'Menge & Domains')}
             </div>
 
             {reiter === 'checkliste' ? (
               <Checkliste zeilen={zeilen} zumSetter={() => setReiter('setter')} />
+            ) : reiter === 'menge' ? (
+              <MengeUndDomains betrieb={id} />
             ) : (
               <>
                 <div style={s.karte}>
@@ -448,6 +458,301 @@ export default function BetriebsAkte() {
 }
 
 // ---------------------------------------------------------------------------
+// MENGE & DOMAINS (11.09.2026)
+//
+// Der öffentliche Berater lief bis heute ohne Mengengrenze — die drei
+// Kostenbremsen in lib/ki.ts greifen alle nur `if (userId)`, und ein Besucher
+// auf einer fremden Website ist nicht eingeloggt. Seit lib/chatDeckel.ts gibt
+// es die Grenze; hier ist die Stelle, an der man sie sieht und verstellt.
+// ---------------------------------------------------------------------------
+
+const AMPEL_FARBE: Record<string, string> = { gruen: C.green, gelb: C.warn, rot: C.danger };
+const AMPEL_TEXT: Record<string, string> = {
+  gruen: 'Läuft unauffällig',
+  gelb: 'Über 80 % — jetzt ist der Moment für das Gespräch über die nächste Stufe',
+  rot: 'Grenze erreicht — Besucher bekommen den Hinweis aufs Kontaktformular',
+};
+
+type StufenAngabeUi = { key: string; name: string; preis: number; grenze: number | null };
+type SeiteUi = { slug: string; status: string; domain: string; oeffentlichId: string; chatDomains: string[] };
+
+type ChatStand = {
+  monat: string;
+  stufe: string;
+  stufeGesetzt: boolean;
+  notiz: string;
+  verbraucht: number;
+  grenze: number | null;
+  preis: number;
+  rest: number | null;
+  prozent: number | null;
+  ampel: string;
+  klartext: string;
+  gewarntAm: string | null;
+  gesperrtSeit: string | null;
+  stufen: StufenAngabeUi[];
+  verlauf: Array<{ monat: string; anzahl: number }>;
+  seiten: SeiteUi[];
+};
+
+function monatName(iso: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(String(iso ?? ''));
+  if (!m) return String(iso ?? '');
+  const namen = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  return `${namen[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
+}
+
+function MengeUndDomains({ betrieb }: { betrieb: string }) {
+  const [stand, setStand] = useState<ChatStand | null>(null);
+  const [laden, setLaden] = useState(true);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [hinweis, setHinweis] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [wahl, setWahl] = useState('klein');
+  const [notiz, setNotiz] = useState('');
+  const [domainText, setDomainText] = useState<Record<string, string>>({});
+
+  const hole = useCallback(async () => {
+    if (!betrieb) return;
+    setFehler(null);
+    try {
+      const r = await fetch(`/api/admin/chat-verwaltung?betrieb=${encodeURIComponent(betrieb)}`);
+      const d = await r.json();
+      if (d?.ok) {
+        setStand(d as ChatStand);
+        setWahl(String(d.stufe ?? 'klein'));
+        setNotiz(String(d.notiz ?? ''));
+        const texte: Record<string, string> = {};
+        for (const s2 of (d.seiten ?? []) as SeiteUi[]) texte[s2.slug] = (s2.chatDomains ?? []).join('\n');
+        setDomainText(texte);
+      } else {
+        setFehler(d?.error || 'Konnte den Stand nicht laden.');
+      }
+    } catch {
+      setFehler('Verbindung fehlgeschlagen.');
+    }
+    setLaden(false);
+  }, [betrieb]);
+
+  useEffect(() => { hole(); }, [hole]);
+
+  async function speichereStufe() {
+    setBusy(true); setMeldung(null); setFehler(null); setHinweis(null);
+    try {
+      const r = await fetch('/api/admin/chat-verwaltung', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ betrieb, aktion: 'stufe', stufe: wahl, notiz }),
+      });
+      const d = await r.json();
+      if (d?.ok) {
+        setMeldung(`✓ Stufe gespeichert — ${d.klartext}`);
+        if (d.hinweis) setHinweis(String(d.hinweis));
+        hole();
+      } else {
+        setFehler(d?.error || 'Speichern fehlgeschlagen.');
+      }
+    } catch {
+      setFehler('Verbindung fehlgeschlagen.');
+    }
+    setBusy(false);
+  }
+
+  async function speichereDomains(slug: string) {
+    setBusy(true); setMeldung(null); setFehler(null); setHinweis(null);
+    try {
+      const r = await fetch('/api/admin/chat-verwaltung', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ betrieb, aktion: 'domains', seite: slug, chat_domains: domainText[slug] ?? '' }),
+      });
+      const d = await r.json();
+      if (d?.ok) {
+        const liste = (d.chatDomains ?? []) as string[];
+        setMeldung(liste.length
+          ? `✓ Freigegeben für ${liste.length === 1 ? 'eine Adresse' : `${liste.length} Adressen`}: ${liste.join(', ')}`
+          : '✓ Gespeichert — keine fremde Adresse mehr freigegeben.');
+        if (d.hinweis) setHinweis(String(d.hinweis));
+        hole();
+      } else {
+        setFehler(d?.error || 'Speichern fehlgeschlagen.');
+      }
+    } catch {
+      setFehler('Verbindung fehlgeschlagen.');
+    }
+    setBusy(false);
+  }
+
+  if (laden) return <div style={s.hint}>Lädt …</div>;
+  if (!stand) return <div style={s.fehlerBox}>{fehler || 'Kein Stand gefunden.'}</div>;
+
+  const farbe = AMPEL_FARBE[stand.ampel] ?? C.textDim;
+  const breite = stand.prozent === null ? 100 : Math.max(2, Math.min(100, stand.prozent));
+  const spitze = Math.max(1, ...stand.verlauf.map((v) => v.anzahl));
+
+  return (
+    <>
+      {fehler && <div style={s.fehlerBox}>{fehler}</div>}
+      {meldung && <div style={s.okBox}>{meldung}</div>}
+      {hinweis && (
+        <div style={s.warnBox}>
+          <b style={{ color: C.warn }}>⚠️ Bitte lesen</b>
+          <p style={{ margin: '8px 0 0', lineHeight: 1.6 }}>{hinweis}</p>
+        </div>
+      )}
+
+      {/* --- Wie viel läuft --------------------------------------------- */}
+      <div style={s.karte}>
+        <div style={s.karteTitel}>Dieser Monat · {monatName(stand.monat)}</div>
+
+        <div style={s.balkenAussen}>
+          <div style={{ ...s.balkenInnen, width: `${breite}%`, background: farbe }} />
+        </div>
+        <div style={s.balkenText}>
+          <b style={{ color: farbe, fontSize: 16 }}>{stand.klartext}</b>
+          <br />
+          <span style={{ color: farbe }}>{AMPEL_TEXT[stand.ampel] ?? ''}</span>
+          {stand.rest !== null && stand.rest > 0 && <> · noch <b style={{ color: '#fff' }}>{stand.rest}</b> übrig</>}
+        </div>
+
+        <p style={s.hinweis}>
+          Gezählt wird der <b>Betrieb</b>, nie ein Besucher — keine IP, kein Zeitstempel je Gespräch.
+          Am Monatsersten beginnt die Zählung von selbst wieder bei null; einen Knopf zum Zurücksetzen
+          gibt es bewusst nicht.
+          {stand.gesperrtSeit && <> Gesperrt seit dem {new Date(stand.gesperrtSeit).toLocaleDateString('de-DE')}.</>}
+          {!stand.gesperrtSeit && stand.gewarntAm && <> 80 % erreicht am {new Date(stand.gewarntAm).toLocaleDateString('de-DE')}.</>}
+        </p>
+      </div>
+
+      {/* --- Verlauf ------------------------------------------------------ */}
+      {stand.verlauf.length > 1 && (
+        <div style={s.karte}>
+          <div style={s.karteTitel}>Die letzten Monate</div>
+          {stand.verlauf.map((v) => (
+            <div key={v.monat} style={s.verlaufZeile}>
+              <span style={s.verlaufMonat}>{monatName(v.monat)}</span>
+              <span style={s.verlaufBalken}>
+                <span style={{ ...s.verlaufFuellung, width: `${Math.max(2, (v.anzahl / spitze) * 100)}%` }} />
+              </span>
+              <b style={s.verlaufZahl}>{v.anzahl}</b>
+            </div>
+          ))}
+          <p style={s.hinweis}>
+            Der beste Verkaufsanlass, den es gibt: Wer drei Monate hintereinander nah an der Grenze war,
+            braucht die nächste Stufe — und weiß es meistens selbst noch nicht.
+          </p>
+        </div>
+      )}
+
+      {/* --- Stufe -------------------------------------------------------- */}
+      <div style={s.karte}>
+        <div style={s.karteTitel}>Gebuchte Stufe</div>
+        <div style={s.zeile}>
+          {stand.stufen.map((st) => (
+            <button
+              key={st.key}
+              onClick={() => setWahl(st.key)}
+              style={{ ...s.wahl, ...(wahl === st.key ? s.wahlAn : {}) }}
+            >
+              {st.name}
+              {st.grenze !== null
+                ? ` · ${st.preis} € · ${st.grenze.toLocaleString('de-DE')}`
+                : ' · nach Vereinbarung'}
+            </button>
+          ))}
+        </div>
+        <p style={s.hinweis}>
+          {stand.stufeGesetzt
+            ? 'Für diesen Betrieb ist eine Stufe hinterlegt.'
+            : 'Für diesen Betrieb ist noch nichts hinterlegt — dann gilt automatisch die kleine Stufe. Das ist kein Versehen, sondern die sichere Vorgabe.'}
+          {' '}Die Preise stehen in <code style={s.code}>lib/chatDeckel.ts</code> und sind dieselben, die in den AGB stehen.
+        </p>
+
+        <div style={{ marginTop: 14 }}>
+          <label style={s.label}>Notiz (nur für dich)</label>
+          <input
+            value={notiz}
+            onChange={(e) => setNotiz(e.target.value)}
+            placeholder="z. B. „gebucht am 11.09.2026, Rechnung läuft über den Jahresvertrag“"
+            style={{ ...s.input, maxWidth: '100%' }}
+          />
+        </div>
+
+        <button onClick={speichereStufe} disabled={busy} style={{ ...s.btnGold, marginTop: 14, opacity: busy ? 0.5 : 1 }}>
+          {busy ? 'Speichere…' : 'Stufe speichern'}
+        </button>
+      </div>
+
+      {/* --- Domains ------------------------------------------------------ */}
+      <div style={s.karte}>
+        <div style={s.karteTitel}>Wo der Berater antworten darf</div>
+        <p style={s.hinweis}>
+          Ohne Eintrag antwortet der Berater nur auf der ARGONAUT-Seite des Betriebs. Jede fremde
+          Adresse — die alte WordPress-Seite, der Shop, eine Landingpage — muss hier stehen, sonst
+          bleibt das Widget dort stumm. Das ist keine Schikane: ohne diese Liste könnte jede beliebige
+          Website den Berater auf Rechnung dieses Betriebs laufen lassen.
+        </p>
+
+        {stand.seiten.length === 0 ? (
+          <p style={{ ...s.hinweis, color: C.warn }}>
+            Dieser Betrieb hat noch keine Webseite angelegt. Die entsteht in seinem Dashboard unter
+            „Webseiten“ — hier lässt sich keine erzeugen, sonst hätte er plötzlich eine Seite, die er
+            nie gebaut hat.
+          </p>
+        ) : (
+          stand.seiten.map((seite) => (
+            <div key={seite.slug} style={s.frageBox}>
+              <div style={s.frageKopf}>
+                <b style={{ color: '#fff', fontSize: 14.5 }}>{seite.slug}</b>
+                <span style={{
+                  ...s.pille,
+                  color: seite.status === 'live' ? C.green : C.textDim,
+                  borderColor: seite.status === 'live' ? C.green : 'rgba(255,255,255,0.2)',
+                }}>
+                  {seite.status === 'live' ? '● live' : `○ ${seite.status || 'Entwurf'}`}
+                </span>
+                {seite.domain && <span style={s.wer}>{seite.domain}</span>}
+              </div>
+
+              {seite.status !== 'live' && (
+                <p style={{ ...s.hinweis, color: C.warn }}>
+                  Diese Seite ist nicht live. Der Berater antwortet dort gar nicht — auch nicht auf
+                  freigegebenen Adressen. Erst veröffentlichen, dann freigeben.
+                </p>
+              )}
+
+              <textarea
+                value={domainText[seite.slug] ?? ''}
+                onChange={(e) => setDomainText((alt) => ({ ...alt, [seite.slug]: e.target.value }))}
+                placeholder={'muster-bau.de\nshop.muster-bau.de'}
+                rows={4}
+                style={{ ...s.input, maxWidth: '100%', marginTop: 10, fontFamily: 'ui-monospace, monospace', fontSize: 13.5, resize: 'vertical' }}
+              />
+              <p style={s.hinweis}>
+                Eine Adresse je Zeile, höchstens zehn. <code style={s.code}>www.</code> und die Adresse
+                ohne <code style={s.code}>www.</code> gelten als dieselbe Seite. Eine Subdomain wie
+                {' '}<code style={s.code}>shop.…</code> ist eine EIGENE Adresse und muss einzeln stehen —
+                ein Suffix-Vergleich würde auch <code style={s.code}>boese-muster-bau.de</code> durchlassen.
+              </p>
+
+              <button
+                onClick={() => speichereDomains(seite.slug)}
+                disabled={busy}
+                style={{ ...s.btnCyan, marginTop: 10, opacity: busy ? 0.5 : 1 }}
+              >
+                {busy ? 'Speichere…' : 'Freigabe speichern'}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 function Checkliste({ zeilen, zumSetter }: { zeilen: Zeile[]; zumSetter: () => void }) {
   if (!zeilen.length) {
@@ -522,6 +827,12 @@ const s: Record<string, CSSProperties> = {
   balkenAussen: { background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 9, overflow: 'hidden' },
   balkenInnen: { height: '100%', borderRadius: 999 },
   balkenText: { color: C.textDim, fontSize: 13.5, marginTop: 10 },
+
+  verlaufZeile: { display: 'flex', gap: 12, alignItems: 'center', padding: '5px 0' },
+  verlaufMonat: { color: C.textDim, fontSize: 13, minWidth: 120, whiteSpace: 'nowrap' },
+  verlaufBalken: { flex: 1, background: 'rgba(255,255,255,0.07)', borderRadius: 999, height: 8, overflow: 'hidden', minWidth: 60 },
+  verlaufFuellung: { display: 'block', height: '100%', background: C.cyan, borderRadius: 999 },
+  verlaufZahl: { color: '#fff', fontSize: 13.5, minWidth: 52, textAlign: 'right' },
 
   punkt: { padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' },
   punktKopf: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
