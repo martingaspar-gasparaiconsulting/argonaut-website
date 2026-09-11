@@ -31,7 +31,7 @@ export function augeRechnungen(d: {
 
   if (d.ueberfaelligBetrag > 0) {
     stimmung = 'achtung';
-    klartext = `${eur(d.ueberfaelligBetrag)} sind überfällig (${d.ueberfaelligAnzahl} Rechnung${d.ueberfaelligAnzahl === 1 ? '' : 'en'}) — die solltest du jetzt eintreiben.`;
+    klartext = `${eur(d.ueberfaelligBetrag)} sind überfällig (${d.ueberfaelligAnzahl} Rechnung${d.ueberfaelligAnzahl === 1 ? '' : 'en'}) — die sollten Sie jetzt eintreiben.`;
     (d.topUeberfaellig || []).slice(0, 3).forEach((u) => punkte.push(`${u.empf}: ${eur(u.offenerBetrag)} offen, ${u.tageUeber} Tage über Ziel`));
   } else if (gesamtOffen > 0) {
     stimmung = 'neutral';
@@ -70,7 +70,7 @@ export function augeMahnwesen(d: { anzahl: number; offenerBetrag: number; nichtG
   if (d.nichtGemahnt > 0) punkte.push(`${d.nichtGemahnt} noch nicht gemahnt — hier zuerst die 1. Mahnung raus.`);
   if (d.inMahnung > 0) punkte.push(`${d.inMahnung} bereits in Mahnung — Fristen im Blick behalten.`);
   return {
-    klartext: `${eur(d.offenerBetrag)} sind überfällig (${d.anzahl} Rechnung${d.anzahl === 1 ? '' : 'en'}) — die solltest du jetzt eintreiben.`,
+    klartext: `${eur(d.offenerBetrag)} sind überfällig (${d.anzahl} Rechnung${d.anzahl === 1 ? '' : 'en'}) — die sollten Sie jetzt eintreiben.`,
     punkte, stimmung: 'achtung',
   };
 }
@@ -165,7 +165,7 @@ export function augeHousekeeping(d: { schmutzig: number; inReinigung: number; ab
 /** IT-Assets/Lizenzen/SLA: abgelaufene oder überbuchte Lizenzen, gerissene SLA, bald fällige. */
 export function augeItAssets(d: { lizenzenAbgelaufen: number; ueberbucht: number; slaAbgelaufen: number; lizenzenBald: number; ohneGarantie: number; gesamt: number }): AugeErgebnis {
   if (d.gesamt === 0) {
-    return { klartext: 'Noch nichts erfasst — Assets, Lizenzen (mit Plätzen & Ablauf) und SLA je Kunde anlegen, dann behältst du Ablauf und Compliance im Blick.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch nichts erfasst — Assets, Lizenzen (mit Plätzen & Ablauf) und SLA je Kunde anlegen, dann behalten Sie Ablauf und Compliance im Blick.', punkte: [], stimmung: 'neutral' };
   }
   const kritisch = d.lizenzenAbgelaufen + d.ueberbucht + d.slaAbgelaufen;
   const punkte: string[] = [];
@@ -237,7 +237,7 @@ export function augePersonal(d: {
   offeneBewerber: number;
 }): AugeErgebnis {
   if (d.mitarbeiterGesamt === 0) {
-    return { klartext: 'Noch keine Mitarbeiter erfasst — leg dein Team an, dann behalte ich Abwesenheiten, Zertifikate und Bewerbungen für dich im Blick.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Mitarbeiter erfasst — legen Sie Ihr Team an, dann bleiben Abwesenheiten, Zertifikate und Bewerbungen im Blick.', punkte: [], stimmung: 'neutral' };
   }
 
   const punkte: string[] = [`${d.mitarbeiterGesamt} Mitarbeiter im Team (${d.mitarbeiterAktiv} aktiv).`];
@@ -317,7 +317,7 @@ export function augeWiederkehr(d: {
 
   if (d.faellig > 0) {
     return {
-      klartext: `${d.faellig} Wiederkehr${d.faellig === 1 ? '' : 'en'} ${d.faellig === 1 ? 'ist' : 'sind'} jetzt fällig — daraus solltest du zeitnah Rechnungen erzeugen, bevor Umsatz liegen bleibt.`,
+      klartext: `${d.faellig} Wiederkehr${d.faellig === 1 ? '' : 'en'} ${d.faellig === 1 ? 'ist' : 'sind'} jetzt fällig — daraus sollten Sie zeitnah Rechnungen erzeugen, bevor Umsatz liegen bleibt.`,
       punkte: [...punkte, ...(d.bald > 0 ? [`${d.bald} weitere werden in den nächsten 14 Tagen fällig.`] : [])],
       stimmung: 'achtung',
     };
@@ -338,7 +338,7 @@ export function augeWiederkehr(d: {
 export function augeObjekte(d: {
   gesamt: number; faellig: number; bald: number; kritisch: number; beobachten: number;
 }): AugeErgebnis {
-  if (d.gesamt === 0) return { klartext: 'Noch keine Objekte erfasst — leg dein Register an, dann behältst du Kontrollen und Zustand automatisch im Blick.', punkte: [], stimmung: 'neutral' };
+  if (d.gesamt === 0) return { klartext: 'Noch keine Objekte erfasst — legen Sie Ihr Register an, dann bleiben Kontrollen und Zustand automatisch im Blick.', punkte: [], stimmung: 'neutral' };
   const punkte: string[] = [];
   if (d.kritisch > 0) punkte.push(`${d.kritisch} Objekt(e) im Zustand „kritisch" — instand setzen oder ersetzen.`);
   if (d.beobachten > 0) punkte.push(`${d.beobachten} Objekt(e) unter Beobachtung.`);
@@ -357,7 +357,7 @@ export function augeObjekte(d: {
 /** Aufwand-Cockpit: offener abrechenbarer Aufwand (Projekte + Objektzeiten). */
 export function augeAufwand(d: { betragOffen: number; anzahlOffen: number; stundenOffen: number; betragAbg: number }): AugeErgebnis {
   if (d.anzahlOffen === 0 && d.betragAbg === 0) {
-    return { klartext: 'Noch kein abrechenbarer Aufwand erfasst — buch Zeiten auf Projekte oder Objekte, dann siehst du hier, was zu fakturieren ist.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch kein abrechenbarer Aufwand erfasst — buchen Sie Zeiten auf Projekte oder Objekte, dann sehen Sie hier, was zu fakturieren ist.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [];
   if (d.betragAbg > 0) punkte.push(`${eur(d.betragAbg)} sind bereits abgerechnet.`);
@@ -373,14 +373,14 @@ export function augeAufwand(d: { betragOffen: number; anzahlOffen: number; stund
 /** Rezeptur: Wareneinsatz, Kosten je Portion, fairer Verkaufspreis (Food-Cost). */
 export function augeRezeptur(d: { we: number; kostenPortion: number | null; foodcostZiel: number | null; vk: number | null; hatZutaten: boolean }): AugeErgebnis {
   if (!d.hatZutaten || d.we <= 0) {
-    return { klartext: 'Erfasse Zutaten mit Preisen — dann rechne ich dir Wareneinsatz, Kosten je Portion und einen fairen Verkaufspreis aus.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Erfassen Sie Zutaten mit Preisen — dann werden Wareneinsatz, Kosten je Portion und ein fairer Verkaufspreis berechnet.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`Wareneinsatz gesamt: ${eur(d.we)}.`];
   if (d.kostenPortion != null) punkte.push(`Kosten je Portion: ${eur(d.kostenPortion)}.`);
   if (d.vk != null && d.foodcostZiel != null) {
-    return { klartext: `Für ${d.foodcostZiel}% Food-Cost solltest du je Portion mindestens ${eur(d.vk)} netto verlangen.`, punkte, stimmung: 'gut' };
+    return { klartext: `Für ${d.foodcostZiel}% Food-Cost sollten Sie je Portion mindestens ${eur(d.vk)} netto verlangen.`, punkte, stimmung: 'gut' };
   }
-  return { klartext: 'Wareneinsatz steht — hinterlege Portionen + Ziel-Food-Cost, dann bekommst du einen Verkaufspreis-Vorschlag.', punkte, stimmung: 'neutral' };
+  return { klartext: 'Wareneinsatz steht — hinterlegen Sie Portionen + Ziel-Food-Cost, dann bekommen Sie einen Verkaufspreis-Vorschlag.', punkte, stimmung: 'neutral' };
 }
 
 /** Chargen/HACCP: abgelaufene/bald ablaufende Chargen, gesperrte, fällige Kontrollen. */
@@ -414,7 +414,7 @@ export function augeFoerder(d: { bewilligt: number; summeBewilligt: number; fris
   }
   if (d.nachweiseOffen > 0) return { klartext: `Keine Frist akut, aber ${d.nachweiseOffen} Verwendungsnachweis(e) noch offen — rechtzeitig einreichen.`, punkte, stimmung: 'neutral' };
   if (d.bewilligt > 0) return { klartext: `${d.bewilligt} bewilligte(s) Vorhaben, alle Nachweise erbracht — sauber.`, punkte, stimmung: 'gut' };
-  return { klartext: 'Noch keine bewilligten Vorhaben — verfolge oben passende Programme und setz dir die Fristen.', punkte, stimmung: 'neutral' };
+  return { klartext: 'Noch keine bewilligten Vorhaben — verfolgen Sie oben passende Programme und setzen Sie sich die Fristen.', punkte, stimmung: 'neutral' };
 }
 
 /** Verleih: ausgegebene/reservierte Gegenstände + überfällige Rückgaben. */
@@ -437,7 +437,7 @@ export function augeVerleih(d: { ausgegeben: number; reserviert: number; ueberfa
 /** Belegung: Auslastung, An-/Abreisen heute und offene Reservierungen. */
 export function augeBelegung(d: { aktiveEinheiten: number; belegtJetzt: number; freiJetzt: number; anreisenHeute: number; abreisenHeute: number; reservierungenOffen: number }): AugeErgebnis {
   if (d.aktiveEinheiten === 0) {
-    return { klartext: 'Noch keine Einheiten — leg deine erste buchbare Einheit an (Ferienwohnung, Stellplatz, Halle …) und erfasse die erste Belegung.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Einheiten — legen Sie Ihre erste buchbare Einheit an (Ferienwohnung, Stellplatz, Halle …) und erfassen Sie die erste Belegung.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.belegtJetzt} von ${d.aktiveEinheiten} Einheiten aktuell belegt.`];
   if (d.reservierungenOffen > 0) punkte.push(`${d.reservierungenOffen} Reservierung(en) noch unbestätigt.`);
@@ -454,7 +454,7 @@ export function augeBelegung(d: { aktiveEinheiten: number; belegtJetzt: number; 
 /** Schlagkartei: Nachweispflicht Düngung/Pflanzenschutz + fehlende Bedarfsermittlung. */
 export function augeSchlagkartei(d: { anzahlSchlaege: number; flaecheGesamt: number; duengungenJahr: number; psmJahr: number; spaetDoku: number; schlaegeOhneBedarf: number }): AugeErgebnis {
   if (d.anzahlSchlaege === 0) {
-    return { klartext: 'Noch keine Schläge — leg dein erstes Feldstück an und dokumentiere Düngung und Pflanzenschutz gesetzeskonform.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Schläge — legen Sie Ihr erstes Feldstück an und dokumentieren Sie Düngung und Pflanzenschutz gesetzeskonform.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.anzahlSchlaege} Schläge · ${d.flaecheGesamt} ha · ${d.duengungenJahr} Düngungen / ${d.psmJahr} PSM-Anwendungen dieses Jahr.`];
   if (d.spaetDoku > 0 || d.schlaegeOhneBedarf > 0) {
@@ -473,7 +473,7 @@ export function augeSchlagkartei(d: { anzahlSchlaege: number; flaecheGesamt: num
 /** Tierbestand: offene und überfällige HIT-Meldungen. */
 export function augeTierbestand(d: { anzahlGruppen: number; tiereGesamt: number; offeneMeldungen: number; ueberfaellig: number }): AugeErgebnis {
   if (d.anzahlGruppen === 0) {
-    return { klartext: 'Noch kein Bestand — leg deine erste Tiergruppe mit VVVO-Nummer an und dokumentiere Zu- und Abgänge.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch kein Bestand — legen Sie Ihre erste Tiergruppe mit VVVO-Nummer an und dokumentieren Sie Zu- und Abgänge.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.tiereGesamt} Tiere in ${d.anzahlGruppen} Gruppe(n).`];
   if (d.ueberfaellig > 0) {
@@ -492,7 +492,7 @@ export function augeTierbestand(d: { anzahlGruppen: number; tiereGesamt: number;
 /** Kanzlei: offene, überfällige und in der Vorfrist stehende Fristen. */
 export function augeKanzlei(d: { akten: number; offen: number; ueberfaellig: number; vorfrist: number }): AugeErgebnis {
   if (d.akten === 0) {
-    return { klartext: 'Noch keine Akten — leg dein erstes Mandat an und trag die Fristen mit Vorfrist ein.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Akten — legen Sie Ihr erstes Mandat an und tragen Sie die Fristen mit Vorfrist ein.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.akten} Akte(n) · ${d.offen} offene Frist(en).`];
   if (d.ueberfaellig > 0) {
@@ -507,7 +507,7 @@ export function augeKanzlei(d: { akten: number; offen: number; ueberfaellig: num
 /** Zuschnitt: Anzahl Projekte und Teilepositionen. */
 export function augeZuschnitt(d: { projekte: number; teile: number }): AugeErgebnis {
   if (d.projekte === 0) {
-    return { klartext: 'Noch keine Zuschnitt-Projekte — leg eins an, trag die Teile ein, und die Optimierung zeigt dir Stangenbedarf und Verschnitt in Prozent.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Zuschnitt-Projekte — legen Sie eins an, tragen Sie die Teile ein, und die Optimierung zeigt Ihnen Stangenbedarf und Verschnitt in Prozent.', punkte: [], stimmung: 'neutral' };
   }
   return { klartext: `${d.projekte} Projekt(e) · ${d.teile} Teileposition(en) — die Optimierung minimiert den Verschnitt automatisch.`, punkte: [], stimmung: 'gut' };
 }
@@ -515,7 +515,7 @@ export function augeZuschnitt(d: { projekte: number; teile: number }): AugeErgeb
 /** Spenden: Summe des Jahres und noch offene Zuwendungsbestätigungen. */
 export function augeSpenden(d: { anzahlJahr: number; summeJahr: number; offeneBestaetigungen: number }): AugeErgebnis {
   if (d.anzahlJahr === 0 && d.offeneBestaetigungen === 0) {
-    return { klartext: 'Noch keine Zuwendungen erfasst — trag die erste Spende ein und hinterlege einmal die Vereinsdaten für die Bestätigungen.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Zuwendungen erfasst — tragen Sie die erste Spende ein und hinterlegen Sie einmal die Vereinsdaten für die Bestätigungen.', punkte: [], stimmung: 'neutral' };
   }
   const summe = d.summeJahr.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
   const punkte: string[] = [`${d.anzahlJahr} Zuwendung(en) dieses Jahr · ${summe}.`];
@@ -528,7 +528,7 @@ export function augeSpenden(d: { anzahlJahr: number; summeJahr: number; offeneBe
 /** Tour/Dispo: offene Stopps und Zustellfortschritt. */
 export function augeTour(d: { touren: number; offeneTouren: number; offeneStopps: number; zugestelltGesamt: number }): AugeErgebnis {
   if (d.touren === 0) {
-    return { klartext: 'Noch keine Touren — leg eine Tour an, füge die Stopps hinzu und quittiere jede Zustellung mit Unterschrift.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Touren — legen Sie eine Tour an, fügen Sie die Stopps hinzu und quittieren Sie jede Zustellung mit Unterschrift.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.offeneTouren} offene Tour(en) · ${d.zugestelltGesamt} zugestellt gesamt.`];
   if (d.offeneStopps > 0) {
@@ -540,7 +540,7 @@ export function augeTour(d: { touren: number; offeneTouren: number; offeneStopps
 /** Gutachten: Entwürfe vs. fertige Gutachten. */
 export function augeGutachten(d: { gesamt: number; entwurf: number; fertig: number }): AugeErgebnis {
   if (d.gesamt === 0) {
-    return { klartext: 'Noch keine Gutachten — leg dein erstes an, gliedere es in Befund und Bewertung und rechne das Honorar nach JVEG.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Gutachten — legen Sie Ihr erstes an, gliedern Sie es in Befund und Bewertung und rechnen Sie das Honorar nach JVEG ab.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.fertig} fertig · ${d.entwurf} in Arbeit.`];
   if (d.entwurf > 0) {
@@ -552,7 +552,7 @@ export function augeGutachten(d: { gesamt: number; entwurf: number; fertig: numb
 /** Hilfsmittel-Versorgung: offene Fälle und Genehmigungsstatus. */
 export function augeHilfsmittel(d: { gesamt: number; offen: number; wartetGenehmigung: number; abgerechnet: number }): AugeErgebnis {
   if (d.gesamt === 0) {
-    return { klartext: 'Noch keine Versorgungen — erfasse die erste Verordnung und die Hilfsmittel-Positionen mit HMV-Nummer.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Versorgungen — erfassen Sie die erste Verordnung und die Hilfsmittel-Positionen mit HMV-Nummer.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.offen} offene Versorgung(en) · ${d.abgerechnet} abgerechnet.`];
   if (d.wartetGenehmigung > 0) {
@@ -564,12 +564,12 @@ export function augeHilfsmittel(d: { gesamt: number; offen: number; wartetGenehm
 /** Kurse: Teilnehmer, freie Plätze und Warteliste über alle Kurse. */
 export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: number; freiePlaetze: number }): AugeErgebnis {
   if (d.kurse === 0) {
-    return { klartext: 'Noch keine Kurse — leg deinen ersten Kurs an und trag die Teilnehmer ein.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Kurse — legen Sie Ihren ersten Kurs an und tragen Sie die Teilnehmer ein.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [`${d.teilnehmer} Teilnehmer in ${d.kurse} Kurs(en).`];
   if (d.warteliste > 0) {
     return {
-      klartext: `${d.warteliste} Interessent(en) auf der Warteliste — prüfe, ob du nachrücken lassen oder einen Zusatztermin öffnen kannst.`,
+      klartext: `${d.warteliste} Interessent(en) auf der Warteliste — prüfen Sie, ob Sie nachrücken lassen oder einen Zusatztermin öffnen können.`,
       punkte: [...punkte, `${d.freiePlaetze} Platz/Plätze aktuell frei.`],
       stimmung: 'achtung',
     };
@@ -580,7 +580,7 @@ export function augeKurse(d: { kurse: number; teilnehmer: number; warteliste: nu
 /** Prüfprotokolle: Fälligkeit + Mängel über alle dokumentierten Prüfungen. */
 export function augePruef(d: { gesamt: number; maengel: number; ueberfaellig: number; bald: number }): AugeErgebnis {
   if (d.gesamt === 0) {
-    return { klartext: 'Noch keine Prüfungen dokumentiert — leg das erste Prüfprotokoll an.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Prüfungen dokumentiert — legen Sie das erste Prüfprotokoll an.', punkte: [], stimmung: 'neutral' };
   }
   if (d.ueberfaellig > 0) {
     const punkte: string[] = [];
@@ -618,7 +618,7 @@ export function augeReservierung(k: {
   if (k.verwertungFaellig > 0) {
     if (k.abholUeberfaellig > 0) punkte.push(`${k.abholUeberfaellig} Vorbestellung(en) zur Abholung überfällig.`);
     return {
-      klartext: `${k.verwertungFaellig} Einlagerung(en) über die Laufzeit + 14-Tage-Frist hinaus — erst nach schriftlicher Ankündigung darfst du verwerten. Kunden anschreiben.`,
+      klartext: `${k.verwertungFaellig} Einlagerung(en) über die Laufzeit + 14-Tage-Frist hinaus — erst nach schriftlicher Ankündigung dürfen Sie verwerten. Kunden anschreiben.`,
       punkte, stimmung: 'achtung',
     };
   }
@@ -630,7 +630,7 @@ export function augeReservierung(k: {
     };
   }
   if (k.tischHeute === 0 && k.eingelagertAktiv === 0 && k.vorbestellungOffen === 0) {
-    return { klartext: 'Noch nichts offen — leg deinen ersten Vorgang an (Tischreservierung, Einlagerung oder Vorbestellung).', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch nichts offen — legen Sie Ihren ersten Vorgang an (Tischreservierung, Einlagerung oder Vorbestellung).', punkte: [], stimmung: 'neutral' };
   }
   if (k.tischHeute > 0) punkte.push(`${k.tischHeute} Tischreservierung(en) für heute.`);
   if (k.eingelagertAktiv > 0) punkte.push(`${k.eingelagertAktiv} laufende Einlagerung(en).`);
@@ -649,7 +649,7 @@ export function augeGutscheine(k: {
   eingeloestBetrag: number;
 }): AugeErgebnis {
   if (k.aktive === 0 && k.kartenOffen === 0) {
-    return { klartext: 'Noch keine aktiven Gutscheine — stell deinen ersten aus (Wertgutschein, Mehrfachkarte oder Leistungsgutschein).', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine aktiven Gutscheine — stellen Sie Ihren ersten aus (Wertgutschein, Mehrfachkarte oder Leistungsgutschein).', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [];
   if (k.offenerRestwert > 0) punkte.push(`${eur(k.offenerRestwert)} offener Restwert — als Verbindlichkeit im Blick behalten.`);
@@ -707,7 +707,7 @@ export function augeEinkauf(k: {
     };
   }
   if (k.offeneBestellungen === 0) {
-    return { klartext: k.lieferantenAktiv === 0 ? 'Noch keine Lieferanten/Bestellungen — leg deinen ersten Lieferanten an.' : 'Keine offenen Bestellungen — alles geliefert.', punkte: [], stimmung: k.lieferantenAktiv === 0 ? 'neutral' : 'gut' };
+    return { klartext: k.lieferantenAktiv === 0 ? 'Noch keine Lieferanten/Bestellungen — legen Sie Ihren ersten Lieferanten an.' : 'Keine offenen Bestellungen — alles geliefert.', punkte: [], stimmung: k.lieferantenAktiv === 0 ? 'neutral' : 'gut' };
   }
   return {
     klartext: `${k.offeneBestellungen} offene Bestellung(en), ${eur(k.bestellwertOffen)} noch nicht geliefert.`,
@@ -731,7 +731,7 @@ export function augeExpose(k: {
     };
   }
   if (k.aktiv === 0 && k.reserviert === 0) {
-    return { klartext: 'Nichts aktiv in der Vermarktung — leg ein Exposé an und schalte es aktiv.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Nichts aktiv in der Vermarktung — legen Sie ein Exposé an und schalten Sie es aktiv.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [];
   if (k.reserviert > 0) punkte.push(`${k.reserviert} reserviert.`);
@@ -778,7 +778,7 @@ export function augeBde(k: {
 }): AugeErgebnis {
   const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
   if (k.buchungen === 0) {
-    return { klartext: 'Noch keine BDE-Buchungen — leg eine Maschine an und buche die erste Schicht, dann rechne ich die OEE aus.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine BDE-Buchungen — legen Sie eine Maschine an und buchen Sie die erste Schicht, dann wird die OEE berechnet.', punkte: [], stimmung: 'neutral' };
   }
   // Schwächster der drei Faktoren = größter Hebel.
   const faktoren = [
@@ -813,7 +813,7 @@ export function augeErtraege(k: {
 }): AugeErgebnis {
   const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
   if (k.ablesungen === 0) {
-    return { klartext: 'Noch keine Ablesungen — leg eine Anlage an und erfasse die erste Ablesung, dann rechne ich Soll/Ist, Verfügbarkeit und Erlös.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Ablesungen — legen Sie eine Anlage an und erfassen Sie die erste Ablesung, dann werden Soll/Ist, Verfügbarkeit und Erlös berechnet.', punkte: [], stimmung: 'neutral' };
   }
   if (k.schwacheAnlagen > 0) {
     return {
@@ -847,7 +847,7 @@ export function augeProofing(k: {
 }): AugeErgebnis {
   const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
   if (k.assets === 0) {
-    return { klartext: 'Noch keine Assets — leg das erste an und reiche eine Version zur Freigabe ein.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Assets — legen Sie das erste an und reichen Sie eine Version zur Freigabe ein.', punkte: [], stimmung: 'neutral' };
   }
   if (k.offeneAenderungen > 0) {
     return {
@@ -884,7 +884,7 @@ export function augeEvents(k: {
 }): AugeErgebnis {
   const p = (n: number) => (Math.round((Number(n) || 0) * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %';
   if (k.veranstaltungen === 0) {
-    return { klartext: 'Noch keine Veranstaltungen — leg die erste an, dann rechne ich Auslastung, freie Plätze und Einnahmen.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine Veranstaltungen — legen Sie die erste an, dann werden Auslastung, freie Plätze und Einnahmen berechnet.', punkte: [], stimmung: 'neutral' };
   }
   if (k.ausverkaufte > 0 && k.wartelisteGesamt > 0) {
     return {
@@ -1029,7 +1029,7 @@ export function augePipeline(d: {
 }): AugeErgebnis {
   const ueberfaellig = Number(d.ueberfaellig) || 0;
   if ((Number(d.offen) || 0) === 0) {
-    return { klartext: 'Noch keine offenen Deals — leg deine erste Vertriebschance an.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Noch keine offenen Deals — legen Sie Ihre erste Vertriebschance an.', punkte: [], stimmung: 'neutral' };
   }
   const punkte: string[] = [];
   punkte.push(`Pipeline-Wert offen: ${eur(d.pipelineWert)} · gewichteter Forecast: ${eur(d.gewichtet)}`);
@@ -1038,7 +1038,7 @@ export function augePipeline(d: {
 
   if (ueberfaellig > 0) {
     return {
-      klartext: `${ueberfaellig} Deal${ueberfaellig === 1 ? '' : 's'} mit überfälligem Abschlusstermin — da solltest du jetzt nachfassen.`,
+      klartext: `${ueberfaellig} Deal${ueberfaellig === 1 ? '' : 's'} mit überfälligem Abschlusstermin — da sollten Sie jetzt nachfassen.`,
       punkte, stimmung: 'achtung',
     };
   }
@@ -1080,7 +1080,7 @@ export function augeGesamt(
 
   if (achtung.length > 0) {
     return {
-      klartext: `${achtung.length} Bereich${achtung.length === 1 ? '' : 'e'} ${achtung.length === 1 ? 'braucht' : 'brauchen'} jetzt deine Aufmerksamkeit.`,
+      klartext: `${achtung.length} Bereich${achtung.length === 1 ? '' : 'e'} ${achtung.length === 1 ? 'braucht' : 'brauchen'} jetzt Ihre Aufmerksamkeit.`,
       punkte: achtung.slice(0, maxPunkte).map((m) => `${m.modul}: ${m.ergebnis.klartext}`),
       stimmung: 'achtung',
     };
