@@ -23,6 +23,13 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { SCHWELLEN } from '@/lib/schwellen'
 import { demoStatus } from '@/lib/demo'
 import { sendeMail, mailLayout } from '@/lib/mail'
+import {
+  rueckfallKonfig,
+  istAusfall,
+  rueckfallMoeglich,
+  nachOpenAiBody,
+  nachAnthropicAntwort,
+} from '@/lib/kiRueckfall'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -303,6 +310,89 @@ function mitCacheControl(options: RequestInit): RequestInit {
   }
 }
 
+// ---------------------------------------------------------------------------
+// AUSFALLPLAN (Punkt 6.3) — zweiter Anbieter hinter derselben Funktion
+//
+// Bisher hing jeder KI-Aufruf des ganzen Systems an einem einzigen Schluessel
+// bei einem einzigen Anbieter. Faellt der aus, stehen Guide, Wachendes Auge,
+// Berater und Setter gleichzeitig still.
+//
+// Umgeschaltet wird NUR bei einem echten Ausfall (429/529/5xx oder gar keine
+// Antwort). Ein 400 oder 401 ist unser eigener Fehler und wird bewusst NICHT
+// beim zweiten Anbieter wiederholt — das kostet nur Geld und verdeckt den
+// Fehler. Ohne gesetzte KI_RUECKFALL_*-Variablen passiert hier gar nichts;
+// das System verhaelt sich dann exakt wie vorher.
+// ---------------------------------------------------------------------------
+
+/**
+ * Versucht denselben Aufruf beim zweiten Anbieter und uebersetzt dessen
+ * Antwort ins Anthropic-Format zurueck. Gibt null zurueck, wenn kein Rueckfall
+ * konfiguriert oder moeglich ist oder auch der zweite Anbieter nicht liefert —
+ * dann bleibt es beim Original-Fehler.
+ */
+async function versucheRueckfall(options: RequestInit): Promise<Response | null> {
+  const konfig = rueckfallKonfig(process.env as Record<string, string | undefined>)
+  if (!konfig) return null
+
+  let anthropicBody: unknown
+  try {
+    if (typeof options.body !== 'string') return null
+    anthropicBody = JSON.parse(options.body)
+  } catch {
+    return null
+  }
+  if (!rueckfallMoeglich(anthropicBody)) return null
+
+  try {
+    const res = await fetch(konfig.url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${konfig.schluessel}`,
+      },
+      body: JSON.stringify(nachOpenAiBody(anthropicBody, konfig.modell)),
+    })
+    if (!res.ok) {
+      console.error('[ki-rueckfall] zweiter Anbieter antwortet mit', res.status)
+      return null
+    }
+    const json = await res.json()
+    const uebersetzt = nachAnthropicAntwort(json, konfig.modell)
+    console.warn('[ki-rueckfall] Hauptanbieter ausgefallen — Antwort kam vom zweiten Anbieter.')
+    return new Response(JSON.stringify(uebersetzt), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  } catch (e) {
+    console.error('[ki-rueckfall] zweiter Anbieter ebenfalls nicht erreichbar:', e)
+    return null
+  }
+}
+
+/**
+ * Holt die Antwort — beim Hauptanbieter, und nur im Ausfall beim zweiten.
+ * Diese Funktion ist die EINZIGE Stelle im System, an der ein zweiter Anbieter
+ * ins Spiel kommt. Keine der rund 30 Routen merkt davon etwas: sie bekommen in
+ * beiden Faellen dieselbe Antwortform.
+ */
+async function holeAntwort(options: RequestInit): Promise<Response> {
+  let res: Response
+  try {
+    res = await fetch(ANTHROPIC_URL, mitCacheControl(options))
+  } catch (e) {
+    // Gar keine Antwort (Netz weg, Zeitueberschreitung) — das ist der haerteste
+    // Ausfall. Erst wenn auch der Rueckfall nichts liefert, geht der Fehler
+    // unveraendert nach oben.
+    const ersatz = await versucheRueckfall(options)
+    if (ersatz) return ersatz
+    throw e
+  }
+
+  if (!istAusfall(res.status)) return res
+  const ersatz = await versucheRueckfall(options)
+  return ersatz ?? res
+}
+
 /**
  * Ersatz fuer `fetch("https://api.anthropic.com/v1/messages", options)`.
  * Gibt die UNVERAENDERTE Original-Antwort zurueck (res.ok / res.json() wie gehabt)
@@ -435,7 +525,8 @@ export async function kiFetch(route: string, options: RequestInit): Promise<Resp
     }
   }
 
-  const res = await fetch(ANTHROPIC_URL, mitCacheControl(options))
+  // Hauptanbieter — und im Ausfall automatisch der zweite (Punkt 6.3).
+  const res = await holeAntwort(options)
 
   // Nur erfolgreiche Antworten protokollieren. Klon lesen -> Original unberuehrt.
   try {
