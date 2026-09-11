@@ -115,8 +115,8 @@ const BEREICHE: Bereich[] = [
     ],
   },
   {
-    icon: '🧭', titel: 'Ihre KI-Crew',
-    lead: 'Mitarbeiter, die nie schlafen — und mitdenken.',
+    icon: '🧭', titel: 'Ihre Bausteine',
+    lead: 'Arbeit, die von selbst läuft — Tag und Nacht.',
     features: [
       { name: 'Routine-Automation', sub: 'Wiederkehrendes von selbst' },
       { name: 'Vorschläge & Entwürfe', sub: 'Texte, Angebote, Antworten' },

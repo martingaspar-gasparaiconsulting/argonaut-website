@@ -1,9 +1,17 @@
 // ============================================================================
 // ARGONAUT OS · lib/tarif.ts — EINE Quelle der Wahrheit für alle Preise
 //
-// Website (components/Pricing.tsx), AGB (app/agb/page.tsx), der Tarif-Rechner
-// und die Rechnungs-Logik ziehen AUSSCHLIESSLICH von hier. Nie wieder Zahlen an
-// mehreren Stellen pflegen.
+// Wer von hier zieht: app/vorschau/_components/AngebotRechner.tsx und die
+// Rechnungs-Logik. Eine Datei components/Pricing.tsx gibt es NICHT (mehr).
+//
+// ACHTUNG — DIE AGB ZIEHT NICHT VON HIER. In app/agb/page.tsx stehen dieselben
+// Zahlen noch einmal im Text. Das ist Absicht: Ein Rechtstext soll nicht zur
+// Laufzeit aus Code zusammengesetzt werden, sonst steht im Vertrag etwas
+// anderes als beim Abschluss. Der Preis dafuer ist, dass beide Stellen
+// auseinanderlaufen koennen — GENAU DAGEGEN laeuft tests/agbPreise.test.mjs:
+// er faellt um, sobald hier eine Zahl geaendert und die AGB vergessen wird.
+//
+// Wer also einen Preis aendert, aendert ZWEI Stellen. Der Test erinnert daran.
 //
 // Preisstand: 26.07.2026 (von Martin freigegeben). Alle Beträge NETTO, zzgl.
 // 19 % MwSt. Keine Imports, keine Hooks — von Client- UND Server-Code nutzbar.
