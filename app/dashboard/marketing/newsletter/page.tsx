@@ -203,7 +203,7 @@ export default function NewsletterAbonnenten() {
     setSpeichern(false);
     if (error || !neu) {
       if ((error as { code?: string })?.code === '23505') {
-        setHinweis('Diese E-Mail steht bereits in deiner Liste.');
+        setHinweis('Diese E-Mail steht bereits in Ihrer Liste.');
       } else {
         setHinweis('Fehler beim Speichern: ' + (error?.message ?? ''));
       }
@@ -463,7 +463,7 @@ export default function NewsletterAbonnenten() {
         ) : liste.length === 0 ? (
           <div style={{ background: C.navy2, borderRadius: 14, padding: '48px 24px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.12)' }}>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, fontSize: 'clamp(16px, 1.38vw, 22px)' }}>
-              Noch keine Abonnenten. Füge oben deinen ersten Empfänger hinzu.
+              Noch keine Abonnenten. Fügen Sie oben Ihren ersten Empfänger hinzu.
             </p>
           </div>
         ) : (

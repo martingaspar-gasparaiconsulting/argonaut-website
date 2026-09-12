@@ -115,7 +115,7 @@ export function newsletterMailHtml(
         <div style="font-size:15px;line-height:1.6;color:#1a2332;">${inhalt}</div>
       </div>
       <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
-        Du erhältst diese E-Mail, weil du dich beim Newsletter von ${firma} angemeldet hast.<br>
+        Sie erhalten diese E-Mail, weil Sie sich beim Newsletter von ${firma} angemeldet haben.<br>
         <a href="${abmelde}" style="color:${akzent};text-decoration:underline;">Vom Newsletter abmelden</a>.
       </div>
     </div>
@@ -170,7 +170,7 @@ export function autoresponderMailHtml(
         <div style="font-size:15px;line-height:1.6;color:#1a2332;">${inhalt}</div>
       </div>
       <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
-        Du erhältst diese E-Mail als Teil einer automatischen Info-Serie von ${firma}.<br>
+        Sie erhalten diese E-Mail als Teil einer automatischen Info-Serie von ${firma}.<br>
         <a href="${abmelde}" style="color:${akzent};text-decoration:underline;">Keine weiteren E-Mails erhalten</a>.
       </div>
     </div>
@@ -220,16 +220,16 @@ export function optinBestaetigungHtml(
       </div>
       <div style="padding:28px;font-size:15px;line-height:1.6;color:#1a2332;">
         <p style="margin:0 0 14px;">${anrede}</p>
-        <p style="margin:0 0 20px;">bitte bestätige einmalig, dass du E-Mails von <b>${firma}</b> erhalten möchtest. Klicke dazu auf den folgenden Knopf:</p>
+        <p style="margin:0 0 20px;">bitte bestätigen Sie einmalig, dass Sie E-Mails von <b>${firma}</b> erhalten möchten. Klicken Sie dazu auf den folgenden Knopf:</p>
         <p style="text-align:center;margin:0 0 24px;">
           <a href="${bestaetigenUrl}" style="display:inline-block;background:${akzent};color:#ffffff;text-decoration:none;font-weight:800;font-size:16px;padding:14px 28px;border-radius:10px;">Anmeldung bestätigen</a>
         </p>
-        <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Falls der Knopf nicht funktioniert, kopiere diesen Link in deinen Browser:<br>
+        <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Falls der Knopf nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br>
         <a href="${bestaetigenUrl}" style="color:${akzent};word-break:break-all;">${bestaetigenUrl}</a></p>
       </div>
       <div style="padding:18px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
-        Du erhältst diese E-Mail, weil sich jemand mit deiner Adresse bei ${firma} angemeldet hat.
-        Warst du das nicht, ignoriere diese Nachricht einfach — ohne Bestätigung senden wir dir nichts.
+        Sie erhalten diese E-Mail, weil sich jemand mit Ihrer Adresse bei ${firma} angemeldet hat.
+        Waren Sie das nicht, ignorieren Sie diese Nachricht einfach — ohne Bestätigung senden wir Ihnen nichts.
       </div>
     </div>
   </div>

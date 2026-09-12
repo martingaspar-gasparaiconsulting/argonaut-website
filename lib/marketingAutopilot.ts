@@ -79,7 +79,7 @@ export function autopilotVorschlaege(input: AutopilotInput): Vorschlag[] {
   if (kanaele.newsletterAbos > 0 && kanaele.newsletterVersand <= 0) {
     v.push({
       prioritaet: 2, kategorie: 'Newsletter', titel: 'Newsletter verschicken',
-      grund: `Du hast ${kanaele.newsletterAbos} Abonnenten, aber noch keinen Versand — eine ungenutzte Chance auf direkte Kontakte.`,
+      grund: `Sie haben ${kanaele.newsletterAbos} Abonnenten, aber noch keinen Versand — eine ungenutzte Chance auf direkte Kontakte.`,
       aktionText: 'Newsletter starten', aktionHref: HREF.newsletter,
     });
   }
@@ -88,7 +88,7 @@ export function autopilotVorschlaege(input: AutopilotInput): Vorschlag[] {
   if (kanaele.socialAktiv && kanaele.socialGeplant <= 0) {
     v.push({
       prioritaet: 3, kategorie: 'Social', titel: 'Beiträge einplanen',
-      grund: 'Dein Social-Kanal ist verbunden, aber es ist kein Beitrag geplant. Regelmäßige Posts halten dich sichtbar.',
+      grund: 'Ihr Social-Kanal ist verbunden, aber es ist kein Beitrag geplant. Regelmäßige Posts halten Sie sichtbar.',
       aktionText: 'Redaktionsplan öffnen', aktionHref: HREF.social,
     });
   }
@@ -96,7 +96,7 @@ export function autopilotVorschlaege(input: AutopilotInput): Vorschlag[] {
   // 6) Ungenutzte Kanäle aktivieren (nur wenn wenige laufen).
   const genutzt = [kanaele.newsletterAbos > 0, kanaele.socialAktiv, kanaele.whatsappKontakte > 0, kanaele.adsAktiv].filter(Boolean).length;
   if (genutzt <= 2) {
-    if (kanaele.newsletterAbos <= 0) v.push({ prioritaet: 3, kategorie: 'Kanäle', titel: 'Newsletter aufbauen', grund: 'Ein Newsletter ist der einzige Kanal, der dir gehört — unabhängig von Plattformen.', aktionText: 'Newsletter einrichten', aktionHref: HREF.newsletter });
+    if (kanaele.newsletterAbos <= 0) v.push({ prioritaet: 3, kategorie: 'Kanäle', titel: 'Newsletter aufbauen', grund: 'Ein Newsletter ist der einzige Kanal, der Ihnen gehört — unabhängig von Plattformen.', aktionText: 'Newsletter einrichten', aktionHref: HREF.newsletter });
     if (!kanaele.socialAktiv) v.push({ prioritaet: 3, kategorie: 'Kanäle', titel: 'Social-Media aktivieren', grund: 'Ein Social-Kanal erreicht neue Interessenten ohne Mehrkosten in bestehenden Kanälen.', aktionText: 'Social verbinden', aktionHref: HREF.social });
     if (kanaele.whatsappKontakte <= 0) v.push({ prioritaet: 3, kategorie: 'Kanäle', titel: 'WhatsApp aktivieren', grund: 'WhatsApp erreicht Kunden dort, wo sie ohnehin schreiben — mit hoher Öffnungsrate.', aktionText: 'WhatsApp verbinden', aktionHref: HREF.whatsapp });
   }

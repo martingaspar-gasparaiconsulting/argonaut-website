@@ -67,7 +67,7 @@ export default function RoiVerzahnungPage() {
         🔗 ROI-Verzahnung
       </h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 800 }}>
-        Die ganze Kette auf einen Blick: was deine Werbung <b style={{ color: C.text }}>kostet</b>, wie viele <b style={{ color: C.text }}>Anfragen</b> daraus werden und welcher <b style={{ color: C.text }}>Umsatz</b> am Ende steht. So siehst du je Kampagne, was jeder Euro wirklich bringt — Kosten je Anfrage, Umsatz je Anfrage und echter ROI.
+        Die ganze Kette auf einen Blick: was Ihre Werbung <b style={{ color: C.text }}>kostet</b>, wie viele <b style={{ color: C.text }}>Anfragen</b> daraus werden und welcher <b style={{ color: C.text }}>Umsatz</b> am Ende steht. So sehen Sie je Kampagne, was jeder Euro wirklich bringt — Kosten je Anfrage, Umsatz je Anfrage und echter ROI.
       </p>
 
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>{fehler}</div>}
@@ -106,7 +106,7 @@ export default function RoiVerzahnungPage() {
             <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 14 }}>Je Kampagne</div>
             {daten.zeilen.length === 0 ? (
               <div style={{ color: C.textDim, fontSize: 13.5 }}>
-                Noch keine Kampagnen angelegt. Sobald du im Cockpit Kampagnen mit Budget führst und Leads darauf zugeordnet werden, erscheint hier die volle Verzahnung. Umsatz wird sichtbar, sobald einer Kampagne eine Rechnung zugeordnet ist.
+                Noch keine Kampagnen angelegt. Sobald Sie im Cockpit Kampagnen mit Budget führen und Leads darauf zugeordnet werden, erscheint hier die volle Verzahnung. Umsatz wird sichtbar, sobald einer Kampagne eine Rechnung zugeordnet ist.
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 8 }}>

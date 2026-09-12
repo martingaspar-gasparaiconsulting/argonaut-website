@@ -32,7 +32,7 @@ type Daten = {
 
 const FARBE: Record<string, string> = { gut: C.green, hinweis: C.gold, warnung: C.danger };
 const AMPEL_TEXT: Record<string, string> = {
-  gut: 'Dein Marketing läuft rund',
+  gut: 'Ihr Marketing läuft rund',
   hinweis: 'Ein paar Stellschrauben warten',
   warnung: 'Es gibt etwas Dringendes',
 };
@@ -62,7 +62,7 @@ export default function LageberichtPage() {
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 20px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
       <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(1.5rem, 3.2vw, 2.1rem)', fontWeight: 800, margin: 0 }}>KI-Lagebericht</h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 20px', maxWidth: 760 }}>
-        Dein Marketing auf einen Blick — was läuft, was dringend ist, und was du als Nächstes tun solltest. Aus deinen echten Zahlen (Leads, Kanäle, Kampagnen, Landingpages).
+        Ihr Marketing auf einen Blick — was läuft, was dringend ist, und was Sie als Nächstes tun sollten. Aus Ihren echten Zahlen (Leads, Kanäle, Kampagnen, Landingpages).
       </p>
 
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>{fehler}</div>}
@@ -73,14 +73,14 @@ export default function LageberichtPage() {
             <span style={{ width: 14, height: 14, borderRadius: '50%', background: FARBE[daten.ampel], flexShrink: 0 }} />
             <div>
               <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 18, color: FARBE[daten.ampel] }}>{AMPEL_TEXT[daten.ampel]}</div>
-              <div style={{ color: C.textDim, fontSize: 13, marginTop: 2 }}>{daten.befunde.length} Befund(e) aus deinen aktuellen Daten.</div>
+              <div style={{ color: C.textDim, fontSize: 13, marginTop: 2 }}>{daten.befunde.length} Befund(e) aus Ihren aktuellen Daten.</div>
             </div>
           </div>
 
           {/* KI-Klartext */}
           {daten.klartext && (
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 18 }}>
-              <div style={{ fontSize: 12, color: C.cyan, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Dein Berater sagt</div>
+              <div style={{ fontSize: 12, color: C.cyan, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Ihr Berater sagt</div>
               <p style={{ margin: 0, lineHeight: 1.65, fontSize: 15 }}>{daten.klartext}</p>
             </div>
           )}
@@ -171,7 +171,7 @@ export default function LageberichtPage() {
           )}
 
           <p style={{ color: C.textDim, fontSize: 12, lineHeight: 1.6, marginTop: 20 }}>
-            Hinweis: Der Bericht rechnet mechanisch aus deinen echten Zahlen (kostenlos); die KI formuliert nur den Klartext. Eine regionale Auswertung („mehr Werbung in Bayern statt Niedersachsen") folgt, sobald wir Region/PLZ bei Leads erfassen bzw. Meta/Google-Ads verbunden sind.
+            Hinweis: Der Bericht rechnet mechanisch aus Ihren echten Zahlen (kostenlos); die KI formuliert nur den Klartext. Eine regionale Auswertung („mehr Werbung in Bayern statt Niedersachsen") folgt, sobald wir Region/PLZ bei Leads erfassen bzw. Meta/Google-Ads verbunden sind.
           </p>
         </>
       )}

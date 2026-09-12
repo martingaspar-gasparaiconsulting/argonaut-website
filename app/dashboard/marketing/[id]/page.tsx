@@ -364,7 +364,7 @@ function TabInhalte({ kampagneId, inhalte, reload }: { kampagneId: string; inhal
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-          Inhalte dieser Kampagne. KI-generierte Inhalte erstellst du im Content-Studio.
+          Inhalte dieser Kampagne. KI-generierte Inhalte erstellen Sie im Content-Studio.
         </p>
         <button onClick={neu} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '9px 18px', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', cursor: 'pointer' }}>
           + Inhalt

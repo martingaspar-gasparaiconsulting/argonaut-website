@@ -142,7 +142,7 @@ export default function ContentStudio() {
         <div style={{ margin: '16px 0 24px' }}>
           <h1 style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(30px, 2.63vw, 42px)', fontWeight: 700, color: C.gold, margin: 0 }}>✨ KI-Content-Studio</h1>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '6px 0 0', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-            Briefing eingeben — die KI schreibt im Markenton aus eurem Firmen-Wissen. Du gibst frei.
+            Briefing eingeben — die KI schreibt im Markenton aus Ihrem Firmen-Wissen. Sie geben frei.
           </p>
         </div>
 

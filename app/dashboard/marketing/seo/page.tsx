@@ -80,14 +80,14 @@ export default function SeoPage() {
         🔍 SEO-Modul
       </h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 800 }}>
-        Damit dich Kunden bei Google finden — <b style={{ color: C.text }}>ohne für jede Anfrage zu bezahlen</b>. Der Check prüft deine Website gegen die wichtigsten Google-Faktoren und sagt dir in Klartext, was du verbessern kannst. Dazu passende Suchbegriffe, nach denen deine Kunden suchen.
+        Damit Kunden Sie bei Google finden — <b style={{ color: C.text }}>ohne für jede Anfrage zu bezahlen</b>. Der Check prüft Ihre Website gegen die wichtigsten Google-Faktoren und sagt Ihnen in Klartext, was Sie verbessern können. Dazu passende Suchbegriffe, nach denen Ihre Kunden suchen.
       </p>
 
       {/* Punkt 6b — Bestehende externe Website prüfen */}
       <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 20px', marginBottom: 22 }}>
         <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🌐 Bestehende Website prüfen</div>
         <div style={{ color: C.textDim, fontSize: 13.5, marginBottom: 12, lineHeight: 1.5 }}>
-          Du hast schon eine eigene Website? Gib die Adresse ein — der Check liest die echte Seite und bewertet sie genauso wie eine ARGONAUT-Seite.
+          Sie haben schon eine eigene Website? Geben Sie die Adresse ein — der Check liest die echte Seite und bewertet sie genauso wie eine ARGONAUT-Seite.
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <input
@@ -126,12 +126,12 @@ export default function SeoPage() {
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>{fehler}</div>}
 
       {/* ARGONAUT-eigene Seiten */}
-      <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, margin: '4px 0 12px' }}>🏛️ Deine ARGONAUT-Seiten</div>
+      <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, margin: '4px 0 12px' }}>🏛️ Ihre ARGONAUT-Seiten</div>
       {laden ? <p style={{ color: C.textDim }}>Website wird geprüft …</p> : daten && (
         <>
           {daten.seiten.length === 0 ? (
             <div style={{ background: C.navy2, border: `1px dashed ${C.border}`, borderRadius: 14, padding: 24, color: C.textDim, fontSize: 14.5, lineHeight: 1.6 }}>
-              Noch keine Seite im ARGONAUT-Baukasten. Sobald du dort eine Seite angelegt und veröffentlicht hast, prüft der Check sie hier automatisch. Eine bestehende externe Website kannst du oben direkt prüfen.
+              Noch keine Seite im ARGONAUT-Baukasten. Sobald Sie dort eine Seite angelegt und veröffentlicht haben, prüft der Check sie hier automatisch. Eine bestehende externe Website können Sie oben direkt prüfen.
               <div style={{ marginTop: 12 }}>
                 <a href="/dashboard/website" style={{ color: C.cyan, textDecoration: 'none', fontWeight: 700 }}>Zum Website-Baukasten →</a>
               </div>
@@ -144,7 +144,7 @@ export default function SeoPage() {
                   <div>
                     <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 18 }}>Gesamt-SEO-Score</div>
                     <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 3 }}>
-                      Durchschnitt über {daten.seiten.length} Seite{daten.seiten.length === 1 ? '' : 'n'}. Je höher, desto besser findet dich Google.
+                      Durchschnitt über {daten.seiten.length} Seite{daten.seiten.length === 1 ? '' : 'n'}. Je höher, desto besser findet Google Sie.
                     </div>
                   </div>
                 </div>
@@ -157,8 +157,8 @@ export default function SeoPage() {
 
           {daten.keywords.length > 0 && (
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 20px' }}>
-              <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>💡 Keyword-Ideen für deine Region</div>
-              <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>Suchbegriffe, nach denen potenzielle Kunden googeln — baue sie natürlich in deine Texte, Titel und FAQ ein.</div>
+              <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>💡 Keyword-Ideen für Ihre Region</div>
+              <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>Suchbegriffe, nach denen potenzielle Kunden googeln — bauen Sie sie natürlich in Ihre Texte, Titel und FAQ ein.</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {daten.keywords.map((k, i) => (
                   <span key={i} style={{ background: 'rgba(0,229,255,0.10)', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 999, padding: '6px 14px', fontSize: 13.5 }}>{k}</span>

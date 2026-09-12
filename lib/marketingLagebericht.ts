@@ -44,7 +44,7 @@ export function lagebericht(input: LageInput): Befund[] {
     const roas = ads.roas ?? (ads.ausgaben > 0 ? Math.round((ads.umsatz / ads.ausgaben) * 100) / 100 : 0);
     if (roas >= 3) {
       b.push({ schwere: 'gut', titel: 'Werbung zahlt sich aus', kennzahl: `ROAS ${roas}×`,
-        text: `Jeder investierte Euro bringt aktuell ${roas} € Umsatz zurück (${eur(ads.ausgaben)} Ausgaben → ${eur(ads.umsatz)} Umsatz). Das Budget läuft effizient — hier kannst du bedenkenlos mehr investieren.` });
+        text: `Jeder investierte Euro bringt aktuell ${roas} € Umsatz zurück (${eur(ads.ausgaben)} Ausgaben → ${eur(ads.umsatz)} Umsatz). Das Budget läuft effizient — hier können Sie bedenkenlos mehr investieren.` });
     } else if (roas >= 1) {
       b.push({ schwere: 'hinweis', titel: 'Werbung trägt sich, aber knapp', kennzahl: `ROAS ${roas}×`,
         text: `${eur(ads.ausgaben)} Ausgaben stehen ${eur(ads.umsatz)} Umsatz gegenüber (ROAS ${roas}×). Die schwächsten Kampagnen prüfen und Budget auf die besten umschichten.` });
@@ -83,7 +83,7 @@ export function lagebericht(input: LageInput): Befund[] {
       text: `„${top.quelle}" bringt mit ${top.anzahl} Leads am meisten, „${schwach.quelle}" nur ${schwach.anzahl}. Mehr Einsatz (und Budget) auf ${top.quelle} lenken, ${schwach.quelle} überdenken.` });
   } else if (kanaele2.length === 1) {
     b.push({ schwere: 'hinweis', titel: `Leads nur über ${kanaele2[0].quelle}`, kennzahl: `${kanaele2[0].anzahl} Leads`,
-      text: `Alle Anfragen kommen aktuell über „${kanaele2[0].quelle}". Ein zweiter Kanal (Newsletter, Social, Empfehlung) macht dich unabhängiger von einer Quelle.` });
+      text: `Alle Anfragen kommen aktuell über „${kanaele2[0].quelle}". Ein zweiter Kanal (Newsletter, Social, Empfehlung) macht Sie unabhängiger von einer Quelle.` });
   }
 
   // 5) Kanal-Nutzung — wie viele der vier Marketing-Kanäle laufen überhaupt?
@@ -95,7 +95,7 @@ export function lagebericht(input: LageInput): Befund[] {
     if (kanaele.whatsappKontakte <= 0) fehlen.push('WhatsApp');
     if (!kanaele.adsAktiv) fehlen.push('Ads');
     b.push({ schwere: 'hinweis', titel: 'Kanäle ausbauen', kennzahl: `${genutzt}/4 aktiv`,
-      text: `Du nutzt erst ${genutzt} von 4 Marketing-Kanälen. Noch ungenutzt: ${fehlen.join(', ')}. Ein weiterer Kanal erschließt neue Interessenten ohne Mehrkosten in den bestehenden.` });
+      text: `Sie nutzen erst ${genutzt} von 4 Marketing-Kanälen. Noch ungenutzt: ${fehlen.join(', ')}. Ein weiterer Kanal erschließt neue Interessenten ohne Mehrkosten in den bestehenden.` });
   }
 
   // 6) Attribution — kommen Leads „aus dem Nichts" oder aus messbaren Kampagnen?
@@ -103,7 +103,7 @@ export function lagebericht(input: LageInput): Befund[] {
     const ohne = leads.gesamt - leads.ausKampagne;
     if (pct(ohne, leads.gesamt) >= 70) {
       b.push({ schwere: 'hinweis', titel: 'Die meisten Leads sind nicht zugeordnet', kennzahl: `${pct(ohne, leads.gesamt)}% ohne Kampagne`,
-        text: `${ohne} von ${leads.gesamt} Leads sind keiner Kampagne zugeordnet — du siehst dadurch nicht, was sie ausgelöst hat. Kampagnen mit UTM/Quelle nutzen, dann wird sichtbar, welche Aktion wirkt.` });
+        text: `${ohne} von ${leads.gesamt} Leads sind keiner Kampagne zugeordnet — Sie sehen dadurch nicht, was sie ausgelöst hat. Kampagnen mit UTM/Quelle nutzen, dann wird sichtbar, welche Aktion wirkt.` });
     }
   }
 
@@ -125,7 +125,7 @@ export function lagebericht(input: LageInput): Befund[] {
   // 9) Newsletter-Liste als Basis-Asset.
   if (kanaele.newsletterAbos <= 0) {
     b.push({ schwere: 'hinweis', titel: 'Noch keine Newsletter-Liste', kennzahl: '0 Abonnenten',
-      text: `Ein Newsletter ist der einzige Kanal, der dir gehört (keine Plattform dazwischen). Ein Anmeldefeld auf der Website + ein kleiner Anreiz starten den Aufbau.` });
+      text: `Ein Newsletter ist der einzige Kanal, der Ihnen gehört (keine Plattform dazwischen). Ein Anmeldefeld auf der Website + ein kleiner Anreiz starten den Aufbau.` });
   }
 
   return b;

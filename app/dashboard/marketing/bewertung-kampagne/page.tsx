@@ -81,7 +81,7 @@ export default function BewertungKampagnePage() {
         ⭐ Bewertungs-Kampagne
       </h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 800 }}>
-        Gute Bewertungen sind der beste Verkäufer. Bitte deine zufriedenen Kunden aus dem CRM <b style={{ color: C.text }}>mit einem Klick</b> um eine Bewertung — die Einladung geht in deinem Namen raus. Abgegebene Bewertungen sammelst und veröffentlichst du im Bewertungs-Modul.
+        Gute Bewertungen sind der beste Verkäufer. Bitten Sie Ihre zufriedenen Kunden aus dem CRM <b style={{ color: C.text }}>mit einem Klick</b> um eine Bewertung — die Einladung geht in Ihrem Namen raus. Abgegebene Bewertungen sammeln und veröffentlichen Sie im Bewertungs-Modul.
       </p>
 
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14, marginBottom: 14 }}>{fehler}</div>}

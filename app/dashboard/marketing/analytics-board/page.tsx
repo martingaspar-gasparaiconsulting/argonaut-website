@@ -90,7 +90,7 @@ export default function AnalyticsBoardPage() {
         📊 Analytics-Board
       </h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 22px', maxWidth: 780 }}>
-        Alle Marketing-Zahlen auf einen Blick — visuell aufbereitet: wie sich deine Anfragen entwickeln, in welcher Phase sie stecken, woher sie kommen, aus welcher Region, und was deine Werbung bringt. Das Betrachtungsfenster oben gilt für alle Zahlen außer der Werbe-Auswertung — die zählt immer alles.
+        Alle Marketing-Zahlen auf einen Blick — visuell aufbereitet: wie sich Ihre Anfragen entwickeln, in welcher Phase sie stecken, woher sie kommen, aus welcher Region, und was Ihre Werbung bringt. Das Betrachtungsfenster oben gilt für alle Zahlen außer der Werbe-Auswertung — die zählt immer alles.
       </p>
 
       {/* Betrachtungsfenster */}
@@ -143,7 +143,7 @@ export default function AnalyticsBoardPage() {
 
           {keineLeads && (
             <div style={{ background: C.navy2, border: `1px dashed ${C.border}`, borderRadius: 14, padding: 22, color: C.textDim, fontSize: 14, marginBottom: 24 }}>
-              Noch keine Anfragen erfasst. Sobald über deine Website, Kampagnen oder Kanäle Leads eingehen, füllt sich das Board automatisch mit Funnel, Trend, Regionen und Quellen.
+              Noch keine Anfragen erfasst. Sobald über Ihre Website, Kampagnen oder Kanäle Leads eingehen, füllt sich das Board automatisch mit Funnel, Trend, Regionen und Quellen.
             </div>
           )}
 

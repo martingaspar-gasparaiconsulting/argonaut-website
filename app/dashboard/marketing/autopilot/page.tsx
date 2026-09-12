@@ -42,7 +42,7 @@ export default function AutopilotPage() {
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 20px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
       <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontSize: 'clamp(1.5rem, 3.2vw, 2.1rem)', fontWeight: 800, margin: 0 }}>Marketing-Autopilot</h1>
       <p style={{ color: C.textDim, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 20px', maxWidth: 760 }}>
-        Der Autopilot beobachtet dein Marketing und schlägt dir die nächsten Schritte vor — nach Dringlichkeit sortiert, jeder mit einem Klick zur richtigen Stelle. Er handelt nichts von selbst: <b style={{ color: C.text }}>du entscheidest</b>.
+        Der Autopilot beobachtet Ihr Marketing und schlägt Ihnen die nächsten Schritte vor — nach Dringlichkeit sortiert, jeder mit einem Klick zur richtigen Stelle. Er handelt nichts von selbst: <b style={{ color: C.text }}>Sie entscheiden</b>.
       </p>
 
       {fehler && <div style={{ color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>{fehler}</div>}
@@ -64,7 +64,7 @@ export default function AutopilotPage() {
           {/* Vorschläge */}
           {daten.vorschlaege.length === 0 ? (
             <div style={{ background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24, color: C.textDim, textAlign: 'center' }}>
-              Nichts zu tun — dein Marketing läuft rund. Sobald sich etwas ändert (offene Anfragen, teure Kampagnen, ein Landingpage-Sieger), erscheinen hier Vorschläge.
+              Nichts zu tun — Ihr Marketing läuft rund. Sobald sich etwas ändert (offene Anfragen, teure Kampagnen, ein Landingpage-Sieger), erscheinen hier Vorschläge.
             </div>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
