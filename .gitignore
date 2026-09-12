@@ -65,3 +65,8 @@ fix_agb.js
 
 # Ablage der Bridge-Auslieferungen — gehoert nicht ins Repo
 Claude outputs/
+
+# Ausnahme (12.09.2026): Pruef-Werkzeuge unter scripts/ SOLLEN ins Repo.
+# Die Regel *.cjs oben zielt auf die Wegwerf-Patch-Skripte im Wurzelordner.
+# Ohne diese Zeile verschluckt `git add` jedes neue Pruefskript lautlos.
+!scripts/*.cjs
