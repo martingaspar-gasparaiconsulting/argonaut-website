@@ -1,0 +1,195 @@
+========================================================================
+ARGONAUT OS · Befund Fassung 3 · Standardliste (23 gesperrte Tabellen)
+Erzeugt: 2026-09-12 11:27
+Durchsucht: 938 Dateien in app, lib, components
+========================================================================
+
+LESART
+  ABSICHT      jeder Zugriff laeuft ueber createAdminClient — nichts tun
+  TOT          mindestens ein Zugriff mit anon-Client — liefert nichts
+  PRUEFEN      eine Variable liess sich nicht aufloesen — von Hand ansehen
+  NUR-STORAGE  nur der Datei-Eimer gleichen Namens, nicht die Tabelle
+  UNBENUTZT    kein Code-Zugriff gefunden
+
+------------------------------------------------------------------------
+KURZFASSUNG
+------------------------------------------------------------------------
+TOT          1: churned_customers
+PRUEFEN      9: chat_tarif, chat_verbrauch, dossier_leads, ki_nutzung, social_zugang, web_ereignisse, website_anfragen, website_termine, whatsapp_zugang
+NUR-STORAGE  0
+ABSICHT      10: ads_zugang, api_schluessel, bank_zugang, belege, betriebs_geheimnisse, elster_zugang, mail_zugang, marktplatz_zugang, oeffentliche_bestellungen, versand_zugang
+UNBENUTZT    3: demo_hr_backup, modul_nutzung, training_data
+
+------------------------------------------------------------------------
+EINZELHEITEN — nur was nicht ABSICHT oder UNBENUTZT ist
+------------------------------------------------------------------------
+
+### chat_tarif
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:74
+        db.from('chat_tarif').select('stufe, notiz, geaendert_am').eq('owner_user_id', betrieb).maybeSingle(
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:173
+        db.from('chat_tarif').select('stufe').eq('owner_user_id', betrieb).maybeSingle()
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:182
+        const { error } = await db
+    UNKLAR(db)            app/api/oeffentlich/chat/route.ts:143
+        const { data: tarifRow } = await db
+
+### chat_verbrauch
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:76
+        db.from('chat_verbrauch').select('monat, anzahl, gewarnt_am, gesperrt_seit')
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:79
+        db.from('chat_verbrauch').select('monat, anzahl')
+    UNKLAR(db)            app/api/admin/chat-verwaltung/route.ts:175
+        db.from('chat_verbrauch').select('anzahl').eq('owner_user_id', betrieb).eq('monat', monat).maybeSing
+    UNKLAR(db)            app/api/oeffentlich/chat/route.ts:145
+        const { data: verbrauchRow } = await db
+
+### churned_customers
+    TOT · anon-Client trifft RLS ohne Regel — liefert nichts
+    SERVER-ANON           app/auth/callback/route.ts:37
+        const { data: churned } = await supabase
+
+### dossier_leads
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/admin/dossiers/route.ts:98
+        db.from('dossier_leads').select('id', { count: 'exact', head: true }),
+    UNKLAR(db)            app/api/admin/dossiers/route.ts:99
+        db.from('dossier_leads').select('id', { count: 'exact', head: true }).eq('status', 'aktiv'),
+    UNKLAR(db)            app/api/admin/dossiers/route.ts:100
+        db.from('dossier_leads').select('id', { count: 'exact', head: true }).eq('status', 'unbestaetigt'),
+    UNKLAR(admin)         app/api/cron/dossier-sequenz/route.ts:57
+        const { data, error } = await admin
+    UNKLAR(admin)         app/api/cron/dossier-sequenz/route.ts:74
+        await admin.from('dossier_leads').update({ seq_status: 'fertig' }).eq('id', l.id);
+    UNKLAR(admin)         app/api/cron/dossier-sequenz/route.ts:94
+        await admin.from('dossier_leads').update({ seq_schritt: idx, seq_status: 'fertig' }).eq('id', l.id);
+    UNKLAR(admin)         app/api/cron/dossier-sequenz/route.ts:99
+        await admin.from('dossier_leads').update({ seq_schritt: next, seq_naechster_am: nextAm }).eq('id', l
+    UNKLAR(db)            app/api/oeffentlich/dossier-abmelden/route.ts:33
+        const { data } = await db.from('dossier_leads').select('id').eq('abmelde_token', token).maybeSingle(
+    UNKLAR(db)            app/api/oeffentlich/dossier-abmelden/route.ts:36
+        await db.from('dossier_leads').update({ seq_status: 'abgemeldet' }).eq('id', l.id);
+    UNKLAR(db)            app/api/oeffentlich/dossier-bestaetigen/route.ts:34
+        const { data } = await db.from('dossier_leads').select('id, email, name, branche, status, quelle').e
+    UNKLAR(db)            app/api/oeffentlich/dossier-bestaetigen/route.ts:51
+        await db.from('dossier_leads').update(update).eq('id', l.id);
+    UNKLAR(db)            lib/dossierFunnel.ts:44
+        const { data: vorhanden } = await db.from('dossier_leads').select('id, status').eq('email', email).m
+    UNKLAR(db)            lib/dossierFunnel.ts:55
+        await db.from('dossier_leads').update({ status: 'unbestaetigt', token, name, branche, bestaetigt_am:
+    UNKLAR(db)            lib/dossierFunnel.ts:57
+        await db.from('dossier_leads').insert({ email, name, branche, status: 'unbestaetigt', token, quelle 
+
+### ki_nutzung
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/admin/command-center/page.tsx:73
+        const { data: ki } = await db.from('ki_nutzung').select('kosten_usd').gte('created_at', monatStart);
+    ADMIN                 app/admin/command-center/vertraege/page.tsx:88
+        const { data: ki } = await db.from('ki_nutzung').select('kosten_usd').gte('created_at', monatStart);
+    UNKLAR(admin)         app/api/cron/ki-bericht/route.ts:78
+        admin.from('ki_nutzung').select('user_id, kosten_usd').gte('created_at', seit).neq('route', '_warnun
+    ADMIN                 lib/ki.ts:98
+        await admin.from('ki_nutzung').insert({
+    ADMIN                 lib/ki.ts:185
+        const { data } = await admin
+    ADMIN                 lib/ki.ts:203
+        const { count } = await admin
+    ADMIN                 lib/ki.ts:214
+        await admin.from('ki_nutzung').insert({
+    ADMIN                 lib/ki.ts:256
+        const { data } = await admin
+    ADMIN                 lib/ki.ts:415
+        const { count } = await admin.from('ki_nutzung')
+    ADMIN                 lib/ki.ts:460
+        const { count } = await admin.from('ki_nutzung')
+
+### social_zugang
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(admin)         app/api/cron/social-posten/route.ts:50
+        const { data } = await admin
+    ADMIN                 app/api/marketing/ads-schalten/route.ts:61
+        const { data } = await admin.from('social_zugang').select('ziel_id, verbunden').eq('owner_user_id', 
+    ADMIN                 app/api/marketing/social-senden/route.ts:32
+        const { data } = await admin
+    ADMIN                 app/api/marketing/social-verbindung/route.ts:50
+        const { data } = await admin
+    ADMIN                 app/api/marketing/social-verbindung/route.ts:96
+        const { error } = await admin
+    ADMIN                 app/api/marketing/social-verbindung/route.ts:123
+        const { error } = await admin
+
+### web_ereignisse
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/oeffentlich/analyse/route.ts:202
+        await db.from('web_ereignisse').insert({
+
+### website_anfragen
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    ADMIN                 app/admin/command-center/vertrieb/page.tsx:53
+        const { data } = await db.from('website_anfragen').select('*').order('created_at', { ascending: fals
+    ADMIN                 app/api/admin/anfragen/route.ts:35
+        const r = await admin.from('website_anfragen').select('*').order('created_at', { ascending: false })
+    ADMIN                 app/api/admin/anfragen/route.ts:40
+        const r2 = await admin.from('website_anfragen').select('*').limit(500)
+    UNKLAR(supabase)      app/api/website-anfrage/route.ts:62
+        const { error } = await supabase.from('website_anfragen').insert(payload)
+
+### website_termine
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/cron/termin-nachfass/route.ts:56
+        const { data, error } = await db
+    UNKLAR(db)            app/api/cron/termin-nachfass/route.ts:74
+        await db.from('website_termine').update({ nachfass_gesendet_am: new Date().toISOString() }).eq('id',
+    UNKLAR(supabase)      app/api/termine/route.ts:24
+        const { data, error } = await supabase
+    UNKLAR(supabase)      app/api/website-anfrage/route.ts:49
+        const { error } = await supabase.from('website_termine').insert({
+
+### whatsapp_zugang
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/api/admin/betrieb-einrichtung/route.ts:120
+        db.from('whatsapp_zugang').select('owner_user_id, webhook_token, app_secret_verschluesselt, meta_pho
+    UNKLAR(db)            app/api/admin/betrieb-einrichtung/route.ts:210
+        db.from('whatsapp_zugang').select('webhook_token, app_secret_verschluesselt, meta_phone_number_id, v
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:75
+        const { data } = await db
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:103
+        const { data: zugaenge } = await db
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:175
+        const { data: vorhanden } = await db
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:183
+        ({ error } = await db.from('whatsapp_zugang').update(felder).eq('owner_user_id', betrieb));
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:185
+        ({ error } = await db.from('whatsapp_zugang').insert({ owner_user_id: betrieb, ...felder }));
+    UNKLAR(db)            app/api/admin/whatsapp-eingang/route.ts:192
+        const { data: neu } = await db
+    ADMIN                 app/api/marketing/whatsapp-eingang/route.ts:35
+        const { data } = await admin
+    ADMIN                 app/api/marketing/whatsapp-eingang/route.ts:88
+        const { data: vorhanden } = await admin
+    ADMIN                 app/api/marketing/whatsapp-eingang/route.ts:96
+        ({ error } = await admin.from('whatsapp_zugang').update(felder).eq('owner_user_id', uid));
+    ADMIN                 app/api/marketing/whatsapp-eingang/route.ts:98
+        ({ error } = await admin.from('whatsapp_zugang').insert({ owner_user_id: uid, ...felder }));
+    ADMIN                 app/api/marketing/whatsapp-eingang/route.ts:105
+        const { data: neu } = await admin
+    ADMIN                 app/api/marketing/whatsapp-posteingang/route.ts:215
+        const { data: zug } = await admin
+    ADMIN                 app/api/marketing/whatsapp-senden/route.ts:57
+        const { data: zug } = await admin
+    ADMIN                 app/api/marketing/whatsapp-verbindung/route.ts:35
+        const { data: zug } = await admin
+    ADMIN                 app/api/marketing/whatsapp-verbindung/route.ts:92
+        const { data: vorhanden } = await admin.from('whatsapp_zugang').select('owner_user_id').eq('owner_us
+    ADMIN                 app/api/marketing/whatsapp-verbindung/route.ts:95
+        ({ error } = await admin.from('whatsapp_zugang').update(felder).eq('owner_user_id', uid));
+    ADMIN                 app/api/marketing/whatsapp-verbindung/route.ts:97
+        ({ error } = await admin.from('whatsapp_zugang').insert({ owner_user_id: uid, ...felder }));
+    ADMIN                 app/api/marketing/whatsapp-verbindung/route.ts:109
+        const { error } = await admin
+    ADMIN                 app/api/whatsapp/webhook/route.ts:53
+        const { data } = await db
+    ADMIN                 app/api/whatsapp/webhook/route.ts:106
+        const { data: zug } = await db

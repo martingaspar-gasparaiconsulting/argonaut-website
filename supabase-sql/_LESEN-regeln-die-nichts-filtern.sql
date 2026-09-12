@@ -1,26 +1,31 @@
 -- ============================================================
 -- ARGONAUT OS · Der blinde Fleck: Regeln, die nichts filtern
--- Stand: 12.09.2026 · gehoert zu Punkt 2.6
+-- Fassung 2 · 12.09.2026 · gehoert zu Punkt 2.6
 --
--- WOZU
--- Die erste Abfrage (_LESEN-mandantentrennung.sql) hat gefragt:
--- "Welche Tabelle hat gar keine Regel?" Antwort: keine einzige ohne RLS.
+-- WARUM FASSUNG 2
+-- Fassung 1 hat 259 Regeln als "anzusehen" gemeldet, die alle sauber sind.
+-- Der Fehler: Sie hat nur `qual` (die Lesebedingung) gegen das Muster
+-- geprueft. Eine INSERT-Regel hat aber gar kein qual — dort steht die
+-- Bedingung in `with_check`. Also fiel jede INSERT-Regel durch.
 --
--- Das ist aber nur die halbe Frage. Eine Tabelle kann RLS anhaben UND
--- Regeln besitzen — und trotzdem offen sein, naemlich wenn die Regel
--- `using (true)` lautet. Die sagt: "jede Zeile ist sichtbar". Das ist
--- exakt so offen wie gar kein RLS, taucht aber in keiner Liste der
--- ersten Abfrage auf.
+-- Fassung 2 prueft die WIRKSAME Bedingung:
+--   SELECT, DELETE   -> qual
+--   INSERT           -> with_check
+--   UPDATE, ALL      -> beide (bei UPDATE kann eine offene Schreibbedingung
+--                      erlauben, eine Zeile einem Fremden zuzuschreiben)
 --
 -- RANG
---   1  Bedingung ist `true` — filtert nichts. Hier zuerst hinsehen.
---   2  gar keine Lesebedingung bei einer lesenden/aendernden Regel.
+--   1  wirksame Bedingung ist `true` — filtert nichts. Hier zuerst hinsehen.
+--   2  gar keine wirksame Bedingung.
 --   3  Bedingung vorhanden, bindet aber an nichts Erkennbares.
---   9  bindet an auth.uid(), firma_id, chef_id o.ae. — sieht richtig aus.
---      Rang 9 wird bewusst NICHT ausgegeben, nur gezaehlt.
+--   9  bindet an auth.uid(), mein_chef_id(), owner_user_id o.ae. — sieht
+--      richtig aus. Wird bewusst NICHT ausgegeben, nur gezaehlt.
 --
--- Die erste Ergebniszeile ist die Zusammenfassung. Kommt danach keine
--- weitere Zeile, ist das das bestmoegliche Ergebnis.
+-- AUF DIE SPALTE `rollen` ACHTEN
+-- `public` heisst NICHT "oeffentliche Daten", sondern: die Regel gilt fuer
+-- ALLE Rollen — auch fuer `anon`, also fuer jeden, der den anon-Schluessel
+-- hat. Der steht in jedem Browser-Bundle und ist damit oeffentlich bekannt.
+-- Rang 1 plus Rolle `public` heisst deshalb: weltweit lesbar.
 --
 -- DIESE ABFRAGE LIEST NUR. Sie aendert, legt an und loescht nichts.
 -- ============================================================
@@ -40,10 +45,19 @@ mit_rang as (
   select
     b.*,
     case
-      when btrim(b.q) = 'true' or btrim(b.w) = 'true'            then 1
-      when b.q = '' and b.fuer in ('SELECT','ALL','UPDATE','DELETE') then 2
-      when b.q ~ 'auth\.uid|auth\.jwt|mein_chef_id|chef_id|firma_id|betrieb_id|tenant_id|user_id|owner_id|standort_id'
-                                                                  then 9
+      -- 1) Die wirksame Bedingung ist `true` — sie filtert nichts.
+      when (b.fuer in ('SELECT','DELETE')  and btrim(b.q) = 'true')
+        or (b.fuer =  'INSERT'             and btrim(b.w) = 'true')
+        or (b.fuer in ('UPDATE','ALL')     and (btrim(b.q) = 'true' or btrim(b.w) = 'true'))
+                                                                   then 1
+      -- 2) Es gibt ueberhaupt keine wirksame Bedingung.
+      when (b.fuer =  'INSERT'             and b.w = '')
+        or (b.fuer in ('SELECT','DELETE','UPDATE','ALL') and b.q = '')
+                                                                   then 2
+      -- 9) Die wirksame Bedingung bindet an den Nutzer oder den Betrieb.
+      when coalesce(nullif(b.q, ''), b.w) ~
+           'auth\.uid|auth\.jwt|mein_chef_id|chef_id|firma_id|betrieb_id|tenant_id|user_id|owner_id|standort_id|mitarbeiter'
+                                                                   then 9
       else 3
     end as rang
   from bewertet b
@@ -53,7 +67,7 @@ select
   'ZUSAMMENFASSUNG'                   as tabelle,
       (select count(*) from mit_rang)::text            || ' Regeln gesamt · '
    || (select count(*) from mit_rang where rang = 1)::text || ' offen (true) · '
-   || (select count(*) from mit_rang where rang = 2)::text || ' ohne Lesebedingung · '
+   || (select count(*) from mit_rang where rang = 2)::text || ' ohne Bedingung · '
    || (select count(*) from mit_rang where rang = 3)::text || ' anzusehen · '
    || (select count(*) from mit_rang where rang = 9)::text || ' sauber gebunden'
                                       as regel,

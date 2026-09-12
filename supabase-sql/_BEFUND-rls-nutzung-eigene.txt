@@ -1,0 +1,44 @@
+========================================================================
+ARGONAUT OS · Befund Fassung 3 · eigene Liste (4 Tabellen)
+Erzeugt: 2026-09-12 11:27
+Durchsucht: 938 Dateien in app, lib, components
+========================================================================
+
+LESART
+  ABSICHT      jeder Zugriff laeuft ueber createAdminClient — nichts tun
+  TOT          mindestens ein Zugriff mit anon-Client — liefert nichts
+  PRUEFEN      eine Variable liess sich nicht aufloesen — von Hand ansehen
+  NUR-STORAGE  nur der Datei-Eimer gleichen Namens, nicht die Tabelle
+  UNBENUTZT    kein Code-Zugriff gefunden
+
+ACHTUNG BEI EIGENER LISTE
+  Dieses Skript kennt die Regeln in der Datenbank nicht. "TOT" heisst
+  hier nur: es gibt einen Zugriff mit anon-Client. Ob der ins Leere
+  laeuft, haengt daran, ob die Tabelle eine passende Regel hat. Bei
+  einer Tabelle mit `using (true)` funktioniert der Zugriff — und ist
+  genau der Grund, warum man die Regel nicht einfach zumachen darf.
+
+------------------------------------------------------------------------
+KURZFASSUNG
+------------------------------------------------------------------------
+TOT          1: academy_kurse
+PRUEFEN      1: betreiber_flags
+NUR-STORAGE  0
+ABSICHT      0
+UNBENUTZT    2: agents, automatisierungen
+
+------------------------------------------------------------------------
+EINZELHEITEN — nur was nicht ABSICHT oder UNBENUTZT ist
+------------------------------------------------------------------------
+
+### academy_kurse
+    TOT · anon-Client trifft RLS ohne Regel — liefert nichts
+    SERVER-ANON           app/dashboard/academy/page.tsx:23
+        const { data } = await supabase
+
+### betreiber_flags
+    PRUEFEN · Client einer Variablen nicht aufloesbar
+    UNKLAR(db)            app/admin/command-center/page.tsx:81
+        const { data: f } = await db.from('betreiber_flags').select('wert').eq('schluessel', 'cta_modus').ma
+    UNKLAR(admin)         app/api/admin/cta-modus/route.ts:31
+        const { error } = await admin

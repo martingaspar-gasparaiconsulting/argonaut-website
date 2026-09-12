@@ -1,21 +1,27 @@
 /* ============================================================
- * ARGONAUT OS · Wer greift auf die gesperrten Tabellen zu?  (Punkt 2.6)
- * Stand: 12.09.2026
+ * ARGONAUT OS · Wer greift auf welche Tabelle zu?  (Punkt 2.6)
+ * Fassung 3 · 12.09.2026
  *
- * WOZU
- * 23 Tabellen haben RLS an, aber keine einzige Regel. Das heisst: An die
- * Daten kommt nur der Service-Role-Schluessel. Fuer jede dieser Tabellen
- * gibt es genau zwei Moeglichkeiten:
+ * WARUM FASSUNG 2
+ * Fassung 1 hat gefragt: "Kommt in dieser DATEI irgendwo ein anon-Import
+ * vor?" Das ist zu grob. Eine Server-Route prueft voellig richtig erst mit
+ * lib/supabase-server (anon + Cookie), WER eingeloggt ist, und arbeitet
+ * dann mit createAdminClient auf der Tabelle. Fassung 1 hat solche Routen
+ * als "TOT" gemeldet — 15 Fehlalarme.
  *
- *   ABSICHT  Sie wird ausschliesslich ueber lib/supabase-admin.ts
- *            (createAdminClient) angefasst. Dann ist die Sperre sogar die
- *            sicherste Variante, die es gibt.
+ * Fassung 2 loest die VARIABLE auf: bei `admin.from('x')` wird geschaut,
+ * womit `admin` erzeugt wurde. Nur das entscheidet, ob RLS greift.
  *
- *   TOT      Sie wird ueber lib/supabase.ts (Browser) oder
- *            lib/supabase-server.ts angefasst. BEIDE benutzen den
- *            anon-Schluessel — RLS gilt dort. Ohne Regel kommt kein
- *            einziger Datensatz zurueck. Build gruen, Tests gruen,
- *            Seite leer. Genau das Muster der Betriebs-Akte vom 11.09.
+ * Ausserdem wird `.storage.from('belege')` nicht mehr mitgezaehlt — das
+ * ist der Datei-Eimer im storage-Bereich, nicht die Tabelle `belege`.
+ * Storage hat eigene Regeln und wird getrennt ausgewiesen.
+ *
+ * ZUR ERINNERUNG, WARUM DAS UEBERHAUPT ZAEHLT
+ *   lib/supabase-admin.ts   Service-Role — umgeht RLS
+ *   lib/supabase-server.ts  ANON-Key + Cookie — RLS gilt!
+ *   lib/supabase.ts         ANON-Key im Browser — RLS gilt
+ * Bei einer Tabelle mit RLS und ohne Regel liefern die letzten beiden
+ * garantiert nichts zurueck — ohne Fehlermeldung, ohne roten Build.
  *
  * Dieses Skript LIEST NUR. Es aendert keine einzige Datei.
  *
@@ -31,7 +37,10 @@ const ORDNER = ['app', 'lib', 'components'];
 const ENDUNGEN = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 const UEBERSPRINGEN = new Set(['node_modules', '.next', '.git', 'out', '.vercel']);
 
-const TABELLEN = [
+// Standardliste: die 23 Tabellen mit RLS und ohne Regel (Stand 12.09.2026).
+// Andere Tabellen pruefen: Namen einfach anhaengen, z.B.
+//   node scripts/pruefe-rls-nutzung.cjs agents betreiber_flags
+const STANDARD = [
   'ads_zugang', 'api_schluessel', 'bank_zugang', 'belege',
   'betriebs_geheimnisse', 'chat_tarif', 'chat_verbrauch',
   'churned_customers', 'demo_hr_backup', 'dossier_leads', 'elster_zugang',
@@ -40,6 +49,11 @@ const TABELLEN = [
   'versand_zugang', 'web_ereignisse', 'website_anfragen', 'website_termine',
   'whatsapp_zugang',
 ];
+const ARGUMENTE = process.argv.slice(2).filter((a) => /^[a-z0-9_]+$/i.test(a));
+const TABELLEN = ARGUMENTE.length ? ARGUMENTE : STANDARD;
+const LISTENNAME = ARGUMENTE.length
+  ? 'eigene Liste (' + ARGUMENTE.length + ' Tabellen)'
+  : 'Standardliste (23 gesperrte Tabellen)';
 
 // ---------- Dateien einsammeln ----------
 function sammle(ordner, treffer) {
@@ -58,24 +72,47 @@ function sammle(ordner, treffer) {
   return treffer;
 }
 
-// ---------- Welchen Client benutzt diese Datei? ----------
-// Wichtig: supabase-server.ts benutzt den ANON-Key, nicht den Service-Role-Key.
-// RLS gilt dort also genauso wie im Browser. Nur createAdminClient umgeht sie.
-function clientArt(inhalt) {
-  const arten = [];
-  if (/createAdminClient|supabase-admin|SUPABASE_SERVICE_ROLE_KEY/.test(inhalt)) {
-    arten.push('ADMIN');
+// ---------- Schritt 1: Welcher Importname steht fuer welche Client-Art? ----------
+function importArten(inhalt) {
+  const karte = new Map();
+  const re = /import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/g;
+  let m;
+  while ((m = re.exec(inhalt))) {
+    const quelle = m[2];
+    let art = null;
+    if (/supabase-admin/.test(quelle)) art = 'ADMIN';
+    else if (/supabase-server/.test(quelle)) art = 'SERVER-ANON';
+    else if (/(^|\/)supabase$/.test(quelle)) art = 'BROWSER-ANON';
+    if (!art) continue;
+    for (const teil of m[1].split(',')) {
+      const t = teil.trim();
+      if (!t) continue;
+      const als = t.match(/^(\w+)\s+as\s+(\w+)$/);
+      karte.set(als ? als[2] : t, art);
+    }
   }
-  if (/from\s+['"][^'"]*lib\/supabase-server['"]|@\/lib\/supabase-server/.test(inhalt)) {
-    arten.push('SERVER-ANON');
+  // Direkt erzeugter Browser-Client ohne Umweg ueber lib/supabase.ts
+  if (/createBrowserClient\s*\(/.test(inhalt)) karte.set('createBrowserClient', 'BROWSER-ANON');
+  if (/createServerClient\s*\(/.test(inhalt)) karte.set('createServerClient', 'SERVER-ANON');
+  return karte;
+}
+
+// ---------- Schritt 2: Welche Variable haelt welchen Client? ----------
+function variablenArten(inhalt, impArten) {
+  const karte = new Map();
+  const re = /(?:const|let|var)\s+(\w+)\s*(?::[^=]+)?=\s*(?:await\s+)?(\w+)\s*\(/g;
+  let m;
+  while ((m = re.exec(inhalt))) {
+    const art = impArten.get(m[2]);
+    if (art) karte.set(m[1], art);
   }
-  if (/from\s+['"][^'"]*lib\/supabase['"]|@\/lib\/supabase['"]/.test(inhalt)) {
-    arten.push('BROWSER-ANON');
-  }
-  if (/createBrowserClient/.test(inhalt)) {
-    if (!arten.includes('BROWSER-ANON')) arten.push('BROWSER-ANON');
-  }
-  return arten.length ? arten : ['UNKLAR'];
+  return karte;
+}
+
+function zeileVon(inhalt, index) {
+  let n = 1;
+  for (let i = 0; i < index && i < inhalt.length; i++) if (inhalt[i] === '\n') n++;
+  return n;
 }
 
 // ---------- Suchen ----------
@@ -89,40 +126,55 @@ for (const datei of dateien) {
   } catch {
     continue;
   }
-  const arten = clientArt(inhalt);
-  const istClientDatei = /^\s*['"]use client['"]/m.test(inhalt);
-  const zeilen = inhalt.split(/\r?\n/);
+  const kurz = path.relative(WURZEL, datei).replace(/\\/g, '/');
+  const impArten = importArten(inhalt);
+  const varArten = variablenArten(inhalt, impArten);
 
   for (const tabelle of TABELLEN) {
-    // Exakt .from('tabelle') — verhindert, dass "belege" auch in
-    // "belege_ocr" oder "beleg_positionen" anschlaegt.
-    const muster = new RegExp(
-      "\\.(from|rpc)\\(\\s*['\"`]" + tabelle + "['\"`]\\s*\\)",
+    // (variable) [.storage] .from('tabelle')
+    // \s deckt auch Zeilenumbrueche ab — mehrzeilige Ketten wie
+    //   await admin
+    //     .from('ads_zugang')
+    // werden dadurch der Variablen `admin` zugeordnet.
+    const re = new RegExp(
+      "(\\w+)\\s*(\\.\\s*storage\\s*)?\\.\\s*from\\(\\s*['\"`]" + tabelle + "['\"`]",
+      'g',
     );
-    zeilen.forEach((zeile, i) => {
-      if (muster.test(zeile)) {
-        befund.get(tabelle).push({
-          datei: path.relative(WURZEL, datei).replace(/\\/g, '/'),
-          zeile: i + 1,
-          arten,
-          istClientDatei,
-          text: zeile.trim().slice(0, 110),
-        });
-      }
-    });
+    let m;
+    while ((m = re.exec(inhalt))) {
+      const variable = m[1];
+      const istStorage = Boolean(m[2]);
+      const zeile = zeileVon(inhalt, m.index);
+      const art = istStorage
+        ? 'STORAGE'
+        : varArten.get(variable) || 'UNKLAR(' + variable + ')';
+      const zeilenText = inhalt.split(/\r?\n/)[zeile - 1] || '';
+      befund.get(tabelle).push({
+        datei: kurz,
+        zeile,
+        art,
+        text: zeilenText.trim().slice(0, 100),
+      });
+    }
   }
 }
 
 // ---------- Urteil je Tabelle ----------
 function urteil(stellen) {
-  if (stellen.length === 0) return 'UNBENUTZT · nirgends im Code angefasst';
-  const alleArten = new Set(stellen.flatMap((s) => s.arten));
-  const nurAdmin = [...alleArten].every((a) => a === 'ADMIN');
-  if (nurAdmin) return 'ABSICHT · nur ueber Service-Role — Sperre ist richtig';
-  if (alleArten.has('BROWSER-ANON') || alleArten.has('SERVER-ANON')) {
-    return 'TOT · wird mit anon-Key gelesen, RLS blockt — liefert nichts';
+  const echte = stellen.filter((s) => s.art !== 'STORAGE');
+  if (echte.length === 0) {
+    return stellen.length
+      ? 'NUR-STORAGE · nur der Datei-Eimer, nicht die Tabelle'
+      : 'UNBENUTZT · nirgends im Code angefasst';
   }
-  return 'PRUEFEN · Client-Art nicht eindeutig erkannt';
+  const arten = new Set(echte.map((s) => s.art));
+  if ([...arten].some((a) => a.startsWith('UNKLAR'))) {
+    return 'PRUEFEN · Client einer Variablen nicht aufloesbar';
+  }
+  if ([...arten].every((a) => a === 'ADMIN')) {
+    return 'ABSICHT · nur ueber Service-Role — Sperre ist richtig';
+  }
+  return 'TOT · anon-Client trifft RLS ohne Regel — liefert nichts';
 }
 
 // ---------- Bericht ----------
@@ -130,54 +182,69 @@ const zeilen = [];
 const z = (s = '') => zeilen.push(s);
 
 z('='.repeat(72));
-z('ARGONAUT OS · Befund: Nutzung der 23 gesperrten Tabellen');
+z('ARGONAUT OS · Befund Fassung 3 · ' + LISTENNAME);
 z('Erzeugt: ' + new Date().toISOString().slice(0, 16).replace('T', ' '));
 z('Durchsucht: ' + dateien.length + ' Dateien in ' + ORDNER.join(', '));
 z('='.repeat(72));
 z();
 z('LESART');
-z('  ABSICHT    nur createAdminClient — alles gut, nichts tun');
-z('  TOT        anon-Key trifft auf RLS ohne Regel — liefert garantiert');
-z('             nichts, ohne dass irgendwo ein Fehler erscheint');
-z('  UNBENUTZT  kein Code-Zugriff gefunden');
-z('  PRUEFEN    Client-Art nicht eindeutig — von Hand ansehen');
+z('  ABSICHT      jeder Zugriff laeuft ueber createAdminClient — nichts tun');
+z('  TOT          mindestens ein Zugriff mit anon-Client — liefert nichts');
+z('  PRUEFEN      eine Variable liess sich nicht aufloesen — von Hand ansehen');
+z('  NUR-STORAGE  nur der Datei-Eimer gleichen Namens, nicht die Tabelle');
+z('  UNBENUTZT    kein Code-Zugriff gefunden');
 z();
+if (ARGUMENTE.length) {
+  z('ACHTUNG BEI EIGENER LISTE');
+  z('  Dieses Skript kennt die Regeln in der Datenbank nicht. "TOT" heisst');
+  z('  hier nur: es gibt einen Zugriff mit anon-Client. Ob der ins Leere');
+  z('  laeuft, haengt daran, ob die Tabelle eine passende Regel hat. Bei');
+  z('  einer Tabelle mit `using (true)` funktioniert der Zugriff — und ist');
+  z('  genau der Grund, warum man die Regel nicht einfach zumachen darf.');
+  z();
+}
 
-const gruppen = { TOT: [], PRUEFEN: [], ABSICHT: [], UNBENUTZT: [] };
+const gruppen = {};
 for (const t of TABELLEN) {
-  const u = urteil(befund.get(t));
-  gruppen[u.split(' ')[0]].push(t);
+  const kopf = urteil(befund.get(t)).split(' ')[0];
+  (gruppen[kopf] = gruppen[kopf] || []).push(t);
 }
 
 z('-'.repeat(72));
 z('KURZFASSUNG');
 z('-'.repeat(72));
-for (const [name, liste] of Object.entries(gruppen)) {
-  z(name.padEnd(10) + ' ' + liste.length + (liste.length ? ': ' + liste.join(', ') : ''));
+for (const kopf of ['TOT', 'PRUEFEN', 'NUR-STORAGE', 'ABSICHT', 'UNBENUTZT']) {
+  const liste = gruppen[kopf] || [];
+  z(kopf.padEnd(12) + ' ' + liste.length + (liste.length ? ': ' + liste.join(', ') : ''));
 }
 z();
 
 z('-'.repeat(72));
-z('EINZELHEITEN');
+z('EINZELHEITEN — nur was nicht ABSICHT oder UNBENUTZT ist');
 z('-'.repeat(72));
+let etwasGezeigt = false;
 for (const t of TABELLEN) {
   const stellen = befund.get(t);
+  const u = urteil(stellen);
+  const kopf = u.split(' ')[0];
+  if (kopf === 'ABSICHT' || kopf === 'UNBENUTZT') continue;
+  etwasGezeigt = true;
   z();
   z('### ' + t);
-  z('    ' + urteil(stellen));
-  if (!stellen.length) continue;
+  z('    ' + u);
   for (const s of stellen) {
-    z('    ' + s.arten.join('+').padEnd(14) +
-      (s.istClientDatei ? '[use client] ' : '') +
-      s.datei + ':' + s.zeile);
+    z('    ' + s.art.padEnd(22) + s.datei + ':' + s.zeile);
     z('        ' + s.text);
   }
 }
+if (!etwasGezeigt) z();
+if (!etwasGezeigt) z('    Nichts zu zeigen — jede Tabelle ist entweder ABSICHT oder UNBENUTZT.');
 z();
 
 const bericht = zeilen.join('\n');
-const ziel = path.join(WURZEL, 'supabase-sql', '_BEFUND-rls-nutzung.txt');
-fs.writeFileSync(ziel, bericht, 'utf8');
-
+const dateiname = ARGUMENTE.length
+  ? '_BEFUND-rls-nutzung-eigene.txt'
+  : '_BEFUND-rls-nutzung.txt';
+fs.writeFileSync(path.join(WURZEL, 'supabase-sql', dateiname), bericht, 'utf8');
 console.log(bericht);
-console.log('\nGeschrieben nach: supabase-sql/_BEFUND-rls-nutzung.txt');
+console.log('\nGeschrieben nach: supabase-sql/' + dateiname);
