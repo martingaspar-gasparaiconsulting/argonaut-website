@@ -1,0 +1,925 @@
+============================================================================
+ARGONAUT OS · Anrede-Scan nach Rolle  (Punkt 3.1)
+Erzeugt: 2026-09-12 11:57
+Durchsucht: 938 Dateien in app, lib, components
+============================================================================
+
+LESART
+  SIEZEN       Duz-Stelle auf einer Chef-Seite oder in etwas, das das
+               System verlaesst — muss gesiezt werden.
+  ANREDEFREI   Duz-Stelle im Mitarbeiterbereich — Anrede herausnehmen,
+               statt sie zu duzen oder zu siezen.
+  ANSEHEN      Betreiber-/sonstige Datei oder ein vermuteter Imperativ;
+               das entscheidet ein Mensch, kein Muster.
+
+----------------------------------------------------------------------------
+KURZFASSUNG
+----------------------------------------------------------------------------
+SIEZEN        209 Stellen in 103 Dateien
+ANREDEFREI     16 Stellen in 4 Dateien (Mitarbeiterbereich)
+ANSEHEN       187 Stellen in 79 Dateien
+
+SUMME         412 Fundstellen
+
+----------------------------------------------------------------------------
+SIEZEN — nach Datei, die dicksten zuerst
+----------------------------------------------------------------------------
+ 20  app/vorschau/_lib/dossierHtml.ts
+  9  app/dashboard/finanzen/kennzahlen/page.tsx
+  7  app/dashboard/marketing/seo/page.tsx
+  6  app/dashboard/versand/page.tsx
+  6  lib/newsletter.ts
+  5  app/dashboard/auftraege/[id]/page.tsx
+  5  app/dashboard/marketing/lagebericht/page.tsx
+  5  app/dashboard/mitglieder/page.tsx
+  5  app/dashboard/online-buchung/page.tsx
+  4  app/dashboard/ChefCockpit.tsx
+  4  app/dashboard/leistungskatalog/page.tsx
+  4  app/dashboard/projekte/page.tsx
+  3  app/dashboard/crm/page.tsx
+  3  app/dashboard/erp/bestellungen/page.tsx
+  3  app/dashboard/mahnwesen/[id]/page.tsx
+  3  app/dashboard/projekte/[id]/page.tsx
+  3  app/dashboard/rechte/page.tsx
+  2  app/api/oeffentlich/chat/route.ts
+  2  app/api/oeffentlich/optin-bestaetigen/route.ts
+  2  app/dashboard/crm/firmen/page.tsx
+  2  app/dashboard/crm/import/page.tsx
+  2  app/dashboard/crm/wochenfokus/page.tsx
+  2  app/dashboard/einstellungen/ApiSchluesselKarte.tsx
+  2  app/dashboard/elster/page.tsx
+  2  app/dashboard/ernte/page.tsx
+  2  app/dashboard/erp/lieferanten/import/page.tsx
+  2  app/dashboard/erp/nachbestellung/page.tsx
+  2  app/dashboard/erp/preisliste/import/page.tsx
+  2  app/dashboard/euer/page.tsx
+  2  app/dashboard/finanzen/cashflow/page.tsx
+  2  app/dashboard/finanzen/ueberweisung/page.tsx
+  2  app/dashboard/forst/einsatzmittel/page.tsx
+  2  app/dashboard/layout.tsx
+  2  app/dashboard/marketing/analytics-board/page.tsx
+  2  app/dashboard/marketing/autopilot/page.tsx
+  2  app/dashboard/marketing/newsletter/page.tsx
+  2  app/dashboard/marketing/roi-verzahnung/page.tsx
+  2  app/dashboard/nachkalkulation/page.tsx
+  2  app/dashboard/objektzeiten/page.tsx
+  2  app/dashboard/personal/page.tsx
+  2  app/dashboard/provisionen/page.tsx
+  2  app/dashboard/sepa-einzug/page.tsx
+  2  app/dashboard/wer-sieht-was/page.tsx
+  2  app/dashboard/werkstatt/page.tsx
+  2  app/dashboard/zahlungen/page.tsx
+  1  app/api/oeffentlich/branchen-chat/route.ts
+  1  app/api/oeffentlich/buchung/route.ts
+  1  app/api/oeffentlich/lp/route.ts
+  1  app/api/oeffentlich/optin/route.ts
+  1  app/api/oeffentlich/web-newsletter/route.ts
+  1  app/dashboard/_components/EigeneFelder.tsx
+  1  app/dashboard/_components/ERechnungDialog.tsx
+  1  app/dashboard/_components/KiAuge.tsx
+  1  app/dashboard/analyse/page.tsx
+  1  app/dashboard/analytics/page.tsx
+  1  app/dashboard/analytics/umsatz/page.tsx
+  1  app/dashboard/anlagen/page.tsx
+  1  app/dashboard/aufmass/page.tsx
+  1  app/dashboard/auftraege/page.tsx
+  1  app/dashboard/aufwand/page.tsx
+  1  app/dashboard/bautagebuch/page.tsx
+  1  app/dashboard/controlling/page.tsx
+  1  app/dashboard/crm/dubletten/page.tsx
+  1  app/dashboard/crm/firmen/[id]/page.tsx
+  1  app/dashboard/crm/pipeline/page.tsx
+  1  app/dashboard/einkauf/page.tsx
+  1  app/dashboard/einstellungen/firmaPruefung.ts
+  1  app/dashboard/einstellungen/ModulFreischaltung.tsx
+  1  app/dashboard/einstellungen/PasswortAendern.tsx
+  1  app/dashboard/erp/[id]/page.tsx
+  1  app/dashboard/erp/fuhrpark/page.tsx
+  1  app/dashboard/erp/inventar/page.tsx
+  1  app/dashboard/erp/inventur/page.tsx
+  1  app/dashboard/erp/lager/page.tsx
+  1  app/dashboard/erp/layout.tsx
+  1  app/dashboard/erp/page.tsx
+  1  app/dashboard/erp/preisliste/page.tsx
+  1  app/dashboard/erp/wareneingang/page.tsx
+  1  app/dashboard/finanzen/euer/page.tsx
+  1  app/dashboard/finanzen/page.tsx
+  1  app/dashboard/forst/auftraege/page.tsx
+  1  app/dashboard/gobd/page.tsx
+  1  app/dashboard/holz/import/page.tsx
+  1  app/dashboard/holz/page.tsx
+  1  app/dashboard/holz/preisauskunft/page.tsx
+  1  app/dashboard/mahnwesen/page.tsx
+  1  app/dashboard/mail-sync/page.tsx
+  1  app/dashboard/marketing/[id]/page.tsx
+  1  app/dashboard/marketing/bewertung-kampagne/page.tsx
+  1  app/dashboard/marketing/studio/page.tsx
+  1  app/dashboard/marktplaetze/page.tsx
+  1  app/dashboard/pipeline/page.tsx
+  1  app/dashboard/projekt-abrechnung/page.tsx
+  1  app/dashboard/rechnungen/[id]/page.tsx
+  1  app/dashboard/team-chat/page.tsx
+  1  app/dashboard/team-kalender/page.tsx
+  1  app/dashboard/termine/page.tsx
+  1  app/dashboard/verleih/page.tsx
+  1  app/dashboard/vertraege/[id]/page.tsx
+  1  app/dashboard/vertrag-kuendigen/page.tsx
+  1  app/dashboard/vorlagen/page.tsx
+  1  app/vorschau/page.tsx
+  1  lib/mailKalender.ts
+
+----------------------------------------------------------------------------
+SIEZEN — jede Stelle einzeln
+----------------------------------------------------------------------------
+
+### app/api/oeffentlich/branchen-chat/route.ts   [VERLAESST]
+     58 │ - Du bist eine KI-Assistenz.`;
+
+### app/api/oeffentlich/buchung/route.ts   [VERLAESST]
+    155 │ if (!kundeName) return NextResponse.json({ error: 'Bitte deinen Namen angeben.' }, { status: 400 });
+
+### app/api/oeffentlich/chat/route.ts   [VERLAESST]
+    217 │ : `Du bist ein freundlicher, ehrlicher Verkaufsberater im Onlineshop von ${firma}.${kontext ? ' Über den Betri
+    226 │ - Du bist eine KI-Assistenz.`;
+
+### app/api/oeffentlich/lp/route.ts   [VERLAESST]
+    204 │ betreff: `Bitte bestätige deine Anmeldung bei ${brand.firma}`,
+
+### app/api/oeffentlich/optin/route.ts   [VERLAESST]
+    119 │ betreff: `Bitte bestätige deine Anmeldung bei ${betrieb.firma}`,
+
+### app/api/oeffentlich/optin-bestaetigen/route.ts   [VERLAESST]
+     89 │ return seite(firma, akzent, 'Bereits bestätigt', `Deine Anmeldung bei ${firma} war schon bestätigt. Du bist da
+    165 │ `Vielen Dank — deine Anmeldung bei ${firma} ist jetzt bestätigt. Du kannst dieses Fenster schließen.`,
+
+### app/api/oeffentlich/web-newsletter/route.ts   [VERLAESST]
+    110 │ betreff: `Bitte bestätige deine Anmeldung bei ${firma}`,
+
+### app/dashboard/analyse/page.tsx   [CHEF]
+    133 │ Für dein Konto ist noch keine Seite freigeschaltet. Sobald du eine Website veröffentlichst (oder als Betreiber
+
+### app/dashboard/analytics/page.tsx   [CHEF]
+    117 │ Alle Auswertungen deines Betriebs an einem Ort — wähle einen Report.
+
+### app/dashboard/analytics/umsatz/page.tsx   [CHEF]
+    306 │ Blick — direkt aus deinen Rechnungen.
+
+### app/dashboard/anlagen/page.tsx   [CHEF]
+    243 │ text="Erfasse dein Anlagevermögen (Maschinen, Fahrzeuge, Ausstattung) — ARGONAUT rechnet die AfA automatisch j
+
+### app/dashboard/aufmass/page.tsx   [CHEF]
+    568 │ <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Positionen erfassen.</d
+
+### app/dashboard/auftraege/page.tsx   [CHEF]
+    647 │ Kopf-Daten anlegen — Positionen fügst du danach auf der Detailseite hinzu.
+
+### app/dashboard/auftraege/[id]/page.tsx   [CHEF]
+    585 │ Dieser Auftrag existiert nicht oder gehört nicht zu deinem Konto.
+    935 │ Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst im Vertrieb/CRM an.
+    953 │ ARGONAUT nutzt deine echten Preise aus deinen Dokumenten, wo vorhanden — und schätzt nur,
+   1056 │ ? "📄 = Preis aus deinen Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für dich und erscheint nie beim
+   1093 │ {ausDok ? "📄 aus deinen Dokumenten" : "⚠️ geschätzt"}
+
+### app/dashboard/aufwand/page.tsx   [CHEF]
+    156 │ <Leerzustand icon="⏱️" titel="Kein abrechenbarer Aufwand" text="Sobald du Zeiten buchst, sammelt sich der offe
+
+### app/dashboard/bautagebuch/page.tsx   [CHEF]
+    269 │ <Leerzustand icon="🏗️" titel="Noch keine Baustellen" text="Das Bautagebuch hängt an deinen Projekten — lege z
+
+### app/dashboard/ChefCockpit.tsx   [CHEF]
+    176 │ rec.onstart = () => setVoiceStatus({ text: 'Ich höre zu … tippe erneut aufs Mikrofon, wenn du fertig bist.', f
+    339 │ <h2 style={titel}>Dein Betrieb heute</h2>
+    340 │ <p style={untertitel}>Ein Klick – die KI fasst zusammen, worauf es heute ankommt, liest vor und beantwortet de
+    350 │ <span style={pulsPunkt} /> Die KI wertet deinen Betrieb aus…
+
+### app/dashboard/controlling/page.tsx   [CHEF]
+     87 │ <Kennz label="Break-even-Umsatz" wert={eur(be.breakEvenUmsatz)} farbe={C.gold} sub="ab hier verdienst du Geld"
+
+### app/dashboard/crm/dubletten/page.tsx   [CHEF]
+    318 │ Links bleibt bestehen, rechts verschwindet. Für jedes Feld entscheidest du,
+
+### app/dashboard/crm/firmen/page.tsx   [CHEF]
+    247 │ Deine Firmen &amp; Accounts – jeder Kontakt kann einer Firma zugeordnet werden.
+    298 │ ? "Noch keine Firmen. Leg deine erste Firma an."
+
+### app/dashboard/crm/firmen/[id]/page.tsx   [CHEF]
+    444 │ Alle Kontakte sind bereits einer Firma zugeordnet. Neue Kontakte legst du im Kontakt-Cockpit an.
+
+### app/dashboard/crm/import/page.tsx   [CHEF]
+    149 │ 'Nur sinnvoll, wenn du sicher bist, dass es verschiedene Personen sind.'
+    345 │ Wählst du sie, kannst du dieselbe Datei später erneut importieren — es entstehen
+
+### app/dashboard/crm/page.tsx   [CHEF]
+    807 │ Deine Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
+   1028 │ text="Dein CRM sammelt Kunden und Interessenten an einem Ort — mit Betreuungs-Intervallen und Tags."
+   1308 │ Tags kannst du nach dem Anlegen auf der Kontakt-Detailseite vergeben.
+
+### app/dashboard/crm/pipeline/page.tsx   [CHEF]
+    349 │ Zieh deine Verkaufschancen per Drag&amp;Drop durch die Phasen.
+
+### app/dashboard/crm/wochenfokus/page.tsx   [CHEF]
+    114 │ Wen du diese Woche zuerst kontaktieren solltest – von ARGONAUT priorisiert.
+    136 │ ARGONAUT sichtet deine Kontakte und priorisiert…
+
+### app/dashboard/einkauf/page.tsx   [CHEF]
+    361 │ text="Erfasse deine Einkäufe bei Lieferanten — so behältst du Kosten und offene Lieferungen im Blick."
+
+### app/dashboard/einstellungen/ApiSchluesselKarte.tsx   [CHEF]
+    174 │ Ein API-Schlüssel erlaubt es einer Automatisierung — etwa n8n — im Namen deines Betriebs
+    293 │ Authorization: Bearer <em>dein-schlüssel</em>
+
+### app/dashboard/einstellungen/firmaPruefung.ts   [CHEF]
+    180 │ + 'konzentriere dich rein auf inhaltliche Stimmigkeit. Pruefe insbesondere:\n'
+
+### app/dashboard/einstellungen/ModulFreischaltung.tsx   [CHEF]
+    207 │ Blende Bereiche aus, die du (noch) nicht brauchst – so bleibt dein Menü
+
+### app/dashboard/einstellungen/PasswortAendern.tsx   [CHEF]
+     62 │ Vergib direkt hier ein neues Passwort für deinen Zugang. Du bist eingeloggt – es wird keine E-Mail benötigt.
+
+### app/dashboard/elster/page.tsx   [CHEF]
+    134 │ <p style={styles.sub}>ARGONAUT stellt deine Umsatzsteuer-Voranmeldung aus den bezahlten Rechnungen und der Vor
+    194 │ <p style={styles.disclaimer}>Automatische Zusammenstellung nach Zufluss (§ 11 EStG — nur bezahlte Rechnungen).
+
+### app/dashboard/ernte/page.tsx   [CHEF]
+    389 │ {produkte.length === 0 ? <Leerzustand icon="🥕" titel="Noch keine Produkte im Katalog" text="Lege deine Markts
+    418 │ <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 3 }}>Überträgt deine Marktverk
+
+### app/dashboard/erp/bestellungen/page.tsx   [CHEF]
+    598 │ ? "Noch keine Bestellungen. Lege oben rechts deine erste Bestellung an."
+    685 │ Noch keine Lieferanten angelegt — du kannst später einen
+    784 │ Die ARGONAUT-KI analysiert deine Bestände…
+
+### app/dashboard/erp/fuhrpark/page.tsx   [CHEF]
+    500 │ ? "Noch keine Fahrzeuge angelegt. Lege oben rechts dein erstes Fahrzeug an."
+
+### app/dashboard/erp/inventar/page.tsx   [CHEF]
+    492 │ ? "Noch keine Betriebsmittel angelegt. Lege oben rechts dein erstes an."
+
+### app/dashboard/erp/inventur/page.tsx   [CHEF]
+    827 │ Noch keine Bestandskorrekturen im gewählten Zeitraum. Sobald du im Reiter „Zählung" eine
+
+### app/dashboard/erp/lager/page.tsx   [CHEF]
+    241 │ {!loading && bewegungen.length === 0 && <div style={styles.stateBox}>Noch keine Zu-/Abgänge erfasst. Über „＋ Z
+
+### app/dashboard/erp/layout.tsx   [CHEF]
+     83 │ Lager, Einkauf, Inventar &amp; Fuhrpark — deine komplette Warenwirtschaft
+
+### app/dashboard/erp/lieferanten/import/page.tsx   [CHEF]
+    289 │ Füg einfach ein, was du hast – eine Lieferantenliste aus Excel, einer PDF,
+    347 │ Deine Lieferantenliste hier einfügen
+
+### app/dashboard/erp/nachbestellung/page.tsx   [CHEF]
+    186 │ `Du kannst die Bestellung danach prüfen und selbst absenden.`,
+    454 │ allen Positionen und öffnet sie — dort prüfst du und schaltest sie auf „bestellt". „Bestell-E-Mail"
+
+### app/dashboard/erp/page.tsx   [CHEF]
+    544 │ text="Lege dein Sortiment an — mit Preisen, Beständen und Mindestbestand. ARGONAUT warnt automatisch bei knapp
+
+### app/dashboard/erp/preisliste/import/page.tsx   [CHEF]
+    330 │ Füg einfach ein, was du hast – aus Excel, einer PDF, Word oder von einem
+    391 │ Deine Liste hier einfügen
+
+### app/dashboard/erp/preisliste/page.tsx   [CHEF]
+    473 │ Deine lebende Preistabelle – Einkauf, Verkauf und Marge auf einen Blick.
+
+### app/dashboard/erp/wareneingang/page.tsx   [CHEF]
+     96 │ Alle erfassten Lieferungen. Neue Eingänge buchst du direkt in der
+
+### app/dashboard/erp/[id]/page.tsx   [CHEF]
+    944 │ Wie viel du pro Bestellung ordern solltest, damit Bestell- und Lagerkosten
+
+### app/dashboard/euer/page.tsx   [CHEF]
+    175 │ <p style={styles.sub}>ARGONAUT stellt deine Gewinnermittlung nach § 4 Abs. 3 EStG zusammen — Einnahmen aus Rec
+    248 │ <p style={styles.disclaimer}>Automatische Zusammenstellung aus deinen erfassten Daten — als Vorbereitung und Ü
+
+### app/dashboard/finanzen/cashflow/page.tsx   [CHEF]
+     99 │ <p style={styles.sub}>Wie sich deine Liquidität die nächsten 12 Wochen entwickelt — erwartete Zuflüsse aus off
+    130 │ <div style={styles.okBox}>🟢 Kein Liquiditätsengpass in den nächsten 12 Wochen — dein Saldo bleibt durchgehend
+
+### app/dashboard/finanzen/euer/page.tsx   [CHEF]
+    382 │ Beratung – die finale EÜR erstellt dein Steuerberater.
+
+### app/dashboard/finanzen/kennzahlen/page.tsx   [CHEF]
+    209 │ Deine Zahlen automatisch bewertet – plus Rechner für die wichtigsten kaufmännischen Formeln
+    320 │ ? `Achtung: Du machst pro Stück ${eur(db)} Verlust – der Preis liegt unter den variablen Kosten.`
+    330 │ unterzeile="Ab wie vielen Verkäufen du in die Gewinnzone kommst"
+    353 │ : `Ab ${menge} verkauften Einheiten (${eur(umsatz)} Umsatz) deckst du deine Fixkosten. Jede weitere Einheit is
+    362 │ unterzeile="Wie weit dein Umsatz sinken darf, bevor es kritisch wird"
+    378 │ ? "Gib deinen aktuellen Umsatz und den Break-Even-Umsatz ein."
+    380 │ ? `Dein Umsatz darf um ${pct(marge)} (${eur(puffer)}) sinken, bevor du in die Verlustzone kommst.`
+    381 │ : `Achtung: Du liegst unter dem Break-Even – aktuell entsteht Verlust.`,
+    412 │ Die oberen Kennzahlen kommen automatisch aus deinen echten Einnahmen und Ausgaben ({jahr},
+
+### app/dashboard/finanzen/page.tsx   [CHEF]
+    178 │ Dein Überblick über Einnahmen, Ausgaben und Gewinn – {jahr}
+
+### app/dashboard/finanzen/ueberweisung/page.tsx   [CHEF]
+     82 │ <p style={styles.sub}>Gehälter oder Lieferanten in einem Rutsch: Empfänger erfassen, gültige SEPA-Datei (pain.
+     86 │ <div style={styles.cardTitel}>Auftraggeber (dein Konto)</div>
+
+### app/dashboard/forst/auftraege/page.tsx   [CHEF]
+    186 │ Fäll- und Pflegeaufträge mit Positionen aus deinen Einsatzmitteln oder freien Leistungen. Notdienst-Zuschlag i
+
+### app/dashboard/forst/einsatzmittel/page.tsx   [CHEF]
+    136 │ Deine Maschinen und Fahrzeuge mit Stundensatz und Wegepauschale — die Preis-Grundlage für Fäll- und Pflegeauft
+    204 │ {!liste.length && <p style={styles.dim}>Noch keine Einsatzmittel. Leg oben dein erstes an — z. B. Seilwinde, 8
+
+### app/dashboard/gobd/page.tsx   [CHEF]
+    192 │ if (!window.confirm('Aktuellen Stand als finale, revisionssichere Version festschreiben?\n\nDie Fassung wird d
+
+### app/dashboard/holz/import/page.tsx   [CHEF]
+    380 │ Standardmäßig aus. Preise, die du von Hand gepflegt hast, bleiben unangetastet —
+
+### app/dashboard/holz/page.tsx   [CHEF]
+    607 │ Variante zuerst mit „Anlegen" speichern — danach kannst du Preise und Rabatte pflegen.
+
+### app/dashboard/holz/preisauskunft/page.tsx   [CHEF]
+    298 │ Kunde, Variante, Menge — fertig. Der Text ist so formuliert, dass du ihn
+
+### app/dashboard/layout.tsx   [CHEF]
+    152 │ ? 'Du kannst alles ansehen, aber nichts mehr ändern. Sichere dir deinen ARGONAUT mit einem Termin.'
+    153 │ : 'Du testest ARGONAUT im Demo-Modus — danach bleibt alles sichtbar, zum Weiterarbeiten vereinbare einen Termi
+
+### app/dashboard/leistungskatalog/page.tsx   [CHEF]
+    214 │ ? `Für „${kat}" sind keine neuen Vorschläge übrig — dein Katalog ist schon gefüllt.`
+    215 │ : 'Für Vorschläge brauche ich deine Branche: Setz sie im Onboarding bzw. in den Einstellungen, dann lade ich t
+    219 │ if (!window.confirm(`${zeilen.length} typische Leistungen für ${label} in den Katalog laden?\n\nAlles sind Sta
+    462 │ <Leerzustand icon="🧰" titel="Noch keine Leistungen" text="Lade typische Leistungen deiner Branche und pass di
+
+### app/dashboard/mahnwesen/page.tsx   [CHEF]
+    746 │ Mit „⏫" stufst du direkt hoch (ohne Schreiben), „↺" setzt die Stufe zurück.
+
+### app/dashboard/mahnwesen/[id]/page.tsx   [CHEF]
+    426 │ Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
+    618 │ placeholder="Hier erscheint der Entwurf – oder schreibe direkt selbst. Du kannst alles frei anpassen, bevor du
+    705 │ Noch keine Mahnung protokolliert. Sobald du oben „gesendet markierst",
+
+### app/dashboard/mail-sync/page.tsx   [CHEF]
+    111 │ <p style={styles.sub}>Verbinde dein Postfach — bei <b style={{ color: C.text }}>IMAP</b> (IONOS, GMX, Strato …
+
+### app/dashboard/marketing/analytics-board/page.tsx   [CHEF]
+     93 │ Alle Marketing-Zahlen auf einen Blick — visuell aufbereitet: wie sich deine Anfragen entwickeln, in welcher Ph
+    146 │ Noch keine Anfragen erfasst. Sobald über deine Website, Kampagnen oder Kanäle Leads eingehen, füllt sich das B
+
+### app/dashboard/marketing/autopilot/page.tsx   [CHEF]
+     45 │ Der Autopilot beobachtet dein Marketing und schlägt dir die nächsten Schritte vor — nach Dringlichkeit sortier
+     67 │ Nichts zu tun — dein Marketing läuft rund. Sobald sich etwas ändert (offene Anfragen, teure Kampagnen, ein Lan
+
+### app/dashboard/marketing/bewertung-kampagne/page.tsx   [CHEF]
+     84 │ Gute Bewertungen sind der beste Verkäufer. Bitte deine zufriedenen Kunden aus dem CRM <b style={{ color: C.tex
+
+### app/dashboard/marketing/lagebericht/page.tsx   [CHEF]
+     35 │ gut: 'Dein Marketing läuft rund',
+     65 │ Dein Marketing auf einen Blick — was läuft, was dringend ist, und was du als Nächstes tun solltest. Aus deinen
+     76 │ <div style={{ color: C.textDim, fontSize: 13, marginTop: 2 }}>{daten.befunde.length} Befund(e) aus deinen aktu
+     83 │ <div style={{ fontSize: 12, color: C.cyan, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 
+    174 │ Hinweis: Der Bericht rechnet mechanisch aus deinen echten Zahlen (kostenlos); die KI formuliert nur den Klarte
+
+### app/dashboard/marketing/newsletter/page.tsx   [CHEF]
+    206 │ setHinweis('Diese E-Mail steht bereits in deiner Liste.');
+    466 │ Noch keine Abonnenten. Füge oben deinen ersten Empfänger hinzu.
+
+### app/dashboard/marketing/roi-verzahnung/page.tsx   [CHEF]
+     70 │ Die ganze Kette auf einen Blick: was deine Werbung <b style={{ color: C.text }}>kostet</b>, wie viele <b style
+    109 │ Noch keine Kampagnen angelegt. Sobald du im Cockpit Kampagnen mit Budget führst und Leads darauf zugeordnet we
+
+### app/dashboard/marketing/seo/page.tsx   [CHEF]
+     83 │ Damit dich Kunden bei Google finden — <b style={{ color: C.text }}>ohne für jede Anfrage zu bezahlen</b>. Der 
+     90 │ Du hast schon eine eigene Website? Gib die Adresse ein — der Check liest die echte Seite und bewertet sie gena
+    129 │ <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, margin: '4px 0 12px' 
+    134 │ Noch keine Seite im ARGONAUT-Baukasten. Sobald du dort eine Seite angelegt und veröffentlicht hast, prüft der 
+    147 │ Durchschnitt über {daten.seiten.length} Seite{daten.seiten.length === 1 ? '' : 'n'}. Je höher, desto besser fi
+    160 │ <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16, marginBottom: 6 }}>💡
+    161 │ <div style={{ color: C.textDim, fontSize: 13, marginBottom: 12 }}>Suchbegriffe, nach denen potenzielle Kunden 
+
+### app/dashboard/marketing/studio/page.tsx   [CHEF]
+    145 │ Briefing eingeben — die KI schreibt im Markenton aus eurem Firmen-Wissen. Du gibst frei.
+
+### app/dashboard/marketing/[id]/page.tsx   [CHEF]
+    367 │ Inhalte dieser Kampagne. KI-generierte Inhalte erstellst du im Content-Studio.
+
+### app/dashboard/marktplaetze/page.tsx   [CHEF]
+     86 │ <p style={styles.sub}>Verbinde deine Verkaufsplattformen — die Zugänge kannst du schon jetzt sicher hinterlege
+
+### app/dashboard/mitglieder/page.tsx   [CHEF]
+    182 │ if (!ibanGueltig(cred.iban)) { setFehler('Deine Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht). Bitte ob
+    236 │ <h2 style={styles.cardTitel}>🏦 Deine SEPA-Gläubigerdaten</h2>
+    238 │ Einmal hinterlegen — kommt in jede Lastschrift-Datei. Die Gläubiger-ID bekommst du bei der Deutschen Bundesban
+    262 │ <li>Du lädst die Datei in dein <b>Online-Banking</b> hoch („SEPA-Datei / Sammellastschrift importieren") oder 
+    263 │ <li>Die <b>Bank zieht</b> am Fälligkeitstag von den Mitglieder-Konten ein → das Geld landet auf deinem Konto.<
+
+### app/dashboard/nachkalkulation/page.tsx   [CHEF]
+    150 │ <Leerzustand icon="🧮" titel="Noch keine Projekte" text="Sobald du Projekte mit Budget anlegst und Leistungen 
+    196 │ die <b>Marge</b> = Deckungsbeitrag ÷ Erbracht. Kosten erfasst du oben je Projekt (im „Voll"-Modus). Später las
+
+### app/dashboard/objektzeiten/page.tsx   [CHEF]
+    301 │ <div style={styles.hint}>Lege zuerst oben rechts ein Objekt an — dann kannst du Zeiten darauf buchen.</div>
+    468 │ <Leerzustand icon="🏢" titel="Noch keine Objekte" text="Lege dein erstes Objekt an, um Zeiten darauf zu erfass
+
+### app/dashboard/online-buchung/page.tsx   [CHEF]
+     91 │ Gib deinen Kunden einen Link, unter dem sie selbst freie Termine buchen — ohne Anruf, ohne Login.
+     92 │ Grundlage sind deine <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700 }}>Öffnungszeiten &a
+    102 │ <label style={styles.lbl}>Dein Buchungs-Link (Kürzel)</label>
+    124 │ <div style={{ fontWeight: 700, marginBottom: 8 }}>🌐 Dein Link — teile ihn mit Kunden:</div>
+    134 │ 💡 Damit Slots erscheinen, brauchst du in <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700
+
+### app/dashboard/personal/page.tsx   [CHEF]
+    741 │ if (!window.confirm(`Zugang von ${vorname} ${nachname} zurücksetzen?\n\nEs wird ein NEUES Einmal-Passwort erze
+    865 │ onClick={() => navigator.clipboard?.writeText(`Dein ARGONAUT-Zugang:\nLogin: ${zugang.loginUrl}\nE-Mail: ${zug
+
+### app/dashboard/pipeline/page.tsx   [CHEF]
+    148 │ <p style={styles.sub}>Deine Vertriebschancen als Karten über die Stufen. Verschieb einen Deal weiter, und der 
+
+### app/dashboard/projekt-abrechnung/page.tsx   [CHEF]
+    149 │ <Leerzustand icon="📁" titel="Noch keine Projekte" text="Die Projekt-Abrechnung hängt an deinen Projekten — le
+
+### app/dashboard/projekte/page.tsx   [CHEF]
+    509 │ text="Plane deine Vorhaben als Projekte — mit Aufgaben, Terminen und Verantwortlichen an einem Ort."
+    732 │ Beschreibe kurz, worum es geht — die KI erstellt dir einen Projektnamen und eine sinnvolle Aufgabenliste als V
+    772 │ <label style={labelStil}>Vorgeschlagene Aufgaben ({kiVorschlag.aufgaben.length}) — du kannst anpassen oder lös
+    786 │ {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDi
+
+### app/dashboard/projekte/[id]/page.tsx   [CHEF]
+    541 │ alert(`Vorlage „${name.trim()}" gespeichert — mit ${aufgaben.length} Standard-Aufgabe${aufgaben.length === 1 ?
+   1043 │ Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellst du später mit einem Klick neue,
+   1052 │ Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) findest du auf der Übersicht über „Bearbeiten".
+
+### app/dashboard/provisionen/page.tsx   [CHEF]
+    117 │ <p style={styles.sub}>Für jeden gewonnenen Deal legst du einen Provisionssatz und einen Empfänger fest — ARGON
+    136 │ text={'Sobald du in der Deal-Pipeline einen Deal auf „Gewonnen" setzt, erscheint er hier zur Provisionsabrechn
+
+### app/dashboard/rechnungen/[id]/page.tsx   [CHEF]
+    746 │ Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
+
+### app/dashboard/rechte/page.tsx   [CHEF]
+    474 │ Du als Chef siehst immer alles. „Übersicht" und „Mein Bereich" sieht jeder Mitarbeiter.
+    478 │ Mit <span style={{ color: C.cyan, fontWeight: 700 }}>✏️ darf ändern</span> gibst du zusätzlich
+    887 │ Du gibst <strong>{nm}</strong> Zugriff auf <strong style={{ color: C.warn }}>{lab}</strong>.
+
+### app/dashboard/sepa-einzug/page.tsx   [CHEF]
+    209 │ if (!ibanGueltig(cred.iban)) { setFehler('Deine Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht).'); retur
+    278 │ <div style={styles.cardTitel}>🏦 Deine SEPA-Gläubigerdaten</div>
+
+### app/dashboard/team-chat/page.tsx   [CHEF]
+    121 │ return 'Du bist kein Mitglied dieses Kanals — deshalb hat die Datenbank das Schreiben abgelehnt. Lass dich vom
+
+### app/dashboard/team-kalender/page.tsx   [CHEF]
+    181 │ <Leerzustand icon="📆" titel="Noch keine Mitarbeiter" text="Sobald Mitarbeiter angelegt sind, siehst du hier U
+
+### app/dashboard/termine/page.tsx   [CHEF]
+    384 │ Titel und Zeit reichen — den Rest findest du im Voll-Modus.
+
+### app/dashboard/verleih/page.tsx   [CHEF]
+    336 │ {artikel.length === 0 ? <Leerzustand icon="📦" titel="Noch keine Mietgegenstände" text="Lege an, was du vermie
+
+### app/dashboard/versand/page.tsx   [CHEF]
+    137 │ ? 'Noch keine Sendungen — erfasse dein erstes Paket.'
+    213 │ <p style={styles.sub}>Erfasse deine Sendungen, druck ein Adress-Label und behalte den Status im Blick. Die ech
+    253 │ <label style={styles.lab}>shipcloud-API-Key<input style={styles.inp} type="password" value={apiKey} onChange={
+    290 │ {form.richtung === 'retoure' && <div style={styles.retoureHinweis}>↩️ Retoure: Das Label wird als <strong>Rück
+    333 │ text="Wenn ein Kunde etwas zurückschickt, legst du hier eine Retoure an — ARGONAUT druckt ein Rücksende-Etiket
+    338 │ text="Erfasse dein erstes Paket — ARGONAUT druckt dir ein Adress-Label und behält den Versandstatus im Blick."
+
+### app/dashboard/vertraege/[id]/page.tsx   [CHEF]
+    593 │ Die ARGONAUT-KI formuliert deinen Entwurf…
+
+### app/dashboard/vertrag-kuendigen/page.tsx   [CHEF]
+    200 │ „gekündigt" gesetzt. Eine Bestätigung geht per E-Mail an dich. Fortfahren?
+
+### app/dashboard/vorlagen/page.tsx   [CHEF]
+    136 │ <p style={styles.sub}>Ein zentraler Pool, aus dem jede Filiale zieht. {darfVerwalten ? 'Du kannst Vorlagen anl
+
+### app/dashboard/wer-sieht-was/page.tsx   [CHEF]
+     91 │ <p style={styles.sub}>Auf einen Blick, welcher Mitarbeiter welche Module sieht — berechnet aus gebuchten Modul
+    157 │ ℹ️ Der Chef (du) sieht alle gebuchten Module. Der aktive Filial-Umschalter im Kopf blendet zusätzlich Module a
+
+### app/dashboard/werkstatt/page.tsx   [CHEF]
+    988 │ <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Fahrzeug und Leistungen
+   1318 │ Noch keine Ressourcen angelegt. Lege im Modul „Buchungen" z. B. „Hebebühne 1" an — danach kannst du sie hier t
+
+### app/dashboard/zahlungen/page.tsx   [CHEF]
+    110 │ <p style={styles.sub}>Alles Geld auf einen Blick: was reinkam (Kundenzahlungen) und was rausging (Belege &amp;
+    209 │ <p style={styles.disclaimer}>Überblick aus deinen erfassten Daten. „Bestätigen" bzw. das Häkchen setzen den Za
+
+### app/dashboard/_components/EigeneFelder.tsx   [CHEF]
+    114 │ <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>Lege dir eigene Spalten an — sie erscheinen 
+
+### app/dashboard/_components/ERechnungDialog.tsx   [CHEF]
+    298 │ Leer lassen, wenn keine Behörden-Rechnung. Die ID gibt dir die jeweilige Behörde.
+
+### app/dashboard/_components/KiAuge.tsx   [CHEF]
+    154 │ title="Die KI liest die Übersicht und sagt dir, was jetzt wichtig ist"
+
+### app/vorschau/page.tsx   [VERLAESST]
+    327 │ Ich habe 12 relevante Updates für dich.
+
+### app/vorschau/_lib/dossierHtml.ts   [VERLAESST]
+     68 │ du: ['Vor Ort messen und ein paar Fotos machen — per App', 'Einmal auf „Angebot senden" tippen', 'Den Auftrag 
+     72 │ du: ['Auftrag und Menge einmal anlegen', 'Fortschritt kurz bestätigen', 'Freigeben und ausliefern — die Rechnu
+     76 │ du: ['Artikel und Preise einmal pflegen', 'Bestellung mit einem Klick freigeben', 'Ware annehmen — der Bestand
+     80 │ du: ['Fahrzeug und Auftrag aufnehmen', 'Kostenvoranschlag mit einem Klick senden', 'Auftrag abschließen — die 
+     84 │ du: ['Verfügbarkeiten einmal hinterlegen', 'Gäste empfangen', 'Am Ende des Tages: ein Klick Tagesabschluss'],
+     88 │ du: ['Sortiment einmal anlegen', 'Wareneingang kurz bestätigen', 'Am Tresen kassieren — der Rest läuft mit'],
+     92 │ du: ['Auftrag und Ziel eingeben', 'Tour freigeben', 'Zustellung per App bestätigen'],
+     96 │ du: ['Ticket oder Projekt anlegen', 'Zeit mit einem Klick erfassen', 'Rechnung bestätigen — Verträge laufen au
+    100 │ du: ['Projekt oder Anlage anlegen', 'Einsatz per App dokumentieren', 'Abrechnung freigeben'],
+    104 │ du: ['Objekt und Einheit anlegen', 'Anfrage kurz bearbeiten', 'Abrechnung freigeben'],
+    108 │ du: ['Projekt und Angebot anlegen', 'Aufwand erfassen', 'Rechnung freigeben'],
+    112 │ du: ['Fachlich prüfen und mit einem Klick freigeben', 'Einmal „Rechnung erstellen" bestätigen', 'Den Mandanten
+    116 │ du: ['Kurs und Termin anlegen', 'Teilnehmer aufnehmen', 'Abschluss bestätigen'],
+    120 │ du: ['Verfügbarkeiten hinterlegen', 'Kunden empfangen', 'Leistung kurz erfassen'],
+    124 │ du: ['Angebote und Kurse einmal anlegen', 'Neue Kunden über ein kurzes Formular aufnehmen', 'Am Tresen mit ein
+    128 │ du: ['Verfügbarkeiten hinterlegen', 'Kunde und Tier aufnehmen', 'Leistung kurz erfassen'],
+    132 │ du: ['Auftrag oder Fläche anlegen', 'Einsatz per App dokumentieren', 'Abrechnung freigeben'],
+    136 │ du: ['Auftrag und Termin anlegen', 'Einsatz per App bestätigen', 'Rechnung freigeben'],
+    140 │ du: ['Mitglied oder Termin anlegen', 'Anmeldung bearbeiten', 'Abrechnung freigeben'],
+    278 │ <div class="col col-du"><h3>Sie tun nur noch</h3><ul>${ss.du.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></
+
+### lib/mailKalender.ts   [VERLAESST]
+     75 │ hinweis: 'Kalender-Freigabe-URL + Passwort aus deinem Kalender-Dienst.',
+
+### lib/newsletter.ts   [VERLAESST]
+    118 │ Du erhältst diese E-Mail, weil du dich beim Newsletter von ${firma} angemeldet hast.<br>
+    173 │ Du erhältst diese E-Mail als Teil einer automatischen Info-Serie von ${firma}.<br>
+    223 │ <p style="margin:0 0 20px;">bitte bestätige einmalig, dass du E-Mails von <b>${firma}</b> erhalten möchtest. K
+    227 │ <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Falls der Knopf nicht funktioniert, kopiere diesen Lin
+    231 │ Du erhältst diese E-Mail, weil sich jemand mit deiner Adresse bei ${firma} angemeldet hat.
+    232 │ Warst du das nicht, ignoriere diese Nachricht einfach — ohne Bestätigung senden wir dir nichts.
+
+----------------------------------------------------------------------------
+ANSEHEN — Betreiber-Seiten, Sonstiges und vermutete Imperative
+----------------------------------------------------------------------------
+
+### app/admin/abo-einzug/page.tsx   [BETREIBER]
+    117 │ PRONOMEN    │ Sammel-Lastschrift für alle ausgewählten Kunden in einer Datei. Es wird nichts automatisch abgebucht — du läds
+
+### app/admin/anfragen/page.tsx   [BETREIBER]
+    129 │ PRONOMEN    │ Diese Liste ist deine zentrale Eingangsstelle für alle Website-Leads — komplett autark, ohne n8n. Jede neue An
+
+### app/admin/command-center/belege/page.tsx   [BETREIBER]
+    128 │ PRONOMEN    │ Deine Belege im Überblick. KI-Vorschläge sind unbestätigt, bis du sie freigibst — Bestätigen und Hochladen fol
+    186 │ PRONOMEN    │ Hinweis: Vorschläge der KI sind keine Steuerberatung. Zahlen prüfst du und bestätigst sie selbst; Grenzfälle k
+
+### app/admin/command-center/belege/UploadWidget.tsx   [BETREIBER]
+    136 │ PRONOMEN    │ Der Beleg steht jetzt unten in der Liste. Bestätigen bzw. korrigieren kannst du ihn im nächsten Schritt.
+
+### app/admin/command-center/BestellstreckeFreischalten.tsx   [BETREIBER]
+     23 │ PRONOMEN    │ { titel: 'Dein persönliches Go erreicht', detail: 'Genug Kunden/Gespräche geführt, Rechnungen laufen, Schulden
+     49 │ PRONOMEN    │ Fertig gebaut, aber noch dunkel. Öffne die Checkliste, wenn du bereit bist, öffentlich zu verkaufen.
+     62 │ PRONOMEN    │ Deine Checkliste vor dem Scharfstellen ({anzahl}/{SCHRITTE.length}):
+     91 │ PRONOMEN    │ „Jetzt buchen"-Link — ein Push, und du bist live. Nichts wird automatisch abgebucht; es kommen nur
+     92 │ PRONOMEN    │ Bestellungen + SEPA-Mandate rein, die du dann bearbeitest.
+
+### app/admin/command-center/betrieb/[id]/page.tsx   [BETREIBER]
+     46 │ PRONOMEN    │ betreiber: 'du',
+    674 │ PRONOMEN    │ <label style={s.label}>Notiz (nur für dich)</label>
+    774 │ PRONOMEN    │ <div style={s.karteTitel}>Das liegt jetzt bei dir</div>
+
+### app/admin/command-center/CtaModusSchalter.tsx   [BETREIBER]
+     25 │ PRONOMEN    │ if (ziel === 'bestellen' && !window.confirm('Öffentliche Knöpfe auf „Sofort bestellen" umstellen?\n\nInteresse
+     45 │ IMPERATIV?  │ type="button" onClick={() => setze(ziel)} disabled={saving}
+     76 │ PRONOMEN    │ {knopf('termin', '📅', 'Nur Termin', 'Nur „Termin vereinbaren" — Interessenten buchen ein Erstgespräch. Kein K
+     77 │ PRONOMEN    │ {knopf('beide', '🔀', 'Termin + 7-Tage-Test', 'Beide Knöpfe nebeneinander: Erstgespräch UND „7 Tage kostenlos 
+     78 │ PRONOMEN    │ {knopf('bestellen', '🛒', 'Nur Bestellen', 'Knöpfe führen in die Bestellstrecke. Erst umlegen, wenn du bereit 
+
+### app/admin/command-center/page.tsx   [BETREIBER]
+     95 │ PRONOMEN    │ { label: 'Lebenshaltung / Monat', wert: '—', sub: 'folgt · du pflegst es selbst', akzent: C.dim },
+    124 │ PRONOMEN    │ { titel: 'Lebenshaltung & Entnahme', sub: 'Dein persönlicher Überblick', bald: true },
+    154 │ PRONOMEN    │ <span style={{ padding: '3px 10px', background: 'rgba(201,168,76,0.12)', border: `1px solid rgba(201,168,76,0.
+    166 │ PRONOMEN    │ <span style={{ color: C.dim }}>Freischalten, wenn du bereit bist (Ziel: erste Kunden / schuldenfrei). Checklis
+    201 │ PRONOMEN    │ {ansicht === 'privat' ? 'Privat — nur für dich' : 'Bereiche'}
+    223 │ PRONOMEN    │ Dein Cockpit · nur für dich sichtbar. „BALD" heißt: Struktur steht, Inhalt füllen wir Block für Block.
+
+### app/admin/command-center/schnittstellen/page.tsx   [BETREIBER]
+     62 │ PRONOMEN    │ Zwei Ebenen: <b style={{ color: C.text }}>Plattform-Dienste</b> setzt du zentral (Umgebungsvariablen).
+
+### app/admin/command-center/systeme/page.tsx   [BETREIBER]
+     47 │ PRONOMEN    │ { label: 'Betreiber-Sperre', ok: da(process.env.ANALYSE_BETREIBER_ID), detail: 'Command Center ist hart auf de
+
+### app/admin/command-center/vertraege/page.tsx   [BETREIBER]
+    133 │ PRONOMEN    │ Deine wiederkehrenden Kosten auf einen Blick — inklusive der echten KI-Kosten und dem Abstand zum Break-even.
+    177 │ PRONOMEN    │ Noch keine Verträge erfasst. Das Hinzufügen kommt im nächsten Schritt — dann trägst du Vercel, Supabase, Domai
+    188 │ PRONOMEN    │ Hinweis: Beträge und steuerliche Zuordnung sind deine Angaben; Grenzfälle klärt der Steuerberater.
+
+### app/admin/command-center/vertrieb/page.tsx   [BETREIBER]
+     94 │ PRONOMEN    │ Deine eingehenden Website-Leads mit dem nächsten sinnvollen Schritt — von „jetzt kontaktieren" bis „nachfassen
+
+### app/admin/command-center/whatsapp/page.tsx   [BETREIBER]
+    155 │ IMPERATIV?  │ <select value={gewaehlt} onChange={(e) => waehle(e.target.value)} style={s.select}>
+    204 │ IMPERATIV?  │ <button onClick={() => speichere(true)} disabled={busy} style={s.btnGrau}>Neu erzeugen</button>
+    207 │ IMPERATIV?  │ <button onClick={() => speichere(true)} disabled={busy} style={s.btnGold}>
+    255 │ IMPERATIV?  │ <tr key={b.id} onClick={() => waehle(b.id)} style={{ cursor: 'pointer' }}>
+
+### app/admin/demo-betriebe/page.tsx   [BETREIBER]
+     78 │ PRONOMEN    │ <b>Bevor du klickst:</b> Die Konten werden mit bereits bestätigter E-Mail angelegt — es geht dabei
+     88 │ PRONOMEN    │ <span style={s.schalterDim}> — nur nötig, wenn du die Betriebe schon einmal angelegt hast und frische Beispiel
+
+### app/admin/inhalte/page.tsx   [BETREIBER]
+    367 │ IMPERATIV?  │ <button style={s.zeilenKnopf} onClick={() => oeffne(z)}>
+
+### app/admin/tenants/page.tsx   [BETREIBER]
+    610 │ PRONOMEN    │ Sobald du das <b>erste</b> Modul aktivierst, sieht er <b>nur noch</b> die aktivierten.
+
+### app/admin/verbrauch/page.tsx   [BETREIBER]
+    148 │ PRONOMEN    │ Hinweis: „KI unbegrenzt" für den Kunden bleibt bestehen — dieses Panel ist deine <b style={{ color: C.text }}>
+    149 │ PRONOMEN    │ Du siehst sofort, welcher Kunde KI-Kosten treibt oder ans Speicher-Limit stößt, und kannst gezielt gegensteuer
+
+### app/agb/page.tsx   [VERLAESST]
+     25 │ IMPERATIV?  │ { id: 'speicher', label: '§ 9a Speicherplatz' },
+    214 │ IMPERATIV?  │ <section id="speicher" style={{ marginBottom: '44px' }}>
+
+### app/anmelden/[slug]/page.tsx   [SONSTIGES]
+     68 │ PRONOMEN    │ setFehler('Bitte bestätige die Einwilligung, damit wir dir schreiben dürfen.');
+    118 │ PRONOMEN    │ <h1 style={S.h1}>{fertig === 'bereits' ? 'Du bist schon dabei' : 'Fast geschafft!'}</h1>
+    121 │ PRONOMEN    │ ? `Deine Adresse ist bereits für ${betrieb} bestätigt. Es ist nichts weiter zu tun.`
+    122 │ PRONOMEN    │ : `Wir haben dir eine E-Mail geschickt. Bitte öffne sie und klicke auf „Anmeldung bestätigen“ — erst danach bi
+
+### app/api/academy/aufbereiten/route.ts   [SONSTIGES]
+     29 │ PRONOMEN    │ Deine Aufgabe: den Text so aufbereiten, dass er als Untertitel und zum Nachlesen taugt.
+     42 │ PRONOMEN    │ - Füllwörter ("äh", "also ja", "sozusagen"), Versprecher und doppelte Satzanfänge entfernst du.
+     45 │ PRONOMEN    │ - Die Anrede bleibt wie im Original (meist "Sie" oder direktes Du unter Kollegen).
+
+### app/api/analyse-ki/route.ts   [SONSTIGES]
+     38 │ PRONOMEN    │ Du bekommst echte, anonyme Website-Kennzahlen. Deute sie nüchtern und gib klare, umsetzbare Empfehlungen.
+     81 │ PRONOMEN    │ 'Teile den Link zu deiner Seite aktiv — E-Mail-Signatur, Visitenkarte, QR-Code auf Flyern.',
+
+### app/api/auftrag-ki-positionen/route.ts   [SONSTIGES]
+     17 │ PRONOMEN    │ "Du bist der Auftrags-Assistent von ARGONAUT OS, einem Betriebssystem für den deutschen Mittelstand. " +
+     18 │ PRONOMEN    │ "Ein Handwerker oder Dienstleister beschreibt dir in eigenen Worten (oft per Sprache diktiert, daher umgangssp
+     19 │ PRONOMEN    │ "Du erhältst ggf. AUSZÜGE AUS DEN EIGENEN DOKUMENTEN DES BETRIEBS (Preislisten, frühere Angebote). Diese entha
+     21 │ PRONOMEN    │ "- Findest du für die Leistung einen passenden Preis in den Dokument-Auszügen, übernimm GENAU diesen Netto-Pre
+     22 │ PRONOMEN    │ "- Findest du KEINEN passenden Preis in den Auszügen (neue/exotische Leistung), schätze einen marktüblichen Ne
+
+### app/api/autoresponder/abmelden/route.ts   [SONSTIGES]
+     59 │ PRONOMEN    │ return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht bist du ber
+     81 │ PRONOMEN    │ `Du wurdest von der Info-Serie von ${firma} abgemeldet und erhältst keine weiteren E-Mails mehr. Du kannst die
+
+### app/api/beleg-upload/route.ts   [SONSTIGES]
+     55 │ PRONOMEN    │ konfidenz: deine Sicherheit von 0 bis 1, wie gut der Beleg lesbar/eindeutig war.`;
+
+### app/api/chat/route.ts   [SONSTIGES]
+     18 │ PRONOMEN    │ system: systemPrompt || 'Du bist der ARGONAUT KI-Assistent. Antworte auf Deutsch, freundlich und pr\u00e4gnant
+
+### app/api/cockpit-action/route.ts   [SONSTIGES]
+    170 │ PRONOMEN    │ return NextResponse.json({ ok: false, rueckfrage: `Mehrere Kanaele passen zu "${wunschKanal}". Welchen meinst 
+    212 │ PRONOMEN    │ if (liste.length === 0) return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kontakt "${wunschKo
+    217 │ PRONOMEN    │ return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Kontakte zu "${wunschKontakt}". Welchen m
+
+### app/api/cockpit-chat/route.ts   [SONSTIGES]
+     48 │ PRONOMEN    │ `Du bist der ARGONAUT-Assistent im Chef-Cockpit des Betriebsinhabers. Der Chef kann dir eine FRAGE stellen ode
+     56 │ PRONOMEN    │ Dir liegen die aktuellen Live-Kennzahlen seines Betriebs vor (siehe unten).
+     64 │ PRONOMEN    │ Wenn der Chef dich bittet, intern etwas ZU TUN, fuehre es NICHT selbst aus. Gib einen Aktions-Vorschlag zuruec
+     91 │ PRONOMEN    │ - Der "klartext" ist deine Sicherheits-Rueckfrage: liste darin JEDE geplante Aufgabe knapp mit Empfaenger und 
+     93 │ PRONOMEN    │ WICHTIG — Formatierung im Feld "antwort": KEINE Markdown-Zeichen, keine Sternchen, keine Rauten, keine Backtic
+
+### app/api/crm-briefing/route.ts   [SONSTIGES]
+    205 │ PRONOMEN    │ "Du bist ein erfahrener deutscher Vertriebs-Assistent. Du erstellst ein knappes, praxisnahes Briefing, " +
+    206 │ PRONOMEN    │ "das ein Verkäufer in 15 Sekunden vor einem Anruf oder Termin liest. Stütze dich AUSSCHLIESSLICH auf die " +
+
+### app/api/crm-followup/route.ts   [SONSTIGES]
+    172 │ PRONOMEN    │ "Du bist ein erfahrener deutscher Vertriebstexter. Du schreibst eine kurze, überzeugende Follow-up-E-Mail " +
+    173 │ PRONOMEN    │ "an einen Geschäftskontakt, passend zur bisherigen Historie. Konkrete Fakten, Leistungen und Preise entnimmst 
+
+### app/api/crm-nba/route.ts   [SONSTIGES]
+    158 │ PRONOMEN    │ "Du bist ein Vertriebs-Coach. Du erhältst eine Liste von Kontakten, bei denen aus CRM-Sicht Handlungsbedarf be
+    160 │ PRONOMEN    │ "diese Woche zuerst angehen? Für jeden gibst du eine kurze, konkrete Handlungsempfehlung (z. B. 'anrufen und A
+
+### app/api/crm-visitenkarte/route.ts   [SONSTIGES]
+     44 │ PRONOMEN    │ "Du liest Visitenkarten aus. Extrahiere die Kontaktdaten exakt so, wie sie auf der Karte stehen - " +
+
+### app/api/crm-voice/route.ts   [SONSTIGES]
+     52 │ PRONOMEN    │ "Du bist ein Assistent, der aus einer gesprochenen, unstrukturierten Rohnotiz eines Verkäufers eine saubere " 
+
+### app/api/dashboard-chat/route.ts   [SONSTIGES]
+    115 │ PRONOMEN    │ `Du bist der ARGONAUT KI-Assistent im Dashboard des Betriebsinhabers. Du hilfst ihm, seinen Betrieb auf einen 
+    117 │ PRONOMEN    │ Dir liegen die aktuellen Live-Kennzahlen aus seinem System vor (siehe unten). Beantworte Fragen dazu präzise, 
+    119 │ PRONOMEN    │ Halte dich kurz und klar (in der Regel unter 120 Wörtern). Schreibe in einfachen, klaren Absätzen.
+    121 │ PRONOMEN    │ WICHTIG — Formatierung: Verwende KEINE Markdown-Zeichen. Keine Sternchen für Fettschrift (** oder *), keine Ra
+    123 │ PRONOMEN    │ Nenne dich immer "ARGONAUT-Assistent" und niemals einen anderen Namen.
+
+### app/api/ki-auge/route.ts   [SONSTIGES]
+     68 │ PRONOMEN    │ "Du bist das wachende Auge von ARGONAUT OS, dem KI-Betriebssystem für",
+     78 │ PRONOMEN    │ "- Sprich den Unternehmer direkt an ('du'), sachlich, ohne Floskeln.",
+     80 │ PRONOMEN    │ "- Nenne dich niemals anders als 'ARGONAUT' oder 'die KI'.",
+
+### app/api/ki-klartext/route.ts   [SONSTIGES]
+     35 │ PRONOMEN    │ `Du bist der ARGONAUT KI-Assistent im Dashboard des Betriebsinhabers. Deine Aufgabe: eine kurze Lage aus seine
+     46 │ PRONOMEN    │ - Nenne dich immer ARGONAUT und niemals einen anderen Namen.`;
+
+### app/api/korrespondenz-ki/route.ts   [SONSTIGES]
+     71 │ PRONOMEN    │ - WICHTIG: Nenne dich im Text niemals "Claude" oder "KI" — der Brief kommt vom Unternehmen selbst.
+
+### app/api/leads/angebot/route.ts   [SONSTIGES]
+     22 │ PRONOMEN    │ "Du bist der Vertriebs-Assistent von ARGONAUT OS und formulierst professionelle, freundliche Angebotsentwuerfe
+     23 │ PRONOMEN    │ "Du erstellst einen klar strukturierten Angebotsentwurf auf Basis der Anfrage-Daten des Interessenten und - fa
+
+### app/api/mahnung-ki/route.ts   [SONSTIGES]
+    131 │ PRONOMEN    │ - WICHTIG: Nenne dich im Text niemals "Claude" oder "KI" – das Schreiben kommt vom Unternehmen selbst.
+
+### app/api/marketing/ads-kampagnen/route.ts   [SONSTIGES]
+     73 │ IMPERATIV?  │ if (!pruef.ok) return NextResponse.json({ ok: false, error: pruef.fehler.join(' ') }, { status: 400 });
+
+### app/api/marketing/social-beitraege/route.ts   [SONSTIGES]
+     66 │ IMPERATIV?  │ if (!pruef.ok) return NextResponse.json({ ok: false, error: pruef.fehler.join(' ') }, { status: 400 });
+
+### app/api/marketing/whatsapp-vorlagen/route.ts   [SONSTIGES]
+     58 │ IMPERATIV?  │ if (!pruef.ok) return NextResponse.json({ ok: false, error: pruef.fehler.join(' ') }, { status: 400 });
+
+### app/api/marketing-content/route.ts   [SONSTIGES]
+    100 │ PRONOMEN    │ "Du bist ein erfahrener deutscher Marketing-Texter. Du schreibst ueberzeugende, professionelle Werbetexte " +
+    101 │ PRONOMEN    │ "im Markenton des Unternehmens. Konkrete Fakten, Leistungen, Preise und Tonalitaet entnimmst du AUSSCHLIESSLIC
+
+### app/api/marketing-stratege/route.ts   [SONSTIGES]
+     90 │ PRONOMEN    │ "Du bist ein erfahrener deutscher Marketing-Stratege. Du entwirfst vollstaendige, umsetzbare Kampagnenplaene f
+     91 │ PRONOMEN    │ "kleine und mittlere Unternehmen. Konkrete Fakten, Leistungen, Preise und Tonalitaet entnimmst du AUSSCHLIESSL
+
+### app/api/mitarbeiter-chat/route.ts   [SONSTIGES]
+     25 │ PRONOMEN    │ "Du bist der kompetente Mitarbeiter-Assistent von ARGONAUT OS. Du hilfst dem Mitarbeiter, Informationen aus de
+     26 │ PRONOMEN    │ "Bei Faktenfragen antwortest du nur auf Basis der bereitgestellten Dokument-Auszuege und erfindest nichts. Wen
+     27 │ PRONOMEN    │ "Du kannst ausserdem Geschaeftsdokumente erstellen. Wenn der Mitarbeiter dich bittet, ein Dokument zu erstelle
+
+### app/api/newsletter/abmelden/route.ts   [SONSTIGES]
+     59 │ PRONOMEN    │ return seite('Newsletter', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht bist du ber
+     81 │ PRONOMEN    │ `Du wurdest vom Newsletter von ${firma} abgemeldet und erhältst keine weiteren E-Mails mehr. Du kannst dieses 
+
+### app/api/projekt-ki-setup/route.ts   [SONSTIGES]
+     15 │ PRONOMEN    │ Aus einer kurzen Projektbeschreibung des Unternehmers erstellst du einen sinnvollen, praxisnahen Projektplan.
+
+### app/api/projekt-statusbericht/route.ts   [SONSTIGES]
+     12 │ PRONOMEN    │ Du erhältst strukturierte Projektdaten (Eckdaten, Aufgaben nach Status, Auslastung). Daraus schreibst du einen
+
+### app/api/team-chat-ki/route.ts   [SONSTIGES]
+     38 │ PRONOMEN    │ 'Du bist ARGONAUT, der eingebaute KI-Assistent im Team-Chat eines Unternehmens. ' +
+     40 │ PRONOMEN    │ 'Du bist Teil des Teams und sprichst kollegial und freundlich. ' +
+     41 │ PRONOMEN    │ 'Nenne dich ausschließlich ARGONAUT. Erwähne niemals, dass du auf einem Modell ' +
+     43 │ PRONOMEN    │ 'anderer KI-Anbieter. Wenn dir Informationen fehlen, sage das ehrlich, statt zu raten.';
+     47 │ PRONOMEN    │ 'Frage an dich (ARGONAUT):\n' + echteFrage;
+
+### app/api/ticket-antwort/route.ts   [SONSTIGES]
+     82 │ PRONOMEN    │ - ${istReklamation ? "Zeige echtes Verständnis für die Reklamation, entschuldige dich angemessen für die Unann
+     87 │ PRONOMEN    │ - WICHTIG: Nenne dich im Text niemals "Claude" oder "KI" — der Brief kommt vom Unternehmen selbst.
+
+### app/auth/passwort-neu/page.tsx   [SONSTIGES]
+     88 │ PRONOMEN    │ Du wirst angemeldet und weitergeleitet …
+
+### app/bewerten/[token]/page.tsx   [SONSTIGES]
+     80 │ PRONOMEN    │ <p style={styles.sub}>{fertig ? 'Deine Bewertung ist angekommen.' : 'Für diesen Link wurde bereits eine Bewert
+     84 │ PRONOMEN    │ <h1 style={styles.h1}>Wie zufrieden warst du{betrieb ? <> mit <span style={{ color: C.gold }}>{betrieb}</span>
+     85 │ PRONOMEN    │ {kunde && <p style={styles.sub}>Hallo {kunde}, deine Meinung hilft uns sehr.</p>}
+     94 │ PRONOMEN    │ <textarea style={styles.input} value={text} onChange={(e) => setText(e.target.value)} placeholder="Magst du ku
+
+### app/components/WebsiteChat.tsx   [SONSTIGES]
+     14 │ PRONOMEN    │ Du bist kein Chatbot. Du bist ein erfahrener Unternehmensberater der zuhört, versteht und dann die perfekte Lö
+     17 │ PRONOMEN    │ SCHRITT 1 — VERSTEHEN: Frage nach Branche UND Mitarbeiterzahl bevor du etwas empfiehlst.
+     70 │ PRONOMEN    │ - Du heißt ARGO`
+
+### app/dashboard/crm/dubletten/page.tsx   [CHEF]
+    264 │ IMPERATIV?  │ <button onClick={() => oeffne(p)} disabled={laeuft} style={styles.goldBtn}>Prüfen →</button>
+
+### app/dashboard/einstellungen/ApiSchluesselKarte.tsx   [CHEF]
+    136 │ IMPERATIV?  │ body: JSON.stringify({ holzart: 'buche', scheitlaenge_cm: 33, trocknungsgrad: 'lufttrocken', menge: 8, einheit
+
+### app/dashboard/einstellungen/PruefAuge.tsx   [CHEF]
+    100 │ IMPERATIV?  │ className={'pruef-auge-btn' + (offen ? '' : ' pruef-auge-puls')}
+
+### app/dashboard/finanzen/cashflow/page.tsx   [CHEF]
+    167 │ IMPERATIV?  │ Hinweis: {eur(v.offeneOhneTermin)} an offenen Rechnungen haben <b>kein Fälligkeitsdatum</b> und sind hier bewu
+
+### app/dashboard/finanzen/kennzahlen/page.tsx   [CHEF]
+    282 │ IMPERATIV?  │ {faelligAnzahl === 1 ? " ist" : "e sind"} zur Prüfung fällig – schau bei den markierten
+
+### app/dashboard/holz/auftraege/page.tsx   [CHEF]
+    652 │ IMPERATIV?  │ <button key={a.id} onClick={() => oeffne(a)} style={styles.listItem}>
+
+### app/dashboard/holz/pakete/page.tsx   [CHEF]
+    336 │ IMPERATIV?  │ <button key={p.id} onClick={() => oeffne(p)} style={{ ...styles.listItem, opacity: p.aktiv ? 1 : 0.55 }}>
+
+### app/dashboard/schichtplan/page.tsx   [MITARBEITER]
+    187 │ IMPERATIV?  │ const [rolle, setRolle] = useState<'pruefe' | 'chef' | 'mitarbeiter'>('pruefe');
+
+### app/dashboard/_components/holzLogik.ts   [CHEF]
+     87 │ IMPERATIV?  │ | 'buche'
+    105 │ IMPERATIV?  │ { schluessel: 'buche', name: 'Buche', gruppe: 'hart' },
+    118 │ IMPERATIV?  │ export const STANDARD_HOLZART: HolzartSchluessel = 'buche';
+
+### app/dashboard/_components/KiAuge.tsx   [CHEF]
+    125 │ IMPERATIV?  │ {/* Dezent pulsierende Cyan-Umrandung als "klick mich"-Signal.
+
+### app/webseiten-editor/page.tsx   [SONSTIGES]
+    411 │ PRONOMEN    │ <p style={styles.spalteHinweis}>Klicke einen Baustein auf der Seite an — der passende springt hier hoch. Übers
+
+### app/whatsapp-anmelden/[slug]/page.tsx   [SONSTIGES]
+     59 │ PRONOMEN    │ if (!einwilligung) { setFehler('Bitte bestätige die Einwilligung, damit wir dir schreiben dürfen.'); return; }
+    101 │ PRONOMEN    │ <h1 style={S.h1}>{fertig === 'bereits' ? 'Du bist schon dabei' : 'Angemeldet!'}</h1>
+    104 │ PRONOMEN    │ ? `Deine Nummer ist bereits bei ${betrieb} eingetragen. Es ist nichts weiter zu tun.`
+    105 │ PRONOMEN    │ : `Danke! Deine Nummer ist bei ${betrieb} eingetragen. Du kannst dich jederzeit wieder abmelden.`}
+
+### lib/auge.ts   [SONSTIGES]
+    423 │ IMPERATIV?  │ return { klartext: 'Aktuell ist nichts verliehen — leg Mietgegenstände an und erfasse die erste Ausleihe.', pu
+   1056 │ IMPERATIV?  │ return { klartext: 'Noch keine Provisionen erfasst — trag bei einem gewonnenen Deal einen Satz ein.', punkte: 
+
+### lib/contentFliessband.ts   [SONSTIGES]
+    116 │ PRONOMEN    │ 'Du bist ein erfahrener Marketing-Texter für einen deutschen Mittelstandsbetrieb.',
+    117 │ PRONOMEN    │ 'Aus EINEM Thema/Anlass erstellst du fertige, veröffentlichungsreife Beiträge — je Kanal genau im geforderten 
+    120 │ PRONOMEN    │ 'Für jeden Kanal gibst du zusätzlich ein Bildmotiv an (Feld "bild"): 2–4 Wörter, die eine passende, lizenzfrei
+    292 │ PRONOMEN    │ 'Du bist ein erfahrener Marketing-Texter für einen deutschen Mittelstandsbetrieb.',
+    293 │ PRONOMEN    │ 'Du lieferst zu EINEM Thema VIELE eigenständige Beitrags-Varianten für EINEN Kanal — jede mit einem anderen Au
+
+### lib/erechnung-validator.ts   [SONSTIGES]
+     82 │ PRONOMEN    │ if (leer(seller.name)) add('BR-06', 'fehler', 'Verkäufer-Name (dein Firmenname) fehlt.');
+
+### lib/ertraege.ts   [SONSTIGES]
+     22 │ IMPERATIV?  │ { key: 'speicher',    label: 'Batteriespeicher', einheit: 'kWh' },
+
+### lib/inhaltPrompt.ts   [SONSTIGES]
+     90 │ PRONOMEN    │ export const SYSTEM_PROMPT = `Du schreibst Kapitel für die Handbücher von ARGONAUT OS, einem KI-Betriebssystem
+     95 │ PRONOMEN    │ WIE DU SCHREIBST
+    198 │ PRONOMEN    │ { suche: /\b(du|dich|dir|dein|deine|deinen|deiner|deinem|deines)\b/i, meldung: 'Duz-Form — Kundentexte siezen'
+
+### lib/ki.ts   [SONSTIGES]
+    465 │ PRONOMEN    │ JSON.stringify({ error: 'Das KI-Kontingent der Demo ist für heute aufgebraucht. In 24 Stunden geht es weiter —
+
+### lib/marketingAutopilot.ts   [SONSTIGES]
+     82 │ PRONOMEN    │ grund: `Du hast ${kanaele.newsletterAbos} Abonnenten, aber noch keinen Versand — eine ungenutzte Chance auf di
+     91 │ PRONOMEN    │ grund: 'Dein Social-Kanal ist verbunden, aber es ist kein Beitrag geplant. Regelmäßige Posts halten dich sicht
+     99 │ PRONOMEN    │ if (kanaele.newsletterAbos <= 0) v.push({ prioritaet: 3, kategorie: 'Kanäle', titel: 'Newsletter aufbauen', gr
+
+### lib/marketingLagebericht.ts   [SONSTIGES]
+     47 │ PRONOMEN    │ text: `Jeder investierte Euro bringt aktuell ${roas} € Umsatz zurück (${eur(ads.ausgaben)} Ausgaben → ${eur(ad
+     86 │ PRONOMEN    │ text: `Alle Anfragen kommen aktuell über „${kanaele2[0].quelle}". Ein zweiter Kanal (Newsletter, Social, Empfe
+     98 │ PRONOMEN    │ text: `Du nutzt erst ${genutzt} von 4 Marketing-Kanälen. Noch ungenutzt: ${fehlen.join(', ')}. Ein weiterer Ka
+    106 │ PRONOMEN    │ text: `${ohne} von ${leads.gesamt} Leads sind keiner Kampagne zugeordnet — du siehst dadurch nicht, was sie au
+    128 │ PRONOMEN    │ text: `Ein Newsletter ist der einzige Kanal, der dir gehört (keine Plattform dazwischen). Ein Anmeldefeld auf 
+
+### lib/seoCheck.ts   [SONSTIGES]
+    145 │ PRONOMEN    │ tipp: 'Setz oben einen Titelbereich mit einer klaren Hauptüberschrift, die dein Angebot benennt.',
+    194 │ PRONOMEN    │ tipp: 'Vollständige Adresse (Straße, PLZ, Ort) hilft bei „…in deiner Stadt"-Suchen und im Google-Unternehmensp
+
+### lib/setter.ts   [SONSTIGES]
+    324 │ PRONOMEN    │ teile.push(`Du führst für ${firma} ein kurzes Gespräch mit einem Interessenten. Dein Ziel: ${ZIEL_TEXT[einst?.
+    328 │ PRONOMEN    │ teile.push(`\nDiese Angaben brauchst du:\n${fragenListe}`);
+    339 │ PRONOMEN    │ teile.push('\nAlle Angaben liegen vor. Fasse kurz zusammen, was du verstanden hast, und schließe das Gespräch 
+    343 │ PRONOMEN    │ '\nSo sprichst du:'
+    346 │ PRONOMEN    │ + '\n- Was der Besucher schon gesagt hat, fragst du nicht noch einmal.',
+    352 │ PRONOMEN    │ + '\n1. Du nennst NUR Preise, die oben ausdrücklich aufgeführt sind. Gibt es keinen, sagst du das offen und st
+    353 │ PRONOMEN    │ + '\n2. Du bist eine KI-Assistenz und sagst das ehrlich, wenn jemand danach fragt. Du behauptest NIE, ein Mens
+    357 │ PRONOMEN    │ '\nZum Schluss deiner Antwort hängst du unsichtbar an, was du neu erfahren hast:'
+    359 │ PRONOMEN    │ + '\nNur neue oder korrigierte Angaben, mit den Schlüsseln von oben. Nichts erfahren? Dann lässt du die Markie
+
+### lib/vertrieb-prompts.ts   [SONSTIGES]
+     18 │ PRONOMEN    │ export const INTENT_PROMPT = `Du bist ein praeziser Intent-Klassifikator fuer eingehende Kundennachrichten ein
+     41 │ PRONOMEN    │ export const QUALIFIZIERUNG_PROMPT = `Du bist ein erfahrener Vertriebsmitarbeiter und qualifizierst eingehende
+     71 │ PRONOMEN    │ export const ANGEBOT_PROMPT = `Du bist ein Vertriebsprofi und erstellst ein professionelles, kundenfertiges An
+     73 │ PRONOMEN    │ Du erhaeltst:
+    101 │ PRONOMEN    │ export const FRONTDESK_PROMPT = `Du bist der erste Ansprechpartner (Frontdesk) eines Handwerks-/Dienstleistung
+
+### lib/videoSkript.ts   [SONSTIGES]
+    188 │ PRONOMEN    │ 'Du bist ein erfahrener Kurzvideo-Autor (Reels, TikTok, Shorts) für einen deutschen Mittelstandsbetrieb.',
+    189 │ PRONOMEN    │ 'Aus EINEM Thema/Anlass erstellst du je Kanal ein drehreifes, veröffentlichungsfertiges Kurzvideo-Skript — gen
+    394 │ PRONOMEN    │ 'Du bist ein erfahrener Kurzvideo-Autor (Reels, TikTok, Shorts) für einen deutschen Mittelstandsbetrieb.',
+    395 │ PRONOMEN    │ 'Du lieferst zu EINEM Thema VIELE eigenständige Varianten desselben Kurzvideos für EINEN Kanal — jede mit eine
+    397 │ PRONOMEN    │ 'WICHTIG: Das Skript jeder Variante muss beim Vorlesen die geforderte Dauer treffen — halte dich eng an das vo
+
+### lib/vorfuehrungInhalt.ts   [SONSTIGES]
+     47 │ PRONOMEN    │ 'Leistungskatalog mit deinen Preisen: Angebot in Minuten statt an einem Abend',
+     48 │ PRONOMEN    │ 'Objektzeiten je Baustelle — du siehst sofort, wo Stunden verbrennen',
+    117 │ PRONOMEN    │ 'Der Wareneinsatz im Restaurant ist auf 32 % gestiegen, üblich sind bei dir 28 %.',
+    146 │ PRONOMEN    │ 'Filiale Bahnhof macht 31 % des Umsatzes bei 18 % der Personalkosten — deine stärkste.',
+    147 │ PRONOMEN    │ 'Filiale Weststadt hat 14 % Retourenquote, im Schnitt liegst du bei 6 %.',
+    162 │ PRONOMEN    │ 'Zwei Sendungen darauf liegen unter deiner Deckungsbeitragsgrenze.',
+
+### lib/webBloecke.ts   [SONSTIGES]
+    400 │ PRONOMEN    │ ? '<div>' + esc(adr) + '</div><a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=' + encA
+    422 │ PRONOMEN    │ ? '<div class="ao-buchung-hinweis ao-leer">Terminarten &amp; Zeiten richtest du im Buchungs-Modul ein. Der Kno
+
+### components/UpgradePopup.tsx   [SONSTIGES]
+     54 │ PRONOMEN    │ <p style={p}>Dein SOLO Beta-Zugang endet in wenigen Wochen. Wechsle jetzt zu einem ARGONAUT OS Paket ohne Unte
+
+----------------------------------------------------------------------------
+ANREDEFREI — Mitarbeiterbereich, jede Stelle einzeln
+----------------------------------------------------------------------------
+
+### app/dashboard/mein-bereich/MeineUnterschrift.tsx
+    132 │ if (typeof window !== 'undefined' && !window.confirm('Deine gespeicherte Unterschrift wirklich entfernen?')) r
+    156 │ Deine persönliche Unterschrift — nur du siehst und nutzt sie. Sie kann auf deine Dokumente gesetzt werden (z. 
+
+### app/dashboard/mein-bereich/page.tsx
+    278 │ setUVon(''); setUBis(''); setMsg('Urlaubsantrag eingereicht — dein Vorgesetzter prüft ihn.');
+    337 │ setMsg('Antrag gesendet — dein Vorgesetzter wird benachrichtigt.');
+    368 │ : 'Einwand gemeldet — dein Vorgesetzter wird informiert.');
+    401 │ <div>Dieser Zugang ist noch keinem Mitarbeiter-Profil zugeordnet. Bitte wende dich an deinen Vorgesetzten.</di
+    454 │ <div style={styles.listHint}>Aktuell sind keine kommenden Schichten für dich eingeplant.</div>
+    473 │ {istBestaetigt ? '✓ Du hast diesen Plan bestätigt.'
+    474 │ : istEinwand ? '⚠ Du hast einen Einwand gemeldet.'
+    475 │ : 'Bitte sieh dir deinen Plan an und bestätige ihn.'}
+    478 │ <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 4 }}>Dein Einwand: {bestaeti
+
+### app/dashboard/meine-einsaetze/page.tsx
+    855 │ <h2 style={styles.modalTitel}>🗺 Deine Tour</h2>
+
+### app/dashboard/schichtplan/page.tsx
+    900 │ {rolle === 'mitarbeiter' ? 'Weiterleitung zu deinem Bereich …' : 'Wird geladen …'}
+    994 │ Du kannst sie vorher per Ziehen anpassen. Freigeben macht sie zu festen Schichten.
+   1478 │ Du hast noch keine Schichtarten angelegt. Lege zuerst unter „Schichtarten verwalten"
+   1612 │ Lege deine wiederkehrenden Schichten einmalig an &ndash; danach beim Planen mit einem Klick &uuml;bernehmen.
