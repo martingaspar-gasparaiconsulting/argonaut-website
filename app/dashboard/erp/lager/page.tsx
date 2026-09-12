@@ -238,7 +238,7 @@ export default function LagerJeFilialePage() {
       {tab === 'bewegungen' && (
         <div style={{ ...styles.card, padding: 0, overflowX: 'auto' }}>
           {loading && <div style={styles.stateBox}>Lädt …</div>}
-          {!loading && bewegungen.length === 0 && <div style={styles.stateBox}>Noch keine Zu-/Abgänge erfasst. Über „＋ Zu-/Abgang" buchst du Wareneingang, Warenausgang oder eine Korrektur je Filiale.</div>}
+          {!loading && bewegungen.length === 0 && <div style={styles.stateBox}>Noch keine Zu-/Abgänge erfasst. Über „＋ Zu-/Abgang" buchen Sie Wareneingang, Warenausgang oder eine Korrektur je Filiale.</div>}
           {!loading && bewegungen.length > 0 && (
             <table style={styles.table}>
               <thead><tr><th style={{ ...styles.th, textAlign: 'left' }}>Datum</th><th style={{ ...styles.th, textAlign: 'left' }}>Artikel</th><th style={{ ...styles.th, textAlign: 'left' }}>Filiale</th><th style={{ ...styles.th, textAlign: 'left' }}>Typ</th><th style={styles.th}>Menge</th><th style={{ ...styles.th, textAlign: 'left' }}>Grund</th></tr></thead>

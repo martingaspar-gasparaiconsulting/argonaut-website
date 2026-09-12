@@ -470,7 +470,7 @@ export default function PreislisteCockpit() {
             🏷️ Preisliste
           </h1>
           <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-            Deine lebende Preistabelle – Einkauf, Verkauf und Marge auf einen Blick.
+            Ihre lebende Preistabelle – Einkauf, Verkauf und Marge auf einen Blick.
             Preise direkt in der Zelle anklicken und ändern.
           </p>
         </div>

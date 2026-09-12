@@ -286,9 +286,9 @@ export default function LieferantenImport() {
         🪄 KI-Import · Lieferanten
       </h1>
       <p style={{ margin: "0 0 20px", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 760 }}>
-        Füg einfach ein, was du hast – eine Lieferantenliste aus Excel, einer PDF,
+        Fügen Sie einfach ein, was Sie haben – eine Lieferantenliste aus Excel, einer PDF,
         Word oder abgetippte Visitenkarten. Die KI erkennt Firma, Ansprechpartner
-        und Kontaktdaten und zeigt dir vor dem Speichern eine Vorschau.
+        und Kontaktdaten und zeigt Ihnen vor dem Speichern eine Vorschau.
       </p>
 
       {ergebnis && (
@@ -344,7 +344,7 @@ export default function LieferantenImport() {
               marginBottom: 8,
             }}
           >
-            Deine Lieferantenliste hier einfügen
+            Ihre Lieferantenliste hier einfügen
           </label>
           <textarea
             value={rohtext}

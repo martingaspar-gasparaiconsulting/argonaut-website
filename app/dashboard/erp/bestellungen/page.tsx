@@ -595,7 +595,7 @@ export default function BestellungenListe() {
         ) : gefiltert.length === 0 ? (
           <div style={{ padding: 30, color: C.textDim }}>
             {bestellungen.length === 0
-              ? "Noch keine Bestellungen. Lege oben rechts deine erste Bestellung an."
+              ? "Noch keine Bestellungen. Legen Sie oben rechts Ihre erste Bestellung an."
               : "Keine Bestellungen für diese Filter gefunden."}
           </div>
         ) : (
@@ -682,7 +682,7 @@ export default function BestellungenListe() {
               </select>
               {lieferanten.length === 0 && (
                 <div style={{ marginTop: 6, fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.warn }}>
-                  Noch keine Lieferanten angelegt — du kannst später einen
+                  Noch keine Lieferanten angelegt — Sie können später einen
                   zuordnen.
                 </div>
               )}
@@ -781,7 +781,7 @@ export default function BestellungenListe() {
 
             {kiLaden ? (
               <div style={{ padding: "20px 0", color: C.textDim }}>
-                Die ARGONAUT-KI analysiert deine Bestände…
+                Die ARGONAUT-KI analysiert Ihre Bestände…
               </div>
             ) : kiGruppen.length === 0 ? (
               <div style={{ padding: "20px 0", color: C.textDim }}>

@@ -941,7 +941,7 @@ function EoqKarte({
     <div style={card}>
       <h3 style={{ margin: "0 0 4px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>📦 Optimale Bestellmenge</h3>
       <p style={{ margin: "0 0 14px", color: CE.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', lineHeight: 1.5 }}>
-        Wie viel du pro Bestellung ordern solltest, damit Bestell- und Lagerkosten
+        Wie viel Sie pro Bestellung ordern sollten, damit Bestell- und Lagerkosten
         zusammen am geringsten sind (Andler-Formel).
       </p>
 

@@ -497,7 +497,7 @@ export default function FuhrparkCockpit() {
         ) : gefiltert.length === 0 ? (
           <div style={{ padding: 30, color: C.textDim }}>
             {fahrzeuge.length === 0
-              ? "Noch keine Fahrzeuge angelegt. Lege oben rechts dein erstes Fahrzeug an."
+              ? "Noch keine Fahrzeuge angelegt. Legen Sie oben rechts Ihr erstes Fahrzeug an."
               : "Keine Fahrzeuge für diese Filter gefunden."}
           </div>
         ) : (

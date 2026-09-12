@@ -489,7 +489,7 @@ export default function InventarCockpit() {
         ) : gefiltert.length === 0 ? (
           <div style={{ padding: 30, color: C.textDim }}>
             {inventar.length === 0
-              ? "Noch keine Betriebsmittel angelegt. Lege oben rechts dein erstes an."
+              ? "Noch keine Betriebsmittel angelegt. Legen Sie oben rechts Ihr erstes an."
               : "Keine Betriebsmittel für diese Filter gefunden."}
           </div>
         ) : (

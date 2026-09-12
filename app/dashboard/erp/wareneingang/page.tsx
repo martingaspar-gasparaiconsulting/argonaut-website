@@ -93,7 +93,7 @@ export default function WareneingangListe() {
           📥 Wareneingang
         </h1>
         <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-          Alle erfassten Lieferungen. Neue Eingänge buchst du direkt in der
+          Alle erfassten Lieferungen. Neue Eingänge buchen Sie direkt in der
           jeweiligen Bestellung.
         </p>
       </div>

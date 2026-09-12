@@ -541,7 +541,7 @@ export default function LagerCockpit() {
             <Leerzustand
               icon="📦"
               titel="Noch keine Artikel"
-              text="Lege dein Sortiment an — mit Preisen, Beständen und Mindestbestand. ARGONAUT warnt automatisch bei knapper Ware."
+              text="Legen Sie Ihr Sortiment an — mit Preisen, Beständen und Mindestbestand. ARGONAUT warnt automatisch bei knapper Ware."
               schritte={["Artikel mit Preis und Bestand anlegen", "Mindestbestand setzen", "Bestand wächst aus Wareneingang / Kasse mit"]}
             />
           ) : (

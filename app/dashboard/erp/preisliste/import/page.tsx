@@ -327,9 +327,9 @@ export default function PreisImport() {
         🪄 KI-Import
       </h1>
       <p style={{ margin: "0 0 20px", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', maxWidth: 760 }}>
-        Füg einfach ein, was du hast – aus Excel, einer PDF, Word oder von einem
+        Fügen Sie einfach ein, was Sie haben – aus Excel, einer PDF, Word oder von einem
         Zettel abgetippt. Die KI erkennt die Artikel, räumt Preise und Einheiten
-        auf und zeigt dir vor dem Speichern eine Vorschau. Du bestätigst, was
+        auf und zeigt Ihnen vor dem Speichern eine Vorschau. Sie bestätigen, was
         übernommen wird.
       </p>
 
@@ -388,7 +388,7 @@ export default function PreisImport() {
               marginBottom: 8,
             }}
           >
-            Deine Liste hier einfügen
+            Ihre Liste hier einfügen
           </label>
           <textarea
             value={rohtext}

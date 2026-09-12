@@ -807,7 +807,7 @@ export default function InventurSeite() {
             <strong style={{ color: C.text }}>GoBD-Protokoll:</strong> Jede Bestandskorrektur wird hier
             unveränderbar festgehalten (wer, wann, welcher Artikel, von Soll auf Ist). Die Einträge lassen sich
             nicht ändern oder löschen — genau das verlangt die GoBD. Für die Ablage oder eine Betriebsprüfung
-            kannst du das Protokoll als PDF herunterladen.
+            können Sie das Protokoll als PDF herunterladen.
           </div>
 
           {/* Protokoll-Tabelle */}
@@ -824,7 +824,7 @@ export default function InventurSeite() {
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              Noch keine Bestandskorrekturen im gewählten Zeitraum. Sobald du im Reiter „Zählung" eine
+              Noch keine Bestandskorrekturen im gewählten Zeitraum. Sobald Sie im Reiter „Zählung" eine
               Korrektur durchführst, erscheint sie hier im Protokoll.
             </div>
           ) : (

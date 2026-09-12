@@ -80,7 +80,7 @@ export default function ErpLayout({
             maxWidth: 720,
           }}
         >
-          Lager, Einkauf, Inventar &amp; Fuhrpark — deine komplette Warenwirtschaft
+          Lager, Einkauf, Inventar &amp; Fuhrpark — Ihre komplette Warenwirtschaft
           an einem Ort. Bestände im Blick, Nachschub per Klick, Prüf- und
           TÜV-Fristen automatisch im Auge.
         </p>

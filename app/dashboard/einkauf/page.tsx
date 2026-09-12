@@ -358,7 +358,7 @@ export default function EinkaufPage() {
                 <Leerzustand
                   icon="🛒"
                   titel="Noch keine Bestellungen"
-                  text="Erfasse deine Einkäufe bei Lieferanten — so behältst du Kosten und offene Lieferungen im Blick."
+                  text="Erfassen Sie Ihre Einkäufe bei Lieferanten — so behalten Sie Kosten und offene Lieferungen im Blick."
                   schritte={["Lieferant anlegen", "Bestellung mit Positionen erfassen", "Wareneingang buchen — Bestand wächst automatisch"]}
                 />
               ) : (

@@ -183,7 +183,7 @@ export default function NachbestellungPage() {
     if (g.zeilen.length === 0) return;
     const ok = window.confirm(
       `${g.zeilen.length} Position(en) als Entwurf-Bestellung bei "${g.name}" anlegen?\n\n` +
-        `Du kannst die Bestellung danach prüfen und selbst absenden.`,
+        `Sie können die Bestellung danach prüfen und selbst absenden.`,
     );
     if (!ok) return;
 
@@ -451,8 +451,8 @@ export default function NachbestellungPage() {
           <div style={{ ...karte, borderColor: 'rgba(0,229,255,0.25)', color: C.dim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
             <b style={{ color: C.cyan }}>So funktioniert&apos;s:</b> Empfehlung = Auffüllen auf den doppelten
             Meldebestand (Sicherheitspuffer). „Als Bestellung anlegen" erzeugt eine <b>Entwurf</b>-Bestellung mit
-            allen Positionen und öffnet sie — dort prüfst du und schaltest sie auf „bestellt". „Bestell-E-Mail"
-            öffnet nur deine Mail-App mit fertigem Text (kein automatischer Versand). Die optimale
+            allen Positionen und öffnet sie — dort prüfen Sie und schalten sie auf „bestellt". „Bestell-E-Mail"
+            öffnet nur Ihre Mail-App mit fertigem Text (kein automatischer Versand). Die optimale
             Andler-Bestellmenge folgt als spätere Ausbaustufe.
           </div>
         </>
