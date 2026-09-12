@@ -77,12 +77,12 @@ export default function BewertenSeite() {
             <>
               <div style={{ fontSize: 40, marginBottom: 8 }}>🙏</div>
               <h1 style={styles.h1}>Vielen Dank!</h1>
-              <p style={styles.sub}>{fertig ? 'Deine Bewertung ist angekommen.' : 'Für diesen Link wurde bereits eine Bewertung abgegeben.'}</p>
+              <p style={styles.sub}>{fertig ? 'Ihre Bewertung ist angekommen.' : 'Für diesen Link wurde bereits eine Bewertung abgegeben.'}</p>
             </>
           ) : (
             <>
-              <h1 style={styles.h1}>Wie zufrieden warst du{betrieb ? <> mit <span style={{ color: C.gold }}>{betrieb}</span></> : ''}?</h1>
-              {kunde && <p style={styles.sub}>Hallo {kunde}, deine Meinung hilft uns sehr.</p>}
+              <h1 style={styles.h1}>Wie zufrieden waren Sie{betrieb ? <> mit <span style={{ color: C.gold }}>{betrieb}</span></> : ''}?</h1>
+              {kunde && <p style={styles.sub}>Hallo {kunde}, Ihre Meinung hilft uns sehr.</p>}
 
               <div style={styles.sterne}>
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -91,7 +91,7 @@ export default function BewertenSeite() {
                 ))}
               </div>
 
-              <textarea style={styles.input} value={text} onChange={(e) => setText(e.target.value)} placeholder="Magst du kurz sagen, was gut war (oder was wir besser machen können)? – optional" />
+              <textarea style={styles.input} value={text} onChange={(e) => setText(e.target.value)} placeholder="Möchten Sie kurz sagen, was gut war (oder was wir besser machen können)? – optional" />
 
               {fehler && <div style={styles.err}>{fehler}</div>}
 

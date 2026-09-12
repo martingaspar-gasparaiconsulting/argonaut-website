@@ -56,7 +56,7 @@ export default function WhatsappAnmeldenSeite() {
   async function absenden() {
     setFehler(null);
     if (telefon.trim().replace(/[^\d]/g, '').length < 8) { setFehler('Bitte eine gültige Handynummer eingeben.'); return; }
-    if (!einwilligung) { setFehler('Bitte bestätige die Einwilligung, damit wir dir schreiben dürfen.'); return; }
+    if (!einwilligung) { setFehler('Bitte bestätigen Sie die Einwilligung, damit wir Ihnen schreiben dürfen.'); return; }
     setSenden(true);
     try {
       const res = await fetch('/api/oeffentlich/whatsapp-optin', {
@@ -98,11 +98,11 @@ export default function WhatsappAnmeldenSeite() {
         ) : fertig ? (
           <div style={S.card}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>{fertig === 'bereits' ? '👍' : '✅'}</div>
-            <h1 style={S.h1}>{fertig === 'bereits' ? 'Du bist schon dabei' : 'Angemeldet!'}</h1>
+            <h1 style={S.h1}>{fertig === 'bereits' ? 'Sie sind schon dabei' : 'Angemeldet!'}</h1>
             <p style={S.sub}>
               {fertig === 'bereits'
-                ? `Deine Nummer ist bereits bei ${betrieb} eingetragen. Es ist nichts weiter zu tun.`
-                : `Danke! Deine Nummer ist bei ${betrieb} eingetragen. Du kannst dich jederzeit wieder abmelden.`}
+                ? `Ihre Nummer ist bereits bei ${betrieb} eingetragen. Es ist nichts weiter zu tun.`
+                : `Danke! Ihre Nummer ist bei ${betrieb} eingetragen. Sie können sich jederzeit wieder abmelden.`}
             </p>
           </div>
         ) : (
