@@ -118,7 +118,7 @@ export default function TeamChatPage() {
   function fehlerText(meldung: string): string {
     const m = (meldung || '').toLowerCase();
     if (m.includes('row-level security') || m.includes('42501')) {
-      return 'Du bist kein Mitglied dieses Kanals — deshalb hat die Datenbank das Schreiben abgelehnt. Lass dich vom Ersteller des Kanals einladen.';
+      return 'Kein Mitglied dieses Kanals — deshalb hat die Datenbank das Schreiben abgelehnt. Der Ersteller des Kanals kann eine Einladung schicken.';
     }
     if (m.includes('failed to fetch') || m.includes('networkerror')) {
       return 'Keine Verbindung zum Server. Internet pruefen und noch einmal senden.';

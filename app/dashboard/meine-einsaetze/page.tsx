@@ -852,7 +852,7 @@ export default function MeineEinsaetzePage() {
       {tour && (
         <div style={styles.overlay} onClick={() => setTour(null)}>
           <div style={styles.modal} onClick={(ev) => ev.stopPropagation()}>
-            <h2 style={styles.modalTitel}>🗺 Deine Tour</h2>
+            <h2 style={styles.modalTitel}>🗺 Meine Tour</h2>
             <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', margin: '0 0 12px' }}>
               {tour.quelle === 'optimiert' ? 'Reihenfolge nach kürzestem Weg ab Betrieb.' : 'Reihenfolge nach geplanter Uhrzeit.'}
             </p>

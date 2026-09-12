@@ -129,7 +129,7 @@ export default function MeineUnterschrift() {
 
   async function entfernen() {
     if (!uid) return;
-    if (typeof window !== 'undefined' && !window.confirm('Deine gespeicherte Unterschrift wirklich entfernen?')) return;
+    if (typeof window !== 'undefined' && !window.confirm('Gespeicherte Unterschrift wirklich entfernen?')) return;
     setBusy(true); setMsg(null);
     try {
       await supabase.from('benutzer_unterschrift').delete().eq('auth_user_id', uid);
@@ -153,7 +153,7 @@ export default function MeineUnterschrift() {
         <h2 style={{ margin: 0, fontSize: 'clamp(17px, 1.5vw, 22px)', fontWeight: 800, color: C.gold }}>✍️ Meine Unterschrift</h2>
       </div>
       <p style={{ color: C.textDim, margin: '0 0 16px', fontSize: 14 }}>
-        Deine persönliche Unterschrift — nur du siehst und nutzt sie. Sie kann auf deine Dokumente gesetzt werden (z. B. Nachweise, Bestätigungen).
+        Die eigene Unterschrift — nur im eigenen Zugang sichtbar und nutzbar. Sie kann auf die eigenen Dokumente gesetzt werden (z. B. Nachweise, Bestätigungen).
       </p>
 
       {msg && (

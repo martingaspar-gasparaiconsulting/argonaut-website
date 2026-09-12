@@ -275,7 +275,7 @@ export default function MeinBereichPage() {
         von: uVon, bis: uBis, tage: arbeitstage(uVon, uBis, bundesland), status: 'beantragt',
       });
       if (error) throw error;
-      setUVon(''); setUBis(''); setMsg('Urlaubsantrag eingereicht — dein Vorgesetzter prüft ihn.');
+      setUVon(''); setUBis(''); setMsg('Urlaubsantrag eingereicht — der Vorgesetzte prüft ihn.');
       ladeAlles();
     } catch (e: unknown) { setMsg('Antrag fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setUSaving(false); }
   }
@@ -334,7 +334,7 @@ export default function MeinBereichPage() {
       });
       if (error) throw error;
       setAbgabeSchichtId(null); setAbgabeGrund('');
-      setMsg('Antrag gesendet — dein Vorgesetzter wird benachrichtigt.');
+      setMsg('Antrag gesendet — der Vorgesetzte wird benachrichtigt.');
       ladeAlles();
     } catch (e: unknown) { setMsg('Antrag fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); } finally { setAbgabeSaving(false); }
   }
@@ -365,7 +365,7 @@ export default function MeinBereichPage() {
       if (error) throw error;
       setMsg(status === 'bestaetigt'
         ? 'Schichtplan bestätigt. Danke!'
-        : 'Einwand gemeldet — dein Vorgesetzter wird informiert.');
+        : 'Einwand gemeldet — der Vorgesetzte wird informiert.');
       setEinwandModus(false); setEinwandText('');
       ladeAlles();
     } catch (e: unknown) {
@@ -398,7 +398,7 @@ export default function MeinBereichPage() {
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>
             <div style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, color: C.text, marginBottom: 8 }}>Kein Mitarbeiter-Profil verknüpft</div>
-            <div>Dieser Zugang ist noch keinem Mitarbeiter-Profil zugeordnet. Bitte wende dich an deinen Vorgesetzten.</div>
+            <div>Dieser Zugang ist noch keinem Mitarbeiter-Profil zugeordnet. Bitte an den Vorgesetzten wenden.</div>
           </div>
         )}
 
@@ -451,7 +451,7 @@ export default function MeinBereichPage() {
             <section style={{ ...styles.card, marginBottom: 18 }}>
               <h2 style={styles.cardTitle}>Meine Schichten</h2>
               {schichten.length === 0 && (
-                <div style={styles.listHint}>Aktuell sind keine kommenden Schichten für dich eingeplant.</div>
+                <div style={styles.listHint}>Aktuell sind keine kommenden Schichten eingeplant.</div>
               )}
 
               {schichten.length > 0 && (() => {
@@ -470,12 +470,12 @@ export default function MeinBereichPage() {
                           Schichtplan KW {kalenderwoche(montag)} · {wochenRange(montag)}
                         </div>
                         <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 2 }}>
-                          {istBestaetigt ? '✓ Du hast diesen Plan bestätigt.'
-                            : istEinwand ? '⚠ Du hast einen Einwand gemeldet.'
-                            : 'Bitte sieh dir deinen Plan an und bestätige ihn.'}
+                          {istBestaetigt ? '✓ Plan bestätigt.'
+                            : istEinwand ? '⚠ Einwand gemeldet.'
+                            : 'Bitte den Plan ansehen und bestätigen.'}
                         </div>
                         {istEinwand && bestaetigung?.kommentar && (
-                          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 4 }}>Dein Einwand: {bestaetigung.kommentar}</div>
+                          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, marginTop: 4 }}>Einwand: {bestaetigung.kommentar}</div>
                         )}
                       </div>
                       {!istBestaetigt && (

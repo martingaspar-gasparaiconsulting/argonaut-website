@@ -291,7 +291,7 @@ export default function BdePage() {
           <div style={styles.card}>
             <div style={styles.cardTitel}>Neue Buchung (Schicht / Auftrag)</div>
             {maschinen.length === 0 ? (
-              <div style={styles.hint}>Leg zuerst eine Maschine im Reiter „Maschinen" an.</div>
+              <div style={styles.hint}>Legen Sie zuerst eine Maschine im Reiter „Maschinen" an.</div>
             ) : (
               <>
                 <div style={styles.grid}>

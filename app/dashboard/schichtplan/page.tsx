@@ -897,7 +897,7 @@ export default function SchichtplanPage() {
             borderRadius: '50%', animation: 'argoSpin 0.8s linear infinite',
           }} />
           <div style={{ fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-            {rolle === 'mitarbeiter' ? 'Weiterleitung zu deinem Bereich …' : 'Wird geladen …'}
+            {rolle === 'mitarbeiter' ? 'Weiterleitung zum eigenen Bereich …' : 'Wird geladen …'}
           </div>
         </div>
         <style>{`@keyframes argoSpin { to { transform: rotate(360deg); } }`}</style>
@@ -991,7 +991,7 @@ export default function SchichtplanPage() {
               ✨ {vorschlaege.length} Schicht-Vorschläge in dieser Woche
             </div>
             <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim, marginTop: 2 }}>
-              Du kannst sie vorher per Ziehen anpassen. Freigeben macht sie zu festen Schichten.
+              Sie können sie vorher per Ziehen anpassen. Freigeben macht sie zu festen Schichten.
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -1470,12 +1470,12 @@ export default function SchichtplanPage() {
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               Verteilt die gewählte Schichtart auf die geöffneten Wochentage — bis zu den
               Soll-Wochenstunden je Mitarbeiter. Ruhetage, Feiertage, Abwesenheiten und
-              bestehende Schichten werden ausgelassen. Du prüfst alles als Vorschlag, bevor es gilt.
+              bestehende Schichten werden ausgelassen. Sie prüfen alles als Vorschlag, bevor es gilt.
             </p>
 
             {vorlagen.length === 0 ? (
               <div style={{ ...card, borderColor: BRAND.warn, color: BRAND.warn, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-                Du hast noch keine Schichtarten angelegt. Lege zuerst unter „Schichtarten verwalten"
+                Sie haben noch keine Schichtarten angelegt. Legen Sie zuerst unter „Schichtarten verwalten"
                 mindestens eine an (z.B. Frühschicht 06:00–14:00).
               </div>
             ) : (
@@ -1609,7 +1609,7 @@ export default function SchichtplanPage() {
               Schichtarten verwalten
             </h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-              Lege deine wiederkehrenden Schichten einmalig an &ndash; danach beim Planen mit einem Klick &uuml;bernehmen.
+              Legen Sie Ihre wiederkehrenden Schichten einmalig an &ndash; danach beim Planen mit einem Klick &uuml;bernehmen.
             </p>
 
             {/* Bestehende Vorlagen */}
