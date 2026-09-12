@@ -643,7 +643,7 @@ export default function AuftraegePage() {
             {' '}<a href="/dashboard/holz" style={{ color: C.cyan }}>Zum Sortiment →</a>
           </div>
         ) : auftraege.length === 0 ? (
-          <div style={styles.hint}>Noch kein Auftrag. Leg oben rechts den ersten an.</div>
+          <div style={styles.hint}>Noch kein Auftrag. Legen Sie oben rechts den ersten an.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {auftraege.map((a) => {

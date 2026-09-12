@@ -131,7 +131,7 @@ export default function ElsterSeite() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Finanzen · ELSTER</div>
       <h1 style={styles.h1}>🏛 USt-Voranmeldung</h1>
-      <p style={styles.sub}>ARGONAUT stellt deine Umsatzsteuer-Voranmeldung aus den bezahlten Rechnungen und der Vorsteuer zusammen — mit den amtlichen Kennziffern. Als Vorbereitung und Überblick; die verbindliche Anmeldung prüft dein Steuerberater.</p>
+      <p style={styles.sub}>ARGONAUT stellt Ihre Umsatzsteuer-Voranmeldung aus den bezahlten Rechnungen und der Vorsteuer zusammen — mit den amtlichen Kennziffern. Als Vorbereitung und Überblick; die verbindliche Anmeldung prüft Ihr Steuerberater.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
@@ -191,7 +191,7 @@ export default function ElsterSeite() {
             <button style={{ ...styles.ghost, opacity: 0.55, cursor: 'not-allowed' }} disabled title="Wird gerade finalisiert">📤 An ELSTER übermitteln <span style={styles.betaMini}>in Aufbau</span></button>
             <span style={{ color: C.textDim, fontSize: 12.5 }}>PDF/CSV zum fehlerfreien Abtippen in ELSTER-Online.</span>
           </div>
-          <p style={styles.disclaimer}>Automatische Zusammenstellung nach Zufluss (§ 11 EStG — nur bezahlte Rechnungen). Steuersätze je Rechnung anhand des ausgewiesenen USt-Betrags erkannt. Vorbereitung/Überblick — die verbindliche Voranmeldung erstellt bzw. prüft dein Steuerberater.</p>
+          <p style={styles.disclaimer}>Automatische Zusammenstellung nach Zufluss (§ 11 EStG — nur bezahlte Rechnungen). Steuersätze je Rechnung anhand des ausgewiesenen USt-Betrags erkannt. Vorbereitung/Überblick — die verbindliche Voranmeldung erstellt bzw. prüft Ihr Steuerberater.</p>
         </div>
       )}
     </div>

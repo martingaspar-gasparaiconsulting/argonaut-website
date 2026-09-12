@@ -134,7 +134,7 @@ export default function VersandSeite() {
 
   const augeRegel = {
     klartext: kpi.gesamt === 0
-      ? 'Noch keine Sendungen — erfasse dein erstes Paket.'
+      ? 'Noch keine Sendungen — erfassen Sie Ihr erstes Paket.'
       : kpi.unterwegs > 0
         ? `${kpi.unterwegs} Sendung${kpi.unterwegs === 1 ? '' : 'en'} unterwegs · ${kpi.offen} noch zu buchen.`
         : `${kpi.offen} Sendung${kpi.offen === 1 ? '' : 'en'} offen zum Buchen.`,
@@ -210,7 +210,7 @@ export default function VersandSeite() {
       <div style={styles.kopf}>
         <div>
           <h1 style={styles.h1}>📦 Versand</h1>
-          <p style={styles.sub}>Erfasse deine Sendungen, druck ein Adress-Label und behalte den Status im Blick. Die echte Frankierung und automatische Sendungsverfolgung schalten wir über einen Versand-Anbieter frei (nächster Schritt).</p>
+          <p style={styles.sub}>Erfassen Sie Ihre Sendungen, drucken Sie ein Adress-Label und behalten Sie den Status im Blick. Die echte Frankierung und automatische Sendungsverfolgung schalten wir über einen Versand-Anbieter frei (nächster Schritt).</p>
         </div>
         <button style={styles.primaer} onClick={() => { if (!formAuf) setForm({ ...LEER, richtung: tab }); setFormAuf((v) => !v); }}>{formAuf ? 'Abbrechen' : (tab === 'retoure' ? '↩️ Neue Retoure' : '＋ Neue Sendung')}</button>
       </div>
@@ -239,7 +239,7 @@ export default function VersandSeite() {
             </>
           ) : (
             <>
-              <span style={{ color: C.textDim, fontSize: 13.5 }}>📮 Verbinde ein Versand-Konto (shipcloud), um <strong>echte Paketscheine</strong> zu frankieren und Tracking automatisch zu holen.</span>
+              <span style={{ color: C.textDim, fontSize: 13.5 }}>📮 Verbinden Sie ein Versand-Konto (shipcloud), um <strong>echte Paketscheine</strong> zu frankieren und Tracking automatisch zu holen.</span>
               <span style={{ flex: 1 }} />
               <button style={styles.mini} onClick={() => setVerbAuf((v) => !v)}>{verbAuf ? 'Abbrechen' : 'Versand-Konto verbinden'}</button>
             </>
@@ -250,7 +250,7 @@ export default function VersandSeite() {
         <div style={{ ...styles.card, marginBottom: 12 }}>
           {!verb.encKeyBereit && <div style={styles.hinweisWarn}>Hinweis: Der Sicherheits-Schlüssel (APP_ENC_KEY) ist noch nicht gesetzt — das Speichern klappt erst danach.</div>}
           <div style={styles.grid}>
-            <label style={styles.lab}>shipcloud-API-Key<input style={styles.inp} type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Aus deinem shipcloud-Konto" /></label>
+            <label style={styles.lab}>shipcloud-API-Key<input style={styles.inp} type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Aus Ihrem shipcloud-Konto" /></label>
             <label style={styles.lab}>Konto-Name (optional)<input style={styles.inp} value={kontoName} onChange={(e) => setKontoName(e.target.value)} placeholder="z. B. Hauptkonto" /></label>
           </div>
           <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={verbinden}>🔗 Verbinden</button>
@@ -287,7 +287,7 @@ export default function VersandSeite() {
               </select>
             )}
           </div>
-          {form.richtung === 'retoure' && <div style={styles.retoureHinweis}>↩️ Retoure: Das Label wird als <strong>Rücksende-Etikett an dich</strong> gedruckt — trag hier die Adresse des Kunden ein, der zurückschickt.</div>}
+          {form.richtung === 'retoure' && <div style={styles.retoureHinweis}>↩️ Retoure: Das Label wird als <strong>Rücksende-Etikett an Sie</strong> gedruckt — tragen Sie hier die Adresse des Kunden ein, der zurückschickt.</div>}
           <div style={styles.grid}>
             <label style={styles.lab}>Empfänger (Kontakt oder frei)
               <input list="vk" style={styles.inp} value={form.empfaenger_name} onChange={(e) => kontaktWaehlen(e.target.value)} placeholder="Name" />
@@ -330,12 +330,12 @@ export default function VersandSeite() {
       ) : gefiltert.length === 0 ? (
         tab === 'retoure' ? (
           <Leerzustand icon="↩️" titel="Noch keine Retouren"
-            text="Wenn ein Kunde etwas zurückschickt, legst du hier eine Retoure an — ARGONAUT druckt ein Rücksende-Etikett an dich und verfolgt den Status."
+            text="Wenn ein Kunde etwas zurückschickt, legen Sie hier eine Retoure an — ARGONAUT druckt ein Rücksende-Etikett an Sie und verfolgt den Status."
             schritte={['Oben „↩️ Neue Retoure" anlegen', 'Kundenadresse + Grund erfassen', '🖨 Rücksende-Label an den Kunden geben']}
             aktionText="↩️ Neue Retoure" onAktion={() => { setForm({ ...LEER, richtung: 'retoure' }); setFormAuf(true); }} />
         ) : (
           <Leerzustand icon="📦" titel="Noch keine Sendungen"
-            text="Erfasse dein erstes Paket — ARGONAUT druckt dir ein Adress-Label und behält den Versandstatus im Blick."
+            text="Erfassen Sie Ihr erstes Paket — ARGONAUT druckt Ihnen ein Adress-Label und behält den Versandstatus im Blick."
             schritte={['Oben „＋ Neue Sendung" anlegen', 'Empfänger, Gewicht und Dienstleister erfassen', '🖨 Label drucken und Paket auf die Reise schicken']}
             aktionText="＋ Neue Sendung" onAktion={() => { setForm({ ...LEER, richtung: 'ausgehend' }); setFormAuf(true); }} />
         )

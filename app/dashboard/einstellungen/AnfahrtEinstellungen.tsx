@@ -554,7 +554,7 @@ export default function AnfahrtEinstellungen() {
       <h2 style={styles.h2}>Anfahrt & Entfernungen</h2>
       <p style={styles.sub}>
         Damit ARGONAUT die Anfahrt zu jedem Kunden selbst berechnen kann, braucht es zwei Dinge:
-        deinen Betriebsstandort als Startpunkt und einen Schlüssel für den Kartendienst.
+        Ihren Betriebsstandort als Startpunkt und einen Schlüssel für den Kartendienst.
         Beides einmal einrichten — danach läuft es von allein.
       </p>
 
@@ -615,7 +615,7 @@ export default function AnfahrtEinstellungen() {
             {!routeExakt && !hatKoordinaten && (
               <div style={styles.infoBox}>
                 Noch kein Kartendienst hinterlegt — die Adresssuche steht damit nicht zur Verfügung.
-                Setz die Koordinaten so lange <strong>von Hand</strong>. Sobald der Schlüssel eingetragen ist,
+                Setzen Sie die Koordinaten so lange <strong>von Hand</strong>. Sobald der Schlüssel eingetragen ist,
                 findet ARGONAUT die Adresse selbst.
               </div>
             )}
@@ -765,8 +765,8 @@ export default function AnfahrtEinstellungen() {
                   </ol>
                   <span style={{ display: 'block', marginTop: 12, color: C.textDim }}>
                     Der Schlüssel wird <strong>sofort getestet</strong> — ein falscher wird gar nicht erst gespeichert.
-                    ⚠ Nach dem Speichern lässt er sich nicht mehr anzeigen (auch nicht für ARGONAUT). Bewahr ihn dort
-                    auf, wo du ihn erzeugt hast. Verloren? Dann erzeugst du in drei Minuten einen neuen.
+                    ⚠ Nach dem Speichern lässt er sich nicht mehr anzeigen (auch nicht für ARGONAUT). Bewahren Sie ihn dort
+                    auf, wo Sie ihn erzeugt haben. Verloren? Dann erzeugen Sie in drei Minuten einen neuen.
                   </span>
                   {schluessel.vorhanden && (
                     <><br /><br />Der bisherige Schlüssel bleibt aktiv, bis der neue geprüft ist.</>

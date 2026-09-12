@@ -133,7 +133,7 @@ export default function ForstEinsatzmittelPage() {
         <Link href="/dashboard/forst/verkehrssicherung" style={styles.subnavLink}>Verkehrssicherung</Link>
       </div>
       <p style={styles.sub}>
-        Deine Maschinen und Fahrzeuge mit Stundensatz und Wegepauschale — die Preis-Grundlage für Fäll- und Pflegeaufträge.
+        Ihre Maschinen und Fahrzeuge mit Stundensatz und Wegepauschale — die Preis-Grundlage für Fäll- und Pflegeaufträge.
       </p>
 
       {!laden && (
@@ -201,7 +201,7 @@ export default function ForstEinsatzmittelPage() {
               <span style={{ color: m.aktiv ? C.green : C.textDim, flexShrink: 0 }}>{m.aktiv ? 'aktiv' : 'inaktiv'}</span>
             </button>
           ))}
-          {!liste.length && <p style={styles.dim}>Noch keine Einsatzmittel. Leg oben dein erstes an — z. B. Seilwinde, 85 €/Std.</p>}
+          {!liste.length && <p style={styles.dim}>Noch keine Einsatzmittel. Legen Sie oben Ihr erstes an — z. B. Seilwinde, 85 €/Std.</p>}
         </div>
       )}
     </div>

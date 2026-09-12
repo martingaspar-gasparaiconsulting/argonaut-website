@@ -352,7 +352,7 @@ export default function ErnteSeite() {
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><button style={btnGold} onClick={() => openErnte()}>+ Ernte erfassen</button></div>
           {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
-          {ernten.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Ernte erfasst" text="Erfasse Erntemengen je Kultur — Basis für Lager und Direktvermarktung." schritte={["Ernte oben erfassen", "Kultur, Menge und Qualität eintragen", "Bei Bedarf ins Lager buchen"]} /> : (
+          {ernten.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Ernte erfasst" text="Erfassen Sie Erntemengen je Kultur — Basis für Lager und Direktvermarktung." schritte={["Ernte oben erfassen", "Kultur, Menge und Qualität eintragen", "Bei Bedarf ins Lager buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ernten.map((e) => (
                 <div key={e.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -386,7 +386,7 @@ export default function ErnteSeite() {
             <label style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 6 }}>⤓ CSV importieren<input type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={onCsv} /></label>
             <button style={btnGold} onClick={() => openProdukt()}>+ Produkt</button>
           </div>
-          {produkte.length === 0 ? <Leerzustand icon="🥕" titel="Noch keine Produkte im Katalog" text="Lege deine Marktstand-Produkte mit Preis und MwSt an." schritte={["Produkt oben anlegen", "Preis (inkl. MwSt) und Kategorie setzen", "Beim Markttag verkaufen"]} /> : (
+          {produkte.length === 0 ? <Leerzustand icon="🥕" titel="Noch keine Produkte im Katalog" text="Legen Sie Ihre Marktstand-Produkte mit Preis und MwSt an." schritte={["Produkt oben anlegen", "Preis (inkl. MwSt) und Kategorie setzen", "Beim Markttag verkaufen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {produkte.map((p) => (
                 <div key={p.id} style={{ ...card, opacity: p.verfuegbar ? 1 : 0.55, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -415,7 +415,7 @@ export default function ErnteSeite() {
           <div style={{ ...card, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontWeight: 800 }}>💶 Umsatz in die Finanzen buchen</div>
-              <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 3 }}>Überträgt deine Marktverkäufe als Einnahmen in EÜR &amp; Finanz-Cockpit. Mehrfaches Klicken bucht nichts doppelt.</div>
+              <div style={{ color: C.textDim, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 3 }}>Überträgt Ihre Marktverkäufe als Einnahmen in EÜR &amp; Finanz-Cockpit. Mehrfaches Klicken bucht nichts doppelt.</div>
               {finanzMeldung && <div style={{ color: C.cyan, fontSize: "clamp(12px,1.05vw,16px)", marginTop: 6 }}>{finanzMeldung}</div>}
             </div>
             <button style={{ ...btnGold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={bucheInFinanzen}>{busy ? "…" : "In Finanzen buchen"}</button>
@@ -438,7 +438,7 @@ export default function ErnteSeite() {
             {vk.produkt_id && vk.menge && <div style={{ marginTop: 8, color: C.cyan }}>Position: {eur(verkaufsWerte(zahl(vk.menge), zahl(vk.einzelpreis), zahl(vk.mwst_satz)).brutto)} brutto</div>}
           </div>
 
-          {markttage.length === 0 ? <Leerzustand icon="🧺" titel="Noch keine Verkäufe gebucht" text="Buche Marktverkäufe — sie werden zu Markttagen mit Tageserlös gebündelt." schritte={["Produkt und Menge wählen", "Verkauf buchen", "Markttag-Abrechnung als PDF"]} /> : (
+          {markttage.length === 0 ? <Leerzustand icon="🧺" titel="Noch keine Verkäufe gebucht" text="Buchen Sie Marktverkäufe — sie werden zu Markttagen mit Tageserlös gebündelt." schritte={["Produkt und Menge wählen", "Verkauf buchen", "Markttag-Abrechnung als PDF"]} /> : (
             <div style={{ display: "grid", gap: 12 }}>
               {markttage.map((t) => (
                 <div key={`${t.datum}|${t.ort}`} style={card}>

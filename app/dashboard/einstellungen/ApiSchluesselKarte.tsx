@@ -171,9 +171,9 @@ export default function ApiSchluesselKarte() {
     <section style={styles.wrap}>
       <h2 style={styles.h2}>Automatisierung</h2>
       <p style={styles.sub}>
-        Ein API-Schlüssel erlaubt es einer Automatisierung — etwa n8n — im Namen deines Betriebs
+        Ein API-Schlüssel erlaubt es einer Automatisierung — etwa n8n — im Namen Ihres Betriebs
         Preisauskünfte abzurufen. Jeder Betrieb hat seinen eigenen Schlüssel. Er ist die Zuordnung:
-        was mit ihm abgefragt wird, gehört zu dir und zu niemandem sonst.
+        was mit ihm abgefragt wird, gehört zu Ihnen und zu niemandem sonst.
       </p>
 
       <div style={styles.card}>
@@ -215,7 +215,7 @@ export default function ApiSchluesselKarte() {
         ) : liste.length === 0 ? (
           <div style={styles.hint}>
             Noch kein Schlüssel vorhanden. Solange keiner existiert, kann keine Automatisierung
-            auf deinen Betrieb zugreifen.
+            auf Ihren Betrieb zugreifen.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
@@ -262,7 +262,7 @@ export default function ApiSchluesselKarte() {
         <div style={styles.sektion}>
           <div style={{ ...styles.titel, fontSize: 'clamp(13.5px, 1.19vw, 19px)', marginBottom: 4 }}>Verbindung testen</div>
           <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, margin: '0 0 12px', lineHeight: 1.55 }}>
-            Füge einen Schlüssel ein und schick eine Testanfrage — genau so, wie es die Automatisierung
+            Fügen Sie einen Schlüssel ein und schicken Sie eine Testanfrage — genau so, wie es die Automatisierung
             später tut. Der Schlüssel wird nirgends gespeichert.
           </p>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -290,7 +290,7 @@ export default function ApiSchluesselKarte() {
           Die Automatisierung schickt den Schlüssel im Kopf ihrer Anfrage mit:
           <div style={styles.codeBlock}>
             POST /api/preisauskunft<br />
-            Authorization: Bearer <em>dein-schlüssel</em>
+            Authorization: Bearer <em>ihr-schlüssel</em>
           </div>
           <span style={{ color: C.textDim }}>
             Niemals in einer Adresszeile oder in einem öffentlichen Verzeichnis ablegen — dort landet er in Protokollen.

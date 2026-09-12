@@ -295,8 +295,8 @@ export default function PreisauskunftPage() {
         <div>
           <h1 style={styles.h1}>Preisauskunft</h1>
           <p style={styles.sub}>
-            Kunde, Variante, Menge — fertig. Der Text ist so formuliert, dass du ihn
-            unverändert verschicken kannst. Anfahrt und Steuer sind bereits drin.
+            Kunde, Variante, Menge — fertig. Der Text ist so formuliert, dass Sie ihn
+            unverändert verschicken können. Anfahrt und Steuer sind bereits drin.
           </p>
         </div>
         <a href="/dashboard/holz" style={styles.ghostBtn}>← Sortiment</a>

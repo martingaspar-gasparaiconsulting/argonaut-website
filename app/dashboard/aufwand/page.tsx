@@ -118,7 +118,7 @@ export default function AufwandCockpit() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={styles.h1}>⏱ Aufwand-Cockpit</h1>
-          <p style={styles.sub}>Aller abrechenbarer Aufwand an einem Ort — Projekt-Leistungen und Objektzeiten, offen wie abgerechnet. Rechne jeden Posten direkt hier ab, bevor Geld liegen bleibt.</p>
+          <p style={styles.sub}>Aller abrechenbarer Aufwand an einem Ort — Projekt-Leistungen und Objektzeiten, offen wie abgerechnet. Rechnen Sie jeden Posten direkt hier ab, bevor Geld liegen bleibt.</p>
         </div>
         <button onClick={() => void laden_()} style={styles.ghostBtn}>↻ Aktualisieren</button>
       </div>
@@ -153,7 +153,7 @@ export default function AufwandCockpit() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : gruppen.length === 0 ? (
-          <Leerzustand icon="⏱️" titel="Kein abrechenbarer Aufwand" text="Sobald du Zeiten buchst, sammelt sich der offene Aufwand hier zum Abrechnen." schritte={["Zeiten unter Projekt-Abrechnung buchen", "oder unter Objekt-Zeiterfassung", "Offene Aufwände hier abrechnen"]} />
+          <Leerzustand icon="⏱️" titel="Kein abrechenbarer Aufwand" text="Sobald Sie Zeiten buchen, sammelt sich der offene Aufwand hier zum Abrechnen." schritte={["Zeiten unter Projekt-Abrechnung buchen", "oder unter Objekt-Zeiterfassung", "Offene Aufwände hier abrechnen"]} />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

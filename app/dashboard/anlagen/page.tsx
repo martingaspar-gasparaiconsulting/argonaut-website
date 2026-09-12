@@ -240,7 +240,7 @@ export default function AnlagenPage() {
           <Leerzustand
             icon="🏗️"
             titel="Noch keine Anlagegüter"
-            text="Erfasse dein Anlagevermögen (Maschinen, Fahrzeuge, Ausstattung) — ARGONAUT rechnet die AfA automatisch je Jahr."
+            text="Erfassen Sie Ihr Anlagevermögen (Maschinen, Fahrzeuge, Ausstattung) — ARGONAUT rechnet die AfA automatisch je Jahr."
             schritte={["Anlagegut mit Anschaffungswert anlegen", "Nutzungsdauer und Methode wählen", "AfA und Restbuchwert erscheinen automatisch"]}
           />
         ) : (

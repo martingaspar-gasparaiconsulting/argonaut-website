@@ -59,7 +59,7 @@ export default function PasswortAendern() {
     <div style={card}>
       <h2 style={{ fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 900, margin: '0 0 6px' }}>🔑 Passwort ändern</h2>
       <p style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.55)', margin: '0 0 18px', lineHeight: 1.6, maxWidth: 560 }}>
-        Vergib direkt hier ein neues Passwort für deinen Zugang. Du bist eingeloggt – es wird keine E-Mail benötigt.
+        Vergeben Sie direkt hier ein neues Passwort für Ihren Zugang. Sie sind eingeloggt – es wird keine E-Mail benötigt.
       </p>
 
       <div style={{ display: 'grid', gap: 14, maxWidth: 420 }}>

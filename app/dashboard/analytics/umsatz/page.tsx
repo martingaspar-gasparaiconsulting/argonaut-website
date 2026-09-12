@@ -303,7 +303,7 @@ export default function UmsatzReport() {
             }}
           >
             Umsatzentwicklung, Zahlungseingänge und offene Forderungen auf einen
-            Blick — direkt aus deinen Rechnungen.
+            Blick — direkt aus Ihren Rechnungen.
           </p>
         </div>
 

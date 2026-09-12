@@ -84,7 +84,7 @@ export default function ControllingPage() {
           <Feld label="Deckungsbeitrags-Marge %" v={f.dbMarge} on={(v) => set('dbMarge', v)} hint="= 100 % − variable Kostenquote" />
         </div>
         <div style={styles.ergGrid}>
-          <Kennz label="Break-even-Umsatz" wert={eur(be.breakEvenUmsatz)} farbe={C.gold} sub="ab hier verdienst du Geld" />
+          <Kennz label="Break-even-Umsatz" wert={eur(be.breakEvenUmsatz)} farbe={C.gold} sub="ab hier verdienen Sie Geld" />
           <Kennz label="Sicherheitsabstand" wert={proz(be.sicherheitsabstand)} farbe={sicherA.farbe} tag={be.sicherheitsabstand == null ? undefined : sicherA.label} sub={f.umsatz ? `bei ${eur(num(f.umsatz))} Umsatz` : 'Umsatz oben eintragen'} />
         </div>
       </section>

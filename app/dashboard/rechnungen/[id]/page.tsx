@@ -743,7 +743,7 @@ export default function RechnungDetail() {
           <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🧾</div>
           <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>
-            Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
+            Diese Rechnung existiert nicht oder gehört nicht zu Ihrem Konto.
           </p>
           <button onClick={() => router.push("/dashboard/rechnungen")} style={btnGold}>
             Zurück zur Übersicht
@@ -1111,7 +1111,7 @@ export default function RechnungDetail() {
 
           {zeilen.length === 0 ? (
             <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: "16px 0" }}>
-              Noch keine Positionen. {!gesperrt && "Füge oben eine hinzu."}
+              Noch keine Positionen. {!gesperrt && "Fügen Sie oben eine hinzu."}
             </p>
           ) : (
             <div style={{ overflowX: "auto" }}>

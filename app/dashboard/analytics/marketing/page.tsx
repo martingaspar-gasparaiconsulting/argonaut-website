@@ -205,7 +205,7 @@ export default function MarketingReport() {
           }}
         >
           Kampagnen, Content-Produktion und Redaktionsplan im Überblick — damit
-          deine Außenwirkung nie stockt.
+          Ihre Außenwirkung nie stockt.
         </p>
       </div>
 

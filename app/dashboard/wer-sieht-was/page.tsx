@@ -88,7 +88,7 @@ export default function WerSiehtWasPage() {
         <div>
           <div style={styles.eyebrow}>ARGONAUT OS · Chef-Schalttisch</div>
           <h1 style={styles.h1}>Wer sieht was</h1>
-          <p style={styles.sub}>Auf einen Blick, welcher Mitarbeiter welche Module sieht — berechnet aus gebuchten Modulen, Mitarbeiter-Rechten und Sitz-Typ. Ändern kannst du das in „Rechte" (je Mitarbeiter) und „Filial-Module" (je Filiale).</p>
+          <p style={styles.sub}>Auf einen Blick, welcher Mitarbeiter welche Module sieht — berechnet aus gebuchten Modulen, Mitarbeiter-Rechten und Sitz-Typ. Ändern können Sie das in „Rechte" (je Mitarbeiter) und „Filial-Module" (je Filiale).</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a href="/dashboard/rechte" style={styles.linkBtn}>🔑 Rechte je Mitarbeiter</a>
@@ -154,7 +154,7 @@ export default function WerSiehtWasPage() {
           </div>
 
           <div style={styles.hinweis}>
-            ℹ️ Der Chef (du) sieht alle gebuchten Module. Der aktive Filial-Umschalter im Kopf blendet zusätzlich Module aus, die an der gewählten Filiale abgeschaltet sind (siehe „Module je Filiale"). „Sitz-Typ": <b>Voll</b> = alles Zugewiesene, <b>Standard</b> = ohne sensible Bereiche, <b>Self-Service</b> = nur eigener Bereich.
+            ℹ️ Der Chef (Sie) sieht alle gebuchten Module. Der aktive Filial-Umschalter im Kopf blendet zusätzlich Module aus, die an der gewählten Filiale abgeschaltet sind (siehe „Module je Filiale"). „Sitz-Typ": <b>Voll</b> = alles Zugewiesene, <b>Standard</b> = ohne sensible Bereiche, <b>Self-Service</b> = nur eigener Bereich.
           </div>
         </>
       )}

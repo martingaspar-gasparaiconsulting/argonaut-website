@@ -178,7 +178,7 @@ export default function TeamKalenderPage() {
       {loading && <div style={styles.stateBox}>Lädt …</div>}
 
       {!loading && ma.length === 0 && (
-        <Leerzustand icon="📆" titel="Noch keine Mitarbeiter" text="Sobald Mitarbeiter angelegt sind, siehst du hier Urlaub und Abwesenheiten im Monat." schritte={["Mitarbeiter unter „Personal“ anlegen", "Abwesenheiten erfassen", "Überblick im Monatskalender"]} />
+        <Leerzustand icon="📆" titel="Noch keine Mitarbeiter" text="Sobald Mitarbeiter angelegt sind, sehen Sie hier Urlaub und Abwesenheiten im Monat." schritte={["Mitarbeiter unter „Personal“ anlegen", "Abwesenheiten erfassen", "Überblick im Monatskalender"]} />
       )}
 
       {!loading && ma.length > 0 && (

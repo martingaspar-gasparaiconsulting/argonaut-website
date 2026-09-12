@@ -381,7 +381,7 @@ export default function TermineCockpit() {
               Neuer Termin
             </h2>
             <p style={{ color: C.textDim, fontSize: "clamp(13px, 1.13vw, 18px)", margin: "0 0 20px" }}>
-              Titel und Zeit reichen — den Rest findest du im Voll-Modus.
+              Titel und Zeit reichen — den Rest finden Sie im Voll-Modus.
             </p>
 
             <label style={labelStyle}>Titel *</label>

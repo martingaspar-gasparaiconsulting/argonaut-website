@@ -111,7 +111,7 @@ export function EigeneFelderManager({ modul, ownerId, onChange }: { modul: strin
       </button>
       {offen && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>Lege dir eigene Spalten an — sie erscheinen dann im Formular und in der Liste. Nur du siehst deine Felder.</div>
+          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>Legen Sie sich eigene Spalten an — sie erscheinen dann im Formular und in der Liste. Nur Sie sehen Ihre Felder.</div>
           {felder.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
               {felder.map((f) => (

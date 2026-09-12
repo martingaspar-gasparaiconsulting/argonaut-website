@@ -123,7 +123,7 @@ export default function VertragKuendigenSeite() {
         <h1 style={{ fontSize: 'clamp(24px, 3vw, 40px)', fontWeight: 900, margin: 0 }}>Vertrag kündigen</h1>
         <p style={{ color: C.textDim, marginTop: 8, maxWidth: 720 }}>
           Vertrag wählen, Grund angeben, verbindlich bestätigen — die Bestätigung geht anschließend
-          automatisch per E-Mail an dich (Textform).
+          automatisch per E-Mail an Sie (Textform).
         </p>
       </div>
 
@@ -197,7 +197,7 @@ export default function VertragKuendigenSeite() {
                 <div style={{ background: 'rgba(224,162,76,0.10)', border: `1px solid ${C.warn}`, borderRadius: 12, padding: 16 }}>
                   <p style={{ margin: '0 0 14px', color: C.text }}>
                     <b>„{v.bezeichnung}"</b> wird verbindlich zum nächstmöglichen Termin gekündigt und auf
-                    „gekündigt" gesetzt. Eine Bestätigung geht per E-Mail an dich. Fortfahren?
+                    „gekündigt" gesetzt. Eine Bestätigung geht per E-Mail an Sie. Fortfahren?
                   </p>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button

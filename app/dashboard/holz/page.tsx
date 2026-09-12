@@ -583,7 +583,7 @@ export default function HolzSortimentPage() {
             {dublette && (
               <div style={styles.err}>
                 Diese Kombination gibt es bereits: „{anzeigeName(dublette)}".
-                Ändere Holzart, Länge oder Trocknungsgrad — oder bearbeite die vorhandene Variante.
+                Ändern Sie Holzart, Länge oder Trocknungsgrad — oder bearbeiten Sie die vorhandene Variante.
               </div>
             )}
 
@@ -604,7 +604,7 @@ export default function HolzSortimentPage() {
             {/* ============ A3a: PREISE ============ */}
             {!form.id ? (
               <div style={styles.infoBox}>
-                Variante zuerst mit „Anlegen" speichern — danach kannst du Preise und Rabatte pflegen.
+                Variante zuerst mit „Anlegen" speichern — danach können Sie Preise und Rabatte pflegen.
               </div>
             ) : (
               <>
@@ -614,7 +614,7 @@ export default function HolzSortimentPage() {
                     {preisGespeichert && <span style={{ color: C.green, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>✓ gespeichert</span>}
                   </div>
                   <div style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: C.textDim, marginBottom: 12, lineHeight: 1.5 }}>
-                    Trag einen Preis ein — die anderen Einheiten werden daraus vorgeschlagen.
+                    Tragen Sie einen Preis ein — die anderen Einheiten werden daraus vorgeschlagen.
                     Der Vorschlag ist unverbindlich: mit „Übernehmen" einsetzen oder eigenen Wert tippen.
                   </div>
 
@@ -696,7 +696,7 @@ export default function HolzSortimentPage() {
 
                   {staffel.length === 0 ? (
                     <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-                      Keine Staffel für {einheitKurz(testEinheit)}. Leg unten die erste an.
+                      Keine Staffel für {einheitKurz(testEinheit)}. Legen Sie unten die erste an.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

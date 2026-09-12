@@ -590,7 +590,7 @@ export default function VertragDetail() {
 
             {kiLaden ? (
               <div style={{ padding: "24px 0", color: C.textDim }}>
-                Die ARGONAUT-KI formuliert deinen Entwurf…
+                Die ARGONAUT-KI formuliert Ihren Entwurf…
               </div>
             ) : kiFehler ? (
               <div

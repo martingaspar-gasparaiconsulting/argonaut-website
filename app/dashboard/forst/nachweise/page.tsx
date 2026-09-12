@@ -204,7 +204,7 @@ export default function ForstNachweisePage() {
 
       {/* Liste je Mitarbeiter */}
       {laden ? <p style={styles.dim}>Lädt …</p> : !liste.length ? (
-        <p style={styles.dim}>Noch keine Nachweise. Erfasse oben den ersten — z. B. Motorsägenschein Modul A.</p>
+        <p style={styles.dim}>Noch keine Nachweise. Erfassen Sie oben den ersten — z. B. Motorsägenschein Modul A.</p>
       ) : (
         mitarbeiter.map((name) => (
           <div key={name} style={styles.card}>

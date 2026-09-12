@@ -83,7 +83,7 @@ export default function MarktplaetzeSeite() {
         <h1 style={styles.h1}>🛒 Marktplätze</h1>
         <span style={styles.beta}>Abgleich in Aufbau</span>
       </div>
-      <p style={styles.sub}>Verbinde deine Verkaufsplattformen — die Zugänge kannst du schon jetzt sicher hinterlegen. Der automatische Bestell- und Bestandsabgleich (Bestellungen rein, Bestand synchron) wird gerade finalisiert.</p>
+      <p style={styles.sub}>Verbinden Sie Ihre Verkaufsplattformen — die Zugänge können Sie schon jetzt sicher hinterlegen. Der automatische Bestell- und Bestandsabgleich (Bestellungen rein, Bestand synchron) wird gerade finalisiert.</p>
 
       {!encKeyBereit && <div style={styles.warn}>Hinweis: Der Sicherheits-Schlüssel (APP_ENC_KEY) ist noch nicht gesetzt — das Speichern klappt erst danach.</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

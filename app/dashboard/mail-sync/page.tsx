@@ -108,7 +108,7 @@ export default function MailSyncSeite() {
         <h1 style={styles.h1}>📬 Mail & Kalender</h1>
         <a href="/dashboard/posteingang" style={styles.posteingangBtn}>→ Posteingang öffnen</a>
       </div>
-      <p style={styles.sub}>Verbinde dein Postfach — bei <b style={{ color: C.text }}>IMAP</b> (IONOS, GMX, Strato …) siehst du deine E-Mails direkt im Posteingang. Microsoft 365 & Gmail kannst du sicher hinterlegen; deren Abruf (OAuth) folgt. Zugangsdaten werden verschlüsselt gespeichert, nie im Browser sichtbar.</p>
+      <p style={styles.sub}>Verbinden Sie Ihr Postfach — bei <b style={{ color: C.text }}>IMAP</b> (IONOS, GMX, Strato …) sehen Sie Ihre E-Mails direkt im Posteingang. Microsoft 365 & Gmail können Sie sicher hinterlegen; deren Abruf (OAuth) folgt. Zugangsdaten werden verschlüsselt gespeichert, nie im Browser sichtbar.</p>
 
       {!encKeyBereit && <div style={styles.warn}>Hinweis: Der Sicherheits-Schlüssel (APP_ENC_KEY) ist noch nicht gesetzt — das Speichern klappt erst danach.</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

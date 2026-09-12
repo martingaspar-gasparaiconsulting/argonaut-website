@@ -211,12 +211,12 @@ export default function LeistungskatalogPage() {
         .map((z) => ({ ...z, aktualisiert_am: new Date().toISOString() }));
       if (zeilen.length === 0) {
         setFehler(kat
-          ? `Für „${kat}" sind keine neuen Vorschläge übrig — dein Katalog ist schon gefüllt.`
-          : 'Für Vorschläge brauche ich deine Branche: Setz sie im Onboarding bzw. in den Einstellungen, dann lade ich typische Leistungen.');
+          ? `Für „${kat}" sind keine neuen Vorschläge übrig — Ihr Katalog ist schon gefüllt.`
+          : 'Für Vorschläge brauche ich Ihre Branche: Setzen Sie sie im Onboarding bzw. in den Einstellungen, dann lade ich typische Leistungen.');
         setStartBusy(false); return;
       }
-      const label = kat && hatStartKatalog(kat) ? `„${kat}"` : 'deine Branche';
-      if (!window.confirm(`${zeilen.length} typische Leistungen für ${label} in den Katalog laden?\n\nAlles sind Startwerte — du kannst danach jede Leistung frei anpassen oder löschen.`)) { setStartBusy(false); return; }
+      const label = kat && hatStartKatalog(kat) ? `„${kat}"` : 'Ihre Branche';
+      if (!window.confirm(`${zeilen.length} typische Leistungen für ${label} in den Katalog laden?\n\nAlles sind Startwerte — Sie können danach jede Leistung frei anpassen oder löschen.`)) { setStartBusy(false); return; }
       const { error } = await supabase.from('leistungskatalog').insert(zeilen);
       if (error) throw error;
       await laden_();
@@ -459,7 +459,7 @@ export default function LeistungskatalogPage() {
           <div style={styles.hint}>Lädt …</div>
         ) : gefiltert.length === 0 ? (
           liste.length === 0 ? (
-            <Leerzustand icon="🧰" titel="Noch keine Leistungen" text="Lade typische Leistungen deiner Branche und pass die Preise an — oder leg sie selbst an." schritte={["„✨ Typische Leistungen“ laden", "Preise und Einheiten anpassen", "Beim Angebot/Auftrag auswählen"]} aktionText="✨ Typische Leistungen laden" onAktion={ladeStartkatalog} />
+            <Leerzustand icon="🧰" titel="Noch keine Leistungen" text="Laden Sie typische Leistungen Ihrer Branche und passen Sie die Preise an — oder legen Sie sie selbst an." schritte={["„✨ Typische Leistungen“ laden", "Preise und Einheiten anpassen", "Beim Angebot/Auftrag auswählen"]} aktionText="✨ Typische Leistungen laden" onAktion={ladeStartkatalog} />
           ) : (
             <div style={styles.hint}>Keine Leistungen für diesen Filter.</div>
           )

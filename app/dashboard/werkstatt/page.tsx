@@ -985,7 +985,7 @@ export default function WerkstattPage() {
             {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
 
             {!form.id ? (
-              <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Fahrzeug und Leistungen hinzufügen.</div>
+              <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach können Sie Fahrzeug und Leistungen hinzufügen.</div>
             ) : (
               <>
                 {/* Fahrzeug-Annahme · Block 1.5 */}
@@ -1315,7 +1315,7 @@ export default function WerkstattPage() {
 
                     {ressourcen.length === 0 ? (
                       <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
-                        Noch keine Ressourcen angelegt. Lege im Modul „Buchungen" z. B. „Hebebühne 1" an — danach kannst du sie hier terminieren.
+                        Noch keine Ressourcen angelegt. Legen Sie im Modul „Buchungen" z. B. „Hebebühne 1" an — danach können Sie sie hier terminieren.
                       </div>
                     ) : (
                       <>

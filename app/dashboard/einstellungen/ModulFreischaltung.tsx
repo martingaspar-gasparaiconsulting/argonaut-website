@@ -204,9 +204,9 @@ export default function ModulFreischaltung() {
           maxWidth: 640,
         }}
       >
-        Blende Bereiche aus, die du (noch) nicht brauchst – so bleibt dein Menü
+        Blenden Sie Bereiche aus, die Sie (noch) nicht brauchen – so bleibt Ihr Menü
         übersichtlich. Ausgeblendete Module verschwinden nur aus der Navigation;
-        deine Daten bleiben vollständig erhalten und du kannst jedes Modul
+        Ihre Daten bleiben vollständig erhalten und Sie können jedes Modul
         jederzeit wieder einschalten.
       </p>
       <p style={{ fontSize: 'clamp(12.5px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.4)', margin: '0 0 18px' }}>

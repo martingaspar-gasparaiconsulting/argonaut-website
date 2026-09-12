@@ -151,7 +151,7 @@ export default function KiAuge({
           transition: "all 0.15s ease",
           animation: offen ? "none" : "argoAugePuls 2.4s ease-out infinite",
         }}
-        title="Die KI liest die Übersicht und sagt dir, was jetzt wichtig ist"
+        title="Die KI liest die Übersicht und sagt Ihnen, was jetzt wichtig ist"
       >
         <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', lineHeight: 1 }} aria-hidden="true">
           👁

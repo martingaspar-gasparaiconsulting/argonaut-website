@@ -130,7 +130,7 @@ export default function AnalysePage() {
     <div style={wrap}>
       <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800 }}>Website-Analyse</h1>
       <p style={{ color: C.textDim, maxWidth: 620, lineHeight: 1.6 }}>
-        Für dein Konto ist noch keine Seite freigeschaltet. Sobald du eine Website veröffentlichst (oder als Betreiber die Betreiber-ID gesetzt ist), erscheint sie hier zur Auswahl.
+        Für Ihr Konto ist noch keine Seite freigeschaltet. Sobald Sie eine Website veröffentlichen (oder als Betreiber die Betreiber-ID gesetzt ist), erscheint sie hier zur Auswahl.
       </p>
     </div>
   );

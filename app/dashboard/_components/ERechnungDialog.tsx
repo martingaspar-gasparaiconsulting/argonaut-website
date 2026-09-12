@@ -272,7 +272,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
           >
             <div style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 900, marginBottom: 4, color: GOLD }}>E-Rechnung erzeugen</div>
             <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: DIM, marginBottom: 20 }}>
-              Wähle das Format. XRechnung für Behörden, ZUGFeRD für Firmenkunden.
+              Wählen Sie das Format. XRechnung für Behörden, ZUGFeRD für Firmenkunden.
             </div>
 
             {/* Profil-Wahl */}
@@ -295,7 +295,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
                   style={{ width: "100%", background: "rgba(0,229,255,0.04)", border: `1px solid ${LINE}`, borderRadius: 8, padding: "10px 12px", color: TEXT, fontSize: 'clamp(14px, 1.25vw, 20px)', outline: "none" }}
                 />
                 <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: DIM, marginTop: 6 }}>
-                  Leer lassen, wenn keine Behörden-Rechnung. Die ID gibt dir die jeweilige Behörde.
+                  Leer lassen, wenn keine Behörden-Rechnung. Die ID gibt Ihnen die jeweilige Behörde.
                 </div>
               </div>
             )}

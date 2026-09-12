@@ -230,7 +230,7 @@ export default function VerleihPage() {
           <div style={styles.card}>
             <div style={styles.cardTitel}>Neue Ausleihe</div>
             {artikel.length === 0 ? (
-              <div style={styles.hint}>Lege zuerst im Reiter „Mietgegenstände" einen Artikel an.</div>
+              <div style={styles.hint}>Legen Sie zuerst im Reiter „Mietgegenstände" einen Artikel an.</div>
             ) : (
               <>
                 <div style={styles.grid}>
@@ -333,7 +333,7 @@ export default function VerleihPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {artikel.length === 0 ? <Leerzustand icon="📦" titel="Noch keine Mietgegenstände" text="Lege an, was du vermietest — mit Tages-/Wochenpreis und Kaution." schritte={["Mietgegenstand oben anlegen", "Preise und Kaution setzen", "Aus Vorlage typische Gegenstände übernehmen"]} /> : (
+              {artikel.length === 0 ? <Leerzustand icon="📦" titel="Noch keine Mietgegenstände" text="Legen Sie an, was Sie vermieten — mit Tages-/Wochenpreis und Kaution." schritte={["Mietgegenstand oben anlegen", "Preise und Kaution setzen", "Aus Vorlage typische Gegenstände übernehmen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Gegenstand</th><th style={styles.th}>Kategorie</th>

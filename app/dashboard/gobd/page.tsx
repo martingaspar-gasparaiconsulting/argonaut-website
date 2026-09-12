@@ -189,7 +189,7 @@ export default function GobdPage() {
 
   async function finalisieren() {
     if (finalisiert) return;
-    if (!window.confirm('Aktuellen Stand als finale, revisionssichere Version festschreiben?\n\nDie Fassung wird dauerhaft gesichert; du arbeitest danach an einer neuen Version weiter.')) return;
+    if (!window.confirm('Aktuellen Stand als finale, revisionssichere Version festschreiben?\n\nDie Fassung wird dauerhaft gesichert; Sie arbeiten danach an einer neuen Version weiter.')) return;
     setFinalisiert(true); setFehler(null);
     try {
       await speichern(); // aktuellen Stand sichern, damit die finale Version stimmt

@@ -455,7 +455,7 @@ export default function RechtePage() {
             )}
           </div>
           <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-            Lege pro Mitarbeiter fest, welche Bereiche er sehen darf
+            Legen Sie pro Mitarbeiter fest, welche Bereiche er sehen darf
           </p>
         </div>
 
@@ -471,11 +471,11 @@ export default function RechtePage() {
             lineHeight: 1.6,
           }}
         >
-          Du als Chef siehst immer alles. „Übersicht" und „Mein Bereich" sieht jeder Mitarbeiter.
-          Wähle eine Vorlage und passe danach einzelne Häkchen an. Bereiche mit
+          Sie als Chef sehen immer alles. „Übersicht" und „Mein Bereich" sieht jeder Mitarbeiter.
+          Wählen Sie eine Vorlage und passen Sie danach einzelne Häkchen an. Bereiche mit
           <span style={{ color: C.warn, fontWeight: 700 }}> 🔒 sensibel</span> sind rechtlich/kaufmännisch
           heikel — sie brauchen beim Freigeben und beim Speichern eine Bestätigung.
-          Mit <span style={{ color: C.cyan, fontWeight: 700 }}>✏️ darf ändern</span> gibst du zusätzlich
+          Mit <span style={{ color: C.cyan, fontWeight: 700 }}>✏️ darf ändern</span> geben Sie zusätzlich
           das Recht, in einem Bereich zu speichern und zu löschen — ohne dieses Häkchen darf der
           Mitarbeiter den Bereich nur ansehen.
         </div>
@@ -884,7 +884,7 @@ export default function RechtePage() {
                   🔒 Sensiblen Bereich freigeben
                 </div>
                 <p style={{ color: "#fff", fontSize: 'clamp(14.5px, 1.25vw, 20px)', lineHeight: 1.6, margin: "0 0 8px" }}>
-                  Du gibst <strong>{nm}</strong> Zugriff auf <strong style={{ color: C.warn }}>{lab}</strong>.
+                  Sie geben <strong>{nm}</strong> Zugriff auf <strong style={{ color: C.warn }}>{lab}</strong>.
                 </p>
                 <p style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', lineHeight: 1.6, margin: 0 }}>
                   Dieser Bereich ist rechtlich und kaufmännisch heikel. Bitte bestätige die Freigabe bewusst.

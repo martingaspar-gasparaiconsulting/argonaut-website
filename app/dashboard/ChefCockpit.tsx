@@ -173,7 +173,7 @@ export default function ChefCockpit(props: Props) {
     rec.interimResults = true
     rec.continuous = true
 
-    rec.onstart = () => setVoiceStatus({ text: 'Ich höre zu … tippe erneut aufs Mikrofon, wenn du fertig bist.', fehler: false })
+    rec.onstart = () => setVoiceStatus({ text: 'Ich höre zu … tippen Sie erneut aufs Mikrofon, wenn Sie fertig sind.', fehler: false })
     rec.onresult = (e: any) => {
       let seg = ''
       for (let i = 0; i < e.results.length; i++) seg += e.results[i][0].transcript
@@ -336,8 +336,8 @@ export default function ChefCockpit(props: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={augeKreis}><span style={{ fontSize: 'clamp(22px, 1.94vw, 31px)' }}>{'\uD83D\uDC41'}</span></div>
             <div>
-              <h2 style={titel}>Dein Betrieb heute</h2>
-              <p style={untertitel}>Ein Klick – die KI fasst zusammen, worauf es heute ankommt, liest vor und beantwortet deine Rückfragen.</p>
+              <h2 style={titel}>Ihr Betrieb heute</h2>
+              <p style={untertitel}>Ein Klick – die KI fasst zusammen, worauf es heute ankommt, liest vor und beantwortet Ihre Rückfragen.</p>
             </div>
           </div>
           {!ki && !laedt ? (
@@ -347,7 +347,7 @@ export default function ChefCockpit(props: Props) {
 
         {laedt ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px, 1.25vw, 20px)', paddingTop: '4px' }}>
-            <span style={pulsPunkt} /> Die KI wertet deinen Betrieb aus…
+            <span style={pulsPunkt} /> Die KI wertet Ihren Betrieb aus…
           </div>
         ) : null}
 
@@ -446,7 +446,7 @@ export default function ChefCockpit(props: Props) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); frageSenden() } }}
-                  placeholder={hoert ? 'Sprich jetzt …' : 'Frage stellen oder Auftrag geben, z. B. „Leg Thomas eine Aufgabe an: Angebot Müller prüfen"'}
+                  placeholder={hoert ? 'Sprechen Sie jetzt …' : 'Frage stellen oder Auftrag geben, z. B. „Leg Thomas eine Aufgabe an: Angebot Müller prüfen"'}
                   rows={1}
                   style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '11px 14px', color: '#FFFFFF', fontSize: 'clamp(14px, 1.25vw, 20px)', lineHeight: 1.5, outline: 'none', resize: 'none', minHeight: '44px', maxHeight: '130px', fontFamily: 'inherit' }}
                 />

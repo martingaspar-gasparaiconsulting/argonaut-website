@@ -738,7 +738,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
   async function zugangZuruecksetzen() {
     if (!istMA) return;
     if (!email.trim()) { setMsg('Für diesen Mitarbeiter ist keine E-Mail hinterlegt.'); return; }
-    if (!window.confirm(`Zugang von ${vorname} ${nachname} zurücksetzen?\n\nEs wird ein NEUES Einmal-Passwort erzeugt. Das bisherige Passwort des Mitarbeiters wird damit ungültig. Anschließend gibst du ihm den neuen Zugang weiter.`)) return;
+    if (!window.confirm(`Zugang von ${vorname} ${nachname} zurücksetzen?\n\nEs wird ein NEUES Einmal-Passwort erzeugt. Das bisherige Passwort des Mitarbeiters wird damit ungültig. Anschließend geben Sie ihm den neuen Zugang weiter.`)) return;
     setInviting(true); setMsg(null);
     try {
       const res = await fetch('/api/hr/zugang-reset', {
@@ -862,7 +862,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
                   <ZugangZeile label="Login-Link" wert={zugang.loginUrl} />
                   <button
                     style={{ ...styles.primaryBtn, marginTop: 10 }}
-                    onClick={() => navigator.clipboard?.writeText(`Dein ARGONAUT-Zugang:\nLogin: ${zugang.loginUrl}\nE-Mail: ${zugang.email}\nEinmal-Passwort: ${zugang.passwort}\n\nBitte einloggen und anschließend dein Passwort ändern.`)}
+                    onClick={() => navigator.clipboard?.writeText(`ARGONAUT-Zugang:\nLogin: ${zugang.loginUrl}\nE-Mail: ${zugang.email}\nEinmal-Passwort: ${zugang.passwort}\n\nBitte einloggen und anschließend das Passwort ändern.`)}
                   >
                     Alles kopieren
                   </button>
@@ -987,7 +987,7 @@ function EntsendungBox({ maId, maName, heimatStandortId, standorte, onChanged }:
   }
 
   if (standorte.length < 2) {
-    return <div style={styles.stateBox}>Entsendungen gibt es erst ab zwei Filialen. Lege weitere Standorte an, um Personal filialübergreifend einzusetzen.</div>;
+    return <div style={styles.stateBox}>Entsendungen gibt es erst ab zwei Filialen. Legen Sie weitere Standorte an, um Personal filialübergreifend einzusetzen.</div>;
   }
 
   return (

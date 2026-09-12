@@ -133,7 +133,7 @@ export default function VorlagenPoolPage() {
         <div>
           <div style={styles.eyebrow}>ARGONAUT OS · Multistandort</div>
           <h1 style={styles.h1}>Vorlagen-Sammelbecken</h1>
-          <p style={styles.sub}>Ein zentraler Pool, aus dem jede Filiale zieht. {darfVerwalten ? 'Du kannst Vorlagen anlegen und als „empfohlen" markieren.' : 'Vom Chef/der Leitung gepflegt — hier findest du die empfohlenen Vorlagen.'}</p>
+          <p style={styles.sub}>Ein zentraler Pool, aus dem jede Filiale zieht. {darfVerwalten ? 'Sie können Vorlagen anlegen und als „empfohlen" markieren.' : 'Vom Chef/der Leitung gepflegt — hier stehen die empfohlenen Vorlagen.'}</p>
         </div>
         {darfVerwalten && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

@@ -114,7 +114,7 @@ export default function AnalyticsCockpit() {
             lineHeight: 1.5,
           }}
         >
-          Alle Auswertungen deines Betriebs an einem Ort — wähle einen Report.
+          Alle Auswertungen Ihres Betriebs an einem Ort — wählen Sie einen Report.
         </p>
       </div>
 

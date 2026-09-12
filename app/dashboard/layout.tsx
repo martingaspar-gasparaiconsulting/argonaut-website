@@ -149,8 +149,8 @@ export default async function DashboardLayout({
             </span>
             <span style={{ color: 'rgba(255,255,255,0.85)' }}>
               {demoInfo.abgelaufen
-                ? 'Du kannst alles ansehen, aber nichts mehr ändern. Sichere dir deinen ARGONAUT mit einem Termin.'
-                : 'Du testest ARGONAUT im Demo-Modus — danach bleibt alles sichtbar, zum Weiterarbeiten vereinbare einen Termin.'}
+                ? 'Sie können alles ansehen, aber nichts mehr ändern. Sichern Sie sich Ihren ARGONAUT mit einem Termin.'
+                : 'Sie testen ARGONAUT im Demo-Modus — danach bleibt alles sichtbar, zum Weiterarbeiten vereinbaren Sie einen Termin.'}
             </span>
             <span style={{ flex: 1 }} />
             <a

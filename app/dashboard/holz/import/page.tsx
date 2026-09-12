@@ -377,7 +377,7 @@ export default function PreislisteImportPage() {
                 <strong>Vorhandene Preise überschreiben</strong>
                 <br />
                 <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
-                  Standardmäßig aus. Preise, die du von Hand gepflegt hast, bleiben unangetastet —
+                  Standardmäßig aus. Preise, die Sie von Hand gepflegt haben, bleiben unangetastet —
                   nur fehlende werden ergänzt.
                 </span>
               </span>
@@ -450,8 +450,8 @@ export default function PreislisteImportPage() {
 
           <div style={styles.infoBox}>
             <strong>Nächster Schritt</strong><br />
-            Prüf die Preise im Sortiment — besonders die abgeleiteten Vorschläge für RM und FM,
-            falls du nur SRM-Preise importiert hast. Danach kann die Preisauskunft rechnen.
+            Prüfen Sie die Preise im Sortiment — besonders die abgeleiteten Vorschläge für RM und FM,
+            falls Sie nur SRM-Preise importiert haben. Danach kann die Preisauskunft rechnen.
           </div>
 
           <div style={styles.aktionen}>
