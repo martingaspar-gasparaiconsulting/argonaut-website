@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server';
+import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 
@@ -20,14 +20,12 @@ type Felder = Record<string, unknown>;
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
-
-    const betreiber = process.env.ANALYSE_BETREIBER_ID;
-    if (betreiber && user.id !== betreiber) {
-      return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403 });
-    }
+    // Doppelschloss aus lib/betreiberGuard.ts — dieselbe Strenge wie bei den
+    // Betreiber-Endpunkten. Bis zum 12.09.2026 galt hier dieselbe schwache
+    // Form wie in beleg-upload: ohne gesetzte ANALYSE_BETREIBER_ID kam jeder
+    // Eingeloggte durch und konnte fremde Belege aendern und bestaetigen.
+    const { absage, userId } = await betreiberPruefung();
+    if (absage) return absage;
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const id = typeof body?.id === 'string' ? body.id : '';
@@ -42,7 +40,7 @@ export async function POST(req: Request) {
       .from('belege')
       .select('*')
       .eq('id', id)
-      .eq('owner_user_id', user.id)
+      .eq('owner_user_id', userId)
       .maybeSingle();
     if (ladeErr) {
       console.error('beleg-bestaetigen Ladefehler:', ladeErr.message);
@@ -89,7 +87,7 @@ export async function POST(req: Request) {
       .from('belege')
       .update(update)
       .eq('id', id)
-      .eq('owner_user_id', user.id)
+      .eq('owner_user_id', userId)
       .select()
       .single();
     if (updErr) {

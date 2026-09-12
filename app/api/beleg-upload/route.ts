@@ -1,5 +1,5 @@
 import { kiFetch } from '@/lib/ki';
-import { createClient } from '@/lib/supabase-server';
+import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
@@ -109,16 +109,16 @@ function schwach(v: Vorschlag | null): boolean {
 
 export async function POST(req: Request) {
   try {
-    // 1. Nur eingeloggt.
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
-
-    // 2. Betreiber-Sperre: nur Martin (wie die CC-Seite selbst).
-    const betreiber = process.env.ANALYSE_BETREIBER_ID;
-    if (betreiber && user.id !== betreiber) {
-      return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403 });
-    }
+    // 1.+2. Doppelschloss aus lib/betreiberGuard.ts: angemeldet · role 'admin' ·
+    // ANALYSE_BETREIBER_ID gesetzt UND identisch mit der Kennung.
+    //
+    // Bis zum 12.09.2026 stand hier eine Pruefung der Form
+    // "wenn die Variable gesetzt ist UND nicht passt, dann absagen". Bei NICHT
+    // gesetzter Variable kam damit JEDER Eingeloggte durch — in eine private
+    // Buchhaltung, samt KI-Kosten je Hochladung. Die Rolle wurde gar nicht
+    // geprueft. Jetzt gilt: fehlt die Variable, kommt niemand durch.
+    const { absage, userId } = await betreiberPruefung();
+    if (absage) return absage;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'KI nicht konfiguriert.' }, { status: 500 });
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
     const db = createAdminClient();
 
     // 4. In den PRIVATEN Bucket legen — Pfad nach owner getrennt. Keine öffentliche URL.
-    const pfad = `${user.id}/${randomUUID()}.${endung}`;
+    const pfad = `${userId}/${randomUUID()}.${endung}`;
     const { error: upErr } = await db.storage.from(BUCKET).upload(pfad, bytes, {
       contentType: datei.type,
       upsert: false,
@@ -187,7 +187,7 @@ export async function POST(req: Request) {
     const afaJahre = abschreibung === 'afa' ? num(v?.afa_jahre) : null;
 
     const neuerBeleg = {
-      owner_user_id: user.id,
+      owner_user_id: userId,
       art,
       richtung,
       datum: str(v?.datum),
