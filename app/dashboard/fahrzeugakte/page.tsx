@@ -4,7 +4,13 @@
 // ARGONAUT OS · Modul D+ · Block D+.5 · Fahrzeugakte (Lebensakte je FIN)
 // Fahrzeug per FIN/Kennzeichen suchen → komplette Historie: Halterwechsel,
 // alle Werkstattaufträge chronologisch mit Leistungen/Material + Summen,
-// nächste HU mit Ampel, Gesamt-Statistik. Liest nur bestehende Tabellen.
+// nächste HU mit Ampel, Gesamt-Statistik.
+//
+// 12.09.26 (Punkt 3.7): Die Akte kann jetzt auch SCHREIBEN — Stammdaten
+// bearbeiten und Halterwechsel eintragen. Aufträge und Positionen bleiben
+// bewusst lesend: die gehören der Werkstatt, hier würde man sie nur
+// versehentlich verändern. Die FIN ist der Schlüssel der Akte und wird nie
+// geändert. Gelöscht wird nichts — der alte Halter bekommt ein bis_datum.
 // Design 1:1 wie das übrige Dashboard.
 // Pfad: app/dashboard/fahrzeugakte/page.tsx
 // ============================================================
@@ -19,6 +25,10 @@ import {
 } from '../_components/leistungLogik';
 import { statusDef } from '../_components/werkstattLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
+import {
+  pruefeStammdaten, stammdatenNutzlast, halterWechselPlan,
+  type StammEingabe, type HalterEintrag,
+} from '@/lib/fahrzeugAkte';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -73,6 +83,21 @@ export default function FahrzeugaktePage() {
   const [detailLaden, setDetailLaden] = useState(false);
   const [offen, setOffen] = useState<Set<string>>(new Set());
 
+  // Schreiben (3.7): Stammdaten bearbeiten + Halterwechsel
+  const [bearbeiten, setBearbeiten] = useState(false);
+  const [form, setForm] = useState<StammEingabe>({
+    kennzeichen: '', hersteller: '', modell: '', erstzulassung: '',
+    farbe: '', kraftstoff: '', naechste_hu: '', notiz: '',
+  });
+  const [formFehler, setFormFehler] = useState<string[]>([]);
+  const [speichern, setSpeichern] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [halterOffen, setHalterOffen] = useState(false);
+  const [neuerHalter, setNeuerHalter] = useState('');
+  const [halterAb, setHalterAb] = useState(() => new Date().toISOString().slice(0, 10));
+  const [halterFehler, setHalterFehler] = useState<string | null>(null);
+  const [halterBusy, setHalterBusy] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -126,6 +151,14 @@ export default function FahrzeugaktePage() {
 
   useEffect(() => { if (gewaehlt) void ladeDetail(gewaehlt); }, [gewaehlt, ladeDetail]);
 
+  // Beim Wechsel des Fahrzeugs beide Formulare schliessen — sonst stünden
+  // die Eingaben des vorigen Fahrzeugs im Feld.
+  useEffect(() => {
+    setBearbeiten(false); setFormFehler([]); setMeldung(null);
+    setHalterOffen(false); setNeuerHalter(''); setHalterFehler(null);
+    setHalterAb(new Date().toISOString().slice(0, 10));
+  }, [gewaehlt]);
+
   const gefiltert = useMemo(() => {
     const q = suche.trim().toLowerCase();
     if (!q) return fahrzeuge;
@@ -158,6 +191,78 @@ export default function FahrzeugaktePage() {
 
   function toggle(id: string) {
     setOffen((o) => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+
+  /** Formular mit den Werten des gewaehlten Fahrzeugs fuellen und oeffnen. */
+  function bearbeitenStarten() {
+    const f = fahrzeuge.find((x) => x.id === gewaehlt);
+    if (!f) return;
+    setForm({
+      kennzeichen: f.kennzeichen || '', hersteller: f.hersteller || '', modell: f.modell || '',
+      erstzulassung: (f.erstzulassung || '').slice(0, 10), farbe: f.farbe || '',
+      kraftstoff: f.kraftstoff || '', naechste_hu: (f.naechste_hu || '').slice(0, 10), notiz: f.notiz || '',
+    });
+    setFormFehler([]); setMeldung(null); setBearbeiten(true);
+  }
+
+  async function stammdatenSpeichern() {
+    if (!gewaehlt) return;
+    const fehlerListe = pruefeStammdaten(form);
+    setFormFehler(fehlerListe);
+    if (fehlerListe.length > 0) return;
+    setSpeichern(true); setMeldung(null);
+    try {
+      const { error } = await supabase.from('werkstatt_fahrzeuge')
+        .update(stammdatenNutzlast(form))
+        .eq('id', gewaehlt);
+      if (error) throw error;
+      setBearbeiten(false);
+      setMeldung('Stammdaten gespeichert.');
+      await ladeFahrzeuge();
+    } catch (e: unknown) {
+      setFormFehler(['Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')]);
+    } finally { setSpeichern(false); }
+  }
+
+  /**
+   * Halterwechsel. Der Plan entsteht zuerst vollstaendig in lib/fahrzeugAkte
+   * und wird hier nur ausgefuehrt — bricht ein Schritt ab, bricht alles ab.
+   * Reihenfolge mit Absicht: erst den alten Eintrag schliessen, dann den neuen
+   * anlegen. Andersherum gaebe es kurz zwei offene Halter.
+   */
+  async function halterWechseln() {
+    if (!gewaehlt || !uid) return;
+    const plan = halterWechselPlan(halter as HalterEintrag[], neuerHalter, halterAb);
+    setHalterFehler(plan.fehler);
+    if (plan.fehler || !plan.neu) return;
+    setHalterBusy(true); setMeldung(null);
+    try {
+      if (plan.schliessen) {
+        const { error } = await supabase.from('werkstatt_fahrzeug_halter_log')
+          .update({ bis_datum: plan.schliessen.bis_datum })
+          .eq('id', plan.schliessen.id);
+        if (error) throw error;
+      }
+      const { error: insErr } = await supabase.from('werkstatt_fahrzeug_halter_log').insert({
+        owner_user_id: uid,
+        fahrzeug_id: gewaehlt,
+        halter_name: plan.neu.halter_name,
+        von_datum: plan.neu.von_datum,
+      });
+      if (insErr) throw insErr;
+      // Der Name am Fahrzeug ist nur die Abkuerzung fuer die Anzeige — die
+      // Wahrheit steht im Log. Schlaegt das hier fehl, ist der Wechsel
+      // trotzdem eingetragen.
+      await supabase.from('werkstatt_fahrzeuge')
+        .update({ halter_name: plan.neu.halter_name, aktualisiert_am: new Date().toISOString() })
+        .eq('id', gewaehlt);
+      setHalterOffen(false); setNeuerHalter('');
+      setMeldung('Halterwechsel eingetragen.');
+      await ladeDetail(gewaehlt);
+      await ladeFahrzeuge();
+    } catch (e: unknown) {
+      setHalterFehler('Halterwechsel fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setHalterBusy(false); }
   }
 
   const huTage = tageBis(fz?.naechste_hu ?? null);
@@ -200,7 +305,7 @@ export default function FahrzeugaktePage() {
         {/* Rechte Spalte: Akte */}
         <div style={styles.rechtsSpalte}>
           {!fz ? (
-            <div style={styles.card}><div style={styles.hint}>Wähle links ein Fahrzeug, um seine Akte zu öffnen.</div></div>
+            <div style={styles.card}><div style={styles.hint}>Wählen Sie links ein Fahrzeug, um seine Akte zu öffnen.</div></div>
           ) : (
             <>
               {/* Fahrzeug-Kopf */}
@@ -221,6 +326,52 @@ export default function FahrzeugaktePage() {
                   <Info label="Farbe" wert={fz.farbe || '—'} />
                   <Info label="Aktueller Halter" wert={fz.halter_name || '—'} />
                 </div>
+
+                {fz.notiz && !bearbeiten && (
+                  <div style={styles.notizBox}>{fz.notiz}</div>
+                )}
+
+                {meldung && <div style={styles.ok}>{meldung}</div>}
+
+                {!bearbeiten ? (
+                  <button onClick={bearbeitenStarten} style={styles.knopfLeise}>✏️ Stammdaten bearbeiten</button>
+                ) : (
+                  <div style={styles.formBox}>
+                    <div style={styles.formGrid}>
+                      <Feld label="Kennzeichen" wert={form.kennzeichen} setz={(v) => setForm((f) => ({ ...f, kennzeichen: v }))} />
+                      <Feld label="Hersteller" wert={form.hersteller} setz={(v) => setForm((f) => ({ ...f, hersteller: v }))} />
+                      <Feld label="Modell" wert={form.modell} setz={(v) => setForm((f) => ({ ...f, modell: v }))} />
+                      <Feld label="Erstzulassung" wert={form.erstzulassung} setz={(v) => setForm((f) => ({ ...f, erstzulassung: v }))} typ="date" />
+                      <Feld label="Farbe" wert={form.farbe} setz={(v) => setForm((f) => ({ ...f, farbe: v }))} />
+                      <Feld label="Kraftstoff" wert={form.kraftstoff} setz={(v) => setForm((f) => ({ ...f, kraftstoff: v }))} />
+                      <Feld label="Nächste HU" wert={form.naechste_hu} setz={(v) => setForm((f) => ({ ...f, naechste_hu: v }))} typ="date" />
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <div style={styles.feldLabel}>Notiz</div>
+                      <textarea
+                        value={form.notiz}
+                        onChange={(e) => setForm((f) => ({ ...f, notiz: e.target.value }))}
+                        rows={3}
+                        style={{ ...styles.input, resize: 'vertical' }}
+                      />
+                    </div>
+                    <div style={styles.finHinweis}>
+                      Die FIN <strong>{fz.fin}</strong> ist der Schlüssel dieser Akte und lässt sich hier nicht ändern —
+                      sonst verlöre das Fahrzeug seine Geschichte.
+                    </div>
+                    {formFehler.length > 0 && (
+                      <ul style={styles.fehlerListe}>{formFehler.map((f, i) => <li key={i}>{f}</li>)}</ul>
+                    )}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                      <button onClick={() => void stammdatenSpeichern()} disabled={speichern} style={styles.knopf}>
+                        {speichern ? 'Speichert …' : 'Speichern'}
+                      </button>
+                      <button onClick={() => { setBearbeiten(false); setFormFehler([]); }} disabled={speichern} style={styles.knopfLeise}>
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Statistik-Kacheln */}
@@ -238,9 +389,11 @@ export default function FahrzeugaktePage() {
               </div>
 
               {/* Halter-Historie */}
-              {halter.length > 0 && (
-                <div style={{ ...styles.card, marginTop: 12 }}>
+              <div style={{ ...styles.card, marginTop: 12 }}>
                   <h2 style={styles.cardTitle}>Halter-Historie</h2>
+                  {halter.length === 0 && (
+                    <div style={{ ...styles.hint, padding: '0 0 10px' }}>Noch kein Halter eingetragen.</div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {halter.map((h) => (
                       <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
@@ -252,8 +405,33 @@ export default function FahrzeugaktePage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+
+                  {!halterOffen ? (
+                    <button onClick={() => { setHalterOffen(true); setHalterFehler(null); }} style={{ ...styles.knopfLeise, marginTop: 14 }}>
+                      🔁 Halterwechsel eintragen
+                    </button>
+                  ) : (
+                    <div style={styles.formBox}>
+                      <div style={styles.formGrid}>
+                        <Feld label="Neuer Halter" wert={neuerHalter} setz={setNeuerHalter} />
+                        <Feld label="Gilt ab" wert={halterAb} setz={setHalterAb} typ="date" />
+                      </div>
+                      <div style={styles.finHinweis}>
+                        Der bisherige Halter wird zu diesem Datum abgeschlossen — nichts wird gelöscht,
+                        die Akte behält die vollständige Geschichte.
+                      </div>
+                      {halterFehler && <ul style={styles.fehlerListe}><li>{halterFehler}</li></ul>}
+                      <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                        <button onClick={() => void halterWechseln()} disabled={halterBusy} style={styles.knopf}>
+                          {halterBusy ? 'Trägt ein …' : 'Halterwechsel eintragen'}
+                        </button>
+                        <button onClick={() => { setHalterOffen(false); setHalterFehler(null); }} disabled={halterBusy} style={styles.knopfLeise}>
+                          Abbrechen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+              </div>
 
               {/* Auftrags-Historie */}
               <div style={{ ...styles.card, marginTop: 12 }}>
@@ -332,6 +510,19 @@ function Info({ label, wert }: { label: string; wert: string }) {
     </div>
   );
 }
+function Feld({ label, wert, setz, typ }: { label: string; wert: string; setz: (v: string) => void; typ?: string }) {
+  return (
+    <div>
+      <div style={styles.feldLabel}>{label}</div>
+      <input
+        type={typ || 'text'}
+        value={wert}
+        onChange={(e) => setz(e.target.value)}
+        style={styles.input}
+      />
+    </div>
+  );
+}
 function SummeKarte({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div style={styles.summeBox}>
@@ -372,6 +563,16 @@ const styles: Record<string, CSSProperties> = {
   externBadge: { marginLeft: 6, fontSize: 'clamp(10px, 0.88vw, 14px)', color: C.lila, border: `1px solid ${C.lila}`, borderRadius: 5, padding: '1px 5px' },
 
   input: { width: '100%', boxSizing: 'border-box', background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 'clamp(14px, 1.25vw, 20px)', fontFamily: 'inherit' },
+
+  formBox: { marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 },
+  feldLabel: { fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  knopf: { background: C.cyan, color: C.navy, border: 'none', borderRadius: 10, padding: '10px 18px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'clamp(14px, 1.25vw, 20px)' },
+  knopfLeise: { marginTop: 14, background: 'transparent', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'clamp(13.5px, 1.19vw, 19px)' },
+  notizBox: { marginTop: 14, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 13px', color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', whiteSpace: 'pre-wrap' },
+  finHinweis: { marginTop: 10, color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', lineHeight: 1.5 },
+  fehlerListe: { margin: '10px 0 0', paddingLeft: 20, color: C.danger, fontSize: 'clamp(13px, 1.13vw, 18px)' },
+  ok: { marginTop: 14, color: C.green, fontSize: 'clamp(13.5px, 1.19vw, 19px)', background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '9px 13px' },
   hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 4px' },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 16 },
 };
