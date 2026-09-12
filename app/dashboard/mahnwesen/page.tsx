@@ -743,7 +743,7 @@ export default function MahnwesenCockpit() {
         {!laden && !fehler && ueberfaellige.length > 0 && (
           <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 14, lineHeight: 1.5 }}>
             Hinweis: „✉️ Mahnung erstellen" öffnet den Assistenten (Text von ARGONAUT + PDF).
-            Mit „⏫" stufst du direkt hoch (ohne Schreiben), „↺" setzt die Stufe zurück.
+            Mit „⏫" stufen Sie direkt hoch (ohne Schreiben), „↺" setzt die Stufe zurück.
           </p>
         )}
       </div>

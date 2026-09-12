@@ -175,7 +175,7 @@ export default function FinanzCockpit() {
             💶 Finanzen
           </h1>
           <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-            Dein Überblick über Einnahmen, Ausgaben und Gewinn – {jahr}
+            Ihr Überblick über Einnahmen, Ausgaben und Gewinn – {jahr}
           </p>
         </div>
 

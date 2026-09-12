@@ -114,7 +114,7 @@ export default function ProvisionenSeite() {
       <div style={styles.kopf}>
         <div>
           <h1 style={styles.h1}>💰 Provisionen</h1>
-          <p style={styles.sub}>Für jeden gewonnenen Deal legst du einen Provisionssatz und einen Empfänger fest — ARGONAUT rechnet den Betrag und trennt offen von ausgezahlt.</p>
+          <p style={styles.sub}>Für jeden gewonnenen Deal legen Sie einen Provisionssatz und einen Empfänger fest — ARGONAUT rechnet den Betrag und trennt offen von ausgezahlt.</p>
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export default function ProvisionenSeite() {
         <div style={styles.hint}>Lädt …</div>
       ) : deals.length === 0 ? (
         <Leerzustand icon="💰" titel="Noch keine gewonnenen Deals"
-          text={'Sobald du in der Deal-Pipeline einen Deal auf „Gewonnen" setzt, erscheint er hier zur Provisionsabrechnung.'}
+          text={'Sobald Sie in der Deal-Pipeline einen Deal auf „Gewonnen" setzen, erscheint er hier zur Provisionsabrechnung.'}
           schritte={['Deal in der Pipeline auf „Gewonnen" ziehen', 'Hier Satz (%) und Empfänger eintragen', 'Nach Zahlung „ausgezahlt" markieren']}
           aktionText="Zur Deal-Pipeline" aktionHref="/dashboard/pipeline" />
       ) : (

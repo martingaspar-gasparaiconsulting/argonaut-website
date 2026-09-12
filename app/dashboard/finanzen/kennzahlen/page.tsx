@@ -206,7 +206,7 @@ export default function FinanzKennzahlen() {
             📐 Kennzahlen
           </h1>
           <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-            Deine Zahlen automatisch bewertet – plus Rechner für die wichtigsten kaufmännischen Formeln
+            Ihre Zahlen automatisch bewertet – plus Rechner für die wichtigsten kaufmännischen Formeln
           </p>
         </div>
 
@@ -279,8 +279,8 @@ export default function FinanzKennzahlen() {
                 }}
               >
                 🔔 {faelligAnzahl} gespeichertes Szenario
-                {faelligAnzahl === 1 ? " ist" : "e sind"} zur Prüfung fällig – schau bei den markierten
-                Einträgen unten, ob die Zahlen noch stimmen.
+                {faelligAnzahl === 1 ? " ist" : "e sind"} zur Prüfung fällig – sehen Sie bei den markierten
+                Einträgen unten nach, ob die Zahlen noch stimmen.
               </div>
             )}
 
@@ -313,11 +313,11 @@ export default function FinanzKennzahlen() {
                       { label: "Deckungsbeitrags-Quote", wert: pct(quote) },
                     ],
                     klartext: leer
-                      ? "Gib Verkaufspreis und variable Kosten pro Stück ein."
+                      ? "Geben Sie Verkaufspreis und variable Kosten pro Stück ein."
                       : db > 0
                       ? `Pro verkaufter Einheit bleiben ${eur(db)} übrig, um Fixkosten zu decken und Gewinn zu machen (${pct(quote)} vom Preis).`
                       : db < 0
-                      ? `Achtung: Du machst pro Stück ${eur(db)} Verlust – der Preis liegt unter den variablen Kosten.`
+                      ? `Achtung: Sie machen pro Stück ${eur(db)} Verlust – der Preis liegt unter den variablen Kosten.`
                       : "Der Preis deckt genau die variablen Kosten – es bleibt nichts für die Fixkosten übrig.",
                   };
                 }}
@@ -327,7 +327,7 @@ export default function FinanzKennzahlen() {
                 typ="break_even"
                 onAenderung={ladeFaellig}
                 titel="Break-Even (Gewinnschwelle)"
-                unterzeile="Ab wie vielen Verkäufen du in die Gewinnzone kommst"
+                unterzeile="Ab wie vielen Verkäufen Sie in die Gewinnzone kommen"
                 farbe={C.green}
                 felder={[
                   { key: "fix", label: "Fixkosten (pro Monat)", suffix: "€", placeholder: "z. B. 4000" },
@@ -347,10 +347,10 @@ export default function FinanzKennzahlen() {
                     ],
                     klartext:
                       w.fix === 0 && w.preis === 0
-                        ? "Gib Fixkosten, Verkaufspreis und variable Kosten ein."
+                        ? "Geben Sie Fixkosten, Verkaufspreis und variable Kosten ein."
                         : !machbar
                         ? "Mit diesem Preis ist kein Break-Even möglich – der Deckungsbeitrag pro Stück ist 0 oder negativ."
-                        : `Ab ${menge} verkauften Einheiten (${eur(umsatz)} Umsatz) deckst du deine Fixkosten. Jede weitere Einheit ist Gewinn.`,
+                        : `Ab ${menge} verkauften Einheiten (${eur(umsatz)} Umsatz) decken Sie Ihre Fixkosten. Jede weitere Einheit ist Gewinn.`,
                   };
                 }}
               />
@@ -359,7 +359,7 @@ export default function FinanzKennzahlen() {
                 typ="sicherheitsmarge"
                 onAenderung={ladeFaellig}
                 titel="Sicherheitsmarge"
-                unterzeile="Wie weit dein Umsatz sinken darf, bevor es kritisch wird"
+                unterzeile="Wie weit Ihr Umsatz sinken darf, bevor es kritisch wird"
                 farbe={C.lila}
                 felder={[
                   { key: "ist", label: "Aktueller Umsatz", suffix: "€", placeholder: "z. B. 100000" },
@@ -375,10 +375,10 @@ export default function FinanzKennzahlen() {
                       { label: "Puffer in Euro", wert: eur(puffer) },
                     ],
                     klartext: leer
-                      ? "Gib deinen aktuellen Umsatz und den Break-Even-Umsatz ein."
+                      ? "Geben Sie Ihren aktuellen Umsatz und den Break-Even-Umsatz ein."
                       : marge != null && marge >= 0
-                      ? `Dein Umsatz darf um ${pct(marge)} (${eur(puffer)}) sinken, bevor du in die Verlustzone kommst.`
-                      : `Achtung: Du liegst unter dem Break-Even – aktuell entsteht Verlust.`,
+                      ? `Ihr Umsatz darf um ${pct(marge)} (${eur(puffer)}) sinken, bevor Sie in die Verlustzone kommen.`
+                      : `Achtung: Sie liegen unter dem Break-Even – aktuell entsteht Verlust.`,
                   };
                 }}
               />
@@ -399,7 +399,7 @@ export default function FinanzKennzahlen() {
                   return {
                     ergebnisse: [{ label: "ROI", wert: pct(roi), gross: true }],
                     klartext: leer
-                      ? "Gib den Gewinn und das eingesetzte Kapital ein."
+                      ? "Geben Sie den Gewinn und das eingesetzte Kapital ein."
                       : roi != null && roi >= 0
                       ? `Jeder investierte Euro bringt ${pct(roi)} Rendite. Aus ${eur(w.kapital)} werden ${eur(w.kapital + w.gewinn)}.`
                       : `Die Investition ist aktuell im Minus (${pct(roi)}).`,
@@ -409,7 +409,7 @@ export default function FinanzKennzahlen() {
             </div>
 
             <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 24, lineHeight: 1.5 }}>
-              Die oberen Kennzahlen kommen automatisch aus deinen echten Einnahmen und Ausgaben ({jahr},
+              Die oberen Kennzahlen kommen automatisch aus Ihren echten Einnahmen und Ausgaben ({jahr},
               netto). Die Rechner sind Werkzeuge zum Durchspielen – Liquiditätsgrade und Eigenkapitalquote
               folgen später, sobald Bilanz-/Kontodaten angebunden sind.
             </p>

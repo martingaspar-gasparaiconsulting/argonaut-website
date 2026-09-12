@@ -107,7 +107,7 @@ export default function ZahlungenPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>💸 Zahlungen · Ein- & Ausgänge</h1>
-      <p style={styles.sub}>Alles Geld auf einen Blick: was reinkam (Kundenzahlungen) und was rausging (Belege &amp; laufende Abos). Vom Kunden gemeldete Zahlungen bestätigst du mit einem Klick — später übernimmt das die Bankanbindung automatisch.</p>
+      <p style={styles.sub}>Alles Geld auf einen Blick: was reinkam (Kundenzahlungen) und was rausging (Belege &amp; laufende Abos). Vom Kunden gemeldete Zahlungen bestätigen Sie mit einem Klick — später übernimmt das die Bankanbindung automatisch.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
 
@@ -170,7 +170,7 @@ export default function ZahlungenPage() {
 
           <section style={styles.card}>
             <div style={styles.titel}>🧾 Belege / Eingangsrechnungen</div>
-            {belege.length === 0 ? <p style={styles.dim}>Keine Belege. Lade sie in der Beleg-Inbox hoch.</p> : (
+            {belege.length === 0 ? <p style={styles.dim}>Keine Belege. Laden Sie sie in der Beleg-Inbox hoch.</p> : (
               <div style={{ marginTop: 8 }}>
                 {[...offeneBelege, ...bezahlteBelege].slice(0, 200).map((b) => (
                   <div key={b.id} style={styles.zeile}>
@@ -188,7 +188,7 @@ export default function ZahlungenPage() {
 
           <section style={styles.card}>
             <div style={styles.titel}>🔁 Laufende Verträge & Abos</div>
-            {abos.length === 0 ? <p style={styles.dim}>Keine laufenden Kosten erfasst. Trage sie unter „Verträge" ein.</p> : (
+            {abos.length === 0 ? <p style={styles.dim}>Keine laufenden Kosten erfasst. Tragen Sie sie unter „Verträge" ein.</p> : (
               <div style={{ marginTop: 8 }}>
                 {abos.map((v) => (
                   <div key={v.id} style={styles.zeileMini}>
@@ -206,7 +206,7 @@ export default function ZahlungenPage() {
           </section>
         </>
       )}
-      <p style={styles.disclaimer}>Überblick aus deinen erfassten Daten. „Bestätigen" bzw. das Häkchen setzen den Zahlungsstatus manuell — sobald die Bankanbindung aktiv ist, gleicht sie Ein- und Ausgänge automatisch mit dem Konto ab.</p>
+      <p style={styles.disclaimer}>Überblick aus Ihren erfassten Daten. „Bestätigen" bzw. das Häkchen setzen den Zahlungsstatus manuell — sobald die Bankanbindung aktiv ist, gleicht sie Ein- und Ausgänge automatisch mit dem Konto ab.</p>
     </div>
   );
 }

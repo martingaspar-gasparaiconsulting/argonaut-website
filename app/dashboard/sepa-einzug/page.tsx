@@ -206,7 +206,7 @@ export default function SepaEinzugPage() {
     if (!cred.glaeubiger.trim() || !cred.iban.trim() || !cred.inhaber.trim()) {
       setFehler('Bitte zuerst die Gläubigerdaten (Gläubiger-ID, Kontoinhaber, IBAN) oben speichern.'); return;
     }
-    if (!ibanGueltig(cred.iban)) { setFehler('Deine Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht).'); return; }
+    if (!ibanGueltig(cred.iban)) { setFehler('Ihre Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht).'); return; }
     if (!gewaehlt.length) { setFehler('Bitte mindestens eine Rechnung mit gültigem Mandat auswählen.'); return; }
 
     // Je Mandat nur EINE Sequenz (FRST/RCUR) je Datei — nach Mandat gruppieren.
@@ -275,7 +275,7 @@ export default function SepaEinzugPage() {
 
       {/* Gläubigerdaten */}
       <div style={styles.card}>
-        <div style={styles.cardTitel}>🏦 Deine SEPA-Gläubigerdaten</div>
+        <div style={styles.cardTitel}>🏦 Ihre SEPA-Gläubigerdaten</div>
         <p style={styles.cardSub}>Einmal hinterlegen — kommt in jede Lastschrift-Datei. Die Gläubiger-ID gibt es kostenlos bei der Deutschen Bundesbank.</p>
         <div style={styles.grid2}>
           <label style={styles.lab}>Gläubiger-ID<input style={styles.inp} value={cred.glaeubiger} onChange={(e) => setCred((c) => ({ ...c, glaeubiger: e.target.value }))} placeholder="DE98ZZZ09999999999" /></label>

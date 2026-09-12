@@ -96,7 +96,7 @@ export default function CashflowSeite() {
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <a href="/dashboard/finanzen" style={{ color: C.cyan, textDecoration: 'none', fontSize: 14 }}>← Zurück zu Finanzen</a>
         <h1 style={styles.h1}>💧 Cashflow-Vorschau</h1>
-        <p style={styles.sub}>Wie sich deine Liquidität die nächsten 12 Wochen entwickelt — erwartete Zuflüsse aus offenen Rechnungen (nach Fälligkeit) minus deine Fixkosten, ab deinem aktuellen Kontostand.</p>
+        <p style={styles.sub}>Wie sich Ihre Liquidität die nächsten 12 Wochen entwickelt — erwartete Zuflüsse aus offenen Rechnungen (nach Fälligkeit) minus Ihre Fixkosten, ab Ihrem aktuellen Kontostand.</p>
 
         {fehler && <div style={styles.err}>⚠️ {fehler}</div>}
 
@@ -124,10 +124,10 @@ export default function CashflowSeite() {
             {v.ersteUnterdeckung ? (
               <div style={styles.warnBox}>
                 🔴 <b>Unterdeckung ab {new Date(v.ersteUnterdeckung).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}</b> —
-                dein Saldo rutscht unter 0. Zuflüsse vorziehen (überfällige Rechnungen anmahnen) oder Ausgaben strecken.
+                Ihr Saldo rutscht unter 0. Zuflüsse vorziehen (überfällige Rechnungen anmahnen) oder Ausgaben strecken.
               </div>
             ) : (
-              <div style={styles.okBox}>🟢 Kein Liquiditätsengpass in den nächsten 12 Wochen — dein Saldo bleibt durchgehend positiv.</div>
+              <div style={styles.okBox}>🟢 Kein Liquiditätsengpass in den nächsten 12 Wochen — Ihr Saldo bleibt durchgehend positiv.</div>
             )}
 
             {/* Timeline-Chart (laufender Saldo) */}
@@ -164,7 +164,7 @@ export default function CashflowSeite() {
 
             {v.offeneOhneTermin > 0 && (
               <p style={{ color: C.textDim, fontSize: 13, marginTop: 12 }}>
-                Hinweis: {eur(v.offeneOhneTermin)} an offenen Rechnungen haben <b>kein Fälligkeitsdatum</b> und sind hier bewusst nicht eingeplant — trag die Fälligkeit nach, dann fließen sie in die Vorschau ein.
+                Hinweis: {eur(v.offeneOhneTermin)} an offenen Rechnungen haben <b>kein Fälligkeitsdatum</b> und sind hier bewusst nicht eingeplant — tragen Sie die Fälligkeit nach, dann fließen sie in die Vorschau ein.
               </p>
             )}
           </>

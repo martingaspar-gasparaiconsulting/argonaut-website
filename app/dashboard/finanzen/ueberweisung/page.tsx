@@ -79,11 +79,11 @@ export default function UeberweisungSeite() {
       <div style={{ maxWidth: 1050, margin: '0 auto' }}>
         <a href="/dashboard/finanzen" style={{ color: C.cyan, textDecoration: 'none', fontSize: 14 }}>← Zurück zu Finanzen</a>
         <h1 style={styles.h1}>🏦 SEPA-Sammelüberweisung</h1>
-        <p style={styles.sub}>Gehälter oder Lieferanten in einem Rutsch: Empfänger erfassen, gültige SEPA-Datei (pain.001) erzeugen und im Online-Banking hochladen. ARGONAUT erzeugt nur die Datei — die Freigabe machst du in deiner Bank.</p>
+        <p style={styles.sub}>Gehälter oder Lieferanten in einem Rutsch: Empfänger erfassen, gültige SEPA-Datei (pain.001) erzeugen und im Online-Banking hochladen. ARGONAUT erzeugt nur die Datei — die Freigabe machen Sie in Ihrer Bank.</p>
 
         {/* Absender */}
         <div style={styles.card}>
-          <div style={styles.cardTitel}>Auftraggeber (dein Konto)</div>
+          <div style={styles.cardTitel}>Auftraggeber (Ihr Konto)</div>
           <div style={styles.grid}>
             <label style={styles.lab}>Name<input style={styles.inp} value={absName} onChange={(e) => setAbsName(e.target.value)} placeholder="Firma / Inhaber" /></label>
             <label style={styles.lab}>IBAN<input style={{ ...styles.inp, borderColor: absIban && !ibanGueltig(absIban) ? C.danger : C.border }} value={absIban} onChange={(e) => setAbsIban(e.target.value)} placeholder="DE.." /></label>

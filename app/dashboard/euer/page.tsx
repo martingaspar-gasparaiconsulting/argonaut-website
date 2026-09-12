@@ -172,7 +172,7 @@ export default function EuerPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>📗 EÜR · Einnahmen-Überschuss-Rechnung</h1>
-      <p style={styles.sub}>ARGONAUT stellt deine Gewinnermittlung nach § 4 Abs. 3 EStG zusammen — Einnahmen aus Rechnungen, Ausgaben aus Belegen, Reisekosten und Abschreibungen, alles für ein Jahr. Reine Verzahnung deiner Daten, keine KI.</p>
+      <p style={styles.sub}>ARGONAUT stellt Ihre Gewinnermittlung nach § 4 Abs. 3 EStG zusammen — Einnahmen aus Rechnungen, Ausgaben aus Belegen, Reisekosten und Abschreibungen, alles für ein Jahr. Reine Verzahnung Ihrer Daten, keine KI.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
 
@@ -245,7 +245,7 @@ export default function EuerPage() {
             <Zeile label={s.ustZahllast >= 0 ? 'USt-Zahllast ans Finanzamt' : 'USt-Erstattung vom Finanzamt'} wert={eur(Math.abs(s.ustZahllast))} fett farbe={s.ustZahllast >= 0 ? C.warn : C.green} />
           </section>
 
-          <p style={styles.disclaimer}>Automatische Zusammenstellung aus deinen erfassten Daten — als Vorbereitung und Überblick. Die verbindliche EÜR und die Umsatzsteuer-Voranmeldung erstellt bzw. prüft dein Steuerberater. Basis „Zufluss": nur tatsächlich bezahlte Rechnungen zählen (§ 11 EStG).</p>
+          <p style={styles.disclaimer}>Automatische Zusammenstellung aus Ihren erfassten Daten — als Vorbereitung und Überblick. Die verbindliche EÜR und die Umsatzsteuer-Voranmeldung erstellt bzw. prüft Ihr Steuerberater. Basis „Zufluss": nur tatsächlich bezahlte Rechnungen zählen (§ 11 EStG).</p>
         </>
       )}
     </div>

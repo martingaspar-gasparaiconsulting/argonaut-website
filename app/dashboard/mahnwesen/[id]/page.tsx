@@ -423,7 +423,7 @@ export default function MahnungErstellen() {
           <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>⚠️</div>
           <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", marginBottom: 10 }}>Rechnung nicht gefunden</h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>
-            Diese Rechnung existiert nicht oder gehört nicht zu deinem Konto.
+            Diese Rechnung existiert nicht oder gehört nicht zu Ihrem Konto.
           </p>
           <button onClick={() => router.push("/dashboard/mahnwesen")} style={btnGold}>
             Zurück zum Mahnwesen
@@ -615,7 +615,7 @@ export default function MahnungErstellen() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Hier erscheint der Entwurf – oder schreibe direkt selbst. Du kannst alles frei anpassen, bevor du das PDF erzeugst."
+            placeholder="Hier erscheint der Entwurf – oder schreiben Sie direkt selbst. Sie können alles frei anpassen, bevor Sie das PDF erzeugen."
             rows={14}
             style={{
               width: "100%",
@@ -702,7 +702,7 @@ export default function MahnungErstellen() {
         <Karte titel="Mahn-Verlauf">
           {historie.length === 0 ? (
             <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-              Noch keine Mahnung protokolliert. Sobald du oben „gesendet markierst",
+              Noch keine Mahnung protokolliert. Sobald Sie oben „gesendet markieren",
               erscheint hier der Nachweis.
             </div>
           ) : (

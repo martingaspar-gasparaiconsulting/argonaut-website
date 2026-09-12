@@ -379,7 +379,7 @@ export default function EuerReport() {
 
             <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 20, lineHeight: 1.5 }}>
               Hinweis: Vereinfachte Übersicht nach Zufluss-/Abfluss-Prinzip. Ersetzt keine steuerliche
-              Beratung – die finale EÜR erstellt dein Steuerberater.
+              Beratung – die finale EÜR erstellt Ihr Steuerberater.
             </p>
           </>
         )}
