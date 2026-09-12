@@ -298,7 +298,7 @@ export default function ObjektzeitenPage() {
       <div style={styles.card}>
         <h2 style={styles.cardTitle}>Zeit erfassen</h2>
         {objekte.length === 0 ? (
-          <div style={styles.hint}>Lege zuerst oben rechts ein Objekt an — dann kannst du Zeiten darauf buchen.</div>
+          <div style={styles.hint}>Legen Sie zuerst oben rechts ein Objekt an — dann können Sie Zeiten darauf buchen.</div>
         ) : (
           <div style={styles.erfassGrid}>
             <div>
@@ -465,7 +465,7 @@ export default function ObjektzeitenPage() {
           <div style={{ ...styles.card, marginTop: 16 }}>
             <h2 style={styles.cardTitle}>Objekte</h2>
             {objekte.length === 0 ? (
-              <Leerzustand icon="🏢" titel="Noch keine Objekte" text="Lege dein erstes Objekt an, um Zeiten darauf zu erfassen und je Objekt abzurechnen." schritte={["Objekt oben rechts anlegen", "Zeiten je Objekt erfassen", "Abrechenbare Zeiten in eine Rechnung übernehmen"]} />
+              <Leerzustand icon="🏢" titel="Noch keine Objekte" text="Legen Sie Ihr erstes Objekt an, um Zeiten darauf zu erfassen und je Objekt abzurechnen." schritte={["Objekt oben rechts anlegen", "Zeiten je Objekt erfassen", "Abrechenbare Zeiten in eine Rechnung übernehmen"]} />
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>

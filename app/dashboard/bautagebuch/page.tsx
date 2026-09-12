@@ -266,7 +266,7 @@ export default function BautagebuchPage() {
       <div style={styles.projektZeile}>
         <label style={styles.lbl}>Baustelle / Projekt</label>
         {projekte.length === 0 ? (
-          <Leerzustand icon="🏗️" titel="Noch keine Baustellen" text="Das Bautagebuch hängt an deinen Projekten — lege zuerst eine Baustelle als Projekt an." aktionText="Zu Projekten" aktionHref="/dashboard/projekte" />
+          <Leerzustand icon="🏗️" titel="Noch keine Baustellen" text="Das Bautagebuch hängt an Ihren Projekten — legen Sie zuerst eine Baustelle als Projekt an." aktionText="Zu Projekten" aktionHref="/dashboard/projekte" />
         ) : (
           <select style={{ ...styles.input, maxWidth: 460 }} value={projektId} onChange={(e) => setProjektId(e.target.value)}>
             {projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt ohne Name'}</option>)}

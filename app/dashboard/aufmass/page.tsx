@@ -565,7 +565,7 @@ export default function AufmassPage() {
             </div>
 
             {!form.id ? (
-              <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach kannst du Positionen erfassen.</div>
+              <div style={styles.infoBox}>Kopfdaten unten mit „Anlegen" speichern — danach können Sie Positionen erfassen.</div>
             ) : (
               <div style={styles.sektion}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

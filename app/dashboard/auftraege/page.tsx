@@ -644,7 +644,7 @@ export default function AuftraegeCockpit() {
               Neuer Auftrag
             </h2>
             <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 20px" }}>
-              Kopf-Daten anlegen — Positionen fügst du danach auf der Detailseite hinzu.
+              Kopf-Daten anlegen — Positionen fügen Sie danach auf der Detailseite hinzu.
             </p>
 
             <label style={labelStyle}>Titel *</label>

@@ -506,7 +506,7 @@ export default function ProjektePage() {
           <Leerzustand
             icon="📁"
             titel="Noch keine Projekte"
-            text="Plane deine Vorhaben als Projekte — mit Aufgaben, Terminen und Verantwortlichen an einem Ort."
+            text="Planen Sie Ihre Vorhaben als Projekte — mit Aufgaben, Terminen und Verantwortlichen an einem Ort."
             schritte={["Projekt mit Enddatum anlegen", "Aufgaben und Verantwortliche zuweisen", "Fortschritt und Fristen im Blick behalten"]}
           />
         )
@@ -729,7 +729,7 @@ export default function ProjektePage() {
           <div style={{ ...card, width: 600, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>✨ KI-Projekt-Setup</h2>
             <p style={{ margin: '0 0 16px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-              Beschreibe kurz, worum es geht — die KI erstellt dir einen Projektnamen und eine sinnvolle Aufgabenliste als Vorschlag. Du prüfst alles, bevor das Projekt angelegt wird.
+              Beschreiben Sie kurz, worum es geht — die KI erstellt Ihnen einen Projektnamen und eine sinnvolle Aufgabenliste als Vorschlag. Sie prüfen alles, bevor das Projekt angelegt wird.
             </p>
 
             {!kiVorschlag ? (
@@ -769,7 +769,7 @@ export default function ProjektePage() {
                   </select>
                 </div>
 
-                <label style={labelStil}>Vorgeschlagene Aufgaben ({kiVorschlag.aufgaben.length}) — du kannst anpassen oder löschen</label>
+                <label style={labelStil}>Vorgeschlagene Aufgaben ({kiVorschlag.aufgaben.length}) — Sie können anpassen oder löschen</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, maxHeight: 280, overflowY: 'auto' }}>
                   {kiVorschlag.aufgaben.map((a: any, i: number) => {
                     const pm = PRIO_META[a.prioritaet] || PRIO_META.normal;
@@ -783,7 +783,7 @@ export default function ProjektePage() {
                       </div>
                     );
                   })}
-                  {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim }}>Keine Aufgaben — du kannst sie später im Projekt anlegen.</div>}
+                  {kiVorschlag.aufgaben.length === 0 && <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.textDim }}>Keine Aufgaben — Sie können sie später im Projekt anlegen.</div>}
                 </div>
 
                 {kiFehler && <div style={{ ...card, borderColor: BRAND.danger, color: BRAND.danger, fontSize: 'clamp(13px, 1.13vw, 18px)', marginBottom: 14 }}>{kiFehler}</div>}

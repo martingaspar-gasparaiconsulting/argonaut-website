@@ -582,7 +582,7 @@ export default function AuftragDetail() {
             Auftrag nicht gefunden
           </h2>
           <p style={{ color: C.textDim, marginBottom: 20 }}>
-            Dieser Auftrag existiert nicht oder gehört nicht zu deinem Konto.
+            Dieser Auftrag existiert nicht oder gehört nicht zu Ihrem Konto.
           </p>
           <button onClick={() => router.push("/dashboard/auftraege")} style={btnGold}>
             ← Zurück zu den Aufträgen
@@ -932,7 +932,7 @@ export default function AuftragDetail() {
             ))}
           </select>
           <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 14, lineHeight: 1.5 }}>
-            Kontakt & Firma stammen aus deinem CRM. Nicht gefunden? Leg sie zuerst im Vertrieb/CRM an.
+            Kontakt & Firma stammen aus Ihrem CRM. Nicht gefunden? Legen Sie sie zuerst im Vertrieb/CRM an.
           </p>
         </Karte>
       </div>
@@ -950,8 +950,8 @@ export default function AuftragDetail() {
         <div style={{ ...sektionLabel, color: C.gold }}>✨ Positionen mit KI</div>
         <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 12px", lineHeight: 1.5 }}>
           Beschreib den Auftrag in eigenen Worten — tippen oder aufs Mikrofon und reinsprechen.
-          ARGONAUT nutzt deine echten Preise aus deinen Dokumenten, wo vorhanden — und schätzt nur,
-          was neu ist. Alle Vorschläge kannst du vor dem Übernehmen frei anpassen.
+          ARGONAUT nutzt Ihre echten Preise aus Ihren Dokumenten, wo vorhanden — und schätzt nur,
+          was neu ist. Alle Vorschläge können Sie vor dem Übernehmen frei anpassen.
         </p>
 
         <div style={{ position: "relative" }}>
@@ -1053,7 +1053,7 @@ export default function AuftragDetail() {
 
             <div style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', marginBottom: 12, lineHeight: 1.5 }}>
               {hatDok
-                ? "📄 = Preis aus deinen Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für dich und erscheint nie beim Kunden."
+                ? "📄 = Preis aus Ihren Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für Sie und erscheint nie beim Kunden."
                 : "Keine Preis-Dokumente gefunden — alle Preise wurden geschätzt. Nach dem Übernehmen frei anpassbar."}
             </div>
 
@@ -1090,7 +1090,7 @@ export default function AuftragDetail() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {ausDok ? "📄 aus deinen Dokumenten" : "⚠️ geschätzt"}
+                        {ausDok ? "📄 aus Ihren Dokumenten" : "⚠️ geschätzt"}
                       </span>
                     </div>
                     <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 4 }}>

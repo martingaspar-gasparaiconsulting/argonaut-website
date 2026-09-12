@@ -146,7 +146,7 @@ export default function ProjektAbrechnungPage() {
       <div style={styles.projektZeile}>
         <label style={styles.lbl}>Projekt</label>
         {projekte.length === 0 ? (
-          <Leerzustand icon="📁" titel="Noch keine Projekte" text="Die Projekt-Abrechnung hängt an deinen Projekten — lege zuerst eines an." aktionText="Zu Projekten" aktionHref="/dashboard/projekte" />
+          <Leerzustand icon="📁" titel="Noch keine Projekte" text="Die Projekt-Abrechnung hängt an Ihren Projekten — legen Sie zuerst eines an." aktionText="Zu Projekten" aktionHref="/dashboard/projekte" />
         ) : (
           <select style={{ ...styles.input, maxWidth: 420 }} value={projektId} onChange={(e) => setProjektId(e.target.value)}>
             {projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt ohne Name'}</option>)}

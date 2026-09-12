@@ -147,7 +147,7 @@ export default function NachkalkulationSeite() {
         {laden ? (
           <div style={styles.hint}>Lädt …</div>
         ) : kalk.length === 0 ? (
-          <Leerzustand icon="🧮" titel="Noch keine Projekte" text="Sobald du Projekte mit Budget anlegst und Leistungen buchst, erscheint hier die Plan-Ist-Nachkalkulation." schritte={["Projekt mit Budget anlegen", "Leistungen (Stunden × Satz) buchen", "Hier Plan gegen Ist prüfen"]} />
+          <Leerzustand icon="🧮" titel="Noch keine Projekte" text="Sobald Sie Projekte mit Budget anlegen und Leistungen buchen, erscheint hier die Plan-Ist-Nachkalkulation." schritte={["Projekt mit Budget anlegen", "Leistungen (Stunden × Satz) buchen", "Hier Plan gegen Ist prüfen"]} />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>
@@ -193,7 +193,7 @@ export default function NachkalkulationSeite() {
 
       <div style={styles.rechtHinweis}>
         „Erbracht" ist die gebuchte, abrechenbare Leistung (Stunden × Satz). Der <b>Deckungsbeitrag</b> = Erbracht − erfasste Material-/Fremdkosten,
-        die <b>Marge</b> = Deckungsbeitrag ÷ Erbracht. Kosten erfasst du oben je Projekt (im „Voll"-Modus). Später lassen sich die Kosten auch
+        die <b>Marge</b> = Deckungsbeitrag ÷ Erbracht. Kosten erfassen Sie oben je Projekt (im „Voll"-Modus). Später lassen sich die Kosten auch
         automatisch aus zugeordneten Belegen ziehen — sie fließen in dieselbe Struktur. Auf „Voll" erscheinen zusätzlich Stunden, Auslastung, offener Betrag, Material, Deckungsbeitrag und Marge.
       </div>
     </div>

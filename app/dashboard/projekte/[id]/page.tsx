@@ -538,7 +538,7 @@ export default function ProjektDetailPage() {
         const aRes = await supabase.from('vorlagen_aufgaben').insert(rows);
         if (aRes.error) throw aRes.error;
       }
-      alert(`Vorlage „${name.trim()}" gespeichert — mit ${aufgaben.length} Standard-Aufgabe${aufgaben.length === 1 ? '' : 'n'}. Du findest sie auf der Projekte-Übersicht unter „Aus Vorlage erstellen".`);
+      alert(`Vorlage „${name.trim()}" gespeichert — mit ${aufgaben.length} Standard-Aufgabe${aufgaben.length === 1 ? '' : 'n'}. Sie finden sie auf der Projekte-Übersicht unter „Aus Vorlage erstellen".`);
     } catch (e: any) {
       alert('Speichern fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     } finally {
@@ -1040,7 +1040,7 @@ export default function ProjektDetailPage() {
             <h3 style={{ margin: '0 0 8px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Als Vorlage speichern</h3>
             <p style={{ margin: '0 0 14px', color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.5 }}>
               Speichert dieses Projekt als wiederverwendbare Blaupause — mit Beschreibung, Priorität, Farbe und allen
-              Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellst du später mit einem Klick neue,
+              Aufgaben (ohne Termine und Zuweisungen). Aus der Vorlage erstellen Sie später mit einem Klick neue,
               gleich strukturierte Projekte.
             </p>
             <button style={btn} onClick={alsVorlageSpeichern} disabled={vorlageSpeichern}>
@@ -1049,7 +1049,7 @@ export default function ProjektDetailPage() {
           </div>
 
           <div style={{ ...card, color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
-            Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) findest du auf der Übersicht über „Bearbeiten".
+            Weitere Projekt-Einstellungen (Bearbeiten/Archivieren) finden Sie auf der Übersicht über „Bearbeiten".
           </div>
         </div>
       )}
