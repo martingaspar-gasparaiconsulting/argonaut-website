@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
     const notizIn = (typeof body?.notiz === 'string' ? body.notiz : '').trim();
 
     if (!slug || !artId) return NextResponse.json({ error: 'Buchung unvollständig.' }, { status: 400 });
-    if (!kundeName) return NextResponse.json({ error: 'Bitte deinen Namen angeben.' }, { status: 400 });
+    if (!kundeName) return NextResponse.json({ error: 'Bitte Ihren Namen angeben.' }, { status: 400 });
     if (!istMail(kundeMail)) return NextResponse.json({ error: 'Bitte eine gültige E-Mail angeben.' }, { status: 400 });
     const beginnD = new Date(beginnIso); const endeD = new Date(endeIso);
     if (isNaN(beginnD.getTime()) || isNaN(endeD.getTime()) || endeD <= beginnD) {

@@ -72,7 +72,7 @@ export const MAIL_ANBIETER: MailAnbieter[] = [
     idLabel: 'Kalender-URL',
     tokenLabel: 'Passwort',
     bereiche: ['Kalender'],
-    hinweis: 'Kalender-Freigabe-URL + Passwort aus deinem Kalender-Dienst.',
+    hinweis: 'Kalender-Freigabe-URL + Passwort aus Ihrem Kalender-Dienst.',
   },
 ];
 

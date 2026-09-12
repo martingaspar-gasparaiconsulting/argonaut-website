@@ -88,8 +88,8 @@ export default function OnlineBuchungPage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Termine</div>
       <h1 style={styles.h1}>Online-Terminbuchung</h1>
       <p style={styles.sub}>
-        Gib deinen Kunden einen Link, unter dem sie selbst freie Termine buchen — ohne Anruf, ohne Login.
-        Grundlage sind deine <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700 }}>Öffnungszeiten &amp; Terminarten</a>.
+        Geben Sie Ihren Kunden einen Link, unter dem sie selbst freie Termine buchen — ohne Anruf, ohne Login.
+        Grundlage sind Ihre <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700 }}>Öffnungszeiten &amp; Terminarten</a>.
       </p>
 
       {laden ? (
@@ -99,7 +99,7 @@ export default function OnlineBuchungPage() {
           {fehler && <div style={styles.err}>{fehler}</div>}
           {ok && <div style={styles.ok}>{ok}</div>}
 
-          <label style={styles.lbl}>Dein Buchungs-Link (Kürzel)</label>
+          <label style={styles.lbl}>Ihr Buchungs-Link (Kürzel)</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>{linkBasis}/buchen/</span>
             <input style={{ ...styles.input, maxWidth: 260 }} value={slug} onChange={(e) => setSlug(slugify(e.target.value))} placeholder="mein-betrieb" />
@@ -121,7 +121,7 @@ export default function OnlineBuchungPage() {
 
           {aktiv && link && (
             <div style={styles.linkBox}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>🌐 Dein Link — teile ihn mit Kunden:</div>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>🌐 Ihr Link — teilen Sie ihn mit Kunden:</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: C.cyan, fontWeight: 700, wordBreak: 'break-all' }}>{link}</a>
                 <button onClick={kopiere} style={styles.ghost}>{kopiert ? '✓ Kopiert' : 'Kopieren'}</button>
@@ -131,7 +131,7 @@ export default function OnlineBuchungPage() {
           )}
 
           <div style={styles.tipp}>
-            💡 Damit Slots erscheinen, brauchst du in <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700 }}>Termine</a> hinterlegte
+            💡 Damit Slots erscheinen, brauchen Sie in <a href="/dashboard/termine" style={{ color: C.cyan, fontWeight: 700 }}>Termine</a> hinterlegte
             Öffnungszeiten und mindestens eine aktive Terminart.
           </div>
         </div>

@@ -324,7 +324,7 @@ export default function VorschauPage() {
                 Guten Morgen, Martin.
               </p>
               <p style={{ fontSize: '0.9rem', color: '#8fa9b6', margin: '0 0 18px' }}>
-                Ich habe 12 relevante Updates für dich.
+                Ich habe 12 relevante Updates für Sie.
               </p>
 
               {/* KPI-Kacheln */}

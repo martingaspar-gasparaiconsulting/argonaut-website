@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     const url = optinBestaetigenUrl(BASIS_URL, token);
     await sendeMail({
       an: email,
-      betreff: `Bitte bestätige deine Anmeldung bei ${betrieb.firma}`,
+      betreff: `Bitte bestätigen Sie Ihre Anmeldung bei ${betrieb.firma}`,
       html: optinBestaetigungHtml(betrieb.firma, url, brand.akzent, name),
       absenderName: betrieb.firma,
       antwortAn: brand.email,

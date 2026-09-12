@@ -86,7 +86,7 @@ export async function GET(req: Request) {
       return seite('Newsletter', '#1a2332', 'Anmeldung', 'Dieser Bestätigungs-Link ist nicht (mehr) gültig.');
     }
     if (ab.status === 'aktiv') {
-      return seite(firma, akzent, 'Bereits bestätigt', `Deine Anmeldung bei ${firma} war schon bestätigt. Du bist dabei — nichts weiter zu tun.`);
+      return seite(firma, akzent, 'Bereits bestätigt', `Ihre Anmeldung bei ${firma} war schon bestätigt. Sie sind dabei — nichts weiter zu tun.`);
     }
 
     await admin
@@ -162,7 +162,7 @@ export async function GET(req: Request) {
       firma,
       akzent,
       'Anmeldung bestätigt',
-      `Vielen Dank — deine Anmeldung bei ${firma} ist jetzt bestätigt. Du kannst dieses Fenster schließen.`,
+      `Vielen Dank — Ihre Anmeldung bei ${firma} ist jetzt bestätigt. Sie können dieses Fenster schließen.`,
     );
   } catch {
     return seite('Newsletter', '#1a2332', 'Anmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');
