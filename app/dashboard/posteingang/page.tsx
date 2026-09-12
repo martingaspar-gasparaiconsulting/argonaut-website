@@ -13,6 +13,10 @@
 // Postfach (SMTP). Deshalb steht die Antwort auch in seinem Ordner „Gesendet“
 // und der Kunde kann auf sie antworten.
 //
+// 12.09.26 (Punkt 3.4): Ordner, Suche und der Anhang-Download kamen dazu.
+// Der Ordner wird bei JEDEM Abruf mitgereicht — dieselbe UID bedeutet in
+// einem anderen Ordner eine andere Nachricht.
+//
 // WARUM HIER KEIN FREMDES HTML STEHT
 // Die Route liefert bewusst nur Text. Fremdes HTML in der eigenen Oberfläche
 // heißt: Skripte und Zählpixel des Absenders laufen mit und melden ihm, wann
@@ -80,31 +84,61 @@ export default function PosteingangSeite() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  // Punkt 3.4 — Ordner und Suche
+  const [ordner, setOrdner] = useState('INBOX');
+  const [ordnerAlle, setOrdnerAlle] = useState<string[]>([]);
+  const [suchfeld, setSuchfeld] = useState('');
+  const [aktiveSuche, setAktiveSuche] = useState('');
+
   const [offen, setOffen] = useState<Nachricht | null>(null);
   const [ladeText, setLadeText] = useState(false);
   const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const [sendet, setSendet] = useState(false);
   const [erfolg, setErfolg] = useState<string | null>(null);
 
-  const laden_ = useCallback(async () => {
+  const laden_ = useCallback(async (wunschOrdner?: string, wunschSuche?: string) => {
+    const o = wunschOrdner ?? ordner;
+    const q = wunschSuche ?? aktiveSuche;
     setLaden(true); setFehler(null);
     try {
-      const r = await fetch('/api/mail/posteingang?n=30');
+      const adr = `/api/mail/posteingang?n=30&ordner=${encodeURIComponent(o)}`
+        + (q ? `&q=${encodeURIComponent(q)}` : '');
+      const r = await fetch(adr);
       const j = await r.json();
+      // Die Ordnerliste kommt auch im Fehlerfall mit — sonst säße man in einem
+      // Ordner fest, den es nicht mehr gibt, ohne Weg zurück.
+      if (Array.isArray(j?.ordnerAlle)) setOrdnerAlle(j.ordnerAlle as string[]);
       if (!r.ok || !j?.ok) { setFehler(j?.error || 'Abruf fehlgeschlagen.'); setVerbunden(j?.verbunden !== false); return; }
       setVerbunden(!!j.verbunden);
       setKonto(j.konto || '');
       setMails((j.mails || []) as MailZeile[]);
+      if (typeof j.ordner === 'string' && j.ordner) setOrdner(j.ordner);
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLaden(false); }
-  }, []);
+  }, [ordner, aktiveSuche]);
 
-  useEffect(() => { void laden_(); }, [laden_]);
+  // Absichtlich nur beim ersten Aufbau: laden_ ändert sich mit Ordner und
+  // Suche, ein Effekt darauf würde bei jedem Tastendruck abrufen.
+  useEffect(() => { void laden_('INBOX', ''); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  function ordnerWechseln(neu: string) {
+    setOrdner(neu); setOffen(null); setEntwurf(null); setErfolg(null);
+    void laden_(neu, aktiveSuche);
+  }
+  function suchen() {
+    const q = suchfeld.trim();
+    setAktiveSuche(q); setOffen(null);
+    void laden_(ordner, q);
+  }
+  function sucheLoeschen() {
+    setSuchfeld(''); setAktiveSuche(''); setOffen(null);
+    void laden_(ordner, '');
+  }
 
   async function oeffne(uid: number) {
     setLadeText(true); setFehler(null); setErfolg(null); setEntwurf(null); setOffen(null);
     try {
-      const r = await fetch(`/api/mail/nachricht?uid=${encodeURIComponent(String(uid))}`);
+      const r = await fetch(`/api/mail/nachricht?uid=${encodeURIComponent(String(uid))}&ordner=${encodeURIComponent(ordner)}`);
       const j = await r.json();
       if (!r.ok || !j?.ok) { setFehler(j?.error || 'Die Nachricht ließ sich nicht öffnen.'); return; }
       setOffen(j as Nachricht);
@@ -175,6 +209,39 @@ export default function PosteingangSeite() {
         Ihre Antwort geht über Ihr eigenes Postfach hinaus und steht danach in Ihrem Ordner „Gesendet“.
         (IMAP; Microsoft 365 und Gmail folgen.)
       </p>
+
+      {/* Punkt 3.4 — Ordner und Suche. Nur in der Liste; im Detail stört es. */}
+      {!inDetail && verbunden && (
+        <div style={styles.werkzeugleiste}>
+          {ordnerAlle.length > 1 && (
+            <select
+              value={ordner}
+              onChange={(e) => ordnerWechseln(e.target.value)}
+              disabled={laden}
+              style={styles.ordnerWahl}
+              title="Ordner wählen"
+            >
+              {ordnerAlle.map((o) => <option key={o} value={o}>{o === 'INBOX' ? 'Posteingang' : o}</option>)}
+            </select>
+          )}
+          <input
+            value={suchfeld}
+            onChange={(e) => setSuchfeld(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') suchen(); }}
+            placeholder="🔎 Betreff oder Absender …"
+            style={styles.suchfeld}
+          />
+          <button style={styles.mini} onClick={suchen} disabled={laden}>Suchen</button>
+          {aktiveSuche && (
+            <button style={styles.mini} onClick={sucheLoeschen} disabled={laden}>✕ Suche aufheben</button>
+          )}
+          {aktiveSuche && (
+            <span style={styles.trefferHinweis}>
+              {mails.length === 0 ? 'Kein Treffer' : `${mails.length} Treffer`} für „{aktiveSuche}"
+            </span>
+          )}
+        </div>
+      )}
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {erfolg && <div style={styles.ok}>{erfolg}</div>}
@@ -266,13 +333,22 @@ export default function PosteingangSeite() {
               <div style={styles.label}>Anhänge</div>
               {offen.anhaenge.map((a, i) => (
                 <div key={i} style={styles.anhang}>
-                  <span>📎 {a.name}</span>
-                  <span style={{ color: C.textDim, fontSize: 12.5 }}>{groesse(a.groesse)}</span>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📎 {a.name}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    <span style={{ color: C.textDim, fontSize: 12.5 }}>{groesse(a.groesse)}</span>
+                    <a
+                      href={`/api/mail/anhang?uid=${encodeURIComponent(String(offen.uid))}&i=${i}&ordner=${encodeURIComponent(ordner)}`}
+                      style={styles.mini}
+                      title="Anhang herunterladen"
+                    >
+                      ⬇ Herunterladen
+                    </a>
+                  </span>
                 </div>
               ))}
               <p style={styles.hinweis}>
-                Das Herunterladen von Anhängen folgt — es bekommt eine eigene Prüfung, weil hier
-                fremde Dateien ins Haus kommen.
+                Anhänge werden immer heruntergeladen, nie im Browser geöffnet — eine fremde Datei
+                soll nicht in Ihrem angemeldeten Dashboard laufen.
               </p>
             </div>
           )}
@@ -352,6 +428,10 @@ const styles: Record<string, CSSProperties> = {
   mailVon: { fontSize: 14, marginTop: 6 },
   mailText: { whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: C.text, fontSize: 14.5, lineHeight: 1.65, maxHeight: '60vh', overflowY: 'auto' },
   anhang: { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 13px', marginTop: 8, fontSize: 14 },
+  werkzeugleiste: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', margin: '0 0 14px' },
+  ordnerWahl: { background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 11px', fontSize: 14, fontFamily: 'inherit' },
+  suchfeld: { flex: '1 1 220px', minWidth: 180, background: C.navy2, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', fontSize: 14, fontFamily: 'inherit' },
+  trefferHinweis: { color: C.textDim, fontSize: 13 },
 
   mini: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 13px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 10, padding: '11px 18px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', display: 'inline-block' },

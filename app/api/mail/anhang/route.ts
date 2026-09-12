@@ -1,28 +1,28 @@
 // ============================================================================
-// ARGONAUT OS · app/api/mail/nachricht/route.ts — eine Nachricht im Klartext
+// ARGONAUT OS · app/api/mail/anhang/route.ts — einen Anhang herunterladen
 //
-// Der Posteingang zeigt bis heute nur den Umschlag: Absender, Betreff, Datum,
-// gelesen. Damit sieht man, DASS etwas da ist — arbeiten kann man damit nicht.
-// Diese Route holt den Inhalt.
+//   GET ?uid=123&i=0[&ordner=INBOX]  ->  die Datei als Download
 //
-//   GET ?uid=123[&ordner=INBOX]  ->  { text, betreff, von, datumIso, messageId, anhaenge[] }
+// Die Nachbarroute /api/mail/nachricht benennt Anhänge nur (Name, Typ, Größe)
+// und sagt in ihrem eigenen Kopf: „Der Download ist ein eigener Schritt mit
+// eigener Prüfung." Das ist dieser Schritt.
 //
-// 12.09.26 (Punkt 3.4): Der Ordner kam dazu. Ohne Angabe bleibt es INBOX —
-// die Route verhält sich also wie vorher. Der Ordner MUSS mitgereicht werden,
-// sobald der Posteingang einen anderen anzeigt: dieselbe UID bedeutet in
-// einem anderen Ordner eine andere Nachricht.
+// ▄▄▄ DREI DINGE, DIE HIER NIE PASSIEREN DÜRFEN ▄▄▄
+//  1) INLINE AUSLIEFERN. Eine Mail-Anlage als text/html oder image/svg+xml
+//     inline auf unserer eigenen Adresse hiesse: fremdes Skript läuft im
+//     angemeldeten Dashboard, mit Zugriff auf die Sitzung. Jeder Anhang geht
+//     deshalb als `attachment` raus — ausnahmslos, siehe contentDisposition().
+//  2) DEN BEHAUPTETEN TYP ÜBERNEHMEN. Er kommt vom Absender. sichererTyp()
+//     lässt nur eine kurze, harmlose Liste durch, alles andere wird
+//     octet-stream. Dazu X-Content-Type-Options: nosniff, damit der Browser
+//     auch nicht selbst rät.
+//  3) DEN NAMEN IN DIE KOPFZEILE SCHREIBEN. Anführungszeichen, Semikolon oder
+//     ein Zeilenumbruch im Dateinamen brechen die Kopfzeile auf.
+//     sichererDateiname() räumt das weg, RFC 5987 rettet die Umlaute.
 //
-// ▄▄▄ WARUM NUR TEXT UND KEIN HTML ▄▄▄
-// Eine E-Mail ist fremder Inhalt. Wer fremdes HTML in die eigene Oberfläche
-// stellt, holt sich alles ins Haus, was darin steckt: Skripte, Zählpixel,
-// nachgeladene Bilder, die dem Absender melden, wann und wo gelesen wurde.
-// Deshalb geht hier ausschliesslich Text an den Client. Liegt nur eine
-// HTML-Fassung vor, wird sie serverseitig in Text gewandelt (textAusHtml).
-// Eine abgesicherte HTML-Ansicht kann später kommen — als eigene Entscheidung,
-// nicht als Nebenwirkung.
-//
-// Anhänge werden benannt, aber nicht ausgeliefert: Name, Typ, Größe. Der
-// Download ist ein eigener Schritt mit eigener Prüfung.
+// Der Anhang wird NICHT gespeichert. Er wird geholt, durchgereicht, fertig —
+// es entsteht keine zweite Kopie in unserem Speicher, die jemand aufräumen
+// müsste und die irgendwann mit dem Postfach auseinanderläuft.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
@@ -30,17 +30,16 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele, encKeyBereit } from '@/lib/crypto';
 import { imapPort } from '@/lib/mailKalender';
-import { textAusHtml } from '@/lib/mailSmtp';
-import { ordnerListe, ordnerErlaubt } from '@/lib/mailAbruf';
+import {
+  anhangIndex, sichererTyp, contentDisposition, ordnerErlaubt,
+  ordnerListe, MAX_ANHANG_BYTES,
+} from '@/lib/mailAbruf';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-
-/** Längenbremse: Eine Werbemail kann Megabyte an Text enthalten. */
-const MAX_TEXT = 200_000;
 
 type ZugangRow = {
   konto_id?: string | null;
@@ -58,10 +57,17 @@ export async function GET(req: Request) {
 
   const p = new URL(req.url).searchParams;
   const uid = parseInt(p.get('uid') || '', 10);
+  const idx = anhangIndex(p.get('i'));
   if (!Number.isFinite(uid) || uid <= 0) {
     return NextResponse.json({ ok: false, error: 'Keine gültige Nachrichten-Nummer.' }, { status: 400 });
   }
+  if (idx === null) {
+    return NextResponse.json({ ok: false, error: 'Kein gültiger Anhang angegeben.' }, { status: 400 });
+  }
 
+  // Das Postfach gehört dem eingeloggten Nutzer — die Abfrage filtert auf
+  // seine owner_user_id. Niemand kann über eine fremde uid an ein fremdes
+  // Postfach, weil die Verbindung immer mit SEINEN Zugangsdaten aufgebaut wird.
   const admin = createAdminClient();
   const { data } = await admin
     .from('mail_zugang')
@@ -72,10 +78,10 @@ export async function GET(req: Request) {
   const z = data as ZugangRow | null;
 
   if (!z || z.verbunden !== true || !z.token_verschluesselt) {
-    return NextResponse.json({ ok: false, verbunden: false, error: 'Es ist kein Postfach verbunden.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Es ist kein Postfach verbunden.' }, { status: 400 });
   }
   if (!z.imap_host) {
-    return NextResponse.json({ ok: false, verbunden: true, error: 'Für dieses Postfach fehlt der IMAP-Server.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Für dieses Postfach fehlt der IMAP-Server.' }, { status: 400 });
   }
 
   let passwort = '';
@@ -121,31 +127,35 @@ export async function GET(req: Request) {
     }
 
     const geparst = await simpleParser(roh);
+    const liste = geparst.attachments ?? [];
+    const a = liste[idx];
+    if (!a || !Buffer.isBuffer(a.content)) {
+      return NextResponse.json({ ok: false, error: 'Diesen Anhang gibt es in der Nachricht nicht.' }, { status: 404 });
+    }
+    if (a.content.length > MAX_ANHANG_BYTES) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Dieser Anhang ist zu groß für den Download über ARGONAUT. Bitte holen Sie ihn direkt aus Ihrem Postfach.',
+      }, { status: 413 });
+    }
 
-    const text = String(geparst.text ?? '').trim() || textAusHtml(geparst.html || '');
-    const vonErster = geparst.from?.value?.[0];
-
-    return NextResponse.json({
-      ok: true,
-      uid,
-      betreff: String(geparst.subject ?? '').trim(),
-      vonName: String(vonErster?.name ?? '').trim(),
-      vonAdresse: String(vonErster?.address ?? '').trim(),
-      datumIso: geparst.date instanceof Date && !isNaN(geparst.date.getTime()) ? geparst.date.toISOString() : '',
-      messageId: String(geparst.messageId ?? '').trim(),
-      text: text.slice(0, MAX_TEXT),
-      gekuerzt: text.length > MAX_TEXT,
-      nurHtmlVorhanden: !String(geparst.text ?? '').trim() && !!geparst.html,
-      anhaenge: (geparst.attachments ?? []).map((a) => ({
-        name: String(a.filename ?? 'Anhang').slice(0, 200),
-        typ: String(a.contentType ?? '').slice(0, 100),
-        groesse: Number(a.size) || 0,
-      })),
+    const koerper = new Uint8Array(a.content);
+    return new NextResponse(koerper, {
+      status: 200,
+      headers: {
+        'Content-Type': sichererTyp(a.contentType),
+        'Content-Disposition': contentDisposition(a.filename ?? 'anhang'),
+        'Content-Length': String(koerper.byteLength),
+        // Der Browser soll NICHT selbst raten, was die Datei ist.
+        'X-Content-Type-Options': 'nosniff',
+        // Ein Anhang gehört niemandem ausser diesem Nutzer — nirgends zwischenlagern.
+        'Cache-Control': 'private, no-store',
+      },
     });
   } catch (e) {
     try { await client.close(); } catch { /* egal */ }
     const meldung = e instanceof Error ? e.message : 'Verbindung zum Postfach nicht möglich.';
-    console.error('mail/nachricht:', meldung);
+    console.error('mail/anhang:', meldung);
     return NextResponse.json({ ok: false, error: 'Abruf fehlgeschlagen: ' + meldung }, { status: 502 });
   }
 }
