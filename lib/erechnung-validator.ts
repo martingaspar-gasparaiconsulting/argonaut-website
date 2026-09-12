@@ -79,7 +79,7 @@ export function validiereERechnung(e: ValidierEingabe): ValidierErgebnis {
 
   // ── BR-06 / BR-08: Verkäufer Name + Anschrift ──
   const sAdr = seller.adresse || {};
-  if (leer(seller.name)) add('BR-06', 'fehler', 'Verkäufer-Name (dein Firmenname) fehlt.');
+  if (leer(seller.name)) add('BR-06', 'fehler', 'Verkäufer-Name (Ihr Firmenname) fehlt.');
   if (leer(sAdr.ort)) add('BR-08', 'fehler', 'Verkäufer-Ort fehlt.');
   if (leer(sAdr.plz)) add('BR-08', 'warnung', 'Verkäufer-PLZ fehlt.');
   if (leer(sAdr.strasse)) add('BR-08', 'warnung', 'Verkäufer-Straße fehlt.');

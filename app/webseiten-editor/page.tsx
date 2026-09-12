@@ -408,7 +408,7 @@ export default function VollbildEditor() {
         {/* rechts · Eigenschaften */}
         <aside style={styles.spalteRechts}>
           <div style={styles.spalteTitel}>Eigenschaften</div>
-          <p style={styles.spalteHinweis}>Klicke einen Baustein auf der Seite an — der passende springt hier hoch. Überschriften &amp; Texte änderst du direkt auf der Seite. 🖼️ Ein Bild vom PC ziehst du direkt auf den Titelbereich (Hintergrund) oder die Galerie.</p>
+          <p style={styles.spalteHinweis}>Klicken Sie einen Baustein auf der Seite an — der passende springt hier hoch. Überschriften &amp; Texte ändern Sie direkt auf der Seite. 🖼️ Ein Bild vom PC ziehen Sie direkt auf den Titelbereich (Hintergrund) oder die Galerie.</p>
           {bloecke.length === 0
             ? <p style={styles.spalteHinweis}>Noch keine Bausteine — links einen hinzufügen.</p>
             : <SeitenEditor bloecke={bloecke} onChange={setBloeckeReflow} auswahl={auswahl} onAuswahl={setAuswahl} />}

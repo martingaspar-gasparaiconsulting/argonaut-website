@@ -44,8 +44,8 @@ export const VORFUEHR_INHALT: Record<string, VorfuehrInhalt> = {
     ],
     hoehepunkte: [
       'Aufmaß direkt auf der Baustelle erfassen — daraus wird per Klick das Angebot',
-      'Leistungskatalog mit deinen Preisen: Angebot in Minuten statt an einem Abend',
-      'Objektzeiten je Baustelle — du siehst sofort, wo Stunden verbrennen',
+      'Leistungskatalog mit Ihren Preisen: Angebot in Minuten statt an einem Abend',
+      'Objektzeiten je Baustelle — Sie sehen sofort, wo Stunden verbrennen',
     ],
   },
   heizung: {
@@ -114,7 +114,7 @@ export const VORFUEHR_INHALT: Record<string, VorfuehrInhalt> = {
     kiFrage: 'Wie war der letzte Monat und worauf muss ich achten?',
     kiAntwort: [
       'Auslastung 74 %, durchschnittlicher Zimmerpreis 118 € — gegenüber Vorjahresmonat plus 6 %.',
-      'Der Wareneinsatz im Restaurant ist auf 32 % gestiegen, üblich sind bei dir 28 %.',
+      'Der Wareneinsatz im Restaurant ist auf 32 % gestiegen, üblich sind bei Ihnen 28 %.',
       'Vorschlag: Kalkulation der fünf meistverkauften Gerichte prüfen — dort liegt die Abweichung.',
     ],
     hoehepunkte: [
@@ -143,8 +143,8 @@ export const VORFUEHR_INHALT: Record<string, VorfuehrInhalt> = {
     schmerz: 'Nachts backen, morgens ausliefern, tagsüber Papierkram — und die Retouren fallen erst im Abschluss auf.',
     kiFrage: 'Welche Filiale läuft am besten und wo verliere ich Geld?',
     kiAntwort: [
-      'Filiale Bahnhof macht 31 % des Umsatzes bei 18 % der Personalkosten — deine stärkste.',
-      'Filiale Weststadt hat 14 % Retourenquote, im Schnitt liegst du bei 6 %.',
+      'Filiale Bahnhof macht 31 % des Umsatzes bei 18 % der Personalkosten — Ihre stärkste.',
+      'Filiale Weststadt hat 14 % Retourenquote, im Schnitt liegen Sie bei 6 %.',
       'Vorschlag: Bestellmengen Weststadt nachmittags um ein Fünftel senken — das sind rund 900 € im Monat.',
     ],
     hoehepunkte: [
@@ -159,7 +159,7 @@ export const VORFUEHR_INHALT: Record<string, VorfuehrInhalt> = {
     kiFrage: 'Wo verliere ich auf den Touren Geld?',
     kiAntwort: [
       'Tour Nord fährt seit sechs Wochen im Schnitt 62 Kilometer Leerfahrt pro Tag.',
-      'Zwei Sendungen darauf liegen unter deiner Deckungsbeitragsgrenze.',
+      'Zwei Sendungen darauf liegen unter Ihrer Deckungsbeitragsgrenze.',
       'Vorschlag: Tour Nord und Tour Mitte zusammenlegen — die Route ist bereits gerechnet.',
     ],
     hoehepunkte: [

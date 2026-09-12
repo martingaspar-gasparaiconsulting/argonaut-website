@@ -755,7 +755,7 @@ export function augeBk(k: {
     };
   }
   if (k.einheiten === 0) {
-    return { klartext: 'Leg die Einheiten/Mieter an — dann verteilt sich die Abrechnung automatisch nach Schlüssel.', punkte: [], stimmung: 'neutral' };
+    return { klartext: 'Legen Sie die Einheiten/Mieter an — dann verteilt sich die Abrechnung automatisch nach Schlüssel.', punkte: [], stimmung: 'neutral' };
   }
   if (k.kostenGesamt === 0) {
     return { klartext: `${k.einheiten} Einheit(en) erfasst — jetzt die Kostenarten nach § 2 BetrKV eintragen.`, punkte: [], stimmung: 'neutral' };
@@ -791,7 +791,7 @@ export function augeBde(k: {
   if (k.stoerzeitStd > 0) punkte.push(`${k.stoerzeitStd.toLocaleString('de-DE')} h Störzeit gegenüber ${k.laufzeitStd.toLocaleString('de-DE')} h Laufzeit.`);
 
   if (k.oee < 0.6) {
-    return { klartext: `OEE ${p(k.oee)} — deutlich Luft nach oben. Setz zuerst bei der ${schwach.name} an.`, punkte, stimmung: 'achtung' };
+    return { klartext: `OEE ${p(k.oee)} — deutlich Luft nach oben. Setzen Sie zuerst bei der ${schwach.name} an.`, punkte, stimmung: 'achtung' };
   }
   if (k.oee < 0.85) {
     return { klartext: `OEE ${p(k.oee)} — solide, aber noch nicht Weltklasse (85 %). Größter Hebel: ${schwach.name}.`, punkte, stimmung: 'neutral' };

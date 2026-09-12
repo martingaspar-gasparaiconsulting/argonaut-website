@@ -134,7 +134,7 @@ export function seoPruefungSeite(seite: SeiteRoh, ci: CiRoh | null | undefined) 
     schluessel: 'meta', titel: 'Meta-Beschreibung', gewicht: 3,
     status: !metaQuelle ? 'fehlt' : (metaLen >= 70 && metaLen <= 160 ? 'gut' : 'warnung'),
     befund: !metaQuelle ? 'Keine Beschreibung (Slogan/Über-uns leer).' : `Beschreibung ist ${metaLen} Zeichen lang.`,
-    tipp: 'Hinterlege in den Firmendaten einen Slogan oder Über-uns-Text mit 70–160 Zeichen — das ist der Google-Vorschautext.',
+    tipp: 'Hinterlegen Sie in den Firmendaten einen Slogan oder Über-uns-Text mit 70–160 Zeichen — das ist der Google-Vorschautext.',
   });
 
   // 3) Aufmacher / H1.
@@ -142,7 +142,7 @@ export function seoPruefungSeite(seite: SeiteRoh, ci: CiRoh | null | undefined) 
     schluessel: 'h1', titel: 'Aufmacher (Überschrift)', gewicht: 2,
     status: m.hatHero && m.heroTitel ? 'gut' : 'fehlt',
     befund: m.hatHero && m.heroTitel ? `Aufmacher-Überschrift vorhanden: „${m.heroTitel.slice(0, 60)}".` : 'Kein Titelbereich mit klarer Überschrift.',
-    tipp: 'Setz oben einen Titelbereich mit einer klaren Hauptüberschrift, die dein Angebot benennt.',
+    tipp: 'Setzen Sie oben einen Titelbereich mit einer klaren Hauptüberschrift, die Ihr Angebot benennt.',
   });
 
   // 4) Textmenge.
@@ -191,7 +191,7 @@ export function seoPruefungSeite(seite: SeiteRoh, ci: CiRoh | null | undefined) 
     schluessel: 'adresse', titel: 'Adresse (lokale Suche)', gewicht: 2,
     status: napTeile >= 3 ? 'gut' : (napTeile >= 1 ? 'warnung' : 'fehlt'),
     befund: napTeile >= 3 ? 'Vollständige Adresse hinterlegt.' : napTeile >= 1 ? 'Adresse unvollständig.' : 'Keine Adresse hinterlegt.',
-    tipp: 'Vollständige Adresse (Straße, PLZ, Ort) hilft bei „…in deiner Stadt"-Suchen und im Google-Unternehmensprofil.',
+    tipp: 'Vollständige Adresse (Straße, PLZ, Ort) hilft bei „…in Ihrer Stadt"-Suchen und im Google-Unternehmensprofil.',
   });
 
   // 10) Öffnungszeiten + Telefon (lokale Signale).

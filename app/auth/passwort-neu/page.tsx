@@ -85,7 +85,7 @@ export default function PasswortNeuPage() {
             }}>✓</div>
             <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>Passwort geändert</p>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '14px', lineHeight: 1.6 }}>
-              Du wirst angemeldet und weitergeleitet …
+              Sie werden angemeldet und weitergeleitet …
             </p>
           </div>
         ) : !bereit ? (

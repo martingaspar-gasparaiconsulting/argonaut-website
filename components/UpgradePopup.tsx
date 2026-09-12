@@ -51,7 +51,7 @@ export default function UpgradePopup() {
         <button onClick={handleClose} style={closeBtn}>x</button>
         <div style={badge}>SOLO BETA LAEUFT AUS</div>
         <h2 style={h2}>Bereit fuer den naechsten Schritt?</h2>
-        <p style={p}>Dein SOLO Beta-Zugang endet in wenigen Wochen. Wechsle jetzt zu einem ARGONAUT OS Paket ohne Unterbrechung.</p>
+        <p style={p}>Ihr SOLO Beta-Zugang endet in wenigen Wochen. Wechseln Sie jetzt zu einem ARGONAUT OS Paket ohne Unterbrechung.</p>
         <div style={grid}>
           <div style={card}>
             <div style={cardTitle}>START</div>

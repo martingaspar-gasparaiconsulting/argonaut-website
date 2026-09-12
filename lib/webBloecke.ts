@@ -419,7 +419,7 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         ? '<a class="btn ao-buchung-btn" href="#" style="pointer-events:none;opacity:.6">&#128197; L&auml;dt &hellip;</a>'
         : '<span class="btn ao-buchung-btn">&#128197; Termin online buchen</span>';
       const hint = ed
-        ? '<div class="ao-buchung-hinweis ao-leer">Terminarten &amp; Zeiten richtest du im Buchungs-Modul ein. Der Knopf f&uuml;hrt Besucher zur Buchung.</div>'
+        ? '<div class="ao-buchung-hinweis ao-leer">Terminarten &amp; Zeiten richten Sie im Buchungs-Modul ein. Der Knopf f&uuml;hrt Besucher zur Buchung.</div>'
         : '<div class="ao-buchung-hinweis"></div>';
       return [
         '<section class="sec alt" id="termin-buchen"><div class="wrap narrow">',

@@ -65,7 +65,7 @@ export default function AnmeldenSeite() {
       return;
     }
     if (!einwilligung) {
-      setFehler('Bitte bestätige die Einwilligung, damit wir dir schreiben dürfen.');
+      setFehler('Bitte bestätigen Sie die Einwilligung, damit wir Ihnen schreiben dürfen.');
       return;
     }
     setSenden(true);
@@ -115,11 +115,11 @@ export default function AnmeldenSeite() {
         ) : fertig ? (
           <div style={S.card}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>{fertig === 'bereits' ? '👍' : '📩'}</div>
-            <h1 style={S.h1}>{fertig === 'bereits' ? 'Du bist schon dabei' : 'Fast geschafft!'}</h1>
+            <h1 style={S.h1}>{fertig === 'bereits' ? 'Sie sind schon dabei' : 'Fast geschafft!'}</h1>
             <p style={S.sub}>
               {fertig === 'bereits'
-                ? `Deine Adresse ist bereits für ${betrieb} bestätigt. Es ist nichts weiter zu tun.`
-                : `Wir haben dir eine E-Mail geschickt. Bitte öffne sie und klicke auf „Anmeldung bestätigen“ — erst danach bist du angemeldet.`}
+                ? `Ihre Adresse ist bereits für ${betrieb} bestätigt. Es ist nichts weiter zu tun.`
+                : `Wir haben Ihnen eine E-Mail geschickt. Bitte öffnen Sie sie und klicken Sie auf „Anmeldung bestätigen“ — erst danach sind Sie angemeldet.`}
             </p>
           </div>
         ) : (

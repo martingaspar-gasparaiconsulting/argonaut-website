@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 
     if (error) return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');
     if (!data || data.length === 0) {
-      return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht bist du bereits abgemeldet.');
+      return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht sind Sie bereits abgemeldet.');
     }
 
     // Branding des versendenden Kunden fuer die Bestaetigungsseite laden.
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
       firma,
       akzent,
       'Erfolgreich abgemeldet',
-      `Du wurdest von der Info-Serie von ${firma} abgemeldet und erhältst keine weiteren E-Mails mehr. Du kannst dieses Fenster schließen.`,
+      `Sie wurden von der Info-Serie von ${firma} abgemeldet und erhalten keine weiteren E-Mails mehr. Sie können dieses Fenster schließen.`,
     );
   } catch {
     return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');

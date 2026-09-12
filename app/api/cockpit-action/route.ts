@@ -167,7 +167,7 @@ async function teamNachricht(supabase: any, ownerId: string, a: any) {
       return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kanal "${wunschKanal}" gefunden. Verfuegbare Kanaele:`, optionen: liste.map((k: any) => k.name) });
     }
     if (m.length > 1) {
-      return NextResponse.json({ ok: false, rueckfrage: `Mehrere Kanaele passen zu "${wunschKanal}". Welchen meinst du?`, optionen: m.map((k: any) => k.name) });
+      return NextResponse.json({ ok: false, rueckfrage: `Mehrere Kanaele passen zu "${wunschKanal}". Welchen meinen Sie?`, optionen: m.map((k: any) => k.name) });
     }
     kanal = m[0];
   }
@@ -209,12 +209,12 @@ async function wiedervorlage(supabase: any, ownerId: string, a: any) {
   const heu = (k: any) => `${(k.vorname || "").toLowerCase()} ${(k.nachname || "").toLowerCase()} ${(k.firma || "").toLowerCase()}`;
   const score = (k: any) => tokens.filter((t) => heu(k).includes(t)).length;
 
-  if (liste.length === 0) return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kontakt "${wunschKontakt}" gefunden. Wen genau meinst du?` });
+  if (liste.length === 0) return NextResponse.json({ ok: false, rueckfrage: `Ich habe keinen Kontakt "${wunschKontakt}" gefunden. Wen genau meinen Sie?` });
 
   let kandidaten = liste.filter((k: any) => score(k) === tokens.length);
   if (kandidaten.length === 0) kandidaten = liste;
   if (kandidaten.length > 1) {
-    return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Kontakte zu "${wunschKontakt}". Welchen meinst du?`, optionen: kandidaten.map(label) });
+    return NextResponse.json({ ok: false, rueckfrage: `Es passen mehrere Kontakte zu "${wunschKontakt}". Welchen meinen Sie?`, optionen: kandidaten.map(label) });
   }
   const kontakt = kandidaten[0];
 
