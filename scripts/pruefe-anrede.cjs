@@ -47,7 +47,7 @@ const ROLLEN = [
   [/^app\/api\/oeffentlich\//, 'VERLAESST'],
   [/^app\/(impressum|datenschutz|agb|preise|branchen|kontakt)/, 'VERLAESST'],
 
-  // Der Mitarbeiterbereich — hier ist "du" richtig.
+  // Der Mitarbeiterbereich — hier wird die Anrede herausgenommen.
   [/^app\/dashboard\/(mein-bereich|meine-einsaetze|zeiterfassung|schichtplan)/, 'MITARBEITER'],
 
   // Alles Uebrige im eingeloggten Bereich spricht den Chef an.
@@ -74,6 +74,22 @@ const PRONOMEN = /\b(du|dir|dich|dein|deine|deiner|deinem|deinen|deines)\b/i;
 // nur als Hinweis ausgewiesen — "Trage", "Suche", "Lade" koennen auch
 // Substantive sein.
 const IMPERATIV = /(^|[.!?:·—–]\s+|["'`>]\s*)(leg|lege|buche|trag|trage|klick|klicke|waehl|wähle|wahle|gib|lad|lade|pruef|prüfe|pruefe|sieh|schau|mach|mache|erstell|erstelle|oeffne|öffne|starte|druecke|drücke|fuege|füge|nimm|setz|setze|speicher|speichere|loesch|lösche|waehle)\b/;
+
+// Objektschluessel statt Anrede: `du: [...]` in einer Datenstruktur.
+// Im deutschen Fliesstext folgt auf "du" nie ein Doppelpunkt — in
+// app/vorschau/_lib/dossierHtml.ts heisst so ein Feld, das die Schritte
+// des Nutzers haelt. 19 Fehlalarme kamen am 12.09. genau daher.
+const SCHLUESSEL = /(^|[\s{,[(])(du|dir|dein|deine)\s*:/i;
+
+// Anweisungen an das SPRACHMODELL, kein Kundentext. "Du bist eine
+// KI-Assistenz" steht in einem System-Prompt und wird nie jemandem
+// angezeigt. Wird getrennt ausgewiesen statt mitgezaehlt.
+const KI_PROMPT = /\bDu bist\b|\bDeine Aufgabe\b|\bAntworte\b.{0,40}\bals\b/;
+function istKiPrompt(pfad, zeile) {
+  if (/prompt/i.test(pfad)) return true;
+  if (/^lib\/(ki|vertrieb-prompts|inhaltPrompt|kiGuideTexte|videoSkript)\b/.test(pfad)) return true;
+  return KI_PROMPT.test(zeile);
+}
 
 // Zeilen, die sicher kein Kundentext sind.
 const KEIN_TEXT = [
@@ -124,16 +140,33 @@ for (const datei of dateien) {
 
   zeilen.forEach((zeile, i) => {
     if (istCodeZeile(zeile) || !hatText(zeile)) return;
-    const pron = PRONOMEN.test(zeile);
+    if (SCHLUESSEL.test(zeile)) return;          // `du:` ist ein Feldname
+    const treffer = zeile.match(PRONOMEN);
+    const pron = Boolean(treffer);
     const impe = !pron && IMPERATIV.test(zeile);
     if (!pron && !impe) return;
+
+    // Den Fund MIT Umgebung zeigen, nicht den Zeilenanfang — sonst sieht
+    // man bei langen Zeilen das gesuchte Wort gar nicht und kann die
+    // Stelle nicht beurteilen.
+    let text;
+    if (pron) {
+      const pos = treffer.index || 0;
+      const von = Math.max(0, pos - 45);
+      const bis = Math.min(zeile.length, pos + 75);
+      text = (von > 0 ? '… ' : '') + zeile.slice(von, bis).trim() + (bis < zeile.length ? ' …' : '');
+    } else {
+      text = zeile.trim().slice(0, 110);
+    }
+
     funde.push({
       datei: kurz,
       zeile: i + 1,
       rolle,
-      art: pron ? 'PRONOMEN' : 'IMPERATIV?',
+      art: istKiPrompt(kurz, zeile) ? 'KI-PROMPT' : (pron ? 'PRONOMEN' : 'IMPERATIV?'),
+      wort: pron ? treffer[0] : '',
       soll: sollSiezen(rolle),
-      text: zeile.trim().slice(0, 110),
+      text,
     });
   });
 }
@@ -143,7 +176,7 @@ const zeilen = [];
 const z = (s = '') => zeilen.push(s);
 
 z('='.repeat(76));
-z('ARGONAUT OS · Anrede-Scan nach Rolle  (Punkt 3.1)');
+z('ARGONAUT OS · Anrede-Scan nach Rolle · Fassung 2  (Punkt 3.1)');
 z('Erzeugt: ' + new Date().toISOString().slice(0, 16).replace('T', ' '));
 z('Durchsucht: ' + dateien.length + ' Dateien in ' + ORDNER.join(', '));
 z('='.repeat(76));
@@ -155,11 +188,16 @@ z('  ANREDEFREI   Duz-Stelle im Mitarbeiterbereich — Anrede herausnehmen,');
 z('               statt sie zu duzen oder zu siezen.');
 z('  ANSEHEN      Betreiber-/sonstige Datei oder ein vermuteter Imperativ;');
 z('               das entscheidet ein Mensch, kein Muster.');
+z('  KI-PROMPT    Anweisung an das Sprachmodell, kein Kundentext — wird');
+z('               niemandem angezeigt. Nur gezaehlt, nicht zu aendern.');
 z();
 
 const zuAendern = funde.filter((f) => f.soll && f.art === 'PRONOMEN');
 const richtig = funde.filter((f) => f.rolle === 'MITARBEITER' && f.art === 'PRONOMEN');
-const ansehen = funde.filter((f) => !zuAendern.includes(f) && !richtig.includes(f));
+const kiPrompt = funde.filter((f) => f.art === 'KI-PROMPT');
+const ansehen = funde.filter(
+  (f) => !zuAendern.includes(f) && !richtig.includes(f) && !kiPrompt.includes(f),
+);
 
 function proDatei(liste) {
   const m = new Map();
@@ -173,8 +211,9 @@ z('-'.repeat(76));
 z('SIEZEN       ' + String(zuAendern.length).padStart(4) + ' Stellen in ' + proDatei(zuAendern).length + ' Dateien');
 z('ANREDEFREI   ' + String(richtig.length).padStart(4) + ' Stellen in ' + proDatei(richtig).length + ' Dateien (Mitarbeiterbereich)');
 z('ANSEHEN      ' + String(ansehen.length).padStart(4) + ' Stellen in ' + proDatei(ansehen).length + ' Dateien');
+z('KI-PROMPT    ' + String(kiPrompt.length).padStart(4) + ' Stellen in ' + proDatei(kiPrompt).length + ' Dateien (nicht zu aendern)');
 z();
-z('SUMME        ' + String(zuAendern.length + richtig.length + ansehen.length).padStart(4) + ' Fundstellen');
+z('SUMME        ' + String(funde.length).padStart(4) + ' Fundstellen');
 z();
 
 z('-'.repeat(76));
