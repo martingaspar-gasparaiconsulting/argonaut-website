@@ -44,6 +44,7 @@ type Termin = {
   notiz: string | null;
   erinnerung_min: number | null;
   ressource: string | null;
+  kontakt_id: string | null;
 };
 
 const ERINNERUNGEN: { wert: string; label: string }[] = [
@@ -110,7 +111,7 @@ export default function TermineCockpit() {
       let q = supabase
         .from("termine")
         .select(
-          "id, titel, beginn_am, ende_am, ort, status, kunde_email, notiz, erinnerung_min, ressource"
+          "id, titel, beginn_am, ende_am, ort, status, kunde_email, notiz, erinnerung_min, ressource, kontakt_id"
         );
       if (sid) q = q.or(standortOrFilter(sid));
       const { data, error } = await q.order("beginn_am", { ascending: true });
@@ -123,6 +124,15 @@ export default function TermineCockpit() {
       setLoading(false);
     }
   }, []);
+
+  // Kunden-Namen fuer die Terminkarten. Bewusst aus der ohnehin geladenen
+  // CRM-Liste aufgeloest und NICHT als Join in der Termin-Abfrage: ein
+  // Problem am Kontakt wuerde sonst die komplette Terminliste leer machen.
+  const kundenNamen = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const k of kontakte) m[k.id] = k.anzeigename || k.email || "Kunde im CRM";
+    return m;
+  }, [kontakte]);
 
   useEffect(() => {
     (async () => {
@@ -342,9 +352,9 @@ export default function TermineCockpit() {
         />
       ) : (
         <>
-          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." />
+          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} />
           {vergangen.length > 0 && (
-            <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt />
+            <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt kunden={kundenNamen} />
           )}
         </>
       )}
@@ -499,12 +509,14 @@ function TerminListe({
   onDelete,
   leer,
   gedimmt,
+  kunden,
 }: {
   titel: string;
   liste: Termin[];
   onDelete: (t: Termin) => void;
   leer: string;
   gedimmt?: boolean;
+  kunden: Record<string, string>;
 }) {
   return (
     <div style={{ marginBottom: 22, opacity: gedimmt ? 0.7 : 1 }}>
@@ -554,6 +566,30 @@ function TerminListe({
                 <div style={{ color: C.textDim, fontSize: "clamp(12.5px, 1.13vw, 18px)", marginTop: 2 }}>
                   {[t.ort, t.ressource, t.kunde_email].filter(Boolean).join(" · ") || "—"}
                 </div>
+                {t.kontakt_id ? (
+                  <a
+                    href={`/dashboard/crm/${t.kontakt_id}`}
+                    title="Zur Kunden-Akte"
+                    style={{
+                      display: "inline-block",
+                      marginTop: 6,
+                      padding: "2px 9px",
+                      borderRadius: 999,
+                      border: `1px solid ${C.border}`,
+                      background: "rgba(0,229,255,0.08)",
+                      color: C.cyan,
+                      textDecoration: "none",
+                      fontSize: "clamp(11.5px, 1vw, 16px)",
+                      fontWeight: 600,
+                      maxWidth: "100%",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    👤 {kunden[t.kontakt_id] || "Kunde im CRM"}
+                  </a>
+                ) : null}
               </div>
               <button
                 onClick={() => onDelete(t)}
