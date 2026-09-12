@@ -244,7 +244,7 @@ export default function FirmenListePage() {
                 fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
-              Deine Firmen &amp; Accounts – jeder Kontakt kann einer Firma zugeordnet werden.
+              Ihre Firmen &amp; Accounts – jeder Kontakt kann einer Firma zugeordnet werden.
             </p>
           </div>
           <button onClick={dialogNeu} style={goldBtnGross}>
@@ -295,7 +295,7 @@ export default function FirmenListePage() {
           ) : gefiltert.length === 0 ? (
             <div style={leerBox}>
               {firmen.length === 0
-                ? "Noch keine Firmen. Leg deine erste Firma an."
+                ? "Noch keine Firmen. Legen Sie Ihre erste Firma an."
                 : "Keine Treffer."}
             </div>
           ) : (

@@ -315,14 +315,14 @@ export default function DublettenPage() {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitel}>Zusammenführen</h2>
             <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, margin: '6px 0 16px', lineHeight: 1.55 }}>
-              Links bleibt bestehen, rechts verschwindet. Für jedes Feld entscheidest du,
+              Links bleibt bestehen, rechts verschwindet. Für jedes Feld entscheiden Sie,
               welcher Wert gewinnt. Abweichendes wandert in eine Notiz — <strong>nichts geht verloren</strong>.
             </p>
 
             {offenesPaar.vergleich.emailKonflikt && (
               <div style={styles.warnBox}>
                 ⚠ <strong>Verschiedene E-Mail-Adressen.</strong> Das sind mit hoher Wahrscheinlichkeit
-                zwei verschiedene Personen. Bitte genau prüfen, bevor du fortfährst.
+                zwei verschiedene Personen. Bitte genau prüfen, bevor Sie fortfahren.
               </div>
             )}
 

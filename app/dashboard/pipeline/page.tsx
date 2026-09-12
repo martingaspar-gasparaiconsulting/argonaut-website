@@ -145,7 +145,7 @@ export default function PipelineSeite() {
       <div style={styles.kopf}>
         <div>
           <h1 style={styles.h1}>📊 Deal-Pipeline</h1>
-          <p style={styles.sub}>Deine Vertriebschancen als Karten über die Stufen. Verschieb einen Deal weiter, und der gewichtete Forecast rechnet sich automatisch mit der Abschlusswahrscheinlichkeit.</p>
+          <p style={styles.sub}>Ihre Vertriebschancen als Karten über die Stufen. Verschieben Sie einen Deal weiter, und der gewichtete Forecast rechnet sich automatisch mit der Abschlusswahrscheinlichkeit.</p>
         </div>
         <button style={styles.primaer} onClick={() => setFormAuf((v) => !v)}>{formAuf ? 'Abbrechen' : '＋ Neuer Deal'}</button>
       </div>

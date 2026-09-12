@@ -179,7 +179,7 @@ export default function MitgliederPage() {
     if (!cred.glaeubiger.trim() || !cred.iban.trim() || !cred.inhaber.trim()) {
       setFehler('Bitte zuerst die Gläubigerdaten (Gläubiger-ID, Kontoinhaber, IBAN) oben speichern.'); return;
     }
-    if (!ibanGueltig(cred.iban)) { setFehler('Deine Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht). Bitte oben korrigieren.'); return; }
+    if (!ibanGueltig(cred.iban)) { setFehler('Ihre Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht). Bitte oben korrigieren.'); return; }
     if (!einziehbar.length) {
       setFehler('Keine einziehbaren Mitglieder: es braucht Status „aktiv", IBAN, Mandatsreferenz, Mandatsdatum und einen Betrag > 0.'); return;
     }
@@ -233,9 +233,9 @@ export default function MitgliederPage() {
 
       {/* Gläubigerdaten */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitel}>🏦 Deine SEPA-Gläubigerdaten</h2>
+        <h2 style={styles.cardTitel}>🏦 Ihre SEPA-Gläubigerdaten</h2>
         <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', margin: '0 0 12px' }}>
-          Einmal hinterlegen — kommt in jede Lastschrift-Datei. Die Gläubiger-ID bekommst du bei der Deutschen Bundesbank (kostenlos).
+          Einmal hinterlegen — kommt in jede Lastschrift-Datei. Die Gläubiger-ID bekommen Sie bei der Deutschen Bundesbank (kostenlos).
         </p>
         <div style={styles.formGrid}>
           <div><label style={styles.lbl}>Gläubiger-ID</label><input style={styles.input} value={cred.glaeubiger} onChange={(e) => setCred((c) => ({ ...c, glaeubiger: e.target.value }))} placeholder="DE98ZZZ09999999999" /></div>
@@ -259,8 +259,8 @@ export default function MitgliederPage() {
           <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>So funktioniert's:</div>
           <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
             <li>ARGONAUT erzeugt die <b>SEPA-Datei</b> (Download) — es überweist selbst kein Geld.</li>
-            <li>Du lädst die Datei in dein <b>Online-Banking</b> hoch („SEPA-Datei / Sammellastschrift importieren") oder in ein Banking-Programm (SFirm, StarMoney, ProfiCash …).</li>
-            <li>Die <b>Bank zieht</b> am Fälligkeitstag von den Mitglieder-Konten ein → das Geld landet auf deinem Konto.</li>
+            <li>Sie laden die Datei in Ihr <b>Online-Banking</b> hoch („SEPA-Datei / Sammellastschrift importieren") oder in ein Banking-Programm (SFirm, StarMoney, ProfiCash …).</li>
+            <li>Die <b>Bank zieht</b> am Fälligkeitstag von den Mitglieder-Konten ein → das Geld landet auf Ihrem Konto.</li>
           </ol>
           <div style={{ marginTop: 8 }}>
             Voraussetzungen: <b>Gläubiger-ID</b> (kostenlos bei der Deutschen Bundesbank), ein <b>unterschriebenes Mandat</b> je

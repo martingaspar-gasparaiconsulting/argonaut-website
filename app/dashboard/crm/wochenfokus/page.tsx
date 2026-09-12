@@ -111,7 +111,7 @@ export default function WochenfokusPage() {
                 fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
-              Wen du diese Woche zuerst kontaktieren solltest – von ARGONAUT priorisiert.
+              Wen Sie diese Woche zuerst kontaktieren sollten – von ARGONAUT priorisiert.
             </p>
           </div>
           <button onClick={laden_} disabled={laden} style={{ ...goldBtn, opacity: laden ? 0.6 : 1 }}>
@@ -133,7 +133,7 @@ export default function WochenfokusPage() {
               fontFamily: "'DM Sans', sans-serif",
             }}
           >
-            ARGONAUT sichtet deine Kontakte und priorisiert…
+            ARGONAUT sichtet Ihre Kontakte und priorisiert…
           </div>
         ) : leer ? (
           <div

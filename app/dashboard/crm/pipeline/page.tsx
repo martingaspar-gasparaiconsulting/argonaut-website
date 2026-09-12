@@ -346,7 +346,7 @@ export default function PipelinePage() {
                 fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
-              Zieh deine Verkaufschancen per Drag&amp;Drop durch die Phasen.
+              Ziehen Sie Ihre Verkaufschancen per Drag&amp;Drop durch die Phasen.
             </p>
           </div>
           <button onClick={dialogNeu} style={goldBtnGross}>

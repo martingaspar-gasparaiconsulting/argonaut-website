@@ -146,7 +146,7 @@ export default function KontaktImportPage() {
     if (!window.confirm(
       'Alle möglichen Doppelten trotzdem anlegen?\n\n' +
       'Dabei entstehen mit hoher Wahrscheinlichkeit doppelte Kundendatensätze. ' +
-      'Nur sinnvoll, wenn du sicher bist, dass es verschiedene Personen sind.'
+      'Nur sinnvoll, wenn Sie sicher sind, dass es verschiedene Personen sind.'
     )) return;
     setBefund((b) => (b ? {
       ...b,
@@ -342,7 +342,7 @@ export default function KontaktImportPage() {
 
           <div style={styles.infoBox}>
             <strong>Die ID-Spalte</strong> ist die Kundennummer aus dem Herkunftssystem.
-            Wählst du sie, kannst du dieselbe Datei später erneut importieren — es entstehen
+            Wählen Sie sie, können Sie dieselbe Datei später erneut importieren — es entstehen
             dann Aktualisierungen statt Doppelter. Ohne ID-Spalte geht das nicht.
             <div style={{ marginTop: 10 }}>
               <label style={styles.lbl}>Herkunft (für den Schlüssel)</label>

@@ -441,7 +441,7 @@ export default function FirmaDetailPage() {
             >
               {verfuegbar.length === 0 ? (
                 <span style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-                  Alle Kontakte sind bereits einer Firma zugeordnet. Neue Kontakte legst du im Kontakt-Cockpit an.
+                  Alle Kontakte sind bereits einer Firma zugeordnet. Neue Kontakte legen Sie im Kontakt-Cockpit an.
                 </span>
               ) : (
                 <>

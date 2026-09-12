@@ -804,7 +804,7 @@ export default function CrmCockpitPage() {
                 fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
-              Deine Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
+              Ihre Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1025,7 +1025,7 @@ export default function CrmCockpitPage() {
               <Leerzustand
                 icon="👥"
                 titel="Noch keine Kontakte"
-                text="Dein CRM sammelt Kunden und Interessenten an einem Ort — mit Betreuungs-Intervallen und Tags."
+                text="Ihr CRM sammelt Kunden und Interessenten an einem Ort — mit Betreuungs-Intervallen und Tags."
                 schritte={["Kontakt manuell anlegen oder aus einem Lead übernehmen", "Firma, Rolle und Tags ergänzen", "Betreuung im Blick behalten"]}
               />
             ) : (
@@ -1305,7 +1305,7 @@ export default function CrmCockpitPage() {
 
             {!bearbeite && (
               <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>
-                Tags kannst du nach dem Anlegen auf der Kontakt-Detailseite vergeben.
+                Tags können Sie nach dem Anlegen auf der Kontakt-Detailseite vergeben.
               </div>
             )}
 
