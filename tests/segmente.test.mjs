@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   GESPERRTE_MERKMALE, MERKMALE, merkmal, istErlaubt, OPERATOREN, operatorenFuer,
   trifftRegel, passt, filtere, zaehle, beschreibe, fehltZumSpeichern,
+  merkmaleFuer, werbeStatus, darfWerbung, WERBE_STATUS_TEXT, QUELLEN,
 } from '../out/segmente.js';
 
 // ============================================================================
@@ -14,19 +15,21 @@ import {
 
 const HEUTE = '2026-09-13';
 
+// Genau die Spalten, die public.kontakte am 13.09.2026 wirklich hat.
 const KUNDE = {
   email: 'info@mustermann.de',
-  branche: 'Handwerk & Bau',
+  firma: 'Mustermann Bedachungen',
   ort: 'Stuttgart',
   plz: '70173',
+  land: 'DE',
+  position: 'Geschäftsführung',
+  status: 'kunde',
   quelle: 'Empfehlung',
-  stufe: 'kunde',
   kunde_seit: '2024-03-01',
-  letzter_kauf: '2026-01-10',
-  umsatz_gesamt: 18500,
-  newsletter_status: 'aktiv',
-  freebie: 'Checkliste Bauabnahme',
-  tag: 'A-Kunde',
+  letzter_kontakt_am: '2026-01-10',
+  betreuungs_intervall_tage: 90,
+  werbe_einwilligung: true,
+  werbe_widerspruch_am: null,
 };
 
 // ---------------------------------------------------------------- Sperrliste
@@ -58,13 +61,13 @@ test('ein Merkmal ausserhalb des Katalogs faellt durch statt still zu treffen', 
 // ------------------------------------------------------------------ Text
 
 test('Text: ist, ist nicht, enthaelt, beginnt mit — Gross/Klein egal', () => {
-  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'branche', operator: o, wert: w }, HEUTE);
-  assert.equal(t('ist', 'handwerk & bau'), true);
-  assert.equal(t('ist', 'Handel'), false);
-  assert.equal(t('ist_nicht', 'Handel'), true);
-  assert.equal(t('enthaelt', 'bau'), true);
-  assert.equal(t('beginnt_mit', 'Hand'), true);
-  assert.equal(t('beginnt_mit', 'bau'), false);
+  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'firma', operator: o, wert: w }, HEUTE);
+  assert.equal(t('ist', 'mustermann bedachungen'), true);
+  assert.equal(t('ist', 'Andere GmbH'), false);
+  assert.equal(t('ist_nicht', 'Andere GmbH'), true);
+  assert.equal(t('enthaelt', 'bedach'), true);
+  assert.equal(t('beginnt_mit', 'Musterm'), true);
+  assert.equal(t('beginnt_mit', 'bedach'), false);
 });
 
 test('Postleitzahl: der Anfang genuegt fuer eine ganze Region', () => {
@@ -80,11 +83,11 @@ test('leerer Suchwert trifft nicht — sonst traefe „enthaelt nichts" jeden', 
 // ------------------------------------------------------------------ Zahl
 
 test('Zahl: groesser und kleiner, mit deutscher Schreibweise', () => {
-  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'umsatz_gesamt', operator: o, wert: w }, HEUTE);
-  assert.equal(t('groesser', 10000), true);
-  assert.equal(t('groesser', '18.500'), false, 'gleich ist nicht groesser');
-  assert.equal(t('kleiner', '20.000'), true);
-  assert.equal(t('ist', '18500'), true);
+  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'betreuungs_intervall_tage', operator: o, wert: w }, HEUTE);
+  assert.equal(t('groesser', 30), true);
+  assert.equal(t('groesser', '90'), false, 'gleich ist nicht groesser');
+  assert.equal(t('kleiner', '120'), true);
+  assert.equal(t('ist', '90'), true);
 });
 
 test('Zahl-Operator auf einem Textfeld faellt durch', () => {
@@ -100,8 +103,8 @@ test('Datum: vor und nach einem festen Tag', () => {
 });
 
 test('Datum: „laenger her als" ist der Fall fuer Rueckhol-Aktionen', () => {
-  // letzter Kauf 10.01.2026, heute 13.09.2026 = 246 Tage her
-  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'letzter_kauf', operator: o, wert: w }, HEUTE);
+  // letzter Kontakt 10.01.2026, heute 13.09.2026 = 246 Tage her
+  const t = (o, w) => trifftRegel(KUNDE, { merkmal: 'letzter_kontakt_am', operator: o, wert: w }, HEUTE);
   assert.equal(t('aelter_als_tage', 90), true);
   assert.equal(t('aelter_als_tage', 300), false);
   assert.equal(t('juenger_als_tage', 300), true);
@@ -109,29 +112,29 @@ test('Datum: „laenger her als" ist der Fall fuer Rueckhol-Aktionen', () => {
 });
 
 test('heute wird hereingereicht, nie selbst gebildet — anderes Heute, anderes Ergebnis', () => {
-  const regel = { merkmal: 'letzter_kauf', operator: 'aelter_als_tage', wert: 90 };
+  const regel = { merkmal: 'letzter_kontakt_am', operator: 'aelter_als_tage', wert: 90 };
   assert.equal(trifftRegel(KUNDE, regel, '2026-09-13'), true);
-  assert.equal(trifftRegel(KUNDE, regel, '2026-02-01'), false, 'im Februar war der Kauf erst 22 Tage her');
+  assert.equal(trifftRegel(KUNDE, regel, '2026-02-01'), false, 'im Februar war der Kontakt erst 22 Tage her');
 });
 
 test('kaputtes Datum trifft nicht, statt zu raten', () => {
-  const zeile = { ...KUNDE, letzter_kauf: 'neulich' };
-  assert.equal(trifftRegel(zeile, { merkmal: 'letzter_kauf', operator: 'aelter_als_tage', wert: 30 }, HEUTE), false);
-  assert.equal(trifftRegel(KUNDE, { merkmal: 'letzter_kauf', operator: 'aelter_als_tage', wert: -5 }, HEUTE), false);
+  const zeile = { ...KUNDE, letzter_kontakt_am: 'neulich' };
+  assert.equal(trifftRegel(zeile, { merkmal: 'letzter_kontakt_am', operator: 'aelter_als_tage', wert: 30 }, HEUTE), false);
+  assert.equal(trifftRegel(KUNDE, { merkmal: 'letzter_kontakt_am', operator: 'aelter_als_tage', wert: -5 }, HEUTE), false);
 });
 
 // ------------------------------------------------------------ leer/gefuellt
 
 test('leer und nicht leer', () => {
-  const ohne = { ...KUNDE, tag: '   ' };
-  assert.equal(trifftRegel(ohne, { merkmal: 'tag', operator: 'leer' }, HEUTE), true);
-  assert.equal(trifftRegel(ohne, { merkmal: 'tag', operator: 'nicht_leer' }, HEUTE), false);
-  assert.equal(trifftRegel(KUNDE, { merkmal: 'tag', operator: 'nicht_leer' }, HEUTE), true);
+  const ohne = { ...KUNDE, position: '   ' };
+  assert.equal(trifftRegel(ohne, { merkmal: 'position', operator: 'leer' }, HEUTE), true);
+  assert.equal(trifftRegel(ohne, { merkmal: 'position', operator: 'nicht_leer' }, HEUTE), false);
+  assert.equal(trifftRegel(KUNDE, { merkmal: 'position', operator: 'nicht_leer' }, HEUTE), true);
 });
 
 test('fehlender Wert im Feld laesst jede normale Regel durchfallen', () => {
-  const ohne = { ...KUNDE, branche: null };
-  assert.equal(trifftRegel(ohne, { merkmal: 'branche', operator: 'ist', wert: 'Handwerk & Bau' }, HEUTE), false);
+  const ohne = { ...KUNDE, firma: null };
+  assert.equal(trifftRegel(ohne, { merkmal: 'firma', operator: 'ist', wert: 'Mustermann Bedachungen' }, HEUTE), false);
 });
 
 // ---------------------------------------------------------------- Segment
@@ -144,7 +147,7 @@ test('ohne Regel gehoert niemand ins Segment', () => {
 
 test('und heisst alle, oder heisst eine', () => {
   const regeln = [
-    { merkmal: 'branche', operator: 'ist', wert: 'Handwerk & Bau' },
+    { merkmal: 'firma', operator: 'ist', wert: 'Mustermann Bedachungen' },
     { merkmal: 'ort', operator: 'ist', wert: 'München' },
   ];
   assert.equal(passt(KUNDE, { verknuepfung: 'und', regeln }, HEUTE), false);
@@ -153,7 +156,7 @@ test('und heisst alle, oder heisst eine', () => {
 
 test('ohne Angabe gilt „und" — die engere Auswahl ist die sichere', () => {
   const regeln = [
-    { merkmal: 'branche', operator: 'ist', wert: 'Handwerk & Bau' },
+    { merkmal: 'firma', operator: 'ist', wert: 'Mustermann Bedachungen' },
     { merkmal: 'ort', operator: 'ist', wert: 'München' },
   ];
   assert.equal(passt(KUNDE, { regeln }, HEUTE), false);
@@ -161,12 +164,12 @@ test('ohne Angabe gilt „und" — die engere Auswahl ist die sichere', () => {
 
 test('das Beispiel aus dem Dateikopf trifft', () => {
   const segment = {
-    name: 'Handwerk 70xxx, lange nichts gekauft',
+    name: 'Bedachungen 70xxx, lange nichts gehoert',
     verknuepfung: 'und',
     regeln: [
-      { merkmal: 'branche', operator: 'enthaelt', wert: 'Handwerk' },
+      { merkmal: 'firma', operator: 'enthaelt', wert: 'Bedach' },
       { merkmal: 'plz', operator: 'beginnt_mit', wert: '70' },
-      { merkmal: 'letzter_kauf', operator: 'aelter_als_tage', wert: 90 },
+      { merkmal: 'letzter_kontakt_am', operator: 'aelter_als_tage', wert: 90 },
     ],
   };
   assert.equal(passt(KUNDE, segment, HEUTE), true);
@@ -180,17 +183,93 @@ test('zaehle: erreichbar sind nur die mit Adresse', () => {
     KUNDE,
     { ...KUNDE, email: '' },
     { ...KUNDE, email: null },
-    { ...KUNDE, branche: 'Handel' },
+    { ...KUNDE, firma: 'Andere GmbH' },
   ];
-  const z = zaehle(liste, { regeln: [{ merkmal: 'branche', operator: 'enthaelt', wert: 'Handwerk' }] }, HEUTE);
+  const z = zaehle(liste, { regeln: [{ merkmal: 'firma', operator: 'enthaelt', wert: 'Bedach' }] }, HEUTE);
   assert.equal(z.gesamt, 4);
   assert.equal(z.treffer, 3);
   assert.equal(z.erreichbar, 1);
+  assert.equal(z.ohneAdresse, 2);
 });
 
 test('zaehle: leere Liste ergibt lauter Nullen', () => {
   const z = zaehle([], { regeln: [{ merkmal: 'ort', operator: 'ist', wert: 'Stuttgart' }] }, HEUTE);
-  assert.deepEqual(z, { gesamt: 0, treffer: 0, erreichbar: 0 });
+  assert.deepEqual(z, { gesamt: 0, treffer: 0, erreichbar: 0, gesperrt: 0, ohneEinwilligung: 0, ohneAdresse: 0 });
+});
+
+// --------------------------------------------------- Darf der ueberhaupt Post?
+
+test('ein Widerspruch schlaegt alles — auch eine gesetzte Einwilligung', () => {
+  const z = { ...KUNDE, werbe_einwilligung: true, werbe_widerspruch_am: '2026-05-02T10:00:00Z' };
+  assert.equal(werbeStatus(z), 'widersprochen');
+  assert.equal(darfWerbung(z), false);
+});
+
+test('ohne Einwilligung ist kein klares Nein, aber auch kein Ja', () => {
+  const z = { ...KUNDE, werbe_einwilligung: false };
+  assert.equal(werbeStatus(z), 'ohne_einwilligung');
+  assert.equal(darfWerbung(z), false, 'in den Versand kommt nur „erlaubt"');
+});
+
+test('fehlende Einwilligung wird nicht als true gelesen', () => {
+  assert.equal(werbeStatus({ email: 'a@b.de' }), 'ohne_einwilligung');
+  assert.equal(werbeStatus({ email: 'a@b.de', werbe_einwilligung: 'ja' }), 'ohne_einwilligung',
+    'nur echtes true zaehlt, kein Text');
+});
+
+test('Newsletter: ohne Bestaetigung geht nichts raus', () => {
+  const a = { email: 'a@b.de', bestaetigt_am: null, status: 'unbestaetigt' };
+  assert.equal(werbeStatus(a, 'newsletter'), 'nicht_bestaetigt');
+  const b = { email: 'a@b.de', bestaetigt_am: '2026-03-01T09:00:00Z', status: 'aktiv' };
+  assert.equal(werbeStatus(b, 'newsletter'), 'erlaubt');
+});
+
+test('Newsletter: abgemeldet bleibt abgemeldet, auch mit Bestaetigung', () => {
+  const z = { email: 'a@b.de', bestaetigt_am: '2026-03-01T09:00:00Z', abgemeldet_am: '2026-06-01T09:00:00Z' };
+  assert.equal(werbeStatus(z, 'newsletter'), 'abgemeldet');
+  assert.equal(darfWerbung(z, 'newsletter'), false);
+});
+
+test('jeder Werbe-Status hat einen deutschen Satz', () => {
+  for (const s of ['erlaubt', 'widersprochen', 'abgemeldet', 'nicht_bestaetigt', 'ohne_einwilligung']) {
+    assert.ok(WERBE_STATUS_TEXT[s].length > 5, s);
+  }
+});
+
+test('zaehle trennt erreichbar, gesperrt, ohne Einwilligung und ohne Adresse', () => {
+  const liste = [
+    KUNDE,                                                            // erreichbar
+    { ...KUNDE, werbe_widerspruch_am: '2026-05-02T10:00:00Z' },       // gesperrt
+    { ...KUNDE, werbe_einwilligung: false },                          // ohne Einwilligung
+    { ...KUNDE, email: '' },                                          // ohne Adresse
+    { ...KUNDE, firma: 'Andere GmbH' },                               // trifft nicht
+  ];
+  const z = zaehle(liste, { regeln: [{ merkmal: 'firma', operator: 'enthaelt', wert: 'Bedach' }] }, HEUTE);
+  assert.equal(z.gesamt, 5);
+  assert.equal(z.treffer, 4);
+  assert.equal(z.erreichbar, 1);
+  assert.equal(z.gesperrt, 1);
+  assert.equal(z.ohneEinwilligung, 1);
+  assert.equal(z.ohneAdresse, 1);
+});
+
+// ----------------------------------------------------------------- Quellen
+
+test('merkmaleFuer: jede Quelle zeigt nur ihre eigenen Spalten', () => {
+  const k = merkmaleFuer('kontakte').map((m) => m.schluessel);
+  const n = merkmaleFuer('newsletter').map((m) => m.schluessel);
+  assert.ok(k.includes('plz'));
+  assert.equal(k.includes('variante'), false, 'variante gibt es nur beim Newsletter');
+  assert.ok(n.includes('bestaetigt_am'));
+  assert.equal(n.includes('plz'), false, 'newsletter_abonnenten hat keine Anschrift');
+});
+
+test('jedes Merkmal gehoert zu mindestens einer echten Quelle', () => {
+  const bekannt = QUELLEN.map((q) => q.schluessel);
+  for (const m of MERKMALE) {
+    assert.ok(m.quellen.length > 0, m.schluessel);
+    for (const q of m.quellen) assert.ok(bekannt.includes(q), m.schluessel + ' -> ' + q);
+  }
 });
 
 // --------------------------------------------------------------- beschreibe
@@ -199,12 +278,12 @@ test('beschreibe: ein lesbarer deutscher Satz statt einer Regelliste', () => {
   const s = beschreibe({
     verknuepfung: 'und',
     regeln: [
-      { merkmal: 'branche', operator: 'enthaelt', wert: 'Handwerk' },
+      { merkmal: 'firma', operator: 'enthaelt', wert: 'Bedach' },
       { merkmal: 'plz', operator: 'beginnt_mit', wert: '70' },
     ],
   });
   assert.match(s, /^Alle, bei denen /);
-  assert.match(s, /Branche/);
+  assert.match(s, /Firma/);
   assert.match(s, / und /);
   assert.match(s, /\.$/);
 });

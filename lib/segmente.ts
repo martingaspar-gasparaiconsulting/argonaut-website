@@ -31,35 +31,63 @@ export const GESPERRTE_MERKMALE: string[] = [
 
 export type MerkmalTyp = 'text' | 'zahl' | 'datum' | 'ja_nein';
 
+/** Woher die Empfänger kommen. Jede Quelle hat ihre eigenen Spalten. */
+export type Quelle = 'kontakte' | 'newsletter';
+
+export const QUELLEN: { schluessel: Quelle; label: string; hilfe: string }[] = [
+  { schluessel: 'kontakte', label: 'Kunden & Kontakte', hilfe: 'alles aus dem CRM' },
+  { schluessel: 'newsletter', label: 'Newsletter-Anmeldungen', hilfe: 'wer sich selbst eingetragen hat' },
+];
+
 export type Merkmal = {
   schluessel: string;
   label: string;
   typ: MerkmalTyp;
   /** Kurze Erklärung für die Oberfläche — in Martins Sprache, nicht in Fachsprache. */
   hilfe: string;
+  /** In welchen Quellen es diese Spalte WIRKLICH gibt. */
+  quellen: Quelle[];
 };
 
 /**
- * Der Katalog der erlaubten Merkmale. Wer ein Merkmal ergänzt, prüft vorher
- * gegen GESPERRTE_MERKMALE — istErlaubt() tut das bei jeder Auswertung erneut.
+ * Der Katalog der erlaubten Merkmale.
+ *
+ * Jeder Eintrag entspricht einer Spalte, die am 13.09.2026 in der Datenbank
+ * nachgesehen wurde — nicht einer, die es geben könnte. Ein Merkmal ohne
+ * Spalte wäre eine leere Liste im Browser bei grünem Build.
+ *
+ * NICHT dabei und bewusst offen (Andockpunkte): Branche (steht am BETRIEB in
+ * profiles.kategorie, nicht am Kontakt), Umsatz gesamt (müsste aus den
+ * Rechnungen gerechnet werden), angefordertes Freebie (liegt in freebie_lead),
+ * eigenes Merkmal (kommt aus den eigenen Feldern je Betrieb).
  */
 export const MERKMALE: Merkmal[] = [
-  { schluessel: 'branche', label: 'Branche', typ: 'text', hilfe: 'wie im Stammdatensatz hinterlegt' },
-  { schluessel: 'ort', label: 'Ort', typ: 'text', hilfe: 'Ort aus der Anschrift' },
-  { schluessel: 'plz', label: 'Postleitzahl', typ: 'text', hilfe: 'auch der Anfang genügt — „70" trifft ganz Stuttgart' },
-  { schluessel: 'quelle', label: 'Woher gekommen', typ: 'text', hilfe: 'Website, Empfehlung, Messe …' },
-  { schluessel: 'stufe', label: 'Stufe im Vertrieb', typ: 'text', hilfe: 'Anfrage, Termin, Kunde …' },
-  { schluessel: 'kunde_seit', label: 'Kunde seit', typ: 'datum', hilfe: 'Datum des ersten Auftrags' },
-  { schluessel: 'letzter_kauf', label: 'Letzter Kauf', typ: 'datum', hilfe: 'für Rückhol-Aktionen' },
-  { schluessel: 'umsatz_gesamt', label: 'Umsatz gesamt', typ: 'zahl', hilfe: 'alles, was dieser Kunde bisher gebracht hat' },
-  { schluessel: 'newsletter_status', label: 'Newsletter', typ: 'text', hilfe: 'aktiv, unbestätigt, abgemeldet' },
-  { schluessel: 'freebie', label: 'Angefordertes Freebie', typ: 'text', hilfe: 'was jemand selbst heruntergeladen hat' },
-  { schluessel: 'tag', label: 'Eigenes Merkmal', typ: 'text', hilfe: 'was der Betrieb selbst vergeben hat' },
+  { schluessel: 'firma', label: 'Firma', typ: 'text', hilfe: 'Firmenname des Kontakts', quellen: ['kontakte'] },
+  { schluessel: 'ort', label: 'Ort', typ: 'text', hilfe: 'Ort aus der Anschrift', quellen: ['kontakte'] },
+  { schluessel: 'plz', label: 'Postleitzahl', typ: 'text', hilfe: 'auch der Anfang genügt — „70" trifft ganz Stuttgart', quellen: ['kontakte'] },
+  { schluessel: 'land', label: 'Land', typ: 'text', hilfe: 'für Versand außerhalb Deutschlands', quellen: ['kontakte'] },
+  { schluessel: 'position', label: 'Position', typ: 'text', hilfe: 'Geschäftsführung, Einkauf, Technik …', quellen: ['kontakte'] },
+  { schluessel: 'status', label: 'Status', typ: 'text', hilfe: 'wie der Kontakt im CRM geführt wird', quellen: ['kontakte', 'newsletter'] },
+  { schluessel: 'quelle', label: 'Woher gekommen', typ: 'text', hilfe: 'Website, Empfehlung, Messe …', quellen: ['kontakte', 'newsletter'] },
+  { schluessel: 'kunde_seit', label: 'Kunde seit', typ: 'datum', hilfe: 'ab wann jemand Kunde ist — leer heißt: noch keiner', quellen: ['kontakte'] },
+  { schluessel: 'letzter_kontakt_am', label: 'Letzter Kontakt', typ: 'datum', hilfe: 'für Rückhol-Aktionen: „länger her als 90 Tage"', quellen: ['kontakte'] },
+  { schluessel: 'werbe_einwilligung', label: 'Werbe-Einwilligung', typ: 'ja_nein', hilfe: 'hat ausdrücklich zugestimmt', quellen: ['kontakte'] },
+  { schluessel: 'betreuungs_intervall_tage', label: 'Betreuungs-Intervall (Tage)', typ: 'zahl', hilfe: 'wie oft dieser Kontakt gehört werden soll', quellen: ['kontakte'] },
+  { schluessel: 'name', label: 'Name', typ: 'text', hilfe: 'wie bei der Anmeldung angegeben', quellen: ['newsletter'] },
+  { schluessel: 'angemeldet_am', label: 'Angemeldet am', typ: 'datum', hilfe: 'Tag der Eintragung', quellen: ['newsletter'] },
+  { schluessel: 'bestaetigt_am', label: 'Bestätigt am', typ: 'datum', hilfe: 'leer heißt: hat den Link nie angeklickt', quellen: ['newsletter'] },
+  { schluessel: 'variante', label: 'Variante', typ: 'text', hilfe: 'über welche Fassung der Seite jemand kam', quellen: ['newsletter'] },
 ];
 
 export function merkmal(schluessel: unknown): Merkmal | null {
   const s = String(schluessel ?? '').trim();
   return MERKMALE.find((m) => m.schluessel === s) ?? null;
+}
+
+/** Nur die Merkmale, die es in dieser Quelle wirklich als Spalte gibt. */
+export function merkmaleFuer(quelle: unknown): Merkmal[] {
+  const q = String(quelle ?? 'kontakte').trim() as Quelle;
+  return MERKMALE.filter((m) => m.quellen.includes(q));
 }
 
 /** Ein Merkmal ist nur erlaubt, wenn es im Katalog steht UND nicht gesperrt ist. */
@@ -224,12 +252,21 @@ export function zaehle(
   zeilen: Empfaenger[] | null | undefined,
   segment: Segment | null | undefined,
   heute: string,
+  quelle: unknown = 'kontakte',
   emailFeld = 'email',
-): { gesamt: number; treffer: number; erreichbar: number } {
+): { gesamt: number; treffer: number; erreichbar: number; gesperrt: number; ohneEinwilligung: number; ohneAdresse: number } {
   const alle = zeilen ?? [];
   const treffer = filtere(alle, segment, heute);
-  const erreichbar = treffer.filter((z) => String(z[emailFeld] ?? '').includes('@')).length;
-  return { gesamt: alle.length, treffer: treffer.length, erreichbar };
+
+  let erreichbar = 0, gesperrt = 0, ohneEinwilligung = 0, ohneAdresse = 0;
+  for (const z of treffer) {
+    if (!String(z[emailFeld] ?? '').includes('@')) { ohneAdresse += 1; continue; }
+    const st = werbeStatus(z, quelle);
+    if (st === 'erlaubt') erreichbar += 1;
+    else if (st === 'ohne_einwilligung') ohneEinwilligung += 1;
+    else gesperrt += 1;
+  }
+  return { gesamt: alle.length, treffer: treffer.length, erreichbar, gesperrt, ohneEinwilligung, ohneAdresse };
 }
 
 /**
@@ -272,4 +309,65 @@ export function fehltZumSpeichern(segment: Segment | null | undefined): string[]
     if (!o.ohneWert && String(r.wert ?? '').trim() === '') { fehlt.push('einen Wert in jeder Regel'); break; }
   }
   return fehlt;
+}
+
+
+// ------------------------------------------------- Darf der überhaupt Post?
+
+/**
+ * Die Frage VOR jeder Regel — und der Grund, warum sie hier steht und nicht
+ * in der Oberfläche: ein Segment ist eine Empfängerliste, und eine
+ * Empfängerliste ohne Einwilligungsprüfung ist ein Abmahnrisiko.
+ *
+ * Die Spalten dafür gibt es seit jeher, sie wurden nur nie zusammen gelesen:
+ * kontakte.werbe_widerspruch_am, kontakte.werbe_einwilligung,
+ * newsletter_abonnenten.abgemeldet_am und .bestaetigt_am.
+ */
+export type WerbeStatus = 'erlaubt' | 'widersprochen' | 'abgemeldet' | 'nicht_bestaetigt' | 'ohne_einwilligung';
+
+export const WERBE_STATUS_TEXT: Record<WerbeStatus, string> = {
+  erlaubt: 'darf angeschrieben werden',
+  widersprochen: 'hat der Werbung widersprochen',
+  abgemeldet: 'hat sich abgemeldet',
+  nicht_bestaetigt: 'hat die Anmeldung nie bestätigt',
+  ohne_einwilligung: 'keine ausdrückliche Einwilligung hinterlegt',
+};
+
+function gefuellt(v: unknown): boolean {
+  return v != null && String(v).trim() !== '';
+}
+
+/**
+ * Ein Widerspruch schlägt ALLES. Danach kommt die fehlende Bestätigung, dann
+ * die fehlende Einwilligung — in dieser Reihenfolge, weil ein Widerspruch die
+ * härteste Aussage des Menschen ist.
+ *
+ * „ohne_einwilligung" ist bewusst KEIN klares Nein: § 7 Abs. 3 UWG lässt
+ * Werbung an Bestandskunden für ähnliche Leistungen unter Auflagen auch ohne
+ * ausdrückliche Einwilligung zu. Ob das im Einzelfall trägt, entscheidet kein
+ * Programm — deshalb wird gezählt und angezeigt, nicht stillschweigend
+ * versendet. Gehört auf die Anwaltsliste.
+ */
+export function werbeStatus(zeile: Empfaenger | null | undefined, quelle: unknown = 'kontakte'): WerbeStatus {
+  if (!zeile) return 'ohne_einwilligung';
+  const q = String(quelle ?? 'kontakte').trim();
+  const status = String(zeile.status ?? '').trim().toLowerCase();
+
+  if (gefuellt(zeile.werbe_widerspruch_am)) return 'widersprochen';
+  if (status === 'widersprochen') return 'widersprochen';
+
+  if (q === 'newsletter') {
+    if (gefuellt(zeile.abgemeldet_am) || status === 'abgemeldet') return 'abgemeldet';
+    if (!gefuellt(zeile.bestaetigt_am)) return 'nicht_bestaetigt';
+    return 'erlaubt';
+  }
+
+  if (status === 'abgemeldet') return 'abgemeldet';
+  if (zeile.werbe_einwilligung === true) return 'erlaubt';
+  return 'ohne_einwilligung';
+}
+
+/** Nur wer hier true ist, darf in einen Werbeversand. */
+export function darfWerbung(zeile: Empfaenger | null | undefined, quelle: unknown = 'kontakte'): boolean {
+  return werbeStatus(zeile, quelle) === 'erlaubt';
 }
