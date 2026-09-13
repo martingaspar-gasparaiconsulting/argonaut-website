@@ -78,9 +78,9 @@ export async function POST(req: Request) {
       return NextResponse.json({
         bewertung: 'Für diesen Zeitraum liegen noch keine Besuche vor. Sobald erste Besucher kommen, bewerte ich die Lage hier automatisch.',
         empfehlungen: [
-          'Teile den Link zu deiner Seite aktiv — E-Mail-Signatur, Visitenkarte, QR-Code auf Flyern.',
-          'Setze bei Anzeigen und Newslettern UTM-Parameter, damit die Herkunft sauber erfasst wird.',
-          'Schau in 1–2 Tagen wieder rein — dann sind genug Daten für eine echte Bewertung da.',
+          'Teilen Sie den Link zu Ihrer Seite aktiv — E-Mail-Signatur, Visitenkarte, QR-Code auf Flyern.',
+          'Setzen Sie bei Anzeigen und Newslettern UTM-Parameter, damit die Herkunft sauber erfasst wird.',
+          'Schauen Sie in 1–2 Tagen wieder rein — dann sind genug Daten für eine echte Bewertung da.',
         ],
       });
     }

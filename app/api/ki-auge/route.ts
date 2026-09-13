@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       "- 'klartext': 1 kurzer Satz, was insgesamt Sache ist (max ~20 Wörter).",
       "- 'punkte': 2-5 konkrete Handlungshinweise, jeweils kurz, das Wichtigste zuerst.",
       "- 'stimmung': 'achtung' bei dringenden Problemen, 'gut' wenn alles rund läuft, sonst 'neutral'.",
-      "- Sprich den Unternehmer direkt an ('du'), sachlich, ohne Floskeln.",
+      "- Sprich den Unternehmer mit 'Sie' an, sachlich, ohne Floskeln.",
       "- Nenne KEINE erfundenen Zahlen — nutze nur, was im Kontext steht.",
       "- Nenne dich niemals anders als 'ARGONAUT' oder 'die KI'.",
     ].join("\n");

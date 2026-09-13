@@ -165,6 +165,6 @@ export async function GET(req: Request) {
       `Vielen Dank — Ihre Anmeldung bei ${firma} ist jetzt bestätigt. Sie können dieses Fenster schließen.`,
     );
   } catch {
-    return seite('Newsletter', '#1a2332', 'Anmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');
+    return seite('Newsletter', '#1a2332', 'Anmeldung', 'Es gab ein technisches Problem. Bitte versuchen Sie es später erneut.');
   }
 }

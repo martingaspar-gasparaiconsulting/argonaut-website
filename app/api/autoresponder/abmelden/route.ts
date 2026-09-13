@@ -54,7 +54,7 @@ export async function GET(req: Request) {
       .eq('abmelde_token', token)
       .select('email, owner_user_id');
 
-    if (error) return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');
+    if (error) return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuchen Sie es später erneut.');
     if (!data || data.length === 0) {
       return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht sind Sie bereits abgemeldet.');
     }
@@ -81,6 +81,6 @@ export async function GET(req: Request) {
       `Sie wurden von der Info-Serie von ${firma} abgemeldet und erhalten keine weiteren E-Mails mehr. Sie können dieses Fenster schließen.`,
     );
   } catch {
-    return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuche es später erneut.');
+    return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuchen Sie es später erneut.');
   }
 }
