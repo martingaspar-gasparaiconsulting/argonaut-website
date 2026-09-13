@@ -232,7 +232,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .aussteller { font-size: 11.5px; color: #0A1628; }
   .aussteller .name { font-weight: bold; font-size: 13px; }
   .aussteller .dim { color: #5b6b80; }
-  h1 { font-size: 24px; margin: 4px 0 2px; color: #0A1628; }
+  h1 { font-size: 24px; margin: 4px 0 2px; color: ${markePrimaer}; }
   .nummer { color: #5b6b80; font-size: 13px; font-family: 'DejaVu Sans Mono', monospace; }
 
   .empf-zeile { display: flex; justify-content: space-between; gap: 24px; border-top: 3px solid ${markeAkzent}; padding-top: 20px; margin-top: 12px; margin-bottom: 24px; }
@@ -272,7 +272,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   .giro .cap { font-size: 9.5px; color: #5b6b80; margin-top: 4px; line-height: 1.3; }
   .giro .cap b { color: #0A1628; }
   .zahlung .pay { margin-top: 12px; }
-  .paybtn { display: inline-block; background: #0A1628; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 12.5px; }
+  .paybtn { display: inline-block; background: ${markePrimaer}; color: ${theadText}; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 12.5px; }
   .notizen { margin-top: 18px; color: #5b6b80; font-size: 11.5px; }
 
   .fuss { margin-top: 40px; border-top: 1px solid #e1e6ee; padding-top: 12px; color: #8a99ad; font-size: 10.5px; text-align: center; }
