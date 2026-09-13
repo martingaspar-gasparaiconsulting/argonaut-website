@@ -8,6 +8,7 @@
     "start": "next start",
     "test": "node scripts/tests-bauen.cjs && node --test \"tests/*.test.mjs\"",
     "test:bauen": "node scripts/tests-bauen.cjs",
+    "anrede-scan": "node scripts/anrede-scan.cjs",
     "lint": "eslint"
   },
   "dependencies": {

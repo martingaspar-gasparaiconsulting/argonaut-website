@@ -36,6 +36,6 @@ export async function GET(req: Request) {
     await db.from('dossier_leads').update({ seq_status: 'abgemeldet' }).eq('id', l.id);
     return seite('Abgemeldet', 'Sie erhalten keine weiteren Mails zum Test. Ihr Dossier bleibt gültig — und Sie können jederzeit wieder auf uns zukommen.');
   } catch {
-    return seite('Kleiner Fehler', 'Das hat gerade nicht geklappt. Bitte versuche es später noch einmal oder antworte kurz auf eine unserer Mails.');
+    return seite('Kleiner Fehler', 'Das hat gerade nicht geklappt. Bitte versuchen Sie es später noch einmal oder antworten Sie kurz auf eine unserer Mails.');
   }
 }
