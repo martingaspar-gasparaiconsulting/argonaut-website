@@ -1,6 +1,6 @@
 # ARGONAUT OS · Startprompt für den nächsten Chat
 
-**Stand: Sonntag, 13. September 2026, Nachmittag** — löst den Startprompt vom Mittag ab.
+**Stand: Sonntag, 13. September 2026, Abend** — löst den Startprompt vom Mittag ab. Alles darin Genannte ist gebaut, geprüft und auf `main` gepusht.
 
 Ich bin Martin Gaspar, Gründer von ARGONAUT OS. Wir bauen weiter.
 
@@ -21,24 +21,31 @@ Zum Ändern IMMER erst `action: "read"` mit dieser URL, dann mit `url` publizier
 
 ---
 
-## NEU seit heute: `npm test`
-
-Im Repo liegt jetzt `scripts/tests-bauen.cjs` und in der `package.json` stehen zwei Skripte:
+## NEU seit heute: `npm test` — 730 Tests auf einen Befehl
 
 ```
-npm test          übersetzt alle Logik-Dateien nach out/ und startet node --test
+npm test             übersetzt alle Logik-Dateien nach out/ und startet node --test
 npm run test:bauen   nur übersetzen
 ```
 
-**Warum das wichtig ist:** Die 33 Test-Dateien importieren aus `../out/<name>.js`. Dieses `out/` steht nicht im Repo (.gitignore) und war nur mit 8 von 33 Dateien gefüllt — wer `node --test tests/` startete, bekam für den Rest MODULE_NOT_FOUND und konnte meinen, die Tests seien kaputt. Das Skript füllt alles auf einmal.
+Erster grüner Lauf am 13.09.2026 abends: **32 von 32 übersetzt, 730 Tests, 0 Fehler.**
+
+**Warum das wichtig ist:** Die Test-Dateien importieren aus `../out/<name>.js`. Dieses `out/` steht nicht im Repo (.gitignore) und war nur mit 8 von 33 Dateien gefüllt — wer `node --test` startete, bekam für den Rest MODULE_NOT_FOUND und konnte meinen, die Tests seien kaputt. Sie waren es nie; es fehlte die Übersetzung.
 
 Gebündelt wird bewusst: Manche Logik-Dateien greifen auf andere zu (abTest → mailMessung, freebie → newsletter), und TypeScript schreibt solche Importe ohne `.js`-Endung, die Node im ESM-Betrieb aber verlangt.
+
+**Vier Stolpersteine, die dabei behoben wurden — bitte nicht zurückdrehen:**
+
+1. **esbuild steht jetzt als `devDependency`** in der package.json. Das Skript lädt es als **Modul** (`require('esbuild')`) und startet dafür keinen Unterprozess. Der erste Entwurf rief `npx.cmd` auf — Node weigert sich unter Windows seit 18.20/20.12, eine `.cmd`-Datei ohne Shell zu starten (CVE-2024-27980) und antwortet mit `spawnSync npx.cmd EINVAL`. Als Rückfall gibt es weiterhin `node_modules/.bin` und `npx`, unter Windows beide über die Shell und mit gesetzten Anführungszeichen.
+2. **`platform: 'node'`**, nicht `neutral`. `lib/whatsappEingang.ts` holt sich `createHmac` aus `node:crypto`; bei „neutral" kennt esbuild die eingebauten Node-Bausteine nicht und meldet „Could not resolve".
+3. **`node --test "tests/*.test.mjs"`**, nicht `node --test tests/`. Der Ordner-Aufruf funktioniert je nach Node-Version nicht.
+4. **Das Skript schreibt eine eigene kleine `out/package.json` mit `{"type":"module"}`.** Sonst warnt Node bei jeder Datei `MODULE_TYPELESS_PACKAGE_JSON`. In die große package.json darf `"type": "module"` **nicht** — daran hängen `next.config.ts`, eslint und die vielen `.cjs`-Helfer im Wurzelordner.
 
 Fehlt zu einem Test die Quelle, wird das gemeldet, ohne abzubrechen. Nur ein echter Übersetzungsfehler beendet mit Fehlercode.
 
 ---
 
-## Was am 13.09. nachmittags fertig wurde
+## Was am 13.09. fertig wurde
 
 ### 3.15 Marketing-Tiefe — Paket 1: Empfängergruppen ✅
 
@@ -80,7 +87,7 @@ Segmentiert wird **nur nach Stammdaten und erklärten Handlungen** — nie nach 
 
 ---
 
-## Womit wir weitermachen
+## Womit wir weitermachen — DER ERSTE BAUAUFTRAG
 
 **3.15 Paket 3: Rückhol-Strecke.** Kunden, die seit X Monaten nichts gekauft haben, bekommen automatisch eine Folge. Die Segmente sind da, der Automations-Motor (`lib/automation.ts` + `/api/cron/automationen`) ist da — es fehlt die Verbindung.
 
@@ -99,6 +106,7 @@ Danach **Paket 4** (Anmelde-Einblendung auf der Website; es gibt bereits eine `c
 - Vertriebs-Kette: eine echte Woche eintragen
 - Segmente und A/B-Test einmal durchklicken
 - `CRON_SECRET` prüfen
+- `npm audit` — Stand 13.09.: 17 Meldungen, davon 1 kritisch. **Nicht** mit `npm audit fix --force` erledigen (kann Next oder Supabase auf inkompatible Versionen ziehen), sondern einzeln durchgehen
 
 ---
 
