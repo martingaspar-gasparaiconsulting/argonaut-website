@@ -375,3 +375,80 @@ export function kanalLabel(v: unknown): string {
   const s = String(v ?? '').trim();
   return KANAELE.find((k) => k.schluessel === s)?.label ?? (s || 'Gesamt');
 }
+
+// ------------------------------------------- Brücke zum Akquise-Cockpit
+
+/**
+ * Eine Zeile aus public.vertrieb_aktivitaet (Akquise-Cockpit D2).
+ * Dort wird JEDER Handgriff einzeln erfasst — Art und Ergebnis, zwei Tipps.
+ */
+export type AktivitaetZeile = { art?: unknown; ergebnis?: unknown };
+
+export type AusAktivitaeten = {
+  /** Jede erfasste Aktivität ist eine Ansprache. */
+  ansprachen: number;
+  /** Alles außer „niemand erreicht" — irgendjemand hat reagiert. */
+  reaktionen: number;
+  /** Gesprochen ODER Termin: bei einem Termin wurde immer auch gesprochen. */
+  gespraeche: number;
+  /** Nur das Ergebnis „Termin". */
+  termineGebucht: number;
+  /** Wieviele Zeilen gar kein brauchbares Ergebnis trugen. */
+  ohneErgebnis: number;
+};
+
+/**
+ * Rechnet erfasste Einzel-Aktivitäten in Wochenzahlen um — damit niemand am
+ * Freitag noch einmal zählt, was er die Woche über schon getippt hat.
+ *
+ * BEWUSST NUR VIER FELDER. Beiträge, Anfragen, gehaltene Termine, Kunden,
+ * Umsatz und alle Zeiten stehen nicht im Akquise-Cockpit und bleiben
+ * Handeingabe — sie werden von dieser Funktion nie angefasst.
+ *
+ * Die Zuordnung ist eine AUSLEGUNG, keine Tatsache: das Cockpit kennt vier
+ * Ergebnisse (niemand erreicht · gesprochen · Termin · Absage). „Reaktion"
+ * meint hier jede Rückmeldung, auch eine Absage — eine Absage ist ein
+ * Ergebnis, kein Nichts. Deshalb schlägt die Oberfläche die Zahlen nur vor;
+ * das letzte Wort hat der Mensch.
+ *
+ * Die Auswahl der Woche passiert VORHER in der Abfrage (Zeitfenster auf
+ * erstellt_am). Diese Funktion rechnet nur und kennt kein Datum — so bleibt
+ * sie ohne Zeitzonen-Annahme und node-testbar.
+ */
+export function ausAktivitaeten(zeilen: (AktivitaetZeile | null | undefined)[] | null | undefined): AusAktivitaeten {
+  const ergebnis: AusAktivitaeten = {
+    ansprachen: 0, reaktionen: 0, gespraeche: 0, termineGebucht: 0, ohneErgebnis: 0,
+  };
+  for (const z of zeilen ?? []) {
+    if (!z) continue;
+    ergebnis.ansprachen += 1;
+    const e = String(z.ergebnis ?? '').trim();
+    if (e === 'termin') { ergebnis.reaktionen += 1; ergebnis.gespraeche += 1; ergebnis.termineGebucht += 1; }
+    else if (e === 'gesprochen') { ergebnis.reaktionen += 1; ergebnis.gespraeche += 1; }
+    else if (e === 'absage') { ergebnis.reaktionen += 1; }
+    else if (e !== 'kein_kontakt') { ergebnis.ohneErgebnis += 1; }
+  }
+  return ergebnis;
+}
+
+/**
+ * Zeitfenster einer Woche als ISO-Zeitstempel, für die Abfrage auf
+ * erstellt_am. Montag 00:00 bis zum nächsten Montag 00:00, gerechnet in der
+ * Zeitzone des AUFRUFENDEN GERÄTS — der Betrieb sitzt dort, wo gearbeitet
+ * wird, und dessen Kalenderwoche ist gemeint.
+ *
+ * Rückgabe [von, bis); leere Strings, wenn das Datum nicht taugt.
+ *
+ * Heisst bewusst NICHT wochenFenster: so nennt die Kette-Seite ihren eigenen
+ * Zustand für die Anzahl betrachteter Wochen. Gleiche Namen haetten sich dort
+ * ueberdeckt — der Typcheck hat genau das gefunden.
+ */
+export function wochenZeitraum(montagIso: unknown): [string, string] {
+  const s = String(montagIso ?? '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ['', ''];
+  const von = new Date(s + 'T00:00:00');
+  if (Number.isNaN(von.getTime())) return ['', ''];
+  const bis = new Date(von.getTime());
+  bis.setDate(bis.getDate() + 7);
+  return [von.toISOString(), bis.toISOString()];
+}

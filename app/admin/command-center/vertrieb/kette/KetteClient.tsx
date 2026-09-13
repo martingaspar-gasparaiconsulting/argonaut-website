@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase';
 import {
   werte, summiere, kette, zeit, beurteileZeit, hebelRangliste,
   bedarfFuerKunden, montagVon, wochenLabel, kanalLabel, KANAELE, BELASTBAR_AB,
+  ausAktivitaeten, wochenZeitraum,
   type WochenZeile,
 } from '@/lib/vertriebsKette';
 
@@ -94,6 +95,7 @@ export default function KetteClient() {
   const [laedt, setLaedt] = useState(true);
   const [meldung, setMeldung] = useState<string>('');
   const [speichert, setSpeichert] = useState(false);
+  const [holt, setHolt] = useState(false);
   const [heuteIso, setHeuteIso] = useState('');
   const [form, setForm] = useState<Formular>(leeresFormular(''));
   const [wochenFenster, setWochenFenster] = useState(4);
@@ -168,6 +170,53 @@ export default function KetteClient() {
 
   const setzeFeld = (schluessel: keyof Formular, wert: string) =>
     setForm((f): Formular => ({ ...f, [schluessel]: wert }));
+
+  // Holt die im Akquise-Cockpit erfassten Einzel-Aktivitäten dieser Woche und
+  // schlägt daraus vier Zahlen vor. Überschrieben wird nur, was das Cockpit
+  // wirklich weiß — Beiträge, Anfragen, gehaltene Termine, Kunden, Umsatz und
+  // alle Zeiten bleiben unangetastet.
+  async function ausCockpitHolen() {
+    if (!form.woche) return;
+    const [von, bis] = wochenZeitraum(form.woche);
+    if (!von || !bis) { setMeldung('Diese Woche kann ich nicht lesen.'); return; }
+    setHolt(true);
+    setMeldung('');
+    try {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { setMeldung('Nicht angemeldet.'); return; }
+      const { data, error } = await sb
+        .from('vertrieb_aktivitaet')
+        .select('art, ergebnis')
+        .eq('owner_user_id', user.id)
+        .gte('erstellt_am', von)
+        .lt('erstellt_am', bis)
+        .limit(5000);
+      if (error) { setMeldung('Akquise-Cockpit nicht lesbar: ' + error.message); return; }
+      const a = ausAktivitaeten(data ?? []);
+      if (a.ansprachen === 0) {
+        setMeldung('Für ' + wochenLabel(form.woche) + ' steht im Akquise-Cockpit nichts.');
+        return;
+      }
+      setForm((f): Formular => ({
+        ...f,
+        ansprachen: String(a.ansprachen),
+        reaktionen: String(a.reaktionen),
+        gespraeche: String(a.gespraeche),
+        termine_gebucht: String(a.termineGebucht),
+      }));
+      setMeldung(
+        a.ansprachen + ' Aktivitäten übernommen · ' + a.reaktionen + ' Reaktionen · '
+        + a.gespraeche + ' Gespräche · ' + a.termineGebucht + ' Termine'
+        + (a.ohneErgebnis > 0 ? ' (' + a.ohneErgebnis + ' ohne verwertbares Ergebnis)' : '')
+        + '. Bitte prüfen — das Cockpit trennt nach Art, nicht nach Kanal.',
+      );
+    } catch (e) {
+      setMeldung('Akquise-Cockpit nicht lesbar: ' + (e instanceof Error ? e.message : 'unbekannt'));
+    } finally {
+      setHolt(false);
+    }
+  }
 
   async function speichern() {
     if (!form.woche) return;
@@ -430,6 +479,30 @@ export default function KetteClient() {
                 {KANAELE.map((k) => <option key={k.schluessel} value={k.schluessel}>{k.label}</option>)}
               </select>
             </label>
+          </div>
+
+          {/* Brücke zum Akquise-Cockpit: wer jeden Anruf einzeln tippt, soll ihn
+              am Freitag nicht noch einmal zählen. Der Knopf schlägt nur vor —
+              vier Felder, der Rest bleibt Handarbeit. */}
+          <div style={{
+            display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+            padding: '12px 14px', marginBottom: 18, borderRadius: 12,
+            background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.22)',
+          }}>
+            <button type="button" onClick={() => void ausCockpitHolen()} disabled={holt || !form.woche}
+              style={{
+                background: 'transparent', color: C.cyan, border: '1px solid ' + C.cyan,
+                borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700,
+                cursor: holt ? 'default' : 'pointer', opacity: holt ? 0.6 : 1, whiteSpace: 'nowrap',
+              }}>
+              {holt ? 'liest …' : '↓ Aus dem Akquise-Cockpit holen'}
+            </button>
+            <span style={{ fontSize: 12.5, color: C.dim, flex: 1, minWidth: 220, lineHeight: 1.5 }}>
+              Füllt Ansprachen, Reaktionen, Gespräche und gebuchte Termine aus dem, was Sie
+              unter <Link href="/dashboard/akquise" style={{ color: C.cyan }}>Akquise</Link> schon
+              einzeln erfasst haben. Beiträge, Anfragen, gehaltene Termine, Kunden, Umsatz und
+              alle Zeiten bleiben Ihre Eingabe.
+            </span>
           </div>
 
           <p style={{ fontSize: 12, color: C.gold, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 10px' }}>Stückzahlen</p>

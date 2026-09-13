@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   BELASTBAR_AB, zahl, werte, summiere, kette, zeit, beurteileZeit,
   hebelRangliste, bedarfFuerKunden, montagVon, wochenLabel, kanalLabel,
+  ausAktivitaeten, wochenZeitraum,
 } from '../out/vertriebsKette.js';
 
 // ============================================================================
@@ -198,4 +199,80 @@ test('wochenLabel und kanalLabel bleiben auch bei Unsinn lesbar', () => {
   assert.equal(kanalLabel('social'), 'Social Media');
   assert.equal(kanalLabel(''), 'Gesamt');
   assert.equal(kanalLabel('unbekannt'), 'unbekannt');
+});
+
+// ---------------------------------------------------------------------------
+// Brücke zum Akquise-Cockpit (ergänzt am 13.09.2026)
+// ---------------------------------------------------------------------------
+
+test('ausAktivitaeten: jede Aktivitaet ist eine Ansprache', () => {
+  const a = ausAktivitaeten([
+    { art: 'anruf', ergebnis: 'kein_kontakt' },
+    { art: 'anruf', ergebnis: 'gesprochen' },
+    { art: 'mail', ergebnis: 'termin' },
+  ]);
+  assert.equal(a.ansprachen, 3);
+});
+
+test('ausAktivitaeten: „niemand erreicht" ist keine Reaktion', () => {
+  const a = ausAktivitaeten([
+    { ergebnis: 'kein_kontakt' }, { ergebnis: 'kein_kontakt' }, { ergebnis: 'gesprochen' },
+  ]);
+  assert.equal(a.ansprachen, 3);
+  assert.equal(a.reaktionen, 1);
+});
+
+test('ausAktivitaeten: eine Absage IST eine Reaktion, aber kein Gespraech', () => {
+  const a = ausAktivitaeten([{ ergebnis: 'absage' }]);
+  assert.equal(a.reaktionen, 1);
+  assert.equal(a.gespraeche, 0);
+  assert.equal(a.termineGebucht, 0);
+});
+
+test('ausAktivitaeten: ein Termin zaehlt auch als Gespraech', () => {
+  const a = ausAktivitaeten([{ ergebnis: 'termin' }]);
+  assert.equal(a.termineGebucht, 1);
+  assert.equal(a.gespraeche, 1, 'wer einen Termin bekommt, hat gesprochen');
+  assert.equal(a.reaktionen, 1);
+});
+
+test('ausAktivitaeten: unbekannte Ergebnisse werden gezaehlt, nicht geraten', () => {
+  const a = ausAktivitaeten([{ ergebnis: 'irgendwas' }, { ergebnis: null }, {}]);
+  assert.equal(a.ansprachen, 3);
+  assert.equal(a.reaktionen, 0, 'nichts wird unterstellt');
+  assert.equal(a.ohneErgebnis, 3);
+});
+
+test('ausAktivitaeten: leere und kaputte Eingaben ergeben lauter Nullen', () => {
+  assert.equal(ausAktivitaeten([]).ansprachen, 0);
+  assert.equal(ausAktivitaeten(null).ansprachen, 0);
+  assert.equal(ausAktivitaeten([null, undefined]).ansprachen, 0);
+});
+
+test('ausAktivitaeten: eine volle Woche rechnet sich schluessig durch', () => {
+  const woche = [
+    ...Array(12).fill({ ergebnis: 'kein_kontakt' }),
+    ...Array(6).fill({ ergebnis: 'gesprochen' }),
+    ...Array(3).fill({ ergebnis: 'absage' }),
+    ...Array(2).fill({ ergebnis: 'termin' }),
+  ];
+  const a = ausAktivitaeten(woche);
+  assert.equal(a.ansprachen, 23);
+  assert.equal(a.reaktionen, 11);   // 6 + 3 + 2
+  assert.equal(a.gespraeche, 8);    // 6 + 2
+  assert.equal(a.termineGebucht, 2);
+  assert.equal(a.ohneErgebnis, 0);
+});
+
+test('wochenZeitraum: sieben Tage ab Montag, Ende ist ausschliesslich', () => {
+  const [von, bis] = wochenZeitraum('2026-09-07');
+  assert.ok(von && bis);
+  const tage = (new Date(bis).getTime() - new Date(von).getTime()) / 86400000;
+  assert.equal(tage, 7);
+});
+
+test('wochenZeitraum: Unsinn ergibt leer statt eines erfundenen Zeitraums', () => {
+  assert.deepEqual(wochenZeitraum('letzte Woche'), ['', '']);
+  assert.deepEqual(wochenZeitraum(null), ['', '']);
+  assert.deepEqual(wochenZeitraum('2026-13-45'), ['', '']);
 });
