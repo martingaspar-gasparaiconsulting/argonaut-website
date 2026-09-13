@@ -88,15 +88,21 @@ export default function UberUns() {
         <section style={{ padding: '30px 24px 50px' }}>
           <div className="uu-wrap">
             <p className="uu-eyebrow">Die Geschichte</p>
-            <h2 className="uu-h2">Böblingen, 2024.<br />Eine Mission beginnt.</h2>
-            <p className="uu-p">Martin Gaspar hat jahrelang gesehen, wie der deutsche Mittelstand kämpft — nicht wegen schlechter Produkte oder fehlenden Einsatzes, sondern wegen fehlender Werkzeuge. Während Großkonzerne Millionen in KI und Software investierten, blieb das Rückgrat unserer Wirtschaft mit Insellösungen und Papierkram zurück.</p>
+            {/* Bewusst OHNE Jahreszahl (13.09.2026). Ein Gründungsdatum beantwortet
+                keine Frage, die ein Interessent wirklich hat — und ein falsches wäre
+                eine Angabe über das eigene Unternehmen, an der § 5 UWG hängt. Die
+                Jahre, die zählen und die stimmen, sind die im Mittelstand. */}
+            <h2 className="uu-h2">Böblingen.<br />Eine Mission, die in fremden Büros begann.</h2>
+            <p className="uu-p">Sie beginnt nicht an einem Schreibtisch, sondern in den Betrieben anderer Leute. In Werkstätten, in denen der Auftragszettel zweimal abgetippt wird. In Büros, in denen die Rechnung auf eine Freigabe wartet, die in einem Posteingang liegt, den gerade niemand öffnet. Jahr für Jahr dasselbe Bild, nur mit einem anderen Logo an der Tür.</p>
+            <p className="uu-p">Martin Gaspar hat jahrelang gesehen, woran deutsche Betriebe scheitern — nicht an schlechten Produkten und nicht an fehlendem Einsatz, sondern an Werkzeugen, die für jemand anderen gebaut wurden. Während Großkonzerne Millionen in eigene Systeme steckten, hielt das Rückgrat unserer Wirtschaft seinen Betrieb mit zwölf Programmen zusammen, die nicht miteinander reden. Irgendwann hat er aufgehört, darüber zu reden, und angefangen zu bauen.</p>
             <div style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '16px', padding: '32px', margin: '10px 0 24px' }}>
               <p style={{ fontSize: 'clamp(1.25rem, 2.6vw, 1.6rem)', fontWeight: 700, color: GOLD, lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>
-                „Jedes Unternehmen verdient ein System, das mitdenkt — und eine Crew, die niemals schläft."
+                „Jedes Unternehmen verdient ein System, das mitdenkt — und einen Menschen, der rangeht, wenn es klemmt."
               </p>
               <p style={{ fontSize: '.9rem', color: '#8fa9b6', margin: '16px 0 0' }}>Martin Gaspar, Gründer ARGONAUT OS</p>
             </div>
-            <p className="uu-p">Aus dieser Überzeugung entstand ARGONAUT OS: ein Betriebssystem, das den ganzen Betrieb in einem System bündelt — bezahlbar, verständlich und auf EU-Servern. Kein Werkzeug für IT-Abteilungen, sondern für Menschen, die anpacken.</p>
+            <p className="uu-p">Nicht ein weiteres Programm für ein weiteres Problem — sondern das System, das den ganzen Betrieb trägt: bezahlbar, verständlich, auf EU-Servern. Kein Werkzeug für IT-Abteilungen, sondern für Menschen, die anpacken.</p>
+            <p className="uu-p">Heute steht ARGONAUT OS für {branchenAnzahl()} Branchen bereit, wird mit echten Betrieben erprobt und wächst weiter — in dem Tempo, in dem sich Ihr Betrieb ändert, nicht im Tempo eines Konzern-Fahrplans.</p>
           </div>
         </section>
 
@@ -135,7 +141,10 @@ export default function UberUns() {
           <div className="uu-wrap">
             <p className="uu-eyebrow">Unser Versprechen</p>
             <h2 className="uu-h2">Wir sind Ihre Crew.</h2>
-            <p className="uu-p">Wie die Argonauten damals — an Ihrer Seite, jeden Tag. Nicht nur als Software, sondern als Partner, der mitdenkt, handelt und liefert. Während Sie schlafen, während Sie mit Kunden sprechen, während Sie Ihren Betrieb führen.</p>
+            {/* „Crew" meint hier ausdrücklich die MENSCHEN — Martin, sein Team und
+                Sie als Kunde. Was das System tut, wird als Arbeit beschrieben, nicht
+                als Mannschaft: siehe Wortwahl-Hinweis in app/vorschau/page.tsx. */}
+            <p className="uu-p">Wie die Argonauten damals — an Ihrer Seite, jeden Tag. Ein echter Ansprechpartner beim Start, einer beim Ausbau und einer, wenn etwas klemmt. Und dazwischen läuft die Arbeit weiter: während Sie mit Kunden sprechen, während Sie auf der Baustelle sind, während Sie Ihren Betrieb führen.</p>
             <p className="uu-p uu-strong" style={{ fontSize: '1.2rem' }}>Sie geben die Richtung vor. Wir sorgen dafür, dass Sie ankommen.</p>
           </div>
         </section>

@@ -242,7 +242,7 @@ export default function VorschauPage() {
               </h1>
 
               <p className="arg-sub">
-                Ein System statt zwölf. Ihre Crew, die niemals schläft.
+                Ein System statt zwölf. Und es arbeitet weiter, wenn Sie Feierabend machen.
                 Entwickelt für den deutschen Mittelstand.
               </p>
 
@@ -528,7 +528,12 @@ export default function VorschauPage() {
       {/* ============== SCHRITT 4 · ERSPARNIS-RECHNER ============== */}
       <ErsparnisRechner />
 
-      {/* ============== SCHRITT 5 · DAS AUGE / IHRE CREW ============== */}
+      {/* ============== SCHRITT 5 · DAS WACHENDE AUGE ============== */}
+      {/* Wortwahl (13.09.2026): „Crew" bleibt den MENSCHEN vorbehalten — Martin,
+          seinem Team und den Kunden als Argonauten. Was die Software tut, heißt
+          hier Arbeit oder Baustein, nie Mannschaft und nie Mitarbeiter: eine KI,
+          die als schlaflose Crew beschrieben wird, rückt an die feste Grenze
+          „behauptet nie, ein Mensch zu sein". Gilt für alle Texte dieser Seite. */}
       <section className="arg-crew">
         <div className="arg-wrap">
           <div className="arg-bigeye arg-eye">
@@ -539,11 +544,11 @@ export default function VorschauPage() {
           </div>
 
           <h2 className="arg-h2">
-            Ihre Crew, die <span style={{ color: GOLD }}>niemals schläft</span>.
+            Ein Auge, das <span style={{ color: GOLD }}>nie zufällt</span>.
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.6 }}>
-            ARGONAUT ist mehr als Software. Es begrüßt Sie mit Namen, führt Sie durch jedes Modul, denkt mit —
-            und wächst mit Ihnen. Ein Partner, der nie Feierabend macht.
+            ARGONAUT ist mehr als Software. Es begrüßt Sie mit Namen, führt Sie durch jedes Modul und denkt mit.
+            Was auffällt, fällt auf — auch sonntags um sechs.
           </p>
 
           <div className="arg-pillars">
@@ -593,7 +598,7 @@ export default function VorschauPage() {
             So einfach ist der <span style={{ color: GOLD }}>Start</span>.
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '48ch', margin: '0 auto', lineHeight: 1.55 }}>
-            Kein IT-Projekt, kein Handbuch — ein echter Ansprechpartner bringt Sie an Bord, dann führt Sie Ihre Crew.
+            Kein IT-Projekt, kein Handbuch — ein echter Ansprechpartner bringt Sie an Bord, dann zeigt Ihnen ARGONAUT selbst den nächsten Schritt.
           </p>
 
           <div className="arg-steps">
@@ -657,10 +662,14 @@ export default function VorschauPage() {
       <section className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
-            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>{branchenAnzahl()} Branchen.</span>
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>Nicht für den Durchschnitt.</span>
           </h2>
+          {/* Die Branchen-Zahl steht bewusst NICHT mehr in dieser Überschrift
+              (13.09.2026). Als Schlagzeile liest sie sich wie ein Katalog, in dem
+              der Besucher erst suchen muss — als Beleg weiter unten im Fakten-Band
+              und im FAQ wirkt dieselbe Zahl wie ein Versprechen. */}
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
-            Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
+            Vom Handwerk bis zur Industrie kommt ARGONAUT vorkonfiguriert für Ihren Betrieb — mit Ihren Abläufen, Ihren Begriffen, Ihren Nachweisen. Statt als leere Hülle, die Sie erst mühsam einrichten.
           </p>
 
           <div className="arg-mod-grid">
