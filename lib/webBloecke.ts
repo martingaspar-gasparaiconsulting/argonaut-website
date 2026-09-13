@@ -15,6 +15,8 @@
 
 import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht } from './webRecht';
 
+import { einstellung as einblendungEinstellung } from './einblendung';
+
 export interface CiWeb extends CiRecht {
   firma?: string | null;
   slogan?: string | null;
@@ -47,7 +49,8 @@ export type Block =
   | { typ: 'buchung'; eyebrow?: string; titel: string; text?: string }
   | { typ: 'produkte'; eyebrow?: string; titel: string }
   | { typ: 'chatbot'; titel?: string; gruss?: string }
-  | { typ: 'cta'; titel: string; knopf: string };
+  | { typ: 'cta'; titel: string; knopf: string }
+  | { typ: 'einblendung'; titel: string; text: string; knopf?: string; nach_sekunden?: number; bei_verlassen?: boolean; sperre_tage?: number };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
 export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; beschreibung: string }[] = [
@@ -69,6 +72,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'produkte', icon: '🛍️', name: 'Shop-Produkte', beschreibung: 'Ihre Produkte als Kacheln mit Warenkorb (aus „Produkte in den Shop")' },
   { typ: 'chatbot', icon: '🤖', name: 'KI-Verkaufsberater', beschreibung: 'Schwebender KI-Chat — berät, kennt Produkte, Preise & Bestand live' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
+  { typ: 'einblendung', icon: '🔔', name: 'Anmelde-Einblendung', beschreibung: 'Einladung zum Newsletter, die nach einer Weile erscheint — auf dem Handy als Balken' },
 ];
 
 // --- Helfer -----------------------------------------------------------------
@@ -233,6 +237,89 @@ function terminSkript(): string {
 }
 
 // --- Ein Baustein → HTML ----------------------------------------------------
+// --- Anmelde-Einblendung (3.15 Paket 4) -------------------------------------
+// CSS und Skript bleiben BEIM BLOCK statt in seiteCss()/seiteHtml-Kopf: der
+// Baustein ist damit in sich geschlossen, und eine 64-KB-Datei bekommt keine
+// weitere Stelle, an der zwei Dinge zusammenpassen muessen.
+
+function einblendungCss(): string {
+  return '<style>'
+    + '.ao-pop-huelle{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(10,22,40,.55);padding:16px;animation:aopop .18s ease-out}'
+    + '.ao-pop-huelle[hidden]{display:none}'
+    + '@keyframes aopop{from{opacity:0}to{opacity:1}}'
+    + '@media (prefers-reduced-motion:reduce){.ao-pop-huelle{animation:none}}'
+    + '.ao-pop-karte{background:#fff;border-radius:14px;padding:22px 22px 18px;max-width:440px;width:100%;box-shadow:0 18px 50px rgba(10,22,40,.28)}'
+    + '.ao-pop-kopf{display:flex;align-items:flex-start;gap:12px}'
+    + '.ao-pop-kopf h3{margin:0 0 6px;font-size:20px;line-height:1.3;flex:1}'
+    + '.ao-pop-zu{margin-left:auto;background:none;border:0;font-size:26px;line-height:1;cursor:pointer;color:#8a94a6;padding:0 4px}'
+    + '.ao-pop-zu:hover{color:#1a1a1a}'
+    + '.ao-pop-karte p{margin:0 0 14px;color:#4a5568;font-size:14.5px;line-height:1.55}'
+    + '.ao-pop-row{display:flex;gap:8px;flex-wrap:wrap}'
+    + '.ao-pop-row input{flex:1 1 190px;padding:10px 12px;border:1px solid #d8dee8;border-radius:8px;font:inherit;min-width:0}'
+    + '.ao-pop-hinweis{background:rgba(0,229,255,.08);border-left:3px solid #00a5b5;padding:10px 14px;border-radius:0 8px 8px 0;margin:0 0 14px;font-size:13.5px;color:#31465f}'
+    + '@media(max-width:639px){'
+    + '.ao-pop-huelle{align-items:flex-end;background:rgba(10,22,40,.35);padding:0}'
+    + '.ao-pop-karte{max-width:none;border-radius:14px 14px 0 0;padding:16px 16px 14px}'
+    + '.ao-pop-karte p{font-size:13.5px;margin-bottom:10px}'
+    + '}'
+    + '</style>';
+}
+
+// Zeigt die Einblendung nach der eingestellten Zeit. Die Regeln entsprechen
+// lib/einblendung.ts (dort node-getestet): nie sofort, nach dem Wegklicken
+// Ruhe, nach der Anmeldung nie wieder. Der Zustand liegt im Browser des
+// Besuchers (localStorage) — wir legen dafuer kein Profil an.
+function einblendungSkript(): string {
+  return '<script>(function(){'
+    + 'var p=document.getElementById("ao-pop");if(!p)return;'
+    + 'var sek=parseInt(p.getAttribute("data-sek"),10)||25;'
+    + 'var sperre=parseInt(p.getAttribute("data-sperre"),10)||30;'
+    + 'var seite=p.getAttribute("data-seite")||"";'
+    + 'var exit=p.getAttribute("data-verlassen")==="1";'
+    + 'var key="ao_einblendung_"+seite;'
+    + 'function heute(){return new Date().toISOString().slice(0,10);}'
+    + 'function lies(){try{return JSON.parse(localStorage.getItem(key)||"{}")||{};}catch(e){return {};}}'
+    + 'function schreib(o){try{localStorage.setItem(key,JSON.stringify(o));}catch(e){}}'
+    + 'function tageHer(d){var a=Date.parse(d+"T00:00:00Z"),b=Date.parse(heute()+"T00:00:00Z");'
+    + 'if(isNaN(a)||isNaN(b))return null;return Math.floor((b-a)/86400000);}'
+    + 'var z=lies();'
+    + 'if(z.a===true)return;'
+    + 'if(z.z){var her=tageHer(z.z);if(her!==null&&her>=0&&her<sperre)return;}'
+    + 'var offen=false,timer=null;'
+    + 'function zeigen(){if(offen)return;offen=true;p.hidden=false;'
+    + 'var f=p.querySelector("input[type=email]");if(f&&window.innerWidth>=640)f.focus();}'
+    + 'function schliessen(merken){p.hidden=true;offen=false;if(timer){clearTimeout(timer);timer=null;}'
+    + 'if(merken){var n=lies();n.z=heute();schreib(n);}'
+    + 'document.removeEventListener("keydown",aufTaste);}'
+    + 'function aufTaste(e){if(e.key==="Escape")schliessen(true);}'
+    + 'timer=setTimeout(function(){zeigen();document.addEventListener("keydown",aufTaste);},sek*1000);'
+    + 'if(exit&&window.innerWidth>=640){document.addEventListener("mouseout",function(e){'
+    + 'if(e.clientY<=0&&!e.relatedTarget){zeigen();document.addEventListener("keydown",aufTaste);}});}'
+    + 'p.addEventListener("click",function(e){if(e.target===p)schliessen(true);});'
+    + 'var zu=p.querySelector(".ao-pop-zu");if(zu)zu.addEventListener("click",function(){schliessen(true);});'
+    + 'var form=document.getElementById("ao-pop-form");if(!form)return;'
+    + 'var el=form.elements;var m=document.getElementById("ao-pop-msg");'
+    + 'function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}'
+    + 'form.addEventListener("submit",function(e){e.preventDefault();'
+    + 'if(el.firma_hp&&el.firma_hp.value)return;'
+    + 'var email=(el.email.value||"").trim();'
+    + 'if(!email||email.indexOf("@")<1){set("Bitte eine g\\u00fcltige E-Mail-Adresse eingeben.",false);return;}'
+    + 'if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}'
+    + 'if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird die Anmeldung gesendet.",true);return;}'
+    + 'var btn=form.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="\\u2026";'
+    + 'fetch("/api/oeffentlich/web-newsletter",{method:"POST",headers:{"content-type":"application/json"},'
+    + 'body:JSON.stringify({seite:seite,email:email,privacy:true,firma_hp:el.firma_hp?el.firma_hp.value:""})})'
+    + '.then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})'
+    + '.then(function(x){if(x.ok){form.reset();'
+    + 'var n=lies();n.a=true;n.z=heute();schreib(n);'
+    + 'set("Fast geschafft! Bitte best\\u00e4tigen Sie die Anmeldung \\u00fcber den Link in Ihrer E-Mail.",true);'
+    + 'setTimeout(function(){schliessen(false);},4000);}'
+    + 'else{set((x.d&&x.d.error)||"Anmeldung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}})'
+    + '.catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);})'
+    + '.finally(function(){btn.disabled=false;btn.textContent=bt;});});'
+    + '})()<\/script>';
+}
+
 export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; editor?: boolean } = {}): string {
   const ed = ctx.editor;
   // Editor-Marker: nur im Vollbild-Editor gesetzt. Macht Text direkt anklick-/editierbar.
@@ -326,6 +413,54 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
     }
     case 'cta':
       return '<section class="cta"><div class="wrap"><h2' + ce('titel') + '>' + esc(b.titel) + '</h2><a class="btn btn-dunkel" href="#kontakt"' + ce('knopf') + '>' + esc(b.knopf) + '</a></div></section>';
+
+    // Anmelde-Einblendung (3.15 Paket 4). Im EDITOR als normale Sektion, damit
+    // sie sich bearbeiten laesst; auf der fertigen Seite als verstecktes
+    // Overlay, das einblendungSkript() nach der eingestellten Zeit zeigt.
+    // Die Grenzen (nie sofort, nie zweimal, Handy nur als Balken) stehen in
+    // lib/einblendung.ts und werden hier nur eingebettet.
+    case 'einblendung': {
+      const e = einblendungEinstellung(b);
+      const seite = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
+      const inhalt = [
+        '<div class="ao-pop-kopf">',
+        '<h3' + ce('titel') + '>' + esc(e.titel) + '</h3>',
+        '<button type="button" class="ao-pop-zu" aria-label="Schlie&szlig;en">&times;</button>',
+        '</div>',
+        '<p' + ce('text') + '>' + esc(e.text) + '</p>',
+        '<form class="ao-pop-form" id="ao-pop-form">',
+        '<input type="hidden" name="seite" value="' + seite + '">',
+        '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+        '<div class="ao-pop-row">',
+        '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" required>',
+        '<button type="submit" class="btn"' + ce('knopf') + '>' + esc(e.knopf) + '</button>',
+        '</div>',
+        '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich m&ouml;chte E-Mails erhalten und habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen.*</label>',
+        '<div class="ao-msg" id="ao-pop-msg" role="status"></div>',
+        '</form>',
+      ].join('');
+
+      if (ed) {
+        return [
+          '<section class="sec alt"><div class="wrap narrow">',
+          '<div class="ao-pop-hinweis">So sieht die Einblendung aus. Auf der ver&ouml;ffentlichten Seite erscheint sie nach '
+            + e.nachSekunden + ' Sekunden' + (e.beiVerlassen ? ' oder wenn der Zeiger die Seite verl&auml;sst' : '')
+            + ' &mdash; auf dem Handy als Balken unten. Nach dem Wegklicken ' + e.sperreTage
+            + ' Tage Ruhe; wer sich eingetragen hat, wird nie wieder gefragt.</div>',
+          '<div class="ao-pop-karte">' + inhalt + '</div>',
+          '</div></section>',
+        ].join('');
+      }
+
+      return [
+        einblendungCss(),
+        '<div class="ao-pop-huelle" id="ao-pop" hidden role="dialog" aria-modal="true" aria-label="' + esc(e.titel) + '"',
+        ' data-sek="' + e.nachSekunden + '" data-verlassen="' + (e.beiVerlassen ? '1' : '0') + '"',
+        ' data-sperre="' + e.sperreTage + '" data-seite="' + seite + '">',
+        '<div class="ao-pop-karte">' + inhalt + '</div>',
+        '</div>',
+      ].join('');
+    }
     case 'newsletter':
       return [
         '<section class="sec" id="newsletter"><div class="wrap narrow">',
@@ -826,6 +961,7 @@ export function seiteHtml(
   const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
   const hatProdukte = (seite.bloecke || []).some((b) => b.typ === 'produkte');
   const hatChatbot = (seite.bloecke || []).some((b) => b.typ === 'chatbot');
+  const hatEinblendung = (seite.bloecke || []).some((b) => b.typ === 'einblendung');
 
   return [
     '<!doctype html>',
@@ -857,6 +993,7 @@ export function seiteHtml(
     (opts.oeffentlichId && hatBuchung) ? buchungSkript() : '',
     (opts.oeffentlichId && hatProdukte) ? produkteSkript() : '',
     (opts.oeffentlichId && hatChatbot) ? chatSkript() : '',
+    (!opts.editor && hatEinblendung) ? einblendungSkript() : '',
     hatProdukte ? widerrufSkript() : '',
     (opts.oeffentlichId && hatBewertungen) ? bewertungenSkript() : '',
     opts.editor ? editorSkript() : '',

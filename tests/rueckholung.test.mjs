@@ -206,6 +206,21 @@ test('fehltZumStarten erkennt doppelte Nummern', () => {
   assert.ok(fehlt.some((f) => /eigene Nummer/.test(f)));
 });
 
+test('eine fehlende Wartezeit ist ein Fehler, nicht heimlich Null', () => {
+  // Number('') ergibt 0 — ohne die Leer-Pruefung in ganzeZahl waere eine
+  // leere Wartezeit stillschweigend „sofort" geworden statt gemeldet.
+  const fehlt = fehltZumStarten({
+    name: 'Leer-Test',
+    schritte: [{ schritt: 1, nach_tagen: '', betreff: 'a', text: 'a' }],
+  });
+  assert.ok(fehlt.some((f) => /gültige Wartezeit/.test(f)), fehlt.join(' | '));
+});
+
+test('eine leere Ruhezeit faellt auf die Untergrenze, nicht auf Null', () => {
+  assert.equal(ruheTage(''), MIN_RUHE_TAGE);
+  assert.equal(ruheTage('   '), MIN_RUHE_TAGE);
+});
+
 test('eine Strecke ohne Nachricht ist nicht startklar', () => {
   assert.ok(fehltZumStarten({ name: 'Leer', schritte: [] }).some((f) => /mindestens eine Nachricht/.test(f)));
 });

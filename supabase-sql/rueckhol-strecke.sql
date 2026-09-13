@@ -159,7 +159,9 @@ end $$;
 
 -- ============================================================================
 -- 7) KONTROLLE — eine einzige Abfrage (der Supabase-Editor zeigt sonst nur
---    das Ergebnis der letzten). Erwartet: 4 Tabellen, 14 Regeln.
+--    das Ergebnis der letzten). Erwartet: 4 Tabellen, 13 Regeln
+--    (Strecke und Schritt je 4, Lauf 3, Versand 2 — Protokollzeilen werden
+--    weder geaendert noch geloescht).
 -- ============================================================================
 select 'Tabelle' as art, tablename as name, '' as zusatz
 from pg_tables

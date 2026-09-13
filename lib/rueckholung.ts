@@ -121,7 +121,15 @@ function tag(v: unknown): string | null {
 }
 
 function ganzeZahl(v: unknown, standard = 0): number {
-  const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
+  // Leer ist NICHT null: Number('') ergibt 0. Ohne diese Pruefung waere eine
+  // fehlende Wartezeit stillschweigend „sofort" statt ein Fehler — und
+  // fehltZumStarten() haette sie nie gemeldet. Gefunden 13.09. beim Bau der
+  // Einblendung, dort steckte derselbe Fehler.
+  if (v === null || v === undefined) return standard;
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : standard;
+  const s = String(v).trim();
+  if (s === '') return standard;
+  const n = Number(s);
   return Number.isFinite(n) ? Math.trunc(n) : standard;
 }
 

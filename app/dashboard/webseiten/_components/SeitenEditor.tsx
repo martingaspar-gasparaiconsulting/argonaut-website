@@ -10,6 +10,7 @@
 
 import { CSSProperties, useState, useEffect, useRef, type DragEvent } from 'react';
 import { BAUSTEIN_KATALOG, type Block } from '@/lib/webBloecke';
+import { VORLAGE as EINBLENDUNG_VORLAGE, MIN_SEKUNDEN, MIN_SPERRE_TAGE, beschreibe as einblendungText } from '@/lib/einblendung';
 import FotoPicker from './FotoPicker';
 
 const C = {
@@ -43,6 +44,15 @@ export function neuerBlock(typ: Block['typ']): Block {
     case 'produkte': return { typ, eyebrow: 'Shop', titel: 'Unsere Produkte' };
     case 'chatbot': return { typ, titel: 'Fragen? Ich berate Sie', gruss: 'Hallo! Ich helfe Ihnen gern weiter — wonach suchen Sie?' };
     case 'cta': return { typ, titel: 'Bereit? Wir freuen uns auf Ihre Anfrage.', knopf: 'Jetzt anfragen' };
+    case 'einblendung': return {
+      typ,
+      titel: EINBLENDUNG_VORLAGE.titel,
+      text: EINBLENDUNG_VORLAGE.text,
+      knopf: EINBLENDUNG_VORLAGE.knopf,
+      nach_sekunden: EINBLENDUNG_VORLAGE.nach_sekunden,
+      bei_verlassen: EINBLENDUNG_VORLAGE.bei_verlassen,
+      sperre_tage: EINBLENDUNG_VORLAGE.sperre_tage,
+    };
     default: return { typ: 'ueber', titel: 'Text', text: '' } as Block;
   }
 }
@@ -239,6 +249,35 @@ function felderFuer(
       return [T('Titel (Chat-Kopf)', 'titel', b.titel || ''), T('Begrüßung', 'gruss', b.gruss || '', true)];
     case 'cta':
       return [T('Überschrift', 'titel', b.titel), T('Knopf-Text', 'knopf', b.knopf)];
+    case 'einblendung':
+      return [
+        T('Überschrift', 'titel', b.titel),
+        T('Warum sich das Eintragen lohnt', 'text', b.text, true),
+        T('Knopf-Text', 'knopf', b.knopf || 'Anmelden'),
+        <Feld
+          key="nach_sekunden"
+          label={`Erscheint nach ... Sekunden (mindestens ${MIN_SEKUNDEN})`}
+          value={String(b.nach_sekunden ?? EINBLENDUNG_VORLAGE.nach_sekunden)}
+          onChange={(v) => setBlock(i, { nach_sekunden: Number(v) || EINBLENDUNG_VORLAGE.nach_sekunden })}
+        />,
+        <Feld
+          key="sperre_tage"
+          label={`Nach dem Wegklicken ... Tage Ruhe (mindestens ${MIN_SPERRE_TAGE})`}
+          value={String(b.sperre_tage ?? EINBLENDUNG_VORLAGE.sperre_tage)}
+          onChange={(v) => setBlock(i, { sperre_tage: Number(v) || EINBLENDUNG_VORLAGE.sperre_tage })}
+        />,
+        <label key="bei_verlassen" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, margin: '2px 0 6px' }}>
+          <input
+            type="checkbox"
+            checked={b.bei_verlassen === true}
+            onChange={(e) => setBlock(i, { bei_verlassen: e.target.checked })}
+          />
+          <span>Auch zeigen, wenn der Zeiger die Seite verlässt (nur am Rechner)</span>
+        </label>,
+        <p key="hinweis" style={{ fontSize: 12.5, color: '#8FA3BE', lineHeight: 1.5, margin: '4px 0 0' }}>
+          {einblendungText(b)}
+        </p>,
+      ];
     case 'galerie': {
       const bilder = (b.bilder as string[]) || [];
       return [
