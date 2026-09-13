@@ -4,6 +4,7 @@ import AngebotRechner from './_components/AngebotRechner'
 import Navbar from './_components/Navbar'
 import AnfrageFormular from './_components/AnfrageFormular'
 import Dreizack from '@/components/Dreizack';
+import { branchenAnzahl } from './_lib/branchen-web';
 
 // ============================================================================
 // ARGONAUT OS · app/vorschau/page.tsx — NEUE WEBSITE (Parallel-Bau / Vorschau)
@@ -33,7 +34,9 @@ const GOLD = '#c9a84c'
 const TEAL = '#7aa3b3'
 
 const FAQ: { q: string; a: string }[] = [
-  { q: 'Für wen ist ARGONAUT OS?', a: 'Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für über 690 Branchen vorkonfiguriert.' },
+  // Die Branchen-Zahl kommt aus branchenAnzahl() — eine Quelle für die ganze
+  // Website, damit FAQ, Branchen-Abschnitt und „Über uns" nie auseinanderlaufen.
+  { q: 'Für wen ist ARGONAUT OS?', a: `Für den deutschen Mittelstand — vom Einzelunternehmer bis zum Betrieb mit mehreren hundert Mitarbeitern. ARGONAUT ist für ${branchenAnzahl()} Branchen vorkonfiguriert.` },
   { q: 'Was kostet ARGONAUT?', a: 'Eine monatliche Grundgebühr nach Betriebsgröße plus die Nutzer-Sitze, die Sie brauchen — ab 499 € im Monat für Einzelunternehmer. Die KI-Nutzung ist unbegrenzt inklusive.' },
   { q: 'Ist die KI wirklich unbegrenzt inklusive?', a: 'Ja. Kein Kontingent, keine nutzungsabhängigen Zusatzkosten. Sie arbeiten so viel Sie wollen.' },
   { q: 'Wo liegen meine Daten?', a: 'Auf EU-Servern, DSGVO-konform. Ihre Daten bleiben in der EU.' },
@@ -624,7 +627,7 @@ export default function VorschauPage() {
 
           <div className="arg-facts">
             {[
-              { val: '24/7', lab: 'Ihre KI-Crew ist immer an Bord' },
+              { val: '24/7', lab: 'Ihre Bausteine sind immer an Bord' },
               { val: 'Unbegrenzt', lab: 'KI inklusive — keine Nachzahlung pro Aktion' },
               { val: '100 %', lab: 'DSGVO-konform · EU-Hosting · Audit-Trails' },
               { val: '1 statt 12', lab: 'Ein System, ein Login, ein Preis' },
@@ -654,7 +657,7 @@ export default function VorschauPage() {
       <section className="arg-modules">
         <div className="arg-wrap">
           <h2 className="arg-h2">
-            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>698 Branchen.</span>
+            Für Ihre Branche gemacht. <span style={{ color: GOLD }}>{branchenAnzahl()} Branchen.</span>
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 1.8vw, 1.18rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.55 }}>
             Vom Handwerk bis zur Industrie — ARGONAUT kommt vorkonfiguriert für Ihren Betrieb, statt als leere Hülle, die Sie erst mühsam einrichten.
@@ -717,8 +720,8 @@ export default function VorschauPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', textAlign: 'left' }}>
             {[
-              { k: '698', t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
-              { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Crew — alles an einem Login.' },
+              { k: String(branchenAnzahl()), t: 'Branchen vorkonfiguriert', d: 'Vom Einzelunternehmer bis zum Konzern — für jede Branche fertig eingerichtet.' },
+              { k: '1', t: 'System statt zwölf', d: 'CRM, ERP, Warenwirtschaft, DMS und KI-Bausteine — alles an einem Login.' },
               { k: '🇪🇺', t: 'EU-Hosting, DSGVO', d: 'Ihre Daten bleiben in der EU — sicher und rechtskonform.' },
             ].map((x) => (
               <div key={x.t} style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.7), rgba(10,22,40,0.6))', border: '1px solid rgba(122,163,179,0.16)', borderRadius: '16px', padding: '26px 24px' }}>

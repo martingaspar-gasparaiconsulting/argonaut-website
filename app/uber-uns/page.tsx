@@ -2,11 +2,16 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../vorschau/_components/Navbar'
 import Footer from '../vorschau/_components/Footer'
+import { branchenAnzahl } from '../vorschau/_lib/branchen-web'
 
 // ============================================================================
 // ARGONAUT OS · app/uber-uns/page.tsx — Über uns im neuen dunklen Design.
-// Story (Jason/Argonauten) + Gründer-Mission, ausgebaut, einheitlich „Sie",
-// aktuelle Fakten (690+ Branchen). Neue Sektion „Wofür wir stehen".
+// Story (Jason/Argonauten) + Gründer-Mission, ausgebaut, einheitlich „Sie".
+// Neue Sektion „Wofür wir stehen".
+//
+// Die Branchen-Zahl steht hier NICHT mehr als Text (bis 13.09.2026: „690+",
+// während die Startseite 698 nannte), sondern kommt aus branchenAnzahl() —
+// derselben Quelle wie die Startseite. Server-Komponente, also erlaubt.
 // ============================================================================
 
 const GOLD = '#c9a84c'
@@ -25,7 +30,7 @@ const werte = [
 ]
 
 const zahlen = [
-  { zahl: '690+', label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
+  { zahl: String(branchenAnzahl()), label: 'Branchen vorkonfiguriert', sub: 'vom Einzelunternehmer bis zum Konzern' },
   { zahl: '1', label: 'System statt zwölf', sub: 'CRM, ERP, Warenwirtschaft, DMS — ein Login' },
   { zahl: '🇪🇺', label: 'EU-Hosting & DSGVO', sub: 'Ihre Daten bleiben in der EU' },
   { zahl: '24/7', label: 'Ihre KI ist immer ansprechbar', sub: 'rund um die Uhr — beantwortet, füllt aus, schlägt vor' },

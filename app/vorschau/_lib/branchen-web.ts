@@ -253,6 +253,24 @@ export function websiteBranchen(): WebBranche[] {
   return [...bestand, ...EXTRA_BRANCHEN]
 }
 
+/**
+ * Anzahl aller Website-Branchen — die EINE Quelle für jede Branchen-Zahl,
+ * die auf der Website steht.
+ *
+ * Grund (13.09.2026): Startseite und „Über uns" nannten drei verschiedene
+ * Zahlen für dieselbe Sache — „698 Branchen", „über 690 Branchen" und
+ * „690+". Wer eine Branche ergänzt oder in AUSSCHLUSS aufnimmt, müsste
+ * sonst daran denken, jede Textstelle von Hand nachzuziehen. Seither zieht
+ * jede Anzeige-Stelle diese Funktion, und die Zahlen können nicht mehr
+ * auseinanderlaufen.
+ *
+ * Nur in SERVER-Komponenten aufrufen — sie liest die vollstaendige
+ * Branchen-Datenbank. Auf der Startseite und /uber-uns ist das der Fall.
+ */
+export function branchenAnzahl(): number {
+  return websiteBranchen().length
+}
+
 export function websiteBrancheBySlug(slug: string): WebBranche | undefined {
   return websiteBranchen().find((b) => b.slug === slug)
 }
