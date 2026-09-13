@@ -12,6 +12,9 @@
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+// 13.09.2026 (D4): Diktat in der Baustellen-Doku — „Bautagebuch im Regen" steht
+// im Kopf von Diktat.tsx als gedachter Fall, fehlte hier aber.
+import Diktat from '../_components/Diktat';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -396,12 +399,12 @@ export default function BautagebuchPage() {
                 <Feld label="Temperatur"><input style={styles.input} value={eintragForm.temperatur} onChange={(e) => setEintragForm((f) => ({ ...f, temperatur: e.target.value }))} placeholder="z. B. 12 °C" /></Feld>
               </NurVoll>
               <Feld label="Mannschaft / Gewerke" voll><input style={styles.input} value={eintragForm.anwesende} onChange={(e) => setEintragForm((f) => ({ ...f, anwesende: e.target.value }))} placeholder="wer war vor Ort" /></Feld>
-              <Feld label="Geleistete Arbeiten" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={eintragForm.arbeiten} onChange={(e) => setEintragForm((f) => ({ ...f, arbeiten: e.target.value }))} /></Feld>
+              <Feld label="Geleistete Arbeiten" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={eintragForm.arbeiten} onChange={(e) => setEintragForm((f) => ({ ...f, arbeiten: e.target.value }))} /><Diktat wert={eintragForm.arbeiten} onWert={(neu) => setEintragForm((f) => ({ ...f, arbeiten: neu }))} klein /></Feld>
               <NurVoll>
-                <Feld label="Material" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.material} onChange={(e) => setEintragForm((f) => ({ ...f, material: e.target.value }))} /></Feld>
+                <Feld label="Material" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.material} onChange={(e) => setEintragForm((f) => ({ ...f, material: e.target.value }))} /><Diktat wert={eintragForm.material} onWert={(neu) => setEintragForm((f) => ({ ...f, material: neu }))} klein /></Feld>
               </NurVoll>
               <NurVoll>
-                <Feld label="Besondere Vorkommnisse / Behinderungen" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.vorkommnisse} onChange={(e) => setEintragForm((f) => ({ ...f, vorkommnisse: e.target.value }))} placeholder="Verzögerungen, Nachträge, Anweisungen …" /></Feld>
+                <Feld label="Besondere Vorkommnisse / Behinderungen" voll><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={eintragForm.vorkommnisse} onChange={(e) => setEintragForm((f) => ({ ...f, vorkommnisse: e.target.value }))} placeholder="Verzögerungen, Nachträge, Anweisungen …" /><Diktat wert={eintragForm.vorkommnisse} onWert={(neu) => setEintragForm((f) => ({ ...f, vorkommnisse: neu }))} klein /></Feld>
               </NurVoll>
               <NurVoll>
                 <EigeneFelderInputs felder={felder} werte={eintragExtra} setWert={(fid, w) => setEintragExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} />
@@ -422,7 +425,7 @@ export default function BautagebuchPage() {
             <h2 style={styles.modalTitel}>Neuer Mangel</h2>
             <div style={styles.formGrid}>
               <Feld label="Titel *" voll><input style={styles.input} value={mangelForm.titel} onChange={(e) => setMangelForm((f) => ({ ...f, titel: e.target.value }))} placeholder="z. B. Fuge Bad unvollständig" /></Feld>
-              <Feld label="Beschreibung" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={mangelForm.beschreibung} onChange={(e) => setMangelForm((f) => ({ ...f, beschreibung: e.target.value }))} /></Feld>
+              <Feld label="Beschreibung" voll><textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={mangelForm.beschreibung} onChange={(e) => setMangelForm((f) => ({ ...f, beschreibung: e.target.value }))} /><Diktat wert={mangelForm.beschreibung} onWert={(neu) => setMangelForm((f) => ({ ...f, beschreibung: neu }))} klein /></Feld>
               <NurVoll>
                 <Feld label="Frist zur Behebung"><input type="date" style={styles.input} value={mangelForm.frist} onChange={(e) => setMangelForm((f) => ({ ...f, frist: e.target.value }))} /></Feld>
               </NurVoll>

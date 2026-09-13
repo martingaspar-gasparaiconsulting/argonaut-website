@@ -11,6 +11,9 @@ import ServiceAuge from "./ServiceAuge";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+// 13.09.2026 (D4): Diktat im Ticket — der Kopfkommentar von Diktat.tsx nennt
+// genau diesen Fall, „Ticket zwischen zwei Anrufen", war aber nie eingebaut.
+import Diktat from '../_components/Diktat';
 
 const MODUL = 'tickets';
 
@@ -731,6 +734,11 @@ export default function ServicePage() {
                   setForm({ ...form, beschreibung: e.target.value })
                 }
                 placeholder="Details zum Anliegen …"
+              />
+              <Diktat
+                wert={form.beschreibung}
+                onWert={(neu) => setForm({ ...form, beschreibung: neu })}
+                klein
               />
             </div>
 
