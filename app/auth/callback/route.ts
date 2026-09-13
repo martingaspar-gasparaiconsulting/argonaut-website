@@ -34,13 +34,27 @@ export async function GET(request: NextRequest) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user?.email) {
-        const { data: churned } = await supabase
+        // Churn-Lock: Die Sperrliste wird NICHT hier gefiltert, sondern von der
+        // Datenbank-Regel churned_eigene_email_lesen:
+        //   for select to authenticated
+        //   using (lower(email) = lower(auth.jwt() ->> 'email'))
+        // Die Regel vergleicht ohne Ruecksicht auf Gross-/Kleinschreibung. Ein
+        // eigener .eq('email', ...) waere strenger als die Regel und wuerde bei
+        // "Max@Firma.de" gegen "max@firma.de" daneben greifen.
+        // WER DIESE REGEL AENDERT ODER ENTFERNT, HEBELT DIE SPERRE AUS.
+        const { data: churned, error: churnFehler } = await supabase
           .from('churned_customers')
           .select('id')
-          .eq('email', user.email)
-          .single()
+          .limit(1)
 
-        if (churned) {
+        if (churnFehler) {
+          // Nicht verschlucken - sonst faellt die Sperre lautlos aus.
+          console.error('[churn-lock] Pruefung fehlgeschlagen:', churnFehler.message)
+        }
+
+        // .limit(1) statt .single(): .single() wirft bei null UND bei mehr als
+        // einer Zeile - ein Doppeleintrag haette die Sperre still ausgehebelt.
+        if (churned && churned.length > 0) {
           return NextResponse.redirect(`${origin}/auth/login?error=churn_locked`)
         }
       }
