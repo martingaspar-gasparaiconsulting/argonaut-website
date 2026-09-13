@@ -66,6 +66,19 @@ export type TriggerDef = {
   datumFeld: string;    // ab diesem Datum laeuft die Wartezeit
   grundfilter: { feld: string; werte: string[]; negiert?: boolean } | null;
   felder: FeldDef[];    // fuer den Bedingungs-Baukasten
+  /**
+   * Ist eine Mail aus diesem Ausloeser WERBUNG?
+   *
+   * Die Unterscheidung entscheidet, ob ein Werbewiderspruch die Mail stoppt.
+   * BETRIEBSPOST (false) laeuft immer: eine Zahlungserinnerung, eine Antwort
+   * zum eigenen Angebot, eine Terminsache. Sie gehoert zum Vertrag, und ein
+   * Werbewiderspruch darf sie NICHT verhindern — sonst faellt die Mahnung
+   * lautlos aus und niemand merkt es.
+   *
+   * WERBUNG (true) ist alles, was der Empfaenger nicht angestossen hat —
+   * Wiedervorlage, Rueckholung. Dafuer gilt § 7 UWG und Art. 21 DSGVO.
+   */
+  werbung: boolean;
 };
 
 export type AktionsFeld = {
@@ -143,6 +156,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'faelligkeitsdatum',
     grundfilter: { feld: 'zahlungsstatus', werte: ['offen', 'teilbezahlt', 'ueberfaellig'] },
     felder: F_RECHNUNG,
+    werbung: false,
   },
   {
     key: 'rechnung_bezahlt',
@@ -153,6 +167,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'bezahlt_am',
     grundfilter: { feld: 'zahlungsstatus', werte: ['bezahlt'] },
     felder: F_RECHNUNG,
+    werbung: false,
   },
   {
     key: 'angebot_ohne_antwort',
@@ -163,6 +178,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'erstellt_am',
     grundfilter: { feld: 'status', werte: ['gesendet'] },
     felder: F_ANGEBOT,
+    werbung: false,
   },
   {
     key: 'angebot_laeuft_ab',
@@ -173,6 +189,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'gueltig_bis',
     grundfilter: { feld: 'status', werte: ['gesendet'] },
     felder: F_ANGEBOT,
+    werbung: false,
   },
   {
     key: 'angebot_angenommen',
@@ -183,6 +200,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'angenommen_am',
     grundfilter: { feld: 'status', werte: ['angenommen'] },
     felder: F_ANGEBOT,
+    werbung: false,
   },
   {
     key: 'aufgabe_ueberfaellig',
@@ -193,6 +211,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'faellig_am',
     grundfilter: { feld: 'status', werte: ['fertig'], negiert: true },
     felder: F_AUFGABE,
+    werbung: false,
   },
   {
     key: 'kontakt_wiedervorlage',
@@ -203,6 +222,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'naechster_kontakt_am',
     grundfilter: null,
     felder: F_KONTAKT,
+    werbung: true,
   },
   {
     key: 'kontakt_lange_still',
@@ -213,6 +233,7 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'letzter_kontakt_am',
     grundfilter: null,
     felder: F_KONTAKT,
+    werbung: true,
   },
   {
     key: 'projekt_endet',
@@ -223,11 +244,22 @@ export const TRIGGER: TriggerDef[] = [
     datumFeld: 'end_datum',
     grundfilter: { feld: 'status', werte: ['aktiv'] },
     felder: F_PROJEKT,
+    werbung: false,
   },
 ];
 
 export function triggerDef(key: string): TriggerDef | undefined {
   return TRIGGER.find((t) => t.key === key);
+}
+
+/**
+ * Ist Post aus diesem Ausloeser Werbung — und damit vom Werbewiderspruch
+ * betroffen? Ein unbekannter Ausloeser gilt vorsichtshalber ALS Werbung:
+ * lieber eine Mail zu wenig als eine Abmahnung.
+ */
+export function istWerbung(triggerKey: string): boolean {
+  const t = triggerDef(triggerKey);
+  return t ? t.werbung === true : true;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,8 +4,9 @@ import { createClient as createServerClient } from '@/lib/supabase-server';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 import {
   triggerDef, aktionDef, pruefeRegel, platzhalterWerte, ersetzePlatzhalter, empfaengerAdresse,
-  alsZahl, type AutomationRegel, type TriggerDef, type Datensatz,
+  alsZahl, istWerbung, type AutomationRegel, type TriggerDef, type Datensatz,
 } from '@/lib/automation';
+import { werbeStatus, WERBE_STATUS_TEXT } from '@/lib/segmente';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/automationen — der Motor des Automations-Bauers
@@ -125,6 +126,22 @@ async function fuehreAus(
     case 'mail_senden': {
       const an = empfaengerAdresse(satz, cfg);
       if (!an || !an.includes('@')) return { ergebnis: 'uebersprungen', meldung: 'keine E-Mail-Adresse hinterlegt' };
+
+      // ▄▄▄ WERBEWIDERSPRUCH ▄▄▄ (nachgeruestet 13.09.2026)
+      // Bis hierher ging jede Automations-Mail an jede Adresse — auch an
+      // Empfaenger, die der Werbung ausdruecklich widersprochen hatten.
+      //
+      // Geprueft wird NUR bei Werbe-Ausloesern (TriggerDef.werbung) und NUR
+      // bei Post an den Kunden. Betriebspost — Zahlungserinnerung, Angebot,
+      // Termin — laeuft weiter: ein Werbewiderspruch darf eine Mahnung nicht
+      // aushebeln. Post an eine feste eigene Adresse ist ohnehin keine Werbung.
+      if (istWerbung(regel.trigger_typ) && cfg.an !== 'feste_adresse') {
+        const status = werbeStatus(satz, 'kontakte');
+        if (status !== 'erlaubt') {
+          return { ergebnis: 'uebersprungen', meldung: `kein Werbeversand: ${WERBE_STATUS_TEXT[status]}` };
+        }
+      }
+
       const betreff = text('betreff') || regel.name;
       const inhalt = text('text').split('\n').map((z) => `<p style="margin:0 0 10px">${z || '&nbsp;'}</p>`).join('');
       const marke = await absenderBranding(admin, regel.owner_user_id);

@@ -42,11 +42,12 @@ export const WERBE_ANTEIL = 0.5;
 
 /**
  * So viele Crons teilen sich den Werbe-Anteil: Autoresponder, Dossier-Sequenz,
- * die Lead-Nachfass-Kette (07.09.26) und die Freebie-Strecke (08.09.26).
+ * die Lead-Nachfass-Kette (07.09.26), die Freebie-Strecke (08.09.26) und die
+ * Rueckhol-Strecke (13.09.26).
  * Kommt einer dazu, gehoert die Zahl hier erhoeht — sonst reissen sie
  * zusammen den Anteil und draengen die Betriebspost aus dem Kontingent.
  */
-export const WERBE_CRONS = 4;
+export const WERBE_CRONS = 5;
 
 /**
  * Untergrenze je Durchgang. Auch bei einem winzigen Budget soll ein Durchgang

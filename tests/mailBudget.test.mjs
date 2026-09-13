@@ -6,13 +6,14 @@ import {
 
 test('Alle Werbe-Crons sind eingetragen — sonst reißen sie zusammen den Anteil', () => {
   // Autoresponder · Dossier-Sequenz · Lead-Nachfass (07.09.) · Freebie-Strecke (08.09.)
-  assert.equal(WERBE_CRONS, 4);
+  // · Rückhol-Strecke (13.09.)
+  assert.equal(WERBE_CRONS, 5);
 });
 
 test('Beim kostenlosen Tarif bleibt die Hälfte für Betriebspost reserviert', () => {
-  // 100 Mails/Tag × 0,5 Werbe-Anteil ÷ 4 Crons = 12 je Durchgang
-  assert.equal(werbeDeckel(100), 12);
-  assert.equal(werbeDeckel(undefined), 12);
+  // 100 Mails/Tag × 0,5 Werbe-Anteil ÷ 5 Crons = 10 je Durchgang
+  assert.equal(werbeDeckel(100), 10);
+  assert.equal(werbeDeckel(undefined), 10);
 });
 
 test('Die Werbepost kann die Betriebspost nie ganz verdrängen', () => {
