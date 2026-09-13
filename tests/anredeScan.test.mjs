@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   stellen, pruefeText, istLadeanzeige, rolleFuer, aufgabeFuer,
-  istKiPrompt, bewerteDatei, rang, sortiere,
+  istKiPrompt, bewerteDatei, rang, sortiere, istPfad,
 } from '../out/anredeScan.js';
 
 // ============================================================================
@@ -272,4 +272,58 @@ test('ein Prompt, dessen Marker in derselben Zeile steht, wird erkannt', () => {
   const quelle = 'const system = `Du bist ein freundlicher KI-Berater fuer die Branche.`;';
   assert.equal(istKiPrompt(quelle, 1), true);
   assert.equal(bewerteDatei('app/api/oeffentlich/branchen-chat/route.ts', quelle).every((f) => f.kiPrompt), true);
+});
+
+// ============================================================================
+// Die folgenden Tests stammen aus dem ERSTEN echten Lauf ueber alle 955
+// Dateien (13.09.2026). Er meldete 39 Stellen — davon war genau EINE echt.
+// Jeder Test hier haelt einen der vier Gruende fest, warum die anderen 38
+// Fehlalarme waren.
+// ============================================================================
+
+test('ein Prompt heisst oft SYSTEM_PROMPT — der Unterstrich darf die Erkennung nicht aushebeln', () => {
+  // 28 der 39 Fehlmeldungen kamen hierher: \bSYSTEM\b trifft nicht in
+  // SYSTEM_PROMPT, weil der Unterstrich als Wortzeichen gilt.
+  const quelle = [
+    'const SYSTEM_PROMPT =',
+    '  "Du bist der Auftrags-Assistent von ARGONAUT OS. " +',
+    '  "Ein Handwerker beschreibt dir in eigenen Worten einen Auftrag.";',
+  ].join('\n');
+  assert.equal(istKiPrompt(quelle, 3), true);
+  assert.equal(bewerteDatei('app/api/auftrag-ki-positionen/route.ts', quelle).every((f) => f.kiPrompt), true);
+});
+
+test('auch ein Prompt mit anderem Namen wird erkannt', () => {
+  const quelle = 'export const QUALIFIZIERUNG_PROMPT = `Du bist ein erfahrener Vertriebsmitarbeiter.`;';
+  assert.equal(istKiPrompt(quelle, 1), true);
+});
+
+test('dir in einer URL ist kein Pronomen', () => {
+  // app/api/tour-planen: new URL("https://www.google.com/maps/dir/")
+  assert.equal(istPfad('https://www.google.com/maps/dir/'), true);
+  assert.deepEqual(pruefeText('https://www.google.com/maps/dir/'), []);
+});
+
+test('euer ist in ARGONAUT die EUeR, nicht das Pronomen', () => {
+  // lib/rechte.ts: { href: '/dashboard/euer', modul: 'euer' } — die
+  // Einnahmen-Ueberschuss-Rechnung. Drei Fehlmeldungen kamen daher.
+  assert.deepEqual(pruefeText('/dashboard/euer'), []);
+  assert.deepEqual(pruefeText('euer'), []);
+  assert.deepEqual(pruefeText('Wir haben euer Angebot erhalten').map((x) => x.art), ['duz'],
+    'im Satz bleibt euer aber ein Pronomen');
+});
+
+test('Suche: ist die Beschriftung eines Suchfelds, kein Befehl', () => {
+  // Fuenf Fehlmeldungen aus den ERP-Seiten.
+  assert.deepEqual(pruefeText('Suche: Bestellnr. oder Lieferant…'), []);
+  assert.deepEqual(pruefeText('Suche: Bezeichnung, Artikelnr., Kategorie…'), []);
+  assert.equal(pruefeText('Suche den Beleg heraus.').length, 1, 'ohne Doppelpunkt bleibt es ein Befehl');
+});
+
+test('die eine echte Stelle aus dem Lauf wird weiterhin gemeldet', () => {
+  const quelle = 'return NextResponse.json({ error: "Dieser Mitarbeiter hat bereits einen Zugang. Nutze spaeter \'Zugang zuruecksetzen\', um ein neues Passwort zu erzeugen." }, { status: 409 });';
+  const funde = bewerteDatei('app/api/hr/mitarbeiter-einladen/route.ts', quelle).filter((f) => !f.kiPrompt);
+  assert.equal(funde.length, 1);
+  assert.equal(funde[0].art, 'imperativ');
+  assert.equal(funde[0].rolle, 'chef');
 });

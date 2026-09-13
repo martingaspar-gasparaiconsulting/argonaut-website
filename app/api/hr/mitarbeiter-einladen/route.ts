@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Fuer diesen Mitarbeiter ist keine E-Mail hinterlegt. Bitte zuerst eine E-Mail-Adresse in den Stammdaten eintragen und speichern." }, { status: 400 });
     }
     if (ma.auth_user_id) {
-      return NextResponse.json({ error: "Dieser Mitarbeiter hat bereits einen Zugang. Nutze spaeter 'Zugang zuruecksetzen', um ein neues Passwort zu erzeugen." }, { status: 409 });
+      return NextResponse.json({ error: "Dieser Mitarbeiter hat bereits einen Zugang. Nutzen Sie spaeter 'Zugang zuruecksetzen', um ein neues Passwort zu erzeugen." }, { status: 409 });
     }
 
     const email = ma.email.trim().toLowerCase();

@@ -212,6 +212,18 @@ const ANREDE_DU = /(\bdu-?form\b|\bper du\b|['"„][Dd]u['"“”]|\bduz(e|en|t|
 /** Ladeanzeigen und Verlaufsmeldungen sind keine Anrede — nicht zu ändern. */
 const LADEANZEIGE = /^(lade|lädt|laedt|speichere|speichert|sende|sendet|prüfe|pruefe|erstelle|berechne|suche)\b[^.!?]{0,40}(…|\.\.\.)\s*$/i;
 
+/**
+ * Pfad, URL, Modulschluessel oder ein einzelnes Wort — nichts davon ist ein
+ * Satz, den jemand liest. Der Test ist bewusst streng: sobald ein Leerzeichen
+ * drin ist, gilt es wieder als Text.
+ */
+export function istPfad(text: string): boolean {
+  const t = String(text ?? '').trim();
+  if (t === '') return true;
+  if (/\s/.test(t)) return false;   // hat ein Leerzeichen -> Satz
+  return true;                      // ein einzelnes Wort ist keine Anrede
+}
+
 export function istLadeanzeige(text: string): boolean {
   return LADEANZEIGE.test(String(text ?? '').trim());
 }
@@ -221,6 +233,11 @@ export function pruefeText(text: string): Array<{ art: Art; treffer: string }> {
   const t = String(text ?? '');
   const raus: Array<{ art: Art; treffer: string }> = [];
   if (!t.trim() || istLadeanzeige(t)) return raus;
+  // Ein Pfad ist kein Satz. Sonst wird aus „https://www.google.com/maps/dir/"
+  // das Pronomen „dir" und aus dem Modul „/dashboard/euer" (das ist die EUeR,
+  // die Einnahmen-Ueberschuss-Rechnung) das Pronomen „euer". Beides echt
+  // passiert, beim ersten Lauf ueber die 955 Dateien.
+  if (istPfad(t)) return raus;
 
   // Anweisung an die KI zur Anrede — zuerst, weil sie am schwersten wiegt.
   if (ANREDE_WORT.test(t) && ANREDE_DU.test(t)) {
@@ -239,6 +256,9 @@ export function pruefeText(text: string): Array<{ art: Art; treffer: string }> {
   while ((m2 = IMPERATIV_RE.exec(klein)) !== null) {
     // Alles seit dem letzten Satzende darf nur aus Fuellwoertern bestehen.
     // „Bitte versuche …" zaehlt, „Ich lade die Datei hoch" nicht.
+    // „Suche:" ist die Ueberschrift eines Suchfelds, kein Befehl. Steht
+    // direkt hinter dem Wort ein Doppelpunkt, ist es eine Beschriftung.
+    if (klein[m2.index + m2[0].length] === ':') continue;
     const satz = klein.slice(0, m2.index).split(/[.!?:;•]/).pop() ?? '';
     const vorlauf = satz.replace(/[-—*"'`„“]/g, ' ').trim();
     if (vorlauf === '' || VORLAUF.test(vorlauf)) {
@@ -324,7 +344,10 @@ export function istKiPrompt(quelle: string, zeile: number): boolean {
   // Abbruch galt in einer Datei mit SYSTEM-Prompt oben auch jede Fehlermeldung
   // weiter unten als Prompt — und waere still aus der Arbeitsliste gefallen.
   const ENDE = /^\s*(export|function|return\s*[(<]|\}|const\s+\w+\s*=\s*(await|use|async))/;
-  const PROMPT = /\b(SYSTEM|system\s*[:=]|prompt|messages\s*:|role\s*:\s*['"]system|anweisung)\b/i;
+  // ACHTUNG Wortgrenze: \bSYSTEM\b trifft NICHT in `SYSTEM_PROMPT`, weil der
+  // Unterstrich als Wortzeichen gilt. Genau daran sind beim ersten echten Lauf
+  // 28 von 39 Meldungen entstanden — lauter Prompts, die als Chef-Text galten.
+  const PROMPT = /(^|[^A-Za-z])(system|prompt)([^A-Za-z]|$)|messages\s*:|role\s*:\s*['"]system|anweisung/i;
 
   // Die Fundzeile SELBST zuerst: `const system = \`Du bist …\`` traegt den
   // Marker in derselben Zeile, nicht darueber.
