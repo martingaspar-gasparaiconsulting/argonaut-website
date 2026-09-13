@@ -113,6 +113,12 @@ export default async function VertriebPage() {
           <Link href="/admin/anfragen" style={{ color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
             Anfragen-Tabelle →
           </Link>
+          {/* 13.09.2026: die eigene Kette — was ging raus, was kam zurueck, was
+              hat es an Zeit gekostet. Liegt bewusst hier und nicht im Kunden-
+              Dashboard: die Zeitspalten sind Betreiber-Sicht. */}
+          <Link href="/admin/command-center/vertrieb/kette" style={{ color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '0.45rem 0.9rem', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
+            Meine Vertriebs-Kette →
+          </Link>
         </div>
 
         {/* Lead-Liste */}
