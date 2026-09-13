@@ -70,6 +70,8 @@ function tageBis(iso: string | null): number | null {
 
 export default function FahrzeugaktePage() {
   const [uid, setUid] = useState<string | null>(null);
+  // Besitzer ist der BETRIEB, nicht die angemeldete Person - siehe unten.
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [fahrzeuge, setFahrzeuge] = useState<FahrzeugRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -103,6 +105,12 @@ export default function FahrzeugaktePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // owner_user_id ist der BETRIEB. mein_chef_id() liefert bei einem
+      // Mitarbeiter die Kennung seines Chefs, bei einem Chef null - dann ist er
+      // selbst der Betrieb. Sonst gehoerte ein eingetragener Halterwechsel dem
+      // Mitarbeiter allein und der Chef saehe ihn nie.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
     })();
   }, []);
@@ -244,7 +252,7 @@ export default function FahrzeugaktePage() {
         if (error) throw error;
       }
       const { error: insErr } = await supabase.from('werkstatt_fahrzeug_halter_log').insert({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         fahrzeug_id: gewaehlt,
         halter_name: plan.neu.halter_name,
         von_datum: plan.neu.von_datum,

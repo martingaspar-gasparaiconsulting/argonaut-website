@@ -148,6 +148,9 @@ function istPauschal(p: PositionBasis): boolean {
 export default function WerkstattPage() {
   const router = useRouter();
   const [uid, setUid] = useState<string | null>(null);
+  // Besitzer aller Werkstatt-Datensaetze ist der BETRIEB, nicht die angemeldete
+  // Person. Siehe Kommentar beim Laden weiter unten.
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [auftraege, setAuftraege] = useState<AuftragRow[]>([]);
   const [fahrzeuge, setFahrzeuge] = useState<FahrzeugRow[]>([]);
   const [katalog, setKatalog] = useState<KatalogRow[]>([]);
@@ -184,6 +187,15 @@ export default function WerkstattPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // ▄▄▄ WARUM HIER NICHT EINFACH die eigene Kennung genommen wird ▄▄▄
+      // owner_user_id ist der BETRIEB, dem ein Datensatz gehoert - nicht die
+      // Person, die ihn eingetippt hat. mein_chef_id() liefert bei einem
+      // Mitarbeiter die Kennung seines Chefs und bei einem Chef null; dann ist
+      // er selbst der Betrieb. Ohne das gehoerte ein vom Mitarbeiter angelegter
+      // Auftrag ihm allein und der Chef saehe ihn nie wieder - und die
+      // Mitarbeiter-Regeln (_ma, seit 13.09.) lehnen das Schreiben ohnehin ab.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
     })();
   }, []);
@@ -270,7 +282,7 @@ export default function WerkstattPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid, titel: form.titel.trim(), nummer: form.nummer.trim() || null,
+        owner_user_id: besitzer ?? uid, titel: form.titel.trim(), nummer: form.nummer.trim() || null,
         kunde_name: form.kunde_name.trim() || null, kennzeichen: form.kennzeichen.trim() || null,
         prioritaet: form.prioritaet, zugesagt_am: form.zugesagt_am || null,
         beschreibung: form.beschreibung.trim() || null, notiz: form.notiz.trim() || null,
@@ -328,7 +340,7 @@ export default function WerkstattPage() {
     if (!finGueltig(fin)) { if (!window.confirm('Die FIN sieht ungewöhnlich aus (nicht 17 Zeichen / enthält I/O/Q). Trotzdem anlegen?')) return; }
     try {
       const { data, error } = await supabase.from('werkstatt_fahrzeuge').insert({
-        owner_user_id: uid, fin, kennzeichen: fzNeu.kennzeichen.trim() || null,
+        owner_user_id: besitzer ?? uid, fin, kennzeichen: fzNeu.kennzeichen.trim() || null,
         hersteller: fzNeu.hersteller.trim() || null, modell: fzNeu.modell.trim() || null,
         halter_name: fzNeu.halter_name.trim() || null,
         naechste_hu: fzNeu.naechste_hu || null,
@@ -390,7 +402,7 @@ export default function WerkstattPage() {
     if (!uid || !form.id) { setFehler('Bitte zuerst den Auftrag speichern (Anlegen), dann Positionen hinzufügen.'); return; }
     try {
       const { error } = await supabase.from('werkstatt_positionen').insert({
-        owner_user_id: uid, auftrag_id: form.id, katalog_id: katalogId,
+        owner_user_id: besitzer ?? uid, auftrag_id: form.id, katalog_id: katalogId,
         art: pos.art ?? 'leistung', bezeichnung: pos.bezeichnung ?? '',
         erfassungsart: pos.erfassungsart ?? 'stunden', menge: pos.menge ?? 1,
         aw_minuten: pos.aw_minuten ?? null, einzelpreis_netto: pos.einzelpreis_netto ?? null,
@@ -458,7 +470,7 @@ export default function WerkstattPage() {
       const { error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id);
       if (e1) throw e1;
       const { error: e2 } = await supabase.from('werkstatt_status_log').insert({
-        owner_user_id: uid, auftrag_id: a.id, von_status: a.status, nach_status: naechster, geaendert_von: uid,
+        owner_user_id: besitzer ?? uid, auftrag_id: a.id, von_status: a.status, nach_status: naechster, geaendert_von: uid,
       });
       if (e2) throw e2;
       await laden_();
@@ -513,7 +525,7 @@ export default function WerkstattPage() {
       if (e1) throw e1;
 
       const { error: e2 } = await supabase.from('werkstatt_freigabe_log').insert({
-        owner_user_id: uid, auftrag_id: a.id,
+        owner_user_id: besitzer ?? uid, auftrag_id: a.id,
         von_status: von, nach_status: nach,
         summe_netto: nach === 'freigegeben' ? aktuelleSumme : null,
         notiz,
@@ -753,6 +765,10 @@ export default function WerkstattPage() {
 
     setBuchBusy(true); setFehler(null);
     try {
+      // ANDOCKPUNKT: 'buchungen' ist KEINE werkstatt_*-Tabelle und hat (Stand
+      // 13.09.2026) keine Mitarbeiter-Regel. Deshalb bleibt hier bewusst die
+      // eigene Kennung stehen. Wird 'buchungen' spaeter fuer Mitarbeiter
+      // geoeffnet, gehoert hier ebenfalls 'besitzer ?? uid' hin.
       const { error } = await supabase.from('buchungen').insert({
         owner_user_id: uid,
         ressource_id: buchForm.ressource_id,
