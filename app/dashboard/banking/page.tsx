@@ -2,15 +2,24 @@
 
 // ============================================================
 // ARGONAUT OS · Banking-Abgleich (Punkt 11)
-// Kontoumsätze (CSV-Export der Bank) gegen offene Rechnungen matchen und
-// per Klick als bezahlt markieren. Funktioniert sofort ohne externen Partner.
-// Die automatische Bankanbindung (finAPI) ist anschlussfertig vorbereitet,
-// aber noch „in Aufbau". Pfad: app/dashboard/banking/page.tsx
+// Kontoumsätze gegen offene Rechnungen matchen und per Klick als bezahlt
+// markieren. Funktioniert sofort ohne externen Partner.
+//
+// 14.09.26: Der Import versteht jetzt DREI Formate — CAMT.053 (ISO 20022),
+// MT940 und CSV. Erkannt wird am Inhalt, nicht an der Dateiendung. Grund:
+// ein CSV-Export sieht bei jeder Bank anders aus, CAMT.053 und MT940 sind
+// genormt und bei jeder deutschen Bank gleich. Parser in lib/bankFormate.ts,
+// das Zuordnen selbst bleibt unverändert in lib/bankAbgleich.ts.
+//
+// Die automatische Bankanbindung ist NICHT gebaut und wird auf dieser Seite
+// bewusst als „geplant" bezeichnet, nicht als „in Arbeit" — es gibt dafür
+// weder eine Route noch einen Vertrag. Pfad: app/dashboard/banking/page.tsx
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { parseUmsaetzeCsv, matchAlle, zaehleMatches, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
+import { matchAlle, zaehleMatches, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
+import { parseUmsaetze, erkenneFormat, FORMAT_NAMEN } from '@/lib/bankFormate';
 import KiAuge from '../_components/KiAuge';
 import { augeBanking } from '@/lib/auge';
 import { zaehleBanking } from '@/lib/augeZaehler';
@@ -30,14 +39,14 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 export default function BankingSeite() {
   const [uid, setUid] = useState<string | null>(null);
   const [offene, setOffene] = useState<OffeneRechnung[]>([]);
-  const [csv, setCsv] = useState('');
+  const [datei, setDatei] = useState('');
   const [matches, setMatches] = useState<MatchZeile[] | null>(null);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [erledigt, setErledigt] = useState<Set<string>>(new Set());
-  // Bank-Verbindungen (Mehrbank, in Aufbau)
+  // Bank-Verbindungen (Mehrbank, geplant — kein Abruf gebaut)
   const [verbindungen, setVerbindungen] = useState<Array<{ id: string; bank_name: string; verbunden: boolean }>>([]);
   const [verbAuf, setVerbAuf] = useState(false);
   const [bankName, setBankName] = useState('');
@@ -73,16 +82,26 @@ export default function BankingSeite() {
     })();
   }, [laden_]);
 
+  // Das Format wird am Inhalt erkannt, damit die Anzeige nicht lügt, wenn die
+  // Bank eine CAMT-Datei als .txt ausgibt.
+  const format = useMemo(() => erkenneFormat(datei), [datei]);
+
   function abgleichen() {
     setFehler(null); setOk(null); setErledigt(new Set());
-    const tx = parseUmsaetzeCsv(csv);
-    if (tx.length === 0) { setFehler('Keine Umsätze erkannt. Bitte den CSV-Export Ihrer Bank einfügen (mit Kopfzeile).'); setMatches(null); return; }
+    const tx = parseUmsaetze(datei);
+    if (tx.length === 0) {
+      setFehler(format === 'leer'
+        ? 'Bitte zuerst eine Umsatzdatei einfügen oder auswählen.'
+        : `Keine Umsätze erkannt (gelesen als ${FORMAT_NAMEN[format]}). ARGONAUT versteht CAMT.053, MT940 und CSV — bei CSV bitte mit Kopfzeile exportieren.`);
+      setMatches(null);
+      return;
+    }
     setMatches(matchAlle(tx, offene));
   }
 
   async function dateiLesen(f: File) {
     const text = await f.text();
-    setCsv(text);
+    setDatei(text);
   }
 
   async function alsBezahlt(m: MatchZeile) {
@@ -111,7 +130,7 @@ export default function BankingSeite() {
       const j = await r.json();
       if (!j?.ok) { setFehler(j?.error || 'Verbinden fehlgeschlagen.'); return; }
       setBankName(''); setClientId(''); setSecret(''); setVerbAuf(false);
-      setOk('Bank-Zugang gespeichert. Der automatische Abruf wird gerade finalisiert.');
+      setOk('Bank-Zugang gespeichert. Ein automatischer Abruf findet damit noch nicht statt.');
       await verbindungenLaden();
     } finally { setBusy(null); }
   }
@@ -132,7 +151,7 @@ export default function BankingSeite() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Finanzen</div>
       <h1 style={styles.h1}>🏦 Banking-Abgleich</h1>
-      <p style={styles.sub}>Laden Sie den CSV-Export Ihrer Kontoumsätze hoch — ARGONAUT gleicht sie automatisch gegen Ihre offenen Rechnungen ab, und Sie markieren Zahlungseingänge mit einem Klick.</p>
+      <p style={styles.sub}>Laden Sie den Umsatz-Export Ihrer Bank hoch — CAMT.053, MT940 oder CSV. ARGONAUT gleicht die Umsätze gegen Ihre offenen Rechnungen ab, und Sie markieren Zahlungseingänge mit einem Klick.</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
@@ -144,10 +163,11 @@ export default function BankingSeite() {
         </div>
       )}
 
-      {/* Bankverbindungen (Mehrbank, in Aufbau) */}
+      {/* Bankverbindungen — geplant, kein Abruf gebaut. Formulierung bewusst
+          ehrlich: es gibt weder Route noch Vertrag. */}
       <div style={styles.verbBox}>
-        <span style={styles.beta}>in Aufbau</span>
-        <span style={{ color: C.textDim, fontSize: 13.5 }}>🔗 Automatische Bankanbindung (finAPI) — mehrere Banken hinterlegbar, der Auto-Abruf wird gerade finalisiert.</span>
+        <span style={styles.beta}>geplant</span>
+        <span style={{ color: C.textDim, fontSize: 13.5 }}>🔗 Automatische Bankanbindung — geplant, derzeit noch nicht verfügbar. Der Datei-Import darunter deckt heute schon jede deutsche Bank ab.</span>
         <span style={{ flex: 1 }} />
         <button style={styles.mini} onClick={() => setVerbAuf((v) => !v)}>{verbAuf ? 'Abbrechen' : '＋ Bank hinzufügen'}</button>
       </div>
@@ -157,7 +177,7 @@ export default function BankingSeite() {
             {verbindungen.map((v) => (
               <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ color: C.green, fontWeight: 700 }}>🏦 {v.bank_name}</span>
-                <span style={{ ...styles.badge, color: C.cyan, borderColor: C.cyan }}>hinterlegt · Abruf folgt</span>
+                <span style={{ ...styles.badge, color: C.textDim, borderColor: C.border }}>hinterlegt · kein Abruf aktiv</span>
                 <span style={{ flex: 1 }} />
                 <button style={styles.mini} disabled={busy === 'verb'} onClick={() => bankTrennen(v.id)}>Entfernen</button>
               </div>
@@ -169,24 +189,43 @@ export default function BankingSeite() {
         <div style={{ ...styles.card, marginBottom: 14 }}>
           <div style={styles.grid}>
             <label style={styles.lab}>Bank-Name<input style={styles.inp} value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="z. B. Sparkasse, Volksbank, N26" /></label>
-            <label style={styles.lab}>finAPI Client-ID<input style={styles.inp} value={clientId} onChange={(e) => setClientId(e.target.value)} /></label>
-            <label style={styles.lab}>finAPI Secret<input style={styles.inp} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} /></label>
+            <label style={styles.lab}>Client-ID<input style={styles.inp} value={clientId} onChange={(e) => setClientId(e.target.value)} /></label>
+            <label style={styles.lab}>Secret<input style={styles.inp} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} /></label>
           </div>
           <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'verb' ? 0.6 : 1 }} disabled={busy === 'verb'} onClick={bankVerbinden}>🔗 Bank speichern</button>
-          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. Sie können beliebig viele Banken hinterlegen. Bis der Auto-Abruf live ist, nutzen Sie den CSV-Import unten — der funktioniert sofort.</div>
+          <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 8 }}>Verschlüsselt gespeichert, nie im Browser sichtbar. <b>Hinweis:</b> Ein automatischer Abruf findet derzeit nicht statt — hinterlegte Zugänge werden nur gespeichert. Für den laufenden Betrieb nutzen Sie bitte den Datei-Import darunter.</div>
         </div>
       )}
 
-      {/* CSV-Import */}
+      {/* Datei-Import: CAMT.053 · MT940 · CSV */}
       <div style={styles.card}>
         <div style={styles.cardTitel}>Kontoumsätze abgleichen</div>
-        <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 10px' }}>Exportieren Sie Ihre Umsätze im Online-Banking als CSV und fügen Sie sie hier ein (oder laden Sie die Datei). ARGONAUT erkennt Datum, Betrag und Verwendungszweck automatisch.</p>
-        <textarea style={styles.area} value={csv} onChange={(e) => setCsv(e.target.value)} placeholder={'Buchungstag;Name;Verwendungszweck;Betrag\n20.07.2026;Stadtwerke Böblingen;Rechnung RE-2026-0001;1926,00'} />
+        <p style={{ color: C.textDim, fontSize: 13.5, margin: '0 0 10px' }}>
+          Exportieren Sie Ihre Umsätze im Online-Banking und fügen Sie die Datei hier ein (oder laden Sie sie hoch).
+          Am besten <b>CAMT.053</b> oder <b>MT940</b> — beide Formate sind genormt und bei jeder Bank gleich.
+          CSV geht auch, bitte dann mit Kopfzeile. ARGONAUT erkennt das Format selbst.
+        </p>
+        <textarea
+          style={styles.area}
+          value={datei}
+          onChange={(e) => setDatei(e.target.value)}
+          placeholder={'Buchungstag;Name;Verwendungszweck;Betrag\n20.07.2026;Stadtwerke Böblingen;Rechnung RE-2026-0001;1926,00\n\n… oder der Inhalt Ihrer CAMT.053-XML- bzw. MT940-Datei'}
+        />
         <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button style={styles.primaer} onClick={abgleichen}>🔍 Abgleichen</button>
-          <label style={styles.dateiBtn}>📁 CSV-Datei
-            <input type="file" accept=".csv,text/csv,text/plain" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void dateiLesen(f); e.target.value = ''; }} />
+          <label style={styles.dateiBtn}>📁 Datei wählen
+            <input
+              type="file"
+              accept=".csv,.xml,.sta,.txt,.940,.mt940,text/csv,text/xml,application/xml,text/plain"
+              style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void dateiLesen(f); e.target.value = ''; }}
+            />
           </label>
+          {datei.trim() !== '' && (
+            <span style={{ ...styles.badge, color: format === 'leer' ? C.textDim : C.cyan, borderColor: format === 'leer' ? C.border : C.cyan }}>
+              erkannt: {FORMAT_NAMEN[format]}
+            </span>
+          )}
           <span style={{ color: C.textDim, fontSize: 13 }}>{offene.length} offene Rechnung{offene.length === 1 ? '' : 'en'} im Abgleich</span>
         </div>
       </div>
