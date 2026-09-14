@@ -27,6 +27,7 @@ import {
   TEILNAHME_OFFEN, TEILNAHME_TEILGENOMMEN, TEILNAHME_GEFEHLT,
   STATUS_AKTIV, STATUS_ABGEMELDET,
 } from '@/lib/webinar';
+import { kontaktAusAnmeldung, uebernehmbar } from '@/lib/webinarKontakt';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -77,6 +78,8 @@ export default function WebinareSeite() {
   const [webinare, setWebinare] = useState<Webinar[]>([]);
   const [termine, setTermine] = useState<Termin[]>([]);
   const [anmeldungen, setAnmeldungen] = useState<Anmeldung[]>([]);
+  /** Adressen, die schon als Kontakt existieren — gegen doppelte Anlage. */
+  const [kontaktMails, setKontaktMails] = useState<string[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -98,14 +101,17 @@ export default function WebinareSeite() {
   const alles = useCallback(async (id: string) => {
     setLaden(true); setFehler(null);
     try {
-      const [w, t, a] = await Promise.all([
+      const [w, t, a, k] = await Promise.all([
         supabase.from('webinare').select(WEBINAR_SPALTEN).eq('owner_user_id', id).order('erstellt_am', { ascending: false }).limit(200),
         supabase.from('webinar_termin').select(TERMIN_SPALTEN).eq('owner_user_id', id).order('beginnt_am', { ascending: true }).limit(500),
         supabase.from('webinar_anmeldung').select(ANMELDUNG_SPALTEN).eq('owner_user_id', id).limit(5000),
+        supabase.from('kontakte').select('email').eq('owner_user_id', id).limit(20000),
       ]);
       setWebinare(((w.data as unknown as Webinar[]) ?? []));
       setTermine(((t.data as unknown as Termin[]) ?? []));
       setAnmeldungen(((a.data as unknown as Anmeldung[]) ?? []));
+      setKontaktMails(((k.data as unknown as { email: string | null }[]) ?? [])
+        .map((r) => String(r.email ?? '')).filter(Boolean));
     } catch (e) {
       setFehler('Laden fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -197,6 +203,40 @@ export default function WebinareSeite() {
       if (error) throw error;
       await alles(uid);
     } catch (e) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
+  /**
+   * Teilnehmer ins CRM übernehmen.
+   *
+   * WICHTIG: kontaktAusAnmeldung setzt KEINE Werbe-Einwilligung — wer sich für
+   * ein Webinar angemeldet hat, hat in genau das eingewilligt, nicht in den
+   * Newsletter. Die Einwilligung muss der Betrieb getrennt einholen.
+   * Übernommen werden nur BESTÄTIGTE Anmeldungen, keine Abgemeldeten, und
+   * niemand doppelt (lib/webinarKontakt.ts, node-getestet).
+   */
+  async function insCrm(w: Webinar) {
+    if (!uid) return;
+    const meine = anmeldungen.filter((a) => a.webinar_id === w.id);
+    const offen = uebernehmbar(meine, kontaktMails, STATUS_AKTIV);
+    if (offen.length === 0) { setOk('Es gibt niemanden zu übernehmen — alle sind schon Kontakt oder nicht bestätigt.'); return; }
+    if (!window.confirm(`${offen.length} bestätigte Teilnehmer als Kontakte anlegen?\n\nEs wird KEINE Werbe-Einwilligung gesetzt — die Anmeldung galt nur diesem Webinar.`)) return;
+
+    setBusy('crm'); setFehler(null);
+    try {
+      const meineTermine = termine.filter((t) => t.webinar_id === w.id);
+      const zeilen = offen.map((a) => {
+        const t = meineTermine.find((x) => x.id === a.termin_id);
+        return {
+          owner_user_id: uid,
+          ...kontaktAusAnmeldung(a, { titel: w.titel, terminText: t ? formatiereTermin(t.beginnt_am) : '' }),
+        };
+      });
+      const { error } = await supabase.from('kontakte').insert(zeilen);
+      if (error) throw error;
+      setOk(`${zeilen.length} Teilnehmer ins CRM übernommen — ohne Werbe-Einwilligung.`);
+      await alles(uid);
+    } catch (e) { setFehler('Übernahme fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
 
@@ -416,6 +456,16 @@ export default function WebinareSeite() {
                     </table>
                   </div>
                 )}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+                  <button style={styles.mini} disabled={busy === 'crm'} onClick={() => void insCrm(w)}>
+                    👤 Teilnehmer ins CRM übernehmen
+                    {' ('}{uebernehmbar(meineAnmeldungen, kontaktMails, STATUS_AKTIV).length}{')'}
+                  </button>
+                  <span style={{ color: C.textDim, fontSize: 12.5 }}>
+                    Ohne Werbe-Einwilligung — die Anmeldung galt nur diesem Webinar.
+                  </span>
+                </div>
+
                 <p style={{ color: C.textDim, fontSize: 12.5, marginTop: 10 }}>
                   „War da?" entscheidet, welchen Text die Nachbereitung bekommt — Teilnehmer und Fehlende
                   bekommen bewusst verschiedene Mails. Ohne Angabe geht der neutrale Text raus.
