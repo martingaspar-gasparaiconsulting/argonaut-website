@@ -5,9 +5,10 @@ import { escapeHtml, textZuHtml } from '@/lib/newsletter';
 import { werbeDeckel, tagesBudget, WERBE_ANTEIL, begruendung } from '@/lib/mailBudget';
 import {
   erinnerungFaellig, nachbereitungFaellig, nachbereitungFuer,
-  setzePlatzhalter, anrede, abmeldenUrl, formatiereTermin, dauerText,
+  setzePlatzhalter, anrede, abmeldenUrl, formatiereTermin, dauerText, endetAm,
   ERINNERUNGEN, STATUS_AKTIV, TERMIN_GEPLANT,
 } from '@/lib/webinar';
+import { icsAnhang } from '@/lib/ics';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/webinar   (Paket 5 · Punkt 3.13)
@@ -238,10 +239,30 @@ async function lauf(req: Request) {
             <a href="${abmeldenUrl(basis, a.abmelde_token || '')}" style="color:#8a94a6;">Hier abmelden</a>.
           </p>`;
 
+        // Kalendereintrag nur an die Stufen haengen, die auch den Zugangslink
+        // tragen — dann steht der Link im Kalender und der Teilnehmer muss die
+        // Mail nicht mehr suchen. DIESELBE UID wie in der Bestaetigungsmail,
+        // die Folgenummer ist die Stufe: der Kalender ERSETZT den Eintrag,
+        // statt einen zweiten anzulegen.
+        const kalender = e.mitZugang
+          ? icsAnhang({
+              uid: `webinar-${a.id}@argonaut-os.com`,
+              beginn: t.beginnt_am,
+              ende: endetAm(t.beginnt_am, t.dauer_minuten),
+              titel: w.titel,
+              beschreibung: w.referent ? `Referent: ${w.referent}` : '',
+              ort: t.zugang_url || '',
+              organisatorName: marke.firma,
+              organisatorMail: marke.email,
+              sequenz: e.stufe,
+            })
+          : null;
+
         const r = await sendeMail({
           an: a.email, betreff,
           html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
           absenderName: marke.firma, antwortAn: marke.email,
+          ...(kalender ? { anhaenge: [kalender] } : {}),
         });
         if (!r.ok) throw new Error(r.fehler);
         erinnert++;

@@ -3,10 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
 import {
-  anrede, abmeldenUrl, seitenUrl, formatiereTermin, dauerText,
+  anrede, abmeldenUrl, seitenUrl, formatiereTermin, dauerText, endetAm,
   bestaetigungVerfallen, kannAnmelden,
   STATUS_AKTIV, STATUS_ABGEMELDET, STATUS_UNBESTAETIGT, TERMIN_ABGESAGT,
 } from '@/lib/webinar';
+import { icsAnhang } from '@/lib/ics';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/webinar-bestaetigen   (Paket 5 · Punkt 3.13)
@@ -54,7 +55,7 @@ type AnmeldungRow = {
 type WebinarRow = { id: string; titel: string; referent: string; key: string };
 type TerminRow = {
   id: string; beginnt_am: string | null; dauer_minuten: number;
-  kapazitaet: number | null; status: string;
+  kapazitaet: number | null; status: string; zugang_url: string | null;
 };
 
 export async function GET(req: Request) {
@@ -89,7 +90,7 @@ export async function GET(req: Request) {
 
     const { data: tRoh } = await db
       .from('webinar_termin')
-      .select('id, beginnt_am, dauer_minuten, kapazitaet, status')
+      .select('id, beginnt_am, dauer_minuten, kapazitaet, status, zugang_url')
       .eq('id', a.termin_id)
       .maybeSingle();
     const t = (tRoh as TerminRow | null) ?? null;
@@ -140,6 +141,22 @@ export async function GET(req: Request) {
         <a href="${abUrl}" style="color:#8a94a6;">Hier können Sie sich jederzeit mit einem Klick abmelden.</a>
       </p>`;
 
+    // Kalendereintrag zum Anklicken. Die UID haengt an DIESER Anmeldung und
+    // bleibt stabil — die Erinnerungsmails schicken denselben Eintrag noch
+    // einmal mit hoeherer Folgenummer, und der Kalender ERSETZT ihn dann,
+    // statt einen zweiten anzulegen.
+    const kalender = icsAnhang({
+      uid: `webinar-${a.id}@argonaut-os.com`,
+      beginn: t.beginnt_am,
+      ende: endetAm(t.beginnt_am, t.dauer_minuten),
+      titel: w.titel,
+      beschreibung: w.referent ? `Referent: ${w.referent}` : '',
+      ort: t.zugang_url || '',
+      organisatorName: firma,
+      organisatorMail: (p.firma_email || '').trim() || undefined,
+      sequenz: 0,
+    });
+
     try {
       await sendeMail({
         an: a.email,
@@ -147,6 +164,7 @@ export async function GET(req: Request) {
         html: kundenMailLayout(firma, p.firma_akzentfarbe, '', inhalt),
         absenderName: firma,
         antwortAn: (p.firma_email || '').trim() || undefined,
+        ...(kalender ? { anhaenge: [kalender] } : {}),
       });
       // Protokollzeile, damit die Bestaetigung in der Uebersicht auftaucht.
       await db.from('webinar_versand').insert({
