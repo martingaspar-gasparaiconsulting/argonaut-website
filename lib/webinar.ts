@@ -511,3 +511,47 @@ export function zaehleAnmeldungen(
     teilnahmequote: erfasst > 0 ? Math.round((teilgenommen / erfasst) * 1000) / 10 : null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Der oeffentliche Schluessel
+// ---------------------------------------------------------------------------
+
+/**
+ * Zeichenvorrat ohne Verwechsler: kein 0/O, kein 1/l/I. Der Schluessel steht
+ * in einer Adresse, die jemand vom Bildschirm abtippt oder am Telefon durchgibt.
+ */
+const SCHLUESSEL_ZEICHEN = 'abcdefghjkmnpqrstuvwxyz23456789';
+export const SCHLUESSEL_LAENGE = 12;
+
+/**
+ * Ein zufaelliger oeffentlicher Schluessel fuer /w/<schluessel>.
+ *
+ * BEWUSST ZUFAELLIG, nicht aus dem Titel abgeleitet: Ein sprechender Name
+ * liesse sich erraten und von einem anderen Betrieb wegschnappen — dasselbe
+ * Problem, das bei den Landingpages noch offen ist. Und wer einen Schluessel
+ * kennt, soll daraus nicht auf andere schliessen koennen.
+ *
+ * Nutzt crypto.getRandomValues, wo vorhanden (Browser und Node ab 19), sonst
+ * Math.random. Der Rueckfall ist schwaecher, aber der Schluessel schuetzt
+ * keine Geheimnisse — die Seite ist ohnehin oeffentlich; er verhindert nur
+ * das Erraten und das Besetzen von Namen.
+ */
+export function neuerSchluessel(laenge: number = SCHLUESSEL_LAENGE): string {
+  const n = Math.max(8, Math.min(64, Math.floor(Number(laenge)) || SCHLUESSEL_LAENGE));
+  const vorrat = SCHLUESSEL_ZEICHEN;
+  const g = (globalThis as { crypto?: { getRandomValues?: (a: Uint32Array) => Uint32Array } }).crypto;
+  let aus = '';
+  if (g && typeof g.getRandomValues === 'function') {
+    const werte = g.getRandomValues(new Uint32Array(n));
+    for (let i = 0; i < n; i++) aus += vorrat[werte[i] % vorrat.length];
+    return aus;
+  }
+  for (let i = 0; i < n; i++) aus += vorrat[Math.floor(Math.random() * vorrat.length)];
+  return aus;
+}
+
+/** Taugt dieser Schluessel fuer eine Adresse? Prueft Form, nicht Existenz. */
+export function schluesselGueltig(roh: unknown): boolean {
+  const s = String(roh ?? '').trim();
+  return s.length >= 8 && s.length <= 64 && /^[a-z0-9-]+$/.test(s);
+}

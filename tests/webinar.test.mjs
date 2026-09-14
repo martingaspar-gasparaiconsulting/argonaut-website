@@ -419,3 +419,52 @@ test('zaehleAnmeldungen verträgt Müll ohne zu werfen', () => {
   assert.equal(z.gesamt, 4);
   assert.equal(z.unbestaetigt, 4);
 });
+
+// ── Öffentlicher Schlüssel ──────────────────────────────────────────────────
+
+test('Der Schlüssel hat die richtige Länge und den richtigen Zeichenvorrat', async () => {
+  const { neuerSchluessel, SCHLUESSEL_LAENGE } = await import('../out/webinar.js');
+  for (let i = 0; i < 200; i++) {
+    const s = neuerSchluessel();
+    assert.equal(s.length, SCHLUESSEL_LAENGE);
+    assert.match(s, /^[a-z0-9]+$/);
+  }
+});
+
+test('Der Zeichenvorrat enthält keine Verwechsler', async () => {
+  const { neuerSchluessel } = await import('../out/webinar.js');
+  // Kein 0/O, kein 1/l/I — der Schlüssel wird abgetippt und durchgegeben.
+  let alle = '';
+  for (let i = 0; i < 500; i++) alle += neuerSchluessel();
+  for (const c of ['0', 'o', '1', 'l', 'i']) {
+    assert.ok(!alle.includes(c), `„${c}" darf nicht im Vorrat sein`);
+  }
+});
+
+test('Zwei Schlüssel sind praktisch nie gleich', async () => {
+  const { neuerSchluessel } = await import('../out/webinar.js');
+  const menge = new Set();
+  for (let i = 0; i < 2000; i++) menge.add(neuerSchluessel());
+  assert.equal(menge.size, 2000, 'ein Zusammenstoß bei 2000 Ziehungen wäre ein Fehler im Zufall');
+});
+
+test('Die Länge lässt sich nicht auf einen unsicheren Wert drücken', async () => {
+  const { neuerSchluessel } = await import('../out/webinar.js');
+  // Ein 3-Zeichen-Schlüssel wäre in Minuten durchprobiert.
+  assert.equal(neuerSchluessel(3).length, 8);
+  assert.equal(neuerSchluessel(0).length, 12);
+  assert.equal(neuerSchluessel(-5).length, 8);
+  assert.equal(neuerSchluessel(9999).length, 64);
+  assert.equal(neuerSchluessel('abc').length, 12);
+});
+
+test('schluesselGueltig lässt nur brauchbare Adressen durch', async () => {
+  const { schluesselGueltig, neuerSchluessel } = await import('../out/webinar.js');
+  assert.equal(schluesselGueltig(neuerSchluessel()), true);
+  assert.equal(schluesselGueltig('sommer-webinar-2026'), true);
+  assert.equal(schluesselGueltig('kurz'), false);           // zu kurz
+  assert.equal(schluesselGueltig('Mit GROSS'), false);      // Leerzeichen und Großbuchstaben
+  assert.equal(schluesselGueltig('../../etc/passwd'), false);
+  assert.equal(schluesselGueltig(''), false);
+  assert.equal(schluesselGueltig(null), false);
+});

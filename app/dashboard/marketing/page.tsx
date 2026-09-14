@@ -307,6 +307,7 @@ export default function MarketingCockpit() {
             { href: '/dashboard/marketing/segmente', label: '🎯 Empfängergruppen' },
             { href: '/dashboard/marketing/ab-test', label: '🅰️ Betreffzeilen testen' },
             { href: '/dashboard/marketing/rueckholung', label: '↩️ Rückhol-Strecke' },
+            { href: '/dashboard/marketing/webinare', label: '🎥 Webinare' },
             { href: '/dashboard/marketing/autoresponder', label: '🔄 Autoresponder' },
             { href: '/dashboard/marketing/ads', label: '📢 Ads' },
             { href: '/dashboard/marketing/landingpages', label: '🖼️ Landingpages' },
