@@ -55,8 +55,9 @@ function adminDb() {
 
 type ProfilRow = {
   id: string;
-  firma?: string | null;
+  firma_name?: string | null;
   company_name?: string | null;
+  company?: string | null;
   email?: string | null;
   buchung_slug?: string | null;
   buchung_aktiv?: boolean | null;
@@ -76,7 +77,11 @@ function gefuellt(wert: unknown): boolean {
 }
 
 function anzeigeName(p: ProfilRow): string {
-  return String(p.firma || p.company_name || p.email || p.id);
+  // Korrektur 15.09.2026: Hier stand p.firma — eine Spalte, die public.profiles
+  // GAR NICHT HAT. Die Tabelle fuehrt firma_name (Rechnungsanschrift),
+  // company_name (aus dem Onboarding) und company (Altbestand). Belegt ueber
+  // information_schema.columns am 15.09.2026.
+  return String(p.firma_name || p.company_name || p.company || p.email || p.id);
 }
 
 /** Volles Limit heißt: es kann mehr geben, als wir gesehen haben. */
@@ -103,11 +108,28 @@ export async function GET(req: Request) {
 async function alleBetriebe() {
   const db = adminDb();
 
-  const { data: profileRoh } = await db
+  // ▄▄▄ KORREKTUR 15.09.2026 ▄▄▄
+  // Hier standen 'firma' im select UND im order — eine Spalte, die
+  // public.profiles nicht besitzt. PostgREST antwortete mit einem Fehler,
+  // data war null, und die Zeile darunter machte daraus eine LEERE LISTE.
+  // Ergebnis: "Noch kein Betrieb sichtbar", obwohl 27 Profile in der
+  // Datenbank standen. Der Fehler wurde nirgends ausgewertet — deshalb sah
+  // ein kaputter Aufruf genauso aus wie ein leerer Bestand.
+  // Jetzt: richtige Spalte, UND der Fehler wird gemeldet statt geschluckt.
+  const { data: profileRoh, error: profilFehler } = await db
     .from('profiles')
-    .select('id, firma, company_name, email, buchung_slug, buchung_aktiv')
-    .order('firma', { ascending: true })
+    .select('id, firma_name, company_name, company, email, buchung_slug, buchung_aktiv')
+    .order('firma_name', { ascending: true, nullsFirst: false })
     .limit(BETRIEB_LIMIT);
+
+  if (profilFehler) {
+    console.error('Betriebs-Uebersicht: profiles-Abfrage fehlgeschlagen:', profilFehler.message);
+    return NextResponse.json({
+      ok: false,
+      error: 'Die Betriebsliste konnte nicht geladen werden: ' + profilFehler.message,
+    }, { status: 502 });
+  }
+
   const profile = (profileRoh as ProfilRow[] | null) ?? [];
 
   const [ci, seiten, dialog, wa, arten, artikel, module] = await Promise.all([
@@ -191,11 +213,23 @@ async function alleBetriebe() {
 async function einBetrieb(betrieb: string) {
   const db = adminDb();
 
-  const { data: pRoh } = await db
+  // Korrektur 15.09.2026: 'firma' gibt es in public.profiles nicht — siehe
+  // alleBetriebe(). Hier schlug es weniger auf: ein Fehler sah aus wie
+  // "Betrieb nicht gefunden". Auch hier wird der Fehler jetzt unterschieden.
+  const { data: pRoh, error: pFehler } = await db
     .from('profiles')
-    .select('id, firma, company_name, email, buchung_slug, buchung_aktiv')
+    .select('id, firma_name, company_name, company, email, buchung_slug, buchung_aktiv')
     .eq('id', betrieb)
     .maybeSingle();
+
+  if (pFehler) {
+    console.error('Betriebs-Detail: profiles-Abfrage fehlgeschlagen:', pFehler.message);
+    return NextResponse.json({
+      ok: false,
+      error: 'Der Betrieb konnte nicht geladen werden: ' + pFehler.message,
+    }, { status: 502 });
+  }
+
   const p = pRoh as ProfilRow | null;
   if (!p) return NextResponse.json({ ok: false, error: 'Betrieb nicht gefunden.' }, { status: 404 });
 
