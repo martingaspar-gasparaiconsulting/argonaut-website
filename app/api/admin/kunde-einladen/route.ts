@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '../../../../lib/supabase-server';
+import { betreiberGuard } from '../../../../lib/betreiberGuard';
 import { paketModule, branchenPaket, KERN_MODULE } from '../../../../lib/pakete';
 import { ALLE_MODUL_KEYS } from '../../../../lib/rechte';
 import { sendeMail, mailLayout } from '../../../../lib/mail';
@@ -33,15 +33,11 @@ function getClient() {
 }
 
 /** Türsteher: eingeloggt + role === 'admin'. null = erlaubt. */
+// Korrektur 15.09.2026: eigene Kopie durch das Doppelschloss ersetzt.
+// Diese Route legt Konten an und verschickt Einladungen — hier ist das
+// zweite Schloss (ANALYSE_BETREIBER_ID) besonders wichtig.
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'nicht angemeldet' }, { status: 401 });
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || profil.role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'kein Zugriff' }, { status: 403 });
-  }
-  return null;
+  return betreiberGuard();
 }
 
 function istEmail(s: string): boolean {

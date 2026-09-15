@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '../../../../lib/supabase-server';
+import { betreiberGuard } from '../../../../lib/betreiberGuard';
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/tenants/route.ts  (P50 -> Command-Center)
@@ -36,19 +36,13 @@ function getClient() {
 }
 
 /** Tuersteher: eingeloggt + role === 'admin'. null = erlaubt. */
+// Korrektur 15.09.2026: Hier stand eine eigene Kopie, die NUR profiles.role
+// pruefte. lib/betreiberGuard.ts begruendet in seinem Kopf, warum das nicht
+// reicht — eine versehentlich auf 'admin' gesetzte Zeile in `profiles` haette
+// gereicht, um in jeden Kundenbetrieb zu schreiben. Ab jetzt beide Schloesser:
+// role === 'admin' UND ANALYSE_BETREIBER_ID gesetzt und identisch.
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
-  const { data: profil } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profil || profil.role !== 'admin') {
-    return NextResponse.json({ error: 'kein Zugriff' }, { status: 403 });
-  }
-  return null;
+  return betreiberGuard();
 }
 
 export async function GET() {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '../../../../lib/supabase-server';
+import { betreiberGuard } from '../../../../lib/betreiberGuard';
 import { ablaufAusTagen } from '../../../../lib/demo';
 
 // ============================================================================
@@ -24,15 +24,10 @@ function getClient() {
   return createClient(url, serviceKey);
 }
 
+// Korrektur 15.09.2026: eigene Kopie durch das Doppelschloss ersetzt.
+// Siehe lib/betreiberGuard.ts — role === 'admin' allein reicht nicht.
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'nicht angemeldet' }, { status: 401 });
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || profil.role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'kein Zugriff' }, { status: 403 });
-  }
-  return null;
+  return betreiberGuard();
 }
 
 export async function POST(req: Request) {

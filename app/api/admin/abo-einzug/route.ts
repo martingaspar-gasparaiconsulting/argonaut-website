@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createClient as createServerClient } from '../../../../lib/supabase-server'
+import { betreiberGuard } from '../../../../lib/betreiberGuard'
 import { baueSepaXml, type SepaLastschrift, type SepaSeq } from '../../../../lib/sepa'
 import { MWST } from '../../../../lib/tarif'
 
@@ -28,13 +28,12 @@ function svc() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
+// Korrektur 15.09.2026: eigene Kopie durch das Doppelschloss ersetzt.
+// Diese Route liest ALLE Kunden-IBANs und SEPA-Mandate und baut daraus eine
+// Lastschriftdatei. Von allen vier war sie die, bei der ein einzelnes Schloss
+// am wenigsten zu verantworten war.
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ ok: false, error: 'nicht angemeldet' }, { status: 401 })
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (!profil || profil.role !== 'admin') return NextResponse.json({ ok: false, error: 'kein Zugriff' }, { status: 403 })
-  return null
+  return betreiberGuard()
 }
 
 function brutto(netto: number): number {
