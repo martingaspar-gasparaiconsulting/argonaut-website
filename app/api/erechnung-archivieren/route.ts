@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
 
 // ============================================================
@@ -17,8 +18,21 @@ import { createHash } from 'crypto';
 //    brutto_summe, waehrung, rechnungsdatum, rechnung_id, notiz)
 //
 // ADDITIV. Nutzt Service-Role-Client (Env), damit Storage+Insert sicher
-// laufen; owner_user_id wird serverseitig aus dem übergebenen Wert bzw.
-// via Trigger gesetzt.
+// laufen.
+//
+// ▄▄▄ WER DARF HIER SCHREIBEN — Korrektur 15.09.2026 ▄▄▄
+// Bis heute nahm diese Route die owner_user_id aus dem FORMULAR und prüfte
+// gar nichts. Sie ist damit unangemeldet erreichbar gewesen: Der Proxy lässt
+// /api/... bewusst aus (proxy.ts, matcher), und der Service-Role-Schlüssel
+// umgeht jede Row-Level-Security. Wer die Adresse kannte, konnte Dateien in
+// den Speicher-Ordner eines fremden Betriebs legen und erfundene Zeilen in
+// dessen GoBD-Archiv schreiben — Rechnungsnummer und Betrag frei wählbar.
+//
+// Jetzt gilt dasselbe Muster wie in app/api/beleg-upload und app/api/kasse-beleg:
+// erst getUser(), dann owner_user_id AUS DER SITZUNG. Ein mitgeschicktes
+// owner_user_id-Feld wird ignoriert — die aufrufende Seite darf es weiter
+// senden (app/dashboard/erechnung-import/page.tsx tut das), es hat nur keine
+// Wirkung mehr. Damit ist der Wert nicht mehr wählbar, sondern nachgewiesen.
 // ============================================================
 
 function envClient() {
@@ -35,6 +49,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Archiv-Dienst nicht konfiguriert.' }, { status: 500 });
     }
 
+    // ── Schloss: Wer ist das? ────────────────────────────────
+    // Muss VOR dem Einlesen der Datei stehen: eine unangemeldete Anfrage
+    // soll nicht erst eine beliebig grosse Datei hochladen duerfen.
+    const nutzerClient = await createServerClient();
+    const { data: { user } } = await nutzerClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet.' }, { status: 401 });
+    }
+    // Die Kennung kommt aus der Sitzung, NIE aus dem Formular.
+    const ownerId = user.id;
+
     const form = await req.formData();
     const datei = form.get('datei');
     if (!datei || typeof datei === 'string') {
@@ -42,13 +67,6 @@ export async function POST(req: NextRequest) {
     }
     const file = datei as File;
     const buf = Buffer.from(await file.arrayBuffer());
-
-    // owner_user_id muss mitgegeben werden (aus der Client-Session),
-    // da Service-Role keine auth.uid() hat.
-    const ownerId = String(form.get('owner_user_id') || '').trim();
-    if (!ownerId) {
-      return NextResponse.json({ error: 'owner_user_id fehlt.' }, { status: 400 });
-    }
 
     const richtung = String(form.get('richtung') || 'ausgang');
     const rechnungsnummer = String(form.get('rechnungsnummer') || '');

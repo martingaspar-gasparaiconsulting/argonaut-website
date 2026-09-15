@@ -102,14 +102,25 @@ export async function POST(req: Request) {
       if (createErr) {
         const existiert = /already|registered|exist|duplicate/i.test(createErr.message || "");
         if (existiert) {
-          const { data: liste } = await admin.auth.admin.listUsers();
-          const treffer = liste?.users?.find((u) => (u.email || "").toLowerCase() === email);
-          if (!treffer) {
-            return NextResponse.json({ error: "Es existiert bereits ein Konto mit dieser E-Mail, konnte aber nicht zugeordnet werden." }, { status: 409 });
-          }
-          authUserId = treffer.id;
-          const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, { password: tempPw });
-          if (pwErr) throw pwErr;
+          // ▄▄▄ KORREKTUR 15.09.2026 — kein stilles Adoptieren mehr ▄▄▄
+          // Hier stand bis heute: listUsers() -> das Konto allein ueber die
+          // E-MAIL suchen -> dessen Passwort ueberschreiben -> im Klartext
+          // zurueckgeben. Das war eine Kontouebernahme: Wer einen Mitarbeiter
+          // mit der Adresse einer FREMDEN Person anlegte und dann diesen Knopf
+          // drueckte, bekam deren Zugang. Die Schutzsperre oben prueft nur
+          // `customers` und schuetzte damit weder Mitarbeiter anderer Betriebe
+          // noch Betreiber-Konten (die stehen in `profiles`).
+          //
+          // Ein bestehendes Konto darf NIE stillschweigend uebernommen werden.
+          // Die Route sagt jetzt, was los ist, und tut nichts.
+          return NextResponse.json({
+            error:
+              "Zu dieser E-Mail-Adresse gibt es bereits einen Zugang. " +
+              "Aus Sicherheitsgruenden wird ein bestehendes Konto hier nicht uebernommen. " +
+              "Gehoert der Zugang zu dieser Person, kann sie sich ueber 'Passwort vergessen' " +
+              "selbst ein neues Passwort setzen. Ist die Adresse versehentlich doppelt " +
+              "vergeben, bitte den Support kontaktieren.",
+          }, { status: 409 });
         } else {
           console.error("Konto-Erstellung fehlgeschlagen:", createErr);
           return NextResponse.json({ error: "Zugang konnte nicht erstellt werden: " + createErr.message }, { status: 500 });
