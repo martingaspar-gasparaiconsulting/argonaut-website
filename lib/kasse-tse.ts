@@ -4,10 +4,23 @@
 // eine Signatur für einen Kassenbeleg.
 //
 //  · Demo/Manuell oder nicht aktiv  -> Demo-Signatur (klar als solche markiert).
-//  · Echter Anbieter aktiv (fiskaly/Deutsche Fiskal/Epson) -> hier ist der EINE
-//    Einhängepunkt: sobald die Anbieter-Anbindung freigeschaltet ist, wird die
-//    echte TSE-Signatur erzeugt. Bis dahin wird der Beleg mit einer als
-//    "Anbindung ausstehend" markierten Signatur versehen (Kasse bleibt nutzbar).
+//  · Echter Anbieter hinterlegt (fiskaly/Deutsche Fiskal/Epson) -> hier ist der
+//    EINE Einhängepunkt für die spätere Anbieter-Anbindung. Bis die gebaut ist,
+//    bleibt der Beleg eine DEMO-Signatur und wird auch so gemeldet.
+//
+// ------------------------------------------------------------
+// ABSCHALTUNG DES LIVE-ZWEIGS · 16.09.2026
+// Bis heute gab dieser Zweig `modus: 'live'` zurück und signierte trotzdem mit
+// demoSignatur(). Damit meldete die Kasse eine zertifizierte technische
+// Sicherheitseinrichtung, die es nicht gibt:
+//   · § 146a Abs. 1 AO — eine Kasse ohne zertifizierte TSE ist ein Mangel.
+//   · § 5 UWG — sie als "live" zu kennzeichnen macht aus dem Mangel eine
+//     unrichtige Angabe gegenüber dem Betrieb und seinen Kunden.
+// Der Zweig gibt deshalb jetzt ehrlich `modus: 'demo'` zurück. Die Kasse bleibt
+// voll nutzbar; die Kassenseite zeigt dann dauerhaft ihren Demo-Hinweis an.
+// Sobald die echte Anbieter-Anbindung gebaut ist, kommt sie GENAU an die unten
+// markierte Stelle und darf dort wieder `modus: 'live'` setzen.
+// ------------------------------------------------------------
 //
 // Server-Helfer (nutzt einen übergebenen Supabase-Client). Keine React-Hooks.
 // ============================================================
@@ -22,6 +35,12 @@ export type TseErgebnis = {
   seriennummer: string;
   zeit: string;
   hinweis?: string;
+  /**
+   * true, wenn der Betrieb einen echten Anbieter hinterlegt und aktiv geschaltet
+   * hat, dessen Anbindung aber noch nicht gebaut ist. Der Beleg ist dann trotzdem
+   * eine Demo — dieses Feld sagt nur, dass der Betrieb schon bereit wäre.
+   */
+  anbieterHinterlegt?: boolean;
 };
 
 function demoSignatur(belegNr: string, brutto: number): string {
@@ -37,6 +56,8 @@ function demoSignatur(belegNr: string, brutto: number): string {
  * Signiert einen Beleg. ownerId = Betrieb (Chef), damit auch ein Kassierer
  * (Mitarbeiter) die Integration nutzen kann — gelesen wird per Service-Role
  * durch den Aufrufer, daher hier nur die Logik.
+ *
+ * Gibt derzeit IMMER modus: 'demo' zurück — siehe Kopf der Datei.
  */
 export async function signiereBeleg(
   db: SupabaseClient,
@@ -56,16 +77,20 @@ export async function signiereBeleg(
     return { modus: 'demo', anbieter: intg?.anbieter || 'demo', signatur: demoSignatur(belegNr, bruttoSumme), seriennummer: 'DEMO-TSE', zeit: jetzt };
   }
 
-  // --- Echter Anbieter aktiv: hier kommt die Anbieter-Anbindung hin. ---
-  // Sobald z. B. der fiskaly-Client eingebunden ist, wird an dieser Stelle die
-  // echte Signatur geholt (Sign-Transaction über die TSS-ID aus intg.config).
-  // Bis zur Freischaltung bleibt die Kasse nutzbar; der Beleg wird markiert.
+  // ----------------------------------------------------------------
+  // ANDOCKPUNKT: Echter Anbieter ist hinterlegt und aktiv geschaltet.
+  // HIER kommt die Anbieter-Anbindung hin (z. B. fiskaly Sign-Transaction über
+  // die TSS-ID aus intg.config). Erst wenn die echte Signatur von dort kommt,
+  // darf modus: 'live' und die echte Seriennummer zurückgegeben werden.
+  // Bis dahin: ehrliche Demo-Kennzeichnung, Kasse bleibt nutzbar.
+  // ----------------------------------------------------------------
   return {
-    modus: 'live',
+    modus: 'demo',
     anbieter: intg!.anbieter,
     signatur: demoSignatur(belegNr, bruttoSumme),
-    seriennummer: String((intg!.config?.tss_id as string) || intg!.anbieter),
+    seriennummer: 'DEMO-TSE',
     zeit: jetzt,
-    hinweis: `Anbieter "${intg!.anbieter}" ist hinterlegt. Die echte TSE-Signatur wird nach Freischaltung der Anbieter-Anbindung erzeugt.`,
+    anbieterHinterlegt: true,
+    hinweis: `Anbieter "${intg!.anbieter}" ist hinterlegt, die Anbindung an dessen TSE ist aber noch nicht freigeschaltet. Dieser Beleg trägt KEINE gültige TSE-Signatur nach § 146a AO.`,
   };
 }
