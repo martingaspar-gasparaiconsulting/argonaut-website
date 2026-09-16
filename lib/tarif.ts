@@ -124,9 +124,26 @@ export function getStufe(key: StufeKey): Stufe {
   return s;
 }
 
-/** Passende Stufe zur Mitarbeiterzahl. */
+/**
+ * Passende Stufe zur Mitarbeiterzahl.
+ *
+ * REPARIERT 16.09.2026 — der Rueckfall war bis dahin STUFEN[letzte], also
+ * ENTERPRISE. Alles, was durch die Baender fiel, bekam damit die TEUERSTE
+ * Stufe: ein leeres Feld (0), eine Fehleingabe (-3), Text (NaN) und vor allem
+ * jede Bruchzahl zwischen zwei Baendern (2,5 Personen passt in kein Band).
+ * Im oeffentlichen Preisrechner sah ein Interessent dadurch 7.900 EUR/Monat
+ * plus 24.900 EUR Einrichtung statt MINI mit 790 EUR.
+ *
+ * Neuer Rueckfall ist die KLEINSTE Stufe: bei einer Fehleingabe lieber zu
+ * guenstig zeigen als jemanden mit dem Hoechstpreis verschrecken. Bruchzahlen
+ * werden aufgerundet — 2,5 Personen sind 3 Personen, nicht 500.
+ */
 export function stufeFuerMitarbeiter(anzahl: number): Stufe {
-  return STUFEN.find((s) => anzahl >= s.minMa && (s.maxMa === null || anzahl <= s.maxMa)) ?? STUFEN[STUFEN.length - 1];
+  const n = Number(anzahl);
+  // Leeres Feld, Text, NaN, Unendlich, null oder negativ -> kleinste Stufe.
+  if (!Number.isFinite(n) || n <= 0) return STUFEN[0];
+  const ma = Math.ceil(n);
+  return STUFEN.find((s) => ma >= s.minMa && (s.maxMa === null || ma <= s.maxMa)) ?? STUFEN[0];
 }
 
 /** Größen-Band (0..3) für die Sitz-Staffel. SOLO nutzt Band 0 (hat aber keine getrennten Sitze). */

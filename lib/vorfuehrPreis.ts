@@ -30,14 +30,35 @@ export type PreisBild = {
 export type SitzMix = { voll: number; standard: number; self: number };
 
 /**
+ * Macht aus einer Formulareingabe eine brauchbare ganze Zahl. Leeres Feld,
+ * Text, NaN, Unendlich oder eine negative Zahl ergeben den Mindestwert.
+ */
+function ganzeZahl(wert: number, mindestens: number): number {
+  const n = Number(wert);
+  if (!Number.isFinite(n)) return mindestens;
+  return Math.max(mindestens, Math.round(n));
+}
+
+/**
  * Verteilt die Mitarbeiter auf die Standorte, damit firmenweit() eine echte
  * Standortliste bekommt. Der erste Standort erhält den Rest der Division —
  * das entspricht der Praxis: die Zentrale ist größer als die Filiale.
+ *
+ * REPARIERT 16.09.2026 — waren mehr Standorte gewuenscht als Mitarbeiter da
+ * sind, entstanden hier Standorte mit 0 Mitarbeitern. tarif.firmenweit() wirft
+ * leere Standorte heraus (zu Recht), damit fiel der Standort-Zuschlag weg und
+ * 11 Standorte wurden BILLIGER als 10: 2.966 EUR statt 3.407 EUR im Monat,
+ * 3.900 EUR statt 5.610 EUR Einrichtung. Ein Interessent sieht das sofort.
+ *
+ * Jeder Standort hat mindestens einen Menschen. Sind mehr Standorte angegeben
+ * als Mitarbeiter, wird die Mitarbeiterzahl deshalb auf die Standortzahl
+ * angehoben — das Ergebnis weist die gezaehlte Zahl in `mitarbeiter` aus.
  */
 function standortListe(mitarbeiter: number, standorte: number): { mitarbeiter: number }[] {
-  const n = Math.max(1, Math.round(standorte));
-  const pro = Math.floor(mitarbeiter / n);
-  const rest = mitarbeiter - pro * n;
+  const n = ganzeZahl(standorte, 1);
+  const ma = Math.max(ganzeZahl(mitarbeiter, 1), n);
+  const pro = Math.floor(ma / n);
+  const rest = ma - pro * n;
   return Array.from({ length: n }, (_, i) => ({ mitarbeiter: pro + (i === 0 ? rest : 0) }));
 }
 
@@ -51,7 +72,7 @@ function standortListe(mitarbeiter: number, standorte: number): { mitarbeiter: n
  * selbst, und bei ein bis zwei Personen gibt es gar nichts zu verteilen.
  */
 export function sitzMixFuer(mitarbeiter: number): SitzMix {
-  const ma = Math.max(1, Math.round(mitarbeiter));
+  const ma = ganzeZahl(mitarbeiter, 1);
   if (ma <= 2) return { voll: ma, standard: 0, self: 0 };
   if (ma <= 9) {
     const voll = Math.max(1, Math.round(ma * 0.35));
@@ -104,7 +125,17 @@ export function preisAus(eingabe: { mitarbeiter: number; standorte: number; sitz
   };
 }
 
+/**
+ * Die Mitarbeiterzahl, mit der wirklich gerechnet wird: mindestens eine Person
+ * je Standort. Stufe UND Sitz-Mix muessen dieselbe Zahl benutzen — sonst zahlt
+ * ein Betrieb mit 2 Personen an 3 Standorten mehr als einer mit 3 Personen.
+ */
+export function effektiveMitarbeiter(mitarbeiter: number, standorte: number): number {
+  return Math.max(ganzeZahl(mitarbeiter, 1), ganzeZahl(standorte, 1));
+}
+
 /** Preisbild zu einer frei gewählten Betriebsgröße — für den Abspieler. */
 export function preisFuerGroesse(mitarbeiter: number, standorte = 1): PreisBild {
-  return preisAus({ mitarbeiter, standorte, sitze: sitzMixFuer(mitarbeiter) });
+  const ma = effektiveMitarbeiter(mitarbeiter, standorte);
+  return preisAus({ mitarbeiter: ma, standorte, sitze: sitzMixFuer(ma) });
 }
