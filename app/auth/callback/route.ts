@@ -2,11 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { weiterleitungsAdresse } from '@/lib/weiterleitung'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const next = searchParams.get('next')
 
   if (code) {
     const cookieStore = await cookies()
@@ -59,7 +60,14 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.redirect(`${origin}${next}`)
+      // `next` kam bis 16.09.2026 ungeprueft aus der Adresse und wurde direkt an
+      // den eigenen Ursprung gehaengt. ?next=@fremde-seite.de ergab
+      // https://argonaut-os.com@fremde-seite.de — der Browser liest den Teil vor
+      // dem @ als Benutzernamen und landet woanders. Das war ein Phishing-Link
+      // mit der echten ARGONAUT-Domain, verschickt aus ARGONAUT heraus.
+      // weiterleitungsAdresse laesst nur noch interne Pfade durch und faellt
+      // sonst auf /dashboard zurueck, statt die Anmeldung zu verweigern.
+      return NextResponse.redirect(weiterleitungsAdresse(origin, next))
     }
   }
 
