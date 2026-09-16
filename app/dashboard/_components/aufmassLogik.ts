@@ -162,8 +162,21 @@ export function rechneMenge(eingabe: string | null | undefined): MengeErgebnis {
     if (rest.startsWith('+')) rest = rest.slice(1);
     else if (rest.startsWith('-')) { vorzeichen = -1; rest = rest.slice(1); }
 
-    const faktoren = rest.split(/[x×*]/i).map((f) => f.trim()).filter(Boolean);
-    if (faktoren.length === 0) return { menge: null, rechenweg: null, fehler: 'Unvollständige Rechnung.' };
+    // KEIN .filter(Boolean) — REPARIERT 16.09.2026.
+    // Bis dahin entfernte der Filter eine leere Komponente stillschweigend und
+    // die Rechnung lief mit dem Rest weiter. Die Fehlerbremse eine Zeile
+    // darunter konnte deshalb nie greifen:
+    //   "8,20 x"  ergab die Menge 8,20     (abgebrochene Eingabe)
+    //   "2*"      ergab die Menge 2
+    //   "2**3"    ergab die Menge 6        (statt eines Fehlers)
+    //   "2*-3"    ergab die Menge −1       (als "2 − 3" gelesen)
+    // Solche Werte sind plausibel genug, um durch jede Sichtprüfung zu kommen —
+    // und fließen über "Rechnung aus Aufmaß" direkt in eine Rechnung. Der
+    // Rechenweg, der als Beleg gedacht ist, bestätigt die Abkürzung sogar.
+    const faktoren = rest.split(/[x×*]/i).map((f) => f.trim());
+    if (faktoren.length === 0 || faktoren.some((f) => f === '')) {
+      return { menge: null, rechenweg: null, fehler: 'Unvollständige Rechnung — vor oder nach einem × fehlt eine Zahl.' };
+    }
 
     let produkt = 1;
     const faktorTexte: string[] = [];
@@ -282,7 +295,15 @@ export function aufmassSumme(positionen: PositionBasis[]): AufmassSumme {
  */
 export function katalogNachAufmassPosition(k: KatalogEintrag): PositionBasis {
   const mwst = typeof k.mwst_satz === 'number' ? k.mwst_satz : 19;
-  const pauschale = k.festpreis_netto ?? null;
+  // `|| null` statt `?? null` — REPARIERT 16.09.2026.
+  // Ein Katalog-Eintrag ohne Pauschale trägt in der Datenbank die Zahl 0, nicht
+  // null (die Spalte ist nicht nullable, und lib/kalkulatorUebergabe liefert
+  // festpreis_netto: 0). `?? null` ließ die 0 stehen, damit gewann der
+  // Pauschal-Zweig unten, setzte einzelpreis_netto auf null — und eine aus dem
+  // Kalkulator übernommene Leistung mit 14,36 €/m² kostete 0,00 €. Das Aufmaß
+  // meldete die Null sogar als vollständig, weil positionsBetrag einen
+  // Festpreis von 0 als gültigen Betrag ansieht.
+  const pauschale = k.festpreis_netto || null;
 
   if (pauschale != null) {
     return {

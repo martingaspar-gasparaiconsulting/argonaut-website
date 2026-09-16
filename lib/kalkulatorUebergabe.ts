@@ -136,7 +136,14 @@ export function alsKatalogEintrag(q: UebergabeQuelle & { kategorie?: string }): 
     bezeichnung,
     kuerzel: kuerzelAus(bezeichnung),
     kategorie: String(q.kategorie || 'Kalkuliert'),
-    erfassungsart: istStunde ? 'stunden' : 'menge',
+    // 'stueck', NICHT 'menge' — REPARIERT 16.09.2026.
+    // Die gueltigen Erfassungsarten sind 'minuten' | 'stunden' | 'aw' | 'stueck'
+    // (siehe _components/leistungLogik.ts). 'menge' gab es nie. Eine unbekannte
+    // Erfassungsart wird wie 'stunden' behandelt, also las katalogNachPosition
+    // den Preis aus stundensatz_netto — und der ist bei einer Mengen-Leistung 0.
+    // Jede aus dem Kalkulator uebernommene Nicht-Stunden-Leistung kostete
+    // deshalb 0,00 EUR, egal welcher Preis je Einheit kalkuliert wurde.
+    erfassungsart: istStunde ? 'stunden' : 'stueck',
     standard_wert: 1,
     einheit,
     einheitspreis_netto: istStunde ? 0 : preis,

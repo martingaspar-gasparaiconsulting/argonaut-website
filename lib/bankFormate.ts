@@ -128,7 +128,16 @@ export function parseUmsaetzeCamt(xml: string): Transaktion[] {
     const betragAbs = Math.abs(parseBetrag(text(amtRoh)));
     if (!Number.isFinite(betragAbs) || betragAbs === 0) continue;
     const ind = text(tagInhalt(ntry, 'CdtDbtInd')).toUpperCase();
-    const betrag = ind === 'DBIT' ? -betragAbs : betragAbs;
+    // <RvslInd>true</RvslInd> — ERGAENZT 16.09.2026.
+    // Die Zeile STORNIERT eine fruehere Buchung. <CdtDbtInd> nennt dabei die
+    // Richtung der urspruenglichen Buchung, das Geld laeuft aber andersherum.
+    // Eine Ruecklastschrift kam deshalb als CRDT mit positivem Betrag herein:
+    // der Bankabgleich ordnete sie der Rechnung zu und setzte sie auf bezahlt,
+    // waehrend das Geld beim Kunden lag. Gemahnt wurde nie.
+    // Das MT940-Gegenstueck macht es ueber RC/RD schon richtig (Z. 227 unten).
+    const storno = /^(?:true|1|y|yes)$/i.test(text(tagInhalt(ntry, 'RvslInd')));
+    const richtung = (ind === 'DBIT' ? -1 : 1) * (storno ? -1 : 1);
+    const betrag = richtung * betragAbs;
 
     // 3) Datum: Buchungstag vor Wertstellung
     const bookg = tagInhalt(ntry, 'BookgDt');

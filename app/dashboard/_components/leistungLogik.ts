@@ -110,9 +110,17 @@ export function minutenZuStunden(minuten: number | null | undefined): number {
   return minuten / 60;
 }
 
-/** Ist das eine Mengen-Leistung (Hektar, Festmeter, Stück …)? */
+/**
+ * Ist das eine Mengen-Leistung (Hektar, Festmeter, Stück …)?
+ *
+ * 'menge' ist eine ALTLAST: lib/kalkulatorUebergabe.ts schrieb bis zum
+ * 16.09.2026 diesen Wert, den es als Erfassungsart nie gab. Solche Einträge
+ * liegen womöglich schon in Leistungskatalogen und würden sonst weiterhin als
+ * Stunden-Leistung gerechnet — also mit dem Stundensatz 0, macht 0,00 €.
+ * Die Quelle schreibt jetzt 'stueck'; diese Zeile fängt das Alte mit ab.
+ */
 export function istMengenLeistung(art: string | null | undefined): boolean {
-  return art === 'stueck';
+  return art === 'stueck' || art === 'menge';
 }
 
 /** "2 ha", "8 Srm", "3 Stück" — oder nur die Zahl, wenn kein Etikett da ist. */
@@ -215,7 +223,11 @@ export function auftragsSumme(positionen: PositionBasis[]): AuftragsSumme {
 export function katalogNachPosition(k: KatalogEintrag): PositionBasis {
   const art = (k.erfassungsart as Erfassungsart) || 'stunden';
   const menge = istMengenLeistung(art);
-  const pauschale = k.festpreis_netto ?? null;
+  // `|| null` statt `?? null` — REPARIERT 16.09.2026, dieselbe Ursache wie in
+  // _components/aufmassLogik.ts: ein Katalog-Eintrag ohne Pauschale trägt die
+  // Zahl 0, nicht null. `?? null` ließ die 0 stehen, der Pauschal-Zweig gewann,
+  // einzelpreis blieb null — und die Position kostete 0,00 €.
+  const pauschale = k.festpreis_netto || null;
 
   let einzelpreis: number | null = null;
   if (pauschale == null) {
