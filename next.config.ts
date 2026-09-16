@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { kopfzeilenRegel } from "./lib/sicherheitsKopfzeilen";
 
 const nextConfig: NextConfig = {
   // Lese-Bibliotheken serverseitig laden statt bündeln (Vercel-sicher).
@@ -10,6 +11,17 @@ const nextConfig: NextConfig = {
   // Go-Live: die alten /vorschau-URLs dauerhaft auf die sauberen Root-URLs
   // umleiten (SEO-Konsolidierung, keine Dubletten). Die alte Demo-Seite
   // (veraltete Agenten-Preise) ebenfalls auf die Startseite.
+  // Sicherheits-Kopfzeilen (16.09.2026). Bis dahin ging jede Antwort ohne eine
+  // einzige davon raus. Die Liste steht in lib/sicherheitsKopfzeilen.ts, damit
+  // sie node-getestet ist — und damit dort dokumentiert bleibt, was BEWUSST
+  // fehlt: frame-ancestors, X-Frame-Options und Permissions-Policy wuerden den
+  // Berater auf fremden Kundenseiten, den Vorfuehr-Modus bzw. Diktat und
+  // Beleg-Erkennung abschalten. Die gehoeren einzeln gebaut und im Browser
+  // nachgeprueft.
+  async headers() {
+    return [kopfzeilenRegel()];
+  },
+
   async redirects() {
     return [
       { source: "/vorschau", destination: "/", permanent: true },
