@@ -4,6 +4,8 @@
 // definiert die Quellen und rechnet das Ergebnis. Reine Daten/Formeln — KEINE
 // Supabase-/React-Abhängigkeit. Node-getestet.
 
+import { csvZeile } from './csvSchreiben';
+
 export type FeldTyp = 'zahl' | 'text' | 'datum';
 export interface Feld { key: string; label: string; typ: FeldTyp; }
 export interface Quelle {
@@ -100,7 +102,10 @@ export function formatWert(n: number, istGeld: boolean): string {
 /** CSV aus dem Ergebnis (für Export, 10b). */
 export function reportCsv(erg: ReportErgebnis, gruppeLabel: string, metrikLabel: string): string {
   const head = `${gruppeLabel};${metrikLabel};Anteil %`;
-  const zeilen = erg.zeilen.map((z2) => `${String(z2.gruppe).replace(/;/g, ',')};${z2.wert};${z2.anteil}`);
+  // Der Gruppenwert ist ein beliebiges Datenbankfeld — oft ein Kundenname.
+  // Bis 16.09.2026 wurde nur das Semikolon zum Komma gemacht; eine Formel blieb
+  // eine Formel, und der Name wurde nebenbei veraendert.
+  const zeilen = erg.zeilen.map((z2) => csvZeile([z2.gruppe, z2.wert, z2.anteil]));
   return [head, ...zeilen, `Gesamt;${erg.gesamt};100`].join('\n');
 }
 

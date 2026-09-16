@@ -8,6 +8,7 @@
 // ============================================================================
 
 import type { UstvaErgebnis } from './ustva';
+import { csvFeld } from './csvSchreiben';
 
 function z(x: unknown): number {
   if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
@@ -31,10 +32,10 @@ export function ustvaZeilen(erg: UstvaErgebnis): UstvaZeile[] {
   }));
 }
 
-function csvFeld(s: string): string {
-  const t = String(s ?? '');
-  return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-}
+// csvFeld stand bis 16.09.2026 als eigene Kopie hier. Sie quotete korrekt,
+// neutralisierte aber keine Formeln. Die Positionstexte kommen zwar aus dem
+// eigenen UStVA-Katalog, der Zeitraum-Kopf aber aus der Oberflaeche — und
+// einheitlich ist einheitlich. Jetzt aus lib/csvSchreiben.
 
 /** UStVA als CSV (UTF-8-BOM, CRLF) — Kopf, Kennziffern, Zahllast. */
 export function ustvaCsv(erg: UstvaErgebnis, von: string, bis: string): string {
@@ -42,9 +43,9 @@ export function ustvaCsv(erg: UstvaErgebnis, von: string, bis: string): string {
   zeilen.push(csvFeld(`Umsatzsteuer-Voranmeldung ${von} bis ${bis}`));
   zeilen.push('');
   zeilen.push(['Kz', 'Position', 'Betrag'].join(';'));
-  for (const r of ustvaZeilen(erg)) zeilen.push([r.kz, r.position, r.betrag].map(csvFeld).join(';'));
+  for (const r of ustvaZeilen(erg)) zeilen.push([r.kz, r.position, r.betrag].map((x) => csvFeld(x)).join(';'));
   zeilen.push('');
   const zl = erg.zahllast >= 0 ? 'USt-Zahllast ans Finanzamt' : 'Erstattung vom Finanzamt';
-  zeilen.push(['', zl, euroText(Math.abs(erg.zahllast))].map(csvFeld).join(';'));
+  zeilen.push(['', zl, euroText(Math.abs(erg.zahllast))].map((x) => csvFeld(x)).join(';'));
   return '﻿' + zeilen.join('\r\n');
 }

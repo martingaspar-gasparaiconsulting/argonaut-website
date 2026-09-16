@@ -15,6 +15,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { csvFeld } from '@/lib/csvSchreiben';
 
 const MODUL = 'anlagegueter';
 
@@ -140,7 +141,7 @@ export default function AnlagenPage() {
 
   function csvExport() {
     const head = `Bezeichnung;Kategorie;Anschaffung;Kosten netto;Nutzungsdauer;Methode;AfA ${jahr};Restbuchwert ${jahr};Status`;
-    const zeilen = berechnet.map(({ a, p }) => [a.bezeichnung, a.kategorie || '', dtag(a.anschaffungsdatum), a.anschaffungskosten ?? '', a.nutzungsdauer_jahre ?? '', p.methode.toUpperCase(), p.afaStichjahr, p.restbuchwertHeute, a.status].map((x) => String(x).replace(/;/g, ',')).join(';'));
+    const zeilen = berechnet.map(({ a, p }) => [a.bezeichnung, a.kategorie || '', dtag(a.anschaffungsdatum), a.anschaffungskosten ?? '', a.nutzungsdauer_jahre ?? '', p.methode.toUpperCase(), p.afaStichjahr, p.restbuchwertHeute, a.status].map((x) => csvFeld(x)).join(';'));
     const blob = new Blob(['﻿' + head + '\n' + zeilen.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const el = document.createElement('a');
     el.href = url; el.download = `Anlagenverzeichnis_${new Date().toISOString().slice(0, 10)}.csv`;

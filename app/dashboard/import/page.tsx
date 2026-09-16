@@ -22,6 +22,7 @@ import {
 } from '@/lib/importKatalog';
 import { BRANCHEN_PAKETE, KERN_MODULE, paketModule } from '@/lib/pakete';
 import { MODUL_PFAD } from '@/lib/rechte';
+import { csvZeile } from '@/lib/csvSchreiben';
 import {
   ZIELE, zielDef, errateMapping, fehlendePflichtfelder, pruefeAlles,
   baueMustervorlage, passtZuordnung,
@@ -355,7 +356,9 @@ export default function ImportCenterPage() {
     ];
     if (zeilen.length === 0) return;
     const kopf = 'Art;Zeile;Feld;Meldung';
-    const text = [kopf, ...zeilen.map((z) => `${z.art};${z.zeile};"${String(z.feld).replace(/"/g, '""')}";"${String(z.meldung).replace(/"/g, '""')}"`)].join('\r\n');
+    // Feldname und Meldung stammen aus der HOCHGELADENEN Datei, sind also
+    // fremder Text. Bis 16.09.2026 wurden sie nur gequotet, nicht entschaerft.
+    const text = [kopf, ...zeilen.map((z) => csvZeile([z.art, z.zeile, z.feld, z.meldung]))].join('\r\n');
     const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

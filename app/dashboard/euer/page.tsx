@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan } from '@/lib/afa';
+import { csvFeld } from '@/lib/csvSchreiben';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -161,7 +162,7 @@ export default function EuerPage() {
       ['Gezahlte Vorsteuer', String(agg.vorsteuer)],
       ['USt-Zahllast (+) / Erstattung (-)', String(s.ustZahllast)],
     ];
-    const csv = rows.map((r) => r.map((x) => String(x).replace(/;/g, ',').replace('.', ',')).join(';')).join('\n');
+    const csv = rows.map((r) => r.map((x) => csvFeld(String(x).replace('.', ','))).join(';')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const el = document.createElement('a');
     el.href = url; el.download = `EUER_${jahr}.csv`; document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url);

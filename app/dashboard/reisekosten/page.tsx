@@ -15,6 +15,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { csvFeld } from '@/lib/csvSchreiben';
 
 const MODUL = 'reisekosten';
 
@@ -146,7 +147,7 @@ export default function ReisekostenPage() {
 
   function csvExport() {
     const head = 'Reisender;Anlass;Ziel;Abreise;Rueckkehr;km;Fahrtkosten;Verpflegung;Uebernachtung;Sonstige;Gesamt;Status';
-    const zeilen = reisen.map((r) => [r.reisender || '', r.anlass || '', r.ziel || '', dtag(r.abreise), dtag(r.rueckkehr), r.km ?? '', r.fahrt_betrag ?? '', r.verpflegung_netto ?? '', r.uebernachtung ?? '', r.sonstige ?? '', r.gesamt ?? '', r.status].map((x) => String(x).replace(/;/g, ',')).join(';'));
+    const zeilen = reisen.map((r) => [r.reisender || '', r.anlass || '', r.ziel || '', dtag(r.abreise), dtag(r.rueckkehr), r.km ?? '', r.fahrt_betrag ?? '', r.verpflegung_netto ?? '', r.uebernachtung ?? '', r.sonstige ?? '', r.gesamt ?? '', r.status].map((x) => csvFeld(x)).join(';'));
     const blob = new Blob(['﻿' + head + '\n' + zeilen.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `Reisekosten_${new Date().toISOString().slice(0, 10)}.csv`;

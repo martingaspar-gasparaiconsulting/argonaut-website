@@ -18,6 +18,7 @@ import KiAuge from '../_components/KiAuge';
 import { augeEingangsbelege } from '@/lib/auge';
 import { zaehleEingangsbelege } from '@/lib/augeZaehler';
 import { NurVoll } from '../_components/Ansicht';
+import { csvFeld } from '@/lib/csvSchreiben';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -152,7 +153,7 @@ export default function EingangsbelegePage() {
 
   function csvExport() {
     const head = 'Datum;Lieferant;Belegnummer;Netto;USt-Satz;USt-Betrag;Brutto;Kategorie;DATEV-Konto;Kontenrahmen';
-    const zeilen = belege.map((b) => [d(b.belegdatum), b.lieferant || '', b.belegnummer || '', b.netto ?? '', b.ust_satz ?? '', b.ust_betrag ?? '', b.brutto ?? '', b.kategorie || '', b.datev_konto || '', (b.datev_rahmen || '').toUpperCase()].map((x) => String(x).replace(/;/g, ',')).join(';'));
+    const zeilen = belege.map((b) => [d(b.belegdatum), b.lieferant || '', b.belegnummer || '', b.netto ?? '', b.ust_satz ?? '', b.ust_betrag ?? '', b.brutto ?? '', b.kategorie || '', b.datev_konto || '', (b.datev_rahmen || '').toUpperCase()].map((x) => csvFeld(x)).join(';'));
     const blob = new Blob(['﻿' + head + '\n' + zeilen.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `Eingangsbelege_${new Date().toISOString().slice(0, 10)}.csv`;

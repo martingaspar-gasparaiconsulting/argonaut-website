@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
+import { csvFeld } from "@/lib/csvSchreiben";
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-5a — EXPORT (CSV)
@@ -82,11 +83,10 @@ function datumDeIso(d: string): string {
 function geldCsv(n: number): string {
   return (Number(n) || 0).toFixed(2).replace(".", ",");
 }
-function csvFeld(s: any): string {
-  const t = String(s ?? "");
-  if (/[;"\n]/.test(t)) return '"' + t.replace(/"/g, '""') + '"';
-  return t;
-}
+// csvFeld kam bis 16.09.2026 aus einer eigenen Kopie hier in der Datei. Sie
+// quotete korrekt, neutralisierte aber keine Formeln: Buchungstext, Kategorie
+// und Geschaeftspartner gingen ungefiltert in eine Datei, die der Steuerberater
+// in Excel oeffnet. Jetzt aus lib/csvSchreiben, wie alle anderen Exporte auch.
 function r2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
@@ -318,7 +318,7 @@ export default function ExportSeite() {
         geldCsv(z.netto),
         z.zahlungsart,
       ]
-        .map(csvFeld)
+        .map((x) => csvFeld(x))
         .join(";")
     );
     const inhalt = "\uFEFF" + [kopf.join(";"), ...zeilenText].join("\r\n");
