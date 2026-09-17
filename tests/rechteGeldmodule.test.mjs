@@ -5,10 +5,10 @@
 // sie in MITARBEITER_ERLAUBT — jeder eingeladene Mitarbeiter konnte sie per
 // Direkt-URL oeffnen, ganz ohne Freigabe. Das Menue versteckte nur den Knopf.
 //
-// Kasse und Einkauf sind BEWUSST noch offen (operative Module, ein Kassierer
-// muss kassieren). Sie kommen als eigener Schritt nach einem Klicktest.
-// Der Waechter-Test unten haelt das fest: wer die beiden umstellt, muss den
-// Test mit Absicht mitaendern.
+// Teil 2 (17.09.2026): Kasse und Einkauf folgen als eigener Push. Vorher per
+// SQL geprueft: der einzige Mitarbeiter mit Kasse/Einkauf-Freigabe hat einen
+// vollen Sitz und behaelt den Zugang. Die drei Standard-Sitze ohne Freigabe
+// kamen bisher nur ueber die Luecke hinein.
 // ============================================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,6 +25,8 @@ const GELDMODULE = [
   ['betriebskosten', '/dashboard/betriebskosten'],
   ['gutscheine', '/dashboard/gutscheine'],
   ['foerder-angebot', '/dashboard/foerder-angebot'],
+  ['kasse', '/dashboard/kasse'],
+  ['einkauf', '/dashboard/einkauf'],
 ];
 
 for (const [modul, pfad] of GELDMODULE) {
@@ -56,17 +58,16 @@ test('Sitz-Typ standard: Geldmodule sind gesperrt, voll bleibt offen', () => {
   assert.equal(pfadErlaubtFuerNutzerTyp('/dashboard/reisekosten', 'voll'), true);
 });
 
-test('WAECHTER: Kasse und Einkauf sind in diesem Schritt noch NICHT sensibel', () => {
-  assert.equal(istSensibel('kasse'), false);
-  assert.equal(istSensibel('einkauf'), false);
-  assert.equal(mitarbeiterDarf('/dashboard/kasse', []), true);
-  assert.equal(mitarbeiterDarf('/dashboard/einkauf', []), true);
+test('Kassierer mit Freigabe und vollem Sitz kommt weiter an die Kasse', () => {
+  assert.equal(mitarbeiterDarf('/dashboard/kasse', ['kasse']), true);
+  assert.equal(pfadErlaubtFuerNutzerTyp('/dashboard/kasse', 'voll'), true);
+  assert.equal(mitarbeiterDarf('/dashboard/einkauf', ['einkauf']), true);
 });
 
 test('kein anderes Modul hat sich still veraendert', () => {
-  // Vor Punkt 9: 22 verschiedene sensible Schluessel. Jetzt genau 7 mehr.
+  // Vor Punkt 9: 22 verschiedene sensible Schluessel. Jetzt genau 9 mehr.
   const alle = new Set(SENSIBLE_MODULE);
-  assert.equal(alle.size, 29, 'erwartet 22 alte + 7 neue sensible Schluessel');
+  assert.equal(alle.size, 31, 'erwartet 22 alte + 9 neue sensible Schluessel');
   const ohneNeue = [...alle].filter((m) => !GELDMODULE.some(([g]) => g === m));
   assert.equal(ohneNeue.length, 22, 'die 22 bisherigen bleiben unveraendert');
   assert.ok(NAV_LINKS.length > 0);

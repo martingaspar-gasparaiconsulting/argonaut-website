@@ -202,12 +202,12 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🦽 Hilfsmittel', href: '/dashboard/hilfsmittel', modul: 'hilfsmittel', ebene: 3, gruppe: 'betrieb' },
 
   // --- Lager & Automatik (Ebene 3, operativ) --------------------------------
-  { label: '📥 Einkauf', href: '/dashboard/einkauf', modul: 'einkauf', ebene: 3, gruppe: 'lager' },
+  { label: '📥 Einkauf', href: '/dashboard/einkauf', modul: 'einkauf', ebene: 3, sensibel: true, gruppe: 'lager' },
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '🏬 Lager je Filiale', href: '/dashboard/erp/lager', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '🧩 Varianten & Matrix', href: '/dashboard/varianten', modul: 'varianten', ebene: 3, gruppe: 'lager' },
   { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
-  { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, gruppe: 'lager' },
+  { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, sensibel: true, gruppe: 'lager' },
   { label: '🛒 Shop / Marktplatz', href: '/dashboard/shop', modul: 'shop', ebene: 3, gruppe: 'lager' },
   // Alt-Hinweis (15.07.26): Der Punkt „Agenten/Automatisierungen" war ein Schaufenster
   // ohne Funktion und flog raus. Seit 15.08.26 gibt es unter „Verwaltung" den echten
