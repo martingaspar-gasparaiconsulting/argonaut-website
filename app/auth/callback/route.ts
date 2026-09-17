@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { weiterleitungsAdresse } from '@/lib/weiterleitung'
+import { churnEntscheidung, CHURN_ZIEL } from '@/lib/churnSperre'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -48,15 +49,13 @@ export async function GET(request: NextRequest) {
           .select('id')
           .limit(1)
 
-        if (churnFehler) {
-          // Nicht verschlucken - sonst faellt die Sperre lautlos aus.
-          console.error('[churn-lock] Pruefung fehlgeschlagen:', churnFehler.message)
-        }
-
-        // .limit(1) statt .single(): .single() wirft bei null UND bei mehr als
-        // einer Zeile - ein Doppeleintrag haette die Sperre still ausgehebelt.
-        if (churned && churned.length > 0) {
-          return NextResponse.redirect(`${origin}/auth/login?error=churn_locked`)
+        // Seit 17.09.2026 dieselbe Regel wie in app/dashboard/layout.tsx
+        // (lib/churnSperre.ts). Fehler werden nicht verschluckt, sperren aber
+        // nicht - eine Stoerung soll nie alle Kunden aussperren.
+        const churn = churnEntscheidung(churned, churnFehler)
+        if (churn.protokoll) console.error(churn.protokoll)
+        if (churn.gesperrt) {
+          return NextResponse.redirect(`${origin}${CHURN_ZIEL}`)
         }
       }
 

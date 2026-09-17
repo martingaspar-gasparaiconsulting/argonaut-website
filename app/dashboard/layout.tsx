@@ -15,6 +15,7 @@ import UnterschriftLoader from './_components/UnterschriftLoader'
 import NutzungMelder from './_components/NutzungMelder'
 import FilialUmschalter from './_components/FilialUmschalter'
 import { AnsichtUmschalter } from './_components/Ansicht'
+import { churnEntscheidung, CHURN_ZIEL } from '@/lib/churnSperre'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -51,6 +52,21 @@ export default async function DashboardLayout({
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (!user || userError) redirect('/auth/login')
+
+  // KUENDIGUNGS-SPERRE (Punkt 11, 17.09.2026)
+  // Sass bis heute NUR im Anmelde-Callback. Die Passwort-Anmeldung laeuft dort
+  // nie durch - ein gekuendigter Kunde kam mit seinem Passwort einfach herein.
+  // Dieses Layout passiert jeder Anmeldeweg beim ersten Laden des Dashboards.
+  // Die Datenbank-Regel churned_eigene_email_lesen liefert hoechstens die
+  // EIGENE Zeile. Bei einem Abfragefehler wird NICHT gesperrt (siehe
+  // lib/churnSperre.ts). redirect() darf nie in einem try/catch stehen.
+  const { data: churnZeilen, error: churnFehler } = await supabase
+    .from('churned_customers')
+    .select('id')
+    .limit(1)
+  const churn = churnEntscheidung(churnZeilen, churnFehler)
+  if (churn.protokoll) console.error(churn.protokoll)
+  if (churn.gesperrt) redirect(CHURN_ZIEL)
 
   // Anzeige-Name holen — beide Quellen parallel, damit kein Wasserfall entsteht.
   // maybeSingle() wirft nicht, wenn nichts da ist -> Fehler koennen den Header
