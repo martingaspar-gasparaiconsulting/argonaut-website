@@ -14,7 +14,28 @@
 //
 // Reine Formeln/Parser, KEINE Supabase-/React-Abhaengigkeit. Node-getestet.
 
-import { parseBetrag, parseUmsaetzeCsv, type Transaktion } from './bankAbgleich';
+import { parseUmsaetzeCsv, type Transaktion } from './bankAbgleich';
+import { leseZahlMitTrenner } from './zahlen';
+
+// ERGAENZT 18.09.2026 (Punkt 18): Die Betraege dieser beiden Formate sind
+// GENORMT, das Dezimaltrennzeichen ist also sicher bekannt — CAMT.053 (ISO
+// 20022) schreibt einen Punkt und KEINE Tausendertrenner, MT940 (SWIFT) ein
+// Komma. Genau dafuer gibt es leseZahlMitTrenner aus lib/zahlen.ts. Der
+// allgemeine Leser haette hier raten muessen und "123.456" in einer
+// CAMT-Datei als 123.456 Euro statt 123,456 Euro gelesen.
+
+/** CAMT-Betrag: Dezimalpunkt, keine Tausendertrenner (ISO 20022). */
+function betragIso(wert: string): number {
+  const n = leseZahlMitTrenner(String(wert ?? '').trim(), '.');
+  return n === null ? 0 : n;
+}
+
+/** MT940-Betrag: Dezimalkomma (SWIFT). Ein abschliessendes Komma ohne
+ *  Nachkommastellen ("1926,") ist nach der Norm zulaessig. */
+function betragSwift(wert: string): number {
+  const n = leseZahlMitTrenner(String(wert ?? '').trim().replace(/,$/, ''), ',');
+  return n === null ? 0 : n;
+}
 
 export type BankFormat = 'camt' | 'mt940' | 'csv' | 'leer';
 
@@ -125,7 +146,7 @@ export function parseUmsaetzeCamt(xml: string): Transaktion[] {
     // 2) Betrag + Vorzeichen
     const amtRoh = tagInhalt(ntry, 'Amt');
     if (amtRoh === null) continue;
-    const betragAbs = Math.abs(parseBetrag(text(amtRoh)));
+    const betragAbs = Math.abs(betragIso(text(amtRoh)));
     if (!Number.isFinite(betragAbs) || betragAbs === 0) continue;
     const ind = text(tagInhalt(ntry, 'CdtDbtInd')).toUpperCase();
     // <RvslInd>true</RvslInd> — ERGAENZT 16.09.2026.
@@ -231,7 +252,7 @@ export function parseUmsaetzeMt940(inhalt: string): Transaktion[] {
       const m = erste.match(/^(\d{6})(\d{4})?(RC|RD|C|D)([A-Za-z])?(\d[\d.,]*)/);
       if (!m) continue;
       const [, datumRoh, , kennung, , betragRoh] = m;
-      const betragAbs = Math.abs(parseBetrag(betragRoh));
+      const betragAbs = Math.abs(betragSwift(betragRoh));
       if (!Number.isFinite(betragAbs) || betragAbs === 0) continue;
       const negativ = kennung === 'D' || kennung === 'RC';
       offen = {
