@@ -10,13 +10,20 @@
 import type { UstvaErgebnis } from './ustva';
 import { csvFeld } from './csvSchreiben';
 
+import { leseZahlOder } from './zahlen';
+
+/** Zahl lesen — über den gemeinsamen Leser aus lib/zahlen.ts (Punkt 24). */
 function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
+  return leseZahlOder(x, 0);
 }
 
-/** Euro-Text ohne geschütztes Leerzeichen (PDF-/CSV-sicher): „1.234,50 €". */
+/**
+ * Euro-Text ohne geschütztes Leerzeichen (PDF-/CSV-sicher): „1.234,50 €".
+ *
+ * Punkt 17: Ein negativer Wert behält sein Minus. Kennziffer 83 trägt seit
+ * dem 18.09. ihr Vorzeichen, und genau dieses Minus muss in ELSTER mit
+ * abgetippt werden — sonst wird aus einer Erstattung eine Zahlung.
+ */
 export function euroText(n: unknown): string {
   return z(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
