@@ -228,9 +228,23 @@ function spezifitaet(r: Mengenrabatt, sortimentId: string, einheit: HolzEinheit)
  * Findet die anzuwendende Rabattstaffel.
  *
  * Regel: Die SPEZIFISCHSTE Staffel gewinnt. Innerhalb derselben Spezifitaet
- * gewinnt die hoechste erreichte Schwelle. Kein Aufaddieren, kein Raten.
+ * gewinnt der HOECHSTE RABATT. Kein Aufaddieren, kein Raten.
  *
  * Beispiel: "ab 5 SRM = 3 %" und "ab 10 SRM = 5 %" -> bei 12 SRM greift 5 %.
+ *
+ * ▄▄▄ GEAENDERT AM 18.09.2026 (Punkt 13) ▄▄▄
+ * Vorher gewann die hoechste erreichte SCHWELLE. Das stimmt nur, solange die
+ * Staffel sauber ansteigt. Bei "ab 5 SRM = 20 %" und "ab 10 SRM = 3 %" bekam
+ * der Kunde fuer 12 SRM nur 3 %, fuer 9 SRM aber 20 % — er zahlte fuer MEHR
+ * Ware WENIGER Rabatt und in Summe womoeglich mehr Geld. Das rechnet der Kunde
+ * nach, und dann steht die Rechnung in Frage.
+ *
+ * Jetzt gewinnt der hoechste Rabatt. Bei gleichem Rabatt entscheidet die
+ * hoehere Schwelle — damit die Auswahl stabil bleibt und der angezeigte
+ * Hinweis ("ab X") zur Menge passt, die der Kunde tatsaechlich bestellt hat.
+ * Eine sauber ansteigende Staffel verhaelt sich damit GENAU wie vorher.
+ *
+ * Die Fehlkonfiguration selbst meldet staffelUnstimmigkeiten() weiter unten.
  */
 export function findeRabatt(
   rabatte: readonly Mengenrabatt[],
@@ -250,7 +264,66 @@ export function findeRabatt(
   const maxS = Math.max(...kandidaten.map((x) => x.s));
   const engste = kandidaten.filter((x) => x.s === maxS).map((x) => x.r);
 
-  return engste.reduce((a, b) => (b.ab_menge > a.ab_menge ? b : a));
+  return engste.reduce((a, b) => {
+    if (b.rabatt_prozent > a.rabatt_prozent) return b;
+    if (b.rabatt_prozent < a.rabatt_prozent) return a;
+    return b.ab_menge > a.ab_menge ? b : a;
+  });
+}
+
+export interface StaffelUnstimmigkeit {
+  /** Die Staffel mit der hoeheren Schwelle, die WENIGER Rabatt gibt. */
+  hoehereSchwelle: Mengenrabatt;
+  /** Die Staffel mit der niedrigeren Schwelle und dem hoeheren Rabatt. */
+  niedrigereSchwelle: Mengenrabatt;
+  /** Ein Satz im Klartext fuer die Oberflaeche. */
+  text: string;
+}
+
+/**
+ * Findet Staffeln, die nicht ansteigen: eine hoehere Schwelle mit weniger
+ * Rabatt als eine niedrigere. Seit Punkt 13 rechnet findeRabatt so etwas nicht
+ * mehr zum Nachteil des Kunden — aber die Staffel bleibt trotzdem falsch
+ * eingestellt, und der Betrieb sollte das sehen.
+ *
+ * Verglichen wird nur INNERHALB derselben Zuordnung (gleiches Sortiment,
+ * gleiche Einheit). Eine globale 3-%-Staffel neben einer sortimentgenauen
+ * 20-%-Staffel ist keine Unstimmigkeit, sondern Absicht — die spezifischere
+ * gewinnt ohnehin.
+ */
+export function staffelUnstimmigkeiten(
+  rabatte: readonly Mengenrabatt[],
+): StaffelUnstimmigkeit[] {
+  const aktive = rabatte.filter((r) => r.aktiv);
+  const gruppen = new Map<string, Mengenrabatt[]>();
+  for (const r of aktive) {
+    const schluessel = `${r.sortiment_id ?? '*'}|${r.einheit ?? '*'}`;
+    const liste = gruppen.get(schluessel);
+    if (liste) liste.push(r);
+    else gruppen.set(schluessel, [r]);
+  }
+
+  const raus: StaffelUnstimmigkeit[] = [];
+  for (const liste of gruppen.values()) {
+    const sortiert = [...liste].sort((a, b) => a.ab_menge - b.ab_menge);
+    for (let i = 1; i < sortiert.length; i++) {
+      const hoch = sortiert[i];
+      const tief = sortiert[i - 1];
+      if (hoch.rabatt_prozent < tief.rabatt_prozent) {
+        raus.push({
+          hoehereSchwelle: hoch,
+          niedrigereSchwelle: tief,
+          text:
+            `Ab ${formatZahl(hoch.ab_menge, 2)} gibt es nur ` +
+            `${formatZahl(hoch.rabatt_prozent, 0)} % Rabatt, ab ` +
+            `${formatZahl(tief.ab_menge, 2)} aber ` +
+            `${formatZahl(tief.rabatt_prozent, 0)} %. Wer mehr bestellt, ` +
+            `bekommt sonst weniger. Angewendet wird der höhere Rabatt.`,
+        });
+      }
+    }
+  }
+  return raus;
 }
 
 /** Alle Staffeln einer Variante, aufsteigend — fuer die Anzeige. */
@@ -493,6 +566,35 @@ export function pruefeRabatt(e: RabattEntwurf, vorhandene: readonly Mengenrabatt
     (r) => r.aktiv && r.sortiment_id === e.sortiment_id && r.einheit === e.einheit && r.ab_menge === e.ab_menge,
   );
   if (doppelt) fehler.push('Für diese Schwelle existiert bereits eine Staffel.');
+
+  // Punkt 13: Staffeln muessen ansteigen. Bewusst nur ein HINWEIS, kein Fehler —
+  // das Anlegen soll nicht blockiert werden, und findeRabatt wendet seit dem
+  // 18.09. ohnehin den hoeheren Rabatt an. Der Betrieb soll es aber sehen.
+  if (Number.isFinite(e.ab_menge) && e.ab_menge > 0 && Number.isFinite(e.rabatt_prozent)) {
+    const gleicheZuordnung = vorhandene.filter(
+      (r) => r.aktiv && r.sortiment_id === e.sortiment_id && r.einheit === e.einheit,
+    );
+    const darunterBesser = gleicheZuordnung
+      .filter((r) => r.ab_menge < e.ab_menge && r.rabatt_prozent > e.rabatt_prozent)
+      .sort((a, b) => b.rabatt_prozent - a.rabatt_prozent)[0];
+    if (darunterBesser) {
+      hinweise.push(
+        `Ab ${formatZahl(darunterBesser.ab_menge, 2)} gibt es bereits ` +
+          `${formatZahl(darunterBesser.rabatt_prozent, 0)} % Rabatt — diese Staffel ` +
+          `gibt bei größerer Menge weniger. Angewendet wird der höhere Rabatt.`,
+      );
+    }
+    const darueberSchlechter = gleicheZuordnung
+      .filter((r) => r.ab_menge > e.ab_menge && r.rabatt_prozent < e.rabatt_prozent)
+      .sort((a, b) => a.ab_menge - b.ab_menge)[0];
+    if (darueberSchlechter) {
+      hinweise.push(
+        `Ab ${formatZahl(darueberSchlechter.ab_menge, 2)} gibt es nur ` +
+          `${formatZahl(darueberSchlechter.rabatt_prozent, 0)} % Rabatt — weniger als ` +
+          `diese Staffel. Bitte die höhere Schwelle anpassen.`,
+      );
+    }
+  }
 
   return { ok: fehler.length === 0, fehler, hinweise };
 }
