@@ -29,8 +29,18 @@
 // automatisch gesetzter Satz waere fuer die Haelfte aller Betriebe falsch.
 // Der abgeleitete Wert ist deshalb ein VORSCHLAG, keine Festlegung.
 //
-// Keine Imports, keine Hooks — node-testbar.
+// ZAHLEN-LESER SEIT 18.09.2026 (Punkt 24)
+// Diese Datei hatte einen eigenen Zahl-Leser: er ersetzte nur das erste Komma
+// durch einen Punkt. Aus "1.234,56" wurde dadurch "1.234.56", was Number() zu
+// NaN macht — und der Rueckfall lieferte still 0. Eine Zahlung ueber 1.234,56
+// Euro war damit in EUER, BWA und Kennzahlen eine Zahlung ueber 0,00 Euro.
+// Jetzt liest lib/zahlen.ts, und das Runden ist symmetrisch um Null, damit
+// Ruecklastschriften und Gutschriften nicht in die falsche Richtung kippen.
+//
+// Ausser den Imports node-testbar — keine Hooks, kein Supabase.
 // ============================================================================
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 /** Die Saetze, die das deutsche Umsatzsteuerrecht kennt. */
 export const SAETZE = [0, 7, 19] as const;
@@ -48,17 +58,15 @@ export type ZahlungRoh = {
   rechnung_id?: string | null;
 };
 
+/** Zahl lesen. Nicht Lesbares ergibt 0 — wie bisher, aber Lesbares wird jetzt
+ *  auch in deutscher Schreibweise richtig gelesen. */
 function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') {
-    const n = Number(x.replace(',', '.').trim());
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+  return leseZahlOder(x, 0);
 }
 
+/** Auf Cent runden, symmetrisch um Null (siehe centRunden in lib/zahlen.ts). */
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n);
 }
 
 /** Effektiver Satz einer Rechnung, auf den naechsten Regelsatz gerundet. */

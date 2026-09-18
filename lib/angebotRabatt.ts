@@ -7,6 +7,14 @@
 // Staffel- und Gesamtrabatt zu EINEM Wert. So rechnen Angebot, PDF und
 // Rechnung garantiert dieselbe Summe (die Rechnung-Route nutzt genau diesen
 // effektiven Prozentsatz je Position).
+//
+// ZAHLEN-LESER SEIT 18.09.2026 (Punkt 24)
+// Diese Datei hatte einen eigenen Zahl-Leser, der ALLE Punkte entfernte. Aus
+// einem Einzelpreis "223.75" wurden dadurch 22.375 Euro (Faktor 100), aus
+// "7.5" Prozent Rabatt wurden 75 Prozent. Jetzt liest lib/zahlen.ts, und das
+// Runden ist symmetrisch um Null (Gutschriften).
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 /** Ab welchem Gesamtrabatt (%) ein Angebot eine Freigabe braucht. */
 export const RABATT_FREIGABE_AB = 20;
@@ -19,13 +27,11 @@ export interface RabattPos {
   rabatt?: number | string | null; // manueller Positionsrabatt %
 }
 
-function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(/\./g, '').replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
-}
+/** Zahl lesen. Nicht Lesbares ergibt 0 — wie bisher. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
 function clampP(p: number): number { return Math.min(Math.max(p, 0), 100); }
-function r2(n: number): number { return Math.round((n + Number.EPSILON) * 100) / 100; }
+/** Auf Cent runden, symmetrisch um Null (siehe centRunden in lib/zahlen.ts). */
+function r2(n: number): number { return centRunden(n); }
 
 /** Höchster Staffelrabatt (%), dessen Mengenschwelle erreicht ist. */
 export function staffelRabatt(menge: number, staffeln: Staffel[] | null | undefined): number {

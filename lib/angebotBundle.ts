@@ -5,6 +5,15 @@
 //
 // Die Positionen werden als JSONB gespeichert; alle Felder als STRINGS (identisch
 // zum Formular-Zustand der Angebote-Seite), damit Einfügen 1:1 möglich ist.
+//
+// ZAHLEN-LESER SEIT 18.09.2026 (Punkt 24)
+// nurGefuellte las den Einzelpreis mit replace(',', '.'). Eine Position ueber
+// "1.234,56" wurde dadurch zu NaN, galt als leer und FLOG AUS DEM BAUSTEIN —
+// stiller Datenverlust genau bei den teuersten Positionen. Jetzt liest
+// lib/zahlen.ts. Weil hier ausschliesslich Formular-Strings ankommen, ist das
+// der Ort, an dem der deutsche Tausenderpunkt wirklich auftritt.
+
+import { leseZahlOder } from './zahlen';
 
 export interface BundlePosition {
   bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst_satz: string; rabatt: string;
@@ -39,7 +48,9 @@ export function normalisierePositionen(roh: unknown): BundlePosition[] {
 
 /** Nur Positionen mit Inhalt (Bezeichnung oder Preis) übernehmen. */
 export function nurGefuellte(positionen: BundlePosition[]): BundlePosition[] {
-  return (positionen || []).filter((p) => (p.bezeichnung || '').trim() !== '' || (Number((p.einzelpreis || '').replace(',', '.')) || 0) > 0);
+  return (positionen || []).filter(
+    (p) => (p.bezeichnung || '').trim() !== '' || leseZahlOder(p.einzelpreis, 0) > 0,
+  );
 }
 
 /** Name säubern; leerer Name → '' (Aufrufer lehnt dann ab). */
