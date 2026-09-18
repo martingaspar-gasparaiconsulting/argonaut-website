@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { wartungPositionen, darfAbrechnen } from "@/lib/wiederkehr";
+import {
+  wartungPositionen, darfAbrechnen, darfAboAbrechnen,
+  naechsteFaelligkeitAb, intervallZuMonate, datumPlusMonate, datumPlusTage, istDatum,
+} from "@/lib/wiederkehr";
 
 export const runtime = "nodejs";
 
@@ -13,6 +16,21 @@ export const runtime = "nodejs";
 //  - Abo:     naechste_faellig wird fortgeschrieben -> nicht erneut faellig.
 //  => von sich aus idempotent. Jeder Lauf wird in wiederkehr_lauf protokolliert.
 //  - body { vorschau:true } zaehlt nur (fuer die Nachfrage im Cockpit), erzeugt nichts.
+//
+// ANSCHLUSS PUNKT 20 (18.09.2026, von Martin freigegeben)
+// Die Zusage "von sich aus idempotent" stimmte fuer Abos NICHT. GEMESSEN:
+//   - naechstesAboDatum rechnete mit setMonth() + toISOString(). Aus dem 31.01.
+//     wurde der 02.03. (der Februar fiel aus), und JEDER Sprung verlor durch die
+//     Zeitzone einen Tag: 15. -> 14. -> 13. Nach einem Jahr monatlich waren das
+//     zwoelf Tage Drift.
+//   - Die Faelligkeit rueckte nur um EIN Intervall vor. Ein drei Monate
+//     ueberfaelliges Abo war danach immer noch faellig: vier Klicks auf denselben
+//     Knopf ergaben VIER Rechnungen an denselben Kunden am selben Tag.
+//   - "heute" kam aus toISOString(). Um 00:30 Berliner Zeit war das GESTERN —
+//     damit auch das Rechnungs- und Faelligkeitsdatum der erzeugten Rechnungen.
+// Jetzt rechnet lib/wiederkehr: naechsteFaelligkeitAb() springt monatsende-sicher
+// so weit, dass der Termin STRIKT NACH heute liegt, und darfAboAbrechnen() sperrt
+// ein Abo, das heute schon abgerechnet wurde. Beides ist dort node-getestet.
 // ============================================================
 
 const MWST_STD = 19;
@@ -23,13 +41,30 @@ type Kopf = { titel: string; empfaenger_name?: string | null; kontakt_id?: strin
 type AnlageErgebnis = { error?: string; rechnungId?: string; netto?: number };
 type DetailEintrag = { quelle: "wartung" | "abo"; id: string; titel: string; rechnungId?: string; fehler?: string };
 
-/** Naechstes Abo-Faelligkeitsdatum (monat/quartal/jahr). */
-function naechstesAboDatum(iso: string, intervall: string): string {
-  const d = new Date((iso || "").slice(0, 10) + "T00:00:00");
-  if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
-  const add = intervall === "jahr" ? 12 : intervall === "quartal" ? 3 : 1;
-  d.setMonth(d.getMonth() + add);
-  return d.toISOString().slice(0, 10);
+/**
+ * Heute als "YYYY-MM-DD" in ORTSZEIT. new Date().toISOString() liefert UTC und
+ * damit zwischen Mitternacht und 01:00 (Sommerzeit: 02:00) noch den Vortag —
+ * das stand bisher als Rechnungsdatum auf den erzeugten Rechnungen.
+ */
+function heuteLokal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Naechstes Abo-Faelligkeitsdatum. Rechnet jetzt ueber lib/wiederkehr statt mit
+ * setMonth()+toISOString() und springt so weit, dass der Termin STRIKT NACH
+ * heute liegt.
+ *
+ * RUECKFALL: Gibt naechsteFaelligkeitAb null zurueck (Intervall 0 = einmalig,
+ * oder ein unlesbares Datum), bleibt es beim bisherigen Verhalten — EIN Schritt
+ * weiter. Das ist bewusst kein neues Verhalten an einer Stelle, die Geld
+ * bewegt: ein 'einmalig' gesetztes Abo wird weiterhin behandelt wie bisher.
+ */
+function naechstesAboDatum(bisher: string, intervall: string, heute: string): string {
+  const basis = istDatum(bisher) ? String(bisher).slice(0, 10) : heute;
+  const monate = intervallZuMonate(intervall);
+  return naechsteFaelligkeitAb(basis, monate, heute) ?? datumPlusMonate(basis, Math.max(1, monate));
 }
 
 /** Legt eine Rechnung + Positionen sicher an (Storno bei Positionsfehler). */
@@ -52,10 +87,8 @@ async function rechnungAnlegen(supabase: Sb, userId: string, kopf: Kopf, posten:
 
   const summe = steuerGruppen(rechnungsPosten.map<SteuerPosten>((p) => ({ netto: p.gesamt_netto, satz: p.mwst_satz })));
 
-  const heute = new Date();
-  const rechnungsdatum = heute.toISOString().slice(0, 10);
-  const faellig = new Date(heute);
-  faellig.setDate(faellig.getDate() + 14);
+  const rechnungsdatum = heuteLokal();
+  const faelligkeitsdatum = datumPlusTage(rechnungsdatum, 14);
 
   const { data: neu, error: rErr } = await supabase
     .from("rechnungen")
@@ -70,7 +103,7 @@ async function rechnungAnlegen(supabase: Sb, userId: string, kopf: Kopf, posten:
       zahlungsstatus: "offen",
       rechnungsdatum,
       leistungsdatum: rechnungsdatum,
-      faelligkeitsdatum: faellig.toISOString().slice(0, 10),
+      faelligkeitsdatum,
       zahlungsziel_tage: 14,
       netto_summe: summe.netto,
       mwst_summe: summe.steuer,
@@ -113,7 +146,7 @@ export async function POST(req: Request) {
     // Filial-Stempel für alle in diesem Lauf erzeugten Rechnungen: aktiver Standort (Cookie), sonst je Quelle abgeleitet.
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
 
-    const heute = new Date().toISOString().slice(0, 10);
+    const heute = heuteLokal();
 
     // --- Faellige Wartungen (aktiv, nicht archiviert, Betrag > 0, Doppel-Schutz) ---
     const { data: wRows } = await supabase
@@ -134,7 +167,17 @@ export async function POST(req: Request) {
       .lte("naechste_faellig", heute);
     const faelligeAbo = ((aRows as Record<string, unknown>[]) ?? []).filter((a) => {
       const pos = Array.isArray(a.positionen) ? (a.positionen as Posten[]) : [];
-      return pos.some((p) => (Number(p?.einzelpreis) || 0) > 0);
+      if (!pos.some((p) => (Number(p?.einzelpreis) || 0) > 0)) return false;
+      // Der Doppelschutz, der hier gefehlt hat: wer heute schon abgerechnet
+      // wurde, kommt nicht noch einmal dran — egal wie oft der Lauf startet.
+      return darfAboAbrechnen(
+        {
+          aktiv: a.aktiv !== false,
+          naechste_faellig: typeof a.naechste_faellig === "string" ? a.naechste_faellig : null,
+          zuletzt_erzeugt: typeof a.zuletzt_erzeugt === "string" ? a.zuletzt_erzeugt : null,
+        },
+        heute,
+      ).darf;
     });
 
     // --- Vorschau: nur zaehlen, nichts erzeugen ---
@@ -191,7 +234,7 @@ export async function POST(req: Request) {
         details.push({ quelle: "abo", id: String(a.id), titel, fehler: r.error || "Unbekannt" });
         continue;
       }
-      const naechste = naechstesAboDatum(String(a.naechste_faellig), String(a.intervall || "monat"));
+      const naechste = naechstesAboDatum(String(a.naechste_faellig ?? ""), String(a.intervall || "monat"), heute);
       await supabase.from("abo_rechnungen")
         .update({ naechste_faellig: naechste, zuletzt_erzeugt: heute, anzahl_erzeugt: (Number(a.anzahl_erzeugt) || 0) + 1, updated_at: new Date().toISOString() })
         .eq("id", a.id as string);
