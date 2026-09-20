@@ -11,7 +11,26 @@
 //
 // Ergebnis ist rechnerisch eindeutig — richtig, sofort, kostenlos.
 // Reine Funktionen, keine Hooks/Supabase — ueberall importierbar.
+//
+// ▄▄▄ PUNKT 29b (20.09.2026) ▄▄▄
+//  1. EINE KURZE FAHRT UEBER MITTERNACHT ERGAB 28 EUR.
+//     GEMESSEN: Abreise 23:00, Rueckkehr 01:00 — zwei Stunden unterwegs —
+//     ergab An- UND Abreisetag zu je 14 EUR. Der Code zaehlte nur die
+//     Kalendertage. Wer zwei Stunden unterwegs ist, hat nicht uebernachtet;
+//     dann gilt die Eintagesregel, und unter 8 Stunden gibt es gar nichts.
+//     REPARIERT NUR, WO ES EINDEUTIG IST: Dauert die Reise insgesamt
+//     hoechstens 8 Stunden, kann keine Uebernachtung stattgefunden haben —
+//     dieser Fall rechnet jetzt wie eintaegig. Dauert sie laenger und geht
+//     ueber Mitternacht, kann der Code NICHT wissen, ob uebernachtet wurde
+//     (§ 9 Abs. 4a EStG: ohne Uebernachtung stehen nur 14 EUR zu, dem Tag
+//     mit dem ueberwiegenden Teil zugeordnet). Dort bleibt die Rechnung wie
+//     bisher, und der Hinweis sagt es. Nicht geraten.
+//  2. round2() las mit Number() und rundete unsymmetrisch — "1.234" km
+//     ergaben 0,00 EUR Fahrtkosten. Jetzt ueber lib/zahlen.ts.
+// Node-getestet: tests/steuerRechnerP29.test.mjs
 // ============================================================================
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 export const VP_VOLL = 28;   // voller Kalendertag (24 Std. abwesend)
 export const VP_TEIL = 14;   // An-/Abreisetag oder eintaegig > 8 Std.
@@ -41,14 +60,30 @@ export function verpflegung(abreiseISO?: string | null, rueckkehrISO?: string | 
   const tageDiff = Math.round((ganzerTag(r) - ganzerTag(a)) / 86400000);
 
   let brutto = 0, volleTage = 0, teilTage = 0, hinweis = '';
-  if (tageDiff === 0) {
+
+  // Punkt 29b: Eine Reise von hoechstens 8 Stunden kann keine Uebernachtung
+  // enthalten — auch dann nicht, wenn sie ueber Mitternacht geht. Sie wird
+  // deshalb wie eintaegig behandelt. Vorher ergaben zwei Stunden von 23:00
+  // bis 01:00 volle 28 EUR, weil nur die Kalendertage gezaehlt wurden.
+  const ueberNachtOhneUebernachtung = tageDiff > 0 && stunden <= 8;
+
+  if (tageDiff === 0 || ueberNachtOhneUebernachtung) {
     if (stunden > 8) { brutto = VP_TEIL; teilTage = 1; hinweis = 'Eintägig, über 8 Std. abwesend → 14 €.'; }
-    else { hinweis = 'Eintägig, 8 Std. oder weniger → keine Verpflegungspauschale.'; }
+    else if (ueberNachtOhneUebernachtung) {
+      hinweis = `Nur ${round2(stunden)} Std. unterwegs, auch wenn die Reise über Mitternacht geht — ` +
+        'ohne Übernachtung gilt die Eintagesregel, und unter 8 Std. gibt es keine Verpflegungspauschale.';
+    } else { hinweis = 'Eintägig, 8 Std. oder weniger → keine Verpflegungspauschale.'; }
   } else {
     volleTage = Math.max(0, tageDiff - 1);
     teilTage = 2;
     brutto = teilTage * VP_TEIL + volleTage * VP_VOLL;
     hinweis = `${tageDiff + 1} Reisetage: An- + Abreisetag (je 14 €) + ${volleTage} volle(r) Tag(e) (je 28 €).`;
+    // Ohne Uebernachtung stehen nach § 9 Abs. 4a EStG nur 14 EUR zu, dem Tag
+    // mit dem ueberwiegenden Teil zugeordnet. Ob uebernachtet wurde, weiss
+    // diese Funktion nicht — also sagen statt raten.
+    if (volleTage === 0) {
+      hinweis += ' Falls NICHT übernachtet wurde: dann stehen nach § 9 Abs. 4a EStG nur 14 € zu.';
+    }
   }
 
   const mm = { fruehstueck: Math.max(0, m?.fruehstueck || 0), mittag: Math.max(0, m?.mittag || 0), abend: Math.max(0, m?.abend || 0) };
@@ -60,7 +95,7 @@ export function verpflegung(abreiseISO?: string | null, rueckkehrISO?: string | 
 /** Fahrtkosten fuer gefahrene Kilometer mit dem Privatfahrzeug. */
 export function fahrtkosten(km?: number | null, fahrzeug: Fahrzeug = 'pkw'): number {
   const satz = KM_SATZ[fahrzeug] ?? KM_SATZ.pkw;
-  return round2((Number(km) || 0) * satz);
+  return round2(leseZahlOder(km, 0) * satz);
 }
 
-export function round2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+export function round2(n: number): number { return centRunden(leseZahlOder(n, 0)); }

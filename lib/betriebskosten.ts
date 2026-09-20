@@ -7,7 +7,36 @@
 //   §556a BGB — ohne Vereinbarung wird nach Wohnfläche umgelegt.
 //   §7 HeizkostenV — Heiz-/Warmwasserkosten: mind. 50 %, höchstens 70 % nach
 //   erfasstem Verbrauch; der Rest (Grundkosten) nach Wohn-/Nutzfläche.
-// Node-getestet (betriebskosten.test.ts).
+//
+// ▄▄▄ PUNKT 29b (20.09.2026) ▄▄▄
+// Im Kopf stand bis heute „Node-getestet (betriebskosten.test.ts)". DIESE
+// TESTDATEI GIBT ES IM REPO NICHT — dieselbe falsche Zusage wie bei
+// bankAbgleich.ts (P18), fristen.ts (P21) und provision.ts (P25). Jetzt gibt
+// es tests/steuerRechnerP29.test.mjs, und die Zusage stimmt.
+//
+// Drei Befunde, alle am echten Code GEMESSEN:
+//
+//  1. OHNE ERFASSTEN VERBRAUCH VERSCHWINDEN DIE HEIZKOSTEN FAST GANZ.
+//     GEMESSEN: zwei Einheiten ohne Verbrauchswerte, 1.000 EUR Heizkosten →
+//     verteilt wurden 300 EUR. Die 700 EUR Verbrauchsanteil fielen weg, weil
+//     die Verteilbasis 0 war — ohne jede Meldung.
+//     NICHT GERATEN: Wie ohne Erfassung abzurechnen ist, ist eine
+//     Rechtsfrage (§ 9a HeizkostenV lässt eine Schätzung zu, nach welchem
+//     Maßstab entscheidet der Vermieter). Die Verteilung bleibt deshalb wie
+//     sie ist — aber bkHinweise() sagt es jetzt im Klartext.
+//
+//  2. r2() las Zahlen mit Number() und rundete unsymmetrisch. Ein Betrag als
+//     "1.234,56" wurde 0, und ein GUTHABEN über -2,345 EUR wurde -2,34 statt
+//     -2,35. Jetzt über lib/zahlen.ts.
+//
+//  3. Jeder Anteil wird einzeln auf Cent gerundet, deshalb trifft die Summe
+//     den Gesamtbetrag nicht immer: 100 EUR auf drei gleiche Einheiten ergibt
+//     99,99 EUR. Eine Restcent-Verteilung würde jede bestehende Abrechnung
+//     ändern; stattdessen nennt bkHinweise() die Differenz.
+//
+// Node-getestet: tests/steuerRechnerP29.test.mjs
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 export type Verteiler = 'wohnflaeche' | 'personen' | 'einheiten' | 'verbrauch';
 
@@ -44,17 +73,22 @@ export const HEIZ_VERBRAUCH_MIN = 50;
 export const HEIZ_VERBRAUCH_MAX = 70;
 export const HEIZ_VERBRAUCH_STD = 70;
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Auf Cent runden — symmetrisch, damit ein Guthaben nicht anders rundet. */
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
+
+/** Zahl lesen; nicht lesbar heisst 0 (diese Datei kennt keinen null-Fall). */
+function z(n: unknown): number { return leseZahlOder(n, 0); }
 
 /** Verbrauchsanteil auf den zulässigen Bereich 50–70 % begrenzen. */
 export function heizVerbrauchAnteil(prozent: number | null | undefined): number {
   if (prozent == null) return HEIZ_VERBRAUCH_STD;
-  const p = Number(prozent);
+  const p = leseZahlOder(prozent, Number.NaN);
   if (!Number.isFinite(p)) return HEIZ_VERBRAUCH_STD;
   return Math.min(Math.max(p, HEIZ_VERBRAUCH_MIN), HEIZ_VERBRAUCH_MAX);
 }
 export function heizAnteilGueltig(prozent: number): boolean {
-  return Number(prozent) >= HEIZ_VERBRAUCH_MIN && Number(prozent) <= HEIZ_VERBRAUCH_MAX;
+  const p = leseZahlOder(prozent, Number.NaN);
+  return p >= HEIZ_VERBRAUCH_MIN && p <= HEIZ_VERBRAUCH_MAX;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,9 +112,9 @@ export interface KostenartLite {
 
 /** Basiswert einer Einheit für einen Verteilerschlüssel. */
 export function basisWert(e: EinheitLite, v: Verteiler): number {
-  if (v === 'wohnflaeche') return Number(e.wohnflaeche) || 0;
-  if (v === 'personen') return Number(e.personen) || 0;
-  if (v === 'verbrauch') return Number(e.verbrauch) || 0;
+  if (v === 'wohnflaeche') return z(e.wohnflaeche);
+  if (v === 'personen') return z(e.personen);
+  if (v === 'verbrauch') return z(e.verbrauch);
   return 1; // einheiten: jede Einheit gleich
 }
 
@@ -90,7 +124,7 @@ export function summeBasis(einheiten: EinheitLite[], v: Verteiler): number {
 
 /** Anteil einer Einheit an EINER Kostenart (inkl. Heizkosten-Split nach HeizkostenV). */
 export function anteilKostenart(k: KostenartLite, e: EinheitLite, einheiten: EinheitLite[]): number {
-  const betrag = Number(k.betrag_gesamt) || 0;
+  const betrag = z(k.betrag_gesamt);
   if (betrag === 0) return 0;
   const teile = (b: number, basisE: number, basisS: number) => (basisS > 0 ? b * (basisE / basisS) : 0);
 
@@ -118,7 +152,7 @@ export interface EinheitAbrechnung {
 export function abrechnungFuerEinheit(e: EinheitLite, kostenarten: KostenartLite[], einheiten: EinheitLite[]): EinheitAbrechnung {
   const positionen = kostenarten.map((k) => ({ bezeichnung: k.bezeichnung || 'Kostenart', anteil: anteilKostenart(k, e, einheiten) }));
   const summeKosten = r2(positionen.reduce((s, p) => s + p.anteil, 0));
-  const vorauszahlung = r2(Number(e.vorauszahlung) || 0);
+  const vorauszahlung = r2(e.vorauszahlung as number);
   return { positionen, summeKosten, vorauszahlung, saldo: r2(summeKosten - vorauszahlung) };
 }
 
@@ -129,7 +163,78 @@ export function verteilteSumme(kostenarten: KostenartLite[], einheiten: EinheitL
   return r2(s);
 }
 export function gesamtKosten(kostenarten: KostenartLite[]): number {
-  return r2(kostenarten.reduce((s, k) => s + (Number(k.betrag_gesamt) || 0), 0));
+  return r2(kostenarten.reduce((s, k) => s + z(k.betrag_gesamt), 0));
+}
+
+// ---------------------------------------------------------------------------
+// Was der Vermieter VOR dem Versenden sehen muss (Punkt 29b, additiv)
+// ---------------------------------------------------------------------------
+
+/**
+ * Nennt die Stellen, an denen die Abrechnung nicht aufgeht.
+ *
+ * Wie extfHinweise und ustvaHinweise: ändert NICHTS und blockiert nichts,
+ * macht nur sichtbar, was ein Mensch ansehen muss. Eine
+ * Betriebskostenabrechnung wird vom Mieter nachgerechnet — was hier fehlt,
+ * fällt dort auf.
+ */
+export function bkHinweise(einheiten: EinheitLite[], kostenarten: KostenartLite[]): string[] {
+  const raus: string[] = [];
+  const eur = (n: number) => `${centRunden(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+
+  // 1. Heizkosten ohne erfassten Verbrauch — der schwerste Fall.
+  const heizOhneBasis = kostenarten.filter((k) => k.ist_heizkosten && z(k.betrag_gesamt) !== 0);
+  if (heizOhneBasis.length > 0 && summeBasis(einheiten, 'verbrauch') <= 0) {
+    const summe = heizOhneBasis.reduce((s, k) => s + z(k.betrag_gesamt) * heizVerbrauchAnteil(k.verbrauch_anteil_prozent) / 100, 0);
+    raus.push(
+      `Für keine Einheit ist ein Verbrauch erfasst. Der verbrauchsabhängige Teil der Heiz- und ` +
+        `Warmwasserkosten — ${eur(summe)} — wird deshalb auf NIEMANDEN verteilt und fehlt in der ` +
+        `Abrechnung. Nach § 7 HeizkostenV müssen mindestens 50 % nach Verbrauch abgerechnet werden; ` +
+        `ohne Erfassung lässt § 9a HeizkostenV eine Schätzung zu. Nach welchem Maßstab geschätzt wird, ` +
+        `entscheidet der Vermieter — ARGONAUT rät das bewusst nicht.`,
+    );
+  }
+
+  // 2. Einzelne Verteiler ohne Basis.
+  for (const v of ['wohnflaeche', 'personen', 'verbrauch'] as Verteiler[]) {
+    const betroffen = kostenarten.filter((k) => !k.ist_heizkosten && (k.verteiler ?? 'wohnflaeche') === v && z(k.betrag_gesamt) !== 0);
+    if (betroffen.length > 0 && summeBasis(einheiten, v) <= 0) {
+      const summe = betroffen.reduce((s, k) => s + z(k.betrag_gesamt), 0);
+      const name = VERTEILER.find((x) => x.key === v)?.label ?? v;
+      raus.push(
+        `${betroffen.length === 1 ? 'Eine Kostenart wird' : `${betroffen.length} Kostenarten werden`} nach ` +
+          `„${name}" verteilt, aber keine Einheit hat dafür einen Wert. ${eur(summe)} bleiben unverteilt.`,
+      );
+    }
+  }
+
+  // 3. Rundungsdifferenz.
+  const gesamt = gesamtKosten(kostenarten);
+  const verteilt = verteilteSumme(kostenarten, einheiten);
+  const diff = centRunden(gesamt - verteilt);
+  if (diff !== 0 && raus.length === 0) {
+    raus.push(
+      `Die verteilten Anteile ergeben ${eur(verteilt)}, die Kosten betragen ${eur(gesamt)} — ` +
+        `Differenz ${eur(diff)}. Das ist Centrundung bei der Aufteilung, kein Rechenfehler. ` +
+        `Wer sie vermeiden will, legt den Restbetrag auf eine Einheit.`,
+    );
+  } else if (diff !== 0) {
+    raus.push(`Verteilt sind ${eur(verteilt)} von ${eur(gesamt)} — Differenz ${eur(diff)}.`);
+  }
+
+  // 4. Verbrauchsanteil außerhalb des zulässigen Bereichs.
+  const luecken = kostenarten.filter(
+    (k) => k.ist_heizkosten && k.verbrauch_anteil_prozent != null && !heizAnteilGueltig(k.verbrauch_anteil_prozent as number),
+  );
+  for (const k of luecken) {
+    raus.push(
+      `„${k.bezeichnung || 'Heizkosten'}": ${k.verbrauch_anteil_prozent} % Verbrauchsanteil liegen außerhalb der ` +
+        `nach § 7 HeizkostenV zulässigen ${HEIZ_VERBRAUCH_MIN}–${HEIZ_VERBRAUCH_MAX} %. ` +
+        `Gerechnet wird mit ${heizVerbrauchAnteil(k.verbrauch_anteil_prozent)} %.`,
+    );
+  }
+
+  return raus;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,14 +251,14 @@ export interface BkKennzahlen {
 
 export function zaehleBk(einheiten: EinheitLite[], kostenarten: KostenartLite[]): BkKennzahlen {
   const kostenGesamt = gesamtKosten(kostenarten);
-  const vorauszahlungGesamt = r2(einheiten.reduce((s, e) => s + (Number(e.vorauszahlung) || 0), 0));
+  const vorauszahlungGesamt = r2(einheiten.reduce((s, e) => s + z(e.vorauszahlung), 0));
   let saldoGesamt = 0, nachzahler = 0;
   for (const e of einheiten) {
     const a = abrechnungFuerEinheit(e, kostenarten, einheiten);
     saldoGesamt += a.saldo;
     if (a.saldo > 0) nachzahler++;
   }
-  const heizLuecken = kostenarten.filter((k) => k.ist_heizkosten && k.verbrauch_anteil_prozent != null && !heizAnteilGueltig(Number(k.verbrauch_anteil_prozent))).length;
+  const heizLuecken = kostenarten.filter((k) => k.ist_heizkosten && k.verbrauch_anteil_prozent != null && !heizAnteilGueltig(k.verbrauch_anteil_prozent as number)).length;
   return {
     einheiten: einheiten.length,
     kostenGesamt,

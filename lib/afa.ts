@@ -11,7 +11,16 @@
 //     voller Abzug im Anschaffungsjahr.
 //
 // Reine Funktionen, keine Hooks/Supabase — ueberall importierbar.
+//
+// ▄▄▄ PUNKT 29b (20.09.2026) ▄▄▄
+// r2() las Zahlen mit Number() und rundete unsymmetrisch. Anschaffungskosten
+// als "1.234,56" wurden damit 0 — und ein Wirtschaftsgut mit 0 EUR faellt
+// durch den GWG-Zweig (k > 0) in die lineare AfA und schreibt jahrelang
+// nichts ab. Jetzt ueber lib/zahlen.ts.
+// Node-getestet: tests/steuerRechnerP29.test.mjs
 // ============================================================================
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 export const GWG_GRENZE = 800; // € netto, Sofortabschreibung 2026
 
@@ -26,7 +35,7 @@ export type AfaPlan = {
   hinweis: string;
 };
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 export function afaPlan(kosten: number, nutzungsdauer: number, anschaffungISO?: string | null, stichjahr?: number): AfaPlan {
   const k = r2(kosten);
