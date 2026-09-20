@@ -12,6 +12,18 @@
 // — sie schuetzen den Nutzer vor unmoeglichen Eingaben, sind aber keine Zusage.
 // ============================================================================
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/geld.ts angeschlossen ▄▄▄
+// Die eigene Geld-Anzeige ist raus. GEMESSEN vor der Umstellung, wie diese
+// Datei denselben Wert zeigte wie die vier anderen Vertriebs-Dateien:
+//   "1.234,56" -> "0,00 €"
+//   "12.500"   -> "0,00 €"
+// Supabase liefert numeric-Spalten haeufig als Text; genau dann griff der
+// Fehler. Jetzt liest lib/zahlen.ts und formatiert lib/geld.ts.
+// Ein fehlender Wert bleibt hier bewusst "0,00 €" (euroOderNull): in einer
+// Vertriebs-Kachel ist "keine Ausgaben" eine Aussage, keine Luecke.
+
+import { leseZahlOder, centRunden } from './zahlen';
+import { euroOderNull, euroKurz } from './geld';
 export type AdsPlattformId = 'meta' | 'google' | 'linkedin' | 'tiktok';
 
 /** Kern = direkt/verbreitet. Schwanz = mit zusaetzlicher Huerde (Audit/Nische). */
@@ -143,9 +155,8 @@ export function zuBetrag(v: unknown): number {
 }
 
 /** Euro-Format (de-DE), z. B. 1500 -> „1.500,00 €". null/0-sicher. */
-export function formatEuro(n: number | null | undefined): string {
-  const w = typeof n === 'number' && Number.isFinite(n) ? n : 0;
-  return w.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+export function formatEuro(n: number | null | undefined | string): string {
+  return euroOderNull(n);
 }
 
 /**

@@ -3,6 +3,18 @@
 // Reine Formeln — KEINE Supabase-Aufrufe, KEINE React-Hooks (Client + Node).
 // Node-getestet (pipeline.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/geld.ts angeschlossen ▄▄▄
+// Die eigene Geld-Anzeige ist raus. GEMESSEN vor der Umstellung, wie diese
+// Datei denselben Wert zeigte wie die vier anderen Vertriebs-Dateien:
+//   "1.234,56" -> "0 €"
+//   "12.500"   -> "13 €"
+// Supabase liefert numeric-Spalten haeufig als Text; genau dann griff der
+// Fehler. Jetzt liest lib/zahlen.ts und formatiert lib/geld.ts.
+// Ein fehlender Wert bleibt hier bewusst "0,00 €" (euroOderNull): in einer
+// Vertriebs-Kachel ist "keine Ausgaben" eine Aussage, keine Luecke.
+
+import { leseZahlOder, centRunden } from './zahlen';
+import { euroOderNull, euroKurz } from './geld';
 export interface StufeInfo {
   key: string;
   label: string;
@@ -38,12 +50,8 @@ export interface DealLite {
   wahrscheinlichkeit?: number | string | null;
 }
 
-function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
-}
-function r2(n: number): number { return Math.round((n + Number.EPSILON) * 100) / 100; }
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+function r2(n: number): number { return centRunden(n); }
 function clampP(p: number): number { return Math.min(Math.max(p, 0), 100); }
 
 /** Wahrscheinlichkeit eines Deals: eigener Wert, sonst Standard der Stufe. */
@@ -95,6 +103,11 @@ export function zaehlePipeline(deals: DealLite[]): PipelineKennzahlen {
   };
 }
 
+/**
+ * Ganze Euro — die Pipeline zeigt Groessenordnungen, keine Cent-Betraege.
+ * Punkt 30: heisst jetzt euroKurz(), damit am Aufruf sichtbar ist, dass
+ * gerundet wird. Vorher stand das still in maximumFractionDigits: 0.
+ */
 export function formatEuro(n: unknown): string {
-  return z(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  return euroKurz(n, euroKurz(0));
 }

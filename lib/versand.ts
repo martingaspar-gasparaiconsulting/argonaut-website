@@ -4,6 +4,18 @@
 // Abhängigkeit, KEINE echten Carrier-APIs (die kommen anschlussfertig in 4b).
 // Node-getestet (versand.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/geld.ts angeschlossen ▄▄▄
+// Die eigene Geld-Anzeige ist raus. GEMESSEN vor der Umstellung, wie diese
+// Datei denselben Wert zeigte wie die vier anderen Vertriebs-Dateien:
+//   "1.234,56" -> "0,00 €"
+//   "12.500"   -> "12,50 €"
+// Supabase liefert numeric-Spalten haeufig als Text; genau dann griff der
+// Fehler. Jetzt liest lib/zahlen.ts und formatiert lib/geld.ts.
+// Ein fehlender Wert bleibt hier bewusst "0,00 €" (euroOderNull): in einer
+// Vertriebs-Kachel ist "keine Ausgaben" eine Aussage, keine Luecke.
+
+import { leseZahlOder, centRunden } from './zahlen';
+import { euroOderNull, euroKurz } from './geld';
 export interface CarrierInfo {
   key: string;
   name: string;
@@ -69,11 +81,7 @@ export interface SendungEingabe {
   carrier?: string | null;
 }
 
-function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
-}
+function z(x: unknown): number { return leseZahlOder(x, 0); }
 
 /** Was fehlt, damit die Sendung buchbar ist? Leeres Array = vollständig. */
 export function sendungProbleme(s: SendungEingabe): string[] {
@@ -106,7 +114,7 @@ export function formatGewicht(kg: unknown): string {
   return n > 0 ? `${n.toLocaleString('de-DE', { maximumFractionDigits: 2 })} kg` : '—';
 }
 export function formatEuro(n: unknown): string {
-  return z(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  return euroOderNull(n);
 }
 
 /** Kennzahlen für Liste/Auge. */

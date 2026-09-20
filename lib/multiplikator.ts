@@ -26,6 +26,18 @@
 // Keine Imports, keine Hooks — node-testbar.
 // ============================================================================
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/geld.ts angeschlossen ▄▄▄
+// Die eigene Geld-Anzeige ist raus. GEMESSEN vor der Umstellung, wie diese
+// Datei denselben Wert zeigte wie die vier anderen Vertriebs-Dateien:
+//   "1.234,56" -> "1.234,56 €"
+//   "12.500"   -> "12,50 €"
+// Supabase liefert numeric-Spalten haeufig als Text; genau dann griff der
+// Fehler. Jetzt liest lib/zahlen.ts und formatiert lib/geld.ts.
+// Ein fehlender Wert bleibt hier bewusst "0,00 €" (euroOderNull): in einer
+// Vertriebs-Kachel ist "keine Ausgaben" eine Aussage, keine Luecke.
+
+import { leseZahlOder, centRunden } from './zahlen';
+import { euroOderNull, euroKurz } from './geld';
 export type PartnerArt = 'empfehlung' | 'multiplikator' | 'vertrieb';
 export type PartnerModell = 'einmalig' | 'wiederkehrend' | 'gegengeschaeft';
 export type PartnerStatus = 'aktiv' | 'pausiert' | 'beendet';
@@ -115,11 +127,11 @@ export function z(x: unknown): number {
 }
 
 export function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n);
 }
 
 export function euro(n: unknown): string {
-  return z(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  return euroOderNull(n);
 }
 
 export function prozent(n: unknown): string {
