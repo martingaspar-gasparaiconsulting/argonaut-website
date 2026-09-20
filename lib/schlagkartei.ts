@@ -8,6 +8,19 @@
 // Die Ampel prüft, ob ein Eintrag INNERHALB der Frist erfasst wurde
 // (Vergleich Maßnahme-Datum ↔ Erfassungszeitpunkt).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export const DUENGE_FRIST_TAGE = 14;
 export const PSM_FRIST_TAGE = 30;
 
@@ -21,7 +34,10 @@ function tagUTC(v: string | Date): number {
   const y = Number(s.slice(0, 4)), m = Number(s.slice(5, 7)), d = Number(s.slice(8, 10));
   return (y && m && d) ? Date.UTC(y, m - 1, d) : NaN;
 }
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 /** Ganze Tage zwischen zwei Datumsangaben (Datums-Anteil, DST-sicher). */
 export function tageDiff(von: string | Date, bis: string | Date): number {
@@ -42,22 +58,22 @@ export function fristRest(datumMassnahme: string | Date, fristTage: number, heut
 
 /** Aufwand je ha × Fläche = Gesamtmenge. */
 export function mengeGesamt(proHa: number, flaecheHa: number): number {
-  return r2((Number(proHa) || 0) * (Number(flaecheHa) || 0));
+  return r2(z(proHa) * z(flaecheHa));
 }
 
 /** Summe des Gesamt-N (kg N/ha) über eine Liste Düngungen. */
 export function summeN(duengungen: { n_gesamt?: number | null }[]): number {
-  return r2(duengungen.reduce((s, d) => s + (Number(d.n_gesamt) || 0), 0));
+  return r2(duengungen.reduce((s, d) => s + z(d.n_gesamt), 0));
 }
 
 /** N-Saldo je ha: Bedarf minus bereits gedüngt. Positiv = Rest, negativ = Überschreitung. */
 export function nSaldo(nBedarf: number, nGeduengt: number): number {
-  return r2((Number(nBedarf) || 0) - (Number(nGeduengt) || 0));
+  return r2(z(nBedarf) - z(nGeduengt));
 }
 
 /** Summe der Fläche (ha) über alle aktiven Schläge. */
 export function flaecheSumme(schlaege: { flaeche_ha?: number | null; status?: string }[]): number {
-  return r2(schlaege.filter((x) => (x.status ?? 'aktiv') === 'aktiv').reduce((a, x) => a + (Number(x.flaeche_ha) || 0), 0));
+  return r2(schlaege.filter((x) => (x.status ?? 'aktiv') === 'aktiv').reduce((a, x) => a + z(x.flaeche_ha), 0));
 }
 
 function jahrVon(datum: string | Date): number { return Number(String(datum).slice(0, 4)); }

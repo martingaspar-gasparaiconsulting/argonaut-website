@@ -10,6 +10,19 @@
 //   D ≤130 · E ≤160 · F ≤200 · G ≤250 · H >250 kWh/(m²·a).
 // Node-getestet (expose.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export type ObjektArt = 'wohnung' | 'haus' | 'gewerbe' | 'grundstueck';
 export type VermarktungArt = 'kauf' | 'miete';
 export type AusweisTyp = 'bedarf' | 'verbrauch';
@@ -38,7 +51,10 @@ export const STATUS_INFO: Record<ExposeStatus, { label: string; farbe: 'gold' | 
   vermietet: { label: '✓ Vermietet',  farbe: 'green' },
 };
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 // ---------------------------------------------------------------------------
 // Energieeffizienzklasse aus Endenergie-Kennwert (kWh/m²a) — GEG Anlage 10.
@@ -56,7 +72,7 @@ export const ENERGIE_KLASSEN: { klasse: string; bis: number }[] = [
 
 /** Energieeffizienzklasse aus dem Endenergie-Kennwert. A+ = unter 30, H = über 250. */
 export function energieKlasse(kennwert: number | null | undefined): string | null {
-  const k = Number(kennwert);
+  const k = z(kennwert);
   if (!(k > 0)) return null;
   if (k < 30) return 'A+';
   for (const e of ENERGIE_KLASSEN) {
@@ -71,17 +87,17 @@ export function energieKlasse(kennwert: number | null | undefined): string | nul
 // ---------------------------------------------------------------------------
 /** Preis je m² Wohnfläche (0 wenn Fläche fehlt). */
 export function preisProM2(preis: number, wohnflaeche: number): number {
-  const f = Number(wohnflaeche) || 0;
+  const f = z(wohnflaeche);
   if (f <= 0) return 0;
-  return r2((Number(preis) || 0) / f);
+  return r2(z(preis) / f);
 }
 
 export interface ProvisionErgebnis { basis: number; prozent: number; netto: number; mwst: number; brutto: number; }
 /** Provision/Courtage aus Basis (z.B. Kaufpreis) und Prozentsatz, inkl. 19% USt. */
 export function provision(basis: number, prozent: number, mwstSatz: number = 19): ProvisionErgebnis {
-  const netto = r2((Number(basis) || 0) * (Number(prozent) || 0) / 100);
-  const mwst = r2(netto * (Number(mwstSatz) || 0) / 100);
-  return { basis: r2(basis), prozent: Number(prozent) || 0, netto, mwst, brutto: r2(netto + mwst) };
+  const netto = r2(z(basis) * z(prozent) / 100);
+  const mwst = r2(netto * z(mwstSatz) / 100);
+  return { basis: r2(basis), prozent: z(prozent), netto, mwst, brutto: r2(netto + mwst) };
 }
 
 // ---------------------------------------------------------------------------
@@ -104,8 +120,8 @@ export interface ExposeLite {
 export function pflichtangabenVollstaendig(e: ExposeLite): boolean {
   if (e.objekt_art === 'grundstueck') return true;
   if (e.energieausweis_vorhanden === false) return true; // Ausnahme: Ausweis liegt (noch) nicht vor
-  return Boolean(e.energie_typ) && Number(e.energiekennwert) > 0 &&
-    Boolean(e.energietraeger) && Number(e.baujahr) > 0;
+  return Boolean(e.energie_typ) && z(e.energiekennwert) > 0 &&
+    Boolean(e.energietraeger) && z(e.baujahr) > 0;
 }
 
 /** Fehlende Pflichtfelder als Liste (für Hinweise). */
@@ -113,9 +129,9 @@ export function fehlendePflichtangaben(e: ExposeLite): string[] {
   if (e.objekt_art === 'grundstueck' || e.energieausweis_vorhanden === false) return [];
   const fehlt: string[] = [];
   if (!e.energie_typ) fehlt.push('Ausweis-Art');
-  if (!(Number(e.energiekennwert) > 0)) fehlt.push('Energiekennwert');
+  if (!(z(e.energiekennwert) > 0)) fehlt.push('Energiekennwert');
   if (!e.energietraeger) fehlt.push('Energieträger');
-  if (!(Number(e.baujahr) > 0)) fehlt.push('Baujahr');
+  if (!(z(e.baujahr) > 0)) fehlt.push('Baujahr');
   return fehlt;
 }
 
@@ -136,7 +152,7 @@ export function zaehleExpose(exposes: ExposeLite[]): ExposeKennzahlen {
     const st = e.status ?? 'entwurf';
     if (st === 'aktiv') {
       aktiv++;
-      if (e.vermarktung_art === 'kauf') volumenAktiv += Number(e.preis) || 0;
+      if (e.vermarktung_art === 'kauf') volumenAktiv += z(e.preis);
       if (!pflichtangabenVollstaendig(e)) pflichtLuecken++;
     } else if (st === 'reserviert') {
       reserviert++;

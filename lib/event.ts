@@ -4,6 +4,19 @@
 // Einnahmen. KEINE Supabase-Aufrufe, KEINE React-Hooks (Client + Node).
 // Node-getestet (event.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export type EventArt = 'konzert' | 'workshop' | 'tagung' | 'fest' | 'vortrag' | 'kurs' | 'sonstige';
 export type AnmeldeStatus = 'angemeldet' | 'bestaetigt' | 'teilgenommen' | 'warteliste' | 'storniert';
 
@@ -33,8 +46,11 @@ export function istBelegend(status: string): boolean {
   return status === 'angemeldet' || status === 'bestaetigt' || status === 'teilgenommen';
 }
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
-function clamp01(n: number): number { return Math.min(Math.max(Number(n) || 0, 0), 1); }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
+function clamp01(n: number): number { return Math.min(Math.max(z(n), 0), 1); }
 
 export interface EventLite { id?: string; kapazitaet?: number; preis?: number; status?: string }
 export interface AnmeldungLite {
@@ -46,34 +62,34 @@ export interface AnmeldungLite {
 }
 
 export function belegtePlaetze(anmeldungen: AnmeldungLite[]): number {
-  return (anmeldungen || []).reduce((s, a) => s + (istBelegend(a.status ?? 'angemeldet') ? (Number(a.plaetze) || 0) : 0), 0);
+  return (anmeldungen || []).reduce((s, a) => s + (istBelegend(a.status ?? 'angemeldet') ? z(a.plaetze) : 0), 0);
 }
 export function wartelistePlaetze(anmeldungen: AnmeldungLite[]): number {
-  return (anmeldungen || []).reduce((s, a) => s + (a.status === 'warteliste' ? (Number(a.plaetze) || 0) : 0), 0);
+  return (anmeldungen || []).reduce((s, a) => s + (a.status === 'warteliste' ? z(a.plaetze) : 0), 0);
 }
 export function freiePlaetze(kapazitaet: number, belegt: number): number {
-  return Math.max(0, (Number(kapazitaet) || 0) - (Number(belegt) || 0));
+  return Math.max(0, z(kapazitaet) - z(belegt));
 }
 export function auslastung(belegt: number, kapazitaet: number): number {
-  const k = Number(kapazitaet) || 0;
+  const k = z(kapazitaet);
   if (k <= 0) return 0;
-  return clamp01((Number(belegt) || 0) / k);
+  return clamp01(z(belegt) / k);
 }
 export function istAusverkauft(belegt: number, kapazitaet: number): boolean {
-  const k = Number(kapazitaet) || 0;
-  return k > 0 && (Number(belegt) || 0) >= k;
+  const k = z(kapazitaet);
+  return k > 0 && z(belegt) >= k;
 }
 
 /** Neuer Anmelde-Status je nach freier Kapazität: passt nicht → Warteliste. */
 export function naechsterStatus(kapazitaet: number, belegt: number, plaetze: number): AnmeldeStatus {
-  const k = Number(kapazitaet) || 0;
+  const k = z(kapazitaet);
   if (k <= 0) return 'angemeldet'; // keine Begrenzung
-  return (Number(belegt) || 0) + (Number(plaetze) || 0) <= k ? 'angemeldet' : 'warteliste';
+  return z(belegt) + z(plaetze) <= k ? 'angemeldet' : 'warteliste';
 }
 
 /** Betrag einer Anmeldung = Preis × Plätze. */
 export function betrag(preis: number, plaetze: number): number {
-  return r2((Number(preis) || 0) * (Number(plaetze) || 0));
+  return r2(z(preis) * z(plaetze));
 }
 
 /** Einnahmen einer Veranstaltung: erwartet (belegend) und bereits bezahlt. */
@@ -81,7 +97,7 @@ export function einnahmen(anmeldungen: AnmeldungLite[]): { erwartet: number; bez
   let erwartet = 0, bezahlt = 0;
   for (const a of anmeldungen || []) {
     if (!istBelegend(a.status ?? 'angemeldet')) continue;
-    const b = Number(a.betrag) || 0;
+    const b = z(a.betrag);
     erwartet += b;
     if (a.bezahlt) bezahlt += b;
   }
@@ -97,7 +113,7 @@ export interface EventKennzahl {
 
 export function eventKennzahl(e: EventLite, anmeldungen: AnmeldungLite[]): EventKennzahl {
   const belegt = belegtePlaetze(anmeldungen);
-  const kap = Number(e.kapazitaet) || 0;
+  const kap = z(e.kapazitaet);
   const ein = einnahmen(anmeldungen);
   return {
     belegt, frei: freiePlaetze(kap, belegt), auslastung: auslastung(belegt, kap), warteliste: wartelistePlaetze(anmeldungen),
@@ -137,7 +153,7 @@ export function zaehleEvents(
   for (const e of veranstaltungen || []) {
     const abs = e.id ? (proEvent.get(e.id) || []) : [];
     const k = eventKennzahl(e, abs);
-    gesamtPlaetze += Number(e.kapazitaet) || 0;
+    gesamtPlaetze += z(e.kapazitaet);
     belegt += k.belegt;
     warteliste += k.warteliste;
     if (k.ausverkauft) ausverkaufte++;

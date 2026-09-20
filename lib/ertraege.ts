@@ -12,6 +12,19 @@
 //   Erlös               = Einspeisung × Vergütung + Eigenverbrauch × Strompreis (Ersparnis)
 // „Soll-Erreichung" bewusst NICHT Performance Ratio (das bräuchte Einstrahlungsdaten).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export type AnlagenTyp = 'pv' | 'bhkw' | 'wind' | 'speicher' | 'waermepumpe' | 'sonstige';
 
 export interface AnlagenTypInfo { key: AnlagenTyp; label: string; einheit: string }
@@ -31,8 +44,11 @@ export const SOLL_SPEZIFISCH_STD = 950;
 export const SPEZIFISCH_DE_MIN = 800;
 export const SPEZIFISCH_DE_MAX = 1200;
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
-function clamp01(n: number): number { return Math.min(Math.max(Number(n) || 0, 0), 1); }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
+function clamp01(n: number): number { return Math.min(Math.max(z(n), 0), 1); }
 
 export interface AnlageLite {
   id?: string;
@@ -64,50 +80,50 @@ export function tageZeitraum(von?: string, bis?: string): number {
 
 /** Spezifischer Ertrag = Ertrag / Nennleistung (kWh je kWp/kW). */
 export function spezifischerErtrag(ertrag_kwh: number, nennleistung: number): number {
-  const p = Number(nennleistung) || 0;
+  const p = z(nennleistung);
   if (p <= 0) return 0;
-  return r2((Number(ertrag_kwh) || 0) / p);
+  return r2(z(ertrag_kwh) / p);
 }
 
 /** Soll-Ertrag im Zeitraum = Jahres-Sollwert × kWp × Tage/365. */
 export function sollErtragZeitraum(soll_spezifisch: number, nennleistung: number, tage: number): number {
-  return r2((Number(soll_spezifisch) || 0) * (Number(nennleistung) || 0) * (Number(tage) || 0) / 365);
+  return r2(z(soll_spezifisch) * z(nennleistung) * z(tage) / 365);
 }
 
 /** Soll-Erreichung = Ist / Soll (kann >1 sein bei Übererfüllung). */
 export function sollErreichung(ist_kwh: number, soll_kwh: number): number {
-  const s = Number(soll_kwh) || 0;
+  const s = z(soll_kwh);
   if (s <= 0) return 0;
-  return (Number(ist_kwh) || 0) / s;
+  return z(ist_kwh) / s;
 }
 
 /** Verfügbarkeit = 1 − Ausfallstunden / Periodenstunden (0..1). */
 export function verfuegbarkeit(ausfall_stunden: number, tage: number): number {
-  const perioden = (Number(tage) || 0) * 24;
+  const perioden = z(tage) * 24;
   if (perioden <= 0) return 0;
-  return clamp01(1 - (Number(ausfall_stunden) || 0) / perioden);
+  return clamp01(1 - z(ausfall_stunden) / perioden);
 }
 
 export function eigenverbrauchsquote(eigen_kwh: number, ertrag_kwh: number): number {
-  const e = Number(ertrag_kwh) || 0;
+  const e = z(ertrag_kwh);
   if (e <= 0) return 0;
-  return clamp01((Number(eigen_kwh) || 0) / e);
+  return clamp01(z(eigen_kwh) / e);
 }
 export function einspeisequote(einspeisung_kwh: number, ertrag_kwh: number): number {
-  const e = Number(ertrag_kwh) || 0;
+  const e = z(ertrag_kwh);
   if (e <= 0) return 0;
-  return clamp01((Number(einspeisung_kwh) || 0) / e);
+  return clamp01(z(einspeisung_kwh) / e);
 }
 export function autarkiegrad(eigen_kwh: number, verbrauch_kwh: number): number {
-  const v = Number(verbrauch_kwh) || 0;
+  const v = z(verbrauch_kwh);
   if (v <= 0) return 0;
-  return clamp01((Number(eigen_kwh) || 0) / v);
+  return clamp01(z(eigen_kwh) / v);
 }
 
 /** Erlös = Einspeisung × Vergütung + Eigenverbrauch × Strompreis (Ersparnis), in €. */
 export function erloes(einspeisung_kwh: number, verguetung_ct: number, eigen_kwh: number, strompreis_ct: number): number {
-  const einspeise = (Number(einspeisung_kwh) || 0) * (Number(verguetung_ct) || 0) / 100;
-  const ersparnis = (Number(eigen_kwh) || 0) * (Number(strompreis_ct) || 0) / 100;
+  const einspeise = z(einspeisung_kwh) * z(verguetung_ct) / 100;
+  const ersparnis = z(eigen_kwh) * z(strompreis_ct) / 100;
   return r2(einspeise + ersparnis);
 }
 
@@ -127,19 +143,19 @@ export interface ErtragKennzahl {
 /** Alle Kennzahlen für EINE Ablesung + zugehörige Anlage. */
 export function kennzahlAblesung(a: AnlageLite, ab: AblesungLite): ErtragKennzahl {
   const tage = tageZeitraum(ab.von, ab.bis);
-  const ertrag = Number(ab.ertrag_kwh) || 0;
-  const soll = sollErtragZeitraum(Number(a.soll_spezifisch) || 0, Number(a.nennleistung_kwp) || 0, tage);
+  const ertrag = z(ab.ertrag_kwh);
+  const soll = sollErtragZeitraum(z(a.soll_spezifisch), z(a.nennleistung_kwp), tage);
   return {
     tage,
     ertrag_kwh: r2(ertrag),
-    spezifisch: spezifischerErtrag(ertrag, Number(a.nennleistung_kwp) || 0),
+    spezifisch: spezifischerErtrag(ertrag, z(a.nennleistung_kwp)),
     soll_kwh: soll,
     sollErreichung: sollErreichung(ertrag, soll),
-    verfuegbarkeit: verfuegbarkeit(Number(ab.ausfall_stunden) || 0, tage),
-    eigenverbrauchsquote: eigenverbrauchsquote(Number(ab.eigenverbrauch_kwh) || 0, ertrag),
-    einspeisequote: einspeisequote(Number(ab.einspeisung_kwh) || 0, ertrag),
-    autarkiegrad: autarkiegrad(Number(ab.eigenverbrauch_kwh) || 0, Number(ab.verbrauch_kwh) || 0),
-    erloes: erloes(Number(ab.einspeisung_kwh) || 0, Number(a.verguetung_ct) || 0, Number(ab.eigenverbrauch_kwh) || 0, Number(a.strompreis_ct) || 0),
+    verfuegbarkeit: verfuegbarkeit(z(ab.ausfall_stunden), tage),
+    eigenverbrauchsquote: eigenverbrauchsquote(z(ab.eigenverbrauch_kwh), ertrag),
+    einspeisequote: einspeisequote(z(ab.einspeisung_kwh), ertrag),
+    autarkiegrad: autarkiegrad(z(ab.eigenverbrauch_kwh), z(ab.verbrauch_kwh)),
+    erloes: erloes(z(ab.einspeisung_kwh), z(a.verguetung_ct), z(ab.eigenverbrauch_kwh), z(a.strompreis_ct)),
   };
 }
 
@@ -159,13 +175,13 @@ export function aggregat(items: { a: AnlageLite; ab: AblesungLite }[]): ErtragAg
   for (const it of items || []) {
     const t = tageZeitraum(it.ab.von, it.ab.bis);
     tage += t;
-    ertrag += Number(it.ab.ertrag_kwh) || 0;
-    eigen += Number(it.ab.eigenverbrauch_kwh) || 0;
-    einsp += Number(it.ab.einspeisung_kwh) || 0;
-    verbr += Number(it.ab.verbrauch_kwh) || 0;
-    ausfall += Number(it.ab.ausfall_stunden) || 0;
-    soll += sollErtragZeitraum(Number(it.a.soll_spezifisch) || 0, Number(it.a.nennleistung_kwp) || 0, t);
-    erl += erloes(Number(it.ab.einspeisung_kwh) || 0, Number(it.a.verguetung_ct) || 0, Number(it.ab.eigenverbrauch_kwh) || 0, Number(it.a.strompreis_ct) || 0);
+    ertrag += z(it.ab.ertrag_kwh);
+    eigen += z(it.ab.eigenverbrauch_kwh);
+    einsp += z(it.ab.einspeisung_kwh);
+    verbr += z(it.ab.verbrauch_kwh);
+    ausfall += z(it.ab.ausfall_stunden);
+    soll += sollErtragZeitraum(z(it.a.soll_spezifisch), z(it.a.nennleistung_kwp), t);
+    erl += erloes(z(it.ab.einspeisung_kwh), z(it.a.verguetung_ct), z(it.ab.eigenverbrauch_kwh), z(it.a.strompreis_ct));
   }
   const perioden = tage * 24;
   return {

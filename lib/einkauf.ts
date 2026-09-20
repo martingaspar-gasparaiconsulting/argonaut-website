@@ -9,6 +9,19 @@
 //   Handelsspanne/Marge            = (VK − EK) / VK × 100  (bezogen auf VK)
 // Node-getestet (einkauf.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export type BestellStatus = 'entwurf' | 'bestellt' | 'teilgeliefert' | 'geliefert' | 'storniert';
 
 export const BESTELL_STATUS: Record<BestellStatus, { label: string; farbe: 'gold' | 'cyan' | 'green' | 'textDim' | 'danger' | 'warn' }> = {
@@ -19,7 +32,10 @@ export const BESTELL_STATUS: Record<BestellStatus, { label: string; farbe: 'gold
   storniert:     { label: '✕ Storniert',      farbe: 'textDim' },
 };
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 export interface PositionLite {
   menge?: number;
@@ -31,12 +47,12 @@ export interface PositionLite {
 
 /** Netto-Wert einer Bestellposition (Menge × EK). */
 export function positionNetto(p: PositionLite): number {
-  return r2((Number(p.menge) || 0) * (Number(p.ek_preis) || 0));
+  return r2(z(p.menge) * z(p.ek_preis));
 }
 
 /** Noch nicht gelieferte Menge (>= 0). */
 export function offeneMenge(p: PositionLite): number {
-  return Math.max((Number(p.menge) || 0) - (Number(p.menge_erhalten) || 0), 0);
+  return Math.max(z(p.menge) - z(p.menge_erhalten), 0);
 }
 
 /** Netto-Summe einer Bestellung über alle Positionen. */
@@ -46,14 +62,14 @@ export function bestellNetto(positionen: PositionLite[]): number {
 
 /** Retoure-Menge-Summe über alle Positionen. */
 export function retoureSumme(positionen: PositionLite[]): number {
-  return positionen.reduce((s, p) => s + (Number(p.retoure_menge) || 0), 0);
+  return positionen.reduce((s, p) => s + z(p.retoure_menge), 0);
 }
 
 /** Liefergrad aus den Positionen ableiten (unabhängig vom gespeicherten Status). */
 export function lieferStatus(positionen: PositionLite[]): 'offen' | 'teilgeliefert' | 'geliefert' {
   if (positionen.length === 0) return 'offen';
-  const gesamt = positionen.reduce((s, p) => s + (Number(p.menge) || 0), 0);
-  const erhalten = positionen.reduce((s, p) => s + (Number(p.menge_erhalten) || 0), 0);
+  const gesamt = positionen.reduce((s, p) => s + z(p.menge), 0);
+  const erhalten = positionen.reduce((s, p) => s + z(p.menge_erhalten), 0);
   if (erhalten <= 0) return 'offen';
   if (erhalten >= gesamt) return 'geliefert';
   return 'teilgeliefert';
@@ -74,15 +90,15 @@ export interface KalkErgebnis {
 /** Vorkalkulation: aus EK + Gemeinkosten-% + Gewinn-% den VK bestimmen. */
 export function kalkuliereVk(ekNetto: number, gemeinkostenProz: number, gewinnProz: number): KalkErgebnis {
   const ek = r2(ekNetto);
-  const selbstkosten = r2(ek * (1 + (Number(gemeinkostenProz) || 0) / 100));
-  const vkNetto = r2(selbstkosten * (1 + (Number(gewinnProz) || 0) / 100));
+  const selbstkosten = r2(ek * (1 + z(gemeinkostenProz) / 100));
+  const vkNetto = r2(selbstkosten * (1 + z(gewinnProz) / 100));
   return baueKalk(ek, selbstkosten, vkNetto);
 }
 
 /** Nachkalkulation: aus tatsächlichem EK und erzieltem VK die Kennzahlen. */
 export function margenAusVk(ekNetto: number, vkNetto: number, gemeinkostenProz: number = 0): KalkErgebnis {
   const ek = r2(ekNetto);
-  const selbstkosten = r2(ek * (1 + (Number(gemeinkostenProz) || 0) / 100));
+  const selbstkosten = r2(ek * (1 + z(gemeinkostenProz) / 100));
   return baueKalk(ek, selbstkosten, r2(vkNetto));
 }
 
@@ -94,7 +110,7 @@ function baueKalk(ek: number, selbstkosten: number, vkNetto: number): KalkErgebn
 }
 
 export function bruttoAusNetto(netto: number, mwstSatz: number = 19): { netto: number; mwst: number; brutto: number; mwstSatz: number } {
-  const n = r2(netto); const satz = Number(mwstSatz) || 0;
+  const n = r2(netto); const satz = z(mwstSatz);
   const mwst = r2(n * satz / 100);
   return { netto: n, mwst, brutto: r2(n + mwst), mwstSatz: satz };
 }
@@ -118,7 +134,7 @@ export function zaehleEinkauf(bestellungen: BestellungLite[], lieferanten: { sta
   let offeneBestellungen = 0, wareneingangOffen = 0, retourenOffen = 0, bestellwertOffen = 0;
   for (const b of bestellungen) {
     const st = b.status ?? 'entwurf';
-    retourenOffen += b.positionen.filter((p) => (Number(p.retoure_menge) || 0) > 0).length;
+    retourenOffen += b.positionen.filter((p) => z(p.retoure_menge) > 0).length;
     if (st === 'bestellt' || st === 'teilgeliefert') {
       offeneBestellungen++;
       bestellwertOffen += bestellNetto(b.positionen);

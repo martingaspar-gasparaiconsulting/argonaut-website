@@ -10,6 +10,19 @@
 // pflicht (LMIDV), keine Nährwerttabelle.
 // Rechtsstand verifiziert 07/2026. Node-getestet (etiketten.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export interface Allergen {
   key: string;
   name: string;
@@ -51,7 +64,10 @@ export const NAEHRWERT_FELDER: { key: string; label: string; einheit: string; un
   { key: 'salz', label: 'Salz', einheit: 'g' },
 ];
 
-function r2(n: unknown): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: unknown): number { return centRunden(leseZahlOder(n, 0)); }
 
 // ---------------------------------------------------------------------------
 // Allergene parsen / benennen
@@ -73,12 +89,12 @@ export function istAllergenKey(key: string): boolean {
 // ---------------------------------------------------------------------------
 // Energie-Umrechnung / Plausibilität (1 kcal = 4,184 kJ)
 // ---------------------------------------------------------------------------
-export function kjAusKcal(kcal: unknown): number { return r2((Number(kcal) || 0) * 4.184); }
-export function kcalAusKj(kj: unknown): number { return r2((Number(kj) || 0) / 4.184); }
+export function kjAusKcal(kcal: unknown): number { return r2(z(kcal) * 4.184); }
+export function kcalAusKj(kj: unknown): number { return r2(z(kj) / 4.184); }
 
 /** Passen kJ und kcal grob zusammen? (Toleranz Standard 15 %). */
 export function energiePlausibel(kj: unknown, kcal: unknown, toleranz = 0.15): boolean {
-  const k = Number(kj) || 0, c = Number(kcal) || 0;
+  const k = z(kj), c = z(kcal);
   if (k <= 0 || c <= 0) return true; // nichts zu prüfen
   const erwartet = c * 4.184;
   return Math.abs(k - erwartet) <= erwartet * toleranz;

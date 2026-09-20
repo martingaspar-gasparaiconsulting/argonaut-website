@@ -6,12 +6,28 @@
 // Zuwendungsbestätigung nach amtlichem Muster (§50 EStDV) — dort ist der
 // Betrag in Buchstaben anzugeben (euroInWorten).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export const KLEINBETRAG_GRENZE = 300;
 
 export const SPENDE_ARTEN = ['geldzuwendung', 'sachzuwendung', 'aufwandsverzicht'] as const;
 export type SpendeArt = typeof SPENDE_ARTEN[number];
 
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 const EINER = ['null', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf', 'dreizehn', 'vierzehn', 'fünfzehn', 'sechzehn', 'siebzehn', 'achtzehn', 'neunzehn'];
 const ZEHNER = ['', '', 'zwanzig', 'dreißig', 'vierzig', 'fünfzig', 'sechzig', 'siebzig', 'achtzig', 'neunzig'];
@@ -32,7 +48,7 @@ function unter1000(n: number): string {
 
 /** Ganze Zahl (0 … 999.999.999) in deutschen Worten. */
 export function zahlInWorten(n: number): string {
-  n = Math.floor(n);
+  n = Math.floor(z(n));
   if (n === 0) return 'null';
   if (n < 0) return 'minus ' + zahlInWorten(-n);
   const mio = Math.floor(n / 1000000), tsd = Math.floor((n % 1000000) / 1000), rest = n % 1000;
@@ -45,8 +61,8 @@ export function zahlInWorten(n: number): string {
 
 /** Betrag in Buchstaben für die Zuwendungsbestätigung, z. B. "Einhundertfünfzig Euro". */
 export function euroInWorten(betrag: number): string {
-  const euros = Math.floor(Number(betrag) || 0);
-  const cents = Math.round(((Number(betrag) || 0) - euros) * 100);
+  const euros = Math.floor(z(betrag));
+  const cents = Math.round((z(betrag) - euros) * 100);
   let s = zahlInWorten(euros) + ' Euro';
   if (cents > 0) s += ' und ' + cents + ' Cent';
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -54,7 +70,7 @@ export function euroInWorten(betrag: number): string {
 
 /** Bis 300 € genügt der vereinfachte Nachweis (keine formelle Bestätigung nötig). */
 export function kleinbetrag(betrag: number): boolean {
-  return (Number(betrag) || 0) <= KLEINBETRAG_GRENZE;
+  return z(betrag) <= KLEINBETRAG_GRENZE;
 }
 
 function jahrVon(d: string | Date): number { return Number(String(d).slice(0, 4)); }
@@ -72,7 +88,7 @@ export function zaehleSpenden(
   const jahrS = spenden.filter((s) => jahrVon(s.datum) === jahr);
   return {
     anzahlJahr: jahrS.length,
-    summeJahr: r2(jahrS.reduce((a, s) => a + (Number(s.betrag) || 0), 0)),
+    summeJahr: r2(jahrS.reduce((a, s) => a + z(s.betrag), 0)),
     offeneBestaetigungen: spenden.filter((s) => !s.bestaetigt).length,
   };
 }

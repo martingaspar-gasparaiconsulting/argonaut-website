@@ -15,6 +15,19 @@
 //     gutschein -> Steuer erst bei EINLÖSUNG.
 // Node-getestet (gutscheine.test.ts).
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// Die eigenen Zahl-Leser (Number(x) || 0) und die eigene Cent-Rundung sind
+// weg. Zwei Fehler steckten darin:
+//   1. Ein Betrag als "1.234,56" wurde zu 0, "12.500" zu 12,5 — Supabase
+//      liefert numeric-Spalten haeufig als Text.
+//   2. Ein negativer Wert rundete anders als derselbe Betrag positiv:
+//      -2,675 wurde -2,67, +2,675 aber 2,68.
+// Wichtiger als beides: es wird jetzt ZUERST GELESEN und DANN GERECHNET.
+// Runden allein half nicht — bei a - b macht JavaScript aus "10.000"
+// schon vor dem Runden die Zahl 10.
+// Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
+import { leseZahlOder, centRunden } from './zahlen';
+
 export type GutscheinArt = 'wert' | 'mehrfachkarte' | 'leistung';
 export type MwStTyp = 'einzweck' | 'mehrzweck';
 
@@ -80,14 +93,17 @@ export function tageBisVerfall(gueltigBis: string | Date, jetzt: string | Date =
 // ---------------------------------------------------------------------------
 // Restwert / Restnutzungen
 // ---------------------------------------------------------------------------
-function r2(n: number): number { return Math.round((Number(n) || 0) * 100) / 100; }
+/** Liest einen Wert aus der Datenbank als Zahl. Supabase liefert numeric oft als Text. */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+function r2(n: number): number { return centRunden(leseZahlOder(n, 0)); }
 
 export function restwert(wert: number, eingeloest: number): number {
-  return r2(Math.max((Number(wert) || 0) - (Number(eingeloest) || 0), 0));
+  return r2(Math.max(z(wert) - z(eingeloest), 0));
 }
 
 export function restNutzungen(gesamt: number, verbraucht: number): number {
-  return Math.max((Number(gesamt) || 0) - (Number(verbraucht) || 0), 0);
+  return Math.max(z(gesamt) - z(verbraucht), 0);
 }
 
 export interface GutscheinLite {
@@ -124,7 +140,7 @@ export function pruefeEinloesungBetrag(g: GutscheinLite, betrag: number, jetzt: 
   const rest = restwert(g.wert || 0, g.eingeloest || 0);
   if (g.status === 'storniert') return { ok: false, grund: 'Gutschein ist storniert.', neuerRest: rest };
   if (istVerfallen(g.gueltig_bis, jetzt)) return { ok: false, grund: 'Gutschein ist verfallen.', neuerRest: rest };
-  const b = Number(betrag) || 0;
+  const b = z(betrag);
   if (b <= 0) return { ok: false, grund: 'Betrag muss größer als 0 sein.', neuerRest: rest };
   if (b > rest + 1e-9) return { ok: false, grund: `Nur noch ${rest.toFixed(2)} € Restwert verfügbar.`, neuerRest: rest };
   return { ok: true, neuerRest: r2(rest - b) };
@@ -135,7 +151,7 @@ export function pruefeEinloesungNutzung(g: GutscheinLite, anzahl: number, jetzt:
   const rest = restNutzungen(g.nutzungen_gesamt || 0, g.nutzungen_verbraucht || 0);
   if (g.status === 'storniert') return { ok: false, grund: 'Karte ist storniert.', neuerRest: rest };
   if (istVerfallen(g.gueltig_bis, jetzt)) return { ok: false, grund: 'Karte ist verfallen.', neuerRest: rest };
-  const n = Math.round(Number(anzahl) || 0);
+  const n = Math.round(z(anzahl));
   if (n <= 0) return { ok: false, grund: 'Anzahl muss größer als 0 sein.', neuerRest: rest };
   if (n > rest) return { ok: false, grund: `Nur noch ${rest} Nutzung(en) verfügbar.`, neuerRest: rest };
   return { ok: true, neuerRest: rest - n };
@@ -147,7 +163,7 @@ export function pruefeEinloesungNutzung(g: GutscheinLite, anzahl: number, jetzt:
 export interface SteuerAufteilung { brutto: number; netto: number; mwstSatz: number; mwst: number; }
 export function nettoAusBrutto(brutto: number, mwstSatz: number): SteuerAufteilung {
   const b = r2(brutto);
-  const satz = Number(mwstSatz) || 0;
+  const satz = z(mwstSatz);
   const netto = r2(b / (1 + satz / 100));
   return { brutto: b, netto, mwstSatz: satz, mwst: r2(b - netto) };
 }
@@ -169,7 +185,7 @@ export const BALD_VERFALL_TAGE = 90;
 export function zaehleGutscheine(gutscheine: GutscheinLite[], jetzt: string | Date = new Date()): GutscheinKennzahlen {
   let aktive = 0, offenerRestwert = 0, kartenOffen = 0, baldVerfallend = 0, verfallen = 0, eingeloestBetrag = 0;
   for (const g of gutscheine) {
-    eingeloestBetrag += Number(g.eingeloest) || 0;
+    eingeloestBetrag += z(g.eingeloest);
     const st = gutscheinStatus(g, jetzt);
     if (st === 'aktiv') {
       aktive++;

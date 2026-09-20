@@ -27,6 +27,14 @@
 // setzt das Ergebnis `geschaetzt = true`. Die Oberfläche MUSS das zeigen.
 // ============================================================================
 
+// ▄▄▄ PUNKT 30 (20.09.2026) — an lib/zahlen.ts angeschlossen ▄▄▄
+// cent() rundete mit Math.round(... + EPSILON) und las gar nicht: ein
+// Stufenbetrag, den Supabase als Text "12,50" liefert, ergab NaN und damit
+// einen Gedankenstrich statt eines Betrages. Ausserdem rundete ein negativer
+// Wert anders als derselbe Betrag positiv. Jetzt leseZahlOder + centRunden.
+// Bei Zahlen aendert sich NICHTS — nur Text wird jetzt gelesen.
+import { leseZahlOder, centRunden } from '@/lib/zahlen';
+
 import type { GeoPunkt, PruefErgebnis } from './empfaengerLogik';
 
 // ----------------------------------------------------------------------------
@@ -96,8 +104,8 @@ export const STANDARD_KONFIG = {
 // 2. GELD & ZAHLEN
 // ----------------------------------------------------------------------------
 
-export function cent(betrag: number): number {
-  return Math.round((betrag + Number.EPSILON) * 100) / 100;
+export function cent(betrag: unknown): number {
+  return centRunden(leseZahlOder(betrag, 0));
 }
 
 export function eur(betrag: number): string {
@@ -408,20 +416,28 @@ export function berechneAnfahrt(
   let betragNetto = cent(stufe.betrag_netto);
   let mindestbetragGriff = false;
 
-  if (konfig.mindestbetrag_netto !== null && betragNetto < konfig.mindestbetrag_netto) {
-    betragNetto = cent(konfig.mindestbetrag_netto);
+  // ZUERST lesen, DANN vergleichen: ein Mindestbetrag als Text "50,00" wurde
+  // beim Groessenvergleich sonst gar nicht als Zahl behandelt.
+  const mindestbetrag = konfig.mindestbetrag_netto === null
+    ? null
+    : cent(konfig.mindestbetrag_netto);
+
+  if (mindestbetrag !== null && betragNetto < mindestbetrag) {
+    betragNetto = mindestbetrag;
     mindestbetragGriff = true;
-    hinweise.push(`Mindestbetrag von ${eur(konfig.mindestbetrag_netto)} angewendet.`);
+    hinweise.push(`Mindestbetrag von ${eur(mindestbetrag)} angewendet.`);
   }
 
-  const steuerBetrag = cent(betragNetto * (konfig.steuersatz_prozent / 100));
+  const steuersatz = leseZahlOder(konfig.steuersatz_prozent, 0);
+  const steuerBetrag = cent(betragNetto * (steuersatz / 100));
 
   return {
     ok: true, fehler: [], hinweise,
     deaktiviert: false, imFreibereich: false, geschaetzt: distanz.geschaetzt,
     distanz, stufe,
     betragNetto, mindestbetragGriff,
-    steuersatzProzent: konfig.steuersatz_prozent,
+    // der Satz, mit dem WIRKLICH gerechnet wurde — nicht der rohe Feldwert
+    steuersatzProzent: steuersatz,
     steuerBetrag,
     betragBrutto: cent(betragNetto + steuerBetrag),
   };
