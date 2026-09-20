@@ -41,6 +41,37 @@
 // Math.floor. Bei einem negativen Saldo rundet das VOM Nullpunkt WEG
 // (-1000,50 wurde -1001) und meldet einen Euro zu viel als Minderung. Jetzt
 // Math.trunc, also immer in Richtung Null.
+//
+// ▄▄▄ PUNKT 28 (20.09.2026) — AUSGEWIESENE STEUER VERSCHWAND ▄▄▄
+// Beim Schreiben der Tests gefunden, am echten Code GEMESSEN:
+//
+//   Eine Rechnung ueber 1.000 EUR netto mit 30 EUR ausgewiesener Umsatzsteuer
+//   (effektiv 3 %) ergab: umsatz0 = 1.000, ZAHLLAST = 0.
+//
+// satzVon() sucht den naechstgelegenen Regelsatz. Bei 3 % ist das die 0, und
+// der Zweig fuer steuerfreie Umsaetze nahm nur das Netto mit — die 30 EUR
+// Umsatzsteuer fielen ersatzlos weg. Gemeldet wurden dem Finanzamt 0 EUR
+// statt 30 EUR. Zu WENIG melden ist die gefaehrliche Richtung (§ 153 AO).
+//
+// Der haeufige Anlass ist harmlos und alltaeglich: eine Rechnung mit
+// Positionen zu 7 % UND 19 % hat einen Mischsatz irgendwo dazwischen. In
+// Gastronomie, Baeckerei und Handel ist das der Normalfall.
+//
+// REPARIERT, OHNE ZU RATEN: Aus netto und mwst allein laesst sich die
+// Aufteilung nicht herleiten — wieviel davon 7 % und wieviel 19 % ist, weiss
+// nur der Beleg. Deshalb:
+//   · Die ausgewiesene Steuer geht IMMER in die Zahllast, auch wenn der Satz
+//     keinem Regelsatz entspricht (neu: `ustUnzugeordnet`).
+//   · Jede Rechnung, deren effektiver Satz mehr als einen Prozentpunkt neben
+//     0, 7 oder 19 liegt, wird gezaehlt (neu: `uneindeutig`) und von
+//     ustvaHinweise() im Klartext genannt.
+//   · Zugeordnet wird weiterhin wie bisher. Die Bemessungsgrundlagen aendern
+//     sich dadurch NICHT — nur die Zahllast wird richtig, und der Betrieb
+//     erfaehrt, welche Belege ein Mensch ansehen muss.
+//
+// ▲ SICHTBARE AENDERUNG IM BETRIEB: Wo eine Rechnung mit unrundem Steuersatz
+//   im Zeitraum liegt, steigt Kennziffer 83. Richtung: mehr Zahllast, weil
+//   bisher ausgewiesene Steuer unter den Tisch fiel.
 // ============================================================================
 
 import { leseZahlOder, centRunden } from './zahlen';
@@ -68,6 +99,31 @@ export function satzVon(netto: unknown, mwst: unknown): number {
   return kandidaten.reduce((best, k) => (Math.abs(k - p) < Math.abs(best - p) ? k : best), 0);
 }
 
+/**
+ * Der EFFEKTIVE Steuersatz in Prozent, ungerundet — oder null, wenn er sich
+ * nicht bilden laesst. Punkt 28, additiv: satzVon() bleibt unveraendert.
+ */
+export function effektiverSatz(netto: unknown, mwst: unknown): number | null {
+  const n = Math.abs(z(netto));
+  const m = Math.abs(z(mwst));
+  if (n <= 0) return null;
+  return (m / n) * 100;
+}
+
+/**
+ * Passt der effektive Satz zu dem Regelsatz, dem die Rechnung zugeordnet wird?
+ *
+ * Ein Prozentpunkt Toleranz faengt gewoehnliche Rundung ab (eine Rechnung mit
+ * 19 % trifft wegen der Positionsrundung fast nie exakt 19,00 %). Alles
+ * darueber ist keine Rundung mehr, sondern ein anderer Sachverhalt — meist
+ * eine Rechnung mit gemischten Steuersaetzen.
+ */
+export function satzIstEindeutig(netto: unknown, mwst: unknown): boolean {
+  const p = effektiverSatz(netto, mwst);
+  if (p === null) return true;
+  return Math.abs(p - satzVon(netto, mwst)) <= 1;
+}
+
 export interface UstvaRechnung { netto_summe?: number | string | null; mwst_summe?: number | string | null; }
 export interface Kennziffer { kz: string; label: string; wert: number; istBetrag: boolean; }
 export interface UstvaErgebnis {
@@ -79,6 +135,18 @@ export interface UstvaErgebnis {
   kennziffern: Kennziffer[];
   /** Wie viele Zeilen waren Gutschriften (negativer Netto-Betrag)? */
   gutschriften: number;
+  /**
+   * Ausgewiesene Umsatzsteuer aus Rechnungen, die keinem Regelsatz zugeordnet
+   * werden konnten. Geht in die Zahllast ein — vorher fiel sie weg.
+   * (Punkt 28, additiv ergänzt.)
+   */
+  ustUnzugeordnet: number;
+  /**
+   * Wie viele Rechnungen einen Steuersatz tragen, der mehr als einen
+   * Prozentpunkt neben 0, 7 oder 19 liegt — meist gemischte Rechnungen.
+   * (Punkt 28, additiv ergänzt.)
+   */
+  uneindeutig: number;
 }
 
 /** Bemessungsgrundlage in vollen Euro — immer in Richtung Null. */
@@ -93,17 +161,24 @@ function volleEuro(n: number): number {
  */
 export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | string): UstvaErgebnis {
   let umsatz19 = 0, ust19 = 0, umsatz7 = 0, ust7 = 0, umsatz0 = 0, gutschriften = 0;
+  let ustUnzugeordnet = 0, uneindeutig = 0;
   for (const r of rechnungen || []) {
     const netto = z(r.netto_summe), mwst = z(r.mwst_summe);
     if (netto < 0) gutschriften += 1;
+    if (!satzIstEindeutig(netto, mwst)) uneindeutig += 1;
     const s = satzVon(netto, mwst);
     if (s === 19) { umsatz19 += netto; ust19 += mwst; }
     else if (s === 7) { umsatz7 += netto; ust7 += mwst; }
-    else { umsatz0 += netto; }
+    else {
+      umsatz0 += netto;
+      // Punkt 28: Eine ausgewiesene Steuer darf hier nicht verschwinden.
+      // Sie wird nicht geraten, nur nicht verloren.
+      ustUnzugeordnet += mwst;
+    }
   }
   const vst = z(vorsteuer);
   const bg19 = volleEuro(umsatz19), bg7 = volleEuro(umsatz7), bg0 = volleEuro(umsatz0);
-  const zahllast = r2(ust19 + ust7 - vst);
+  const zahllast = r2(ust19 + ust7 + ustUnzugeordnet - vst);
 
   const kennziffern: Kennziffer[] = [
     { kz: '81', label: 'Umsätze zu 19 % (netto)', wert: bg19, istBetrag: true },
@@ -131,11 +206,25 @@ export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | strin
     });
   }
 
+  // Punkt 28: Steuer, die ausgewiesen ist, aber zu keinem Regelsatz passt,
+  // wird SICHTBAR gemacht — sie steckt sonst nur in Kennziffer 83 und niemand
+  // wüsste, woher der Betrag kommt.
+  if (r2(ustUnzugeordnet) !== 0) {
+    const ziel = kennziffern.findIndex((k) => k.kz === '83');
+    kennziffern.splice(ziel < 0 ? kennziffern.length : ziel, 0, {
+      kz: '?',
+      label: 'Umsatzsteuer ohne eindeutigen Steuersatz — Beleg prüfen (meist eine Rechnung mit gemischten Sätzen)',
+      wert: r2(ustUnzugeordnet),
+      istBetrag: true,
+    });
+  }
+
   return {
     umsatz19: r2(umsatz19), ust19: r2(ust19),
     umsatz7: r2(umsatz7), ust7: r2(ust7),
     umsatz0: r2(umsatz0),
     vorsteuer: r2(vst), zahllast, kennziffern, gutschriften,
+    ustUnzugeordnet: r2(ustUnzugeordnet), uneindeutig,
   };
 }
 
@@ -163,6 +252,25 @@ export function ustvaHinweise(erg: UstvaErgebnis): string[] {
       `${erg.gutschriften} ${erg.gutschriften === 1 ? 'Gutschrift mindert' : 'Gutschriften mindern'} ` +
         'Umsatz und Umsatzsteuer im jeweiligen Steuersatz. Bitte gegenprüfen, ' +
         'ob alle Gutschriften im richtigen Zeitraum liegen.',
+    );
+  }
+
+  if (erg.uneindeutig > 0) {
+    raus.push(
+      `${erg.uneindeutig} ${erg.uneindeutig === 1 ? 'Rechnung trägt' : 'Rechnungen tragen'} einen Steuersatz, ` +
+        'der weder 0, 7 noch 19 % ist — fast immer eine Rechnung mit gemischten Sätzen ' +
+        '(etwa 7 % Speisen und 19 % Getränke auf einem Beleg). ARGONAUT ordnet sie dem ' +
+        'nächstgelegenen Satz zu und rät die Aufteilung NICHT: aus Netto und Steuerbetrag ' +
+        'allein lässt sie sich nicht herleiten. Die Bemessungsgrundlagen 81 und 86 sind ' +
+        'dadurch verschoben. Bitte diese Belege einzeln ansehen.',
+    );
+  }
+
+  if (erg.ustUnzugeordnet !== 0) {
+    raus.push(
+      `${formatEuro(erg.ustUnzugeordnet)} ausgewiesene Umsatzsteuer gehört zu keinem Regelsatz. ` +
+        'Der Betrag ist in Kennziffer 83 enthalten — er darf nicht verschwinden — steht aber ' +
+        'in keiner Bemessungsgrundlage. Bitte den zugehörigen Beleg prüfen.',
     );
   }
 

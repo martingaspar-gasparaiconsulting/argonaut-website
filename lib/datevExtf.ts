@@ -48,7 +48,28 @@
 // Steuerberater bestaetigt — deshalb ist jedes davon frei einstellbar.
 // ============================================================================
 
-import { leseZahlOder } from './zahlen';
+// ▄▄▄ PUNKT 28 (20.09.2026) — ZWEI LUECKEN, BEIM TESTEN GEFUNDEN ▄▄▄
+//
+//  A. extfBetrag() rundete NICHT symmetrisch. Math.abs() verdeckte das fast
+//     vollstaendig — nur wenn Betrag x 100 exakt auf ,5 endet, faellt es auf.
+//     GEMESSEN: eine Rechnung ueber 2,675 EUR wird "2,68", eine Gutschrift
+//     ueber -2,675 EUR wird "2,67". Ein Cent Unterschied zwischen Hin- und
+//     Rueckbuchung, im Buchungsstapel beim Steuerberater. Jetzt centRunden.
+//
+//  B. extfBelegdatum() nahm jeden Tag von 01 bis 31 in jedem Monat an.
+//     "2026-02-31" ergab "3102" — einen Tag, den es nicht gibt. DATEV weist
+//     den Stapel dann ab, und zwar erst beim Steuerberater. Jetzt wird die
+//     Tageszahl gegen den Monat geprueft, Schaltjahr eingeschlossen; was
+//     unmoeglich ist, ergibt leer und wird von extfHinweise() gezaehlt.
+//
+// BEWUSST NICHT GEAENDERT: Diese Datei bekommt KEINEN CSV-Formelschutz.
+// lib/csvSchreiben.ts nimmt sie im eigenen Dateikopf ausdruecklich aus, weil
+// ein vorangestelltes Apostroph den DATEV-Import bricht. Die Grenze verlaeuft
+// zwischen "ein Mensch oeffnet das in Excel" und "eine Software liest das
+// ein". Ein Waechter-Test haelt das fest.
+// ============================================================================
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 export type ExtfKonfig = {
   beraterNr: string;      // DATEV-Beraternummer (Pflicht für echten Import)
@@ -98,9 +119,16 @@ export function erloeskontoSteuerfrei(k: ExtfKonfig): string {
 function n(v: unknown): number {
   return leseZahlOder(v, 0);
 }
-/** Betrag DATEV-konform: 2 Nachkommastellen, Komma als Dezimaltrenner, ohne Vorzeichen. */
+/**
+ * Betrag DATEV-konform: 2 Nachkommastellen, Komma als Dezimaltrenner, ohne
+ * Vorzeichen (DATEV liest die Richtung aus dem Soll/Haben-Kennzeichen).
+ *
+ * Punkt 28: Erst runden, DANN den Betrag nehmen — und zwar symmetrisch.
+ * Vorher lief Math.round auf dem vorzeichenbehafteten Wert und Math.abs
+ * darueber: aus -2,675 wurde "2,67", aus 2,675 aber "2,68".
+ */
 export function extfBetrag(v: unknown): string {
-  return Math.abs(Math.round(n(v) * 100) / 100).toFixed(2).replace('.', ',');
+  return Math.abs(centRunden(n(v))).toFixed(2).replace('.', ',');
 }
 /** Text als DATEV-Feld: immer in Anführungszeichen, interne " verdoppelt, gekürzt. */
 function q(v: unknown, max = 60): string {
@@ -123,6 +151,18 @@ export function kontoFeld(v: unknown, ersatz = ''): string {
   return String(ersatz ?? '').replace(/[^0-9]/g, '');
 }
 /**
+ * Wie viele Tage hat dieser Monat? Schaltjahr nach der gregorianischen Regel:
+ * durch 4 teilbar, aber nicht durch 100 — ausser durch 400.
+ */
+function tageImMonat(jahr: number, monat: number): number {
+  if (monat === 2) {
+    const schalt = (jahr % 4 === 0 && jahr % 100 !== 0) || jahr % 400 === 0;
+    return schalt ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(monat) ? 30 : 31;
+}
+
+/**
  * Belegdatum als TTMM (Wirtschaftsjahr steckt im Kopf).
  *
  * Punkt 15: Der Wert lief frueher durch new Date() und wurde dann als UTC
@@ -137,9 +177,12 @@ export function extfBelegdatum(iso: unknown): string {
   // Der Normalfall aus der Datenbank: YYYY-MM-DD, ggf. mit Uhrzeit dahinter.
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (m) {
+    const jahr = Number(m[1]);
     const monat = Number(m[2]);
     const tag = Number(m[3]);
-    if (monat < 1 || monat > 12 || tag < 1 || tag > 31) return '';
+    // Punkt 28: Der Tag muss es im Monat wirklich geben. "2026-02-31" ergab
+    // vorher "3102" und brach den Import erst beim Steuerberater.
+    if (monat < 1 || monat > 12 || tag < 1 || tag > tageImMonat(jahr, monat)) return '';
     return `${m[3]}${m[2]}`;
   }
 
