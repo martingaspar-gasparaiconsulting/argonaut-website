@@ -175,10 +175,21 @@ export interface UmrechnungsOptionen {
 // 5. HILFSFUNKTIONEN
 // ----------------------------------------------------------------------------
 
-/** Kaufmaennisch runden ohne Gleitkomma-Ueberraschungen (0,1 + 0,2 usw.). */
+/**
+ * Kaufmaennisch runden ohne Gleitkomma-Ueberraschungen (0,1 + 0,2 usw.).
+ *
+ * Punkt 29 (20.09.2026): Symmetrisch um Null. Vorher lief Math.round auf dem
+ * vorzeichenbehafteten Wert, und -2,345 wurde -2,34 statt -2,35 — eine
+ * Ruecknahme rundete anders als die Lieferung. GEMESSEN an
+ * alleEinheiten(-8, 'srm'). Bewusst KEIN Import aus lib/zahlen.ts: diese
+ * Datei ist ausdruecklich ohne externe Abhaengigkeiten gebaut, und centRunden
+ * kann nur zwei Stellen — hier sind es standardmaessig drei.
+ */
 export function runde(wert: number, stellen = 3): number {
+  if (!Number.isFinite(wert)) return wert;
   const f = Math.pow(10, stellen);
-  return Math.round((wert + Number.EPSILON) * f) / f;
+  const v = Math.round((Math.abs(wert) + Number.EPSILON) * f) / f;
+  return wert < 0 ? -v : v;
 }
 
 /**
@@ -186,13 +197,27 @@ export function runde(wert: number, stellen = 3): number {
  * Ist die Laenge nicht konfiguriert (z. B. 40 cm), wird der Faktor der
  * naechstgelegenen konfigurierten Laenge genommen — statt stillschweigend
  * einen Standardwert zu unterstellen.
+ *
+ * Punkt 29 (20.09.2026): Eine Laenge, die gar keine ist — NaN, 0 oder ein
+ * negativer Wert — nimmt jetzt die STANDARD_SCHEITLAENGE.
+ *
+ * GEMESSEN: Vorher lieferte fmProSrm(NaN) den Wert 0,42, also den Faktor fuer
+ * 25 cm. Grund: `Math.abs(b - NaN) < Math.abs(a - NaN)` ist immer false, also
+ * blieb reduce beim ERSTEN Eintrag der Tabelle haengen. Dasselbe bei 0 und bei
+ * negativen Werten, weil dort die kuerzeste Laenge die naechstgelegene ist.
+ * Der Unterschied ist 0,42 statt 0,40 FM je SRM — fuenf Prozent mehr Holz,
+ * und der Aufrufer (`opt.scheitlaenge ?? STANDARD_SCHEITLAENGE`) faengt das
+ * nicht ab, weil `??` nur null und undefined ersetzt, nicht NaN oder 0.
  */
 export function fmProSrm(
   scheitlaenge: number = STANDARD_SCHEITLAENGE,
   konfig: UmrechnungsKonfig = STANDARD_UMRECHNUNG,
 ): number {
+  const laenge =
+    Number.isFinite(scheitlaenge) && scheitlaenge > 0 ? scheitlaenge : STANDARD_SCHEITLAENGE;
+
   const tabelle = konfig.fmProSrmNachLaenge;
-  const direkt = tabelle[scheitlaenge];
+  const direkt = tabelle[laenge];
   if (typeof direkt === 'number') return direkt;
 
   const laengen = Object.keys(tabelle)
@@ -201,7 +226,7 @@ export function fmProSrm(
   if (laengen.length === 0) return STANDARD_UMRECHNUNG.fmProSrmNachLaenge[STANDARD_SCHEITLAENGE];
 
   const naechste = laengen.reduce((a, b) =>
-    Math.abs(b - scheitlaenge) < Math.abs(a - scheitlaenge) ? b : a,
+    Math.abs(b - laenge) < Math.abs(a - laenge) ? b : a,
   );
   return tabelle[naechste];
 }
