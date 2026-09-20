@@ -27,7 +27,29 @@
 //   Rabatt mindert das Entgelt, die Steuer folgt dem geminderten Entgelt.
 //   Umgekehrt entstünde ein Steuerbetrag auf Geld, das nie geflossen ist.
 //   (Keine Steuerberatung — aber die Reihenfolge ist zwingend.)
+//
+// ▄▄▄ PUNKT 27 (20.09.2026) — WAS SICH GEÄNDERT HAT ▄▄▄
+//  1. `cent()` rundete NICHT symmetrisch um Null. Math.round(-234.5) ist in
+//     JavaScript -234, nicht -235: aus -2,345 € wurden -2,34 € statt -2,35 €.
+//     Diese Datei erlaubt negative Mengen ausdrücklich ("Negative Menge —
+//     ist das eine Gutschrift?"), also traf es genau die Gutschriften.
+//     Jetzt centRunden() aus lib/zahlen.ts — dieselbe Rundung wie in
+//     nachkalkulation, provision, zahlungAufteilung und steuerLogik.
+//  2. `preisGenau()` hatte denselben Fehler auf vier Stellen.
+//  3. Menge, Einzelpreis, Steuersatz und Rabatt werden über lib/zahlen.ts
+//     gelesen. Vorher galt "1.234,56" aus einem Formularfeld als
+//     "keine gültige Zahl" und die ganze Position fiel aus der Summe.
+//  4. `verteileFixpreis` liest den Fixpreis jetzt ebenfalls über
+//     lib/zahlen.ts und meldet additiv `ok`. Vorher gab sie bei einem
+//     Fixpreis, der als Text oder als null ankam, die UNVERÄNDERTEN
+//     Positionen zurück — das Paket kostete dann den vollen Einzelpreis,
+//     und der einzige Hinweis darauf stand in `hinweise`, das paketLogik
+//     zwar durchreicht, aber nicht auswertet.
+//
+// Node-getestet: tests/geldSchichtP27.test.mjs
 // ============================================================================
+
+import { leseZahl, centRunden } from '@/lib/zahlen';
 
 // ----------------------------------------------------------------------------
 // 1. TYPEN
@@ -106,9 +128,13 @@ export interface Summe {
 // 2. GELD
 // ----------------------------------------------------------------------------
 
-/** Auf Cent runden. Jeder Geldbetrag läuft hier durch. */
+/**
+ * Auf Cent runden. Jeder Geldbetrag läuft hier durch.
+ * Symmetrisch um Null — eine Gutschrift über -2,345 € ergibt -2,35 €,
+ * nicht -2,34 €.
+ */
 export function cent(betrag: number): number {
-  return Math.round((betrag + Number.EPSILON) * 100) / 100;
+  return centRunden(betrag);
 }
 
 /**
@@ -117,9 +143,22 @@ export function cent(betrag: number): number {
  *   227,45 € / 2 Stück = 113,725 -> gerundet 113,73 -> × 2 = 227,46 €
  * Ein Paket für 249 € rechnete so 249,01 € ab.
  * Deshalb vier Nachkommastellen. Der ZEILENBETRAG bleibt auf Cent.
+ *
+ * Ebenfalls symmetrisch um Null, aus demselben Grund wie cent().
  */
 export function preisGenau(wert: number): number {
-  return Math.round((wert + Number.EPSILON) * 1e4) / 1e4;
+  if (!Number.isFinite(wert)) return 0;
+  const v = Math.round((Math.abs(wert) + Number.EPSILON) * 1e4) / 1e4;
+  return wert < 0 ? -v : v;
+}
+
+/**
+ * Liest einen Zahlwert aus Formular oder Datenbank.
+ * null heißt "nicht lesbar" — der Aufrufer meldet das als Fehler, statt
+ * still mit 0 weiterzurechnen.
+ */
+function zahl(v: unknown): number | null {
+  return leseZahl(v);
 }
 
 export function eur(betrag: number): string {
@@ -147,22 +186,29 @@ export function berechnePosition(p: Position): PositionsErgebnis {
 
   if (!p.bezeichnung?.trim()) fehler.push('Die Position hat keine Bezeichnung.');
 
-  if (!Number.isFinite(p.menge)) fehler.push('Die Menge ist keine gültige Zahl.');
-  else if (p.menge === 0) fehler.push('Die Menge ist 0.');
-  else if (p.menge < 0) hinweise.push('Negative Menge — ist das eine Gutschrift?');
+  // Über lib/zahlen.ts, damit "1.234,56" aus einem Formularfeld gelesen wird
+  // statt als "keine gültige Zahl" die ganze Position aus der Summe zu werfen.
+  const menge = zahl(p.menge);
+  if (menge === null) fehler.push('Die Menge ist keine gültige Zahl.');
+  else if (menge === 0) fehler.push('Die Menge ist 0.');
+  else if (menge < 0) hinweise.push('Negative Menge — ist das eine Gutschrift?');
 
-  if (!Number.isFinite(p.einzelpreis_netto)) fehler.push('Der Einzelpreis ist keine gültige Zahl.');
-  else if (p.einzelpreis_netto < 0) fehler.push('Der Einzelpreis darf nicht negativ sein.');
-  else if (p.einzelpreis_netto === 0) hinweise.push('Einzelpreis 0 € — Absicht?');
+  const einzelpreis = zahl(p.einzelpreis_netto);
+  if (einzelpreis === null) fehler.push('Der Einzelpreis ist keine gültige Zahl.');
+  else if (einzelpreis < 0) fehler.push('Der Einzelpreis darf nicht negativ sein.');
+  else if (einzelpreis === 0) hinweise.push('Einzelpreis 0 € — Absicht?');
 
-  const steuersatzProzent = p.steuersatz_prozent;
-  if (!Number.isFinite(steuersatzProzent) || steuersatzProzent < 0 || steuersatzProzent > 100) {
+  const satzGelesen = zahl(p.steuersatz_prozent);
+  if (satzGelesen === null || satzGelesen < 0 || satzGelesen > 100) {
     fehler.push('Der Steuersatz muss zwischen 0 und 100 % liegen.');
   }
+  const steuersatzProzent = satzGelesen ?? 0;
 
-  const rabattRoh = p.rabatt_prozent ?? 0;
+  const rabattRoh = p.rabatt_prozent === null || p.rabatt_prozent === undefined ? 0 : zahl(p.rabatt_prozent);
   let rabattProzent = 0;
-  if (Number.isFinite(rabattRoh) && rabattRoh > 0) {
+  if (rabattRoh === null) {
+    fehler.push('Der Rabatt ist keine gültige Zahl.');
+  } else if (rabattRoh > 0) {
     if (rabattRoh > 100) fehler.push('Der Rabatt darf 100 % nicht überschreiten.');
     else {
       rabattProzent = rabattRoh;
@@ -170,15 +216,15 @@ export function berechnePosition(p: Position): PositionsErgebnis {
     }
   }
 
-  if (fehler.length > 0) {
+  if (fehler.length > 0 || menge === null || einzelpreis === null) {
     return {
       position: p, ok: false, fehler, hinweise,
       grundNetto: 0, rabattProzent: 0, rabattBetrag: 0, netto: 0,
-      steuersatzProzent: Number.isFinite(steuersatzProzent) ? steuersatzProzent : 0,
+      steuersatzProzent,
     };
   }
 
-  const grundNetto = cent(p.menge * p.einzelpreis_netto);
+  const grundNetto = cent(menge * einzelpreis);
   const rabattBetrag = cent(grundNetto * (rabattProzent / 100));
   // Rabatt vor Steuer. Die Steuer folgt dem geminderten Entgelt.
   const netto = cent(grundNetto - rabattBetrag);
@@ -287,9 +333,11 @@ export function positionKlartext(e: PositionsErgebnis): string {
   if (!e.ok) return e.fehler.join(' ');
 
   const p = e.position;
+  // Über lib/zahlen.ts, damit ein Formularwert wie "1.234,56" hier nicht als
+  // "—" erscheint, während die Zeile darunter richtig rechnet.
   const teile = [
-    `${mengeText(p.menge, p.einheit)} ${p.bezeichnung}`,
-    eur(p.einzelpreis_netto),
+    `${mengeText(zahl(p.menge) ?? 0, p.einheit)} ${p.bezeichnung}`,
+    eur(zahl(p.einzelpreis_netto) ?? 0),
   ];
   if (e.rabattProzent > 0) teile.push(`− ${formatZahl(e.rabattProzent, 0)} % (${eur(e.rabattBetrag)})`);
   return `${teile.join(' · ')} → ${eur(e.netto)} netto`;
@@ -313,6 +361,15 @@ export interface AufteilungsErgebnis {
   /** Der Rundungsrest, der auf die größte Position gelegt wurde. */
   restCent: number;
   hinweise: string[];
+  /**
+   * Wurde der Fixpreis wirklich verteilt? (Punkt 27, additiv ergänzt.)
+   *
+   * false heißt: die Positionen kommen UNVERÄNDERT zurück und tragen ihre
+   * vollen Einzelpreise. Wer das Ergebnis als "Paket zum Festpreis" anzeigt,
+   * ohne dieses Feld zu prüfen, berechnet dem Kunden den vollen Preis und
+   * nennt ihn trotzdem Festpreis.
+   */
+  ok: boolean;
 }
 
 /**
@@ -337,35 +394,54 @@ export interface AufteilungsErgebnis {
  */
 export function verteileFixpreis(
   positionen: readonly Position[],
-  fixpreisNetto: number,
+  // Der Typ sagt jetzt die Wahrheit: paketLogik reicht `paket.fixpreis_netto`
+  // durch, und diese Spalte kommt aus der Datenbank — sie kann null sein oder
+  // als numeric-String ankommen. Eine Erweiterung, kein Bruch: jeder
+  // bisherige Aufrufer uebergibt weiterhin eine number.
+  fixpreisNetto: number | string | null | undefined,
 ): AufteilungsErgebnis {
   const hinweise: string[] = [];
 
   if (positionen.length === 0) {
-    return { positionen: [], restCent: 0, hinweise: ['Keine Positionen zum Aufteilen.'] };
-  }
-  if (!Number.isFinite(fixpreisNetto) || fixpreisNetto < 0) {
-    return { positionen: [...positionen], restCent: 0, hinweise: ['Ungültiger Fixpreis.'] };
+    return { positionen: [], restCent: 0, hinweise: ['Keine Positionen zum Aufteilen.'], ok: false };
   }
 
-  const einzelSummen = positionen.map((p) => cent(Math.max(0, p.menge) * Math.max(0, p.einzelpreis_netto)));
+  // Über lib/zahlen.ts: ein Fixpreis, der als "12.500,00" aus einem Formular
+  // oder als numeric-String aus der Datenbank kommt, wurde bisher verworfen.
+  const fix = zahl(fixpreisNetto);
+  if (fix === null) {
+    return {
+      positionen: [...positionen], restCent: 0, ok: false,
+      hinweise: ['Der Fixpreis ist keine lesbare Zahl. Die Positionen tragen weiterhin ihre vollen Einzelpreise — das ist KEIN Festpreis.'],
+    };
+  }
+  if (fix < 0) {
+    return {
+      positionen: [...positionen], restCent: 0, ok: false,
+      hinweise: ['Der Fixpreis ist negativ. Die Positionen tragen weiterhin ihre vollen Einzelpreise — das ist KEIN Festpreis.'],
+    };
+  }
+
+  const mengeVon = (p: Position) => zahl(p.menge) ?? 0;
+  const preisVon = (p: Position) => zahl(p.einzelpreis_netto) ?? 0;
+
+  const einzelSummen = positionen.map((p) => cent(Math.max(0, mengeVon(p)) * Math.max(0, preisVon(p))));
   const gesamt = cent(einzelSummen.reduce((s, x) => s + x, 0));
 
   if (gesamt === 0) {
     // Ohne Einzelpreise gibt es kein Verhältnis. Gleichmäßig teilen und sagen.
     hinweise.push('Keine Einzelpreise hinterlegt — der Fixpreis wird gleichmäßig verteilt.');
-    const je = cent(fixpreisNetto / positionen.length);
-    const neu = positionen.map((p) => ({
-      ...p,
-      einzelpreis_netto: p.menge !== 0 ? preisGenau(je / p.menge) : 0,
-      rabatt_prozent: 0,
-    }));
-    return { positionen: neu, restCent: 0, hinweise };
+    const je = cent(fix / positionen.length);
+    const neu = positionen.map((p) => {
+      const m = mengeVon(p);
+      return { ...p, einzelpreis_netto: m !== 0 ? preisGenau(je / m) : 0, rabatt_prozent: 0 };
+    });
+    return { positionen: neu, restCent: 0, hinweise, ok: true };
   }
 
-  const einzelSummenNeu = einzelSummen.map((s) => cent((s / gesamt) * fixpreisNetto));
+  const einzelSummenNeu = einzelSummen.map((s) => cent((s / gesamt) * fix));
   const summeNeu = cent(einzelSummenNeu.reduce((s, x) => s + x, 0));
-  const restCent = cent(fixpreisNetto - summeNeu);
+  const restCent = cent(fix - summeNeu);
 
   // Rest auf die größte Position. Nicht verteilen — sonst wandert er weiter.
   if (restCent !== 0) {
@@ -387,17 +463,21 @@ export function verteileFixpreis(
 
   // Einzelpreis mit vier Stellen — sonst entsteht durch die Division ein
   // zweiter Rundungsfehler und die Summe verfehlt den Fixpreis.
-  const neu = positionen.map((p, i) => ({
-    ...p,
-    einzelpreis_netto: p.menge !== 0 ? preisGenau(einzelSummenNeu[i] / p.menge) : 0,
-    rabatt_prozent: 0, // Der Fixpreis IST der Rabatt.
-  }));
+  const neu = positionen.map((p, i) => {
+    const m = mengeVon(p);
+    return {
+      ...p,
+      menge: m,
+      einzelpreis_netto: m !== 0 ? preisGenau(einzelSummenNeu[i] / m) : 0,
+      rabatt_prozent: 0, // Der Fixpreis IST der Rabatt.
+    };
+  });
 
   // Gegenprobe: Ergibt die Summe der Zeilenbeträge exakt den Fixpreis?
   // Wenn nicht, wandert die Differenz auf den Einzelpreis der größten Zeile.
   const zeilen = neu.map((p) => cent(p.menge * p.einzelpreis_netto));
   const ist = cent(zeilen.reduce((s2, x) => s2 + x, 0));
-  const luecke = cent(fixpreisNetto - ist);
+  const luecke = cent(fix - ist);
 
   if (luecke !== 0) {
     let groesster = 0;
@@ -408,5 +488,5 @@ export function verteileFixpreis(
     }
   }
 
-  return { positionen: neu, restCent, hinweise };
+  return { positionen: neu, restCent, hinweise, ok: true };
 }
