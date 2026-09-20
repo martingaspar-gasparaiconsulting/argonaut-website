@@ -21,8 +21,32 @@
 // 1.030,93 EUR. Bei jedem einzelnen Auftrag sind das Centbetraege, ueber ein
 // Jahr sind es vierstellige Summen. Diese Datei rechnet es richtig.
 //
-// Keine Imports, keine Hooks — node-testbar.
+// ▄▄▄ PUNKT 29c (20.09.2026) — DREI BEFUNDE, AM ECHTEN CODE GEMESSEN ▄▄▄
+//
+//  1. DER EIGENE ZAHLEN-LESER VERSTAND NUR DIE HAELFTE.
+//     GEMESSEN: "12.500" wurde 12,5 — Faktor 1000 zu niedrig. Der Leser
+//     entfernte Tausenderpunkte nur, wenn AUCH ein Komma dastand (dieselbe
+//     Bauart-C-Falle wie frueher in bankAbgleich). Dazu: "5,00 EUR" wurde 0,
+//     weil nur das Zeichen € entfernt wurde, nicht die Buchstaben. Und
+//     "3 %" wurde 0 — ein als Text erfasster Skontosatz fiel damit
+//     ersatzlos weg: GEMESSEN bot ARGONAUT 1.000,00 EUR an statt 1.030,93,
+//     der Betrieb verschenkte die 3 %. Jetzt liest lib/zahlen.ts.
+//
+//  2. cent() rundete nicht symmetrisch: -2,675 wurde -2,67, -1,005 wurde
+//     -1,00. Deckungsbeitrag und Gewinn je Einheit koennen negativ sein —
+//     genau dort schlug es zu.
+//
+//  3. DIE ANGEZEIGTEN KOSTENARTEN SUMMIERTEN SICH NICHT AUF DIE
+//     EINZELKOSTEN. GEMESSEN: Material 0,01 + Zeit 0,01 stand ueber einer
+//     Summe von 0,01. Grund: jede Kostenart wurde einzeln gerundet, die
+//     Summe aber aus den UNGERUNDETEN Werten gebildet. Wer nachrechnet,
+//     findet den Widerspruch. Jetzt wird aus den angezeigten Werten
+//     summiert — die Summe kann dadurch um Cents steigen.
+//
+// Node-getestet: tests/kalkulatorP29.test.mjs
 // ============================================================================
+
+import { leseZahlOder, centRunden } from './zahlen';
 
 export type PostenArt = 'material' | 'zeit' | 'energie' | 'fremd';
 
@@ -102,20 +126,20 @@ export type Ergebnis = {
 // Helfer
 // ---------------------------------------------------------------------------
 
+/**
+ * Zahl lesen — seit Punkt 29c ueber den gemeinsamen Leser aus lib/zahlen.ts.
+ * Signatur unveraendert, damit jeder bisherige Aufrufer weiterlaeuft.
+ */
 export function zahl(wert: unknown, standard = 0): number {
-  if (typeof wert === 'number') return isNaN(wert) ? standard : wert;
-  if (wert === null || wert === undefined || wert === '') return standard;
-  let s = String(wert).trim().replace(/[€\s ]/g, '');
-  if (s.includes(',') && s.includes('.')) {
-    s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
-  } else if (s.includes(',')) s = s.replace(',', '.');
-  const n = Number(s);
-  return isNaN(n) ? standard : n;
+  return leseZahlOder(wert, standard);
 }
 
-/** Auf Cent runden — konsequent an jeder Stelle, damit die Summen aufgehen. */
+/**
+ * Auf Cent runden — konsequent an jeder Stelle, damit die Summen aufgehen.
+ * Symmetrisch um Null: ein negativer Deckungsbeitrag rundet wie ein positiver.
+ */
 export function cent(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n);
 }
 
 export function euro(n: number): string {
@@ -178,7 +202,11 @@ export function rechne(k: Kalkulation): Ergebnis {
     } else fremd += gesamt;
   }
 
-  const einzelkosten = cent(material + zeitKosten + energie + fremd);
+  // Punkt 29c: aus den ANGEZEIGTEN Werten summieren. Vorher wurden die vier
+  // Kostenarten einzeln gerundet, die Summe aber aus den ungerundeten Werten
+  // gebildet — die Anzeige widersprach sich dann um ein bis zwei Cent.
+  const materialC = cent(material), zeitC = cent(zeitKosten), energieC = cent(energie), fremdC = cent(fremd);
+  const einzelkosten = cent(materialC + zeitC + energieC + fremdC);
 
   // 2) Gemeinkosten -> Selbstkosten
   const gemeinkosten = cent(einzelkosten * gemein / 100);
@@ -198,10 +226,10 @@ export function rechne(k: Kalkulation): Ergebnis {
   const proEinheit = (n: number) => (menge > 0 ? cent(n / menge) : 0);
 
   return {
-    material: cent(material),
-    zeit: cent(zeitKosten),
-    energie: cent(energie),
-    fremd: cent(fremd),
+    material: materialC,
+    zeit: zeitC,
+    energie: energieC,
+    fremd: fremdC,
 
     einzelkosten,
     gemeinkosten,
@@ -276,8 +304,20 @@ export function pruefeKalkulation(k: Kalkulation): string[] {
 /** Kurzer Klartext-Befund fuer den Chef — was die Zahlen bedeuten. */
 export function befund(e: Ergebnis): { ton: 'gut' | 'achtung' | 'schlecht'; text: string } {
   if (e.einzelkosten <= 0) return { ton: 'achtung', text: 'Noch nichts zu rechnen — bitte Positionen erfassen.' };
-  if (e.marge_prozent <= 0) {
+  if (e.marge_prozent < 0) {
     return { ton: 'schlecht', text: `Bei diesem Preis zahlen Sie drauf: die Selbstkosten liegen bei ${euro(e.selbstkosten)}.` };
+  }
+  // Punkt 29c: Genau 0 % ist NICHT "draufzahlen" — der alte Text behauptete
+  // das. Ueber rechne() ist 0 % sogar der Normalfall, sobald Wagnis und
+  // Gewinn auf 0 stehen; eine negative Marge kann rechne() gar nicht
+  // liefern, weil Skonto und Rabatt den Preis erhoehen statt ihn zu senken.
+  // Der Satz muss also stimmen, er wird oft gelesen.
+  if (e.marge_prozent === 0) {
+    return {
+      ton: 'schlecht',
+      text: `Sie halten genau die Null: ${euro(e.selbstkosten)} Selbstkosten, ${euro(e.angebotspreis_netto)} Angebot. ` +
+        'Verdient ist daran nichts — Wagnis und Gewinn sind auf 0 %.',
+    };
   }
   if (e.marge_prozent < 5) {
     return { ton: 'achtung', text: `Nur ${e.marge_prozent} % Marge — ein einziger Fehltag frisst den Gewinn auf.` };
