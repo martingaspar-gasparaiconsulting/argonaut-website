@@ -7,8 +7,8 @@ Ersetzt ARGONAUT-STARTPROMPT-14-09-2026.md als juengsten Stand.
 
 ## STAND
 
-**33 von 72 erledigt. Offen 39.**
-Ich baue 12 . Gemeinsam 12 . Martin selbst 14 . Anwalt 1
+**37 von 72 erledigt. Offen 35.**
+Ich baue 8 . Gemeinsam 12 . Martin selbst 14 . Anwalt 1
 
     Repo:     C:\Users\Admin\Desktop\gaspar-ai-system\argonaut\website\argonaut-website
     Dachordner: C:\Users\Admin\Desktop\gaspar-ai-system   (beide freigeben, Sieben-Ebenen-Grenze)
@@ -30,6 +30,9 @@ Baulog in der Memory: **argonaut-bauliste-0921** (alles Heutige steht dort ausfu
     d211478  P53 Paket 1   E-Rechnung: BR-CO-10, IBAN, Kontakt, Leitweg-ID, Datum
     ff2a50a  P53 Paket 2   Validator prueft die Zahlen, die wirklich rausgehen
     2e7c06d  P55 Paket 1   Skonto als reine Logik, 22 Tests
+    ea07360  P56 Paket 1   Sicherheitseinbehalt, 21 Tests
+    fe8892d  P57 Paket 1   Paragraf 13b UStG + Paragraf 48 EStG, 23 Tests
+    (P58)    P58 Paket 1   USt-IdNr. + Bestaetigungsabfrage, 28 Tests
 
 Dazu ohne Push: Punkte 31 + 32 (Anwaltsvorlage-Nachtrag + Anlage "Das wachende Auge"),
 beide PDFs liegen in docs\ und ANWALT-RECHT\ , NICHT committet.
@@ -38,28 +41,32 @@ beide PDFs liegen in docs\ und ANWALT-RECHT\ , NICHT committet.
 
 ## DIE ERSTE AUFGABE IM NEUEN CHAT
 
-**Punkt 56 / R6 — Sicherheitseinbehalt.**
+**Punkt 59 + 60 — Aufmass und VOB/C-Uebermessung.** Die beiden gehoeren
+zusammen und sind der Grund, warum der Chat vom 21.09. beendet wurde: dafuer
+muessen app/dashboard/_components/aufmassLogik.ts, holzLogik.ts und
+sortimentLogik.ts VOLLSTAENDIG gelesen werden, zusammen ueber 40 KB.
 
-Muster wie P55: zuerst eine reine Logik-Datei mit Tests, die noch niemand aufruft.
-Das Anschliessen an die Rechnung beruehrt ein Kern-Geld-Formular und kommt getrennt
-und gemeinsam.
+Der Befund aus der Liste: ueber alle 295 Dateien nach
+`raumbuch|VOB|uebermess|abzugsfl` gesucht - null Treffer. Maler, Trockenbau
+und Bodenleger uebermessen heute im Kopf.
 
-Was dabei zu beachten ist (am Fach, nicht am Code):
-- Der Einbehalt mindert das ENTGELT NICHT. Die Rechnung weist die volle
-  Umsatzsteuer aus, genau wie beim Skonto. Nur der Zahlbetrag sinkt.
-- Ueblich sind 5 Prozent Gewaehrleistungseinbehalt, abloesbar durch Buergschaft.
-- Die Gewaehrleistungsfrist entscheidet ueber das Rueckgabedatum: VOB/B meist
-  vier Jahre bei Bauwerken, BGB fuenf Jahre. NICHT raten, welche gilt - beides
-  als Eingabe anbieten.
-- lib/skonto.ts ist die Vorlage fuer Aufbau und Ton.
+Was dabei zu beachten ist:
+- VOB/C (ATV DIN 18299 ff.) regelt je Gewerk, welche Oeffnungen uebermessen
+  werden duerfen und ab welcher Groesse abgezogen werden MUSS. Die Grenzen
+  sind je Gewerk VERSCHIEDEN - nicht eine Zahl fuer alles raten.
+- aufmassLogik.runde3 ist bereits symmetrisch gebaut (am 20.09. geprueft),
+  da ist nichts zu reparieren.
+- Muster wie P55 bis P58: zuerst eine reine Logik-Datei mit Tests, die noch
+  niemand aufruft. Das Anschliessen kommt getrennt.
 
----
+VIER PAKET-1-BAUSTEINE liegen bereits bereit und rufen alle noch niemanden
+auf: lib/skonto.ts . lib/sicherheitseinbehalt.ts . lib/bauleistung.ts .
+lib/ustIdNr.ts . Ihre Pakete 2 (Spalten, Formular, PDF, E-Rechnung) treffen
+ALLE dieselbe Rechnung und fallen ALLE unter die GEMEINSAM-Regel - sie
+gehoeren zusammen geplant, nicht einzeln drangeflanscht.
 
 ## DANACH IN DIESER REIHENFOLGE
 
-    57       Reverse Charge (Paragraf 13b UStG) + Bauabzugsteuer (Paragraf 48 EStG)
-    58       Qualifizierte USt-IdNr.-Abfrage beim BZSt
-    59 + 60  Aufmass: Klammern, Division, Raumbuch . VOB/C-Uebermessung
     61       Kalkulator lernt aus Ist-Zeiten, Stundensatz herleiten
     62       Nachkalkulation ehrlich machen
     63       Import-Parser haerten (dort auch der Gutschrift-Rest aus Punkt 30)
@@ -142,3 +149,12 @@ echte Mails oder posten wirklich. ZWEI loeschen.
    habe ich die Bankverbindung in rechnungen/[id]/page.tsx ergaenzt - der echte
    Klickweg laeuft aber ueber ERechnungDialog.tsx, wo dieselbe Abfrage DREIMAL
    stand. Vor dem Bauen fragen: wer ruft das WIRKLICH auf?
+
+8. **BLEIBT EINE GEGENPROBE GRUEN, ERST DEN PATCH PRUEFEN, DANN DEN TEST.**
+   Bei P58 blieb "GR als Griechenland akzeptieren" gruen, weil mein Patch nur
+   das Muster-Objekt traf - geprueft wird aber zuerst gegen die Laenderliste.
+   Der PATCH war wirkungslos, nicht die Reparatur.
+
+9. **EINEN FREMDEN ALGORITHMUS VOR DEM EINBAU GEGENPRUEFEN, NICHT DANACH.**
+   Die Pruefziffer der deutschen USt-IdNr. wurde erst an vier echten Nummern
+   und drei Zahlendrehern gemessen und dann in die Datei geschrieben.
