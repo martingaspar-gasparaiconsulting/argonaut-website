@@ -34,7 +34,7 @@
 // „heute"/„jetzt" wird immer hereingereicht, nie hier gebildet.
 // ============================================================================
 
-import { werbeStatus, type WerbeStatus } from './segmente';
+import { werbeStatus, WERBE_STATUS_TEXT, type WerbeStatus } from './segmente';
 
 // ---------------------------------------------------------------- Grenzwerte
 
@@ -53,6 +53,22 @@ export const MAX_SCHRITTE = 5;
 
 /** Mindestabstand zwischen zwei Schritten, in Tagen. */
 export const MIND_ABSTAND_TAGE = 3;
+
+/**
+ * Der Platzhalter, der in JEDER Nachricht stehen muss.
+ *
+ * ▄▄▄ WARUM PFLICHT (Punkt 44, 21.09.2026) ▄▄▄
+ * Eine Rückhol-Nachricht ist Werbung. § 7 Abs. 2 Nr. 2 UWG verlangt, dass der
+ * Empfänger sie jederzeit und ohne Kosten abbestellen kann — und zwar in JEDER
+ * Nachricht, nicht nur in der ersten. Bis heute kannte diese Datei den Begriff
+ * „abmelden" überhaupt nicht.
+ *
+ * Der WORTLAUT des Hinweises kommt vom Anwalt (offener Punkt 68). Was hier
+ * gebaut ist, ist nur die Mechanik: ohne diesen Platzhalter startet keine
+ * Strecke und geht keine Nachricht hinaus. Den Satz drumherum setzt der
+ * Betrieb — oder später der vom Anwalt formulierte Standardtext.
+ */
+export const ABMELDE_PLATZHALTER = '{{abmeldelink}}';
 
 /**
  * Wer eine Strecke durchlaufen hat, kommt so lange nicht wieder hinein.
@@ -101,16 +117,46 @@ export type StoppGrund =
   | 'gemeldet'
   | 'widersprochen'
   | 'abgemeldet'
+  /** Punkt 44: zurueckgezogene oder nie erteilte Einwilligung. */
+  | 'ohne_einwilligung'
+  /** Punkt 44: Anmeldung nie bestaetigt (Double-Opt-in offen). */
+  | 'nicht_bestaetigt'
   | 'keine_adresse'
+  | 'kein_abmeldelink'
   | 'strecke_leer';
 
 export const STOPP_TEXT: Record<StoppGrund, string> = {
   gekauft: 'hat inzwischen wieder gekauft',
   gemeldet: 'hat sich inzwischen selbst gemeldet',
-  widersprochen: 'hat der Werbung widersprochen',
-  abgemeldet: 'hat sich abgemeldet',
+  widersprochen: WERBE_STATUS_TEXT.widersprochen,
+  abgemeldet: WERBE_STATUS_TEXT.abgemeldet,
+  ohne_einwilligung: WERBE_STATUS_TEXT.ohne_einwilligung,
+  nicht_bestaetigt: WERBE_STATUS_TEXT.nicht_bestaetigt,
   keine_adresse: 'keine E-Mail-Adresse hinterlegt',
+  kein_abmeldelink: 'der Nachricht fehlt der Abmeldelink',
   strecke_leer: 'die Strecke hat keinen aktiven Schritt mehr',
+};
+
+/**
+ * Jeder Werbe-Status ausser 'erlaubt' ist ein Grund, nicht zu schreiben.
+ *
+ * ▄▄▄ WARUM DIESE TABELLE UND NICHT ZWEI if-ZEILEN (Punkt 44, 21.09.2026) ▄▄▄
+ * Bis heute prüfte stoppGrund() nur 'widersprochen' und 'abgemeldet' — zwei
+ * der FÜNF Werte, die werbeStatus() kennt. Wer seine Einwilligung zurückzog,
+ * bekam die angefangene Strecke trotzdem zu Ende geschrieben. Das ist genau
+ * der Fall, für den § 7 Abs. 1 UWG gemacht ist.
+ *
+ * Die Tabelle ist vollständig über WerbeStatus typisiert: Kommt in
+ * lib/segmente.ts je ein sechster Status dazu, schlägt hier der Compiler an,
+ * statt ihn stillschweigend durchzulassen. Genau dieses Durchlassen war der
+ * Fehler.
+ */
+const STATUS_STOPP: Record<WerbeStatus, StoppGrund | null> = {
+  erlaubt: null,
+  widersprochen: 'widersprochen',
+  abgemeldet: 'abgemeldet',
+  nicht_bestaetigt: 'nicht_bestaetigt',
+  ohne_einwilligung: 'ohne_einwilligung',
 };
 
 // -------------------------------------------------------------- kleine Helfer
@@ -303,6 +349,10 @@ export function fehltZumStarten(strecke: Strecke | null | undefined): string[] {
     const nr = ganzeZahl(s.schritt);
     if (!String(s.betreff ?? '').trim()) fehlt.push(`ein Betreff bei Nachricht ${nr}`);
     if (!String(s.text ?? '').trim()) fehlt.push(`ein Text bei Nachricht ${nr}`);
+    // Punkt 44: der Abmeldelink gehoert in JEDE Nachricht, nicht nur die erste.
+    else if (!String(s.text).includes(ABMELDE_PLATZHALTER)) {
+      fehlt.push(`der Abmeldelink ${ABMELDE_PLATZHALTER} im Text von Nachricht ${nr}`);
+    }
 
     const t = ganzeZahl(s.nach_tagen, -1);
     if (t < 0) {
@@ -351,9 +401,10 @@ export function stoppGrund(
 ): StoppGrund | null {
   if (!kontakt) return 'keine_adresse';
 
+  // Punkt 44: ALLE Werte auswerten, nicht nur zwei — siehe STATUS_STOPP.
   const status = werbeStatus(kontakt, 'kontakte');
-  if (status === 'widersprochen') return 'widersprochen';
-  if (status === 'abgemeldet') return 'abgemeldet';
+  const ausStatus = STATUS_STOPP[status];
+  if (ausStatus) return ausStatus;
 
   if (!String(kontakt.email ?? '').includes('@')) return 'keine_adresse';
 
@@ -454,6 +505,8 @@ export type PlatzhalterWerte = {
   betrieb?: unknown;
   tage?: unknown;
   letzter_kauf?: unknown;
+  /** Punkt 44: die vollstaendige Abmelde-Adresse. Ohne sie geht nichts raus. */
+  abmeldelink?: unknown;
 };
 
 /** Datum als 13.09.2026; leer bei unbrauchbarer Eingabe. */
@@ -476,6 +529,7 @@ export function setzePlatzhalter(text: unknown, werte: PlatzhalterWerte | null |
     betrieb: String(w.betrieb ?? '').trim(),
     tage: String(w.tage ?? '').trim(),
     letzter_kauf: datumDeutsch(w.letzter_kauf),
+    abmeldelink: String(w.abmeldelink ?? '').trim(),
   };
   return String(text ?? '').replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_t, key: string) => tabelle[key] ?? '');
 }
@@ -501,6 +555,107 @@ export function nameFuer(kontakt: Kontakt | null | undefined): string {
   return firma;
 }
 
+// --------------------------------------------- Punkt 44 · Der letzte Riegel
+
+/**
+ * Prueft den FERTIGEN Text kurz vor dem Versand.
+ *
+ * ▄▄▄ WARUM DAS NICHT fehltZumStarten ERLEDIGT ▄▄▄
+ * fehltZumStarten() sieht die VORLAGE an und verlangt dort den Platzhalter.
+ * Das genuegt nicht: setzePlatzhalter() LEERT einen Platzhalter, fuer den kein
+ * Wert mitgegeben wurde — bewusst, damit nie „{{vorname}}" in einer Kundenmail
+ * steht. Genau diese Freundlichkeit wuerde hier zur Falle: Aus dem sauber
+ * hinterlegten {{abmeldelink}} wuerde eine leere Stelle, und die Mail ginge
+ * ohne Abmeldemoeglichkeit hinaus — formal vorhanden, tatsaechlich weg.
+ *
+ * Deshalb wird hier der Text geprueft, der WIRKLICH verschickt wird.
+ *
+ * @returns null, wenn die Nachricht hinausgehen darf — sonst der Stopp-Grund.
+ */
+export function fehltVorVersand(fertigerText: unknown, werte: PlatzhalterWerte | null | undefined): StoppGrund | null {
+  const link = String(werte?.abmeldelink ?? '').trim();
+  if (!link) return 'kein_abmeldelink';
+  const text = String(fertigerText ?? '');
+  if (!text.trim()) return 'kein_abmeldelink';
+  // Der Link muss im fertigen Text wirklich auftauchen — und der Platzhalter
+  // darf NICHT mehr drinstehen (dann waere er nicht ersetzt worden).
+  if (text.includes(ABMELDE_PLATZHALTER)) return 'kein_abmeldelink';
+  if (!text.includes(link)) return 'kein_abmeldelink';
+  return null;
+}
+
+// ------------------------------------------ Punkt 44 · Eine Person, ein Lauf
+
+/** Eine E-Mail-Adresse auf ihre Vergleichsform bringen. Leer = unbrauchbar. */
+export function emailSchluessel(wert: unknown): string {
+  const s = String(wert ?? '').trim().toLowerCase();
+  return s.includes('@') ? s : '';
+}
+
+export type LaufLite = {
+  email?: unknown;
+  kontakt_id?: unknown;
+  status?: unknown;
+};
+
+/**
+ * Laeuft fuer diese Adresse schon eine Strecke?
+ *
+ * ▄▄▄ WARUM UEBER DIE ADRESSE UND NICHT UEBER DIE KENNUNG ▄▄▄
+ * Der eindeutige Index in der Datenbank lautet
+ *   (strecke_id, kontakt_id) where status = 'aktiv' and kontakt_id is not null
+ * — er haelt also je KENNUNG einen Lauf offen. Zwei Dubletten desselben
+ * Menschen im CRM haben aber zwei Kennungen und dieselbe Adresse: Derselbe
+ * Mensch bekaeme die Strecke doppelt. Und ein Lauf ohne kontakt_id ist vom
+ * Index ueberhaupt nicht erfasst, weil die Bedingung ihn ausnimmt.
+ *
+ * Die Adresse ist das, was der Empfaenger erlebt. Also zaehlt sie.
+ */
+export function schonOffenerLauf(email: unknown, laufende: LaufLite[] | null | undefined): boolean {
+  const key = emailSchluessel(email);
+  if (!key) return false;
+  for (const l of laufende ?? []) {
+    if (String(l?.status ?? 'aktiv').trim().toLowerCase() !== 'aktiv') continue;
+    if (emailSchluessel(l?.email) === key) return true;
+  }
+  return false;
+}
+
+export type Kandidat = {
+  email?: unknown;
+  kontakt_id?: unknown;
+};
+
+/**
+ * Aus einer Kandidatenliste je Adresse genau EINEN behalten.
+ *
+ * Die Reihenfolge bleibt erhalten: der erste Treffer gewinnt. Kandidaten ohne
+ * brauchbare Adresse fallen heraus — an eine Zeile ohne @ kann ohnehin nichts
+ * gehen, und sie stillschweigend mitzuschleppen erzeugt nur einen Lauf, der
+ * beim ersten Schritt auf 'keine_adresse' laeuft.
+ */
+export function entdoppleNachEmail<T extends Kandidat>(kandidaten: T[] | null | undefined): T[] {
+  const gesehen = new Set<string>();
+  const raus: T[] = [];
+  for (const k of kandidaten ?? []) {
+    const key = emailSchluessel(k?.email);
+    if (!key || gesehen.has(key)) continue;
+    gesehen.add(key);
+    raus.push(k);
+  }
+  return raus;
+}
+
+/**
+ * Wie viele Kandidaten wegen einer Dublette wegfallen — fuer die Anzeige.
+ * „128 Empfaenger, 3 Dubletten zusammengefasst" ist eine Zahl, die ein Betrieb
+ * versteht; eine stille Korrektur ist es nicht.
+ */
+export function dublettenZahl(kandidaten: Kandidat[] | null | undefined): number {
+  const alle = (kandidaten ?? []).filter((k) => emailSchluessel(k?.email) !== '').length;
+  return alle - entdoppleNachEmail(kandidaten).length;
+}
+
 // ------------------------------------------------------------- Vorlage
 
 /**
@@ -518,7 +673,8 @@ export const VORLAGE: { name: string; ruhe_tage: number; schritte: Schritt[] } =
       text:
         'wir haben gemerkt, dass wir länger nicht voneinander gehört haben — der letzte Auftrag ist inzwischen eine Weile her.\n\n' +
         'Falls etwas offen geblieben ist oder Sie mit etwas nicht zufrieden waren: Wir hören das gern, auch wenn es unangenehm ist.\n\n' +
-        'Und falls es einfach der Alltag war — melden Sie sich, wann immer es passt.',
+        'Und falls es einfach der Alltag war — melden Sie sich, wann immer es passt.\n\n' +
+        'Keine weiteren Nachrichten: {{abmeldelink}}',
     },
     {
       schritt: 2,
@@ -527,7 +683,8 @@ export const VORLAGE: { name: string; ruhe_tage: number; schritte: Schritt[] } =
       text:
         'wir wollten nur kurz nachfragen, ob unsere letzte Nachricht angekommen ist.\n\n' +
         'Wenn sich bei Ihnen etwas geändert hat oder wir gerade nicht der richtige Partner sind, ist das völlig in Ordnung — ' +
-        'eine kurze Rückmeldung genügt, dann halten wir uns zurück.',
+        'eine kurze Rückmeldung genügt, dann halten wir uns zurück.\n\n' +
+        'Keine weiteren Nachrichten: {{abmeldelink}}',
     },
     {
       schritt: 3,
@@ -535,7 +692,8 @@ export const VORLAGE: { name: string; ruhe_tage: number; schritte: Schritt[] } =
       betreff: 'Wir melden uns nicht wieder',
       text:
         'das ist unsere letzte Nachricht zu diesem Thema — wir möchten Sie nicht behelligen.\n\n' +
-        'Die Tür bleibt offen: Wenn Sie uns brauchen, sind wir da. Bis dahin wünschen wir Ihnen alles Gute.',
+        'Die Tür bleibt offen: Wenn Sie uns brauchen, sind wir da. Bis dahin wünschen wir Ihnen alles Gute.\n\n' +
+        'Keine weiteren Nachrichten: {{abmeldelink}}',
     },
   ],
 };
