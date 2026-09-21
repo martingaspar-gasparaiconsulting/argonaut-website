@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase-server';
+import { cronGuard } from '@/lib/cronGuard';
 import { fasseCockpit } from '@/lib/marketingCockpit';
 import { lagebericht, lageAmpel, type LageInput } from '@/lib/marketingLagebericht';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
@@ -31,18 +31,16 @@ type Sb = any;
 type Row = Record<string, unknown>;
 
 /** Cron-Secret ODER eingeloggter Admin. Ohne beides: 403. */
+// Punkt 69 (21.09.2026): Diese Pruefung stand wortgleich in NEUN Endpunkten und
+// hatte zwei Loecher. Erstens das Einzelschloss `profiles.role === 'admin'` —
+// eine versehentlich auf admin gesetzte Zeile genuegte. Zweitens, und schwerer:
+// War CRON_SECRET nicht gesetzt, wurde nicht abgebrochen, sondern der
+// Anmeldeweg versucht. Eine vergessene Umgebungsvariable machte den Weg also
+// weiter auf statt zu. Beides steckt jetzt in lib/cronGuard.ts, einmal, mit
+// 26 Tests. `betreiberErlaubt: true`, weil dieser Endpunkt den Anmeldeweg
+// schon immer hatte — er prueft jetzt nur beide Schloesser statt einem.
 async function erlaubt(req: Request): Promise<boolean> {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization') || '';
-    const url = new URL(req.url);
-    if (auth === `Bearer ${secret}` || url.searchParams.get('secret') === secret) return true;
-  }
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  return (p as { role?: string } | null)?.role === 'admin';
+  return (await cronGuard(req, { betreiberErlaubt: true })) === null;
 }
 
 async function hole(admin: Sb, tabelle: string, spalten: string): Promise<Row[]> {
