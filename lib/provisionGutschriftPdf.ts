@@ -32,6 +32,7 @@
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
+import { euro } from './geld';
 
 export interface GutschriftAussteller {
   firma_name?: string | null;
@@ -81,9 +82,8 @@ const GOLD: [number, number, number] = [201, 168, 76];
 const GRAU: [number, number, number] = [110, 122, 138];
 const ROT: [number, number, number] = [190, 60, 60];
 
-function eur(n: number): string {
-  return (Number.isFinite(n) ? n : 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
+// P30 Rest (b): geht ueber lib/geld.ts.
+const eur = euro;
 
 function zeilenAdresse(name: string, firma: string, strasse: string, plzOrt: string): string[] {
   return [name, firma, strasse, plzOrt].map((x) => (x || '').trim()).filter(Boolean);

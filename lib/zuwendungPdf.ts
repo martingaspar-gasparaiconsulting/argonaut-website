@@ -10,6 +10,7 @@
 import { jsPDF } from 'jspdf';
 import { euroInWorten } from '@/lib/spenden';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { euro } from './geld';
 
 export interface ZuwendungAussteller {
   org_name?: string | null; org_anschrift?: string | null; finanzamt?: string | null;
@@ -29,7 +30,8 @@ function deDatum(iso?: string | null): string {
   const p = String(iso).slice(0, 10).split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
 }
-function eur(n: number): string { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
+// P30 Rest (b): geht ueber lib/geld.ts.
+const eur = euro;
 
 export function zuwendungPdf(aussteller: ZuwendungAussteller, s: ZuwendungSpende): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

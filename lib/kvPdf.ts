@@ -10,6 +10,7 @@ import { jsPDF } from 'jspdf';
 import { kvSumme, mehrkostenSumme, gesamtSumme } from '@/lib/hilfsmittel';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
+import { euro } from './geld';
 
 export interface KvAussteller { name?: string | null; anschrift?: string | null; ort?: string | null }
 export interface KvVersorgung {
@@ -25,7 +26,8 @@ function deDatum(iso?: string | null): string {
   const p = String(iso).slice(0, 10).split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
 }
-function eur(n: number): string { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
+// P30 Rest (b): geht ueber lib/geld.ts.
+const eur = euro;
 
 export function kvPdf(aussteller: KvAussteller, v: KvVersorgung, positionen: KvPos[]): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

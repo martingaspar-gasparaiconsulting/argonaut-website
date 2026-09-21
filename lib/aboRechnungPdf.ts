@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { escapeHtml } from '@/lib/newsletter'
+import { euro } from './geld'
 
 // --- Fester Absender (Leistender) aus dem Impressum -------------------------
 const ABSENDER = {
@@ -35,9 +36,9 @@ export type AboRechnungDaten = {
   zeitraum?: string
 }
 
-function geld(n: number): string {
-  return (Number(n) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
-}
+// P30 Rest (b): geht ueber lib/geld.ts. Ein Betrag, der als TEXT aus der
+// Datenbank kommt, stand hier bisher als 0,00 Euro auf dem Beleg.
+const geld = euro
 function datumDe(iso: string): string {
   const d = new Date((iso || '').slice(0, 10) + 'T00:00:00')
   if (isNaN(d.getTime())) return escapeHtml(iso || '')

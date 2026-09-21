@@ -9,6 +9,7 @@
 import { jsPDF } from 'jspdf';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
+import { euro as euroAnzeige } from '@/lib/geld';
 
 export type PdfFirma = {
   name?: string | null;
@@ -54,9 +55,8 @@ function hexRgb(hex: string | null | undefined, fallback: [number, number, numbe
   if ([r, g, b].some((x) => Number.isNaN(x))) return fallback;
   return [r, g, b];
 }
-function euro(n: number): string {
-  return (Number(n) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' \u20AC';
-}
+// P30 Rest (b): geht ueber lib/geld.ts. zahl() bleibt, das ist kein Geld.
+const euro = euroAnzeige;
 function zahl(n: number): string {
   return (Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 2 });
 }

@@ -9,6 +9,7 @@
 import { jsPDF } from 'jspdf';
 import { honorar, honorarsatz, summePositionen } from '@/lib/gutachten';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
+import { euro } from './geld';
 
 export interface GutachtenKopf {
   titel: string; auftraggeber?: string | null; objekt?: string | null; art?: string | null;
@@ -27,7 +28,8 @@ function deDatum(iso?: string | null): string {
   const p = String(iso).slice(0, 10).split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
 }
-function eur(n: number): string { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
+// P30 Rest (b): geht ueber lib/geld.ts.
+const eur = euro;
 
 export function gutachtenPdf(g: GutachtenKopf, positionen: GutachtenPos[]): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
