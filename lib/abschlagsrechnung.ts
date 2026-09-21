@@ -181,6 +181,59 @@ export function steuerAus(netto: unknown, steuersatz: unknown): number {
   return centRunden(n * s / 100);
 }
 
+/** Die Saetze, die es in Deutschland ueberhaupt gibt. 16 wegen der Altfaelle 2020. */
+export const STANDARD_SAETZE = [0, 5, 7, 16, 19];
+
+/**
+ * Leitet den Steuersatz einer gestellten Rechnung aus Netto und Steuer her.
+ *
+ * ▄▄▄ WARUM DAS GEBRAUCHT WIRD ▄▄▄
+ * Die Tabelle `rechnungen` speichert `netto_summe` und `mwst_summe`, aber
+ * KEINEN Satz — der steht nur an den Positionen. Beim Absetzen einer
+ * Abschlagsrechnung in der Schlussrechnung ist aber genau der Satz noetig,
+ * denn abgesetzt wird JE STEUERSATZ (§ 14 Abs. 4 Nr. 8 UStG).
+ *
+ * Der bequeme Weg waere, einfach 19 anzunehmen. Das ist derselbe Fehler wie
+ * in Punkt 63 (importParser): ein fest verdrahteter Satz von 19 machte aus
+ * 107,00 EUR brutto still 89,92/17,08 statt 100,00/7,00.
+ *
+ * Gerechnet wird deshalb `steuer / netto`, und das Ergebnis wird auf einen
+ * ECHTEN deutschen Satz eingerastet, wenn einer nahe genug liegt — denn
+ * einzeln gerundete Betraege ergeben nie exakt 19,00 %. Passt keiner, bleibt
+ * der gerechnete Satz stehen UND `eingerastet` ist false: dann stimmt etwas
+ * nicht, und das soll auffallen statt verschwinden.
+ */
+export function satzAusBetraegen(
+  netto: unknown,
+  steuer: unknown,
+): { satz: number; eingerastet: boolean } {
+  const n = betrag(netto);
+  const s = betrag(steuer);
+
+  // Ohne Entgelt gibt es keinen Satz. 0 ist hier die ehrliche Antwort.
+  if (n === 0) return { satz: 0, eingerastet: s === 0 };
+  if (s === 0) return { satz: 0, eingerastet: true };
+
+  // Toleranz: ein Cent plus ein Promille des Entgelts. Das deckt die
+  // Rundung einzelner Positionen ab, ohne einen echten Fehler zu schlucken.
+  const toleranz = Math.max(0.02, Math.abs(n) * 0.001);
+
+  let bester = -1;
+  let besteAbweichung = Infinity;
+  for (const kandidat of STANDARD_SAETZE) {
+    const abweichung = Math.abs(centRunden(n * kandidat / 100) - s);
+    if (abweichung < besteAbweichung) {
+      besteAbweichung = abweichung;
+      bester = kandidat;
+    }
+  }
+
+  if (bester >= 0 && besteAbweichung <= toleranz) {
+    return { satz: bester, eingerastet: true };
+  }
+  return { satz: Math.round(s / n * 10000) / 100, eingerastet: false };
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // TEIL 1 — DER EINZELNE ABSCHLAG (§ 632a BGB)
 // ───────────────────────────────────────────────────────────────────────────

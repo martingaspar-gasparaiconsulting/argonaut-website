@@ -42,6 +42,7 @@ import {
   DECKEL_PROZENT,
   VERBRAUCHER_SICHERHEIT_PROZENT,
   STEUERSATZ_STANDARD,
+  satzAusBetraegen,
 } from '../out/abschlagsrechnung.js';
 
 import { rechneSkonto } from '../out/skonto.js';
@@ -555,4 +556,58 @@ test('jede Rechtsgrundlage traegt eine Belegstufe — beide pruefen einzeln', ()
 test('die Kennzahlen stehen als Konstanten, nicht im Text vergraben', () => {
   assert.equal(DECKEL_PROZENT, 90);
   assert.equal(VERBRAUCHER_SICHERHEIT_PROZENT, 5);
+});
+
+// ===========================================================================
+// TEIL 8 — DEN STEUERSATZ AUS DEN BETRAEGEN HERLEITEN
+// Die Tabelle rechnungen speichert netto_summe und mwst_summe, aber keinen
+// Satz. Ein fest verdrahtetes 19 waere derselbe Fehler wie in Punkt 63.
+// ===========================================================================
+
+test('19 % und 7 % werden sauber erkannt', () => {
+  assert.deepEqual(satzAusBetraegen(30000, 5700), { satz: 19, eingerastet: true });
+  assert.deepEqual(satzAusBetraegen(2000, 140), { satz: 7, eingerastet: true });
+  assert.deepEqual(satzAusBetraegen(1000, 50), { satz: 5, eingerastet: true });
+  assert.deepEqual(satzAusBetraegen(1000, 160), { satz: 16, eingerastet: true });
+});
+
+test('ein Cent Rundungsunterschied kippt den Satz NICHT', () => {
+  // Einzeln gerundete Positionen ergeben nie exakt 19,00 % der Kopfsumme.
+  assert.deepEqual(satzAusBetraegen(100, 19.01), { satz: 19, eingerastet: true });
+  assert.deepEqual(satzAusBetraegen(100, 18.99), { satz: 19, eingerastet: true });
+});
+
+test('ein echter Fehler rastet NICHT ein und wird als solcher gemeldet', () => {
+  // 50 % Umsatzsteuer gibt es nicht — derselbe Befund wie im Beleg-Check P65-2.
+  const r = satzAusBetraegen(100, 50);
+  assert.equal(r.eingerastet, false, 'das darf nicht als gueltiger Satz durchgehen');
+  assert.equal(r.satz, 50);
+});
+
+test('ohne Steuer ist der Satz 0 — und das ist eingerastet, nicht geraten', () => {
+  assert.deepEqual(satzAusBetraegen(1000, 0), { satz: 0, eingerastet: true });
+});
+
+test('ohne Entgelt gibt es keinen Satz', () => {
+  assert.deepEqual(satzAusBetraegen(0, 0), { satz: 0, eingerastet: true });
+  assert.equal(satzAusBetraegen(0, 100).eingerastet, false, 'Steuer ohne Entgelt ist ein Fehler');
+});
+
+test('die Toleranz waechst nicht ins Uferlose — Lehre aus P65-2', () => {
+  // Bei 100.000 EUR netto sind 0,1 % schon 100 EUR. Ein Fehler von 200 EUR
+  // muss auffallen, sonst versteckt die Toleranz genau das, was sie finden soll.
+  assert.equal(satzAusBetraegen(100000, 19000).eingerastet, true);
+  assert.equal(satzAusBetraegen(100000, 19200).eingerastet, false);
+});
+
+test('der hergeleitete Satz gruppiert die Absetzung richtig', () => {
+  // Ohne Herleitung landete ein 7-%-Abschlag in der 19-%-Gruppe.
+  const a = satzAusBetraegen(2000, 140);
+  const r = baueSchlussrechnung({
+    gesamt: [{ netto: 5000, steuersatz: 7 }],
+    abschlaege: [{ nummer: 'A1', netto: 2000, steuersatz: a.satz, steuer: 140 }],
+  });
+  assert.equal(r.gruppen.length, 1, 'ein falscher Satz haette zwei Gruppen erzeugt');
+  assert.equal(r.gruppen[0].steuersatz, 7);
+  assert.equal(r.restSteuer, 210);
 });

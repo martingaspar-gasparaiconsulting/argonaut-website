@@ -8,6 +8,19 @@ import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import ERechnungDialog from "../../_components/ERechnungDialog";
 import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 import { NurVoll } from "../../_components/Ansicht";
+// P54 Paket 3 — Abschlags- und Schlussrechnung. Die gesamte neue Oberflaeche
+// liegt in AbschlagsKarten.tsx, damit dieses Kern-Geld-Formular klein bleibt.
+import {
+  RechnungsartKarte,
+  ZahlungsbedingungenKarte,
+  AbsetzungsBlock,
+  ZUSATZ_LEER,
+  zusatzAusZeile,
+  zusatzFuerSpeichern,
+  type RechnungsZusatz,
+  type AbschlagZeile,
+} from "../../_components/AbschlagsKarten";
+import { satzAusBetraegen } from "@/lib/abschlagsrechnung";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
@@ -168,6 +181,15 @@ export default function RechnungDetail() {
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [geladeneIds, setGeladeneIds] = useState<string[]>([]);
 
+  // P54 — Rechnungsart, Zahlungsbedingungen und die abgesetzten Abschlaege.
+  const [zusatz, setZusatzRoh] = useState<RechnungsZusatz>(ZUSATZ_LEER);
+  const [abgesetzte, setAbgesetzte] = useState<AbschlagZeile[]>([]);
+  // markDirty ist eine hochgezogene Funktionsdeklaration weiter unten.
+  function setZusatz(z: RechnungsZusatz) {
+    setZusatzRoh(z);
+    markDirty();
+  }
+
   const [dirty, setDirty] = useState(false);
   const [speichern, setSpeichern] = useState(false);
   const [gespeichert, setGespeichert] = useState(false);
@@ -206,6 +228,7 @@ export default function RechnungDetail() {
     setWaehrung(r.waehrung || "EUR");
     setNotizen(r.notizen || "");
     setKleinunternehmer(!!r.kleinunternehmer);
+    setZusatzRoh(zusatzAusZeile(r)); // P54 — ohne markDirty, das ist nur Laden
     // Einzel-Zahlungen dieser Rechnung laden (Quelle der Wahrheit für Block C/D)
     const { data: zData } = await supabase
       .from("zahlungen")
@@ -424,6 +447,7 @@ export default function RechnungDetail() {
           netto_summe: summen.netto,
           mwst_summe: summen.mwst,
           brutto_summe: summen.brutto,
+          ...zusatzFuerSpeichern(zusatz), // P54 — Rechnungsart und Zahlungsbedingungen
         })
         .eq("id", id);
 
@@ -431,6 +455,39 @@ export default function RechnungDetail() {
         setFehler("Speichern fehlgeschlagen: " + rErr.message);
         setSpeichern(false);
         return;
+      }
+
+      // P54 — welche Abschlaege in DIESER Schlussrechnung abgesetzt sind.
+      // Die Betraege werden EINGEFROREN: aendert jemand spaeter eine
+      // Abschlagsrechnung, verschiebt sich die Schlussrechnung nicht still.
+      if (!gesperrt) {
+        const { error: delErr } = await supabase
+          .from("rechnung_abschlaege")
+          .delete()
+          .eq("schlussrechnung_id", id);
+        if (delErr) {
+          setFehler("Die abgesetzten Abschläge konnten nicht aktualisiert werden: " + delErr.message);
+          setSpeichern(false);
+          return;
+        }
+        if (zusatz.rechnungsart === "schluss" && abgesetzte.length > 0) {
+          const rows = abgesetzte.map((a) => ({
+            schlussrechnung_id: id,
+            abschlagsrechnung_id: a.id,
+            nummer_kopie: a.nummer || null,
+            datum_kopie: (a.datum as string) || null,
+            netto: Number(a.netto) || 0,
+            // hergeleitet, nicht auf 19 geraten (Befund 8 aus Punkt 63)
+            steuersatz: satzAusBetraegen(a.netto, a.steuer).satz,
+            steuer: Number(a.steuer) || 0,
+          }));
+          const { error: insErr } = await supabase.from("rechnung_abschlaege").insert(rows);
+          if (insErr) {
+            setFehler("Die abgesetzten Abschläge konnten nicht gespeichert werden: " + insErr.message);
+            setSpeichern(false);
+            return;
+          }
+        }
       }
 
       // Zahlungsstatus/Bezahlt aus den Zahlungen neu berechnen (Brutto kann sich geändert haben)
@@ -1090,6 +1147,19 @@ export default function RechnungDetail() {
         </Karte>
       </div>
 
+      {/* P54 — Rechnungsart und Zahlungsbedingungen */}
+      <RechnungsartKarte
+        zusatz={zusatz}
+        setZusatz={setZusatz}
+        gesperrt={gesperrt}
+        rechnungsnummer={rechnung?.rechnungsnummer || ""}
+        nettoSumme={summen.netto}
+        steuersatz={summen.gruppen.length === 1 ? summen.gruppen[0].satz : 19}
+      />
+      <NurVoll>
+        <ZahlungsbedingungenKarte zusatz={zusatz} setZusatz={setZusatz} gesperrt={gesperrt} />
+      </NurVoll>
+
       {/* POSITIONEN */}
       <div style={{ marginBottom: 20 }}>
         <div
@@ -1210,6 +1280,19 @@ export default function RechnungDetail() {
           Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
       </Karte>
+
+      {/* P54 — Absetzung der Abschlagszahlungen (nur bei einer Schlussrechnung) */}
+      <div style={{ marginTop: 20 }}>
+        <AbsetzungsBlock
+          auftragId={rechnung?.auftrag_id || null}
+          eigeneId={id}
+          gesamt={summen.gruppen.map((g) => ({ netto: g.netto, steuersatz: g.satz }))}
+          waehrung={waehrung}
+          zusatz={zusatz}
+          gesperrt={gesperrt}
+          onAuswahl={setAbgesetzte}
+        />
+      </div>
 
       <EinsatzNachweis rechnungId={id} />
       <NurVoll>
