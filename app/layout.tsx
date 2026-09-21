@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
-import { Syne, DM_Sans } from 'next/font/google'
+import { DM_Sans } from 'next/font/google'
 import './globals.css'
-const syne = Syne({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-syne',
-})
+// PUNKT 66 (21.09.2026): Syne wurde hier noch in FUENF Schnitten geladen
+// (400/500/600/700/800) und war seit der Vereinheitlichung nirgends mehr
+// sichtbar: globals.css leitet --font-syne per html:root auf DM Sans um,
+// und html:root gewinnt gegen die next/font-Klasse. Die Schriftdateien
+// kamen also bei jedem Seitenaufruf mit und taten nichts.
+// Die Variable bleibt definiert - sie kommt jetzt allein aus globals.css.
+// AM AUSSEHEN AENDERT SICH NICHTS, weil Syne schon vorher nicht gerendert hat.
 const dmSans = DM_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500'],
@@ -56,7 +58,7 @@ const orgJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${syne.variable} ${dmSans.variable}`}>
+    <html lang="de" className={dmSans.variable}>
       <body className="antialiased">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         {children}
