@@ -481,7 +481,7 @@ export default function RechnungDetail() {
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer, firma_telefon, firma_iban, firma_bic, firma_bank")
         .single();
       const prof: any = p || {};
       const aussteller = {
@@ -495,6 +495,14 @@ export default function RechnungDetail() {
         ust_idnr: prof.firma_ust_id || "",
         steuernummer: prof.firma_steuernummer || "",
         email: prof.firma_email || "",
+        // Punkt 53 (21.09.2026): Diese vier Felder gingen bisher NUR an die
+        // PDF-Route. Dadurch stand die Bankverbindung auf dem Papier und
+        // fehlte in der E-Rechnung (BG-16), und der Pflichtkontakt BG-6 fehlte
+        // ganz. Geladen wurden sie schon immer - nur hier nicht mitgeschickt.
+        telefon: prof.firma_telefon || "",
+        bank_iban: prof.firma_iban || "",
+        bank_bic: prof.firma_bic || "",
+        bank_name: prof.firma_bank || "",
       };
       const res = await fetch("/api/rechnung-e", {
         method: "POST",

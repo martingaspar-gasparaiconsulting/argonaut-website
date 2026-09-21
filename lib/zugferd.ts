@@ -16,6 +16,7 @@
 // ============================================================
 
 import { steuerGruppen, type SteuerPosten } from '../app/dashboard/_components/steuerLogik';
+import { leseZahlOder, centRunden } from './zahlen';
 
 // ─── Typen (bewusst tolerant — Daten kommen aus verschiedenen Quellen) ───
 
@@ -34,6 +35,20 @@ export interface ZugferdPartei {
   ust_idnr?: string;     // USt-IdNr. (DE123456789)
   steuernummer?: string; // alternativ zur USt-IdNr.
   email?: string;
+  /**
+   * ADDITIV (Punkt 53, 21.09.2026). Alle vier Felder sind OPTIONAL — ein
+   * Aufrufer, der sie nicht mitschickt, bekommt dasselbe XML wie bisher,
+   * nur mit einer zusaetzlichen Warnung.
+   *
+   * Die Rechnungsseite laedt diese Werte laengst aus dem Profil und
+   * schickt sie an /api/rechnung-pdf (firma_iban, firma_bic, firma_bank,
+   * firma_telefon) — nur an die E-Rechnung gingen sie nie mit. Deshalb
+   * stand die Bankverbindung auf dem PDF und fehlte im XML.
+   */
+  telefon?: string;      // BG-6 Kontakt
+  bank_iban?: string;    // BG-16 Zahlungsdaten
+  bank_bic?: string;
+  bank_name?: string;    // Kontoinhaber/Institut, nur Anzeige
 }
 
 export interface ZugferdEingabe {
@@ -57,32 +72,87 @@ function x(s: any): string {
     .replace(/'/g, '&apos;');
 }
 
-/** Betrag mit exakt 2 Nachkommastellen, Punkt als Trenner (XML-Norm). */
+/**
+ * Betrag mit exakt 2 Nachkommastellen, Punkt als Trenner (XML-Norm).
+ *
+ * PUNKT 53 (21.09.2026): Vorher stand hier `Number(v)`. Aus dem Text
+ * "1.234,56", wie ihn eine numeric-Spalte oft liefert, wurde NaN und
+ * daraus 0.00 — im XML stand dann eine Position ueber null Euro, und das
+ * XML war in sich schluessig, also meldete kein Validator etwas.
+ * Jetzt liest lib/zahlen.ts, und centRunden rundet symmetrisch um Null
+ * (toFixed kippt eine Gutschrift von -0,005 sonst nach oben).
+ */
 function n2(v: any): string {
-  const num = Number(v);
-  return (Number.isFinite(num) ? num : 0).toFixed(2);
+  return centRunden(leseZahlOder(v, 0)).toFixed(2);
 }
 
 /** Prozentsatz ohne unnötige Nullen, Punkt-Trenner (z.B. "19" oder "7"). */
 function nPct(v: any): string {
-  const num = Number(v);
-  const clean = Number.isFinite(num) ? num : 0;
-  return String(clean);
+  return String(leseZahlOder(v, 0));
 }
 
-/** Datum -> YYYYMMDD (Format 102 der Norm). Fällt auf heute zurück. */
-function dat102(d: any): string {
-  let dt: Date;
+/**
+ * Nettobetrag EINER Zeile — die eine Rundungsstelle fuer das XML.
+ *
+ * PUNKT 53 (21.09.2026), BR-CO-10: Die Summe der Zeilenbetraege muss die
+ * Kopfsumme ergeben. Vorher wurde der Rueckfall `menge * einzelpreis`
+ * UNGERUNDET weitergereicht: die Zeile bekam ihn ueber toFixed(2), die
+ * Kopfsumme ueber centRunden — zwei verschiedene Rundungen auf denselben
+ * Wert. GEMESSEN an der alten Fassung: zweimal 1,5 Std a 66,67 EUR ergab
+ * Zeilen 100,00 + 100,00 = 200,00 und im Kopf 200,01. Jede XRechnung mit
+ * diesem Muster faellt durch.
+ *
+ * EHRLICH DAZU: Auf dem normalen Weg ueber die Rechnungsseite ist das NIE
+ * passiert — die Seite rechnet `gesamt_netto` selbst mit cent() und
+ * schickt es mit (page.tsx `zeileNetto`, Z.313). Betroffen war nur der
+ * Rueckfall, wenn ein Aufrufer `gesamt_netto` weglaesst. Diese Funktion
+ * wendet jetzt genau dieselbe Regel an wie das Formular.
+ */
+function zeilenNetto(p: any): number {
+  if (p?.gesamt_netto != null) return centRunden(leseZahlOder(p.gesamt_netto, 0));
+  return centRunden(leseZahlOder(p?.menge, 0) * leseZahlOder(p?.einzelpreis, 0));
+}
+
+/**
+ * Datum -> YYYYMMDD (Format 102 der Norm).
+ *
+ * PUNKT 53 (21.09.2026), zwei Reparaturen:
+ *  1. ZEITZONE. Vorher lasen getFullYear/getMonth/getDate in der Zeitzone
+ *     des Servers. Ein als "2026-08-31T22:00:00Z" gespeicherter Beleg —
+ *     also deutsche Mitternacht des 1. September — wurde auf einem
+ *     UTC-Server zum 31.08. und rutschte in den Vormonat. Derselbe Fehler
+ *     war bei datevExtf schon einmal da. Jetzt wird in UTC gelesen.
+ *  2. STILLER RUECKFALL. Ein unlesbares Datum wurde stillschweigend HEUTE.
+ *     Das Rechnungsdatum ist steuerlich bindend; es darf nicht erfunden
+ *     werden, ohne dass es jemand erfaehrt. `lesbar` sagt es jetzt an,
+ *     der Aufrufer macht daraus eine Warnung.
+ */
+function dat102Roh(d: any): { wert: string; lesbar: boolean } {
+  let dt: Date | null = null;
+  let lesbar = false;
   try {
-    dt = d ? new Date(d) : new Date();
-    if (isNaN(dt.getTime())) dt = new Date();
+    if (d != null && String(d).trim() !== '') {
+      const versuch = new Date(d as any);
+      if (!isNaN(versuch.getTime())) { dt = versuch; lesbar = true; }
+    }
   } catch {
-    dt = new Date();
+    dt = null;
   }
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${y}${m}${day}`;
+  if (!dt) dt = new Date();
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dt.getUTCDate()).padStart(2, '0');
+  return { wert: `${y}${m}${day}`, lesbar };
+}
+
+/** Wie dat102Roh, aber nur der Wert — fuer Stellen ohne Warnungsbedarf. */
+function dat102(d: any): string {
+  return dat102Roh(d).wert;
+}
+
+/** IBAN fuer das XML: ohne Leerzeichen, in Grossbuchstaben. */
+function normIban(v: unknown): string {
+  return String(v ?? '').replace(/[\s-]/g, '').toUpperCase();
 }
 
 /**
@@ -128,6 +198,10 @@ function normPartei(p: ZugferdPartei, freitextAnschrift?: string): Required<Zugf
     email: p.email ?? '',
     ust_idnr: p.ust_idnr ?? '',
     steuernummer: p.steuernummer ?? '',
+    telefon: p.telefon ?? '',
+    bank_iban: p.bank_iban ?? '',
+    bank_bic: p.bank_bic ?? '',
+    bank_name: p.bank_name ?? '',
     adresse: {
       strasse: adrRoh.strasse ?? '',
       plz: adrRoh.plz ?? '',
@@ -169,11 +243,11 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const waehrung = String(rechnung?.waehrung || 'EUR').toUpperCase().slice(0, 3) || 'EUR';
 
   // ── Steuer identisch zum PDF berechnen ──
+  // BR-CO-10: dieselbe, EINMAL gerundete Zahl geht in die Zeile UND in die
+  // Steuergruppe. Sonst rundet die Zeile anders als der Kopf (siehe zeilenNetto).
   const posten: SteuerPosten[] = (positionen || []).map((p: any) => ({
-    netto: p?.gesamt_netto != null
-      ? Number(p.gesamt_netto) || 0
-      : (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0),
-    satz: Number(p?.mwst_satz) || 0,
+    netto: zeilenNetto(p),
+    satz: leseZahlOder(p?.mwst_satz, 0),
   }));
   const s = steuerGruppen(posten);
 
@@ -194,7 +268,11 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const ph = (wert: string, fallback: string) => wert ? x(wert) : x(fallback);
 
   const rechnungsnr = rechnung?.rechnungsnummer || 'ENTWURF';
-  const rDatum = dat102(rechnung?.rechnungsdatum);
+  const rDatumRoh = dat102Roh(rechnung?.rechnungsdatum);
+  const rDatum = rDatumRoh.wert;
+  if (!rDatumRoh.lesbar) {
+    warnungen.push('Rechnungsdatum fehlt oder ist nicht lesbar — im XML steht ersatzweise das heutige Datum. Bitte pruefen.');
+  }
   const leistDatum = rechnung?.leistungsdatum ? dat102(rechnung.leistungsdatum) : rDatum;
   const faellig = rechnung?.faelligkeitsdatum ? dat102(rechnung.faelligkeitsdatum) : '';
 
@@ -212,10 +290,10 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
 
   // ── Positionszeilen (CII: IncludedSupplyChainTradeLineItem) ──
   const lineItems = (positionen || []).map((p: any, i: number) => {
-    const menge = Number(p?.menge) || 0;
-    const einzel = Number(p?.einzelpreis) || 0;
-    const netto = p?.gesamt_netto != null ? (Number(p.gesamt_netto) || 0) : menge * einzel;
-    const satz = klein ? 0 : (Number(p?.mwst_satz) || 0);
+    const menge = leseZahlOder(p?.menge, 0);
+    const einzel = leseZahlOder(p?.einzelpreis, 0);
+    const netto = zeilenNetto(p);
+    const satz = klein ? 0 : leseZahlOder(p?.mwst_satz, 0);
     const cat = klein ? 'E' : 'S';
     // Einheit: ZUGFeRD nutzt UN/ECE-Codes. "C62" = Stück (Default), "HUR" = Stunde.
     const einheitCode = mapEinheit(p?.einheit);
@@ -279,9 +357,14 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
     : '';
 
   // ── Leitweg-ID (BuyerReference) — bei XRechnung/B2G Pflicht ──
+  // PUNKT 53 (21.09.2026): Fehlte die Leitweg-ID, stand bei XRechnung bisher
+  // der Text "LEITWEG-ID-FEHLT" im Feld. Der ist syntaktisch gueltig — die
+  // Rechnung lief also durch die Pruefung der Behoerde und wurde erst dort
+  // abgelehnt, weil die Leitweg-ID nicht existiert. Ein leeres Feld mit
+  // Warnung ist ehrlicher: der Fehler faellt HIER auf, nicht beim Empfaenger.
   const buyerRef = leitweg_id
     ? `<ram:BuyerReference>${x(leitweg_id)}</ram:BuyerReference>`
-    : (istXR ? `<ram:BuyerReference>${x('LEITWEG-ID-FEHLT')}</ram:BuyerReference>` : '');
+    : '';
 
   // Verkäufer-Steuerregistrierung
   const sellerTaxReg =
@@ -295,6 +378,40 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const buyerTaxReg = buyer.ust_idnr
     ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${x(buyer.ust_idnr)}</ram:ID></ram:SpecifiedTaxRegistration>`
     : '';
+
+  // ── BG-6 · Kontaktangaben des Verkaeufers (BR-DE-2/5/6 Pflicht bei XRechnung) ──
+  // XSD-Reihenfolge in SellerTradeParty: Name -> DefinedTradeContact ->
+  // PostalTradeAddress -> URIUniversalCommunication -> SpecifiedTaxRegistration.
+  const sellerKontaktTeile =
+    (seller.name ? `\n          <ram:PersonName>${x(seller.name)}</ram:PersonName>` : '') +
+    (seller.telefon ? `\n          <ram:TelephoneUniversalCommunication><ram:CompleteNumber>${x(seller.telefon)}</ram:CompleteNumber></ram:TelephoneUniversalCommunication>` : '') +
+    (seller.email ? `\n          <ram:EmailURIUniversalCommunication><ram:URIID>${x(seller.email)}</ram:URIID></ram:EmailURIUniversalCommunication>` : '');
+  const sellerKontakt = sellerKontaktTeile
+    ? `
+        <ram:DefinedTradeContact>${sellerKontaktTeile}
+        </ram:DefinedTradeContact>`
+    : '';
+  if (istXR && !seller.telefon) warnungen.push('Telefonnummer des Verkaeufers fehlt (BG-6, bei XRechnung Pflicht)');
+  if (istXR && !seller.email) warnungen.push('E-Mail des Verkaeufers fehlt (BG-6, bei XRechnung Pflicht)');
+
+  // ── BG-16 · Zahlungsdaten (IBAN/BIC). Ohne sie weiss der Empfaenger nicht,
+  //    wohin er zahlen soll — BR-49/BR-50. Stand bisher nur auf dem PDF. ──
+  const iban = normIban(seller.bank_iban);
+  const bic = String(seller.bank_bic ?? '').replace(/\s/g, '').toUpperCase();
+  const paymentMeans = iban
+    ? `
+      <ram:SpecifiedTradeSettlementPaymentMeans>
+        <ram:TypeCode>58</ram:TypeCode>
+        <ram:PayeePartyCreditorFinancialAccount>
+          <ram:IBANID>${x(iban)}</ram:IBANID>${seller.bank_name ? `
+          <ram:AccountName>${x(seller.bank_name)}</ram:AccountName>` : ''}
+        </ram:PayeePartyCreditorFinancialAccount>${bic ? `
+        <ram:PayeeSpecifiedCreditorFinancialInstitution>
+          <ram:BICID>${x(bic)}</ram:BICID>
+        </ram:PayeeSpecifiedCreditorFinancialInstitution>` : ''}
+      </ram:SpecifiedTradeSettlementPaymentMeans>`
+    : '';
+  if (!iban) warnungen.push('Bankverbindung (IBAN) fehlt — ohne sie enthaelt die E-Rechnung keine Zahlungsdaten (BG-16)');
 
   const sellerEmail = seller.email
     ? `<ram:URIUniversalCommunication><ram:URIID schemeID="EM">${x(seller.email)}</ram:URIID></ram:URIUniversalCommunication>`
@@ -326,7 +443,7 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
     <ram:ApplicableHeaderTradeAgreement>
       ${buyerRef}
       <ram:SellerTradeParty>
-        <ram:Name>${ph(seller.name, 'FIRMENNAME-FEHLT')}</ram:Name>
+        <ram:Name>${ph(seller.name, 'FIRMENNAME-FEHLT')}</ram:Name>${sellerKontakt}
         <ram:PostalTradeAddress>
           <ram:PostcodeCode>${x(seller.adresse.plz)}</ram:PostcodeCode>
           <ram:LineOne>${x(seller.adresse.strasse)}</ram:LineOne>
@@ -356,7 +473,7 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
       </ram:ActualDeliverySupplyChainEvent>
     </ram:ApplicableHeaderTradeDelivery>
     <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>${x(waehrung)}</ram:InvoiceCurrencyCode>${taxBlocks}${paymentTerms}
+      <ram:InvoiceCurrencyCode>${x(waehrung)}</ram:InvoiceCurrencyCode>${paymentMeans}${taxBlocks}${paymentTerms}
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
         <ram:LineTotalAmount>${n2(nettoGesamt)}</ram:LineTotalAmount>
         <ram:TaxBasisTotalAmount>${n2(nettoGesamt)}</ram:TaxBasisTotalAmount>
