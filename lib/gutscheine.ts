@@ -211,3 +211,201 @@ export function zaehleGutscheine(gutscheine: GutscheinLite[], jetzt: string | Da
     eingeloestBetrag: r2(eingeloestBetrag),
   };
 }
+
+// ============================================================================
+// PUNKT 65 / R12, PAKET 2 (21.09.2026) — IST DIE EINSTUFUNG ÜBERHAUPT ZULÄSSIG?
+//
+// REIN ADDITIV. MwStTyp, MWST_TYPEN, nettoAusBrutto und alles darüber bleiben
+// unverändert.
+//
+// ▄▄▄ WAS SCHON DA WAR — UND WAS FEHLTE ▄▄▄
+// Diese Datei kennt Einzweck- und Mehrzweckgutschein seit jeher: als Typ, als
+// Beschriftung, mit richtigen Hinweisen und mit nettoAusBrutto für den
+// Einzweckfall. Der Befund der Bauliste war insofern nur halb richtig.
+//
+// Was FEHLTE, ist die Frage davor: DARF dieser Gutschein überhaupt als
+// Einzweckgutschein geführt werden?
+//
+// § 3 Abs. 14 UStG lässt das nur zu, wenn bei der AUSGABE sowohl der
+// LEISTUNGSORT als auch der STEUERSATZ feststehen. Ein Gastwirt, der Speisen
+// mit 7 % und Getränke mit 19 % verkauft, hat bei einem Wertgutschein über
+// 50 EUR genau das NICHT — sein Gutschein ist zwingend ein Mehrzweckgutschein.
+//
+// ▄▄▄ WARUM DAS GELD KOSTET ▄▄▄
+// Die Einstufung entscheidet, WANN die Umsatzsteuer entsteht.
+//   · Einzweck  -> schon bei der Ausgabe.
+//   · Mehrzweck -> erst bei der Einlösung.
+// Wer falsch einstuft, meldet die Steuer im falschen Voranmeldungszeitraum.
+// Bei einem Weihnachtsgeschäft mit Gutscheinen über mehrere tausend Euro ist
+// das keine Kleinigkeit, und es fällt erst bei der Umsatzsteuer-Sonderprüfung
+// auf — dann mit Zinsen nach § 233a AO.
+//
+// Der zweite Fall, den fast niemand auf dem Schirm hat: ein VERFALLENER
+// Gutschein. Beim Einzweckgutschein bleibt die Steuer, denn sie ist bei der
+// Ausgabe entstanden. Beim Mehrzweckgutschein entsteht sie NIE, weil nie eine
+// Leistung erbracht wurde — der Betrag ist dann steuerfreier Ertrag.
+// ============================================================================
+
+export interface TypPruefung {
+  /** Darf der Gutschein als Einzweckgutschein geführt werden? */
+  einzweckZulaessig: boolean;
+  /** Die Einstufung, die sich aus den Angaben ergibt. */
+  empfehlung: MwStTyp;
+  /** Passt die gewählte Einstufung dazu? */
+  stimmtMitWahl: boolean;
+  gruende: string[];
+  hinweis: string;
+}
+
+export interface TypEingabe {
+  /** Was der Betrieb eingestellt hat. */
+  gewaehlt?: MwStTyp | null;
+  /**
+   * Alle Steuersätze, die mit diesem Gutschein eingelöst werden können.
+   * Mehr als einer -> zwingend Mehrzweckgutschein.
+   */
+  moeglicheSteuersaetze?: readonly number[] | null;
+  /** Steht der Leistungsort bei Ausgabe fest? */
+  leistungsortFest?: boolean | null;
+  /**
+   * Ist die Leistung konkret bezeichnet? Ein Leistungsgutschein über „eine
+   * Maniküre" ja, ein Wertgutschein über 50 EUR nein.
+   */
+  leistungKonkret?: boolean | null;
+}
+
+/**
+ * Prüft, ob die Einstufung als Einzweckgutschein zulässig ist.
+ *
+ * Im Zweifel Mehrzweck: das ist die Einstufung, die niemandem schadet, wenn
+ * sie falsch ist — die Steuer wird dann später fällig, nicht gar nicht.
+ * Umgekehrt wäre ein zu Unrecht als Einzweck geführter Gutschein eine zu
+ * früh gemeldete Steuer und, beim Verfall, eine zu viel gezahlte.
+ */
+export function pruefeGutscheinTyp(e: TypEingabe): TypPruefung {
+  const gruende: string[] = [];
+  const saetze = (e.moeglicheSteuersaetze ?? []).filter((s) => typeof s === 'number' && Number.isFinite(s));
+  const verschiedene = Array.from(new Set(saetze));
+
+  let zulaessig = true;
+
+  if (verschiedene.length === 0) {
+    zulaessig = false;
+    gruende.push('Es ist nicht hinterlegt, mit welchem Steuersatz dieser Gutschein eingelöst wird.');
+  } else if (verschiedene.length > 1) {
+    zulaessig = false;
+    gruende.push(
+      `Der Gutschein kann mit ${verschiedene.length} verschiedenen Steuersätzen eingelöst werden ` +
+        `(${verschiedene.map((s) => s + ' %').join(', ')}). Damit steht der Steuersatz bei der Ausgabe nicht fest.`,
+    );
+  }
+
+  if (e.leistungsortFest === false) {
+    zulaessig = false;
+    gruende.push('Der Leistungsort steht bei der Ausgabe nicht fest (§ 3 Abs. 14 Satz 1 UStG).');
+  } else if (e.leistungsortFest == null) {
+    zulaessig = false;
+    gruende.push('Es ist nicht angegeben, ob der Leistungsort bei der Ausgabe feststeht.');
+  }
+
+  if (e.leistungKonkret === false) {
+    gruende.push(
+      'Die Leistung ist nicht konkret bezeichnet. Das allein schließt den Einzweckgutschein nicht aus — ' +
+        'entscheidend sind Leistungsort und Steuersatz.',
+    );
+  }
+
+  const empfehlung: MwStTyp = zulaessig ? 'einzweck' : 'mehrzweck';
+  const gewaehlt = e.gewaehlt ?? null;
+  const stimmtMitWahl = gewaehlt === null || gewaehlt === empfehlung || (gewaehlt === 'mehrzweck' && zulaessig);
+
+  let hinweis: string;
+  if (gewaehlt === 'einzweck' && !zulaessig) {
+    hinweis =
+      'ACHTUNG: Als Einzweckgutschein geführt, aber die Voraussetzungen des § 3 Abs. 14 UStG liegen nicht vor. ' +
+      `${gruende.join(' ')} Die Umsatzsteuer würde zu früh gemeldet — richtig ist ein Mehrzweckgutschein, ` +
+      'bei dem sie erst mit der Einlösung entsteht.';
+  } else if (zulaessig && gewaehlt === 'mehrzweck') {
+    hinweis =
+      'Als Mehrzweckgutschein geführt, obwohl die Voraussetzungen für einen Einzweckgutschein vorliegen. ' +
+      'Das ist die vorsichtige Einstufung, aber sie verschiebt die Steuer — bitte mit dem Steuerberater klären.';
+  } else if (zulaessig) {
+    hinweis = 'Einzweckgutschein: Leistungsort und Steuersatz stehen fest, die Steuer entsteht bei der Ausgabe.';
+  } else {
+    hinweis = `Mehrzweckgutschein. ${gruende.join(' ')} Die Steuer entsteht erst bei der Einlösung.`;
+  }
+
+  return { einzweckZulaessig: zulaessig, empfehlung, stimmtMitWahl, gruende, hinweis };
+}
+
+export type SteuerEreignis = 'ausgabe' | 'einloesung' | 'keine';
+
+export interface SteuerZeitpunkt {
+  ereignis: SteuerEreignis;
+  /** Betrag, auf den die Steuer entsteht. */
+  bemessung: number;
+  steuer: number;
+  hinweis: string;
+}
+
+/**
+ * Wann entsteht die Umsatzsteuer — und wie viel?
+ *
+ * Der VERFALL ist der Fall, den fast niemand auf dem Schirm hat: Beim
+ * Einzweckgutschein bleibt die Steuer, beim Mehrzweckgutschein entsteht sie
+ * nie. Wer das verwechselt, führt Steuer auf einen Umsatz ab, den es nie
+ * gegeben hat.
+ */
+export function steuerZeitpunkt(
+  typ: MwStTyp,
+  vorgang: 'ausgabe' | 'einloesung' | 'verfall',
+  bruttoBetrag: number,
+  mwstSatz: number,
+): SteuerZeitpunkt {
+  const b = r2(bruttoBetrag);
+  const aufteilung = nettoAusBrutto(b, mwstSatz);
+
+  if (typ === 'einzweck') {
+    if (vorgang === 'ausgabe') {
+      return {
+        ereignis: 'ausgabe', bemessung: aufteilung.netto, steuer: aufteilung.mwst,
+        hinweis: 'Einzweckgutschein: Die Umsatzsteuer entsteht mit der Ausgabe (§ 3 Abs. 14 Satz 2 UStG).',
+      };
+    }
+    if (vorgang === 'einloesung') {
+      return {
+        ereignis: 'keine', bemessung: 0, steuer: 0,
+        hinweis: 'Die Steuer ist bereits bei der Ausgabe entstanden — die Einlösung löst keine weitere aus.',
+      };
+    }
+    return {
+      ereignis: 'keine', bemessung: 0, steuer: 0,
+      hinweis:
+        'Verfallener Einzweckgutschein: Die bei der Ausgabe abgeführte Steuer BLEIBT. ' +
+        'Der Vorgang ist nur noch ein Ertrag ohne weitere Steuerfolge.',
+    };
+  }
+
+  // Mehrzweckgutschein
+  if (vorgang === 'ausgabe') {
+    return {
+      ereignis: 'keine', bemessung: 0, steuer: 0,
+      hinweis:
+        'Mehrzweckgutschein: Die Ausgabe ist kein steuerbarer Umsatz (§ 3 Abs. 15 UStG). ' +
+        'Der Betrag ist zunächst nur eine Anzahlung ohne Steuer.',
+    };
+  }
+  if (vorgang === 'einloesung') {
+    return {
+      ereignis: 'einloesung', bemessung: aufteilung.netto, steuer: aufteilung.mwst,
+      hinweis: 'Mehrzweckgutschein: Die Umsatzsteuer entsteht erst jetzt, mit der tatsächlichen Leistung.',
+    };
+  }
+  return {
+    ereignis: 'keine', bemessung: 0, steuer: 0,
+    hinweis:
+      'Verfallener Mehrzweckgutschein: Es wurde nie eine Leistung erbracht, also entsteht AUCH JETZT keine ' +
+      'Umsatzsteuer. Der Betrag ist steuerfreier Ertrag. Wer hier Steuer abführt, zahlt auf einen Umsatz, ' +
+      'den es nie gegeben hat.',
+  };
+}

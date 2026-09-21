@@ -268,3 +268,199 @@ export function zaehleBk(einheiten: EinheitLite[], kostenarten: KostenartLite[])
     heizLuecken,
   };
 }
+
+// ============================================================================
+// PUNKT 65 / R12, PAKET 2 (21.09.2026) — ZWÖLFMONATSFRIST UND KABELANSCHLUSS
+//
+// REIN ADDITIV. Der BetrKV-Katalog, die Verteiler und alle Rechenfunktionen
+// darüber bleiben unverändert.
+//
+// ▄▄▄ BEFUND 1 — DIE ZWÖLFMONATSFRIST FEHLTE GANZ ▄▄▄
+// § 556 Abs. 3 Satz 2 und 3 BGB: Der Vermieter muss binnen ZWÖLF MONATEN
+// nach Ende des Abrechnungszeitraums abrechnen. Danach ist die
+// Geltendmachung einer NACHFORDERUNG ausgeschlossen — es sei denn, er hat
+// die Verspätung nicht zu vertreten.
+//
+// Das ist eine AUSSCHLUSSFRIST, keine Verjährung: sie wirkt von selbst, der
+// Mieter muss sich nicht darauf berufen. Und sie ist einseitig — ein
+// GUTHABEN des Mieters muss trotzdem ausgezahlt werden.
+//
+// Für einen Hausverwalter mit zwanzig Einheiten ist das der teuerste Termin
+// im Jahr, und bis heute erinnerte ihn nichts daran.
+//
+// ▄▄▄ BEFUND 2 — DER KABELANSCHLUSS STEHT NOCH IM KATALOG ▄▄▄
+// Nr. 15 heißt hier „Gemeinschaftsantenne/Breitband". Seit dem 1. Juli 2024
+// ist das TV-GRUNDENTGELT nicht mehr umlagefähig — das Nebenkostenprivileg
+// ist mit dem Telekommunikationsmodernisierungsgesetz entfallen
+// (§ 2 Nr. 15 BetrKV, § 230 Abs. 5 TKG).
+//
+// WICHTIG, und der Grund, warum die Zeile nicht einfach gestrichen wird:
+// Nr. 15 ist NICHT komplett weg. Umlagefähig bleiben der Betriebsstrom der
+// Gemeinschaftsantennenanlage und die Kosten der Betriebsbereitschafts-
+// prüfung; NEU hinzugekommen ist das Glasfaser-Bereitstellungsentgelt nach
+// § 72 Abs. 1 TKG (§ 2 Nr. 15 lit. c BetrKV). Wer die Position ganz
+// streicht, nimmt dem Vermieter etwas, das ihm zusteht.
+// ============================================================================
+
+/** Abrechnungsfrist in Monaten nach Ende des Abrechnungszeitraums. */
+export const ABRECHNUNGSFRIST_MONATE = 12;
+
+/** Tag, ab dem das TV-Grundentgelt nicht mehr umlagefähig ist. */
+export const KABEL_PRIVILEG_ENDE = '2024-07-01';
+
+/** Nummer der betroffenen Kostenart im BetrKV-Katalog. */
+export const BETRKV_NR_ANTENNE = 15;
+
+export interface FristErgebnis {
+  /** Letzter Tag, an dem die Abrechnung beim Mieter sein muss. */
+  fristEnde: string;
+  /** Tage bis zum Fristende, negativ wenn schon vorbei. */
+  tageBis: number;
+  abgelaufen: boolean;
+  /** Kann der Vermieter noch nachfordern? */
+  nachforderungMoeglich: boolean;
+  /** Ein Guthaben muss IMMER ausgezahlt werden — auch nach Fristablauf. */
+  guthabenAuszahlen: true;
+  hinweis: string;
+}
+
+function tagUtc(iso: string): number {
+  const y = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7)), d = Number(iso.slice(8, 10));
+  if (!y || !m || !d) return NaN;
+  return Date.UTC(y, m - 1, d);
+}
+
+function isoVon(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Prüft die Zwölfmonatsfrist für einen Abrechnungszeitraum.
+ *
+ * `endeISO` ist der LETZTE Tag des Abrechnungszeitraums (bei Kalenderjahr
+ * also der 31.12.). Die Frist endet zwölf Monate später am selben Kalendertag.
+ *
+ * `nichtZuVertreten` ist die Ausnahme des § 556 Abs. 3 Satz 3 BGB. Sie ist
+ * ein EINGABEWERT, kein Standardwert: ob die Verspätung entschuldigt ist,
+ * kann die Software nicht wissen, und eine ungeprüfte Annahme wäre hier
+ * teurer als eine Rückfrage.
+ */
+export function abrechnungsfrist(
+  endeISO: string,
+  heuteISO: string,
+  nichtZuVertreten = false,
+): FristErgebnis {
+  const ende = tagUtc(endeISO);
+  const heute = tagUtc(heuteISO);
+  if (!Number.isFinite(ende) || !Number.isFinite(heute)) {
+    return {
+      fristEnde: endeISO, tageBis: 0, abgelaufen: false,
+      nachforderungMoeglich: true, guthabenAuszahlen: true,
+      hinweis: 'Abrechnungszeitraum oder Stichtag sind kein gültiges Datum.',
+    };
+  }
+
+  const d = new Date(ende);
+  const fristMs = Date.UTC(d.getUTCFullYear() + 1, d.getUTCMonth(), d.getUTCDate());
+  const fristEnde = isoVon(fristMs);
+  const tageBis = Math.round((fristMs - heute) / 86400000);
+  const abgelaufen = tageBis < 0;
+
+  let hinweis: string;
+  if (!abgelaufen) {
+    hinweis = tageBis <= 60
+      ? `Noch ${tageBis} Tage bis zum ${fristEnde}. Danach ist eine Nachforderung nach § 556 Abs. 3 BGB ausgeschlossen.`
+      : `Die Abrechnung muss bis zum ${fristEnde} beim Mieter sein (§ 556 Abs. 3 Satz 2 BGB).`;
+  } else if (nichtZuVertreten) {
+    hinweis =
+      `Die Frist lief am ${fristEnde} ab. Eine Nachforderung ist nur möglich, weil die Verspätung als ` +
+      'nicht zu vertreten eingestuft wurde (§ 556 Abs. 3 Satz 3 BGB) — das muss der Vermieter belegen können.';
+  } else {
+    hinweis =
+      `Die Frist lief am ${fristEnde} ab (vor ${Math.abs(tageBis)} Tagen). Eine NACHFORDERUNG ist ausgeschlossen ` +
+      '(§ 556 Abs. 3 Satz 3 BGB) — das wirkt von selbst, der Mieter muss sich nicht darauf berufen. ' +
+      'Ein GUTHABEN muss trotzdem ausgezahlt werden.';
+  }
+
+  return {
+    fristEnde, tageBis, abgelaufen,
+    nachforderungMoeglich: !abgelaufen || nichtZuVertreten,
+    guthabenAuszahlen: true,
+    hinweis,
+  };
+}
+
+/**
+ * Was von einer Abrechnung nach Fristablauf übrig bleibt.
+ * Eine Nachforderung fällt weg, ein Guthaben nicht.
+ */
+export function ergebnisNachFrist(saldo: number, frist: FristErgebnis): {
+  betrag: number;
+  art: 'nachforderung' | 'guthaben' | 'ausgeglichen' | 'nachforderung_verfallen';
+  hinweis: string;
+} {
+  const s = centRunden(leseZahlOder(saldo, 0));
+  if (Math.abs(s) < 0.005) return { betrag: 0, art: 'ausgeglichen', hinweis: 'Die Abrechnung geht auf null auf.' };
+
+  // Positiv = Nachforderung des Vermieters, negativ = Guthaben des Mieters.
+  if (s < 0) {
+    return {
+      betrag: s, art: 'guthaben',
+      hinweis: frist.abgelaufen
+        ? 'Guthaben des Mieters — wird trotz abgelaufener Frist ausgezahlt.'
+        : 'Guthaben des Mieters.',
+    };
+  }
+  if (!frist.nachforderungMoeglich) {
+    return {
+      betrag: 0, art: 'nachforderung_verfallen',
+      hinweis:
+        `Die Nachforderung über ${s.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR ` +
+        'ist nach § 556 Abs. 3 Satz 3 BGB ausgeschlossen, weil die Abrechnung zu spät kam.',
+    };
+  }
+  return { betrag: s, art: 'nachforderung', hinweis: 'Nachforderung des Vermieters.' };
+}
+
+export interface KostenartPruefung {
+  umlagefaehig: boolean;
+  /** Teilweise: die Position gibt es noch, aber nicht mehr in voller Höhe. */
+  teilweise: boolean;
+  hinweis: string | null;
+}
+
+/**
+ * Prüft eine Kostenart auf Besonderheiten, die der Katalog nicht abbildet.
+ *
+ * BEFUND 2: Nr. 15 ist nicht pauschal weg. Deshalb gibt diese Funktion
+ * `teilweise: true` zurück und sagt im Klartext, WAS noch geht — statt die
+ * Position stumm zu streichen und dem Vermieter etwas wegzunehmen.
+ */
+export function pruefeKostenart(
+  nr: number,
+  abrechnungsEndeISO: string,
+): KostenartPruefung {
+  if (nr !== BETRKV_NR_ANTENNE) return { umlagefaehig: true, teilweise: false, hinweis: null };
+
+  const ende = tagUtc(abrechnungsEndeISO);
+  const stichtag = tagUtc(KABEL_PRIVILEG_ENDE);
+  if (!Number.isFinite(ende) || ende < stichtag) {
+    return {
+      umlagefaehig: true, teilweise: false,
+      hinweis: `Für Zeiträume vor dem ${KABEL_PRIVILEG_ENDE} war das TV-Grundentgelt noch umlagefähig.`,
+    };
+  }
+
+  return {
+    umlagefaehig: true,
+    teilweise: true,
+    hinweis:
+      `Seit dem ${KABEL_PRIVILEG_ENDE} ist das GRUNDENTGELT für Kabel-TV nicht mehr umlagefähig — ` +
+      'das Nebenkostenprivileg ist mit dem Telekommunikationsmodernisierungsgesetz entfallen ' +
+      '(§ 2 Nr. 15 BetrKV, § 230 Abs. 5 TKG). Weiterhin umlagefähig bleiben: Betriebsstrom der ' +
+      'Gemeinschaftsantennenanlage, Kosten der Betriebsbereitschaftsprüfung und — unter den ' +
+      'Voraussetzungen des § 2 Nr. 15 lit. c BetrKV — das Glasfaser-Bereitstellungsentgelt nach ' +
+      '§ 72 Abs. 1 TKG. Bitte prüfen, was in dieser Position wirklich steckt.',
+  };
+}
