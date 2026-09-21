@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase-server';
 import { baueBezahllink } from '@/lib/bezahllink';
 import type { IntegrationDatensatz } from '@/lib/konnektoren';
 import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
+// PUNKT 54 (21.09.2026): die Geldlogik der Schlussrechnung kommt aus der
+// getesteten Bibliothek; hier wird nur noch daraus HTML gemacht.
+import { baueSchlussrechnung, type AbschlagPosten } from '@/lib/abschlagsrechnung';
 
 export const runtime = 'nodejs';
 
@@ -70,7 +73,7 @@ function positionNetto(p: any): number {
   return (Number(p?.menge) || 0) * (Number(p?.einzelpreis) || 0);
 }
 
-function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null, ci: any = null): string {
+function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaName: string, aussteller: any, bezahllink: { url: string; anbieter: string } | null = null, ci: any = null, abschlaege: AbschlagPosten[] = []): string {
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const klein = !!rechnung?.kleinunternehmer;
@@ -176,6 +179,64 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
       <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(s.brutto, waehrung)}</span></div>`;
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // PUNKT 54 — § 13b, Abschlagsabsetzung, Einbehalt und Skonto
+  // ALLES haengt an neuen Feldern. Sind sie leer, bleibt der Block leer
+  // und der Summenblock oben steht unveraendert da wie bisher.
+  // ─────────────────────────────────────────────────────────────────
+  const reverseCharge = !klein && !!rechnung?.reverse_charge;
+  const istSchluss = String(rechnung?.rechnungsart || '') === 'schluss';
+  const istAbschlag = String(rechnung?.rechnungsart || '') === 'abschlag';
+
+  if (reverseCharge) {
+    // Ohne Steuerausweis, mit Pflichthinweis nach § 14a Abs. 5 UStG.
+    summenHtml = `
+      <div class="zeile"><span class="label">Zwischensumme (netto)</span><span>${geld(s.netto, waehrung)}</span></div>
+      <div class="zeile"><span class="label">Umsatzsteuer</span><span>0,00 ${esc(waehrung)}</span></div>
+      <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(s.netto, waehrung)}</span></div>`;
+  }
+
+  let zusatzHtml = '';
+
+  if (istSchluss) {
+    const sr = baueSchlussrechnung({
+      gesamt: s.gruppen.map((g) => ({ netto: g.netto, steuersatz: g.satz })),
+      abschlaege,
+      einbehalt: { prozent: rechnung?.einbehalt_prozent, basis: rechnung?.einbehalt_basis === 'netto' ? 'netto' : 'brutto' },
+      skontoProzent: rechnung?.skonto_prozent,
+      skontoTage: rechnung?.skonto_tage,
+      skontoBasis: rechnung?.skonto_basis === 'gesamtleistung' ? 'gesamtleistung' : 'restbetrag',
+      reverseCharge,
+    });
+
+    const absetzZeilen = sr.gruppen
+      .filter((g) => g.abgesetztNetto !== 0 || g.abgesetztSteuer !== 0)
+      .map((g) => `
+        <div class="zeile gruppe">
+          <span class="label">Entgelt ${geld(g.abgesetztNetto, waehrung)}${reverseCharge ? '' : ` zzgl. ${satzText(g.steuersatz)} % USt ${geld(g.abgesetztSteuer, waehrung)}`}</span>
+          <span></span>
+        </div>`).join('');
+
+    zusatzHtml = `
+      <div class="steuerblock">
+        <div class="steuerblock-titel">Abzüglich bereits berechneter Abschlagszahlungen</div>
+        ${absetzZeilen || '<div class="zeile gruppe"><span class="label">keine</span><span></span></div>'}
+        <div class="zeile"><span class="label">Summe der Abschlagszahlungen</span><span>− ${geld(sr.abgesetztBrutto, waehrung)}</span></div>
+      </div>
+      <div class="zeile"><span class="label">Verbleibendes Entgelt (netto)</span><span>${geld(sr.restNetto, waehrung)}</span></div>
+      ${reverseCharge ? '' : `<div class="zeile"><span class="label">zzgl. Umsatzsteuer</span><span>${geld(sr.restSteuer, waehrung)}</span></div>`}
+      <div class="zeile brutto"><span>${sr.ueberzahlt ? 'Rückzahlung an Sie' : 'Verbleibender Rechnungsbetrag'}</span><span>${geld(Math.abs(sr.restBrutto), waehrung)}</span></div>
+      ${sr.einbehalt > 0 ? `<div class="zeile"><span class="label">abzüglich Sicherheitseinbehalt${rechnung?.einbehalt_prozent ? ` (${satzText(Number(rechnung.einbehalt_prozent))} %)` : ''}</span><span>− ${geld(sr.einbehalt, waehrung)}</span></div>` : ''}
+      ${sr.einbehalt > 0 ? `<div class="zeile brutto"><span>Jetzt zahlbar</span><span>${geld(sr.restBrutto - sr.einbehalt, waehrung)}</span></div>` : ''}`;
+  } else if (Number(rechnung?.einbehalt_prozent) > 0) {
+    // Auch eine normale oder Abschlagsrechnung kann einen Einbehalt tragen.
+    const basisBetrag = rechnung?.einbehalt_basis === 'netto' ? s.netto : (reverseCharge ? s.netto : s.brutto);
+    const einbehalt = Math.round(basisBetrag * (Number(rechnung.einbehalt_prozent) || 0)) / 100;
+    zusatzHtml = `
+      <div class="zeile"><span class="label">abzüglich Sicherheitseinbehalt (${satzText(Number(rechnung.einbehalt_prozent))} %)</span><span>− ${geld(einbehalt, waehrung)}</span></div>
+      <div class="zeile brutto"><span>Jetzt zahlbar</span><span>${geld((reverseCharge ? s.netto : s.brutto) - einbehalt, waehrung)}</span></div>`;
+  }
+
   // Gespeicherte Summe vs. ausgewiesene Summe — nie stillschweigend abweichen.
   if (hatGruppen) {
     const abw: string[] = [];
@@ -190,6 +251,29 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
       </div>`;
     }
   }
+
+  // PUNKT 54 — Pflichthinweise und Zahlungsbedingungen
+  // Die Ueberschrift sagt, was das Dokument IST. Eine Abschlagsrechnung,
+  // die schlicht "Rechnung" heisst, laedt zum Doppelzahlen ein.
+  const dokumentTitel = istSchluss ? 'Schlussrechnung' : istAbschlag ? 'Abschlagsrechnung' : 'Rechnung';
+
+  const rcHinweis = reverseCharge
+    ? `<div class="hinweis"><strong>Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG).</strong> Die Umsatzsteuer schulden Sie als Leistungsempfänger.</div>`
+    : '';
+
+  const skontoP = Number(rechnung?.skonto_prozent) || 0;
+  const skontoT = Number(rechnung?.skonto_tage) || 0;
+  const skontoHinweis = (skontoP > 0 && skontoT > 0)
+    ? `<div class="hinweis">Bei Zahlung innerhalb von ${skontoT} Tagen gewähren wir ${satzText(skontoP)} % Skonto. Der Steuerbetrag bleibt hiervon zunächst unberührt (§ 17 Abs. 1 UStG).</div>`
+    : '';
+
+  const einbehaltHinweis = (Number(rechnung?.einbehalt_prozent) > 0 && rechnung?.einbehalt_bis)
+    ? `<div class="hinweis">Der Sicherheitseinbehalt wird nach Ablauf der Gewährleistung bis zum ${datumDe(rechnung.einbehalt_bis)} zur Zahlung fällig.</div>`
+    : '';
+
+  const abschlagHinweis = istAbschlag
+    ? `<div class="hinweis">Abschlagsrechnung für die bis heute erbrachten Leistungen (§ 632a BGB). Die Aufstellung der Leistungen entnehmen Sie den Positionen.</div>`
+    : '';
 
   const kleinHinweis = klein
     ? `<div class="hinweis">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</div>`
@@ -286,14 +370,14 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   <div class="kopf">
     <div class="aussteller">
       ${markeLogo ? `<img src="${esc(markeLogo)}" alt="Logo" class="logo">` : ''}
-      <div class="marke">Rechnung</div>
+      <div class="marke">${esc(dokumentTitel)}</div>
       <div class="name">${pflicht(aussteller?.name, 'Firmenname ergänzen')}</div>
       <div class="dim">${pflichtMehrzeilig(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
       <div class="dim">${steuerZeile}</div>
       ${aussteller?.telefon || aussteller?.email ? `<div class="dim">${esc(aussteller?.telefon || '')}${aussteller?.telefon && aussteller?.email ? ' &middot; ' : ''}${esc(aussteller?.email || '')}</div>` : ''}
     </div>
     <div style="text-align:right;">
-      <h1>Rechnung</h1>
+      <h1>${esc(dokumentTitel)}</h1>
       <div class="nummer">${pflicht(rechnung?.rechnungsnummer, 'Nummer fehlt')}</div>
     </div>
   </div>
@@ -333,9 +417,14 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   <div class="summen">
     ${summenHtml}
+    ${zusatzHtml}
   </div>
 
   ${abweichungHtml}
+  ${rcHinweis}
+  ${abschlagHinweis}
+  ${skontoHinweis}
+  ${einbehaltHinweis}
 
   ${kleinHinweis}
 
@@ -395,7 +484,36 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* CI optional — ohne CI neutrales Standardlayout */ }
 
-    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller, bezahllink, ci);
+    // PUNKT 54: die abgesetzten Abschlaege kommen SERVERSEITIG aus der
+    // Datenbank, nicht aus dem Browser. Sie entscheiden ueber den Betrag,
+    // den der Kunde ueberweist.
+    let abschlaege: AbschlagPosten[] = [];
+    if (String(rechnung?.rechnungsart || '') === 'schluss' && rechnung?.id) {
+      try {
+        const supabase = await createClient();
+        const { data } = await supabase
+          .from('rechnung_abschlaege')
+          .select('nummer_kopie, datum_kopie, netto, steuersatz, steuer')
+          .eq('schlussrechnung_id', rechnung.id);
+        abschlaege = (Array.isArray(data) ? data : []).map((z: any) => ({
+          nummer: z?.nummer_kopie || '',
+          datum: z?.datum_kopie,
+          netto: z?.netto,
+          steuersatz: z?.steuersatz,
+          steuer: z?.steuer,
+        }));
+      } catch {
+        // Bewusst KEIN stiller Rueckfall auf "keine Abschlaege": ohne
+        // Absetzung waere der ausgewiesene Betrag zu hoch. Stattdessen
+        // bricht die PDF-Erstellung ab und sagt warum.
+        return NextResponse.json(
+          { error: 'Die abgesetzten Abschlagszahlungen konnten nicht geladen werden. Ohne sie waere der Rechnungsbetrag zu hoch - das PDF wurde deshalb nicht erstellt.' },
+          { status: 503 },
+        );
+      }
+    }
+
+    const html = baueHtml(rechnung, positionen, kontaktName, firmaName, aussteller, bezahllink, ci, abschlaege);
 
     const gotenbergUrl = process.env.GOTENBERG_URL;
     const gUser = process.env.GOTENBERG_USER;
@@ -424,7 +542,9 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = await pdfResp.arrayBuffer();
     const basis = String(rechnung?.rechnungsnummer || 'Rechnung')
       .replace(/[^a-zA-Z0-9äöüÄÖÜ -]/g, '').replace(/\s+/g, '_').slice(0, 60);
-    const dateiName = `Rechnung_${basis}.pdf`;
+    const art = String(rechnung?.rechnungsart || '');
+    const vorsatz = art === 'schluss' ? 'Schlussrechnung' : art === 'abschlag' ? 'Abschlagsrechnung' : 'Rechnung';
+    const dateiName = `${vorsatz}_${basis}.pdf`;
 
     return new NextResponse(pdfBuffer, {
       status: 200,

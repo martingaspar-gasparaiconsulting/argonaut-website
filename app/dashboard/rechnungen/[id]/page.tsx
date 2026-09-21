@@ -625,6 +625,9 @@ export default function RechnungDetail() {
       }));
 
       const rechnungDaten = {
+        // P54: die id MUSS mit, sonst kann die Route die abgesetzten
+        // Abschlaege nicht laden und der Betrag auf dem Papier waere zu hoch.
+        id,
         rechnungsnummer: rechnung?.rechnungsnummer || "",
         titel: titel,
         rechnungsdatum,
@@ -636,6 +639,9 @@ export default function RechnungDetail() {
         mwst_summe: summen.mwst,
         brutto_summe: summen.brutto,
         notizen,
+        // P54: Rechnungsart und Zahlungsbedingungen aus dem Formular —
+        // NICHT aus rechnung, das ist der Stand vor dem letzten Speichern.
+        ...zusatzFuerSpeichern(zusatz),
       };
 
       // Absenderdaten (§14) aus dem Firmenprofil (profiles). Anschrift = Straße + PLZ Ort.

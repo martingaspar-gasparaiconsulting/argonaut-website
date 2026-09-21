@@ -58,6 +58,16 @@ export interface ZugferdEingabe {
   empfaenger: ZugferdPartei;     // Käufer (Kunde)
   profil?: ZugferdProfil;        // Default 'zugferd'
   leitweg_id?: string;           // nur B2G/XRechnung (Behörden)
+
+  // ─── PUNKT 54 (21.09.2026), alles optional ───
+  /**
+   * Summe der bereits berechneten Abschlaege, BRUTTO. Wird als
+   * TotalPrepaidAmount (BT-113) ausgewiesen; DuePayableAmount ist dann
+   * Gesamtbetrag minus dieser Summe.
+   */
+  vorausgezahlt?: unknown;
+  /** Skonto fuer die Zahlungsbedingungen (BR-DE-18). */
+  skonto?: { prozent: unknown; tage: unknown };
 }
 
 // ─── kleine Helfer ───
@@ -240,6 +250,11 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const buyer = normPartei(eingabe.empfaenger || {}, (eingabe.empfaenger as any)?.anschrift);
 
   const klein = !!rechnung?.kleinunternehmer;
+  // PUNKT 54: § 13b UStG — der Empfaenger schuldet die Steuer. Die Rechnung
+  // wird OHNE Steuerausweis geschrieben, mit Pflichthinweis nach
+  // § 14a Abs. 5 UStG. Kleinunternehmer geht vor: wer keine Steuer ausweist,
+  // kann sie auch nicht uebertragen.
+  const reverseCharge = !klein && !!rechnung?.reverse_charge;
   const waehrung = String(rechnung?.waehrung || 'EUR').toUpperCase().slice(0, 3) || 'EUR';
 
   // ── Steuer identisch zum PDF berechnen ──
@@ -252,9 +267,10 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const s = steuerGruppen(posten);
 
   // Bei Kleinunternehmer: alles Satz 0, Steuerbefreiungsgrund Pflicht
-  const nettoGesamt = klein ? posten.reduce((a, p) => a + p.netto, 0) : s.netto;
-  const steuerGesamt = klein ? 0 : s.steuer;
-  const bruttoGesamt = klein ? nettoGesamt : s.brutto;
+  const ohneSteuer = klein || reverseCharge;
+  const nettoGesamt = ohneSteuer ? posten.reduce((a, p) => a + p.netto, 0) : s.netto;
+  const steuerGesamt = ohneSteuer ? 0 : s.steuer;
+  const bruttoGesamt = ohneSteuer ? nettoGesamt : s.brutto;
 
   // ── Pflichtfeld-Prüfung (nicht blockierend) ──
   if (!seller.name) warnungen.push('Verkäufer-Name fehlt');
@@ -283,18 +299,22 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
 
   // ── Steuerbefreiung / Kategorie ──
   // S = Standardsatz, Z = Nullsatz, E = steuerbefreit (Kleinunternehmer §19)
-  const taxCat = klein ? 'E' : 'S';
+  // AE = VAT Reverse Charge (§ 13b UStG). Die Kategorie muss auf der
+  // ZEILE und im Kopf dieselbe sein, sonst faellt das XML durch.
+  const taxCat = klein ? 'E' : reverseCharge ? 'AE' : 'S';
   const taxBefreiung = klein
     ? '<ram:ExemptionReason>Kleinunternehmer gemäß § 19 UStG</ram:ExemptionReason>'
-    : '';
+    : reverseCharge
+      ? '<ram:ExemptionReason>Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG)</ram:ExemptionReason>'
+      : '';
 
   // ── Positionszeilen (CII: IncludedSupplyChainTradeLineItem) ──
   const lineItems = (positionen || []).map((p: any, i: number) => {
     const menge = leseZahlOder(p?.menge, 0);
     const einzel = leseZahlOder(p?.einzelpreis, 0);
     const netto = zeilenNetto(p);
-    const satz = klein ? 0 : leseZahlOder(p?.mwst_satz, 0);
-    const cat = klein ? 'E' : 'S';
+    const satz = ohneSteuer ? 0 : leseZahlOder(p?.mwst_satz, 0);
+    const cat = taxCat;
     // Einheit: ZUGFeRD nutzt UN/ECE-Codes. "C62" = Stück (Default), "HUR" = Stunde.
     const einheitCode = mapEinheit(p?.einheit);
     return `
@@ -327,14 +347,14 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   }).join('');
 
   // ── Steueraufschlüsselung (eine ApplicableTradeTax je Satz) ──
-  const taxBlocks = klein
+  const taxBlocks = ohneSteuer
     ? `
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
         ${taxBefreiung}
         <ram:BasisAmount>${n2(nettoGesamt)}</ram:BasisAmount>
-        <ram:CategoryCode>E</ram:CategoryCode>
+        <ram:CategoryCode>${taxCat}</ram:CategoryCode>
         <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>`
     : s.gruppen.map((g) => `
@@ -346,13 +366,41 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
         <ram:RateApplicablePercent>${nPct(g.satz)}</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>`).join('');
 
-  // ── Zahlungsziel ──
-  const paymentTerms = faellig
+  // ── PUNKT 54: bereits berechnete Abschlaege ──
+  // BT-113 TotalPrepaidAmount. Vorher stand DuePayableAmount IMMER gleich
+  // GrandTotalAmount — eine Schlussrechnung, die 80.000 EUR Abschlaege
+  // abzieht, haette im XML trotzdem den vollen Betrag als zahlbar
+  // ausgewiesen. Der Kunde zahlt nach dem XML, nicht nach dem PDF.
+  const vorausgezahlt = centRunden(leseZahlOder(eingabe.vorausgezahlt, 0));
+  const zahlbar = centRunden(bruttoGesamt - vorausgezahlt);
+  if (vorausgezahlt < 0) {
+    warnungen.push('Die Summe der Abschlaege ist negativ — das XML weist sie so aus, wie sie hereinkam.');
+  }
+  if (vorausgezahlt > bruttoGesamt) {
+    warnungen.push('Die Abschlaege uebersteigen den Rechnungsbetrag. DuePayableAmount ist negativ — das ist eine Rueckzahlung an den Kunden.');
+  }
+
+  // ── Zahlungsziel und Skonto ──
+  // BR-DE-18: Skonto gehoert in die Zahlungsbedingungen, und zwar in genau
+  // dieser Schreibweise, sonst liest es kein Empfaengersystem aus.
+  // Die Reihenfolge im CII ist festgelegt: Description VOR DueDateDateTime.
+  const skontoProzent = leseZahlOder(eingabe.skonto?.prozent, 0);
+  const skontoTage = Math.trunc(leseZahlOder(eingabe.skonto?.tage, 0));
+  const skontoGilt = skontoProzent > 0 && skontoProzent < 100 && skontoTage > 0;
+  const skontoZeile = skontoGilt
+    ? `#SKONTO#TAGE=${skontoTage}#PROZENT=${skontoProzent.toFixed(2)}#BASISBETRAG=${n2(zahlbar)}#`
+    : '';
+  const skontoHtml = skontoGilt
     ? `
-      <ram:SpecifiedTradePaymentTerms>
+        <ram:Description>${x(skontoZeile)}</ram:Description>`
+    : '';
+
+  const paymentTerms = (faellig || skontoGilt)
+    ? `
+      <ram:SpecifiedTradePaymentTerms>${skontoHtml}${faellig ? `
         <ram:DueDateDateTime>
           <udt:DateTimeString format="102">${faellig}</udt:DateTimeString>
-        </ram:DueDateDateTime>
+        </ram:DueDateDateTime>` : ''}
       </ram:SpecifiedTradePaymentTerms>`
     : '';
 
@@ -478,8 +526,9 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
         <ram:LineTotalAmount>${n2(nettoGesamt)}</ram:LineTotalAmount>
         <ram:TaxBasisTotalAmount>${n2(nettoGesamt)}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="${x(waehrung)}">${n2(steuerGesamt)}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>${n2(bruttoGesamt)}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>${n2(bruttoGesamt)}</ram:DuePayableAmount>
+        <ram:GrandTotalAmount>${n2(bruttoGesamt)}</ram:GrandTotalAmount>${vorausgezahlt !== 0 ? `
+        <ram:TotalPrepaidAmount>${n2(vorausgezahlt)}</ram:TotalPrepaidAmount>` : ''}
+        <ram:DuePayableAmount>${n2(zahlbar)}</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
