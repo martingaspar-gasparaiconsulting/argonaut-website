@@ -279,3 +279,153 @@ test('Sonderzeichen werden weiter XML-sicher geschrieben', () => {
   assert.ok(erg.xml.includes('&lt;50mm&gt; &amp; &quot;Dichtung&quot;'));
   assert.ok(!erg.xml.includes('<50mm>'));
 });
+
+// ===========================================================================
+// TEIL 6 — PAKET 2: DER VALIDATOR PRUEFT JETZT DIE ZAHLEN, DIE RAUSGEHEN
+//
+// Der Pruefbefund sagte: "der Validator meldet konform, weil er andere Zahlen
+// prueft als der Erzeuger schreibt." An der alten Fassung GEMESSEN:
+//
+//   Eine vollstaendige, richtige Rechnung, deren Werte als deutscher Text
+//   ankommen ("1.000,00"), ergab: konform true, 0 Fehler, 0 Warnungen,
+//   KEIN EINZIGER Pruefpunkt. Der Validator hatte intern mit lauter Nullen
+//   gerechnet — und zwei Nullen, die zueinander passen, sah er als
+//   Uebereinstimmung. Ein kaputtes Rechnungsdatum und ein Steuersatz trotz
+//   Kleinunternehmer-Kennzeichen liefen ebenso durch.
+// ===========================================================================
+
+import { validiereERechnung } from '../out/erechnung-validator.js';
+
+const V_FIRMA = {
+  name: 'Gaspar AI Consulting',
+  adresse: { strasse: 'Musterweg 3', plz: '71032', ort: 'Boeblingen' },
+  ust_idnr: 'DE123456789',
+  email: 'rechnung@example.de',
+  telefon: '07031 123456',
+  bank_iban: 'DE89 3704 0044 0532 0130 00',
+  bank_bic: 'COBADEFF370',
+};
+const V_KUNDE = { name: 'Kunde GmbH', adresse: { strasse: 'Bahnhofstr. 1', plz: '70173', ort: 'Stuttgart' } };
+
+function pruefe(positionen, rechnung = {}, aussteller = V_FIRMA, profil = 'xrechnung', leitweg = 'X-1') {
+  return validiereERechnung({
+    rechnung: { rechnungsnummer: 'RE-2026-001', rechnungsdatum: '2026-09-21', waehrung: 'EUR', ...rechnung },
+    positionen,
+    aussteller,
+    empfaenger: V_KUNDE,
+    profil,
+    leitweg_id: leitweg,
+  });
+}
+const regeln = (erg) => erg.punkte.map((p) => p.regel + ':' + p.stufe);
+
+test('DER KERNBEFUND: der Validator rechnet jetzt mit denselben Zahlen wie das XML', () => {
+  // Genau der Fall, an dem sich beide frueher unterschieden: der Rueckfall
+  // ohne gesamt_netto. Sechs Zeilen, damit die Rundungsdifferenz ueber die
+  // Toleranz von zwei Cent hinauswaechst — bei zwei Zeilen waeren es nur
+  // 0,01 gewesen, und die haette die Toleranz verschluckt (siehe die Notiz
+  // zur Toleranz weiter unten).
+  const pos = Array.from({ length: 6 }, () => (
+    { bezeichnung: 'Montage', menge: 1.5, einzelpreis: 66.67, mwst_satz: 19 }
+  ));
+  const kopf = zeilenUndKopf(baue(pos).xml).kopf;
+  assert.equal(kopf, '600.06', 'sechsmal 100,01 — so steht es im XML');
+
+  // Der Validator muss GENAU diese Zahl als Positionssumme sehen. Rechnet er
+  // wie frueher ungerundet weiter, kommt er auf 600,03 und meldet an einer
+  // richtigen Rechnung eine Abweichung.
+  const erg = pruefe(pos, { netto_summe: 600.06, mwst_summe: 114.01, brutto_summe: 714.07 });
+  assert.ok(!regeln(erg).some((r) => r.startsWith('BR-CO-10')), 'keine falsche Abweichungsmeldung');
+  assert.ok(!regeln(erg).some((r) => r.startsWith('BR-CO-14')), 'auch die Steuer stimmt ueberein');
+  assert.equal(erg.konform, true);
+});
+
+test('NOTIZ ZUR TOLERANZ: zwei Cent verstecken genau die Art Fehler, um die es geht', () => {
+  // Der Validator laesst zwei Cent Abweichung durch. Das ist fuer OCR-Belege
+  // sinnvoll und hier trotzdem heikel: bei zwei Positionen betraegt der
+  // Rundungsunterschied nur einen Cent und faellt damit unter die Toleranz —
+  // der Fehler war also da und blieb trotzdem unsichtbar. Erst ab sechs
+  // Zeilen waechst er darueber hinaus. Festgehalten, damit niemand aus einem
+  // gruenen Haken schliesst, dass die Zahlen uebereinstimmen.
+  const zwei = Array.from({ length: 2 }, () => ({ bezeichnung: 'M', menge: 1.5, einzelpreis: 66.67, mwst_satz: 19 }));
+  const ungerundet = 2 * 1.5 * 66.67;               // 200.01 — so rechnete der Validator frueher
+  const gerundet = Number(zeilenUndKopf(baue(zwei).xml).kopf); // 200.02 — so steht es im XML
+  assert.ok(Math.abs(ungerundet - gerundet) <= 0.02, 'unter der Toleranz, also unsichtbar');
+  assert.equal(gerundet, 200.02);
+});
+
+test('BEFUND: deutsche Zahlen machten den Validator blind', () => {
+  // Diese Rechnung IST falsch: die Positionen ergeben 1.000,00, gespeichert
+  // sind 2.000,00. Die alte Fassung las beide Werte als 0 und meldete
+  // "konform, keine Beanstandung".
+  const erg = pruefe(
+    [{ bezeichnung: 'Leistung', menge: '1', einzelpreis: '1.000,00', mwst_satz: '19', gesamt_netto: '1.000,00' }],
+    { netto_summe: '2.000,00', mwst_summe: '380,00', brutto_summe: '2.380,00' },
+  );
+  assert.equal(erg.konform, false, 'vorher true');
+  assert.ok(regeln(erg).includes('BR-CO-10:fehler'), 'die Abweichung wird jetzt gefunden');
+});
+
+test('eine richtige Rechnung in deutscher Schreibweise bleibt konform', () => {
+  const erg = pruefe(
+    [{ bezeichnung: 'Leistung', menge: '1', einzelpreis: '1.000,00', mwst_satz: '19', gesamt_netto: '1.000,00' }],
+    { netto_summe: '1.000,00', mwst_summe: '190,00', brutto_summe: '1.190,00' },
+  );
+  assert.equal(erg.konform, true);
+  assert.equal(erg.fehlerAnzahl, 0);
+});
+
+test('BEFUND: fehlende Bankverbindung wurde verschwiegen', () => {
+  const ohne = { ...V_FIRMA, bank_iban: '' };
+  const erg = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { netto_summe: 100, mwst_summe: 19, brutto_summe: 119 }, ohne);
+  assert.ok(regeln(erg).includes('BG-16:warnung'), 'vorher kam dazu kein Wort');
+  assert.equal(erg.konform, true, 'WICHTIG: es bleibt eine Warnung, kein Fehler — sonst waere der Knopf rot geworden');
+});
+
+test('BEFUND: fehlender Pflichtkontakt wurde verschwiegen — aber nur bei XRechnung', () => {
+  const ohne = { ...V_FIRMA, telefon: '', email: '' };
+  const xr = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { netto_summe: 100, mwst_summe: 19, brutto_summe: 119 }, ohne, 'xrechnung');
+  assert.equal(regeln(xr).filter((r) => r.startsWith('BG-6')).length, 2, 'Telefon und E-Mail');
+
+  const zf = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { netto_summe: 100, mwst_summe: 19, brutto_summe: 119 }, ohne, 'zugferd');
+  assert.equal(regeln(zf).filter((r) => r.startsWith('BG-6')).length, 0, 'ZUGFeRD verlangt BG-6 nicht');
+});
+
+test('BEFUND: ein unlesbares Rechnungsdatum lief durch', () => {
+  const erg = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { rechnungsdatum: 'kaputt', netto_summe: 100, mwst_summe: 19, brutto_summe: 119 });
+  assert.ok(regeln(erg).includes('BR-03:warnung'), 'vorher kam keine einzige Meldung');
+  assert.equal(erg.konform, true);
+
+  const leerDatum = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { rechnungsdatum: '', netto_summe: 100, mwst_summe: 19, brutto_summe: 119 });
+  assert.ok(regeln(leerDatum).includes('BR-03:fehler'), 'ganz fehlend bleibt ein Fehler wie bisher');
+});
+
+test('BEFUND: Kleinunternehmer mit Steuersatz in der Position lief durch', () => {
+  const erg = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }],
+    { kleinunternehmer: true, netto_summe: 100, brutto_summe: 100 });
+  assert.ok(regeln(erg).includes('BR-E-Klein:warnung'), 'der Satz verschwindet im XML still — jetzt mit Ansage');
+  assert.equal(erg.konform, true);
+});
+
+test('BEFUND: Positionen ohne gespeicherte Summe wurden gar nicht geprueft', () => {
+  const erg = pruefe([{ bezeichnung: 'X', menge: 1, einzelpreis: 100, mwst_satz: 19, gesamt_netto: 100 }], {});
+  assert.ok(regeln(erg).includes('BR-CO-10:warnung'), 'vorher wurde die Pruefung stillschweigend uebersprungen');
+  assert.equal(erg.konform, true);
+});
+
+test('was schon vorher ein Fehler war, bleibt einer', () => {
+  const erg = validiereERechnung({
+    rechnung: {}, positionen: [], aussteller: {}, empfaenger: {}, profil: 'xrechnung',
+  });
+  const r = regeln(erg);
+  for (const soll of ['BR-02:fehler', 'BR-03:fehler', 'BR-06:fehler', 'BR-07:fehler', 'BR-CO-26:fehler', 'BR-16:fehler']) {
+    assert.ok(r.includes(soll), 'fehlt: ' + soll);
+  }
+  assert.equal(erg.konform, false);
+  assert.ok(r.includes('BR-DE-15:warnung'), 'Leitweg-ID bleibt Warnung');
+});

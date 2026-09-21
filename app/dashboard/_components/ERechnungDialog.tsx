@@ -82,6 +82,16 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     return { name, adresse: { strasse, plz, ort, land }, ust_idnr: ust, email, anschrift };
   }
 
+  // Punkt 53 (21.09.2026): Diese Spaltenliste stand dreimal wortgleich in
+  // dieser Datei, und das Aussteller-Objekt daneben auch - einmal ueber
+  // baueAussteller, zweimal von Hand daneben geschrieben. Deshalb fiel nicht
+  // auf, dass in keiner der drei die Bankverbindung geladen wurde: die
+  // E-Rechnung ging ohne IBAN (BG-16) und ohne Kontakt (BG-6) raus, waehrend
+  // dieselben Felder im PDF laengst standen. Jetzt gibt es eine Liste und
+  // eine Funktion.
+  const FIRMEN_SPALTEN =
+    "firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer, firma_telefon, firma_iban, firma_bic, firma_bank";
+
   function baueAussteller(prof: any) {
     return {
       name: prof.firma_name || "",
@@ -89,6 +99,10 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
       ust_idnr: prof.firma_ust_id || "",
       steuernummer: prof.firma_steuernummer || "",
       email: prof.firma_email || "",
+      telefon: prof.firma_telefon || "",
+      bank_iban: prof.firma_iban || "",
+      bank_bic: prof.firma_bic || "",
+      bank_name: prof.firma_bank || "",
     };
   }
 
@@ -98,7 +112,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .select(FIRMEN_SPALTEN)
         .single();
       const aussteller = baueAussteller(p || {});
       const erg = validiereERechnung({
@@ -125,16 +139,9 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .select(FIRMEN_SPALTEN)
         .single();
-      const prof: any = p || {};
-      const aussteller = {
-        name: prof.firma_name || "",
-        adresse: { strasse: prof.firma_strasse || "", plz: prof.firma_plz || "", ort: prof.firma_ort || "", land: "DE" },
-        ust_idnr: prof.firma_ust_id || "",
-        steuernummer: prof.firma_steuernummer || "",
-        email: prof.firma_email || "",
-      };
+      const aussteller = baueAussteller(p || {});
 
       const body: any = {
         rechnung,
@@ -200,16 +207,9 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("firma_name, firma_strasse, firma_plz, firma_ort, firma_email, firma_ust_id, firma_steuernummer")
+        .select(FIRMEN_SPALTEN)
         .single();
-      const prof: any = p || {};
-      const aussteller = {
-        name: prof.firma_name || "",
-        adresse: { strasse: prof.firma_strasse || "", plz: prof.firma_plz || "", ort: prof.firma_ort || "", land: "DE" },
-        ust_idnr: prof.firma_ust_id || "",
-        steuernummer: prof.firma_steuernummer || "",
-        email: prof.firma_email || "",
-      };
+      const aussteller = baueAussteller(p || {});
       const body: any = {
         rechnung,
         positionen: (zeilen || []).map((z: any) => ({

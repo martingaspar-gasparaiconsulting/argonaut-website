@@ -108,7 +108,7 @@ function nPct(v: any): string {
  * Rueckfall, wenn ein Aufrufer `gesamt_netto` weglaesst. Diese Funktion
  * wendet jetzt genau dieselbe Regel an wie das Formular.
  */
-function zeilenNetto(p: any): number {
+export function zeilenNetto(p: any): number {
   if (p?.gesamt_netto != null) return centRunden(leseZahlOder(p.gesamt_netto, 0));
   return centRunden(leseZahlOder(p?.menge, 0) * leseZahlOder(p?.einzelpreis, 0));
 }
