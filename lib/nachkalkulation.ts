@@ -38,6 +38,38 @@
 //    Punkt 17 und das SKR-Feld in Punkt 15.
 //
 // Die Datei hatte bis heute KEINEN Test.
+//
+// ▄▄▄ PUNKT 62 (21.09.2026) — DIE NACHKALKULATION EHRLICH MACHEN ▄▄▄
+//
+// DER BEFUND, an dieser Datei selbst belegt: Zeile 132 rechnet
+//   deckungsbeitrag = erbracht − kostenSumme
+// `erbracht` ist Stunden mal VERKAUFSPREIS (Z. 110: stunden × stundensatz),
+// `kostenSumme` ist nur Material und Fremdleistung. DIE LOHNKOSTEN FEHLEN
+// VOLLSTÄNDIG. Was hier „Deckungsbeitrag" heißt, ist Umsatz minus Material.
+//
+// GEMESSEN mit dem Fall aus der Bauliste: 100 Stunden zu 75 EUR verkauft
+// = 7.500 EUR, Material 2.000 EUR. Angezeigt werden 5.500 EUR
+// Deckungsbeitrag und 73,3 % Marge. Bei 38 EUR Selbstkosten je Stunde sind
+// es in Wahrheit 1.700 EUR und 22,7 %. Mit dem aus lib/stundensatz.ts
+// hergeleiteten Satz von 44,77 EUR bleiben 1.023 EUR und 13,6 %.
+//
+// Wer der ersten Zahl glaubt, unterbietet sich beim nächsten Angebot —
+// und je mehr Aufträge er so gewinnt, desto schneller geht es schief.
+//
+// WIE ES REPARIERT IST: REIN ADDITIV.
+//   · `deckungsbeitrag` und `marge` bleiben UNVERÄNDERT. Sie stehen heute
+//     auf der Seite; sie stillschweigend umzudefinieren hieße, dass jeder
+//     Betrieb am Montag andere Zahlen sieht, ohne dass ihm jemand etwas
+//     gesagt hat.
+//   · NEU daneben: `lohnkosten`, `deckungsbeitragEcht`, `margeEcht` und
+//     `lohnkostenAngesetzt`.
+//   · Ohne übergebenen Selbstkostensatz ändert sich GAR NICHTS: die neuen
+//     Felder melden dann ehrlich, dass kein Satz hinterlegt ist, statt mit
+//     einem geratenen zu rechnen.
+//   · Die Ampel `kalkStatus` bleibt, wie sie ist — Entscheidung aus Punkt 23.
+//
+// Der Selbstkostensatz kommt aus lib/stundensatz.ts (Punkt 61) und ist dort
+// hergeleitet, nicht eingetippt.
 // ============================================================================
 
 import { leseZahlOder, centRunden } from './zahlen';
@@ -82,6 +114,33 @@ export interface ProjektKalk {
   leistungPlusKosten: number;
   /** budget − leistungPlusKosten (negativ = der Festpreis deckt es nicht mehr). */
   luft: number;
+
+  // --- ab Punkt 62, additiv. Die Felder darüber bleiben unverändert. ---
+  /** Stunden × Selbstkosten je Stunde. 0, wenn kein Satz hinterlegt ist. */
+  lohnkosten: number;
+  /** erbracht − Material − LOHN. Der Deckungsbeitrag, der stimmt. */
+  deckungsbeitragEcht: number;
+  /** deckungsbeitragEcht / erbracht × 100. */
+  margeEcht: number;
+  /**
+   * false = es wurde kein Selbstkostensatz übergeben. Dann sind
+   * `lohnkosten` 0 und `deckungsbeitragEcht` gleich `deckungsbeitrag` —
+   * NICHT weil der Lohn null wäre, sondern weil niemand ihn kennt.
+   * Die Anzeige muss das unterscheiden.
+   */
+  lohnkostenAngesetzt: boolean;
+}
+
+/**
+ * Woher die Lohn-Selbstkosten kommen (Punkt 62).
+ *
+ * `selbstkostenJeStunde` ist die Zahl aus lib/stundensatz.ts — Personalkosten
+ * im Jahr geteilt durch die PRODUKTIVEN Stunden. Ausdrücklich NICHT der
+ * Verkaufs-Stundensatz aus projektleistungen: der steht schon in `erbracht`,
+ * und ihn hier noch einmal abzuziehen ergäbe immer genau null.
+ */
+export interface LohnAnsatz {
+  selbstkostenJeStunde?: number | null;
 }
 
 /** Zahl aus der Datenbank — auch als deutscher Text („12.500,00"). */
@@ -100,8 +159,20 @@ export function kalkStatus(budget: number, erbracht: number): KalkStatus {
   return 'im_budget';
 }
 
-/** Baut je Projekt die Nachkalkulation; sortiert „über Budget" zuerst, dann nach offenem Betrag. */
-export function baueKalkulation(projekte: ProjektRoh[], leistungen: LeistungRoh[], kosten: KostenRoh[] = []): ProjektKalk[] {
+/**
+ * Baut je Projekt die Nachkalkulation; sortiert „über Budget" zuerst, dann nach offenem Betrag.
+ *
+ * Der vierte Parameter ist ab Punkt 62 dazugekommen und optional — ohne ihn
+ * rechnet die Funktion Zeile für Zeile dasselbe wie vorher.
+ */
+export function baueKalkulation(
+  projekte: ProjektRoh[],
+  leistungen: LeistungRoh[],
+  kosten: KostenRoh[] = [],
+  lohn: LohnAnsatz = {},
+): ProjektKalk[] {
+  const satz = Math.max(0, leseZahlOder(lohn.selbstkostenJeStunde, 0));
+  const lohnAngesetzt = satz > 0;
   const agg = new Map<string, { erbracht: number; abgerechnet: number; stunden: number }>();
   for (const l of leistungen) {
     const pid = String(l.projekt_id ?? '');
@@ -130,6 +201,12 @@ export function baueKalkulation(projekte: ProjektRoh[], leistungen: LeistungRoh[
     const abgerechnet = r2(a.abgerechnet);
     const kostenSumme = r2(kostenAgg.get(String(p.id)) || 0);
     const deckungsbeitrag = r2(erbracht - kostenSumme);
+
+    // Punkt 62: der Lohn, der bisher fehlte.
+    const stunden = r2(a.stunden);
+    const lohnkosten = r2(stunden * satz);
+    const deckungsbeitragEcht = r2(deckungsbeitrag - lohnkosten);
+
     return {
       id: String(p.id),
       name: (p.name && String(p.name).trim()) || 'Projekt',
@@ -146,6 +223,10 @@ export function baueKalkulation(projekte: ProjektRoh[], leistungen: LeistungRoh[
       status: kalkStatus(budget, erbracht),
       leistungPlusKosten: r2(erbracht + kostenSumme),
       luft: r2(budget - erbracht - kostenSumme),
+      lohnkosten,
+      deckungsbeitragEcht,
+      margeEcht: erbracht > 0 ? r2((deckungsbeitragEcht / erbracht) * 100) : 0,
+      lohnkostenAngesetzt: lohnAngesetzt,
     };
   });
 
@@ -153,12 +234,13 @@ export function baueKalkulation(projekte: ProjektRoh[], leistungen: LeistungRoh[
   return out.sort((x, y) => (rang[x.status] - rang[y.status]) || (y.offen - x.offen));
 }
 
-/** Summen über alle Projekte (für die KPI-Leiste). */
+/** Summen über alle Projekte (für die KPI-Leiste). Ab Punkt 62 mit Lohn-Feldern. */
 export function summeKalk(kalk: ProjektKalk[]): {
   budget: number; erbracht: number; abgerechnet: number; offen: number; ueberBudget: number;
   kosten: number; deckungsbeitrag: number; marge: number;
+  lohnkosten: number; deckungsbeitragEcht: number; margeEcht: number; lohnkostenAngesetzt: boolean;
 } {
-  const s = { budget: 0, erbracht: 0, abgerechnet: 0, offen: 0, ueberBudget: 0, kosten: 0, deckungsbeitrag: 0 };
+  const s = { budget: 0, erbracht: 0, abgerechnet: 0, offen: 0, ueberBudget: 0, kosten: 0, deckungsbeitrag: 0, lohnkosten: 0, deckungsbeitragEcht: 0 };
   for (const k of kalk) {
     s.budget += k.budget;
     s.erbracht += k.erbracht;
@@ -166,12 +248,22 @@ export function summeKalk(kalk: ProjektKalk[]): {
     s.offen += k.offen;
     s.kosten += k.kosten;
     s.deckungsbeitrag += k.deckungsbeitrag;
+    s.lohnkosten += k.lohnkosten;
+    s.deckungsbeitragEcht += k.deckungsbeitragEcht;
     if (k.status === 'ueber_budget') s.ueberBudget += 1;
   }
+  const erbracht = r2(s.erbracht);
+  const dbEcht = r2(s.deckungsbeitragEcht);
   return {
-    budget: r2(s.budget), erbracht: r2(s.erbracht), abgerechnet: r2(s.abgerechnet), offen: r2(s.offen),
+    budget: r2(s.budget), erbracht, abgerechnet: r2(s.abgerechnet), offen: r2(s.offen),
     ueberBudget: s.ueberBudget, kosten: r2(s.kosten), deckungsbeitrag: r2(s.deckungsbeitrag),
-    marge: s.erbracht > 0 ? r2((s.deckungsbeitrag / s.erbracht) * 100) : 0,
+    marge: erbracht > 0 ? r2((s.deckungsbeitrag / erbracht) * 100) : 0,
+    lohnkosten: r2(s.lohnkosten),
+    deckungsbeitragEcht: dbEcht,
+    margeEcht: erbracht > 0 ? r2((dbEcht / erbracht) * 100) : 0,
+    // Angesetzt heißt: bei ALLEN Projekten, nicht bei einigen. Eine halbe
+    // Summe wäre irreführender als gar keine.
+    lohnkostenAngesetzt: kalk.length > 0 && kalk.every((k) => k.lohnkostenAngesetzt),
   };
 }
 
@@ -221,4 +313,85 @@ export function fixpreisHinweise(kalk: ProjektKalk[]): string[] {
     h.push(`${nochOffen.length} Projekt${nochOffen.length === 1 ? '' : 'e'} hat noch nicht abgerechnete Leistung, obwohl das Budget bereits voll fakturiert ist: ${nochOffen.map((k) => `${k.name} (${eur(k.offen)} offen)`).join(', ')}.`);
   }
   return h;
+}
+
+
+// ============================================================================
+// Klartext zum Deckungsbeitrag (Punkt 62). Ändert keine bestehende Zahl und
+// keine Ampel. NOCH NICHT auf der Seite angezeigt — Andockpunkt, gebündelt
+// mit fixpreisHinweise und den übrigen offenen Hinweis-Funktionen.
+//
+// Der wichtigste Satz ist der erste: solange kein Selbstkostensatz hinterlegt
+// ist, ist die angezeigte Marge KEINE Marge. Das muss dastehen, bevor
+// irgendeine Zahl daneben erscheint.
+// ============================================================================
+
+export function lohnHinweise(kalk: ProjektKalk[]): string[] {
+  const h: string[] = [];
+  const mitLeistung = (kalk || []).filter((k) => k.erbracht > 0);
+  if (mitLeistung.length === 0) return h;
+
+  const ohneSatz = mitLeistung.filter((k) => !k.lohnkostenAngesetzt);
+  if (ohneSatz.length > 0) {
+    h.push(
+      `Für ${ohneSatz.length} Projekt${ohneSatz.length === 1 ? '' : 'e'} ist kein Selbstkostensatz je Stunde hinterlegt. ` +
+        'Der ausgewiesene Deckungsbeitrag enthält dort NUR Material und Fremdleistung — die Lohnkosten fehlen. ' +
+        'Die Marge ist damit deutlich zu hoch dargestellt.',
+    );
+  }
+
+  const mitSatz = mitLeistung.filter((k) => k.lohnkostenAngesetzt);
+
+  const negativ = mitSatz.filter((k) => k.deckungsbeitragEcht < -0.005);
+  if (negativ.length > 0) {
+    h.push(
+      `${negativ.length} Projekt${negativ.length === 1 ? '' : 'e'} trägt sich nach Abzug von Material UND Lohn nicht: ` +
+        negativ.map((k) => `${k.name} (${eur(k.deckungsbeitragEcht)})`).join(', ') + '.',
+    );
+  }
+
+  // Die Projekte, bei denen die alte Zahl gut aussah und die neue nicht.
+  const geschoent = mitSatz.filter((k) => k.marge >= 30 && k.margeEcht < 15);
+  if (geschoent.length > 0) {
+    h.push(
+      `Bei ${geschoent.length} Projekt${geschoent.length === 1 ? '' : 'en'} sieht die Marge ohne Lohnkosten deutlich besser aus, als sie ist: ` +
+        geschoent
+          .map((k) => `${k.name} (${zahl(k.marge)} % gegen ${zahl(k.margeEcht)} % mit Lohn)`)
+          .join(', ') + '.',
+    );
+  }
+
+  const duenn = mitSatz.filter((k) => k.deckungsbeitragEcht >= -0.005 && k.margeEcht < 5);
+  if (duenn.length > 0) {
+    h.push(
+      `${duenn.length} Projekt${duenn.length === 1 ? '' : 'e'} unter 5 % echter Marge — dort bleibt nach Material und Lohn fast nichts: ` +
+        duenn.map((k) => `${k.name} (${zahl(k.margeEcht)} %)`).join(', ') + '.',
+    );
+  }
+
+  return h;
+}
+
+function zahl(n: number): string {
+  return centRunden(n).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
+/**
+ * Ein Satz für die Kopfzeile der Nachkalkulation.
+ * Sagt ausdrücklich, WELCHE der beiden Margen gemeint ist.
+ */
+export function margeKlartext(s: ReturnType<typeof summeKalk>): string {
+  if (s.erbracht <= 0) return 'Noch keine erbrachte Leistung erfasst.';
+  if (!s.lohnkostenAngesetzt) {
+    return (
+      `${eur(s.erbracht)} erbracht, ${eur(s.kosten)} Material. Ausgewiesen sind ${zahl(s.marge)} % — ` +
+      'das ist Umsatz minus Material, NICHT die Marge. Ohne hinterlegten Selbstkostensatz je Stunde ' +
+      'lässt sich der echte Deckungsbeitrag nicht rechnen.'
+    );
+  }
+  return (
+    `${eur(s.erbracht)} erbracht, ${eur(s.kosten)} Material, ${eur(s.lohnkosten)} Lohn. ` +
+    `Echter Deckungsbeitrag ${eur(s.deckungsbeitragEcht)} (${zahl(s.margeEcht)} %). ` +
+    `Ohne Lohn stünden dort ${zahl(s.marge)} %.`
+  );
 }
