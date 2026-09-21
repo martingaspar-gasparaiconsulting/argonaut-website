@@ -8,10 +8,24 @@
 // jetztIso wird hereingereicht (deterministisch).
 // ============================================================================
 
+import { leseZahlOder, centRunden } from './zahlen';
+
 const TAG = 86_400_000;
 const WOCHE = 7 * TAG;
 
-function r2(n: number): number { return Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100; }
+/**
+ * Auf Cent runden — ueber den einen Zahlen-Leser (lib/zahlen.ts).
+ *
+ * Punkt 30, 21.09.2026. Zwei Fehler in einer Zeile, beide GEMESSEN:
+ *  1. Der alte Leser war Number(n) || 0: aus dem Text "1.234,56", wie ihn
+ *     eine numeric-Spalte oft liefert, wurde still die Zahl 0. Ein Saldo
+ *     von 1.234,56 Euro stand als 0,00 Euro da.
+ *  2. Die alte Rundung kippte bei negativen Betraegen nach oben:
+ *     -0,005 wurde -0,00 und -1.234,565 wurde -1.234,56 statt -1.234,57.
+ *     Genau hier faellt das auf, denn der Liquiditaets-Saldo IST oft
+ *     negativ — das ist der Zweck dieser Vorschau.
+ */
+function r2(n: unknown): number { return centRunden(leseZahlOder(n, 0)); }
 function zeitMs(v: unknown): number {
   const t = new Date(String(v ?? '')).getTime();
   return Number.isFinite(t) ? t : 0;
@@ -57,7 +71,7 @@ export type VorschauErgebnis = {
 
 /** Monatliche Fixkosten auf einen Wochenwert umlegen (12 Monate / 52 Wochen). */
 export function fixProWoche(fixkostenProMonat: number): number {
-  return r2((Number(fixkostenProMonat) || 0) * 12 / 52);
+  return r2(leseZahlOder(fixkostenProMonat, 0) * 12 / 52);
 }
 
 /**
@@ -75,14 +89,14 @@ export function liquiditaetsVorschau(e: VorschauEingabe): VorschauErgebnis {
   let ueberfaellig = 0;
   let offeneOhneTermin = 0;
   for (const r of offene) {
-    const rest = Number(r.rest) || 0;
+    const rest = leseZahlOder(r.rest, 0);
     if (rest <= 0) continue;
     const t = zeitMs(r.faelligkeitsdatum);
     if (t <= 0) offeneOhneTermin += rest;
     else if (t < jetzt) ueberfaellig += rest;
   }
 
-  let saldo = Number(e.startSaldo) || 0;
+  let saldo = leseZahlOder(e.startSaldo, 0);
   let summeZufluss = 0;
   let summeAbfluss = 0;
   let ersteUnterdeckung: string | null = null;
@@ -93,7 +107,7 @@ export function liquiditaetsVorschau(e: VorschauEingabe): VorschauErgebnis {
     const wEnd = wStart + WOCHE;
     let zufluss = 0;
     for (const r of offene) {
-      const rest = Number(r.rest) || 0;
+      const rest = leseZahlOder(r.rest, 0);
       if (rest <= 0) continue;
       const t = zeitMs(r.faelligkeitsdatum);
       if (t <= 0) continue; // ohne Termin: nicht einplanen
@@ -113,7 +127,7 @@ export function liquiditaetsVorschau(e: VorschauEingabe): VorschauErgebnis {
 
   return {
     punkte,
-    startSaldo: r2(Number(e.startSaldo) || 0),
+    startSaldo: r2(e.startSaldo),
     endSaldo: saldo,
     summeZufluss,
     summeAbfluss,

@@ -5,6 +5,7 @@
 // Supabase-/React-Abhängigkeit. Node-getestet.
 
 import { csvZeile } from './csvSchreiben';
+import { leseZahlOder, centRunden } from './zahlen';
 
 export type FeldTyp = 'zahl' | 'text' | 'datum';
 export interface Feld { key: string; label: string; typ: FeldTyp; }
@@ -51,12 +52,22 @@ export function quelle(key: string | null | undefined): Quelle | undefined {
 export function zahlFelder(q: Quelle | undefined): Feld[] { return (q?.felder ?? []).filter((f) => f.typ === 'zahl'); }
 export function textFelder(q: Quelle | undefined): Feld[] { return (q?.felder ?? []).filter((f) => f.typ === 'text'); }
 
-function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
-}
-function r2(n: number): number { return Math.round((n + Number.EPSILON) * 100) / 100; }
+/**
+ * Zahl aus einem Datenbankfeld — ueber den einen Zahlen-Leser (lib/zahlen.ts).
+ *
+ * Punkt 30, 21.09.2026. Der alte Leser stand namentlich in der Bauart-A-Liste
+ * im Kopf von lib/zahlen.ts: replace(',', '.') macht aus "1.234,56" den Text
+ * "1.234.56" und daraus NaN, also 0. Eine Auswertung ueber Brutto-Betraege
+ * zeigte dann eine Summe von 0,00 Euro — ohne jeden Hinweis.
+ */
+function z(x: unknown): number { return leseZahlOder(x, 0); }
+
+/**
+ * Auf Cent runden — symmetrisch um Null (centRunden aus lib/zahlen.ts).
+ * Die alte Rundung kippte negative Summen nach oben; summiert werden hier
+ * auch Felder, die negativ sein koennen (Gutschriften, Stornos).
+ */
+function r2(n: number): number { return centRunden(n); }
 
 export type MetrikTyp = 'anzahl' | 'summe';
 export interface ReportKonfig {
