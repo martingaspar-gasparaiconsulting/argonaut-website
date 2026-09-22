@@ -1,3 +1,4 @@
+import { leseZahl } from './zahlen';
 // ============================================================================
 // ARGONAUT OS · lib/terminWert.ts — Was darf eine Anfrage kosten?
 // (Marketing · Termin-Wert-Rechner)
@@ -18,11 +19,17 @@
 // pure, node-testbare Funktionen (Muster wie lib/marketingRoi.ts).
 // ============================================================================
 
-/** Nicht-negative Zahl aus Zahl/String (Komma/Punkt), sonst 0. */
+/**
+ * Nicht-negative Zahl, sonst 0.
+ *
+ * Punkt 12 (22.09.2026): Der eigene Leser entfernte ALLE Punkte. Aus "223.75"
+ * wurden dadurch 22375 — Faktor hundert, und der Terminwert war um zwei
+ * Stellen zu hoch. Jetzt liest lib/zahlen.ts; die Regel "nur positive Werte,
+ * sonst 0" bleibt, weil die Auswertungen darauf bauen.
+ */
 export function zahl(v: unknown): number {
-  if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) && n > 0 ? n : 0;
+  const n = leseZahl(v);
+  return n !== null && n > 0 ? n : 0;
 }
 
 function runde2(n: number): number {

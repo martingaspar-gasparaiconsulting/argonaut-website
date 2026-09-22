@@ -1,3 +1,4 @@
+import { leseZahlOder } from './zahlen';
 // lib/dealScoring.ts
 // KI-Deal-Scoring: bewertet OFFENE Vertriebschancen 0–100, damit der Chef
 // sofort sieht, welchen Deal er JETZT anpacken soll. Reine Heuristik —
@@ -29,10 +30,11 @@ const STUFEN_P: Record<string, number> = {
 };
 const OFFEN = new Set(['lead', 'qualifiziert', 'angebot', 'verhandlung']);
 
+// Punkt 12 (22.09.2026): siehe lib/versandBuchung.ts — derselbe Leser, derselbe
+// Fehler. Ein Deal ueber "25.000,00" wurde mit 0 bewertet und fiel aus jeder
+// Rangliste heraus.
 function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
+  return leseZahlOder(x, 0);
 }
 function clamp(n: number, lo: number, hi: number): number { return Math.min(Math.max(n, lo), hi); }
 

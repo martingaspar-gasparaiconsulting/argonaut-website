@@ -1,3 +1,4 @@
+import { leseZahlOder } from './zahlen';
 // lib/versandBuchung.ts
 // Versand-Center 4b · Anschluss an den Aggregator „shipcloud" (ein Vertrag,
 // alle Carrier). REINE Payload-Builder + Response-Parser — KEINE echten Netz-
@@ -36,10 +37,11 @@ export function splitName(name: string | null | undefined): { first_name: string
   return { first_name: teile.slice(0, -1).join(' '), last_name: teile[teile.length - 1] };
 }
 
+// Punkt 12 (22.09.2026): Der eigene Leser ist weg. Er machte aus "1.234,56"
+// den Text "1.234.56" und damit NaN -> 0: ein Versandwert von 1.234,56 EUR
+// stand als 0,00 EUR in der Buchung. Jetzt liest lib/zahlen.ts.
 function z(x: unknown): number {
-  if (typeof x === 'number') return Number.isFinite(x) ? x : 0;
-  if (typeof x === 'string') { const n = Number(x.replace(',', '.').trim()); return Number.isFinite(n) ? n : 0; }
-  return 0;
+  return leseZahlOder(x, 0);
 }
 
 export interface BuchungSendung {

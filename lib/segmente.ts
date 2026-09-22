@@ -1,3 +1,4 @@
+import { leseZahl } from './zahlen';
 // ============================================================================
 // ARGONAUT OS · lib/segmente.ts — Empfängergruppen bilden (3.15 Teil 1)
 //
@@ -141,10 +142,15 @@ export type Empfaenger = Record<string, unknown>;
 function text(v: unknown): string {
   return String(v ?? '').trim().toLowerCase();
 }
+/**
+ * Punkt 12 (22.09.2026): Auch hier flogen alle Punkte raus. Ein Filter auf
+ * "Umsatz groesser 7.5" verglich gegen 75, ein Prozentwert "7.5" wurde 75.
+ * Jetzt liest lib/zahlen.ts. null bleibt null — ein Filter ohne lesbaren Wert
+ * darf nicht stillschweigend gegen 0 vergleichen.
+ */
 function zahlWert(v: unknown): number | null {
   if (v == null || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
+  return leseZahl(v);
 }
 function tagWert(v: unknown): string | null {
   const s = String(v ?? '').slice(0, 10);
