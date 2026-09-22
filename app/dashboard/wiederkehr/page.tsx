@@ -21,10 +21,13 @@ import {
   ausgabenProMonat,
   zaehleFaelligkeiten,
   faelligBucket,
+  wiederkehrHinweise,
   type WiederkehrEintrag,
+  type WiederkehrRohzeile,
   type FaelligBucket,
 } from '@/lib/wiederkehr';
 import { augeWiederkehr } from '@/lib/auge';
+import Hinweise from '../_components/Hinweise';
 import KiAuge from '../_components/KiAuge';
 
 const supabase = createBrowserClient(
@@ -69,6 +72,10 @@ function heuteLokal(): string {
 export default function WiederkehrCockpit() {
   const [uid, setUid] = useState<string | null>(null);
   const [eintraege, setEintraege] = useState<WiederkehrEintrag[]>([]);
+  // A7: Die ROHZEILEN werden zusaetzlich aufgehoben — wiederkehrHinweise sieht
+  // Dinge, die beim Normalisieren verloren gehen (unbekanntes Intervall,
+  // fehlender Steuersatz, ueberfaellige Erzeugung).
+  const [rohzeilen, setRohzeilen] = useState<WiederkehrRohzeile[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [quelleFilter, setQuelleFilter] = useState<string>('');
@@ -93,9 +100,16 @@ export default function WiederkehrCockpit() {
         ...((v.data as Record<string, unknown>[]) ?? []).map(normalisiereVertrag),
       ];
       setEintraege(alle);
+      setRohzeilen([
+        ...((w.data as WiederkehrRohzeile[]) ?? []),
+        ...((a.data as WiederkehrRohzeile[]) ?? []),
+        ...((m.data as WiederkehrRohzeile[]) ?? []),
+        ...((v.data as WiederkehrRohzeile[]) ?? []),
+      ]);
     } catch (e: unknown) {
       setFehler('Wiederkehr-Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
       setEintraege([]);
+      setRohzeilen([]);
     } finally { setLaden(false); }
   }, []);
 
@@ -201,6 +215,10 @@ export default function WiederkehrCockpit() {
         <Kpi label="Aktive Einnahmequellen" value={String(aktiveEinnahmen)} accent={C.cyan} />
         <Kpi label="Ausgaben / Monat (Verträge)" value={eur(kAusgaben)} accent={C.warn} />
       </div>
+
+      {/* A7 (22.09.2026): wiederkehrHinweise — unbekanntes Intervall, fehlender
+          Steuersatz, ueberfaellige Erzeugung. War gebaut und nirgends angezeigt. */}
+      {!laden && <Hinweise texte={wiederkehrHinweise(rohzeilen, heute)} warnung />}
 
       {/* Regel-Auge: sagt in Klartext, was die Wiederkehr-Lage bedeutet (0 €, ohne KI-Aufruf). */}
       {!laden && (

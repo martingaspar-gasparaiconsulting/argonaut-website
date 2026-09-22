@@ -9,7 +9,9 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { baueUstva, formatEuro, type UstvaErgebnis } from '@/lib/ustva';
+import { baueUstva, ustvaHinweise, formatEuro, type UstvaErgebnis } from '@/lib/ustva';
+import { leseZahlOder } from '@/lib/zahlen';
+import Hinweise from '../_components/Hinweise';
 import { ustvaCsv, ustvaZeilen, euroText } from '@/lib/ustvaExport';
 
 const supabase = createBrowserClient(
@@ -50,8 +52,17 @@ export default function ElsterSeite() {
       ]);
       const rechnungen = (r.data as unknown as Array<Record<string, unknown>>) ?? [];
       const belege = (b.data as unknown as Array<Record<string, unknown>>) ?? [];
-      const vorsteuer = belege.reduce((s, x) => s + (Number(x.ust_betrag) || 0), 0);
-      setErg(baueUstva(rechnungen.map((x) => ({ netto_summe: Number(x.netto_summe) || 0, mwst_summe: Number(x.mwst_summe) || 0 })), vorsteuer));
+      // A7 (22.09.2026): Number() machte aus einem als TEXT gespeicherten Betrag
+      // ("1.234,56") NaN und damit 0 — in der Umsatzsteuer-Voranmeldung. Jetzt
+      // liest lib/zahlen.ts.
+      const vorsteuer = belege.reduce((s, x) => s + leseZahlOder(x.ust_betrag, 0), 0);
+      setErg(baueUstva(
+        rechnungen.map((x) => ({
+          netto_summe: leseZahlOder(x.netto_summe, 0),
+          mwst_summe: leseZahlOder(x.mwst_summe, 0),
+        })),
+        vorsteuer,
+      ));
     } catch (e) {
       setFehler('Berechnung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -166,6 +177,8 @@ export default function ElsterSeite() {
           <button style={styles.ghost} onClick={() => { monatSetzen(0); }}>Dieser Monat</button>
         </div>
       </div>
+
+      {erg && <Hinweise texte={ustvaHinweise(erg)} warnung />}
 
       {erg && (
         <div style={{ ...styles.card, marginTop: 16 }}>

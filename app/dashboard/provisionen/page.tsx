@@ -13,7 +13,8 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { augeProvisionen } from '@/lib/auge';
-import { provisionBetrag, proEmpfaenger, provisionSummen, empfaengerName, formatEuro } from '@/lib/provision';
+import { provisionBetrag, proEmpfaenger, provisionSummen, provisionHinweise, empfaengerName, formatEuro } from '@/lib/provision';
+import Hinweise from '../_components/Hinweise';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -126,6 +127,10 @@ export default function ProvisionenSeite() {
         <Kpi label="Ausgezahlt" value={eur(summen.ausgezahlt)} accent={C.green} />
         <Kpi label="Empfänger" value={String(summen.anzahlEmpfaenger)} accent={C.text} />
       </div>
+
+      {/* A7: provisionHinweise — unlesbare Werte, fehlende Empfaenger,
+          Prozentsaetze ausserhalb des Ueblichen. */}
+      <Hinweise texte={provisionHinweise(deals)} warnung />
 
       {!laden && <div style={{ marginBottom: 14 }}><KiAuge modul="Provisionen" regel={augeRegel} /></div>}
 
