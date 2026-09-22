@@ -10,9 +10,25 @@
 // ============================================================================
 
 import { SCHWELLEN } from './schwellen';
+import { RECHTS_VORBEHALT } from './augeVorbehalt';
+
+// Der Rechtsvorbehalt steht an EINER Stelle (lib/augeVorbehalt.ts) und ist von
+// hier aus weiter zu beziehen. Punkt 41, 22.09.2026.
+export { RECHTS_VORBEHALT } from './augeVorbehalt';
 
 export type Stimmung = 'gut' | 'neutral' | 'achtung';
-export type AugeErgebnis = { klartext: string; punkte: string[]; stimmung: Stimmung };
+export type AugeErgebnis = {
+  klartext: string;
+  punkte: string[];
+  stimmung: Stimmung;
+  /**
+   * Rechtsvorbehalt, der UNTER dem Auge-Text erscheint. Gesetzt wird er nur
+   * dort, wo das Auge etwas Rechtliches sagt — nicht pauschal unter jeder
+   * Zahl, sonst liest ihn niemand mehr. Ein Waechter-Test prueft, dass keine
+   * rechtliche Aussage ohne ihn dasteht (lib/augeVorbehalt.ts).
+   */
+  vorbehalt?: string;
+};
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 
@@ -111,9 +127,9 @@ export function augeEtiketten(d: { unvollstaendig: number; ohneNaehrwert: number
   }
   if (d.unvollstaendig > 0) {
     return {
-      klartext: `${d.unvollstaendig} Etikett${d.unvollstaendig === 1 ? '' : 'en'} ${d.unvollstaendig === 1 ? 'ist' : 'sind'} unvollständig — LMIV-Pflichtangaben fehlen, das ist abmahnfähig. Vor dem Verkauf schließen.`,
+      klartext: `${d.unvollstaendig} Etikett${d.unvollstaendig === 1 ? '' : 'en'} ${d.unvollstaendig === 1 ? 'ist' : 'sind'} unvollständig — Pflichtangaben nach der LMIV fehlen. Bitte vor dem Verkauf ergänzen.`,
       punkte: d.ohneNaehrwert > 0 ? [`${d.ohneNaehrwert} davon ohne vollständige Nährwertdeklaration`] : [],
-      stimmung: 'achtung',
+      stimmung: 'achtung', vorbehalt: RECHTS_VORBEHALT,
     };
   }
   return { klartext: `Alle ${d.gesamt} Etiketten sind LMIV-vollständig — Zutaten, Allergene und Nährwerte sauber gepflegt.`, punkte: [], stimmung: 'gut' };
@@ -726,8 +742,8 @@ export function augeExpose(k: {
 }): AugeErgebnis {
   if (k.pflichtLuecken > 0) {
     return {
-      klartext: `${k.pflichtLuecken} aktive(s) Exposé(s) ohne vollständige GEG-§87-Pflichtangaben (Ausweis-Art, Kennwert, Energieträger, Baujahr) — das ist abmahnfähig, bitte ergänzen.`,
-      punkte: [], stimmung: 'achtung',
+      klartext: `${k.pflichtLuecken} aktive(s) Exposé(s) ohne vollständige Pflichtangaben nach § 87 GEG (Ausweis-Art, Kennwert, Energieträger, Baujahr) — bitte vor der Veröffentlichung ergänzen.`,
+      punkte: [], stimmung: 'achtung', vorbehalt: RECHTS_VORBEHALT,
     };
   }
   if (k.aktiv === 0 && k.reserviert === 0) {
@@ -750,15 +766,15 @@ export function augeBk(k: {
 }): AugeErgebnis {
   if (k.heizLuecken > 0) {
     return {
-      klartext: `${k.heizLuecken} Heizkosten-Position(en) mit Verbrauchsanteil außerhalb 50–70 % — das verstößt gegen die HeizkostenV; der Mieter darf dann um 15 % kürzen (§ 12 HeizkostenV).`,
-      punkte: [], stimmung: 'achtung',
+      klartext: `${k.heizLuecken} Heizkosten-Position(en) mit Verbrauchsanteil außerhalb 50–70 % — diese Spanne ist in der HeizkostenV vorgeschrieben, bitte die Abrechnung prüfen lassen.`,
+      punkte: [], stimmung: 'achtung', vorbehalt: RECHTS_VORBEHALT,
     };
   }
   if (k.einheiten === 0) {
     return { klartext: 'Legen Sie die Einheiten/Mieter an — dann verteilt sich die Abrechnung automatisch nach Schlüssel.', punkte: [], stimmung: 'neutral' };
   }
   if (k.kostenGesamt === 0) {
-    return { klartext: `${k.einheiten} Einheit(en) erfasst — jetzt die Kostenarten nach § 2 BetrKV eintragen.`, punkte: [], stimmung: 'neutral' };
+    return { klartext: `${k.einheiten} Einheit(en) erfasst — jetzt die Kostenarten nach § 2 BetrKV eintragen.`, punkte: [], stimmung: 'neutral', vorbehalt: RECHTS_VORBEHALT };
   }
   return {
     klartext: `${k.einheiten} Einheit(en), ${eur(k.kostenGesamt)} Kosten verteilt${k.nachzahler > 0 ? ` — ${k.nachzahler} Nachzahler` : ' — alles im Guthaben'}.`,

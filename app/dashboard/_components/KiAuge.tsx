@@ -40,6 +40,8 @@ type AugeErgebnis = {
   klartext: string;
   punkte: string[];
   stimmung: Stimmung;
+  /** Rechtsvorbehalt (Punkt 41) — steht NUR unter rechtlichen Aussagen. */
+  vorbehalt?: string;
 };
 
 export type KiAugeProps = {
@@ -103,6 +105,7 @@ export default function KiAuge({
         klartext: data.klartext || "",
         punkte: Array.isArray(data.punkte) ? data.punkte : [],
         stimmung: (data.stimmung as Stimmung) || "neutral",
+        vorbehalt: typeof data.vorbehalt === "string" ? data.vorbehalt : undefined,
       });
     } catch {
       setFehler("Verbindung zur KI fehlgeschlagen.");
@@ -280,6 +283,23 @@ export default function KiAuge({
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {/* Punkt 41: Rechtsvorbehalt — nur dort, wo das Auge etwas
+                  Rechtliches sagt. Der Wortlaut kommt aus lib/augeVorbehalt.ts. */}
+              {ergebnis.vorbehalt && (
+                <div
+                  style={{
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTop: `1px solid ${A.border}`,
+                    fontSize: 'clamp(12px, 1.06vw, 17px)',
+                    lineHeight: 1.5,
+                    color: A.textDim,
+                  }}
+                >
+                  {ergebnis.vorbehalt}
+                </div>
               )}
 
               {aktionHref && (

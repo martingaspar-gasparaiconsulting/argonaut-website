@@ -1,4 +1,5 @@
 import { kiFetch } from '@/lib/ki'
+import { RECHTS_VORBEHALT, brauchtVorbehalt } from '@/lib/augeVorbehalt'
 // app/api/ki-auge/route.ts
 // ---------------------------------------------------------------------
 // ARGONAUT OS · KI-AUGE · eigene Route (unabhängig von /api/ki-klartext)
@@ -121,7 +122,14 @@ export async function POST(req: Request) {
       );
     }
 
-    return Response.json({ ok: true, ...parsed });
+    // Punkt 41 (22.09.2026): Auch der frei formulierte KI-Text bekommt den
+    // Rechtsvorbehalt, sobald er rechtlich klingt. Die Regel-Ebene setzt ihn
+    // selbst; hier faellt er sonst hinten runter, gerade weil niemand
+    // vorhersagen kann, was die KI schreibt.
+    const augeText = [parsed.klartext, ...(parsed.punkte || [])].join(' ');
+    const vorbehalt = brauchtVorbehalt(augeText) ? RECHTS_VORBEHALT : undefined;
+
+    return Response.json({ ok: true, ...parsed, ...(vorbehalt ? { vorbehalt } : {}) });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Interner Fehler.";
     return Response.json({ ok: false, error: msg }, { status: 500 });
