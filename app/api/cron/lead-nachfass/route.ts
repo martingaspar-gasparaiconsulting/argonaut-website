@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, absenderBranding, kundenMailLayout } from '@/lib/mail';
 import { werbeDeckel, tagesBudget, begruendung } from '@/lib/mailBudget';
 import { entscheide, mailFuerSchritt, weiterWerte, stoppWerte } from '@/lib/leadNachfass';
+import { cronGuard } from '../../../../lib/cronGuard';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/lead-nachfass   (Vertrieb · C4)
@@ -38,12 +39,19 @@ function service() {
   );
 }
 
-function erlaubt(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const auth = req.headers.get('authorization') || '';
-  const url = new URL(req.url);
-  return auth === `Bearer ${secret}` || url.searchParams.get('secret') === secret;
+async function erlaubt(req: Request): Promise<boolean> {
+  // Punkt 69 Paket 3 (22.09.2026): Diese Pruefung stand in SECHS Endpunkten
+  // zeichengleich als eigene Kopie. Sie war nicht loechrig — `if (!secret)
+  // return false` war schon da —, aber sechs Kopien heissen: eine Reparatur an
+  // einer Stelle verpufft an fuenf anderen. Jetzt entscheidet lib/cronZugang.ts,
+  // einmal, mit 26 Tests, und vergleicht das Geheimnis zeitverrat-sicher
+  // statt mit ===.
+  //
+  // `betreiberErlaubt` bleibt AUS (Voreinstellung): dieser Endpunkt hatte noch
+  // nie einen Anmeldeweg, und einen zu oeffnen waere eine Entscheidung, keine
+  // Nebenwirkung. Die beiden bisherigen Wege — Vercels Bearer-Kopfzeile und
+  // ?secret= von Hand — bleiben unveraendert.
+  return (await cronGuard(req)) === null;
 }
 
 type LeadRow = {
@@ -68,7 +76,7 @@ function absatzHtml(text: string): string {
 }
 
 async function lauf(req: Request) {
-  if (!erlaubt(req)) {
+  if (!(await erlaubt(req))) {
     return NextResponse.json({ ok: false, error: 'Nicht autorisiert.' }, { status: 401 });
   }
 
