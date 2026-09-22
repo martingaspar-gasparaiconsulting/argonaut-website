@@ -32,7 +32,7 @@
 // ============================================================================
 
 import {
-  verteileFixpreis, summiere, cent, eur, formatZahl,
+  verteileFixpreis, summiere, berechnePosition, cent, eur, formatZahl,
   type Position, type PositionsArt, type Summe,
 } from './positionsLogik';
 
@@ -150,6 +150,23 @@ export function klappeAuf(paket: Paket, positionen: readonly PaketPosition[]): P
   }
 
   const roh = positionen.map(alsPosition);
+
+  // --- A7 (22.09.2026): JEDE Position wird geprueft, BEVOR gerechnet wird ---
+  // Bisher wurde berechnePosition() hier gar nicht aufgerufen: eine Position
+  // ohne Bezeichnung, mit Menge 0, negativem Einzelpreis oder einem Steuersatz
+  // von 120 % rutschte unbemerkt durch. Der Fixpreis wurde dann auf eine
+  // sinnlose Zeile mitverteilt — und zwar still. Jetzt sagt das Paket, WELCHE
+  // Zeile nicht stimmt und WARUM; es wird nichts heimlich ausgelassen und
+  // nichts heimlich gerechnet.
+  roh.forEach((p, i) => {
+    const e = berechnePosition(p);
+    if (e.ok) {
+      for (const h of e.hinweise) hinweise.push(`Position ${i + 1} (${p.bezeichnung || 'ohne Bezeichnung'}): ${h}`);
+      return;
+    }
+    for (const f of e.fehler) fehler.push(`Position ${i + 1} (${p.bezeichnung || 'ohne Bezeichnung'}): ${f}`);
+  });
+
   const einzelSumme = cent(roh.reduce((s, p) => s + p.menge * p.einzelpreis_netto, 0));
 
   const auf = verteileFixpreis(roh, paket.fixpreis_netto);
