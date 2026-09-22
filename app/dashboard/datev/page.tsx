@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseZahlOder } from '@/lib/zahlen';
+import Hinweise from '../_components/Hinweise';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -31,6 +33,9 @@ export default function DatevPage() {
   const [summe, setSumme] = useState<{ anzahl: number; netto: number; mwst: number; brutto: number } | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [datevKonfig, setDatevKonfig] = useState(false);
+  // A7: Vorabpruefung des Buchungsstapels — was DATEV am Import stoeren wird,
+  // steht hier, BEVOR die Datei beim Steuerberater liegt.
+  const [extfHinweise, setExtfHinweise] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -47,13 +52,24 @@ export default function DatevPage() {
         .select('netto_summe, mwst_summe, brutto_summe, zahlungsstatus')
         .neq('zahlungsstatus', 'storniert').gte('rechnungsdatum', von).lte('rechnungsdatum', bis);
       if (error) { setFehler('Daten konnten nicht geladen werden.'); return; }
-      const liste = data || [];
+      type RZeile = { netto_summe?: unknown; mwst_summe?: unknown; brutto_summe?: unknown };
+      const liste = (data || []) as RZeile[];
+      // A7 (22.09.2026): Number() machte aus einem als TEXT gespeicherten Betrag
+      // eine 0 — mitten in der Umsatzsteuer-Vorschau. Jetzt liest lib/zahlen.ts.
       setSumme({
         anzahl: liste.length,
-        netto: liste.reduce((s, r) => s + (Number(r.netto_summe) || 0), 0),
-        mwst: liste.reduce((s, r) => s + (Number(r.mwst_summe) || 0), 0),
-        brutto: liste.reduce((s, r) => s + (Number(r.brutto_summe) || 0), 0),
+        netto: liste.reduce((sum: number, r: RZeile) => sum + leseZahlOder(r.netto_summe, 0), 0),
+        mwst: liste.reduce((sum: number, r: RZeile) => sum + leseZahlOder(r.mwst_summe, 0), 0),
+        brutto: liste.reduce((sum: number, r: RZeile) => sum + leseZahlOder(r.brutto_summe, 0), 0),
       });
+
+      // Vorabpruefung. Scheitert sie, bleibt der Export benutzbar — eine
+      // fehlende Pruefung ist kein Grund, niemanden exportieren zu lassen.
+      try {
+        const res = await fetch(`/api/datev-export?von=${von}&bis=${bis}&pruefen=1`);
+        const pr = await res.json();
+        setExtfHinweise(Array.isArray(pr?.hinweise) ? pr.hinweise : []);
+      } catch { setExtfHinweise([]); }
     } finally { setLaden(false); }
   }, [von, bis]);
 
@@ -74,6 +90,9 @@ export default function DatevPage() {
           <label style={styles.lab}>Bis<input type="date" style={styles.inp} value={bis} onChange={(e) => setBis(e.target.value)} /></label>
           <a href={`/api/datev-export?von=${von}&bis=${bis}`} target="_blank" rel="noreferrer" style={styles.exportBtn}>⬇ DATEV-EXTF-Buchungsstapel</a>
         </div>
+
+        {/* A7: extfHinweise — was DATEV am Import stoeren wird, VOR dem Download. */}
+        <Hinweise texte={extfHinweise} titel="Vor dem Export prüfen" warnung />
         {!datevKonfig && (
           <div style={styles.hinweis}>
             💡 Tipp: Hinterlegen Sie unter <strong>🔌 Schnittstellen → DATEV</strong> Ihre Kontenrahmen- und

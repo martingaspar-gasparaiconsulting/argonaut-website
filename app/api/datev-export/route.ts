@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
-import { baueExtf, extfDefaults, type ExtfKonfig, type RechnungRoh, type BelegRoh } from '@/lib/datevExtf';
+import { baueExtf, extfHinweise, extfDefaults, type ExtfKonfig, type RechnungRoh, type BelegRoh } from '@/lib/datevExtf';
 import { datevVorschlag, DATEV_FALLBACK } from '@/lib/datevKonten';
 
 export const runtime = 'nodejs';
@@ -86,11 +86,29 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const inhalt = baueExtf({
+    const eingabe = {
       rechnungen, belege, konfig, aufwandFallback,
       datumVon: jjjjmmtt(von), datumBis: jjjjmmtt(bis),
       erzeugtAm: erzeugtStempel(heute),
-    });
+    };
+
+    // A7 (22.09.2026): Vorabpruefung statt Datei — ?pruefen=1.
+    // extfHinweise war gebaut, getestet und nirgends angeschlossen. Fehlt zum
+    // Beispiel die Beraternummer, lehnt DATEV den Import ab; das erfuhr der
+    // Betrieb bisher erst beim Steuerberater. Dieser Zweig erzeugt NICHTS und
+    // veraendert NICHTS — er sagt nur, was an der Datei nicht stimmen wird.
+    if (url.searchParams.get('pruefen') === '1') {
+      return NextResponse.json({
+        ok: true,
+        von,
+        bis,
+        anzahlRechnungen: rechnungen.length,
+        anzahlBelege: belege.length,
+        hinweise: extfHinweise(eingabe),
+      });
+    }
+
+    const inhalt = baueExtf(eingabe);
 
     const name = `EXTF_Buchungsstapel_${von}_${bis}.csv`;
     return new NextResponse(inhalt, {
