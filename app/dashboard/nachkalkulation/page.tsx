@@ -11,10 +11,12 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseZahl, leseZahlOder } from '@/lib/zahlen';
 import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
+import Hinweise, { Klartext } from '../_components/Hinweise';
 import {
-  baueKalkulation, summeKalk,
+  baueKalkulation, summeKalk, fixpreisHinweise, lohnHinweise, margeKlartext,
   type ProjektRoh, type LeistungRoh, type KostenRoh, type ProjektKalk, type KalkStatus,
 } from '@/lib/nachkalkulation';
 
@@ -48,6 +50,13 @@ export default function NachkalkulationSeite() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // A7 (22.09.2026): Der Selbstkostensatz je Stunde. Ohne ihn ist die
+  // ausgewiesene "Marge" nur Umsatz minus Material — die Seite sagt das jetzt
+  // im Klartext, statt eine schoene falsche Zahl zu zeigen.
+  const [satz, setSatz] = useState('');
+  const [satzGespeichert, setSatzGespeichert] = useState<number>(0);
+  const [satzBusy, setSatzBusy] = useState(false);
+
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
@@ -61,7 +70,22 @@ export default function NachkalkulationSeite() {
       const leistungen = (pl.error ? [] : (pl.data as unknown as LeistungRoh[])) ?? [];
       const kosten = (pk.error ? [] : (pk.data as unknown as KostenRoh[])) ?? [];
       setProjektListe(projekte.map((p) => ({ id: String(p.id), name: (p.name && String(p.name).trim()) || 'Projekt' })));
-      setKalk(baueKalkulation(projekte, leistungen, kosten));
+
+      // Selbstkostensatz aus dem Profil — fehlt er, bleibt es beim bisherigen
+      // Bild plus Klartext. Ein Fehler hier darf die Seite nicht anhalten.
+      let jeStunde = 0;
+      try {
+        const { data: u2 } = await supabase.auth.getUser();
+        if (u2?.user?.id) {
+          const { data: prof } = await supabase
+            .from('profiles').select('selbstkosten_je_stunde').eq('id', u2.user.id).maybeSingle();
+          jeStunde = leseZahlOder((prof as { selbstkosten_je_stunde?: unknown } | null)?.selbstkosten_je_stunde, 0);
+        }
+      } catch { jeStunde = 0; }
+      setSatzGespeichert(jeStunde);
+      setSatz(jeStunde > 0 ? String(jeStunde).replace('.', ',') : '');
+
+      setKalk(baueKalkulation(projekte, leistungen, kosten, { selbstkostenJeStunde: jeStunde }));
     } catch (e: unknown) {
       setFehler('Nachkalkulation konnte nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -98,6 +122,23 @@ export default function NachkalkulationSeite() {
   }
 
   const s = useMemo(() => summeKalk(kalk), [kalk]);
+  const klartext = useMemo(() => margeKlartext(s), [s]);
+  const hinweise = useMemo(() => [...fixpreisHinweise(kalk), ...lohnHinweise(kalk)], [kalk]);
+
+  async function satzSpeichern() {
+    if (!uid) return;
+    const roh = satz.trim();
+    const wert = roh ? leseZahl(roh) : null;
+    if (roh && wert === null) { setFehler(`"${roh}" ist keine lesbare Zahl. Bitte z. B. 42,50 eingeben.`); return; }
+    if (wert !== null && wert < 0) { setFehler('Ein Selbstkostensatz kann nicht negativ sein.'); return; }
+    setSatzBusy(true); setFehler(null); setOk(null);
+    const { error } = await supabase.from('profiles').update({ selbstkosten_je_stunde: wert }).eq('id', uid);
+    setSatzBusy(false);
+    if (error) { setFehler('Konnte nicht gespeichert werden: ' + error.message); return; }
+    setOk('Selbstkostensatz gespeichert — die Zahlen unten rechnen jetzt damit.');
+    setTimeout(() => setOk(null), 3500);
+    await laden_();
+  }
 
   return (
     <div style={styles.page}>
@@ -117,10 +158,55 @@ export default function NachkalkulationSeite() {
         <Kpi label="Budget gesamt" value={eur(s.budget)} accent={C.cyan} />
         <Kpi label="Erbracht (Ist)" value={eur(s.erbracht)} accent={C.gold} gross />
         <Kpi label="Material/Kosten" value={eur(s.kosten)} accent={s.kosten > 0 ? C.warn : C.textDim} />
-        <Kpi label={`Deckungsbeitrag${s.erbracht > 0 ? ` · ${s.marge.toLocaleString('de-DE', { maximumFractionDigits: 0 })} % Marge` : ''}`} value={eur(s.deckungsbeitrag)} accent={s.deckungsbeitrag >= 0 ? C.green : C.danger} gross />
+        {s.lohnkostenAngesetzt ? (
+          <Kpi
+            label={`Deckungsbeitrag${s.erbracht > 0 ? ` · ${s.margeEcht.toLocaleString('de-DE', { maximumFractionDigits: 0 })} % Marge` : ''}`}
+            value={eur(s.deckungsbeitragEcht)}
+            accent={s.deckungsbeitragEcht >= 0 ? C.green : C.danger}
+            gross
+          />
+        ) : (
+          <Kpi
+            label={`Umsatz minus Material${s.erbracht > 0 ? ` · ${s.marge.toLocaleString('de-DE', { maximumFractionDigits: 0 })} %` : ''}`}
+            value={eur(s.deckungsbeitrag)}
+            accent={s.deckungsbeitrag >= 0 ? C.green : C.danger}
+            gross
+          />
+        )}
         <Kpi label="Offen zum Abrechnen" value={eur(s.offen)} accent={s.offen > 0 ? C.warn : C.green} />
         <Kpi label="Über Budget" value={`${s.ueberBudget} Projekt${s.ueberBudget === 1 ? '' : 'e'}`} accent={s.ueberBudget > 0 ? C.danger : C.green} />
       </div>
+
+      <Klartext text={klartext} />
+      <Hinweise texte={hinweise} />
+
+      {/* A7: Selbstkostensatz je Stunde — ohne ihn gibt es keine echte Marge. */}
+      <NurVoll>
+        <div style={styles.erfassen}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>Selbstkostensatz je Stunde</div>
+          <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', lineHeight: 1.5, margin: '0 0 10px', maxWidth: 780 }}>
+            Was Sie eine Arbeitsstunde wirklich kostet — Lohn plus Lohnnebenkosten, geteilt durch die
+            <b> produktiven</b> Stunden. Erst damit lässt sich der echte Deckungsbeitrag rechnen. Ohne
+            diesen Satz zeigt ARGONAUT nur Umsatz minus Material und sagt das auch so.
+          </p>
+          <div style={styles.erfassenRow}>
+            <input
+              style={{ ...styles.inp, maxWidth: 180 }}
+              value={satz}
+              onChange={(e) => setSatz(e.target.value)}
+              placeholder="z. B. 42,50"
+            />
+            <button style={{ ...styles.primaer, opacity: satzBusy ? 0.6 : 1 }} disabled={satzBusy} onClick={satzSpeichern}>
+              {satzBusy ? 'Speichert …' : 'Speichern'}
+            </button>
+            {satzGespeichert > 0 && (
+              <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)' }}>
+                hinterlegt: {eur(satzGespeichert)} je Stunde
+              </span>
+            )}
+          </div>
+        </div>
+      </NurVoll>
 
       {/* Material-/Fremdkosten je Projekt erfassen (echter Deckungsbeitrag). Nur „Voll". */}
       <NurVoll>
