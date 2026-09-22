@@ -12,6 +12,17 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import DsgvoWerkzeuge from './_Werkzeuge';
+import {
+  vorschlaegeNachBuchung,
+  verzeichnisKopf,
+  kopfLuecken,
+  hatDsb,
+  verzeichnisDruckdaten,
+  type VerzeichnisKopf,
+  type VerfahrenVorschlag,
+} from '@/lib/verarbeitungsverzeichnis';
+import { verzeichnisPdf } from '@/lib/verzeichnisPdf';
+import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -64,6 +75,14 @@ export default function DsgvoPage() {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const [vf, setVf] = useState({ name: '', zweck: '', rechtsgrundlage: '', kategorien_betroffene: '', kategorien_daten: '', empfaenger: '', drittland: '', loeschfrist: '', tom: '' });
+
+  // Punkt 43: Kopf nach Art. 30 Abs. 1 lit. a + Vorschlaege + Ausdruck
+  const [kopf, setKopf] = useState<VerzeichnisKopf | null>(null);
+  const [dsb, setDsb] = useState({ name: '', kontakt: '' });
+  const [dsbBusy, setDsbBusy] = useState(false);
+  const [vorschlaege, setVorschlaege] = useState<VerfahrenVorschlag[]>([]);
+  const [uebernimmt, setUebernimmt] = useState(false);
+  const [ok, setOk] = useState<string | null>(null);
   const [af, setAf] = useState({ betroffener_name: '', betroffener_email: '', art: 'auskunft', eingegangen_am: heuteISO(), notiz: '' });
 
   const laden_ = useCallback(async () => {
@@ -78,6 +97,27 @@ export default function DsgvoPage() {
       setVerfahren((v as Verfahren[]) || []);
       setAnfragen((a as Anfrage[]) || []);
     } catch { setFehler('Daten konnten nicht geladen werden. Ist das SQL eingespielt?'); }
+
+    // Punkt 43: Kopf aus dem Betriebsprofil. Scheitert das, bleibt der Rest
+    // der Seite nutzbar — ein fehlender Kopf ist kein Grund, alles zu sperren.
+    try {
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, dsb_name, dsb_kontakt')
+        .eq('id', u.user.id)
+        .maybeSingle();
+      const k = verzeichnisKopf(p || {});
+      setKopf(k);
+      setDsb({ name: k.dsbName, kontakt: k.dsbKontakt });
+    } catch { setKopf(verzeichnisKopf({})); }
+
+    // Punkt 43: Vorschlaege aus den gebuchten Modulen. Kommt nichts zurueck,
+    // gilt fail-open wie im Menue — dann werden ALLE Vorschlaege angeboten.
+    try {
+      const { data: tm } = await supabase.from('tenant_module').select('modul_key, aktiv');
+      setVorschlaege(vorschlaegeNachBuchung(gebuchteModulKeys((tm as TenantModulRow[]) || null)));
+    } catch { setVorschlaege(vorschlaegeNachBuchung(null)); }
+
     setLaden(false);
   }, []);
 
@@ -95,6 +135,56 @@ export default function DsgvoPage() {
     laden_();
   };
   const verfahrenLoeschen = async (id: string) => { await supabase.from('dsgvo_verfahren').delete().eq('id', id); laden_(); };
+
+  // --- Punkt 43: Datenschutzbeauftragten speichern -------------------------
+  const dsbSpeichern = async () => {
+    if (!uid) return;
+    setDsbBusy(true); setFehler(null); setOk(null);
+    const { error } = await supabase.from('profiles').update({
+      dsb_name: dsb.name.trim() || null,
+      dsb_kontakt: dsb.kontakt.trim() || null,
+    }).eq('id', uid);
+    setDsbBusy(false);
+    if (error) { setFehler('Konnte nicht gespeichert werden: ' + error.message); return; }
+    setOk('Gespeichert.'); setTimeout(() => setOk(null), 2500);
+    laden_();
+  };
+
+  // --- Punkt 43: Vorschlaege uebernehmen -----------------------------------
+  // Uebernommen wird nur, was NOCH NICHT dasteht — ein zweiter Klick darf das
+  // Verzeichnis nicht verdoppeln.
+  const offeneVorschlaege = vorschlaege.filter(
+    (v) => !verfahren.some((x) => (x.name || '').trim().toLowerCase() === v.name.trim().toLowerCase()),
+  );
+
+  const vorschlaegeUebernehmen = async () => {
+    if (!uid || offeneVorschlaege.length === 0) return;
+    setUebernimmt(true); setFehler(null); setOk(null);
+    const { error } = await supabase.from('dsgvo_verfahren').insert(
+      offeneVorschlaege.map((v) => ({
+        owner_user_id: uid,
+        name: v.name,
+        zweck: v.zweck,
+        rechtsgrundlage: v.rechtsgrundlage,
+        kategorien_betroffene: v.kategorien_betroffene,
+        kategorien_daten: v.kategorien_daten,
+        empfaenger: v.empfaenger,
+        drittland: v.drittland,
+        loeschfrist: v.loeschfrist,
+        tom: v.tom,
+      })),
+    );
+    setUebernimmt(false);
+    if (error) { setFehler('Konnte nicht uebernommen werden: ' + error.message); return; }
+    setOk(`${offeneVorschlaege.length} Vorschlag/Vorschlaege uebernommen — bitte durchsehen und an Ihren Betrieb anpassen.`);
+    laden_();
+  };
+
+  // --- Punkt 43: Ausdruck nach Art. 30 Abs. 4 ------------------------------
+  const verzeichnisDrucken = () => {
+    const k = kopf || verzeichnisKopf({});
+    verzeichnisPdf(verzeichnisDruckdaten(k, verfahren, heuteISO()));
+  };
 
   const anfrageAnlegen = async () => {
     if (!uid || !af.betroffener_name.trim()) return;
@@ -117,6 +207,7 @@ export default function DsgvoPage() {
       <h1 style={styles.h1}>🛡️ DSGVO-Center</h1>
       <p style={styles.sub}>Zwei Pflichten der DSGVO an einem Ort: das Verzeichnis Ihrer Verarbeitungstätigkeiten (Art. 30) und der Eingang von Betroffenenanfragen. Jede Anfrage bekommt automatisch die gesetzliche Frist von einem Monat — die Ampel warnt, bevor sie reißt.</p>
       {fehler && <div style={styles.err}>{fehler}</div>}
+      {ok && <div style={styles.ok}>{ok}</div>}
 
       <div style={styles.kpis}>
         <div style={styles.kpi}><div style={styles.kpiZahl}>{verfahren.length}</div><div style={styles.kpiText}>Verarbeitungstätigkeiten</div></div>
@@ -172,6 +263,61 @@ export default function DsgvoPage() {
           {/* ---- Verzeichnis von Verarbeitungstaetigkeiten ---- */}
           <section style={styles.card}>
             <h2 style={styles.h2}>📋 Verzeichnis der Verarbeitungstätigkeiten (Art. 30)</h2>
+
+            {/* Punkt 43: Der Kopf nach Art. 30 Abs. 1 lit. a */}
+            <div style={styles.kopfBox}>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Verantwortlicher (Art. 30 Abs. 1 lit. a)</div>
+              {kopf && (
+                <div style={styles.vGrid}>
+                  <span><b style={styles.lab}>Name:</b> {kopf.verantwortlicher || <span style={{ color: C.warn }}>— fehlt —</span>}</span>
+                  <span><b style={styles.lab}>Anschrift:</b> {kopf.anschrift || <span style={{ color: C.warn }}>— fehlt —</span>}</span>
+                  <span><b style={styles.lab}>Telefon:</b> {kopf.telefon || '—'}</span>
+                  <span><b style={styles.lab}>E-Mail:</b> {kopf.email || '—'}</span>
+                </div>
+              )}
+              {kopf && kopfLuecken(kopf).length > 0 && (
+                <p style={{ ...styles.hint, color: C.warn }}>
+                  Für den Ausdruck fehlen noch: {kopfLuecken(kopf).join(', ')}. Diese Angaben kommen aus
+                  Ihrem Betriebsprofil unter Einstellungen — dort ergänzen, dann sind sie überall richtig.
+                </p>
+              )}
+
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Datenschutzbeauftragter</div>
+                <p style={{ ...styles.hint, margin: '0 0 8px' }}>
+                  Nicht jeder Betrieb braucht einen. In der Regel ist er ab 20 Personen Pflicht, die
+                  ständig personenbezogene Daten verarbeiten (§ 38 BDSG) — und bei bestimmten
+                  Tätigkeiten auch darunter. Ist einer benannt, gehört er in den Kopf des Verzeichnisses.
+                </p>
+                <div style={styles.formRow}>
+                  <input style={styles.in} placeholder="Name (leer lassen, wenn keiner benannt ist)" value={dsb.name} onChange={(e) => setDsb({ ...dsb, name: e.target.value })} />
+                  <input style={styles.in} placeholder="Kontakt (E-Mail oder Telefon)" value={dsb.kontakt} onChange={(e) => setDsb({ ...dsb, kontakt: e.target.value })} />
+                  <button style={styles.btnGold} disabled={dsbBusy} onClick={dsbSpeichern}>{dsbBusy ? 'Speichert …' : 'Speichern'}</button>
+                </div>
+                {kopf && !hatDsb(kopf) && (
+                  <p style={styles.hint}>Zurzeit ist kein Datenschutzbeauftragter benannt — im Ausdruck steht das so.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Punkt 43: Vorschlaege und Ausdruck */}
+            <div style={styles.formRow}>
+              <button
+                style={{ ...styles.btnGold, opacity: offeneVorschlaege.length === 0 || uebernimmt ? 0.55 : 1 }}
+                disabled={offeneVorschlaege.length === 0 || uebernimmt}
+                onClick={vorschlaegeUebernehmen}
+              >
+                {uebernimmt ? 'Übernimmt …' : `✦ ${offeneVorschlaege.length} Vorschlag/Vorschläge übernehmen`}
+              </button>
+              <button style={styles.btnGhost} onClick={verzeichnisDrucken}>⭳ Verzeichnis als PDF (Stand heute)</button>
+            </div>
+            <p style={styles.hint}>
+              Die Vorschläge richten sich nach den Bereichen, die Sie nutzen — Lohnabrechnung etwa nur
+              mit dem Personal-Modul. Sie sind ein <b>Entwurf</b>: Bitte jeden übernommenen Eintrag
+              durchsehen und an Ihren Betrieb anpassen. Den Ausdruck verlangt die Aufsichtsbehörde auf
+              Anfrage (Art. 30 Abs. 4); er trägt das heutige Datum als Stand.
+            </p>
+
             <div style={styles.formGrid}>
               <input style={styles.in} placeholder="Bezeichnung *(z. B. Lohnabrechnung)" value={vf.name} onChange={(e) => setVf({ ...vf, name: e.target.value })} />
               <input style={styles.in} placeholder="Zweck" value={vf.zweck} onChange={(e) => setVf({ ...vf, zweck: e.target.value })} />
@@ -237,5 +383,8 @@ const styles: Record<string, CSSProperties> = {
   vGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '4px 16px', marginTop: 8, fontSize: 14, color: C.text },
   lab: { color: C.textDim, fontWeight: 600 },
   dim: { color: C.textDim, fontSize: 14, marginTop: 8 },
+  kopfBox: { background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 14, fontSize: 14 },
+  btnGhost: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 16px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 },
+  ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },
 };
