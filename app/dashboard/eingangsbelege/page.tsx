@@ -9,7 +9,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { datevVorschlag, datevKontenListe, type DatevVorschlag } from '@/lib/datevKonten';
+import { datevVorschlag, datevHinweise, datevKontenListe, type DatevVorschlag } from '@/lib/datevKonten';
+import Hinweise from '../_components/Hinweise';
 import Leerzustand from '../_components/Leerzustand';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -232,6 +233,15 @@ export default function EingangsbelegePage() {
             {form.datev_konto !== vorschlagKonto && <button type="button" style={styles.uebernehmen} onClick={vorschlagUebernehmen}>übernehmen</button>}
           </div>
           <div style={{ color: C.textDim, fontSize: 11.5, marginTop: 6 }}>Vorschlag der Regel-Ebene — keine KI, kostenlos. Endgültige Kontierung bitte mit dem Steuerberater bestätigen.</div>
+
+          {/* A7 (22.09.2026): datevHinweise — WARUM dieses Konto vorgeschlagen
+              wurde und wann man besser nachsieht. War gebaut, getestet und
+              nirgends angezeigt. */}
+          <Hinweise
+            texte={datevHinweise(vorschlag, form.kategorie, form.lieferant)}
+            titel="Zum Kontovorschlag"
+            style={{ margin: '10px 0 0' }}
+          />
         </div>
 
         <label style={{ ...styles.lab, marginTop: 10 }}>Notiz<input style={styles.inp} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></label>
