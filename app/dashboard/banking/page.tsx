@@ -18,7 +18,8 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { matchAlle, zaehleMatches, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
+import { matchAlle, zaehleMatches, bankHinweise, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
+import Hinweise from '../_components/Hinweise';
 import { parseUmsaetze, erkenneFormat, FORMAT_NAMEN } from '@/lib/bankFormate';
 import KiAuge from '../_components/KiAuge';
 import { augeBanking } from '@/lib/auge';
@@ -237,6 +238,9 @@ export default function BankingSeite() {
             <Kpi label="Wahrscheinlich" value={String(kpi.wahrscheinlich)} accent={C.warn} />
             <Kpi label="Ohne Treffer" value={String(kpi.offen)} accent={C.textDim} />
           </div>
+
+          {/* A7: bankHinweise — Teilzahlungen, Sammelzahlungen, unlesbare Zeilen. */}
+          <Hinweise texte={bankHinweise(matches)} warnung />
           <div style={{ ...styles.card, marginTop: 14, overflowX: 'auto' }}>
             <table style={styles.tab}>
               <thead><tr>

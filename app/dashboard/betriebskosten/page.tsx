@@ -16,6 +16,9 @@ import {
   type Verteiler, type EinheitLite, type KostenartLite,
 } from '@/lib/betriebskosten';
 import { augeBk } from '@/lib/auge';
+import { bkHinweise } from '@/lib/betriebskosten';
+import { leseZahl } from '@/lib/zahlen';
+import Hinweise from '../_components/Hinweise';
 import { betriebskostenPdf } from '@/lib/betriebskostenPdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -39,7 +42,19 @@ type Einheit = { id: string; abrechnung_id: string; bezeichnung: string; mieter_
 type Kostenart = { id: string; abrechnung_id: string; bezeichnung: string; betrag_gesamt: number; verteiler: Verteiler; betrkv_nr: number | null; ist_heizkosten: boolean; verbrauch_anteil_prozent: number | null };
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+// A7 (22.09.2026): Der eigene Leser ist weg. parseFloat("1.234,56".replace(',','.'))
+// ergab 1.234 — aus tausendzweihundertvierunddreissig Euro wurde ein Euro
+// dreiundzwanzig. Bei Betriebskosten ist das der Betrag, den der Mieter zahlt.
+function num(s: string): number {
+  const n = leseZahl(s);
+  return n === null ? 0 : n;
+}
+/** Wie num, sagt aber, ob der Text ueberhaupt lesbar war. */
+function numLesbar(s: string): number | null {
+  const t = (s || '').trim();
+  if (!t) return null;
+  return leseZahl(t);
+}
 function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 const VERT_LABEL: Record<string, string> = { wohnflaeche: 'Fläche', personen: 'Personen', einheiten: 'Einheiten', verbrauch: 'Verbrauch' };
@@ -136,11 +151,17 @@ export default function BetriebskostenPage() {
     if (!uid || !selAbr) { setFehler('Bitte zuerst eine Abrechnung wählen.'); return; }
     const kat = BETRKV_KATALOG.find((x) => String(x.nr) === nKost.katalog);
     if (!kat) { setFehler('Bitte eine Kostenart wählen.'); return; }
-    if (num(nKost.betrag) <= 0) { setFehler('Bitte einen Gesamtbetrag angeben.'); return; }
+    const betragRoh = (nKost.betrag || '').trim();
+    const betragWert = numLesbar(betragRoh);
+    if (betragRoh && betragWert === null) {
+      setFehler(`"${betragRoh}" ist keine lesbare Zahl. Bitte z. B. 1.234,56 eingeben.`);
+      return;
+    }
+    if ((betragWert ?? 0) <= 0) { setFehler('Bitte einen Gesamtbetrag angeben.'); return; }
     setBusy('kost'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('bk_kostenart').insert({
-        owner_user_id: uid, abrechnung_id: selAbr, bezeichnung: kat.bezeichnung, betrag_gesamt: num(nKost.betrag),
+        owner_user_id: uid, abrechnung_id: selAbr, bezeichnung: kat.bezeichnung, betrag_gesamt: betragWert ?? 0,
         verteiler: kat.verteiler, betrkv_nr: kat.nr, ist_heizkosten: Boolean(kat.heiz),
         verbrauch_anteil_prozent: kat.heiz ? Math.round(num(nKost.verbrauch_anteil)) : null,
       }).select('id').single();
@@ -223,6 +244,10 @@ export default function BetriebskostenPage() {
             <Kpi label="Heiz-Lücken" value={String(kennzahlen.heizLuecken)} accent={kennzahlen.heizLuecken ? C.danger : C.green} />
           </div>
           {!laden && <div style={{ marginBottom: 14 }}><KiAuge modul="Betriebskosten" regel={augeBk(kennzahlen)} /></div>}
+
+          {/* A7 (22.09.2026): bkHinweise war gebaut, getestet — und nirgends
+              angezeigt. Jetzt steht hier, was an der Abrechnung noch klemmt. */}
+          {!laden && <Hinweise texte={bkHinweise(abrEinheiten as EinheitLite[], abrKosten as KostenartLite[])} warnung />}
 
           {/* Einheiten */}
           <div style={styles.card}>
