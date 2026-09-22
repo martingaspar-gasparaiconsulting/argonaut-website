@@ -12,6 +12,7 @@
 
 import { sendeMail } from './mail';
 import { autoresponderMailHtml, autoresponderAbmeldeUrl } from './newsletter';
+import { werbeKopfzeilen } from './werbemail';
 import { faelligerSchritt, naechsterAktiverSchrittNachPosition, tageAddieren } from './autoresponder';
 
 export type LaufRow = {
@@ -127,6 +128,12 @@ export async function verschickeFaellige(
         html,
         absenderName: branding.firma,
         antwortAn: branding.email,
+        // Punkt 68 (22.09.2026): Abmeldeknopf oben in Gmail und Outlook.
+        // einKlick ist erlaubt, weil /api/autoresponder/abmelden seit heute
+        // ein POST beantwortet und den Lauf dabei WIRKLICH abmeldet.
+        kopfzeilen: werbeKopfzeilen(abmelde, { einKlick: true }),
+        // Post im Namen des Betriebs: die Antwort darf nie bei ARGONAUT landen.
+        kundenPost: true,
       });
 
       await admin.from('autoresponder_versand').insert({

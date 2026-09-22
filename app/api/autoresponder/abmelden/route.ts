@@ -84,3 +84,48 @@ export async function GET(req: Request) {
     return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuchen Sie es später erneut.');
   }
 }
+
+// ---------------------------------------------------------------------------
+// EIN-KLICK-ABMELDUNG (RFC 8058) — Punkt 68, 22.09.2026
+//
+// Gmail und Outlook zeigen oben in der Mail einen Abmeldeknopf, wenn die Mail
+// die Kopfzeilen List-Unsubscribe und List-Unsubscribe-Post traegt. Der Knopf
+// schickt ein POST hierher — KEIN GET. Ohne diesen Handler haette der Anbieter
+// eine 405 bekommen, den Empfaenger fuer sich als abgemeldet gefuehrt, und
+// ARGONAUT haette weiter Werbung geschickt. Genau deshalb steht die
+// Ein-Klick-Kopfzeile in lib/werbemail.ts unter Vorbehalt.
+//
+// Der Anbieter erwartet nur einen Statuscode, keine Seite. Es wird bewusst
+// auch bei unbekanntem Token 200 geantwortet: der Empfaenger ist dann entweder
+// laengst abgemeldet oder der Link ist alt — in beiden Faellen soll der
+// Anbieter den Knopf nicht als kaputt melden. Was wirklich passiert ist, steht
+// in der Datenbank.
+// ---------------------------------------------------------------------------
+export async function POST(req: Request) {
+  let token = (new URL(req.url).searchParams.get('token') || '').trim();
+  if (!token) {
+    // Manche Anbieter schicken den Token im Rumpf statt in der Adresse.
+    try {
+      const roh = await req.text();
+      const p = new URLSearchParams(roh);
+      token = (p.get('token') || '').trim();
+    } catch {
+      /* kein Rumpf — dann bleibt es beim leeren Token */
+    }
+  }
+  if (!token) return new Response(null, { status: 400 });
+
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+    const admin = createClient(url, key);
+    const { error } = await admin
+      .from('autoresponder_lauf')
+      .update({ status: 'abgemeldet' })
+      .eq('abmelde_token', token);
+    if (error) return new Response(null, { status: 500 });
+    return new Response(null, { status: 200 });
+  } catch {
+    return new Response(null, { status: 500 });
+  }
+}

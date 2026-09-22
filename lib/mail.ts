@@ -17,6 +17,7 @@
 
 import { Resend } from "resend";
 import { escapeHtml, sichereFarbe } from "@/lib/newsletter";
+import { werbeFuss } from "@/lib/werbemail";
 
 // ---------------------------------------------------------------------------
 // Konfiguration — zentrale Absender-Identitaet.
@@ -85,6 +86,19 @@ export type MailEingang = {
   absenderName?: string;
   /** Optionale Datei-Anhaenge (z. B. Rechnungs-PDF). */
   anhaenge?: MailAnhang[];
+  /**
+   * Zusaetzliche Kopfzeilen, z. B. List-Unsubscribe bei Werbe-Post.
+   * Sie werden geprueft: ein Zeilenumbruch in Name oder Wert wuerde eine
+   * FREMDE Kopfzeile an die Mail haengen, deshalb fliegt so ein Eintrag raus.
+   * Bauen laesst man sie mit werbeKopfzeilen() aus lib/werbemail.ts.
+   */
+  kopfzeilen?: Record<string, string>;
+  /**
+   * Post, die im NAMEN DES BETRIEBS an dessen Kunden geht.
+   * Dann darf die Antwort NIEMALS bei ARGONAUT landen: ohne antwortAn geht die
+   * Mail lieber ganz ohne Antwort-Adresse raus (22.09.2026, Punkt 68).
+   */
+  kundenPost?: boolean;
 };
 
 export type MailErgebnis =
@@ -110,6 +124,23 @@ export type MailErgebnis =
  *   });
  *   if (!r.ok) console.error(r.fehler);
  */
+/**
+ * Kopfzeilen absichern. Ein Zeilenumbruch oder Doppelpunkt im Namen wuerde
+ * eine fremde Kopfzeile einschleusen — solche Eintraege werden verworfen,
+ * nicht repariert.
+ */
+function saubereKopfzeilen(k: Record<string, string> | undefined): Record<string, string> {
+  const raus: Record<string, string> = {};
+  if (!k) return raus;
+  for (const [name, wert] of Object.entries(k)) {
+    if (typeof name !== "string" || typeof wert !== "string") continue;
+    if (!/^[A-Za-z0-9-]{1,64}$/.test(name)) continue;
+    if (/[\r\n\0]/.test(wert) || wert.length > 998) continue;
+    raus[name] = wert;
+  }
+  return raus;
+}
+
 export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
   try {
     const resend = client();
@@ -121,6 +152,11 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
       ...(a.typ ? { contentType: a.typ } : {}),
     }));
 
+    const kopfzeilen = saubereKopfzeilen(eingang.kopfzeilen);
+    const kopfAntwort = eingang.kundenPost
+      ? (eingang.antwortAn || "").trim() || undefined
+      : eingang.antwortAn ?? ANTWORT_MAIL;
+
     const { data, error } = await resend.emails.send({
       from: fromHeader(eingang.absenderName),
       to: eingang.an,
@@ -129,7 +165,11 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
       ...(eingang.text ? { text: eingang.text } : {}),
       ...(eingang.cc ? { cc: eingang.cc } : {}),
       ...(eingang.bcc ? { bcc: eingang.bcc } : {}),
-      replyTo: eingang.antwortAn ?? ANTWORT_MAIL,
+      // Antwort-Adresse: bei Post im Namen des Betriebs NUR dessen eigene.
+      // Fehlt sie, geht die Mail ohne Antwort-Adresse raus — vorher landete
+      // die Antwort des fremden Kunden bei info@argonaut-os.com.
+      ...(kopfAntwort ? { replyTo: kopfAntwort } : {}),
+      ...(Object.keys(kopfzeilen).length > 0 ? { headers: kopfzeilen } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
 
@@ -221,15 +261,43 @@ export async function absenderBranding(
  * @param titel       Optionale Ueberschrift.
  * @param inhalt      HTML-Inhalt des Haupttextes.
  */
+export type KundenMailOptionen = {
+  /**
+   * true = diese Mail ist Werbung. NUR dann kommt der Werbe-Fuss (Abmeldelink,
+   * Impressum-Zeile, Widerspruchshinweis) darunter. Ob etwas Werbung ist,
+   * entscheidet der Aufrufer — bei Automationen istWerbung() aus
+   * lib/automation.ts, die im Zweifel auf true faellt.
+   */
+  werbung?: boolean;
+  /** Fertiger Abmelde-Link. Ohne ihn entsteht KEIN Fuss. */
+  abmeldeLink?: string;
+  /** Impressum-Zeile des Betriebs (Anschrift). */
+  impressum?: string;
+  /** Warum der Empfaenger diese Mail bekommt. */
+  grund?: string;
+};
+
 export function kundenMailLayout(
   firma: string,
   akzentfarbe: string | null | undefined,
   titel: string,
   inhalt: string,
+  optionen?: KundenMailOptionen,
 ): string {
   const f = escapeHtml((firma || "").trim());
   const a = sichereFarbe(akzentfarbe);
   const t = escapeHtml((titel || "").trim());
+  // Der Fuss kommt NUR bei Werbung — nicht unter eine Rechnung oder eine
+  // Terminbestaetigung. Die Bausteine stehen in lib/werbemail.ts.
+  const fuss = optionen?.werbung === true
+    ? werbeFuss({
+        firmaHtml: f,
+        akzent: a,
+        abmeldeLink: (optionen.abmeldeLink || "").trim(),
+        impressumHtml: optionen.impressum ? escapeHtml(optionen.impressum) : undefined,
+        grundHtml: optionen.grund ? escapeHtml(optionen.grund) : undefined,
+      })
+    : "";
   return `
   <div style="margin:0;padding:0;background:#f4f5f7;font-family:Helvetica,Arial,sans-serif;">
     <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
@@ -243,7 +311,7 @@ export function kundenMailLayout(
         </div>
         <div style="padding:16px 28px;background:#fafbfc;border-top:1px solid #eeeeee;font-size:12px;line-height:1.5;color:#8a94a6;">
           ${f}
-        </div>
+        </div>${fuss}
       </div>
     </div>
   </div>`;

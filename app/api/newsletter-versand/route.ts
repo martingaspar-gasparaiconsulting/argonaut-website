@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { sendeMail } from '@/lib/mail';
 import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
+import { werbeKopfzeilen } from '@/lib/werbemail';
 import { messeMit } from '@/lib/mailMessung';
 
 // ============================================================================
@@ -119,11 +120,12 @@ export async function POST(req: Request) {
     let erfolg = 0;
     let fehler = 0;
     for (const a of empfaenger) {
+      const abmelde = abmeldeUrl(origin, a.abmelde_token || '');
       const roh = newsletterMailHtml(
         firmaName,
         betreff,
         inhalt,
-        abmeldeUrl(origin, a.abmelde_token || ''),
+        abmelde,
         p.firma_akzentfarbe,
       );
       // Ohne Mess-Schlüssel wird NICHT gemessen — die Mail geht trotzdem
@@ -137,6 +139,12 @@ export async function POST(req: Request) {
         html,
         absenderName: firmaName,
         antwortAn,
+        // Punkt 68 (22.09.2026): Abmeldeknopf oben in Gmail und Outlook.
+        // einKlick ist erlaubt, weil /api/newsletter/abmelden seit heute ein
+        // POST beantwortet und den Abonnenten dabei WIRKLICH abmeldet.
+        kopfzeilen: werbeKopfzeilen(abmelde, { einKlick: true }),
+        // Post im Namen des Betriebs: die Antwort darf nie bei ARGONAUT landen.
+        kundenPost: true,
       });
       if (r.ok) erfolg++;
       else fehler++;
