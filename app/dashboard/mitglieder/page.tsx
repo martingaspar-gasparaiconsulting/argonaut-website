@@ -9,7 +9,9 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
+import { baueSepaXml, ibanGueltig, istSepaBetragFehler, type SepaLastschrift } from '@/lib/sepa';
+import { leseBetrag, centRunden } from '@/lib/zahlen';
+import { bankarbeitstagHinweis } from '@/lib/bankarbeitstag';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -47,7 +49,10 @@ const INTERVALLE = [{ w: 'monat', l: 'monatlich' }, { w: 'quartal', l: 'viertelj
 const STATUS = [{ w: 'aktiv', l: 'Aktiv', f: '#4CAF7D' }, { w: 'pausiert', l: 'Pausiert', f: '#E0A24C' }, { w: 'gekuendigt', l: 'Gekündigt', f: '#E06666' }];
 function statusInfo(s: string) { return STATUS.find((x) => x.w === s) ?? { w: s, l: s, f: C.textDim }; }
 function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string): number { return parseFloat((s || '').replace(',', '.')) || 0; }
+// 22.09.2026 (Punkt 64): Der eigene Zahl-Leser ist weg. Er machte aus
+// "1.234,56 EUR" still 1,23 EUR und aus jeder unlesbaren Eingabe eine 0.
+// Jetzt liest lib/zahlen.ts — und ein unlesbarer Beitrag wird ABGELEHNT,
+// nicht stillschweigend zu null Euro gemacht.
 function heutePlus(tage: number) { return new Date(Date.now() + tage * 86400000).toISOString().slice(0, 10); }
 
 export default function MitgliederPage() {
@@ -133,11 +138,19 @@ export default function MitgliederPage() {
   async function speichern() {
     if (!uid) return;
     if (!form.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
+    // Der Beitrag wird gelesen, BEVOR gespeichert wird. Was nicht lesbar ist,
+    // wird zurueckgewiesen — es darf nie als 0,00 EUR in der Datenbank landen.
+    const betragRoh = form.betrag.trim();
+    const betragWert = betragRoh ? leseBetrag(betragRoh) : null;
+    if (betragRoh && betragWert === null) {
+      setFehler(`Der Beitrag „${betragRoh}" ist nicht lesbar. Bitte als Zahl eingeben, z. B. 29,90.`);
+      return;
+    }
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
         owner_user_id: uid, name: form.name.trim(), email: form.email.trim() || null, telefon: form.telefon.trim() || null,
-        betrag: form.betrag.trim() ? num(form.betrag) : null, intervall: form.intervall, status: form.status,
+        betrag: betragWert, intervall: form.intervall, status: form.status,
         beginn_am: form.beginn_am || null, iban: form.iban.replace(/\s+/g, '').toUpperCase() || null, bic: form.bic.replace(/\s+/g, '').toUpperCase() || null,
         mandatsreferenz: form.mandatsreferenz.trim() || null, mandat_datum: form.mandat_datum || null, notiz: form.notiz.trim() || null,
       };
@@ -169,6 +182,8 @@ export default function MitgliederPage() {
 
   const aktive = useMemo(() => liste.filter((m) => m.status === 'aktiv'), [liste]);
   const einziehbar = useMemo(() => aktive.filter((m) => m.iban && m.mandatsreferenz && m.mandat_datum && (m.betrag ?? 0) > 0), [aktive]);
+  // Hinweis, wenn der Faelligkeitstag kein Banktag ist — WARNUNG, keine Sperre.
+  const bankHinweis = useMemo(() => bankarbeitstagHinweis(ausfuehrung), [ausfuehrung]);
   const monatsumsatz = useMemo(() => aktive.reduce((s, m) => {
     const b = m.betrag ?? 0; const teiler = m.intervall === 'jahr' ? 12 : m.intervall === 'quartal' ? 3 : 1;
     return s + b / teiler;
@@ -196,10 +211,20 @@ export default function MitgliederPage() {
     }));
     const msgId = 'ARGO' + Date.now();
     const creDtTm = new Date().toISOString().slice(0, 19);
-    const xml = baueSepaXml(
-      { name: cred.inhaber.trim(), iban: cred.iban.replace(/\s+/g, '').toUpperCase(), bic: cred.bic.replace(/\s+/g, '').toUpperCase() || undefined, glaeubigerId: cred.glaeubiger.trim() },
-      posten, ausfuehrung, msgId, creDtTm,
-    );
+    // Bricht ab, wenn ein Betrag nicht in eine Bankdatei gehoert. Dann entsteht
+    // KEINE Datei — lieber gar keine als eine mit 0,00 EUR darin.
+    let xml: string;
+    try {
+      xml = baueSepaXml(
+        { name: cred.inhaber.trim(), iban: cred.iban.replace(/\s+/g, '').toUpperCase(), bic: cred.bic.replace(/\s+/g, '').toUpperCase() || undefined, glaeubigerId: cred.glaeubiger.trim() },
+        posten, ausfuehrung, msgId, creDtTm,
+      );
+    } catch (e: unknown) {
+      setFehler(istSepaBetragFehler(e)
+        ? (e as Error).message + ' Bitte den Beitrag dieses Mitglieds prüfen.'
+        : 'Die SEPA-Datei konnte nicht erzeugt werden: ' + (e instanceof Error ? e.message : 'Fehler'));
+      return;
+    }
     const blob = new Blob([xml], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -212,7 +237,8 @@ export default function MitgliederPage() {
       await laden_();
     } catch { /* Datei ist erzeugt; Fortschreiben ist Zugabe */ }
 
-    const summe = posten.reduce((s, p) => s + p.betrag, 0);
+    // Dieselbe Rechnung wie in der Datei: erst jeder Posten auf Cent, dann die Summe.
+    const summe = centRunden(posten.reduce((s, p) => s + centRunden(p.betrag), 0));
     setOk(`SEPA-Datei mit ${posten.length} Lastschrift(en) über ${eur(summe)} erzeugt.` + (ungueltige > 0 ? ` ${ungueltige} mit ungültiger IBAN wurden ausgelassen.` : ''));
   }
 
@@ -255,6 +281,7 @@ export default function MitgliederPage() {
           <div><label style={styles.lbl}>Fälligkeitstag (Ausführung)</label><input type="date" style={{ ...styles.input, maxWidth: 200 }} value={ausfuehrung} onChange={(e) => setAusfuehrung(e.target.value)} /></div>
           <button onClick={sepaErzeugen} style={styles.primaer}>⭱ SEPA-Datei erzeugen ({einziehbar.length})</button>
         </div>
+        {bankHinweis && <div style={styles.warnBox}>{bankHinweis}</div>}
         <div style={styles.infoBox}>
           <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>So funktioniert's:</div>
           <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
@@ -367,6 +394,7 @@ const styles: Record<string, CSSProperties> = {
   hint: { color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', padding: '14px 0' },
   err: { color: C.danger, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(224,102,102,0.1)', border: `1px solid rgba(224,102,102,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 14 },
   ok: { color: C.green, fontSize: 'clamp(14px, 1.25vw, 20px)', background: 'rgba(76,175,125,0.1)', border: `1px solid rgba(76,175,125,0.3)`, borderRadius: 10, padding: '12px 14px', marginBottom: 14 },
+  warnBox: { marginTop: 12, background: 'rgba(224,162,76,0.08)', border: `1px solid rgba(224,162,76,0.35)`, borderRadius: 12, padding: '12px 14px', color: C.warn, fontSize: 'clamp(12.5px, 1.06vw, 17px)', lineHeight: 1.5 },
   infoBox: { marginTop: 12, background: 'rgba(0,229,255,0.05)', border: `1px solid rgba(0,229,255,0.22)`, borderRadius: 12, padding: '14px 16px', color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', lineHeight: 1.5 },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(4,10,20,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 16px', zIndex: 1000, overflowY: 'auto' },
   modal: { background: C.navy2, border: `1px solid ${C.line}`, borderRadius: 18, padding: 24, width: '100%', maxWidth: 640, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' },
