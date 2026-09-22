@@ -24,6 +24,9 @@ type MahnInput = {
   mahngebuehr?: number;
   verzugszinsen?: number;
   zins_satz?: number;
+  zins_erklaerung?: string;
+  pauschale?: number;
+  ist_verbraucher?: boolean;
   gesamtforderung?: number;
 };
 
@@ -93,23 +96,35 @@ export async function POST(req: Request) {
   const gesamt = Number(m.gesamtforderung) || 0;
   const zinsSatz = Number(m.zins_satz) || 0;
 
+  // #42 (22.09.2026): Die Pauschale nach § 288 Abs. 5 fehlte hier ganz — die KI
+  // hätte eine Gesamtforderung erklärt, deren Posten sie nicht kennt.
+  const pausch = Number(m.pauschale) || 0;
+  const zinsErklaerung = String(m.zins_erklaerung || "").trim();
+
   let forderungBlock = "";
   let forderungAnweisung = "";
-  if (gebuehr > 0 || zinsen > 0) {
+  if (gebuehr > 0 || pausch > 0 || zinsen > 0) {
     const zeilen: string[] = [];
     zeilen.push(`- Offene Hauptforderung: ${betragText}`);
     if (gebuehr > 0) zeilen.push(`- Mahngebühr: ${fmtGeld(gebuehr)}`);
+    if (pausch > 0) zeilen.push(`- Pauschale nach § 288 Abs. 5 BGB: ${fmtGeld(pausch)}`);
     if (zinsen > 0)
       zeilen.push(
         `- Verzugszinsen${zinsSatz > 0 ? ` (${zinsSatz.toLocaleString("de-DE")} % p.a. nach § 288 BGB)` : ""}: ${fmtGeld(zinsen)}`
       );
     zeilen.push(`- GESAMTFORDERUNG: ${fmtGeld(gesamt)}`);
-    forderungBlock = `\nForderungsaufstellung (bitte genau so verwenden):\n${zeilen.join("\n")}`;
+    forderungBlock =
+      `\nForderungsaufstellung (bitte genau so verwenden):\n${zeilen.join("\n")}` +
+      (zinsErklaerung ? `\nZur Zinsberechnung: ${zinsErklaerung}` : "");
+    const teile: string[] = [];
+    if (gebuehr > 0) teile.push("einer Mahngebühr");
+    if (pausch > 0) teile.push("der Pauschale nach § 288 Abs. 5 BGB");
+    if (zinsen > 0) teile.push("den Verzugszinsen");
     forderungAnweisung =
       " Weise im Text ausdrücklich auf die GESAMTFORDERUNG hin und erkläre knapp, dass sie sich aus der Hauptforderung" +
-      (gebuehr > 0 ? ", einer Mahngebühr" : "") +
-      (zinsen > 0 ? " und den Verzugszinsen" : "") +
-      " zusammensetzt. Fordere zur Zahlung der Gesamtforderung auf (nicht nur der Hauptforderung).";
+      (teile.length ? " sowie " + teile.join(" und ") : "") +
+      " zusammensetzt. Nenne KEINE Beträge und keinen Zinssatz, die oben nicht stehen." +
+      " Fordere zur Zahlung der Gesamtforderung auf (nicht nur der Hauptforderung).";
   }
 
   const prompt = `Du bist ARGONAUT, der Schreibassistent eines mittelständischen Unternehmens. Formuliere auf Deutsch den FLIESSTEXT eines Mahnschreibens. Es soll ${stufeHinweis}

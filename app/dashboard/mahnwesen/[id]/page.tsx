@@ -3,6 +3,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import {
+  verzugszinsen,
+  pauschale,
+  verbraucherVorschlag,
+  zinsErklaerung,
+  forderungsAufstellung,
+  tabelleGiltBis,
+  AUFSCHLAG_VERBRAUCHER,
+  AUFSCHLAG_UNTERNEHMEN,
+  PAUSCHALE_B2B,
+} from "@/lib/verzugszins";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4b — MAHNUNG ERSTELLEN
@@ -50,13 +61,12 @@ const STUFE_FARBE: Record<number, string> = {
 // #1 Mahngebühren je Stufe (in EUR) — bewusst 0 bei der Zahlungserinnerung. Anpassbar.
 const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 15 };
 
-// #2 Verzugszinsen p.a. — B2B: Basiszinssatz + 9 Prozentpunkte (§ 288 Abs. 2 BGB).
-// Basiszinssatz ab 01.07.2026 = 1,52 % (Deutsche Bundesbank) -> 1,52 + 9 = 10,52 %.
-// WICHTIG: halbjährlich prüfen (jeweils 1.1. und 1.7.) und ggf. anpassen.
-// Verbrauchergeschäfte (§ 288 Abs. 1) = Basiszinssatz + 5 Prozentpunkte.
-const BASISZINS_PROZENT = 1.52;
-const VERZUGSZINS_AUFSCHLAG = 9;
-const VERZUGSZINS_PROZENT = BASISZINS_PROZENT + VERZUGSZINS_AUFSCHLAG; // 10,52
+// #2 Verzugszinsen (Punkt 42, 22.09.2026)
+// Der Satz steht NICHT mehr hier. Er kommt aus lib/verzugszins.ts:
+//   - Basiszinssatz aus einer Datumstabelle (halbjährlich, § 247 BGB)
+//   - + 5 Punkte beim Verbraucher (§ 288 Abs. 1), + 9 sonst (§ 288 Abs. 2)
+//   - abschnittsweise, wenn der Verzug über einen Halbjahreswechsel läuft
+// Ein Wächter-Test wird rot, sobald ein Halbjahreswert fehlt.
 
 type HistorieEintrag = {
   id: string;
@@ -66,6 +76,8 @@ type HistorieEintrag = {
   betrag_offen: number | null;
   gebuehr_betrag: number | null;
   zins_betrag: number | null;
+  pauschale_betrag?: number | null;
+  ist_verbraucher?: boolean | null;
   tage_ueberfaellig: number | null;
   kanal: string | null;
   notiz: string | null;
@@ -140,6 +152,11 @@ export default function MahnungErstellen() {
   const [stufe, setStufe] = useState<number>(1);
   const [text, setText] = useState<string>("");
 
+  // #42: Im Zweifel Verbraucher — das ist der niedrigere Satz (5 statt 9 Punkte).
+  // Der Vorschlag kommt aus dem Kontakt, der Betrieb kann ihn hier umstellen.
+  const [istVerbraucher, setIstVerbraucher] = useState<boolean>(true);
+  const [pauschaleVerzicht, setPauschaleVerzicht] = useState<boolean>(false);
+
   const [kiBusy, setKiBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendBusy, setSendBusy] = useState(false);
@@ -171,14 +188,24 @@ export default function MahnungErstellen() {
     // Vorschlag: nächste Stufe (0->1, 1->2, 2->3, 3->4, 4->4)
     setStufe(Math.min((r.mahnstufe || 0) + 1, 4));
 
+    let kontaktDaten: any = null;
     if (r.kontakt_id) {
       const { data: k } = await supabase.from("kontakte").select("*").eq("id", r.kontakt_id).single();
-      if (k) setKontakt(k);
+      if (k) { setKontakt(k); kontaktDaten = k; }
     }
     if (r.firma_id) {
       const { data: f } = await supabase.from("firmen").select("*").eq("id", r.firma_id).single();
       if (f) setFirma(f);
     }
+
+    // #42: Vorschlag Verbraucher/Unternehmen. Was am Kontakt steht, sticht.
+    setIstVerbraucher(
+      verbraucherVorschlag({
+        ist_verbraucher: kontaktDaten?.ist_verbraucher ?? null,
+        firmenname: kontaktDaten?.firmenname ?? kontaktDaten?.firma ?? null,
+        firma_id: r.firma_id ?? null,
+      })
+    );
 
     const {
       data: { user },
@@ -222,21 +249,60 @@ export default function MahnungErstellen() {
     return t !== null && t < 0 ? Math.abs(t) : 0;
   }, [rechnung]);
 
-  // #1 Mahngebühr: aus der gewählten Stufe (0 bei Zahlungserinnerung)
-  const mahngebuehr = useMemo(() => MAHN_GEBUEHR[stufe] ?? 0, [stufe]);
+  // #42 Verzugszinsen: abschnittsweise je Halbjahr, Satz aus lib/verzugszins.ts.
+  //     Verzugsbeginn ist das Fälligkeitsdatum; der § 286 Abs. 3-Hinweis auf der
+  //     Rechnung ist eine offene Anwaltsfrage (B3) und ändert daran vorerst nichts.
+  const zins = useMemo(() => {
+    const leer = { betrag: 0, abschnitte: [] as ReturnType<typeof verzugszinsen>["abschnitte"], luecke: false, unlesbar: false };
+    if (stufe < 2 || tageUeberfaellig <= 0) return leer;
+    const faellig = String(rechnung?.faelligkeitsdatum || "").slice(0, 10);
+    const heute = new Date().toISOString().slice(0, 10);
+    if (!faellig) return leer;
+    return verzugszinsen({ offen: offenerRest, von: faellig, bis: heute, istVerbraucher });
+  }, [stufe, tageUeberfaellig, offenerRest, rechnung, istVerbraucher]);
 
-  // #2 Verzugszinsen: erst ab 1. Mahnung, taggenau ohne Zinseszins
-  //    Zinsen = offener Betrag × Satz% × (Tage / 365)
-  const verzugszinsen = useMemo(() => {
-    if (stufe < 2 || tageUeberfaellig <= 0) return 0;
-    return Math.round(offenerRest * (VERZUGSZINS_PROZENT / 100) * (tageUeberfaellig / 365) * 100) / 100;
-  }, [stufe, tageUeberfaellig, offenerRest]);
+  const zinsBetrag = zins.betrag;
 
-  // Gesamtforderung = offener Betrag + Mahngebühr + Verzugszinsen
-  const gesamtforderung = useMemo(
-    () => Math.round((offenerRest + mahngebuehr + verzugszinsen) * 100) / 100,
-    [offenerRest, mahngebuehr, verzugszinsen]
+  // #42 Die 40-Euro-Pauschale nach § 288 Abs. 5 — nur B2B, einmal je Rechnung.
+  const pauschaleSchonBerechnet = useMemo(
+    () => historie.some((h) => (Number(h.pauschale_betrag) || 0) > 0),
+    [historie]
   );
+  const pauschaleBetrag = useMemo(
+    () =>
+      pauschale({
+        istVerbraucher,
+        stufe,
+        bereitsBerechnet: pauschaleSchonBerechnet,
+        verzicht: pauschaleVerzicht,
+      }),
+    [istVerbraucher, stufe, pauschaleSchonBerechnet, pauschaleVerzicht]
+  );
+
+  // #1 Mahngebühr: aus der gewählten Stufe — entfällt, sobald die Pauschale
+  //    anfällt, weil die Mahnkosten darauf angerechnet werden (§ 288 Abs. 5 S. 3).
+  const mahngebuehr = useMemo(
+    () => (pauschaleBetrag > 0 ? 0 : MAHN_GEBUEHR[stufe] ?? 0),
+    [stufe, pauschaleBetrag]
+  );
+
+  const zinsText = useMemo(() => zinsErklaerung(zins, istVerbraucher), [zins, istVerbraucher]);
+  const zinsSatzAnzeige = zins.abschnitte.length ? zins.abschnitte[zins.abschnitte.length - 1].satz : 0;
+  const zinsLabel = `Verzugszinsen (${tageUeberfaellig} Tage · ${zinsSatzAnzeige.toLocaleString("de-DE")} % p.a.)`;
+
+  // DIE EINE AUFSTELLUNG — Bildschirm und PDF rechnen mit derselben Funktion,
+  // damit die Summe nie einen Posten enthaelt, der nirgends als Zeile steht.
+  const forderung = useMemo(
+    () => forderungsAufstellung({
+      offen: offenerRest,
+      gebuehr: mahngebuehr,
+      pauschale: pauschaleBetrag,
+      zinsen: zinsBetrag,
+      zinsLabel,
+    }),
+    [offenerRest, mahngebuehr, pauschaleBetrag, zinsBetrag, zinsLabel]
+  );
+  const gesamtforderung = forderung.gesamt;
 
   // ---------- KI: Mahntext entwerfen ----------
   async function entwerfen() {
@@ -260,8 +326,11 @@ export default function MahnungErstellen() {
             absender_name: firmenprofil?.firma_name || "",
             // #1/#2: Zuschläge + Gesamtforderung, damit die KI sie im Text nennt
             mahngebuehr,
-            verzugszinsen,
-            zins_satz: VERZUGSZINS_PROZENT,
+            verzugszinsen: zinsBetrag,
+            pauschale: pauschaleBetrag,
+            ist_verbraucher: istVerbraucher,
+            zins_satz: zinsSatzAnzeige,
+            zins_erklaerung: zinsText,
             gesamtforderung,
           },
         }),
@@ -324,8 +393,12 @@ export default function MahnungErstellen() {
             offener_betrag: offenerRest,
             // #1/#2: Forderungsaufstellung fürs PDF
             mahngebuehr,
-            verzugszinsen,
-            zins_satz: VERZUGSZINS_PROZENT,
+            verzugszinsen: zinsBetrag,
+            pauschale: pauschaleBetrag,
+            ist_verbraucher: istVerbraucher,
+            zins_satz: zinsSatzAnzeige,
+            zins_label: zinsLabel,
+            zins_erklaerung: zinsText,
             zins_tage: tageUeberfaellig,
             gesamtforderung,
           },
@@ -375,7 +448,9 @@ export default function MahnungErstellen() {
       stufe_label: STUFE_LABEL[stufe],
       betrag_offen: offenerRest,
       gebuehr_betrag: mahngebuehr,
-      zins_betrag: verzugszinsen,
+      zins_betrag: zinsBetrag,
+      pauschale_betrag: pauschaleBetrag,
+      ist_verbraucher: istVerbraucher,
       tage_ueberfaellig: tageUeberfaellig,
       kanal: "pdf",
       // owner_user_id wird per DB-Default (auth.uid()) gesetzt
@@ -548,33 +623,103 @@ export default function MahnungErstellen() {
       {/* #1+#2: FORDERUNGSAUFSTELLUNG */}
       <div style={{ marginBottom: 20 }}>
         <Karte titel="Forderungsaufstellung">
+          {/* #42: Wer schuldet? Entscheidet über 5 oder 9 Prozentpunkte. */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            {[
+              { wert: true, label: "Privatperson", zusatz: `+ ${AUFSCHLAG_VERBRAUCHER} Punkte` },
+              { wert: false, label: "Firma / Selbstständige", zusatz: `+ ${AUFSCHLAG_UNTERNEHMEN} Punkte` },
+            ].map((o) => {
+              const aktiv = istVerbraucher === o.wert;
+              return (
+                <button
+                  key={String(o.wert)}
+                  onClick={() => setIstVerbraucher(o.wert)}
+                  style={{
+                    background: aktiv ? C.gold : "transparent",
+                    color: aktiv ? "#0A1628" : C.gold,
+                    border: `1px solid ${C.gold}${aktiv ? "" : "77"}`,
+                    borderRadius: 10,
+                    padding: "8px 14px",
+                    fontSize: 'clamp(13px, 1.13vw, 18px)',
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {o.label} <span style={{ opacity: 0.75, fontWeight: 500 }}>{o.zusatz}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            <ZeileForderung label="Offener Rechnungsbetrag" wert={geld(offenerRest, waehrung)} />
-            {mahngebuehr > 0 && (
-              <ZeileForderung label="+ Mahngebühr" wert={geld(mahngebuehr, waehrung)} />
-            )}
-            {verzugszinsen > 0 && (
+            {forderung.posten.map((pos, i) => (
               <ZeileForderung
-                label={`+ Verzugszinsen (${tageUeberfaellig} Tage · ${VERZUGSZINS_PROZENT.toLocaleString(
-                  "de-DE"
-                )} % p.a.)`}
-                wert={geld(verzugszinsen, waehrung)}
+                key={pos.label}
+                label={i === 0 ? pos.label : `+ ${pos.label}`}
+                wert={geld(pos.betrag, waehrung)}
               />
-            )}
+            ))}
+            {zins.abschnitte.length > 1 &&
+              zins.abschnitte.map((a) => (
+                <div
+                  key={a.von}
+                  style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', paddingLeft: 14 }}
+                >
+                  {datumDe(a.von)} bis {datumDe(a.bis)} · {a.tage} Tage zu{" "}
+                  {a.satz.toLocaleString("de-DE")} % = {geld(a.betrag, waehrung)}
+                </div>
+              ))}
             <div style={{ borderTop: `1px solid ${C.border}`, margin: "3px 0" }} />
             <ZeileForderung label="Gesamtforderung" wert={geld(gesamtforderung, waehrung)} gross />
           </div>
-          {mahngebuehr === 0 && verzugszinsen === 0 ? (
+
+          {/* #42: Der einzige Hebel des Betriebs — verzichten. Kein freies Prozentfeld. */}
+          {!istVerbraucher && stufe >= 2 && !pauschaleSchonBerechnet && (
+            <label
+              style={{
+                display: "flex", alignItems: "flex-start", gap: 9, marginTop: 14,
+                color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', cursor: "pointer", lineHeight: 1.5,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={pauschaleVerzicht}
+                onChange={(e) => setPauschaleVerzicht(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                Auf die Pauschale von {PAUSCHALE_B2B} € verzichten. Dann greift wieder die
+                Mahngebühr dieser Stufe.
+              </span>
+            </label>
+          )}
+          {pauschaleSchonBerechnet && !istVerbraucher && stufe >= 2 && (
+            <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
+              Die Pauschale nach § 288 Abs. 5 BGB wurde für diese Rechnung bereits berechnet — sie
+              steht Ihnen nur einmal je Rechnung zu.
+            </p>
+          )}
+
+          {zins.luecke && (
+            <p style={{ color: C.warn, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
+              Achtung: Der Verzug reicht über den {datumDe(tabelleGiltBis())} hinaus. Für diesen
+              Zeitraum liegt noch kein amtlicher Basiszinssatz vor — bitte den Betrag vor dem
+              Versand prüfen.
+            </p>
+          )}
+
+          {mahngebuehr === 0 && pauschaleBetrag === 0 && zinsBetrag === 0 ? (
             <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
               Bei einer Zahlungserinnerung berechnen wir bewusst noch keine Gebühren oder Zinsen –
               ab der 1. Mahnung kommen Mahngebühr und Verzugszinsen (§ 288 BGB) automatisch dazu.
             </p>
           ) : (
             <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "14px 2px 0", lineHeight: 1.5 }}>
-              Verzugszinsen nach § 288 BGB ({VERZUGSZINS_PROZENT.toLocaleString("de-DE")} % p.a. =
-              Basiszinssatz {BASISZINS_PROZENT.toLocaleString("de-DE")} % + {VERZUGSZINS_AUFSCHLAG}{" "}
-              Prozentpunkte, Stand 01.07.2026). Mahngebühr und Zinssatz sind in den Einstellungen
-              der Vorlage hinterlegt.
+              {zinsText} Der Basiszinssatz wird halbjährlich von der Deutschen Bundesbank
+              festgesetzt; ARGONAUT rechnet mit dem Satz, der im jeweiligen Zeitraum galt. Den
+              Zinssatz können Sie nicht frei ändern — das Gesetz gibt ihn vor. Verzichten können Sie
+              jederzeit.
             </p>
           )}
         </Karte>
@@ -709,7 +854,7 @@ export default function MahnungErstellen() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {historie.map((h) => {
                 const farbe = STUFE_FARBE[h.stufe] || C.warn;
-                const zusatz = (Number(h.gebuehr_betrag) || 0) + (Number(h.zins_betrag) || 0);
+                const zusatz = (Number(h.gebuehr_betrag) || 0) + (Number(h.pauschale_betrag) || 0) + (Number(h.zins_betrag) || 0);
                 return (
                   <div
                     key={h.id}

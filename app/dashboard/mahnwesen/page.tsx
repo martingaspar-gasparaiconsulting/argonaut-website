@@ -8,6 +8,7 @@ import KiAuge from "../_components/KiAuge";
 import { augeMahnwesen } from "@/lib/auge";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
+import { verzugszinsen, pauschale, verbraucherVorschlag } from "@/lib/verzugszins";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -59,8 +60,9 @@ const MAHN_META = [
 
 // #5 Werte wie im Mahn-Assistenten — für die Historie beim Sammel-Mahnlauf
 const MAHN_GEBUEHR: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 15 };
-// Verzugszinsen p.a. = Basiszins 01.07.2026 (1,52 %) + 9 Prozentpunkte = 10,52 %
-const VERZUGSZINS_PROZENT = 1.52 + 9;
+// #42 (22.09.2026): Der Zinssatz steht NICHT mehr hier. Er kommt aus
+// lib/verzugszins.ts — Basiszins aus der Datumstabelle, + 5 Punkte beim
+// Verbraucher und + 9 sonst, abschnittsweise ueber den Halbjahreswechsel.
 
 function eur(n: number | null | undefined, waehrung = "EUR"): string {
   const v = typeof n === "number" ? n : 0;
@@ -116,6 +118,8 @@ export default function MahnwesenCockpit() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [kontaktMap, setKontaktMap] = useState<Record<string, string>>({});
+  // #42: je Kontakt merken, ob Verbraucher — entscheidet ueber 5 oder 9 Punkte.
+  const [verbraucherMap, setVerbraucherMap] = useState<Record<string, boolean>>({});
   const [firmaMap, setFirmaMap] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -155,6 +159,7 @@ export default function MahnwesenCockpit() {
         // Kontakt-Namen defensiv auflösen
         const kIds = Array.from(new Set(liste.map((r) => r.kontakt_id).filter(Boolean))) as string[];
         const kMap: Record<string, string> = {};
+        const vMap: Record<string, boolean> = {};
         if (kIds.length) {
           const { data: kData } = await supabase.from("kontakte").select("*").in("id", kIds);
           (kData || []).forEach((k: any) => {
@@ -164,6 +169,10 @@ export default function MahnwesenCockpit() {
               k.name ||
               k.email ||
               "Kontakt";
+            vMap[k.id] = verbraucherVorschlag({
+              ist_verbraucher: k.ist_verbraucher ?? null,
+              firmenname: k.firmenname ?? k.firma ?? null,
+            });
           });
         }
 
@@ -180,6 +189,7 @@ export default function MahnwesenCockpit() {
         if (!aktiv) return;
         setRechnungen(liste);
         setKontaktMap(kMap);
+        setVerbraucherMap(vMap);
         setFirmaMap(fMap);
       } catch (e: any) {
         if (aktiv) setFehler(e?.message || "Fehler beim Laden der Rechnungen.");
@@ -282,16 +292,42 @@ export default function MahnwesenCockpit() {
     const erfolgIds: string[] = [];
     let fehlgeschlagen = 0;
 
+    // #42: Die Pauschale nach § 288 Abs. 5 steht dem Betrieb EINMAL JE RECHNUNG
+    // zu. Ohne diese Abfrage haette ein zweiter Sammellauf sie ein zweites Mal
+    // berechnet — deshalb vorab nachsehen, wo sie schon angefallen ist.
+    const schonPauschale = new Set<string>();
+    {
+      const { data: hData } = await supabase
+        .from("mahnung_historie")
+        .select("rechnung_id,pauschale_betrag")
+        .in("rechnung_id", kandidaten.map((k) => k.id));
+      (hData || []).forEach((h: { rechnung_id: string; pauschale_betrag: number | null }) => {
+        if ((Number(h.pauschale_betrag) || 0) > 0) schonPauschale.add(h.rechnung_id);
+      });
+    }
+
     for (const r of kandidaten) {
       const neu = Math.min((r.mahnstufe || 0) + 1, 4);
       const t = tageBisFaellig(r.faelligkeitsdatum);
       const tage = t === null ? 0 : Math.abs(t);
       const offen = offenerRest(r);
-      const gebuehr = MAHN_GEBUEHR[neu] ?? 0;
-      const zinsen =
-        neu >= 2 && tage > 0
-          ? Math.round(offen * (VERZUGSZINS_PROZENT / 100) * (tage / 365) * 100) / 100
-          : 0;
+      // #42: Eine Firmenzuordnung schliesst den Verbraucher aus; sonst gilt, was
+      // am Kontakt steht — und im Zweifel Verbraucher (der niedrigere Satz).
+      const istVerbraucher = r.firma_id ? false : (r.kontakt_id ? verbraucherMap[r.kontakt_id] !== false : true);
+      const faellig = String(r.faelligkeitsdatum || "").slice(0, 10);
+      const zinsErg =
+        neu >= 2 && tage > 0 && faellig
+          ? verzugszinsen({ offen, von: faellig, bis: heute, istVerbraucher })
+          : { betrag: 0 };
+      const zinsen = zinsErg.betrag;
+      const pausch = pauschale({
+        istVerbraucher,
+        stufe: neu,
+        bereitsBerechnet: schonPauschale.has(r.id),
+        verzicht: false,
+      });
+      // Faellt die Pauschale an, entfaellt die eigene Mahngebuehr (§ 288 Abs. 5 S. 3).
+      const gebuehr = pausch > 0 ? 0 : MAHN_GEBUEHR[neu] ?? 0;
 
       // 1) GoBD-Nachweis
       const { error: hErr } = await supabase.from("mahnung_historie").insert({
@@ -301,6 +337,8 @@ export default function MahnwesenCockpit() {
         stufe_label: MAHN_META[neu].label,
         betrag_offen: offen,
         gebuehr_betrag: gebuehr,
+        pauschale_betrag: pausch,
+        ist_verbraucher: istVerbraucher,
         zins_betrag: zinsen,
         tage_ueberfaellig: tage,
         kanal: "sammellauf",

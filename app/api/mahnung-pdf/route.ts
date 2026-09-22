@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { baueMarke, CI_SPALTEN, type CiRoh, type Marke } from '@/lib/markeCi';
+import { forderungsAufstellung } from '@/lib/verzugszins';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4 — Mahnung-PDF (DIN 5008)
@@ -81,34 +82,48 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
 
   const offen = rechnung?.offener_betrag != null ? rechnung.offener_betrag : rechnung?.brutto_summe;
 
-  // #1/#2: Zuschläge + Gesamtforderung
+  // #42 (22.09.2026): Die Aufstellung kommt aus lib/verzugszins.ts — DERSELBEN
+  // Funktion, mit der auch der Bildschirm rechnet. Vorher rechnete diese Route
+  // eigenständig: eine Pauschale nach § 288 Abs. 5 stand dadurch in der Summe,
+  // aber in keiner Zeile. Das Dokument beim Kunden widersprach sich selbst.
   const gebuehr = Number(rechnung?.mahngebuehr) || 0;
+  const pausch = Number(rechnung?.pauschale) || 0;
   const zinsen = Number(rechnung?.verzugszinsen) || 0;
   const zinsSatz = Number(rechnung?.zins_satz) || 0;
   const zinsTage = Number(rechnung?.zins_tage) || 0;
-  const gesamt =
-    rechnung?.gesamtforderung != null
-      ? Number(rechnung.gesamtforderung)
-      : (Number(offen) || 0) + gebuehr + zinsen;
-  const hatZuschlaege = gebuehr + zinsen > 0.005;
-  const zahlBetrag = hatZuschlaege ? gesamt : offen;
 
-  let zinsLabel = 'Verzugszinsen';
-  if (zinsTage > 0 && zinsSatz > 0) {
-    zinsLabel += ` (${zinsTage} Tage · ${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
-  } else if (zinsSatz > 0) {
-    zinsLabel += ` (${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
+  let zinsLabel = String(rechnung?.zins_label || '').trim();
+  if (!zinsLabel) {
+    zinsLabel = 'Verzugszinsen';
+    if (zinsTage > 0 && zinsSatz > 0) {
+      zinsLabel += ` (${zinsTage} Tage · ${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
+    } else if (zinsSatz > 0) {
+      zinsLabel += ` (${zinsSatz.toLocaleString('de-DE')} % p.a.)`;
+    }
   }
+
+  const forderung = forderungsAufstellung({
+    offen: Number(offen) || 0,
+    gebuehr,
+    pauschale: pausch,
+    zinsen,
+    zinsLabel,
+  });
+  const gesamt = forderung.gesamt;
+  const hatZuschlaege = forderung.hatZuschlaege;
+  const zahlBetrag = hatZuschlaege ? gesamt : offen;
+  const zinsErklaerung = String(rechnung?.zins_erklaerung || '').trim();
 
   const aufstellungHtml = hatZuschlaege
     ? `<div class="aufstellung">
         <div class="titel">Forderungsaufstellung</div>
         <table>
-          <tr><td>Offene Hauptforderung</td><td class="r">${geld(offen, waehrung)}</td></tr>
-          ${gebuehr > 0 ? `<tr><td>Mahngebühr</td><td class="r">${geld(gebuehr, waehrung)}</td></tr>` : ''}
-          ${zinsen > 0 ? `<tr><td>${esc(zinsLabel)}</td><td class="r">${geld(zinsen, waehrung)}</td></tr>` : ''}
+          ${forderung.posten
+            .map((pos) => `<tr><td>${esc(pos.label)}</td><td class="r">${geld(pos.betrag, waehrung)}</td></tr>`)
+            .join('\n          ')}
           <tr class="summe"><td>Gesamtforderung</td><td class="r">${geld(gesamt, waehrung)}</td></tr>
         </table>
+        ${zinsErklaerung ? `<div class="zinsfuss">${esc(zinsErklaerung)}</div>` : ''}
       </div>`
     : '';
 
@@ -130,6 +145,7 @@ function baueHtml(mahnung: any, rechnung: any, empfaengerName: string, firmaName
   * { box-sizing: border-box; }
   body { font-family: 'DejaVu Sans', Arial, sans-serif; color: #0A1628; margin: 0; padding: 44px 52px; font-size: 12.5px; line-height: 1.6; }
   .warn { color: #b8860b; font-weight: bold; }
+  .zinsfuss { font-size: 10.5px; color: #5b6b80; margin-top: 7px; line-height: 1.5; }
 
   .absender-mini { font-size: 10px; color: #5b6b80; border-bottom: 1px solid #e1e6ee; padding-bottom: 6px; margin-bottom: 20px; }
 
