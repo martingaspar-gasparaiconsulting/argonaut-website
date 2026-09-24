@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { DOCUMENT_TEMPLATES, getTemplate } from "@/lib/document-templates";
 import { pflichtfelderFehlen } from "@/lib/document-render";
+import { mischeTreffer, kontextAus, belegeAus, REGELN_BELEGE, MAX_TREFFER, type Treffer } from "@/lib/firmenWissen";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,8 @@ const SYSTEM_PROMPT =
   "Bei Faktenfragen antwortest du nur auf Basis der bereitgestellten Dokument-Auszuege und erfindest nichts. Wenn eine Information nicht in den Auszuegen steht, sage es kurz. " +
   "Du kannst ausserdem Geschaeftsdokumente erstellen. Wenn der Mitarbeiter dich bittet, ein Dokument zu erstellen, zu erzeugen oder zu schreiben (z. B. Angebot, Rechnung, Mahnung, Vertrag), rufe das Tool 'document_generate' auf. " +
   "Waehle die passende templateId und fuelle 'data' mit den genannten Angaben (Schluessel = Feld-keys aus der Liste unten). Erfinde keine Pflichtangaben: Wenn Pflichtfelder fehlen, rufe das Tool trotzdem mit den vorhandenen Daten auf - das System fragt fehlende Felder anschliessend nach. " +
-  "Antworte praezise auf Deutsch und strukturiere laengere Antworten mit Ueberschriften und Aufzaehlungen. Nenne am Ende keine Quellen-Nummern. " +
+  "Antworte praezise auf Deutsch und strukturiere laengere Antworten mit Ueberschriften und Aufzaehlungen. " +
+  REGELN_BELEGE + " " +
   "Verfuegbare Dokumente und ihre Felder (* = Pflichtfeld):\n" +
   KATALOG;
 
@@ -69,8 +71,13 @@ export async function POST(req: Request) {
     }
 
     // RAG: Embedding + Suche (Kontext optional, kein Abbruch wenn leer)
+    // Paket PG Teil 2 (24.09.26): zusaetzlich die vom Chef fuers Team
+    // freigegebenen Dokumente (documents.fuer_team) — WER was sieht, regelt
+    // allein die Datenbank (RLS). Antwort mit Belegen [1], [2] + Textstelle.
     let kontext = "";
     let quellen: string[] = [];
+    let treffer: ReturnType<typeof mischeTreffer> = [];
+    let namen: Record<string, string> = {};
     try {
       const voyageRes = await fetch("https://api.voyageai.com/v1/embeddings", {
         method: "POST",
@@ -80,23 +87,30 @@ export async function POST(req: Request) {
       if (voyageRes.ok) {
         const voyageData = await voyageRes.json();
         const queryEmbedding = voyageData.data[0].embedding;
-        const { data: chunks } = await supabase.rpc("match_document_chunks", {
-          query_embedding: queryEmbedding,
-          match_user_id: user.id,
-          match_count: 5,
-          match_threshold: 0.15,
-        });
-        if (chunks && chunks.length > 0) {
-          const docIds = [...new Set(chunks.map((c: any) => c.document_id))];
+        const suche = (uid: string) =>
+          supabase.rpc("match_document_chunks", {
+            query_embedding: queryEmbedding,
+            match_user_id: uid,
+            match_count: MAX_TREFFER,
+            match_threshold: 0.15,
+          });
+        const { data: eigene } = await suche(user.id);
+        // Chef des Betriebs (NULL fuer den Chef selbst) — best effort.
+        let team: Treffer[] = [];
+        try {
+          const { data: chefId } = await supabase.rpc("mein_chef_id");
+          if (typeof chefId === "string" && chefId && chefId !== user.id) {
+            const { data } = await suche(chefId);
+            team = (data as Treffer[]) ?? [];
+          }
+        } catch { /* ohne Team-Wissen weiter */ }
+        treffer = mischeTreffer((eigene as Treffer[]) ?? [], team);
+        if (treffer.length > 0) {
+          const docIds = [...new Set(treffer.map((c) => c.document_id))];
           const { data: docs } = await supabase.from("documents").select("id, file_name").in("id", docIds);
-          const docMap = new Map((docs || []).map((d: any) => [d.id, d.file_name]));
-          kontext = chunks
-            .map(
-              (c: any, i: number) =>
-                "[Quelle " + (i + 1) + ": " + (docMap.get(c.document_id) || "Unbekannt") + "]\n" + c.content,
-            )
-            .join("\n\n---\n\n");
-          quellen = [...new Set(chunks.map((c: any) => docMap.get(c.document_id) || "Unbekannt"))] as string[];
+          namen = Object.fromEntries((docs || []).map((d: any) => [d.id, d.file_name]));
+          kontext = kontextAus(treffer, namen);
+          quellen = [...new Set(treffer.map((c) => namen[c.document_id] || "Unbekannt"))];
         }
       }
     } catch (e) {
@@ -163,7 +177,8 @@ export async function POST(req: Request) {
     }
 
     // Normale Textantwort (rueckwaertskompatibel)
-    return NextResponse.json({ modus: "text", antwort: text, quellen });
+    const belege = treffer.length ? belegeAus(treffer, namen, text, frage) : [];
+    return NextResponse.json({ modus: "text", antwort: text, quellen, belege });
   } catch (err: any) {
     console.error("Mitarbeiter-Chat Fehler:", err);
     return NextResponse.json({ error: "Interner Fehler." }, { status: 500 });

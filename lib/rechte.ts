@@ -97,6 +97,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '💬 Chat', href: '/dashboard/chat', modul: 'chat', ebene: 4, gruppe: 'komm' },
   { label: '🗨️ Team-Chat', href: '/dashboard/team-chat', modul: 'team-chat', ebene: 4, gruppe: 'komm' },
   { label: '📄 Dokumente', href: '/dashboard/documents', modul: 'dokumente', ebene: 4, gruppe: 'komm' },
+  // Paket PG Teil 2 (24.09.26): Firmen-Wissen — Freigabe einzelner Dokumente
+  // fuers Team. Unterpfad von /dashboard/documents, ohne eigenen Modul-Schluessel.
+  { label: '📚 Firmen-Wissen', href: '/dashboard/documents/wissen', ebene: 2, gruppe: 'komm' },
   { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz', ebene: 4, gruppe: 'komm' },
   { label: '🗂 Vorlagen-Pool', href: '/dashboard/vorlagen', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },

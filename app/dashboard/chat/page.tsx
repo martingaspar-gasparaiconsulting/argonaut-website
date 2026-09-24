@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { markiere, type Beleg } from '@/lib/firmenWissen';
 
 type Vorschlag = {
   templateId: string;
@@ -15,6 +16,8 @@ type Nachricht = {
   rolle: 'user' | 'assistent';
   text: string;
   quellen?: string[];
+  belege?: Beleg[];
+  frage?: string;
   vorschlag?: Vorschlag;
   vorschlagStatus?: 'offen' | 'speichert' | 'gespeichert' | 'abgebrochen';
   erstelltesDokument?: { name: string; typ: string };
@@ -119,7 +122,7 @@ export default function MitarbeiterChatSeite() {
       } else {
         setNachrichten((n) => [
           ...n,
-          { rolle: 'assistent', text: data.antwort ?? data.text ?? '', quellen: data.quellen },
+          { rolle: 'assistent', text: data.antwort ?? data.text ?? '', quellen: data.quellen, belege: Array.isArray(data.belege) ? data.belege : undefined, frage },
         ]);
       }
     } catch {
@@ -231,7 +234,7 @@ export default function MitarbeiterChatSeite() {
           Mitarbeiter-Chat
         </h1>
         <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(14px, 1.25vw, 20px)', color: 'rgba(255,255,255,0.6)', margin: '6px 0 0' }}>
-          Stellen Sie Fragen zu Ihren Dokumenten &ndash; oder lassen Sie neue Dokumente erstellen.
+          Stellen Sie Fragen zu den Firmendokumenten &ndash; die Antwort zeigt, in welchem Dokument und an welcher Stelle es steht. Oder lassen Sie neue Dokumente erstellen.
         </p>
       </div>
 
@@ -258,7 +261,25 @@ export default function MitarbeiterChatSeite() {
                 ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }} />
                 : <span style={{ whiteSpace: 'pre-wrap' }}>{m.text}</span>}
               {m.vorschlag && vorschlagKarte(m, i)}
-              {m.quellen && m.quellen.length > 0 && (
+              {m.belege && m.belege.length > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,229,255,0.2)', display: 'grid', gap: 8 }}>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#00e5ff' }}>Hier steht es:</div>
+                  {m.belege.map((b) => (
+                    <div key={b.nr} style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)', borderRadius: 10, padding: '10px 12px', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <strong style={{ color: '#C9A84C' }}>[{b.nr}] {b.datei}{b.team ? ' · Firmen-Wissen' : ''}</strong>
+                        <a href={`/api/wissen-dokument?id=${encodeURIComponent(b.document_id)}`} target="_blank" rel="noopener noreferrer" style={{ color: '#00e5ff', textDecoration: 'none', border: '1px solid rgba(0,229,255,0.4)', borderRadius: 8, padding: '4px 10px' }}>📄 Dokument öffnen</a>
+                      </div>
+                      <div style={{ marginTop: 6, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
+                        „{markiere(b.stelle, m.frage ?? '').map((x, k) => x.hit
+                          ? <mark key={k} style={{ background: 'rgba(201,168,76,0.35)', color: '#fff', borderRadius: 3, padding: '0 2px' }}>{x.t}</mark>
+                          : <span key={k}>{x.t}</span>)}“
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!m.belege?.length && m.quellen && m.quellen.length > 0 && (
                 <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,229,255,0.2)', fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#00e5ff' }}>
                   Quellen: {m.quellen.join(', ')}
                 </div>
