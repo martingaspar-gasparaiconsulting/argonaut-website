@@ -29,6 +29,8 @@ export interface CiWeb extends CiRecht {
   farbe_akzent?: string | null;
   schrift?: string | null;
   oeffnungszeiten?: string | null;
+  /** Paket PR (K04): Informationen zur Barrierefreiheit (Anlage 3 BFSG), schmales Markdown. Leer = kein Abschnitt. */
+  barrierefreiheit_text?: string | null;
 }
 
 // --- Baustein-Typen ---------------------------------------------------------
@@ -161,16 +163,16 @@ function anfrageFormular(oeffentlichId?: string, knopf?: string): string {
     '<form class="ao-anfrage" id="ao-anfrage" novalidate>',
     '<input type="hidden" name="seite" value="' + seite + '">',
     '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
-    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
+    '<div class="ao-feld"><label>Name*</label><input aria-label="Name" type="text" name="name" required></div>',
     '<div class="ao-zwei">',
-    '<div class="ao-feld"><label>E-Mail</label><input type="email" name="email"></div>',
-    '<div class="ao-feld"><label>Telefon</label><input type="tel" name="telefon"></div>',
+    '<div class="ao-feld"><label>E-Mail</label><input aria-label="E-Mail" type="email" name="email"></div>',
+    '<div class="ao-feld"><label>Telefon</label><input aria-label="Telefon" type="tel" name="telefon"></div>',
     '</div>',
     '<div class="ao-zwei">',
-    '<div class="ao-feld"><label>PLZ</label><input type="text" name="plz" inputmode="numeric" maxlength="5" autocomplete="postal-code"></div>',
-    '<div class="ao-feld"><label>Ort</label><input type="text" name="ort"></div>',
+    '<div class="ao-feld"><label>PLZ</label><input aria-label="PLZ" type="text" name="plz" inputmode="numeric" maxlength="5" autocomplete="postal-code"></div>',
+    '<div class="ao-feld"><label>Ort</label><input aria-label="Ort" type="text" name="ort"></div>',
     '</div>',
-    '<div class="ao-feld"><label>Ihre Nachricht</label><textarea name="nachricht" rows="4"></textarea></div>',
+    '<div class="ao-feld"><label>Ihre Nachricht</label><textarea aria-label="Ihre Nachricht" name="nachricht" rows="4"></textarea></div>',
     '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
     '<button type="submit" class="btn">' + knopfText + '</button>',
     '<div class="ao-msg" id="ao-anfrage-msg" role="status"></div>',
@@ -196,7 +198,7 @@ function newsletterFormular(oeffentlichId?: string, knopf?: string): string {
     '<input type="hidden" name="seite" value="' + seite + '">',
     '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
     '<div class="ao-news-row">',
-    '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" required>',
+    '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse" required>',
     '<button type="submit" class="btn">' + knopfText + '</button>',
     '</div>',
     '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich m&ouml;chte E-Mails erhalten und habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen.*</label>',
@@ -222,13 +224,13 @@ function terminFormular(oeffentlichId?: string, knopf?: string): string {
     '<form class="ao-anfrage" id="ao-termin" novalidate>',
     '<input type="hidden" name="seite" value="' + seite + '">',
     '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
-    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
+    '<div class="ao-feld"><label>Name*</label><input aria-label="Name" type="text" name="name" required></div>',
     '<div class="ao-zwei">',
-    '<div class="ao-feld"><label>E-Mail</label><input type="email" name="email"></div>',
-    '<div class="ao-feld"><label>Telefon</label><input type="tel" name="telefon"></div>',
+    '<div class="ao-feld"><label>E-Mail</label><input aria-label="E-Mail" type="email" name="email"></div>',
+    '<div class="ao-feld"><label>Telefon</label><input aria-label="Telefon" type="tel" name="telefon"></div>',
     '</div>',
-    '<div class="ao-feld"><label>Wunschtermin</label><input type="text" name="wunsch" placeholder="z. B. nächste Woche vormittags"></div>',
-    '<div class="ao-feld"><label>Nachricht</label><textarea name="nachricht" rows="3"></textarea></div>',
+    '<div class="ao-feld"><label>Wunschtermin</label><input aria-label="Wunschtermin" type="text" name="wunsch" placeholder="z. B. nächste Woche vormittags"></div>',
+    '<div class="ao-feld"><label>Nachricht</label><textarea aria-label="Nachricht" name="nachricht" rows="3"></textarea></div>',
     '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
     '<button type="submit" class="btn">' + knopfText + '</button>',
     '<div class="ao-msg" id="ao-termin-msg" role="status"></div>',
@@ -375,7 +377,8 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
       const bilder = Array.isArray(b.bilder) ? b.bilder.map(safeUrl).filter(Boolean) : [];
       let inner = '';
       if (bilder.length) {
-        inner = bilder.slice(0, 12).map((u) => '<div class="galimg"><img src="' + u + '" alt="" loading="lazy"></div>').join('');
+        // Paket PR (K04): Galerie-Bilder zeigen Inhalt -> nie leerer Alternativtext.
+        inner = bilder.slice(0, 12).map((u, i) => '<div class="galimg"><img src="' + u + '" alt="' + esc((z(b.titel) || 'Galerie') + ' – Bild ' + (i + 1)) + '" loading="lazy"></div>').join('');
       } else {
         const n = Math.max(1, Math.min(12, b.anzahl || 3));
         for (let i = 0; i < n; i++) inner += '<div class="ph"><span>Bild</span></div>';
@@ -438,7 +441,7 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         '<input type="hidden" name="seite" value="' + seite + '">',
         '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
         '<div class="ao-pop-row">',
-        '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" required>',
+        '<input type="email" name="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse" required>',
         '<button type="submit" class="btn"' + ce('knopf') + '>' + esc(e.knopf) + '</button>',
         '</div>',
         '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich m&ouml;chte E-Mails erhalten und habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen.*</label>',
@@ -491,7 +494,7 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
         const embed = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1';
         media = '<button type="button" class="ao-video ao-video-facade" data-embed="' + embed + '" style="background-image:url(' + thumb + ')" aria-label="Video abspielen"><span class="ao-video-play">&#9654;</span></button>';
       } else if (v.art === 'vimeo') {
-        media = '<div class="ao-video"><iframe src="https://player.vimeo.com/video/' + v.id + '" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>';
+        media = '<div class="ao-video"><iframe src="https://player.vimeo.com/video/' + v.id + '" title="' + esc(b.titel || 'Video') + '" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>';
       } else {
         media = '<div class="ao-video ao-video-leer"><span>' + (ed ? 'Video-Link rechts einf&uuml;gen (YouTube/Vimeo)' : 'Video') + '</span></div>';
       }
@@ -630,6 +633,11 @@ export function rechtsSektionen(ci: CiWeb): string {
     block('impressum', 'Impressum', impressumText(ci)),
     block('datenschutz', 'Datenschutz', datenschutzText(ci)),
     block('agb', 'AGB', agbText(ci)),
+    // Paket PR (K04): auf JEDER Seite verankert und im Fuss verlinkt = „deutlich wahrnehmbar".
+    // markdownZuHtml maskiert zuerst, dann wird formatiert.
+    z(ci.barrierefreiheit_text)
+      ? '<section class="recht" id="barrierefreiheit"><div class="wrap narrow"><h2>Barrierefreiheit</h2><div class="fliess">' + markdownZuHtml(z(ci.barrierefreiheit_text)) + '</div></div></section>'
+      : '',
   ].join('');
 }
 
@@ -645,11 +653,11 @@ function widerrufSektion(oeffentlichId?: string): string {
     '<form class="ao-anfrage ao-widerruf" id="ao-widerruf" novalidate>',
     '<input type="hidden" name="seite" value="' + seite + '">',
     '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
-    '<div class="ao-feld"><label>Name*</label><input type="text" name="name" required></div>',
-    '<div class="ao-feld"><label>Anschrift</label><input type="text" name="anschrift"></div>',
-    '<div class="ao-zwei"><div class="ao-feld"><label>E-Mail*</label><input type="email" name="email" required></div><div class="ao-feld"><label>Bestell-/Rechnungsnummer</label><input type="text" name="bestellung"></div></div>',
-    '<div class="ao-feld"><label>Bestellt / erhalten am</label><input type="text" name="datum" placeholder="z. B. 05.08.2026"></div>',
-    '<div class="ao-feld"><label>Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung*</label><textarea name="ware" rows="3" required></textarea></div>',
+    '<div class="ao-feld"><label>Name*</label><input aria-label="Name" type="text" name="name" required></div>',
+    '<div class="ao-feld"><label>Anschrift</label><input aria-label="Anschrift" type="text" name="anschrift"></div>',
+    '<div class="ao-zwei"><div class="ao-feld"><label>E-Mail*</label><input aria-label="E-Mail" type="email" name="email" required></div><div class="ao-feld"><label>Bestell-/Rechnungsnummer</label><input aria-label="Bestell-/Rechnungsnummer" type="text" name="bestellung"></div></div>',
+    '<div class="ao-feld"><label>Bestellt / erhalten am</label><input aria-label="Bestellt / erhalten am" type="text" name="datum" placeholder="z. B. 05.08.2026"></div>',
+    '<div class="ao-feld"><label>Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung*</label><textarea aria-label="Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung" name="ware" rows="3" required></textarea></div>',
     '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
     '<button type="submit" class="btn">Widerruf absenden</button>',
     '<div class="ao-msg" id="ao-widerruf-msg" role="status"></div>',
@@ -993,7 +1001,7 @@ export function seiteHtml(
     koerper,
     rechtsSektionen(ci),
     hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
-    fussHtml(ci, jahr, { widerruf: hatProdukte }),
+    fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text) }),
     anfrageSkript(),
     newsletterSkript(),
     terminSkript(),

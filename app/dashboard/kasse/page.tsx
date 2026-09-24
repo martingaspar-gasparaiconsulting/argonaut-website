@@ -111,6 +111,10 @@ export default function KassePage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🧾 Kasse</h1>
+      {/* Paket PR (K03): Kassen-Meldung ans Finanzamt (§ 146a Abs. 4 AO) */}
+      <div style={{ margin: '6px 0 12px' }}>
+        <a href="/dashboard/kasse/meldung" style={styles.exportBtn}>🏛 Kassen-Meldung ans Finanzamt</a>
+      </div>
 
       <div style={styles.split}>
         {/* Links: Artikel */}

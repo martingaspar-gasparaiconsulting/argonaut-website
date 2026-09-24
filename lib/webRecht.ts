@@ -113,7 +113,7 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean } = {}): string {
+export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; barrierefreiheit?: boolean } = {}): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   return [
     '<footer class="ao-fuss">',
@@ -124,6 +124,7 @@ export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean }
     '      <a href="#datenschutz">Datenschutz</a>',
     '      <a href="#agb">AGB</a>',
     opts.widerruf ? '      <a href="#widerruf">Widerruf</a>' : '',
+    opts.barrierefreiheit ? '      <a href="#barrierefreiheit">Barrierefreiheit</a>' : '',
     '    </nav>',
     '  </div>',
     '</footer>',

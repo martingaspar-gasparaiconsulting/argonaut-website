@@ -240,6 +240,10 @@ export default function WebseitenPage() {
         Aus Ihrem Firmen-Auftritt entsteht in Sekunden eine fertige Seite. Wählen Sie den Zweck, lassen Sie die KI
         die Texte schreiben — oder nehmen Sie die Vorlage. Impressum, Datenschutz und AGB sitzen automatisch im Fuß.
       </p>
+      {/* Paket PR (K04): Barrierefreiheits-Check nach BFSG */}
+      <p style={styles.sub}>
+        <a href="/dashboard/webseiten/barrierefreiheit" style={styles.link}>♿ Barrierefreiheit prüfen (BFSG)</a> — Farben, Seiten und die Pflicht-Erklärung.
+      </p>
 
       {laden ? (
         <p style={styles.dim}>Lädt …</p>

@@ -246,6 +246,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧩 Varianten & Matrix', href: '/dashboard/varianten', modul: 'varianten', ebene: 3, gruppe: 'lager' },
   { label: '📷 Lager-Scanner', href: '/dashboard/lager-scanner', modul: 'lager-scanner', ebene: 3, gruppe: 'lager' },
   { label: '🧾 Kasse', href: '/dashboard/kasse', modul: 'kasse', ebene: 3, sensibel: true, gruppe: 'lager' },
+  // Paket PR (24.09.26): Kassen-Meldung § 146a Abs. 4 AO — Unterpfad der Kasse, erbt deren Freigabe.
+  { label: '🏛 Kassen-Meldung', href: '/dashboard/kasse/meldung', ebene: 3, gruppe: 'lager' },
   { label: '🛒 Shop / Marktplatz', href: '/dashboard/shop', modul: 'shop', ebene: 3, gruppe: 'lager' },
   // Alt-Hinweis (15.07.26): Der Punkt „Agenten/Automatisierungen" war ein Schaufenster
   // ohne Funktion und flog raus. Seit 15.08.26 gibt es unter „Verwaltung" den echten
@@ -297,6 +299,8 @@ export const NAV_LINKS: NavLink[] = [
   // --- Verwaltung -----------------------------------------------------------
   { label: '🌐 Webauftritt', href: '/dashboard/webauftritt', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🖥️ Website-Bauer', href: '/dashboard/webseiten', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
+  // Paket PR (24.09.26): Barrierefreiheits-Check (BFSG) — Unterpfad des Website-Bauers, nur Chef.
+  { label: '♿ Barrierefreiheit', href: '/dashboard/webseiten/barrierefreiheit', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '👥 Nutzer & Tarif', href: '/dashboard/nutzer-tarif', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🏢 Standorte & Filialen', href: '/dashboard/standorte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
