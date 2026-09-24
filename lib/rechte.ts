@@ -235,6 +235,9 @@ export const NAV_LINKS: NavLink[] = [
   // sie ohne ausdrueckliche Freigabe fuer jeden offen sind.
   // Agenten: aus der Navigation genommen (Schaufenster ohne echte Funktion). Code bleibt geparkt.
   { label: '👥 Personal', href: '/dashboard/personal', modul: 'personal', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  // Paket PF (24.09.26): Personal-Dokumente — Unterpfad von /dashboard/personal,
+  // deshalb ohne eigenen Modul-Schluessel; sensibel wie Personal selbst.
+  { label: '📄 Personal-Dokumente', href: '/dashboard/personal/dokumente', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
