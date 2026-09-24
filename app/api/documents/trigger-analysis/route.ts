@@ -11,6 +11,8 @@
 //   3. Text lesen (PDF, Word, Excel, Text), in Abschnitte teilen.
 //   4. Voyage-Embeddings (voyage-4-lite, wie die Suche) in Stapeln.
 //   5. Alte Abschnitte dieses Dokuments ersetzen, Status auf „bereit".
+// Erlaubte Status laut Pruefregel documents_status_check:
+//   wartet · wird_analysiert · bereit · fehler
 // Scheitert etwas, steht der Status auf „fehler" — nie still.
 // ============================================================================
 import { NextResponse } from 'next/server';
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
   if ((d.file_size ?? 0) > MAX_BYTES) return fehlschlag('Die Datei ist zu groß zum Auslesen (höchstens 25 MB). Bitte in kleinere Teile aufteilen.', 413);
 
   try {
-    await supabase.from('documents').update({ status: 'wird ausgelesen' }).eq('id', id);
+    await supabase.from('documents').update({ status: 'wird_analysiert' }).eq('id', id);
 
     // 2. Datei holen
     const admin = createAdminClient();

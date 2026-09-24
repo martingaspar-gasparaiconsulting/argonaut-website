@@ -138,6 +138,9 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PG (24.09.26): Gespraechsprotokolle — Unterpfad von /dashboard/crm,
   // deshalb ohne eigenen Modul-Schluessel (erbt die CRM-Freigabe).
   { label: '🗣 Gesprächsprotokolle', href: '/dashboard/crm/gespraeche', ebene: 3, gruppe: 'vertrieb' },
+  // Paket PH (24.09.26): Ausschreibungs-Radar — nur Chef (Tabellen chef-only),
+  // deshalb ebene 2 ohne Modul-Schluessel.
+  { label: '📡 Ausschreibungen', href: '/dashboard/ausschreibungen', ebene: 2, gruppe: 'vertrieb' },
   { label: '📊 Deal-Pipeline', href: '/dashboard/pipeline', modul: 'pipeline', ebene: 3, gruppe: 'vertrieb' },
   { label: '💰 Provisionen', href: '/dashboard/provisionen', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
   { label: '🤝 Partner & Multiplikatoren', href: '/dashboard/partner', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
