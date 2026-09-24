@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { spracheFuer, zweisprachig, teileZweisprachig, cacheSchluessel } from '@/lib/mehrsprachig';
 
 // ---------------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 13 · Team-Chat Cockpit (TC2 + TC3 + Namens-Einladen + Datei-Upload)
+// Paket PM (24.09.26): Uebersetzen in die eigene Sprache (sprach_profil, gewaehlt unter
+// /dashboard/mehrsprachig) und "Deutsch mitsenden" fuer Kollegen, die nicht Deutsch schreiben.
+// Uebersetzungen werden NICHT gespeichert, nur im Browser zwischengehalten.
 // ---------------------------------------------------------------------------
 
 type Kanal = {
@@ -96,6 +100,15 @@ export default function TeamChatPage() {
   const [liveVerbunden, setLiveVerbunden] = useState(false);
   const dateiInputRef = useRef<HTMLInputElement | null>(null);
 
+  // --- Paket PM: Uebersetzen -------------------------------------------------
+  const [meineSprache, setMeineSprache] = useState<string>('de');
+  const [autoUebersetzen, setAutoUebersetzen] = useState(false);
+  const [deutschMitsenden, setDeutschMitsenden] = useState(true);
+  const [uebersetzt, setUebersetzt] = useState<Record<string, string>>({});
+  const [uebersetztLaeuft, setUebersetztLaeuft] = useState(false);
+  const zwischenspeicher = useRef<Map<string, string>>(new Map());
+  const angefragt = useRef<Set<string>>(new Set());
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   /**
@@ -166,6 +179,18 @@ export default function TeamChatPage() {
         (typeof meinName === 'string' && meinName.trim()) ||
           (mail ? mail.split('@')[0] : 'Ich')
       );
+      if (user?.id) {
+        try {
+          const { data: sp } = await supabase.from('sprach_profil').select('sprache').eq('user_id', user.id).maybeSingle();
+          const s = spracheFuer((sp as { sprache?: string } | null)?.sprache);
+          if (s) {
+            setMeineSprache(s.code);
+            let auto = s.code !== 'de';
+            try { const w = window.localStorage.getItem('argonaut_chat_auto_uebersetzen'); if (w === '0') auto = false; if (w === '1') auto = true; } catch { /* egal */ }
+            setAutoUebersetzen(auto);
+          }
+        } catch { /* SQL von Paket PM noch nicht gelaufen -> Deutsch */ }
+      }
       await ladeKanaele();
       setLaedt(false);
     })();
@@ -262,6 +287,78 @@ export default function TeamChatPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [nachrichten, kiDenkt]);
 
+  // --- Paket PM: Nachrichten in die eigene Sprache uebersetzen ---------------
+  /** Der Teil einer Nachricht, der uebersetzt wird (bei zweisprachigen das Original). */
+  function quelleVon(m: Nachricht): string {
+    const t = teileZweisprachig(m.text);
+    // Wer Deutsch liest und eine deutsche Fassung hat, braucht nichts.
+    if (meineSprache === 'de' && t.deutsch) return '';
+    return (t.original || '').trim();
+  }
+
+  const uebersetzeNachrichten = useCallback(async (liste: Nachricht[]) => {
+    const offen: { id: string; text: string; schluessel: string }[] = [];
+    const ausSpeicher: Record<string, string> = {};
+    for (const m of liste) {
+      const text = quelleVon(m);
+      if (!text || angefragt.current.has(m.id)) continue;
+      const schluessel = cacheSchluessel(text, meineSprache);
+      const alt = zwischenspeicher.current.get(schluessel);
+      if (alt !== undefined) { ausSpeicher[m.id] = alt; continue; }
+      offen.push({ id: m.id, text: text.slice(0, 4000), schluessel });
+    }
+    if (Object.keys(ausSpeicher).length) setUebersetzt((u) => ({ ...u, ...ausSpeicher }));
+    const stapel = offen.slice(0, 15);
+    if (!stapel.length) return;
+    stapel.forEach((x) => angefragt.current.add(x.id));
+    setUebersetztLaeuft(true);
+    try {
+      const res = await fetch('/api/uebersetzen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ziel: meineSprache, modus: 'chat', texte: stapel.map((x) => x.text) }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        stapel.forEach((x) => angefragt.current.delete(x.id));
+        setSendeFehler((data && data.error) || 'Die Übersetzung ist gerade nicht erreichbar.');
+        return;
+      }
+      const neu: Record<string, string> = {};
+      stapel.forEach((x, i) => {
+        const e = data.ergebnisse?.[i];
+        if (e && typeof e.text === 'string') {
+          zwischenspeicher.current.set(x.schluessel, e.text);
+          neu[x.id] = e.text;
+        } else {
+          angefragt.current.delete(x.id);
+        }
+      });
+      setUebersetzt((u) => ({ ...u, ...neu }));
+    } catch {
+      stapel.forEach((x) => angefragt.current.delete(x.id));
+    } finally {
+      setUebersetztLaeuft(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meineSprache]);
+
+  // Sprache gewechselt -> alte Uebersetzungen verwerfen
+  useEffect(() => { setUebersetzt({}); angefragt.current = new Set(); }, [meineSprache]);
+
+  // Automatisch: die letzten fremden Nachrichten uebersetzen
+  useEffect(() => {
+    if (!autoUebersetzen) return;
+    const fremde = nachrichten.filter((m) => !m.ist_ki && m.absender_id !== userId && m.text).slice(-15);
+    void uebersetzeNachrichten(fremde);
+  }, [autoUebersetzen, nachrichten, userId, uebersetzeNachrichten]);
+
+  function autoUmschalten() {
+    const neu = !autoUebersetzen;
+    setAutoUebersetzen(neu);
+    try { window.localStorage.setItem('argonaut_chat_auto_uebersetzen', neu ? '1' : '0'); } catch { /* egal */ }
+  }
+
   // --- ARGONAUT-Antwort in den Kanal holen -----------------------------------
   async function argonautAntworten(ausloeser: string) {
     if (!aktiverKanal) return;
@@ -313,10 +410,28 @@ export default function TeamChatPage() {
 
   // --- Nachricht senden ------------------------------------------------------
   async function senden() {
-    const text = entwurf.trim();
-    if (!text || !aktiverKanal || !userId) return;
+    const eingabe = entwurf.trim();
+    if (!eingabe || !aktiverKanal || !userId) return;
     setEntwurf('');
     setSendeFehler(null);
+
+    // Paket PM: wer nicht Deutsch schreibt, schickt die deutsche Fassung gleich mit.
+    let text = eingabe;
+    if (meineSprache !== 'de' && deutschMitsenden && !/@argonaut/i.test(eingabe)) {
+      try {
+        const r = await fetch('/api/uebersetzen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ziel: 'de', modus: 'chat', texte: [eingabe.slice(0, 4000)] }),
+        });
+        const d = await r.json();
+        const de = d?.ok ? d.ergebnisse?.[0]?.text : null;
+        if (typeof de === 'string' && de.trim()) text = zweisprachig(eingabe, de);
+        else setSendeFehler('Die deutsche Fassung konnte nicht erstellt werden — die Nachricht ging ohne sie raus.');
+      } catch {
+        setSendeFehler('Die deutsche Fassung konnte nicht erstellt werden — die Nachricht ging ohne sie raus.');
+      }
+    }
 
     // Die eingefuegte Zeile direkt zurueckgeben lassen und sofort anzeigen.
     // Vorher hing die eigene Nachricht komplett an der Live-Verbindung: stand
@@ -334,7 +449,7 @@ export default function TeamChatPage() {
       .single();
 
     if (error) {
-      setEntwurf(text);
+      setEntwurf(eingabe);
       setSendeFehler(fehlerText(error.message));
       return;
     }
@@ -795,6 +910,23 @@ export default function TeamChatPage() {
                           }}
                         >
                           {m.text && <span>{m.text}</span>}
+                          {m.text && uebersetzt[m.id] && uebersetzt[m.id].trim() !== quelleVon(m) && (
+                            <div
+                              dir={spracheFuer(meineSprache)?.rtl ? 'rtl' : 'ltr'}
+                              style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed ' + BORDER, color: DIM, fontStyle: 'italic' }}
+                            >
+                              🌍 {uebersetzt[m.id]}
+                            </div>
+                          )}
+                          {m.text && !eigen && !m.ist_ki && !uebersetzt[m.id] && quelleVon(m) && (
+                            <button
+                              onClick={() => { void uebersetzeNachrichten([m]); }}
+                              title={'Übersetzen in: ' + (spracheFuer(meineSprache)?.eigen ?? 'Deutsch')}
+                              style={{ display: 'block', marginTop: 6, background: 'transparent', border: 'none', color: CYAN, cursor: 'pointer', padding: 0, fontSize: 'clamp(12px, 1.06vw, 16px)' }}
+                            >
+                              🌍 {spracheFuer(meineSprache)?.eigen ?? 'Deutsch'}
+                            </button>
+                          )}
                           {m.datei_pfad && (
                             <button
                               onClick={() => dateiOeffnen(m.datei_pfad as string)}
@@ -864,6 +996,18 @@ export default function TeamChatPage() {
                       Tipp: Schreiben Sie{' '}
                       <span style={{ color: GOLD, fontWeight: 600 }}>@ARGONAUT</span>{' '}
                       …, um die KI in den Kanal zu holen.
+                    </span>
+                    <span style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <label style={{ cursor: 'pointer' }} title="Nachrichten der Kollegen automatisch in Ihre Sprache übersetzen (Sprache wählen unter Mehrsprachiges Team)">
+                        <input type="checkbox" checked={autoUebersetzen} onChange={autoUmschalten} style={{ marginRight: 5 }} />
+                        🌍 {spracheFuer(meineSprache)?.eigen ?? 'Deutsch'}{uebersetztLaeuft ? ' …' : ''}
+                      </label>
+                      {meineSprache !== 'de' && (
+                        <label style={{ cursor: 'pointer' }} title="Ihre Nachricht bekommt eine deutsche Fassung darunter">
+                          <input type="checkbox" checked={deutschMitsenden} onChange={() => setDeutschMitsenden((v) => !v)} style={{ marginRight: 5 }} />
+                          + Deutsch
+                        </label>
+                      )}
                     </span>
                     {uploadLaedt && <span style={{ color: CYAN }}>📎 Datei wird hochgeladen …</span>}
                     {!liveVerbunden && !uploadLaedt && (

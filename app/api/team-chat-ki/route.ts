@@ -1,5 +1,6 @@
 import { kiFetch } from '@/lib/ki'
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase-server';
 
 // ---------------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 13 · TC3 — Team-Chat KI-Antwort (@ARGONAUT)
@@ -17,6 +18,14 @@ export async function POST(req: Request) {
       frage?: string;
       verlauf?: VerlaufItem[];
     };
+
+    // Paket PM (24.09.26): Anmelde-Pruefung nachgeruestet — vorher konnte jeder
+    // ohne Login die Route aufrufen und KI-Kosten ausloesen (Claude-Befund).
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ fehler: 'Nicht eingeloggt.' }, { status: 401 });
+    }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {

@@ -105,6 +105,9 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PL (24.09.26): Formulare & Checklisten — wie der Vorlagen-Pool fuer jeden (Monteure fuellen
   // Uebergabe/Abnahme/Tagescheck aus). Vorlagen pflegt nur der Chef (RLS, pl-formulare.sql).
   { label: '📋 Formulare & Checklisten', href: '/dashboard/formulare', immer: true, ebene: 4, gruppe: 'komm' },
+  // Paket PM (24.09.26): Mehrsprachiges Team — jeder waehlt seine Sprache, Mitarbeiter lesen
+  // freigegebene Anweisungen in ihrer Sprache. Anlegen/Freigeben nur Chef (RLS, pm-mehrsprachig.sql).
+  { label: '🌍 Mehrsprachiges Team', href: '/dashboard/mehrsprachig', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📥 Posteingang', href: '/dashboard/posteingang', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
   // Paket PA (24.09.26): KI-Sachbearbeiter — Behoerdenbriefe lesen, Vorgaenge
