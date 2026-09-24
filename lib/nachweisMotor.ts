@@ -7,6 +7,9 @@
 //   B17 Subunternehmer        Unbedenklichkeitsbescheinigungen, Haftpflicht, A1 …
 //   B19 Versicherungen        Ablauf, Kündigungsfrist, Beitrag
 //   B20 Entsorgung            Entsorgungsnachweise, Gewerbeabfall-Dokumentation
+//   PS1 Meldungen & Register  Verpackungsregister LUCID, Künstlersozialabgabe,
+//                            Marktstammdatenregister, Agrarantrag, AZAV,
+//                            Intrastat, stiftung ear (Paket PS1, 24.09.2026)
 //
 // EINE Tabelle (nachweis), EIN Katalog, EINE Ampel. Reine Logik: KEINE
 // Supabase-Aufrufe, KEINE Hooks. Node-getestet in tests/nachweisMotorP74.test.mjs.
@@ -20,6 +23,12 @@
 //   (rot), nicht „ok". Wie in lib/fristen.ts.
 // · Versicherungen: Die Kündigungsfrist wird ab Ablauf zurückgerechnet —
 //   „kündigen bis" ist das Datum, das zählt, nicht der Ablauf.
+// · Jährliche Stichtage (PS1): Eine Meldung mit festem Termin (KSK 31.03.,
+//   Vollständigkeitserklärung 15.05. …) rechnet NICHT „letztes Mal + 12
+//   Monate". Wer die KSK-Meldung am 05.01. abgibt, hat die Frist 31.03.
+//   desselben Jahres erledigt — die nächste ist erst im Folgejahr. Wer sie
+//   im Dezember VOR dem Meldefenster abgibt, hat die kommende Frist noch
+//   offen. Siehe naechsterStichtag().
 //
 // ▄▄▄ KEINE RECHTSBERATUNG ▄▄▄
 // Die Intervalle im Katalog sind die üblichen Richtwerte aus Gesetz,
@@ -28,7 +37,7 @@
 // Versicherungsmakler. Der Hinweis HINWEIS_RICHTWERTE steht auf der Seite.
 // ============================================================================
 
-export type Mappe = 'arbeitsschutz' | 'pflichten' | 'subunternehmer' | 'versicherung' | 'entsorgung';
+export type Mappe = 'arbeitsschutz' | 'pflichten' | 'subunternehmer' | 'versicherung' | 'entsorgung' | 'meldungen';
 
 export const MAPPEN: { key: Mappe; label: string; icon: string; beschreibung: string }[] = [
   { key: 'arbeitsschutz', label: 'Arbeitsschutz', icon: '🦺', beschreibung: 'Unterweisungen mit Unterschrift, Gefährdungsbeurteilung, Prüfungen' },
@@ -36,11 +45,15 @@ export const MAPPEN: { key: Mappe; label: string; icon: string; beschreibung: st
   { key: 'subunternehmer', label: 'Subunternehmer', icon: '🤝', beschreibung: 'Nachweise je Partner — bevor Sie haften' },
   { key: 'versicherung', label: 'Versicherungen', icon: '🛡', beschreibung: 'Ablauf, Kündigungsfrist, Beitrag' },
   { key: 'entsorgung', label: 'Entsorgung', icon: '♻️', beschreibung: 'Nachweise und Dokumentation zur Abfallentsorgung' },
+  { key: 'meldungen', label: 'Meldungen & Register', icon: '🏛', beschreibung: 'Behörden-Meldungen und Register mit festen Terminen — Verpackung, Künstlersozialkasse, Energie, Agrar, Statistik' },
 ];
 
 export function istMappe(m: unknown): m is Mappe {
   return typeof m === 'string' && MAPPEN.some((x) => x.key === m);
 }
+
+/** Mappen, die der Betrieb aus dem Katalog vorgeschlagen bekommt. */
+export const VORSCHLAG_MAPPEN: Mappe[] = ['arbeitsschutz', 'pflichten', 'meldungen'];
 
 export const HINWEIS_RICHTWERTE =
   'Die Intervalle sind übliche Richtwerte aus Gesetz, DGUV-Regeln und Technischen Regeln. Maßgeblich sind Ihre Gefährdungsbeurteilung ' +
@@ -68,6 +81,12 @@ export type KatalogArt = {
   kuendigung?: number;
   /** Nur für diese Branchen-Kategorien vorschlagen; fehlt = für alle */
   branchen?: string[];
+  /**
+   * Fester jährlicher Termin (PS1). tag = Fristende „MM-TT", ab = Beginn des
+   * Meldefensters „MM-TT" (liegt ab nach tag, beginnt das Fenster im Vorjahr).
+   * Eine Erledigung ab Fensterbeginn zählt für diese Frist.
+   */
+  stichtag?: { tag: string; ab: string };
 };
 
 const HANDWERK = 'Handwerk & Bau';
@@ -82,6 +101,10 @@ const GESUNDHEIT = 'Gesundheit & Wellness';
 const BEAUTY = 'Sport, Beauty & Lifestyle';
 const LAND = 'Landwirtschaft, Garten & Forst';
 const DIENST = 'Dienstleistungen';
+const HANDEL = 'Handel & E-Commerce';
+const MARKETING = 'Marketing, Medien & Kreativ';
+const BILDUNG = 'Bildung & Wissenschaft';
+const KULTUR = 'Kultur, Soziales & Öffentliches';
 
 export const KATALOG: KatalogArt[] = [
   // --- Arbeitsschutz (B08) ----------------------------------------------------
@@ -159,6 +182,49 @@ export const KATALOG: KatalogArt[] = [
   { key: 'entsorgungsvertrag', mappe: 'entsorgung', label: 'Entsorgungsvertrag', intervall: null, vorwarnTage: 60, grundlage: 'Vertrag', kuendigung: 3 },
   { key: 'register', mappe: 'entsorgung', label: 'Abfallregister führen', intervall: 12, vorwarnTage: 30,
     grundlage: '§ 49 KrWG, § 24 NachwV', hinweis: 'Belege mindestens 3 Jahre aufbewahren.' },
+
+  // --- Meldungen & Register (PS1) — Stand der Angaben: RADAR_STAND -----------------
+  // Verpackungen: Seit 12.08.2026 gelten die EU-Verpackungsverordnung (PPWR)
+  // und das deutsche Verpackungsrecht-Durchführungsgesetz (VerpackDG) statt
+  // des VerpackG. Register bleibt LUCID bei der Zentralen Stelle.
+  { key: 'lucid_registrierung', mappe: 'meldungen', label: 'Verpackungsregister LUCID: Registrierung aktuell', intervall: null, vorwarnTage: 0,
+    grundlage: 'VerpackDG, EU-Verpackungsverordnung (PPWR)', branchen: [HANDEL, LEBENSMITTEL, INDUSTRIE, GASTRO, LAND],
+    hinweis: 'Vor dem ersten Verkauf verpackter Ware an Endkunden in Deutschland — auch Versandkartons. Seit 12.08.2026 gelten PPWR und VerpackDG: Stammdaten in LUCID prüfen. Marktplätze sperren Händler ohne Registrierung.' },
+  { key: 'lucid_datenmeldung', mappe: 'meldungen', label: 'Verpackungen: Mengen an System und LUCID melden', intervall: 12, vorwarnTage: 30,
+    grundlage: 'VerpackDG', branchen: [HANDEL, LEBENSMITTEL, INDUSTRIE, GASTRO, LAND],
+    hinweis: 'Jede Mengenmeldung an Ihr duales System (Plan- und Jahresabschlussmenge) muss inhaltsgleich auch in LUCID gemeldet werden. Den Termin nennt Ihr System.' },
+  { key: 'vollstaendigkeitserklaerung', mappe: 'meldungen', label: 'Vollständigkeitserklärung Verpackungen', intervall: null, vorwarnTage: 60,
+    stichtag: { tag: '05-15', ab: '01-01' }, grundlage: 'VerpackDG (bisher § 11 VerpackG)', branchen: [HANDEL, LEBENSMITTEL, INDUSTRIE],
+    hinweis: 'Jährlich bis 15. Mai für das Vorjahr — aber nur ab diesen Vorjahresmengen: Glas oder Papier/Pappe ab 80.000 kg, Kunststoff ab 50.000 kg, Metall, Getränkekartons oder Verbunde ab 30.000 kg. Von Wirtschaftsprüfer oder Sachverständigem geprüft. Schwellen nach VerpackDG vor der Abgabe mit Ihrem System abgleichen.' },
+  { key: 'ksk_meldung', mappe: 'meldungen', label: 'Künstlersozialkasse: Jahresmeldung der Honorare', intervall: null, vorwarnTage: 45,
+    stichtag: { tag: '03-31', ab: '01-01' }, grundlage: '§§ 24, 27 KSVG', branchen: [MARKETING, KULTUR, BILDUNG, HANDEL],
+    hinweis: 'Bis 31. März die Honorare des Vorjahres an selbstständige Kreative melden (Grafik, Fotos, Texte, Webdesign, Musik, Vorträge). Abgabesatz 2026: 4,9 %, 2027: 5,0 %. Nicht abgabepflichtig bei Eigenwerbung bis 1.000 € im Jahr. Aufzeichnungen 5 Jahre aufbewahren.' },
+  { key: 'mastr', mappe: 'meldungen', label: 'Marktstammdatenregister: Anlage eingetragen', intervall: null, vorwarnTage: 14,
+    grundlage: '§ 5 MaStRV, § 95 EnWG', jeBezug: 'Anlage', branchen: [ENERGIE, LAND, IMMOBILIEN, HANDWERK],
+    hinweis: 'Innerhalb eines Monats nach Inbetriebnahme — auch Batteriespeicher und Balkonkraftwerke (vereinfacht). Tipp: Inbetriebnahme + 1 Monat als „Gültig bis" eintragen; erledigt = Registrierungsnummer in die Notiz.' },
+  { key: 'netzanmeldung', mappe: 'meldungen', label: 'Anmeldung beim Netzbetreiber', intervall: null, vorwarnTage: 14,
+    grundlage: 'EEG, Technische Anschlussbedingungen des Netzbetreibers', jeBezug: 'Anlage', branchen: [ENERGIE, LAND, HANDWERK],
+    hinweis: 'Vor der Inbetriebnahme von PV-Anlage, Speicher, Wärmepumpe oder Wallbox. Balkonkraftwerke seit 2024 nur noch im Marktstammdatenregister.' },
+  { key: 'agrarantrag', mappe: 'meldungen', label: 'Agrarantrag (GAP-Sammelantrag)', intervall: null, vorwarnTage: 45,
+    stichtag: { tag: '05-15', ab: '01-01' }, grundlage: 'GAP-Direktzahlungen-Gesetz, GAPInVeKoSV', branchen: [LAND],
+    hinweis: 'Jährlich bis 15. Mai über das Antragsportal Ihres Bundeslandes. Verspätete Anträge werden gekürzt.' },
+  { key: 'azav_zulassung', mappe: 'meldungen', label: 'AZAV-Trägerzulassung', intervall: null, vorwarnTage: 180,
+    grundlage: '§ 178 SGB III, AZAV', branchen: [BILDUNG],
+    hinweis: 'Das Zertifikat gilt höchstens 5 Jahre — Ablaufdatum als „Gültig bis" eintragen. Die Rezertifizierung rechtzeitig bei der Fachkundigen Stelle beauftragen.' },
+  { key: 'azav_audit', mappe: 'meldungen', label: 'AZAV-Überwachungsaudit', intervall: 12, vorwarnTage: 60,
+    grundlage: 'AZAV', branchen: [BILDUNG], hinweis: 'Jährlich durch die Fachkundige Stelle. Maßnahmezulassungen je Kurs zusätzlich im Blick behalten.' },
+  { key: 'intrastat', mappe: 'meldungen', label: 'Intrastat-Meldung (Warenverkehr EU)', intervall: 1, vorwarnTage: 7,
+    grundlage: 'VO (EU) 2019/2152, Außenhandelsstatistikgesetz', branchen: [HANDEL, INDUSTRIE],
+    hinweis: 'Nur wenn Ihre Warenlieferungen aus EU-Ländern 3 Mio. € oder in EU-Länder 1 Mio. € im Jahr übersteigen (Vorjahr oder ab dem Monat der Überschreitung). Dann monatlich im Folgemonat an Destatis, auch Nullmeldungen. Ab 2027 Dateien über eStatistik.core statt IDEV.' },
+  { key: 'ear_registrierung', mappe: 'meldungen', label: 'stiftung ear: Registrierung Elektrogeräte/Batterien', intervall: null, vorwarnTage: 0,
+    grundlage: '§ 6 ElektroG, BattDG', jeBezug: 'Marke / Geräteart', branchen: [HANDEL, INDUSTRIE],
+    hinweis: 'Vor dem ersten Anbieten — je Marke und Geräteart, auch Online-Händler mit Ware aus dem Ausland. Die Registrierungsnummer gehört auf Rechnungen und in den Shop.' },
+  { key: 'ear_monat', mappe: 'meldungen', label: 'stiftung ear: monatliche Mengenmitteilung', intervall: 1, vorwarnTage: 7,
+    grundlage: '§ 27 ElektroG', branchen: [HANDEL, INDUSTRIE],
+    hinweis: 'In Verkehr gebrachte Geräte für Privatkunden je Monat, bis zum 15. des Folgemonats (Angabe stiftung ear).' },
+  { key: 'ear_jahr', mappe: 'meldungen', label: 'stiftung ear: Jahres-Statistik-Mitteilung', intervall: null, vorwarnTage: 45,
+    stichtag: { tag: '04-30', ab: '01-01' }, grundlage: '§ 27 ElektroG', branchen: [HANDEL, INDUSTRIE],
+    hinweis: 'Bis 30. April für das Vorjahr: Geräte für Gewerbekunden, Rücknahmen, Verwertung.' },
 ];
 
 const KATALOG_NACH: Record<string, KatalogArt> = Object.fromEntries(KATALOG.map((k) => [k.key, k]));
@@ -180,7 +246,7 @@ export function katalogFuer(mappe: Mappe): KatalogArt[] {
 export function vorschlaege(kategorie: string | null | undefined, vorhandeneArten: string[]): KatalogArt[] {
   const da = new Set(vorhandeneArten ?? []);
   return KATALOG.filter((k) =>
-    (k.mappe === 'arbeitsschutz' || k.mappe === 'pflichten')
+    VORSCHLAG_MAPPEN.includes(k.mappe)
     && !da.has(k.key)
     && (!k.branchen || (kategorie ? k.branchen.includes(kategorie) : false)));
 }
@@ -220,6 +286,47 @@ export function heuteIso(jetzt: Date): string {
   const t = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(jetzt);
   const w = (x: string) => t.find((p) => p.type === x)?.value ?? '';
   return `${w('year')}-${w('month')}-${w('day')}`;
+}
+
+function istMonatTag(s: unknown): s is string {
+  return typeof s === 'string' && /^\d{2}-\d{2}$/.test(s) && istIsoDatum(`2028-${s}`);
+}
+
+/** MM-TT im Jahr j; 29.02. fällt in Nicht-Schaltjahren auf den 28.02. */
+function amTag(j: number, mt: string): string {
+  const [m, t] = mt.split('-').map(Number);
+  const letzter = new Date(Date.UTC(j, m, 0)).getUTCDate();
+  return `${j}-${zwei(m)}-${zwei(Math.min(t, letzter))}`;
+}
+
+/**
+ * Nächste offene Frist eines jährlichen Stichtags.
+ *   mit letzte_am: die erste Frist, deren Meldefenster NACH letzte_am beginnt
+ *                  (eine Erledigung im Fenster oder verspätet deckt diese Frist)
+ *   ohne letzte_am: die nächste Frist ab heute
+ * Ungültige Angaben -> null (dann greift „fehlt", nie still grün).
+ */
+export function naechsterStichtag(
+  st: { tag: string; ab: string } | null | undefined,
+  letzteAm: string | null | undefined,
+  heute: string,
+): string | null {
+  if (!st || !istMonatTag(st.tag) || !istMonatTag(st.ab) || !istIsoDatum(heute)) return null;
+  const vorjahr = st.ab > st.tag;
+  if (letzteAm && istIsoDatum(letzteAm)) {
+    const j0 = Number(letzteAm.slice(0, 4));
+    for (let j = j0 - 1; j <= j0 + 2; j++) {
+      const beginn = amTag(vorjahr ? j - 1 : j, st.ab);
+      if (beginn > letzteAm) return amTag(j, st.tag);
+    }
+    return null;
+  }
+  const jh = Number(heute.slice(0, 4));
+  for (let j = jh; j <= jh + 1; j++) {
+    const d = amTag(j, st.tag);
+    if (d >= heute) return d;
+  }
+  return null;
 }
 
 export function datumDe(iso: string | null | undefined): string {
@@ -272,6 +379,17 @@ export function bewerte(z: NachweisZeile, heute: string): Bewertung {
 
   let faellig: string | null = null;
   if (z.gueltig_bis && istIsoDatum(z.gueltig_bis)) faellig = z.gueltig_bis;
+  else if (art?.stichtag) {
+    // Jährlicher Termin: nie erledigt eingetragen = fehlt (rot), aber mit der nächsten Frist.
+    if (!(z.letzte_am && istIsoDatum(z.letzte_am))) {
+      const naechste = naechsterStichtag(art.stichtag, null, heute);
+      return {
+        status: 'fehlt', faellig: naechste, rest: naechste ? tageBis(heute, naechste) : null, kuendigenBis: null,
+        text: naechste ? `Noch nie als erledigt eingetragen — nächste Frist ${datumDe(naechste)}` : 'Kein Datum hinterlegt — Nachweis fehlt',
+      };
+    }
+    faellig = naechsterStichtag(art.stichtag, z.letzte_am, heute);
+  }
   else if (z.letzte_am && istIsoDatum(z.letzte_am) && intervall && intervall > 0) faellig = plusMonate(z.letzte_am, intervall);
 
   if (!faellig) {
@@ -380,6 +498,12 @@ export const RADAR: RadarEintrag[] = [
   { ab: '2028-01-01', titel: 'E-Rechnung: Ausstellungspflicht für alle', wen: 'Alle Betriebe, die an Unternehmen im Inland rechnen',
     tun: 'Papier- und PDF-Rechnungen an Unternehmen sind dann nicht mehr erlaubt (Ausnahmen: Kleinbetragsrechnungen bis 250 €).',
     quelle: 'BMF, FAQ zur E-Rechnung' },
+  { ab: '2027-01-01', titel: 'Künstlersozialabgabe steigt auf 5,0 %', wen: 'Betriebe, die selbstständige Kreative beauftragen (Werbung, Fotos, Texte, Webdesign) — ab 1.000 € im Jahr',
+    tun: 'Honorare an Kreative gesondert erfassen, bis 31. März des Folgejahres an die Künstlersozialkasse melden, Vorauszahlungen anpassen.',
+    quelle: 'Künstlersozialabgabe-Verordnung 2027 (BMAS)' },
+  { ab: '2027-01-01', titel: 'Intrastat: Dateien nur noch über eStatistik.core', wen: 'Betriebe mit Intrastat-Meldepflicht',
+    tun: 'Meldungen als Datei nicht mehr über IDEV, sondern über eStatistik.core abgeben — Zugang vorher einrichten.',
+    quelle: 'Destatis, Leitfaden zur Intrahandelsstatistik 2026', branchen: ['Handel & E-Commerce', 'Industrie & Produktion'] },
 ];
 
 export function radarKommend(heute: string, kategorie?: string | null): RadarEintrag[] {

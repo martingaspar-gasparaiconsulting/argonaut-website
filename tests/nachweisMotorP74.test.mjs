@@ -8,8 +8,8 @@ import {
 
 const HEUTE = '2026-09-24';
 
-test('fuenf Mappen, jeder Katalog-Schluessel eindeutig und einer Mappe zugeordnet', () => {
-  assert.equal(MAPPEN.length, 5);
+test('sechs Mappen (seit PS1), jeder Katalog-Schluessel eindeutig und einer Mappe zugeordnet', () => {
+  assert.equal(MAPPEN.length, 6);
   const keys = KATALOG.map((k) => k.key);
   assert.equal(new Set(keys).size, keys.length);
   for (const k of KATALOG) assert.ok(MAPPEN.some((m) => m.key === k.mappe), k.key);

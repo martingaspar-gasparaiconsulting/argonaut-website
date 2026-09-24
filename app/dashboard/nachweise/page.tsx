@@ -19,7 +19,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties, type 
 import { createBrowserClient } from '@supabase/ssr';
 import {
   MAPPEN, katalogFuer, katalogArt, vorschlaege, bewerte, zaehle, sortiere, heuteIso, datumDe,
-  unterschriftenStand, unterschriftGueltig, radarKommend, RADAR_STAND, HINWEIS_RICHTWERTE,
+  unterschriftenStand, unterschriftGueltig, radarKommend, RADAR_STAND, HINWEIS_RICHTWERTE, VORSCHLAG_MAPPEN,
   type Mappe, type NachweisZeile, type Person, type Unterschrift,
 } from '@/lib/nachweisMotor';
 
@@ -79,7 +79,7 @@ export default function NachweisSeite() {
 
   const mappeZeilen = useMemo(() => (tab === 'radar' ? [] : sortiere(zeilen.filter((z) => z.mappe === tab), heute)), [zeilen, tab, heute]);
   const zahlen = useMemo(() => zaehle(mappeZeilen, heute), [mappeZeilen, heute]);
-  const vorschlagListe = useMemo(() => (tab === 'arbeitsschutz' || tab === 'pflichten')
+  const vorschlagListe = useMemo(() => (tab !== 'radar' && VORSCHLAG_MAPPEN.includes(tab))
     ? vorschlaege(kategorie, zeilen.map((z) => z.art)).filter((k) => k.mappe === tab) : [], [tab, kategorie, zeilen]);
 
   function neu(art?: string) {
@@ -123,7 +123,7 @@ export default function NachweisSeite() {
     const { error } = form.id
       ? await supabase.from('nachweis').update(zeile).eq('id', form.id)
       : await supabase.from('nachweis').insert({ ...zeile, owner_user_id: uid });
-    if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
+    if (error) { setFehler(/mappe_check/.test(error.message) ? 'Die Mappe „Meldungen & Register" ist noch nicht eingerichtet (SQL von Paket PS1 fehlt).' : 'Speichern fehlgeschlagen.'); return; }
     setForm(null); setOk('Gespeichert.'); await laden();
   }
 
@@ -146,7 +146,7 @@ export default function NachweisSeite() {
       intervall_monate: k.intervall, kuendigungsfrist_monate: k.kuendigung ?? null,
     }));
     const { error } = await supabase.from('nachweis').insert(zeilenNeu);
-    if (error) { setFehler('Vorschläge konnten nicht angelegt werden.'); return; }
+    if (error) { setFehler(/mappe_check/.test(error.message) ? 'Die Mappe „Meldungen & Register" ist noch nicht eingerichtet (SQL von Paket PS1 fehlt).' : 'Vorschläge konnten nicht angelegt werden.'); return; }
     setOk(`${zeilenNeu.length} Pflichten angelegt — tragen Sie jeweils das letzte Datum ein.`);
     await laden();
   }
@@ -222,8 +222,10 @@ export default function NachweisSeite() {
                 <label style={s.lab}>Bezeichnung<input style={s.inp} value={form.bezeichnung} onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })} /></label>
                 {(k?.jeBezug || form.bezug) && <label style={s.lab}>{k?.jeBezug || 'Bezug'}<input style={s.inp} value={form.bezug} onChange={(e) => setForm({ ...form, bezug: e.target.value })} /></label>}
                 <label style={s.lab}>Zuletzt erledigt am<input type="date" style={s.inp} value={form.letzte_am} onChange={(e) => setForm({ ...form, letzte_am: e.target.value })} /></label>
-                <label style={s.lab}>Intervall (Monate, leer = nach Anlass)<input style={s.inp} value={form.intervall_monate} onChange={(e) => setForm({ ...form, intervall_monate: e.target.value })} inputMode="numeric" /></label>
-                <label style={s.lab}>{tab === 'versicherung' || tab === 'entsorgung' ? 'Vertrag läuft ab am' : 'Gültig bis (falls festes Datum)'}<input type="date" style={s.inp} value={form.gueltig_bis} onChange={(e) => setForm({ ...form, gueltig_bis: e.target.value })} /></label>
+                {k?.stichtag
+                  ? <div style={{ ...s.lab, fontWeight: 500 }}>Fester Termin: jedes Jahr bis {k.stichtag.tag.slice(3)}.{k.stichtag.tag.slice(0, 2)}. — „Zuletzt erledigt am" eintragen, die nächste Frist rechnet ARGONAUT.</div>
+                  : <label style={s.lab}>Intervall (Monate, leer = nach Anlass)<input style={s.inp} value={form.intervall_monate} onChange={(e) => setForm({ ...form, intervall_monate: e.target.value })} inputMode="numeric" /></label>}
+                <label style={s.lab}>{tab === 'versicherung' || tab === 'entsorgung' ? 'Vertrag läuft ab am' : tab === 'meldungen' ? 'Frist / gültig bis (falls festes Datum)' : 'Gültig bis (falls festes Datum)'}<input type="date" style={s.inp} value={form.gueltig_bis} onChange={(e) => setForm({ ...form, gueltig_bis: e.target.value })} /></label>
                 {(tab === 'versicherung' || k?.kuendigung) && (
                   <label style={s.lab}>Kündigungsfrist (Monate vor Ablauf)<input style={s.inp} value={form.kuendigungsfrist_monate} onChange={(e) => setForm({ ...form, kuendigungsfrist_monate: e.target.value })} inputMode="numeric" /></label>
                 )}
