@@ -5,6 +5,12 @@
 // Angebot erstellen -> Zusage-Link an den Kunden -> nach Annahme per Klick
 // in eine Rechnung umwandeln. PDF über Gotenberg.
 // Pfad: app/dashboard/angebote/page.tsx
+//
+// 24.09.26 · G01 (GEMEINSAM mit Martin freigegeben): „Per Sprache oder Foto"
+// schlägt Positionen vor (_components/AngebotSprache). Preise nur aus Katalog
+// oder belegter Preisliste; eine übernommene Position OHNE Preis blockiert das
+// Speichern, bis der Preis eingetragen ist. Von Hand erfasste Positionen und
+// die Summenformel `rechne` sind unverändert.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -16,6 +22,8 @@ import { NurVoll } from '../_components/Ansicht';
 import { augeAmpel } from '@/lib/auge';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
+import AngebotSprache from '../_components/AngebotSprache';
+import { fehlendePreise, type FormPos } from '@/lib/angebotSprache';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -28,7 +36,7 @@ const C = {
 };
 
 type Kontakt = { id: string; name: string; email: string };
-type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst_satz: string };
+type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst_satz: string; quelle?: FormPos['quelle']; herkunft?: string | null };
 type Angebot = {
   id: string; angebotsnummer: string | null; titel: string; kunde_name: string | null;
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
@@ -105,12 +113,24 @@ export default function AngebotePage() {
   function setPos(i: number, f: keyof Pos, v: string) { setPositionen((ps) => ps.map((p, k) => (k === i ? { ...p, [f]: v } : p))); }
   function posWeg(i: number) { setPositionen((ps) => ps.filter((_, k) => k !== i)); }
   function posDazu() { setPositionen((ps) => [...ps, { ...LEER_POS }]); }
+  /** G01: vorgeschlagene Positionen übernehmen. Eine leere Startzeile wird ersetzt. */
+  function sprachUebernahme(neu: FormPos[], vorschlagTitel: string) {
+    setPositionen((ps) => {
+      const bisher = ps.filter((p) => p.bezeichnung.trim() || p.einzelpreis.trim());
+      return [...bisher, ...neu];
+    });
+    if (vorschlagTitel && (titel.trim() === '' || titel.trim() === 'Angebot')) setTitel(vorschlagTitel);
+    setOk(`${neu.length} Position${neu.length === 1 ? '' : 'en'} übernommen — bitte prüfen.`);
+  }
 
   async function speichern() {
     if (!uid) return;
     if (!kunde.trim()) { setFehler('Bitte einen Kunden angeben.'); return; }
     const posClean = positionen.filter((p) => p.bezeichnung.trim() || num(p.einzelpreis) > 0);
     if (!posClean.length) { setFehler('Bitte mindestens eine Position erfassen.'); return; }
+    // G01: übernommene Positionen ohne belegten Preis dürfen nicht mit 0,00 € rausgehen.
+    const ohnePreis = fehlendePreise(posClean, num);
+    if (ohnePreis.length) { setFehler(`Bitte noch den Preis eintragen für: ${ohnePreis.join(', ')}.`); return; }
     setBusy('neu'); setFehler(null); setOk(null);
     try {
       const gewaehlt = kontakte.find((k) => k.id === kontaktId) || kontakte.find((k) => k.name === kunde.trim());
@@ -235,12 +255,18 @@ export default function AngebotePage() {
             <input style={styles.inp} value={p.bezeichnung} onChange={(e) => setPos(i, 'bezeichnung', e.target.value)} placeholder="Leistung / Artikel" />
             <input style={{ ...styles.inp, textAlign: 'right' }} value={p.menge} onChange={(e) => setPos(i, 'menge', e.target.value)} inputMode="decimal" />
             <input style={styles.inp} value={p.einheit} onChange={(e) => setPos(i, 'einheit', e.target.value)} />
-            <input style={{ ...styles.inp, textAlign: 'right' }} value={p.einzelpreis} onChange={(e) => setPos(i, 'einzelpreis', e.target.value)} inputMode="decimal" placeholder="0" />
+            <input
+              style={{ ...styles.inp, textAlign: 'right', ...(p.quelle === 'fehlt' && !(num(p.einzelpreis) > 0) ? { borderColor: C.danger, background: 'rgba(224,102,102,0.10)' } : {}) }}
+              value={p.einzelpreis} onChange={(e) => setPos(i, 'einzelpreis', e.target.value)} inputMode="decimal"
+              placeholder={p.quelle === 'fehlt' ? 'Preis fehlt' : '0'}
+              title={p.quelle === 'katalog' ? `aus dem Leistungskatalog: ${p.herkunft || ''}` : p.quelle === 'dokument' ? `aus Ihrer Preisliste: ${p.herkunft || ''}` : p.quelle === 'fehlt' ? 'Kein belegter Preis — bitte eintragen' : undefined}
+            />
             <input style={{ ...styles.inp, textAlign: 'right' }} value={p.mwst_satz} onChange={(e) => setPos(i, 'mwst_satz', e.target.value)} inputMode="decimal" />
             <button type="button" style={styles.wegBtn} onClick={() => posWeg(i)} aria-label="entfernen">✕</button>
           </div>
         ))}
         <button type="button" style={styles.dazuBtn} onClick={posDazu}>＋ Position</button>
+        <AngebotSprache onUebernehmen={sprachUebernahme} />
 
         <NurVoll>
           <label style={styles.lab}>Anmerkung (optional)
