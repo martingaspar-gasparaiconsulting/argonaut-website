@@ -4,12 +4,16 @@
 // ARGONAUT OS · Bündel 7 · Bewertungsmanagement (Chef-Ansicht)
 // Kunden per E-Mail um eine Bewertung bitten, Ergebnisse sammeln, freigeben.
 // Öffentliche Abgabe läuft über /bewerten/<token>. Pfad: app/dashboard/bewertungen/page.tsx
+// 24.09.26 (Paket PA · B15): „Antwort entwerfen" an jeder abgegebenen Bewertung
+// und ein Feld für Bewertungen von Google & Co. — der Text wird nur
+// vorgeschlagen und kopiert, veröffentlicht wird von Hand.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import BewertungAntwort from '../_components/BewertungAntwort';
 
 const MODUL = 'bewertungsanfragen';
 
@@ -50,6 +54,9 @@ export default function BewertungenPage() {
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+  // Paket PA · B15 — fremde Bewertung (Google & Co.)
+  const [fremdSterne, setFremdSterne] = useState(5);
+  const [fremdText, setFremdText] = useState('');
 
   const linkBasis = typeof window !== 'undefined' ? window.location.origin : 'https://www.argonaut-os.com';
 
@@ -145,7 +152,7 @@ export default function BewertungenPage() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Vertrieb</div>
       <h1 style={styles.h1}>Bewertungen</h1>
-      <p style={styles.sub}>Bitte zufriedene Kunden per E-Mail um eine Bewertung, sammle die Rückmeldungen und gib die besten frei.</p>
+      <p style={styles.sub}>Bitten Sie zufriedene Kunden per E-Mail um eine Bewertung, sammeln Sie die Rückmeldungen und geben Sie die besten frei.</p>
 
       {/* Kennzahlen */}
       <div style={styles.summenGrid}>
@@ -194,10 +201,28 @@ export default function BewertungenPage() {
                   </button>
                   <button onClick={() => loeschen(a)} style={styles.miniBtnGhost}>Löschen</button>
                 </div>
+                <BewertungAntwort sterne={a.sterne} text={a.text} plattform="eigene Website" />
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Paket PA · B15 — Bewertung von Google & Co. beantworten */}
+      <div style={{ ...styles.card, marginTop: 16 }}>
+        <h2 style={styles.cardTitel}>Bewertung von Google &amp; Co. beantworten</h2>
+        <p style={{ ...styles.hint, padding: '0 0 10px' }}>
+          Bewertungstext hier einfügen — ARGONAUT schlägt eine freundliche, sachliche Antwort vor.
+          Bei Kritik wird nicht gestritten, sondern ein direktes Gespräch angeboten.
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+          <label style={{ ...styles.lbl, margin: 0 }}>Sterne</label>
+          <select value={fremdSterne} onChange={(e) => setFremdSterne(Number(e.target.value))} style={{ ...styles.input, width: 'auto' }}>
+            {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{sterneText(n)}</option>)}
+          </select>
+        </div>
+        <textarea value={fremdText} onChange={(e) => setFremdText(e.target.value)} rows={4} placeholder="Text der Bewertung …" style={{ ...styles.input, resize: 'vertical', lineHeight: 1.5 }} />
+        <BewertungAntwort key={`${fremdSterne}-${fremdText.length > 0}`} sterne={fremdSterne} text={fremdText} plattform="Google" />
       </div>
 
       {/* Offene Anfragen */}

@@ -66,9 +66,14 @@ test('Kassierer mit Freigabe und vollem Sitz kommt weiter an die Kasse', () => {
 
 test('kein anderes Modul hat sich still veraendert', () => {
   // Vor Punkt 9: 22 verschiedene sensible Schluessel. Jetzt genau 9 mehr.
+  // Paket PA (24.09.26): +1 bewusst — 'sachbearbeiter' (Behoerdenbriefe,
+  // Steuerbescheide). Jeder weitere neue sensible Schluessel muss hier
+  // ausdruecklich eingetragen werden, sonst wird dieser Test rot.
+  const BEWUSST_NEU = ['sachbearbeiter'];
   const alle = new Set(SENSIBLE_MODULE);
-  assert.equal(alle.size, 31, 'erwartet 22 alte + 9 neue sensible Schluessel');
-  const ohneNeue = [...alle].filter((m) => !GELDMODULE.some(([g]) => g === m));
+  assert.equal(alle.size, 31 + BEWUSST_NEU.length, 'erwartet 22 alte + 9 Geld + die bewusst neuen');
+  for (const m of BEWUSST_NEU) assert.ok(alle.has(m), `${m} fehlt`);
+  const ohneNeue = [...alle].filter((m) => !GELDMODULE.some(([g]) => g === m) && !BEWUSST_NEU.includes(m));
   assert.equal(ohneNeue.length, 22, 'die 22 bisherigen bleiben unveraendert');
   assert.ok(NAV_LINKS.length > 0);
 });

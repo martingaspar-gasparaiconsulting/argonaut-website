@@ -22,6 +22,11 @@
 // heißt: Skripte und Zählpixel des Absenders laufen mit und melden ihm, wann
 // und wo gelesen wurde. Der Text wird deshalb als Text dargestellt.
 //
+// 24.09.26 (Paket PA · B01): Knopf „Auswerten" an der geöffneten Nachricht.
+// Der KI-Sachbearbeiter erkennt die Art, fasst zusammen, liest Frist und
+// Betrag und schlägt eine Antwort vor. Verschickt wird NICHTS automatisch —
+// der Entwurf landet im normalen Antwort-Formular und geht erst auf Klick raus.
+//
 // Pfad: app/dashboard/posteingang/page.tsx
 // ============================================================
 
@@ -30,6 +35,7 @@ import { antwortBetreff, baueAntwortText, zitiere, MAX_EMPFAENGER } from '@/lib/
 import KiAuge from '../_components/KiAuge';
 import { augePosteingang } from '@/lib/auge';
 import { zaehlePosteingang } from '@/lib/augeZaehler';
+import SachbearbeiterErgebnis, { type SachbearbeiterAntwort } from '../_components/SachbearbeiterErgebnis';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -96,6 +102,10 @@ export default function PosteingangSeite() {
   const [sendet, setSendet] = useState(false);
   const [erfolg, setErfolg] = useState<string | null>(null);
 
+  // Paket PA · B01 — KI-Sachbearbeiter an der geöffneten Nachricht
+  const [sb, setSb] = useState<SachbearbeiterAntwort | null>(null);
+  const [sbLaden, setSbLaden] = useState(false);
+
   const laden_ = useCallback(async (wunschOrdner?: string, wunschSuche?: string) => {
     const o = wunschOrdner ?? ordner;
     const q = wunschSuche ?? aktiveSuche;
@@ -136,7 +146,7 @@ export default function PosteingangSeite() {
   }
 
   async function oeffne(uid: number) {
-    setLadeText(true); setFehler(null); setErfolg(null); setEntwurf(null); setOffen(null);
+    setLadeText(true); setFehler(null); setErfolg(null); setEntwurf(null); setOffen(null); setSb(null);
     try {
       const r = await fetch(`/api/mail/nachricht?uid=${encodeURIComponent(String(uid))}&ordner=${encodeURIComponent(ordner)}`);
       const j = await r.json();
@@ -144,6 +154,40 @@ export default function PosteingangSeite() {
       setOffen(j as Nachricht);
     } catch { setFehler('Verbindung fehlgeschlagen.'); }
     finally { setLadeText(false); }
+  }
+
+  async function auswerten(n: Nachricht) {
+    setSbLaden(true); setFehler(null); setSb(null);
+    try {
+      const r = await fetch('/api/sachbearbeiter', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          modus: 'mail',
+          betreff: n.betreff,
+          von: n.vonName ? `${n.vonName} <${n.vonAdresse}>` : n.vonAdresse,
+          datum: n.datumIso,
+          text: n.text,
+          uid: n.uid,
+          ordner,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.ok) { setFehler(j?.error || 'Die Nachricht konnte nicht ausgewertet werden.'); return; }
+      setSb({ ergebnis: j.ergebnis, aufgabe: j.aufgabe, vorgang: j.vorgang });
+    } catch { setFehler('Verbindung fehlgeschlagen.'); }
+    finally { setSbLaden(false); }
+  }
+
+  /** Den KI-Entwurf ins normale Antwort-Formular legen — mit Zitat darunter. */
+  function antworteMitEntwurf(n: Nachricht, vorschlag: string) {
+    setErfolg(null); setFehler(null);
+    setEntwurf({
+      an: n.vonAdresse,
+      betreff: antwortBetreff(n.betreff),
+      text: baueAntwortText(vorschlag, zitiere(n.text, n.vonName || n.vonAdresse, n.datumIso)),
+      bezug: n.messageId || '',
+    });
   }
 
   function antworte(n: Nachricht) {
@@ -311,8 +355,13 @@ export default function PosteingangSeite() {
               <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 2 }}>{datumLang(offen.datumIso)}</div>
             </div>
             <span style={{ flex: 1 }} />
+            <button onClick={() => void auswerten(offen)} disabled={sbLaden} style={{ ...styles.mini, opacity: sbLaden ? 0.55 : 1 }} title="Art erkennen, zusammenfassen, Frist lesen, Antwort vorschlagen">
+              {sbLaden ? '⏳ Werte aus …' : '🧠 Auswerten'}
+            </button>
             <button onClick={() => antworte(offen)} style={styles.primaer}>↩ Antworten</button>
           </div>
+
+          {sb && <SachbearbeiterErgebnis daten={sb} onAntwort={(t) => antworteMitEntwurf(offen, t)} />}
 
           {offen.nurHtmlVorhanden && (
             <div style={styles.warn}>

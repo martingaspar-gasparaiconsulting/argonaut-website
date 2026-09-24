@@ -21,6 +21,7 @@
 // ============================================================================
 
 import type { BausteinTyp, OffenerBaustein } from './inhaltBaustein';
+import { schaetzeUsd } from './kiPreise';
 
 // ---------------------------------------------------------------------------
 // Modell und Kosten
@@ -59,14 +60,10 @@ export function schaetzeKosten(
   tokensRein = 700,
   tokensRaus = 1200,
 ): { usd: number; hinweis: string } {
-  const m = (modell || '').toLowerCase();
-  let rein = 3.0, raus = 15.0;                       // unbekannt -> konservativ
-  if (m.includes('haiku')) { rein = 1.0; raus = 5.0; }
-  else if (m.includes('sonnet')) { rein = 2.0; raus = 10.0; }
-
+  // Paket PA (24.09.2026): Preise kommen aus der EINEN Tabelle lib/kiPreise.ts.
+  // Unbekanntes Modell -> teuerster Satz (Opus), Stapel = halber Preis.
   const n = Math.max(0, Math.floor(anzahl));
-  const voll = (n * tokensRein * rein + n * tokensRaus * raus) / 1_000_000;
-  const usd = voll / 2;                              // Stapel = halber Preis
+  const usd = schaetzeUsd(n, modell, tokensRein, tokensRaus, true);
   return {
     usd,
     hinweis: `${n} Kapitel über die Stapel-Schnittstelle (halber Preis): geschätzt ${usd.toFixed(2)} USD.`,

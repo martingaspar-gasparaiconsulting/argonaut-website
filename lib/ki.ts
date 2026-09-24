@@ -30,6 +30,7 @@ import {
   nachOpenAiBody,
   nachAnthropicAntwort,
 } from '@/lib/kiRueckfall'
+import { kostenUsd } from '@/lib/kiPreise'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -40,32 +41,10 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
  */
 const WARN_MARKER = '_warnung'
 
-// --- Preise in USD pro 1 Mio Tokens (nach Modell-Familie) -------------------
-// Haiku 4.5:  $1 / $5
-// Sonnet 5 :  Einfuehrungspreis $2 / $10 bis 31.08.2026, danach $3 / $15
-//             -> die Umschaltung passiert AUTOMATISCH nach Datum, kein Handanlegen.
-// Cache: Schreiben = 1,25x Input, Lesen = 0,1x Input. USD, keine EUR-Umrechnung.
-type Preis = { rein: number; raus: number; cacheWrite: number; cacheRead: number }
-
-function preisFuer(modell: string): Preis {
-  const m = (modell || '').toLowerCase()
-
-  // Haiku 4.5 — guenstig
-  if (m.includes('haiku')) {
-    return { rein: 1.0, raus: 5.0, cacheWrite: 1.25, cacheRead: 0.1 }
-  }
-
-  // Sonnet — Einfuehrungspreis bis 31.08.2026, danach Standard (automatisch)
-  if (m.includes('sonnet')) {
-    const einfuehrung = new Date() < new Date('2026-09-01T00:00:00Z')
-    return einfuehrung
-      ? { rein: 2.0, raus: 10.0, cacheWrite: 2.5, cacheRead: 0.2 }
-      : { rein: 3.0, raus: 15.0, cacheWrite: 3.75, cacheRead: 0.3 }
-  }
-
-  // Unbekannt / Opus -> konservativ Sonnet-Standard
-  return { rein: 3.0, raus: 15.0, cacheWrite: 3.75, cacheRead: 0.3 }
-}
+// --- Preise: EINE Tabelle in lib/kiPreise.ts (Paket PA, 24.09.2026) --------
+// Bis hier stand eine eigene Kopie, die Sonnet ab 01.09. mit $3/$15 rechnete
+// (richtig: $2/$10) und Opus mit $3/$15 schaetzte (richtig: $4/$20).
+// Das Protokoll zeigte fuer die Sonnet-Routen dadurch 50 % zu viel.
 
 /** Kunde aus dem Login-Cookie. Kein Login (oeffentlicher Chat) -> null. */
 async function ermittleUserId(): Promise<string | null> {
@@ -89,10 +68,7 @@ async function protokolliere(userId: string | null, route: string, data: any) {
     const cacheWrite = Number(u.cache_creation_input_tokens) || 0
     const cacheRead = Number(u.cache_read_input_tokens) || 0
     const modell = typeof data?.model === 'string' ? data.model : 'unbekannt'
-    const p = preisFuer(modell)
-    const kostenUsd =
-      (rein * p.rein + raus * p.raus + cacheWrite * p.cacheWrite + cacheRead * p.cacheRead) /
-      1_000_000
+    const kosten = kostenUsd(modell, u)
 
     const admin = createAdminClient()
     await admin.from('ki_nutzung').insert({
@@ -103,7 +79,7 @@ async function protokolliere(userId: string | null, route: string, data: any) {
       tokens_raus: raus,
       tokens_cache_write: cacheWrite,
       tokens_cache_read: cacheRead,
-      kosten_usd: kostenUsd,
+      kosten_usd: kosten,
     })
   } catch (e) {
     console.error('[ki_nutzung] Protokoll fehlgeschlagen:', e)

@@ -101,6 +101,10 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🗂 Vorlagen-Pool', href: '/dashboard/vorlagen', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📥 Posteingang', href: '/dashboard/posteingang', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
+  // Paket PA (24.09.26): KI-Sachbearbeiter — Behoerdenbriefe lesen, Vorgaenge
+  // mit Frist. Ebene 2 + sensibel: dort landen Steuerbescheide und Mahnungen.
+  // Jeder sieht nur SEINE eigenen Vorgaenge (RLS owner_user_id = auth.uid()).
+  { label: '🧠 Sachbearbeiter', href: '/dashboard/sachbearbeiter', modul: 'sachbearbeiter', ebene: 2, sensibel: true, gruppe: 'komm' },
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },

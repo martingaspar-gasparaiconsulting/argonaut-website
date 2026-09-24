@@ -1,8 +1,15 @@
 import { kiFetch } from '@/lib/ki'
+import { createClient } from '@/lib/supabase-server'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 11 · T4 KI-Antwortentwurf (API-Route)
 // Erzeugt einen höflichen Antwort-ENTWURF auf ein Kundenservice-Ticket.
 // Kein Versand — Text wird zur Bearbeitung/Kopie an die UI zurückgegeben.
+//
+// Paket PA (24.09.2026): ANMELDE-PRUEFUNG NACHGERUESTET. Bis hier konnte jeder,
+// der die Adresse kannte, ohne Login einen KI-Aufruf ausloesen — ohne Kunde,
+// also auch ohne Firmen-Topf und ohne Minuten-Bremse in kiFetch (beides haengt
+// am eingeloggten Nutzer). Aufgerufen wird die Route nur aus der
+// Ticket-Ansicht im Dashboard (service/[id]), dort ist man immer angemeldet.
 // ---------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -40,6 +47,12 @@ export async function POST(req: Request) {
     t = (body?.ticket ?? {}) as TicketInput;
   } catch {
     return Response.json({ text: "", fehler: "Ungültige Anfrage." });
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ text: "", fehler: "Nicht eingeloggt." }, { status: 401 });
   }
 
   if (!t.betreff) {
