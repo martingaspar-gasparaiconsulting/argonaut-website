@@ -196,6 +196,10 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🖥️ Assets & Lizenzen', href: '/dashboard/itassets', modul: 'itassets', ebene: 3, gruppe: 'betrieb' },
   { label: '🎨 Agentur & Kreativ', href: '/dashboard/agentur', modul: 'agentur-kreativ', ebene: 3, gruppe: 'betrieb' },
   { label: '💆 Gesundheit & Wellness', href: '/dashboard/wellness', modul: 'wellness', ebene: 3, gruppe: 'betrieb' },
+  // Paket PQ (24.09.26): Praxis-Paket — Recall, Ausfallhonorar, Einwilligungen, geschuetzte
+  // Gesundheitsangaben (verschluesselt, Zugriffsprotokoll), Werbe-Pruefer HWG. Unterpfad von
+  // /dashboard/wellness, erbt dessen Freigabe. Gesundheitsangaben selbst nur mit eigener Freigabe (RLS).
+  { label: '🩺 Praxis-Paket', href: '/dashboard/wellness/praxis', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Kanzlei & Steuer', href: '/dashboard/kanzlei', modul: 'kanzlei', ebene: 3, gruppe: 'betrieb' },
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
   { label: '🏫 Räume & Ressourcen', href: '/dashboard/raeume', modul: 'raeume', ebene: 3, gruppe: 'betrieb' },

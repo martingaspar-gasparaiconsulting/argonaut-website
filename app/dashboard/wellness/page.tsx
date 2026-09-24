@@ -110,6 +110,9 @@ export default function WellnessPage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>💆 Gesundheit & Wellness</h1>
       <p style={styles.sub}>Kundenkartei mit Hinweisen und Behandlungshistorie. Reines Verwaltungswerkzeug — keine medizinische Beratung.</p>
+      <div style={{ marginTop: 10 }}>
+        <a href="/dashboard/wellness/praxis" style={styles.praxisLink}>🩺 Praxis-Paket: Recall · Ausfallhonorar · Einwilligungen · geschützte Gesundheitsangaben · Werbe-Prüfer</a>
+      </div>
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
 
@@ -120,7 +123,7 @@ export default function WellnessPage() {
           <input style={{ ...styles.inp, width: 130 }} value={nk.telefon} onChange={(e) => setNk({ ...nk, telefon: e.target.value })} placeholder="Telefon" />
           <input style={{ ...styles.inp, width: 160 }} value={nk.email} onChange={(e) => setNk({ ...nk, email: e.target.value })} placeholder="E-Mail" />
           <NurVoll><label style={styles.lab}>Geburtstag<input type="date" style={styles.inp} value={nk.geburtsdatum} onChange={(e) => setNk({ ...nk, geburtsdatum: e.target.value })} /></label></NurVoll>
-          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder="Hinweise (Allergien, Wünsche …)" /></NurVoll>
+          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder="Hinweise (Wünsche, Vorlieben — keine Gesundheitsangaben)" /></NurVoll>
           <button style={styles.primaer} onClick={kundeAnlegen}>＋ Kunde</button>
         </div>
       </div>
@@ -144,6 +147,10 @@ export default function WellnessPage() {
                   <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung aus offenen Behandlungen</button>
                 </div>
                 {aktiv.hinweise && <div style={styles.hinweis}>⚠️ {aktiv.hinweise}</div>}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <a href={`/dashboard/wellness/praxis?tab=gesundheit&kunde=${aktiv.id}`} style={styles.praxisLink}>🔒 Gesundheitsangaben (geschützt)</a>
+                  <a href={`/dashboard/wellness/praxis?tab=einwilligung&kunde=${aktiv.id}`} style={styles.praxisLink}>✍ Einwilligungen</a>
+                </div>
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>
                   <input style={{ ...styles.inp, flex: 1 }} value={nb.behandlung} onChange={(e) => setNb({ ...nb, behandlung: e.target.value })} placeholder="Behandlung" />
@@ -186,6 +193,7 @@ const styles: Record<string, CSSProperties> = {
   posZeile: { display: 'flex', gap: 10, alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 6, fontSize: 14 },
   dazuBtn: { background: 'transparent', color: C.text, border: `1px dashed ${C.border}`, borderRadius: 9, padding: '9px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   rechnungBtn: { background: 'rgba(76,175,125,0.12)', color: C.green, border: `1px solid ${C.green}`, borderRadius: 10, padding: '9px 14px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
+  praxisLink: { display: 'inline-block', color: C.cyan, border: `1px solid ${C.border}`, borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' },
   badgeOk: { display: 'inline-block', border: `1px solid ${C.green}`, color: C.green, borderRadius: 999, padding: '2px 9px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' },
   dim: { color: C.textDim, fontSize: 14, marginTop: 12 },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14 },

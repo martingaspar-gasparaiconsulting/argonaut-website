@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Diktat from '../../_components/Diktat';
+import { hwgHinweise } from '@/lib/hwgWaechter';
 import {
   TEXT_ARTEN, artInfo, ratgeberSlug, ratgeberBloecke, pruefeText, platzhalter,
   type TextArt, type Gliederung, type Einzeltext, type Pruefpunkt,
@@ -132,7 +133,9 @@ export default function TextWerkstatt() {
   const gesamtText = art === 'ebook'
     ? [gliederung?.titel ?? '', ...kapitelTexte].join('\n')
     : einzel ? [einzel.titel, einzel.beschreibung, einzel.text, ...einzel.faq.map((f) => `${f.frage} ${f.antwort}`)].join('\n') : '';
-  const hinweise = gesamtText.trim() ? pruefeText(gesamtText) : [];
+  // Paket PQ (H02): Gesundheitstexte zusaetzlich gegen das Heilmittelwerbegesetz pruefen.
+  // Ohne Gesundheitsbezug liefert hwgHinweise nichts.
+  const hinweise = gesamtText.trim() ? [...pruefeText(gesamtText), ...hwgHinweise(gesamtText)] : [];
   const offen = platzhalter(gesamtText);
   const fertig = art === 'ebook' ? !!gliederung && kapitelTexte.length > 0 && kapitelTexte.every((t) => t.trim()) : !!einzel;
 
