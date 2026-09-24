@@ -168,6 +168,7 @@ export default function BauLvPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🏗 Bau & Handwerk</h1>
+      <a href="/dashboard/bau-lv/ablaeufe" style={styles.ablaufLink}>🧷 Nachträge &amp; Gewährleistung — Mehraufwand ankündigen, Nachträge abrechnen, Fristen und Sicherheiten nach der Abnahme →</a>
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'lv' ? styles.tabAn : {}) }} onClick={() => setTab('lv')}>📐 LV / Kalkulation</button>
         <button style={{ ...styles.tab, ...(tab === 'abnahme' ? styles.tabAn : {}) }} onClick={() => setTab('abnahme')}>✅ Abnahme</button>
@@ -289,7 +290,7 @@ export default function BauLvPage() {
                 <span style={{ ...styles.badge, color: ART_FARBE[a.art] || C.textDim, borderColor: ART_FARBE[a.art] || C.border }}>{ART_LABEL[a.art] || a.art}</span>
               </div>
             ))}
-            {!abnahmen.length && <Leerzustand icon="✅" titel="Noch keine Abnahmen" text="Dokumentiere Abnahmen mit Mängelliste." schritte={["Abnahme anlegen", "Mängel erfassen", "Protokoll abschließen"]} />}
+            {!abnahmen.length && <Leerzustand icon="✅" titel="Noch keine Abnahmen" text="Dokumentieren Sie Abnahmen mit Mängelliste." schritte={["Abnahme anlegen", "Mängel erfassen", "Protokoll abschließen"]} />}
           </div>
         </>
       )}
@@ -301,6 +302,7 @@ const styles: Record<string, CSSProperties> = {
   page: { maxWidth: 1040, margin: '0 auto', padding: '8px 4px 60px', color: C.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontFamily: 'var(--font-syne), sans-serif', fontSize: 26, fontWeight: 800, margin: 0 },
   tabs: { display: 'flex', gap: 8, margin: '16px 0 6px' },
+  ablaufLink: { display: 'block', marginTop: 10, background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.35)', color: C.gold, borderRadius: 12, padding: '11px 14px', fontSize: 14, fontWeight: 700, textDecoration: 'none' },
   tab: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 999, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
   tabAn: { background: C.gold, color: C.navy, borderColor: C.gold },
   card: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 },
