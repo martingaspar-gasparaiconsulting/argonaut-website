@@ -3,12 +3,14 @@
 // ============================================================
 // ARGONAUT OS · Bündel 11 · Öffentliches Kunden-Portal (ohne Login)
 // /portal/<token> — der Kunde sieht seine eigenen Rechnungen und Termine.
+// Paket PN (24.09.26): + Baufortschritt, Fotos, Dokumente, Freigaben, Monteur-Status (PortalBaustelle).
 // Liest ausschließlich über /api/oeffentlich/portal (Service-Role, Token).
 // Kein Supabase im Browser, keine fremden Daten.
 // ============================================================
 
 import { useEffect, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
+import PortalBaustelle from './PortalBaustelle';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#c9a84c', text: '#EAF1F6',
@@ -141,6 +143,9 @@ export default function PortalSeite() {
                 <div style={styles.summe}>Offener Betrag: <strong style={{ color: C.warn }}>{eur(offeneSumme)}</strong></div>
               )}
             </div>
+
+            {/* --- Paket PN: Monteur, Freigaben, Baufortschritt, Dokumente (eigener Endpunkt) --- */}
+            <PortalBaustelle token={token} />
 
             {/* --- Rechnungen --- */}
             <div style={styles.card}>

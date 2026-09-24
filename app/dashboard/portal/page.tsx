@@ -131,6 +131,10 @@ export default function PortalVerwaltung() {
             Geben Sie einem Kunden einen eigenen Link. Er sieht darüber <strong>nur seine eigenen</strong> Rechnungen
             und Termine — ohne Anmeldung, ohne Passwort, komplett aus Ihrem System.
           </p>
+          {/* Paket PN (24.09.26): Baufortschritt, Fotos, Dokumente, Freigaben je Kunde */}
+          <a href="/dashboard/portal/baustelle" style={{ display: 'inline-block', marginTop: 10, color: C.navy, background: C.gold, borderRadius: 8, padding: '8px 14px', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
+            🏗 Portal plus: Baufortschritt, Fotos, Dokumente, Freigaben
+          </a>
         </div>
         <div style={styles.zaehler}>
           <div style={{ fontSize: 26, fontWeight: 800, color: C.gold }}>{anzahlLinks}</div>
