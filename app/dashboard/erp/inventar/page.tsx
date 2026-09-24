@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../../_components/KiKlartext";
+import { leseZahl } from "@/lib/fuhrparkGeraete";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E7 Inventar / Betriebsmittel
@@ -255,10 +256,8 @@ export default function InventarCockpit() {
       standort: form.standort.trim() || null,
       zustand: form.zustand || "gut",
       anschaffungsdatum: form.anschaffungsdatum || null,
-      anschaffungswert:
-        form.anschaffungswert.trim() === ""
-          ? 0
-          : Number(form.anschaffungswert.replace(",", ".")),
+      // Paket PJ: "1.234,56" ergab frueher NaN (nur das Komma wurde ersetzt).
+      anschaffungswert: form.anschaffungswert.trim() === "" ? 0 : (leseZahl(form.anschaffungswert) ?? 0),
       naechste_pruefung_am: form.naechste_pruefung_am || null,
       notizen: form.notizen.trim() || null,
     };
@@ -374,9 +373,13 @@ export default function InventarCockpit() {
             Geräte, Werkzeuge und Maschinen mit Prüffristen
           </p>
         </div>
-        <button style={btnGold} onClick={oeffneNeu}>
-          + Betriebsmittel anlegen
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {/* Paket PJ (24.09.26): QR-Etiketten fuer Geraete und Fahrzeuge */}
+          <a href="/dashboard/erp/etiketten" style={{ ...btnGhost, textDecoration: "none" }}>🏷 QR-Etiketten</a>
+          <button style={btnGold} onClick={oeffneNeu}>
+            + Betriebsmittel anlegen
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -550,6 +553,10 @@ export default function InventarCockpit() {
                     <td
                       style={{ ...tdStil, textAlign: "right", whiteSpace: "nowrap" }}
                     >
+                      {/* Paket PJ: Akte mit Verlauf, QR und Schnell-Eintraegen */}
+                      <a href={`/dashboard/erp/inventar/${i.id}`} style={{ ...btnGhost, marginRight: 6, textDecoration: "none", display: "inline-block" }}>
+                        Akte
+                      </a>
                       <button
                         style={{ ...btnGhost, marginRight: 6 }}
                         onClick={() => oeffneBearbeiten(i)}
