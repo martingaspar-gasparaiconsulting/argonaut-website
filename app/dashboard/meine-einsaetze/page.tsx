@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from
 import { createBrowserClient } from '@supabase/ssr';
 import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
 import BelegErfassen from './BelegErfassen';
+import MaterialAbruf from './MaterialAbruf';
 import Diktat from '../_components/Diktat';
 
 const supabase = createBrowserClient(
@@ -669,6 +670,8 @@ export default function MeineEinsaetzePage() {
                           </label>
                           {/* Beleg vom Einsatz: Foto -> Beleg-KI -> Ausgaben UND Einsatz. */}
                           <BelegErfassen einsatzId={e.id} ownerUserId={e.owner_user_id} />
+                          {/* Paket PB · B28: fehlendes Material direkt vom Einsatz anfordern. */}
+                          <MaterialAbruf einsatzId={e.id} ownerUserId={e.owner_user_id} einsatzTitel={e.titel} mitarbeiterName={mitarbeiter ? [mitarbeiter.vorname, mitarbeiter.nachname].filter(Boolean).join(' ') : 'Chef'} />
                         </div>
                       </div>
                       {efotos.length > 0 && (

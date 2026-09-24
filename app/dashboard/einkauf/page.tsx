@@ -5,6 +5,7 @@
 // Lieferanten · Bestellungen mit Wareneingang · Retouren/Reklamationen
 // je Position · Nachkalkulation (Aufschlag/Handelsspanne). Reine Formeln
 // aus lib/einkauf (0 €, node-getestet). Pfad: app/dashboard/einkauf/page.tsx
+// 24.09.26 (Paket PB · B28): Material-Abrufe der Monteure oben auf der Seite.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, Fragment, CSSProperties } from 'react';
@@ -20,6 +21,7 @@ import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuc
 import { augeEinkauf } from '@/lib/auge';
 import { bestellPdf } from '@/lib/bestellPdf';
 import KiAuge from '../_components/KiAuge';
+import MaterialAbrufeBuero from '../_components/MaterialAbrufeBuero';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -301,6 +303,9 @@ export default function EinkaufPage() {
           <KiAuge modul="Einkauf" regel={augeEinkauf(kennzahlen)} />
         </div>
       )}
+
+      {/* Paket PB · B28: Anforderungen der Monteure — erscheint nur, wenn etwas offen ist. */}
+      <MaterialAbrufeBuero />
 
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'bestellungen' ? styles.tabAn : {}) }} onClick={() => setTab('bestellungen')}>📦 Bestellungen</button>

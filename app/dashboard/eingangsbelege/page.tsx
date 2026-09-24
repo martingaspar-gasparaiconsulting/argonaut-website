@@ -5,6 +5,12 @@
 // Foto/PDF hochladen -> KI liest Lieferant/Datum/Betrag/USt -> prüfen ->
 // speichern (GoBD-Ablage, Vorsteuer, DATEV-Export). Pfad:
 // app/dashboard/eingangsbelege/page.tsx
+//
+// 24.09.26 (Paket PB · B02): Rechnungs-Abgleich. Unter dem Formular steht,
+// zu welcher Bestellung die Rechnung passt und ob der Betrag zu Bestellung
+// UND Wareneingang stimmt (lib/rechnungsAbgleich). Die Dubletten-Prüfung
+// erkennt jetzt auch „Würth GmbH & Co. KG" = „Würth", „RE-0123" = „RE 123"
+// und gleiche Beträge im Abstand von bis zu 3 Tagen.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, ChangeEvent } from 'react';
@@ -14,7 +20,9 @@ import Hinweise from '../_components/Hinweise';
 import Leerzustand from '../_components/Leerzustand';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
-import { pruefeKonsistenz, istDublette } from '@/lib/belegCheck';
+import { pruefeKonsistenz } from '@/lib/belegCheck';
+import { findeDubletten } from '@/lib/rechnungsAbgleich';
+import RechnungsAbgleich from '../_components/RechnungsAbgleich';
 import KiAuge from '../_components/KiAuge';
 import { augeEingangsbelege } from '@/lib/auge';
 import { zaehleEingangsbelege } from '@/lib/augeZaehler';
@@ -53,6 +61,10 @@ export default function EingangsbelegePage() {
   const [form, setForm] = useState({ ...LEER });
   const [dateiPfad, setDateiPfad] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  // Paket PB · B02 — verknüpfte Bestellung. Eigener Zustand, damit ein
+  // fehlendes SQL (Spalte bestellung_id) nie das normale Speichern stört.
+  const [bestellungId, setBestellungId] = useState<string | null>(null);
+  const [bestellungGeaendert, setBestellungGeaendert] = useState(false);
 
   const laden_ = useCallback(async () => {
     setLaden(true);
@@ -77,7 +89,7 @@ export default function EingangsbelegePage() {
   }, [laden_]);
 
   function setF<K extends keyof typeof LEER>(k: K, v: string) { setForm((f) => ({ ...f, [k]: v })); }
-  function reset() { setForm({ ...LEER }); setDateiPfad(null); setEditId(null); }
+  function reset() { setForm({ ...LEER }); setDateiPfad(null); setEditId(null); setBestellungId(null); setBestellungGeaendert(false); }
 
   // Regel-Ebene: Konto-Vorschlag aus Kategorie + Lieferant — kostenlos, sofort.
   const vorschlag: DatevVorschlag = useMemo(() => datevVorschlag(form.kategorie, form.lieferant), [form.kategorie, form.lieferant]);
@@ -87,7 +99,7 @@ export default function EingangsbelegePage() {
   async function dateiGewaehlt(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f || !uid) return;
-    setOcrLaden(true); setFehler(null); setOk(null); setEditId(null);
+    setOcrLaden(true); setFehler(null); setOk(null); setEditId(null); setBestellungId(null); setBestellungGeaendert(false);
     try {
       const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error('read')); r.readAsDataURL(f); });
       const base64 = dataUrl.split(',')[1] || '';
@@ -129,6 +141,9 @@ export default function EingangsbelegePage() {
       brutto: num(form.brutto), kategorie: form.kategorie.trim() || null, notiz: form.notiz.trim() || null,
       datev_konto: form.datev_konto.trim() || null, datev_rahmen: form.datev_rahmen || null,
       datei_pfad: dateiPfad, updated_at: new Date().toISOString(),
+      // Nur mitschicken, wenn es etwas zu schreiben gibt — ohne die Spalte
+      // (SQL von Paket PB noch nicht gelaufen) speichert der Beleg wie bisher.
+      ...(bestellungId || bestellungGeaendert ? { bestellung_id: bestellungId } : {}),
     };
     try {
       if (editId) { const { error } = await supabase.from('eingangsbelege').update(payload).eq('id', editId); if (error) throw error; }
@@ -139,6 +154,10 @@ export default function EingangsbelegePage() {
 
   function bearbeiten(b: Beleg) {
     setEditId(b.id); setDateiPfad(b.datei_pfad);
+    setBestellungId(null); setBestellungGeaendert(false);
+    // Verknüpfung getrennt laden — fehlt die Spalte noch, bleibt es still bei null.
+    void supabase.from('eingangsbelege').select('bestellung_id').eq('id', b.id).maybeSingle()
+      .then(({ data }) => { const v = (data as { bestellung_id?: string | null } | null)?.bestellung_id; if (v) setBestellungId(v); });
     setForm({
       lieferant: b.lieferant || '', belegnummer: b.belegnummer || '', belegdatum: (b.belegdatum || '').slice(0, 10),
       netto: b.netto != null ? String(b.netto) : '', ust_satz: b.ust_satz != null ? String(b.ust_satz) : '19',
@@ -168,7 +187,11 @@ export default function EingangsbelegePage() {
   }, [belege]);
 
   const kons = pruefeKonsistenz(num(form.netto), num(form.ust_betrag), num(form.brutto));
-  const dublette = istDublette({ belegnummer: form.belegnummer, lieferant: form.lieferant }, belege, editId);
+  // Paket PB: robustere Dubletten-Suche (Schreibweise, Rechtsform, gleicher Betrag ±3 Tage).
+  const dubletten = findeDubletten(
+    { id: editId ?? undefined, lieferant: form.lieferant, belegnummer: form.belegnummer, belegdatum: form.belegdatum, brutto: form.brutto },
+    belege,
+  );
   function bruttoKorrigieren() { setF('brutto', kons.bruttoSoll.toFixed(2).replace('.', ',')); }
 
   return (
@@ -253,9 +276,16 @@ export default function EingangsbelegePage() {
             <button type="button" style={styles.fix} onClick={bruttoKorrigieren}>Brutto auf {eur(kons.bruttoSoll)} setzen</button>
           </div>
         )}
-        {dublette && (
-          <div style={styles.checkWarn}>⚠️ Es gibt bereits einen Beleg mit dieser Belegnummer und diesem Lieferanten — mögliche Dublette. Bitte prüfen.</div>
-        )}
+        {dubletten.map((du, i) => (
+          <div key={i} style={styles.checkWarn}>⚠️ {du.sicher ? 'Mögliche Dublette: ' : 'Bitte prüfen: '}{du.grund}</div>
+        ))}
+
+        <RechnungsAbgleich
+          lieferant={form.lieferant}
+          netto={form.netto}
+          bestellungId={bestellungId}
+          onWahl={(id) => { setBestellungId(id); setBestellungGeaendert(true); }}
+        />
 
         {dateiPfad && <div style={styles.pfad}>📎 Datei abgelegt: {dateiPfad}</div>}
         <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
