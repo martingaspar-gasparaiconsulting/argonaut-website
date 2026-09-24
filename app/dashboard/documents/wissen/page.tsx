@@ -18,6 +18,8 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { sensiblerName } from '@/lib/firmenWissen';
+import { notizDatei, speicherPfad } from '@/lib/dokumentAuslesen';
+import Diktat from '../../_components/Diktat';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -39,6 +41,17 @@ export default function FirmenWissenPage() {
   const [rueckfrage, setRueckfrage] = useState<string | null>(null);
   const [filter, setFilter] = useState<'alle' | 'frei' | 'zu'>('alle');
   const [suche, setSuche] = useState('');
+  const [liest, setLiest] = useState<Record<string, string>>({});
+
+  async function auslesen(id: string) {
+    setLiest((a) => ({ ...a, [id]: 'liest …' }));
+    try {
+      const res = await fetch('/api/documents/trigger-analysis', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ document_id: id }) });
+      const j = await res.json();
+      setLiest((a) => ({ ...a, [id]: j.ok ? `✓ ausgelesen (${j.abschnitte} Abschnitte)` : `✗ ${j.error || 'fehlgeschlagen'}` }));
+    } catch { setLiest((a) => ({ ...a, [id]: '✗ Verbindung fehlgeschlagen' })); }
+    load();
+  }
 
   const load = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -93,6 +106,7 @@ export default function FirmenWissenPage() {
 
       {!spalteFehlt && (
         <>
+          <NeueNotiz onFertig={(id) => { load(); auslesen(id); }} />
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', margin: '14px 0' }}>
             <span style={{ color: C.textDim, fontSize: 14 }}>{frei} von {docs.length} freigegeben</span>
             {(['alle', 'frei', 'zu'] as const).map((f) => (
@@ -119,7 +133,11 @@ export default function FirmenWissenPage() {
                             {d.status ? ` · ${d.status}` : ''}
                             {warnung && <span style={{ color: C.warn }}> · klingt vertraulich ({warnung})</span>}
                           </div>
+                          {liest[d.id] && <div style={{ fontSize: 13, color: liest[d.id].startsWith('✗') ? C.danger : C.green }}>{liest[d.id]}</div>}
                         </div>
+                        {d.status !== 'bereit' && !liest[d.id]?.startsWith('liest') && (
+                          <button style={S.knopf2} onClick={() => auslesen(d.id)}>{d.status === 'fehler' ? 'Erneut auslesen' : 'Jetzt auslesen'}</button>
+                        )}
                         {d.fuer_team
                           ? <button style={S.knopfAus} onClick={() => setze(d, false)}>✓ Freigegeben — zurücknehmen</button>
                           : <button style={S.knopf2} onClick={() => freigeben(d)}>Fürs Team freigeben</button>}
@@ -139,10 +157,56 @@ export default function FirmenWissenPage() {
               </div>
             )}
           <p style={{ color: C.textDim, fontSize: 12, marginTop: 16 }}>
-            Hinweis: Der Chat findet ein Dokument erst, wenn es fertig ausgelesen ist. Neu hochgeladene Dateien brauchen dafür einen Moment.
+            Hinweis: Der Chat findet ein Dokument erst, wenn es ausgelesen ist (Status „bereit"). Steht es noch auf „wartet", auf „Jetzt auslesen" klicken.
+            Eingescannte Bilder ohne echten Text können nicht gelesen werden.
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+function NeueNotiz({ onFertig }: { onFertig: (id: string) => void }) {
+  const [auf, setAuf] = useState(false);
+  const [titel, setTitel] = useState('');
+  const [text, setText] = useState('');
+  const [team, setTeam] = useState(true);
+  const [laeuft, setLaeuft] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+
+  async function speichern() {
+    const n = notizDatei(titel, text);
+    if (!n) { setMeldung('Bitte einen Titel (ab 3 Zeichen) und etwas Text (ab 20 Zeichen) eingeben.'); return; }
+    setLaeuft(true); setMeldung(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setMeldung('Bitte neu einloggen.'); setLaeuft(false); return; }
+    const pfad = speicherPfad(user.id, n.name, Date.now());
+    const blob = new Blob([n.inhalt], { type: 'text/plain;charset=utf-8' });
+    const { error: e1 } = await supabase.storage.from('customer-documents').upload(pfad, blob, { contentType: 'text/plain;charset=utf-8' });
+    if (e1) { setMeldung(`Speichern fehlgeschlagen: ${e1.message}`); setLaeuft(false); return; }
+    const { data: doc, error: e2 } = await supabase.from('documents')
+      .insert({ user_id: user.id, file_name: n.name, file_type: 'TXT', file_size: blob.size, storage_path: pfad, status: 'wartet', fuer_team: team })
+      .select('id').single();
+    if (e2 || !doc) {
+      await supabase.storage.from('customer-documents').remove([pfad]);
+      setMeldung(`Speichern fehlgeschlagen: ${e2?.message ?? 'unbekannt'}`); setLaeuft(false); return;
+    }
+    setLaeuft(false); setTitel(''); setText(''); setAuf(false);
+    onFertig((doc as { id: string }).id);
+  }
+
+  if (!auf) return <button style={{ ...S.knopf2, marginTop: 6 }} onClick={() => setAuf(true)}>✍️ Neue Wissens-Notiz („So machen wir das bei uns")</button>;
+  return (
+    <div style={{ ...S.karte, display: 'grid', gap: 10, marginTop: 6 }}>
+      <input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="Titel, z. B. „Anfahrt: so berechnen wir“" style={S.input} />
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Was jeder im Betrieb wissen soll — Abläufe, Regeln, Ansprechpartner, Tipps." style={{ ...S.input, minHeight: 140 }} />
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Diktat wert={text} onWert={setText} klein />
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}><input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} /> gleich fürs Team freigeben</label>
+        <button style={S.knopfAus} disabled={laeuft} onClick={speichern}>{laeuft ? 'Speichert …' : 'Speichern'}</button>
+        <button style={S.knopf2} onClick={() => setAuf(false)}>Abbrechen</button>
+      </div>
+      {meldung && <div style={{ color: C.danger, fontSize: 13 }}>{meldung}</div>}
     </div>
   );
 }
