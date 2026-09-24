@@ -262,6 +262,8 @@ export default function BautagebuchPage() {
         <div>
           <h1 style={styles.h1}>Bautagebuch &amp; Mängel</h1>
           <p style={styles.sub}>Regieberichte, Fotodokumentation und Mängel-/Abnahmemanagement je Baustelle.</p>
+          {/* Paket PK (24.09.26): Plaene mit Maengel-Pins und Foto-KI */}
+          <a href="/dashboard/bautagebuch/plaene" style={{ display: 'inline-block', marginTop: 8, color: C.gold, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>🗺 Pläne &amp; Mängel-Pins — Mängel direkt auf dem Plan markieren →</a>
         </div>
       </div>
 

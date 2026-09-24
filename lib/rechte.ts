@@ -206,6 +206,8 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PI (24.09.26): Nachtraege & Gewaehrleistung — Unterpfad von /dashboard/bau-lv,
   // erbt dessen Freigabe (Mitarbeiter mit Bau & LV kommen ueber die Kachel dort hinein).
   { label: '🧷 Nachträge & Gewährleistung', href: '/dashboard/bau-lv/ablaeufe', ebene: 3, gruppe: 'betrieb' },
+  // Paket PK (24.09.26): Plaene mit Maengel-Pins — Unterpfad von /dashboard/bautagebuch, erbt dessen Freigabe.
+  { label: '🗺 Pläne & Mängel-Pins', href: '/dashboard/bautagebuch/plaene', ebene: 3, gruppe: 'betrieb' },
   { label: '🪵 Brennholz', href: '/dashboard/holz', modul: 'holz', ebene: 3, gruppe: 'betrieb' },
   { label: '🌲 Baumkataster', href: '/dashboard/forst', modul: 'forst', ebene: 3, gruppe: 'betrieb' },
   { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
