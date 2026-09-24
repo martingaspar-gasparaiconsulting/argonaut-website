@@ -84,6 +84,9 @@ export const NAV_LINKS: NavLink[] = [
   // --- Start ----------------------------------------------------------------
   { label: '🏠 Übersicht', href: '/dashboard', immer: true, exakt: true, ebene: 4, gruppe: 'start', kern: true },
   { label: '📌 Heute', href: '/dashboard/heute', immer: true, ebene: 4, gruppe: 'start', kern: true },
+  // Paket PP (24.09.26): Chef-Blick — Auslastung 8 Wochen, Fruehwarnung je Projekt, Morgen-Briefing,
+  // Bank-Mappe (Umsatz, Forderungen). Enthaelt Geldzahlen -> nur Chef.
+  { label: '🧭 Chef-Blick', href: '/dashboard/chef-blick', nurChef: true, ebene: 1, gruppe: 'start' },
   { label: '🔎 Suche', href: '/dashboard/suche', immer: true, ebene: 4, gruppe: 'start' },
   { label: '🚀 Erste Schritte', href: '/dashboard/onboarding', immer: true, ebene: 4, gruppe: 'start' },
 
