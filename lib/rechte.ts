@@ -102,6 +102,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📚 Firmen-Wissen', href: '/dashboard/documents/wissen', ebene: 2, gruppe: 'komm' },
   { label: '✉️ Korrespondenz', href: '/dashboard/korrespondenz', modul: 'korrespondenz', ebene: 4, gruppe: 'komm' },
   { label: '🗂 Vorlagen-Pool', href: '/dashboard/vorlagen', immer: true, ebene: 4, gruppe: 'komm' },
+  // Paket PL (24.09.26): Formulare & Checklisten — wie der Vorlagen-Pool fuer jeden (Monteure fuellen
+  // Uebergabe/Abnahme/Tagescheck aus). Vorlagen pflegt nur der Chef (RLS, pl-formulare.sql).
+  { label: '📋 Formulare & Checklisten', href: '/dashboard/formulare', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📬 Mail & Kalender', href: '/dashboard/mail-sync', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
   { label: '📥 Posteingang', href: '/dashboard/posteingang', modul: 'mail-sync', immer: true, ebene: 4, gruppe: 'komm' },
   // Paket PA (24.09.26): KI-Sachbearbeiter — Behoerdenbriefe lesen, Vorgaenge
