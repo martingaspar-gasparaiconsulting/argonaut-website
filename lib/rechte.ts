@@ -132,6 +132,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '✅ Freigaben & Proofing', href: '/dashboard/freigaben', modul: 'freigaben', ebene: 3, gruppe: 'vertrieb' },
   { label: '⭐ Bewertungen', href: '/dashboard/bewertungen', modul: 'bewertungen', ebene: 3, gruppe: 'vertrieb' },
   { label: '🤝 Vertrieb/CRM', href: '/dashboard/crm', modul: 'crm', ebene: 3, gruppe: 'vertrieb', kern: true },
+  // Paket PG (24.09.26): Gespraechsprotokolle — Unterpfad von /dashboard/crm,
+  // deshalb ohne eigenen Modul-Schluessel (erbt die CRM-Freigabe).
+  { label: '🗣 Gesprächsprotokolle', href: '/dashboard/crm/gespraeche', ebene: 3, gruppe: 'vertrieb' },
   { label: '📊 Deal-Pipeline', href: '/dashboard/pipeline', modul: 'pipeline', ebene: 3, gruppe: 'vertrieb' },
   { label: '💰 Provisionen', href: '/dashboard/provisionen', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
   { label: '🤝 Partner & Multiplikatoren', href: '/dashboard/partner', modul: 'provisionen', ebene: 2, sensibel: true, gruppe: 'vertrieb' },
