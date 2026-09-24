@@ -290,6 +290,7 @@ export default function MarketingCockpit() {
           titel: 'Inhalte erstellen',
           farbe: C.cyan, tint: 'rgba(0,229,255,0.12)',
           items: [
+            { href: '/dashboard/marketing/texte', label: '✍️ Text-Werkstatt (E-Book, Ratgeber, Presse, Strategie)' },
             { href: '/dashboard/marketing/content-fliessband', label: '🏭 Content-Fließband' },
             { href: '/dashboard/marketing/video-skript', label: '🎬 Video-Skripte' },
             { href: '/dashboard/marketing/studio', label: '✨ KI-Content-Studio' },

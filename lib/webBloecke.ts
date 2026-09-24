@@ -16,6 +16,7 @@
 import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht } from './webRecht';
 
 import { einstellung as einblendungEinstellung } from './einblendung';
+import { markdownZuHtml } from './markdownEinfach';
 
 export interface CiWeb extends CiRecht {
   firma?: string | null;
@@ -50,7 +51,11 @@ export type Block =
   | { typ: 'produkte'; eyebrow?: string; titel: string }
   | { typ: 'chatbot'; titel?: string; gruss?: string }
   | { typ: 'cta'; titel: string; knopf: string }
-  | { typ: 'einblendung'; titel: string; text: string; knopf?: string; nach_sekunden?: number; bei_verlassen?: boolean; sperre_tage?: number };
+  | { typ: 'einblendung'; titel: string; text: string; knopf?: string; nach_sekunden?: number; bei_verlassen?: boolean; sperre_tage?: number }
+  // Paket PC (24.09.26): Ratgeber-Artikel aus der Text-Werkstatt. `text` ist
+  // schmales Markdown (## Zwischenueberschrift, - Punkt, **fett**) und laeuft
+  // durch markdownZuHtml — dort wird ZUERST maskiert, dann formatiert.
+  | { typ: 'artikel'; eyebrow?: string; titel: string; text: string };
 
 // --- Katalog für den Editor (W5) --------------------------------------------
 export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; beschreibung: string }[] = [
@@ -72,6 +77,7 @@ export const BAUSTEIN_KATALOG: { typ: Block['typ']; icon: string; name: string; 
   { typ: 'produkte', icon: '🛍️', name: 'Shop-Produkte', beschreibung: 'Ihre Produkte als Kacheln mit Warenkorb (aus „Produkte in den Shop")' },
   { typ: 'chatbot', icon: '🤖', name: 'KI-Verkaufsberater', beschreibung: 'Schwebender KI-Chat — berät, kennt Produkte, Preise & Bestand live' },
   { typ: 'cta', icon: '📣', name: 'Handlungsaufruf', beschreibung: 'Auffälliger Knopf zur Anfrage' },
+  { typ: 'artikel', icon: '📝', name: 'Ratgeber-Artikel', beschreibung: 'Längerer Text mit Zwischenüberschriften — z. B. aus der Text-Werkstatt' },
   { typ: 'einblendung', icon: '🔔', name: 'Anmelde-Einblendung', beschreibung: 'Einladung zum Newsletter, die nach einer Weile erscheint — auf dem Handy als Balken' },
 ];
 
@@ -603,6 +609,14 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
       }
       return '<div class="ao-chat" data-seite="' + oid + '" data-titel="' + titel + '" data-gruss="' + gruss + '"></div>';
     }
+    case 'artikel':
+      return [
+        '<section class="sec"><div class="wrap narrow"><article class="artikel">',
+        ebHtml(b.eyebrow),
+        '<h1' + ce('titel') + '>' + esc(b.titel) + '</h1>',
+        markdownZuHtml(String(b.text || ''), 'fliess'),
+        '</article></div></section>',
+      ].join('');
     default:
       return '';
   }
