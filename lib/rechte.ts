@@ -105,6 +105,10 @@ export const NAV_LINKS: NavLink[] = [
   // mit Frist. Ebene 2 + sensibel: dort landen Steuerbescheide und Mahnungen.
   // Jeder sieht nur SEINE eigenen Vorgaenge (RLS owner_user_id = auth.uid()).
   { label: '🧠 Sachbearbeiter', href: '/dashboard/sachbearbeiter', modul: 'sachbearbeiter', ebene: 2, sensibel: true, gruppe: 'komm' },
+  // Paket PE (24.09.26): Nachweise & Fristen — Arbeitsschutz, Pflichten,
+  // Subunternehmer, Versicherungen, Entsorgung. Sensibel: Versicherungsbeitraege
+  // und Partnerdaten. Mitarbeiter sehen per RLS ohnehin nur Arbeitsschutz/Pflichten.
+  { label: '🗂 Nachweise & Fristen', href: '/dashboard/nachweise', modul: 'nachweise', ebene: 2, sensibel: true, gruppe: 'komm' },
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },

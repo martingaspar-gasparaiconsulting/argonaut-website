@@ -5,6 +5,7 @@
 //  · Sofortmeldung (Schwarzarbeit): neue Beschäftigte vor Arbeitsbeginn melden.
 //  · §48b Freistellungsbescheinigung: eigene + Subunternehmer, gegen 15 %
 //    Bauabzugsteuer-Einbehalt. ARGONAUT bereitet vor & erinnert.
+//  · 24.09.26: Hinweis auf die neue Seite „Nachweise & Fristen" (Paket PE).
 // Pfad: app/dashboard/compliance/page.tsx
 // ============================================================
 
@@ -13,6 +14,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeAmpel } from '@/lib/auge';
+import { plusMonate, heuteIso } from '@/lib/nachweisMotor';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -28,7 +30,11 @@ type Sofort = { id: string; mitarbeiter_name: string; sv_nummer: string | null; 
 type Frei = { id: string; art: string; inhaber: string | null; finanzamt: string | null; sicherheitsnummer: string | null; gueltig_von: string | null; gueltig_bis: string | null; notiz: string | null };
 type Pruef = { id: string; art: string; bezeichnung: string; verantwortlich: string | null; letzte_pruefung: string | null; intervall_monate: number; naechste_pruefung: string | null; notiz: string | null };
 const ART_PRUEF: Record<string, string> = { fuehrerschein: '🪪 Führerschein', uvv: '🛠 UVV/DGUV V3', tuev: '🚗 TÜV/HU', sonstige: '📋 Sonstige' };
-function nMonate(iso: string | null, monate: number) { const dd = new Date((iso || new Date().toISOString().slice(0, 10)) + 'T00:00:00'); if (isNaN(dd.getTime())) return null; dd.setMonth(dd.getMonth() + (Number(monate) || 12)); return dd.toISOString().slice(0, 10); }
+// Paket PE (24.09.26, Claude-Befund): Die alte Fassung rechnete mit
+// new Date(...T00:00:00).toISOString() — im Browser in Deutschland ergab das
+// den VORTAG, und 31.08. + 6 Monate landete im März statt Ende Februar.
+// Jetzt über lib/nachweisMotor.plusMonate (getestet, reine Kalendertage).
+function nMonate(iso: string | null, monate: number) { return plusMonate((iso || heuteIso(new Date())).slice(0, 10), Number(monate) || 12); }
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function inTagen(iso: string | null) { if (!iso) return null; return Math.ceil((new Date(iso.slice(0, 10) + 'T00:00:00').getTime() - new Date(heute() + 'T00:00:00').getTime()) / 86400000); }
@@ -151,6 +157,7 @@ export default function CompliancePage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>⚖️ Compliance-Center</h1>
       <p style={styles.sub}>Zwei Pflichten mit echten Folgen: die Sofortmeldung neuer Beschäftigter und die §48b-Freistellungsbescheinigung. ARGONAUT bereitet alles vor und erinnert Sie rechtzeitig.</p>
+      <p style={{ ...styles.sub, marginTop: 0 }}>Unterweisungen, Gefährdungsbeurteilung, Versicherungen, Subunternehmer-Nachweise und Entsorgung: <a href="/dashboard/nachweise" style={{ color: C.cyan }}>🗂 Nachweise &amp; Fristen</a>.</p>
       {!laden && (
         <div style={{ marginTop: 14 }}>
           <KiAuge modul="Compliance" aktionHref="/dashboard/compliance" aktionText="Zu den Pflichten"
