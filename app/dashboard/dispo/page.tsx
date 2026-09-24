@@ -8,6 +8,8 @@
 //  (3) Klick auf Einsatz: anschauen · verschieben · Monteur/Status ändern · absagen
 //  (4) "Neuer Einsatz": frei anlegen
 // Tabelle: einsaetze (RLS 1:1 wie termine). NICHT-destruktiv: "Absagen" = Status.
+// Paket PO (24.09.26): Befaehigungen je Einsatz (einsaetze.anforderungen), Warnung + Vorschlag
+// beim Zuweisen (lib/dispoPlus.ts, getestet), Routen-Knopf je Monteur/Tag (/api/tour-planen).
 // Pfad: app/dashboard/dispo/page.tsx
 // ============================================================
 
@@ -18,6 +20,7 @@ import { augeDispo } from '@/lib/auge';
 import { zaehleDispo } from '@/lib/augeZaehler';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
+import { QUALIFIKATIONEN, qualiLabel, saubereAnforderungen, pruefeZuweisung, vorschlaege, ueberschneidungen, engePuffer, type MaQuali } from '@/lib/dispoPlus';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -106,6 +109,7 @@ type Form = {
   mitarbeiterId: string; status: string;
   kundeName: string; kundeEmail: string; kundeTelefon: string;
   rechnungId: string | null;
+  anforderungen: string[];
 };
 
 const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -126,6 +130,11 @@ export default function DispoPage() {
   const [form, setForm] = useState<Form | null>(null);
   const [rechnungBusy, setRechnungBusy] = useState(false);
   const [rechnungErgebnis, setRechnungErgebnis] = useState<'neu' | 'bereits' | null>(null);
+  // Paket PO: Befaehigungen (fail-open: ohne PO-SQL bleibt alles wie bisher)
+  const [qualis, setQualis] = useState<MaQuali[]>([]);
+  const [anfMap, setAnfMap] = useState<Record<string, string[]>>({});
+  const [poAktiv, setPoAktiv] = useState(false);
+  const [routeBusy, setRouteBusy] = useState<string | null>(null);
 
   const wochenEnde = useMemo(() => addDays(wochenStart, 6), [wochenStart]);
 
@@ -163,6 +172,20 @@ export default function DispoPage() {
       if (eiRes.error) throw eiRes.error;
       setMonteure((maRes.data as MitarbeiterRow[]) ?? []);
       setEinsaetze((eiRes.data as EinsatzRow[]) ?? []);
+      // Paket PO: eigene Abfragen — scheitern sie (SQL fehlt), bleibt die Dispo unveraendert.
+      try {
+        const [qRes, aRes] = await Promise.all([
+          supabase.from('mitarbeiter_qualifikation').select('mitarbeiter_id, art, gueltig_bis'),
+          supabase.from('einsaetze').select('id, anforderungen').limit(1000),
+        ]);
+        if (!qRes.error && !aRes.error) {
+          setQualis((qRes.data as MaQuali[]) ?? []);
+          const m: Record<string, string[]> = {};
+          for (const r of (aRes.data as { id: string; anforderungen: string[] | null }[]) ?? []) m[r.id] = saubereAnforderungen(r.anforderungen);
+          setAnfMap(m);
+          setPoAktiv(true);
+        }
+      } catch { /* PO noch nicht eingerichtet */ }
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -226,6 +249,7 @@ export default function DispoPage() {
       mitarbeiterId: mid ?? '', status: 'geplant',
       kundeName: '', kundeEmail: '', kundeTelefon: '',
       rechnungId: null,
+      anforderungen: [],
     });
     setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
@@ -238,6 +262,7 @@ export default function DispoPage() {
       mitarbeiterId: e.mitarbeiter_id ?? (e.inhaber_einsatz ? CHEF : ''), status: e.status ?? 'geplant',
       kundeName: e.kunde_name ?? '', kundeEmail: e.kunde_email ?? '', kundeTelefon: e.kunde_telefon ?? '',
       rechnungId: e.rechnung_id ?? null,
+      anforderungen: anfMap[e.id] ?? [],
     });
     setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
@@ -265,6 +290,7 @@ export default function DispoPage() {
         kunde_name: form.kundeName.trim() || null,
         kunde_email: form.kundeEmail.trim() || null,
         kunde_telefon: form.kundeTelefon.trim() || null,
+        ...(poAktiv ? { anforderungen: saubereAnforderungen(form.anforderungen) } : {}),
       };
       if (form.id) {
         const { error } = await supabase.from('einsaetze').update(daten).eq('id', form.id);
@@ -316,6 +342,58 @@ export default function DispoPage() {
 
   const gridCols = `minmax(130px, 0.85fr) repeat(7, minmax(0, 1fr))`;
 
+  // --- Paket PO: Route je Monteur/Tag ueber die bestehende Tourenplanung ----
+  async function routeOeffnen(mid: string, datum: string) {
+    const key = `${mid}__${datum}`;
+    setRouteBusy(key); setFehler(null);
+    try {
+      const r = await fetch('/api/tour-planen', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mitarbeiterId: mid === CHEF ? '' : mid, datum }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.mapsUrl) { setFehler(d?.hinweis || d?.error || 'Für diesen Tag ließ sich keine Route bilden.'); return; }
+      window.open(d.mapsUrl, '_blank', 'noopener');
+      if (d.hinweis) setErfolg(d.hinweis);
+    } catch { setFehler('Die Route konnte nicht geplant werden.'); }
+    finally { setRouteBusy(null); }
+  }
+
+  /** Einsaetze eines Monteurs an einem Tag (fuer Pruefung und Vorschlag). */
+  function tagesListe(mid: string, datum: string): EinsatzRow[] {
+    return zelleMap.get(`${mid}__${datum}`) ?? [];
+  }
+
+  const poPruefung = (() => {
+    if (!form || !poAktiv) return null;
+    const s = baueZeitpunkt(form.datum, form.von); const e = baueZeitpunkt(form.datum, form.bis);
+    if (!s || !e || e <= s) return null;
+    const beginn = s.toISOString(); const ende = e.toISOString();
+    const anf = saubereAnforderungen(form.anforderungen);
+    const echteMonteure = monteure.map((m) => ({ id: m.id, name: `${m.vorname} ${m.nachname}`.trim(), wochenstunden: m.wochenstunden }));
+    const jeMonteur: Record<string, EinsatzRow[]> = {};
+    for (const m of monteure) {
+      jeMonteur[m.id] = einsaetze.filter((x) => x.mitarbeiter_id === m.id && x.beginn_am && isoTag(new Date(x.beginn_am)) === form.datum);
+    }
+    const liste = vorschlaege({ anforderungen: anf, beginn, ende, datum: form.datum, einsatzort: form.einsatzort, einsatzId: form.id, monteure: echteMonteure, qualis, einsaetzeJeMonteur: jeMonteur });
+    const gewaehlt = form.mitarbeiterId && form.mitarbeiterId !== CHEF ? form.mitarbeiterId : null;
+    const warnungen: string[] = [];
+    if (gewaehlt) {
+      const pz = pruefeZuweisung(anf, qualis, gewaehlt, form.datum);
+      if (pz.fehlt.length) warnungen.push('Es fehlt: ' + pz.fehlt.map(qualiLabel).join(', '));
+      if (pz.abgelaufen.length) warnungen.push('Abgelaufen: ' + pz.abgelaufen.map(qualiLabel).join(', '));
+      const tag = jeMonteur[gewaehlt] ?? [];
+      const ue = ueberschneidungen(tag, beginn, ende, form.id);
+      if (ue.length) warnungen.push(`Überschneidet sich mit: ${ue.map((x) => x.titel || 'Einsatz').join(', ')}`);
+      const kn = engePuffer(tag, { id: form.id ?? undefined, beginn_am: beginn, ende_am: ende, einsatzort: form.einsatzort });
+      if (kn.length) warnungen.push(`Knapp: nur ${Math.min(...kn.map((k) => k.minuten))} Min. zwischen zwei Einsätzen an verschiedenen Orten`);
+    } else if (form.mitarbeiterId === CHEF) {
+      const tag = tagesListe(CHEF, form.datum);
+      if (ueberschneidungen(tag, beginn, ende, form.id).length) warnungen.push('Überschneidet sich mit einem Ihrer eigenen Einsätze.');
+    }
+    return { vorschlaege: liste.slice(0, 4), warnungen };
+  })();
+
   return (
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Field Service</div>
@@ -324,7 +402,10 @@ export default function DispoPage() {
           <h1 style={styles.h1}>Dispo-Board</h1>
           <p style={styles.sub}>Einsätze auf Monteure und Tage verteilen. Klick auf eine Kachel zum Ändern, „+" legt direkt für Monteur & Tag an.</p>
         </div>
-        <button onClick={() => neuerEinsatz()} style={styles.primaerBtn}>+ Neuer Einsatz</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href="/dashboard/dispo/qualifikationen" style={{ ...styles.ghostBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>🎓 Befähigungen</a>
+          <button onClick={() => neuerEinsatz()} style={styles.primaerBtn}>+ Neuer Einsatz</button>
+        </div>
       </div>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
@@ -426,16 +507,23 @@ export default function DispoPage() {
                           const b = e.beginn_am ? new Date(e.beginn_am) : null;
                           const si = statusInfo(e.status);
                           const abg = !belegend(e.status);
+                          const anf = anfMap[e.id] ?? [];
+                          const fehltQuali = !abg && anf.length > 0 && m.id !== CHEF && (() => { const pz = pruefeZuweisung(anf, qualis, m.id, d.datum); return pz.fehlt.length + pz.abgelaufen.length > 0; })();
                           return (
                             <button key={e.id} onClick={() => oeffneEinsatz(e)}
                               style={{ ...styles.einsatzKachel, borderColor: si.farbe, opacity: abg ? 0.5 : 1, textDecoration: abg ? 'line-through' : 'none' }}
                               title={`${e.titel ?? 'Einsatz'} · ${b ? uhr(b) : ''} · ${si.label}`}>
-                              <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}</span>
+                              <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}{fehltQuali && <span title="Dem Monteur fehlt eine verlangte Befähigung" style={{ color: C.danger, marginLeft: 4 }}>⚠</span>}</span>
                               <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.titel ?? 'Einsatz'}</span>
                             </button>
                           );
                         })}
-                        <button onClick={() => neuerEinsatz(m.id, d.datum)} style={styles.plusBtn} title="Einsatz für diesen Monteur & Tag anlegen">+</button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => neuerEinsatz(m.id, d.datum)} style={{ ...styles.plusBtn, flex: 1 }} title="Einsatz für diesen Monteur & Tag anlegen">+</button>
+                          {belegte.filter((x) => !!x.einsatzort).length > 0 && (
+                            <button onClick={() => routeOeffnen(m.id, d.datum)} disabled={routeBusy === `${m.id}__${d.datum}`} style={{ ...styles.plusBtn, flex: 1 }} title="Tagesroute in Google Maps öffnen">{routeBusy === `${m.id}__${d.datum}` ? '…' : '🗺'}</button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -474,6 +562,42 @@ export default function DispoPage() {
                   {monteure.map((m) => <option key={m.id} value={m.id}>{m.vorname} {m.nachname}</option>)}
                 </select>
               </Feld>
+              {poAktiv && (
+                <Feld label="Benötigte Befähigungen" voll>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {QUALIFIKATIONEN.map((q) => {
+                      const an = form.anforderungen.includes(q.key);
+                      return (
+                        <button key={q.key} type="button" title={q.hinweis || q.label}
+                          onClick={() => setF('anforderungen', an ? form.anforderungen.filter((k) => k !== q.key) : [...form.anforderungen, q.key])}
+                          style={{ background: an ? C.cyan : 'transparent', color: an ? C.navy : C.textDim, border: `1px solid ${an ? C.cyan : C.border}`, borderRadius: 999, padding: '4px 10px', fontSize: 12.5, cursor: 'pointer', fontWeight: 600 }}>
+                          {q.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {poPruefung && poPruefung.warnungen.length > 0 && (
+                    <div style={{ marginTop: 8, color: C.danger, fontSize: 13.5 }}>
+                      {poPruefung.warnungen.map((w, i) => <div key={i}>⚠ {w}</div>)}
+                    </div>
+                  )}
+                  {poPruefung && monteure.length > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 13.5 }}>
+                      <div style={{ color: C.textDim, marginBottom: 4 }}>Vorschlag (befähigt, frei, wenig ausgelastet):</div>
+                      {poPruefung.vorschlaege.map((v) => (
+                        <div key={v.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 3 }}>
+                          <span style={{ color: v.passt ? C.green : C.warn }}>{v.passt ? '✓' : '○'}</span>
+                          <span style={{ fontWeight: 600 }}>{v.name}</span>
+                          <span style={{ color: C.textDim }}>{v.stunden} h{v.tagesziel ? ` von ${v.tagesziel} h` : ''}{v.gruende.length ? ` · ${v.gruende.join(' · ')}` : ''}</span>
+                          {form.mitarbeiterId !== v.id && (
+                            <button type="button" onClick={() => setF('mitarbeiterId', v.id)} style={{ background: 'none', border: 'none', color: C.cyan, cursor: 'pointer', padding: 0, fontSize: 13 }}>übernehmen</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Feld>
+              )}
               <Feld label="Status">
                 <select style={styles.input} value={form.status} onChange={(e) => setF('status', e.target.value)}>
                   {STATUS_OPTIONEN.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
