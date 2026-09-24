@@ -72,6 +72,10 @@ const LEER_MANGEL = { titel: '', beschreibung: '', frist: '' };
 
 export default function BautagebuchPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // R2 (24.09.26): Daten gehoeren dem BETRIEB (Chef-ID), nicht der Person — sonst sieht der
+  // Chef nichts, was ein Monteur eintraegt. betrieb = mein_chef_id() oder die eigene ID.
+  const [betrieb, setBetrieb] = useState<string | null>(null);
+  const [istMa, setIstMa] = useState(false);
   const [projekte, setProjekte] = useState<Projekt[]>([]);
   const [projektId, setProjektId] = useState<string>('');
   const [tab, setTab] = useState<'tagebuch' | 'maengel'>('tagebuch');
@@ -101,6 +105,10 @@ export default function BautagebuchPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      let chef: string | null = null;
+      try { const r = await supabase.rpc('mein_chef_id'); chef = (r.data as string | null) ?? null; } catch { /* Chef */ }
+      setIstMa(!!chef && chef !== id);
+      setBetrieb(chef || id);
       // Filial-Zuschnitt (fail-open): nur Projekte des aktiven Standorts (+ Standort-lose) zur Auswahl.
       const sid = konkreterStandort(leseStandortCookie());
       let pq = supabase.from('projekte').select('id, name').eq('archiviert', false);
@@ -156,11 +164,11 @@ export default function BautagebuchPage() {
 
   // --- Bautagebuch-Eintrag anlegen --------------------------------------
   async function eintragSpeichern() {
-    if (!uid || !projektId) { setFehler('Bitte zuerst ein Projekt wählen.'); return; }
+    if (!uid || !betrieb || !projektId) { setFehler('Bitte zuerst ein Projekt wählen.'); return; }
     setEintragBusy(true); setFehler(null);
     try {
       const { data: neu, error } = await supabase.from('bautagebuch').insert({
-        owner_user_id: uid, projekt_id: projektId, erstellt_von: uid,
+        owner_user_id: betrieb, projekt_id: projektId, erstellt_von: uid,
         datum: eintragForm.datum || heute(),
         wetter: eintragForm.wetter.trim() || null,
         temperatur: eintragForm.temperatur.trim() || null,
@@ -180,15 +188,15 @@ export default function BautagebuchPage() {
 
   // --- Foto zu einem Eintrag hochladen ----------------------------------
   async function fotoHochladen(e: Eintrag, file: File) {
-    if (!uid) return;
+    if (!uid || !betrieb) return;
     setFotoBusy(e.id); setFehler(null);
     try {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-      const pfad = `${uid}/${e.id}/${Date.now()}.${ext}`;
+      const pfad = `${betrieb}/${e.id}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('baustellen-fotos').upload(pfad, file, { upsert: false });
       if (upErr) throw upErr;
       const { error: refErr } = await supabase.from('baustellen_fotos').insert({
-        owner_user_id: uid, bautagebuch_id: e.id, pfad, dateiname: file.name,
+        owner_user_id: betrieb, bautagebuch_id: e.id, pfad, dateiname: file.name, erstellt_von: uid,
       });
       if (refErr) throw refErr;
       await laden_();
@@ -197,6 +205,7 @@ export default function BautagebuchPage() {
     } finally { setFotoBusy(null); }
   }
   async function fotoLoeschen(f: Foto) {
+    if (istMa) { setFehler('Fotos löschen kann nur die Geschäftsleitung.'); return; }
     if (!window.confirm('Dieses Foto löschen?')) return;
     setFehler(null);
     try {
@@ -211,12 +220,12 @@ export default function BautagebuchPage() {
 
   // --- Mängel ------------------------------------------------------------
   async function mangelSpeichern() {
-    if (!uid || !projektId) { setFehler('Bitte zuerst ein Projekt wählen.'); return; }
+    if (!uid || !betrieb || !projektId) { setFehler('Bitte zuerst ein Projekt wählen.'); return; }
     if (!mangelForm.titel.trim()) { setFehler('Bitte einen Titel für den Mangel angeben.'); return; }
     setMangelBusy(true); setFehler(null);
     try {
       const { error } = await supabase.from('maengel').insert({
-        owner_user_id: uid, projekt_id: projektId,
+        owner_user_id: betrieb, projekt_id: projektId,
         titel: mangelForm.titel.trim(), beschreibung: mangelForm.beschreibung.trim() || null,
         frist: mangelForm.frist || null, status: 'offen',
       });
@@ -230,6 +239,7 @@ export default function BautagebuchPage() {
   async function mangelWeiter(m: Mangel) {
     const ziel = naechsterMangelStatus(m.status);
     if (!ziel) return;
+    if (istMa && ziel === 'abgenommen') { setFehler('Abnehmen kann nur die Geschäftsleitung.'); return; }
     setFehler(null);
     try {
       const patch: Record<string, unknown> = { status: ziel };
@@ -242,6 +252,7 @@ export default function BautagebuchPage() {
     }
   }
   async function mangelLoeschen(m: Mangel) {
+    if (istMa) { setFehler('Mängel löschen kann nur die Geschäftsleitung.'); return; }
     if (!window.confirm(`Mangel „${m.titel}" löschen?`)) return;
     setFehler(null);
     try {
