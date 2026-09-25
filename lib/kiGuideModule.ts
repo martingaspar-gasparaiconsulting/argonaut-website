@@ -158,6 +158,8 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
   // am Code geprueften Wissensbasis (lib/guideWissen.ts). Die alten Texte hier
   // versprachen Dinge, die es so nicht gibt (z. B. „Rechnung anlegen", „Kontostand
   // eintragen", „jede Mahnung wird protokolliert").
+  // Paket A2d: ebenso Filialvergleich, Wer sieht was, Schnittstellen,
+  // Datensicherung und Automationen.
   '/dashboard/auftraege': {
     nachricht:
       'Beauftragte Arbeiten mit Status. Der Auftrag verbindet Angebot, Termine, Einsätze und die spätere Rechnung.',
@@ -254,51 +256,6 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
       'Vorlage suchen und kopieren',
       'Als Chef oder Leitung eigene Vorlagen anlegen',
       'Bestehende Vorlagen aus den Bausteinen importieren',
-    ],
-  },
-  '/dashboard/schnittstellen': {
-    nachricht:
-      'Die eine Zentrale für alle Zugänge. Solange kein echter Zugang hinterlegt ist, arbeitet ein Baustein im Demo-Modus: Er rechnet richtig, schickt aber nichts nach draußen.',
-    schritte: [
-      'Bereich aufklappen und der Anleitung folgen',
-      'Zugangsdaten eintragen und auf aktiv stellen',
-      'Einen Vorgang zur Probe durchlaufen lassen',
-    ],
-  },
-  '/dashboard/automationen': {
-    nachricht:
-      'Wiederkehrende Abläufe einmal hinterlegen, statt sie jeden Tag von Hand zu machen: Wenn etwas passiert, tut das System etwas.',
-    schritte: [
-      'Mit einer der fertigen Vorlagen starten',
-      'Auslöser und Aktion prüfen',
-      'Erst zur Probe laufen lassen, dann scharf schalten',
-    ],
-  },
-  '/dashboard/datensicherung': {
-    nachricht:
-      'Ihre Daten gehören Ihnen. Hier laden Sie den kompletten Bestand als Excel-Mappe herunter — je Bereich ein Blatt.',
-    schritte: [
-      'Komplett-Backup als Excel erzeugen',
-      'Datei außerhalb des Systems ablegen',
-      'Die JSON-Fassung finden Sie in der Voll-Ansicht',
-    ],
-  },
-  '/dashboard/filialvergleich': {
-    nachricht:
-      'Ihre Standorte nebeneinander: Umsatz, offene Posten, Kasse, Aufträge und wer heute vor Ort ist — entsandte Kräfte eingerechnet.',
-    schritte: [
-      'Stärkste und schwächste Filiale vergleichen',
-      'Vorgänge ohne Filiale getrennt prüfen',
-      'Personal bei Bedarf befristet entsenden',
-    ],
-  },
-  '/dashboard/wer-sieht-was': {
-    nachricht:
-      'Die ehrliche Antwort auf die wichtigste Rechtefrage: Welche Bausteine sieht welche Person wirklich — nach Sitz-Typ, Rolle und Filiale gerechnet.',
-    schritte: [
-      'Person aufklappen und sichtbare Bausteine prüfen',
-      'Änderungen nehmen Sie unter „Rechte" vor',
-      'Filialbezogenes stellen Sie unter „Filial-Module" ein',
     ],
   },
 };
