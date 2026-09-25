@@ -153,24 +153,11 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
       'Nach der Zusage aus dem Angebot die Rechnung erzeugen',
     ],
   },
-  '/dashboard/rechnungen': {
-    nachricht:
-      'Ihre Ausgangsrechnungen. Die Nummern werden fortlaufend je Betrieb vergeben, das PDF erfüllt § 14 UStG und trägt Ihr Logo und Ihre Farben.',
-    schritte: [
-      'Rechnung anlegen oder aus Angebot/Auftrag übernehmen',
-      'Vor dem Versand die Positionen und den Steuersatz prüfen',
-      'Offene Posten laufen automatisch ins Mahnwesen',
-    ],
-  },
-  '/dashboard/mahnwesen': {
-    nachricht:
-      'Alle überfälligen Rechnungen an einem Ort — mit Stufen von der freundlichen Erinnerung bis zur letzten Mahnung.',
-    schritte: [
-      'Die Arbeitsliste zeigt, was wirklich fällig ist',
-      'Stufe wählen und Mahnung erzeugen',
-      'Jede Mahnung wird protokolliert',
-    ],
-  },
+  // Paket A2c (25.09.2026): Rechnungen, Mahnwesen, Nachkalkulation, Beleg-Inbox,
+  // Finanzen, DATEV, USt-Voranmeldung und Report-Baukasten sprechen jetzt aus der
+  // am Code geprueften Wissensbasis (lib/guideWissen.ts). Die alten Texte hier
+  // versprachen Dinge, die es so nicht gibt (z. B. „Rechnung anlegen", „Kontostand
+  // eintragen", „jede Mahnung wird protokolliert").
   '/dashboard/auftraege': {
     nachricht:
       'Beauftragte Arbeiten mit Status. Der Auftrag verbindet Angebot, Termine, Einsätze und die spätere Rechnung.',
@@ -199,51 +186,6 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
     ],
     aktionText: 'Zur Nachkalkulation',
     aktionHref: '/dashboard/nachkalkulation',
-  },
-  '/dashboard/nachkalkulation': {
-    nachricht:
-      'Hier sehen Sie, ob ein Projekt sein Budget hält: geplante Summe gegen tatsächlich geleistete Stunden — über Budget zuerst.',
-    schritte: [
-      'Rote Zeilen zuerst ansehen',
-      'Offene Leistungen abrechnen, bevor sie liegen bleiben',
-      'Stunden und Auslastung zeigt die Voll-Ansicht',
-    ],
-  },
-  '/dashboard/eingangsbelege': {
-    nachricht:
-      'Ihre Eingangsrechnungen. Ein Foto genügt — das System liest Lieferant, Datum, Netto, Umsatzsteuer und Brutto selbst aus und meldet sich, wenn die Summen nicht zusammenpassen.',
-    schritte: [
-      'Beleg fotografieren oder hochladen',
-      'Vorgeschlagene Werte prüfen und bestätigen',
-      'Der Beleg fließt in EÜR und DATEV-Export ein',
-    ],
-  },
-  '/dashboard/finanzen': {
-    nachricht:
-      'Der Geldfluss auf einen Blick: offene Posten, Zahlungen, Cashflow-Vorschau und Sammelüberweisung.',
-    schritte: [
-      'Die Cashflow-Vorschau zeigt zwölf Wochen nach vorn',
-      'Kontostand und Fixkosten einmal eintragen',
-      'Überweisungen als SEPA-Datei fürs Online-Banking erzeugen',
-    ],
-  },
-  '/dashboard/datev': {
-    nachricht:
-      'Der Export für Ihre Steuerkanzlei: ein echter DATEV-Buchungsstapel im EXTF-Format, Ausgangsrechnungen und Eingangsbelege zusammen.',
-    schritte: [
-      'Berater- und Mandantennummer einmal unter Schnittstellen hinterlegen',
-      'Zeitraum wählen',
-      'Stapel herunterladen und der Kanzlei geben',
-    ],
-  },
-  '/dashboard/elster': {
-    nachricht:
-      'Die Umsatzsteuer-Voranmeldung wird aus Ihren Zahlen berechnet — mit den amtlichen Kennziffern. Die Übertragung machen Sie im ELSTER-Portal.',
-    schritte: [
-      'Zeitraum wählen und berechnen lassen',
-      'Als PDF oder CSV herunterladen',
-      'Zahlen im ELSTER-Portal eintragen',
-    ],
   },
   '/dashboard/personal': {
     nachricht:
@@ -339,15 +281,6 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
       'Komplett-Backup als Excel erzeugen',
       'Datei außerhalb des Systems ablegen',
       'Die JSON-Fassung finden Sie in der Voll-Ansicht',
-    ],
-  },
-  '/dashboard/reports': {
-    nachricht:
-      'Auswertungen selbst zusammenstellen: Quelle, Kennzahl, Gruppierung, Zeitraum. Fertige Auswertungen können sich regelmäßig per Mail melden.',
-    schritte: [
-      'Quelle und Kennzahl wählen',
-      'Auswertung speichern, damit sie erhalten bleibt',
-      'Bei Bedarf einen festen Versandtag einstellen',
     ],
   },
   '/dashboard/filialvergleich': {
