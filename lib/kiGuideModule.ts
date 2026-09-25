@@ -23,6 +23,7 @@
 // ============================================================================
 
 import type { GuideInhalt } from './kiGuideTexte';
+import { wissenFuer } from './guideWissen';
 
 /** Was diese Datei von einem Navigationseintrag braucht — mehr nicht. */
 export type GuideNav = {
@@ -392,6 +393,21 @@ export function modulGuide(pfad: string | null | undefined, links: readonly Guid
       schritte: eigener.schritte.slice(0, 3),
       aktionText: eigener.aktionText,
       aktionHref: eigener.aktionHref,
+      stimmung: 'neutral',
+      fortschritt: -1,
+    };
+  }
+
+  // Paket A2: Wissensbasis je Seite (lib/guideWissen.ts) vor dem Einheitssatz.
+  const w = wissenFuer(pfad);
+  if (w) {
+    const ziel = (w.wissen.landetIn ?? []).find((v) => v.href);
+    return {
+      begruessung: titel,
+      nachricht: w.wissen.zweck,
+      schritte: w.wissen.schritte.slice(0, 3),
+      aktionText: ziel ? `Weiter: ${ziel.text}` : undefined,
+      aktionHref: ziel?.href,
       stimmung: 'neutral',
       fortschritt: -1,
     };

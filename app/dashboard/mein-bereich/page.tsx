@@ -620,6 +620,9 @@ export default function MeinBereichPage() {
                   <Field label="AU-Bescheinigung (optional)">
                     <input type="file" style={styles.fileInput} onChange={(e: ChangeEvent<HTMLInputElement>) => setAuFile(e.target.files?.[0] ?? null)} />
                   </Field>
+                  <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: C.textDim, lineHeight: 1.45 }}>
+                    Bitte melden Sie sich am ersten Tag sofort krank. Die Krankschreibung ruft Ihr Betrieb elektronisch bei Ihrer Krankenkasse ab — die Datei ist nur ein zusätzlicher Nachweis. Privat versichert oder Bescheinigung nur auf Papier? Dann bitte hier hochladen.
+                  </div>
                   <button style={{ ...styles.primaryBtn, opacity: kSaving ? 0.6 : 1 }} onClick={krankMelden} disabled={kSaving}>{kSaving ? 'Sendet …' : 'Krankheit melden'}</button>
                 </div>
               </section>

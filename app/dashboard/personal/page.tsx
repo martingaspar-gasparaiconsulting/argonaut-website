@@ -1252,7 +1252,7 @@ function AbwesenheitenTab({ id, rows, loading, msg, setMsg, reload, urlaubsanspr
         <input type="date" style={styles.input} value={von} onChange={(e) => setVon(e.target.value)} />
         <input type="date" style={styles.input} value={bis} onChange={(e) => setBis(e.target.value)} />
         {typ === 'krankheit' && (
-          <label style={styles.checkLabel}><input type="checkbox" checked={au} onChange={(e) => setAu(e.target.checked)} /> AU liegt vor</label>
+          <label style={styles.checkLabel} title="Gesetzlich Versicherte: Die AU rufen Sie elektronisch bei der Krankenkasse ab (eAU) — über Ihr Lohnprogramm oder Ihr Steuerbüro. Den Haken setzen, sobald sie vorliegt."><input type="checkbox" checked={au} onChange={(e) => setAu(e.target.checked)} /> AU liegt vor (eAU abgerufen)</label>
         )}
         <button style={{ ...styles.primaryBtn, opacity: saving ? 0.6 : 1 }} onClick={hinzufuegen} disabled={saving}>+ Hinzufügen</button>
       </div>
