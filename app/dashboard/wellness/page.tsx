@@ -112,6 +112,8 @@ export default function WellnessPage() {
       <p style={styles.sub}>Kundenkartei mit Hinweisen und Behandlungshistorie. Reines Verwaltungswerkzeug — keine medizinische Beratung.</p>
       <div style={{ marginTop: 10 }}>
         <a href="/dashboard/wellness/praxis" style={styles.praxisLink}>🩺 Praxis-Paket: Recall · Ausfallhonorar · Einwilligungen · geschützte Gesundheitsangaben · Werbe-Prüfer</a>
+        {/* Paket PS3 (25.09.26): Nachkauf-Erinnerung */}
+        <a href="/dashboard/wellness/nachkauf" style={{ ...styles.praxisLink, marginLeft: 8 }}>🧴 Nachkauf-Erinnerung</a>
       </div>
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

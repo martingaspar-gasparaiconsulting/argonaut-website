@@ -184,6 +184,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
+  { label: '🛡 Schadenabwicklung', href: '/dashboard/kfz/schaden', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   { label: '🛎️ Housekeeping & Karte', href: '/dashboard/housekeeping', modul: 'housekeeping', ebene: 3, gruppe: 'betrieb' },
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
@@ -199,12 +201,16 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧾 Betriebskosten', href: '/dashboard/betriebskosten', modul: 'betriebskosten', ebene: 3, sensibel: true, gruppe: 'betrieb' },
   { label: '💻 IT & MSP', href: '/dashboard/it-msp', modul: 'it-msp', ebene: 3, gruppe: 'betrieb' },
   { label: '🖥️ Assets & Lizenzen', href: '/dashboard/itassets', modul: 'itassets', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS3 (25.09.26): SLA-Bericht aus tickets + it_sla — Unterpfad von /dashboard/itassets, erbt dessen Freigabe.
+  { label: '📈 SLA-Bericht', href: '/dashboard/itassets/sla', ebene: 3, gruppe: 'betrieb' },
   { label: '🎨 Agentur & Kreativ', href: '/dashboard/agentur', modul: 'agentur-kreativ', ebene: 3, gruppe: 'betrieb' },
   { label: '💆 Gesundheit & Wellness', href: '/dashboard/wellness', modul: 'wellness', ebene: 3, gruppe: 'betrieb' },
   // Paket PQ (24.09.26): Praxis-Paket — Recall, Ausfallhonorar, Einwilligungen, geschuetzte
   // Gesundheitsangaben (verschluesselt, Zugriffsprotokoll), Werbe-Pruefer HWG. Unterpfad von
   // /dashboard/wellness, erbt dessen Freigabe. Gesundheitsangaben selbst nur mit eigener Freigabe (RLS).
   { label: '🩺 Praxis-Paket', href: '/dashboard/wellness/praxis', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS3 (25.09.26): Nachkauf-Erinnerung (§ 7 Abs. 3 UWG) — Unterpfad von /dashboard/wellness.
+  { label: '🧴 Nachkauf-Erinnerung', href: '/dashboard/wellness/nachkauf', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Kanzlei & Steuer', href: '/dashboard/kanzlei', modul: 'kanzlei', ebene: 3, gruppe: 'betrieb' },
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
   { label: '🏫 Räume & Ressourcen', href: '/dashboard/raeume', modul: 'raeume', ebene: 3, gruppe: 'betrieb' },
@@ -217,6 +223,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧮 Kalkulator', href: '/dashboard/kalkulator', modul: 'kalkulator', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Landwirtschaft', href: '/dashboard/landwirtschaft', modul: 'landwirtschaft', ebene: 3, gruppe: 'betrieb' },
   { label: '🐾 Tier-Fachpaket', href: '/dashboard/tier', modul: 'tier', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS3 (25.09.26): Impf-Erinnerung an Halter — Unterpfad von /dashboard/tier.
+  { label: '💉 Impf-Erinnerung', href: '/dashboard/tier/erinnerung', ebene: 3, gruppe: 'betrieb' },
   { label: '🤝 Verein & Sozial', href: '/dashboard/verein', modul: 'verein', ebene: 3, gruppe: 'betrieb' },
   { label: '🚚 Logistik', href: '/dashboard/logistik', modul: 'logistik', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
@@ -255,6 +263,8 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PR (24.09.26): Kassen-Meldung § 146a Abs. 4 AO — Unterpfad der Kasse, erbt deren Freigabe.
   { label: '🏛 Kassen-Meldung', href: '/dashboard/kasse/meldung', ebene: 3, gruppe: 'lager' },
   { label: '🛒 Shop / Marktplatz', href: '/dashboard/shop', modul: 'shop', ebene: 3, gruppe: 'lager' },
+  // Paket PS3 (25.09.26): Retouren & Widerruf — Unterpfad von /dashboard/shop, erbt dessen Freigabe.
+  { label: '↩️ Retouren & Widerruf', href: '/dashboard/shop/retouren', ebene: 3, gruppe: 'lager' },
   // Alt-Hinweis (15.07.26): Der Punkt „Agenten/Automatisierungen" war ein Schaufenster
   // ohne Funktion und flog raus. Seit 15.08.26 gibt es unter „Verwaltung" den echten
   // Automations-Bauer (/dashboard/automationen) — Regel-Engine mit Cron-Motor und

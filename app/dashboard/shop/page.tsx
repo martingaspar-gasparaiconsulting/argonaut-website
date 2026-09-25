@@ -229,6 +229,8 @@ export default function ShopPage() {
             Bestellungen aus Ihrem Online-Shop an einem Ort. Im <strong>Manuell-Modus</strong> per CSV importieren;
             mit hinterlegtem Anbieter (unter „🔌 Schnittstellen") später automatisch per Schnittstelle.
           </p>
+          {/* Paket PS3 (25.09.26): Retouren & Widerruf */}
+          <a href="/dashboard/shop/retouren" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>↩️ Retouren &amp; Widerruf: Frist · Erstattung · Lager</a>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
           <span style={{ ...styles.badge, color: modus === 'live' ? C.green : C.warn, borderColor: modus === 'live' ? C.green : C.warn }}>

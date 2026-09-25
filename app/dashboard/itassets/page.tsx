@@ -224,6 +224,8 @@ export default function ItAssetsSeite() {
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ margin: 0, fontSize: "clamp(26px,2.25vw,36px)", fontWeight: 800 }}>🖥️ Assets & Lizenzen</h1>
         <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: "clamp(14px,1.25vw,20px)" }}>IT-Assets mit Garantie, Lizenzen mit Plätzen & Ablauf und Service-Level-Agreements je Kunde</p>
+        {/* Paket PS3 (25.09.26): SLA-Bericht aus den Tickets */}
+        <a href="/dashboard/itassets/sla" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📈 SLA-Bericht je Kunde und Monat</a>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>

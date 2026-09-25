@@ -96,6 +96,8 @@ export default function ItMspPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>💻 IT & MSP</h1>
+      {/* Paket PS3 (25.09.26): SLA-Bericht (liegt unter Assets & Lizenzen, dort stehen die SLA-Verträge) */}
+      <a href="/dashboard/itassets/sla" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📈 SLA-Bericht je Kunde und Monat</a>
       {!laden && (
         <div style={{ marginTop: 14 }}>
           <KiAuge modul="IT & MSP" aktionHref="/dashboard/it-msp" aktionText="Zu den Wartungsverträgen"
