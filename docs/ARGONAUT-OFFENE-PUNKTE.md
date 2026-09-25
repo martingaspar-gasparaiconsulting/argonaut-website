@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 1 von 45 erledigt** (A3 mit _p107; A1 und A2 zählen nicht mit, sie waren vorher fertig)
+**Stand: 3 von 45 erledigt** (A3 live, A4 + A5 mit _p108; A1 und A2 zählen nicht mit, sie waren vorher fertig)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -11,9 +11,9 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 |---|---|---|
 | A1 | Personalakte | ✅ live |
 | A2 | Wissensbasis für alle 188 Menüseiten | ✅ live (_p106, c7f0fa2) |
-| A3 | Guide nach Rolle, Rang und Datenstand | ✅ gebaut (_p107) |
-| A4 | Lehrplan Matrose bis Kapitän | ⬜ |
-| A5 | Chat-Assistent ersetzen (alte Preise, „24 KI-Agenten") | ⬜ |
+| A3 | Guide nach Rolle, Rang und Datenstand | ✅ live (_p107, 807acd0) |
+| A4 | Lehrplan Matrose bis Kapitän | ✅ gebaut (_p108) |
+| A5 | Chat-Assistent ersetzen (alte Preise, „24 KI-Agenten") | ✅ gebaut (_p108) |
 
 ## 2. Schwerer Querschnitt
 
@@ -81,7 +81,17 @@ Ablauf: Claude schreibt vorher je Punkt **Fehler + Lösung** auf, dann wird geba
 | K4 | Leertexte versprechen, was es nicht gibt („Kaution buchen", „in Angebot übernehmen", Standort-Feld, Stunden im Bautagebuch) | ⬜ |
 | K5 | Für ca. 20 Branchen-Tabellen fehlt die SQL-Datei im Repo — eine Leseabfrage in Supabase klärt die Zugriffsregeln | ⬜ |
 
-## 6. Danach
+## 6. Ganz am Ende — Test-Checklisten und Testtage (Martins Auftrag 25.09.)
+
+Erst nach allen 44 Punkten. Drei Checklisten, jede in logischer Reihenfolge, jede mit eigenem Testtag:
+
+1. **Martin als ARGONAUT-Betreiber** — Kunden anlegen, freischalten, betreuen, abrechnen
+2. **Der Kunde** (Chef eines Betriebs, z. B. Elektrobetrieb) — vom ersten Login bis zum Monatsabschluss
+3. **Mitarbeiter des Kunden** — vom Einladungs-Link bis zum Arbeitsalltag
+
+Je Testtag durch alle Module: Läuft es? Kommt es an? Kommt es **richtig** an (beim Chef, beim Mitarbeiter, in Rechnung, Finanzen, Auswertung)?
+Danach Abgleich mit dem Anwaltstermin: offene Punkte aus der Anwalt-Checkliste (Teil 1 und 2) mit aufnehmen.
+
+## 7. Danach
 
 - Brainstorming (u. a. „mit einem Klick in alle Branchenverzeichnisse")
-- Testtag So 27.09.

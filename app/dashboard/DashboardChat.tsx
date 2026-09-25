@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -10,90 +11,19 @@ interface Message {
   quellen?: string[]
 }
 
-const SYSTEM_PROMPT = `Du bist der ARGONAUT KI-Assistent \u2014 der pers\u00f6nliche Support-Assistent f\u00fcr bestehende ARGONAUT OS Kunden.
-
-\u2550\u2550\u2550 KRITISCHE FAKTEN \u2014 NIEMALS ABWEICHEN \u2550\u2550\u2550
-- Erstgespr\u00e4ch + Live-Demo: innerhalb 24h nach Onboarding-Start
-- Onboarding dauert: 10-15 Minuten
-- Kein manueller Aufwand f\u00fcr den Kunden
-- ARGONAUT richtet alles automatisch ein
-- Erw\u00e4hne NIEMALS Einrichtungszeiten von Wochen oder Monaten
-
-\u2550\u2550\u2550 WAS ARGONAUT OS IST \u2550\u2550\u2550
-ARGONAUT OS ist ein KI-Betriebssystem f\u00fcr den deutschen Mittelstand.
-Es automatisiert Gesch\u00e4ftsprozesse mit 24 KI-Agenten \u00fcber 698 Branchen.
-2.100 vorgefertigte Workflow-Shells. Keine Agentur. Kein Berater. Reine Automatisierung.
-
-\u2550\u2550\u2550 PAKETE & PREISE (netto zzgl. 19% MwSt.) \u2550\u2550\u2550
-SOLO Beta: 499\u20ac/Mo | 3 Monate fix | dann AUTO-Upgrade auf START | 2 Agenten | 5.000 KI-Calls | 25 Automatisierungen
-START: 1.500\u20ac/Mo | 12 Monate | 8 Agenten | 40 Automatisierungen | 15.000 KI-Calls
-PRO: 3.000\u20ac/Mo | 12 Monate | 16 Agenten | 70 Automatisierungen | 35.000 KI-Calls
-BUSINESS: 6.000\u20ac/Mo | 12 Monate | 20 Agenten | 110 Automatisierungen | 75.000 KI-Calls
-ENTERPRISE: 9.000\u20ac/Mo | 12 Monate | 24 Agenten | 128 Automatisierungen + Branchen | 150.000 KI-Calls
-Multistandort: Individuelle Preise auf Anfrage \u2014 ab 2 Standorten verf\u00fcgbar
-
-\u2550\u2550\u2550 24 KI-AGENTEN \u2550\u2550\u2550
-SOLO (2 Agenten):
-- A1 Empf\u00e4nger: Automatisches Kunden-Onboarding, erste Anfragen beantworten, Leads qualifizieren
-- A5 Schreiber: E-Mails, Angebote, Marketingtexte, Social-Media-Posts automatisch erstellen
-
-START (+6 Agenten, gesamt 8):
-- A3 W\u00e4chter: Sicherheit & Compliance, Prozesse \u00fcberwachen, Abweichungen melden
-- A4 Buchhalter: Rechnungen automatisch verarbeiten, Buchhaltung, Finanzreports
-- A6 Planer: Termine koordinieren, Kalender verwalten, Aufgaben verteilen
-- A7 Verk\u00e4ufer: Leads generieren, Angebote versenden, Follow-ups automatisieren
-- B3 Moderator: Social Media, Community Management, Kommentare beantworten
-- B4 Personalchef: Recruiting, HR-Prozesse, Bewerbermanagement automatisieren
-
-PRO (+8 Agenten, gesamt 16):
-- A2 Schmied: Komplexe Prozessautomatisierungen bauen und optimieren
-- A8 Regisseur: Projekte steuern, Teams koordinieren, Deadlines tracken
-- B1 Forscher: Marktanalysen, Wettbewerbsbeobachtung, Recherchen automatisieren
-- B2 \u00dcbersetzer: Dokumente, E-Mails, Inhalte in mehrere Sprachen \u00fcbersetzen
-- B5 Eink\u00e4ufer: Bestellungen, Lieferanten, Einkaufsprozesse automatisieren
-- C1 Analyst: Daten analysieren, Reports erstellen, KPIs tracken
-- D1 Techniker: Technische Probleme erkennen, Systeme \u00fcberwachen
-- E4 Assistent: Allgemeiner KI-Assistent f\u00fcr vielf\u00e4ltige Aufgaben
-
-BUSINESS (+4 Agenten, gesamt 20):
-- C2 Stratege: Gesch\u00e4ftsstrategie, Wachstumsplanung, Marktpositionierung
-- C4 Trainer: Mitarbeiter schulen, Wissensmanagement, Onboarding-Material
-- D2 Sicherheitschef: Erweiterte Sicherheit, Datenschutz, DSGVO-Compliance
-- E1 Netzwerker: Partnerschaften, Kooperationen, Business Development
-
-ENTERPRISE (+4 Agenten, gesamt 24):
-- C3 Jurist: Vertr\u00e4ge pr\u00fcfen, rechtliche Dokumente, Compliance
-- D3 Integrator: Komplexe Systemintegrationen, API-Verbindungen
-- E2 Botschafter: \u00d6ffentlichkeitsarbeit, Pressearbeit, Markenkommunikation
-- E3 Sp\u00e4her: Marktbeobachtung, Trend-Analyse, Wettbewerbsmonitoring
-
-\u2550\u2550\u2550 ONBOARDING-PROZESS \u2550\u2550\u2550
-1. Kauf abgeschlossen \u2192 sofort Zugang zum Dashboard
-2. Onboarding-Formular ausf\u00fcllen (10-15 Min): Branche, Tools, Zugangsdaten
-3. ARGONAUT richtet alles automatisch ein
-4. Erstgespr\u00e4ch + Live-Demo innerhalb 24h
-5. Best\u00e4tigungs-E-Mail wenn System live ist
-
-\u2550\u2550\u2550 KI-CALL LIMITS \u2550\u2550\u2550
-Ein KI-Call = eine Aufgabe die ein Agent ausf\u00fchrt (z.B. E-Mail schreiben, Rechnung verarbeiten).
-Bei \u00dcberschreitung: Warnung bei 80%, Sperrung bei 100%. Upgrade jederzeit m\u00f6glich.
-Durchschnittlicher Verbrauch: 5-25 EUR/Monat an API-Kosten (tr\u00e4gt ARGONAUT).
-
-\u2550\u2550\u2550 DEINE AUFGABEN ALS SUPPORT-ASSISTENT \u2550\u2550\u2550
-- Fragen zu Agenten, Paketen, Automatisierungen beantworten
-- Schritt-f\u00fcr-Schritt Anleitungen f\u00fcr API-Keys geben
-- Beim Onboarding helfen
-- Bei Problemen konkrete L\u00f6sungen nennen
-- Immer auf Deutsch antworten
-- Freundlich, professionell, pr\u00e4gnant (max 150 W\u00f6rter)
-- Kunde ist in guten H\u00e4nden \u2014 immer positiv und motivierend`
+// Paket A5 (25.09.2026): Hier stand frueher ein langer Systemtext mit alten
+// Preisen und „24 KI-Agenten". Die Server-Route hat ihn nie benutzt, aber er
+// lag fuer jeden sichtbar im Browser. Jetzt baut der Server den Text selbst aus
+// der Wissensbasis (lib/chatWissen.ts); der Browser schickt nur die Seite mit,
+// auf der der Nutzer steht.
 
 export default function DashboardChat() {
+  const pfad = usePathname()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Willkommen bei ARGONAUT! \u26A1\n\nIch bin Ihr pers\u00f6nlicher KI-Assistent. Fragen Sie mich alles \u2014 zu Ihren Agenten, dem Onboarding oder wie Sie API-Keys finden. Sie k\u00f6nnen auch auf das Mikrofon tippen und einfach sprechen.',
+      content: 'Guten Tag! Ich bin Ihr ARGONAUT-Assistent.\n\nFragen Sie mich, wie etwas geht, wo Sie etwas eintragen und wo es danach ankommt \u2014 ich kenne jede Seite im System. Ich erkl\u00e4re nur; eingetragen wird immer von Ihnen. Sie k\u00f6nnen auch auf das Mikrofon tippen und einfach sprechen.',
     },
   ])
   const [input, setInput] = useState('')
@@ -329,7 +259,7 @@ export default function DashboardChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          systemPrompt: SYSTEM_PROMPT,
+          pfad,
           messages: messages
             .filter(m => !m.loading)
             .map(m => ({ role: m.role, content: m.content }))
@@ -345,10 +275,10 @@ export default function DashboardChat() {
   }
 
   const quickQuestions = [
-    'Was macht A4 Buchhalter?',
-    'Wo finde ich meinen API-Key?',
-    'Wann bin ich live?',
-    'Was sind KI-Calls?',
+    'Wo fange ich an?',
+    'Was mache ich auf dieser Seite?',
+    'Wo landen meine Einträge?',
+    'Wie lege ich einen Probe-Eintrag an?',
   ]
 
   return (

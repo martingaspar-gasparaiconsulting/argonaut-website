@@ -5,12 +5,19 @@
 // gibt sie der KI als Kontext -> der Chat beantwortet Fragen wie
 // "Wie viele Rechnungen sind offen?" mit echten Zahlen.
 // Getrennt von /api/mitarbeiter-chat (das macht Dokumenten-RAG).
-// Erwartet Body: { messages: [{ role:'user'|'assistant', content }] }
+// Erwartet Body: { messages: [{ role:'user'|'assistant', content }], pfad?: '/dashboard/...' }
+// Paket A5 (25.09.2026): Der Systemtext kommt aus lib/chatWissen.ts — Regeln,
+// Wissensbasis der aktuellen und der passenden Seiten, Menue, Startreihenfolge.
+// Die Rolle wird HIER bestimmt (mitarbeiter-Datensatz vorhanden?), nie aus dem
+// Browser uebernommen. Mitarbeiter bekommen keine Geld-Kennzahlen und keine
+// Namen krankgemeldeter Kollegen (Gesundheitsdaten).
 // Antwort: { antwort: string }
 // ============================================================
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { NAV_LINKS } from "@/lib/rechte";
+import { chatSystemText, sichererPfad, letzteFrage, type ChatRolle } from "@/lib/chatWissen";
 
 export const runtime = "nodejs";
 
@@ -39,6 +46,9 @@ export async function POST(req: Request) {
     }
 
     // --- Live-Daten laden (parallel, defensiv) ---
+    const { data: maSelbst } = await supabase.from("mitarbeiter").select("id").eq("auth_user_id", user.id).maybeSingle();
+    const rolle: ChatRolle = maSelbst ? "mitarbeiter" : "chef";
+
     const [usageR, leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR] = await Promise.all([
       supabase.from("usage_tracking").select("ki_calls_used, ki_calls_limit").eq("user_id", user.id).order("periode_start", { ascending: false }).limit(1).single(),
       supabase.from("leads").select("id, status"),
@@ -97,8 +107,8 @@ export async function POST(req: Request) {
     const kiLimit = usageR.data?.ki_calls_limit ?? 15000;
 
     // --- Live-Kontext fuer die KI ---
-    const liveDaten =
-`AKTUELLE BETRIEBSDATEN (Live-Stand, Datum ${heute}):
+    const liveDaten = rolle === "chef"
+? `AKTUELLE BETRIEBSDATEN (Live-Stand, Datum ${heute}):
 - Offene Leads: ${leadsOffen} (insgesamt ${leads.length} Leads erfasst)
 - Aktive Verkaufschancen: ${chancenAktiv.length}, Pipeline-Wert: ${eur(chancenSumme)}
 - Offene Aufträge: ${auftraegeOffen} (insgesamt ${auftraege.length})
@@ -109,20 +119,22 @@ export async function POST(req: Request) {
 - Mitarbeiter: ${mitarbeiterAktiv} aktiv (insgesamt ${mitarbeiter.length} erfasst)
 - Aktuell krankgemeldet: ${kranke.length}${krankeNamen.length ? " (" + krankeNamen.join(", ") + ")" : ""}
 - Jetzt eingestempelt (im Dienst): ${eingestempelt}
-- KI-Calls diesen Monat: ${kiUsed} von ${kiLimit}`;
+- KI-Anfragen diesen Monat: ${kiUsed} von ${kiLimit}
+Nennen Sie konkrete Zahlen aus diesen Daten. Steht eine Zahl nicht darin, sagen Sie das ehrlich und nennen Sie die Seite, auf der man nachsehen kann.`
+: `AKTUELLE DATEN (Live-Stand, Datum ${heute}) — nur, was ein Mitarbeiter sehen darf:
+- Offene Aufträge: ${auftraegeOffen}
+- Laufende Projekte: ${projekteLaufend}
+Geld-Zahlen (Rechnungen, Umsatz) und Abwesenheiten von Kollegen nennen Sie einem Mitarbeiter NICHT — dafür ist der Chef zuständig.`;
 
-    const SYSTEM_PROMPT =
-`Du bist der ARGONAUT KI-Assistent im Dashboard des Betriebsinhabers. Du hilfst ihm, seinen Betrieb auf einen Blick zu verstehen und schnelle Antworten zu seinen aktuellen Zahlen zu geben.
-
-Dir liegen die aktuellen Live-Kennzahlen aus seinem System vor (siehe unten). Beantworte Fragen dazu präzise, freundlich und auf Deutsch. Nenne konkrete Zahlen aus den Daten. Wenn eine gewünschte Information NICHT in den Kennzahlen steht, sage das ehrlich und weise ggf. auf das passende Modul im Dashboard hin (z. B. Rechnungen, Leads, Personal, Projekte).
-
-Halte dich kurz und klar (in der Regel unter 120 Wörtern). Schreibe in einfachen, klaren Absätzen.
-
-WICHTIG — Formatierung: Verwende KEINE Markdown-Zeichen. Keine Sternchen für Fettschrift (** oder *), keine Rauten (#), keine Backticks. Wenn du etwas aufzählst, schreibe jeden Punkt in eine eigene Zeile, die mit einem Spiegelstrich (–) beginnt. Trenne Gedanken durch normale Absätze (Leerzeile). Deine Antworten werden teils laut vorgelesen — schreibe deshalb ausschließlich natürlichen Fließtext ohne Sonderzeichen-Formatierung.
-
-Nenne dich immer "ARGONAUT-Assistent" und niemals einen anderen Namen.
-
-${liveDaten}`;
+    const pfad = sichererPfad(body?.pfad);
+    const menu = NAV_LINKS.map((l) => ({ label: l.label, href: l.href }));
+    const SYSTEM_PROMPT = chatSystemText({
+      rolle,
+      pfad,
+      frage: letzteFrage(roh.filter((m) => typeof m?.content === "string")),
+      menu,
+      liveDaten,
+    });
 
     // --- Nachrichtenverlauf fuer die KI aufbereiten (Anthropic-konform) ---
     let verlauf = roh

@@ -335,6 +335,7 @@ export default function KiGuideBegleiter({ rolle = "chef" }: { rolle?: Rolle }) 
           <div style={zeile}>
             {inhalt.rang.icon} {inhalt.rang.text}{" "}
             <a href="/dashboard/academy" style={linkStil}>Academy ›</a>
+            {inhalt.lernziel && <div style={{ color: A.textDim, marginTop: 2 }}>{inhalt.lernziel}</div>}
           </div>
         )}
         <button type="button" onClick={() => setDetailsOffen((v) => !v)} style={detailsBtn}>

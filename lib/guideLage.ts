@@ -33,6 +33,7 @@ import {
   type SeitenWissen, type StartSchritt, type Verweis, type Wer,
 } from './guideWissen';
 import { medailleFuer, naechsteMedaille } from './academy';
+import { lernzielSatz } from './lehrplan';
 
 export type Rolle = 'chef' | 'mitarbeiter';
 
@@ -81,6 +82,8 @@ export type GuideLage = GuideInhalt & {
   /** Hinweis auf die Uebungswelt, solange ein Chef noch ganz am Anfang steht. */
   uebungsHinweis: string | null;
   rang: RangLage | null;
+  /** Paket A4: Lernziel der aktuellen Etappe aus lib/lehrplan.ts (null = Kurse unbekannt). */
+  lernziel: string | null;
   /** Alles fuer die aufklappbaren Details. */
   alleSchritte: string[];
   probe: SeitenWissen['probe'] | null;
@@ -297,6 +300,7 @@ export function guideLage(
     naechster,
     uebungsHinweis,
     rang: rangLage(stand.kurse),
+    lernziel: typeof stand.kurse === 'number' ? lernzielSatz(rolle, stand.kurse) : null,
     alleSchritte: wissen?.schritte ?? basis.schritte,
     probe: wissen?.probe ?? null,
     landetIn: (wissen?.landetIn ?? []).filter((v) => !!v.href),

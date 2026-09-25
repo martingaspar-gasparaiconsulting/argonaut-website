@@ -29,6 +29,7 @@ import {
   type Fortschritt, type KursQuelle, type Medaille, type LernStandPerson,
 } from '@/lib/academy';
 import { textZuVtt, baueUntertitel, pruefeText, zaehleWoerter } from '@/lib/academyText';
+import Lehrplan from './Lehrplan';
 
 /** Eigene ID für den Dateinamen im Speicher. */
 function neueId(): string {
@@ -543,6 +544,9 @@ export default function AcademyClient({ globaleKurse }: { globaleKurse: Kurs[] }
           </div>
         );
       })()}
+
+      {/* Paket A4: Lehrplan je Rang und Rolle */}
+      {uid && <Lehrplan rolle={istChef ? 'chef' : 'mitarbeiter'} kurse={zahlen.fertig} />}
 
       {/* Chef-Übersicht */}
       {istChef && (
