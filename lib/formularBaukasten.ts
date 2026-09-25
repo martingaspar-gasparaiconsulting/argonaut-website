@@ -281,6 +281,28 @@ export const STARTVORLAGEN: { titel: string; kategorie: string; beschreibung: st
       ['ja_nein', 'Anlage wieder in Betrieb'], ['foto', 'Fotos'], ['unterschrift', 'Unterschrift Kunde'],
     ]),
   },
+  // Paket PS2 (24.09.2026): HACCP für Gastronomie & Lebensmittel — auch ohne das Lebensmittel-Modul nutzbar.
+  {
+    titel: 'HACCP Temperaturkontrolle (Kühlung)', kategorie: 'pruefung', beschreibung: 'Tägliche Kontrolle der Kühl- und Tiefkühlgeräte mit Maßnahme bei Abweichung.',
+    felder: baue([
+      ['datum', 'Datum', true], ['text', 'Geprüft von', true],
+      ['hinweis', 'Sollwerte aus Ihrem HACCP-Konzept eintragen — übliche Richtwerte: Kühlung höchstens +7 °C (Hackfleisch +2 °C, Fisch +2 °C, Geflügel +4 °C), Tiefkühlung höchstens −18 °C.'],
+      ['zahl', 'Kühlraum / Kühlschrank 1 (°C)', true], ['zahl', 'Kühlschrank 2 (°C)'], ['zahl', 'Tiefkühlung (°C)', true],
+      ['pruefpunkt', 'Alle Werte im Sollbereich'], ['pruefpunkt', 'Türdichtungen sauber und dicht'],
+      ['textlang', 'Abweichung und Korrekturmaßnahme (Ware geprüft/entsorgt, Gerät nachgeregelt, Techniker)'],
+      ['unterschrift', 'Unterschrift', true],
+    ]),
+  },
+  {
+    titel: 'Wareneingangskontrolle Lebensmittel', kategorie: 'pruefung', beschreibung: 'Temperatur, Verpackung, MHD und Charge bei der Anlieferung.',
+    felder: baue([
+      ['datum', 'Datum', true], ['text', 'Lieferant', true], ['text', 'Ware / Charge', true], ['datum', 'MHD / Verbrauchsdatum'],
+      ['zahl', 'Kerntemperatur bei Anlieferung (°C)'],
+      ['pruefpunkt', 'Temperatur im Sollbereich'], ['pruefpunkt', 'Verpackung unbeschädigt und sauber'], ['pruefpunkt', 'Kennzeichnung vollständig (MHD, Charge, Allergene)'], ['pruefpunkt', 'Fahrzeug sauber, Kühlkette eingehalten'],
+      ['auswahl', 'Entscheidung', ['angenommen', 'angenommen mit Vermerk', 'abgelehnt']], ['textlang', 'Bemerkung'], ['foto', 'Foto bei Abweichung'],
+      ['unterschrift', 'Unterschrift', true],
+    ]),
+  },
 ];
 
 /** Name fuer die PDF-Datei. */

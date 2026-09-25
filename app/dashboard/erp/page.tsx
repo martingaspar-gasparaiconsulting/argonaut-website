@@ -6,6 +6,7 @@ import { augeLager } from "@/lib/auge";
 import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+import MhdWarnung from '../_components/MhdWarnung';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'artikel';
@@ -429,6 +430,9 @@ export default function LagerCockpit() {
           + Artikel anlegen
         </button>
       </div>
+
+      {/* Paket PS2: Chargen mit MHD in den nächsten 14 Tagen (nur sichtbar, wenn es etwas gibt) */}
+      <MhdWarnung />
 
       {/* KPI-Kacheln */}
       <div

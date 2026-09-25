@@ -298,6 +298,7 @@ export default function ChargenSeite() {
           <p style={{ margin: "4px 0 0", color: C.textDim, fontSize: "clamp(14px,1.25vw,20px)" }}>
             Chargen/Serien mit Rückverfolgbarkeit (one up / one down) und Prüfplan (Soll ± Toleranz → i.O./n.i.O.)
           </p>
+          <a href="/dashboard/chargen/qualitaet" style={{ color: C.cyan, fontSize: 14 }}>🧪 Qualität: Reklamationen (8D), Lieferanten-Bewertung, Rückruf →</a>
         </div>
         <button style={btnGold} onClick={oeffneNeu}>+ Charge / Serie</button>
       </div>

@@ -158,6 +158,7 @@ export default function LebensmittelPage() {
         <button style={{ ...styles.tab, ...(tab === 'haccp' ? styles.tabAn : {}) }} onClick={() => setTab('haccp')}>🌡 HACCP-Doku</button>
       </div>
       <p style={styles.sub}>Chargen mit Rückverfolgung, HACCP-Kontrollplan und Eigenkontrollen — Dokumentationswerkzeug, ersetzt keine amtliche HACCP-Beratung.</p>
+      <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/qualitaet" style={{ color: C.cyan, fontSize: 14 }}>🧪 Qualität &amp; Rückruf: Reklamationen, Lieferanten-Bewertung, Rückruf-Assistent →</a></p>
 
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

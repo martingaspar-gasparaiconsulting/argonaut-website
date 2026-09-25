@@ -121,6 +121,8 @@ export const NAV_LINKS: NavLink[] = [
   // Subunternehmer, Versicherungen, Entsorgung. Sensibel: Versicherungsbeitraege
   // und Partnerdaten. Mitarbeiter sehen per RLS ohnehin nur Arbeitsschutz/Pflichten.
   { label: '🗂 Nachweise & Fristen', href: '/dashboard/nachweise', modul: 'nachweise', ebene: 2, sensibel: true, gruppe: 'komm' },
+  // Paket PS2 (24.09.26): Gefahrstoffverzeichnis (§ 6 GefStoffV) — Unterpfad von /dashboard/nachweise.
+  { label: '☣️ Gefahrstoffe', href: '/dashboard/nachweise/gefahrstoffe', ebene: 2, sensibel: true, gruppe: 'komm' },
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
@@ -187,6 +189,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '📟 BDE / MDE', href: '/dashboard/bde', modul: 'bde', ebene: 3, gruppe: 'betrieb' },
   { label: '🔬 Chargen & Prüfplan', href: '/dashboard/chargen', modul: 'chargen', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS2 (24.09.26): Qualität — 8D-Reklamation, Lieferanten-Bewertung, Rückruf über Chargen.
+  // Unterpfad von /dashboard/chargen; dieselbe Seite liegt unter /dashboard/lebensmittel/qualitaet.
+  { label: '🧪 Qualität & Rückruf', href: '/dashboard/chargen/qualitaet', ebene: 3, gruppe: 'betrieb' },
   { label: '⚡ Energie', href: '/dashboard/energie', modul: 'energie', ebene: 3, gruppe: 'betrieb' },
   { label: '☀️ Erträge & Monitoring', href: '/dashboard/ertraege', modul: 'ertraege', ebene: 3, gruppe: 'betrieb' },
   { label: '🏢 Immobilien', href: '/dashboard/immobilien', modul: 'immobilien', ebene: 3, gruppe: 'betrieb' },
@@ -204,6 +209,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
   { label: '🏫 Räume & Ressourcen', href: '/dashboard/raeume', modul: 'raeume', ebene: 3, gruppe: 'betrieb' },
   { label: '🥫 Lebensmittel', href: '/dashboard/lebensmittel', modul: 'lebensmittel', ebene: 3, gruppe: 'betrieb' },
+  { label: '🧪 Qualität & Rückruf', href: '/dashboard/lebensmittel/qualitaet', ebene: 3, gruppe: 'betrieb' },
   { label: '🏷️ Etiketten & LMIV', href: '/dashboard/etiketten', modul: 'etiketten', ebene: 3, gruppe: 'betrieb' },
   { label: '🧮 Rezeptur & Ausbeute', href: '/dashboard/rezeptur', modul: 'rezeptur', ebene: 3, gruppe: 'betrieb' },
   // Vorkalkulation: Material + Zeit + Energie -> Selbstkosten je Einheit.

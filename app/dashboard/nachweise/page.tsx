@@ -162,6 +162,7 @@ export default function NachweisSeite() {
         Alles, was Sie regelmäßig nachweisen müssen, an einem Ort — mit Ampel, bevor es teuer wird.
         Führerscheinkontrolle, UVV/TÜV, Sofortmeldung und §48b-Freistellung finden Sie weiterhin im{' '}
         <a href="/dashboard/compliance" style={{ color: C.cyan }}>Compliance-Center</a>.
+        {' '}Gefahrstoffe führen Sie im <a href="/dashboard/nachweise/gefahrstoffe" style={{ color: C.cyan }}>Gefahrstoffverzeichnis</a>.
       </p>
 
       <div style={s.tabs}>
