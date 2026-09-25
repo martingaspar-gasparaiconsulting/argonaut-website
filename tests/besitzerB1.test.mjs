@@ -319,3 +319,36 @@ test('B1: Social-Verbindungen (Zugangsdaten) bleiben unangetastet — Entscheidu
   const src = fs.readFileSync(new URL('../app/api/marketing/social-verbindung/route.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /mein_chef_id/);
 });
+
+// B1b (25.09.2026): Arbeitsseiten, fuer die supabase-sql/b1b-mitarbeiter-arbeitsseiten.sql die
+// Mitarbeiter-Regeln (lesen, anlegen, aendern — nicht loeschen) nachruestet.
+const B1B = {
+  'app/dashboard/aufmass/page.tsx': ['aufmasse', 'aufmass_positionen'],
+  'app/dashboard/nachweise/page.tsx': ['nachweis'],
+  'app/dashboard/objektzeiten/page.tsx': ['objekt_zeiten'],
+  'app/dashboard/service/[id]/page.tsx': ['ticket_verlauf'],
+  'app/dashboard/gastro/page.tsx': ['hotel_zimmer'],
+  'app/dashboard/immobilien/page.tsx': ['immo_einheiten', 'immo_mietvertraege'],
+  'app/dashboard/objekte/page.tsx': ['wartungsvertraege'],
+};
+
+test('B1b: Arbeitsseiten speichern ebenfalls den Betrieb', () => {
+  let geprueft = 0;
+  for (const [datei, tabellen] of Object.entries(B1B)) {
+    const src = fs.readFileSync(new URL('../' + datei, import.meta.url), 'utf8');
+    assert.match(src, /rpc\(['"]mein_chef_id['"]\)/, datei);
+    for (const t of tabellen) for (const wert of schreibstellen(src, t)) {
+      assert.doesNotMatch(wert, ROH, `${datei} -> ${t}: ${wert}`);
+      geprueft++;
+    }
+  }
+  assert.ok(geprueft >= 9, `nur ${geprueft}`);
+});
+
+test('B1b: SQL ist additiv — kein Loeschrecht fuer Mitarbeiter, alle Tabellen der Seiten enthalten', () => {
+  const sql = fs.readFileSync(new URL('../supabase-sql/b1b-mitarbeiter-arbeitsseiten.sql', import.meta.url), 'utf8');
+  assert.doesNotMatch(sql, /for delete/i);
+  assert.doesNotMatch(sql, /drop policy if exists (?!b1_ma_)/i, 'nur eigene b1-Regeln werden neu gesetzt');
+  const liste = sql.slice(sql.indexOf('tabellen text[] := array['), sql.indexOf('];'));
+  for (const t of Object.values(B1B).flat()) assert.match(liste, new RegExp(`'${t}'`), t);
+});

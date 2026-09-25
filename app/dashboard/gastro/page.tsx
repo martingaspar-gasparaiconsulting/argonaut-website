@@ -105,7 +105,7 @@ export default function GastroPage() {
     if (!uid || !nz.nummer.trim()) { setFehler('Bitte eine Zimmernummer angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('hotel_zimmer').insert({
-      owner_user_id: uid, nummer: nz.nummer.trim(), typ: nz.typ.trim() || null,
+      owner_user_id: besitzer ?? uid, nummer: nz.nummer.trim(), typ: nz.typ.trim() || null,
       max_personen: parseInt(nz.max_personen, 10) || 2, preis_nacht: zahlAusFeld((nz.preis_nacht || '')) || 0,
     });
     if (error) { setFehler('Zimmer konnte nicht gespeichert werden.'); return; }

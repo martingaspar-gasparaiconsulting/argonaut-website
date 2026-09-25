@@ -250,9 +250,12 @@ export default function TicketDetailPage() {
   }) {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
+    // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const besitzer = typeof chef === 'string' && chef ? chef : userData.user.id;
     await supabase.from('ticket_verlauf').insert({
       ticket_id: ticketId,
-      owner_user_id: userData.user.id,
+      owner_user_id: besitzer,
       typ: eintrag.typ,
       inhalt: eintrag.inhalt ?? null,
       alt_status: eintrag.alt_status ?? null,

@@ -90,6 +90,7 @@ function istPauschal(p: PositionBasis): boolean {
 export default function AufmassPage() {
   const router = useRouter();
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aufmasse, setAufmasse] = useState<AufmassRow[]>([]);
   const [katalog, setKatalog] = useState<KatalogRow[]>([]);
   const [laden, setLaden] = useState(true);
@@ -122,6 +123,9 @@ export default function AufmassPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
     })();
   }, []);
@@ -190,7 +194,7 @@ export default function AufmassPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid, titel: form.titel.trim(), nummer: form.nummer.trim() || null,
+        owner_user_id: besitzer ?? uid, titel: form.titel.trim(), nummer: form.nummer.trim() || null,
         kunde_name: form.kunde_name.trim() || null, projekt: form.projekt.trim() || null,
         ort: form.ort.trim() || null, status: form.status, aufmass_datum: form.aufmass_datum,
         bearbeiter: form.bearbeiter.trim() || null, notiz: form.notiz.trim() || null,
@@ -200,11 +204,11 @@ export default function AufmassPage() {
         if (error) throw error;
         const neuId = (data as { id: string }).id;
         setForm((f) => ({ ...f, id: neuId }));
-        try { await speichereWerte(MODUL, neuId, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        try { await speichereWerte(MODUL, neuId, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
         const { error } = await supabase.from('aufmasse').update(payload).eq('id', form.id);
         if (error) throw error;
-        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        try { await speichereWerte(MODUL, form.id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setGespeichertHinweis(true); setTimeout(() => setGespeichertHinweis(false), 2500);
       await laden_();
@@ -234,13 +238,13 @@ export default function AufmassPage() {
       if (!lv.positionen.length) { setFehler('In der GAEB-Datei wurden keine Positionen gefunden.'); return; }
       const titel = (lv.projekt || file.name.replace(/\.[^.]+$/, '') || 'GAEB-Import').slice(0, 200);
       const { data, error } = await supabase.from('aufmasse').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), titel, status: 'entwurf',
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), titel, status: 'entwurf',
         aufmass_datum: new Date().toISOString().slice(0, 10), notiz: 'Aus GAEB importiert',
       }).select('*').single();
       if (error) throw error;
       const neuAufmass = data as AufmassRow;
       const rows = lv.positionen.map((p, i) => ({
-        owner_user_id: uid, aufmass_id: neuAufmass.id, position_nr: i + 1,
+        owner_user_id: besitzer ?? uid, aufmass_id: neuAufmass.id, position_nr: i + 1,
         bezeichnung: p.kurztext || `Position ${i + 1}`,
         menge: p.menge ?? 0, einheit: p.einheit || 'St',
         einzelpreis_netto: p.einzelpreis, festpreis_netto: null, mwst_satz: 19,
@@ -301,7 +305,7 @@ export default function AufmassPage() {
     if (gesperrt) return;
     try {
       const { error } = await supabase.from('aufmass_positionen').insert({
-        owner_user_id: uid, aufmass_id: form.id,
+        owner_user_id: besitzer ?? uid, aufmass_id: form.id,
         position_nr: positionen.length + 1,
         bezeichnung: pos.bezeichnung ?? '',
         menge: pos.menge ?? 0,
@@ -491,7 +495,7 @@ export default function AufmassPage() {
         )}
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       {/* --- Modal ------------------------------------------------------ */}
       {modalAuf && (

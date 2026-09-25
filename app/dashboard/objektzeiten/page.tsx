@@ -90,6 +90,7 @@ function isoTag(d: Date) { return `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-
 
 export default function ObjektzeitenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [objekte, setObjekte] = useState<ObjektRow[]>([]);
   const [zeiten, setZeiten] = useState<ZeitRow[]>([]);
   const [laden, setLaden] = useState(true);
@@ -116,6 +117,9 @@ export default function ObjektzeitenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
     })();
   }, []);
@@ -171,7 +175,7 @@ export default function ObjektzeitenPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         bezeichnung: objForm.bezeichnung.trim(),
         kennung: objForm.kennung.trim() || null,
         adresse: objForm.adresse.trim() || null,
@@ -223,7 +227,7 @@ export default function ObjektzeitenPage() {
     setSpeichert(true); setFehler(null);
     try {
       const { data: neu, error } = await supabase.from('objekt_zeiten').insert({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         objekt_id: zeitForm.objekt_id,
         datum: zeitForm.datum,
         dauer_minuten: dauer,
@@ -233,7 +237,7 @@ export default function ObjektzeitenPage() {
         notiz: zeitForm.notiz.trim() || null,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch {}
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch {}
       setNmExtra({});
       setZeitForm(zeitLeer(zeitForm.objekt_id)); // Objekt-Auswahl beibehalten (schnelles Nachbuchen)
       await laden_();
@@ -352,7 +356,7 @@ export default function ObjektzeitenPage() {
         )}
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       {/* Zeitraum + Auswertung */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 14px' }}>

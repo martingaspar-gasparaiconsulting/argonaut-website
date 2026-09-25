@@ -80,12 +80,12 @@ export default function ImmobilienPage() {
     if (!uid || !ne.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { data: neu, error } = await supabase.from('immo_einheiten').insert({
-      owner_user_id: uid, objekt: ne.objekt.trim() || null, bezeichnung: ne.bezeichnung.trim(),
+      owner_user_id: besitzer ?? uid, objekt: ne.objekt.trim() || null, bezeichnung: ne.bezeichnung.trim(),
       flaeche_qm: ne.flaeche_qm ? num(ne.flaeche_qm) : null, zimmer: ne.zimmer ? num(ne.zimmer) : null,
       kaltmiete: num(ne.kaltmiete), nebenkosten: num(ne.nebenkosten),
     }).select('id').single();
     if (error || !neu) { setFehler('Einheit konnte nicht gespeichert werden.'); return; }
-    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, neExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, neExtra); } catch { /* eigene Felder optional */ }
     setNe({ objekt: '', bezeichnung: '', flaeche_qm: '', zimmer: '', kaltmiete: '', nebenkosten: '' }); setNeExtra({}); setOk('Einheit gespeichert.'); await laden_();
   }
 
@@ -93,7 +93,7 @@ export default function ImmobilienPage() {
     if (!uid || !nv.einheit_id || !nv.mieter_name.trim()) { setFehler('Bitte Einheit und Mieter angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('immo_mietvertraege').insert({
-      owner_user_id: uid, einheit_id: nv.einheit_id, mieter_name: nv.mieter_name.trim(), mieter_email: nv.mieter_email.trim() || null,
+      owner_user_id: besitzer ?? uid, einheit_id: nv.einheit_id, mieter_name: nv.mieter_name.trim(), mieter_email: nv.mieter_email.trim() || null,
       beginn: nv.beginn || null, kaltmiete: num(nv.kaltmiete), nebenkosten: num(nv.nebenkosten), kaution: num(nv.kaution),
     });
     if (error) { setFehler('Vertrag konnte nicht gespeichert werden.'); return; }
@@ -146,7 +146,7 @@ export default function ImmobilienPage() {
               <button style={styles.primaer} onClick={einheitAnlegen}>＋ Einheit</button>
             </div>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {einheiten.map((e) => (

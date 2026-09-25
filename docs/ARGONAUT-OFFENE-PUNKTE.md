@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 3 von 47 erledigt, B1a gebaut** (A3–A5 live; B1 in drei Teile geteilt; A1 und A2 zählen nicht mit)
+**Stand: 5 von 49 erledigt** (B1a live, B1b Gruppe 3 mit _p110) (A3–A5 live; B1 in drei Teile geteilt; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -19,8 +19,10 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 
 | Nr. | Was | Stand |
 |---|---|---|
-| B1a | Besitzer-Fehler Teil A: 70 Seiten, deren Tabellen Mitarbeitern das Anlegen für den Betrieb schon erlauben — reiner Code-Fix | ✅ gebaut (_p109) |
-| B1b | Besitzer-Fehler Teil B: 82 Stellen ohne passende Datenbank-Regel (Zugänge, Einstellungen, Geld, einige Fachseiten) — Entscheidung je Gruppe bei Martin | ⬜ |
+| B1a | Besitzer-Fehler Teil A: 70 Seiten, deren Tabellen Mitarbeitern das Anlegen für den Betrieb schon erlauben — reiner Code-Fix | ✅ live (_p109, fcad0cd) |
+| B1b | Besitzer-Fehler Teil B, Gruppe 3 Arbeitsseiten (Aufmaß, Nachweise, Objektzeiten, Service-Verlauf, Hotelzimmer, Immobilien-Einheiten und Mietverträge, Wartungsverträge): SQL-Regel + Code | ✅ gebaut (_p110 + SQL) |
+| B1b-1 | Gruppe 1 Zugänge und Einstellungen — bleiben beim Chef (Empfehlung) | ⬜ Entscheidung |
+| B1b-2 | Gruppe 2 Geld (Rechnung aus …, Angebote, Zahlungen, Kalkulator, Projektabrechnung, Förder-Angebot) — kommt zu G | ⬜ |
 | B1c | Eigene Felder auf den übrigen Seiten (Werkstatt, Service …) ebenfalls dem Betrieb zuordnen | ⬜ |
 
 ## 3. Geld und Abläufe — nur gemeinsam

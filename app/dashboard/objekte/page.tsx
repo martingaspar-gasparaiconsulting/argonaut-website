@@ -232,7 +232,7 @@ export default function ObjekteRegister() {
     setWartungBusy(a.id); setFehler(null); setOk(null);
     try {
       const { data: w, error: wErr } = await supabase.from('wartungsvertraege').insert({
-        owner_user_id: uid, titel: a.bezeichnung, kunde_name: kunde, kontakt_id: a.kontakt_id,
+        owner_user_id: besitzer ?? uid, titel: a.bezeichnung, kunde_name: kunde, kontakt_id: a.kontakt_id,
         status: 'aktiv', beginn_am: a.letzte_kontrolle || null, intervall_monate: a.kontrollintervall_monate || 12,
         letzte_wartung_am: a.letzte_kontrolle || null, naechste_faelligkeit_am: a.naechste_kontrolle || null,
         erinnerung_tage_vorher: 30, aktualisiert_am: new Date().toISOString(),

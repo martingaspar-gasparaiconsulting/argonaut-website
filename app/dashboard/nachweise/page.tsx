@@ -43,6 +43,7 @@ function zahl(s: string): number | null { return leseZahl(s); }
 
 export default function NachweisSeite() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kategorie, setKategorie] = useState<string | null>(null);
   const [tab, setTab] = useState<Mappe | 'radar'>('arbeitsschutz');
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
@@ -65,6 +66,11 @@ export default function NachweisSeite() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
+      if (id) {
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      }
       setUid(id);
       if (id) {
         const { data: p } = await supabase.from('profiles').select('kategorie').eq('id', id).maybeSingle();
@@ -119,7 +125,7 @@ export default function NachweisSeite() {
     };
     const { error } = form.id
       ? await supabase.from('nachweis').update(zeile).eq('id', form.id)
-      : await supabase.from('nachweis').insert({ ...zeile, owner_user_id: uid });
+      : await supabase.from('nachweis').insert({ ...zeile, owner_user_id: besitzer ?? uid });
     if (error) { setFehler(/mappe_check/.test(error.message) ? 'Die Mappe „Meldungen & Register" ist noch nicht eingerichtet (SQL von Paket PS1 fehlt).' : 'Speichern fehlgeschlagen.'); return; }
     setForm(null); setOk('Gespeichert.'); await laden();
   }
@@ -139,7 +145,7 @@ export default function NachweisSeite() {
   async function vorschlaegeAnlegen() {
     if (!uid || vorschlagListe.length === 0) return;
     const zeilenNeu = vorschlagListe.map((k) => ({
-      owner_user_id: uid, mappe: k.mappe, art: k.key, bezeichnung: k.label,
+      owner_user_id: besitzer ?? uid, mappe: k.mappe, art: k.key, bezeichnung: k.label,
       intervall_monate: k.intervall, kuendigungsfrist_monate: k.kuendigung ?? null,
     }));
     const { error } = await supabase.from('nachweis').insert(zeilenNeu);
