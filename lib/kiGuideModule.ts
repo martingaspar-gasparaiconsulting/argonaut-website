@@ -246,12 +246,36 @@ export const MODUL_TEXTE: Record<string, ModulText> = {
   },
   '/dashboard/personal': {
     nachricht:
-      'Ihre Mitarbeiterinnen und Mitarbeiter mit Stammdaten, Rechten und Filiale. Wer wohin gehört, entscheidet auch, was er im System sieht.',
+      'Hier legen Sie als Chef Ihre Mitarbeiter an — das macht nie der Mitarbeiter selbst. Klicken Sie eine Person an: Oben in „Stammdaten" zeigt die Personalakte-Ampel, was noch fehlt, und führt Sie mit einem Klick an die richtige Stelle.',
     schritte: [
-      'Person anlegen und zur Filiale zuordnen',
-      'Bei Bedarf befristet in eine andere Filiale entsenden',
-      'Rechte vergeben Sie unter „Wer sieht was"',
+      '„+ Mitarbeiter anlegen", dann die Person anklicken und die Personalakte-Ampel von oben nach unten abarbeiten',
+      'Unter „Dokumente" Vertrag, Lohnabrechnungen und Zeugnisse ablegen — mit dem Schalter „Mitarbeiter sieht es" landen sie bei ihm in „Mein Bereich → Meine Unterlagen"',
+      'Zum Schluss „Zum Self-Service einladen": Dann stempelt er selbst, beantragt Urlaub und sieht seine Unterlagen',
     ],
+    aktionText: 'Nachweis & Verträge',
+    aktionHref: '/dashboard/personal/dokumente',
+  },
+  '/dashboard/personal/dokumente': {
+    nachricht:
+      'Hier halten Sie je Mitarbeiter fest, was im Arbeitsvertrag stehen muss (Nachweisgesetz), und sehen Fristen für Probezeit und Befristung. Der Vertrag selbst wird hier nicht erzeugt — die unterschriebene Datei legen Sie unter Personal → Person → „Dokumente" ab.',
+    schritte: [
+      'Mitarbeiter wählen, Beginn und Befristung eintragen, Pflichtpunkte abhaken',
+      'Sind alle Pflichtpunkte abgehakt und gespeichert, gilt der Nachweis als erteilt — dann wird der Punkt in der Personalakte-Ampel grün',
+      'Zeugnis und Beschäftigungsbestätigung entstehen aus denselben Stammdaten',
+    ],
+    aktionText: 'Zurück zu Personal',
+    aktionHref: '/dashboard/personal',
+  },
+  '/dashboard/mein-bereich': {
+    nachricht:
+      'Ihr persönlicher Bereich. Ihre Stammdaten, Ihren Urlaubsanspruch und Ihre Unterlagen trägt Ihr Chef ein — Sie selbst stempeln, beantragen Urlaub, melden sich krank und sehen hier alles, was Ihr Chef für Sie freigegeben hat.',
+    schritte: [
+      'Oben stehen Resturlaub und Arbeitszeit — stimmt etwas nicht, sprechen Sie Ihren Chef an',
+      '„Urlaub beantragen" oder „Krankmeldung": Der Antrag landet sofort beim Chef unter Personal → Abwesenheiten',
+      'Unter „Meine Unterlagen" finden Sie Vertrag, Lohnabrechnungen und Zeugnisse, sobald Ihr Chef sie freigibt',
+    ],
+    aktionText: 'Zur Stempeluhr',
+    aktionHref: '/dashboard/zeiterfassung',
   },
   '/dashboard/zeiterfassung': {
     nachricht:

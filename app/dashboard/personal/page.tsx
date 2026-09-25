@@ -13,6 +13,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import PersonalAuge from "./PersonalAuge";
+import PersonalakteAmpel from './PersonalakteAmpel';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import Leerzustand from '../_components/Leerzustand';
@@ -55,7 +56,7 @@ type Bewerber = {
   id: string; vorname: string; nachname: string; email: string | null; telefon: string | null;
   position: string | null; quelle: string | null; status: string; bewerbungsdatum: string | null; mitarbeiter_id: string | null;
 };
-type HrDokument = { id: string; dateiname: string; storage_pfad: string; groesse_bytes: number | null; mime_type: string | null; kategorie: string; hochgeladen_am: string };
+type HrDokument = { id: string; dateiname: string; storage_pfad: string; groesse_bytes: number | null; mime_type: string | null; kategorie: string; hochgeladen_am: string; fuer_mitarbeiter?: boolean | null };
 type Abwesenheit = { id: string; typ: string; von: string; bis: string; tage: number | null; status: string; au_vorhanden: boolean; notiz: string | null };
 type Schulung = { id: string; titel: string; kategorie: string; absolviert_am: string | null; gueltig_bis: string | null; status: string; notiz: string | null };
 type Checkliste = { id: string; art: string; aufgabe: string; erledigt: boolean; erledigt_am: string | null; notiz: string | null; reihenfolge: number };
@@ -608,6 +609,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
   const [urlaubsanspruch, setUrlaubsanspruch] = useState(String(ma?.urlaubsanspruch_tage ?? 30));
   const [arbeitszeitModell, setArbeitszeitModell] = useState(ma?.arbeitszeit_modell ?? 'vollzeit');
   const [wochenstunden, setWochenstunden] = useState(String(ma?.wochenstunden ?? 40));
+  const [eintritt, setEintritt] = useState(ma?.eintrittsdatum ?? '');
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -629,11 +631,19 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
     setListLoading(true);
     try {
       const spalte = istMA ? 'mitarbeiter_id' : 'bewerber_id';
-      const { data, error } = await supabase.from('hr_dokumente')
-        .select('id,dateiname,storage_pfad,groesse_bytes,mime_type,kategorie,hochgeladen_am')
+      // Paket A1: mit Freigabe-Spalte laden; fehlt sie (SQL A1 noch nicht gelaufen), ohne.
+      const mitFreigabe = await supabase.from('hr_dokumente')
+        .select('id,dateiname,storage_pfad,groesse_bytes,mime_type,kategorie,hochgeladen_am,fuer_mitarbeiter')
         .eq(spalte, id).order('hochgeladen_am', { ascending: false });
-      if (error) throw error;
-      setDocs((data as HrDokument[]) ?? []);
+      let zeilen: unknown = mitFreigabe.data;
+      if (mitFreigabe.error) {
+        const ohne = await supabase.from('hr_dokumente')
+          .select('id,dateiname,storage_pfad,groesse_bytes,mime_type,kategorie,hochgeladen_am')
+          .eq(spalte, id).order('hochgeladen_am', { ascending: false });
+        if (ohne.error) throw ohne.error;
+        zeilen = ohne.data;
+      }
+      setDocs((zeilen as HrDokument[]) ?? []);
     } catch { setListMsg('Dokumente konnten nicht geladen werden.'); } finally { setListLoading(false); }
   }, [id, istMA]);
 
@@ -700,6 +710,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
           geburtsdatum: geburtsdatum || null, adresse: adresse.trim() || null, sv_nummer: svNummer.trim() || null,
           steuer_id: steuerId.trim() || null, iban: iban.trim() || null, notfall_kontakt: notfall.trim() || null,
           urlaubsanspruch_tage: parseInt(urlaubsanspruch, 10) || 30,
+          eintrittsdatum: eintritt || null,
           arbeitszeit_modell: arbeitszeitModell,
           wochenstunden: parseFloat(wochenstunden.replace(',', '.')) || 0,
         }).eq('id', id);
@@ -800,6 +811,18 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
         <div style={styles.drawerBody}>
           {detailTab === 'stamm' && (
             <>
+              {istMA && (
+                <PersonalakteAmpel
+                  maId={id}
+                  werte={{
+                    vorname, nachname, email, telefon, position, geburtsdatum, adresse,
+                    eintrittsdatum: eintritt, arbeitszeit_modell: arbeitszeitModell, wochenstunden,
+                    urlaubsanspruch_tage: urlaubsanspruch, steuer_id: steuerId, sv_nummer: svNummer, iban,
+                    notfall_kontakt: notfall, eingeladen,
+                  }}
+                  onGehe={(ort) => { if (ort === 'docs' || ort === 'schul') setDetailTab(ort); }}
+                />
+              )}
               <div style={styles.formGrid}>
                 <Field label="Vorname *"><input style={styles.input} value={vorname} onChange={(e) => setVorname(e.target.value)} /></Field>
                 <Field label="Nachname *"><input style={styles.input} value={nachname} onChange={(e) => setNachname(e.target.value)} /></Field>
@@ -819,6 +842,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
                   <div style={styles.sectionDivider}>Weitere Angaben</div>
                   <div style={styles.formGrid}>
                     <Field label="Geburtsdatum"><input type="date" style={styles.input} value={geburtsdatum} onChange={(e) => setGeburtsdatum(e.target.value)} /></Field>
+                    <Field label="Eintrittsdatum"><input type="date" style={styles.input} value={eintritt} onChange={(e) => setEintritt(e.target.value)} /></Field>
                     <Field label="Urlaubsanspruch (Tage)"><input type="number" style={styles.input} value={urlaubsanspruch} onChange={(e) => setUrlaubsanspruch(e.target.value)} /></Field>
                     <Field label="Arbeitszeit-Modell">
                       <select style={styles.input} value={arbeitszeitModell} onChange={(e) => setArbeitszeitModell(e.target.value)}>
@@ -1058,6 +1082,21 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
   const istMA = typ === 'mitarbeiter';
   const [kategorie, setKategorie] = useState('sonstiges');
   const [uploading, setUploading] = useState(false);
+  // Paket A1: sieht der Mitarbeiter die Datei in „Mein Bereich → Meine Unterlagen"? Standard: nein.
+  const [fuerMa, setFuerMa] = useState(false);
+
+  async function freigabeUmschalten(d: HrDokument) {
+    const neu = !(d.fuer_mitarbeiter === true);
+    const { error } = await supabase.from('hr_dokumente').update({ fuer_mitarbeiter: neu }).eq('id', d.id);
+    if (error) {
+      setMsg(/fuer_mitarbeiter/.test(error.message)
+        ? 'Die Freigabe braucht zuerst das SQL von Paket A1 in Supabase.'
+        : 'Freigabe konnte nicht geändert werden: ' + error.message);
+      return;
+    }
+    setMsg(neu ? 'Freigegeben — der Mitarbeiter sieht die Datei jetzt in „Mein Bereich → Meine Unterlagen".' : 'Nur noch für Sie sichtbar.');
+    reload();
+  }
 
   async function hochladen(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1071,12 +1110,17 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
       const pfad = `${ownerId}/${typ}/${id}/${Date.now()}-${sauber}`;
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, file);
       if (upErr) throw upErr;
-      const { error: insErr } = await supabase.from('hr_dokumente').insert({
+      const zeile: Record<string, unknown> = {
         owner_user_id: ownerId, dateiname: file.name, storage_pfad: pfad, groesse_bytes: file.size,
         mime_type: file.type || null, kategorie, bewerber_id: istMA ? null : id, mitarbeiter_id: istMA ? id : null,
-      });
+      };
+      if (istMA && fuerMa) zeile.fuer_mitarbeiter = true;
+      const { error: insErr } = await supabase.from('hr_dokumente').insert(zeile);
       if (insErr) throw insErr;
-      setMsg('Hochgeladen.'); reload();
+      setMsg(istMA && fuerMa
+        ? 'Hochgeladen und freigegeben — der Mitarbeiter sieht die Datei in „Mein Bereich → Meine Unterlagen".'
+        : 'Hochgeladen. Nur für Sie sichtbar.');
+      reload();
     } catch (err: unknown) { setMsg('Upload fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setUploading(false); e.target.value = ''; }
   }
@@ -1109,6 +1153,12 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
           <input type="file" style={{ display: 'none' }} onChange={hochladen} disabled={uploading} />
           {uploading ? 'Lädt hoch …' : '＋ Datei hochladen'}
         </label>
+        {istMA && (
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={fuerMa} onChange={(e) => setFuerMa(e.target.checked)} />
+            Mitarbeiter sieht es in „Mein Bereich"
+          </label>
+        )}
       </div>
       {msg && <div style={styles.infoMsg}>{msg}</div>}
       <div style={{ marginTop: 14 }}>
@@ -1121,9 +1171,17 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
               <div style={styles.docMeta}>
                 <span style={styles.katBadge}>{KAT_LABEL[d.kategorie] || d.kategorie}</span>
                 {formatBytes(d.groesse_bytes)} · {dStr(d.hochgeladen_am)}
+                {istMA && (d.fuer_mitarbeiter === true
+                  ? <span style={{ color: C.green }}> · Mitarbeiter sieht es</span>
+                  : <span style={{ color: C.textDim }}> · nur Chef</span>)}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              {istMA && (
+                <button style={styles.miniBtn} onClick={() => freigabeUmschalten(d)} title="Legt fest, ob der Mitarbeiter die Datei in „Mein Bereich → Meine Unterlagen“ sieht">
+                  {d.fuer_mitarbeiter === true ? '🔒 Nur Chef' : '👁 Freigeben'}
+                </button>
+              )}
               <button style={styles.miniBtn} onClick={() => oeffnen(d)}>Öffnen</button>
               <button style={{ ...styles.miniBtn, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(d)}>Löschen</button>
             </div>

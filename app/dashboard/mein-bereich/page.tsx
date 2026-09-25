@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import MeineUnterschrift from './MeineUnterschrift';
+import MeineUnterlagen from './MeineUnterlagen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -666,6 +667,9 @@ export default function MeinBereichPage() {
                 );
               })}
             </section>
+
+            {/* Meine Unterlagen (Paket A1) — nur vom Chef freigegebene */}
+            <MeineUnterlagen maId={ma.id} />
 
             {/* Meine Checkliste (Self-Service-Bestätigung) */}
             {CHECK_ARTEN.some((a) => check.some((c) => c.art === a.key)) && (
