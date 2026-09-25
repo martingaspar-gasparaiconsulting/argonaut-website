@@ -17,6 +17,7 @@ import {
 import { augeHaccp } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -33,7 +34,7 @@ type Plan = { id: string; kontrollpunkt: string; sollwert: string | null; interv
 type Haccp = { id: string; datum: string; kontrollpunkt: string; messwert: string | null; in_ordnung: boolean; massnahme: string | null; pruefer: string | null };
 
 function heute() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
 const MHD_META: Record<string, { txt: (m: string | null) => string; farbe: string }> = {

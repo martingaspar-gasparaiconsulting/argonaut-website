@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { MEDIEN, nutzungsStand, rechteKlausel, datumDe, heuteBerlin, euroText, type Nutzungsrecht } from '@/lib/papiereIdentifizierung';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -123,7 +123,7 @@ export default function NutzungsrechteSeite() {
               </span>
               <span style={{ display: 'flex', gap: 6 }}>
                 <button style={{ ...knopf, padding: '3px 8px' }} onClick={() => setText(rechteKlausel(r, agentur))}>📄 Klausel</button>
-                <button style={{ ...knopf, padding: '3px 8px' }} onClick={() => setF({ ...LEER, id: r.id, retainer_id: r.retainer_id ?? '', kunde: r.kunde ?? '', werk: r.werk, werkart: r.werkart ?? '', recht: r.recht, raum: r.raum ?? '', medien: r.medien ?? [], von: r.von ?? '', bis: r.bis ?? '', bearbeitung: !!r.bearbeitung, weiterlizenz: !!r.weiterlizenz, urheber: r.urheber ?? '', fremd_recht: r.fremd_recht ?? '', fremd_bis: r.fremd_bis ?? '', fremd_medien: r.fremd_medien ?? [], verguetung: r.verguetung == null ? '' : String(r.verguetung).replace('.', ','), notiz: r.notiz ?? '' })}>bearbeiten</button>
+                <button style={{ ...knopf, padding: '3px 8px' }} onClick={() => setF({ ...LEER, id: r.id, retainer_id: r.retainer_id ?? '', kunde: r.kunde ?? '', werk: r.werk, werkart: r.werkart ?? '', recht: r.recht, raum: r.raum ?? '', medien: r.medien ?? [], von: r.von ?? '', bis: r.bis ?? '', bearbeitung: !!r.bearbeitung, weiterlizenz: !!r.weiterlizenz, urheber: r.urheber ?? '', fremd_recht: r.fremd_recht ?? '', fremd_bis: r.fremd_bis ?? '', fremd_medien: r.fremd_medien ?? [], verguetung: r.verguetung == null ? '' : zahlFeld(r.verguetung).replace('.', ','), notiz: r.notiz ?? '' })}>bearbeiten</button>
                 {istChef && <button style={{ ...knopf, padding: '3px 8px', color: C.danger }} onClick={() => loeschen(r)}>✕</button>}
               </span>
             </div>

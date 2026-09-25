@@ -28,6 +28,7 @@ import { augeEingangsbelege } from '@/lib/auge';
 import { zaehleEingangsbelege } from '@/lib/augeZaehler';
 import { NurVoll } from '../_components/Ansicht';
 import { csvFeld } from '@/lib/csvSchreiben';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -48,7 +49,7 @@ type Beleg = {
 const LEER = { lieferant: '', belegnummer: '', belegdatum: '', netto: '', ust_satz: '19', ust_betrag: '', brutto: '', kategorie: '', notiz: '', datev_konto: '', datev_rahmen: 'skr03' };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string): number | null { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; }
+function num(s: string): number | null { return leseZahl(s); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
 export default function EingangsbelegePage() {
@@ -122,8 +123,8 @@ export default function EingangsbelegePage() {
         const vs = datevVorschlag(j.kategorie, j.lieferant);
         setForm({
           lieferant: j.lieferant || '', belegnummer: j.belegnummer || '', belegdatum: j.belegdatum || '',
-          netto: j.netto != null ? String(j.netto) : '', ust_satz: j.ust_satz != null ? String(j.ust_satz) : '19',
-          ust_betrag: j.ust_betrag != null ? String(j.ust_betrag) : '', brutto: j.brutto != null ? String(j.brutto) : '',
+          netto: j.netto != null ? zahlFeld(j.netto) : '', ust_satz: j.ust_satz != null ? zahlFeld(j.ust_satz) : '19',
+          ust_betrag: j.ust_betrag != null ? zahlFeld(j.ust_betrag) : '', brutto: j.brutto != null ? zahlFeld(j.brutto) : '',
           kategorie: j.kategorie || '', notiz: '', datev_rahmen: 'skr03', datev_konto: vs.skr03,
         });
         setOk('Beleg gelesen — bitte kurz prüfen und speichern.' + (pfad ? '' : ' (Datei-Ablage übersprungen.)'));
@@ -160,8 +161,8 @@ export default function EingangsbelegePage() {
       .then(({ data }) => { const v = (data as { bestellung_id?: string | null } | null)?.bestellung_id; if (v) setBestellungId(v); });
     setForm({
       lieferant: b.lieferant || '', belegnummer: b.belegnummer || '', belegdatum: (b.belegdatum || '').slice(0, 10),
-      netto: b.netto != null ? String(b.netto) : '', ust_satz: b.ust_satz != null ? String(b.ust_satz) : '19',
-      ust_betrag: b.ust_betrag != null ? String(b.ust_betrag) : '', brutto: b.brutto != null ? String(b.brutto) : '',
+      netto: b.netto != null ? zahlFeld(b.netto) : '', ust_satz: b.ust_satz != null ? zahlFeld(b.ust_satz) : '19',
+      ust_betrag: b.ust_betrag != null ? zahlFeld(b.ust_betrag) : '', brutto: b.brutto != null ? zahlFeld(b.brutto) : '',
       kategorie: b.kategorie || '', notiz: b.notiz || '', datev_konto: b.datev_konto || '', datev_rahmen: b.datev_rahmen || 'skr03',
     });
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });

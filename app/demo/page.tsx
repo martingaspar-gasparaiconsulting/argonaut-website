@@ -1,5 +1,6 @@
 'use client'
 
+import { zahlText } from '@/lib/zahlen';
 import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -214,7 +215,7 @@ export default function DemoPage() {
                     <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#FFFFFF' }}>{cluster.name}</h3>
                     {clusterStunden > 0 && (
                       <span style={{ fontSize: '11px', color: '#22c55e', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '999px', padding: '2px 10px', fontWeight: 700 }}>
-                        {clusterStunden.toFixed(1)} h/Woche
+                        {zahlText(clusterStunden, 1)} h/Woche
                       </span>
                     )}
                   </div>

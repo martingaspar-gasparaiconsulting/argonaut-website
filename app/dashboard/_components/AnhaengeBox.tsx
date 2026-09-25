@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,7 +52,7 @@ function bytesText(b: number | null): string {
   if (!b) return '';
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
-  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  return `${zahlText(b / 1024 / 1024, 1)} MB`;
 }
 function istBild(mime: string | null): boolean {
   return !!mime && mime.startsWith('image/');

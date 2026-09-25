@@ -36,6 +36,7 @@ import {
   eur, eurJeEinheit, pruefePreis, pruefeRabatt,
   type Preis, type Mengenrabatt,
 } from '../_components/preisLogik';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -73,10 +74,7 @@ function leerForm(): Form {
   };
 }
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 
 // --- A3a: Preis-Formular je Einheit -----------------------------------------
 type PreisZelle = { preis: string; steuer: string };
@@ -163,9 +161,9 @@ export default function HolzSortimentPage() {
     setForm({
       id: s.id,
       holzart: s.holzart,
-      scheitlaenge_cm: String(s.scheitlaenge_cm),
+      scheitlaenge_cm: zahlFeld(s.scheitlaenge_cm),
       trocknungsgrad: s.trocknungsgrad,
-      restfeuchte_prozent: s.restfeuchte_prozent != null ? String(s.restfeuchte_prozent) : '',
+      restfeuchte_prozent: s.restfeuchte_prozent != null ? zahlFeld(s.restfeuchte_prozent) : '',
       bezeichnung: s.bezeichnung ?? '',
       notiz: s.notiz ?? '',
       aktiv: s.aktiv,
@@ -338,7 +336,7 @@ export default function HolzSortimentPage() {
     try {
       const { error } = await supabase.from('holz_preise').delete().eq('id', pr.id);
       if (error) throw error;
-      setPreisForm((f) => ({ ...f, [pr.einheit]: { preis: '', steuer: String(STANDARD_STEUERSATZ_BRENNHOLZ) } }));
+      setPreisForm((f) => ({ ...f, [pr.einheit]: { preis: '', steuer: zahlFeld(STANDARD_STEUERSATZ_BRENNHOLZ) } }));
       await laden_();
     } catch (e: unknown) {
       setFehler('Preis entfernen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -532,7 +530,7 @@ export default function HolzSortimentPage() {
                   <input style={{ ...styles.input, width: 120 }} inputMode="numeric"
                     value={form.scheitlaenge_cm} onChange={(e) => setF('scheitlaenge_cm', e.target.value)} />
                   {SCHEITLAENGEN.map((l) => (
-                    <button key={l} onClick={() => setF('scheitlaenge_cm', String(l))}
+                    <button key={l} onClick={() => setF('scheitlaenge_cm', zahlFeld(l))}
                       style={{ ...styles.miniBtn, ...(laenge === l ? styles.miniBtnAktiv : {}) }}>
                       {l} cm
                     </button>
@@ -654,7 +652,7 @@ export default function HolzSortimentPage() {
                                 {zeigeVorschlag ? (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{eur(v as number)}</span>
-                                    <button onClick={() => setPreisZelle(e.wert, 'preis', String(v))} style={styles.miniBtn}>
+                                    <button onClick={() => setPreisZelle(e.wert, 'preis', zahlFeld(v))} style={styles.miniBtn}>
                                       Übernehmen
                                     </button>
                                   </div>

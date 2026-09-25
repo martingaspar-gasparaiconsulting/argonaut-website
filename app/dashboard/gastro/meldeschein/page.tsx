@@ -17,7 +17,7 @@ import {
   MELDESCHEIN_HINWEIS, meldepflichtig, pruefeMeldeschein, meldescheinFristen, kurtaxe, datumDe, heuteBerlin, euroText,
   type KurtaxeGast,
 } from '@/lib/papiereIdentifizierung';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -92,7 +92,7 @@ export default function MeldescheinSeite() {
     setBelegungen((b.data as Belegung[]) ?? []);
     const st = (k.data as Satz | null) ?? null;
     setSatz(st);
-    if (st) setNs({ gemeinde: st.gemeinde ?? '', satz_erwachsen: String(st.satz_erwachsen ?? '').replace('.', ','), satz_kind: st.satz_kind == null ? '' : String(st.satz_kind).replace('.', ','), kind_bis_alter: st.kind_bis_alter == null ? '' : String(st.kind_bis_alter), frei_bis_alter: st.frei_bis_alter == null ? '' : String(st.frei_bis_alter), max_naechte: st.max_naechte == null ? '' : String(st.max_naechte) });
+    if (st) setNs({ gemeinde: st.gemeinde ?? '', satz_erwachsen: zahlFeld(st.satz_erwachsen ?? '').replace('.', ','), satz_kind: st.satz_kind == null ? '' : zahlFeld(st.satz_kind).replace('.', ','), kind_bis_alter: st.kind_bis_alter == null ? '' : zahlFeld(st.kind_bis_alter), frei_bis_alter: st.frei_bis_alter == null ? '' : zahlFeld(st.frei_bis_alter), max_naechte: st.max_naechte == null ? '' : zahlFeld(st.max_naechte) });
     setKtBelege((kb.data as KtBeleg[]) ?? []);
   }, []);
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function MeldescheinSeite() {
   function ktOeffnen(b: Belegung) {
     const vorhanden = ktBelege.find((k) => k.belegung_id === b.id);
     setKtBeleg(b);
-    setGaeste(vorhanden ? vorhanden.gaeste.map((g) => ({ name: g.name ?? '', alter: g.alter == null ? '' : String(g.alter), befreit: !!g.befreit })) : Array.from({ length: Math.max(1, b.personen) }, (_, i) => ({ name: i === 0 ? b.gast_name ?? '' : '', alter: '', befreit: false })));
+    setGaeste(vorhanden ? vorhanden.gaeste.map((g) => ({ name: g.name ?? '', alter: g.alter == null ? '' : zahlFeld(g.alter), befreit: !!g.befreit })) : Array.from({ length: Math.max(1, b.personen) }, (_, i) => ({ name: i === 0 ? b.gast_name ?? '' : '', alter: '', befreit: false })));
   }
   async function ktSpeichern() {
     if (!ktBeleg || !ktErgebnis?.ok) return;

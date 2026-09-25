@@ -56,6 +56,7 @@ import {
 import { eur, steuerAusweisZeilen, type Position } from '../../_components/positionsLogik';
 import { lieferscheinPdf } from '../../_components/lieferscheinPdf';
 import { klappeAuf, paketKurz, type Paket, type PaketPosition } from '../../_components/paketLogik';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -91,10 +92,7 @@ type PositionRow = Position & { id: string; auftrag_id: string; sortiment_id: st
 type KundenEintrag = { art: 'kontakt' | 'firma'; empf: Empfaenger };
 type Zusatz = { bezeichnung: string; menge: string; einheit: string; preis: string; steuer: string };
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 function datumHuebsch(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -310,7 +308,7 @@ export default function AuftraegePage() {
       ? { meter: Number(a.entfernung_m), quelle: (a.entfernung_quelle as DistanzQuelle) ?? 'manuell', geschaetzt: a.entfernung_geschaetzt }
       : null);
     setLiefertermin(a.liefertermin ?? '');
-    setRestfeuchte(a.restfeuchte_prozent !== null ? String(a.restfeuchte_prozent) : '');
+    setRestfeuchte(a.restfeuchte_prozent !== null ? zahlFeld(a.restfeuchte_prozent) : '');
     setNotiz(a.notiz ?? '');
     setRechnungId(a.rechnung_id ?? null);
     setFehler(null); setModalAuf(true);
@@ -327,13 +325,13 @@ export default function AuftraegePage() {
     const ware = pos.find((p) => p.art === 'sortiment');
     if (ware?.quelle_id) {
       setSortimentId(ware.quelle_id);
-      setMenge(String(ware.menge));
+      setMenge(zahlFeld(ware.menge));
       const e = EINHEITEN.find((x) => x.kurz === ware.einheit);
       if (e) setEinheit(e.wert);
     }
     setZusatz(pos.filter((p) => p.art === 'leistung').map((p) => ({
-      bezeichnung: p.bezeichnung, menge: String(p.menge), einheit: p.einheit,
-      preis: String(p.einzelpreis_netto), steuer: String(p.steuersatz_prozent),
+      bezeichnung: p.bezeichnung, menge: zahlFeld(p.menge), einheit: p.einheit,
+      preis: zahlFeld(p.einzelpreis_netto), steuer: zahlFeld(p.steuersatz_prozent),
     })));
     // Paketzeilen kommen fertig aus der DB — mit ihrem verteilten Fixpreis.
     setPaketZeilen(pos.filter((p) => p.art === 'paket').map((p) => ({

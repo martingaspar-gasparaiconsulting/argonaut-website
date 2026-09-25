@@ -22,6 +22,7 @@ import {
   unterschriftenStand, unterschriftGueltig, radarKommend, RADAR_STAND, HINWEIS_RICHTWERTE, VORSCHLAG_MAPPEN,
   type Mappe, type NachweisZeile, type Person, type Unterschrift,
 } from '@/lib/nachweisMotor';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -38,11 +39,7 @@ type Zeile = NachweisZeile & { id: string; owner_user_id: string; mappe: Mappe; 
 type Form = { id: string | null; art: string; bezeichnung: string; bezug: string; letzte_am: string; intervall_monate: string; gueltig_bis: string; kuendigungsfrist_monate: string; betrag: string; notiz: string };
 const LEER: Form = { id: null, art: '', bezeichnung: '', bezug: '', letzte_am: '', intervall_monate: '', gueltig_bis: '', kuendigungsfrist_monate: '', betrag: '', notiz: '' };
 
-function zahl(s: string): number | null {
-  const t = s.trim(); if (!t) return null;
-  const n = Number(t.replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
+function zahl(s: string): number | null { return leseZahl(s); }
 
 export default function NachweisSeite() {
   const [uid, setUid] = useState<string | null>(null);
@@ -89,17 +86,17 @@ export default function NachweisSeite() {
       ...LEER,
       art: k?.key ?? '',
       bezeichnung: k?.label ?? '',
-      intervall_monate: k?.intervall ? String(k.intervall) : '',
-      kuendigungsfrist_monate: k?.kuendigung ? String(k.kuendigung) : '',
+      intervall_monate: k?.intervall ? zahlFeld(k.intervall) : '',
+      kuendigungsfrist_monate: k?.kuendigung ? zahlFeld(k.kuendigung) : '',
     });
   }
 
   function bearbeiten(z: Zeile) {
     setForm({
       id: z.id, art: z.art, bezeichnung: z.bezeichnung, bezug: z.bezug ?? '', letzte_am: z.letzte_am ?? '',
-      intervall_monate: z.intervall_monate ? String(z.intervall_monate) : '', gueltig_bis: z.gueltig_bis ?? '',
-      kuendigungsfrist_monate: z.kuendigungsfrist_monate != null ? String(z.kuendigungsfrist_monate) : '',
-      betrag: z.betrag != null ? String(z.betrag).replace('.', ',') : '', notiz: z.notiz ?? '',
+      intervall_monate: z.intervall_monate ? zahlFeld(z.intervall_monate) : '', gueltig_bis: z.gueltig_bis ?? '',
+      kuendigungsfrist_monate: z.kuendigungsfrist_monate != null ? zahlFeld(z.kuendigungsfrist_monate) : '',
+      betrag: z.betrag != null ? zahlFeld(z.betrag).replace('.', ',') : '', notiz: z.notiz ?? '',
     });
   }
 
@@ -215,7 +212,7 @@ export default function NachweisSeite() {
                 <label style={s.lab}>Art
                   <select style={s.inp} value={form.art} onChange={(e) => {
                     const nk = katalogArt(e.target.value);
-                    setForm({ ...form, art: e.target.value, bezeichnung: nk?.label ?? form.bezeichnung, intervall_monate: nk?.intervall ? String(nk.intervall) : '', kuendigungsfrist_monate: nk?.kuendigung ? String(nk.kuendigung) : form.kuendigungsfrist_monate });
+                    setForm({ ...form, art: e.target.value, bezeichnung: nk?.label ?? form.bezeichnung, intervall_monate: nk?.intervall ? zahlFeld(nk.intervall) : '', kuendigungsfrist_monate: nk?.kuendigung ? zahlFeld(nk.kuendigung) : form.kuendigungsfrist_monate });
                   }}>
                     {katalogFuer(tab).map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
                   </select>

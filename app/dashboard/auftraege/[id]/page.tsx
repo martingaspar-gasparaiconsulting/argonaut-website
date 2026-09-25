@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
+import { leseZahlOder } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+A9
@@ -73,11 +74,7 @@ type KiVorschlag = {
   quelle_datei?: string;
 };
 
-function parseZahl(s: string): number {
-  if (!s) return 0;
-  const n = parseFloat(String(s).replace(",", "."));
-  return isNaN(n) ? 0 : n;
-}
+function parseZahl(s: string): number { return leseZahlOder(s, 0); }
 function ladeStr(n: number | null | undefined): string {
   if (n === null || n === undefined) return "";
   return String(n).replace(".", ",");

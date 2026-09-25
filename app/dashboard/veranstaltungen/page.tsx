@@ -22,6 +22,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'event_veranstaltung';
 
@@ -45,7 +46,7 @@ const E_STATUS = [
 const E_ST_FARBE: Record<string, string> = { aktiv: C.green, ausverkauft: C.gold, abgesagt: C.danger, beendet: C.textDim, geplant: C.cyan };
 
 function beginnStd() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T18:00`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function fmtDT(iso: string | null) { if (!iso) return '—'; const s = iso.slice(0, 16); const [d, t] = s.split('T'); if (!d) return iso; const p = d.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}${t ? ` ${t}` : ''}` : iso; }
 function pct(n: number) { return `${(Number(n) * 100).toLocaleString('de-DE', { maximumFractionDigits: 0 })} %`; }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }

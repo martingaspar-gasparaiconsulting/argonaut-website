@@ -7,6 +7,7 @@ import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
 import KiKlartext from "../../_components/KiKlartext";
+import { leseZahlOder, zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-6 — KENNZAHLEN
@@ -45,7 +46,7 @@ function eur(n: number | null | undefined): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 function pct(n: number | null | undefined): string {
@@ -61,10 +62,7 @@ function jahrVon(d: string): number | null {
   return isNaN(j) ? null : j;
 }
 // Eingabe (deutsches Komma erlaubt) -> Zahl
-function num(v: string): number {
-  const n = parseFloat(String(v).replace(",", "."));
-  return isNaN(n) ? 0 : n;
-}
+function num(v: string): number { return leseZahlOder(v, 0); }
 
 export default function FinanzKennzahlen() {
   const router = useRouter();

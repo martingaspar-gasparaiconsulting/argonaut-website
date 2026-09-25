@@ -26,6 +26,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'bestellung';
 
@@ -46,7 +47,7 @@ type Position = { id: string; bestellung_id: string; artikel: string; menge: num
 type LagerArtikel = { id: string; bezeichnung: string; artikelnummer: string | null; einheit: string | null; aktueller_bestand: number | null };
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 

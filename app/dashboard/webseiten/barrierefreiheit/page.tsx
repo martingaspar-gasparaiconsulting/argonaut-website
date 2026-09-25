@@ -20,6 +20,7 @@ import {
   betroffenheit, ciKontraste, pruefeHtml, erklaerungText, HANDPRUEFUNG, ERFUELLT_VORSCHLAEGE, BFSG_STAND, MLBF,
   type Befund,
 } from '@/lib/barrierefreiheit';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -39,7 +40,7 @@ function heuteBerlin(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 function de(t: string) { return `${t.slice(8, 10)}.${t.slice(5, 7)}.${t.slice(0, 4)}`; }
-function zahl(s: string): number | null { const t = s.trim(); if (!t) return null; const n = Number(t.replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; }
+function zahl(s: string): number | null { return leseZahl(s); }
 
 export default function BarrierefreiheitSeite() {
   const [uid, setUid] = useState<string | null>(null);
@@ -64,8 +65,8 @@ export default function BarrierefreiheitSeite() {
     const d = b.data as Record<string, unknown> | null;
     if (d) setA({
       verbraucher: (d.verbraucher as boolean | null) ?? null, online_vertrag: (d.online_vertrag as boolean | null) ?? null,
-      beschaeftigte: d.beschaeftigte != null ? String(d.beschaeftigte) : '', umsatz_mio: d.umsatz_mio != null ? String(d.umsatz_mio).replace('.', ',') : '',
-      leistung: String(d.leistung ?? ''), erfuellt: Array.isArray(d.erfuellt) ? (d.erfuellt as string[]) : [], barrieren: String(d.barrieren ?? ''),
+      beschaeftigte: d.beschaeftigte != null ? zahlFeld(d.beschaeftigte) : '', umsatz_mio: d.umsatz_mio != null ? zahlFeld(d.umsatz_mio).replace('.', ',') : '',
+      leistung: zahlFeld(d.leistung ?? ''), erfuellt: Array.isArray(d.erfuellt) ? (d.erfuellt as string[]) : [], barrieren: zahlFeld(d.barrieren ?? ''),
       geprueft_am: (d.geprueft_am as string | null) ?? null,
     });
   }, []);

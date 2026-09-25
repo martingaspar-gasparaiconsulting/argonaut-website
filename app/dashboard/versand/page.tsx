@@ -13,6 +13,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { CARRIER, SERVICES, VERSAND_STATUS, RICHTUNGEN, RETOURE_GRUENDE, istRetoure, statusInfo, carrierName, trackingLink, sendungProbleme, adresseEinzeilig, formatGewicht, formatEuro, zaehleSendungen } from '@/lib/versand';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -34,7 +35,7 @@ type Sendung = {
 };
 type Verbindung = { verbunden: boolean; konto_name: string; encKeyBereit: boolean };
 
-function num(s: string): number { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 const LEER = {
   kontakt_id: '', empfaenger_name: '', empfaenger_firma: '', strasse: '', plz: '', ort: '', land: 'DE',
   gewicht_kg: '', laenge_cm: '', breite_cm: '', hoehe_cm: '', carrier: 'dhl', service: 'Paket', referenz: '', kosten: '', notiz: '',

@@ -13,6 +13,7 @@
 // 1) Typen
 // ---------------------------------------------------------------------------
 
+import { leseZahl } from './zahlen';
 export type Operator =
   | 'gleich'
   | 'ungleich'
@@ -350,11 +351,7 @@ export function alsZahl(wert: unknown): number | null {
   if (typeof wert === 'number') return isNaN(wert) ? null : wert;
   if (typeof wert === 'boolean') return wert ? 1 : 0;
   if (wert === null || wert === undefined || wert === '') return null;
-  let s = String(wert).trim().replace(/\s|€/g, '');
-  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
-  else if (s.includes(',')) s = s.replace(',', '.');
-  const n = Number(s);
-  return isNaN(n) ? null : n;
+  return leseZahl(String(wert));
 }
 
 /** Ganze Tage zwischen zwei Datumsangaben (b - a), auf Tagesgrenze gerundet. */

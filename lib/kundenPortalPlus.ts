@@ -18,6 +18,7 @@
 // Nachtrag aus PI direkt als Freigabe, Abnahme-Formular (PL) als Dokument.
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 export const FREIGABE_STATUS = ['offen', 'freigegeben', 'abgelehnt', 'zurueckgezogen'] as const;
 export type FreigabeStatus = (typeof FREIGABE_STATUS)[number];
 
@@ -88,7 +89,7 @@ export function fortschrittAus(aufgaben: { erledigt?: unknown; status?: unknown 
 /** Manueller Fortschritt aus einer Meldung (0–100, ganzzahlig) oder null. */
 export function leseProzent(v: unknown): number | null {
   if (v === null || v === undefined || String(v).trim() === '') return null;
-  const n = Number(String(v).replace(',', '.').replace('%', '').trim());
+  const n = leseZahlOder(String(v), NaN);
   if (!Number.isFinite(n) || n < 0 || n > 100) return null;
   return Math.round(n);
 }

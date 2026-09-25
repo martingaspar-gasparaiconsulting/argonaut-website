@@ -117,11 +117,8 @@ export function z(x: unknown): number {
   if (typeof x === 'string') {
     const roh = x.trim();
     if (!roh) return 0;
-    // "1.234,50" und "1234.50" sollen beide funktionieren.
-    const deutsch = /,\d{1,2}$/.test(roh) || (roh.includes('.') && roh.includes(','));
-    const sauber = deutsch ? roh.replace(/\./g, '').replace(',', '.') : roh.replace(',', '.');
-    const n = Number(sauber.replace(/[^0-9.\-]/g, ''));
-    return Number.isFinite(n) ? n : 0;
+    // "1.234,50", "1.500" und "1234.50" — deutsche Regel aus lib/zahlen.ts.
+    return leseZahlOder(roh, 0);
   }
   return 0;
 }

@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import DateiImport from "../../../_components/DateiImport";
+import { leseZahl } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · ERP · Preisliste · KI-Import (Etappe 2, Baustein 2a-2)
@@ -51,15 +52,7 @@ interface Vorschau {
   alsUpdate: boolean;
 }
 
-function zahl(s: string): number | null {
-  const t = s.trim();
-  if (t === "") return null;
-  let x = t.replace(/[€\s]/g, "");
-  if (x.includes(",") && x.includes(".")) x = x.replace(/\./g, "").replace(",", ".");
-  else if (x.includes(",")) x = x.replace(",", ".");
-  const n = Number(x.replace(/[^\d.-]/g, ""));
-  return isFinite(n) ? n : null;
-}
+function zahl(s: string): number | null { return leseZahl(s); }
 
 function eur(n: number | null | undefined): string {
   return (Number(n) || 0).toLocaleString("de-DE", {

@@ -19,6 +19,7 @@ import {
   type EtikettLite,
 } from "@/lib/etiketten";
 import { etikettPdf } from "@/lib/etikettPdf";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-2 · Etiketten & Kennzeichnung nach LMIV (EU 1169/2011)
@@ -96,7 +97,7 @@ const LEER: FormState = {
   naehrwert_basis: "100 g", status: "aktiv",
 };
 
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function num(n: number | null): string { return (Number(n) || 0).toLocaleString("de-DE", { maximumFractionDigits: 2 }); }
 
 export default function EtikettenSeite() {
@@ -160,11 +161,11 @@ export default function EtikettenSeite() {
       bezeichnung: p.bezeichnung ?? "", art: p.art ?? "verpackt", artikel_id: p.artikel_id ?? "",
       zutaten: p.zutaten ?? "", allergene: parseAllergene(p.allergene), spuren: p.spuren ?? "",
       nettomenge: p.nettomenge ?? "", mhd: p.mhd ?? "", aufbewahrung: p.aufbewahrung ?? "", verantwortlicher: p.verantwortlicher ?? "",
-      ursprung: p.ursprung ?? "", alkohol: p.alkohol != null ? String(p.alkohol) : "", charge: p.charge ?? "",
-      energie_kj: p.energie_kj != null ? String(p.energie_kj) : "", energie_kcal: p.energie_kcal != null ? String(p.energie_kcal) : "",
-      fett: p.fett != null ? String(p.fett) : "", gesaettigt: p.gesaettigt != null ? String(p.gesaettigt) : "",
-      kohlenhydrate: p.kohlenhydrate != null ? String(p.kohlenhydrate) : "", zucker: p.zucker != null ? String(p.zucker) : "",
-      eiweiss: p.eiweiss != null ? String(p.eiweiss) : "", salz: p.salz != null ? String(p.salz) : "",
+      ursprung: p.ursprung ?? "", alkohol: p.alkohol != null ? zahlFeld(p.alkohol) : "", charge: p.charge ?? "",
+      energie_kj: p.energie_kj != null ? zahlFeld(p.energie_kj) : "", energie_kcal: p.energie_kcal != null ? zahlFeld(p.energie_kcal) : "",
+      fett: p.fett != null ? zahlFeld(p.fett) : "", gesaettigt: p.gesaettigt != null ? zahlFeld(p.gesaettigt) : "",
+      kohlenhydrate: p.kohlenhydrate != null ? zahlFeld(p.kohlenhydrate) : "", zucker: p.zucker != null ? zahlFeld(p.zucker) : "",
+      eiweiss: p.eiweiss != null ? zahlFeld(p.eiweiss) : "", salz: p.salz != null ? zahlFeld(p.salz) : "",
       naehrwert_basis: p.naehrwert_basis ?? "100 g", status: p.status ?? "aktiv",
     });
     setFehler(null); setModal(true);
@@ -260,7 +261,7 @@ export default function EtikettenSeite() {
     for (let i = 1; i < zeilen.length; i++) {
       const sp = zeilen[i].split(";");
       const val = (n: string) => { const k = idx(n); return k >= 0 ? (sp[k] ?? "").trim() : ""; };
-      const znum = (n: string) => { const v = val(n); return v === "" ? null : Number(v.replace(",", ".")); };
+      const znum = (n: string) => { const v = val(n); return v === "" ? null : zahlAusFeld(v); };
       if (!val("bezeichnung")) continue;
       const base: Record<string, unknown> = {
         bezeichnung: val("bezeichnung"), art: val("art") || "verpackt",

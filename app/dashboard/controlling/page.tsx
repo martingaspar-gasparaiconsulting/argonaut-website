@@ -10,13 +10,14 @@
 
 import { useState, useMemo, CSSProperties } from 'react';
 import { ergebnis, breakEven, liquiditaet, stundensatz, ekQuote } from '@/lib/controlling';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-function num(s: string): number { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function eur(n: number | null | undefined) { return n == null ? '—' : (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function proz(n: number | null | undefined) { return n == null ? '—' : `${(Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`; }
 

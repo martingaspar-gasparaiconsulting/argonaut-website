@@ -15,6 +15,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { augeProvisionen } from '@/lib/auge';
 import { provisionBetrag, proEmpfaenger, provisionSummen, provisionHinweise, empfaengerName, formatEuro } from '@/lib/provision';
 import Hinweise from '../_components/Hinweise';
+import { zahlAusFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -80,7 +81,7 @@ export default function ProvisionenSeite() {
 
   async function speichern(d: Deal) {
     const e = entwurf[d.id] ?? { prozent: '', empfaenger: '' };
-    const prozent = e.prozent.trim() === '' ? null : parseFloat(e.prozent.replace(',', '.')) || 0;
+    const prozent = e.prozent.trim() === '' ? null : zahlAusFeld(e.prozent) || 0;
     setBusy(d.id); setFehler(null);
     try {
       const { error } = await supabase.from('crm_deal')

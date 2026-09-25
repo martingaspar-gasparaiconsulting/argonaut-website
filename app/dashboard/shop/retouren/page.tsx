@@ -22,6 +22,7 @@ import {
   offenePlatzhalter, heuteBerlin, datumDe,
   type RetourenArt, type RetourenStatus, type Zustand, type RetourePosition,
 } from '@/lib/kundenVorgaenge';
+import { leseZahl } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,12 +52,7 @@ type Retoure = {
   lager_gebucht: boolean; grund: string | null; notiz: string | null; erstellt_am: string;
 };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 function euro(n: number | null | undefined): string { return n == null ? '—' : n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 
 const LEER = { bestellung_id: '', art: 'widerruf' as RetourenArt, kunde_name: '', email: '', bestellnummer: '', erhalten_am: '', widerruf_am: heuteBerlin(), belehrung_ok: true, hinversand: '', grund: RETOUREN_GRUENDE[0] };

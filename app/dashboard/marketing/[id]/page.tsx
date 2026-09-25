@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { zahlAusFeld } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 3 MARKETING · M3 Detailseite
@@ -578,7 +579,7 @@ function TabEinstellungen({ kampagne, reload }: { kampagne: Kampagne; reload: ()
     const payload: Record<string, unknown> = {
       name: fName.trim(), ziel: fZiel.trim() || null, beschreibung: fBeschreibung.trim() || null,
       status: fStatus, kanaele: fKanaele,
-      budget: fBudget.trim() ? Number(fBudget.replace(',', '.')) : null,
+      budget: fBudget.trim() ? zahlAusFeld(fBudget) : null,
       start_datum: fStart || null, end_datum: fEnde || null,
     };
     const { error } = await supabase.from('marketing_kampagnen').update(payload).eq('id', kampagne.id);

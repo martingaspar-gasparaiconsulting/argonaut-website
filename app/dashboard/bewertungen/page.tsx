@@ -14,6 +14,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import BewertungAntwort from '../_components/BewertungAntwort';
+import { zahlText } from '@/lib/zahlen';
 
 const MODUL = 'bewertungsanfragen';
 
@@ -156,7 +157,7 @@ export default function BewertungenPage() {
 
       {/* Kennzahlen */}
       <div style={styles.summenGrid}>
-        <SummeKarte label="Ø Sterne" value={schnitt != null ? schnitt.toFixed(1) : '—'} accent={C.gold} />
+        <SummeKarte label="Ø Sterne" value={schnitt != null ? zahlText(schnitt, 1) : '—'} accent={C.gold} />
         <SummeKarte label="Abgegeben" value={String(abgegebene.length)} accent={C.green} />
         <SummeKarte label="Offen" value={String(offene.length)} accent={offene.length > 0 ? C.warn : C.green} />
         <SummeKarte label="Veröffentlicht" value={String(abgegebene.filter((a) => a.veroeffentlicht).length)} accent={C.cyan} />

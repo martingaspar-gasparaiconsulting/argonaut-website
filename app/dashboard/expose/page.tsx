@@ -23,6 +23,7 @@ import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'expose';
 
@@ -50,7 +51,7 @@ type Expose = {
 type Interessent = { id: string; expose_id: string; name: string; email: string | null; telefon: string | null; status: string; notiz: string | null; created_at: string };
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 
 const LEER: Record<string, string> = {

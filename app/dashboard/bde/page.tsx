@@ -20,6 +20,7 @@ import { bdePdf } from '@/lib/bdePdf';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'bde_buchung';
 
@@ -41,7 +42,7 @@ const SCHICHTEN = ['Früh', 'Spät', 'Nacht', 'Tag'];
 const M_STATUS = [{ v: 'aktiv', l: 'aktiv' }, { v: 'wartung', l: 'in Wartung' }, { v: 'ausgemustert', l: 'ausgemustert' }];
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function pct(n: number) { return `${(Number(n) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`; }
 function stdVon(min: number) { return (min / 60).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }

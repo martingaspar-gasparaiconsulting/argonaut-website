@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -38,7 +39,7 @@ function gutLabel(k: string) { return GUT_ARTEN.find((a) => a.key === k)?.label 
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function inTagen(tage: number) { const g = new Date(); g.setDate(g.getDate() + tage); return g.toISOString().slice(0, 10); }
-function num(s: string) { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function plusMonate(iso: string, monate: number) { const dt = new Date(iso); dt.setMonth(dt.getMonth() + monate); return dt.toISOString().slice(0, 10); }
 function istSperrfrist(iso: string) { const p = iso.split('-').map(Number); const md = p[1] * 100 + p[2]; return md >= 301 && md <= 930; }

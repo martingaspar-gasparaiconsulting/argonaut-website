@@ -24,6 +24,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort } from '@/lib/standortDaten';
 import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,7 +47,7 @@ const MODI: { w: Modus; label: string; farbe: string; zeichen: string }[] = [
 /** Die drei Modi in der Sprache der Datenbank. Inventur SETZT den Bestand. */
 const MODUS_ART = { eingang: 'zugang', ausgang: 'abgang', inventur: 'korrektur' } as const;
 function modusInfo(m: Modus) { return MODI.find((x) => x.w === m) as (typeof MODI)[number]; }
-function num(s: string): number { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function fmt(n: number) { return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE'); }
 function clean(code: string) { return (code || '').trim().replace(/[^A-Za-z0-9\-_.]/g, ''); }
 
@@ -137,7 +138,7 @@ export default function LagerScannerPage() {
       // Inventur: mit dem Bestand DIESER Filiale vorbelegen. Wurde hier noch
       // nie gezählt, bleibt das Feld leer — eine vorgeschlagene 0 wäre eine
       // Behauptung über ein Regal, das niemand angesehen hat.
-      setMenge(modus === 'inventur' ? (hier === null ? '' : String(hier)) : '1');
+      setMenge(modus === 'inventur' ? (hier === null ? '' : zahlFeld(hier)) : '1');
     } catch (e: unknown) {
       setFehler('Suche fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     }

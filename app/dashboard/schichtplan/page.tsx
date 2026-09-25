@@ -9,6 +9,7 @@ import type { EigenesFeld } from '@/lib/eigeneFelder';
 import KiAuge from '../_components/KiAuge';
 import { augeSchichtplan } from '@/lib/auge';
 import { zaehleSchichtplan } from '@/lib/augeZaehler';
+import { zahlText } from '@/lib/zahlen';
 
 const MODUL = 'hr_schicht_vorlagen';
 
@@ -1132,9 +1133,9 @@ export default function SchichtplanPage() {
                         return (
                           <div
                             style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: farbe, fontWeight: w?.status === 'ok' ? 500 : 700, marginTop: 2 }}
-                            title={`Minijob-Grenze 2026: max. ~${MINIJOB_STD_MONAT.toFixed(1)} h/Monat (${MINIJOB_EUR} € ÷ ${MINDESTLOHN.toFixed(2).replace('.', ',')} €). Geplant ${monatLabel(w?.monat || '')}: ${std.toFixed(1)} h.`}
+                            title={`Minijob-Grenze 2026: max. ~${zahlText(MINIJOB_STD_MONAT, 1)} h/Monat (${MINIJOB_EUR} € ÷ ${zahlText(MINDESTLOHN, 2).replace('.', ',')} €). Geplant ${monatLabel(w?.monat || '')}: ${zahlText(std, 1)} h.`}
                           >
-                            {icon}Minijob · {std.toFixed(1)}/{MINIJOB_STD_MONAT.toFixed(0)} h
+                            {icon}Minijob · {zahlText(std, 1)}/{zahlText(MINIJOB_STD_MONAT, 0)} h
                             {w?.status === 'ueber' ? ' — Grenze überschritten!' : w?.status === 'knapp' ? ' — fast am Limit' : ''}
                           </div>
                         );
@@ -1218,7 +1219,7 @@ export default function SchichtplanPage() {
                                 <div style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: BRAND.textDim }}>{s.rolle}</div>
                               )}
                               <div style={{ fontSize: 'clamp(10px, 0.88vw, 14px)', color: BRAND.textDim }}>
-                                {dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0).toFixed(1)} h
+                                {zahlText(dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0), 1)} h
                                 {s.pause_minuten > 0 ? ` · ${s.pause_minuten} Min Pause` : ''}
                               </div>
                             </button>
@@ -1254,7 +1255,7 @@ export default function SchichtplanPage() {
                       borderLeft: `1px solid ${BRAND.border}`,
                       fontWeight: 700, fontSize: 'clamp(14px, 1.25vw, 20px)', color: BRAND.gold,
                     }}>
-                      {wochenStundenFuer(maId).toFixed(1)} h
+                      {zahlText(wochenStundenFuer(maId), 1)} h
                     </td>
                   </tr>
                 );
@@ -1274,7 +1275,7 @@ export default function SchichtplanPage() {
 
       {!laden && mitarbeiter.some((m) => (m.arbeitszeit_modell || '') === 'minijob') && (
         <div style={{ marginTop: 10, fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
-          Minijob-Grenze 2026: max. ~{MINIJOB_STD_MONAT.toFixed(1)} h/Monat ({MINIJOB_EUR} € ÷ {MINDESTLOHN.toFixed(2).replace('.', ',')} € Mindestlohn).
+          Minijob-Grenze 2026: max. ~{zahlText(MINIJOB_STD_MONAT, 1)} h/Monat ({MINIJOB_EUR} € ÷ {zahlText(MINDESTLOHN, 2).replace('.', ',')} € Mindestlohn).
           Angezeigt werden die geplanten Schichtstunden im jeweiligen Kalendermonat.
         </div>
       )}
@@ -1361,7 +1362,7 @@ export default function SchichtplanPage() {
 
             {schichtModal.beginn_um && schichtModal.ende_um && (
               <div style={{ marginBottom: 12, color: BRAND.cyan, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600 }}>
-                Netto-Arbeitszeit: {dauerStunden(schichtModal.beginn_um, schichtModal.ende_um, Number(schichtModal.pause_minuten) || 0).toFixed(2)} h
+                Netto-Arbeitszeit: {zahlText(dauerStunden(schichtModal.beginn_um, schichtModal.ende_um, Number(schichtModal.pause_minuten) || 0), 2)} h
               </div>
             )}
 

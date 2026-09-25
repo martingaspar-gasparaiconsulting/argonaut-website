@@ -9,6 +9,7 @@ import {
 } from '@/lib/aktivitaeten';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ============================================================================
 // ARGONAUT OS · MODUL VERTRIEB · Akquise-Cockpit (D2)
@@ -121,7 +122,7 @@ export default function AkquisePage() {
       .from('profiles').select('vertrieb_tagesziel').eq('id', ownerId).maybeSingle();
     const z = Number((profil as { vertrieb_tagesziel?: number | null } | null)?.vertrieb_tagesziel ?? 0) || 0;
     setZiel(z);
-    setZielEingabe(z > 0 ? String(z) : '');
+    setZielEingabe(z > 0 ? zahlFeld(z) : '');
     setLaden(false);
   }, [ownerId]);
 
@@ -178,7 +179,7 @@ export default function AkquisePage() {
 
   async function zielSpeichern() {
     if (!istChef || !uid) return;
-    const n = Math.max(0, Math.floor(Number(zielEingabe.replace(',', '.'))) || 0);
+    const n = Math.max(0, Math.floor(zahlAusFeld(zielEingabe)) || 0);
     setBusy(true);
     const { error } = await supabase.from('profiles').update({ vertrieb_tagesziel: n }).eq('id', uid);
     setBusy(false);

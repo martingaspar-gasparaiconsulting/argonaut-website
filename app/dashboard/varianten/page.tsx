@@ -17,6 +17,7 @@ import {
   type BestandStufe,
 } from "@/lib/varianten";
 import { variantenMatrixPdf } from "@/lib/variantenMatrixPdf";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-1 · Artikel-Varianten & Matrix
@@ -126,9 +127,7 @@ function eur(n: number | null): string {
 function num(n: number | null): string {
   return (Number(n) || 0).toLocaleString("de-DE", { maximumFractionDigits: 2 });
 }
-function zahl(s: string): number {
-  return s.trim() === "" ? 0 : Number(s.replace(",", "."));
-}
+function zahl(s: string): number { return zahlAusFeld(s); }
 
 export default function VariantenSeite() {
   const [gruppen, setGruppen] = useState<Gruppe[]>([]);
@@ -226,8 +225,8 @@ export default function VariantenSeite() {
       achse1_werte: g.achse1_werte ?? "",
       achse2_name: g.achse2_name ?? "",
       achse2_werte: g.achse2_werte ?? "",
-      basis_vk: g.basis_vk != null ? String(g.basis_vk) : "",
-      mwst_satz: g.mwst_satz != null ? String(g.mwst_satz) : "19",
+      basis_vk: g.basis_vk != null ? zahlFeld(g.basis_vk) : "",
+      mwst_satz: g.mwst_satz != null ? zahlFeld(g.mwst_satz) : "19",
       status: g.status ?? "aktiv",
     });
     setGFehler(null);
@@ -342,9 +341,9 @@ export default function VariantenSeite() {
       achse2_wert: v.achse2_wert ?? "",
       sku: v.sku ?? "",
       ean: v.ean ?? "",
-      aufpreis: v.aufpreis != null ? String(v.aufpreis) : "",
-      bestand: v.bestand != null ? String(v.bestand) : "",
-      mindestbestand: v.mindestbestand != null ? String(v.mindestbestand) : "",
+      aufpreis: v.aufpreis != null ? zahlFeld(v.aufpreis) : "",
+      bestand: v.bestand != null ? zahlFeld(v.bestand) : "",
+      mindestbestand: v.mindestbestand != null ? zahlFeld(v.mindestbestand) : "",
       aktiv: v.aktiv,
     });
     setVFehler(null);

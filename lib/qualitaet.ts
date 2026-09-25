@@ -33,6 +33,7 @@
 // Datum
 // ---------------------------------------------------------------------------
 
+import { leseZahl } from './zahlen';
 function zwei(n: number): string { return n < 10 ? `0${n}` : String(n); }
 
 export function istIsoDatum(s: unknown): s is string {
@@ -70,9 +71,7 @@ function zahl(x: unknown): number | null {
   const s = String(x).trim().replace(/\s/g, '');
   if (!s) return null;
   // 1.234,56 -> 1234.56 ; 12,5 -> 12.5 ; 12.5 -> 12.5
-  const norm = /,/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s;
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : null;
+  return leseZahl(s);
 }
 
 // ---------------------------------------------------------------------------

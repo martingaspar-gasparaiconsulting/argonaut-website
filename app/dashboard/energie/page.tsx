@@ -14,6 +14,7 @@ import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'energie_anlagen';
 
@@ -31,7 +32,7 @@ type Anlage = { id: string; bezeichnung: string; typ: string | null; standort: s
 type Ablesung = { id: string; datum: string; zaehlerstand: number | null; ertrag_kwh: number | null };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function ampel(f: string | null): { txt: string; farbe: string } {
   if (!f) return { txt: 'keine Wartung geplant', farbe: C.textDim };

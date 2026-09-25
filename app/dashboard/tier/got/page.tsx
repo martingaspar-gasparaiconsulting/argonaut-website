@@ -17,7 +17,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import {
   GOT_HINWEIS, gotBerechnung, gotRahmen, istNotdienstZeit, kostenText, euro, euroText, heuteBerlin,
 } from '@/lib/gebuehrenHonorare';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -75,7 +75,7 @@ export default function GotSeite() {
   }), [notdienst, vereinbart, km, ust, pos]);
 
   function hinzu(l: Leistung) {
-    setPos([...pos, { key: `${l.id}-${Date.now()}`, nr: l.nr ?? '', bezeichnung: l.bezeichnung, einfach: String(l.einfach_satz).replace('.', ','), faktor: String(min), anzahl: '1' }]);
+    setPos([...pos, { key: `${l.id}-${Date.now()}`, nr: l.nr ?? '', bezeichnung: l.bezeichnung, einfach: zahlFeld(l.einfach_satz).replace('.', ','), faktor: zahlFeld(min), anzahl: '1' }]);
   }
   async function leistungAnlegen() {
     const e = leseZahl(nl.einfach);

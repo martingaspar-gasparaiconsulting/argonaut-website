@@ -46,6 +46,7 @@ import {
 } from '../../_components/preisauskunftLogik';
 import { preisauskunftPdf } from '../../_components/preisauskunftPdf';
 import { anschriftBlock } from '../../_components/empfaengerLogik';
+import { leseZahl } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -71,10 +72,7 @@ type Entfernung = {
   hinweis?: string | null;
 };
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 
 export default function PreisauskunftPage() {
   const [uid, setUid] = useState<string | null>(null);

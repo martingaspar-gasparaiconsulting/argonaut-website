@@ -18,6 +18,7 @@ import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 const MODUL = 'ernte_ernte';
 
 // ---------------------------------------------------------------------
@@ -43,7 +44,7 @@ interface Verkauf { id: string; produkt_id: string | null; bezeichnung: string |
 interface SchlagKurz { id: string; bezeichnung: string; }
 
 const heute = () => new Date().toISOString().slice(0, 10);
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function num(x: number | null): string { return (Number(x) || 0).toLocaleString("de-DE", { maximumFractionDigits: 2 }); }
 function eur(x: number | null): string { return (Number(x) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" }); }
 function dstr(s: string | null): string { return s ? new Date(s).toLocaleDateString("de-DE") : "—"; }
@@ -184,7 +185,7 @@ export default function ErnteSeite() {
   // ---------- Ernte ----------
   function openErnte(e?: Ernte) {
     setEEdit(e?.id ?? null);
-    setEForm(e ? { schlag_id: e.schlag_id ?? "", artikel_id: e.artikel_id ?? "", kultur: e.kultur ?? "", datum: e.datum ?? heute(), menge: e.menge != null ? String(e.menge) : "", einheit: e.einheit ?? "kg", qualitaet: e.qualitaet ?? "", lagerort: e.lagerort ?? "", status: e.status ?? "gelagert", notiz: e.notiz ?? "" } : LEER_E);
+    setEForm(e ? { schlag_id: e.schlag_id ?? "", artikel_id: e.artikel_id ?? "", kultur: e.kultur ?? "", datum: e.datum ?? heute(), menge: e.menge != null ? zahlFeld(e.menge) : "", einheit: e.einheit ?? "kg", qualitaet: e.qualitaet ?? "", lagerort: e.lagerort ?? "", status: e.status ?? "gelagert", notiz: e.notiz ?? "" } : LEER_E);
     setNmExtra(e ? (werteMap[e.id] ?? {}) : {});
     setFehler(null); setEModal(true);
   }
@@ -221,7 +222,7 @@ export default function ErnteSeite() {
   // ---------- Produkt ----------
   function openProdukt(p?: Produkt) {
     setPEdit(p?.id ?? null);
-    setPForm(p ? { bezeichnung: p.bezeichnung ?? "", kategorie: p.kategorie ?? "Gemüse", einheit: p.einheit ?? "kg", preis: p.preis != null ? String(p.preis) : "", mwst_satz: p.mwst_satz != null ? String(p.mwst_satz) : "7", bio: p.bio, herkunft: p.herkunft ?? "eigen", verfuegbar: p.verfuegbar, notiz: p.notiz ?? "" } : LEER_P);
+    setPForm(p ? { bezeichnung: p.bezeichnung ?? "", kategorie: p.kategorie ?? "Gemüse", einheit: p.einheit ?? "kg", preis: p.preis != null ? zahlFeld(p.preis) : "", mwst_satz: p.mwst_satz != null ? zahlFeld(p.mwst_satz) : "7", bio: p.bio, herkunft: p.herkunft ?? "eigen", verfuegbar: p.verfuegbar, notiz: p.notiz ?? "" } : LEER_P);
     setFehler(null); setPModal(true);
   }
   async function speichereProdukt() {
@@ -250,7 +251,7 @@ export default function ErnteSeite() {
   // ---------- Verkauf ----------
   function waehleProdukt(id: string) {
     const p = produktById[id];
-    setVk((v) => ({ ...v, produkt_id: id, einzelpreis: p?.preis != null ? String(p.preis) : v.einzelpreis, mwst_satz: p?.mwst_satz != null ? String(p.mwst_satz) : v.mwst_satz }));
+    setVk((v) => ({ ...v, produkt_id: id, einzelpreis: p?.preis != null ? zahlFeld(p.preis) : v.einzelpreis, mwst_satz: p?.mwst_satz != null ? zahlFeld(p.mwst_satz) : v.mwst_satz }));
   }
   async function bucheVerkauf() {
     if (!vk.produkt_id) { setHinweis("Bitte ein Produkt wählen."); return; }

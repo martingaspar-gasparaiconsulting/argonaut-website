@@ -7,9 +7,10 @@
 // ============================================================================
 
 // Kleine, eigenständige Helfer (kein Cross-Import -> node-testbar + build-sicher).
+import { leseZahlOder } from './zahlen';
 function num(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function roasVon(umsatz: number, ausgaben: number): number | null {

@@ -17,6 +17,7 @@
 // KEINE Netzwerk-/Supabase-Aufrufe, KEINE React-Hooks — pure, node-testbar.
 // ============================================================================
 
+import { leseZahl } from './zahlen';
 export type Kennzeichen = 'material' | 'hotel' | 'sprit' | 'bewirtung' | 'sonstiges';
 
 export type KennzeichenInfo = {
@@ -152,8 +153,7 @@ function text(v: unknown): string | null {
 }
 function zahl(v: unknown): number | null {
   if (v == null || v === '') return null;
-  const n = Number(String(v).replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
+  return leseZahl(v);
 }
 
 /**

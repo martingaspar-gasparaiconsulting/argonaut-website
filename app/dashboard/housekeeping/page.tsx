@@ -21,6 +21,7 @@ import { speisekartePdf } from "@/lib/speisekartePdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = "hk_zimmer";
 
@@ -59,7 +60,7 @@ type GForm = { name: string; kategorie: string; preis: string; beschreibung: str
 const LEER_G: GForm = { name: "", kategorie: "Hauptgericht", preis: "", beschreibung: "", allergene: [], zusatzstoffe: [], verfuegbar: true, hervorgehoben: false, reihenfolge: "" };
 
 const heute = () => new Date().toISOString().slice(0, 10);
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function eur(n: number | null): string { return n == null ? "—" : (Number(n) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" }); }
 
 export default function HousekeepingSeite() {
@@ -179,7 +180,7 @@ export default function HousekeepingSeite() {
   function neuGericht() { setGEdit(null); setGForm(LEER_G); setFehler(null); setGModal(true); }
   function editGericht(g: Gericht) {
     setGEdit(g.id);
-    setGForm({ name: g.name ?? "", kategorie: g.kategorie ?? "Hauptgericht", preis: g.preis != null ? String(g.preis) : "", beschreibung: g.beschreibung ?? "", allergene: parseAllergene(g.allergene), zusatzstoffe: parseKeys(g.zusatzstoffe), verfuegbar: g.verfuegbar, hervorgehoben: g.hervorgehoben, reihenfolge: g.reihenfolge != null ? String(g.reihenfolge) : "" });
+    setGForm({ name: g.name ?? "", kategorie: g.kategorie ?? "Hauptgericht", preis: g.preis != null ? zahlFeld(g.preis) : "", beschreibung: g.beschreibung ?? "", allergene: parseAllergene(g.allergene), zusatzstoffe: parseKeys(g.zusatzstoffe), verfuegbar: g.verfuegbar, hervorgehoben: g.hervorgehoben, reihenfolge: g.reihenfolge != null ? zahlFeld(g.reihenfolge) : "" });
     setFehler(null); setGModal(true);
   }
   async function speichereGericht() {

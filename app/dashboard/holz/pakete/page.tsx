@@ -26,6 +26,7 @@ import {
   klappeAuf, pruefePaket, pruefePaketPosition, paketKurz, STEUER_HINWEIS_PAKET,
   type Paket, type PaketPosition,
 } from '../../_components/paketLogik';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,10 +61,7 @@ function leerePos(): PosForm {
   return { art: 'freitext', sortiment_id: null, bezeichnung: '', menge: '1', einheit: 'Stk', preis: '', steuer: '19' };
 }
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 
 export default function PaketePage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -188,11 +186,11 @@ export default function PaketePage() {
 
   function oeffne(p: Paket) {
     setPaketId(p.id); setBezeichnung(p.bezeichnung); setBeschreibung(p.beschreibung ?? '');
-    setFixpreis(String(p.fixpreis_netto)); setPflichtangaben(p.pflichtangaben ?? ''); setAktiv(p.aktiv);
+    setFixpreis(zahlFeld(p.fixpreis_netto)); setPflichtangaben(p.pflichtangaben ?? ''); setAktiv(p.aktiv);
     setPosten(alleInhalte.filter((x) => x.paket_id === p.id).map((x) => ({
       id: x.id, art: x.art, sortiment_id: x.sortiment_id,
-      bezeichnung: x.bezeichnung, menge: String(x.menge), einheit: x.einheit,
-      preis: String(x.einzelpreis_netto), steuer: String(x.steuersatz_prozent),
+      bezeichnung: x.bezeichnung, menge: zahlFeld(x.menge), einheit: x.einheit,
+      preis: zahlFeld(x.einzelpreis_netto), steuer: zahlFeld(x.steuersatz_prozent),
     })));
     setFehler(null); setModalAuf(true);
   }
@@ -210,8 +208,8 @@ export default function PaketePage() {
       sortiment_id: sid,
       bezeichnung: `${holzartName(s.holzart)} ${s.scheitlaenge_cm} cm, ${trocknungsgradName(s.trocknungsgrad).toLowerCase()}`,
       einheit: einheitKurz(e),
-      preis: p ? String(p.preis_netto) : '',
-      steuer: p ? String(p.steuersatz_prozent) : '7',
+      preis: p ? zahlFeld(p.preis_netto) : '',
+      steuer: p ? zahlFeld(p.steuersatz_prozent) : '7',
     } : z)));
   }
 

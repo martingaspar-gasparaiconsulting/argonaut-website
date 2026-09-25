@@ -31,6 +31,7 @@ import {
   modellVon, artVon, statusVon, euro, prozent, ibanKurz,
   type Partner, type Zuordnung, type PartnerZeile,
 } from '@/lib/multiplikator';
+import { zahlAusFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -127,7 +128,7 @@ export default function PartnerSeite() {
       telefon: neu.telefon.trim() || null,
       art: neu.art,
       modell: neu.modell,
-      satz_prozent: neu.modell === 'gegengeschaeft' ? 0 : Number(String(neu.satz_prozent).replace(',', '.')) || 0,
+      satz_prozent: neu.modell === 'gegengeschaeft' ? 0 : zahlAusFeld(neu.satz_prozent) || 0,
       laufzeit_monate: neu.modell === 'wiederkehrend' ? Math.floor(Number(neu.laufzeit_monate) || 0) : null,
       ust_pflichtig: neu.ust_pflichtig,
       iban: neu.iban.replace(/\s/g, '') || null,
@@ -400,7 +401,7 @@ export default function PartnerSeite() {
                         <>
                           <Feld label="Provisionssatz in %">
                             <input style={s.in} defaultValue={String(p.satz_prozent ?? '')} inputMode="decimal"
-                              onBlur={(e) => feldSetzen(p.id, 'satz_prozent', Number(e.target.value.replace(',', '.')) || 0)} />
+                              onBlur={(e) => feldSetzen(p.id, 'satz_prozent', zahlAusFeld(e.target.value) || 0)} />
                           </Feld>
                           <Feld label="IBAN">
                             <input style={s.in} defaultValue={p.iban ?? ''} placeholder={ibanKurz(p.iban)}

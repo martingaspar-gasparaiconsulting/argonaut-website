@@ -35,6 +35,7 @@ import {
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'leistungskatalog';
 
@@ -85,12 +86,7 @@ const LEER: Form = {
   mwst_satz: '19', notiz: '',
 };
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.');
-  if (t === '') return null;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 
 export default function LeistungskatalogPage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -183,13 +179,13 @@ export default function LeistungskatalogPage() {
     setFormExtra(werteMap[k.id] ?? {});
     setForm({
       id: k.id, bezeichnung: k.bezeichnung ?? '', kuerzel: k.kuerzel ?? '', kategorie: k.kategorie ?? '',
-      erfassungsart: k.erfassungsart ?? 'stunden', standard_wert: String(k.standard_wert ?? 1),
-      aw_minuten: String(k.aw_minuten ?? 6),
+      erfassungsart: k.erfassungsart ?? 'stunden', standard_wert: zahlFeld(k.standard_wert ?? 1),
+      aw_minuten: zahlFeld(k.aw_minuten ?? 6),
       einheit: k.einheit ?? '',
-      einheitspreis_netto: k.einheitspreis_netto != null ? String(k.einheitspreis_netto) : '',
-      stundensatz_netto: k.stundensatz_netto != null ? String(k.stundensatz_netto) : '',
-      festpreis_netto: k.festpreis_netto != null ? String(k.festpreis_netto) : '',
-      mwst_satz: k.mwst_satz != null ? String(k.mwst_satz) : '19',
+      einheitspreis_netto: k.einheitspreis_netto != null ? zahlFeld(k.einheitspreis_netto) : '',
+      stundensatz_netto: k.stundensatz_netto != null ? zahlFeld(k.stundensatz_netto) : '',
+      festpreis_netto: k.festpreis_netto != null ? zahlFeld(k.festpreis_netto) : '',
+      mwst_satz: k.mwst_satz != null ? zahlFeld(k.mwst_satz) : '19',
       notiz: k.notiz ?? '',
     });
     setModalAuf(true);

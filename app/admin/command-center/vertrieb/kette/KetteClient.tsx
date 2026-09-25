@@ -9,6 +9,7 @@ import {
   ausAktivitaeten, wochenZeitraum,
   type WochenZeile,
 } from '@/lib/vertriebsKette';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · vertrieb/kette/KetteClient.tsx
@@ -54,7 +55,7 @@ function leeresFormular(woche: string): Formular {
 }
 
 function n(v: string): number {
-  const x = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
+  const x = zahlAusFeld(String(v ?? '').trim());
   return Number.isFinite(x) && x > 0 ? x : 0;
 }
 function zahlDe(v: number | null, nachkomma = 0): string {
@@ -135,13 +136,13 @@ export default function KetteClient() {
     if (!vorhanden) return;
     setForm((f) => ({
       ...f,
-      beitraege: String(vorhanden.beitraege ?? ''), ansprachen: String(vorhanden.ansprachen ?? ''),
-      reaktionen: String(vorhanden.reaktionen ?? ''), antworten: String(vorhanden.antworten ?? ''),
-      gespraeche: String(vorhanden.gespraeche ?? ''), eintragungen: String(vorhanden.eintragungen ?? ''),
-      termine_gebucht: String(vorhanden.termine_gebucht ?? ''), termine_gehalten: String(vorhanden.termine_gehalten ?? ''),
-      kunden: String(vorhanden.kunden ?? ''), umsatz: String(vorhanden.umsatz ?? ''),
-      min_inhalte: String(vorhanden.min_inhalte ?? ''), min_ansprache: String(vorhanden.min_ansprache ?? ''),
-      min_gespraeche: String(vorhanden.min_gespraeche ?? ''), min_termine: String(vorhanden.min_termine ?? ''),
+      beitraege: zahlFeld(vorhanden.beitraege ?? ''), ansprachen: zahlFeld(vorhanden.ansprachen ?? ''),
+      reaktionen: zahlFeld(vorhanden.reaktionen ?? ''), antworten: zahlFeld(vorhanden.antworten ?? ''),
+      gespraeche: zahlFeld(vorhanden.gespraeche ?? ''), eintragungen: zahlFeld(vorhanden.eintragungen ?? ''),
+      termine_gebucht: zahlFeld(vorhanden.termine_gebucht ?? ''), termine_gehalten: zahlFeld(vorhanden.termine_gehalten ?? ''),
+      kunden: zahlFeld(vorhanden.kunden ?? ''), umsatz: zahlFeld(vorhanden.umsatz ?? ''),
+      min_inhalte: zahlFeld(vorhanden.min_inhalte ?? ''), min_ansprache: zahlFeld(vorhanden.min_ansprache ?? ''),
+      min_gespraeche: zahlFeld(vorhanden.min_gespraeche ?? ''), min_termine: zahlFeld(vorhanden.min_termine ?? ''),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.woche, form.kanal, zeilen.length]);
@@ -200,10 +201,10 @@ export default function KetteClient() {
       }
       setForm((f): Formular => ({
         ...f,
-        ansprachen: String(a.ansprachen),
-        reaktionen: String(a.reaktionen),
-        gespraeche: String(a.gespraeche),
-        termine_gebucht: String(a.termineGebucht),
+        ansprachen: zahlFeld(a.ansprachen),
+        reaktionen: zahlFeld(a.reaktionen),
+        gespraeche: zahlFeld(a.gespraeche),
+        termine_gebucht: zahlFeld(a.termineGebucht),
       }));
       setMeldung(
         a.ansprachen + ' Aktivitäten übernommen · ' + a.reaktionen + ' Reaktionen · '

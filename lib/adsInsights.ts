@@ -9,12 +9,13 @@
 // Werbekonto verbunden ist. Dokumentierte Form (Stand 2026).
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 export type Kennzahlen = { ausgaben: number; impressionen: number; klicks: number; conversions: number; umsatz: number };
 
 const LEER: Kennzahlen = { ausgaben: 0, impressionen: 0, klicks: 0, conversions: 0, umsatz: 0 };
 
 function z(v: unknown): number {
-  const n = Number(String(v ?? '').trim().replace(',', '.'));
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function summe(a: Kennzahlen, b: Kennzahlen): Kennzahlen {

@@ -24,6 +24,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import AngebotSprache from '../_components/AngebotSprache';
 import { fehlendePreise, type FormPos } from '@/lib/angebotSprache';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -47,7 +48,7 @@ const STATUS_FARBE: Record<string, string> = {
   entwurf: C.textDim, gesendet: C.cyan, angenommen: C.green, abgelehnt: C.danger, abgelaufen: C.warn,
 };
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(/\./g, '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function heutePlus(tage: number) { const d = new Date(); d.setDate(d.getDate() + tage); return d.toISOString().slice(0, 10); }
 
 const LEER_POS: Pos = { bezeichnung: '', menge: '1', einheit: 'Stk', einzelpreis: '', mwst_satz: '19' };

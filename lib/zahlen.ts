@@ -221,3 +221,58 @@ export function leseProzent(wert: unknown): number | null {
 export function istZahlText(wert: unknown): boolean {
   return leseZahl(wert) !== null;
 }
+
+// ============================================================================
+// EINGABEFELDER (Punkt Zahlen-Querschnitt, 25.09.2026)
+//
+// WARUM NOCH ZWEI FUNKTIONEN
+// Am 17.09. wurde lib/ umgestellt, die SEITEN (app/**) aber nicht. Dort lagen
+// am 25.09. noch ueber hundert eigene Zahl-Leser — num(), zahl(), zahlAus(),
+// parseZahl() und Dutzende Number(x.replace(',', '.')). Folge u. a.:
+//   "1.200,00" -> 1,20   ·   "1.500" -> 1,5   ·   "1.000,00" -> NaN oder 1
+// Ab jetzt lesen ALLE Eingabefelder ueber diese Datei. Der Waechter-Test
+// tests/zahlenWaechter.test.mjs schlaegt an, sobald irgendwo wieder ein
+// eigener Leser auftaucht — damit derselbe Fehler nicht zum dritten Mal kommt.
+//
+// DIE REGEL (deutsch):  1.500 = eintausendfuenfhundert · 1.500,50 · 12,5
+// ============================================================================
+
+/**
+ * Wie Number(), aber in deutscher Schreibweise: ein leeres Feld ist 0,
+ * ein nicht lesbares NaN. Gedacht als 1:1-Ersatz fuer die alten
+ * Number(s.replace(',', '.'))-Stellen, damit deren Pruefungen (isNaN, || 0,
+ * Number.isFinite) unveraendert weiter greifen.
+ */
+export function zahlAusFeld(wert: unknown): number {
+  if (typeof wert === 'string' && wert.trim() === '') return 0;
+  if (wert === null || wert === undefined) return 0;
+  const n = leseZahl(wert);
+  return n === null ? NaN : n;
+}
+
+/**
+ * Das Gegenstueck zum Vorbelegen eines Eingabefeldes: 2.125 wird "2,125",
+ * 1500 bleibt "1500". Ohne das stuende nach "Bearbeiten" "2.125" im Feld —
+ * und das ist nach deutscher Regel zweitausendeinhundertfuenfundzwanzig.
+ * Alles, was keine Zahl ist, kommt unveraendert als Text zurueck
+ * (null/undefined als leerer Text).
+ */
+export function zahlFeld(wert: unknown): string {
+  if (wert === null || wert === undefined) return '';
+  if (typeof wert === 'number') {
+    if (!Number.isFinite(wert)) return '';
+    const s = String(wert);
+    return /e/i.test(s) ? s : s.replace('.', ',');
+  }
+  return String(wert);
+}
+
+/**
+ * Zahl fuer die ANZEIGE mit fester Nachkommazahl, deutsch: 1.234,5.
+ * Ersetzt n.toFixed(1), das "1234.5" mit Punkt zeigt.
+ */
+export function zahlText(wert: unknown, stellen = 2): string {
+  const n = typeof wert === 'number' ? wert : leseZahl(wert);
+  if (n === null || !Number.isFinite(n)) return '—';
+  return n.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen });
+}

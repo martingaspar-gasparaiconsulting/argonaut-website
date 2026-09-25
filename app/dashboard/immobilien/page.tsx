@@ -11,6 +11,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'immo_einheiten';
 
@@ -29,7 +30,7 @@ type Vertrag = { id: string; einheit_id: string | null; mieter_name: string | nu
 type Zahlung = { id: string; vertrag_id: string; monat: string; betrag: number };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function heute() { return new Date().toISOString().slice(0, 10); }
 function monatsStart() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; }
 
@@ -167,7 +168,7 @@ export default function ImmobilienPage() {
           <div style={styles.card}>
             <div style={{ fontWeight: 800 }}>Mietvertrag anlegen</div>
             <div style={styles.row}>
-              <select style={{ ...styles.inp, minWidth: 160 }} value={nv.einheit_id} onChange={(e) => { const id = e.target.value; const ein = einheiten.find((x) => x.id === id); setNv({ ...nv, einheit_id: id, kaltmiete: ein ? String(ein.kaltmiete) : nv.kaltmiete, nebenkosten: ein ? String(ein.nebenkosten) : nv.nebenkosten }); }}>
+              <select style={{ ...styles.inp, minWidth: 160 }} value={nv.einheit_id} onChange={(e) => { const id = e.target.value; const ein = einheiten.find((x) => x.id === id); setNv({ ...nv, einheit_id: id, kaltmiete: ein ? zahlFeld(ein.kaltmiete) : nv.kaltmiete, nebenkosten: ein ? zahlFeld(ein.nebenkosten) : nv.nebenkosten }); }}>
                 <option value="">Einheit wählen …</option>
                 {einheiten.map((e) => <option key={e.id} value={e.id}>{einheitName[e.id]}</option>)}
               </select>

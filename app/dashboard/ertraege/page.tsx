@@ -20,6 +20,7 @@ import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'ertrag_anlage';
 
@@ -38,7 +39,7 @@ type Ablesung = { id: string; anlage_id: string; von: string | null; bis: string
 
 function heuteLokal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function monatsErster() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function pct(n: number) { return `${(Number(n) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`; }
 function kwh(n: number) { return `${(Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 0 })} kWh`; }
@@ -130,7 +131,7 @@ export default function ErtraegePage() {
       }).select('id').single();
       if (error) throw error;
       try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nAnlExtra); } catch { /* eigene Felder optional */ }
-      setNAnl({ bezeichnung: '', typ: 'pv', standort: '', nennleistung_kwp: '', soll_spezifisch: String(SOLL_SPEZIFISCH_STD), verguetung_ct: '', strompreis_ct: '', status: 'aktiv' });
+      setNAnl({ bezeichnung: '', typ: 'pv', standort: '', nennleistung_kwp: '', soll_spezifisch: zahlFeld(SOLL_SPEZIFISCH_STD), verguetung_ct: '', strompreis_ct: '', status: 'aktiv' });
       setNAnlExtra({});
       setOk('Anlage angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }

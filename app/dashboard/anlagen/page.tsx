@@ -16,6 +16,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { csvFeld } from '@/lib/csvSchreiben';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'anlagegueter';
 
@@ -43,7 +44,7 @@ type Anlage = {
 const LEER = { bezeichnung: '', kategorie: '', anschaffungsdatum: '', anschaffungskosten: '', nutzungsdauer_jahre: '', notiz: '', status: 'aktiv' };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string): number { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function intv(s: string): number { const n = parseInt(s || '0', 10); return Number.isFinite(n) && n > 0 ? n : 0; }
 function dtag(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
@@ -118,7 +119,7 @@ export default function AnlagenPage() {
     setEditId(a.id);
     setForm({
       bezeichnung: a.bezeichnung || '', kategorie: a.kategorie || '', anschaffungsdatum: (a.anschaffungsdatum || '').slice(0, 10),
-      anschaffungskosten: a.anschaffungskosten != null ? String(a.anschaffungskosten) : '',
+      anschaffungskosten: a.anschaffungskosten != null ? zahlFeld(a.anschaffungskosten) : '',
       nutzungsdauer_jahre: a.nutzungsdauer_jahre != null ? String(a.nutzungsdauer_jahre) : '', notiz: a.notiz || '', status: a.status || 'aktiv',
     });
     setNmExtra(werteMap[a.id] ?? {});

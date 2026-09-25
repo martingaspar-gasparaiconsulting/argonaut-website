@@ -12,29 +12,13 @@
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { leseZahl } from '@/lib/zahlen';
 
 export const runtime = "nodejs";
 
 // Deutsche wie englische Zahlen robust zu number|null machen.
 // "12,80" -> 12.8 · "1.234,56" -> 1234.56 · "12.80" -> 12.8 · "" -> null
-function zahl(v: unknown): number | null {
-  if (v == null) return null;
-  if (typeof v === "number") return isFinite(v) ? v : null;
-  let s = String(v).trim();
-  if (s === "") return null;
-  s = s.replace(/[€\s]/g, "");
-  const hatKomma = s.includes(",");
-  const hatPunkt = s.includes(".");
-  if (hatKomma && hatPunkt) {
-    // deutsches Format: Punkt = Tausender, Komma = Dezimal
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (hatKomma) {
-    // nur Komma -> Dezimaltrenner
-    s = s.replace(",", ".");
-  }
-  const n = Number(s.replace(/[^\d.-]/g, ""));
-  return isFinite(n) ? n : null;
-}
+function zahl(v: unknown): number | null { return leseZahl(v); }
 
 function text(v: unknown): string | null {
   if (v == null) return null;

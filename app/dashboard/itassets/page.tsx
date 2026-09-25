@@ -18,6 +18,7 @@ import { itBerichtPdf, type Ampel } from "@/lib/itBerichtPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = "it_asset";
 
@@ -43,8 +44,8 @@ interface Lizenz { id: string; kunde: string | null; bezeichnung: string; herste
 interface Sla { id: string; kunde: string | null; bezeichnung: string; reaktion_std: number | null; wiederherstell_std: number | null; servicezeit: string | null; verfuegbarkeit: number | null; gueltig_bis: string | null; notiz: string | null; }
 
 const heute = () => new Date().toISOString().slice(0, 10);
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
-function ganz(s: string): number | null { return s.trim() === "" ? null : Math.floor(Number(s.replace(",", "."))); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
+function ganz(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function eur(n: number | null): string { return n == null ? "—" : (Number(n) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" }); }
 function dstr(s: string | null): string { return s ? new Date(s).toLocaleDateString("de-DE") : "—"; }
 
@@ -117,12 +118,12 @@ export default function ItAssetsSeite() {
   }
   function openLizenz(l?: Lizenz) {
     setEditId(l?.id ?? null);
-    setLForm(l ? { kunde: l.kunde ?? "", bezeichnung: l.bezeichnung ?? "", hersteller: l.hersteller ?? "", lizenztyp: l.lizenztyp ?? "abo", plaetze: l.plaetze != null ? String(l.plaetze) : "1", belegt: l.belegt != null ? String(l.belegt) : "0", start: l.start ?? "", ablauf: l.ablauf ?? "", kosten_jahr: l.kosten_jahr != null ? String(l.kosten_jahr) : "", schluessel: l.schluessel ?? "", notiz: l.notiz ?? "", status: l.status ?? "aktiv" } : LEER_L);
+    setLForm(l ? { kunde: l.kunde ?? "", bezeichnung: l.bezeichnung ?? "", hersteller: l.hersteller ?? "", lizenztyp: l.lizenztyp ?? "abo", plaetze: l.plaetze != null ? zahlFeld(l.plaetze) : "1", belegt: l.belegt != null ? zahlFeld(l.belegt) : "0", start: l.start ?? "", ablauf: l.ablauf ?? "", kosten_jahr: l.kosten_jahr != null ? String(l.kosten_jahr) : "", schluessel: l.schluessel ?? "", notiz: l.notiz ?? "", status: l.status ?? "aktiv" } : LEER_L);
     setFehler(null); setModal("lizenz");
   }
   function openSla(s?: Sla) {
     setEditId(s?.id ?? null);
-    setSForm(s ? { kunde: s.kunde ?? "", bezeichnung: s.bezeichnung ?? "", reaktion_std: s.reaktion_std != null ? String(s.reaktion_std) : "", wiederherstell_std: s.wiederherstell_std != null ? String(s.wiederherstell_std) : "", servicezeit: s.servicezeit ?? "", verfuegbarkeit: s.verfuegbarkeit != null ? String(s.verfuegbarkeit) : "", gueltig_bis: s.gueltig_bis ?? "", notiz: s.notiz ?? "" } : LEER_S);
+    setSForm(s ? { kunde: s.kunde ?? "", bezeichnung: s.bezeichnung ?? "", reaktion_std: s.reaktion_std != null ? zahlFeld(s.reaktion_std) : "", wiederherstell_std: s.wiederherstell_std != null ? zahlFeld(s.wiederherstell_std) : "", servicezeit: s.servicezeit ?? "", verfuegbarkeit: s.verfuegbarkeit != null ? zahlFeld(s.verfuegbarkeit) : "", gueltig_bis: s.gueltig_bis ?? "", notiz: s.notiz ?? "" } : LEER_S);
     setFehler(null); setModal("sla");
   }
 

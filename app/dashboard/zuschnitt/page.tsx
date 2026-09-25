@@ -18,6 +18,7 @@ import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'zuschnitt_projekt';
 
@@ -34,7 +35,7 @@ const C = {
 type Projekt = { id: string; bezeichnung: string; material: string | null; stangenlaenge: number; saegeblatt_mm: number; querschnitt_mm2: number | null; dichte: number | null; status: string; notiz: string | null };
 type Teil = { id: string; projekt_id: string; bezeichnung: string | null; laenge: number; anzahl: number; notiz: string | null };
 
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function mm(n: number) { return `${(Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 1 })} mm`; }
 function kg(n: number) { return `${(Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 2 })} kg`; }
 

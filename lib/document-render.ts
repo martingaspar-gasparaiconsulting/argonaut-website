@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------------
 import { getTemplate, type DocumentTemplate } from "@/lib/document-templates";
 import type { DocxParagraph, XlsxColumn } from "@/lib/document-engine";
+import { leseZahlOder } from './zahlen';
 
 const CONTENT_TYPES: Record<"pdf" | "docx" | "xlsx" | "pptx", string> = {
   pdf: "application/pdf",
@@ -47,7 +48,7 @@ export type RenderErgebnis =
 
 // Hilfsfunktionen --------------------------------------------------------------
 function formatBetrag(v: unknown): string {
-  const n = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
+  const n = typeof v === "number" ? v : leseZahlOder(v, NaN);
   if (Number.isNaN(n)) return String(v ?? "");
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 }

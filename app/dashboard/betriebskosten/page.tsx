@@ -17,7 +17,7 @@ import {
 } from '@/lib/betriebskosten';
 import { augeBk } from '@/lib/auge';
 import { bkHinweise } from '@/lib/betriebskosten';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 import Hinweise from '../_components/Hinweise';
 import { betriebskostenPdf } from '@/lib/betriebskostenPdf';
 import KiAuge from '../_components/KiAuge';
@@ -167,7 +167,7 @@ export default function BetriebskostenPage() {
       }).select('id').single();
       if (error) throw error;
       try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nKostExtra); } catch { /* eigene Felder optional */ }
-      setNKost({ katalog: '17', betrag: '', verbrauch_anteil: String(HEIZ_VERBRAUCH_STD) }); setNKostExtra({});
+      setNKost({ katalog: '17', betrag: '', verbrauch_anteil: zahlFeld(HEIZ_VERBRAUCH_STD) }); setNKostExtra({});
       setOk('Kostenart hinzugefügt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }

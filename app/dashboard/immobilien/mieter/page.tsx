@@ -22,6 +22,7 @@ import {
   pruefeKaution, kautionsRaten, kautionsStand, kautionsAbrechnung, offenePlatzhalter, heuteBerlin, datumDe, euroText,
   type SchadenKategorie, type Dringlichkeit, type SchadenStatus, type KautionEingang,
 } from '@/lib/versammlungObjekte';
+import { leseZahl } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,12 +47,7 @@ type Schaden = { id: string; vertrag_id: string | null; einheit_id: string | nul
 type Anpassung = { id: string; vertrag_id: string; art: 'vergleich' | 'index'; miete_alt: number; miete_neu: number; zugang_am: string; wirksam_ab: string; index_alt: number | null; index_neu: number | null; status: string; uebernommen: boolean; erstellt_am: string };
 type Kaution = { id: string; vertrag_id: string; soll: number; eingaenge: KautionEingang[]; anlage: string | null; zinsen: number | null; einbehalte: { grund: string; betrag: number }[]; rueckgabe_am: string | null; ausgezahlt: number | null };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 
 export default function MieterSeite() {
   const heute = heuteBerlin();

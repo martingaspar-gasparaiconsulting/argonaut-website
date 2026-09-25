@@ -8,6 +8,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import MhdWarnung from '../_components/MhdWarnung';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'artikel';
 
@@ -259,11 +260,11 @@ export default function LagerCockpit() {
       beschreibung: a.beschreibung ?? "",
       kategorie: a.kategorie ?? "",
       einheit: a.einheit ?? "Stk",
-      einkaufspreis: a.einkaufspreis != null ? String(a.einkaufspreis) : "",
-      verkaufspreis: a.verkaufspreis != null ? String(a.verkaufspreis) : "",
-      mindestbestand: a.mindestbestand != null ? String(a.mindestbestand) : "",
+      einkaufspreis: a.einkaufspreis != null ? zahlFeld(a.einkaufspreis) : "",
+      verkaufspreis: a.verkaufspreis != null ? zahlFeld(a.verkaufspreis) : "",
+      mindestbestand: a.mindestbestand != null ? zahlFeld(a.mindestbestand) : "",
       aktueller_bestand:
-        a.aktueller_bestand != null ? String(a.aktueller_bestand) : "",
+        a.aktueller_bestand != null ? zahlFeld(a.aktueller_bestand) : "",
       lagerort: a.lagerort ?? "",
       lieferant_id: a.lieferant_id ?? "",
       aktiv: a.aktiv,
@@ -286,7 +287,7 @@ export default function LagerCockpit() {
     setFehler(null);
 
     const zahl = (s: string) =>
-      s.trim() === "" ? 0 : Number(s.replace(",", "."));
+      s.trim() === "" ? 0 : zahlAusFeld(s);
 
     const payload = {
       artikelnummer: form.artikelnummer.trim() || null,

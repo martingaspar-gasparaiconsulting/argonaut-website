@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -31,10 +32,7 @@ type Mittel = {
 
 const ART_LABEL: Record<Art, string> = { maschine: '⚙️ Maschine', fahrzeug: '🚜 Fahrzeug', werkzeug: '🪚 Werkzeug', sonstige: '· Sonstige' };
 
-function numOrNull(s: string): number | null {
-  const t = (s || '').trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function numOrNull(s: string): number | null { return leseZahl(s); }
 function eur(n: number | null): string {
   if (n == null) return '—';
   return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -79,10 +77,10 @@ export default function ForstEinsatzmittelPage() {
   function editieren(m: Mittel) {
     setForm({
       id: m.id, bezeichnung: m.bezeichnung, art: m.art,
-      stundensatz_netto: m.stundensatz_netto != null ? String(m.stundensatz_netto) : '',
-      wegepauschale_netto: m.wegepauschale_netto != null ? String(m.wegepauschale_netto) : '',
-      km_satz_netto: m.km_satz_netto != null ? String(m.km_satz_netto) : '',
-      steuersatz_prozent: String(m.steuersatz_prozent), aktiv: m.aktiv, notiz: m.notiz ?? '',
+      stundensatz_netto: m.stundensatz_netto != null ? zahlFeld(m.stundensatz_netto) : '',
+      wegepauschale_netto: m.wegepauschale_netto != null ? zahlFeld(m.wegepauschale_netto) : '',
+      km_satz_netto: m.km_satz_netto != null ? zahlFeld(m.km_satz_netto) : '',
+      steuersatz_prozent: zahlFeld(m.steuersatz_prozent), aktiv: m.aktiv, notiz: m.notiz ?? '',
     });
     setOk(null); setFehler(null);
   }

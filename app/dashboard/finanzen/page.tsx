@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "./_components/FinanzTabs";
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-5b — FINANZ-COCKPIT
@@ -45,7 +46,7 @@ function eur(n: number | null | undefined): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 function r2(n: number): number {

@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,7 +26,7 @@ type Zeit = { id: string; retainer_id: string; datum: string; stunden: number; b
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function monatStart() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 
 export default function AgenturPage() {

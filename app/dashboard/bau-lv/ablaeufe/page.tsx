@@ -31,6 +31,7 @@ import {
   musterschreiben, offenePlatzhalter, datumDe, euro,
   type Hinweis, type Musterart, type MusterDaten, type NachtragPosition, type NachtragStatus, type RuegeStatus,
 } from '@/lib/bauAblaeufe';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -84,11 +85,7 @@ type RForm = { id: string | null; gewaehrleistung_id: string; eingang_am: string
 
 const LEER_POS: PosForm = { kurztext: '', menge: '1', einheit: 'Stk', einzelpreis: '' };
 
-function zahl(s: string): number | null {
-  const t = (s || '').trim(); if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahl(s: string): number | null { return leseZahl(s); }
 function zuText(n: number | string | null | undefined): string {
   if (n == null || n === '') return '';
   return String(n).replace('.', ',');
@@ -190,7 +187,7 @@ export default function BauAblaeufeSeite() {
       ausfuehrung_ab: n.ausfuehrung_ab ?? '', angeboten_am: n.angeboten_am ?? '', antwort_bis: n.antwort_bis ?? '',
       beauftragt_am: n.beauftragt_am ?? '', beauftragt_durch: n.beauftragt_durch ?? '', abgelehnt_am: n.abgelehnt_am ?? '',
       positionen: (n.positionen && n.positionen.length ? n.positionen : [LEER_POS]).map((p) => ({
-        kurztext: String(p.kurztext ?? ''), menge: zuText(p.menge as number), einheit: String(p.einheit ?? ''), einzelpreis: zuText(p.einzelpreis as number),
+        kurztext: String(p.kurztext ?? ''), menge: zuText(p.menge as number), einheit: zahlFeld(p.einheit ?? ''), einzelpreis: zuText(p.einzelpreis as number),
       })),
       notiz: n.notiz ?? '',
     });
@@ -314,7 +311,7 @@ export default function BauAblaeufeSeite() {
   function gwBearbeiten(g: Gewaehrleistung) {
     setGForm({
       id: g.id, abnahme_id: g.abnahme_id ?? '', lv_id: g.lv_id ?? '', projekt_id: g.projekt_id ?? '', bezeichnung: g.bezeichnung,
-      kunde_name: g.kunde_name ?? '', abnahme_am: g.abnahme_am, regelwerk: g.regelwerk, monate: g.monate != null ? String(g.monate) : '',
+      kunde_name: g.kunde_name ?? '', abnahme_am: g.abnahme_am, regelwerk: g.regelwerk, monate: g.monate != null ? zahlFeld(g.monate) : '',
       sicherheit_art: g.sicherheit_art, sicherheit_betrag: zuText(g.sicherheit_betrag), sicherheit_rueckgabe_am: g.sicherheit_rueckgabe_am ?? '', notiz: g.notiz ?? '',
     });
   }
@@ -706,7 +703,7 @@ export default function BauAblaeufeSeite() {
             <div style={s.row}>
               <label style={{ ...s.lab, flex: 2 }}>Regelwerk (Vorschlag)<select style={s.inp} value={gForm.regelwerk} onChange={(e) => {
                 const r = regelwerk(e.target.value);
-                setGForm({ ...gForm, regelwerk: e.target.value, monate: r?.monate ? String(r.monate) : gForm.monate });
+                setGForm({ ...gForm, regelwerk: e.target.value, monate: r?.monate ? zahlFeld(r.monate) : gForm.monate });
               }}>
                 {REGELWERKE.map((r) => <option key={r.key} value={r.key}>{r.label}{r.monate ? ` (${r.monate / 12} Jahre)` : ''}</option>)}
               </select></label>

@@ -23,6 +23,7 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { zahlText } from '@/lib/zahlen';
 
 const NAVY = '#0A1628';
 const NAVY2 = '#0F2036';
@@ -155,7 +156,7 @@ export default function AdminInhalte() {
     const frage =
       `${jetzt} ${was} erzeugen lassen?\n\n` +
       `Modell: ${bestand.modell}\n` +
-      `Geschätzte Kosten: ${anteilKosten.toFixed(2)} USD (halber Preis über die Stapel-Schnittstelle)\n\n` +
+      `Geschätzte Kosten: ${zahlText(anteilKosten, 2)} USD (halber Preis über die Stapel-Schnittstelle)\n\n` +
       (menge > jetzt
         ? `Ein Stapel fasst höchstens ${grenze}. Die restlichen ${menge - jetzt} bestellen Sie danach mit demselben Knopf.\n\n`
         : '') +
@@ -286,7 +287,7 @@ export default function AdminInhalte() {
         <p style={s.hint}>
           {bestand?.offen.anzahl ?? 0} Bausteine gibt es noch nicht
           {bestand?.branchen ? ` (bei ${bestand.branchen} Branchen)` : ''}.
-          {bestand ? ` Modell: ${bestand.modell} · geschätzt ${bestand.kostenUsd.toFixed(2)} USD für alle zusammen.` : ''}
+          {bestand ? ` Modell: ${bestand.modell} · geschätzt ${zahlText(bestand.kostenUsd, 2)} USD für alle zusammen.` : ''}
           {' '}Bestellt wird nur, was fehlt — an einem Entwurf, den Sie schon bearbeitet haben, rührt der
           Stapel nichts, und was gerade unterwegs ist, wird kein zweites Mal bestellt.
         </p>

@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -25,7 +26,7 @@ type Kunde = { id: string; name: string; telefon: string | null; email: string |
 type Behandlung = { id: string; datum: string; behandlung: string; dauer_min: number | null; preis: number; notiz: string | null; abgerechnet?: boolean };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function d(iso: string) { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 

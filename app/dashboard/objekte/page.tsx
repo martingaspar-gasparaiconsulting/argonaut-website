@@ -28,6 +28,7 @@ import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'assets';
 
@@ -73,7 +74,7 @@ function d(iso: string | null): string {
   const p = iso.slice(0, 10).split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
 }
-function num(s: string): number { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function eur(n: number | null): string { if (n == null) return '—'; return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function zustandFarbe(z: Zustand): string { const n = normZustand(z); return n === 'kritisch' ? C.danger : n === 'beobachten' ? C.warn : C.green; }
 const BUCKET_FARBE: Record<string, string> = { faellig: C.danger, bald: C.warn, ok: C.green, kein: C.textDim };
@@ -151,9 +152,9 @@ export default function ObjekteRegister() {
     setForm({
       id: a.id, bezeichnung: a.bezeichnung ?? '', typ: a.typ ?? 'Maschine', gruppe_id: a.gruppe_id ?? '',
       neueGruppe: '', standort: a.standort ?? '', hersteller: a.hersteller ?? '', kennung: a.kennung ?? '',
-      zustand: normZustand(a.zustand), kontrollintervall_monate: String(a.kontrollintervall_monate ?? 12),
+      zustand: normZustand(a.zustand), kontrollintervall_monate: zahlFeld(a.kontrollintervall_monate ?? 12),
       letzte_kontrolle: a.letzte_kontrolle ?? '', anschaffungsdatum: a.anschaffungsdatum ?? '',
-      anschaffungswert: a.anschaffungswert != null ? String(a.anschaffungswert) : '', notiz: a.notiz ?? '',
+      anschaffungswert: a.anschaffungswert != null ? zahlFeld(a.anschaffungswert) : '', notiz: a.notiz ?? '',
     });
     setFehler(null); setModalAuf(true);
   }
@@ -161,7 +162,7 @@ export default function ObjekteRegister() {
   // Typ wählen: setzt zugleich die Standard-Prüffrist des Typs (Block I).
   function typWaehlen(label: string) {
     const t = objektTypByLabel(label);
-    setForm((f) => ({ ...f, typ: label, kontrollintervall_monate: t ? String(t.kontrollintervallMonate) : f.kontrollintervall_monate }));
+    setForm((f) => ({ ...f, typ: label, kontrollintervall_monate: t ? zahlFeld(t.kontrollintervallMonate) : f.kontrollintervall_monate }));
   }
 
   async function speichern() {

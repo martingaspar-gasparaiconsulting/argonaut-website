@@ -12,6 +12,7 @@ import {
   naechstePosition,
   verzoegerungText,
 } from '@/lib/autoresponder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MARKETING · Autoresponder-Sequenzen
@@ -207,7 +208,7 @@ export default function AutoresponderSeite() {
     setSchrittSeqId(s.sequenz_id);
     setKBetreff(s.betreff);
     setKInhalt(s.inhalt);
-    setKTage(String(s.verzoegerung_tage));
+    setKTage(zahlFeld(s.verzoegerung_tage));
     setSchrittDialog(true);
   }
 
@@ -217,7 +218,7 @@ export default function AutoresponderSeite() {
       alert('Bitte Betreff und Inhalt der Mail ausfüllen.');
       return;
     }
-    const tage = Math.max(0, Math.round(Number(kTage.replace(',', '.')) || 0));
+    const tage = Math.max(0, Math.round(zahlAusFeld(kTage) || 0));
     setSchrittBusy(true);
     let error;
     if (schrittEdit) {

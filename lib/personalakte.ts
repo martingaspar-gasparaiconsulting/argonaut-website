@@ -21,6 +21,7 @@
 // ============================================================================
 
 /** Wo im System der Punkt erledigt wird. */
+import { leseZahlOder } from './zahlen';
 export type AkteOrt = 'stamm' | 'docs' | 'schul' | 'nachweis' | 'zugang';
 
 export type AktePunkt = {
@@ -151,8 +152,7 @@ function gefuellt(s: unknown): boolean {
 }
 
 function zahl(s: unknown): number {
-  const n = Number(String(s ?? '').replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
+  return leseZahlOder(s, 0);
 }
 
 function istIsoDatum(s: unknown): boolean {

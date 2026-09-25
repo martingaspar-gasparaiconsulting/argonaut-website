@@ -45,6 +45,7 @@ import {
   satzAusBetraegen,
 } from "@/lib/abschlagsrechnung";
 import { pruefeUstIdNr } from "@/lib/ustIdNr";
+import { leseZahl, zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -117,12 +118,7 @@ export function zusatzAusZeile(r: any): RechnungsZusatz {
   };
 }
 
-function zahlOderNull(s: string): number | null {
-  const t = String(s ?? "").trim();
-  if (t === "") return null;
-  const n = Number(t.replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
+function zahlOderNull(s: string): number | null { return leseZahl(s); }
 
 /** Was in den UPDATE der Seite wandert. */
 export function zusatzFuerSpeichern(z: RechnungsZusatz): Record<string, unknown> {
@@ -217,7 +213,7 @@ function geld(n: number, waehrung = "EUR"): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: waehrung || "EUR" }).format(n);
   } catch {
-    return n.toFixed(2) + " " + waehrung;
+    return zahlText(n, 2) + " " + waehrung;
   }
 }
 

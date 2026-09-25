@@ -24,6 +24,7 @@
 // ============================================================================
 
 import { qrMatrix } from './qr';
+import { leseZahl as zentralLeseZahl } from './zahlen';
 import { tageBis, istIsoDatum, datumDe } from './nachweisMotor';
 
 export { datumDe };
@@ -44,11 +45,7 @@ export function leseZahl(x: unknown): number | null {
   if (typeof x === 'number') return Number.isFinite(x) ? x : null;
   const t = String(x).trim().replace(/\s|€|km|l$/gi, '');
   if (!t) return null;
-  let norm = t;
-  if (/,/.test(t)) norm = t.replace(/\./g, '').replace(',', '.');
-  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) norm = t.replace(/\./g, ''); // 12.345 = zwoelftausend
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : null;
+  return zentralLeseZahl(t);
 }
 
 function cent(n: number): number {

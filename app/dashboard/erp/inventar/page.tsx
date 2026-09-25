@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../../_components/KiKlartext";
-import { leseZahl } from "@/lib/fuhrparkGeraete";
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E7 Inventar / Betriebsmittel
@@ -229,7 +229,7 @@ export default function InventarCockpit() {
       zustand: i.zustand ?? "gut",
       anschaffungsdatum: i.anschaffungsdatum ?? "",
       anschaffungswert:
-        i.anschaffungswert != null ? String(i.anschaffungswert) : "",
+        i.anschaffungswert != null ? zahlFeld(i.anschaffungswert) : "",
       naechste_pruefung_am: i.naechste_pruefung_am ?? "",
       notizen: i.notizen ?? "",
     });

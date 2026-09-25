@@ -9,6 +9,7 @@ import {
   deutscheStimmen, leseStimmProfil, speichereStimmProfil,
   type Stimme, type StimmProfil,
 } from "@/lib/vorlesen";
+import { zahlText } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · KI-GUIDE STUFE 3 — der Begleiter, der mitwandert
@@ -197,7 +198,7 @@ export default function KiGuideBegleiter() {
             </div>
           )}
 
-          <label style={stimmLabel}>Tempo · {profil.tempo.toFixed(2)}</label>
+          <label style={stimmLabel}>Tempo · {zahlText(profil.tempo, 2)}</label>
           <input
             type="range" min={0.6} max={1.4} step={0.05}
             value={profil.tempo}
@@ -205,7 +206,7 @@ export default function KiGuideBegleiter() {
             style={{ width: "100%" }}
           />
 
-          <label style={stimmLabel}>Tonhöhe · {profil.tonhoehe.toFixed(2)} (tiefer = ruhiger)</label>
+          <label style={stimmLabel}>Tonhöhe · {zahlText(profil.tonhoehe, 2)} (tiefer = ruhiger)</label>
           <input
             type="range" min={0.6} max={1.4} step={0.05}
             value={profil.tonhoehe}

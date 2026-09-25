@@ -16,6 +16,7 @@ import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
 import BelegErfassen from './BelegErfassen';
 import MaterialAbruf from './MaterialAbruf';
 import Diktat from '../_components/Diktat';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -66,7 +67,7 @@ function holeStandort(): Promise<{ lat: number | null; lon: number | null }> {
 }
 function eur(n: number) { return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 function fmtMenge(n: number) { return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE'); }
-function zahl(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function zahl(s: string) { return leseZahlOder(s, 0); }
 
 // Nächste Phase im Lebenszyklus: Geplant → Unterwegs → Vor Ort → Erledigt
 function naechstePhase(status: string | null): { ziel: string; label: string; farbe: string } | null {
@@ -331,7 +332,7 @@ export default function MeineEinsaetzePage() {
     const k = katalog.find((x) => x.id === id);
     if (!k) return;
     const preis = k.einheitspreis_netto ?? k.festpreis_netto ?? k.stundensatz_netto ?? 0;
-    setPosForm((f) => ({ ...f, katalogId: id, bezeichnung: k.bezeichnung, einheit: k.einheit ?? '', einzelpreis: String(preis), mwst: String(k.mwst_satz ?? 19) }));
+    setPosForm((f) => ({ ...f, katalogId: id, bezeichnung: k.bezeichnung, einheit: k.einheit ?? '', einzelpreis: zahlFeld(preis), mwst: zahlFeld(k.mwst_satz ?? 19) }));
   }
 
   async function positionHinzufuegen(einsatzId: string) {

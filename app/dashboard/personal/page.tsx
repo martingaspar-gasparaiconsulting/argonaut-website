@@ -18,6 +18,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import Leerzustand from '../_components/Leerzustand';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld, zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -101,8 +102,8 @@ function dStr(d: string | null): string { if (!d) return ''; try { return new Da
 function formatBytes(b: number | null): string {
   if (!b) return '';
   if (b < 1024) return `${b} B`;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
-  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  if (b < 1024 * 1024) return `${zahlText(b / 1024, 0)} KB`;
+  return `${zahlText(b / 1024 / 1024, 1)} MB`;
 }
 // ---- Arbeitstage & Feiertage (DE, pro Bundesland) — wartungsfrei berechnet ----
 // Feiertage werden für jedes Jahr automatisch berechnet (Oster-Algorithmus +
@@ -712,7 +713,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
           urlaubsanspruch_tage: parseInt(urlaubsanspruch, 10) || 30,
           eintrittsdatum: eintritt || null,
           arbeitszeit_modell: arbeitszeitModell,
-          wochenstunden: parseFloat(wochenstunden.replace(',', '.')) || 0,
+          wochenstunden: zahlAusFeld(wochenstunden) || 0,
         }).eq('id', id);
         if (error) throw error;
       } else {
@@ -906,7 +907,7 @@ function DetailDrawer(props: { typ: Tab; ma?: Mitarbeiter; bw?: Bewerber; stando
             <SchulungenTab id={id} rows={schul} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeSchul} />
           )}
           {detailTab === 'zeit' && (
-            <ZeiterfassungTab id={id} rows={zeitRows} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeZeit} wochenstunden={parseFloat(wochenstunden.replace(',', '.')) || 0} bundesland={bundesland} />
+            <ZeiterfassungTab id={id} rows={zeitRows} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeZeit} wochenstunden={zahlAusFeld(wochenstunden) || 0} bundesland={bundesland} />
           )}
           {detailTab === 'check' && (
             <ChecklistenTab id={id} rows={check} loading={listLoading} msg={listMsg} setMsg={setListMsg} reload={ladeCheck} />
@@ -1527,7 +1528,7 @@ function ZeiterfassungTab({ id, rows, loading, msg, setMsg, reload, wochenstunde
     setEditId(r.id);
     setEKommen(zToLocal(r.kommen_um));
     setEGehen(zToLocal(r.gehen_um));
-    setEPause(String(r.pause_minuten ?? 0));
+    setEPause(zahlFeld(r.pause_minuten ?? 0));
     setMsg(null);
   }
   function abbrechen() { setEditId(null); }

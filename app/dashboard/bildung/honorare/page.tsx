@@ -19,7 +19,7 @@ import {
   euro, euroText, datumDe, heuteBerlin,
 } from '@/lib/gebuehrenHonorare';
 import { teilnahmebescheinigungPdf } from '@/lib/zertifikat';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -102,7 +102,7 @@ export default function HonorareSeite() {
   function terminWaehlen(id: string) {
     const t = termine.find((x) => x.id === id);
     const ue = t ? unterrichtsEinheiten(t.von_uhr, t.bis_uhr) : null;
-    setNh({ ...nh, termin_id: id, datum: t?.datum ?? nh.datum, ue: ue != null ? String(ue).replace('.', ',') : nh.ue });
+    setNh({ ...nh, termin_id: id, datum: t?.datum ?? nh.datum, ue: ue != null ? zahlFeld(ue).replace('.', ',') : nh.ue });
   }
   async function anlegen() {
     if (!nh.dozent.trim()) { setFehler('Dozent angeben.'); return; }

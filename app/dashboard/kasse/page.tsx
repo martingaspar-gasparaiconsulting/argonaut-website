@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -27,7 +28,7 @@ type CartPos = { key: string; artikel_id: string | null; bezeichnung: string; me
 type Beleg = { id: string; beleg_nr: string | null; brutto_summe: number; zahlart: string; erstellt_am: string; tse_modus: string };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
 
 export default function KassePage() {

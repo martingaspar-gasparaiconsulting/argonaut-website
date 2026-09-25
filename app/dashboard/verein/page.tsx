@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'verein_mitglieder';
 
@@ -29,7 +30,7 @@ type Mitglied = { id: string; name: string; email: string | null; beitrag: numbe
 type Veranstaltung = { id: string; titel: string; datum: string | null; ort: string | null; teilnehmer: number; ehrenamt_stunden: number };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function jahresBeitrag(m: Mitglied) { const f = m.intervall === 'monat' ? 12 : m.intervall === 'quartal' ? 4 : 1; return (Number(m.beitrag) || 0) * f; }

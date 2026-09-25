@@ -21,6 +21,7 @@ import { chargenPdf } from "@/lib/chargenPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 const MODUL = 'charge_los';
 
 // ---------------------------------------------------------------------
@@ -65,7 +66,7 @@ type LosForm = {
 const LEER_LOS: LosForm = { charge_nr: "", typ: "charge", bezeichnung: "", artikel_id: "", menge: "", einheit: "Stk", herstell_datum: "", mhd: "", herkunft: "", auftrag: "", status: "freigegeben", bemerkung: "" };
 
 const heuteISO = () => new Date().toISOString().slice(0, 10);
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function num(x: number | null): string { return (Number(x) || 0).toLocaleString("de-DE", { maximumFractionDigits: 3 }); }
 function dstr(s: string | null): string { return s ? new Date(s).toLocaleDateString("de-DE") : "—"; }
 
@@ -159,7 +160,7 @@ export default function ChargenSeite() {
     setEditId(l.id);
     setForm({
       charge_nr: l.charge_nr ?? "", typ: l.typ ?? "charge", bezeichnung: l.bezeichnung ?? "", artikel_id: l.artikel_id ?? "",
-      menge: l.menge != null ? String(l.menge) : "", einheit: l.einheit ?? "Stk",
+      menge: l.menge != null ? zahlFeld(l.menge) : "", einheit: l.einheit ?? "Stk",
       herstell_datum: l.herstell_datum ?? "", mhd: l.mhd ?? "", herkunft: l.herkunft ?? "", auftrag: l.auftrag ?? "",
       status: l.status ?? "freigegeben", bemerkung: l.bemerkung ?? "",
     });

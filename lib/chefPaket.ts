@@ -17,6 +17,7 @@
 // ein Kontostand hinterlegt ist; Auslastung mit Urlaub/Krank aus dem Schichtplan.
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 const TAG = 86_400_000;
 
 /** Kalendertag in Berlin (YYYY-MM-DD). */
@@ -209,7 +210,7 @@ function betrag(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   const s = String(v ?? '').trim();
   if (!s) return 0;
-  const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
+  const n = leseZahlOder(s, 0);
   return Number.isFinite(n) ? n : 0;
 }
 const r2 = (n: number) => Math.round(n * 100) / 100;

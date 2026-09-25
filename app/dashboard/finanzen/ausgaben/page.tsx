@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
+import { leseZahlOder, zahlFeld, zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-2 — AUSGABEN-COCKPIT
@@ -68,7 +69,7 @@ function eur(n: number | null | undefined): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 function datumDe(d: string | null | undefined): string {
@@ -79,11 +80,7 @@ function datumDe(d: string | null | undefined): string {
     return d;
   }
 }
-function parseZahl(s: string): number {
-  if (!s) return 0;
-  const n = parseFloat(String(s).replace(",", "."));
-  return isNaN(n) ? 0 : n;
-}
+function parseZahl(s: string): number { return leseZahlOder(s, 0); }
 function heuteStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -165,8 +162,8 @@ export default function AusgabenCockpit() {
     setEditId(a.id);
     setBezeichnung(a.bezeichnung || "");
     setKategorie(a.kategorie || "Sonstiges");
-    setBetrag(String(a.betrag_brutto ?? "").replace(".", ","));
-    setMwstSatz(String(a.mwst_satz ?? 19));
+    setBetrag(zahlFeld(a.betrag_brutto ?? "").replace(".", ","));
+    setMwstSatz(zahlFeld(a.mwst_satz ?? 19));
     setDatum(a.ausgabedatum || heuteStr());
     setLieferant(a.lieferant || "");
     setZahlungsart(a.zahlungsart || "Überweisung");

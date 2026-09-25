@@ -15,6 +15,7 @@
 //   · Ads-Effizienz (Ausgaben/Umsatz/ROAS/CPL — eine €-Achse, kein Dual-Axis)
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 export type LeadRoh = {
   status?: unknown;
   quelle?: unknown;
@@ -33,7 +34,7 @@ const TAG = 86_400_000;
 
 function num(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 

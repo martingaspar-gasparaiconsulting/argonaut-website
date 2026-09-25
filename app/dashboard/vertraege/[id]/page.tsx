@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V3 Vertrag-Detailseite
@@ -181,15 +182,15 @@ export default function VertragDetail() {
       ende: vertrag.ende ?? "",
       kuendigungsfrist_tage:
         vertrag.kuendigungsfrist_tage != null
-          ? String(vertrag.kuendigungsfrist_tage)
+          ? zahlFeld(vertrag.kuendigungsfrist_tage)
           : "",
       auto_verlaengerung: vertrag.auto_verlaengerung,
       verlaengerung_monate:
         vertrag.verlaengerung_monate != null
-          ? String(vertrag.verlaengerung_monate)
+          ? zahlFeld(vertrag.verlaengerung_monate)
           : "",
       kosten_betrag:
-        vertrag.kosten_betrag != null ? String(vertrag.kosten_betrag) : "",
+        vertrag.kosten_betrag != null ? zahlFeld(vertrag.kosten_betrag) : "",
       kosten_intervall: vertrag.kosten_intervall ?? "monatlich",
       status: vertrag.status ?? "aktiv",
       notizen: vertrag.notizen ?? "",
@@ -211,7 +212,7 @@ export default function VertragDetail() {
     setSpeichern(true);
     setFehler(null);
     const intOr0 = (s: string) =>
-      s.trim() === "" ? 0 : Math.round(Number(s.replace(",", ".")) || 0);
+      s.trim() === "" ? 0 : Math.round(zahlAusFeld(s) || 0);
     const payload = {
       bezeichnung: form.bezeichnung.trim(),
       kategorie: form.kategorie.trim() || null,
@@ -225,7 +226,7 @@ export default function VertragDetail() {
       kosten_betrag:
         form.kosten_betrag.trim() === ""
           ? 0
-          : Number(form.kosten_betrag.replace(",", ".")),
+          : zahlAusFeld(form.kosten_betrag),
       kosten_intervall: form.kosten_intervall || "monatlich",
       status: form.status || "aktiv",
       notizen: form.notizen.trim() || null,

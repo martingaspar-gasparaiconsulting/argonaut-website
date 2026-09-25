@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort } from "@/lib/standortDaten";
 import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from "@/lib/lagerBuchung";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E5 Bestellung-Detailseite
@@ -129,8 +130,8 @@ export default function BestellungDetail() {
         id: p.id,
         artikel_id: p.artikel_id,
         bezeichnung: p.bezeichnung ?? "",
-        menge: p.menge != null ? String(p.menge) : "",
-        einzelpreis: p.einzelpreis != null ? String(p.einzelpreis) : "",
+        menge: p.menge != null ? zahlFeld(p.menge) : "",
+        einzelpreis: p.einzelpreis != null ? zahlFeld(p.einzelpreis) : "",
         menge_geliefert: Number(p.menge_geliefert) || 0,
         position: p.position ?? 1,
       }))
@@ -163,8 +164,8 @@ export default function BestellungDetail() {
       positionen.reduce(
         (s, p) =>
           s +
-          (Number(p.menge.replace(",", ".")) || 0) *
-            (Number(p.einzelpreis.replace(",", ".")) || 0),
+          (zahlAusFeld(p.menge) || 0) *
+            (zahlAusFeld(p.einzelpreis) || 0),
         0
       ),
     [positionen]
@@ -188,8 +189,8 @@ export default function BestellungDetail() {
       .update({
         artikel_id: p.artikel_id,
         bezeichnung: p.bezeichnung.trim() || "Position",
-        menge: Number(p.menge.replace(",", ".")) || 0,
-        einzelpreis: Number(p.einzelpreis.replace(",", ".")) || 0,
+        menge: zahlAusFeld(p.menge) || 0,
+        einzelpreis: zahlAusFeld(p.einzelpreis) || 0,
       })
       .eq("id", id);
   }
@@ -212,7 +213,7 @@ export default function BestellungDetail() {
       .update({
         artikel_id: neu.artikel_id,
         bezeichnung: neu.bezeichnung.trim() || "Position",
-        einzelpreis: Number(neu.einzelpreis.replace(",", ".")) || 0,
+        einzelpreis: zahlAusFeld(neu.einzelpreis) || 0,
       })
       .eq("id", id);
   }
@@ -263,7 +264,7 @@ export default function BestellungDetail() {
   function oeffneWareneingang() {
     const init: Record<string, string> = {};
     positionen.forEach((p) => {
-      const bestellt = Number(p.menge.replace(",", ".")) || 0;
+      const bestellt = zahlAusFeld(p.menge) || 0;
       const offen = Math.max(0, bestellt - p.menge_geliefert);
       init[p.id] = offen > 0 ? String(offen) : "0";
     });
@@ -279,7 +280,7 @@ export default function BestellungDetail() {
     const zuBuchen = positionen
       .map((p) => ({
         p,
-        jetzt: Number((weMengen[p.id] ?? "0").replace(",", ".")) || 0,
+        jetzt: zahlAusFeld((weMengen[p.id] ?? "0")) || 0,
       }))
       .filter((x) => x.jetzt > 0);
     if (zuBuchen.length === 0) {
@@ -360,8 +361,8 @@ export default function BestellungDetail() {
     let alleKomplett = true;
     let etwasGeliefert = false;
     positionen.forEach((p) => {
-      const bestellt = Number(p.menge.replace(",", ".")) || 0;
-      const jetzt = Number((weMengen[p.id] ?? "0").replace(",", ".")) || 0;
+      const bestellt = zahlAusFeld(p.menge) || 0;
+      const jetzt = zahlAusFeld((weMengen[p.id] ?? "0")) || 0;
       const neuGeliefert = p.menge_geliefert + jetzt;
       if (neuGeliefert > 0) etwasGeliefert = true;
       if (neuGeliefert < bestellt) alleKomplett = false;
@@ -648,8 +649,8 @@ export default function BestellungDetail() {
             <tbody>
               {positionen.map((p) => {
                 const zeilenSumme =
-                  (Number(p.menge.replace(",", ".")) || 0) *
-                  (Number(p.einzelpreis.replace(",", ".")) || 0);
+                  (zahlAusFeld(p.menge) || 0) *
+                  (zahlAusFeld(p.einzelpreis) || 0);
                 const einheit = p.artikel_id
                   ? artikelListe.find((a) => a.id === p.artikel_id)?.einheit ?? ""
                   : "";
@@ -854,7 +855,7 @@ export default function BestellungDetail() {
                 </thead>
                 <tbody>
                   {positionen.map((p) => {
-                    const bestellt = Number(p.menge.replace(",", ".")) || 0;
+                    const bestellt = zahlAusFeld(p.menge) || 0;
                     const offen = Math.max(0, bestellt - p.menge_geliefert);
                     return (
                       <tr key={p.id}>

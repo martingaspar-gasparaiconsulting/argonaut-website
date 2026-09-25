@@ -26,6 +26,7 @@ import {
   sortiereStufen, formatKm, eur,
   type AnfahrtKonfig, type FahrtkostenStufe, type Rundung, type DistanzQuelle,
 } from '../_components/anfahrtLogik';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -104,10 +105,7 @@ const RUNDUNGEN: Array<{ wert: Rundung; label: string }> = [
   { wert: 'keine', label: 'nicht runden' },
 ];
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 
 function datumHuebsch(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -215,12 +213,12 @@ export default function AnfahrtEinstellungen() {
         setKonfig(k);
         setKForm({
           aktiv: k.aktiv,
-          frei_bis_km: String(k.frei_bis_km),
+          frei_bis_km: zahlFeld(k.frei_bis_km),
           hin_und_rueck: k.hin_und_rueck,
-          steuersatz_prozent: String(k.steuersatz_prozent),
-          mindestbetrag_netto: k.mindestbetrag_netto != null ? String(k.mindestbetrag_netto) : '',
+          steuersatz_prozent: zahlFeld(k.steuersatz_prozent),
+          mindestbetrag_netto: k.mindestbetrag_netto != null ? zahlFeld(k.mindestbetrag_netto) : '',
           rundung_km: k.rundung_km,
-          luftlinie_aufschlag_prozent: String(k.luftlinie_aufschlag_prozent),
+          luftlinie_aufschlag_prozent: zahlFeld(k.luftlinie_aufschlag_prozent),
         });
       }
       setStufen(sortiereStufen((sfRes.data as FahrtkostenStufe[]) ?? []));

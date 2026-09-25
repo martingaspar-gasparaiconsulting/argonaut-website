@@ -19,6 +19,7 @@ import {
 import { augeRezeptur } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,7 +47,7 @@ type Rezept = {
 type ZutatRow = { id?: string; bezeichnung: string; menge: string; einheit: string; preis_pro_einheit: string; rolle: string };
 
 const LEER_ZUTAT: ZutatRow = { bezeichnung: '', menge: '', einheit: 'kg', preis_pro_einheit: '', rolle: 'sonstige' };
-function num(s: string) { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function eur(n: number | null) { return n == null ? '—' : n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function z1(n: number | null) { return n == null ? '—' : n.toLocaleString('de-DE', { maximumFractionDigits: 2 }); }
 

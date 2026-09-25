@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 const MODUL = 'foerder_angebote';
 
 const supabase = createBrowserClient(
@@ -28,7 +29,7 @@ type Pos = { bezeichnung: string; netto: string };
 type Angebot = { id: string; kunde_name: string | null; titel: string; positionen: { bezeichnung: string; netto: number }[]; netto_summe: number; foerderquote: number; notiz: string | null };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(/\./g, '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 
 // Fertige, förder-freundliche Pakete (netto). Dienen als Startpunkt.
 const PAKETE: { name: string; positionen: Pos[] }[] = [

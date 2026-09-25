@@ -8,6 +8,7 @@ import {
   standortFuerBuchung, buchenArgumente, vereineBewegungen, abgangImZeitraum,
   artText, RPC_BUCHEN, type BewegungAnzeige,
 } from "@/lib/lagerBuchung";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E3 Artikel-Detailseite
@@ -207,7 +208,7 @@ export default function ArtikelDetail() {
 
   // Vorschau des neuen Bestands (am Buchungsort)
   const vorschau = useMemo(() => {
-    const m = buchMenge.trim() === "" ? 0 : Number(buchMenge.replace(",", "."));
+    const m = buchMenge.trim() === "" ? 0 : zahlAusFeld(buchMenge);
     if (isNaN(m)) return null;
     if (modus === "eingang") return basisBestand + m;
     if (modus === "ausgang") return basisBestand - m;
@@ -216,7 +217,7 @@ export default function ArtikelDetail() {
 
   async function bucheBestand() {
     setBuchFehler(null);
-    const m = buchMenge.trim() === "" ? NaN : Number(buchMenge.replace(",", "."));
+    const m = buchMenge.trim() === "" ? NaN : zahlAusFeld(buchMenge);
     if (isNaN(m) || m < 0) {
       setBuchFehler("Bitte eine gültige Menge eingeben.");
       return;
@@ -257,11 +258,11 @@ export default function ArtikelDetail() {
       kategorie: artikel.kategorie ?? "",
       einheit: artikel.einheit ?? "Stk",
       einkaufspreis:
-        artikel.einkaufspreis != null ? String(artikel.einkaufspreis) : "",
+        artikel.einkaufspreis != null ? zahlFeld(artikel.einkaufspreis) : "",
       verkaufspreis:
-        artikel.verkaufspreis != null ? String(artikel.verkaufspreis) : "",
+        artikel.verkaufspreis != null ? zahlFeld(artikel.verkaufspreis) : "",
       mindestbestand:
-        artikel.mindestbestand != null ? String(artikel.mindestbestand) : "",
+        artikel.mindestbestand != null ? zahlFeld(artikel.mindestbestand) : "",
       lagerort: artikel.lagerort ?? "",
       lieferant_id: artikel.lieferant_id ?? "",
       aktiv: artikel.aktiv,
@@ -282,7 +283,7 @@ export default function ArtikelDetail() {
     }
     setSpeichern(true);
     setFormFehler(null);
-    const zahl = (s: string) => (s.trim() === "" ? 0 : Number(s.replace(",", ".")));
+    const zahl = (s: string) => (s.trim() === "" ? 0 : zahlAusFeld(s));
     const payload = {
       artikelnummer: form.artikelnummer.trim() || null,
       bezeichnung: form.bezeichnung.trim(),
@@ -909,7 +910,7 @@ function EoqKarte({
   const [lagerzins, setLagerzins] = useState<string>("20");
 
   const parse = (s: string) =>
-    s.trim() === "" ? NaN : Number(s.replace(",", "."));
+    s.trim() === "" ? NaN : zahlAusFeld(s);
 
   // Wenn kein manueller Wert eingegeben ist, den Auto-Wert nutzen.
   const bedarf =

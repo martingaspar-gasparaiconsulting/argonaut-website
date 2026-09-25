@@ -15,6 +15,7 @@
 // pure, node-testbare Funktionen (Muster wie lib/marketingCockpit.ts).
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 export type KampagneRoh = {
   id?: unknown;
   name?: unknown;
@@ -37,7 +38,7 @@ export type RechnungRoh = {
 /** Nicht-negative Zahl aus Zahl/String (Komma/Punkt), sonst 0. */
 function num(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function runde2(n: number): number {

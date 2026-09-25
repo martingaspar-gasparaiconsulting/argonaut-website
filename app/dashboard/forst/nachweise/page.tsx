@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -42,7 +43,7 @@ function artLabel(k: string) { return ARTEN.find((a) => a.key === k)?.label ?? k
 
 function heute() { return new Date().toISOString().slice(0, 10); }
 function inTagen(tage: number) { const g = new Date(); g.setDate(g.getDate() + tage); return g.toISOString().slice(0, 10); }
-function num(s: string) { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function plusMonate(iso: string, monate: number) { const dt = new Date(iso); dt.setMonth(dt.getMonth() + monate); return dt.toISOString().slice(0, 10); }
 
@@ -81,12 +82,12 @@ export default function ForstNachweisePage() {
   function neu() { setForm(leerForm()); setOk(null); setFehler(null); }
   function artWechseln(key: string) {
     const preset = ARTEN.find((a) => a.key === key);
-    setForm((f) => ({ ...f, art: key, bezeichnung: preset ? preset.bezeichnung : f.bezeichnung, intervall_monate: preset ? String(preset.intervall) : f.intervall_monate }));
+    setForm((f) => ({ ...f, art: key, bezeichnung: preset ? preset.bezeichnung : f.bezeichnung, intervall_monate: preset ? zahlFeld(preset.intervall) : f.intervall_monate }));
   }
   function editieren(n: Nachweis) {
     setForm({
       id: n.id, mitarbeiter_name: n.mitarbeiter_name, art: n.art, bezeichnung: n.bezeichnung ?? '',
-      ausgestellt_am: n.ausgestellt_am ?? '', intervall_monate: String(n.intervall_monate), notiz: n.notiz ?? '',
+      ausgestellt_am: n.ausgestellt_am ?? '', intervall_monate: zahlFeld(n.intervall_monate), notiz: n.notiz ?? '',
     });
     setOk(null); setFehler(null);
   }

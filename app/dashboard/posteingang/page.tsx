@@ -36,6 +36,7 @@ import KiAuge from '../_components/KiAuge';
 import { augePosteingang } from '@/lib/auge';
 import { zaehlePosteingang } from '@/lib/augeZaehler';
 import SachbearbeiterErgebnis, { type SachbearbeiterAntwort } from '../_components/SachbearbeiterErgebnis';
+import { zahlText } from '@/lib/zahlen';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -80,7 +81,7 @@ function datumLang(iso: string): string {
 function groesse(bytes: number): string {
   if (!bytes || bytes < 1024) return `${bytes || 0} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${zahlText(bytes / 1024 / 1024, 1)} MB`;
 }
 
 export default function PosteingangSeite() {

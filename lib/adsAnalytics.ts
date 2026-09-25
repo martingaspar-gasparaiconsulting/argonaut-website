@@ -31,8 +31,7 @@ export type AdsErgebnis = {
 /** Nicht-negative Zahl aus beliebiger Eingabe (Komma/Punkt), sonst 0. */
 export function zuZahl(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const s = String(v ?? '').trim().replace(/\./g, '').replace(',', '.');
-  const n = Number(s);
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 

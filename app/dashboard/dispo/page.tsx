@@ -21,6 +21,7 @@ import { zaehleDispo } from '@/lib/augeZaehler';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { QUALIFIKATIONEN, qualiLabel, saubereAnforderungen, pruefeZuweisung, vorschlaege, ueberschneidungen, engePuffer, type MaQuali } from '@/lib/dispoPlus';
+import { zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,7 +64,7 @@ function stundenAusEinsatz(e: { beginn_am: string | null; ende_am: string | null
   return (en - b) / 3600000;
 }
 function fmtH(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+  return Number.isInteger(n) ? String(n) : zahlText(n, 1);
 }
 // Kapazitäts-Ampel: 🟢 <80% · 🟡 80–100% · 🔴 >100% (Tagesziel = Wochenstunden ÷ 5)
 function ampelInfo(summe: number, ziel: number): { farbe: string; stufe: 'gruen' | 'gelb' | 'rot' } {
@@ -497,7 +498,7 @@ export default function DispoPage() {
                     return (
                       <div key={d.datum} style={{ ...styles.tagZelle, borderColor: rot ? C.danger : (d.heute ? 'rgba(201,168,76,0.4)' : C.border), background: rot ? 'rgba(224,102,102,0.07)' : C.navy }}>
                         {zeigeAmpel && (
-                          <div style={styles.ampelZeile} title={`Auslastung: ${summe.toFixed(1)}h von ${tagesziel.toFixed(1)}h`}>
+                          <div style={styles.ampelZeile} title={`Auslastung: ${zahlText(summe, 1)}h von ${zahlText(tagesziel, 1)}h`}>
                             <span style={{ ...styles.ampelPunkt, background: am.farbe }} />
                             <span style={{ color: am.farbe, fontWeight: 700 }}>{fmtH(summe)}h</span>
                             <span style={{ color: C.textDim }}>/ {fmtH(tagesziel)}h</span>

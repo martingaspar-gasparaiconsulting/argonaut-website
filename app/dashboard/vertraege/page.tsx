@@ -7,6 +7,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import Leerzustand from '../_components/Leerzustand';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'vertraege';
 
@@ -303,11 +304,11 @@ export default function VertraegeCockpit() {
       beginn: v.beginn ?? "",
       ende: v.ende ?? "",
       kuendigungsfrist_tage:
-        v.kuendigungsfrist_tage != null ? String(v.kuendigungsfrist_tage) : "",
+        v.kuendigungsfrist_tage != null ? zahlFeld(v.kuendigungsfrist_tage) : "",
       auto_verlaengerung: v.auto_verlaengerung,
       verlaengerung_monate:
-        v.verlaengerung_monate != null ? String(v.verlaengerung_monate) : "",
-      kosten_betrag: v.kosten_betrag != null ? String(v.kosten_betrag) : "",
+        v.verlaengerung_monate != null ? zahlFeld(v.verlaengerung_monate) : "",
+      kosten_betrag: v.kosten_betrag != null ? zahlFeld(v.kosten_betrag) : "",
       kosten_intervall: v.kosten_intervall ?? "monatlich",
       status: v.status ?? "aktiv",
       notizen: v.notizen ?? "",
@@ -329,7 +330,7 @@ export default function VertraegeCockpit() {
     setSpeichern(true);
     setFehler(null);
     const intOr0 = (s: string) =>
-      s.trim() === "" ? 0 : Math.round(Number(s.replace(",", ".")) || 0);
+      s.trim() === "" ? 0 : Math.round(zahlAusFeld(s) || 0);
     const payload = {
       bezeichnung: form.bezeichnung.trim(),
       kategorie: form.kategorie.trim() || null,
@@ -343,7 +344,7 @@ export default function VertraegeCockpit() {
       kosten_betrag:
         form.kosten_betrag.trim() === ""
           ? 0
-          : Number(form.kosten_betrag.replace(",", ".")),
+          : zahlAusFeld(form.kosten_betrag),
       kosten_intervall: form.kosten_intervall || "monatlich",
       status: form.status || "aktiv",
       notizen: form.notizen.trim() || null,

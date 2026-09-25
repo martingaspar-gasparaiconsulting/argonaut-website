@@ -19,6 +19,7 @@
 // Node-getestet: tests/formularBaukastenP85.test.mjs
 // ============================================================================
 
+import { leseZahlOder } from './zahlen';
 export type FeldTyp =
   | 'ueberschrift' | 'text' | 'textlang' | 'zahl' | 'datum' | 'auswahl' | 'mehrfach'
   | 'ja_nein' | 'pruefpunkt' | 'foto' | 'unterschrift' | 'hinweis';
@@ -144,7 +145,7 @@ export function pruefeWerte(felder: Feld[], werte: Werte, fuerAbschluss: boolean
     switch (feld.typ) {
       case 'zahl': {
         const t = String(v).trim();
-        const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
+        const n = leseZahlOder(t, NaN);
         if (!Number.isFinite(n)) f.push(`„${feld.label}": keine gültige Zahl.`);
         break;
       }

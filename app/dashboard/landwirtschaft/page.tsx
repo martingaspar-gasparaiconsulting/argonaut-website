@@ -11,6 +11,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'agrar_schlaege';
 
@@ -28,7 +29,7 @@ type Schlag = { id: string; name: string; flaeche_ha: number | null; kultur: str
 type Massnahme = { id: string; datum: string; art: string; mittel: string | null; menge: number | null; einheit: string | null; ertrag: number | null; notiz: string | null };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string) { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 const ART_LABEL: Record<string, string> = { aussaat: '🌱 Aussaat', duengung: '💧 Düngung', pflanzenschutz: '🛡 Pflanzenschutz', ernte: '🌾 Ernte', sonstige: '· Sonstige' };
 

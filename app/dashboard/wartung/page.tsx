@@ -33,6 +33,7 @@ import { WARTUNG_VORLAGEN, wartungVorlage } from '@/lib/wiederkehr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'wartungsvertraege';
 
@@ -247,10 +248,10 @@ export default function WartungPage() {
       vertragsnummer: r.vertragsnummer ?? '',
       status: r.status ?? 'aktiv',
       beginn_am: r.beginn_am ?? '',
-      intervall_monate: String(r.intervall_monate ?? 12),
+      intervall_monate: zahlFeld(r.intervall_monate ?? 12),
       letzte_wartung_am: r.letzte_wartung_am ?? '',
-      erinnerung_tage_vorher: String(r.erinnerung_tage_vorher ?? 14),
-      betrag_netto: r.betrag_netto != null ? String(r.betrag_netto) : '',
+      erinnerung_tage_vorher: zahlFeld(r.erinnerung_tage_vorher ?? 14),
+      betrag_netto: r.betrag_netto != null ? zahlFeld(r.betrag_netto) : '',
       beschreibung: r.beschreibung ?? '',
       notiz: r.notiz ?? '',
     });
@@ -274,8 +275,8 @@ export default function WartungPage() {
     setForm((f) => ({
       ...f,
       titel: f.titel.trim() ? f.titel : v.titel,
-      intervall_monate: String(v.intervallMonate),
-      erinnerung_tage_vorher: String(v.erinnerungTage),
+      intervall_monate: zahlFeld(v.intervallMonate),
+      erinnerung_tage_vorher: zahlFeld(v.erinnerungTage),
     }));
   }
 
@@ -286,7 +287,7 @@ export default function WartungPage() {
 
     const intervall = parseInt(form.intervall_monate, 10);
     const erinnerung = parseInt(form.erinnerung_tage_vorher, 10);
-    const betrag = form.betrag_netto.trim() === '' ? null : Number(form.betrag_netto.replace(',', '.'));
+    const betrag = form.betrag_netto.trim() === '' ? null : zahlAusFeld(form.betrag_netto);
 
     // Nächste Fälligkeit aus den Formulardaten berechnen
     const basis: WartungBasis = {

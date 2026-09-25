@@ -20,6 +20,7 @@ import {
   heuteBerlin, datumDe,
   type VersammlungArt, type Mehrheit, type Top,
 } from '@/lib/versammlungObjekte';
+import { leseZahl } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -50,12 +51,7 @@ type Beschluss = {
   angenommen: boolean | null; beschlossen_am: string | null; angefochten_am: string | null; aufgehoben_am: string | null;
 };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 
 export default function VersammlungenSeite({ art }: { art: VersammlungArt }) {
   const heute = heuteBerlin();

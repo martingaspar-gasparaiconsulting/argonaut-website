@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import MarketingRoi from '../_components/MarketingRoi';
 import { leadsProKampagne } from '@/lib/marketing';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 3 MARKETING · M2 Cockpit
@@ -158,7 +159,7 @@ export default function MarketingCockpit() {
     setFBeschreibung(k.beschreibung ?? '');
     setFStatus(k.status);
     setFKanaele(k.kanaele ?? []);
-    setFBudget(k.budget != null ? String(k.budget) : '');
+    setFBudget(k.budget != null ? zahlFeld(k.budget) : '');
     setFStart(k.start_datum ?? '');
     setFEnde(k.end_datum ?? '');
     setDialogOffen(true);
@@ -183,7 +184,7 @@ export default function MarketingCockpit() {
       beschreibung: fBeschreibung.trim() || null,
       status: fStatus,
       kanaele: fKanaele,
-      budget: fBudget.trim() ? Number(fBudget.replace(',', '.')) : null,
+      budget: fBudget.trim() ? zahlAusFeld(fBudget) : null,
       start_datum: fStart || null,
       end_datum: fEnde || null,
     };

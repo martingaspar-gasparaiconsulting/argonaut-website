@@ -1,5 +1,6 @@
 'use client'
 
+import { zahlText } from '@/lib/zahlen';
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung'
@@ -101,8 +102,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes < 1024 * 1024) return `${zahlText(bytes / 1024, 1)} KB`
+  return `${zahlText(bytes / (1024 * 1024), 1)} MB`
 }
 
 function fileTypeIcon(type: string) {

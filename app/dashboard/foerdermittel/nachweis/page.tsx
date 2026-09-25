@@ -17,6 +17,7 @@ import {
   verwendungsAuswertung, sachberichtVorlage, offenePlatzhalter, heuteBerlin, datumDe, euroText, UEBERSCHREITUNG_PROZENT,
   type PlanPosition,
 } from '@/lib/versammlungObjekte';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -39,12 +40,7 @@ const STUFE: Record<string, string> = { ok: C.green, gelb: C.warn, rot: C.danger
 type Vorhaben = { id: string; programm_name: string; status: string; bewilligt_betrag: number | null; verwendet_betrag: number | null; nachweis_frist: string | null; finanzplan: PlanPosition[] | null; bewilligung_von: string | null; bewilligung_bis: string | null; sachbericht: string | null };
 type BelegZeile = { id: string; vorhaben_id: string; position: string; betrag: number; datum: string | null; beleg_nr: string | null; lieferant: string | null; notiz: string | null };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 
 export default function VerwendungsnachweisSeite() {
   const heute = heuteBerlin();
@@ -73,7 +69,7 @@ export default function VerwendungsnachweisSeite() {
   const v = vorhaben.find((x) => x.id === vid) ?? null;
   useEffect(() => {
     if (!v) return;
-    setPlan((v.finanzplan ?? []).map((p) => ({ position: p.position, plan: String(p.plan).replace('.', ',') })));
+    setPlan((v.finanzplan ?? []).map((p) => ({ position: p.position, plan: zahlFeld(p.plan).replace('.', ',') })));
     setZeitraum({ von: v.bewilligung_von ?? '', bis: v.bewilligung_bis ?? '' });
     setSachbericht(v.sachbericht ?? '');
     setNb((n) => ({ ...n, position: (v.finanzplan ?? [])[0]?.position ?? '' }));

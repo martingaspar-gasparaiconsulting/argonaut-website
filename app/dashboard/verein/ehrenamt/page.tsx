@@ -16,6 +16,7 @@ import {
   PAUSCHALEN, PAUSCHALEN_HINWEIS, pauschalenStand, stundenAuswertung, ehrenamtsNachweis, heuteBerlin, datumDe, euroText,
   type PauschaleArt,
 } from '@/lib/versammlungObjekte';
+import { leseZahl } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,12 +38,7 @@ type Mitglied = { id: string; name: string; status: string | null };
 type Eintrag = { id: string; person: string; mitglied_id: string | null; datum: string; stunden: number; taetigkeit: string | null };
 type Pauschale = { id: string; person: string; mitglied_id: string | null; datum: string; betrag: number; art: PauschaleArt; notiz: string | null };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 
 export default function EhrenamtSeite() {
   const heute = heuteBerlin();

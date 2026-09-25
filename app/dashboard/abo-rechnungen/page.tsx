@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -32,7 +33,7 @@ type Abo = {
 
 const INTERVALLE = [{ w: 'monat', l: 'monatlich' }, { w: 'quartal', l: 'vierteljährlich' }, { w: 'jahr', l: 'jährlich' }];
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function heute() { return new Date().toISOString().slice(0, 10); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function kontaktName(k: Record<string, unknown>): string {

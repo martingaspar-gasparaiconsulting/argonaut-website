@@ -15,6 +15,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { anbieterVon, type IntegrationTyp } from '@/lib/konnektoren';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'shop_bestellungen';
 
@@ -42,7 +43,7 @@ const STATUS: { key: string; label: string; farbe: string }[] = [
 ];
 function statusInfo(k: string) { return STATUS.find((s) => s.key === k) || STATUS[0]; }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 
 // CSV: Kopfzeile optional. Spalten: extern_id ; besteller ; email ; bezeichnung ; menge ; einzelpreis
 // Mehrere Zeilen mit gleicher extern_id werden zu EINER Bestellung zusammengefasst.

@@ -14,6 +14,7 @@ import {
   AUFSCHLAG_UNTERNEHMEN,
   PAUSCHALE_B2B,
 } from "@/lib/verzugszins";
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4b — MAHNUNG ERSTELLEN
@@ -89,7 +90,7 @@ function geld(n: number | null | undefined, waehrung = "EUR"): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: waehrung || "EUR" }).format(wert);
   } catch {
-    return `${wert.toFixed(2)} €`;
+    return `${zahlText(wert, 2)} €`;
   }
 }
 function datumDe(d: string | null | undefined): string {

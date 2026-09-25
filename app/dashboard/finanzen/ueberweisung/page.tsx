@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState, CSSProperties } from 'react';
 import { bauePain001, ibanGueltig, type Ueberweisung } from '@/lib/sepaUeberweisung';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const C = {
   navy: '#0A1628', navy2: '#0F1F33', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -22,7 +23,7 @@ function eur(n: number): string {
   try { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(Number(n) || 0); }
   catch { return `${(Number(n) || 0).toFixed(2)} €`; }
 }
-function num(s: string): number { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function morgenIso(): string { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
 function monatJahr(): string { return new Date().toLocaleString('de-DE', { month: 'long', year: 'numeric' }); }
 

@@ -31,12 +31,13 @@
 // ============================================================================
 
 /** Ab dieser Menge in der Vorstufe gilt eine Quote als belastbar. */
+import { leseZahlOder } from './zahlen';
 export const BELASTBAR_AB = 10;
 
 /** Nicht-negative Zahl aus Zahl/String (Komma/Punkt), sonst 0. Null ist gueltig. */
 export function zahl(v: unknown): number {
   if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? v : 0;
-  const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.'));
+  const n = leseZahlOder(v, 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 

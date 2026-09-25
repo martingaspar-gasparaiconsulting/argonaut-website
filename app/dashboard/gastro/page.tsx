@@ -13,6 +13,7 @@ import { augeBelegung } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+import { zahlAusFeld } from '@/lib/zahlen';
 
 const MODUL = 'gastro_reservierungen';
 
@@ -101,7 +102,7 @@ export default function GastroPage() {
     setFehler(null); setOk(null);
     const { error } = await supabase.from('hotel_zimmer').insert({
       owner_user_id: uid, nummer: nz.nummer.trim(), typ: nz.typ.trim() || null,
-      max_personen: parseInt(nz.max_personen, 10) || 2, preis_nacht: parseFloat((nz.preis_nacht || '').replace(',', '.')) || 0,
+      max_personen: parseInt(nz.max_personen, 10) || 2, preis_nacht: zahlAusFeld((nz.preis_nacht || '')) || 0,
     });
     if (error) { setFehler('Zimmer konnte nicht gespeichert werden.'); return; }
     setNz({ nummer: '', typ: 'Doppelzimmer', max_personen: '2', preis_nacht: '' }); await ladeHotel();

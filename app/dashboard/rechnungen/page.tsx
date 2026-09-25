@@ -8,6 +8,7 @@ import { augeRechnungen } from "@/lib/auge";
 import Leerzustand from "../_components/Leerzustand";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 "RECHNUNG" · R2 RECHNUNGS-COCKPIT
@@ -62,7 +63,7 @@ function eur(n: number | null | undefined, waehrung = "EUR"): string {
       currency: waehrung || "EUR",
     }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 

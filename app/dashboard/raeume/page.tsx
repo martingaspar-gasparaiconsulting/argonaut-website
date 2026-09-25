@@ -17,6 +17,7 @@ import { belegungsplanPdf } from "@/lib/belegungsplanPdf";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from "../_components/EigeneFelder";
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = "raum_ressource";
 
@@ -43,7 +44,7 @@ interface Belegung { id: string; ressource_id: string; titel: string; von: strin
 
 const heuteISO = () => new Date().toISOString();
 const heuteTag = () => new Date().toISOString().slice(0, 10);
-function zahl(s: string): number | null { return s.trim() === "" ? null : Number(s.replace(",", ".")); }
+function zahl(s: string): number | null { return String(s ?? '').trim() === '' ? null : zahlAusFeld(s); }
 function tag(iso: string | null): string { return String(iso ?? "").slice(0, 10); }
 function dstr(iso: string | null): string { return iso ? new Date(iso).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "—"; }
 function zeit(iso: string | null): string { return iso ? new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : ""; }
@@ -127,7 +128,7 @@ export default function RaeumeSeite() {
   // ---------- Ressourcen ----------
   function openRessource(r?: Ressource) {
     setREdit(r?.id ?? null);
-    setRForm(r ? { bezeichnung: r.bezeichnung ?? "", typ: r.typ ?? "raum", kapazitaet: r.kapazitaet != null ? String(r.kapazitaet) : "", standort: r.standort ?? "", ausstattung: r.ausstattung ?? "", buchbar: r.buchbar, notiz: r.notiz ?? "" } : LEER_R);
+    setRForm(r ? { bezeichnung: r.bezeichnung ?? "", typ: r.typ ?? "raum", kapazitaet: r.kapazitaet != null ? zahlFeld(r.kapazitaet) : "", standort: r.standort ?? "", ausstattung: r.ausstattung ?? "", buchbar: r.buchbar, notiz: r.notiz ?? "" } : LEER_R);
     setNmExtra(r ? { ...(werteMap[r.id] ?? {}) } : {});
     setFehler(null); setRModal(true);
   }
@@ -161,7 +162,7 @@ export default function RaeumeSeite() {
   function resetBuchung() { setBEdit(null); setB({ ressource_id: b.ressource_id, titel: "", datum: b.datum, vonZeit: "09:00", bisZeit: "10:30", verantwortlich: "", teilnehmer: "", kurs_id: "", status: "reserviert" }); }
   function editBelegung(x: Belegung) {
     setBEdit(x.id);
-    setB({ ressource_id: x.ressource_id, titel: x.titel ?? "", datum: tag(x.von), vonZeit: zeit(x.von), bisZeit: zeit(x.bis), verantwortlich: x.verantwortlich ?? "", teilnehmer: x.teilnehmer != null ? String(x.teilnehmer) : "", kurs_id: x.kurs_id ?? "", status: x.status ?? "reserviert" });
+    setB({ ressource_id: x.ressource_id, titel: x.titel ?? "", datum: tag(x.von), vonZeit: zeit(x.von), bisZeit: zeit(x.bis), verantwortlich: x.verantwortlich ?? "", teilnehmer: x.teilnehmer != null ? zahlFeld(x.teilnehmer) : "", kurs_id: x.kurs_id ?? "", status: x.status ?? "reserviert" });
     setTab("plan"); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function speichereBelegung() {

@@ -15,6 +15,7 @@ import KiKlartext from "../../_components/KiKlartext";
 import { erstelleInventurProtokollPdf } from "../../_components/inventurProtokollPdf";
 import { erstelleAuditProtokollPdf, type AuditEintrag } from "../../_components/inventurAuditPdf";
 import ZeitraumFilter, { ZEITRAUM_ALLES, imZeitraum, type Zeitraum } from "../../_components/ZeitraumFilter";
+import { zahlAusFeld } from '@/lib/zahlen';
 
 const C = {
   navy: "#0A1628",
@@ -55,7 +56,7 @@ function fmtEuro(v: number): string {
 // Eingabe-String -> Zahl (deutsches Komma erlaubt); leer/ungueltig -> null
 function parseIst(s: string | undefined): number | null {
   if (s === undefined || s.trim() === "") return null;
-  const n = Number(s.replace(",", "."));
+  const n = zahlAusFeld(s);
   return Number.isNaN(n) ? null : n;
 }
 

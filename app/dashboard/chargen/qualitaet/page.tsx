@@ -24,6 +24,7 @@ import {
   heuteBerlin, datumDe,
   type Richtung, type SchrittKey, type Schritte, type Reklamation, type Kriterium, type Noten, type Los, type Verwendung, type RueckrufArt, type Abnehmer,
 } from '@/lib/qualitaet';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -47,12 +48,7 @@ const knopf: CSSProperties = { background: 'transparent', color: C.cyan, border:
 const primaer: CSSProperties = { ...knopf, background: C.gold, color: C.navy, border: 'none', fontWeight: 800 };
 const lab: CSSProperties = { display: 'block', color: C.textDim, fontSize: 13, fontWeight: 700, marginTop: 8 };
 
-function zahlAus(s: string): number | null {
-  const t = String(s ?? '').trim();
-  if (!t) return null;
-  const n = Number(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t);
-  return Number.isFinite(n) ? n : null;
-}
+function zahlAus(s: string): number | null { return leseZahl(s); }
 function euro(n: number): string { return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 
 export default function QualitaetSeite() {
@@ -233,7 +229,7 @@ function RekKarte({ r, heute, offen, istChef, onToggle, onFehler, onOk, neuLaden
   const [schritte, setSchritte] = useState<Schritte>(r.schritte ?? {});
   const [wirksam, setWirksam] = useState<boolean>(!!r.wirksam);
   const [kosten, setKosten] = useState<string>(r.kosten != null ? String(r.kosten).replace('.', ',') : '');
-  useEffect(() => { setSchritte(r.schritte ?? {}); setWirksam(!!r.wirksam); setKosten(r.kosten != null ? String(r.kosten).replace('.', ',') : ''); }, [r]);
+  useEffect(() => { setSchritte(r.schritte ?? {}); setWirksam(!!r.wirksam); setKosten(r.kosten != null ? zahlFeld(r.kosten).replace('.', ',') : ''); }, [r]);
 
   const entwurf: Rek = { ...r, schritte, wirksam };
   const staende = schrittStaende(entwurf, heute);

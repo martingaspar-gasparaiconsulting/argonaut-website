@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { summiereZahlungen, type ErsatzSatz } from "@/lib/zahlungAufteilung";
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-3 — EÜR-REPORT
@@ -41,7 +42,7 @@ function eur(n: number | null | undefined): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 function r2(n: number): number {

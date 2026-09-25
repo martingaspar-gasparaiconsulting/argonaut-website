@@ -40,6 +40,7 @@ import { aufmassPdf } from '../_components/aufmassPdf';
 import { parseGaeb, baueGaeb, type GaebLV } from '@/lib/gaeb';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahl } from '@/lib/zahlen';
 
 const MODUL = 'aufmasse';
 
@@ -76,10 +77,7 @@ const LEER: Form = {
   status: 'entwurf', aufmass_datum: new Date().toISOString().slice(0, 10), bearbeiter: '', notiz: '',
 };
 
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 function datumHuebsch(iso: string | null): string {
   if (!iso) return '—';
   const p = iso.split('T')[0].split('-');

@@ -13,6 +13,7 @@ import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'fertigung_auftraege';
 
@@ -31,7 +32,7 @@ type SLPos = { id: string; komponente: string; menge: number; einheit: string };
 type Auftrag = { id: string; auftragsnr: string | null; produkt: string | null; stueckliste_id: string | null; menge: number; status: string; start_am: string | null; fertig_am: string | null };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 const ST_STATUS: { key: string; label: string; farbe: string }[] = [
   { key: 'geplant', label: 'Geplant', farbe: C.cyan },
   { key: 'in_arbeit', label: 'In Arbeit', farbe: C.warn },

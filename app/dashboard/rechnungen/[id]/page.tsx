@@ -21,6 +21,7 @@ import {
   type AbschlagZeile,
 } from "../../_components/AbschlagsKarten";
 import { satzAusBetraegen } from "@/lib/abschlagsrechnung";
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
@@ -93,11 +94,7 @@ type Zahlung = {
 
 const ZAHLUNGSARTEN = ["Überweisung", "Bar", "Karte", "Lastschrift", "PayPal", "Sonstige"];
 
-function parseZahl(s: string): number {
-  if (!s) return 0;
-  const n = parseFloat(String(s).replace(",", "."));
-  return isNaN(n) ? 0 : n;
-}
+function parseZahl(s: string): number { return leseZahlOder(s, 0); }
 function ladeStr(n: number | null | undefined): string {
   if (n === null || n === undefined) return "";
   return String(n).replace(".", ",");
@@ -224,7 +221,7 @@ export default function RechnungDetail() {
     setRechnungsdatum(r.rechnungsdatum || "");
     setLeistungsdatum(r.leistungsdatum || "");
     setFaelligkeitsdatum(r.faelligkeitsdatum || "");
-    setZahlungszielTage(r.zahlungsziel_tage != null ? String(r.zahlungsziel_tage) : "14");
+    setZahlungszielTage(r.zahlungsziel_tage != null ? zahlFeld(r.zahlungsziel_tage) : "14");
     setWaehrung(r.waehrung || "EUR");
     setNotizen(r.notizen || "");
     setKleinunternehmer(!!r.kleinunternehmer);

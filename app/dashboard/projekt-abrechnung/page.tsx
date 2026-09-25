@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -34,7 +35,7 @@ function datumHuebsch(iso: string | null): string {
   const p = iso.split('T')[0].split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
 }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 
 const LEER = { datum: heute(), beschreibung: '', stunden: '', stundensatz: '', kunde_name: '' };
 
@@ -59,7 +60,7 @@ export default function ProjektAbrechnungPage() {
       // Standard-Stundensatz laden und vorbelegen (M1) — nicht-brechend, prefill nur.
       const { data: prof } = await supabase.from('profiles').select('standard_stundensatz').eq('id', id).maybeSingle();
       const stdSatz = prof?.standard_stundensatz;
-      if (stdSatz != null && Number(stdSatz) > 0) setForm((f) => ({ ...f, stundensatz: String(stdSatz) }));
+      if (stdSatz != null && Number(stdSatz) > 0) setForm((f) => ({ ...f, stundensatz: zahlFeld(stdSatz) }));
       const { data: pr } = await supabase.from('projekte').select('id, name').eq('archiviert', false).order('name', { ascending: true });
       const l = (pr as Projekt[]) ?? [];
       setProjekte(l);

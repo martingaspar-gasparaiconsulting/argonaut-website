@@ -17,7 +17,7 @@ import {
   RVG_POSITIONEN, RVG_ANGELEGENHEITEN, RVG_STAND, rvgBerechnung, rvgGebuehrCent,
   STBVV_VORLAGEN, stbvvBerechnung, kostenText, euro, euroText, heuteBerlin,
 } from '@/lib/gebuehrenHonorare';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D',
@@ -129,7 +129,7 @@ export default function GebuehrenSeite() {
           <div style={karte}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <label>Tätigkeit<br />
-                <select style={feld} value={vorlage} onChange={(e) => { const n = STBVV_VORLAGEN.find((x) => x.key === e.target.value) ?? STBVV_VORLAGEN[0]; setVorlage(n.key); setVon(String(n.von)); setBis(String(n.bis)); setZehntel(''); }}>
+                <select style={feld} value={vorlage} onChange={(e) => { const n = STBVV_VORLAGEN.find((x) => x.key === e.target.value) ?? STBVV_VORLAGEN[0]; setVorlage(n.key); setVon(zahlFeld(n.von)); setBis(zahlFeld(n.bis)); setZehntel(''); }}>
                   {STBVV_VORLAGEN.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
                 </select>
               </label>

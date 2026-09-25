@@ -16,6 +16,7 @@ import Leerzustand from '../_components/Leerzustand';
 import { STUFEN, OFFENE_STUFEN, stufeInfo, stufeWahrscheinlichkeit, zaehlePipeline, dealWahrscheinlichkeit, formatEuro } from '@/lib/pipeline';
 import { dealScore, priorisiere } from '@/lib/dealScoring';
 import { augePipeline } from '@/lib/auge';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -34,7 +35,7 @@ type Deal = {
 };
 type Kontakt = { id: string; vorname: string | null; nachname: string | null; firma: string | null };
 
-function num(s: string): number { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function eur(n: unknown) { return formatEuro(n); }
 function fmtDate(d: string | null) { return d ? d.split('-').reverse().join('.') : ''; }
 

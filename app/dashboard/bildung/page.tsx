@@ -21,6 +21,7 @@ import { augeKurse } from '@/lib/auge';
 import { teilnahmebescheinigungPdf } from '@/lib/zertifikat';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -38,7 +39,7 @@ type Termin = { id: string; kurs_id: string; datum: string; von_uhr: string | nu
 type Anw = { id?: string; termin_id: string; anmeldung_id: string; anwesend: boolean };
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { return parseFloat((s || '').replace(',', '.')) || 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 const AN_STATUS = ['angemeldet', 'bestaetigt', 'teilgenommen', 'storniert', 'warteliste'];

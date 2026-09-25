@@ -9,6 +9,7 @@ import { augeMahnwesen } from "@/lib/auge";
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { verzugszinsen, pauschale, verbraucherVorschlag } from "@/lib/verzugszins";
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -69,7 +70,7 @@ function eur(n: number | null | undefined, waehrung = "EUR"): string {
   try {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: waehrung || "EUR" }).format(v);
   } catch {
-    return `${v.toFixed(2)} €`;
+    return `${zahlText(v, 2)} €`;
   }
 }
 

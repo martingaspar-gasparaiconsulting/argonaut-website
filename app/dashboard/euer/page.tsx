@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan } from '@/lib/afa';
 import { csvFeld } from '@/lib/csvSchreiben';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -24,7 +25,7 @@ const C = {
 };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string): number { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function imJahr(iso: string | null | undefined, jahr: number): boolean { return !!iso && iso.slice(0, 4) === String(jahr); }
 
 type Aggregat = {

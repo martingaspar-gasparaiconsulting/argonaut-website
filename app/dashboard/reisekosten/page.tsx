@@ -16,6 +16,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { csvFeld } from '@/lib/csvSchreiben';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'reisekosten';
 
@@ -42,7 +43,7 @@ const LEER = {
 };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function num(s: string): number { const n = parseFloat((s || '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string): number { return leseZahlOder(s, 0); }
 function intv(s: string): number { const n = parseInt(s || '0', 10); return Number.isFinite(n) && n > 0 ? n : 0; }
 function dtag(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
@@ -129,9 +130,9 @@ export default function ReisekostenPage() {
     };
     setForm({
       reisender: r.reisender || '', anlass: r.anlass || '', ziel: r.ziel || '',
-      abreise: loc(r.abreise), rueckkehr: loc(r.rueckkehr), km: r.km != null ? String(r.km) : '',
+      abreise: loc(r.abreise), rueckkehr: loc(r.rueckkehr), km: r.km != null ? zahlFeld(r.km) : '',
       fahrzeug: r.fahrzeug || 'pkw', fruehstueck: '0', mittag: '0', abend: '0',
-      uebernachtung: r.uebernachtung != null ? String(r.uebernachtung) : '', sonstige: r.sonstige != null ? String(r.sonstige) : '',
+      uebernachtung: r.uebernachtung != null ? zahlFeld(r.uebernachtung) : '', sonstige: r.sonstige != null ? zahlFeld(r.sonstige) : '',
       status: r.status || 'offen', notiz: '',
     });
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });

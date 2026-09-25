@@ -20,6 +20,7 @@ import {
 } from '../_components/objektLogik';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 const MODUL = 'objekt_zeiten';
 
 const supabase = createBrowserClient(
@@ -155,7 +156,7 @@ export default function ObjektzeitenPage() {
     setObjForm({
       id: o.id, bezeichnung: o.bezeichnung ?? '', kennung: o.kennung ?? '',
       adresse: o.adresse ?? '', typ: o.typ ?? 'Baustelle', status: o.status ?? 'aktiv',
-      stundensatz_netto: o.stundensatz_netto != null ? String(o.stundensatz_netto) : '',
+      stundensatz_netto: o.stundensatz_netto != null ? zahlFeld(o.stundensatz_netto) : '',
       notiz: o.notiz ?? '',
     });
     setObjModalAuf(true);
@@ -163,7 +164,7 @@ export default function ObjektzeitenPage() {
   async function objSpeichern() {
     if (!uid) return;
     if (!objForm.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung eingeben.'); return; }
-    const satz = objForm.stundensatz_netto.trim() === '' ? null : Number(objForm.stundensatz_netto.replace(',', '.'));
+    const satz = objForm.stundensatz_netto.trim() === '' ? null : zahlAusFeld(objForm.stundensatz_netto);
     const istNeu = !objForm.id;
     if (!window.confirm(istNeu ? `Neues Objekt anlegen?\n\n• ${objForm.bezeichnung}` : `Änderungen an "${objForm.bezeichnung}" speichern?`)) return;
 
@@ -214,7 +215,7 @@ export default function ObjektzeitenPage() {
     const min = parseInt(zeitForm.minuten || '0', 10);
     const dauer = (Number.isFinite(std) ? std : 0) * 60 + (Number.isFinite(min) ? min : 0);
     if (dauer <= 0) { setFehler('Bitte eine Dauer größer als 0 eingeben.'); return; }
-    const satz = zeitForm.stundensatz_netto.trim() === '' ? null : Number(zeitForm.stundensatz_netto.replace(',', '.'));
+    const satz = zeitForm.stundensatz_netto.trim() === '' ? null : zahlAusFeld(zeitForm.stundensatz_netto);
     const objName = objekte.find((o) => o.id === zeitForm.objekt_id)?.bezeichnung ?? 'Objekt';
 
     if (!window.confirm(`Zeit buchen?\n\n• ${objName}\n• ${stundenText(dauer)} am ${zeitForm.datum.split('-').reverse().join('.')}\n• ${zeitForm.abrechenbar ? 'abrechenbar' : 'nicht abrechenbar'}`)) return;

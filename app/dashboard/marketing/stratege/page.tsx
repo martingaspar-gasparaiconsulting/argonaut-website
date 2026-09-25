@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { zahlAusFeld } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · MODUL 3 MARKETING · M7 KI-Kampagnen-Stratege
@@ -93,7 +94,7 @@ export default function KampagnenStratege() {
           ziel,
           start_datum: start || null,
           end_datum: ende || null,
-          budget: budget.trim() ? Number(budget.replace(',', '.')) : null,
+          budget: budget.trim() ? zahlAusFeld(budget) : null,
           tonalitaet,
         }),
       });
@@ -118,7 +119,7 @@ export default function KampagnenStratege() {
         beschreibung: plan.beschreibung || null,
         status: 'aktiv',
         kanaele: plan.kanaele,
-        budget: plan.empfohlenes_budget ?? (budget.trim() ? Number(budget.replace(',', '.')) : null),
+        budget: plan.empfohlenes_budget ?? (budget.trim() ? zahlAusFeld(budget) : null),
         start_datum: start || null,
         end_datum: ende || null,
       };

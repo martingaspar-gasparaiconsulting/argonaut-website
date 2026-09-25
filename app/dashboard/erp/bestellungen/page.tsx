@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import KiKlartext from "../../_components/KiKlartext";
+import { zahlAusFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E5 Bestellungen-Liste (Einkauf)
@@ -343,7 +344,7 @@ export default function BestellungenListe() {
   }
 
   function setKiMenge(gIdx: number, artikelId: string, wert: string) {
-    const menge = Math.max(0, Math.round(Number(wert.replace(",", ".")) || 0));
+    const menge = Math.max(0, Math.round(zahlAusFeld(wert) || 0));
     setKiGruppen((gs) =>
       gs.map((g, i) =>
         i !== gIdx

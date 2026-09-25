@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -45,7 +46,7 @@ const STATUS_LABEL: Record<Status, string> = { entwurf: 'Entwurf', beauftragt: '
 const EINHEITEN = ['Std', 'Stk', 'pauschal', 'km'];
 
 function heute() { return new Date().toISOString().slice(0, 10); }
-function num(s: string) { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 function eur(n: number) { return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 

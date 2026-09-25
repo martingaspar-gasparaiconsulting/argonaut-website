@@ -10,6 +10,7 @@ import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 
 export const runtime = "nodejs";
+import { zahlAusFeld } from '@/lib/zahlen';
 
 type MahnInput = {
   stufe?: number; // 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
 
   let betragText = "[offener Betrag]";
   if (m.betrag != null && String(m.betrag).trim() !== "") {
-    const n = Number(String(m.betrag).replace(",", "."));
+    const n = zahlAusFeld(m.betrag);
     if (!isNaN(n)) {
       betragText = fmtGeld(n);
     }

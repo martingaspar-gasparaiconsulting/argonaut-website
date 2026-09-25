@@ -55,6 +55,7 @@ import MaterialEntnahme from '../_components/MaterialEntnahme';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'werkstatt_auftraege';
 
@@ -136,10 +137,7 @@ function datumHuebsch(iso: string | null): string {
   const p = iso.split('T')[0].split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
 }
-function num(s: string): number | null {
-  const t = s.trim().replace(',', '.'); if (t === '') return null;
-  const n = Number(t); return Number.isFinite(n) ? n : null;
-}
+function num(s: string): number | null { return leseZahl(s); }
 /** Trägt die Position eine Pauschale? */
 function istPauschal(p: PositionBasis): boolean {
   return p.festpreis_netto != null;
@@ -258,7 +256,7 @@ export default function WerkstattPage() {
       kennzeichen: a.kennzeichen ?? '', prioritaet: a.prioritaet ?? 'normal',
       zugesagt_am: a.zugesagt_am ?? '', beschreibung: a.beschreibung ?? '', notiz: a.notiz ?? '',
       fahrzeug_id: a.fahrzeug_id ?? null,
-      kilometerstand: a.kilometerstand != null ? String(a.kilometerstand) : '',
+      kilometerstand: a.kilometerstand != null ? zahlFeld(a.kilometerstand) : '',
       kundenanliegen: a.kundenanliegen ?? '', annahme_zustand: a.annahme_zustand ?? '',
     });
     setFzSuche(''); setFzNeuAuf(false); setLeiSuche(''); setLeiOffen(false); setGespeichertHinweis(false);

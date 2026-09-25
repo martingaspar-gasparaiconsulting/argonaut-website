@@ -5,6 +5,7 @@ import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort } from "@/lib/standortDaten";
 import KiKlartext from "../../_components/KiKlartext";
 import Leerzustand from "../../_components/Leerzustand";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · ERP · Preisliste (Etappe 1: die "lebende Preistabelle")
@@ -257,7 +258,7 @@ export default function PreislisteCockpit() {
   function starteEdit(a: Artikel, feld: Preisfeld) {
     const wert = feld === "einkaufspreis" ? a.einkaufspreis : a.verkaufspreis;
     setEditZelle({ id: a.id, feld });
-    setEditWert(wert == null ? "" : String(wert).replace(".", ","));
+    setEditWert(wert == null ? "" : zahlFeld(wert).replace(".", ","));
     abbruchRef.current = false;
   }
 
@@ -270,7 +271,7 @@ export default function PreislisteCockpit() {
     }
     const { id, feld } = editZelle;
     const roh = editWert.trim();
-    const neu = roh === "" ? null : Number(roh.replace(",", "."));
+    const neu = roh === "" ? null : zahlAusFeld(roh);
 
     if (neu !== null && (isNaN(neu) || neu < 0)) {
       setHinweis("Bitte eine gültige Zahl ≥ 0 eingeben.");

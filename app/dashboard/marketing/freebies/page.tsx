@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { zaehleLeads, seitenUrl, DATEI_MAX_BYTES } from '@/lib/freebie';
+import { zahlText } from '@/lib/zahlen';
 
 // ============================================================================
 // ARGONAUT OS · MODUL MARKETING · Freebie-Baukasten (D3)
@@ -326,7 +327,7 @@ function Bearbeiten({
         </div>
         {f.datei_pfad ? (
           <div style={{ color: C.gruen, fontSize: 13.5, marginBottom: 12 }}>
-            ✓ {f.datei_name}{f.datei_bytes ? ` · ${(f.datei_bytes / 1024 / 1024).toFixed(1)} MB` : ''}
+            ✓ {f.datei_name}{f.datei_bytes ? ` · ${zahlText(f.datei_bytes / 1024 / 1024, 1)} MB` : ''}
           </div>
         ) : (
           <div style={{ color: C.warn, fontSize: 13.5, marginBottom: 12 }}>Noch keine Datei hinterlegt.</div>

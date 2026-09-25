@@ -33,6 +33,7 @@ import {
   type Partner, type Zuordnung,
 } from '@/lib/multiplikator';
 import { provisionGutschriftPdf, fehlendeAngaben } from '@/lib/provisionGutschriftPdf';
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -155,7 +156,7 @@ export default function PartnerProvisionen() {
     setForm((f) => ({
       ...f,
       partner_id: id,
-      satz_prozent: p?.satz_prozent != null ? String(p.satz_prozent) : f.satz_prozent,
+      satz_prozent: p?.satz_prozent != null ? zahlFeld(p.satz_prozent) : f.satz_prozent,
       periode: modell === 'wiederkehrend' ? (f.periode || periodeAus(heuteISO())) : '',
     }));
     setFormFehler([]);
@@ -179,8 +180,8 @@ export default function PartnerProvisionen() {
       kontakt_id: form.kontakt_id || null,
       kunde_name: form.kunde_name.trim() || null,
       quelle: 'manuell',
-      basis_netto: Number(String(form.basis_netto).replace(/\./g, '').replace(',', '.')) || 0,
-      satz_prozent: Number(String(form.satz_prozent).replace(',', '.')) || 0,
+      basis_netto: zahlAusFeld(form.basis_netto) || 0,
+      satz_prozent: zahlAusFeld(form.satz_prozent) || 0,
       betrag,
       periode: form.periode || null,
       faellig_am: form.faellig_am || null,
@@ -202,7 +203,7 @@ export default function PartnerProvisionen() {
   const ausDeal = async (d: Deal) => {
     if (!uid || !form.partner_id) { setFehler('Bitte zuerst oben einen Partner auswählen.'); return; }
     const p = gewaehlterPartner;
-    const satz = Number(String(form.satz_prozent || p?.satz_prozent || 0).replace(',', '.')) || 0;
+    const satz = zahlAusFeld(form.satz_prozent || p?.satz_prozent || 0) || 0;
     const basis = Number(d.wert_netto ?? 0);
     if (satz <= 0 || basis <= 0) { setFehler('Für diesen Deal fehlt ein Netto-Wert oder ein Provisionssatz.'); return; }
 

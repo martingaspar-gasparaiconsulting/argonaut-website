@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { leseZahl, leseZahlOder } from '@/lib/zahlen';
+import { leseZahl, leseZahlOder, zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
 import Hinweise, { Klartext } from '../_components/Hinweise';
@@ -83,7 +83,7 @@ export default function NachkalkulationSeite() {
         }
       } catch { jeStunde = 0; }
       setSatzGespeichert(jeStunde);
-      setSatz(jeStunde > 0 ? String(jeStunde).replace('.', ',') : '');
+      setSatz(jeStunde > 0 ? zahlFeld(jeStunde).replace('.', ',') : '');
 
       setKalk(baueKalkulation(projekte, leistungen, kosten, { selbstkostenJeStunde: jeStunde }));
     } catch (e: unknown) {
@@ -103,7 +103,7 @@ export default function NachkalkulationSeite() {
   async function kostenErfassen() {
     if (!uid) return;
     if (!kf.projekt_id) { setFehler('Bitte ein Projekt wählen.'); return; }
-    const betrag = Number((kf.betrag || '').replace(',', '.'));
+    const betrag = zahlAusFeld((kf.betrag || ''));
     if (!Number.isFinite(betrag) || betrag <= 0) { setFehler('Bitte einen Betrag größer 0 eingeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {

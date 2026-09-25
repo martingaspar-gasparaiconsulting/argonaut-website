@@ -27,6 +27,7 @@ import {
   type EinwilligungArt, type EinwilligungDaten, type EinwilligungZeile, type Kanal, type RecallEinstellung, type RecallStatus, type AusfallErgebnis,
 } from '@/lib/praxis';
 import { pruefeHwg, HWG_STAND } from '@/lib/hwgWaechter';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -49,7 +50,7 @@ type MA = { auth_user_id: string; name: string };
 const STATUS_FARBE: Record<RecallStatus, string> = { ueberfaellig: C.danger, faellig: C.warn, termin: C.green, geplant: C.textDim, ohne_besuch: C.textDim, pausiert: C.textDim };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
-function zahl(s: string): number | null { const t = s.trim(); if (!t) return null; const n = Number(t.replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; }
+function zahl(s: string): number | null { return leseZahl(s); }
 function esc(s: string) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string)); }
 function dtDe(iso: string | null) { return iso ? `${datumDe(berlinTag(iso))} ${berlinZeit(iso)}` : '—'; }
 
@@ -211,7 +212,7 @@ function RecallTab(p: {
           <label style={s.lab}>Kunde
             <select style={s.inp} value={form.kunde_id} onChange={(e) => {
               const r = p.recalls.find((x) => x.kunde_id === e.target.value);
-              setForm(r ? { kunde_id: r.kunde_id, intervall: String(r.intervall_monate), naechster_am: r.naechster_am ?? '', anlass: r.anlass ?? '' } : { ...form, kunde_id: e.target.value });
+              setForm(r ? { kunde_id: r.kunde_id, intervall: zahlFeld(r.intervall_monate), naechster_am: r.naechster_am ?? '', anlass: r.anlass ?? '' } : { ...form, kunde_id: e.target.value });
             }}>
               <option value="">— wählen —</option>
               {ohne.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}

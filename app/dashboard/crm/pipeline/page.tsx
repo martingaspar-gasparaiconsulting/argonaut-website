@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C7 Pipeline-Kanban (Verkaufschancen)
@@ -207,9 +208,9 @@ export default function PipelinePage() {
       kontakt_id: c.kontakt_id || "",
       firma_id: c.firma_id || "",
       phase: c.phase || "erstkontakt",
-      wert: c.wert != null ? String(c.wert) : "",
+      wert: c.wert != null ? zahlFeld(c.wert) : "",
       wahrscheinlichkeit:
-        c.wahrscheinlichkeit != null ? String(c.wahrscheinlichkeit) : "10",
+        c.wahrscheinlichkeit != null ? zahlFeld(c.wahrscheinlichkeit) : "10",
       erwartetes_abschlussdatum: c.erwartetes_abschlussdatum
         ? c.erwartetes_abschlussdatum.slice(0, 10)
         : "",
@@ -243,7 +244,7 @@ export default function PipelinePage() {
       kontakt_id: form.kontakt_id || null,
       firma_id: form.firma_id || null,
       phase: form.phase,
-      wert: form.wert ? parseFloat(form.wert.replace(",", ".")) : 0,
+      wert: form.wert ? zahlAusFeld(form.wert) : 0,
       wahrscheinlichkeit: parseInt(form.wahrscheinlichkeit, 10) || 0,
       erwartetes_abschlussdatum: form.erwartetes_abschlussdatum || null,
       notizen: form.notizen.trim() || null,

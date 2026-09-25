@@ -28,6 +28,7 @@
 // ============================================================================
 
 import { plusMonate, tageBis, istIsoDatum, datumDe } from './nachweisMotor';
+import { leseZahl } from './zahlen';
 
 export { datumDe };
 
@@ -48,9 +49,7 @@ function zahlOderNull(x: unknown): number | null {
   const t = String(x).trim();
   if (!t) return null;
   // Deutsche Schreibweise: 1.234,56 -> 1234.56 ; 12,5 -> 12.5 ; 12.5 -> 12.5
-  const norm = /,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t;
-  const n = Number(norm);
-  return Number.isFinite(n) ? n : null;
+  return leseZahl(t);
 }
 
 function cent(n: number): number {
