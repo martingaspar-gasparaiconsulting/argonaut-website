@@ -38,7 +38,7 @@ test('Sie-Form, kein Agenten-Wort, keine Einheitssaetze', () => {
   for (const [href, w] of Object.entries(WISSEN)) {
     const t = ALLE_TEXTE(w);
     assert.doesNotMatch(t, /\b(du|dein|deine|deinen|dich|dir|euch|euer)\b/i, href);
-    assert.doesNotMatch(t, /Agent/i, href);
+    assert.doesNotMatch(t, /Agent(?!ur)/i, href); // „Agentur & Kreativ“ ist ein Menuepunkt
     assert.doesNotMatch(t, /Sie sind im Bereich/, href);
   }
   const zwecke = Object.values(WISSEN).map((w) => w.zweck);

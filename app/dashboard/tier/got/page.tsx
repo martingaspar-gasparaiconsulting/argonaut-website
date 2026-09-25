@@ -102,8 +102,14 @@ export default function GotSeite() {
     if (!tierId) { setFehler('Zuerst ein Tier wählen.'); return; }
     if (!ergebnis.ok) return;
     if (!window.confirm(`Als Behandlung mit ${euroText(euro(ergebnis.bruttoCent))} in die Tierakte übernehmen?`)) return;
+    // owner_user_id ist Pflicht (not null) und muss der BETRIEB sein: beim Mitarbeiter
+    // liefert mein_chef_id() den Chef, beim Chef null -> dann die eigene Kennung.
+    const { data: u } = await supabase.auth.getUser();
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const besitzer = typeof chef === 'string' && chef ? chef : u?.user?.id;
+    if (!besitzer) { setFehler('Nicht angemeldet.'); return; }
     const { error } = await supabase.from('tier_behandlungen').insert({
-      tier_id: tierId, datum, art: 'behandlung',
+      owner_user_id: besitzer, tier_id: tierId, datum, art: 'behandlung',
       bezeichnung: ergebnis.zeilen.map((z) => z.bezeichnung).join(', ').slice(0, 300),
       preis: euro(ergebnis.bruttoCent), notiz: text().slice(0, 4000),
     });
