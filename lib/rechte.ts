@@ -186,9 +186,12 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
   // Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
   { label: '🛡 Schadenabwicklung', href: '/dashboard/kfz/schaden', ebene: 3, gruppe: 'betrieb' },
+  { label: '🛂 GwG-Identifizierung', href: '/dashboard/kfz/gwg', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Trinkgeld-Verteilung — Unterpfad von /dashboard/gastro, erbt dessen Freigabe.
   { label: '🪙 Trinkgeld-Verteilung', href: '/dashboard/gastro/trinkgeld', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS6 (25.09.26): Meldeschein + Kurtaxe — Unterpfad von /dashboard/gastro.
+  { label: '🪪 Meldeschein & Kurtaxe', href: '/dashboard/gastro/meldeschein', ebene: 3, gruppe: 'betrieb' },
   { label: '🛎️ Housekeeping & Karte', href: '/dashboard/housekeeping', modul: 'housekeeping', ebene: 3, gruppe: 'betrieb' },
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '📟 BDE / MDE', href: '/dashboard/bde', modul: 'bde', ebene: 3, gruppe: 'betrieb' },
@@ -202,6 +205,7 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PS4 (25.09.26): Mieter-Vorgaenge + Eigentuemerversammlungen — Unterpfade von /dashboard/immobilien.
   { label: '🔑 Mieter-Vorgänge', href: '/dashboard/immobilien/mieter', ebene: 3, gruppe: 'betrieb' },
   { label: '🗳 Eigentümerversammlungen', href: '/dashboard/immobilien/versammlungen', ebene: 3, gruppe: 'betrieb' },
+  { label: '🛂 GwG-Identifizierung', href: '/dashboard/immobilien/gwg', ebene: 3, gruppe: 'betrieb' },
   { label: '🏠 Exposé & Vermarktung', href: '/dashboard/expose', modul: 'expose', ebene: 3, gruppe: 'betrieb' },
   { label: '🧾 Betriebskosten', href: '/dashboard/betriebskosten', modul: 'betriebskosten', ebene: 3, sensibel: true, gruppe: 'betrieb' },
   { label: '💻 IT & MSP', href: '/dashboard/it-msp', modul: 'it-msp', ebene: 3, gruppe: 'betrieb' },
@@ -209,6 +213,8 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PS3 (25.09.26): SLA-Bericht aus tickets + it_sla — Unterpfad von /dashboard/itassets, erbt dessen Freigabe.
   { label: '📈 SLA-Bericht', href: '/dashboard/itassets/sla', ebene: 3, gruppe: 'betrieb' },
   { label: '🎨 Agentur & Kreativ', href: '/dashboard/agentur', modul: 'agentur-kreativ', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS6 (25.09.26): Nutzungsrechte — Unterpfad von /dashboard/agentur.
+  { label: '©️ Nutzungsrechte', href: '/dashboard/agentur/nutzungsrechte', ebene: 3, gruppe: 'betrieb' },
   { label: '💆 Gesundheit & Wellness', href: '/dashboard/wellness', modul: 'wellness', ebene: 3, gruppe: 'betrieb' },
   // Paket PQ (24.09.26): Praxis-Paket — Recall, Ausfallhonorar, Einwilligungen, geschuetzte
   // Gesundheitsangaben (verschluesselt, Zugriffsprotokoll), Werbe-Pruefer HWG. Unterpfad von
@@ -219,6 +225,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '⚖️ Kanzlei & Steuer', href: '/dashboard/kanzlei', modul: 'kanzlei', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Gebuehren-Rechner RVG/StBVV — Unterpfad von /dashboard/kanzlei, erbt dessen Freigabe.
   { label: '🧮 Gebühren RVG/StBVV', href: '/dashboard/kanzlei/gebuehren', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS6 (25.09.26): GwG-Identifizierung — Unterpfade von Kanzlei, Immobilien, KFZ (gleiche Seite, Daten nach Bereich).
+  { label: '🛂 GwG-Identifizierung', href: '/dashboard/kanzlei/gwg', ebene: 3, gruppe: 'betrieb' },
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Dozentenhonorare + Bescheinigungen — Unterpfad von /dashboard/bildung (Honorare per RLS nur Chef).
   { label: '🧑‍🏫 Honorare & Bescheinigungen', href: '/dashboard/bildung/honorare', ebene: 3, gruppe: 'betrieb' },
@@ -231,6 +239,8 @@ export const NAV_LINKS: NavLink[] = [
   // Ergaenzt Rezeptur (nur Material, nur Lebensmittel) und Nachkalkulation (Plan/Ist im Nachhinein).
   { label: '🧮 Kalkulator', href: '/dashboard/kalkulator', modul: 'kalkulator', ebene: 3, gruppe: 'betrieb' },
   { label: '🌾 Landwirtschaft', href: '/dashboard/landwirtschaft', modul: 'landwirtschaft', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS6 (25.09.26): Duenge-Fristen — Unterpfad von /dashboard/landwirtschaft.
+  { label: '🧪 Dünge-Fristen', href: '/dashboard/landwirtschaft/duengung', ebene: 3, gruppe: 'betrieb' },
   { label: '🐾 Tier-Fachpaket', href: '/dashboard/tier', modul: 'tier', ebene: 3, gruppe: 'betrieb' },
   // Paket PS3 (25.09.26): Impf-Erinnerung an Halter — Unterpfad von /dashboard/tier.
   { label: '💉 Impf-Erinnerung', href: '/dashboard/tier/erinnerung', ebene: 3, gruppe: 'betrieb' },
@@ -241,6 +251,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🗳 Mitgliederversammlungen', href: '/dashboard/verein/versammlungen', ebene: 3, gruppe: 'betrieb' },
   { label: '🙌 Ehrenamt', href: '/dashboard/verein/ehrenamt', ebene: 3, gruppe: 'betrieb' },
   { label: '🚚 Logistik', href: '/dashboard/logistik', modul: 'logistik', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS6 (25.09.26): CMR-Frachtbrief + Tankkarten-/Maut-Abgleich — Unterpfade von /dashboard/logistik.
+  { label: '📄 CMR-Frachtbrief', href: '/dashboard/logistik/cmr', ebene: 3, gruppe: 'betrieb' },
+  { label: '⛽ Tankkarte & Maut', href: '/dashboard/logistik/tankkarten', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },

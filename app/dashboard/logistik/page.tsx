@@ -90,6 +90,9 @@ export default function LogistikPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🚚 Logistik</h1>
+      {/* Paket PS6 (25.09.26): CMR-Frachtbrief + Tankkarte/Maut */}
+      <a href="/dashboard/logistik/cmr" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📄 CMR-Frachtbrief</a>
+      <a href="/dashboard/logistik/tankkarten" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>⛽ Tankkarte & Maut</a>
       {!laden && (
         <div style={{ marginTop: 14 }}>
           <KiAuge modul="Logistik" aktionHref="/dashboard/logistik" aktionText="Zu den Touren"

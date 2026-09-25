@@ -132,6 +132,8 @@ export default function GastroPage() {
       <h1 style={styles.h1}>🍽 Gastro & Hotel</h1>
       {/* Paket PS5 (25.09.26): Trinkgeld-Verteilung */}
       <a href="/dashboard/gastro/trinkgeld" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🪙 Trinkgeld-Verteilung</a>
+      {/* Paket PS6 (25.09.26): Meldeschein + Kurtaxe */}
+      <a href="/dashboard/gastro/meldeschein" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🪪 Meldeschein & Kurtaxe</a>
       <div style={{ marginTop: 14 }}>
         <KiAuge
           modul="Gastro & Hotel"

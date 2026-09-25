@@ -94,6 +94,8 @@ export default function LandwirtschaftPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🌾 Landwirtschaft & Forst</h1>
+      {/* Paket PS6 (25.09.26): Duenge-Fristen */}
+      <a href="/dashboard/landwirtschaft/duengung" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🧪 Dünge-Fristen</a>
       <p style={styles.sub}>Schlagkartei: Flächen mit Kultur und dokumentierten Maßnahmen. Gesamt: {gesamtHa.toLocaleString('de-DE')} ha.</p>
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

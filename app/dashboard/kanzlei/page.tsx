@@ -94,6 +94,8 @@ export default function KanzleiPage() {
       <h1 style={styles.h1}>⚖️ Kanzlei & Steuer</h1>
       {/* Paket PS5 (25.09.26): Gebuehren-Rechner */}
       <a href="/dashboard/kanzlei/gebuehren" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🧮 Gebühren-Rechner RVG / StBVV</a>
+      {/* Paket PS6 (25.09.26): GwG-Identifizierung */}
+      <a href="/dashboard/kanzlei/gwg" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛂 GwG-Identifizierung</a>
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'fristen' ? styles.tabAn : {}) }} onClick={() => setTab('fristen')}>⏰ Fristen {offenKritisch > 0 && <span style={styles.pill}>{offenKritisch}</span>}</button>
         <button style={{ ...styles.tab, ...(tab === 'mandate' ? styles.tabAn : {}) }} onClick={() => setTab('mandate')}>📁 Mandate</button>

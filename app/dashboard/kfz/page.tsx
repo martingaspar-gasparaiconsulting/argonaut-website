@@ -131,6 +131,8 @@ export default function KfzPage() {
       <h1 style={styles.h1}>🚗 KFZ-Fachpaket</h1>
       {/* Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern */}
       <a href="/dashboard/kfz/schaden" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛡 Schadenabwicklung mit Versicherern</a>
+      {/* Paket PS6 (25.09.26): GwG-Identifizierung bei Barzahlung ab 10.000 EUR */}
+      <a href="/dashboard/kfz/gwg" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, marginLeft: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛂 GwG-Identifizierung</a>
       <div style={{ marginTop: 14 }}>
         <KiAuge
           modul="KFZ"

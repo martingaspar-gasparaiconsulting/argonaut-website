@@ -80,6 +80,8 @@ export default function AgenturPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🎨 Agentur & Kreativ</h1>
+      {/* Paket PS6 (25.09.26): Nutzungsrechte */}
+      <a href="/dashboard/agentur/nutzungsrechte" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>©️ Nutzungsrechte</a>
       <p style={styles.sub}>Retainer je Kunde mit monatlichem Stundenbudget und Auslastung ({new Date().toLocaleDateString('de-DE', { month: 'long' })}).</p>
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
