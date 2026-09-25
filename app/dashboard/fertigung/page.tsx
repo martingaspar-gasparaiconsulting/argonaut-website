@@ -43,6 +43,7 @@ function stInfo(k: string) { return ST_STATUS.find((s) => s.key === k) || ST_STA
 
 export default function FertigungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'sl' | 'auf'>('sl');
   const [sls, setSls] = useState<SL[]>([]);
   const [aktivSl, setAktivSl] = useState<SL | null>(null);
@@ -84,36 +85,39 @@ export default function FertigungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeSls(); await ladeAuftraege(); setLaden(false);
     })();
   }, [ladeSls, ladeAuftraege]);
 
   async function slAnlegen() {
-    if (!uid || !nsl.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
+    if (!besitzer || !nsl.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
-    const { data, error } = await supabase.from('fertigung_stuecklisten').insert({ owner_user_id: uid, name: nsl.name.trim(), produkt: nsl.produkt.trim() || null }).select('id, name, produkt').single();
+    const { data, error } = await supabase.from('fertigung_stuecklisten').insert({ owner_user_id: besitzer, name: nsl.name.trim(), produkt: nsl.produkt.trim() || null }).select('id, name, produkt').single();
     if (error || !data) { setFehler('Stückliste konnte nicht angelegt werden.'); return; }
     setSls((l) => [data as SL, ...l]); setNsl({ name: '', produkt: '' }); setAktivSl(data as SL); setPos([]);
   }
   async function slOeffnen(sl: SL) { setAktivSl(sl); await ladePos(sl.id); }
   async function posAnlegen() {
-    if (!uid || !aktivSl || !np.komponente.trim()) { setFehler('Bitte eine Komponente angeben.'); return; }
+    if (!besitzer || !aktivSl || !np.komponente.trim()) { setFehler('Bitte eine Komponente angeben.'); return; }
     setFehler(null);
-    const { error } = await supabase.from('fertigung_stueckliste_positionen').insert({ owner_user_id: uid, stueckliste_id: aktivSl.id, komponente: np.komponente.trim(), menge: num(np.menge), einheit: np.einheit.trim() || 'Stk', position: pos.length + 1 });
+    const { error } = await supabase.from('fertigung_stueckliste_positionen').insert({ owner_user_id: besitzer, stueckliste_id: aktivSl.id, komponente: np.komponente.trim(), menge: num(np.menge), einheit: np.einheit.trim() || 'Stk', position: pos.length + 1 });
     if (error) { setFehler('Komponente konnte nicht gespeichert werden.'); return; }
     setNp({ komponente: '', menge: '1', einheit: 'Stk' }); await ladePos(aktivSl.id);
   }
   async function posLoeschen(id: string) { if (!aktivSl) return; await supabase.from('fertigung_stueckliste_positionen').delete().eq('id', id); await ladePos(aktivSl.id); }
 
   async function auftragAnlegen() {
-    if (!uid || !na.produkt.trim()) { setFehler('Bitte ein Produkt angeben.'); return; }
+    if (!besitzer || !na.produkt.trim()) { setFehler('Bitte ein Produkt angeben.'); return; }
     setFehler(null); setOk(null);
     const { data: neu, error } = await supabase.from('fertigung_auftraege').insert({
-      owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), auftragsnr: na.auftragsnr.trim() || null, produkt: na.produkt.trim(),
+      owner_user_id: besitzer, standort_id: konkreterStandort(leseStandortCookie()), auftragsnr: na.auftragsnr.trim() || null, produkt: na.produkt.trim(),
       stueckliste_id: na.stueckliste_id || null, menge: num(na.menge) || 1, start_am: na.start_am || null,
     }).select('id').single();
     if (error || !neu) { setFehler('Auftrag konnte nicht angelegt werden.'); return; }
-    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* eigene Felder optional */ }
     setNa({ auftragsnr: '', produkt: '', stueckliste_id: '', menge: '1', start_am: heute() }); setNmExtra({}); setOk('Fertigungsauftrag angelegt.'); await ladeAuftraege();
   }
   async function auftragStatus(a: Auftrag, status: string) {
@@ -196,7 +200,7 @@ export default function FertigungPage() {
               <button style={styles.primaer} onClick={auftragAnlegen}>＋ Auftrag</button>
             </div>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeAuftraege} />}
+          {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={ladeAuftraege} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {auftraege.map((a) => {

@@ -23,26 +23,30 @@ export const dynamic = 'force-dynamic';
 async function userId() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  if (!user) return null;
+  const { data: chef } = await supabase.rpc('mein_chef_id');
+  // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
+  return besitzer;
 }
 
 export async function GET() {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await userId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('social_beitrag')
     .select('id, text, medien_urls, kanaele, status, geplant_am, created_at')
-    .eq('owner_user_id', uid)
+    .eq('owner_user_id', besitzer)
     .order('created_at', { ascending: false });
 
   return NextResponse.json({ ok: true, liste: liste ?? [] });
 }
 
 export async function POST(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await userId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
@@ -74,11 +78,11 @@ export async function POST(req: Request) {
   let error;
   let neuId = id;
   if (id) {
-    ({ error } = await admin.from('social_beitrag').update(felder).eq('id', id).eq('owner_user_id', uid));
+    ({ error } = await admin.from('social_beitrag').update(felder).eq('id', id).eq('owner_user_id', besitzer));
   } else {
     const { data, error: insErr } = await admin
       .from('social_beitrag')
-      .insert({ ...felder, owner_user_id: uid })
+      .insert({ ...felder, owner_user_id: besitzer })
       .select('id')
       .single();
     error = insErr;
@@ -90,13 +94,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await userId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
   const id = (new URL(req.url).searchParams.get('id') || '').trim();
   if (!id) return NextResponse.json({ ok: false, error: 'Keine ID.' }, { status: 400 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from('social_beitrag').delete().eq('id', id).eq('owner_user_id', uid);
+  const { error } = await admin.from('social_beitrag').delete().eq('id', id).eq('owner_user_id', besitzer);
   if (error) return NextResponse.json({ ok: false, error: 'Löschen fehlgeschlagen.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

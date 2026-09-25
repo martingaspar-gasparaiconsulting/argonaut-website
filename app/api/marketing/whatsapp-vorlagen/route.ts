@@ -13,7 +13,7 @@ import { vorlagenNameNormalisieren, validiereVorlage } from '@/lib/whatsapp';
 //
 // Hinweis: Das Einreichen zur Meta-Freigabe + der Versand kommen in Paket 2,
 // sobald der WhatsApp-Zugang (Meta Cloud API / 360dialog) hinterlegt ist.
-// Alles hart auf owner_user_id = user.id beschraenkt.
+// Alles hart auf owner_user_id = Betrieb (beim Mitarbeiter der Chef) beschraenkt.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -21,29 +21,33 @@ export const dynamic = 'force-dynamic';
 
 const KATEGORIEN = ['marketing', 'utility', 'authentication'];
 
-async function userId() {
+async function besitzerId() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  if (!user) return null;
+  // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+  const { data: chef } = await supabase.rpc('mein_chef_id');
+  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
+  return besitzer;
 }
 
 export async function GET() {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await besitzerId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('whatsapp_vorlage')
     .select('id, name, kategorie, sprache, inhalt, status, created_at')
-    .eq('owner_user_id', uid)
+    .eq('owner_user_id', besitzer)
     .order('created_at', { ascending: false });
 
   return NextResponse.json({ ok: true, liste: liste ?? [] });
 }
 
 export async function POST(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await besitzerId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
@@ -63,11 +67,11 @@ export async function POST(req: Request) {
   let error;
   let neuId = id;
   if (id) {
-    ({ error } = await admin.from('whatsapp_vorlage').update(felder).eq('id', id).eq('owner_user_id', uid));
+    ({ error } = await admin.from('whatsapp_vorlage').update(felder).eq('id', id).eq('owner_user_id', besitzer));
   } else {
     const { data, error: insErr } = await admin
       .from('whatsapp_vorlage')
-      .insert({ ...felder, owner_user_id: uid, status: 'entwurf' })
+      .insert({ ...felder, owner_user_id: besitzer, status: 'entwurf' })
       .select('id')
       .single();
     error = insErr;
@@ -84,13 +88,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await besitzerId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
   const id = (new URL(req.url).searchParams.get('id') || '').trim();
   if (!id) return NextResponse.json({ ok: false, error: 'Keine ID.' }, { status: 400 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from('whatsapp_vorlage').delete().eq('id', id).eq('owner_user_id', uid);
+  const { error } = await admin.from('whatsapp_vorlage').delete().eq('id', id).eq('owner_user_id', besitzer);
   if (error) return NextResponse.json({ ok: false, error: 'Löschen fehlgeschlagen.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

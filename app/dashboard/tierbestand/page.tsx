@@ -54,6 +54,7 @@ function fmtDatum(iso: string | null) { if (!iso) return '—'; const p = iso.sl
 
 export default function TierbestandPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'bestand' | 'bewegungen' | 'stichtag'>('bestand');
   const [gruppen, setGruppen] = useState<Gruppe[]>([]);
@@ -97,6 +98,9 @@ export default function TierbestandPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || str(meta.betrieb) || null);
@@ -113,12 +117,12 @@ export default function TierbestandPage() {
     setBusy('gruppe'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('tier_gruppe').insert({
-        owner_user_id: uid, tierart: ng.tierart, bezeichnung: ng.bezeichnung.trim(), betriebsnummer: ng.betriebsnummer.trim() || null,
+        owner_user_id: besitzer ?? uid, tierart: ng.tierart, bezeichnung: ng.bezeichnung.trim(), betriebsnummer: ng.betriebsnummer.trim() || null,
         standort: ng.standort.trim() || null, meldefrist_tage: Math.round(num(ng.meldefrist_tage)) || MELDEFRIST_TAGE_STD,
         aktueller_bestand: Math.round(num(ng.aktueller_bestand)), status: 'aktiv',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNg({ tierart: 'rind', bezeichnung: '', betriebsnummer: '', standort: '', meldefrist_tage: '7', aktueller_bestand: '0' }); setNmExtra({});
       setOk('Tiergruppe angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -130,7 +134,7 @@ export default function TierbestandPage() {
     setBusy('bewegung'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('tier_bewegung').insert({
-        owner_user_id: uid, gruppe_id: nb.gruppe_id, datum: nb.datum, art: nb.art, anzahl: Math.round(num(nb.anzahl)) || 1,
+        owner_user_id: besitzer ?? uid, gruppe_id: nb.gruppe_id, datum: nb.datum, art: nb.art, anzahl: Math.round(num(nb.anzahl)) || 1,
         ohrmarke: nb.ohrmarke.trim() || null, partner: nb.partner.trim() || null, gemeldet: false,
       });
       if (error) throw error;
@@ -156,7 +160,7 @@ export default function TierbestandPage() {
     try {
       const g = gruppeById(ns.gruppe_id);
       const { error } = await supabase.from('tier_stichtag').insert({
-        owner_user_id: uid, gruppe_id: ns.gruppe_id, jahr: Math.round(num(ns.jahr)) || JAHR, stichtag: ns.stichtag,
+        owner_user_id: besitzer ?? uid, gruppe_id: ns.gruppe_id, jahr: Math.round(num(ns.jahr)) || JAHR, stichtag: ns.stichtag,
         tierart: g?.tierart || null, anzahl: Math.round(num(ns.anzahl)),
       });
       if (error) throw error;
@@ -236,7 +240,7 @@ export default function TierbestandPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'gruppe' ? 0.6 : 1 }} disabled={busy === 'gruppe'} onClick={gruppeAnlegen}>＋ Anlegen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {gruppen.length === 0 ? <Leerzustand icon="🐄" titel="Noch keine Bestände" text="Erfasse Tiergruppen je Tierart mit VVVO-Nummer." schritte={["Tiergruppe oben anlegen", "Tierart und Bestand erfassen", "Bewegungen und Stichtag melden"]} /> : (

@@ -36,6 +36,7 @@ function monatsStart() { const d = new Date(); return `${d.getFullYear()}-${Stri
 
 export default function ImmobilienPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'einheiten' | 'vertraege'>('einheiten');
   const [einheiten, setEinheiten] = useState<Einheit[]>([]);
   const [vertraege, setVertraege] = useState<Vertrag[]>([]);
@@ -67,7 +68,11 @@ export default function ImmobilienPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_(); setLaden(false);
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await laden_(); setLaden(false);
     })();
   }, [laden_]);
 
@@ -97,9 +102,9 @@ export default function ImmobilienPage() {
   }
 
   async function mieteErfassen(v: Vertrag) {
-    if (!uid) return;
+    if (!besitzer) return;
     const betrag = (Number(v.kaltmiete) || 0) + (Number(v.nebenkosten) || 0);
-    const { error } = await supabase.from('immo_zahlungen').insert({ owner_user_id: uid, vertrag_id: v.id, monat: monatsStart(), betrag, bezahlt_am: heute() });
+    const { error } = await supabase.from('immo_zahlungen').insert({ owner_user_id: besitzer, vertrag_id: v.id, monat: monatsStart(), betrag, bezahlt_am: heute() });
     if (error) { setFehler('Zahlung konnte nicht erfasst werden.'); return; }
     setOk(`Miete ${eur(betrag)} für ${new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })} erfasst.`); await laden_();
   }

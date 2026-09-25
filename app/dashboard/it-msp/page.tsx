@@ -41,6 +41,7 @@ function plusTage(tage: number) { const dt = new Date(); dt.setDate(dt.getDate()
 
 export default function ItMspPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'assets' | 'vertraege'>('vertraege');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [vertraege, setVertraege] = useState<Vertrag[]>([]);
@@ -62,6 +63,9 @@ export default function ItMspPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -70,7 +74,7 @@ export default function ItMspPage() {
     if (!uid || !na.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('it_assets').insert({
-      owner_user_id: uid, kunde_name: na.kunde_name.trim() || null, bezeichnung: na.bezeichnung.trim(), typ: na.typ.trim() || null,
+      owner_user_id: besitzer, kunde_name: na.kunde_name.trim() || null, bezeichnung: na.bezeichnung.trim(), typ: na.typ.trim() || null,
       hersteller: na.hersteller.trim() || null, seriennummer: na.seriennummer.trim() || null, garantie_bis: na.garantie_bis || null,
     });
     if (error) { setFehler('Asset konnte nicht gespeichert werden.'); return; }
@@ -80,7 +84,7 @@ export default function ItMspPage() {
     if (!uid || !nv.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('it_vertraege').insert({
-      owner_user_id: uid, kunde_name: nv.kunde_name.trim() || null, bezeichnung: nv.bezeichnung.trim(),
+      owner_user_id: besitzer, kunde_name: nv.kunde_name.trim() || null, bezeichnung: nv.bezeichnung.trim(),
       monatspauschale: num(nv.monatspauschale), intervall_tage: parseInt(nv.intervall_tage, 10) || 30, naechste_wartung: nv.naechste_wartung || null,
     });
     if (error) { setFehler('Vertrag konnte nicht gespeichert werden.'); return; }

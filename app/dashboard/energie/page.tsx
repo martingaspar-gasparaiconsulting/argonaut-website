@@ -46,6 +46,7 @@ const LEER_A = { bezeichnung: '', typ: 'PV', standort: '', leistung_kw: '', inbe
 
 export default function EnergiePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [anlagen, setAnlagen] = useState<Anlage[]>([]);
   const [aktiv, setAktiv] = useState<Anlage | null>(null);
   const [ablesungen, setAblesungen] = useState<Ablesung[]>([]);
@@ -75,6 +76,9 @@ export default function EnergiePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeAnlagen(); setLaden(false);
     })();
   }, [ladeAnlagen]);
@@ -83,11 +87,11 @@ export default function EnergiePage() {
     if (!uid || !na.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('energie_anlagen').insert({
-      owner_user_id: uid, bezeichnung: na.bezeichnung.trim(), typ: na.typ.trim() || null, standort: na.standort.trim() || null,
+      owner_user_id: besitzer ?? uid, bezeichnung: na.bezeichnung.trim(), typ: na.typ.trim() || null, standort: na.standort.trim() || null,
       leistung_kw: na.leistung_kw ? num(na.leistung_kw) : null, inbetriebnahme: na.inbetriebnahme || null, wartung_faellig: na.wartung_faellig || null,
     }).select('id, bezeichnung, typ, standort, leistung_kw, inbetriebnahme, wartung_faellig').single();
     if (error || !data) { setFehler('Anlage konnte nicht angelegt werden.'); return; }
-    try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
     setNmExtra({});
     setNa({ ...LEER_A }); setOk('Anlage gespeichert.'); await ladeAnlagen();
     setAktiv(data as Anlage); await ladeAblesungen((data as Anlage).id);
@@ -97,7 +101,7 @@ export default function EnergiePage() {
     if (!uid || !aktiv) return;
     setFehler(null);
     const { error } = await supabase.from('energie_ablesungen').insert({
-      owner_user_id: uid, anlage_id: aktiv.id, datum: nb.datum, zaehlerstand: nb.zaehlerstand ? num(nb.zaehlerstand) : null, ertrag_kwh: nb.ertrag_kwh ? num(nb.ertrag_kwh) : null,
+      owner_user_id: besitzer ?? uid, anlage_id: aktiv.id, datum: nb.datum, zaehlerstand: nb.zaehlerstand ? num(nb.zaehlerstand) : null, ertrag_kwh: nb.ertrag_kwh ? num(nb.ertrag_kwh) : null,
     });
     if (error) { setFehler('Ablesung konnte nicht gespeichert werden.'); return; }
     setNb({ datum: heute(), zaehlerstand: '', ertrag_kwh: '' }); await ladeAblesungen(aktiv.id);
@@ -140,7 +144,7 @@ export default function EnergiePage() {
           <button style={styles.primaer} onClick={anlageAnlegen}>＋ Anlage</button>
         </div>
       </div>
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeAnlagen} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={ladeAnlagen} />}
 
       {laden ? <p style={styles.dim}>Lädt …</p> : (
         <div style={styles.split}>

@@ -37,6 +37,7 @@ function jahresBeitrag(m: Mitglied) { const f = m.intervall === 'monat' ? 12 : m
 
 export default function VereinPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'mitglieder' | 'veranstaltungen'>('mitglieder');
   const [mitglieder, setMitglieder] = useState<Mitglied[]>([]);
   const [veranst, setVeranst] = useState<Veranstaltung[]>([]);
@@ -64,25 +65,29 @@ export default function VereinPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_(); setLaden(false);
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await laden_(); setLaden(false);
     })();
   }, [laden_]);
 
   async function mitgliedAnlegen() {
-    if (!uid || !nm.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
+    if (!besitzer || !nm.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
     const { data: neu, error } = await supabase.from('verein_mitglieder').insert({
-      owner_user_id: uid, name: nm.name.trim(), email: nm.email.trim() || null, beitrag: num(nm.beitrag), intervall: nm.intervall, rolle: nm.rolle.trim() || null,
+      owner_user_id: besitzer, name: nm.name.trim(), email: nm.email.trim() || null, beitrag: num(nm.beitrag), intervall: nm.intervall, rolle: nm.rolle.trim() || null,
     }).select('id').single();
     if (error || !neu) { setFehler('Mitglied konnte nicht gespeichert werden.'); return; }
-    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* eigene Felder optional */ }
     setNm({ name: '', email: '', beitrag: '', intervall: 'jahr', rolle: 'Mitglied' }); setNmExtra({}); setOk('Mitglied gespeichert.'); await laden_();
   }
   async function veranstAnlegen() {
-    if (!uid || !nv.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
+    if (!besitzer || !nv.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('verein_veranstaltungen').insert({
-      owner_user_id: uid, titel: nv.titel.trim(), datum: nv.datum || null, ort: nv.ort.trim() || null,
+      owner_user_id: besitzer, titel: nv.titel.trim(), datum: nv.datum || null, ort: nv.ort.trim() || null,
       teilnehmer: parseInt(nv.teilnehmer, 10) || 0, ehrenamt_stunden: num(nv.ehrenamt_stunden),
     });
     if (error) { setFehler('Veranstaltung konnte nicht gespeichert werden.'); return; }
@@ -127,7 +132,7 @@ export default function VereinPage() {
             </div>
             <div style={{ color: C.textDim, fontSize: 12.5 }}>💡 Beitrags-Einzug per SEPA läuft über das Modul „👥 Mitglieder & Abos".</div>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={laden_} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.liste}>
               {mitglieder.map((m) => (

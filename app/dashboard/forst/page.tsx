@@ -47,6 +47,7 @@ function zustandFarbe(z: Zustand) { return z === 'kritisch' ? C.danger : z === '
 
 export default function ForstPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [objekte, setObjekte] = useState<Objekt[]>([]);
   const [aktiv, setAktiv] = useState<Objekt | null>(null);
   const [baeume, setBaeume] = useState<Baum[]>([]);
@@ -78,15 +79,19 @@ export default function ForstPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await ladeObjekte(); await ladeAlleBaeume(); setLaden(false);
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await ladeObjekte(); await ladeAlleBaeume(); setLaden(false);
     })();
   }, [ladeObjekte, ladeAlleBaeume]);
 
   async function objektAnlegen() {
-    if (!uid || !no.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
+    if (!besitzer || !no.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('forst_objekte').insert({
-      owner_user_id: uid, bezeichnung: no.bezeichnung.trim(), adresse: no.adresse.trim() || null, notiz: no.notiz.trim() || null,
+      owner_user_id: besitzer, bezeichnung: no.bezeichnung.trim(), adresse: no.adresse.trim() || null, notiz: no.notiz.trim() || null,
     }).select('id, bezeichnung, adresse, notiz').single();
     if (error || !data) { setFehler('Objekt konnte nicht gespeichert werden.'); return; }
     setNo({ bezeichnung: '', adresse: '', notiz: '' }); setOk('Objekt gespeichert.');
@@ -96,13 +101,13 @@ export default function ForstPage() {
   async function objektOeffnen(o: Objekt) { setAktiv(o); setOk(null); setFehler(null); await ladeBaeume(o.id); }
 
   async function baumAnlegen() {
-    if (!uid || !aktiv) return;
+    if (!besitzer || !aktiv) return;
     setFehler(null); setOk(null);
     const intervall = Math.max(0, Math.round(num(nb.kontrollintervall_monate)) || 0);
     const letzte = nb.letzte_kontrolle || null;
     const naechste = letzte && intervall > 0 ? plusMonate(letzte, intervall) : null;
     const { error } = await supabase.from('forst_baeume').insert({
-      owner_user_id: uid, objekt_id: aktiv.id,
+      owner_user_id: besitzer, objekt_id: aktiv.id,
       art: nb.art.trim() || null,
       hoehe_m: nb.hoehe_m ? num(nb.hoehe_m) : null,
       stammdurchmesser_cm: nb.stammdurchmesser_cm ? num(nb.stammdurchmesser_cm) : null,

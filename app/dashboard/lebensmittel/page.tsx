@@ -51,6 +51,7 @@ const STATUS_META: Record<string, { label: string; farbe: string }> = {
 
 export default function LebensmittelPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'chargen' | 'plan' | 'haccp'>('chargen');
   const [chargen, setChargen] = useState<Charge[]>([]);
   const [plaene, setPlaene] = useState<Plan[]>([]);
@@ -78,6 +79,8 @@ export default function LebensmittelPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -91,7 +94,7 @@ export default function LebensmittelPage() {
     if (!uid || !nc.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('lm_chargen').insert({
-      owner_user_id: uid, bezeichnung: nc.bezeichnung.trim(), charge_nr: nc.charge_nr.trim() || null, mhd: nc.mhd || null,
+      owner_user_id: besitzer ?? uid, bezeichnung: nc.bezeichnung.trim(), charge_nr: nc.charge_nr.trim() || null, mhd: nc.mhd || null,
       menge: nc.menge ? num(nc.menge) : null, einheit: nc.einheit.trim() || 'kg', lieferant: nc.lieferant.trim() || null,
       herkunft: nc.herkunft.trim() || null, verwendung: nc.verwendung.trim() || null, status: 'aktiv',
     });
@@ -112,7 +115,7 @@ export default function LebensmittelPage() {
     setFehler(null); setOk(null);
     const iv = Math.max(1, Math.round(num(np.intervall_tage)) || 1);
     const { error } = await supabase.from('lm_haccp_plan').insert({
-      owner_user_id: uid, kontrollpunkt: np.kontrollpunkt.trim(), sollwert: np.sollwert.trim() || null, intervall_tage: iv, aktiv: true,
+      owner_user_id: besitzer ?? uid, kontrollpunkt: np.kontrollpunkt.trim(), sollwert: np.sollwert.trim() || null, intervall_tage: iv, aktiv: true,
     });
     if (error) { setFehler('Kontrollpunkt konnte nicht gespeichert werden.'); return; }
     setNp({ kontrollpunkt: '', sollwert: '', intervall_tage: '1' }); setOk('Kontrollpunkt im Plan.'); await laden_();
@@ -125,7 +128,7 @@ export default function LebensmittelPage() {
     const inOrdnung = bewertung === null ? true : bewertung;
     setFehler(null); setOk(null);
     const { error: e1 } = await supabase.from('lm_haccp').insert({
-      owner_user_id: uid, datum: H, kontrollpunkt: p.kontrollpunkt, messwert: mw.trim() || null,
+      owner_user_id: besitzer ?? uid, datum: H, kontrollpunkt: p.kontrollpunkt, messwert: mw.trim() || null,
       in_ordnung: inOrdnung, massnahme: inOrdnung ? null : 'Abweichung vom Sollwert — Maßnahme erforderlich', plan_id: p.id,
     });
     if (e1) { setFehler('Kontrolle konnte nicht gespeichert werden.'); return; }
@@ -142,7 +145,7 @@ export default function LebensmittelPage() {
     if (!uid || !nh.kontrollpunkt.trim()) { setFehler('Bitte einen Kontrollpunkt angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('lm_haccp').insert({
-      owner_user_id: uid, datum: nh.datum, kontrollpunkt: nh.kontrollpunkt.trim(), messwert: nh.messwert.trim() || null,
+      owner_user_id: besitzer ?? uid, datum: nh.datum, kontrollpunkt: nh.kontrollpunkt.trim(), messwert: nh.messwert.trim() || null,
       in_ordnung: nh.in_ordnung, massnahme: nh.in_ordnung ? null : (nh.massnahme.trim() || null), pruefer: nh.pruefer.trim() || null,
     });
     if (error) { setFehler('Kontrolle konnte nicht gespeichert werden.'); return; }

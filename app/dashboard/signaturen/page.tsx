@@ -41,6 +41,7 @@ function kontaktName(k: Record<string, unknown>): string {
 
 export default function SignaturenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<Anfrage[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [laden, setLaden] = useState(true);
@@ -67,7 +68,11 @@ export default function SignaturenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await laden_();
     })();
   }, [laden_]);
 
@@ -79,14 +84,14 @@ export default function SignaturenPage() {
   function linkVon(token: string) { return (typeof window !== 'undefined' ? window.location.origin : '') + '/signieren/' + token; }
 
   async function anlegen() {
-    if (!uid) return;
+    if (!besitzer) return;
     if (!form.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     if (!form.dokument.trim()) { setFehler('Bitte den Dokumenttext eingeben.'); return; }
     setBusy(true); setFehler(null); setOk(null); setLetzterLink(null);
     try {
       const token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Math.random().toString(36).slice(2) + Date.now().toString(36));
       const { error } = await supabase.from('signatur_anfragen').insert({
-        owner_user_id: uid, token, titel: form.titel.trim(), kontakt_id: form.kontakt_id || null,
+        owner_user_id: besitzer, token, titel: form.titel.trim(), kontakt_id: form.kontakt_id || null,
         empfaenger_name: form.empfaenger_name.trim() || null, empfaenger_email: form.empfaenger_email.trim() || null,
         dokument: form.dokument, status: 'gesendet', aufbewahrung_jahre: parseInt(form.aufbewahrung_jahre, 10) || 10,
       });

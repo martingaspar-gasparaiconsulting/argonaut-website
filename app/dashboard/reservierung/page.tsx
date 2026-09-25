@@ -74,6 +74,7 @@ const LEER_NV = {
 
 export default function ReservierungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [tab, setTab] = useState<'vorgaenge' | 'plaetze'>('vorgaenge');
   const [plaetze, setPlaetze] = useState<Platz[]>([]);
@@ -121,6 +122,9 @@ export default function ReservierungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -162,7 +166,7 @@ export default function ReservierungPage() {
     setBusy('platz'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('reservierung_platz').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), art: np.art, bezeichnung: np.bezeichnung.trim(),
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), art: np.art, bezeichnung: np.bezeichnung.trim(),
         standort: np.standort.trim() || null,
         kapazitaet: np.kapazitaet.trim() ? Math.round(num(np.kapazitaet)) : null,
         status: 'aktiv', notiz: np.notiz.trim() || null,
@@ -183,7 +187,7 @@ export default function ReservierungPage() {
     setBusy('vorgang'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('reservierung_vorgang').insert({
-        owner_user_id: uid, art: nv.art, platz_id: nv.platz_id || null, kontakt_id: nv.kontakt_id || null,
+        owner_user_id: besitzer ?? uid, art: nv.art, platz_id: nv.platz_id || null, kontakt_id: nv.kontakt_id || null,
         kunde_name: nv.kunde_name.trim() || null, kunde_tel: nv.kunde_tel.trim() || null,
         von: nv.von, bis: info.hatZeitfenster ? nv.bis : null,
         anzahl: nv.anzahl.trim() ? Math.round(num(nv.anzahl)) : null,
@@ -192,7 +196,7 @@ export default function ReservierungPage() {
         status: START_STATUS[nv.art],
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNmExtra({});
       setNv({ ...LEER_NV, art: nv.art, von: info.hatZeitfenster ? jetztLokal() : (nv.art === 'einlagerung' ? heuteLokal() : jetztLokal()) });
       setOk(`${info.label} angelegt.`); await laden_();
@@ -354,7 +358,7 @@ export default function ReservierungPage() {
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'vorgang' ? 0.6 : 1 }} disabled={busy === 'vorgang'} onClick={vorgangAnlegen}>＋ {info.label} anlegen</button>
           </div>
 
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>

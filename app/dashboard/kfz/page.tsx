@@ -50,6 +50,7 @@ const LEER_R = { kunde_name: '', kennzeichen: '', saison: 'winter', groesse: '',
 
 export default function KfzPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'fahrzeuge' | 'reifen'>('fahrzeuge');
   const [fahrzeuge, setFahrzeuge] = useState<Fahrzeug[]>([]);
   const [reifen, setReifen] = useState<Reifen[]>([]);
@@ -78,6 +79,9 @@ export default function KfzPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -88,13 +92,13 @@ export default function KfzPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('kfz_fahrzeuge').insert({
-        owner_user_id: uid, halter: fz.halter.trim() || null, kennzeichen: fz.kennzeichen.trim() || null,
+        owner_user_id: besitzer ?? uid, halter: fz.halter.trim() || null, kennzeichen: fz.kennzeichen.trim() || null,
         marke: fz.marke.trim() || null, modell: fz.modell.trim() || null, vin: fz.vin.trim() || null,
         erstzulassung: fz.erstzulassung || null, hu_faellig: fz.hu_faellig || null, au_faellig: fz.au_faellig || null,
         km_stand: fz.km_stand ? parseInt(fz.km_stand, 10) : null,
       }).select('id').single();
       if (error || !neu) { setFehler('Speichern fehlgeschlagen.'); return; }
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setFz({ ...LEER_FZ }); setNmExtra({}); setOk('Fahrzeug gespeichert.'); await laden_();
     } finally { setBusy(false); }
   }
@@ -110,7 +114,7 @@ export default function KfzPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('kfz_reifeneinlagerung').insert({
-        owner_user_id: uid, kunde_name: r.kunde_name.trim() || null, kennzeichen: r.kennzeichen.trim() || null,
+        owner_user_id: besitzer ?? uid, kunde_name: r.kunde_name.trim() || null, kennzeichen: r.kennzeichen.trim() || null,
         saison: r.saison, groesse: r.groesse.trim() || null, anzahl: parseInt(r.anzahl, 10) || 4, lagerplatz: r.lagerplatz.trim() || null,
       });
       if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
@@ -177,7 +181,7 @@ export default function KfzPage() {
             </div>
             <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={fzSpeichern}>💾 Fahrzeug speichern</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {laden ? <p style={styles.dim}>Lädt …</p> : fahrzeuge.length === 0 ? <p style={styles.dim}>Noch keine Fahrzeuge — legen Sie oben das erste mit Kennzeichen und Halter an.</p> : (
             <div style={styles.liste}>

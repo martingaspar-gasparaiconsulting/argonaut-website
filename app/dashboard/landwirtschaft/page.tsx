@@ -35,6 +35,7 @@ const ART_LABEL: Record<string, string> = { aussaat: '🌱 Aussaat', duengung: '
 
 export default function LandwirtschaftPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [schlaege, setSchlaege] = useState<Schlag[]>([]);
   const [aktiv, setAktiv] = useState<Schlag | null>(null);
   const [massnahmen, setMassnahmen] = useState<Massnahme[]>([]);
@@ -64,26 +65,29 @@ export default function LandwirtschaftPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeSchlaege(); setLaden(false);
     })();
   }, [ladeSchlaege]);
 
   async function schlagAnlegen() {
-    if (!uid || !ns.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
+    if (!besitzer || !ns.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('agrar_schlaege').insert({
-      owner_user_id: uid, name: ns.name.trim(), flaeche_ha: ns.flaeche_ha ? num(ns.flaeche_ha) : null, kultur: ns.kultur.trim() || null, standort: ns.standort.trim() || null,
+      owner_user_id: besitzer, name: ns.name.trim(), flaeche_ha: ns.flaeche_ha ? num(ns.flaeche_ha) : null, kultur: ns.kultur.trim() || null, standort: ns.standort.trim() || null,
     }).select('id, name, flaeche_ha, kultur, standort').single();
     if (error || !data) { setFehler('Schlag konnte nicht gespeichert werden.'); return; }
-    try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nsExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer, nsExtra); } catch { /* eigene Felder optional */ }
     setNs({ name: '', flaeche_ha: '', kultur: '', standort: '' }); setNsExtra({}); setOk('Schlag gespeichert.'); await ladeSchlaege(); setAktiv(data as Schlag); setMassnahmen([]);
   }
   async function schlagOeffnen(s: Schlag) { setAktiv(s); await ladeMassnahmen(s.id); }
   async function massnahmeAnlegen() {
-    if (!uid || !aktiv) return;
+    if (!besitzer || !aktiv) return;
     setFehler(null);
     const { error } = await supabase.from('agrar_massnahmen').insert({
-      owner_user_id: uid, schlag_id: aktiv.id, datum: nm.datum, art: nm.art, mittel: nm.mittel.trim() || null,
+      owner_user_id: besitzer, schlag_id: aktiv.id, datum: nm.datum, art: nm.art, mittel: nm.mittel.trim() || null,
       menge: nm.menge ? num(nm.menge) : null, einheit: nm.einheit.trim() || null, ertrag: nm.ertrag ? num(nm.ertrag) : null, notiz: nm.notiz.trim() || null,
     });
     if (error) { setFehler('Maßnahme konnte nicht gespeichert werden.'); return; }
@@ -112,7 +116,7 @@ export default function LandwirtschaftPage() {
           <button style={styles.primaer} onClick={schlagAnlegen}>＋ Schlag</button>
         </div>
       </div>
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeSchlaege} />}
+      {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={ladeSchlaege} />}
 
       {laden ? <p style={styles.dim}>Lädt …</p> : (
         <div style={styles.split}>

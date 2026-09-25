@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
   }
+  // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+  const { data: chef } = await supabase.rpc('mein_chef_id');
+  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
 
   // Formulardaten validieren
   const body = await req.json().catch(() => null);
@@ -41,11 +44,11 @@ export async function POST(req: NextRequest) {
   // Aktiver Standort aus dem Filial-Umschalter-Cookie (null = kein Zuschnitt).
   const standortId = konkreterStandort(req.cookies.get(STANDORT_COOKIE)?.value);
 
-  // Lead einfuegen - owner_user_id sicher aus der Session
+  // Lead einfuegen - owner_user_id (Betrieb) sicher aus der Session
   const { data, error } = await supabase
     .from("leads")
     .insert({
-      owner_user_id: user.id,
+      owner_user_id: besitzer,
       name: name.trim(),
       email: email || null,
       telefon: telefon || null,

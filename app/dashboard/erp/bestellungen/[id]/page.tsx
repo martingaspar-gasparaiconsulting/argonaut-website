@@ -301,13 +301,15 @@ export default function BestellungDetail() {
 
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id ?? null;
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const besitzer = typeof chef === 'string' && chef ? chef : uid; // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
 
     // 1) Wareneingang-Kopf
     const kopf = {
       bestellung_id: bestellung.id,
       lieferschein_nr: weLieferschein.trim() || null,
       eingangsdatum: weDatum || null,
-      ...(uid ? { owner_user_id: uid } : {}),
+      ...(besitzer ? { owner_user_id: besitzer } : {}),
     };
     const { data: weKopf, error: eKopf } = await supabase
       .from("wareneingang")
@@ -330,7 +332,7 @@ export default function BestellungDetail() {
         bestellposition_id: p.id,
         artikel_id: p.artikel_id,
         menge: jetzt,
-        ...(uid ? { owner_user_id: uid } : {}),
+        ...(besitzer ? { owner_user_id: besitzer } : {}),
       });
 
       // 3) Bestand hochbuchen (nur wenn Artikel verknuepft)

@@ -91,6 +91,7 @@ function SignaturPad({ onSave, onCancel }: { onSave: (name: string, dataUrl: str
 
 export default function TourPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'touren' | 'stopps'>('touren');
   const [touren, setTouren] = useState<Tour[]>([]);
@@ -134,6 +135,9 @@ export default function TourPage() {
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || null);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -149,10 +153,10 @@ export default function TourPage() {
     setBusy('tour'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('tour').insert({
-        owner_user_id: uid, bezeichnung: nt.bezeichnung.trim(), datum: nt.datum, fahrer: nt.fahrer.trim() || null, fahrzeug: nt.fahrzeug.trim() || null, status: 'geplant',
+        owner_user_id: besitzer ?? uid, bezeichnung: nt.bezeichnung.trim(), datum: nt.datum, fahrer: nt.fahrer.trim() || null, fahrzeug: nt.fahrzeug.trim() || null, status: 'geplant',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNt({ bezeichnung: '', datum: H, fahrer: '', fahrzeug: '' }); setNmExtra({});
       setOk('Tour angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('stopps'); }
@@ -166,7 +170,7 @@ export default function TourPage() {
     setBusy('stopp'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('tour_stopp').insert({
-        owner_user_id: uid, tour_id: aktivId, reihenfolge: aktivStopps.length + 1,
+        owner_user_id: besitzer ?? uid, tour_id: aktivId, reihenfolge: aktivStopps.length + 1,
         empfaenger: nst.empfaenger.trim() || null, adresse: nst.adresse.trim() || null, kolli: Math.max(1, Math.round(num(nst.kolli)) || 1), status: 'offen',
       });
       if (error) throw error;
@@ -250,7 +254,7 @@ export default function TourPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'tour' ? 0.6 : 1 }} disabled={busy === 'tour'} onClick={tourAnlegen}>＋ Anlegen & öffnen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {touren.length === 0 ? <Leerzustand icon="🗺️" titel="Noch keine Touren" text="Plane Liefertouren mit Stopps und elektronischem Abliefernachweis." schritte={["Tour oben anlegen", "Stopps und Empfänger zuordnen", "Unterwegs Status und Unterschrift erfassen"]} /> : (

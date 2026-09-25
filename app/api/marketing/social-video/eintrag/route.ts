@@ -22,6 +22,9 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+    // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const besitzer = typeof chef === 'string' && chef ? chef : user.id;
 
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const pfad = String(body?.pfad ?? '').trim();
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     const { error } = await supabase.from('social_video').insert({
-      owner_user_id: user.id,
+      owner_user_id: besitzer,
       pfad,
       url,
       dateiname,

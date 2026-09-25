@@ -54,6 +54,7 @@ STIHL Vertriebszentrale – Tel. 0800 1234567 – Badstraße 3, 71336 Waiblingen
 
 export default function LieferantenImport() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [bestand, setBestand] = useState<BestLieferant[]>([]);
   const [rohtext, setRohtext] = useState("");
   const [laden, setLaden] = useState(false);
@@ -69,7 +70,13 @@ export default function LieferantenImport() {
 
   async function init() {
     const { data: u } = await supabase.auth.getUser();
-    setUserId(u.user?.id ?? null);
+    const id = u.user?.id ?? null;
+    setUserId(id);
+    if (id) {
+      const { data: chef } = await supabase.rpc("mein_chef_id");
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === "string" && chef ? chef : id);
+    }
     const { data } = await supabase.from("lieferanten").select("id, name");
     if (data) setBestand(data as BestLieferant[]);
   }
@@ -157,7 +164,7 @@ export default function LieferantenImport() {
 
   async function uebernehmen() {
     if (!vorschau) return;
-    if (!userId) {
+    if (!besitzer) {
       setFehler("Nicht eingeloggt. Bitte Seite neu laden.");
       return;
     }
@@ -191,7 +198,7 @@ export default function LieferantenImport() {
         else upd++;
       } else {
         const { error } = await supabase.from("lieferanten").insert({
-          owner_user_id: userId,
+          owner_user_id: besitzer,
           name: x.name.trim(),
           ansprechpartner: x.ansprechpartner.trim() || null,
           email: x.email.trim() || null,

@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 3 von 45 erledigt** (A3 live, A4 + A5 mit _p108; A1 und A2 zählen nicht mit, sie waren vorher fertig)
+**Stand: 3 von 47 erledigt, B1a gebaut** (A3–A5 live; B1 in drei Teile geteilt; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -19,7 +19,9 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 
 | Nr. | Was | Stand |
 |---|---|---|
-| B1 | Besitzer-Fehler: ca. 122 Seiten speichern Mitarbeiter-Einträge unter der eigenen Kennung statt beim Betrieb — der Chef sieht sie nie. Reparatur je Tabelle geprüft. | ⬜ |
+| B1a | Besitzer-Fehler Teil A: 70 Seiten, deren Tabellen Mitarbeitern das Anlegen für den Betrieb schon erlauben — reiner Code-Fix | ✅ gebaut (_p109) |
+| B1b | Besitzer-Fehler Teil B: 82 Stellen ohne passende Datenbank-Regel (Zugänge, Einstellungen, Geld, einige Fachseiten) — Entscheidung je Gruppe bei Martin | ⬜ |
+| B1c | Eigene Felder auf den übrigen Seiten (Werkstatt, Service …) ebenfalls dem Betrieb zuordnen | ⬜ |
 
 ## 3. Geld und Abläufe — nur gemeinsam
 

@@ -43,6 +43,7 @@ const LEER = { titel: '', kontakt_id: '', firma: '', wert_netto: '', stufe: 'lea
 
 export default function PipelineSeite() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [laden, setLaden] = useState(true);
@@ -70,6 +71,9 @@ export default function PipelineSeite() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       await laden_();
     })();
@@ -96,7 +100,7 @@ export default function PipelineSeite() {
     setBusy('anlegen'); setFehler(null);
     try {
       const { error } = await supabase.from('crm_deal').insert({
-        owner_user_id: uid, titel: form.titel.trim(), kontakt_id: form.kontakt_id || null,
+        owner_user_id: besitzer ?? uid, titel: form.titel.trim(), kontakt_id: form.kontakt_id || null,
         firma: form.firma.trim() || null, wert_netto: num(form.wert_netto), stufe: form.stufe,
         wahrscheinlichkeit: stufeWahrscheinlichkeit(form.stufe),
         erwartetes_datum: form.erwartetes_datum || null, notiz: form.notiz.trim() || null,

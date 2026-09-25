@@ -17,28 +17,32 @@ import { SOCIAL_PLATTFORM_IDS } from '@/lib/social';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function userId() {
+async function besitzerId() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  if (!user) return null;
+  const { data: chef } = await supabase.rpc('mein_chef_id');
+  // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
+  return besitzer;
 }
 
 export async function GET() {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await besitzerId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('social_kanal')
     .select('plattform, aktiv, verbunden, konto_name, geprueft_am')
-    .eq('owner_user_id', uid);
+    .eq('owner_user_id', besitzer);
 
   return NextResponse.json({ ok: true, liste: liste ?? [] });
 }
 
 export async function POST(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const besitzer = await besitzerId();
+  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
   const { error } = await admin
     .from('social_kanal')
     .upsert(
-      { owner_user_id: uid, plattform, aktiv },
+      { owner_user_id: besitzer, plattform, aktiv },
       { onConflict: 'owner_user_id,plattform' },
     );
   if (error) return NextResponse.json({ ok: false, error: 'Speichern fehlgeschlagen.' }, { status: 500 });

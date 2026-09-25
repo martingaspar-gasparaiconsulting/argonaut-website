@@ -58,6 +58,7 @@ const LEER_NE = {
 
 export default function ErinnerungenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [erinnerungen, setErinnerungen] = useState<Erinnerung[]>([]);
   const [resVorgaenge, setResVorgaenge] = useState<ResVorgang[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
@@ -95,6 +96,9 @@ export default function ErinnerungenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -131,20 +135,20 @@ export default function ErinnerungenPage() {
   }
 
   async function anlegen() {
-    if (!uid) return;
+    if (!besitzer) return;
     if (!ne.faellig_am) { setFehler('Bitte einen Fälligkeitszeitpunkt angeben.'); return; }
     if (!ne.kunde_name.trim() && !ne.kontakt_id && !ne.titel.trim()) { setFehler('Bitte Titel oder Kunde angeben.'); return; }
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('erinnerung').insert({
-        owner_user_id: uid, titel: ne.titel.trim() || null, bezug_typ: ne.bezug_typ,
+        owner_user_id: besitzer, titel: ne.titel.trim() || null, bezug_typ: ne.bezug_typ,
         bezug_id: ne.bezug_id || null, kontakt_id: ne.kontakt_id || null,
         kunde_name: ne.kunde_name.trim() || null, kanal: ne.kanal,
         faellig_am: ne.faellig_am, termin_am: ne.termin_am || null, status: 'offen',
         notiz: ne.notiz.trim() || null, email: ne.email.trim() || null,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* eigene Felder optional */ }
       setNmExtra({});
       setNe({ ...LEER_NE, faellig_am: jetztLokal() });
       setOk('Erinnerung angelegt.'); await laden_();
@@ -242,7 +246,7 @@ export default function ErinnerungenPage() {
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={anlegen}>＋ Erinnerung anlegen</button>
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={laden_} />}
 
       {/* ---------- ARBEITSLISTE ---------- */}
       <div style={{ display: 'flex', gap: 8, margin: '16px 0 10px' }}>

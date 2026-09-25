@@ -112,6 +112,7 @@ function ersteTextSpalte(p: Record<string, unknown> | null, keys: string[]): str
 
 export default function OnboardingPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [lage, setLage] = useState<Lage>({ firma: false, iban: false, kontakte: 0, rechnungen: 0, angebote: 0, zahlungAktiv: false });
   const [kategorie, setKategorie] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -190,6 +191,9 @@ export default function OnboardingPage() {
       setEmail(data?.user?.email || '');
       if (!id) { setLaden(false); return; }
       setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       await laden_(id);
       await weltStatus();
       setLaden(false);
@@ -274,12 +278,12 @@ export default function OnboardingPage() {
   }
 
   async function toggle(s: RenderSchritt) {
-    if (!uid) return;
+    if (!besitzer) return;
     if (manuell.has(s.key)) {
-      await supabase.from('onboarding_schritte').delete().eq('owner_user_id', uid).eq('schritt_key', s.key);
+      await supabase.from('onboarding_schritte').delete().eq('owner_user_id', besitzer).eq('schritt_key', s.key);
       setManuell((m) => { const n = new Set(m); n.delete(s.key); return n; });
     } else {
-      await supabase.from('onboarding_schritte').upsert({ owner_user_id: uid, schritt_key: s.key, erledigt: true, erledigt_am: new Date().toISOString() }, { onConflict: 'owner_user_id,schritt_key' });
+      await supabase.from('onboarding_schritte').upsert({ owner_user_id: besitzer, schritt_key: s.key, erledigt: true, erledigt_am: new Date().toISOString() }, { onConflict: 'owner_user_id,schritt_key' });
       setManuell((m) => new Set(m).add(s.key));
     }
   }

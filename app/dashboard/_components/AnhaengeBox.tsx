@@ -60,6 +60,7 @@ function istBild(mime: string | null): boolean {
 
 export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<AnhangRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -69,29 +70,34 @@ export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      setUid(data?.user?.id ?? null);
+      const id = data?.user?.id ?? null;
+      setUid(id);
+      if (!id) return;
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
     })();
   }, []);
 
   const laden_ = useCallback(async () => {
-    if (!uid || !bezugId) return;
+    if (!besitzer || !bezugId) return;
     setLaden(true); setFehler(null);
     try {
       const spalte = bezug === 'fahrzeug' ? 'fahrzeug_id' : 'auftrag_id';
       const { data, error } = await supabase.from('werkstatt_anhaenge')
-        .select('*').eq('owner_user_id', uid).eq(spalte, bezugId)
+        .select('*').eq('owner_user_id', besitzer).eq(spalte, bezugId)
         .order('hochgeladen_am', { ascending: false });
       if (error) throw error;
       setListe((data as AnhangRow[]) ?? []);
     } catch (e: unknown) {
       setFehler('Anhänge konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
-  }, [uid, bezug, bezugId]);
+  }, [besitzer, bezug, bezugId]);
 
   useEffect(() => { void laden_(); }, [laden_]);
 
   async function datei(f: File | null) {
-    if (!f || !uid) return;
+    if (!f || !uid || !besitzer) return;
     setFehler(null);
     if (f.size > MAX_BYTES) { setFehler('Datei zu groß (max. 10 MB).'); return; }
     if (f.type && !ERLAUBTE_TYPEN.includes(f.type)) {
@@ -107,7 +113,7 @@ export default function AnhaengeBox({ bezug, bezugId, titel }: Props) {
       });
       if (upErr) throw upErr;
       const { error: dbErr } = await supabase.from('werkstatt_anhaenge').insert({
-        owner_user_id: uid,
+        owner_user_id: besitzer,
         fahrzeug_id: bezug === 'fahrzeug' ? bezugId : null,
         auftrag_id: bezug === 'auftrag' ? bezugId : null,
         kategorie, dateiname: f.name, storage_pfad: pfad,

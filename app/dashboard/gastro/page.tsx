@@ -40,6 +40,7 @@ const BEL_STATUS: Record<string, string> = { gebucht: C.cyan, eingecheckt: C.gre
 
 export default function GastroPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'res' | 'hotel'>('res');
   const [datum, setDatum] = useState(heute());
   const [res, setRes] = useState<Res[]>([]);
@@ -75,6 +76,9 @@ export default function GastroPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeRes(datum); await ladeHotel(); setLaden(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,11 +89,11 @@ export default function GastroPage() {
     if (!uid || !nr.gast_name.trim()) { setFehler('Bitte einen Gastnamen angeben.'); return; }
     setFehler(null); setOk(null);
     const { data: neu, error } = await supabase.from('gastro_reservierungen').insert({
-      owner_user_id: uid, datum, uhrzeit: nr.uhrzeit || null, personen: parseInt(nr.personen, 10) || 2,
+      owner_user_id: besitzer ?? uid, datum, uhrzeit: nr.uhrzeit || null, personen: parseInt(nr.personen, 10) || 2,
       gast_name: nr.gast_name.trim(), telefon: nr.telefon.trim() || null, tisch: nr.tisch.trim() || null,
     }).select('id').single();
     if (error || !neu) { setFehler('Reservierung fehlgeschlagen.'); return; }
-    try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nrExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nrExtra); } catch { /* eigene Felder optional */ }
     setNr({ uhrzeit: '19:00', personen: '2', gast_name: '', telefon: '', tisch: '' }); setNrExtra({}); setOk('Reservierung gespeichert.'); await ladeRes(datum);
   }
   async function resStatus(r: Res, status: string) {
@@ -115,7 +119,7 @@ export default function GastroPage() {
     if (konflikt) { setFehler('Dieses Zimmer ist im gewählten Zeitraum bereits belegt.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('hotel_belegungen').insert({
-      owner_user_id: uid, zimmer_id: nb.zimmer_id, gast_name: nb.gast_name.trim() || null,
+      owner_user_id: besitzer ?? uid, zimmer_id: nb.zimmer_id, gast_name: nb.gast_name.trim() || null,
       personen: parseInt(nb.personen, 10) || 1, anreise: nb.anreise, abreise: nb.abreise,
     });
     if (error) { setFehler('Belegung fehlgeschlagen.'); return; }
@@ -177,7 +181,7 @@ export default function GastroPage() {
               <button style={styles.primaer} onClick={resSpeichern}>＋ Reservieren</button>
             </div>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={() => ladeRes(datum)} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={() => ladeRes(datum)} />}
           {laden ? <p style={styles.dim}>Lädt …</p> : res.length === 0 ? <p style={styles.dim}>Keine Reservierungen für {d(datum)}.</p> : (
             <div style={styles.liste}>
               {res.map((r) => (

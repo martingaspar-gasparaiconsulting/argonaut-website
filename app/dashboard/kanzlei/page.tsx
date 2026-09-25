@@ -36,6 +36,7 @@ function ampel(f: string): { txt: string; farbe: string } {
 
 export default function KanzleiPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'fristen' | 'mandate'>('fristen');
   const [mandate, setMandate] = useState<Mandat[]>([]);
   const [fristen, setFristen] = useState<Frist[]>([]);
@@ -57,6 +58,9 @@ export default function KanzleiPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -64,14 +68,14 @@ export default function KanzleiPage() {
   async function mandatAnlegen() {
     if (!uid || !nm.mandant.trim()) { setFehler('Bitte einen Mandanten angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('kanzlei_mandate').insert({ owner_user_id: uid, mandant: nm.mandant.trim(), art: nm.art.trim() || null, aktenzeichen: nm.aktenzeichen.trim() || null });
+    const { error } = await supabase.from('kanzlei_mandate').insert({ owner_user_id: besitzer ?? uid, mandant: nm.mandant.trim(), art: nm.art.trim() || null, aktenzeichen: nm.aktenzeichen.trim() || null });
     if (error) { setFehler('Mandat konnte nicht gespeichert werden.'); return; }
     setNm({ mandant: '', art: 'Steuer', aktenzeichen: '' }); setOk('Mandat gespeichert.'); await laden_();
   }
   async function fristAnlegen() {
     if (!uid || !nf.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null); setOk(null);
-    const { error } = await supabase.from('kanzlei_fristen').insert({ owner_user_id: uid, mandat_id: nf.mandat_id || null, bezeichnung: nf.bezeichnung.trim(), frist: nf.frist });
+    const { error } = await supabase.from('kanzlei_fristen').insert({ owner_user_id: besitzer ?? uid, mandat_id: nf.mandat_id || null, bezeichnung: nf.bezeichnung.trim(), frist: nf.frist });
     if (error) { setFehler('Frist konnte nicht gespeichert werden.'); return; }
     setNf({ mandat_id: '', bezeichnung: '', frist: heute() }); setOk('Frist gespeichert.'); await laden_();
   }

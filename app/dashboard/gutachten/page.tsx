@@ -45,6 +45,7 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 
 export default function GutachtenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [ausstellerOrt, setAusstellerOrt] = useState<string | null>(null);
   const [tab, setTab] = useState<'liste' | 'bearbeiten'>('liste');
   const [gutachten, setGutachten] = useState<Gutachten[]>([]);
@@ -87,6 +88,9 @@ export default function GutachtenPage() {
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAusstellerOrt(str(meta.ort) || str(meta.stadt) || str(meta.firmenort) || null);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -103,12 +107,12 @@ export default function GutachtenPage() {
     setBusy('gutachten'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('gutachten').insert({
-        owner_user_id: uid, titel: ng.titel.trim(), auftraggeber: ng.auftraggeber.trim() || null, objekt: ng.objekt.trim() || null,
+        owner_user_id: besitzer ?? uid, titel: ng.titel.trim(), auftraggeber: ng.auftraggeber.trim() || null, objekt: ng.objekt.trim() || null,
         art: ng.art.trim() || null, aktenzeichen: ng.aktenzeichen.trim() || null, datum: ng.datum, gutachter: ng.gutachter.trim() || null,
         honorargruppe: ng.honorargruppe || null, stunden: ng.stunden.trim() ? num(ng.stunden) : null, zusammenfassung: ng.zusammenfassung.trim() || null, status: 'entwurf',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNg({ titel: '', auftraggeber: '', objekt: '', art: '', aktenzeichen: '', datum: H, gutachter: '', honorargruppe: '', stunden: '', zusammenfassung: '' });
       setNmExtra({}); setOk('Gutachten angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('bearbeiten'); }
@@ -122,7 +126,7 @@ export default function GutachtenPage() {
     setBusy('position'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('gutachten_position').insert({
-        owner_user_id: uid, gutachten_id: aktivId, position: aktivPos.length + 1, kategorie: np.kategorie,
+        owner_user_id: besitzer ?? uid, gutachten_id: aktivId, position: aktivPos.length + 1, kategorie: np.kategorie,
         titel: np.titel.trim() || null, text: np.text.trim() || null, betrag: np.betrag.trim() ? num(np.betrag) : null,
       });
       if (error) throw error;
@@ -210,7 +214,7 @@ export default function GutachtenPage() {
             {ngHonorar != null && <div style={{ ...styles.vorschau, marginTop: 12 }}><span>JVEG-Honorar: <b style={{ color: C.gold }}>{eur(ngHonorar)}</b> <span style={{ color: C.textDim }}>({honorarsatz(ng.honorargruppe)} €/h × {num(ng.stunden)} h)</span></span></div>}
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'gutachten' ? 0.6 : 1 }} disabled={busy === 'gutachten'} onClick={gutachtenAnlegen}>＋ Anlegen & öffnen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {gutachten.length === 0 ? <Leerzustand icon="⚖️" titel="Noch keine Gutachten" text="Erstelle strukturierte Gutachten mit JVEG-Honorar-Rechner." schritte={["Gutachten oben anlegen", "Befund und Bewertung als Positionen erfassen", "Honorar berechnen lassen"]} /> : (

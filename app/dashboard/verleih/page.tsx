@@ -59,6 +59,7 @@ function kontaktName(k: Record<string, unknown>): string {
 
 export default function VerleihPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'vorgaenge' | 'artikel'>('vorgaenge');
   const [artikel, setArtikel] = useState<Artikel[]>([]);
   const [vorgaenge, setVorgaenge] = useState<Vorgang[]>([]);
@@ -99,6 +100,9 @@ export default function VerleihPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -122,12 +126,12 @@ export default function VerleihPage() {
     setBusy('artikel'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('verleih_artikel').insert({
-        owner_user_id: uid, bezeichnung: na.bezeichnung.trim(), kategorie: na.kategorie.trim() || null,
+        owner_user_id: besitzer, bezeichnung: na.bezeichnung.trim(), kategorie: na.kategorie.trim() || null,
         tagessatz: num(na.tagessatz), wochensatz: na.wochensatz.trim() ? num(na.wochensatz) : null,
         kaution: num(na.kaution), anzahl: Math.max(1, Math.round(num(na.anzahl)) || 1), status: 'aktiv',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, naExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, naExtra); } catch { /* eigene Felder optional */ }
       setNa({ bezeichnung: '', kategorie: '', tagessatz: '', wochensatz: '', kaution: '', anzahl: '1' }); setNaExtra({});
       setOk('Mietgegenstand angelegt.'); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
@@ -144,7 +148,7 @@ export default function VerleihPage() {
     setBusy('vorgang'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('verleih_vorgang').insert({
-        owner_user_id: uid, artikel_id: art.id, kontakt_id: nv.kontakt_id || null, mieter_name: nv.mieter_name.trim() || null,
+        owner_user_id: besitzer, artikel_id: art.id, kontakt_id: nv.kontakt_id || null, mieter_name: nv.mieter_name.trim() || null,
         von: nv.von, bis: nv.bis, tagessatz: art.tagessatz, kaution: art.kaution, status: 'reserviert',
       });
       if (error) throw error;
@@ -330,7 +334,7 @@ export default function VerleihPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'artikel' ? 0.6 : 1 }} disabled={busy === 'artikel'} onClick={artikelAnlegen}>＋ Anlegen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>

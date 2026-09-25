@@ -82,6 +82,7 @@ const BUCKET_LABEL: Record<string, string> = { faellig: 'Kontrolle fällig', bal
 
 export default function ObjekteRegister() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [gruppen, setGruppen] = useState<Gruppe[]>([]);
   const [laden, setLaden] = useState(true);
@@ -125,6 +126,9 @@ export default function ObjekteRegister() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -174,7 +178,7 @@ export default function ObjekteRegister() {
       let gruppeId: string | null = form.gruppe_id || null;
       if (form.neueGruppe.trim()) {
         const { data: g, error: gErr } = await supabase.from('asset_gruppen')
-          .insert({ owner_user_id: uid, bezeichnung: form.neueGruppe.trim() }).select('id').single();
+          .insert({ owner_user_id: besitzer, bezeichnung: form.neueGruppe.trim() }).select('id').single();
         if (gErr || !g) throw gErr ?? new Error('Gruppe fehlgeschlagen');
         gruppeId = g.id as string;
       }
@@ -182,7 +186,7 @@ export default function ObjekteRegister() {
       const letzte = form.letzte_kontrolle || null;
       const naechste = naechsteKontrolleBerechnen(letzte, intervall);
       const payload = {
-        owner_user_id: uid, gruppe_id: gruppeId, typ: form.typ, bezeichnung: form.bezeichnung.trim(),
+        owner_user_id: besitzer, gruppe_id: gruppeId, typ: form.typ, bezeichnung: form.bezeichnung.trim(),
         standort: form.standort.trim() || null, hersteller: form.hersteller.trim() || null,
         kennung: form.kennung.trim() || null, zustand: form.zustand, kontrollintervall_monate: intervall,
         letzte_kontrolle: letzte, naechste_kontrolle: naechste, anschaffungsdatum: form.anschaffungsdatum || null,
@@ -192,11 +196,11 @@ export default function ObjekteRegister() {
       if (form.id) {
         const { error } = await supabase.from('assets').update(payload).eq('id', form.id);
         if (error) throw error;
-        try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        try { await speichereWerte(MODUL, form.id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
         const { data: neu, error } = await supabase.from('assets').insert(payload).select('id').single();
         if (error) throw error;
-        try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+        try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setModalAuf(false); setForm(LEER); setNmExtra({}); setOk('Objekt gespeichert.'); await laden_();
     } catch (e: unknown) {
@@ -362,7 +366,7 @@ export default function ObjekteRegister() {
         )}
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       <div style={styles.rechtHinweis}>
         Die nächste Kontrolle wird automatisch aus letzter Kontrolle + Intervall berechnet; der Objekt-Typ setzt die Standard-Prüffrist. Für Abschreibung/AfA nutze das Anlagen-Modul, für die Fahrzeug-Historie die Fahrzeugakte — das Register dupliziert diese Tiefe bewusst nicht, sondern verknüpft.

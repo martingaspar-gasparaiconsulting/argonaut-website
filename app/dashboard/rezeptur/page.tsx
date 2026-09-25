@@ -53,6 +53,7 @@ function z1(n: number | null) { return n == null ? '—' : n.toLocaleString('de-
 
 export default function RezepturRechner() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [rezepte, setRezepte] = useState<Rezept[]>([]);
   const [aktivId, setAktivId] = useState('');
   const [eck, setEck] = useState<Rezept | null>(null);
@@ -86,6 +87,9 @@ export default function RezepturRechner() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeRezepte(); setLaden(false);
     })();
   }, [ladeRezepte]);
@@ -98,11 +102,11 @@ export default function RezepturRechner() {
   }, [aktivId, rezepte, ladeZutaten]);
 
   async function rezeptAnlegen() {
-    if (!uid || !neuName.trim()) { setFehler('Bitte einen Rezeptnamen angeben.'); return; }
+    if (!besitzer || !neuName.trim()) { setFehler('Bitte einen Rezeptnamen angeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('rezepturen').insert({
-        owner_user_id: uid, name: neuName.trim(), typ: neuTyp, basis_einheit: 'kg',
+        owner_user_id: besitzer, name: neuName.trim(), typ: neuTyp, basis_einheit: 'kg',
       }).select('*').single();
       if (error || !data) throw error ?? new Error('Fehler');
       setNeuName(''); await ladeRezepte(); setAktivId((data as Rezept).id); setOk('Rezept angelegt.');
@@ -126,7 +130,7 @@ export default function RezepturRechner() {
   }
 
   async function zutatenSpeichern() {
-    if (!eck || !uid) return;
+    if (!eck || !besitzer) return;
     setBusy(true); setFehler(null); setOk(null);
     try {
       // Einfach & sicher: bestehende Zutaten ersetzen.
@@ -134,7 +138,7 @@ export default function RezepturRechner() {
       const rows = zutaten
         .filter((z) => z.bezeichnung.trim() || num(z.menge) > 0)
         .map((z, i) => ({
-          owner_user_id: uid, rezeptur_id: eck.id, position: i + 1,
+          owner_user_id: besitzer, rezeptur_id: eck.id, position: i + 1,
           bezeichnung: z.bezeichnung.trim() || 'Zutat', menge: num(z.menge) || null,
           einheit: z.einheit.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
           rolle: z.rolle || 'sonstige',
@@ -147,7 +151,7 @@ export default function RezepturRechner() {
 
   // --- Rezeptur → Charge (Block O · Andock ans Lebensmittel-Fachpaket) ---
   async function chargeErzeugen() {
-    if (!eck || !uid) return;
+    if (!eck || !besitzer) return;
     const menge = Number(eck.basis_menge) || 0;
     if (menge <= 0) { setFehler('Bitte zuerst eine Ausbeute-Menge in den Eckdaten setzen und speichern.'); return; }
     if (!window.confirm(`Charge aus „${eck.name}" erzeugen?\n\n• ${z1(menge)} ${eck.basis_einheit || ''}\n\nSie erscheint im 🥫 Lebensmittel-Modul (Chargen/MHD).`)) return;
@@ -156,7 +160,7 @@ export default function RezepturRechner() {
       const d = new Date();
       const nr = `RZ-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
       const { error } = await supabase.from('lm_chargen').insert({
-        owner_user_id: uid, bezeichnung: eck.name, charge_nr: nr, menge, einheit: eck.basis_einheit || 'kg',
+        owner_user_id: besitzer, bezeichnung: eck.name, charge_nr: nr, menge, einheit: eck.basis_einheit || 'kg',
         notiz: `Aus Rezeptur „${eck.name}" erzeugt.`,
       });
       if (error) throw error;

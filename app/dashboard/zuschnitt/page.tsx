@@ -41,6 +41,7 @@ function kg(n: number) { return `${(Number(n) || 0).toLocaleString('de-DE', { ma
 
 export default function ZuschnittPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'zuschnitt' | 'projekte'>('projekte');
   const [projekte, setProjekte] = useState<Projekt[]>([]);
@@ -79,6 +80,9 @@ export default function ZuschnittPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || null);
@@ -109,12 +113,12 @@ export default function ZuschnittPage() {
     try {
       const dichte = np.dichteKey && DICHTE[np.dichteKey] ? DICHTE[np.dichteKey] : null;
       const { data, error } = await supabase.from('zuschnitt_projekt').insert({
-        owner_user_id: uid, bezeichnung: np.bezeichnung.trim(), material: np.material.trim() || (np.dichteKey || null),
+        owner_user_id: besitzer ?? uid, bezeichnung: np.bezeichnung.trim(), material: np.material.trim() || (np.dichteKey || null),
         stangenlaenge: num(np.stangenlaenge) || 6000, saegeblatt_mm: num(np.saegeblatt_mm),
         querschnitt_mm2: np.querschnitt_mm2.trim() ? num(np.querschnitt_mm2) : null, dichte, status: 'offen',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNp({ bezeichnung: '', material: '', stangenlaenge: '6000', saegeblatt_mm: '3', dichteKey: '', querschnitt_mm2: '' }); setNmExtra({});
       setOk('Projekt angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('zuschnitt'); }
@@ -128,7 +132,7 @@ export default function ZuschnittPage() {
     setBusy('teil'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('zuschnitt_teil').insert({
-        owner_user_id: uid, projekt_id: aktivId, bezeichnung: nt.bezeichnung.trim() || null,
+        owner_user_id: besitzer ?? uid, projekt_id: aktivId, bezeichnung: nt.bezeichnung.trim() || null,
         laenge: num(nt.laenge), anzahl: Math.max(1, Math.round(num(nt.anzahl)) || 1),
       });
       if (error) throw error;
@@ -198,7 +202,7 @@ export default function ZuschnittPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'projekt' ? 0.6 : 1 }} disabled={busy === 'projekt'} onClick={projektAnlegen}>＋ Anlegen & öffnen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {projekte.length === 0 ? <Leerzustand icon="✂️" titel="Noch keine Zuschnitt-Projekte" text="Lege ein Projekt mit Teileliste an — ARGONAUT optimiert Stangenbedarf und Verschnitt." schritte={["Projekt oben anlegen", "Teile und Materiallänge erfassen", "Schnittplan optimieren lassen"]} /> : (

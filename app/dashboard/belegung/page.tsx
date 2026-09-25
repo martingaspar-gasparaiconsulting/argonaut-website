@@ -74,6 +74,7 @@ function kontaktName(k: Record<string, unknown>): string {
 
 export default function BelegungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'belegungen' | 'einheiten'>('belegungen');
   const [einheiten, setEinheiten] = useState<Einheit[]>([]);
   const [vorgaenge, setVorgaenge] = useState<Vorgang[]>([]);
@@ -121,6 +122,9 @@ export default function BelegungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -160,7 +164,7 @@ export default function BelegungPage() {
     setBusy('einheit'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('belegung_einheit').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: ne.bezeichnung.trim(), kategorie: ne.kategorie.trim() || null,
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: ne.bezeichnung.trim(), kategorie: ne.kategorie.trim() || null,
         einheit_nr: ne.einheit_nr.trim() || null, abrechnungsart: ne.abrechnungsart,
         preis_pro_einheit: num(ne.preis), grundgebuehr: num(ne.grundgebuehr), kaution: num(ne.kaution),
         max_belegung: ne.max_belegung.trim() ? Math.round(num(ne.max_belegung)) : null,
@@ -183,7 +187,7 @@ export default function BelegungPage() {
     setBusy('vorgang'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('belegung_vorgang').insert({
-        owner_user_id: uid, einheit_id: e.id, kontakt_id: nv.kontakt_id || null, gast_name: nv.gast_name.trim() || null,
+        owner_user_id: besitzer ?? uid, einheit_id: e.id, kontakt_id: nv.kontakt_id || null, gast_name: nv.gast_name.trim() || null,
         von: nv.von, bis: nv.bis, anzahl_gaeste: nv.anzahl_gaeste.trim() ? Math.round(num(nv.anzahl_gaeste)) : null,
         preis_pro_einheit: e.preis_pro_einheit, grundgebuehr: e.grundgebuehr, kaution: e.kaution, mwst_satz: e.mwst_satz,
         status: 'reserviert',
@@ -193,7 +197,7 @@ export default function BelegungPage() {
         if ((error as { code?: string }).code === '23P01') { setFehler('Dieser Zeitraum ist für die Einheit bereits belegt (von der Datenbank gesperrt).'); return; }
         throw error;
       }
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNmExtra({});
       setNv({ einheit_id: '', kontakt_id: '', gast_name: '', von: H, bis: plusTage(H, 1), anzahl_gaeste: '' });
       setOk('Belegung reserviert.'); await laden_();
@@ -307,7 +311,7 @@ export default function BelegungPage() {
             )}
           </div>
 
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>

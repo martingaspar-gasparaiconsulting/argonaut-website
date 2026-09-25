@@ -69,6 +69,7 @@ function tageBis(iso: string | null): number | null {
 
 export default function DsgvoPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [verfahren, setVerfahren] = useState<Verfahren[]>([]);
   const [anfragen, setAnfragen] = useState<Anfrage[]>([]);
   const [laden, setLaden] = useState(true);
@@ -88,6 +89,9 @@ export default function DsgvoPage() {
   const laden_ = useCallback(async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u?.user) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+    setBesitzer(typeof chef === 'string' && chef ? chef : u.user.id);
     setUid(u.user.id);
     try {
       const [{ data: v }, { data: a }] = await Promise.all([
@@ -126,7 +130,7 @@ export default function DsgvoPage() {
   const verfahrenAnlegen = async () => {
     if (!uid || !vf.name.trim()) return;
     const { error } = await supabase.from('dsgvo_verfahren').insert({
-      owner_user_id: uid, name: vf.name.trim(), zweck: vf.zweck.trim() || null, rechtsgrundlage: vf.rechtsgrundlage.trim() || null,
+      owner_user_id: besitzer ?? uid, name: vf.name.trim(), zweck: vf.zweck.trim() || null, rechtsgrundlage: vf.rechtsgrundlage.trim() || null,
       kategorien_betroffene: vf.kategorien_betroffene.trim() || null, kategorien_daten: vf.kategorien_daten.trim() || null,
       empfaenger: vf.empfaenger.trim() || null, drittland: vf.drittland.trim() || null, loeschfrist: vf.loeschfrist.trim() || null, tom: vf.tom.trim() || null,
     });
@@ -162,7 +166,7 @@ export default function DsgvoPage() {
     setUebernimmt(true); setFehler(null); setOk(null);
     const { error } = await supabase.from('dsgvo_verfahren').insert(
       offeneVorschlaege.map((v) => ({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         name: v.name,
         zweck: v.zweck,
         rechtsgrundlage: v.rechtsgrundlage,
@@ -189,7 +193,7 @@ export default function DsgvoPage() {
   const anfrageAnlegen = async () => {
     if (!uid || !af.betroffener_name.trim()) return;
     const { error } = await supabase.from('dsgvo_anfragen').insert({
-      owner_user_id: uid, betroffener_name: af.betroffener_name.trim(), betroffener_email: af.betroffener_email.trim() || null,
+      owner_user_id: besitzer ?? uid, betroffener_name: af.betroffener_name.trim(), betroffener_email: af.betroffener_email.trim() || null,
       art: af.art, eingegangen_am: af.eingegangen_am, frist: plusEinMonat(af.eingegangen_am), status: 'offen', notiz: af.notiz.trim() || null,
     });
     if (error) { setFehler(error.message); return; }

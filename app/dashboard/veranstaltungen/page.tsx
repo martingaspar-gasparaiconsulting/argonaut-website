@@ -54,6 +54,7 @@ function auslFarbe(a: number) { return a >= 0.9 ? C.gold : a >= 0.5 ? C.green : 
 
 export default function VeranstaltungenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [events, setEvents] = useState<Veranstaltung[]>([]);
   const [anmeldungen, setAnmeldungen] = useState<Anmeldung[]>([]);
@@ -92,6 +93,8 @@ export default function VeranstaltungenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       setUid(id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [meta.firmenname, meta.firma, meta.unternehmen, meta.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -151,12 +154,12 @@ export default function VeranstaltungenPage() {
     setBusy('event'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('event_veranstaltung').insert({
-        owner_user_id: uid, titel: nEvent.titel.trim(), art: nEvent.art, ort: nEvent.ort.trim() || null,
+        owner_user_id: besitzer ?? uid, titel: nEvent.titel.trim(), art: nEvent.art, ort: nEvent.ort.trim() || null,
         beginn: nEvent.beginn || null, ende: nEvent.ende || null, kapazitaet: Math.round(num(nEvent.kapazitaet)),
         preis: num(nEvent.preis), status: nEvent.status,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNEvent({ titel: '', art: 'konzert', ort: '', beginn: beginnStd(), ende: '', kapazitaet: '', preis: '', status: 'aktiv' }); setNmExtra({});
       setOk('Veranstaltung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -174,7 +177,7 @@ export default function VeranstaltungenPage() {
     setBusy('anm'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('event_anmeldung').insert({
-        owner_user_id: uid, veranstaltung_id: ev.id, name: nAnm.name.trim(), email: nAnm.email.trim() || null,
+        owner_user_id: besitzer ?? uid, veranstaltung_id: ev.id, name: nAnm.name.trim(), email: nAnm.email.trim() || null,
         plaetze, status, bezahlt: false, betrag: betrag(ev.preis, plaetze), angemeldet_am: new Date().toISOString(),
       });
       if (error) throw error;
@@ -269,7 +272,7 @@ export default function VeranstaltungenPage() {
         </div>
         <button style={{ ...styles.primaer, marginTop: 10, opacity: busy === 'event' ? 0.6 : 1 }} disabled={busy === 'event'} onClick={eventAnlegen}>＋ Veranstaltung</button>
       </div>
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       {/* Event-Karten */}
       {events.length === 0 ? (

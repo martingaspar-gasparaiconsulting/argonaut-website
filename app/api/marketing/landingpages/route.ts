@@ -24,20 +24,24 @@ const IMPRESSUM_FELDER = 'firma_name, firma_strasse, firma_plz, firma_ort, firma
 async function userId() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  if (!user) return null;
+  const { data: chef } = await supabase.rpc('mein_chef_id');
+  // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
+  return { uid: user.id, besitzer };
 }
 
 export async function GET() {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const ich = await userId();
+  if (!ich) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const admin = createAdminClient();
   const { data: liste } = await admin
     .from('landingpages')
     .select('id, slug, typ, titel, untertitel, nutzen, cta_text, hero_bild_url, video_url, aktiv, ab_aktiv, titel_b, untertitel_b, nutzen_b, cta_text_b, hero_bild_b_url, created_at')
-    .eq('owner_user_id', uid)
+    .eq('owner_user_id', ich.besitzer)
     .order('created_at', { ascending: false });
-  const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', uid).maybeSingle();
+  const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', ich.uid).maybeSingle();
 
   return NextResponse.json({
     ok: true,
@@ -47,8 +51,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const ich = await userId();
+  if (!ich) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
@@ -83,7 +87,7 @@ export async function POST(req: Request) {
 
   // Aktivschalten nur mit vollstaendigem Impressum (Rechtssicherheit).
   if (aktiv) {
-    const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', uid).maybeSingle();
+    const { data: prof } = await admin.from('profiles').select(IMPRESSUM_FELDER).eq('id', ich.uid).maybeSingle();
     const imp = impressumVollstaendig(prof as Parameters<typeof impressumVollstaendig>[0]);
     if (!imp.ok) {
       return NextResponse.json(
@@ -101,11 +105,11 @@ export async function POST(req: Request) {
   let error;
   let neuId = id;
   if (id) {
-    ({ error } = await admin.from('landingpages').update(felder).eq('id', id).eq('owner_user_id', uid));
+    ({ error } = await admin.from('landingpages').update(felder).eq('id', id).eq('owner_user_id', ich.besitzer));
   } else {
     const { data, error: insErr } = await admin
       .from('landingpages')
-      .insert({ ...felder, owner_user_id: uid })
+      .insert({ ...felder, owner_user_id: ich.besitzer })
       .select('id')
       .single();
     error = insErr;
@@ -122,13 +126,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const uid = await userId();
-  if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const ich = await userId();
+  if (!ich) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
   const id = (new URL(req.url).searchParams.get('id') || '').trim();
   if (!id) return NextResponse.json({ ok: false, error: 'Keine ID.' }, { status: 400 });
 
   const admin = createAdminClient();
-  const { error } = await admin.from('landingpages').delete().eq('id', id).eq('owner_user_id', uid);
+  const { error } = await admin.from('landingpages').delete().eq('id', id).eq('owner_user_id', ich.besitzer);
   if (error) return NextResponse.json({ ok: false, error: 'Löschen fehlgeschlagen.' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

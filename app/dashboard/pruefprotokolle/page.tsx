@@ -55,6 +55,7 @@ function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 
 
 export default function PruefprotokollePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [protokolle, setProtokolle] = useState<Protokoll[]>([]);
   const [punkte, setPunkte] = useState<Punkt[]>([]);
@@ -96,6 +97,9 @@ export default function PruefprotokollePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const nm = [m.firmenname, m.firma, m.company, m.full_name, m.name].find((x) => typeof x === 'string' && x.trim());
       setAussteller(typeof nm === 'string' ? nm : null);
@@ -135,14 +139,14 @@ export default function PruefprotokollePage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('pruef_protokoll').insert({
-        owner_user_id: uid, asset_id: nk.asset_id || null, objekt_bezeichnung: nk.objekt_bezeichnung.trim() || null,
+        owner_user_id: besitzer ?? uid, asset_id: nk.asset_id || null, objekt_bezeichnung: nk.objekt_bezeichnung.trim() || null,
         pruef_key: nk.pruef_key || null, pruef_art, norm, datum: nk.datum, pruefer: nk.pruefer.trim() || null,
         intervall_monate: intervall || null, naechste_pruefung: naechste || null, ergebnis: ergebnisLive, bemerkung: nk.bemerkung.trim() || null,
       }).select('id').single();
       if (error || !neu) throw new Error(error?.message || 'Speichern fehlgeschlagen.');
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       const reihen = draft.filter((p) => p.punkt.trim()).map((p, i) => ({
-        owner_user_id: uid, protokoll_id: neu.id, position: i + 1, punkt: p.punkt.trim(), status: p.status, hinweis: p.hinweis.trim() || null,
+        owner_user_id: besitzer ?? uid, protokoll_id: neu.id, position: i + 1, punkt: p.punkt.trim(), status: p.status, hinweis: p.hinweis.trim() || null,
       }));
       if (reihen.length) {
         const { error: pe } = await supabase.from('pruef_punkt').insert(reihen);
@@ -246,7 +250,7 @@ export default function PruefprotokollePage() {
         )}
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       {/* Liste */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (

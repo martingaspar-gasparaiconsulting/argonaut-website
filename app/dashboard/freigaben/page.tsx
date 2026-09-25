@@ -41,6 +41,7 @@ const ST_FARBE: Record<string, string> = { freigegeben: C.green, aenderung: C.wa
 
 export default function FreigabenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [versionen, setVersionen] = useState<Version[]>([]);
@@ -76,6 +77,9 @@ export default function FreigabenPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [meta.firmenname, meta.firma, meta.unternehmen, meta.name].find((x) => typeof x === 'string' && (x as string).trim());
       setAussteller(typeof firma === 'string' ? firma : '');
@@ -97,11 +101,11 @@ export default function FreigabenPage() {
   const kennzahlen = useMemo(() => zaehleProofing(assets, versionen as (VersionLite & { asset_id?: string })[]), [assets, versionen]);
 
   async function assetAnlegen() {
-    if (!uid || !nAsset.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
+    if (!besitzer || !nAsset.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setBusy('asset'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('proof_asset').insert({
-        owner_user_id: uid, titel: nAsset.titel.trim(), kunde: nAsset.kunde.trim() || null, kategorie: nAsset.kategorie,
+        owner_user_id: besitzer, titel: nAsset.titel.trim(), kunde: nAsset.kunde.trim() || null, kategorie: nAsset.kategorie,
       });
       if (error) throw error;
       setNAsset({ titel: '', kunde: '', kategorie: 'design' }); setOk('Asset angelegt.'); await laden_();
@@ -110,12 +114,12 @@ export default function FreigabenPage() {
   }
 
   async function versionAnlegen() {
-    if (!uid || !nVersion) return;
+    if (!besitzer || !nVersion) return;
     const nr = naechsteVersion((versProAsset.get(nVersion.asset_id) || []) as VersionLite[]);
     setBusy('version'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('proof_version').insert({
-        owner_user_id: uid, asset_id: nVersion.asset_id, version_nr: nr,
+        owner_user_id: besitzer, asset_id: nVersion.asset_id, version_nr: nr,
         beschreibung: nVersion.beschreibung.trim() || null, datei_url: nVersion.datei_url.trim() || null,
         status: 'in_pruefung', eingereicht_am: jetztIso(),
       });
@@ -135,12 +139,12 @@ export default function FreigabenPage() {
   }
 
   async function feedbackSpeichern() {
-    if (!uid || !nFeedback) return;
+    if (!besitzer || !nFeedback) return;
     if (!nFeedback.text.trim() && nFeedback.typ === 'kommentar') { setFehler('Bitte einen Text angeben.'); return; }
     setBusy('fb'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('proof_feedback').insert({
-        owner_user_id: uid, version_id: nFeedback.version_id, autor: nFeedback.autor.trim() || null, typ: nFeedback.typ, text: nFeedback.text.trim() || null,
+        owner_user_id: besitzer, version_id: nFeedback.version_id, autor: nFeedback.autor.trim() || null, typ: nFeedback.typ, text: nFeedback.text.trim() || null,
       });
       if (error) throw error;
       // Entscheidungs-Feedback setzt den Versionsstatus.

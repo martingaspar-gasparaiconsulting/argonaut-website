@@ -51,6 +51,7 @@ function oeeFarbe(o: number) { return o >= 0.85 ? C.green : o >= 0.6 ? C.gold : 
 
 export default function BdePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [tab, setTab] = useState<'buchungen' | 'maschinen'>('buchungen');
   const [maschinen, setMaschinen] = useState<Maschine[]>([]);
@@ -100,6 +101,9 @@ export default function BdePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [meta.firmenname, meta.firma, meta.unternehmen, meta.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -141,7 +145,7 @@ export default function BdePage() {
     setBusy('masch'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bde_maschine').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: nMasch.bezeichnung.trim(), maschinen_nr: nMasch.maschinen_nr.trim() || null,
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), bezeichnung: nMasch.bezeichnung.trim(), maschinen_nr: nMasch.maschinen_nr.trim() || null,
         standort: nMasch.standort.trim() || null, ideal_takt_sek: num(nMasch.ideal_takt_sek), status: nMasch.status,
       });
       if (error) throw error;
@@ -157,13 +161,13 @@ export default function BdePage() {
     setBusy('buch'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('bde_buchung').insert({
-        owner_user_id: uid, maschine_id: nBuch.maschine_id, datum: nBuch.datum || null, auftrag: nBuch.auftrag.trim() || null,
+        owner_user_id: besitzer ?? uid, maschine_id: nBuch.maschine_id, datum: nBuch.datum || null, auftrag: nBuch.auftrag.trim() || null,
         schicht: nBuch.schicht || null, bediener: nBuch.bediener.trim() || null,
         planbelegung_min: Math.round(num(nBuch.planbelegung_min)), menge_gesamt: num(nBuch.menge_gesamt),
         menge_gut: num(nBuch.menge_gut), ideal_takt_sek: num(nBuch.ideal_takt_sek), status: 'offen',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNmExtra({});
       setNBuch((v) => ({ ...v, auftrag: '', bediener: '', planbelegung_min: '', menge_gesamt: '', menge_gut: '' }));
       setOk('Buchung angelegt.'); await laden_();
@@ -177,7 +181,7 @@ export default function BdePage() {
     setBusy('stoer'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bde_stoerung').insert({
-        owner_user_id: uid, buchung_id: nStoer.buchung_id, kategorie: nStoer.kategorie,
+        owner_user_id: besitzer ?? uid, buchung_id: nStoer.buchung_id, kategorie: nStoer.kategorie,
         grund: nStoer.grund.trim() || null, dauer_min: Math.round(num(nStoer.dauer_min)),
       });
       if (error) throw error;
@@ -327,7 +331,7 @@ export default function BdePage() {
             )}
           </div>
 
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {/* Filter */}
           {maschinen.length > 0 && (

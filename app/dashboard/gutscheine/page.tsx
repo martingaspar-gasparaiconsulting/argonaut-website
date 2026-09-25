@@ -68,6 +68,7 @@ const LEER_NG = {
 
 export default function GutscheinePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [gutscheine, setGutscheine] = useState<Gutschein[]>([]);
   const [einloesungen, setEinloesungen] = useState<Einloesung[]>([]);
@@ -107,6 +108,9 @@ export default function GutscheinePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -153,14 +157,14 @@ export default function GutscheinePage() {
   }
 
   async function gutscheinAnlegen() {
-    if (!uid) return;
+    if (!besitzer) return;
     if (!ng.empfaenger_name.trim() && !ng.kontakt_id) { setFehler('Bitte Empfänger (Kontakt oder Freitext) angeben.'); return; }
     if (info.hatBetrag && ng.art !== 'mehrfachkarte' && num(ng.wert) <= 0) { setFehler('Bitte einen Wert (€) angeben.'); return; }
     if (info.hatNutzungen && Math.round(num(ng.nutzungen_gesamt)) <= 0) { setFehler('Bitte die Anzahl der Nutzungen angeben.'); return; }
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('gutschein').insert({
-        owner_user_id: uid, code: ng.code.trim() || neuerCode(), art: ng.art, mwst_typ: ng.mwst_typ,
+        owner_user_id: besitzer, code: ng.code.trim() || neuerCode(), art: ng.art, mwst_typ: ng.mwst_typ,
         wert: num(ng.wert), mwst_satz: num(ng.mwst_satz) || 19,
         nutzungen_gesamt: info.hatNutzungen ? Math.round(num(ng.nutzungen_gesamt)) : null,
         leistung_text: ng.leistung_text.trim() || null,
@@ -169,7 +173,7 @@ export default function GutscheinePage() {
         gueltig_bis: ng.gueltig_bis || null, status: 'aktiv', notiz: ng.notiz.trim() || null,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* eigene Felder optional */ }
       setNg({ ...LEER_NG, code: neuerCode() }); setNmExtra({});
       setOk('Gutschein angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -192,12 +196,12 @@ export default function GutscheinePage() {
   }
 
   async function einloeseBuchen() {
-    if (!uid || !zielG || !einloesePruef?.ok) return;
+    if (!besitzer || !zielG || !einloesePruef?.ok) return;
     setBusy('einloesen'); setFehler(null); setOk(null);
     try {
       const istKarte = zielG.art === 'mehrfachkarte';
       const { error } = await supabase.from('gutschein_einloesung').insert({
-        owner_user_id: uid, gutschein_id: zielG.id, datum: new Date().toISOString(),
+        owner_user_id: besitzer, gutschein_id: zielG.id, datum: new Date().toISOString(),
         betrag: istKarte ? 0 : num(einloeseWert), nutzungen: istKarte ? Math.round(num(einloeseWert)) : 0,
         bemerkung: null,
       });
@@ -323,7 +327,7 @@ export default function GutscheinePage() {
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={gutscheinAnlegen}>＋ {info.label} ausstellen</button>
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={laden_} />}
 
       {/* ---------- EINLÖSE-PANEL ---------- */}
       {zielG && zielLite && (

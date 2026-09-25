@@ -48,6 +48,7 @@ function ha(n: number | null) { return `${(Number(n) || 0).toLocaleString('de-DE
 
 export default function SchlagkarteiPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'schlaege' | 'duengung' | 'psm' | 'bedarf'>('schlaege');
   const [schlaege, setSchlaege] = useState<Schlag[]>([]);
@@ -95,6 +96,8 @@ export default function SchlagkarteiPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller(s(m.firmenname) || s(m.firma) || s(m.name) || s(m.betrieb) || null);
@@ -122,12 +125,12 @@ export default function SchlagkarteiPage() {
     setBusy('schlag'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('schlag').insert({
-        owner_user_id: uid, bezeichnung: nsch.bezeichnung.trim(), flurstueck: nsch.flurstueck.trim() || null,
+        owner_user_id: besitzer ?? uid, bezeichnung: nsch.bezeichnung.trim(), flurstueck: nsch.flurstueck.trim() || null,
         flaeche_ha: num(nsch.flaeche_ha), kultur: nsch.kultur.trim() || null, kultur_jahr: JAHR,
         aussaat_am: nsch.aussaat_am || null, ernte_am: nsch.ernte_am || null, standort: nsch.standort.trim() || null, status: 'aktiv',
       }).select('id').single();
       if (error || !neu) throw error ?? new Error('Kein Datensatz');
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNsch({ bezeichnung: '', flurstueck: '', flaeche_ha: '', kultur: '', aussaat_am: '', ernte_am: '', standort: '' }); setNmExtra({});
       setOk('Schlag angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -139,7 +142,7 @@ export default function SchlagkarteiPage() {
     setBusy('bedarf'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('schlag_bedarf').insert({
-        owner_user_id: uid, schlag_id: nbed.schlag_id, jahr: Math.round(num(nbed.jahr)) || JAHR,
+        owner_user_id: besitzer ?? uid, schlag_id: nbed.schlag_id, jahr: Math.round(num(nbed.jahr)) || JAHR,
         kultur: nbed.kultur.trim() || null, ertragserwartung: nbed.ertragserwartung.trim() ? num(nbed.ertragserwartung) : null,
         n_bedarf: num(nbed.n_bedarf), p_bedarf: num(nbed.p_bedarf),
       });
@@ -155,7 +158,7 @@ export default function SchlagkarteiPage() {
     setBusy('duengung'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('schlag_duengung').insert({
-        owner_user_id: uid, schlag_id: ndue.schlag_id, datum: ndue.datum, duengemittel: ndue.duengemittel.trim() || null,
+        owner_user_id: besitzer ?? uid, schlag_id: ndue.schlag_id, datum: ndue.datum, duengemittel: ndue.duengemittel.trim() || null,
         art: ndue.art, menge: num(ndue.menge), einheit: ndue.einheit, n_gesamt: num(ndue.n_gesamt),
         n_verfuegbar: ndue.n_verfuegbar.trim() ? num(ndue.n_verfuegbar) : null, p2o5: num(ndue.p2o5), anwender: ndue.anwender.trim() || null,
       });
@@ -173,7 +176,7 @@ export default function SchlagkarteiPage() {
     try {
       const sch = schlagById(npsm.schlag_id);
       const { error } = await supabase.from('schlag_psm').insert({
-        owner_user_id: uid, schlag_id: npsm.schlag_id, datum: npsm.datum, startzeit: npsm.startzeit.trim() || null,
+        owner_user_id: besitzer ?? uid, schlag_id: npsm.schlag_id, datum: npsm.datum, startzeit: npsm.startzeit.trim() || null,
         verwendungsart: npsm.verwendungsart, mittel_name: npsm.mittel_name.trim(), zulassungsnr: npsm.zulassungsnr.trim(),
         aufwandmenge: num(npsm.aufwandmenge), aufwand_einheit: npsm.aufwand_einheit,
         kultur: npsm.kultur.trim() || sch?.kultur || null, flaeche_ha: npsm.flaeche_ha.trim() ? num(npsm.flaeche_ha) : (sch?.flaeche_ha ?? 0),
@@ -253,7 +256,7 @@ export default function SchlagkarteiPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'schlag' ? 0.6 : 1 }} disabled={busy === 'schlag'} onClick={schlagAnlegen}>＋ Anlegen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {schlaege.length === 0 ? <Leerzustand icon="🌾" titel="Noch keine Schläge" text="Legen Sie Ihre Feldstücke an — die Basis für Düngung, Pflanzenschutz und N-Saldo." schritte={["Schlag oben anlegen", "Fläche und Kultur erfassen", "Düngung und Pflanzenschutz dokumentieren"]} /> : (

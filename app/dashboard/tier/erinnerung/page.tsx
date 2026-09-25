@@ -42,6 +42,7 @@ export default function ImpfErinnerungSeite() {
   const heute = heuteBerlin();
   const [tab, setTab] = useState<'faellig' | 'halter'>('faellig');
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tiere, setTiere] = useState<Tier[]>([]);
   const [beh, setBeh] = useState<BehandlungLite[]>([]);
   const [erinnert, setErinnert] = useState<Erinnert[]>([]);
@@ -68,7 +69,13 @@ export default function ImpfErinnerungSeite() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      setUid(data?.user?.id ?? null);
+      const id = data?.user?.id ?? null;
+      setUid(id);
+      if (id) {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      }
       await laden();
     })();
   }, [laden]);
@@ -79,7 +86,7 @@ export default function ImpfErinnerungSeite() {
   function meldung(o: string | null, f: string | null = null) { setOk(o); setFehler(f); }
 
   async function erinnern(z: (typeof liste)[number], kanal: 'email' | 'telefon' | 'sms') {
-    if (!uid) return;
+    if (!besitzer) return;
     const tier = tiere.find((t) => t.id === z.tier.id);
     if (!z.darf) { meldung(null, z.grund); return; }
     if (kanal === 'email' && !(tier?.halter_email && /@/.test(tier.halter_email))) { meldung(null, 'Für den E-Mail-Weg fehlt die E-Mail des Halters (Reiter „Halter & Einwilligung").'); return; }
@@ -89,7 +96,7 @@ export default function ImpfErinnerungSeite() {
       if (kanal === 'email') {
         const t = impfText({ tier: z.tier.name, bezeichnung: z.behandlung.bezeichnung, faellig: z.faellig });
         const { data: e, error } = await supabase.from('erinnerung').insert({
-          owner_user_id: uid, titel: t.titel, bezug_typ: 'frei', kanal: 'email', kunde_name: tier?.halter || null,
+          owner_user_id: besitzer, titel: t.titel, bezug_typ: 'frei', kanal: 'email', kunde_name: tier?.halter || null,
           email: tier?.halter_email, faellig_am: `${heute}T09:00`, status: 'offen', notiz: t.text,
         }).select('id').single();
         if (error) throw error;

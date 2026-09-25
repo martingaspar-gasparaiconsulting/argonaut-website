@@ -44,6 +44,7 @@ const LEER = {
 
 export default function VersandSeite() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [sendungen, setSendungen] = useState<Sendung[]>([]);
   const [laden, setLaden] = useState(true);
@@ -89,6 +90,9 @@ export default function VersandSeite() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       await laden_();
       await verbLaden();
     })();
@@ -152,12 +156,12 @@ export default function VersandSeite() {
   }
 
   async function anlegen() {
-    if (!uid) return;
+    if (!besitzer) return;
     if (probleme.length) { setFehler('Bitte vervollständigen: ' + probleme.join(', ')); return; }
     setBusy('neu'); setFehler(null);
     try {
       const { error } = await supabase.from('versand_sendung').insert({
-        owner_user_id: uid, kontakt_id: form.kontakt_id || null,
+        owner_user_id: besitzer, kontakt_id: form.kontakt_id || null,
         empfaenger_name: form.empfaenger_name.trim(), empfaenger_firma: form.empfaenger_firma.trim() || null,
         strasse: form.strasse.trim(), plz: form.plz.trim(), ort: form.ort.trim(), land: (form.land.trim() || 'DE').toUpperCase(),
         gewicht_kg: num(form.gewicht_kg), laenge_cm: num(form.laenge_cm) || null, breite_cm: num(form.breite_cm) || null, hoehe_cm: num(form.hoehe_cm) || null,

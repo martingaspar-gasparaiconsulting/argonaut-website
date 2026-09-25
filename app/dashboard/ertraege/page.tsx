@@ -48,6 +48,7 @@ function sollFarbe(o: number) { return o >= 0.95 ? C.green : o >= 0.9 ? C.gold :
 
 export default function ErtraegePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [tab, setTab] = useState<'ablesungen' | 'anlagen'>('ablesungen');
   const [anlagen, setAnlagen] = useState<Anlage[]>([]);
@@ -86,6 +87,9 @@ export default function ErtraegePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [meta.firmenname, meta.firma, meta.unternehmen, meta.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -125,12 +129,12 @@ export default function ErtraegePage() {
     setBusy('anl'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('ertrag_anlage').insert({
-        owner_user_id: uid, bezeichnung: nAnl.bezeichnung.trim(), typ: nAnl.typ, standort: nAnl.standort.trim() || null,
+        owner_user_id: besitzer ?? uid, bezeichnung: nAnl.bezeichnung.trim(), typ: nAnl.typ, standort: nAnl.standort.trim() || null,
         nennleistung_kwp: num(nAnl.nennleistung_kwp), soll_spezifisch: num(nAnl.soll_spezifisch),
         verguetung_ct: num(nAnl.verguetung_ct), strompreis_ct: num(nAnl.strompreis_ct), status: nAnl.status,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nAnlExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nAnlExtra); } catch { /* eigene Felder optional */ }
       setNAnl({ bezeichnung: '', typ: 'pv', standort: '', nennleistung_kwp: '', soll_spezifisch: zahlFeld(SOLL_SPEZIFISCH_STD), verguetung_ct: '', strompreis_ct: '', status: 'aktiv' });
       setNAnlExtra({});
       setOk('Anlage angelegt.'); await laden_();
@@ -145,7 +149,7 @@ export default function ErtraegePage() {
     setBusy('abl'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('ertrag_ablesung').insert({
-        owner_user_id: uid, anlage_id: nAbl.anlage_id, von: nAbl.von, bis: nAbl.bis,
+        owner_user_id: besitzer ?? uid, anlage_id: nAbl.anlage_id, von: nAbl.von, bis: nAbl.bis,
         ertrag_kwh: num(nAbl.ertrag_kwh), eigenverbrauch_kwh: num(nAbl.eigenverbrauch_kwh),
         einspeisung_kwh: num(nAbl.einspeisung_kwh), verbrauch_kwh: num(nAbl.verbrauch_kwh), ausfall_stunden: num(nAbl.ausfall_stunden),
       });
@@ -251,7 +255,7 @@ export default function ErtraegePage() {
               ))}
             </div>
           )}
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
         </div>
       )}
 

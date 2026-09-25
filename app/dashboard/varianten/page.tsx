@@ -134,6 +134,7 @@ export default function VariantenSeite() {
   const [varianten, setVarianten] = useState<Variante[]>([]);
   const [artikel, setArtikel] = useState<ArtikelKurz[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [tab, setTab] = useState<"matrizen" | "varianten">("matrizen");
   const [offeneGruppe, setOffeneGruppe] = useState<string | null>(null);
@@ -163,6 +164,12 @@ export default function VariantenSeite() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUserId(userData.user?.id ?? null);
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const eigeneId = userData.user?.id ?? null;
+      if (eigeneId) {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        setBesitzer(typeof chef === 'string' && chef ? chef : eigeneId);
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -257,7 +264,7 @@ export default function VariantenSeite() {
       const res = await supabase.from("variante_gruppe").update(payload).eq("id", gEditId);
       error = res.error;
     } else {
-      const insertObj = userId ? { ...payload, owner_user_id: userId } : payload;
+      const insertObj = besitzer ? { ...payload, owner_user_id: besitzer } : payload;
       const res = await supabase.from("variante_gruppe").insert(insertObj);
       error = res.error;
     }
@@ -291,7 +298,7 @@ export default function VariantenSeite() {
         mindestbestand: 0,
         aktiv: true,
       };
-      return userId ? { ...base, owner_user_id: userId } : base;
+      return besitzer ? { ...base, owner_user_id: besitzer } : base;
     });
     const { error } = await supabase.from("variante_artikel").insert(rows);
     if (error) { window.alert("Erzeugen fehlgeschlagen: " + error.message); return; }
@@ -314,7 +321,7 @@ export default function VariantenSeite() {
         if (error) fehler++; else aktualisiert++;
       } else {
         const base = { ...stamm, aktueller_bestand: Number(v.bestand) || 0 };
-        const insertObj = userId ? { ...base, owner_user_id: userId } : base;
+        const insertObj = besitzer ? { ...base, owner_user_id: besitzer } : base;
         const { data, error } = await supabase.from("artikel").insert(insertObj).select("id").single();
         if (error || !data) { fehler++; continue; }
         await supabase.from("variante_artikel").update({ artikel_id: (data as { id: string }).id }).eq("id", v.id);
@@ -374,7 +381,7 @@ export default function VariantenSeite() {
       const res = await supabase.from("variante_artikel").update(payload).eq("id", vEditId);
       error = res.error;
     } else {
-      const insertObj = userId ? { ...payload, owner_user_id: userId } : payload;
+      const insertObj = besitzer ? { ...payload, owner_user_id: besitzer } : payload;
       const res = await supabase.from("variante_artikel").insert(insertObj);
       error = res.error;
     }
@@ -445,7 +452,7 @@ export default function VariantenSeite() {
         mwst_satz: zahl(val("mwst_satz")) || 19,
         status: "aktiv",
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(besitzer ? { ...base, owner_user_id: besitzer } : base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
     const { error } = await supabase.from("variante_gruppe").insert(rows);

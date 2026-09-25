@@ -61,6 +61,7 @@ const VERT_LABEL: Record<string, string> = { wohnflaeche: 'Fläche', personen: '
 
 export default function BetriebskostenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [abrechnungen, setAbrechnungen] = useState<Abrechnung[]>([]);
   const [einheiten, setEinheiten] = useState<Einheit[]>([]);
@@ -104,6 +105,9 @@ export default function BetriebskostenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -119,11 +123,11 @@ export default function BetriebskostenPage() {
   const kontrolle = useMemo(() => ({ verteilt: verteilteSumme(abrKosten as KostenartLite[], abrEinheiten as EinheitLite[]), gesamt: gesamtKosten(abrKosten as KostenartLite[]) }), [abrKosten, abrEinheiten]);
 
   async function abrechnungAnlegen() {
-    if (!uid || !nAbr.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
+    if (!besitzer || !nAbr.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setBusy('abr'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('bk_abrechnung').insert({
-        owner_user_id: uid, bezeichnung: nAbr.bezeichnung.trim(), zeitraum_von: nAbr.zeitraum_von || null, zeitraum_bis: nAbr.zeitraum_bis || null, status: 'entwurf',
+        owner_user_id: besitzer, bezeichnung: nAbr.bezeichnung.trim(), zeitraum_von: nAbr.zeitraum_von || null, zeitraum_bis: nAbr.zeitraum_bis || null, status: 'entwurf',
       }).select('id').single();
       if (error) throw error;
       setNAbr({ bezeichnung: '', zeitraum_von: `${new Date().getFullYear() - 1}-01-01`, zeitraum_bis: `${new Date().getFullYear() - 1}-12-31` });
@@ -133,11 +137,11 @@ export default function BetriebskostenPage() {
   }
 
   async function einheitAnlegen() {
-    if (!uid || !selAbr || !nEinheit.bezeichnung.trim()) { setFehler('Bitte Abrechnung wählen und Bezeichnung angeben.'); return; }
+    if (!besitzer || !selAbr || !nEinheit.bezeichnung.trim()) { setFehler('Bitte Abrechnung wählen und Bezeichnung angeben.'); return; }
     setBusy('einheit'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bk_einheit').insert({
-        owner_user_id: uid, abrechnung_id: selAbr, bezeichnung: nEinheit.bezeichnung.trim(), mieter_name: nEinheit.mieter_name.trim() || null,
+        owner_user_id: besitzer, abrechnung_id: selAbr, bezeichnung: nEinheit.bezeichnung.trim(), mieter_name: nEinheit.mieter_name.trim() || null,
         wohnflaeche: num(nEinheit.wohnflaeche), personen: Math.round(num(nEinheit.personen)), verbrauch: num(nEinheit.verbrauch), vorauszahlung: num(nEinheit.vorauszahlung),
       });
       if (error) throw error;
@@ -148,7 +152,7 @@ export default function BetriebskostenPage() {
   }
 
   async function kostenartAnlegen() {
-    if (!uid || !selAbr) { setFehler('Bitte zuerst eine Abrechnung wählen.'); return; }
+    if (!besitzer || !selAbr) { setFehler('Bitte zuerst eine Abrechnung wählen.'); return; }
     const kat = BETRKV_KATALOG.find((x) => String(x.nr) === nKost.katalog);
     if (!kat) { setFehler('Bitte eine Kostenart wählen.'); return; }
     const betragRoh = (nKost.betrag || '').trim();
@@ -161,12 +165,12 @@ export default function BetriebskostenPage() {
     setBusy('kost'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('bk_kostenart').insert({
-        owner_user_id: uid, abrechnung_id: selAbr, bezeichnung: kat.bezeichnung, betrag_gesamt: betragWert ?? 0,
+        owner_user_id: besitzer, abrechnung_id: selAbr, bezeichnung: kat.bezeichnung, betrag_gesamt: betragWert ?? 0,
         verteiler: kat.verteiler, betrkv_nr: kat.nr, ist_heizkosten: Boolean(kat.heiz),
         verbrauch_anteil_prozent: kat.heiz ? Math.round(num(nKost.verbrauch_anteil)) : null,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nKostExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer, nKostExtra); } catch { /* eigene Felder optional */ }
       setNKost({ katalog: '17', betrag: '', verbrauch_anteil: zahlFeld(HEIZ_VERBRAUCH_STD) }); setNKostExtra({});
       setOk('Kostenart hinzugefügt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -316,7 +320,7 @@ export default function BetriebskostenPage() {
             )}
           </div>
 
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={laden_} />}
 
           {/* Ergebnis */}
           {abrEinheiten.length > 0 && abrKosten.length > 0 && (

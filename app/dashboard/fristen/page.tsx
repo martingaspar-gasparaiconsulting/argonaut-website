@@ -53,6 +53,7 @@ function eur(n: number | null) { return n == null ? '—' : (Number(n) || 0).toL
 
 export default function KanzleiPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [tab, setTab] = useState<'akten' | 'fristen'>('fristen');
   const [akten, setAkten] = useState<Akte[]>([]);
@@ -92,6 +93,9 @@ export default function KanzleiPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller(str(meta.firmenname) || str(meta.firma) || str(meta.name) || str(meta.kanzlei) || null);
@@ -110,7 +114,7 @@ export default function KanzleiPage() {
     setBusy('akte'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('kanzlei_akte').insert({
-        owner_user_id: uid, aktenzeichen: na.aktenzeichen.trim() || null, mandant: na.mandant.trim(), gegner: na.gegner.trim() || null,
+        owner_user_id: besitzer ?? uid, aktenzeichen: na.aktenzeichen.trim() || null, mandant: na.mandant.trim(), gegner: na.gegner.trim() || null,
         rechtsgebiet: na.rechtsgebiet.trim() || null, gegenstandswert: na.gegenstandswert.trim() ? num(na.gegenstandswert) : null,
         sachbearbeiter: na.sachbearbeiter.trim() || null, status: 'offen', angelegt_am: H,
       });
@@ -128,11 +132,11 @@ export default function KanzleiPage() {
     setBusy('frist'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('kanzlei_frist').insert({
-        owner_user_id: uid, akte_id: nf.akte_id, bezeichnung: nf.bezeichnung.trim(), art: nf.art, frist_datum: nf.frist_datum,
+        owner_user_id: besitzer ?? uid, akte_id: nf.akte_id, bezeichnung: nf.bezeichnung.trim(), art: nf.art, frist_datum: nf.frist_datum,
         vorfrist_tage: Math.round(num(nf.vorfrist_tage)) || VORFRIST_TAGE_STD, verantwortlich: nf.verantwortlich.trim() || null, erledigt: false,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nfExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nfExtra); } catch { /* eigene Felder optional */ }
       setNf({ akte_id: '', bezeichnung: '', art: 'notfrist', frist_datum: H, vorfrist_tage: '7', verantwortlich: '' }); setNfExtra({});
       setOk('Frist eingetragen.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -249,7 +253,7 @@ export default function KanzleiPage() {
             )}
           </div>
 
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>

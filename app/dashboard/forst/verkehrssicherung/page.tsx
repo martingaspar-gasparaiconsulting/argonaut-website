@@ -53,6 +53,7 @@ function leerG(): GForm { return { id: null, art: 'faellgenehmigung', titel: '',
 
 export default function ForstVerkehrssicherungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [baeume, setBaeume] = useState<Baum[]>([]);
   const [objekte, setObjekte] = useState<Objekt[]>([]);
   const [gutachten, setGutachten] = useState<Gutachten[]>([]);
@@ -80,6 +81,9 @@ export default function ForstVerkehrssicherungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeAlles(); setLaden(false);
     })();
   }, [ladeAlles]);
@@ -92,7 +96,7 @@ export default function ForstVerkehrssicherungPage() {
       const { error: e1 } = await supabase.from('forst_baeume').update({ letzte_kontrolle: HEUTE, naechste_kontrolle: naechste }).eq('id', b.id);
       if (e1) throw e1;
       const { error: e2 } = await supabase.from('forst_gutachten').insert({
-        owner_user_id: uid, objekt_id: b.objekt_id, art: 'kontrollprotokoll',
+        owner_user_id: besitzer, objekt_id: b.objekt_id, art: 'kontrollprotokoll',
         titel: `Kontrolle ${b.art || 'Baum'}`, datum: HEUTE,
         notiz: `Regelkontrolle durchgeführt. Nächste Kontrolle: ${naechste ? d(naechste) : 'kein Intervall'}.`,
       });
@@ -112,7 +116,7 @@ export default function ForstVerkehrssicherungPage() {
     if (!uid || !gform.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setSpeichert(true); setFehler(null); setOk(null);
     const payload = {
-      owner_user_id: uid, art: gform.art, titel: gform.titel.trim(), objekt_id: gform.objekt_id || null,
+      owner_user_id: besitzer, art: gform.art, titel: gform.titel.trim(), objekt_id: gform.objekt_id || null,
       ersteller: gform.ersteller.trim() || null, aktenzeichen: gform.aktenzeichen.trim() || null,
       datum: gform.datum || null, gueltig_bis: gform.gueltig_bis || null, notiz: gform.notiz.trim() || null,
     };

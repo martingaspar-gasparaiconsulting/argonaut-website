@@ -63,6 +63,7 @@ const LEER: Record<string, string> = {
 
 export default function ExposePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [exposes, setExposes] = useState<Expose[]>([]);
   const [laden, setLaden] = useState(true);
@@ -101,6 +102,9 @@ export default function ExposePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -126,7 +130,7 @@ export default function ExposePage() {
     setBusy('anlegen'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('expose').insert({
-        owner_user_id: uid, bezeichnung: f.bezeichnung.trim(), objekt_art: f.objekt_art, vermarktung_art: f.vermarktung_art,
+        owner_user_id: besitzer ?? uid, bezeichnung: f.bezeichnung.trim(), objekt_art: f.objekt_art, vermarktung_art: f.vermarktung_art,
         ort: f.ort.trim() || null, adresse: f.adresse.trim() || null,
         wohnflaeche: f.wohnflaeche.trim() ? num(f.wohnflaeche) : null, grundstuecksflaeche: f.grundstuecksflaeche.trim() ? num(f.grundstuecksflaeche) : null,
         zimmer: f.zimmer.trim() ? num(f.zimmer) : null, baujahr: f.baujahr.trim() ? Math.round(num(f.baujahr)) : null,
@@ -141,7 +145,7 @@ export default function ExposePage() {
         status: 'entwurf',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setF({ ...LEER }); setAusweisVorhanden(true); setNmExtra({}); setOk('Exposé angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
@@ -163,7 +167,7 @@ export default function ExposePage() {
     setBusy('inter'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('expose_interessent').insert({
-        owner_user_id: uid, expose_id: selInter, name: nInter.name.trim(),
+        owner_user_id: besitzer ?? uid, expose_id: selInter, name: nInter.name.trim(),
         email: nInter.email.trim() || null, telefon: nInter.telefon.trim() || null,
         status: nInter.status, notiz: nInter.notiz.trim() || null,
       });
@@ -311,7 +315,7 @@ export default function ExposePage() {
         <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'anlegen' ? 0.6 : 1 }} disabled={busy === 'anlegen'} onClick={anlegen}>＋ Exposé anlegen</button>
       </div>
 
-      {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+      {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
       {/* ---------- LISTE ---------- */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (

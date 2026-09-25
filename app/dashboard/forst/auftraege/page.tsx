@@ -52,6 +52,7 @@ function eur(n: number) { return n.toLocaleString('de-DE', { minimumFractionDigi
 
 export default function ForstAuftraegePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [auftraege, setAuftraege] = useState<Auftrag[]>([]);
   const [aktiv, setAktiv] = useState<Auftrag | null>(null);
   const [positionen, setPositionen] = useState<Position[]>([]);
@@ -87,6 +88,8 @@ export default function ForstAuftraegePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       setUid(id);
       await ladeAuftraege();
       const [oRes, eRes] = await Promise.all([
@@ -103,7 +106,7 @@ export default function ForstAuftraegePage() {
     if (!uid || !na.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('forst_auftrag').insert({
-      owner_user_id: uid, titel: na.titel.trim(), art: na.art,
+      owner_user_id: besitzer ?? uid, titel: na.titel.trim(), art: na.art,
       objekt_id: na.objekt_id || null, datum: na.datum,
     }).select('id, objekt_id, titel, art, notdienst, notdienst_zuschlag_prozent, status, datum, notiz').single();
     if (error || !data) { setFehler('Auftrag konnte nicht angelegt werden.'); return; }
@@ -129,7 +132,7 @@ export default function ForstAuftraegePage() {
     if (!em) { setFehler('Bitte ein Einsatzmittel wählen.'); return; }
     setFehler(null);
     const { error } = await supabase.from('forst_auftrag_position').insert({
-      owner_user_id: uid, auftrag_id: aktiv.id, art: 'einsatzmittel', bezeichnung: em.bezeichnung,
+      owner_user_id: besitzer ?? uid, auftrag_id: aktiv.id, art: 'einsatzmittel', bezeichnung: em.bezeichnung,
       menge: num(emMenge) || 1, einheit: 'Std',
       einzelpreis_netto: em.stundensatz_netto ?? 0, wegepauschale_netto: em.wegepauschale_netto ?? 0,
       steuersatz_prozent: em.steuersatz_prozent, sortierung: positionen.length,
@@ -142,7 +145,7 @@ export default function ForstAuftraegePage() {
     if (!uid || !aktiv || !freie.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setFehler(null);
     const { error } = await supabase.from('forst_auftrag_position').insert({
-      owner_user_id: uid, auftrag_id: aktiv.id, art: 'leistung', bezeichnung: freie.bezeichnung.trim(),
+      owner_user_id: besitzer ?? uid, auftrag_id: aktiv.id, art: 'leistung', bezeichnung: freie.bezeichnung.trim(),
       menge: num(freie.menge) || 1, einheit: freie.einheit,
       einzelpreis_netto: num(freie.einzelpreis), wegepauschale_netto: 0,
       steuersatz_prozent: num(freie.steuersatz) || 19, sortierung: positionen.length,

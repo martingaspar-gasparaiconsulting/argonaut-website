@@ -67,6 +67,7 @@ Schnittschutz-Handschuhe Gr. L, Paar, Einkauf 24,50 €, Verkauf 39,90 €`;
 
 export default function PreisImport() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [bestand, setBestand] = useState<BestArtikel[]>([]);
   const [rohtext, setRohtext] = useState("");
   const [laden, setLaden] = useState(false);
@@ -82,6 +83,11 @@ export default function PreisImport() {
 
   async function init() {
     const { data: u } = await supabase.auth.getUser();
+    if (u.user) {
+      const { data: chef } = await supabase.rpc("mein_chef_id");
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === "string" && chef ? chef : u.user.id);
+    }
     setUserId(u.user?.id ?? null);
     const { data } = await supabase
       .from("artikel")
@@ -219,7 +225,7 @@ export default function PreisImport() {
       } else {
         // Neuer Artikel: mit Grunddaten anlegen
         const { error } = await supabase.from("artikel").insert({
-          owner_user_id: userId,
+          owner_user_id: besitzer ?? userId,
           artikelnummer: x.artikelnummer?.trim() || null,
           bezeichnung: x.bezeichnung.trim(),
           einheit: x.einheit.trim() || "Stück",

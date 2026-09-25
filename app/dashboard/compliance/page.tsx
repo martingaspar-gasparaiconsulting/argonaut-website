@@ -42,6 +42,7 @@ function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 
 
 export default function CompliancePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [sofort, setSofort] = useState<Sofort[]>([]);
   const [frei, setFrei] = useState<Frei[]>([]);
   const [laden, setLaden] = useState(true);
@@ -70,6 +71,9 @@ export default function CompliancePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -80,7 +84,7 @@ export default function CompliancePage() {
     setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('sofortmeldungen').insert({
-        owner_user_id: uid, mitarbeiter_name: sf.mitarbeiter_name.trim(), sv_nummer: sf.sv_nummer.trim() || null,
+        owner_user_id: besitzer, mitarbeiter_name: sf.mitarbeiter_name.trim(), sv_nummer: sf.sv_nummer.trim() || null,
         geburtsdatum: sf.geburtsdatum || null, betriebsnummer: sf.betriebsnummer.trim() || null,
         beschaeftigung_ab: sf.beschaeftigung_ab || null, notiz: sf.notiz.trim() || null,
       });
@@ -107,7 +111,7 @@ export default function CompliancePage() {
     setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('freistellungen').insert({
-        owner_user_id: uid, art: ff.art, inhaber: ff.inhaber.trim() || null, finanzamt: ff.finanzamt.trim() || null,
+        owner_user_id: besitzer, art: ff.art, inhaber: ff.inhaber.trim() || null, finanzamt: ff.finanzamt.trim() || null,
         sicherheitsnummer: ff.sicherheitsnummer.trim() || null, gueltig_von: ff.gueltig_von || null, gueltig_bis: ff.gueltig_bis || null, notiz: ff.notiz.trim() || null,
       });
       if (error) throw error;
@@ -135,7 +139,7 @@ export default function CompliancePage() {
     const naechste = nMonate(pf.letzte_pruefung || heute(), monate);
     try {
       const { error } = await supabase.from('pruefpflichten').insert({
-        owner_user_id: uid, art: pf.art, bezeichnung: pf.bezeichnung.trim(), verantwortlich: pf.verantwortlich.trim() || null,
+        owner_user_id: besitzer, art: pf.art, bezeichnung: pf.bezeichnung.trim(), verantwortlich: pf.verantwortlich.trim() || null,
         letzte_pruefung: pf.letzte_pruefung || null, intervall_monate: monate, naechste_pruefung: naechste, notiz: pf.notiz.trim() || null,
       });
       if (error) throw error;

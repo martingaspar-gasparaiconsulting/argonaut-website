@@ -46,6 +46,7 @@ const AN_STATUS = ['angemeldet', 'bestaetigt', 'teilgenommen', 'storniert', 'war
 
 export default function BildungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
   const [kurse, setKurse] = useState<Kurs[]>([]);
   const [anm, setAnm] = useState<Anmeldung[]>([]);
@@ -97,6 +98,8 @@ export default function BildungPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const name = [m.firmenname, m.firma, m.company, m.full_name, m.name].find((x) => typeof x === 'string' && x.trim());
       setAussteller(typeof name === 'string' ? name : null);
@@ -125,7 +128,7 @@ export default function BildungPage() {
     if (!uid || !nk.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('bildung_kurse').insert({
-      owner_user_id: uid, titel: nk.titel.trim(), start_am: nk.start_am || null, ende_am: nk.ende_am || null,
+      owner_user_id: besitzer ?? uid, titel: nk.titel.trim(), start_am: nk.start_am || null, ende_am: nk.ende_am || null,
       ort: nk.ort.trim() || null, plaetze: parseInt(nk.plaetze, 10) || 10, preis: num(nk.preis),
       art: nk.art, dozent: nk.dozent.trim() || null, zertifikat_aktiv: nk.zertifikat_aktiv,
     }).select('id, titel, start_am, ende_am, ort, plaetze, preis, status, art, dozent, zertifikat_aktiv').single();
@@ -138,7 +141,7 @@ export default function BildungPage() {
     if (!uid || !aktiv || !na.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
     const voll = istVoll(aktiv.plaetze, anmFor(aktiv.id));
-    const payload: Record<string, unknown> = { owner_user_id: uid, kurs_id: aktiv.id, name: na.name.trim(), email: na.email.trim() || null };
+    const payload: Record<string, unknown> = { owner_user_id: besitzer ?? uid, kurs_id: aktiv.id, name: na.name.trim(), email: na.email.trim() || null };
     if (voll) { payload.status = 'warteliste'; payload.warteliste_seit = new Date().toISOString(); }
     const { error } = await supabase.from('bildung_anmeldungen').insert(payload);
     if (error) { setFehler('Anmeldung fehlgeschlagen.'); return; }
@@ -167,7 +170,7 @@ export default function BildungPage() {
     if (!uid || !aktiv || !nt.datum) { setFehler('Bitte ein Datum angeben.'); return; }
     setFehler(null);
     const { error } = await supabase.from('bildung_termine').insert({
-      owner_user_id: uid, kurs_id: aktiv.id, datum: nt.datum, von_uhr: nt.von_uhr || null, bis_uhr: nt.bis_uhr || null, thema: nt.thema.trim() || null,
+      owner_user_id: besitzer ?? uid, kurs_id: aktiv.id, datum: nt.datum, von_uhr: nt.von_uhr || null, bis_uhr: nt.bis_uhr || null, thema: nt.thema.trim() || null,
     });
     if (error) { setFehler('Termin konnte nicht gespeichert werden.'); return; }
     setNt({ datum: heute(), von_uhr: '', bis_uhr: '', thema: '' }); await laden_();
@@ -176,7 +179,7 @@ export default function BildungPage() {
   async function anwesenheitToggle(terminId: string, anmeldungId: string, aktuell: boolean) {
     if (!uid) return;
     const { error } = await supabase.from('bildung_anwesenheit').upsert(
-      { owner_user_id: uid, termin_id: terminId, anmeldung_id: anmeldungId, anwesend: !aktuell },
+      { owner_user_id: besitzer ?? uid, termin_id: terminId, anmeldung_id: anmeldungId, anwesend: !aktuell },
       { onConflict: 'termin_id,anmeldung_id' },
     );
     if (!error) await laden_();

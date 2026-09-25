@@ -47,6 +47,7 @@ const LEER_E: Einstellung = { org_name: '', org_anschrift: '', finanzamt: '', st
 
 export default function SpendenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'spenden' | 'einstellungen'>('spenden');
   const [spenden, setSpenden] = useState<Spende[]>([]);
   const [eForm, setEForm] = useState<Einstellung>(LEER_E);
@@ -84,6 +85,9 @@ export default function SpendenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await laden_();
     })();
   }, [laden_]);
@@ -96,12 +100,12 @@ export default function SpendenPage() {
     setBusy('spende'); setFehler(null); setOk(null);
     try {
       const { data: neu, error } = await supabase.from('spende').insert({
-        owner_user_id: uid, datum: ns.datum, spender_name: ns.spender_name.trim(), spender_anschrift: ns.spender_anschrift.trim() || null,
+        owner_user_id: besitzer, datum: ns.datum, spender_name: ns.spender_name.trim(), spender_anschrift: ns.spender_anschrift.trim() || null,
         betrag: num(ns.betrag), art: ns.art, sachwert_text: ns.sachwert_text.trim() || null, verzicht_aufwand: ns.art === 'aufwandsverzicht' || ns.verzicht_aufwand,
         zweck: ns.zweck.trim() || null, bestaetigt: false,
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nsExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nsExtra); } catch { /* eigene Felder optional */ }
       setNsExtra({});
       setNs({ datum: H, spender_name: '', spender_anschrift: '', betrag: '', art: 'geldzuwendung', sachwert_text: '', verzicht_aufwand: false, zweck: '' });
       setOk('Zuwendung erfasst.'); await laden_();
@@ -114,7 +118,7 @@ export default function SpendenPage() {
     setBusy('einstellung'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('spende_einstellung').upsert({
-        owner_user_id: uid,
+        owner_user_id: besitzer,
         org_name: eForm.org_name || null, org_anschrift: eForm.org_anschrift || null, finanzamt: eForm.finanzamt || null,
         steuernummer: eForm.steuernummer || null, freistellung_datum: eForm.freistellung_datum || null, freistellung_zeitraum: eForm.freistellung_zeitraum || null,
         koerperschaft_art: eForm.koerperschaft_art || null, zweck: eForm.zweck || null, aussteller_ort: eForm.aussteller_ort || null,
@@ -196,7 +200,7 @@ export default function SpendenPage() {
             )}
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'spende' ? 0.6 : 1 }} disabled={busy === 'spende'} onClick={spendeAnlegen}>＋ Erfassen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {spenden.length === 0 ? <Leerzustand icon="🎗️" titel="Noch keine Zuwendungen" text="Erfasse Geld- und Sachspenden und erstelle Zuwendungsbestätigungen nach amtlichem Muster." schritte={["Zuwendung oben anlegen", "Art und Betrag erfassen", "Zuwendungsbestätigung (§50 EStDV) ausgeben"]} /> : (

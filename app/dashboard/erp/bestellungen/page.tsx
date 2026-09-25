@@ -117,7 +117,7 @@ export default function BestellungenListe() {
   const [bestellungen, setBestellungen] = useState<BestellungRow[]>([]);
   const [lieferanten, setLieferanten] = useState<LieferantKurz[]>([]);
   const [laden, setLaden] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -140,7 +140,12 @@ export default function BestellungenListe() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const id = userData.user?.id ?? null;
+      if (id) {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      }
       await Promise.all([lade(), ladeLieferanten()]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,7 +246,7 @@ export default function BestellungenListe() {
       bestelldatum: neuBestelldatum || null,
       lieferdatum_erwartet: neuLieferdatum || null,
     };
-    const insertObj = userId ? { ...basis, owner_user_id: userId } : basis;
+    const insertObj = besitzer ? { ...basis, owner_user_id: besitzer } : basis;
     const { data, error } = await supabase
       .from("bestellungen")
       .insert(insertObj)
@@ -370,7 +375,7 @@ export default function BestellungenListe() {
       status: "entwurf",
       bestelldatum: new Date().toISOString().slice(0, 10),
     };
-    const insertObj = userId ? { ...basis, owner_user_id: userId } : basis;
+    const insertObj = besitzer ? { ...basis, owner_user_id: besitzer } : basis;
     const { data, error } = await supabase
       .from("bestellungen")
       .insert(insertObj)
@@ -390,7 +395,7 @@ export default function BestellungenListe() {
         menge: it.vorschlag_menge,
         einzelpreis: it.einkaufspreis,
         position: idx + 1,
-        ...(userId ? { owner_user_id: userId } : {}),
+        ...(besitzer ? { owner_user_id: besitzer } : {}),
       }));
     if (positionen.length > 0) {
       await supabase.from("bestellpositionen").insert(positionen);

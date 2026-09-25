@@ -31,6 +31,7 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 
 export default function AgenturPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [retainer, setRetainer] = useState<Retainer[]>([]);
   const [zeiten, setZeiten] = useState<Zeit[]>([]);
   const [aktiv, setAktiv] = useState<Retainer | null>(null);
@@ -52,26 +53,30 @@ export default function AgenturPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_(); setLaden(false);
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await laden_(); setLaden(false);
     })();
   }, [laden_]);
 
   const verbraucht = useCallback((rid: string) => zeiten.filter((z) => z.retainer_id === rid).reduce((s, z) => s + (Number(z.stunden) || 0), 0), [zeiten]);
 
   async function retainerAnlegen() {
-    if (!uid || !nr.kunde_name.trim()) { setFehler('Bitte einen Kunden angeben.'); return; }
+    if (!besitzer || !nr.kunde_name.trim()) { setFehler('Bitte einen Kunden angeben.'); return; }
     setFehler(null); setOk(null);
     const { error } = await supabase.from('agentur_retainer').insert({
-      owner_user_id: uid, kunde_name: nr.kunde_name.trim(), bezeichnung: nr.bezeichnung.trim() || 'Retainer',
+      owner_user_id: besitzer, kunde_name: nr.kunde_name.trim(), bezeichnung: nr.bezeichnung.trim() || 'Retainer',
       monatsstunden: num(nr.monatsstunden), stundensatz: num(nr.stundensatz),
     });
     if (error) { setFehler('Retainer konnte nicht gespeichert werden.'); return; }
     setNr({ kunde_name: '', bezeichnung: 'Retainer', monatsstunden: '', stundensatz: '' }); setOk('Retainer gespeichert.'); await laden_();
   }
   async function zeitBuchen() {
-    if (!uid || !aktiv || num(nz.stunden) <= 0) { setFehler('Bitte Stunden angeben.'); return; }
+    if (!besitzer || !aktiv || num(nz.stunden) <= 0) { setFehler('Bitte Stunden angeben.'); return; }
     setFehler(null);
-    const { error } = await supabase.from('agentur_zeiten').insert({ owner_user_id: uid, retainer_id: aktiv.id, datum: nz.datum, stunden: num(nz.stunden), beschreibung: nz.beschreibung.trim() || null });
+    const { error } = await supabase.from('agentur_zeiten').insert({ owner_user_id: besitzer, retainer_id: aktiv.id, datum: nz.datum, stunden: num(nz.stunden), beschreibung: nz.beschreibung.trim() || null });
     if (error) { setFehler('Zeit konnte nicht gebucht werden.'); return; }
     setNz({ datum: heute(), stunden: '', beschreibung: '' }); await laden_();
   }

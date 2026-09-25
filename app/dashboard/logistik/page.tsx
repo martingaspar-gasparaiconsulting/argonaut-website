@@ -32,6 +32,7 @@ const T_STATUS: Record<string, string> = { geplant: C.textDim, unterwegs: C.cyan
 
 export default function LogistikPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [touren, setTouren] = useState<Tour[]>([]);
   const [sendungen, setSendungen] = useState<Sendung[]>([]);
   const [aktiv, setAktiv] = useState<Tour | null>(null);
@@ -53,14 +54,18 @@ export default function LogistikPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_(); setLaden(false);
+      setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      await laden_(); setLaden(false);
     })();
   }, [laden_]);
 
   async function tourAnlegen() {
-    if (!uid) return;
+    if (!besitzer) return;
     setFehler(null); setOk(null);
-    const { data, error } = await supabase.from('logistik_touren').insert({ owner_user_id: uid, datum: nt.datum, fahrer: nt.fahrer.trim() || null, fahrzeug: nt.fahrzeug.trim() || null })
+    const { data, error } = await supabase.from('logistik_touren').insert({ owner_user_id: besitzer, datum: nt.datum, fahrer: nt.fahrer.trim() || null, fahrzeug: nt.fahrzeug.trim() || null })
       .select('id, datum, fahrer, fahrzeug, status').single();
     if (error || !data) { setFehler('Tour konnte nicht angelegt werden.'); return; }
     setNt({ datum: heute(), fahrer: '', fahrzeug: '' }); setOk('Tour angelegt.'); await laden_(); setAktiv(data as Tour);
@@ -70,11 +75,11 @@ export default function LogistikPage() {
     if (!error) { setTouren((l) => l.map((x) => (x.id === t.id ? { ...x, status } : x))); setAktiv((a) => (a && a.id === t.id ? { ...a, status } : a)); }
   }
   async function sendungAnlegen() {
-    if (!uid || !aktiv || !ns.empfaenger.trim()) { setFehler('Bitte einen Empfänger angeben.'); return; }
+    if (!besitzer || !aktiv || !ns.empfaenger.trim()) { setFehler('Bitte einen Empfänger angeben.'); return; }
     setFehler(null);
     const anzahl = sendungen.filter((x) => x.tour_id === aktiv.id).length;
     const { error } = await supabase.from('logistik_sendungen').insert({
-      owner_user_id: uid, tour_id: aktiv.id, sendungsnr: ns.sendungsnr.trim() || null, empfaenger: ns.empfaenger.trim(), adresse: ns.adresse.trim() || null, reihenfolge: anzahl + 1,
+      owner_user_id: besitzer, tour_id: aktiv.id, sendungsnr: ns.sendungsnr.trim() || null, empfaenger: ns.empfaenger.trim(), adresse: ns.adresse.trim() || null, reihenfolge: anzahl + 1,
     });
     if (error) { setFehler('Sendung konnte nicht gespeichert werden.'); return; }
     setNs({ sendungsnr: '', empfaenger: '', adresse: '' }); await laden_();

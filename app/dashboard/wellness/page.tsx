@@ -32,6 +32,7 @@ function d(iso: string) { const p = (iso || '').split('-'); return p.length === 
 
 export default function WellnessPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kunden, setKunden] = useState<Kunde[]>([]);
   const [aktiv, setAktiv] = useState<Kunde | null>(null);
   const [beh, setBeh] = useState<Behandlung[]>([]);
@@ -55,6 +56,9 @@ export default function WellnessPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeKunden(); setLaden(false);
     })();
   }, [ladeKunden]);
@@ -63,7 +67,7 @@ export default function WellnessPage() {
     if (!uid || !nk.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
     const { data, error } = await supabase.from('wellness_kunden').insert({
-      owner_user_id: uid, name: nk.name.trim(), telefon: nk.telefon.trim() || null, email: nk.email.trim() || null,
+      owner_user_id: besitzer ?? uid, name: nk.name.trim(), telefon: nk.telefon.trim() || null, email: nk.email.trim() || null,
       geburtsdatum: nk.geburtsdatum || null, hinweise: nk.hinweise.trim() || null,
     }).select('id, name, telefon, email, hinweise').single();
     if (error || !data) { setFehler('Kunde konnte nicht gespeichert werden.'); return; }
@@ -75,7 +79,7 @@ export default function WellnessPage() {
     if (!uid || !aktiv || !nb.behandlung.trim()) { setFehler('Bitte eine Behandlung angeben.'); return; }
     setFehler(null);
     const { error } = await supabase.from('wellness_behandlungen').insert({
-      owner_user_id: uid, kunde_id: aktiv.id, datum: nb.datum, behandlung: nb.behandlung.trim(),
+      owner_user_id: besitzer ?? uid, kunde_id: aktiv.id, datum: nb.datum, behandlung: nb.behandlung.trim(),
       dauer_min: nb.dauer_min ? parseInt(nb.dauer_min, 10) : null, preis: num(nb.preis), notiz: nb.notiz.trim() || null,
     });
     if (error) { setFehler('Behandlung konnte nicht gespeichert werden.'); return; }

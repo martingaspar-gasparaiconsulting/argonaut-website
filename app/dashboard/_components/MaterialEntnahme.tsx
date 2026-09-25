@@ -57,6 +57,7 @@ type Props = {
 
 export default function MaterialEntnahme({ positionId, auftragId, menge, onGebucht }: Props) {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [offen, setOffen] = useState(false);
   const [artikel, setArtikel] = useState<ArtikelRow[]>([]);
   const [standorte, setStandorte] = useState<StandortRow[]>([]);
@@ -69,31 +70,37 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      setUid(data?.user?.id ?? null);
+      const id = data?.user?.id ?? null;
+      if (id) {
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      }
+      setUid(id);
     })();
   }, []);
 
   const ladeBuchungen = useCallback(async () => {
-    if (!uid) return;
+    if (!besitzer) return;
     const { data } = await supabase.from('werkstatt_material_buchungen')
       .select('id, artikel_id, menge, storniert, bewegung_id')
       .eq('position_id', positionId).eq('storniert', false);
     setBuchungen((data as BuchungRow[]) ?? []);
-  }, [uid, positionId]);
+  }, [besitzer, positionId]);
 
   useEffect(() => { void ladeBuchungen(); }, [ladeBuchungen]);
 
   async function ladeArtikel() {
-    if (!uid) return;
+    if (!besitzer) return;
     const [a, s, b] = await Promise.all([
       supabase.from('artikel')
         .select('id, artikelnummer, bezeichnung, einheit, aktueller_bestand, einkaufspreis')
-        .eq('owner_user_id', uid).eq('aktiv', true)
+        .eq('owner_user_id', besitzer).eq('aktiv', true)
         .order('bezeichnung', { ascending: true }),
       supabase.from('standorte')
-        .select('id, name').eq('owner_user_id', uid).eq('aktiv', true).order('name'),
+        .select('id, name').eq('owner_user_id', besitzer).eq('aktiv', true).order('name'),
       supabase.from('artikel_bestand_standort')
-        .select('artikel_id, standort_id, bestand').eq('owner_user_id', uid),
+        .select('artikel_id, standort_id, bestand').eq('owner_user_id', besitzer),
     ]);
     setArtikel((a.data as ArtikelRow[]) ?? []);
     setStandorte((s.data as StandortRow[]) ?? []);
@@ -136,7 +143,7 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
 
   // --- Entnahme buchen (ausgang) ---------------------------------------
   async function entnehmen(a: ArtikelRow) {
-    if (!uid || busy) return;
+    if (!besitzer || busy) return;
 
     // Erst die Filiale klären — sonst fragt man den Menschen und weist ihn
     // danach ab. Das ist die eine Stelle, an der geraten werden könnte.
@@ -172,7 +179,7 @@ export default function MaterialEntnahme({ positionId, auftragId, menge, onGebuc
       //    Artikel und Menge, nicht über diese Kennung — die Rückbuchung
       //    funktioniert also unverändert.
       const { error: e2 } = await supabase.from('werkstatt_material_buchungen').insert({
-        owner_user_id: uid, position_id: positionId, auftrag_id: auftragId,
+        owner_user_id: besitzer, position_id: positionId, auftrag_id: auftragId,
         artikel_id: a.id, menge, bewegung_id: null,
       });
       if (e2) throw e2;

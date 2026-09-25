@@ -57,6 +57,7 @@ const LEER_NP: NeuePos = { artikel: '', menge: '', einheit: 'Stk', ek_preis: '',
 
 export default function EinkaufPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
   const [tab, setTab] = useState<'bestellungen' | 'lieferanten' | 'kalkulation'>('bestellungen');
   const [lieferanten, setLieferanten] = useState<Lieferant[]>([]);
@@ -115,6 +116,9 @@ export default function EinkaufPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       const m = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const firma = [m.firmenname, m.firma, m.unternehmen, m.name].find((x) => typeof x === 'string' && (x as string).trim());
@@ -136,7 +140,7 @@ export default function EinkaufPage() {
     setBusy('lieferant'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('lieferant').insert({
-        owner_user_id: uid, name: nl.name.trim(), kundennummer: nl.kundennummer.trim() || null,
+        owner_user_id: besitzer ?? uid, name: nl.name.trim(), kundennummer: nl.kundennummer.trim() || null,
         ansprechpartner: nl.ansprechpartner.trim() || null, email: nl.email.trim() || null,
         telefon: nl.telefon.trim() || null, zahlungsziel_tage: nl.zahlungsziel_tage.trim() ? Math.round(num(nl.zahlungsziel_tage)) : null,
         status: 'aktiv', notiz: nl.notiz.trim() || null,
@@ -164,20 +168,20 @@ export default function EinkaufPage() {
     setBusy('bestellung'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('bestellung').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), lieferant_id: nb.lieferant_id || null,
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), lieferant_id: nb.lieferant_id || null,
         bestell_nr: nb.bestell_nr.trim() || `BE-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000 + 1000)}`,
         datum: nb.datum, status: 'bestellt', notiz: nb.notiz.trim() || null,
       }).select('id').single();
       if (error) throw error;
       const bid = (data as { id: string }).id;
       const rows = posEntwurf.map((p) => ({
-        owner_user_id: uid, bestellung_id: bid, artikel: p.artikel.trim(), menge: num(p.menge),
+        owner_user_id: besitzer ?? uid, bestellung_id: bid, artikel: p.artikel.trim(), menge: num(p.menge),
         einheit: p.einheit.trim() || null, ek_preis: num(p.ek_preis), mwst_satz: num(p.mwst_satz) || 19,
         menge_erhalten: 0, retoure_menge: 0,
       }));
       const { error: e2 } = await supabase.from('bestellung_position').insert(rows);
       if (e2) throw e2;
-      try { await speichereWerte(MODUL, bid, uid, nbExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, bid, besitzer ?? uid, nbExtra); } catch { /* eigene Felder optional */ }
       setNb({ lieferant_id: '', bestell_nr: '', datum: heuteLokal(), notiz: '' }); setNbExtra({});
       setPosEntwurf([]); setOk('Bestellung angelegt.'); await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -356,7 +360,7 @@ export default function EinkaufPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'bestellung' ? 0.6 : 1 }} disabled={busy === 'bestellung'} onClick={bestellungAnlegen}>＋ Bestellung anlegen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>

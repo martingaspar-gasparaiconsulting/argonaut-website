@@ -45,6 +45,7 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 
 export default function HilfsmittelPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<{ name: string | null; anschrift: string | null; ort: string | null }>({ name: null, anschrift: null, ort: null });
   const [tab, setTab] = useState<'liste' | 'bearbeiten'>('liste');
   const [versorgungen, setVersorgungen] = useState<Versorgung[]>([]);
@@ -84,6 +85,8 @@ export default function HilfsmittelPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chef === 'string' && chef ? chef : id); // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       const meta = (data?.user?.user_metadata ?? {}) as Record<string, unknown>;
       const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
       setAussteller({ name: str(meta.firmenname) || str(meta.firma) || str(meta.name) || null, anschrift: str(meta.anschrift) || null, ort: str(meta.ort) || str(meta.stadt) || null });
@@ -101,11 +104,11 @@ export default function HilfsmittelPage() {
     setBusy('versorgung'); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('hilfsmittel_versorgung').insert({
-        owner_user_id: uid, versicherter: nv.versicherter.trim(), versicherten_nr: nv.versicherten_nr.trim() || null, krankenkasse: nv.krankenkasse.trim() || null,
+        owner_user_id: besitzer ?? uid, versicherter: nv.versicherter.trim(), versicherten_nr: nv.versicherten_nr.trim() || null, krankenkasse: nv.krankenkasse.trim() || null,
         arzt: nv.arzt.trim() || null, verordnung_datum: nv.verordnung_datum || null, diagnose: nv.diagnose.trim() || null, status: 'verordnet',
       }).select('id').single();
       if (error) throw error;
-      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (data as { id: string } | null)?.id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNv({ versicherter: '', versicherten_nr: '', krankenkasse: '', arzt: '', verordnung_datum: H, diagnose: '' }); setNmExtra({});
       setOk('Versorgung angelegt.'); await laden_();
       if (data?.id) { setAktivId(data.id); setTab('bearbeiten'); }
@@ -119,7 +122,7 @@ export default function HilfsmittelPage() {
     setBusy('position'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('hilfsmittel_position').insert({
-        owner_user_id: uid, versorgung_id: aktivId, position: aktivPos.length + 1, hmv_nummer: np.hmv_nummer.trim() || null, bezeichnung: np.bezeichnung.trim() || null,
+        owner_user_id: besitzer ?? uid, versorgung_id: aktivId, position: aktivPos.length + 1, hmv_nummer: np.hmv_nummer.trim() || null, bezeichnung: np.bezeichnung.trim() || null,
         menge: num(np.menge) || 1, einzelpreis: num(np.einzelpreis), mehrkosten: num(np.mehrkosten),
       });
       if (error) throw error;
@@ -207,7 +210,7 @@ export default function HilfsmittelPage() {
             </div>
             <button style={{ ...styles.primaer, marginTop: 12, opacity: busy === 'versorgung' ? 0.6 : 1 }} disabled={busy === 'versorgung'} onClick={versorgungAnlegen}>＋ Anlegen & öffnen</button>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
               {versorgungen.length === 0 ? <Leerzustand icon="🦽" titel="Noch keine Versorgungen" text="Erfasse Hilfsmittel-Versorgungen von der Verordnung bis zur Genehmigung." schritte={["Versorgung oben anlegen", "Positionen mit HMV-Nummer erfassen", "Kostenvoranschlag und Genehmigung dokumentieren"]} /> : (

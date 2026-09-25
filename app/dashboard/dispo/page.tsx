@@ -117,6 +117,7 @@ const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 export default function DispoPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [chefName, setChefName] = useState('Ich (Chef)');
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -145,6 +146,9 @@ export default function DispoPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       // Name des Inhabers für die "Ich (Chef)"-Zeile.
       const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', id).maybeSingle();
       const name = (prof?.full_name ?? '').trim();
@@ -153,7 +157,7 @@ export default function DispoPage() {
   }, []);
 
   const laden_ = useCallback(async () => {
-    if (!uid) return;
+    if (!besitzer) return;
     setLaden(true); setFehler(null);
     try {
       const heute = isoTag(new Date());
@@ -190,7 +194,7 @@ export default function DispoPage() {
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
-  }, [uid]);
+  }, [besitzer]);
 
   useEffect(() => { void laden_(); }, [laden_]);
 
@@ -273,7 +277,7 @@ export default function DispoPage() {
 
   // --- Speichern (Insert/Update) -------------------------------------------
   async function speichern() {
-    if (!uid || !form) return;
+    if (!besitzer || !form) return;
     const s = baueZeitpunkt(form.datum, form.von);
     const e = baueZeitpunkt(form.datum, form.bis);
     if (!s || !e || e <= s) { setFehler('Bitte gültige Zeiten wählen (Ende nach Start).'); return; }
@@ -298,7 +302,7 @@ export default function DispoPage() {
         if (error) throw error;
         setErfolg('Einsatz gespeichert.');
       } else {
-        const { error } = await supabase.from('einsaetze').insert({ owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), quelle: 'dispo', ...daten });
+        const { error } = await supabase.from('einsaetze').insert({ owner_user_id: besitzer, standort_id: konkreterStandort(leseStandortCookie()), quelle: 'dispo', ...daten });
         if (error) throw error;
         setErfolg('Einsatz angelegt.');
       }

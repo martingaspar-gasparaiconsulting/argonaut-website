@@ -53,6 +53,7 @@ function clean(code: string) { return (code || '').trim().replace(/[^A-Za-z0-9\-
 
 export default function LagerScannerPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [modus, setModus] = useState<Modus>('eingang');
   const [code, setCode] = useState('');
   const [artikel, setArtikel] = useState<Artikel | null>(null);
@@ -80,8 +81,12 @@ export default function LagerScannerPage() {
       const id = data?.user?.id ?? null;
       setUid(id);
       if (id) {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        const b = typeof chef === 'string' && chef ? chef : id;
+        setBesitzer(b);
         const { data: st } = await supabase.from('standorte')
-          .select('id, name').eq('owner_user_id', id).eq('aktiv', true).order('name');
+          .select('id, name').eq('owner_user_id', b).eq('aktiv', true).order('name');
         setStandorte((st as StandortRow[]) ?? []);
       }
     })();
@@ -200,7 +205,7 @@ export default function LagerScannerPage() {
     setAnlegenBusy(true); setFehler(null);
     try {
       const { data, error } = await supabase.from('artikel').insert({
-        owner_user_id: uid, bezeichnung: neuForm.bez.trim(), einheit: neuForm.einheit.trim() || 'Stk',
+        owner_user_id: besitzer ?? uid, bezeichnung: neuForm.bez.trim(), einheit: neuForm.einheit.trim() || 'Stk',
         ean: anlegenCode, artikelnummer: neuForm.nr.trim() || null, aktueller_bestand: 0, aktiv: true,
       }).select('id, artikelnummer, bezeichnung, einheit, aktueller_bestand, ean, lagerort').single();
       if (error) throw error;

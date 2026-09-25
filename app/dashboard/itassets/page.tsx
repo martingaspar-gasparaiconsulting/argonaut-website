@@ -62,6 +62,7 @@ export default function ItAssetsSeite() {
   const [lizenzen, setLizenzen] = useState<Lizenz[]>([]);
   const [sla, setSla] = useState<Sla[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [suche, setSuche] = useState("");
   const [hinweis, setHinweis] = useState<string | null>(null);
@@ -80,7 +81,13 @@ export default function ItAssetsSeite() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const id = userData.user?.id ?? null;
+      setUserId(id);
+      if (id) {
+        const { data: chef } = await supabase.rpc("mein_chef_id");
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        setBesitzer(typeof chef === "string" && chef ? chef : id);
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,24 +142,24 @@ export default function ItAssetsSeite() {
       const payload = { kunde: aForm.kunde.trim() || null, bezeichnung: aForm.bezeichnung.trim(), typ: aForm.typ, hersteller: aForm.hersteller.trim() || null, modell: aForm.modell.trim() || null, seriennr: aForm.seriennr.trim() || null, standort: aForm.standort.trim() || null, status: aForm.status, anschaffung: aForm.anschaffung || null, garantie_bis: aForm.garantie_bis || null, notiz: aForm.notiz.trim() || null };
       if (editId) {
         error = (await supabase.from("it_asset").update(payload).eq("id", editId)).error;
-        if (!error) { try { await speichereWerte(MODUL, editId, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+        if (!error) { try { await speichereWerte(MODUL, editId, besitzer ?? userId, nmExtra); } catch { /* eigene Felder optional */ } }
       } else {
-        const ins = userId ? { ...payload, owner_user_id: userId } : payload;
+        const ins = besitzer ? { ...payload, owner_user_id: besitzer } : payload;
         const res = await supabase.from("it_asset").insert(ins).select("id").single();
         error = res.error;
-        if (!error && res.data) { try { await speichereWerte(MODUL, (res.data as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ } }
+        if (!error && res.data) { try { await speichereWerte(MODUL, (res.data as { id: string }).id, besitzer ?? userId, nmExtra); } catch { /* eigene Felder optional */ } }
       }
       if (!error) setNmExtra({});
     } else if (modal === "lizenz") {
       if (!lForm.bezeichnung.trim()) { setBusy(false); setFehler("Bezeichnung ist Pflicht."); return; }
       const payload = { kunde: lForm.kunde.trim() || null, bezeichnung: lForm.bezeichnung.trim(), hersteller: lForm.hersteller.trim() || null, lizenztyp: lForm.lizenztyp, plaetze: ganz(lForm.plaetze) ?? 1, belegt: ganz(lForm.belegt) ?? 0, start: lForm.start || null, ablauf: lForm.ablauf || null, kosten_jahr: zahl(lForm.kosten_jahr), schluessel: lForm.schluessel.trim() || null, notiz: lForm.notiz.trim() || null, status: lForm.status };
       if (editId) error = (await supabase.from("it_lizenz").update(payload).eq("id", editId)).error;
-      else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("it_lizenz").insert(ins)).error; }
+      else { const ins = besitzer ? { ...payload, owner_user_id: besitzer } : payload; error = (await supabase.from("it_lizenz").insert(ins)).error; }
     } else if (modal === "sla") {
       if (!sForm.bezeichnung.trim()) { setBusy(false); setFehler("Bezeichnung ist Pflicht."); return; }
       const payload = { kunde: sForm.kunde.trim() || null, bezeichnung: sForm.bezeichnung.trim(), reaktion_std: zahl(sForm.reaktion_std), wiederherstell_std: zahl(sForm.wiederherstell_std), servicezeit: sForm.servicezeit.trim() || null, verfuegbarkeit: zahl(sForm.verfuegbarkeit), gueltig_bis: sForm.gueltig_bis || null, notiz: sForm.notiz.trim() || null };
       if (editId) error = (await supabase.from("it_sla").update(payload).eq("id", editId)).error;
-      else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("it_sla").insert(ins)).error; }
+      else { const ins = besitzer ? { ...payload, owner_user_id: besitzer } : payload; error = (await supabase.from("it_sla").insert(ins)).error; }
     }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
@@ -196,7 +203,7 @@ export default function ItAssetsSeite() {
         start: val("start") || null, ablauf: val("ablauf") || null, kosten_jahr: zahl(val("kosten_jahr")),
         schluessel: val("schluessel") || null, status: "aktiv",
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(besitzer ? { ...base, owner_user_id: besitzer } : base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
     const { error } = await supabase.from("it_lizenz").insert(rows);
@@ -276,7 +283,7 @@ export default function ItAssetsSeite() {
               ); })}
             </div>
           )}
-          {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
+          {(besitzer ?? userId) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? userId) as string} onChange={ladeAlles} />}
         </div>
       ) : tab === "lizenzen" ? (
         <div>

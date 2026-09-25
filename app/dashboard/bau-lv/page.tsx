@@ -44,6 +44,7 @@ const LEER_POS = { ordnungszahl: '', kurztext: '', menge: '1', einheit: 'm²', e
 
 export default function BauLvPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'lv' | 'abnahme'>('lv');
   const [lvs, setLvs] = useState<LV[]>([]);
   const [aktivLv, setAktivLv] = useState<LV | null>(null);
@@ -85,6 +86,9 @@ export default function BauLvPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id);
       await ladeLvs(); await ladeAbnahmen();
       setLaden(false);
@@ -95,10 +99,10 @@ export default function BauLvPage() {
     if (!uid || !neuLv.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null })
+      const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: besitzer ?? uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null })
         .select('id, titel, kunde_name, status, netto_summe, rechnung_id').single();
       if (error || !data) { setFehler('LV konnte nicht angelegt werden.'); return; }
-      try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+      try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '' }); setNmExtra({});
       setWerteMap((w) => ({ ...w, [(data as { id: string }).id]: { ...nmExtra } }));
       setAktivLv(data as LV); setPositionen([]);
@@ -122,7 +126,7 @@ export default function BauLvPage() {
     try {
       const gesamt = Math.round(num(pos.menge) * num(pos.einzelpreis) * 100) / 100;
       const { error } = await supabase.from('bau_lv_positionen').insert({
-        owner_user_id: uid, lv_id: aktivLv.id, ordnungszahl: pos.ordnungszahl.trim() || null, kurztext: pos.kurztext.trim(),
+        owner_user_id: besitzer ?? uid, lv_id: aktivLv.id, ordnungszahl: pos.ordnungszahl.trim() || null, kurztext: pos.kurztext.trim(),
         menge: num(pos.menge), einheit: pos.einheit.trim() || 'Stk', einzelpreis: num(pos.einzelpreis), mwst_satz: num(pos.mwst_satz),
         gesamt_netto: gesamt, ist_nachtrag: pos.ist_nachtrag, nachtrag_grund: pos.ist_nachtrag ? (pos.nachtrag_grund.trim() || null) : null,
         position: positionen.length + 1,
@@ -157,7 +161,7 @@ export default function BauLvPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bau_abnahmen').insert({
-        owner_user_id: uid, titel: ab.titel.trim() || 'Abnahme', datum: ab.datum, ort: ab.ort.trim() || null,
+        owner_user_id: besitzer ?? uid, titel: ab.titel.trim() || 'Abnahme', datum: ab.datum, ort: ab.ort.trim() || null,
         teilnehmer: ab.teilnehmer.trim() || null, art: ab.art, maengel, unterschrift_name: ab.unterschrift_name.trim() || null,
       });
       if (error) { setFehler('Abnahme konnte nicht gespeichert werden.'); return; }
@@ -189,7 +193,7 @@ export default function BauLvPage() {
               <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={lvAnlegen}>＋ Anlegen</button>
             </div>
           </div>
-          {uid && <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={ladeLvs} />}
+          {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={ladeLvs} />}
 
           {laden ? <p style={styles.dim}>Lädt …</p> : (
             <div style={styles.split}>

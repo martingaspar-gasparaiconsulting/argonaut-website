@@ -76,7 +76,7 @@ export default function ChargenSeite() {
   const [pruefungen, setPruefungen] = useState<Pruefung[]>([]);
   const [merkmale, setMerkmale] = useState<Merkmal[]>([]);
   const [artikel, setArtikel] = useState<ArtikelKurz[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [offen, setOffen] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
@@ -101,7 +101,12 @@ export default function ChargenSeite() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const id = userData.user?.id ?? null;
+      if (id) {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,13 +185,13 @@ export default function ChargenSeite() {
     let datensatzId: string | null = editId;
     if (editId) { error = (await supabase.from("charge_los").update(payload).eq("id", editId)).error; }
     else {
-      const ins = { ...payload, standort_id: konkreterStandort(leseStandortCookie()), ...(userId ? { owner_user_id: userId } : {}) };
+      const ins = { ...payload, standort_id: konkreterStandort(leseStandortCookie()), ...(besitzer ? { owner_user_id: besitzer } : {}) };
       const res = await supabase.from("charge_los").insert(ins).select('id').single();
       error = res.error; datensatzId = res.data ? (res.data as { id: string }).id : null;
     }
     setSpeichern(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
-    try { await speichereWerte(MODUL, datensatzId, userId, nmExtra); } catch { /* eigene Felder optional */ }
+    try { await speichereWerte(MODUL, datensatzId, besitzer, nmExtra); } catch { /* eigene Felder optional */ }
     setNmExtra({});
     setModal(false); await ladeAlles();
   }
@@ -206,7 +211,7 @@ export default function ChargenSeite() {
   async function addVerwendung(losId: string) {
     if (!vw.referenz.trim()) { setHinweis("Bitte eine Referenz (Auftrag/Lieferung/Rohstoff) angeben."); return; }
     const base = { los_id: losId, richtung: vw.richtung, referenz: vw.referenz.trim(), menge: zahl(vw.menge), datum: vw.datum || null, notiz: null };
-    const ins = userId ? { ...base, owner_user_id: userId } : base;
+    const ins = besitzer ? { ...base, owner_user_id: besitzer } : base;
     const { error } = await supabase.from("charge_verwendung").insert(ins);
     if (error) { window.alert("Fehler: " + error.message); return; }
     setVw({ richtung: vw.richtung, referenz: "", menge: "", datum: heuteISO() });
@@ -221,7 +226,7 @@ export default function ChargenSeite() {
   // ---------------- Prüfung + Merkmal ----------------
   async function addPruefung(losId: string) {
     const base = { los_id: losId, art: pf.art, datum: pf.datum || null, pruefer: pf.pruefer.trim() || null, ergebnis: "offen", bemerkung: null };
-    const ins = userId ? { ...base, owner_user_id: userId } : base;
+    const ins = besitzer ? { ...base, owner_user_id: besitzer } : base;
     const { data, error } = await supabase.from("charge_pruefung").insert(ins).select("id").single();
     if (error) { window.alert("Fehler: " + error.message); return; }
     setPf({ art: pf.art, datum: heuteISO(), pruefer: pf.pruefer });
@@ -237,7 +242,7 @@ export default function ChargenSeite() {
   async function addMerkmal(pruefungId: string) {
     if (!mk.merkmal.trim()) { setHinweis("Bitte ein Merkmal benennen (z. B. Durchmesser)."); return; }
     const base = { pruefung_id: pruefungId, merkmal: mk.merkmal.trim(), sollwert: zahl(mk.sollwert), toleranz_minus: zahl(mk.toleranz_minus), toleranz_plus: zahl(mk.toleranz_plus), istwert: zahl(mk.istwert), einheit: mk.einheit.trim() || null };
-    const ins = userId ? { ...base, owner_user_id: userId } : base;
+    const ins = besitzer ? { ...base, owner_user_id: besitzer } : base;
     const { error } = await supabase.from("charge_merkmal").insert(ins);
     if (error) { window.alert("Fehler: " + error.message); return; }
     setMk({ merkmal: "", sollwert: "", toleranz_minus: "", toleranz_plus: "", istwert: "", einheit: mk.einheit });
@@ -321,7 +326,7 @@ export default function ChargenSeite() {
         </div>
       )}
 
-      {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
+      {besitzer && <EigeneFelderManager modul={MODUL} ownerId={besitzer} onChange={ladeAlles} />}
 
       <div style={{ margin: "16px 0 14px" }}>
         <input style={{ ...input, maxWidth: 360 }} placeholder="Suche: Chargen-Nr., Bezeichnung, Auftrag…" value={suche} onChange={(e) => setSuche(e.target.value)} />

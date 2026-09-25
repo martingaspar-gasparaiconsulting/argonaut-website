@@ -183,10 +183,13 @@ export default function InventurSeite() {
         setSpeichern(false);
         return;
       }
+      const { data: chef } = await supabase.rpc("mein_chef_id");
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const besitzer = typeof chef === "string" && chef ? chef : uid;
       const rows = artikel
         .filter((a) => parseIst(ist[a.id]) !== null)
         .map((a) => ({
-          owner_user_id: uid,
+          owner_user_id: besitzer,
           artikel_id: a.id,
           artikel_name: a.bezeichnung,
           einheit: a.einheit,
@@ -283,10 +286,13 @@ export default function InventurSeite() {
         setKorrigiert(false);
         return;
       }
+      const { data: chef } = await supabase.rpc("mein_chef_id");
+      // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
+      const besitzer = typeof chef === "string" && chef ? chef : uid;
 
       // 1) Zaehlungen als Historie sichern (inventur_zaehlung)
       const zRows = zuKorrigieren.map(({ a, soll, istVal }) => ({
-        owner_user_id: uid,
+        owner_user_id: besitzer,
         artikel_id: a.id,
         artikel_name: a.bezeichnung,
         einheit: a.einheit,
@@ -321,7 +327,7 @@ export default function InventurSeite() {
       //    unveraenderbaren Protokoll-Eintrag anlegen (append-only Tabelle).
       if (erfolgreich.length > 0) {
         const auditRows = erfolgreich.map(({ a, soll, istVal, diff, wertDiff }) => ({
-          owner_user_id: uid,
+          owner_user_id: besitzer,
           artikel_id: a.id,
           artikel_name: a.bezeichnung,
           artikelnummer: a.artikelnummer,
