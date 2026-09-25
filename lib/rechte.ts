@@ -197,6 +197,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '⚡ Energie', href: '/dashboard/energie', modul: 'energie', ebene: 3, gruppe: 'betrieb' },
   { label: '☀️ Erträge & Monitoring', href: '/dashboard/ertraege', modul: 'ertraege', ebene: 3, gruppe: 'betrieb' },
   { label: '🏢 Immobilien', href: '/dashboard/immobilien', modul: 'immobilien', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS4 (25.09.26): Mieter-Vorgaenge + Eigentuemerversammlungen — Unterpfade von /dashboard/immobilien.
+  { label: '🔑 Mieter-Vorgänge', href: '/dashboard/immobilien/mieter', ebene: 3, gruppe: 'betrieb' },
+  { label: '🗳 Eigentümerversammlungen', href: '/dashboard/immobilien/versammlungen', ebene: 3, gruppe: 'betrieb' },
   { label: '🏠 Exposé & Vermarktung', href: '/dashboard/expose', modul: 'expose', ebene: 3, gruppe: 'betrieb' },
   { label: '🧾 Betriebskosten', href: '/dashboard/betriebskosten', modul: 'betriebskosten', ebene: 3, sensibel: true, gruppe: 'betrieb' },
   { label: '💻 IT & MSP', href: '/dashboard/it-msp', modul: 'it-msp', ebene: 3, gruppe: 'betrieb' },
@@ -226,6 +229,9 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PS3 (25.09.26): Impf-Erinnerung an Halter — Unterpfad von /dashboard/tier.
   { label: '💉 Impf-Erinnerung', href: '/dashboard/tier/erinnerung', ebene: 3, gruppe: 'betrieb' },
   { label: '🤝 Verein & Sozial', href: '/dashboard/verein', modul: 'verein', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS4 (25.09.26): Mitgliederversammlungen + Ehrenamt — Unterpfade von /dashboard/verein.
+  { label: '🗳 Mitgliederversammlungen', href: '/dashboard/verein/versammlungen', ebene: 3, gruppe: 'betrieb' },
+  { label: '🙌 Ehrenamt', href: '/dashboard/verein/ehrenamt', ebene: 3, gruppe: 'betrieb' },
   { label: '🚚 Logistik', href: '/dashboard/logistik', modul: 'logistik', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
@@ -310,6 +316,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🛡️ DSGVO-Center', href: '/dashboard/dsgvo', modul: 'dsgvo', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📊 DATEV & E-Rechnung', href: '/dashboard/datev', modul: 'datev', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💰 Fördermittel', href: '/dashboard/foerdermittel', modul: 'foerdermittel', ebene: 3, sensibel: true, gruppe: 'finanzen' },
+  // Paket PS4 (25.09.26): Verwendungsnachweis — Unterpfad von /dashboard/foerdermittel, sensibel wie das Modul.
+  { label: '🧾 Verwendungsnachweis', href: '/dashboard/foerdermittel/nachweis', ebene: 3, sensibel: true, gruppe: 'finanzen' },
   { label: '📝 Förder-Angebot', href: '/dashboard/foerder-angebot', modul: 'foerder-angebot', ebene: 3, sensibel: true, gruppe: 'finanzen' },
 
   // --- Verwaltung -----------------------------------------------------------

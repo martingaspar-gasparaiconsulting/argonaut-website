@@ -14,6 +14,8 @@ import {
   type FoerderProgramm, type FoerderKategorie, type Foerderart, type FoerderPhase,
 } from './programme';
 import { fristBucket, restVerwendung, verwendungsQuote, zaehleFoerder } from '@/lib/foerder';
+// PS4 (25.09.26): Betraege ueber lib/zahlen — vorher wurde "1.234,56" zu NaN (Number("1.234.56")).
+import { leseZahl } from '@/lib/zahlen';
 import { augeFoerder } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -326,12 +328,14 @@ export default function FoerdermittelPage() {
                   return (
                     <div style={styles.nachweisBox}>
                       <div style={{ fontWeight: 700, fontSize: 12.5, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Verwendungsnachweis</div>
+                      {/* Paket PS4 (25.09.26): Belegliste gegen Finanzierungsplan */}
+                      <a href="/dashboard/foerdermittel/nachweis" style={{ color: C.cyan, fontSize: 13, fontWeight: 700 }}>🧾 Belegliste &amp; Soll/Ist öffnen →</a>
                       <div style={styles.vhRow}>
                         <label style={styles.miniLabel}>Bewilligt (€)
-                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.bewilligt_betrag ?? ''} onBlur={(e) => aktualisieren(v, { bewilligt_betrag: e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.')) })} />
+                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.bewilligt_betrag ?? ''} onBlur={(e) => aktualisieren(v, { bewilligt_betrag: leseZahl(e.target.value) })} />
                         </label>
                         <label style={styles.miniLabel}>Verwendet (€)
-                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.verwendet_betrag ?? ''} onBlur={(e) => aktualisieren(v, { verwendet_betrag: e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.')) })} />
+                          <input style={styles.miniSelect} inputMode="decimal" defaultValue={v.verwendet_betrag ?? ''} onBlur={(e) => aktualisieren(v, { verwendet_betrag: leseZahl(e.target.value) })} />
                         </label>
                         <label style={styles.miniLabel}>Nachweis-Frist
                           <input type="date" style={styles.miniSelect} value={v.nachweis_frist ?? ''} onChange={(e) => aktualisieren(v, { nachweis_frist: e.target.value || null })} />

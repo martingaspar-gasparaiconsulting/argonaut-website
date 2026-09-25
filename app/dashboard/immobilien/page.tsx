@@ -111,6 +111,11 @@ export default function ImmobilienPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.h1}>🏢 Immobilienverwaltung</h1>
+      {/* Paket PS4 (25.09.26): Eigentuemerversammlungen + Mieter-Vorgaenge */}
+      <div>
+        <a href="/dashboard/immobilien/mieter" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🔑 Mieter-Vorgänge: Schäden · Mietanpassung · Kaution</a>
+        <a href="/dashboard/immobilien/versammlungen" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🗳 Eigentümerversammlungen</a>
+      </div>
       <div style={styles.tabs}>
         <button style={{ ...styles.tab, ...(tab === 'einheiten' ? styles.tabAn : {}) }} onClick={() => setTab('einheiten')}>🏠 Einheiten</button>
         <button style={{ ...styles.tab, ...(tab === 'vertraege' ? styles.tabAn : {}) }} onClick={() => setTab('vertraege')}>📄 Verträge & Miete</button>
