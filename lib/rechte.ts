@@ -187,6 +187,8 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
   { label: '🛡 Schadenabwicklung', href: '/dashboard/kfz/schaden', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS5 (25.09.26): Trinkgeld-Verteilung — Unterpfad von /dashboard/gastro, erbt dessen Freigabe.
+  { label: '🪙 Trinkgeld-Verteilung', href: '/dashboard/gastro/trinkgeld', ebene: 3, gruppe: 'betrieb' },
   { label: '🛎️ Housekeeping & Karte', href: '/dashboard/housekeeping', modul: 'housekeeping', ebene: 3, gruppe: 'betrieb' },
   { label: '🏭 Fertigung & PPS', href: '/dashboard/fertigung', modul: 'fertigung', ebene: 3, gruppe: 'betrieb' },
   { label: '📟 BDE / MDE', href: '/dashboard/bde', modul: 'bde', ebene: 3, gruppe: 'betrieb' },
@@ -215,7 +217,11 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PS3 (25.09.26): Nachkauf-Erinnerung (§ 7 Abs. 3 UWG) — Unterpfad von /dashboard/wellness.
   { label: '🧴 Nachkauf-Erinnerung', href: '/dashboard/wellness/nachkauf', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Kanzlei & Steuer', href: '/dashboard/kanzlei', modul: 'kanzlei', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS5 (25.09.26): Gebuehren-Rechner RVG/StBVV — Unterpfad von /dashboard/kanzlei, erbt dessen Freigabe.
+  { label: '🧮 Gebühren RVG/StBVV', href: '/dashboard/kanzlei/gebuehren', ebene: 3, gruppe: 'betrieb' },
   { label: '🎓 Bildung & Kurse', href: '/dashboard/bildung', modul: 'bildung', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS5 (25.09.26): Dozentenhonorare + Bescheinigungen — Unterpfad von /dashboard/bildung (Honorare per RLS nur Chef).
+  { label: '🧑‍🏫 Honorare & Bescheinigungen', href: '/dashboard/bildung/honorare', ebene: 3, gruppe: 'betrieb' },
   { label: '🏫 Räume & Ressourcen', href: '/dashboard/raeume', modul: 'raeume', ebene: 3, gruppe: 'betrieb' },
   { label: '🥫 Lebensmittel', href: '/dashboard/lebensmittel', modul: 'lebensmittel', ebene: 3, gruppe: 'betrieb' },
   { label: '🧪 Qualität & Rückruf', href: '/dashboard/lebensmittel/qualitaet', ebene: 3, gruppe: 'betrieb' },
@@ -228,6 +234,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🐾 Tier-Fachpaket', href: '/dashboard/tier', modul: 'tier', ebene: 3, gruppe: 'betrieb' },
   // Paket PS3 (25.09.26): Impf-Erinnerung an Halter — Unterpfad von /dashboard/tier.
   { label: '💉 Impf-Erinnerung', href: '/dashboard/tier/erinnerung', ebene: 3, gruppe: 'betrieb' },
+  // Paket PS5 (25.09.26): GOT-Rechner — Unterpfad von /dashboard/tier.
+  { label: '🧾 GOT-Rechner', href: '/dashboard/tier/got', ebene: 3, gruppe: 'betrieb' },
   { label: '🤝 Verein & Sozial', href: '/dashboard/verein', modul: 'verein', ebene: 3, gruppe: 'betrieb' },
   // Paket PS4 (25.09.26): Mitgliederversammlungen + Ehrenamt — Unterpfade von /dashboard/verein.
   { label: '🗳 Mitgliederversammlungen', href: '/dashboard/verein/versammlungen', ebene: 3, gruppe: 'betrieb' },
@@ -302,6 +310,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📑 Verträge', href: '/dashboard/vertraege', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🚪 Vertrag kündigen', href: '/dashboard/vertrag-kuendigen', modul: 'vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '👥 Mitglieder & Abos', href: '/dashboard/mitglieder', modul: 'mitglieder', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  // Paket PS5 (25.09.26): Kuendigungsfristen + Check-in — Unterpfade von /dashboard/mitglieder, sensibel wie das Modul.
+  { label: '📜 Verträge & Kündigung', href: '/dashboard/mitglieder/vertraege', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  { label: '✅ Check-in', href: '/dashboard/mitglieder/checkin', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '💶 SEPA-Lastschrift', href: '/dashboard/sepa-einzug', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🔁 Wiederkehrende Rechnungen', href: '/dashboard/abo-rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🔁 Wiederkehr-Cockpit', href: '/dashboard/wiederkehr', modul: 'wiederkehr', ebene: 2, sensibel: true, gruppe: 'finanzen' },

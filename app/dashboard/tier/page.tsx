@@ -118,6 +118,8 @@ export default function TierPage() {
       <p style={styles.sub}>Tierkartei mit Halter, Behandlungen und Impfungen inkl. Wiederholungs-Fälligkeit.</p>
       {/* Paket PS3 (25.09.26): Impf-Erinnerung an Halter */}
       <a href="/dashboard/tier/erinnerung" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>💉 Impf-Erinnerung an Halter</a>
+      {/* Paket PS5 (25.09.26): GOT-Rechner */}
+      <a href="/dashboard/tier/got" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, marginLeft: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🧾 GOT-Rechner</a>
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}
 

@@ -247,6 +247,11 @@ export default function MitgliederPage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Beiträge & Abos</div>
       <h1 style={styles.h1}>Mitglieder &amp; Abos</h1>
       <p style={styles.sub}>Beiträge und Laufzeit-Verträge verwalten und per SEPA-Lastschrift einziehen (Datei fürs Bankprogramm).</p>
+      {/* Paket PS5 (25.09.26): Kuendigungsfristen + Check-in */}
+      <div style={{ marginBottom: 12 }}>
+        <a href="/dashboard/mitglieder/vertraege" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📜 Verträge & Kündigung</a>
+        <a href="/dashboard/mitglieder/checkin" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>✅ Check-in</a>
+      </div>
 
       <div style={styles.summenGrid}>
         <SummeKarte label="Aktive" value={String(aktive.length)} accent={C.green} />
