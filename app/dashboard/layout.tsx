@@ -219,7 +219,7 @@ export default async function DashboardLayout({
 
       {/* KI-Guide Stufe 3 — wandert von Baustein zu Baustein mit, unten links
           ueber dem Praesentations-Knopf. Standard zugeklappt. */}
-      <KiGuideBegleiter />
+      <KiGuideBegleiter rolle={mitarbeiterRes.data ? 'mitarbeiter' : 'chef'} />
 
       {/* Service-Worker für Offline-Grundfähigkeit (rendert nichts) */}
       <SwRegister />

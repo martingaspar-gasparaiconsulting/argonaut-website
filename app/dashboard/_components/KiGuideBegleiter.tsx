@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import KiGuide from "./KiGuide";
 import { NAV_LINKS } from "@/lib/rechte";
-import { modulGuide } from "@/lib/kiGuideModule";
+import { guideLage, firmaFelderAusProfil, type Datenstand, type Rolle } from "@/lib/guideLage";
+import { pruefeFirma } from "../einstellungen/firmaPruefung";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   istVorlesenMoeglich, sprich, stoppeVorlesen, baueVorleseText,
   deutscheStimmen, leseStimmProfil, speichereStimmProfil,
@@ -34,6 +36,69 @@ import { zahlText } from '@/lib/zahlen';
 
 const SPEICHER_SCHLUESSEL = "argonaut_guide_offen";
 
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+);
+
+/**
+ * Paket A3: Was der Guide ueber den Betrieb weiss. Geladen wird erst, wenn der
+ * Guide aufgeklappt wird — wer ihn zu laesst, loest keine einzige Abfrage aus.
+ * Jede Zahl ist einzeln abgesichert: scheitert eine Abfrage, bleibt das Feld
+ * leer und der Guide sagt dazu nichts (lieber kein Hinweis als ein falscher).
+ */
+async function ladeDatenstand(rolle: Rolle): Promise<Datenstand> {
+  const { data: u } = await supabase.auth.getUser();
+  const id = u?.user?.id;
+  if (!id) return {};
+  const zaehle = async (q: PromiseLike<{ count: number | null; error: unknown }>): Promise<number | undefined> => {
+    try {
+      const r = await q;
+      return r.error ? undefined : r.count ?? 0;
+    } catch {
+      return undefined;
+    }
+  };
+  const kurse = zaehle(
+    supabase.from("academy_fortschritt").select("kurs_id", { count: "exact", head: true }).eq("user_id", id).eq("abgeschlossen", true),
+  );
+  if (rolle === "mitarbeiter") {
+    const [k, z] = await Promise.all([
+      kurse,
+      zaehle(supabase.from("hr_zeiterfassung").select("id", { count: "exact", head: true })),
+    ]);
+    return { kurse: k, zeiten: z };
+  }
+  const firma = (async () => {
+    try {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+      if (error) return undefined;
+      return pruefeFirma(firmaFelderAusProfil((data as Record<string, unknown> | null) ?? null)).anzahlFehler === 0;
+    } catch {
+      return undefined;
+    }
+  })();
+  const welt = (async () => {
+    try {
+      const r = await fetch("/api/uebungswelt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aktion: "status" }) });
+      if (!r.ok) return undefined;
+      const j = await r.json();
+      return typeof j?.geladen === "boolean" ? j.geladen : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  const [k, firmaOk, uebungswelt, kunden, mitarbeiter, eingeladen] = await Promise.all([
+    kurse,
+    firma,
+    welt,
+    zaehle(supabase.from("kontakte").select("id", { count: "exact", head: true })),
+    zaehle(supabase.from("mitarbeiter").select("id", { count: "exact", head: true })),
+    zaehle(supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).not("auth_user_id", "is", null)),
+  ]);
+  return { kurse: k, firmaOk, uebungswelt, kunden, mitarbeiter, eingeladen };
+}
+
 /** Was der Guide zur Probe sagt, wenn man eine Stimme aussucht. */
 const PROBE_SATZ =
   "Guten Tag. Ich bin Ihr ARGONAUT-Guide und begleite Sie durch das System. So klinge ich.";
@@ -47,8 +112,11 @@ const A = {
   border: "rgba(255,255,255,0.10)",
 };
 
-export default function KiGuideBegleiter() {
+export default function KiGuideBegleiter({ rolle = "chef" }: { rolle?: Rolle }) {
   const pfad = usePathname();
+  const [stand, setStand] = useState<Datenstand>({});
+  const [standGeladen, setStandGeladen] = useState(false);
+  const [detailsOffen, setDetailsOffen] = useState(false);
   const [offen, setOffen] = useState(false);
   const [kannVorlesen, setKannVorlesen] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
@@ -91,7 +159,19 @@ export default function KiGuideBegleiter() {
     setLaeuft(false);
   }, [pfad]);
 
-  const inhalt = useMemo(() => modulGuide(pfad || "/dashboard", NAV_LINKS), [pfad]);
+  // Datenstand einmal laden, sobald der Guide offen ist. Das Layout bleibt beim
+  // Seitenwechsel stehen, also gilt der Stand fuer die ganze Sitzung.
+  useEffect(() => {
+    if (!offen || standGeladen) return;
+    let aktiv = true;
+    setStandGeladen(true);
+    ladeDatenstand(rolle).then((s) => { if (aktiv) setStand(s); }).catch(() => {});
+    return () => { aktiv = false; };
+  }, [offen, standGeladen, rolle]);
+
+  useEffect(() => { setDetailsOffen(false); }, [pfad]);
+
+  const inhalt = useMemo(() => guideLage(pfad || "/dashboard", NAV_LINKS, rolle, stand), [pfad, rolle, stand]);
 
   function umschalten() {
     setOffen((v) => {
@@ -236,6 +316,53 @@ export default function KiGuideBegleiter() {
         fortschritt={inhalt.fortschritt}
         onVorlesen={kannVorlesen ? vorlesen : undefined}
       />
+
+      {/* Paket A3: Rolle, naechster Schritt, Rang und die ganze Anleitung */}
+      <div style={lageKasten}>
+        {inhalt.rollenHinweis && <div style={hinweisGold}>👤 {inhalt.rollenHinweis}</div>}
+        {!inhalt.rollenHinweis && inhalt.werKurz && (
+          <div style={zeile}><b style={{ color: A.gold }}>Wer trägt ein:</b> {inhalt.werKurz}</div>
+        )}
+        {inhalt.uebungsHinweis && <div style={hinweisCyan}>🎁 {inhalt.uebungsHinweis}</div>}
+        {inhalt.naechster && (
+          <div style={zeile}>
+            <b style={{ color: A.gold }}>Ihr nächster Schritt:</b>{" "}
+            <a href={inhalt.naechster.href} style={linkStil}>{inhalt.naechster.text} ›</a>
+            <div style={{ color: A.textDim, marginTop: 2 }}>{inhalt.naechster.warum}</div>
+          </div>
+        )}
+        {inhalt.rang && (
+          <div style={zeile}>
+            {inhalt.rang.icon} {inhalt.rang.text}{" "}
+            <a href="/dashboard/academy" style={linkStil}>Academy ›</a>
+          </div>
+        )}
+        <button type="button" onClick={() => setDetailsOffen((v) => !v)} style={detailsBtn}>
+          {detailsOffen ? "▲ Anleitung zuklappen" : "▼ Ganze Anleitung, Probe-Eintrag, wo es ankommt"}
+        </button>
+        {detailsOffen && (
+          <div style={{ marginTop: 8 }}>
+            {inhalt.werText && <div style={zeile}><b style={{ color: A.gold }}>Wer darf was:</b> {inhalt.werText}</div>}
+            <ol style={{ margin: "6px 0 8px 18px", padding: 0 }}>
+              {inhalt.alleSchritte.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
+            </ol>
+            {inhalt.probe && (
+              <div style={zeile}>
+                <b style={{ color: A.gold }}>Probe-Eintrag:</b> {inhalt.probe.anlegen}
+                <div style={{ marginTop: 2 }}><b style={{ color: A.gold }}>Wieder löschen:</b> {inhalt.probe.loeschen}</div>
+              </div>
+            )}
+            {inhalt.landetIn.length > 0 && (
+              <div style={zeile}>
+                <b style={{ color: A.gold }}>Das landet in:</b>{" "}
+                {inhalt.landetIn.map((v, i) => (
+                  <span key={v.href ?? i}>{i > 0 ? " · " : ""}<a href={v.href} style={linkStil}>{v.text}</a></span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -334,4 +461,46 @@ const schliessenBtn: React.CSSProperties = {
   cursor: "pointer",
   color: A.textDim,
   fontFamily: "inherit",
+};
+
+const lageKasten: React.CSSProperties = {
+  borderTop: `1px solid ${A.border}`,
+  margin: "10px -12px 0",
+  padding: "10px 16px 14px",
+  fontSize: 12.5,
+  lineHeight: 1.5,
+  color: "rgba(255,255,255,0.88)",
+};
+
+const zeile: React.CSSProperties = { marginBottom: 8 };
+
+const hinweisGold: React.CSSProperties = {
+  marginBottom: 8,
+  padding: "8px 10px",
+  borderRadius: 10,
+  border: `1px solid ${A.gold}55`,
+  background: "rgba(201,168,76,0.08)",
+};
+
+const hinweisCyan: React.CSSProperties = {
+  marginBottom: 8,
+  padding: "8px 10px",
+  borderRadius: 10,
+  border: "1px solid rgba(0,229,255,0.3)",
+  background: "rgba(0,229,255,0.06)",
+};
+
+const linkStil: React.CSSProperties = { color: A.cyan, fontWeight: 700, textDecoration: "none" };
+
+const detailsBtn: React.CSSProperties = {
+  background: "transparent",
+  border: `1px solid ${A.border}`,
+  borderRadius: 8,
+  padding: "5px 10px",
+  fontSize: 12,
+  cursor: "pointer",
+  color: A.textDim,
+  fontFamily: "inherit",
+  width: "100%",
+  textAlign: "left",
 };
