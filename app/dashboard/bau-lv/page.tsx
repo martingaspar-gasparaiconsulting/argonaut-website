@@ -15,6 +15,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahlOder } from '@/lib/zahlen';
+import { lvGesperrt, pruefePosition } from '@/lib/bauLvRegeln';
 
 const MODUL = 'bau_lv';
 
@@ -110,7 +111,15 @@ export default function BauLvPage() {
     } finally { setBusy(false); }
   }
 
-  async function lvOeffnen(lv: LV) { setAktivLv(lv); setOk(null); setFehler(null); await ladePositionen(lv.id); }
+  async function lvOeffnen(lv: LV) {
+    setAktivLv(lv); setOk(null); setFehler(null);
+    // G12: Wurde die Rechnung zum LV storniert, ist das LV wieder frei.
+    if (lv.rechnung_id) {
+      const { data: r } = await supabase.from('rechnungen').select('zahlungsstatus').eq('id', lv.rechnung_id).maybeSingle();
+      if ((r as { zahlungsstatus?: string } | null)?.zahlungsstatus === 'storniert') setAktivLv({ ...lv, rechnung_id: null, status: 'beauftragt' });
+    }
+    await ladePositionen(lv.id);
+  }
 
   async function summeAktualisieren(lvId: string) {
     const { data } = await supabase.from('bau_lv_positionen').select('gesamt_netto').eq('lv_id', lvId);
@@ -122,14 +131,17 @@ export default function BauLvPage() {
 
   async function posAnlegen() {
     if (!uid || !aktivLv) return;
+    // G12 (26.09.26): abgerechnetes LV ist gesperrt; nichts wird still zu 0.
+    if (lvGesperrt(aktivLv)) { setFehler('Dieses LV ist bereits abgerechnet — Änderungen bitte als Nachtrag mit eigener Rechnung.'); return; }
     if (!pos.kurztext.trim()) { setFehler('Bitte einen Kurztext angeben.'); return; }
+    const pruefung = pruefePosition(pos.menge, pos.einzelpreis);
+    if (!pruefung.ok) { setFehler(pruefung.fehler); return; }
     setBusy(true); setFehler(null);
     try {
-      const gesamt = Math.round(num(pos.menge) * num(pos.einzelpreis) * 100) / 100;
       const { error } = await supabase.from('bau_lv_positionen').insert({
         owner_user_id: besitzer ?? uid, lv_id: aktivLv.id, ordnungszahl: pos.ordnungszahl.trim() || null, kurztext: pos.kurztext.trim(),
-        menge: num(pos.menge), einheit: pos.einheit.trim() || 'Stk', einzelpreis: num(pos.einzelpreis), mwst_satz: num(pos.mwst_satz),
-        gesamt_netto: gesamt, ist_nachtrag: pos.ist_nachtrag, nachtrag_grund: pos.ist_nachtrag ? (pos.nachtrag_grund.trim() || null) : null,
+        menge: pruefung.menge, einheit: pos.einheit.trim() || 'Stk', einzelpreis: pruefung.einzelpreis, mwst_satz: num(pos.mwst_satz),
+        gesamt_netto: pruefung.gesamt, ist_nachtrag: pos.ist_nachtrag, nachtrag_grund: pos.ist_nachtrag ? (pos.nachtrag_grund.trim() || null) : null,
         position: positionen.length + 1,
       });
       if (error) { setFehler('Position konnte nicht gespeichert werden.'); return; }
@@ -140,6 +152,7 @@ export default function BauLvPage() {
   async function posLoeschen(id: string) {
     if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     if (!aktivLv) return;
+    if (lvGesperrt(aktivLv)) { setFehler('Dieses LV ist bereits abgerechnet — Positionen lassen sich nicht mehr löschen.'); return; }
     const { data: weg, error } = await supabase.from('bau_lv_positionen').delete().eq('id', id).select('id');
     if (!error && nichtsGeschrieben(weg)) { setFehler(NICHT_GELOESCHT); return; }
     if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
@@ -154,6 +167,7 @@ export default function BauLvPage() {
       const j = await res.json();
       if (!res.ok) { setFehler(j?.error || 'Umwandlung fehlgeschlagen.'); return; }
       setOk(j.bereitsVorhanden ? 'Zu diesem LV gibt es bereits eine Rechnung.' : 'Rechnung erstellt — unter „🧾 Rechnungen".');
+      if (j.rechnungId) setAktivLv((x) => (x ? { ...x, rechnung_id: j.rechnungId, status: 'abgerechnet' } : x)); // G12: sofort sperren
       await ladeLvs();
     } finally { setBusy(false); }
   }
@@ -229,10 +243,13 @@ export default function BauLvPage() {
                           <div style={{ color: C.textDim, fontSize: 12.5 }}>{p.menge.toLocaleString('de-DE')} {p.einheit} × {eur(p.einzelpreis)}{p.nachtrag_grund ? ` · ${p.nachtrag_grund}` : ''}</div>
                         </div>
                         <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{eur(p.gesamt_netto)}</div>
-                        <button style={styles.wegBtn} onClick={() => posLoeschen(p.id)}>✕</button>
+                        {!lvGesperrt(aktivLv) && <button style={styles.wegBtn} onClick={() => posLoeschen(p.id)}>✕</button>}
                       </div>
                     ))}
 
+                    {lvGesperrt(aktivLv) ? (
+                      <div style={{ color: C.textDim, fontSize: 14, margin: '12px 0' }}>🔒 Dieses LV ist abgerechnet — die Positionen sind gesperrt, damit LV und Rechnung übereinstimmen. Mehraufwand bitte über <a href="/dashboard/bau-lv/ablaeufe" style={{ color: C.gold }}>Nachträge</a> mit eigener Rechnung.{aktivLv.rechnung_id ? <> <a href={`/dashboard/rechnungen/${aktivLv.rechnung_id}`} style={{ color: C.gold }}>Zur Rechnung →</a></> : null}</div>
+                    ) : (<>
                     <div style={styles.posForm}>
                       <NurVoll><input style={{ ...styles.inp, width: 78 }} value={pos.ordnungszahl} onChange={(e) => setPos({ ...pos, ordnungszahl: e.target.value })} placeholder="OZ" /></NurVoll>
                       <input style={{ ...styles.inp, flex: 1, minWidth: 120 }} value={pos.kurztext} onChange={(e) => setPos({ ...pos, kurztext: e.target.value })} placeholder="Kurztext" />
@@ -248,6 +265,7 @@ export default function BauLvPage() {
                     </div>
 
                     <button style={{ ...styles.rechnungBtn, opacity: busy || !positionen.length ? 0.6 : 1 }} disabled={busy || !positionen.length} onClick={inRechnung}>🧾 Aus LV eine Rechnung erstellen</button>
+                    </>)}
                   </div>
                 )}
               </div>

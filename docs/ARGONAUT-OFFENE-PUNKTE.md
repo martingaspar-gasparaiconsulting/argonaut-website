@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 42 von 50 erledigt** (G3–G5 live mit _p116, G6–G8 mit _p117; B1b Gruppe 4, G1–G2, K1–K5, F1–F22 live; A1 und A2 zählen nicht mit)
+**Stand: 48 von 50 erledigt** (G9–G14 mit _p118 + SQL g-paket-g9-g14; G6–G8 live mit _p117, G3–G5 mit _p116; B1b Gruppe 4, G1–G2, K1–K5, F1–F22 live; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -40,12 +40,12 @@ Ablauf: je Punkt zeigt Claude **Fehler + Lösung + Empfehlung**, Martin sagt „
 | G6 | E-Rechnung-Import legt keinen Eingangsbeleg an | ✅ gebaut (_p117) — Eingangsbeleg automatisch, kein Doppel |
 | G7 | SEPA-Einzug markiert Rechnungen nicht — Doppel-Einzug möglich | ✅ gebaut (_p117 + SQL g7) — Vermerk „in SEPA-Datei“, Zurücksetzen, nur offener Rest |
 | G8 | Banking/Zahlungen: immer voller Betrag und „bezahlt heute" | ✅ gebaut (_p117) — Zahlung mit echtem Betrag und Buchungsdatum, Teilzahlung bleibt offen |
-| G9 | Mitglieder-Kündigung nimmt sofort aus dem SEPA-Einzug | ⬜ |
-| G10 | EÜR zählt stornierte Rechnungen und AfA ausgemusterter Anlagen | ⬜ |
-| G11 | Objektzeiten: Doppel-Abrechnung möglich, Rechnung sofort „offen" ohne Empfänger | ⬜ |
-| G12 | Bau & LV: Positionen nach Rechnung änderbar, unlesbare Werte still 0 | ⬜ |
-| G13 | Schadenabwicklung: „Gekürzt" falsch bei offener SB, Zahlung nicht entfernbar | ⬜ |
-| G14 | Förder-Angebot enthält ARGONAUT-eigene Pakete | ⬜ |
+| G9 | Mitglieder-Kündigung nimmt sofort aus dem SEPA-Einzug | ✅ gebaut (_p118) — Gekündigte bleiben bis Vertragsende im Einzug, „zahlt bis …“ in der Liste |
+| G10 | EÜR zählt stornierte Rechnungen und AfA ausgemusterter Anlagen | ✅ gebaut (_p118 + SQL) — Storno zählt nicht; Abgangsdatum (Pflicht), AfA bis Abgangsmonat, Restbuchwert als Ausgabe |
+| G11 | Objektzeiten: Doppel-Abrechnung möglich, Rechnung sofort „offen" ohne Empfänger | ✅ gebaut (_p118) — Zeiten erst reservieren, dann abrechnen; Empfänger Pflicht |
+| G12 | Bau & LV: Positionen nach Rechnung änderbar, unlesbare Werte still 0 | ✅ gebaut (_p118 + SQL-Trigger) — abgerechnetes LV gesperrt (frei nach Storno), klare Meldung statt 0 |
+| G13 | Schadenabwicklung: „Gekürzt" falsch bei offener SB, Zahlung nicht entfernbar | ✅ gebaut (_p118) — Status aus allen Zahlungen, ✕ entfernt eine Zahlung mit Rückfrage |
+| G14 | Förder-Angebot enthält ARGONAUT-eigene Pakete | ✅ gebaut (_p118 + SQL) — neutrale Vorlagen, eigene Leistungsbeschreibung, Löschen mit Rückfrage |
 
 ## 4. Abläufe und Fehler — Claude baut allein
 

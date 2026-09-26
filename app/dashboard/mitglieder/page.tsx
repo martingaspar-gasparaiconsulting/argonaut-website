@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, istSepaBetragFehler, type SepaLastschrift } from '@/lib/sepa';
 import { leseBetrag, centRunden } from '@/lib/zahlen';
 import { bankarbeitstagHinweis } from '@/lib/bankarbeitstag';
+import { imEinzug, laeuftAus } from '@/lib/mitgliedEinzug';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -181,13 +182,18 @@ export default function MitgliederPage() {
   }
 
   const aktive = useMemo(() => liste.filter((m) => m.status === 'aktiv'), [liste]);
-  const einziehbar = useMemo(() => aktive.filter((m) => m.iban && m.mandatsreferenz && m.mandat_datum && (m.betrag ?? 0) > 0), [aktive]);
+  // G9 (26.09.26): Gekuendigte zahlen bis zum Vertragsende weiter. Frueher
+  // fielen sie mit dem Tag der Kuendigung aus dem Einzug. Stichtag ist der
+  // Ausfuehrungstag der SEPA-Datei.
+  const heuteTag = heutePlus(0);
+  const zahlende = useMemo(() => liste.filter((m) => imEinzug(m, heuteTag)), [liste, heuteTag]);
+  const einziehbar = useMemo(() => liste.filter((m) => imEinzug(m, ausfuehrung) && m.iban && m.mandatsreferenz && m.mandat_datum && (m.betrag ?? 0) > 0), [liste, ausfuehrung]);
   // Hinweis, wenn der Faelligkeitstag kein Banktag ist — WARNUNG, keine Sperre.
   const bankHinweis = useMemo(() => bankarbeitstagHinweis(ausfuehrung), [ausfuehrung]);
-  const monatsumsatz = useMemo(() => aktive.reduce((s, m) => {
+  const monatsumsatz = useMemo(() => zahlende.reduce((s, m) => {
     const b = m.betrag ?? 0; const teiler = m.intervall === 'jahr' ? 12 : m.intervall === 'quartal' ? 3 : 1;
     return s + b / teiler;
-  }, 0), [aktive]);
+  }, 0), [zahlende]);
 
   async function sepaErzeugen() {
     setFehler(null); setOk(null);
@@ -196,7 +202,7 @@ export default function MitgliederPage() {
     }
     if (!ibanGueltig(cred.iban)) { setFehler('Ihre Gläubiger-IBAN ist ungültig (Prüfsumme stimmt nicht). Bitte oben korrigieren.'); return; }
     if (!einziehbar.length) {
-      setFehler('Keine einziehbaren Mitglieder: es braucht Status „aktiv", IBAN, Mandatsreferenz, Mandatsdatum und einen Betrag > 0.'); return;
+      setFehler('Keine einziehbaren Mitglieder: es braucht Status „aktiv" (oder gekündigt mit Vertragsende ab dem Einzugstag), IBAN, Mandatsreferenz, Mandatsdatum und einen Betrag > 0.'); return;
     }
     // Nur Mitglieder mit gültiger IBAN-Prüfsumme aufnehmen.
     const gueltige = einziehbar.filter((m) => ibanGueltig(m.iban as string));
@@ -326,7 +332,7 @@ export default function MitgliederPage() {
                       <td style={styles.td}><div style={{ fontWeight: 600 }}>{m.name}</div>{m.email && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{m.email}</div>}<EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></td>
                       <td style={styles.td}>{m.betrag != null ? `${eur(m.betrag)} / ${intv}` : '—'}</td>
                       <td style={styles.td}>{bereit ? <span style={{ color: C.green }}>✓ Mandat</span> : <span style={{ color: C.warn }}>fehlt</span>}</td>
-                      <td style={styles.td}><span style={{ color: si.f }}>{si.l}</span></td>
+                      <td style={styles.td}><span style={{ color: si.f }}>{si.l}</span>{laeuftAus(m, heuteTag) && m.kuendigung_zum && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>zahlt bis {new Date(m.kuendigung_zum.slice(0, 10) + 'T12:00:00').toLocaleDateString('de-DE')}</div>}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}><button onClick={() => bearbeiten(m)} style={styles.miniBtnGhost}>Bearbeiten</button></td>
                     </tr>
                   );

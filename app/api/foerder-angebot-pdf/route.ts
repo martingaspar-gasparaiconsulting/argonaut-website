@@ -36,9 +36,20 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
 
     // RLS schützt auf den Eigentümer
-    const { data: a } = await supabase.from('foerder_angebote')
-      .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz, erstellt_am')
+    // G14 (26.09.26): eigene Leistungsbeschreibung des Betriebs mitlesen;
+    // fehlt die Spalte noch (SQL nicht eingespielt), ohne sie.
+    const mit = await supabase.from('foerder_angebote')
+      .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz, erstellt_am, leistungsbeschreibung')
       .eq('id', id).maybeSingle();
+    const ohne = mit.error
+      ? await supabase.from('foerder_angebote')
+        .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz, erstellt_am')
+        .eq('id', id).maybeSingle()
+      : null;
+    const a = (ohne ? ohne.data : mit.data) as Record<string, unknown> & {
+      kunde_name?: string | null; titel?: string | null; positionen?: unknown; netto_summe?: number | null;
+      foerderquote?: number | null; notiz?: string | null; erstellt_am?: string | null; leistungsbeschreibung?: string | null;
+    } | null;
     if (!a) return NextResponse.json({ error: 'Angebot nicht gefunden.' }, { status: 404 });
 
     const { data: pRaw } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
@@ -107,7 +118,7 @@ export async function GET(req: NextRequest) {
     <div style="font-size:14px;font-weight:700;">${esc(a.kunde_name || '')}</div>
   </div>
 
-  <h1>${esc(a.titel || 'ARGONAUT Einführungspaket')}</h1>
+  <h1>${esc(a.titel || 'Förder-Angebot')}</h1>
 
   <table class="pos">
     <thead><tr><th style="width:28px;">#</th><th>Leistung</th><th class="r">Netto</th></tr></thead>
@@ -131,11 +142,9 @@ export async function GET(req: NextRequest) {
 
   <div class="box">
     <h3>Leistungsbeschreibung (für Ihren Förderantrag)</h3>
-    ARGONAUT OS ist ein betriebliches Software-System zur durchgängigen Digitalisierung der Geschäftsprozesse.
-    Der Leistungsumfang umfasst die digitale Auftrags-, Termin-, Dokumenten- und Rechnungsverwaltung, eine
-    revisionssichere Belegablage nach GoBD, ein rollenbasiertes Rechte- und Benutzermanagement sowie eine
-    DSGVO-konforme Datenhaltung mit Hosting in Deutschland. Ziel des Vorhabens ist die durchgängige
-    Digitalisierung betrieblicher Abläufe und die Erhöhung der IT- und Datensicherheit des Unternehmens.
+    ${a.leistungsbeschreibung && String(a.leistungsbeschreibung).trim()
+      ? esc(String(a.leistungsbeschreibung)).replace(/\n/g, '<br>')
+      : 'Das Vorhaben umfasst die oben aufgeführten Leistungen. Art, Umfang und Ziel der Maßnahme ergeben sich aus den einzelnen Positionen.'}
   </div>
 
   <div class="box hinweis">
@@ -148,10 +157,10 @@ export async function GET(req: NextRequest) {
 
   ${a.notiz ? `<div class="box"><h3>Anmerkung</h3>${esc(a.notiz)}</div>` : ''}
 
-  <div class="fuss">${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''} · Angebot erstellt mit ARGONAUT OS</div>
+  <div class="fuss">${esc(firma)}${strasse ? ` · ${esc(strasse)}, ${esc(plzOrt)}` : ''} </div>
 </body></html>`;
 
-    const dateiName = `Foerder-Angebot-${String(a.kunde_name || 'ARGONAUT').replace(/[^A-Za-z0-9._-]/g, '_')}.pdf`;
+    const dateiName = `Foerder-Angebot-${String(a.kunde_name || 'Kunde').replace(/[^A-Za-z0-9._-]/g, '_')}.pdf`;
 
     const gUrl = (process.env.GOTENBERG_URL || '').replace(/\/+$/, '');
     if (gUrl) {

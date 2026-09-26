@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { afaPlan } from '@/lib/afa';
+import { afaMitAbgang, zaehltAlsEinnahme } from '@/lib/euerRegeln';
 import { csvFeld } from '@/lib/csvSchreiben';
 import { leseZahlOder } from '@/lib/zahlen';
 
@@ -33,9 +33,10 @@ type Aggregat = {
   belegeNetto: number; vorsteuer: number; belegeAnzahl: number; nachKategorie: { kategorie: string; netto: number }[];
   reisekosten: number; reisenAnzahl: number;
   afa: number; afaAnzahl: number;
+  restbuchwertAbgang: number; abgaengeAnzahl: number; ohneAbgangsdatum: number;
 };
 
-const LEER_AGG: Aggregat = { einnahmenNetto: 0, vereinnahmteUst: 0, einnahmenAnzahl: 0, belegeNetto: 0, vorsteuer: 0, belegeAnzahl: 0, nachKategorie: [], reisekosten: 0, reisenAnzahl: 0, afa: 0, afaAnzahl: 0 };
+const LEER_AGG: Aggregat = { einnahmenNetto: 0, vereinnahmteUst: 0, einnahmenAnzahl: 0, belegeNetto: 0, vorsteuer: 0, belegeAnzahl: 0, nachKategorie: [], reisekosten: 0, reisenAnzahl: 0, afa: 0, afaAnzahl: 0, restbuchwertAbgang: 0, abgaengeAnzahl: 0, ohneAbgangsdatum: 0 };
 
 export default function EuerPage() {
   const jetzt = new Date().getFullYear();
@@ -56,6 +57,8 @@ export default function EuerPage() {
     await versuch(async () => {
       const { data } = await supabase.from('rechnungen').select('netto_summe, mwst_summe, brutto_summe, bezahlt_am, rechnungsdatum, zahlungsstatus, kleinunternehmer');
       (data as Record<string, unknown>[] || []).forEach((r) => {
+        // G10 (26.09.26): Stornierte Rechnungen sind kein Umsatz.
+        if (!zaehltAlsEinnahme(r as { zahlungsstatus?: string | null })) return;
         const datum = b === 'zahlung' ? (r.bezahlt_am as string) : (r.rechnungsdatum as string);
         if (b === 'zahlung' && !r.bezahlt_am) return;   // Zufluss: nur tatsächlich bezahlte
         if (!imJahr(datum, j)) return;
@@ -112,11 +115,24 @@ export default function EuerPage() {
     });
 
     // AfA aus Anlagegütern (Jahres-AfA fürs gewählte Jahr)
+    // G10 (26.09.26): Verkaufte/ausgemusterte Anlagen schreiben nur bis zum
+    // Abgangsmonat ab; im Abgangsjahr zählt der Restbuchwert als Ausgabe.
+    // Fehlt die Spalte abgang_am noch (SQL nicht eingespielt), wird ohne sie
+    // gelesen — dann meldet die Seite die Abgänge ohne Datum, statt still 0.
     await versuch(async () => {
-      const { data } = await supabase.from('anlagegueter').select('anschaffungskosten, nutzungsdauer_jahre, anschaffungsdatum');
-      (data as Record<string, unknown>[] || []).forEach((an) => {
-        const p = afaPlan(Number(an.anschaffungskosten) || 0, Number(an.nutzungsdauer_jahre) || 1, (an.anschaffungsdatum as string) || null, j);
-        if (p.afaStichjahr > 0) { a.afa += p.afaStichjahr; a.afaAnzahl += 1; }
+      const mit = await supabase.from('anlagegueter').select('anschaffungskosten, nutzungsdauer_jahre, anschaffungsdatum, status, abgang_am');
+      const zeilen = mit.error
+        ? ((await supabase.from('anlagegueter').select('anschaffungskosten, nutzungsdauer_jahre, anschaffungsdatum, status')).data as Record<string, unknown>[] | null)
+        : (mit.data as Record<string, unknown>[] | null);
+      (zeilen || []).forEach((an) => {
+        const e = afaMitAbgang({
+          anschaffungskosten: Number(an.anschaffungskosten) || 0, nutzungsdauer_jahre: Number(an.nutzungsdauer_jahre) || 1,
+          anschaffungsdatum: (an.anschaffungsdatum as string) || null, status: (an.status as string) || 'aktiv',
+          abgang_am: (an.abgang_am as string) || null,
+        }, j);
+        if (e.ohneAbgangsdatum) { a.ohneAbgangsdatum += 1; return; }
+        if (e.afa > 0) { a.afa += e.afa; a.afaAnzahl += 1; }
+        if (e.restbuchwertAbgang > 0) { a.restbuchwertAbgang += e.restbuchwertAbgang; a.abgaengeAnzahl += 1; }
       });
     });
 
@@ -133,7 +149,7 @@ export default function EuerPage() {
 
   const s = useMemo(() => {
     const einnahmen = agg.einnahmenNetto + num(sonstEin);
-    const ausgaben = agg.belegeNetto + agg.reisekosten + agg.afa + num(sonstAus);
+    const ausgaben = agg.belegeNetto + agg.reisekosten + agg.afa + agg.restbuchwertAbgang + num(sonstAus);
     const gewinn = einnahmen - ausgaben;
     const ustZahllast = agg.vereinnahmteUst - agg.vorsteuer;
     return { einnahmen, ausgaben, gewinn, ustZahllast };
@@ -153,6 +169,7 @@ export default function EuerPage() {
       ...agg.nachKategorie.map((k) => ['Belege · ' + k.kategorie, String(k.netto)]),
       ['Reisekosten', String(agg.reisekosten)],
       ['Abschreibungen (AfA)', String(agg.afa)],
+      ['Restbuchwert abgegangener Anlagen', String(agg.restbuchwertAbgang)],
       ['Sonstige Ausgaben', String(num(sonstAus))],
       ['Summe Ausgaben', String(s.ausgaben)],
       ['', ''],
@@ -224,6 +241,8 @@ export default function EuerPage() {
             {agg.nachKategorie.map((k) => <Zeile key={k.kategorie} label={`Belege · ${k.kategorie}`} wert={eur(k.netto)} />)}
             <Zeile label={`Reisekosten · ${agg.reisenAnzahl}`} wert={eur(agg.reisekosten)} />
             <Zeile label={`Abschreibungen (AfA) · ${agg.afaAnzahl} Anlage(n)`} wert={eur(agg.afa)} />
+            {agg.restbuchwertAbgang > 0 && <Zeile label={`Restbuchwert abgegangener Anlagen · ${agg.abgaengeAnzahl}`} wert={eur(agg.restbuchwertAbgang)} />}
+            {agg.ohneAbgangsdatum > 0 && <p style={{ ...styles.dim, color: C.warn }}>⚠ {agg.ohneAbgangsdatum} verkaufte oder ausgemusterte Anlage(n) ohne Abgangsdatum — nicht gerechnet. Bitte in der Anlagenbuchhaltung das Abgangsdatum eintragen.</p>}
             <div style={styles.zeileEdit}>
               <span>Sonstige Ausgaben (manuell)</span>
               <input style={styles.miniInp} value={sonstAus} onChange={(e) => setSonstAus(e.target.value)} inputMode="decimal" placeholder="0,00" />

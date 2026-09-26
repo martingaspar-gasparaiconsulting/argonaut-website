@@ -26,38 +26,41 @@ const C = {
 };
 
 type Pos = { bezeichnung: string; netto: string };
-type Angebot = { id: string; kunde_name: string | null; titel: string; positionen: { bezeichnung: string; netto: number }[]; netto_summe: number; foerderquote: number; notiz: string | null };
+type Angebot = { id: string; kunde_name: string | null; titel: string; positionen: { bezeichnung: string; netto: number }[]; netto_summe: number; foerderquote: number; notiz: string | null; leistungsbeschreibung?: string | null };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string) { return leseZahlOder(s, 0); }
 
-// Fertige, förder-freundliche Pakete (netto). Dienen als Startpunkt.
+// G14 (26.09.2026): Hier standen bisher ARGONAUT-eigene Pakete
+// („Jahreslizenz ARGONAUT OS …"). Diese Seite nutzt aber der KUNDE, um SEINEN
+// Kunden ein Förder-Angebot zu machen — ARGONAUT-Lizenzen haben darin nichts
+// verloren. Jetzt neutrale Vorlagen, die jeder Betrieb an seine Leistungen
+// und Preise anpasst.
 const PAKETE: { name: string; positionen: Pos[] }[] = [
   {
-    name: 'Starter (~4.500 €)',
+    name: 'Digitalisierung',
     positionen: [
-      { bezeichnung: 'ARGONAUT OS – Einrichtung & Konfiguration des Betriebssystems', netto: '1500' },
-      { bezeichnung: 'Jahreslizenz ARGONAUT OS (12 Monate)', netto: '2000' },
-      { bezeichnung: 'Datenmigration bestehender Kunden-/Auftragsdaten', netto: '600' },
-      { bezeichnung: 'Mitarbeiter-Schulung (Grundlagen)', netto: '400' },
+      { bezeichnung: 'Analyse der Abläufe und Soll-Konzept', netto: '800' },
+      { bezeichnung: 'Anschaffung und Einrichtung von Hard- und Software', netto: '2500' },
+      { bezeichnung: 'Datenübernahme aus dem bisherigen System', netto: '900' },
+      { bezeichnung: 'Schulung der Mitarbeiter', netto: '600' },
     ],
   },
   {
-    name: 'Betrieb (~6.900 €)',
+    name: 'IT-Sicherheit',
     positionen: [
-      { bezeichnung: 'ARGONAUT OS – Einrichtung & Prozess-Konfiguration', netto: '2500' },
-      { bezeichnung: 'Jahreslizenz ARGONAUT OS inkl. Fachmodule (12 Monate)', netto: '2900' },
-      { bezeichnung: 'Datenmigration & Dokumentenübernahme', netto: '900' },
-      { bezeichnung: 'Schulung Team + Administrator', netto: '600' },
+      { bezeichnung: 'Sicherheits-Check und Maßnahmenplan', netto: '700' },
+      { bezeichnung: 'Datensicherung (Backup) einrichten', netto: '1200' },
+      { bezeichnung: 'Schutz von Netzwerk und Endgeräten einrichten', netto: '1500' },
+      { bezeichnung: 'Sensibilisierung der Mitarbeiter', netto: '500' },
     ],
   },
   {
-    name: 'Komplett + IT-Sicherheit (~9.900 €)',
+    name: 'Beratung',
     positionen: [
-      { bezeichnung: 'ARGONAUT OS – Einrichtung, Prozess- & Rechte-Konfiguration', netto: '3500' },
-      { bezeichnung: 'Jahreslizenz ARGONAUT OS – Vollausbau (12 Monate)', netto: '3900' },
-      { bezeichnung: 'IT-Sicherheit: Rollen/Rechte, revisionssichere Ablage (GoBD), DSGVO-Setup', netto: '1500' },
-      { bezeichnung: 'Datenmigration, Schulung & Begleitung erste Wochen', netto: '1000' },
+      { bezeichnung: 'Beratungstage vor Ort', netto: '2400' },
+      { bezeichnung: 'Begleitung der Umsetzung', netto: '1200' },
+      { bezeichnung: 'Abschlussbericht', netto: '400' },
     ],
   },
 ];
@@ -78,8 +81,9 @@ export default function FoerderAngebotPage() {
 
   // Formular
   const [kunde, setKunde] = useState('');
-  const [titel, setTitel] = useState('ARGONAUT Einführungspaket');
-  const [positionen, setPositionen] = useState<Pos[]>(PAKETE[1].positionen);
+  const [titel, setTitel] = useState('Förder-Angebot');
+  const [positionen, setPositionen] = useState<Pos[]>([{ ...LEER_POS }]);
+  const [beschreibung, setBeschreibung] = useState('');
   const [quote, setQuote] = useState(50);
   const [notiz, setNotiz] = useState('');
 
@@ -127,7 +131,7 @@ export default function FoerderAngebotPage() {
       const posClean = positionen.filter((p) => p.bezeichnung.trim() || num(p.netto) > 0)
         .map((p) => ({ bezeichnung: p.bezeichnung.trim(), netto: num(p.netto) }));
       const { data, error } = await supabase.from('foerder_angebote')
-        .insert({ owner_user_id: uid, kunde_name: kunde.trim(), titel: titel.trim() || 'ARGONAUT Einführungspaket', positionen: posClean, netto_summe: netto, foerderquote: quote, notiz: notiz.trim() || null })
+        .insert({ owner_user_id: uid, kunde_name: kunde.trim(), titel: titel.trim() || 'Förder-Angebot', positionen: posClean, netto_summe: netto, foerderquote: quote, notiz: notiz.trim() || null, leistungsbeschreibung: beschreibung.trim() || null })
         .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz').single();
       if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
       try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch {}
@@ -139,6 +143,7 @@ export default function FoerderAngebotPage() {
   }
 
   async function loeschen(id: string) {
+    if (!window.confirm('Dieses Förder-Angebot löschen?')) return;
     const { error } = await supabase.from('foerder_angebote').delete().eq('id', id);
     if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
     setListe((l) => l.filter((a) => a.id !== id));
@@ -148,9 +153,9 @@ export default function FoerderAngebotPage() {
     <div style={styles.page}>
       <h1 style={styles.h1}>📝 Förder-Angebot-Generator</h1>
       <p style={styles.sub}>
-        Erstellen Sie ein förder-taugliches Angebot als <strong>Investition</strong> (Einrichtung + Jahreslizenz +
-        Schulung). Das PDF enthält eine passende Leistungsbeschreibung, die Förder-Schätzung und den wichtigen
-        Hinweis zur Reihenfolge — ideal als Kostenvoranschlag für den Digitalbonus-Antrag des Kunden.
+        Erstellen Sie für Ihren Kunden ein förder-taugliches Angebot (z. B. Digitalbonus, BAFA-Beratung) mit
+        <strong> Ihren Leistungen</strong>. Das PDF enthält Ihre Leistungsbeschreibung, die Förder-Schätzung und den
+        wichtigen Hinweis zur Reihenfolge — als Kostenvoranschlag für den Förderantrag Ihres Kunden.
       </p>
 
       <div style={styles.card}>
@@ -165,7 +170,7 @@ export default function FoerderAngebotPage() {
         </div>
 
         <div style={styles.paketRow}>
-          <span style={{ color: C.textDim, fontSize: 13 }}>Fertiges Paket laden:</span>
+          <span style={{ color: C.textDim, fontSize: 13 }}>Vorlage laden (Beispiele — bitte an Ihre Leistungen und Preise anpassen):</span>
           {PAKETE.map((pk) => (
             <button key={pk.name} type="button" style={styles.paketBtn} onClick={() => setPositionen(pk.positionen.map((p) => ({ ...p })))}>{pk.name}</button>
           ))}
@@ -180,6 +185,10 @@ export default function FoerderAngebotPage() {
           </div>
         ))}
         <button type="button" style={styles.dazuBtn} onClick={posDazu}>＋ Position hinzufügen</button>
+
+        <label style={styles.lab}>Leistungsbeschreibung für den Förderantrag (optional)
+          <textarea style={{ ...styles.inp, minHeight: 90, resize: 'vertical' }} value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} placeholder="Was wird umgesetzt, welches Ziel hat das Vorhaben? Z. B. „Einführung einer digitalen Auftragsbearbeitung mit mobiler Zeiterfassung, um …“" />
+        </label>
 
         <div style={styles.row2}>
           <label style={styles.lab}>Angenommene Förderquote

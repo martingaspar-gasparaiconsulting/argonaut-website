@@ -110,6 +110,11 @@ export default function ObjektzeitenPage() {
   // Rechnung aus Objektzeiten (Block K)
   const [rechnungBusy, setRechnungBusy] = useState<string | null>(null);
   const [rechnungMsg, setRechnungMsg] = useState<string | null>(null);
+  // G11 (26.09.26): Empfänger vor dem Abrechnen wählen.
+  const [rechnungFuer, setRechnungFuer] = useState<{ objektId: string; bezeichnung: string } | null>(null);
+  const [kontakte, setKontakte] = useState<{ id: string; name: string }[]>([]);
+  const [empfKontakt, setEmpfKontakt] = useState('');
+  const [empfName, setEmpfName] = useState('');
 
   // Chef ermitteln
   useEffect(() => {
@@ -258,16 +263,36 @@ export default function ObjektzeitenPage() {
   }
 
   // --- Rechnung aus abrechenbaren Objektzeiten (Block K) ----------------
-  async function rechnungAusObjekt(objektId: string, bezeichnung: string) {
-    if (!window.confirm(`Rechnung aus allen offenen, abrechenbaren Zeiten von „${bezeichnung}" erstellen?`)) return;
+  async function rechnungStarten(objektId: string, bezeichnung: string) {
+    setFehler(null); setRechnungMsg(null);
+    setRechnungFuer({ objektId, bezeichnung }); setEmpfKontakt(''); setEmpfName('');
+    if (!kontakte.length) {
+      try {
+        const { data: kd } = await supabase.from('kontakte').select('*').limit(2000);
+        const t = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+        const liste = ((kd as Record<string, unknown>[]) ?? []).map((k) => ({
+          id: String(k.id),
+          name: t(k.anzeigename) || [t(k.vorname), t(k.nachname)].filter(Boolean).join(' ') || t(k.name) || t(k.firmenname) || t(k.firma) || t(k.email) || 'Kontakt',
+        })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+        setKontakte(liste);
+      } catch { /* dann eben nur Name eintragen */ }
+    }
+  }
+
+  async function rechnungAusObjekt() {
+    if (!rechnungFuer) return;
+    const { objektId, bezeichnung } = rechnungFuer;
+    if (!empfKontakt && !empfName.trim()) { setFehler('Bitte einen Empfänger wählen oder eintragen — eine Rechnung ohne Empfänger darf nicht raus.'); return; }
     setRechnungBusy(objektId); setFehler(null); setRechnungMsg(null);
     try {
       const res = await fetch('/api/rechnung-aus-objektzeit', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ objektId }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objektId, kontaktId: empfKontakt || null, empfaengerName: empfName.trim() || null }),
       });
       const j = await res.json();
       if (!res.ok) { setFehler(j?.error || 'Rechnung fehlgeschlagen.'); return; }
       setRechnungMsg(`Rechnung aus ${j.anzahl} Zeitbuchung(en) für „${bezeichnung}" erstellt — unter 🧾 Rechnungen.`);
+      setRechnungFuer(null);
       await laden_();
     } catch (e: unknown) {
       setFehler('Rechnung fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -414,13 +439,31 @@ export default function ObjektzeitenPage() {
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
                           {s.objektId && s.minutenAbrechenbar > 0 ? (
-                            <button onClick={() => rechnungAusObjekt(s.objektId as string, s.bezeichnung)} disabled={rechnungBusy === s.objektId} style={{ ...styles.miniBtnGhost, color: C.gold, borderColor: `${C.gold}55`, whiteSpace: 'nowrap' }} title="Offene abrechenbare Zeiten dieses Objekts abrechnen">{rechnungBusy === s.objektId ? '…' : '🧾 Rechnung'}</button>
+                            <button onClick={() => rechnungStarten(s.objektId as string, s.bezeichnung)} disabled={rechnungBusy === s.objektId} style={{ ...styles.miniBtnGhost, color: C.gold, borderColor: `${C.gold}55`, whiteSpace: 'nowrap' }} title="Offene abrechenbare Zeiten dieses Objekts abrechnen">{rechnungBusy === s.objektId ? '…' : '🧾 Rechnung'}</button>
                           ) : null}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {rechnungFuer && (
+                  <div style={{ marginTop: 12, padding: 14, border: `1px solid ${C.gold}55`, borderRadius: 10, background: 'rgba(201,168,76,0.06)' }}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>🧾 Rechnung für „{rechnungFuer.bezeichnung}" — an wen?</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <select value={empfKontakt} onChange={(e) => setEmpfKontakt(e.target.value)} style={{ ...styles.input, width: 'auto', minWidth: 220, flex: 1 }}>
+                        <option value="">— Kontakt wählen —</option>
+                        {kontakte.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                      </select>
+                      <span style={{ color: C.textDim }}>oder</span>
+                      <input value={empfName} onChange={(e) => setEmpfName(e.target.value)} placeholder="Name des Empfängers" style={{ ...styles.input, width: 'auto', minWidth: 220, flex: 1 }} />
+                    </div>
+                    <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Alle offenen, abrechenbaren Zeiten dieses Objekts kommen auf die Rechnung. Die Anschrift ergänzen Sie in der Rechnung, falls sie fehlt.</div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <button onClick={rechnungAusObjekt} disabled={rechnungBusy === rechnungFuer.objektId} style={styles.primaerBtn}>{rechnungBusy === rechnungFuer.objektId ? 'Erstellt …' : 'Rechnung erstellen'}</button>
+                      <button onClick={() => setRechnungFuer(null)} style={styles.ghostBtn}>Abbrechen</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
+import { pruefeEmpfaenger, reservierteZeiten } from "@/lib/objektzeitRechnung";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,12 @@ export const runtime = "nodejs";
 //  · MwSt je Steuersatz (steuerLogik), Nummer via DB-Trigger.
 //  · Positions-Insert scheitert -> Rechnung STORNIEREN (keine Nummernlücke).
 //  · Danach werden die Zeiten als abgerechnet markiert (+ rechnung_id).
+//
+// G11 (26.09.2026): Die Zeiten werden jetzt ZUERST reserviert
+// (abgerechnet false -> true in einem Schritt). Nur was dabei umspringt,
+// kommt auf die Rechnung — ein zweiter Klick findet nichts mehr. Scheitert
+// danach etwas, werden genau diese Zeiten wieder freigegeben. Und ohne
+// Empfänger (Kontakt oder Name) entsteht keine Rechnung mehr.
 // ============================================================
 
 const MWST_STD = 19;
@@ -28,6 +35,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const objektId = String(body?.objektId || "").trim();
     if (!objektId) return NextResponse.json({ error: "Kein Objekt übergeben." }, { status: 400 });
+    const empf = pruefeEmpfaenger({ kontaktId: body?.kontaktId, empfaengerName: body?.empfaengerName });
+    if (!empf.ok) return NextResponse.json({ error: empf.fehler }, { status: 400 });
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -46,8 +55,30 @@ export async function POST(req: Request) {
     if (zErr) return NextResponse.json({ error: "Objektzeiten konnten nicht geladen werden." }, { status: 500 });
 
     const zeiten = (zRaw || []) as Zeit[];
-    const abrechenbar = zeiten.filter((z) => (Number(z.dauer_minuten) || 0) > 0);
-    if (!abrechenbar.length) return NextResponse.json({ error: "Keine offenen abrechenbaren Objektzeiten." }, { status: 400 });
+    const kandidaten = zeiten.filter((z) => (Number(z.dauer_minuten) || 0) > 0);
+    if (!kandidaten.length) return NextResponse.json({ error: "Keine offenen abrechenbaren Objektzeiten." }, { status: 400 });
+
+    // Empfänger: gewählter Kontakt (Name aus dem Kontakt) oder eingetragener Name.
+    let empfaengerName = empf.name;
+    if (empf.kontaktId && !empfaengerName) {
+      const { data: k } = await supabase.from("kontakte").select("*").eq("id", empf.kontaktId).maybeSingle();
+      if (!k) return NextResponse.json({ error: "Der gewählte Kontakt wurde nicht gefunden." }, { status: 400 });
+      const kr = k as Record<string, unknown>;
+      const t = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+      empfaengerName = t(kr.anzeigename) || [t(kr.vorname), t(kr.nachname)].filter(Boolean).join(" ") || t(kr.name) || t(kr.firmenname) || t(kr.firma) || null;
+    }
+
+    // Erst reservieren: nur Zeilen, die jetzt von false auf true springen.
+    const { data: umgesprungen, error: resErr } = await supabase.from("objekt_zeiten")
+      .update({ abgerechnet: true })
+      .in("id", kandidaten.map((z) => z.id)).eq("abgerechnet", false)
+      .select("id");
+    if (resErr) return NextResponse.json({ error: "Objektzeiten konnten nicht reserviert werden." }, { status: 500 });
+    const abrechenbar = reservierteZeiten(kandidaten, umgesprungen as { id: string }[] | null);
+    if (!abrechenbar.length) return NextResponse.json({ error: "Diese Zeiten werden gerade schon abgerechnet — bitte die Seite neu laden." }, { status: 409 });
+    const freigeben = async () => {
+      await supabase.from("objekt_zeiten").update({ abgerechnet: false, rechnung_id: null }).in("id", abrechenbar.map((z) => z.id));
+    };
 
     const rechnungsPosten = abrechenbar.map((z, i) => {
       const std = (Number(z.dauer_minuten) || 0) / 60;
@@ -73,15 +104,16 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
+        owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: empf.kontaktId, firma_id: null,
         titel: obj?.bezeichnung ? `Objekt: ${obj.bezeichnung}` : "Objektzeiten-Abrechnung",
-        empfaenger_name: null, zahlungsstatus: "offen",
+        empfaenger_name: empfaengerName, zahlungsstatus: "offen",
         rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
         zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
       })
       .select("id").single();
     if (rErr || !neueRechnung) {
       console.error("Rechnung anlegen fehlgeschlagen:", rErr?.message || rErr);
+      await freigeben();
       return NextResponse.json({ error: "Rechnung konnte nicht erstellt werden." }, { status: 500 });
     }
     const rechnungId = neueRechnung.id;
@@ -94,13 +126,16 @@ export async function POST(req: Request) {
         notizen: "Automatisch storniert: Objektzeiten konnten nicht übernommen werden.",
         updated_at: new Date().toISOString(),
       }).eq("id", rechnungId);
+      await freigeben();
       return NextResponse.json({ error: "Positionen konnten nicht übernommen werden. Die Rechnung wurde storniert." }, { status: 500 });
     }
 
+    // Die Zeiten sind schon reserviert (abgerechnet = true) — jetzt nur noch
+    // die Rechnung dazuschreiben. Scheitert das, bleiben sie trotzdem gesperrt.
     const { error: updErr } = await supabase.from("objekt_zeiten")
-      .update({ abgerechnet: true, rechnung_id: rechnungId })
+      .update({ rechnung_id: rechnungId })
       .in("id", abrechenbar.map((z) => z.id));
-    if (updErr) console.error("objekt_zeiten markieren fehlgeschlagen:", updErr.message);
+    if (updErr) console.error("objekt_zeiten Rechnungsnummer eintragen fehlgeschlagen:", updErr.message);
 
     return NextResponse.json({ rechnungId, anzahl: abrechenbar.length });
   } catch (err: unknown) {

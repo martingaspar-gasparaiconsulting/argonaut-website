@@ -18,7 +18,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import {
   SCHADEN_ARTEN, SCHADEN_STATUS, PRUEFFRIST_TAGE, BAGATELLGRENZE,
   unterlagenFuer, fehlendeUnterlagen, schadenOffen, schadenStand, ersatzTage, schadenZahlen, schadenSchreiben,
-  naechsteNummer, offenePlatzhalter, heuteBerlin, datumDe,
+  naechsteNummer, offenePlatzhalter, heuteBerlin, datumDe, schadenStatusNachZahlungen,
   type SchadenArt, type SchadenStatus, type Zahlung,
 } from '@/lib/kundenVorgaenge';
 import { leseZahl } from '@/lib/zahlen';
@@ -211,12 +211,21 @@ function FallKarte({ f, heute, firma, offen, onToggle, onFehler, onOk, neuLaden 
     const b = zahlAus(zahlung.betrag);
     if (b == null || b === 0) { onFehler('Bitte einen Betrag eintragen.'); return; }
     const liste = [...f.zahlungen, { am: zahlung.am || heute, betrag: b, von: zahlung.von }];
-    const rechnung = zahlAus(e.rechnung);
-    const summe = liste.reduce((a, z) => a + (Number(z.betrag) || 0), 0);
-    let status: SchadenStatus = f.status;
-    if (rechnung != null) status = summe + 0.005 >= rechnung ? 'bezahlt' : zahlung.von === 'versicherer' ? 'gekuerzt' : f.status;
+    // G13 (26.09.26): Status aus allen Zahlungen neu ableiten — offene
+    // Selbstbeteiligung des Kunden ist KEINE Kürzung.
+    const status: SchadenStatus = schadenStatusNachZahlungen({ ...aktuell, zahlungen: liste });
     setZahlung({ am: heute, betrag: '', von: 'versicherer' });
     await speichern({ zahlungen: liste, status }, `Zahlung über ${euro(b)} gebucht.`);
+  }
+
+  // G13: Falsch erfasste Zahlung wieder entfernen (mit Rückfrage).
+  async function zahlungEntfernen(i: number) {
+    const z = f.zahlungen[i];
+    if (!z) return;
+    if (!window.confirm(`Zahlung vom ${datumDe(z.am)} über ${euro(Number(z.betrag))} entfernen?`)) return;
+    const liste = f.zahlungen.filter((_, k) => k !== i);
+    const status: SchadenStatus = schadenStatusNachZahlungen({ ...aktuell, zahlungen: liste });
+    await speichern({ zahlungen: liste, status }, 'Zahlung entfernt.');
   }
 
   const platz = offenePlatzhalter(text);
@@ -276,7 +285,7 @@ function FallKarte({ f, heute, firma, offen, onToggle, onFehler, onOk, neuLaden 
           <div style={{ ...karte, background: C.navy }}>
             <b>Zahlungen</b>
             {f.zahlungen.length === 0 && <div style={{ color: C.textDim }}>Noch keine Zahlung eingegangen.</div>}
-            {f.zahlungen.map((z, i) => <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}><span>{datumDe(z.am)} · {z.von === 'kunde' ? 'Kunde' : 'Versicherer'}</span><span>{euro(Number(z.betrag))}</span></div>)}
+            {f.zahlungen.map((z, i) => <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span>{datumDe(z.am)} · {z.von === 'kunde' ? 'Kunde' : 'Versicherer'}</span><span>{euro(Number(z.betrag))} <button type="button" disabled={busy} onClick={() => zahlungEntfernen(i)} title="Zahlung entfernen" style={{ background: 'transparent', border: 'none', color: C.danger, cursor: 'pointer', fontSize: 14, padding: '0 0 0 6px' }}>✕</button></span></div>)}
             <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 6, paddingTop: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Rechnung</span><span>{euro(o.rechnung)}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Eingegangen</span><span>{euro(o.gezahlt)}</span></div>

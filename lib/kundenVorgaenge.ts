@@ -407,6 +407,34 @@ export function ersatzTage(von: string | null | undefined, bis: string | null | 
   return t > 0 ? t : null;
 }
 
+/**
+ * G13 (26.09.2026): Status aus den Zahlungen ableiten — bei jeder neuen UND
+ * jeder entfernten Zahlung neu.
+ *
+ * Vorher: Jede Versicherer-Zahlung unter dem Rechnungsbetrag hiess
+ * „gekuerzt". Bei einem Kaskoschaden mit 300 EUR Selbstbeteiligung zahlt der
+ * Versicherer aber korrekt Rechnung minus SB — der Rest ist Sache des Kunden.
+ * Der Fall stand trotzdem als „Gekürzt" da und zaehlte oben mit.
+ *
+ * Jetzt:
+ *   alles bezahlt                                   -> bezahlt
+ *   Versicherer hat gezahlt, sein Anteil fehlt noch -> gekuerzt
+ *   nur noch SB des Kunden offen / nichts gezahlt   -> war es bezahlt/gekuerzt,
+ *                                                      zurück auf abgerechnet,
+ *                                                      sonst bleibt der Status
+ *   abgeschlossen oder keine Rechnung               -> bleibt
+ */
+export function schadenStatusNachZahlungen(s: SchadenLite): SchadenStatus {
+  if (s.status === 'abgeschlossen') return s.status;
+  const o = schadenOffen(s);
+  if (o.rechnung == null || o.offen == null) return s.status;
+  if (o.offen <= 0.005) return 'bezahlt';
+  const vomVers = (s.zahlungen ?? []).filter((z) => z.von !== 'kunde').reduce((a, z) => a + (Number(z.betrag) || 0), 0);
+  if (vomVers > 0.005 && (o.offenVersicherer ?? 0) > 0.005) return 'gekuerzt';
+  if (s.status === 'bezahlt' || s.status === 'gekuerzt') return 'abgerechnet';
+  return s.status;
+}
+
 export function schadenZahlen(liste: SchadenLite[], heute: string): { offen: number; nachfassen: number; summeOffen: number; gekuerzt: number } {
   let offen = 0, nachfassen = 0, summe = 0, gekuerzt = 0;
   for (const s of liste) {

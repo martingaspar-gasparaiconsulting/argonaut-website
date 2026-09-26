@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { afaPlan, GWG_GRENZE } from '@/lib/afa';
+import { afaMitAbgang, istAbgegangen } from '@/lib/euerRegeln';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -40,8 +41,9 @@ const ND_HILFE = [
 type Anlage = {
   id: string; bezeichnung: string; kategorie: string | null; anschaffungsdatum: string | null;
   anschaffungskosten: number | null; nutzungsdauer_jahre: number | null; notiz: string | null; status: string;
+  abgang_am?: string | null;
 };
-const LEER = { bezeichnung: '', kategorie: '', anschaffungsdatum: '', anschaffungskosten: '', nutzungsdauer_jahre: '', notiz: '', status: 'aktiv' };
+const LEER = { bezeichnung: '', kategorie: '', anschaffungsdatum: '', anschaffungskosten: '', nutzungsdauer_jahre: '', notiz: '', status: 'aktiv', abgang_am: '' };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string): number { return leseZahlOder(s, 0); }
@@ -66,8 +68,12 @@ export default function AnlagenPage() {
   const laden_ = useCallback(async () => {
     setLaden(true);
     try {
-      const { data } = await supabase.from('anlagegueter').select('id, bezeichnung, kategorie, anschaffungsdatum, anschaffungskosten, nutzungsdauer_jahre, notiz, status').order('anschaffungsdatum', { ascending: false });
-      const rows = (data as Anlage[]) ?? [];
+      // G10 (26.09.26): abgang_am mitlesen; fehlt die Spalte noch, ohne sie.
+      const mit = await supabase.from('anlagegueter').select('id, bezeichnung, kategorie, anschaffungsdatum, anschaffungskosten, nutzungsdauer_jahre, notiz, status, abgang_am').order('anschaffungsdatum', { ascending: false });
+      const ohne = mit.error
+        ? await supabase.from('anlagegueter').select('id, bezeichnung, kategorie, anschaffungsdatum, anschaffungskosten, nutzungsdauer_jahre, notiz, status').order('anschaffungsdatum', { ascending: false })
+        : null;
+      const rows = ((ohne ? ohne.data : mit.data) as Anlage[]) ?? [];
       setAnlagen(rows);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
@@ -97,11 +103,14 @@ export default function AnlagenPage() {
     if (!uid) return;
     setFehler(null); setOk(null);
     if (!form.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
+    const abgegangen = istAbgegangen({ status: form.status });
+    if (abgegangen && !form.abgang_am) { setFehler('Bitte das Abgangsdatum angeben (Tag des Verkaufs bzw. der Ausmusterung) — sonst stimmt die AfA nicht.'); return; }
+    if (abgegangen && form.anschaffungsdatum && form.abgang_am < form.anschaffungsdatum) { setFehler('Das Abgangsdatum liegt vor dem Anschaffungsdatum.'); return; }
     const payload = {
       owner_user_id: uid, bezeichnung: form.bezeichnung.trim(), kategorie: form.kategorie.trim() || null,
       anschaffungsdatum: form.anschaffungsdatum || null, anschaffungskosten: num(form.anschaffungskosten),
       nutzungsdauer_jahre: intv(form.nutzungsdauer_jahre) || 1, notiz: form.notiz.trim() || null,
-      status: form.status, updated_at: new Date().toISOString(),
+      status: form.status, abgang_am: abgegangen ? form.abgang_am : null, updated_at: new Date().toISOString(),
     };
     try {
       if (editId) {
@@ -121,6 +130,7 @@ export default function AnlagenPage() {
       bezeichnung: a.bezeichnung || '', kategorie: a.kategorie || '', anschaffungsdatum: (a.anschaffungsdatum || '').slice(0, 10),
       anschaffungskosten: a.anschaffungskosten != null ? zahlFeld(a.anschaffungskosten) : '',
       nutzungsdauer_jahre: a.nutzungsdauer_jahre != null ? String(a.nutzungsdauer_jahre) : '', notiz: a.notiz || '', status: a.status || 'aktiv',
+      abgang_am: (a.abgang_am || '').slice(0, 10),
     });
     setNmExtra(werteMap[a.id] ?? {});
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -131,18 +141,25 @@ export default function AnlagenPage() {
   }
 
   // Für Liste + KPIs: AfA je Anlage rechnen.
-  const berechnet = useMemo(() => anlagen.map((a) => ({ a, p: afaPlan(Number(a.anschaffungskosten) || 0, a.nutzungsdauer_jahre || 1, a.anschaffungsdatum || null, jahr) })), [anlagen, jahr]);
+  // G10 (26.09.26): Abgegangene Anlagen schreiben nur bis zum Abgangsmonat ab
+  // und haben danach keinen Restbuchwert mehr.
+  const berechnet = useMemo(() => anlagen.map((a) => {
+    const p = afaPlan(Number(a.anschaffungskosten) || 0, a.nutzungsdauer_jahre || 1, a.anschaffungsdatum || null, jahr);
+    const e = afaMitAbgang(a, jahr);
+    const weg = istAbgegangen(a);
+    return { a, p, afaJahr: weg ? e.afa : p.afaStichjahr, rest: weg ? 0 : p.restbuchwertHeute, ohneDatum: e.ohneAbgangsdatum };
+  }), [anlagen, jahr]);
 
   const kpi = useMemo(() => {
     const anschaffung = anlagen.reduce((s, a) => s + (Number(a.anschaffungskosten) || 0), 0);
-    const restbuchwert = berechnet.reduce((s, x) => s + (x.p.restbuchwertHeute || 0), 0);
-    const afaJahr = berechnet.reduce((s, x) => s + (x.p.afaStichjahr || 0), 0);
+    const restbuchwert = berechnet.reduce((s, x) => s + (x.rest || 0), 0);
+    const afaJahr = berechnet.reduce((s, x) => s + (x.afaJahr || 0), 0);
     return { anzahl: anlagen.length, anschaffung, restbuchwert, afaJahr };
   }, [anlagen, berechnet]);
 
   function csvExport() {
     const head = `Bezeichnung;Kategorie;Anschaffung;Kosten netto;Nutzungsdauer;Methode;AfA ${jahr};Restbuchwert ${jahr};Status`;
-    const zeilen = berechnet.map(({ a, p }) => [a.bezeichnung, a.kategorie || '', dtag(a.anschaffungsdatum), a.anschaffungskosten ?? '', a.nutzungsdauer_jahre ?? '', p.methode.toUpperCase(), p.afaStichjahr, p.restbuchwertHeute, a.status].map((x) => csvFeld(x)).join(';'));
+    const zeilen = berechnet.map(({ a, p, afaJahr, rest }) => [a.bezeichnung, a.kategorie || '', dtag(a.anschaffungsdatum), a.anschaffungskosten ?? '', a.nutzungsdauer_jahre ?? '', p.methode.toUpperCase(), afaJahr, rest, a.status + (a.abgang_am ? ' ' + dtag(a.abgang_am) : '')].map((x) => csvFeld(x)).join(';'));
     const blob = new Blob(['﻿' + head + '\n' + zeilen.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const el = document.createElement('a');
     el.href = url; el.download = `Anlagenverzeichnis_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -181,6 +198,9 @@ export default function AnlagenPage() {
               <option value="ausgemustert">ausgemustert</option>
             </select>
           </label></NurVoll>
+          {form.status !== 'aktiv' && <label style={styles.lab}>Abgangsdatum
+            <input type="date" style={styles.inp} value={form.abgang_am} onChange={(e) => setF('abgang_am', e.target.value)} />
+          </label>}
           <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
         </div>
         <div style={styles.ndHilfe}>
@@ -252,14 +272,14 @@ export default function AnlagenPage() {
                 <th style={styles.th}>Bezeichnung</th><th style={styles.th}>Anschaffung</th><th style={styles.thR}>Kosten</th><th style={styles.th}>Methode</th><th style={styles.thR}>AfA {jahr}</th><th style={styles.thR}>Restbuchwert</th><th style={styles.thR}></th>
               </tr></thead>
               <tbody>
-                {berechnet.map(({ a, p }) => (
+                {berechnet.map(({ a, p, afaJahr, rest, ohneDatum }) => (
                   <tr key={a.id}>
-                    <td style={styles.td}>{a.bezeichnung}{a.kategorie ? <span style={{ color: C.textDim }}> · {a.kategorie}</span> : null}{a.status !== 'aktiv' ? <span style={{ color: C.warn, fontSize: 12 }}> ({a.status})</span> : null}<EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} /></td>
+                    <td style={styles.td}>{a.bezeichnung}{a.kategorie ? <span style={{ color: C.textDim }}> · {a.kategorie}</span> : null}{a.status !== 'aktiv' ? <span style={{ color: C.warn, fontSize: 12 }}> ({a.status}{a.abgang_am ? ` am ${dtag(a.abgang_am)}` : ''}{ohneDatum ? ' — Abgangsdatum fehlt' : ''})</span> : null}<EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} /></td>
                     <td style={styles.td}>{dtag(a.anschaffungsdatum)}</td>
                     <td style={styles.tdR}>{eur(a.anschaffungskosten)}</td>
                     <td style={styles.td}><span style={{ color: p.methode === 'gwg' ? C.cyan : C.textDim, fontSize: 13 }}>{p.methode === 'gwg' ? 'GWG' : `linear · ${a.nutzungsdauer_jahre} J.`}</span></td>
-                    <td style={styles.tdR}>{eur(p.afaStichjahr)}</td>
-                    <td style={{ ...styles.tdR, fontWeight: 700, color: C.gold }}>{eur(p.restbuchwertHeute)}</td>
+                    <td style={styles.tdR}>{eur(afaJahr)}</td>
+                    <td style={{ ...styles.tdR, fontWeight: 700, color: C.gold }}>{eur(rest)}</td>
                     <td style={styles.tdR}>
                       <button style={styles.mini} onClick={() => bearbeiten(a)}>Bearbeiten</button>
                       <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(a)}>🗑</button>

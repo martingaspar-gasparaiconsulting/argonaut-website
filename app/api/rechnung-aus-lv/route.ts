@@ -32,8 +32,9 @@ export async function POST(req: Request) {
     if (lErr || !lv) return NextResponse.json({ error: "LV nicht gefunden." }, { status: 404 });
 
     if (lv.rechnung_id) {
-      const { data: vorhanden } = await supabase.from("rechnungen").select("id").eq("id", lv.rechnung_id).maybeSingle();
-      if (vorhanden?.id) return NextResponse.json({ rechnungId: vorhanden.id, bereitsVorhanden: true });
+      // G12 (26.09.26): Eine stornierte Rechnung zählt nicht — dann darf neu abgerechnet werden.
+      const { data: vorhanden } = await supabase.from("rechnungen").select("id, zahlungsstatus").eq("id", lv.rechnung_id).maybeSingle();
+      if (vorhanden?.id && vorhanden.zahlungsstatus !== "storniert") return NextResponse.json({ rechnungId: vorhanden.id, bereitsVorhanden: true });
     }
 
     const { data: posRaw, error: pErr } = await supabase.from("bau_lv_positionen")

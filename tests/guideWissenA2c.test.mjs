@@ -33,8 +33,8 @@ test('Veraltete Guide-Texte sind raus: diese Seiten sprechen aus der Wissensbasi
 });
 
 test('Loeschen ohne Rueckfrage wird ausdruecklich gewarnt', () => {
-  for (const href of ['/dashboard/dsgvo', '/dashboard/foerdermittel', '/dashboard/foerder-angebot', '/dashboard/mahnwesen',
-    '/dashboard/abo-rechnungen']) { // G3a/G8: Rechnungen-Storno, Zahlungen und Banking sind jetzt abgesichert (26.09.2026): Rechnungen-Storno und Zahlungen fragen jetzt nach
+  for (const href of ['/dashboard/dsgvo', '/dashboard/foerdermittel', '/dashboard/mahnwesen',
+    '/dashboard/abo-rechnungen']) { // G14 (26.09.2026): Foerder-Angebot fragt jetzt vor dem Loeschen // G3a/G8: Rechnungen-Storno, Zahlungen und Banking sind jetzt abgesichert (26.09.2026): Rechnungen-Storno und Zahlungen fragen jetzt nach
     assert.match(texte(WISSEN[href]), /ohne Rückfrage/, href);
   }
 });
