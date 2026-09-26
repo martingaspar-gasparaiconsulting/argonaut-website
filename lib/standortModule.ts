@@ -3,13 +3,24 @@
 //
 // Eine Ebene UNTER dem tenant_module-Buchungs-Gate: der Betreiber bucht ein
 // Modul fuer den Tenant (tenant_module); hier legt der Chef fest, an WELCHEM
-// Standort es aktiv ist. Gleicher FAIL-OPEN-Vertrag wie tenant_module:
-//   - keine Zeile fuer den Standort            -> alles aktiv (nicht scharf)
-//   - Zeilen vorhanden, aber keine aktiv        -> alles aktiv (Sicherheitsnetz)
-//   - ab der ersten AKTIVEN Zeile               -> strikte Whitelist je Standort
+// Standort ein Modul ABGESCHALTET ist.
 //
-// KEINE Supabase-Aufrufe, KEINE Hooks — in Browser UND Node nutzbar. Die
-// eigentliche Gate-Wirkung wird erst mit dem Filial-Umschalter (G3) verdrahtet.
+// ▄▄▄ F1 (26.09.2026) — SPERRLISTE statt Positivliste ▄▄▄
+// Bis F1 las diese Datei die Zeilen als POSITIVLISTE („ab der ersten aktiven
+// Zeile sind NUR die aktiven Module erlaubt"), die Seite Filial-Module schreibt
+// aber eine SPERRLISTE („Zeile aktiv=false = aus, sonst an"). Folge:
+//   - Modul aus- und wieder einschalten -> eine Zeile aktiv=true -> an dem
+//     Standort waren ploetzlich ALLE anderen Module weg.
+//   - Nur abschalten (alle Zeilen false) -> Sicherheitsnetz -> Abschalten
+//     wirkte gar nicht.
+// Jetzt gilt EINE Regel fuer Seite, Menue und Proxy:
+//   - Zeile mit aktiv = false  -> Modul an diesem Standort aus
+//   - Zeile mit aktiv = true   -> an (wie keine Zeile)
+//   - keine Zeile              -> an
+// Infrastruktur-Links ohne Modul-Schluessel (u. a. Filial-Module selbst,
+// Standorte, Einstellungen) sind nie abschaltbar — der Chef kommt immer zurueck.
+//
+// KEINE Supabase-Aufrufe, KEINE Hooks — in Browser UND Node nutzbar.
 // ============================================================================
 
 import type { NavLink } from './rechte';
@@ -18,41 +29,38 @@ import type { NavLink } from './rechte';
 export type StandortModulRow = { modul_key: string; aktiv: boolean };
 
 /**
- * Aktive Module eines Standorts als Set — oder null (fail-open).
- * @returns null  wenn keine Zeile existiert ODER keine Zeile aktiv ist.
- * @returns Set   der aktiv gesetzten modul_key ab der ersten aktiven Zeile.
+ * An diesem Standort ABGESCHALTETE Module als Set — oder null (nichts aus).
  */
-export function aktiveModuleAmStandort(
+export function abgeschalteteModuleAmStandort(
   rows: StandortModulRow[] | null | undefined,
 ): Set<string> | null {
   if (!rows || rows.length === 0) return null;
-  const aktive = rows.filter((r) => r.aktiv).map((r) => r.modul_key);
-  if (aktive.length === 0) return null;
-  return new Set(aktive);
+  const aus = rows.filter((r) => r.aktiv === false).map((r) => r.modul_key);
+  if (aus.length === 0) return null;
+  return new Set(aus);
 }
 
 /**
  * Ist dieses Modul am Standort aktiv? Infrastruktur-Links ohne Schluessel und
- * fail-open (null) sind immer aktiv.
+ * „nichts abgeschaltet" (null) sind immer aktiv.
  */
 export function istModulAmStandortAktiv(
   modulKey: string | undefined,
-  aktive: Set<string> | null,
+  aus: Set<string> | null,
 ): boolean {
-  if (!modulKey) return true;      // Infra-Link, nicht buchbar
-  if (aktive === null) return true; // fail-open: nicht scharf konfiguriert
-  return aktive.has(modulKey);
+  if (!modulKey) return true;   // Infra-Link, nicht abschaltbar
+  if (aus === null) return true; // nichts abgeschaltet
+  return !aus.has(modulKey);
 }
 
 /**
- * Filtert eine bereits (rechte-/buchungs-)gefilterte Nav-Liste zusaetzlich auf
- * die am aktiven Standort freigeschalteten Module. Fail-open (aktive === null)
- * reicht die Liste unveraendert durch — Infra-Links ohne `modul` bleiben immer.
+ * Filtert eine bereits (rechte-/buchungs-)gefilterte Nav-Liste zusaetzlich um
+ * die am aktiven Standort abgeschalteten Module. Infra-Links bleiben immer.
  */
 export function nurStandortAktiveLinks(
   links: NavLink[],
-  aktive: Set<string> | null,
+  aus: Set<string> | null,
 ): NavLink[] {
-  if (aktive === null) return links;
-  return links.filter((l) => istModulAmStandortAktiv(l.modul, aktive));
+  if (aus === null) return links;
+  return links.filter((l) => istModulAmStandortAktiv(l.modul, aus));
 }

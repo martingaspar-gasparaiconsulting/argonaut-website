@@ -5,7 +5,10 @@
 // Der CHEF wählt einen Standort und schaltet Module gezielt ab/an.
 // Fail-open wie tenant_module: solange nichts abgeschaltet ist, sind an
 // der Filiale alle (gebuchten) Module aktiv. Die echte Gate-Wirkung greift
-// mit dem Filial-Umschalter (G3) — der Live-Gate bleibt hier unberührt.
+// mit dem Filial-Umschalter (G3).
+// F1 (26.09.2026): lib/standortModule liest jetzt dieselbe Sperrliste wie
+// diese Seite (aktiv=false = aus). Vorher Positivliste -> Aus/An blendete
+// alle anderen Module aus.
 // Pfad: app/dashboard/filial-module/page.tsx
 // ============================================================
 
@@ -96,6 +99,8 @@ export default function FilialModulePage() {
       <p style={styles.sub}>
         Schalten Sie einzelne Module je Standort ab, wenn eine Filiale sie nicht braucht.
         Solange Sie nichts abschalten, sind an jeder Filiale alle gebuchten Module aktiv.
+        Ein abgeschaltetes Modul verschwindet aus dem Menü und ist gesperrt, sobald oben diese Filiale gewählt ist.
+        Diese Seite, Standorte und Einstellungen lassen sich nie abschalten — Sie kommen also immer zurück.
       </p>
 
       {ok && <div style={styles.ok}>{ok}</div>}

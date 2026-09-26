@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { istNurChefPfad, mitarbeiterDarf, pfadPasst, pfadErlaubtFuerNutzerTyp } from './lib/rechte'
 import { gebuchteModulKeys, pfadGebucht, modulKeyFuerPfad, type TenantModulRow } from './lib/tenantModule'
-import { aktiveModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
+import { abgeschalteteModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
 import { STANDORT_COOKIE } from './lib/aktiverStandort'
 import { konkreterStandort } from './lib/standortDaten'
 
@@ -134,8 +134,8 @@ export async function proxy(req: NextRequest) {
   // Ist im Header ein konkreter Standort gewaehlt (Cookie argonaut_standort),
   // wird der Direktaufruf eines Moduls, das an DIESEM Standort nicht aktiv ist,
   // hart geblockt (bisher nur im Menue versteckt). Gilt fuer Chef UND Mitarbeiter.
-  // FAIL-OPEN: kein/'alle'-Standort ODER keine aktive standort_module-Zeile ->
-  // nichts einschraenken (kein Aussperren). Infra-Pfade ohne Modul immer erlaubt.
+  // F1 (26.09.2026): SPERRLISTE — nur Zeilen mit aktiv=false blocken.
+  // Kein/'alle'-Standort ODER nichts abgeschaltet -> nichts einschraenken. Infra-Pfade ohne Modul immer erlaubt.
   {
     const sid = konkreterStandort(req.cookies.get(STANDORT_COOKIE)?.value)
     if (sid) {
@@ -143,7 +143,7 @@ export async function proxy(req: NextRequest) {
         .from('standort_module')
         .select('modul_key, aktiv')
         .eq('standort_id', sid)
-      const aktive = aktiveModuleAmStandort((smRows as StandortModulRow[] | null) ?? null)
+      const aktive = abgeschalteteModuleAmStandort((smRows as StandortModulRow[] | null) ?? null)
       if (!istModulAmStandortAktiv(modulKeyFuerPfad(req.nextUrl.pathname), aktive)) {
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }

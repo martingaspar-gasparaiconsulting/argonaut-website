@@ -1,9 +1,9 @@
-# ARGONAUT OS · Offene Punkte (Stand 25.09.2026)
+# ARGONAUT OS · Offene Punkte (Stand 26.09.2026)
 
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 5 von 49 erledigt** (B1a live, B1b Gruppe 3 mit _p110) (A3–A5 live; B1 in drei Teile geteilt; A1 und A2 zählen nicht mit)
+**Stand: 27 von 49 erledigt** (F1–F22 gebaut: F2–F22 mit _p111, F1 mit _p112; B1a/B1b live; A3–A5 live; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -48,32 +48,38 @@ Ablauf: je Punkt zeigt Claude **Fehler + Lösung + Empfehlung**, Martin sagt „
 
 ## 4. Abläufe und Fehler — Claude baut allein
 
-Ablauf: Claude schreibt vorher je Punkt **Fehler + Lösung** auf, dann wird gebaut.
+Ablauf: Claude schreibt vorher je Punkt **Fehler + Lösung** auf, dann wird gebaut. F3 und F17 von Martin am 26.09. freigegeben (Empfehlung).
 
 | Nr. | Fehler | Stand |
 |---|---|---|
-| F1 | Filial-Module: Aus- und wieder Einschalten blendet alle anderen Module aus (SCHWER) | ⬜ |
-| F2 | Website-Bauer: jedes Speichern nimmt die Seite offline, Bausteine werden nicht wieder geladen | ⬜ |
-| F3 | Rechte-Seite leitet auf /login (gibt es nicht) | ⬜ |
-| F4 | Filialleitung schreibt andere Tabelle, als der Filialvergleich liest | ⬜ |
-| F5 | Standorte: Hauptsitz löschbar | ⬜ |
-| F6 | Import: falsche Zeilennummern, kein Rückgängig | ⬜ |
-| F7 | Automation ist sofort nach dem Anlegen aktiv | ⬜ |
-| F8 | Datensicherung „komplett" = nur 8 Bereiche | ⬜ |
-| F9 | Rezeptur: 2,125 kg wird beim Laden 2125, Speichern löscht erst alle Zutaten | ⬜ |
-| F10 | KFZ: Fahrzeug löschen ohne Rückfrage, km „84.500" wird 84 | ⬜ |
-| F11 | Chargen-Rückruf: „Jetzt sperren" verliert die Checklisten-Haken | ⬜ |
-| F12 | BDE: Pause senkt die OEE wie eine Störung | ⬜ |
-| F13 | Versammlung: „Verschiedenes" wird als Beschluss markiert | ⬜ |
-| F14 | Belegung: Status-Schild nach Check-in falsch | ⬜ |
-| F15 | Gastro: Reservierungs-Zahl immer 0, Felder Telefon/Personen fehlen | ⬜ |
-| F16 | Tierbestand: Bestand ändert sich nie | ⬜ |
-| F17 | Dünge-Fristen: 14 Tage und 2 Tage widersprechen sich | ⬜ |
-| F18 | Tour: Status nicht änderbar | ⬜ |
-| F19 | Aufmaß-Preisfeld liest „1.234" als 1234 (Menge bewusst als 1,234) | ⬜ |
-| F20 | Werkstatt, Versammlungen, Brennholz: Speichern scheitert still oder meldet „✓ gespeichert" | ⬜ |
-| F21 | DSGVO-Frist einen Tag zu früh | ⬜ |
-| F22 | Arbeitszeit-Nachweis und GoBD zeigen nur die eigenen Daten | ⬜ |
+| F1 | Filial-Module: Aus- und wieder Einschalten blendet alle anderen Module aus (SCHWER) | ✅ gebaut (_p112) — Sperrliste statt Positivliste; Filial-Module/Standorte/Einstellungen nie abschaltbar |
+| F2 | Website-Bauer: jedes Speichern nimmt die Seite offline, Bausteine werden nicht wieder geladen | ✅ gebaut (_p111) — Live-Status bleibt beim Speichern, gespeicherte Bausteine werden geladen, Domain/Berater überschreiben nichts |
+| F3 | Rechte-Seite leitet auf /login (gibt es nicht) | ✅ gebaut (_p111) — 9 Seiten auf /auth/login, Wächter-Test |
+| F4 | Filialleitung schreibt andere Tabelle, als der Filialvergleich liest | ✅ gebaut (_p111) — Vergleich liest mitarbeiter_standorte |
+| F5 | Standorte: Hauptsitz löschbar | ✅ gebaut (_p111) |
+| F6 | Import: falsche Zeilennummern, kein Rückgängig | ✅ gebaut (_p111 + SQL f6) — echte Dateizeile, „↺ … löschen“ je Import (nicht bei Offenen Posten) |
+| F7 | Automation ist sofort nach dem Anlegen aktiv | ✅ gebaut (_p111) — neue Regeln starten pausiert |
+| F8 | Datensicherung „komplett" = nur 8 Bereiche | ✅ gebaut (_p111) — alle Tabellen außer Zugangsdaten |
+| F9 | Rezeptur: 2,125 kg wird beim Laden 2125, Speichern löscht erst alle Zutaten | ✅ gebaut (_p111) — Komma-Vorbelegung, erst schreiben dann alte löschen |
+| F10 | KFZ: Fahrzeug löschen ohne Rückfrage, km „84.500" wird 84 | ✅ gebaut (_p111) |
+| F11 | Chargen-Rückruf: „Jetzt sperren" verliert die Checklisten-Haken | ✅ gebaut (_p111) |
+| F12 | BDE: Pause senkt die OEE wie eine Störung | ✅ gebaut (_p111) — Pause kürzt die Planbelegung |
+| F13 | Versammlung: „Verschiedenes" wird als Beschluss markiert | ✅ gebaut (_p111) |
+| F14 | Belegung: Status-Schild nach Check-in falsch | ✅ gebaut (_p111) — eingecheckt = belegt bis Check-out |
+| F15 | Gastro: Reservierungs-Zahl immer 0, Felder Telefon/Personen fehlen | ✅ gebaut (_p111) — Zahl zählt „reserviert“, Telefon-Feld ergänzt |
+| F16 | Tierbestand: Bestand ändert sich nie | ✅ gebaut (_p111) — Bewegungen ändern den Bestand |
+| F17 | Dünge-Fristen: 14 Tage und 2 Tage widersprechen sich | ✅ gebaut (_p111) — 2 Tage (DüV § 10 Abs. 2), Anwalt-Checkliste 2 |
+| F18 | Tour: Status nicht änderbar | ✅ gebaut (_p111) |
+| F19 | Aufmaß-Preisfeld liest „1.234" als 1234 (Menge bewusst als 1,234) | ✅ gebaut (_p111) — Preis mit Komma vorbelegt |
+| F20 | Werkstatt, Versammlungen, Brennholz: Speichern scheitert still oder meldet „✓ gespeichert" | ✅ gebaut (_p111) — 0 geänderte Zeilen = Fehlermeldung; Holz-Positionen erst schreiben, dann löschen |
+| F21 | DSGVO-Frist einen Tag zu früh | ✅ gebaut (_p111) — Monatsfrist rein als Datum, Monatsende |
+| F22 | Arbeitszeit-Nachweis und GoBD zeigen nur die eigenen Daten | ✅ gebaut (_p111) — Mitarbeiter sehen eigenen Nachweis; GoBD-Doku klar beim Inhaber |
+
+### Claude-Befunde beim Bau von F (26.09.2026, noch nicht gezählt)
+
+- Import-Center speichert neue Datensätze mit der eigenen Kennung — importiert ein Mitarbeiter Kontakte, sieht der Chef sie nicht (gleicher Fehler wie B1; kontakte hat keine Anlege-Regel für Mitarbeiter → gehört zu B1b-Entscheidung).
+- Zahlenfelder, die die Zahl direkt als Wert halten (`value={zahl}`), lassen kein Komma tippen — in der Rezeptur behoben, auf anderen Seiten noch zu suchen (Kandidat für K-Paket).
+- Werkstatt: Positionen einzeln speichern meldet jetzt Fehler; das Löschen eines Mitarbeiters dort wirkt weiterhin still nicht (A2e-Befund, offen).
 
 ## 5. Kleinkram — ein Sammel-Paket
 

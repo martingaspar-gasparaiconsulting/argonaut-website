@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { sichtbareNavLinks, gruppiereNavLinks, nurNachNutzerTyp } from '../../lib/rechte';
 import { gebuchteModulKeys, nurGebuchteLinks, type TenantModulRow } from '../../lib/tenantModule';
-import { aktiveModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
+import { abgeschalteteModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
 import { leseStandortCookie, istStandortAktiv } from '../../lib/aktiverStandort';
 import { useAnsicht } from './_components/Ansicht';
 
@@ -100,7 +100,7 @@ export default function DashboardNav() {
             .from('standort_module')
             .select('modul_key, aktiv')
             .eq('standort_id', stCookie);
-          if (aktiv) setStandortAktiv(aktiveModuleAmStandort((sm as StandortModulRow[] | null) ?? null));
+          if (aktiv) setStandortAktiv(abgeschalteteModuleAmStandort((sm as StandortModulRow[] | null) ?? null));
         } else if (aktiv) {
           setStandortAktiv(null);
         }
