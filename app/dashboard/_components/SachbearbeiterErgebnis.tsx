@@ -82,9 +82,12 @@ export default function SachbearbeiterErgebnis({
       const { data: u } = await supabase.auth.getUser();
       const uid = u?.user?.id;
       if (!uid) { setVorgangStatus('fehler'); setMeldung('Nicht angemeldet.'); return; }
+      // B1b Gruppe 4: der Vorgang gehoert dem Betrieb.
+      const { data: chefId } = await supabase.rpc('mein_chef_id');
+      const betrieb = typeof chefId === 'string' && chefId ? chefId : uid;
       const { data, error } = await supabase
         .from('post_vorgang')
-        .insert({ ...vorgang, owner_user_id: uid, aufgabe_angelegt: aufgabeStatus === 'ok' })
+        .insert({ ...vorgang, owner_user_id: betrieb, aufgabe_angelegt: aufgabeStatus === 'ok' })
         .select('id')
         .single();
       if (error) {

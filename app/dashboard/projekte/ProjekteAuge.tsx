@@ -46,15 +46,18 @@ export default function ProjekteAuge() {
           return;
         }
 
+        // B1b Gruppe 4: Daten des Betriebs, nicht nur die eigenen.
+        const { data: chefId } = await supabase.rpc("mein_chef_id");
+        const betrieb = typeof chefId === "string" && chefId ? chefId : uid;
         const [projRes, aufgRes] = await Promise.all([
           supabase
             .from("projekte")
             .select("name, status, prioritaet, end_datum, verantwortlich, archiviert")
-            .eq("owner_user_id", uid),
+            .eq("owner_user_id", betrieb),
           supabase
             .from("aufgaben")
             .select("id, projekt_id, erledigt, status")
-            .eq("owner_user_id", uid),
+            .eq("owner_user_id", betrieb),
         ]);
 
         const projekte = (projRes.data || []).filter(

@@ -142,18 +142,23 @@ export default function ProjektDetailPage() {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setOwnerId(uid);
+      // B1b Gruppe 4 (26.09.2026): Projekt, Aufgaben, Beteiligte und Teams gehoeren
+      // dem Betrieb. Vorher las die Seite nur Eintraege der angemeldeten Person —
+      // ein Mitarbeiter bekam „Projekt nicht gefunden".
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      const betrieb = typeof chef === 'string' && chef ? chef : uid;
+      setOwnerId(betrieb);
 
       const [projRes, aufgRes, betRes, teamRes, maRes] = await Promise.all([
-        supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', uid).maybeSingle(),
-        supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', uid)
+        supabase.from('projekte').select('*').eq('id', projektId).eq('owner_user_id', betrieb).maybeSingle(),
+        supabase.from('aufgaben').select('*').eq('projekt_id', projektId).eq('owner_user_id', betrieb)
           .is('parent_id', null)
           .order('sortierung', { ascending: true }).order('erstellt_am', { ascending: true }),
-        supabase.from('projekt_beteiligte').select('*').eq('owner_user_id', uid).eq('aktiv', true)
+        supabase.from('projekt_beteiligte').select('*').eq('owner_user_id', betrieb).eq('aktiv', true)
           .order('name', { ascending: true }),
-        supabase.from('projekt_teams').select('*').eq('owner_user_id', uid).eq('aktiv', true)
+        supabase.from('projekt_teams').select('*').eq('owner_user_id', betrieb).eq('aktiv', true)
           .order('name', { ascending: true }),
-        supabase.from('mitarbeiter').select('id,vorname,nachname,abteilung').eq('owner_user_id', uid),
+        supabase.from('mitarbeiter').select('id,vorname,nachname,abteilung').eq('owner_user_id', betrieb),
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
@@ -164,7 +169,7 @@ export default function ProjektDetailPage() {
 
       // Unteraufgaben-Zaehlung je Hauptaufgabe (fuer Karten-Badge)
       const { data: subRows } = await supabase.from('aufgaben')
-        .select('parent_id,erledigt').eq('projekt_id', projektId).eq('owner_user_id', uid)
+        .select('parent_id,erledigt').eq('projekt_id', projektId).eq('owner_user_id', betrieb)
         .not('parent_id', 'is', null);
       const map: Record<string, { erl: number; ges: number }> = {};
       (subRows || []).forEach((s: any) => {

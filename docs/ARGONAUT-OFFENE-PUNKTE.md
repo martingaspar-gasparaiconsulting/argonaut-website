@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 32 von 49 erledigt** (K1–K5 mit _p113; F1–F22 live; B1a/B1b live; A3–A5 live; A1 und A2 zählen nicht mit)
+**Stand: 36 von 50 erledigt** (G1–G2 mit _p114, B1b Gruppe 4 mit _p115; K1–K5 und F1–F22 live; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -21,7 +21,8 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 |---|---|---|
 | B1a | Besitzer-Fehler Teil A: 70 Seiten, deren Tabellen Mitarbeitern das Anlegen für den Betrieb schon erlauben — reiner Code-Fix | ✅ live (_p109, fcad0cd) |
 | B1b | Besitzer-Fehler Teil B, Gruppe 3 Arbeitsseiten (Aufmaß, Nachweise, Objektzeiten, Service-Verlauf, Hotelzimmer, Immobilien-Einheiten und Mietverträge, Wartungsverträge): SQL-Regel + Code | ✅ gebaut (_p110 + SQL) |
-| B1b-1 | Gruppe 1 Zugänge und Einstellungen — bleiben beim Chef (Empfehlung) | ⬜ Entscheidung |
+| B1b-1 | Gruppe 1 Zugänge und Einstellungen — bleiben beim Chef (Empfehlung) | ✅ entschieden 26.09.: Zugänge und Einstellungen bleiben beim Chef |
+| B1b-4 | Gruppe 4 (Befund K5): Aufgaben, Kommentare, Auftragspositionen, Kontakt-Tags und -Aktivitäten, Projekt-Beteiligte/-Teams/-Vorlagen, Verkaufschancen, Objekte, Ressourcen, Korrespondenz, Post, Text-Werkstatt | ✅ gebaut (_p115 + SQL b1b-gruppe4) |
 | B1b-2 | Gruppe 2 Geld (Rechnung aus …, Angebote, Zahlungen, Kalkulator, Projektabrechnung, Förder-Angebot) — kommt zu G | ⬜ |
 | B1c | Eigene Felder auf den übrigen Seiten (Werkstatt, Service …) ebenfalls dem Betrieb zuordnen | ⬜ |
 
@@ -31,8 +32,8 @@ Ablauf: je Punkt zeigt Claude **Fehler + Lösung + Empfehlung**, Martin sagt „
 
 | Nr. | Fehler | Stand |
 |---|---|---|
-| G1 | Beleg-Inbox, Reisekosten, Anlagen, Förder-Angebot: erkannter Wert „119.5" wird 1195 | ⬜ |
-| G2 | Reisekosten „Bearbeiten" setzt Mahlzeiten auf 0 und leert die Notiz | ⬜ |
+| G1 | Beleg-Inbox, Reisekosten, Anlagen, Förder-Angebot: erkannter Wert „119.5" wird 1195 | ✅ war durch Zahlen-Querschnitt (_p104) schon behoben — Test dazu (_p114) |
+| G2 | Reisekosten „Bearbeiten" setzt Mahlzeiten auf 0 und leert die Notiz | ✅ gebaut (_p114) |
 | G3 | Rechnung: Stornieren ohne Rückfrage, keine Registerdaten, Logo-Upload fehlt | ⬜ |
 | G4 | Angebote: 🗑 löscht sofort ohne Rückfrage | ⬜ |
 | G5 | Spendenbescheinigung: Nummer beginnt nicht je Jahr neu | ⬜ |

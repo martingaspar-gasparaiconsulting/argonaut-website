@@ -47,6 +47,7 @@ async function post(url: string, body: unknown) {
 
 export default function TextWerkstatt() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null); // B1b Gruppe 4: Texte gehoeren dem Betrieb
   const [art, setArt] = useState<TextArt>('ebook');
   const [form, setForm] = useState<Form>({ ...LEER });
   const [laeuft, setLaeuft] = useState<string | null>(null);
@@ -84,6 +85,8 @@ export default function TextWerkstatt() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       setUid(data?.user?.id ?? null);
+      const { data: chefId } = await supabase.rpc('mein_chef_id');
+      setBesitzer(typeof chefId === 'string' && chefId ? chefId : (data?.user?.id ?? null));
       await ladeListe();
     })();
   }, [ladeListe]);
@@ -165,7 +168,7 @@ export default function TextWerkstatt() {
     const titel = art === 'ebook' ? gliederung?.titel : einzel?.titel;
     if (!titel) return null;
     const zeile = {
-      owner_user_id: uid, art, titel: titel.slice(0, 200),
+      owner_user_id: besitzer ?? uid, art, titel: titel.slice(0, 200),
       eingabe: form,
       inhalt: art === 'ebook' ? { gliederung, kapitel: kapitelTexte } : { ...einzel, seo },
       status: geprueft ? 'geprueft' : 'entwurf',
