@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { buchungsDatumIso } from '@/lib/zahlungErfassen';
 import { matchAlle, zaehleMatches, bankHinweise, type MatchZeile, type OffeneRechnung } from '@/lib/bankAbgleich';
 import Hinweise from '../_components/Hinweise';
 import { parseUmsaetze, erkenneFormat, FORMAT_NAMEN } from '@/lib/bankFormate';
@@ -109,13 +110,21 @@ export default function BankingSeite() {
     if (!m.rechnungId) return;
     setBusy(m.rechnungId); setFehler(null);
     try {
-      const { error } = await supabase.from('rechnungen').update({
-        zahlungsstatus: 'bezahlt', bezahlt_am: new Date().toISOString().slice(0, 10),
-        bezahlter_betrag: m.transaktion.betrag, updated_at: new Date().toISOString(),
-      }).eq('id', m.rechnungId);
+      // G8 (26.09.2026): als Zahlung erfassen (echter Betrag, Buchungsdatum).
+      // Der Datenbank-Trigger setzt daraus „teilbezahlt" bzw. „bezahlt".
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user) throw new Error('Nicht angemeldet.');
+      const heuteIso = new Date().toISOString().slice(0, 10);
+      const { error } = await supabase.from('zahlungen').insert({
+        owner_user_id: u.user.id, rechnung_id: m.rechnungId,
+        betrag: Math.round(m.transaktion.betrag * 100) / 100,
+        zahlungsdatum: buchungsDatumIso(m.transaktion.datum, heuteIso),
+        zahlungsart: 'Überweisung',
+        referenz: (m.transaktion.verwendungszweck || '').slice(0, 140) || null,
+      });
       if (error) throw error;
       setErledigt((s) => new Set(s).add(m.rechnungId as string));
-      setOk(`Rechnung ${m.rechnungNummer || ''} als bezahlt markiert.`);
+      setOk(`Zahlung zu Rechnung ${m.rechnungNummer || ''} erfasst — bei Teilzahlung bleibt der Rest offen.`);
     } catch (e) { setFehler('Markieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }

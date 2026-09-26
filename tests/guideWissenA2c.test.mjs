@@ -34,7 +34,7 @@ test('Veraltete Guide-Texte sind raus: diese Seiten sprechen aus der Wissensbasi
 
 test('Loeschen ohne Rueckfrage wird ausdruecklich gewarnt', () => {
   for (const href of ['/dashboard/dsgvo', '/dashboard/foerdermittel', '/dashboard/foerder-angebot', '/dashboard/mahnwesen',
-    '/dashboard/zahlungen', '/dashboard/banking', '/dashboard/abo-rechnungen', '/dashboard/rechnungen']) {
+    '/dashboard/abo-rechnungen']) { // G3a/G8: Rechnungen-Storno, Zahlungen und Banking sind jetzt abgesichert (26.09.2026): Rechnungen-Storno und Zahlungen fragen jetzt nach
     assert.match(texte(WISSEN[href]), /ohne Rückfrage/, href);
   }
 });
@@ -56,6 +56,6 @@ test('Fachliche Kernaussagen stimmen mit dem Code', () => {
   assert.match(texte(WISSEN['/dashboard/banking']), /nur geplant/);
   assert.match(texte(WISSEN['/dashboard/elster']), /noch gesperrt/);
   assert.match(texte(WISSEN['/dashboard/datev']), /OHNE Vorsteuer/);
-  assert.match(texte(WISSEN['/dashboard/sepa-einzug']), /nicht zweimal einziehen/);
+  assert.match(texte(WISSEN['/dashboard/sepa-einzug']), /nicht noch einmal einziehen/); // G7
   assert.match(texte(WISSEN['/dashboard/dsgvo']), /LOESCHEN/);
 });

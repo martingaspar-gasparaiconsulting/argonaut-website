@@ -12,6 +12,7 @@
 
 import React, { useState, useRef } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { belegAusERechnung, istDoppelterBeleg } from "@/lib/belegAusERechnung";
 
 const NAVY = "#0A1628";
 const NAVY2 = "#0f1f38";
@@ -124,7 +125,24 @@ export default function ERechnungImport() {
         return;
       }
       setArchivStatus("ok");
-      setArchivInfo("revisionssicher archiviert" + (j.archiviert_am ? " am " + datum(String(j.archiviert_am).slice(0, 10)) : ""));
+      // G6 (26.09.2026): zusätzlich als Eingangsbeleg anlegen (sonst fehlt die
+      // Rechnung in Ausgaben, EÜR, USt-Voranmeldung und DATEV). Kein Doppel.
+      let belegText = "";
+      try {
+        const beleg = belegAusERechnung(rechnung);
+        const { data: chef } = await supabase.rpc("mein_chef_id");
+        const betrieb = typeof chef === "string" && chef ? chef : user.id;
+        const { data: gleiche } = beleg.belegnummer
+          ? await supabase.from("eingangsbelege").select("lieferant, belegnummer").eq("belegnummer", beleg.belegnummer)
+          : { data: [] as { lieferant: string | null; belegnummer: string | null }[] };
+        if (istDoppelterBeleg(beleg, (gleiche as { lieferant: string | null; belegnummer: string | null }[] | null) ?? [])) {
+          belegText = " · Eingangsbeleg gab es schon";
+        } else {
+          const { error: bErr } = await supabase.from("eingangsbelege").insert({ ...beleg, owner_user_id: betrieb });
+          belegText = bErr ? " · Eingangsbeleg konnte nicht angelegt werden: " + bErr.message : " · als Eingangsbeleg übernommen (bitte Kategorie prüfen)";
+        }
+      } catch { belegText = " · Eingangsbeleg konnte nicht angelegt werden"; }
+      setArchivInfo("revisionssicher archiviert" + (j.archiviert_am ? " am " + datum(String(j.archiviert_am).slice(0, 10)) : "") + belegText);
     } catch (e: any) {
       setArchivStatus("fehler");
       setArchivInfo(e?.message || String(e));

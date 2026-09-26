@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { buchungsDatumIso, offenerRest, pruefeZahlbetrag } from '@/lib/zahlungErfassen';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeZahlungen } from '@/lib/auge';
@@ -28,7 +29,7 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type Rechnung = { id: string; rechnungsnummer: string | null; titel: string | null; empfaenger_name: string | null; brutto_summe: number | null; zahlungsstatus: string | null; bezahlt_am: string | null; zahlung_gemeldet_am: string | null };
+type Rechnung = { id: string; rechnungsnummer: string | null; titel: string | null; empfaenger_name: string | null; brutto_summe: number | null; zahlungsstatus: string | null; bezahlt_am: string | null; zahlung_gemeldet_am: string | null; bezahlter_betrag?: number | null };
 type Beleg = { id: string; lieferant: string | null; belegnummer: string | null; belegdatum: string | null; brutto: number | null; kategorie: string | null; bezahlt_am: string | null };
 type Vertrag = { id: string; bezeichnung: string; kategorie: string | null; kosten_betrag: number | null; kosten_intervall: string | null; status: string | null };
 
@@ -53,7 +54,7 @@ export default function ZahlungenPage() {
     setLaden(true); setFehler(null);
     const versuch = async (fn: () => Promise<void>) => { try { await fn(); } catch { /* Tabelle evtl. fehlt */ } };
     await versuch(async () => {
-      const { data } = await supabase.from('rechnungen').select('id, rechnungsnummer, titel, empfaenger_name, brutto_summe, zahlungsstatus, bezahlt_am, zahlung_gemeldet_am').neq('zahlungsstatus', 'storniert').order('rechnungsdatum', { ascending: false }).limit(500);
+      const { data } = await supabase.from('rechnungen').select('id, rechnungsnummer, titel, empfaenger_name, brutto_summe, zahlungsstatus, bezahlt_am, zahlung_gemeldet_am, bezahlter_betrag').neq('zahlungsstatus', 'storniert').order('rechnungsdatum', { ascending: false }).limit(500);
       setRechnungen((data as Rechnung[]) ?? []);
     });
     await versuch(async () => {
@@ -76,11 +77,27 @@ export default function ZahlungenPage() {
   }, [laden_]);
 
   async function eingangBestaetigen(r: Rechnung) {
-    setBusy(r.id);
+    // G8 (26.09.2026): Betrag und Datum abfragen (vorbelegt: offener Rest, heute)
+    // und als Zahlung erfassen — vorher immer voller Betrag und „heute".
+    const rest = offenerRest(r.brutto_summe, r.bezahlter_betrag);
+    const bEingabe = window.prompt(`Wie viel ist zu Rechnung ${r.rechnungsnummer || ''} eingegangen? (Euro)`, rest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    if (bEingabe === null) return;
+    const { betrag, fehler: bFehler } = pruefeZahlbetrag(bEingabe, rest);
+    if (bFehler || betrag === null) { setFehler(bFehler); return; }
+    const dEingabe = window.prompt('Wann ist das Geld eingegangen? (TT.MM.JJJJ)', heute().split('-').reverse().join('.'));
+    if (dEingabe === null) return;
+    const datum = buchungsDatumIso(dEingabe, '');
+    if (!datum) { setFehler('Datum ist nicht lesbar — bitte TT.MM.JJJJ.'); return; }
+    setBusy(r.id); setFehler(null);
     try {
-      await supabase.from('rechnungen').update({ zahlungsstatus: 'bezahlt', bezahlt_am: heute(), bezahlter_betrag: Number(r.brutto_summe) || 0 }).eq('id', r.id);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user) throw new Error('Nicht angemeldet.');
+      const { error } = await supabase.from('zahlungen').insert({
+        owner_user_id: u.user.id, rechnung_id: r.id, betrag, zahlungsdatum: datum, zahlungsart: 'Überweisung', referenz: null,
+      });
+      if (error) throw error;
       await laden_();
-    } catch { setFehler('Bestätigen fehlgeschlagen.'); }
+    } catch (e) { setFehler('Bestätigen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
   async function belegBezahlt(b: Beleg, an: boolean) {

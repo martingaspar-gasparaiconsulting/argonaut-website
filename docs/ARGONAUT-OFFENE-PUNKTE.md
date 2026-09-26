@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 36 von 50 erledigt** (G1–G2 mit _p114, B1b Gruppe 4 mit _p115; K1–K5 und F1–F22 live; A1 und A2 zählen nicht mit)
+**Stand: 42 von 50 erledigt** (G3–G5 live mit _p116, G6–G8 mit _p117; B1b Gruppe 4, G1–G2, K1–K5, F1–F22 live; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -22,7 +22,7 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 | B1a | Besitzer-Fehler Teil A: 70 Seiten, deren Tabellen Mitarbeitern das Anlegen für den Betrieb schon erlauben — reiner Code-Fix | ✅ live (_p109, fcad0cd) |
 | B1b | Besitzer-Fehler Teil B, Gruppe 3 Arbeitsseiten (Aufmaß, Nachweise, Objektzeiten, Service-Verlauf, Hotelzimmer, Immobilien-Einheiten und Mietverträge, Wartungsverträge): SQL-Regel + Code | ✅ gebaut (_p110 + SQL) |
 | B1b-1 | Gruppe 1 Zugänge und Einstellungen — bleiben beim Chef (Empfehlung) | ✅ entschieden 26.09.: Zugänge und Einstellungen bleiben beim Chef |
-| B1b-4 | Gruppe 4 (Befund K5): Aufgaben, Kommentare, Auftragspositionen, Kontakt-Tags und -Aktivitäten, Projekt-Beteiligte/-Teams/-Vorlagen, Verkaufschancen, Objekte, Ressourcen, Korrespondenz, Post, Text-Werkstatt | ✅ gebaut (_p115 + SQL b1b-gruppe4) |
+| B1b-4 | Gruppe 4 (Befund K5): Aufgaben, Kommentare, Auftragspositionen, Kontakt-Tags und -Aktivitäten, Projekt-Beteiligte/-Teams/-Vorlagen, Verkaufschancen, Objekte, Ressourcen, Korrespondenz, Post, Text-Werkstatt | ✅ live (_p115 + SQL b1b-gruppe4) |
 | B1b-2 | Gruppe 2 Geld (Rechnung aus …, Angebote, Zahlungen, Kalkulator, Projektabrechnung, Förder-Angebot) — kommt zu G | ⬜ |
 | B1c | Eigene Felder auf den übrigen Seiten (Werkstatt, Service …) ebenfalls dem Betrieb zuordnen | ⬜ |
 
@@ -34,12 +34,12 @@ Ablauf: je Punkt zeigt Claude **Fehler + Lösung + Empfehlung**, Martin sagt „
 |---|---|---|
 | G1 | Beleg-Inbox, Reisekosten, Anlagen, Förder-Angebot: erkannter Wert „119.5" wird 1195 | ✅ war durch Zahlen-Querschnitt (_p104) schon behoben — Test dazu (_p114) |
 | G2 | Reisekosten „Bearbeiten" setzt Mahlzeiten auf 0 und leert die Notiz | ✅ gebaut (_p114) |
-| G3 | Rechnung: Stornieren ohne Rückfrage, keine Registerdaten, Logo-Upload fehlt | ⬜ |
-| G4 | Angebote: 🗑 löscht sofort ohne Rückfrage | ⬜ |
-| G5 | Spendenbescheinigung: Nummer beginnt nicht je Jahr neu | ⬜ |
-| G6 | E-Rechnung-Import legt keinen Eingangsbeleg an | ⬜ |
-| G7 | SEPA-Einzug markiert Rechnungen nicht — Doppel-Einzug möglich | ⬜ |
-| G8 | Banking/Zahlungen: immer voller Betrag und „bezahlt heute" | ⬜ |
+| G3 | Rechnung: Stornieren ohne Rückfrage, keine Registerdaten, Logo-Upload fehlt | ✅ live (_p116) — Storno-Rückfrage, Registerdaten im Fuß, Logo-Upload |
+| G4 | Angebote: 🗑 löscht sofort ohne Rückfrage | ✅ live (_p116) |
+| G5 | Spendenbescheinigung: Nummer beginnt nicht je Jahr neu | ✅ live (_p116) |
+| G6 | E-Rechnung-Import legt keinen Eingangsbeleg an | ✅ gebaut (_p117) — Eingangsbeleg automatisch, kein Doppel |
+| G7 | SEPA-Einzug markiert Rechnungen nicht — Doppel-Einzug möglich | ✅ gebaut (_p117 + SQL g7) — Vermerk „in SEPA-Datei“, Zurücksetzen, nur offener Rest |
+| G8 | Banking/Zahlungen: immer voller Betrag und „bezahlt heute" | ✅ gebaut (_p117) — Zahlung mit echtem Betrag und Buchungsdatum, Teilzahlung bleibt offen |
 | G9 | Mitglieder-Kündigung nimmt sofort aus dem SEPA-Einzug | ⬜ |
 | G10 | EÜR zählt stornierte Rechnungen und AfA ausgemusterter Anlagen | ⬜ |
 | G11 | Objektzeiten: Doppel-Abrechnung möglich, Rechnung sofort „offen" ohne Empfänger | ⬜ |

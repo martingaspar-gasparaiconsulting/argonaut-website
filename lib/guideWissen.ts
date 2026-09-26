@@ -665,7 +665,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
     probe: {
       anlegen: 'Hier entsteht keine neue Rechnung. Zum Ausprobieren in der Übungswelt eine Beispiel-Rechnung öffnen und unter „Neue Zahlung erfassen“ einen kleinen Betrag mit „＋ Zahlung buchen“ erfassen.',
-      loeschen: 'Die Zahlung mit 🗑 entfernen — dabei kommt eine Rückfrage. Eine Rechnung selbst lässt sich nicht löschen, nur mit „Stornieren“ auf storniert setzen. Achtung: Das geschieht sofort und ohne Rückfrage. „Reaktivieren“ macht es rückgängig.',
+      loeschen: 'Die Zahlung mit 🗑 entfernen — dabei kommt eine Rückfrage. Eine Rechnung selbst lässt sich nicht löschen, nur mit „Stornieren“ auf storniert setzen — nach einer Rückfrage. „Reaktivieren“ macht es rückgängig (ebenfalls mit Rückfrage).',
     },
     landetIn: [{ text: 'Mahnwesen (überfällige Rechnungen)', href: '/dashboard/mahnwesen' }, { text: 'EÜR (Einnahmen und Umsatzsteuer)', href: '/dashboard/euer' }, { text: 'Finanzen', href: '/dashboard/finanzen' }],
     vorher: [{ text: 'Angebot angenommen und in eine Rechnung umgewandelt', href: '/dashboard/angebote' }, { text: 'Oder ein Auftrag', href: '/dashboard/auftraege' }, { text: 'Oder eine wiederkehrende Rechnung', href: '/dashboard/abo-rechnungen' }, { text: 'Firmendaten und Bankverbindung für das PDF', href: '/dashboard/einstellungen' }],
@@ -678,7 +678,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Die Datei in das Feld „E-Rechnung hierher ziehen oder klicken“ ziehen oder anklicken und auswählen (.xml oder .pdf)',
       'Warten, bis „Rechnung wird ausgelesen…“ verschwindet. Oben erscheint dann „✓ GoBD-Archiv: revisionssicher archiviert“ oder, bei einer schon bekannten Datei, „bereits archiviert am …“',
       'Die Angaben prüfen: „Lieferant (Rechnungssteller)“, „Empfänger“, die Eckdaten, „POSITIONEN“ und die Summen. Auf gelbe „⚠ Hinweise“ achten',
-      'Wichtig: Hier wird nur ausgelesen und archiviert. Für Buchhaltung und Vorsteuer die Rechnung zusätzlich in der Beleg-Inbox erfassen',
+      'Nach dem Archivieren legt ARGONAUT die Rechnung automatisch als Eingangsbeleg an (Beleg-Inbox, Status zu prüfen) — dort nur noch die Kategorie prüfen. Gleicher Lieferant mit gleicher Belegnummer wird nicht doppelt angelegt',
       'Mit „Weitere Rechnung einlesen“ die nächste Datei holen',
     ],
     probe: {
@@ -798,7 +798,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hier wird nur der Zahlungsstatus gesetzt, anlegen oder löschen ist nicht möglich.',
     schritte: [
       'Reiter „⬇ Eingänge“: Unter „💬 Vom Kunden gemeldet — bitte bestätigen“ stehen Rechnungen, bei denen der Kunde im Portal „Ich habe bezahlt“ geklickt hat',
-      'Erst den Geldeingang auf dem Konto prüfen, dann „✓ Als bezahlt bestätigen“. Achtung: Das geschieht sofort und ohne Rückfrage, die Rechnung gilt dann als voll bezahlt',
+      'Erst den Geldeingang auf dem Konto prüfen, dann „✓ Als bezahlt bestätigen“: Betrag (vorbelegt mit dem offenen Rest) und Eingangsdatum eintragen. Weniger als offen ergibt „teilbezahlt“, der Rest bleibt offen',
       '„✅ Erhaltene Zahlungen“ zeigt die bezahlten Rechnungen mit Datum',
       'Reiter „⬆ Ausgänge“: Unter „🧾 Belege / Eingangsrechnungen“ setzt das Häkchen den Beleg auf bezahlt (mit heutigem Datum). Häkchen entfernen nimmt das zurück',
       '„🔁 Laufende Verträge & Abos“ rechnet aktive Verträge auf Kosten je Monat um, mit Summe unten',
@@ -922,7 +922,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Unter „📝 Mandat je Kontakt“ einen „Kontakt“ wählen und „IBAN“, „Mandatsreferenz“ sowie „Mandat unterschrieben am“ eintragen, dann „💾 Mandat speichern“. Eine IBAN mit falscher Prüfsumme wird abgelehnt',
       'Bei Bedarf in der Mandatsliste „✍️ unterschreiben“: Der Unterschrifts-Link wird erstellt und in die Zwischenablage kopiert',
       'Unter „💶 Offene Rechnungen einziehen“ den „Fälligkeitstag (Ausführung)“ wählen und Rechnungen einzeln anhaken oder „Alle wählen“',
-      '„⭱ SEPA-Datei erzeugen“ und die Datei im Online-Banking unter Sammellastschrift bzw. SEPA-Datei-Import hochladen. Die Rechnungen bleiben danach offen, bis der Eingang verbucht ist — also nicht zweimal einziehen',
+      '„⭱ SEPA-Datei erzeugen“ und die Datei im Online-Banking unter Sammellastschrift bzw. SEPA-Datei-Import hochladen. Die Rechnungen stehen danach unter „Schon in einer SEPA-Datei“ und lassen sich nicht noch einmal einziehen. Lehnt die Bank die Datei ab, dort „↺ Zurücksetzen“',
     ],
     probe: { anlegen: 'Ein Mandat für einen Test-Kontakt mit einer gültigen Test-IBAN speichern.', loeschen: 'Hier nicht möglich: Ein Mandat kann auf dieser Seite nur über „Bearbeiten“ geändert werden. Es gibt keinen Knopf zum Löschen und keinen zum Abschalten.' },
     landetIn: [{ text: 'Signaturen (Mandat unterschreiben lassen)', href: '/dashboard/signaturen' }],
@@ -997,12 +997,12 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/banking': {
     zweck: 'Einen Umsatz-Export Ihrer Bank (CAMT.053, MT940 oder CSV) gegen die offenen Rechnungen abgleichen und Zahlungseingänge per Klick als bezahlt markieren. Die automatische Bankanbindung ist nur geplant: Zugänge lassen sich hinterlegen, ein Abruf findet aber nicht statt.',
     wer: 'chef',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hinterlegte Bank-Zugänge werden mit Rückfrage entfernt. „✓ als bezahlt“ wirkt sofort und ohne Rückfrage.',
+    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hinterlegte Bank-Zugänge werden mit Rückfrage entfernt. „✓ als bezahlt“ erfasst die Überweisung als Zahlung (echter Betrag, Buchungsdatum).',
     schritte: [
       'Im Online-Banking die Umsätze exportieren, am besten als CAMT.053 oder MT940. Bei CSV bitte mit Kopfzeile',
       'Den Inhalt in das Textfeld einfügen oder „📁 Datei wählen“. Das erkannte Format steht daneben',
       '„🔍 Abgleichen“ und die Kacheln „Sicher zugeordnet“, „Wahrscheinlich“ und „Ohne Treffer“ prüfen',
-      'Bei jedem Treffer Rechnungsnummer und Hinweis „sicher“ oder „wahrscheinlich“ prüfen, dann „✓ als bezahlt“. Achtung: sofort und ohne Rückfrage, auch bei „wahrscheinlich“ — und es wird immer der volle Betrag als bezahlt gesetzt',
+      'Bei jedem Treffer Rechnungsnummer und Hinweis „sicher“ oder „wahrscheinlich“ prüfen, dann „✓ als bezahlt“. Erfasst wird die Überweisung mit ihrem echten Betrag und Buchungsdatum — eine Teilzahlung lässt den Rest offen. Bei „wahrscheinlich“ vorher genau prüfen',
       'Optional „＋ Bank hinzufügen“ mit Bank-Name, Client-ID und Secret, dann „🔗 Bank speichern“. Damit wird nur gespeichert, ein automatischer Abruf findet derzeit nicht statt',
     ],
     probe: { anlegen: 'Die Beispielzeile aus dem Textfeld einfügen und „🔍 Abgleichen“. Das speichert nichts, solange Sie nicht „✓ als bezahlt“ klicken.', loeschen: 'Ein Abgleich ohne „✓ als bezahlt“ hinterlässt nichts. Einen hinterlegten Bank-Zugang entfernt „Entfernen“ (mit Rückfrage). „Als bezahlt“ lässt sich auf dieser Seite nicht zurücknehmen.' },

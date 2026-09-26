@@ -36,6 +36,7 @@ type Rechnung = {
   id: string; rechnungsnummer: string | null; kontakt_id: string | null; brutto_summe: number | null;
   faelligkeitsdatum: string | null; titel: string | null; empfaenger_name: string | null;
   zahlungsstatus: string; bezahlt_am: string | null;
+  bezahlter_betrag?: number | null; sepa_datei_am?: string | null; // G7
 };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
@@ -44,6 +45,11 @@ function ibanKurz(iban: string | null | undefined) { const s = (iban || '').repl
 function kontaktName(k: Record<string, unknown>): string {
   const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
   return s(k.anzeigename) || [s(k.vorname), s(k.nachname)].filter(Boolean).join(' ') || s(k.name) || s(k.firmenname) || s(k.firma) || s(k.email) || 'Kontakt';
+}
+
+/** G7: offener Rest einer Rechnung (brutto minus bereits bezahlt), nie negativ. */
+function offenerRest(r: { brutto_summe: number | null; bezahlter_betrag?: number | null }): number {
+  return Math.max(0, Math.round(((Number(r.brutto_summe) || 0) - (Number(r.bezahlter_betrag) || 0)) * 100) / 100);
 }
 
 export default function SepaEinzugPage() {
@@ -55,6 +61,7 @@ export default function SepaEinzugPage() {
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [mandate, setMandate] = useState<Record<string, Mandat>>({});
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
+  const [inDatei, setInDatei] = useState<Rechnung[]>([]); // G7: schon in einer SEPA-Datei, noch nicht bezahlt
   const [auswahl, setAuswahl] = useState<Record<string, boolean>>({});
   const [ausfuehrung, setAusfuehrung] = useState(heutePlus(6));
 
@@ -91,13 +98,22 @@ export default function SepaEinzugPage() {
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, Object.values(mm).map((m) => m.id).filter(Boolean) as string[]));
 
-      const { data: rData } = await supabase.from('rechnungen')
-        .select('id, rechnungsnummer, kontakt_id, brutto_summe, faelligkeitsdatum, titel, empfaenger_name, zahlungsstatus, bezahlt_am')
-        .order('faelligkeitsdatum', { ascending: true });
-      const offen = ((rData as Rechnung[]) || []).filter((r) =>
-        !r.bezahlt_am && r.zahlungsstatus !== 'bezahlt' && r.zahlungsstatus !== 'storniert' && (Number(r.brutto_summe) || 0) > 0
+      // G7 (26.09.2026): mit bezahltem Betrag und SEPA-Vermerk; fehlt die neue
+      // Spalte (SQL G7 noch nicht gelaufen), wie bisher ohne Vermerk.
+      const BASIS = 'id, rechnungsnummer, kontakt_id, brutto_summe, faelligkeitsdatum, titel, empfaenger_name, zahlungsstatus, bezahlt_am, bezahlter_betrag';
+      // Eigene Variablen statt Neuzuweisung: die Supabase-Typen leiten je
+      // select-Text einen eigenen Ergebnistyp ab (Lehre aus _p98).
+      const rMit = await supabase.from('rechnungen').select(BASIS + ', sepa_datei_am').order('faelligkeitsdatum', { ascending: true });
+      let rDaten: unknown = rMit.data;
+      if (rMit.error) {
+        const rOhne = await supabase.from('rechnungen').select(BASIS).order('faelligkeitsdatum', { ascending: true });
+        rDaten = rOhne.data;
+      }
+      const alleOffen = ((rDaten as Rechnung[] | null) || []).filter((r) =>
+        !r.bezahlt_am && r.zahlungsstatus !== 'bezahlt' && r.zahlungsstatus !== 'storniert' && offenerRest(r) > 0
       );
-      setRechnungen(offen);
+      setRechnungen(alleOffen.filter((r) => !r.sepa_datei_am));
+      setInDatei(alleOffen.filter((r) => !!r.sepa_datei_am));
     } catch (e: unknown) {
       setFehler('Daten konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
@@ -193,7 +209,7 @@ export default function SepaEinzugPage() {
   }), [rechnungen, mandate]);
 
   const gewaehlt = useMemo(() => einziehbar.filter((r) => auswahl[r.id]), [einziehbar, auswahl]);
-  const summeGewaehlt = useMemo(() => gewaehlt.reduce((s, r) => s + (Number(r.brutto_summe) || 0), 0), [gewaehlt]);
+  const summeGewaehlt = useMemo(() => gewaehlt.reduce((s, r) => s + offenerRest(r), 0), [gewaehlt]);
 
   function alleWaehlen(an: boolean) {
     const next: Record<string, boolean> = {};
@@ -219,7 +235,7 @@ export default function SepaEinzugPage() {
         name: kontaktMap[r.kontakt_id as string] || r.empfaenger_name || 'Kunde',
         iban: (m.iban as string).replace(/\s+/g, '').toUpperCase(),
         bic: m.bic || undefined,
-        betrag: Number(r.brutto_summe) || 0,
+        betrag: offenerRest(r), // G7: nur der offene Rest, nicht der volle Betrag
         mandatsreferenz: m.mandatsreferenz as string,
         mandatDatum: m.mandat_datum as string,
         verwendungszweck: `Rechnung ${r.rechnungsnummer || ''}`.trim(),
@@ -239,6 +255,13 @@ export default function SepaEinzugPage() {
     const a = document.createElement('a');
     a.href = url; a.download = `SEPA-Rechnungen_${ausfuehrung}.xml`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+
+    // G7 (26.09.2026): Rechnungen als „in SEPA-Datei" vermerken — sonst konnte
+    // ein zweiter Klick sie noch einmal einziehen.
+    {
+      const { error: vErr } = await supabase.from('rechnungen').update({ sepa_datei_am: ausfuehrung }).in('id', gewaehlt.map((r) => r.id));
+      if (vErr) setFehler('SEPA-Datei erzeugt. Achtung: Die Rechnungen konnten nicht als eingezogen vermerkt werden (SQL von G7 fehlt?) — bitte nicht noch einmal einziehen.');
+    }
 
     // Genutzte Mandate fortschreiben: nächster Einzug = Folge-Lastschrift (RCUR).
     try {
@@ -347,10 +370,28 @@ export default function SepaEinzugPage() {
                   <span style={{ fontWeight: 700, color: C.gold, minWidth: 96 }}>{r.rechnungsnummer || '—'}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>{kontaktMap[r.kontakt_id as string] || r.empfaenger_name || '—'}</span>
                   <span style={{ ...styles.badge, color: seq === 'RCUR' ? C.cyan : C.gold, borderColor: seq === 'RCUR' ? C.cyan : C.gold }}>{seq}</span>
-                  <span style={{ fontWeight: 700, minWidth: 96, textAlign: 'right' }}>{eur(r.brutto_summe)}</span>
+                  <span style={{ fontWeight: 700, minWidth: 96, textAlign: 'right' }}>{eur(offenerRest(r))}</span>
                 </label>
               );
             })}
+          </div>
+        )}
+
+        {inDatei.length > 0 && (
+          <div style={{ ...styles.hinweis, marginTop: 10 }}>
+            <b>Schon in einer SEPA-Datei, Geld noch nicht verbucht ({inDatei.length}):</b>
+            {inDatei.map((r) => (
+              <div key={r.id} style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+                <span style={{ minWidth: 96 }}>{r.rechnungsnummer || '—'}</span>
+                <span style={{ flex: 1 }}>{kontaktMap[r.kontakt_id as string] || r.empfaenger_name || '—'} · Einzug {r.sepa_datei_am}</span>
+                <span>{eur(offenerRest(r))}</span>
+                <button style={styles.ghost} onClick={async () => {
+                  if (!window.confirm(`Rechnung ${r.rechnungsnummer || ''} wieder zum Einzug freigeben? Nur tun, wenn die Bank die Lastschrift NICHT ausgeführt hat.`)) return;
+                  const { error } = await supabase.from('rechnungen').update({ sepa_datei_am: null }).eq('id', r.id);
+                  if (error) setFehler('Zurücksetzen fehlgeschlagen: ' + error.message); else await laden_();
+                }}>↺ Zurücksetzen</button>
+              </div>
+            ))}
           </div>
         )}
 
