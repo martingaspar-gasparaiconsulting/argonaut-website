@@ -65,6 +65,8 @@ type Job = {
   kopfzeilen: string[] | null; mapping: Mapping | null;
   zeilen_gesamt: number; zeilen_ok: number; zeilen_fehler: number;
   als_vorlage: boolean; vorlage_name: string | null; erstellt_am: string;
+  /** F6: ids der neu angelegten Datensätze (nur wenn die SQL-Spalte existiert). */
+  angelegte_ids?: string[] | null; rueckgaengig_am?: string | null;
 };
 
 function fmtZeit(iso: string | null): string {
@@ -159,13 +161,49 @@ export default function ImportCenterPage() {
   const offenePflicht = useMemo(() => (zielKey ? fehlendePflichtfelder(mapping, zielKey) : []), [mapping, zielKey]);
 
   const verlaufLaden = useCallback(async () => {
-    const { data } = await supabase
-      .from('import_jobs')
-      .select('id,ziel,dateiname,status,kopfzeilen,mapping,zeilen_gesamt,zeilen_ok,zeilen_fehler,als_vorlage,vorlage_name,erstellt_am')
-      .order('erstellt_am', { ascending: false })
-      .limit(40);
-    setVerlauf((data as Job[]) ?? []);
+    const SPALTEN = 'id,ziel,dateiname,status,kopfzeilen,mapping,zeilen_gesamt,zeilen_ok,zeilen_fehler,als_vorlage,vorlage_name,erstellt_am';
+    // F6: mit den neuen Spalten fuer „Rückgängig" — fehlen sie (SQL noch nicht
+    // gelaufen), wie bisher ohne.
+    const r1 = await supabase.from('import_jobs').select(SPALTEN + ',angelegte_ids,rueckgaengig_am')
+      .order('erstellt_am', { ascending: false }).limit(40);
+    if (!r1.error) { setVerlauf((r1.data as unknown as Job[]) ?? []); return; }
+    const r2 = await supabase.from('import_jobs').select(SPALTEN)
+      .order('erstellt_am', { ascending: false }).limit(40);
+    setVerlauf((r2.data as unknown as Job[]) ?? []);
   }, []);
+
+  // --- F6: Import rückgängig machen -----------------------------------------
+  // Loescht NUR die Datensaetze, die dieser Import neu angelegt hat. Geaenderte
+  // bestehende Datensaetze bleiben geaendert (der alte Stand ist nicht
+  // gespeichert). Offene Posten (Rechnungen) sind ausgenommen — Geld-Daten
+  // werden nicht per Knopf geloescht.
+  async function rueckgaengig(j: Job) {
+    const z = zielDef(j.ziel);
+    const ids = (j.angelegte_ids ?? []).filter(Boolean);
+    if (!z || ids.length === 0 || z.tabelle === 'rechnungen') return;
+    if (typeof window !== 'undefined' && !window.confirm(
+      `Die ${ids.length} Datensätze, die dieser Import in „${z.label}" neu angelegt hat, werden gelöscht. ` +
+      'Geänderte bestehende Datensätze bleiben, wie sie sind. Fortfahren?'
+    )) return;
+    setBusy('rueck'); setFehler(null); setHinweis(null);
+    let geloescht = 0; let gescheitert = 0;
+    try {
+      for (let i = 0; i < ids.length; i += 200) {
+        const teil = ids.slice(i, i + 200);
+        const { data, error } = await supabase.from(z.tabelle).delete().in('id', teil).select('id');
+        if (error) { gescheitert += teil.length; continue; }
+        const n = ((data as unknown[]) ?? []).length;
+        geloescht += n; gescheitert += teil.length - n;
+      }
+      await supabase.from('import_jobs').update({ status: 'rueckgaengig', rueckgaengig_am: new Date().toISOString() }).eq('id', j.id);
+      setHinweis(gescheitert === 0
+        ? `Import rückgängig gemacht — ${geloescht} Datensätze gelöscht.`
+        : `${geloescht} Datensätze gelöscht, ${gescheitert} nicht (bereits gelöscht, fehlendes Löschrecht oder schon anderswo verwendet, z. B. in einer Rechnung).`);
+      await verlaufLaden();
+    } catch (err: unknown) {
+      setFehler('Rückgängig fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
 
   useEffect(() => { verlaufLaden(); }, [verlaufLaden]);
 
@@ -282,48 +320,61 @@ export default function ImportCenterPage() {
       }
 
       const neu: Record<string, unknown>[] = [];
-      const zuAendern: { id: string; werte: Record<string, unknown> }[] = [];
+      const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
+      const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
+      const angelegteIds: string[] = [];           // F6: fuer „Rückgängig"
 
-      bericht.saetze.forEach((satz) => {
+      bericht.saetze.forEach((satz, idx) => {
+        const dateiZeile = bericht.zeilenNummern?.[idx] ?? 0;
         const s = ziel.schluessel ? String(satz[ziel.schluessel] ?? '').trim().toLowerCase() : '';
         const treffer = s ? vorhanden.get(s) : undefined;
         if (treffer) {
-          if (beiDublette === 'aktualisieren') zuAendern.push({ id: treffer, werte: satz });
+          if (beiDublette === 'aktualisieren') zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
           else erg.uebersprungen++;
           return;
         }
         neu.push({ ...satz, owner_user_id: uid });
+        neuZeile.push(dateiZeile);
       });
 
       // Neue Datensätze in Stapeln. Scheitert ein Stapel, wird er Zeile für Zeile
       // wiederholt — nur so weiß man am Ende, WELCHE Zeile das Problem war.
       for (let i = 0; i < neu.length; i += BATCH) {
         const stapel = neu.slice(i, i + BATCH);
-        const { error } = await supabase.from(ziel.tabelle).insert(stapel);
-        if (!error) { erg.angelegt += stapel.length; continue; }
+        const { data: neuIds, error } = await supabase.from(ziel.tabelle).insert(stapel).select('id');
+        if (!error) {
+          erg.angelegt += stapel.length;
+          ((neuIds as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+          continue;
+        }
 
         for (let j = 0; j < stapel.length; j++) {
           const einzeln = stapel[j];
-          const { error: e2 } = await supabase.from(ziel.tabelle).insert(einzeln);
+          const { data: eineId, error: e2 } = await supabase.from(ziel.tabelle).insert(einzeln).select('id');
           if (e2) {
             erg.fehlgeschlagen++;
             erg.fehler.push({
-              zeile: i + j + 2,
+              zeile: neuZeile[i + j] ?? 0,
               feld: ziel.schluessel ? String(einzeln?.[ziel.schluessel] ?? '') : '',
               meldung: e2.message,
             });
-          } else erg.angelegt++;
+          } else {
+            erg.angelegt++;
+            ((eineId as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+          }
         }
       }
 
       for (const a of zuAendern) {
         const { error } = await supabase.from(ziel.tabelle).update(a.werte).eq('id', a.id);
-        if (error) { erg.fehlgeschlagen++; erg.fehler.push({ zeile: 0, feld: '', meldung: error.message }); }
+        if (error) { erg.fehlgeschlagen++; erg.fehler.push({ zeile: a.zeile, feld: '', meldung: error.message }); }
         else erg.aktualisiert++;
       }
 
       // Protokoll schreiben — inklusive Zuordnung, damit sie wiederverwendbar ist.
-      await supabase.from('import_jobs').insert({
+      // F6: mit angelegten ids; fehlt die neue Spalte (SQL noch nicht gelaufen),
+      // wird wie bisher ohne gespeichert.
+      const jobSatz = {
         owner_user_id: uid,
         ziel: zielKey,
         dateiname: datei.dateiname,
@@ -337,7 +388,9 @@ export default function ImportCenterPage() {
         als_vorlage: merken,
         vorlage_name: merken ? datei.dateiname : null,
         beendet_am: new Date().toISOString(),
-      });
+      };
+      const { error: jobFehler } = await supabase.from('import_jobs').insert({ ...jobSatz, angelegte_ids: angelegteIds });
+      if (jobFehler) await supabase.from('import_jobs').insert(jobSatz);
 
       setErgebnis(erg);
       await verlaufLaden();
@@ -638,6 +691,7 @@ export default function ImportCenterPage() {
                     <th style={styles.th}>Datei</th>
                     <th style={styles.th}>Übernommen</th>
                     <th style={styles.th}>Zuordnung</th>
+                    <th style={styles.th}>Rückgängig</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -655,6 +709,16 @@ export default function ImportCenterPage() {
                         </td>
                         <td style={{ ...styles.td, fontSize: 12.5, color: j.als_vorlage ? C.cyan : C.dim }}>
                           {j.als_vorlage ? '✓ gemerkt' : '—'}
+                        </td>
+                        <td style={{ ...styles.td, fontSize: 12.5 }}>
+                          {j.status === 'rueckgaengig' ? <span style={{ color: C.dim }}>↺ rückgängig gemacht</span>
+                            : z?.tabelle === 'rechnungen' ? <span style={{ color: C.dim }} title="Offene Posten werden nicht per Knopf gelöscht.">—</span>
+                            : (j.angelegte_ids?.length ?? 0) > 0 ? (
+                              <button type="button" disabled={busy !== null} onClick={() => rueckgaengig(j)}
+                                style={{ background: 'transparent', border: `1px solid ${C.danger}`, color: C.danger, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12.5 }}>
+                                ↺ {j.angelegte_ids?.length} löschen
+                              </button>
+                            ) : <span style={{ color: C.dim }}>—</span>}
                         </td>
                       </tr>
                     );

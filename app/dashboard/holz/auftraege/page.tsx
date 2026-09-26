@@ -40,6 +40,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import { EINHEITEN, einheitKurz, formatZahl, type HolzEinheit } from '../../_components/holzLogik';
 import { sortiereSortimente, anzeigeName, type Sortiment } from '../../_components/sortimentLogik';
 import { bepreisteEinheiten, istVerkaufsfertig, type Preis, type Mengenrabatt } from '../../_components/preisLogik';
@@ -532,14 +533,20 @@ export default function AuftraegePage() {
         id = data.id as string;
         setAuftragId(id); setNummer(nr);
       } else {
-        const { error } = await supabase.from('holz_auftraege').update(kopf).eq('id', id);
+        const { data: geschrieben, error } = await supabase.from('holz_auftraege').update(kopf).eq('id', id).select('id');
         if (error) throw error;
+        if (nichtsGeschrieben(geschrieben)) throw new Error(NICHT_GESPEICHERT); // F20
       }
 
       // Positionen: alte löschen, neue schreiben. Kein Diff — bei zehn Zeilen
       // ist das schneller und fehlerfrei.
       if (bearbeitbar) {
-        await supabase.from('holz_auftrag_positionen').delete().eq('auftrag_id', id);
+        // F20 (26.09.2026): erst neue Zeilen schreiben, dann die alten loeschen —
+        // vorher wurde zuerst geloescht (ungeprueft). Scheiterte das Schreiben,
+        // war der Auftrag leer.
+        const { data: altePos, error: eAlt } = await supabase.from('holz_auftrag_positionen').select('id').eq('auftrag_id', id);
+        if (eAlt) throw eAlt;
+        const altIds = ((altePos as { id: string }[] | null) ?? []).map((r) => r.id);
 
         const zeilen = befund.positionen.map((p) => ({
           owner_user_id: uid,
@@ -560,6 +567,10 @@ export default function AuftraegePage() {
 
         const { error } = await supabase.from('holz_auftrag_positionen').insert(zeilen);
         if (error) throw error;
+        if (altIds.length) {
+          const { error: eDel } = await supabase.from('holz_auftrag_positionen').delete().in('id', altIds);
+          if (eDel) throw eDel;
+        }
       }
 
       // Positionen neu laden — sonst druckt der Lieferschein den alten Stand.
@@ -589,8 +600,9 @@ export default function AuftraegePage() {
     try {
       const patch: Record<string, unknown> = { status: neuStatus };
       if (neuStatus === 'geliefert') patch.geliefert_am = new Date().toISOString();
-      const { error } = await supabase.from('holz_auftraege').update(patch).eq('id', auftragId);
+      const { data: geschrieben, error } = await supabase.from('holz_auftraege').update(patch).eq('id', auftragId).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben)) throw new Error(NICHT_GESPEICHERT); // F20
       setStatus(neuStatus);
       await alles();
       melde(`Status: ${label}`);

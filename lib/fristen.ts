@@ -211,3 +211,24 @@ export function fristenHinweise(
   }
   return h;
 }
+
+/**
+ * F21 (26.09.2026) — Monatsfrist ab einem Ereignistag (z. B. Eingang einer
+ * DSGVO-Anfrage, Art. 12 Abs. 3 DSGVO; Rechnung wie § 188 Abs. 2 und 3 BGB):
+ * gleiche Tageszahl n Monate spaeter; gibt es den Tag im Zielmonat nicht,
+ * endet die Frist am letzten Tag dieses Monats (31.01. -> 28./29.02.).
+ * Rein mit Zeichenketten gerechnet — keine Zeitzone, kein toISOString.
+ * Vorher (dsgvo/page.tsx) lag die Frist in Deutschland 1 Tag zu frueh
+ * (Mitternacht Ortszeit -> UTC-Vortag) und lief bei 31.01. in den Maerz.
+ */
+export function monatsFristEnde(iso: string, monate = 1): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''));
+  if (!m) return '';
+  const j = Number(m[1]), mo = Number(m[2]), t = Number(m[3]);
+  const ziel = (mo - 1) + monate;
+  const zj = j + Math.floor(ziel / 12);
+  const zm = ((ziel % 12) + 12) % 12; // 0-basiert
+  const letzter = new Date(Date.UTC(zj, zm + 1, 0)).getUTCDate();
+  const zt = Math.min(t, letzter);
+  return `${zj}-${String(zm + 1).padStart(2, '0')}-${String(zt).padStart(2, '0')}`;
+}

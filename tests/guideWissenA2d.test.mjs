@@ -28,12 +28,15 @@ test('Alte Guide-Texte der Verwaltung sind raus, der Guide spricht aus der Wisse
 
 test('Kernaussagen stimmen mit dem Code', () => {
   assert.match(texte(WISSEN['/dashboard/webseiten']), /Offline nehmen/);
-  assert.match(texte(WISSEN['/dashboard/webseiten']), /wieder offline/);
+  // F2 (26.09.2026): Speichern nimmt die Seite nicht mehr offline
+  assert.doesNotMatch(texte(WISSEN['/dashboard/webseiten']), /wieder offline/);
+  assert.match(texte(WISSEN['/dashboard/webseiten']), /sofort live/);
   assert.match(texte(WISSEN['/dashboard/rechte']), /darf ändern/);
   assert.match(texte(WISSEN['/dashboard/rechte']), /sensibel/);
   assert.match(texte(WISSEN['/dashboard/import']), /nicht/);
-  assert.match(texte(WISSEN['/dashboard/automationen']), /SOFORT aktiv/);
-  assert.match(texte(WISSEN['/dashboard/datensicherung']), /NICHT dabei/);
+  // F7/F8 (26.09.2026): Automation startet pausiert, Sicherung ist vollständig
+  assert.match(texte(WISSEN['/dashboard/automationen']), /PAUSIERT/);
+  assert.match(texte(WISSEN['/dashboard/datensicherung']), /Zugangsdaten/);
   assert.match(texte(WISSEN['/dashboard/filialleitung']), /ohne Rückfrage/);
   // Der Knopf „Alle Module hier wieder aktivieren" wird NICHT empfohlen (Befund: blendet andere Module aus)
   assert.doesNotMatch(texte(WISSEN['/dashboard/filial-module']), /wieder aktivieren/);

@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import { EINHEITEN, einheitKurz, holzartName } from '../../_components/holzLogik';
 import { sortiereSortimente, trocknungsgradName, type Sortiment } from '../../_components/sortimentLogik';
 import { findePreis, bepreisteEinheiten, istVerkaufsfertig, type Preis } from '../../_components/preisLogik';
@@ -243,12 +244,16 @@ export default function PaketePage() {
         id = data.id as string;
         setPaketId(id);
       } else {
-        const { error } = await supabase.from('pakete').update(kopf).eq('id', id);
+        const { data: geschrieben, error } = await supabase.from('pakete').update(kopf).eq('id', id).select('id');
         if (error) throw error;
+        if (nichtsGeschrieben(geschrieben)) throw new Error(NICHT_GESPEICHERT); // F20
       }
 
-      // Positionen: alte weg, neue rein. Bei zehn Zeilen fehlerfrei und schnell.
-      await supabase.from('paket_positionen').delete().eq('paket_id', id);
+      // F20 (26.09.2026): erst neue Positionen schreiben, dann die alten
+      // loeschen (vorher: ungeprueft zuerst geloescht).
+      const { data: altePos, error: eAlt } = await supabase.from('paket_positionen').select('id').eq('paket_id', id);
+      if (eAlt) throw eAlt;
+      const altIds = ((altePos as { id: string }[] | null) ?? []).map((r) => r.id);
 
       const zeilen = entwurfPositionen.map((p, i) => ({
         owner_user_id: uid,
@@ -265,6 +270,10 @@ export default function PaketePage() {
 
       const { error: pErr } = await supabase.from('paket_positionen').insert(zeilen);
       if (pErr) throw pErr;
+      if (altIds.length) {
+        const { error: eDel } = await supabase.from('paket_positionen').delete().in('id', altIds);
+        if (eDel) throw eDel;
+      }
 
       await alles();
       melde(istNeu ? 'Paket angelegt.' : 'Gespeichert.');
@@ -278,8 +287,9 @@ export default function PaketePage() {
     const ziel = !p.aktiv;
     if (!window.confirm(ziel ? `„${p.bezeichnung}" wieder verkaufen?` : `„${p.bezeichnung}" aus dem Verkauf nehmen?`)) return;
     try {
-      const { error } = await supabase.from('pakete').update({ aktiv: ziel }).eq('id', p.id);
+      const { data: geschrieben, error } = await supabase.from('pakete').update({ aktiv: ziel }).eq('id', p.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben)) throw new Error(NICHT_GESPEICHERT); // F20
       setModalAuf(false);
       await alles();
     } catch (e: unknown) {

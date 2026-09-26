@@ -3,7 +3,7 @@
 // ============================================================
 // ARGONAUT OS · A5 · Schlagkartei / Dünge- & PSM-Doku
 // Feldstücke + gesetzeskonforme Dokumentation: Düngebedarfsermittlung,
-// Düngung (DüV §10, Frist 14 Tage) und Pflanzenschutz (Pflichtfelder ab
+// Düngung (DüV § 10 Abs. 2, Frist 2 Tage — F17) und Pflanzenschutz (Pflichtfelder ab
 // 01.01.2026, Frist 30 Tage). Fristen-Ampeln + N-Saldo aus lib/schlagkartei
 // (0 €, node-getestet).
 // Pfad: app/dashboard/schlagkartei/page.tsx
@@ -213,7 +213,7 @@ export default function SchlagkarteiPage() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Schlagkartei</div>
       <h1 style={styles.h1}>🌾 Schlagkartei & Nachweise</h1>
-      <p style={styles.sub}>Feldstücke, Düngung und Pflanzenschutz gesetzeskonform dokumentieren — mit Düngebedarfsermittlung, N-Saldo und Fristen-Ampel (Düngung 14 Tage, Pflanzenschutz 30 Tage).</p>
+      <p style={styles.sub}>Feldstücke, Düngung und Pflanzenschutz gesetzeskonform dokumentieren — mit Düngebedarfsermittlung, N-Saldo und Fristen-Ampel (Düngung 2 Tage, Pflanzenschutz 30 Tage).</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
@@ -326,7 +326,7 @@ export default function SchlagkarteiPage() {
           </div>
           {!laden && (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {duengungen.length === 0 ? <Leerzustand icon="💧" titel="Noch keine Düngungen" text="Dokumentiere Düngungen DüV-konform (Frist 14 Tage)." schritte={["Schlag wählen", "Düngung mit Menge und Datum erfassen", "N-Saldo und Frist-Ampel im Blick behalten"]} /> : (
+              {duengungen.length === 0 ? <Leerzustand icon="💧" titel="Noch keine Düngungen" text="Dokumentieren Sie Düngungen DüV-konform (Frist 2 Tage nach dem Aufbringen)." schritte={["Schlag wählen", "Düngung mit Menge und Datum erfassen", "N-Saldo und Frist-Ampel im Blick behalten"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Schlag</th><th style={styles.th}>Mittel</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>N / P₂O₅</th><th style={styles.th}>Doku</th></tr></thead>
                   <tbody>

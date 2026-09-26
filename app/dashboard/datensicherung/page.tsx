@@ -14,6 +14,7 @@
 import { useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
+import { alleSicherungsBereiche, HAUPT_BEREICHE, NIE_SICHERN } from '../../../lib/sicherungTabellen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -36,17 +37,10 @@ type XlsWS = {
 type XlsWB = { creator: string; addWorksheet: (name: string) => XlsWS; xlsx: { writeBuffer: () => Promise<ArrayBuffer> } };
 type XlsMod = { Workbook: new () => XlsWB };
 
-// Welche Bereiche in die Sicherung wandern (Blatt-Name ≤ 31 Zeichen für Excel).
-const BEREICHE: { table: string; blatt: string; label: string }[] = [
-  { table: 'kontakte', blatt: 'Kunden', label: '🧭 Kunden & Kontakte' },
-  { table: 'leads', blatt: 'Anfragen', label: '🎯 Anfragen & Leads' },
-  { table: 'angebote', blatt: 'Angebote', label: '🗒 Angebote' },
-  { table: 'auftraege', blatt: 'Auftraege', label: '📋 Aufträge' },
-  { table: 'rechnungen', blatt: 'Rechnungen', label: '🧾 Rechnungen' },
-  { table: 'eingangsbelege', blatt: 'Ausgaben', label: '💶 Ausgaben & Belege' },
-  { table: 'projekte', blatt: 'Projekte', label: '📁 Projekte' },
-  { table: 'termine', blatt: 'Termine', label: '🗓 Termine' },
-];
+// F8 (26.09.2026): vorher nur 8 feste Bereiche — obwohl „komplette Daten"
+// versprochen war. Jetzt alle Tabellen des Betriebs ausser Zugangsdaten
+// (Liste und Begruendung in lib/sicherungTabellen.ts).
+const BEREICHE = alleSicherungsBereiche();
 
 function heuteStr(): string {
   const d = new Date();
@@ -90,22 +84,27 @@ export default function DatensicherungPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [fertig, setFertig] = useState<string | null>(null);
 
-  async function sammle(): Promise<{ daten: Record<string, Row[]>; zeilen: number }> {
+  async function sammle(): Promise<{ daten: Record<string, Row[]>; zeilen: number; mitDaten: number }> {
     const daten: Record<string, Row[]> = {};
-    let zeilen = 0;
-    for (const b of BEREICHE) {
-      setStatus(`Lade ${b.label} …`);
-      const rows = await ladeAlles(b.table);
-      daten[b.blatt] = rows;
-      zeilen += rows.length;
+    let zeilen = 0; let mitDaten = 0;
+    // 6 Tabellen gleichzeitig — sonst dauern ~380 Abfragen zu lange.
+    for (let i = 0; i < BEREICHE.length; i += 6) {
+      const teil = BEREICHE.slice(i, i + 6);
+      setStatus(`Lade Bereich ${Math.min(i + 6, BEREICHE.length)} von ${BEREICHE.length} …`);
+      const erg = await Promise.all(teil.map((b) => ladeAlles(b.table)));
+      teil.forEach((b, k) => {
+        daten[b.blatt] = erg[k];
+        zeilen += erg[k].length;
+        if (erg[k].length > 0) mitDaten += 1;
+      });
     }
-    return { daten, zeilen };
+    return { daten, zeilen, mitDaten };
   }
 
   async function alsExcel() {
     setBusy(true); setFehler(null); setFertig(null);
     try {
-      const { daten, zeilen } = await sammle();
+      const { daten, zeilen, mitDaten } = await sammle();
       setStatus('Baue Excel-Datei …');
       const mod = await import('exceljs');
       const ExcelJS = ((mod as unknown as { default?: XlsMod }).default ?? (mod as unknown as XlsMod));
@@ -113,6 +112,8 @@ export default function DatensicherungPage() {
       wb.creator = 'ARGONAUT OS';
       for (const b of BEREICHE) {
         const rows = daten[b.blatt] || [];
+        // Hauptbereiche immer als Blatt, weitere Tabellen nur, wenn Daten da sind.
+        if (rows.length === 0 && !HAUPT_BEREICHE.some((h) => h.table === b.table)) continue;
         const ws = wb.addWorksheet(b.blatt);
         if (rows.length === 0) { ws.addRow(['(keine Daten)']); continue; }
         const keys = Array.from(rows.reduce((set: Set<string>, r) => { Object.keys(r).forEach((k) => set.add(k)); return set; }, new Set<string>()));
@@ -122,7 +123,7 @@ export default function DatensicherungPage() {
       }
       const buf = await wb.xlsx.writeBuffer();
       ladeDownload(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `ARGONAUT-Backup_${heuteStr()}.xlsx`);
-      setFertig(`Excel-Sicherung erstellt — ${zeilen} Datensätze aus ${BEREICHE.length} Bereichen.`);
+      setFertig(`Excel-Sicherung erstellt — ${zeilen} Datensätze aus ${mitDaten} Bereichen mit Daten (${BEREICHE.length} geprüft).`);
     } catch (e) {
       setFehler('Konnte die Excel-Sicherung nicht erstellen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setBusy(false); setStatus(''); }
@@ -131,11 +132,11 @@ export default function DatensicherungPage() {
   async function alsJson() {
     setBusy(true); setFehler(null); setFertig(null);
     try {
-      const { daten, zeilen } = await sammle();
+      const { daten, zeilen, mitDaten } = await sammle();
       setStatus('Baue JSON-Datei …');
       const inhalt = { erzeugt_am: new Date().toISOString(), quelle: 'ARGONAUT OS', bereiche: daten };
       ladeDownload(new Blob([JSON.stringify(inhalt, null, 2)], { type: 'application/json' }), `ARGONAUT-Backup_${heuteStr()}.json`);
-      setFertig(`JSON-Sicherung erstellt — ${zeilen} Datensätze aus ${BEREICHE.length} Bereichen.`);
+      setFertig(`JSON-Sicherung erstellt — ${zeilen} Datensätze aus ${mitDaten} Bereichen mit Daten (${BEREICHE.length} geprüft).`);
     } catch (e) {
       setFehler('Konnte die JSON-Sicherung nicht erstellen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setBusy(false); setStatus(''); }
@@ -154,8 +155,13 @@ export default function DatensicherungPage() {
       <div style={styles.card}>
         <div style={styles.kartenkopf}>Enthaltene Bereiche</div>
         <div style={styles.chips}>
-          {BEREICHE.map((b) => <span key={b.table} style={styles.chip}>{b.label}</span>)}
+          {HAUPT_BEREICHE.map((b) => <span key={b.table} style={styles.chip}>{b.label}</span>)}
+          <span style={styles.chip}>+ {BEREICHE.length - HAUPT_BEREICHE.length} weitere Bereiche (Personal, Lager, Branchen …)</span>
         </div>
+        <p style={{ fontSize: 13, color: C.textDim, margin: '8px 0 0' }}>
+          Bewusst nicht enthalten: Zugangsdaten und Schlüssel ({NIE_SICHERN.length} Tabellen, z. B. Bank-, ELSTER- und Mail-Zugänge) —
+          die gehören nicht in eine Datei auf Ihrem Rechner. Im Excel erscheinen weitere Bereiche nur, wenn sie Daten enthalten.
+        </p>
 
         <div style={styles.knopfreihe}>
           <button style={{ ...styles.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={alsExcel}>

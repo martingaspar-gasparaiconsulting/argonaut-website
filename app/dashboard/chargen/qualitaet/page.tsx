@@ -546,8 +546,15 @@ function RueckrufKarte({ rr, offen, onToggle, lose, verwendungen, lmChargen, heu
       ? await supabase.from('charge_los').update({ status: 'gesperrt' }).in('id', betroffen.map((l) => l.id))
       : await supabase.from('lm_chargen').update({ status: 'gesperrt' }).eq('id', rr.charge_id);
     if (r.error) { onFehler('Sperren fehlgeschlagen.'); return; }
-    setSchritte({ ...schritte, sperren: heute });
-    onOk('Gesperrt — bitte Speichern nicht vergessen.'); await neuLaden();
+    // F11 (26.09.2026): Haken SOFORT mitspeichern. Vorher nur im Zustand
+    // gesetzt — neuLaden() lud den Rueckruf neu und der useEffect ueberschrieb
+    // die Checkliste mit dem alten Stand: „Sperren" und alle noch nicht
+    // gespeicherten Haken waren weg.
+    const neu = { ...schritte, sperren: heute };
+    setSchritte(neu);
+    const { error: eS } = await supabase.from('qs_rueckruf').update({ schritte: neu }).eq('id', rr.id);
+    if (eS) { onFehler('Gesperrt, aber die Checkliste konnte nicht gespeichert werden — bitte „Speichern" klicken.'); return; }
+    onOk('Gesperrt — der Haken „Sperren" ist gespeichert.'); await neuLaden();
   }
 
   const fertig = !!rr.abgeschlossen_am;

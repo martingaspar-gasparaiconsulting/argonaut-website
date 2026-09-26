@@ -154,7 +154,8 @@ export default function GastroPage() {
               freiJetzt: Math.max(0, aktiveEinheiten - belegtJetzt),
               anreisenHeute: beleg.filter((b) => b.anreise === t).length,
               abreisenHeute: beleg.filter((b) => b.abreise === t).length,
-              reservierungenOffen: res.filter((r) => (r.status || 'offen') === 'offen').length,
+              // F15 (26.09.2026): Reservierungen heissen „reserviert", nicht „offen" — die Zahl war immer 0.
+              reservierungenOffen: res.filter((r) => (r.status || 'reserviert') === 'reserviert').length,
             });
           })()}
         />
@@ -174,6 +175,8 @@ export default function GastroPage() {
               <label style={styles.lab}>Zeit<input style={{ ...styles.inp, width: 90 }} value={nr.uhrzeit} onChange={(e) => setNr({ ...nr, uhrzeit: e.target.value })} placeholder="19:00" /></label>
               <label style={styles.lab}>Pers.<input style={{ ...styles.inp, width: 60 }} value={nr.personen} onChange={(e) => setNr({ ...nr, personen: e.target.value })} inputMode="numeric" /></label>
               <input style={{ ...styles.inp, flex: 1, minWidth: 140 }} value={nr.gast_name} onChange={(e) => setNr({ ...nr, gast_name: e.target.value })} placeholder="Gast" />
+              {/* F15: Telefon fehlte im Formular, obwohl es gespeichert und angezeigt wird */}
+              <input style={{ ...styles.inp, width: 150 }} value={nr.telefon} onChange={(e) => setNr({ ...nr, telefon: e.target.value })} placeholder="Telefon" inputMode="tel" />
               <NurVoll>
               <input style={{ ...styles.inp, width: 100 }} value={nr.tisch} onChange={(e) => setNr({ ...nr, tisch: e.target.value })} placeholder="Tisch" />
               <EigeneFelderInputs felder={felder} werte={nrExtra} setWert={(fid, w) => setNrExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} />

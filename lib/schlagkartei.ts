@@ -3,7 +3,9 @@
 // KEINE Hooks, KEINE Supabase-Aufrufe. Node-getestet (schlagkartei.test.mjs, 13/13).
 //
 // Rechtliche Fristen (verifiziert 07/2026):
-//  · Düngung (DüV §10): Aufzeichnung spätestens 14 Tage nach der Maßnahme.
+//  · Düngung (DüV § 10 Abs. 2): Aufzeichnung spätestens 2 Tage nach dem Aufbringen.
+//    F17 (26.09.2026): vorher 14 Tage — widersprach der Seite Dünge-Fristen
+//    (lib/papiereIdentifizierung, 2 Tage). Anwalt-Checkliste 2: Wert bestätigen.
 //  · Pflanzenschutz (ab 01.01.2026): unverzüglich, spätestens 30 Tage.
 // Die Ampel prüft, ob ein Eintrag INNERHALB der Frist erfasst wurde
 // (Vergleich Maßnahme-Datum ↔ Erfassungszeitpunkt).
@@ -21,7 +23,7 @@
 // Die ANZEIGE aendert sich dadurch nicht — nur die Zahlen stimmen.
 import { leseZahlOder, centRunden } from './zahlen';
 
-export const DUENGE_FRIST_TAGE = 14;
+export const DUENGE_FRIST_TAGE = 2;
 export const PSM_FRIST_TAGE = 30;
 
 export const DUENGER_ART = ['mineralisch', 'organisch'] as const;

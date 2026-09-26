@@ -1167,7 +1167,8 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Unter „2 · Wie soll gebaut werden?“: „Komplett mit KI“ (Story eintragen, dann „✨ KI baut die Seite“), „Feste Vorlage“ oder „KI + selbst justieren“ (Bausteine mit ↑ ↓ ⧉ ✕ bearbeiten, Bilder über „🖼️ Titelbild wählen“)',
       'In „3 · Vorschau“ Desktop, Tablet und Handy prüfen, dann „💾 Als meine Seite speichern“ — die Seite ist damit Entwurf, noch nicht online',
       'Unter „5 · Veröffentlichen“ „🌐 Jetzt veröffentlichen“. Danach steht dort „✅ Live:“ mit der Adresse. Offline nehmen: denselben Zweck wählen, „⏸ Offline nehmen“',
-      'Achtung: „💾 Als meine Seite speichern“, „Domain speichern“ und „Freigabe speichern“ nehmen eine veröffentlichte Seite wieder offline — danach erneut „🌐 Jetzt veröffentlichen“',
+      'Ist die Seite schon veröffentlicht, sind Änderungen nach „💾 Als meine Seite speichern“ sofort live. „Domain speichern“ und „Freigabe speichern“ ändern nichts an Inhalt oder Live-Stand',
+      'Beim nächsten Öffnen lädt die Seite Ihren gespeicherten Stand im Editor — Sie arbeiten also immer am gespeicherten Stand weiter',
       'Achtung: Ein Wechsel des Zwecks verwirft den ungespeicherten Stand ohne Rückfrage',
       'Optional „6 · Eigene Domain“ (danach DNS-Einträge beim Domain-Anbieter setzen) und „7 · Berater auf Ihrer eigenen Website“ (nur bei veröffentlichter Seite, „📋 Schnipsel kopieren“)',
     ],
@@ -1219,7 +1220,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/standorte': {
     zweck: 'Die Standorte des Betriebs verwalten: genau ein Hauptsitz und beliebig viele Filialen, jeweils mit Adresse und Telefon, aktiv oder inaktiv. Darauf bauen Filialleitung, Filial-Module und Filialvergleich auf.',
     wer: 'chef',
-    werText: 'Nur der Chef. Gelöscht wird erst nach „Wirklich löschen“; statt Löschen geht auch „Deaktivieren“.',
+    werText: 'Nur der Chef. Gelöscht wird erst nach „Wirklich löschen“; statt Löschen geht auch „Deaktivieren“. Den Hauptsitz kann man nicht löschen — erst einen anderen Standort zum Hauptsitz machen.',
     schritte: [
       'Unter „Neuen Standort anlegen“ den „Name *“, Adresse und Telefon eintragen, dann „+ Standort anlegen“',
       'Für den Hauptsitz „Als Hauptsitz festlegen“ anhaken oder in der Liste „Als Hauptsitz“ — der bisherige wird automatisch Filiale',
@@ -1250,7 +1251,8 @@ export const WISSEN: Record<string, SeitenWissen> = {
     schritte: [
       'Unter „Standort wählen“ die Filiale auswählen',
       'Ein Modul anklicken, um es zwischen „aktiv“ und „aus“ umzuschalten. Rechts oben steht, wie viele „Abgeschaltet“ sind',
-      'Danach im Menü dieser Filiale kontrollieren, ob die richtigen Bereiche sichtbar sind',
+      'Danach oben im Kopf diese Filiale wählen und im Menü kontrollieren: abgeschaltete Module sind dort ausgeblendet und gesperrt',
+      'Filial-Module, Standorte und Einstellungen lassen sich nie abschalten — Sie kommen also immer hierher zurück',
     ],
     landetIn: [{ text: 'Filialvergleich', href: '/dashboard/filialvergleich' }, { text: 'Wer sieht was', href: '/dashboard/wer-sieht-was' }],
     vorher: [{ text: 'Standorte anlegen', href: '/dashboard/standorte' }],
@@ -1264,6 +1266,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„🏆 Stärkste Filiale nach Umsatz“ nennt die Filiale mit dem höchsten Umsatz aus Rechnungen und Kasse',
       'In der Tabelle je Standort „Umsatz“, „Offen“, „Kasse“, „Aufträge“, „Team“ und „Mod. aus“ vergleichen. „+ Zahl“ bei Team = hierher entsandte Mitarbeiter',
       'Stornierte Rechnungen und Kassenbelege zählen nicht. Der Umsatz umfasst alle Rechnungen seit Beginn, ohne Zeitraum-Filter',
+      'Unter „Leitung“ stehen alle Mitarbeiter mit Leitungs-Titel, die unter Filialleitung für diesen Standort angehakt sind (oder dort ihren Heimat-Standort haben)',
     ],
     vorher: [{ text: 'Standorte angelegt', href: '/dashboard/standorte' }, { text: 'Leitungsrollen vergeben', href: '/dashboard/filialleitung' }],
   },
@@ -1293,20 +1296,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'DATEV-Export', href: '/dashboard/datev' }, { text: 'Rechnungen (Bezahllink)', href: '/dashboard/rechnungen' }, { text: 'Kasse (TSE)', href: '/dashboard/kasse' }, { text: 'Versand', href: '/dashboard/versand' }, { text: 'Marktplätze', href: '/dashboard/marktplaetze' }],
   },
   '/dashboard/datensicherung': {
-    zweck: 'Lädt eine Sicherung Ihrer Daten herunter: als Excel-Datei mit je einem Tabellenblatt für Kunden, Anfragen, Angebote, Aufträge, Rechnungen, Ausgaben, Projekte und Termine, oder als JSON-Datei.',
+    zweck: 'Lädt eine Sicherung aller Daten Ihres Betriebs herunter: als Excel-Datei (Kunden, Anfragen, Angebote, Aufträge, Rechnungen, Ausgaben, Projekte, Termine und jeder weitere Bereich mit Daten als eigenes Blatt) oder als JSON-Datei. Zugangsdaten wie Bank- oder ELSTER-Zugänge sind bewusst nicht enthalten.',
     wer: 'lesen',
     werText: 'Nur der Chef. Hier wird nichts eingetragen oder gelöscht, nur heruntergeladen — und nur die eigenen Daten.',
     schritte: [
-      'Unter „Enthaltene Bereiche“ prüfen, was in der Sicherung steckt — Personal, Artikel, Kasse und Zahlungen sind derzeit NICHT dabei',
+      'Unter „Enthaltene Bereiche“ prüfen, was in der Sicherung steckt — die Hauptbereiche plus alle weiteren (Personal, Lager, Kasse, Branchen …), ohne Zugangsdaten',
       '„⬇ Komplett-Backup als Excel“ klicken und warten, die Seite zeigt den gerade geladenen Bereich',
       'Für die maschinenlesbare Fassung „⬇ Als JSON“ (nur in der Ansicht „Voll“)',
-      'Die Meldung „✓ … Datensätze aus 8 Bereichen“ bestätigt den Download. Die Datei an einen sicheren Ort legen, z. B. eine externe Festplatte',
+      'Die Meldung „✓ … Datensätze aus … Bereichen mit Daten“ bestätigt den Download. Die Datei an einen sicheren Ort legen, z. B. eine externe Festplatte',
     ],
   },
   '/dashboard/import': {
     zweck: 'Bringt bestehende Daten aus einer Excel- oder CSV-Datei in ARGONAUT, in vier Stufen: Ziel wählen, Datei laden, Spalten zuordnen, prüfen und importieren. Direkt hier: Kunden & Kontakte, Artikel & Preise, Lieferanten und Offene Posten; für weitere Bereiche Vorlagen und der Sprung ins jeweilige Modul.',
     wer: 'beide',
-    werText: 'Wer das Modul „Import-Center“ hat, darf importieren. Einen Import rückgängig machen kann das Import-Center nicht — importierte Datensätze entfernen Sie im jeweiligen Zielbereich.',
+    werText: 'Wer das Modul „Import-Center“ hat, darf importieren. Unter „Bisherige Importe“ macht „↺ … löschen“ einen Import rückgängig: es löscht die Datensätze, die dieser Import neu angelegt hat (nicht bei Offenen Posten). Geänderte bestehende Datensätze bleiben geändert.',
     schritte: [
       '„1 · Was möchten Sie importieren?“: Kunden & Kontakte, Artikel & Preise, Lieferanten oder Offene Posten anklicken',
       '„2 · Datei auswählen“: Excel oder CSV mit Überschriften in der ersten Zeile. Ohne passende Datei zuerst „⬇ Mustervorlage“ laden',
@@ -1315,7 +1318,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„… Datensätze jetzt importieren“ und die Rückfrage bestätigen. „Ergebnis ansehen ›“ führt zum Zielbereich',
       '„Diese Spalten-Zuordnung merken“ übernimmt die Zuordnung beim nächsten Import mit gleichem Datei-Aufbau',
     ],
-    probe: { anlegen: 'Eine kleine Datei mit ein bis zwei Zeilen importieren, z. B. die „⬇ Mustervorlage“ für „Lieferanten“.', loeschen: 'Kein Knopf zum Rückgängigmachen. Jeden Datensatz im Zielbereich entfernen: Kontakte unter Vertrieb/CRM, Artikel unter ERP/Lager, Lieferanten unter ERP → Lieferanten. Offene Posten lassen sich unter Rechnungen nur stornieren.' },
+    probe: { anlegen: 'Eine kleine Datei mit ein bis zwei Zeilen importieren, z. B. die „⬇ Mustervorlage“ für „Lieferanten“.', loeschen: 'Unter „Bisherige Importe“ beim Probe-Import „↺ … löschen“ klicken und bestätigen. Offene Posten lassen sich nur unter Rechnungen stornieren.' },
     landetIn: [{ text: 'Vertrieb/CRM (Kontakte)', href: '/dashboard/crm' }, { text: 'ERP/Lager (Artikel)', href: '/dashboard/erp' }, { text: 'Rechnungen (offene Posten)', href: '/dashboard/rechnungen' }],
   },
   '/dashboard/automationen': {
@@ -1326,10 +1329,10 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Unter „Fertige Vorlagen“ eine Vorlage anklicken (z. B. „Freundliche Zahlungserinnerung“) oder „＋ Leere Automation“',
       '„Name der Automation“ eintragen, bei „1 · Wenn das passiert“ den Auslöser wählen; in „Voll“ bei „2 · Und nur wenn“ mit „＋ Bedingung“ eingrenzen',
       '„3 · Erst nach dieser Wartezeit“ Tage eintragen, „4 · Dann tu das“ die Aktion wählen. Platzhalter wie {{name}}, {{betrag}}, {{nummer}} werden ersetzt',
-      '„So liest sich Ihre Regel“ gegenlesen, dann „Automation anlegen“ — die Regel ist SOFORT aktiv',
+      '„So liest sich Ihre Regel“ gegenlesen, dann „Automation anlegen“ — die Regel startet PAUSIERT. Erst „Aktivieren“ an der Regel schaltet sie scharf',
       '„🔍 Probelauf — was würde jetzt passieren?“ rechnet nur und führt nichts aus. „Pausieren“, „Bearbeiten“, „Löschen“ stehen an jeder Regel',
     ],
-    probe: { anlegen: 'Eine Vorlage übernehmen, „Automation anlegen“ und die Regel sofort „Pausieren“ — sie ist gleich nach dem Speichern aktiv. Dann „🔍 Probelauf“.', loeschen: '„Löschen“ an der Regel, mit Rückfrage.' },
+    probe: { anlegen: 'Eine Vorlage übernehmen und „Automation anlegen“ — die Regel startet pausiert. Dann „🔍 Probelauf“, erst danach „Aktivieren“.', loeschen: '„Löschen“ an der Regel, mit Rückfrage.' },
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }],
   },
   '/dashboard/einstellungen': {
@@ -1646,7 +1649,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Reiter „Maschinen": „Bezeichnung" (z. B. „CNC-Fräse 1"), „Maschinen-Nr.", „Standort", „Idealtakt (Sek./Teil)" und „Status" eintragen, dann „＋ Maschine"',
       'Reiter „Buchungen & OEE": unter „Neue Buchung (Schicht / Auftrag)" die Maschine wählen — der Idealtakt wird übernommen. „Datum", „Auftrag", „Schicht", „Bediener" ergänzen',
       '„Planbelegung (Min.)" ist Pflicht (z. B. 480), dazu „Menge gesamt (Stk)" und „davon Gutmenge (Stk)". Die Vorschau zeigt Leistung, Qualität und Ausschuss noch ohne Störzeiten. Dann „＋ Buchung"',
-      'An der Buchung mit „＋ Störung" Kategorie, Grund und „Dauer (Min.)" erfassen — jede Störzeit senkt die Verfügbarkeit, auch „Pause / geplant"',
+      'An der Buchung mit „＋ Störung" Kategorie, Grund und „Dauer (Min.)" erfassen — echte Störungen senken die Verfügbarkeit; „Pause / geplant" (Pause, Schichtende, Betriebsruhe) verkürzt nur die Planbelegung und zählt nicht als Verlust',
       'Oben stehen OEE gesamt, Verfügbarkeit, Leistung, Qualität, offene Buchungen und der Top-Störgrund; mit „Filter Maschine" nur eine Maschine ansehen. Grün ab 85 % OEE, gelb ab 60 %',
       '„📄 Schichtbericht" druckt das PDF, „✓ abschließen" schließt die Buchung ab („↩ wieder öffnen" macht es rückgängig)',
       'Liegt die Roh-Leistung über 100 %, erscheint „Takt/Menge prüfen" — die OEE wird dann auf 100 % begrenzt',
@@ -2249,7 +2252,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Schläge und Düngungen in der Landwirtschaft', href: '/dashboard/landwirtschaft' }],
   },
   '/dashboard/schlagkartei': {
-    zweck: 'Schlagkartei mit Nachweisen: Feldstücke anlegen, Düngebedarf je Schlag und Jahr, Düngungen und Pflanzenschutz dokumentieren — mit N-Saldo, Fristen-Ampel (Düngung 14 Tage, Pflanzenschutz 30 Tage) und Jahres-Nachweis als PDF.',
+    zweck: 'Schlagkartei mit Nachweisen: Feldstücke anlegen, Düngebedarf je Schlag und Jahr, Düngungen und Pflanzenschutz dokumentieren — mit N-Saldo, Fristen-Ampel (Düngung 2 Tage nach dem Aufbringen, Pflanzenschutz 30 Tage) und Jahres-Nachweis als PDF.',
     wer: 'beide',
     werText: 'Wer das Modul „Schlagkartei" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Bearbeiten und Löschen gibt es hier nicht.',
     schritte: [
@@ -2285,7 +2288,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     werText: 'Wer das Modul „Tierbestand" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Bearbeiten und Löschen gibt es hier nicht.',
     schritte: [
       'Reiter „🐄 Bestände": „Tierart", „Bezeichnung" und „Aktueller Bestand (Stück)" eintragen — VVVO-/Betriebsnummer, Standort und „Meldefrist (Tage)" (vorbelegt 7) nur in der Ansicht „Voll" — dann „＋ Anlegen"',
-      'Reiter „🔄 Bewegungen": „Gruppe", „Ereignis" (Geburt, Zugang, Einfuhr, Abgang, Tod / Verendung, Schlachtung, Ausfuhr), „Datum" und „Anzahl" — Ohrmarke und „Herkunft / Ziel" nur in der Ansicht „Voll" — dann „＋ Erfassen"',
+      'Reiter „🔄 Bewegungen": „Gruppe", „Ereignis" (Geburt, Zugang, Einfuhr, Abgang, Tod / Verendung, Schlachtung, Ausfuhr), „Datum" und „Anzahl" — Ohrmarke und „Herkunft / Ziel" nur in der Ansicht „Voll" — dann „＋ Erfassen". Geburt, Zugang und Einfuhr erhöhen den Bestand der Gruppe, alle anderen Ereignisse senken ihn',
       'Die Spalte „Meldung" zeigt „offen", „überfällig", „gemeldet" oder „spät gemeldet". Nach der Meldung an HI-Tier „✓ gemeldet" drücken — das setzt das heutige Datum',
       '„📄 HIT-Meldeliste" erzeugt ein PDF aller offenen Meldungen, die dringendsten zuerst',
       'Reiter „📅 Stichtag": Gruppe, „Jahr", „Stichtag" (vorbelegt 01.01.) und „Bestand am Stichtag" eintragen, dann „＋ Erfassen"',

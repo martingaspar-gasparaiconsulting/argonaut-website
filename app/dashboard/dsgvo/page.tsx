@@ -22,6 +22,7 @@ import {
   type VerfahrenVorschlag,
 } from '@/lib/verarbeitungsverzeichnis';
 import { verzeichnisPdf } from '@/lib/verzeichnisPdf';
+import { monatsFristEnde } from '@/lib/fristen';
 import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 
 const supabase = createBrowserClient(
@@ -54,12 +55,9 @@ type Anfrage = {
 };
 
 function dtag(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
-function heuteISO() { return new Date().toISOString().slice(0, 10); }
-function plusEinMonat(iso: string) {
-  const d = new Date(iso + 'T00:00:00');
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
-}
+function heuteISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+// F21 (26.09.2026): Monatsfrist rein als Datum (lib/fristen) — vorher 1 Tag zu frueh.
+function plusEinMonat(iso: string) { return monatsFristEnde(iso, 1); }
 function tageBis(iso: string | null): number | null {
   if (!iso) return null;
   const a = new Date(iso + 'T00:00:00').getTime();

@@ -24,6 +24,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
 import { augeWerkstatt } from '@/lib/auge';
@@ -297,8 +298,9 @@ export default function WerkstattPage() {
         try { await speichereWerte(MODUL, neuId, uid, nmExtra); } catch { /* eigene Felder optional */ }
         setForm((f) => ({ ...f, id: neuId })); // in Bearbeiten-Modus wechseln
       } else {
-        const { error } = await supabase.from('werkstatt_auftraege').update(payload).eq('id', form.id);
+        const { data: geschrieben1, error } = await supabase.from('werkstatt_auftraege').update(payload).eq('id', form.id).select('id');
         if (error) throw error;
+        if (nichtsGeschrieben(geschrieben1)) throw new Error(NICHT_GESPEICHERT);
         try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setGespeichertHinweis(true);
@@ -321,9 +323,10 @@ export default function WerkstattPage() {
   async function fahrzeugKoppeln(fzId: string | null) {
     if (!form.id) { setForm((f) => ({ ...f, fahrzeug_id: fzId })); return; }
     try {
-      const { error } = await supabase.from('werkstatt_auftraege')
-        .update({ fahrzeug_id: fzId, aktualisiert_am: new Date().toISOString() }).eq('id', form.id);
+      const { data: geschrieben2, error } = await supabase.from('werkstatt_auftraege')
+        .update({ fahrzeug_id: fzId, aktualisiert_am: new Date().toISOString() }).eq('id', form.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben2)) throw new Error(NICHT_GESPEICHERT);
       setForm((f) => ({ ...f, fahrzeug_id: fzId }));
       setFzSuche('');
       await laden_();
@@ -378,10 +381,11 @@ export default function WerkstattPage() {
 
     setHuBusy(true); setFehler(null);
     try {
-      const { error } = await supabase.from('werkstatt_fahrzeuge')
+      const { data: geschrieben3, error } = await supabase.from('werkstatt_fahrzeuge')
         .update({ naechste_hu: ziel, aktualisiert_am: new Date().toISOString() })
-        .eq('id', gekoppeltesFahrzeug.id);
+        .eq('id', gekoppeltesFahrzeug.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben3)) throw new Error(NICHT_GESPEICHERT);
       setHuEingabe(ziel);
       await laden_();
     } catch (e: unknown) {
@@ -429,9 +433,12 @@ export default function WerkstattPage() {
   }
   async function positionAendern(id: string, patch: Partial<PositionRow>) {
     setPositionen((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
-    try {
-      await supabase.from('werkstatt_positionen').update({ ...patch, aktualisiert_am: new Date().toISOString() }).eq('id', id);
-    } catch { /* Feld-Fehler still; UI bleibt konsistent */ }
+    // F20 (26.09.2026): vorher ohne jede Pruefung — scheiterte das Speichern
+    // (z. B. fehlendes Recht), stand der Wert nur im Browser und war nach dem
+    // Neuladen weg. Jetzt: Fehlermeldung.
+    const { data: geschrieben, error } = await supabase.from('werkstatt_positionen').update({ ...patch, aktualisiert_am: new Date().toISOString() }).eq('id', id).select('id');
+    if (error) setFehler('Position nicht gespeichert: ' + error.message);
+    else if (nichtsGeschrieben(geschrieben)) setFehler(NICHT_GESPEICHERT);
   }
   /**
    * Schaltet zwischen Pauschale und Satz/Einheitspreis um.
@@ -465,8 +472,9 @@ export default function WerkstattPage() {
     try {
       const update: Record<string, unknown> = { status: naechster, aktualisiert_am: new Date().toISOString() };
       if (istAbgeschlossen(naechster) && !a.fertig_am) update.fertig_am = new Date().toISOString();
-      const { error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id);
+      const { data: geschrieben4, error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id).select('id');
       if (e1) throw e1;
+      if (nichtsGeschrieben(geschrieben4)) throw new Error(NICHT_GESPEICHERT);
       const { error: e2 } = await supabase.from('werkstatt_status_log').insert({
         owner_user_id: besitzer ?? uid, auftrag_id: a.id, von_status: a.status, nach_status: naechster, geaendert_von: uid,
       });
@@ -519,8 +527,9 @@ export default function WerkstattPage() {
       // Summen-Snapshot nur beim Freigeben setzen (Nachtrag-Basis).
       if (nach === 'freigegeben') update.freigabe_summe_netto = aktuelleSumme;
 
-      const { error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id);
+      const { data: geschrieben5, error: e1 } = await supabase.from('werkstatt_auftraege').update(update).eq('id', a.id).select('id');
       if (e1) throw e1;
+      if (nichtsGeschrieben(geschrieben5)) throw new Error(NICHT_GESPEICHERT);
 
       const { error: e2 } = await supabase.from('werkstatt_freigabe_log').insert({
         owner_user_id: besitzer ?? uid, auftrag_id: a.id,
@@ -539,8 +548,9 @@ export default function WerkstattPage() {
   async function archivieren(a: AuftragRow) {
     if (!window.confirm(`Auftrag "${a.titel}" archivieren?\n\nDer Verlauf bleibt erhalten.`)) return;
     try {
-      const { error } = await supabase.from('werkstatt_auftraege').update({ archiviert: true, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
+      const { data: geschrieben6, error } = await supabase.from('werkstatt_auftraege').update({ archiviert: true, aktualisiert_am: new Date().toISOString() }).eq('id', a.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben6)) throw new Error(NICHT_GESPEICHERT);
       setModalAuf(false); await laden_();
     } catch (e: unknown) {
       setFehler('Archivieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
@@ -793,8 +803,9 @@ export default function WerkstattPage() {
   async function buchungStornieren(b: BuchungRow) {
     if (!window.confirm(`Buchung "${b.titel}" stornieren?\n\nSie gibt den Zeitraum wieder frei.`)) return;
     try {
-      const { error } = await supabase.from('buchungen').update({ status: 'storniert', aktualisiert_am: new Date().toISOString() }).eq('id', b.id);
+      const { data: geschrieben7, error } = await supabase.from('buchungen').update({ status: 'storniert', aktualisiert_am: new Date().toISOString() }).eq('id', b.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben7)) throw new Error(NICHT_GESPEICHERT);
       if (form.id) await ladeBuchungen(form.id);
     } catch (e: unknown) {
       setFehler('Stornieren fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));

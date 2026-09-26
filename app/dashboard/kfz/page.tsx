@@ -13,6 +13,7 @@ import { augeAmpel } from '@/lib/auge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { leseZahl } from '@/lib/zahlen';
 
 const MODUL = 'kfz_fahrzeuge';
 
@@ -46,6 +47,11 @@ function ampel(faellig: string | null): { txt: string; farbe: string } {
 }
 
 const LEER_FZ = { halter: '', kennzeichen: '', marke: '', modell: '', vin: '', erstzulassung: '', hu_faellig: '', au_faellig: '', km_stand: '' };
+// F10: km-Stand deutsch lesen („84.500" = 84500), ganze Kilometer, nie negativ.
+function kmAus(t: string): number | null {
+  const n = leseZahl(t);
+  return n === null || !Number.isFinite(n) || n < 0 ? null : Math.round(n);
+}
 const LEER_R = { kunde_name: '', kennzeichen: '', saison: 'winter', groesse: '', anzahl: '4', lagerplatz: '' };
 
 export default function KfzPage() {
@@ -95,7 +101,7 @@ export default function KfzPage() {
         owner_user_id: besitzer ?? uid, halter: fz.halter.trim() || null, kennzeichen: fz.kennzeichen.trim() || null,
         marke: fz.marke.trim() || null, modell: fz.modell.trim() || null, vin: fz.vin.trim() || null,
         erstzulassung: fz.erstzulassung || null, hu_faellig: fz.hu_faellig || null, au_faellig: fz.au_faellig || null,
-        km_stand: fz.km_stand ? parseInt(fz.km_stand, 10) : null,
+        km_stand: kmAus(fz.km_stand), // F10: „84.500" war mit parseInt 84
       }).select('id').single();
       if (error || !neu) { setFehler('Speichern fehlgeschlagen.'); return; }
       try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
@@ -103,6 +109,9 @@ export default function KfzPage() {
     } finally { setBusy(false); }
   }
   async function fzLoeschen(id: string) {
+    // F10 (26.09.2026): Rueckfrage — vorher loeschte 🗑 sofort.
+    const f = fahrzeuge.find((x) => x.id === id);
+    if (typeof window !== 'undefined' && !window.confirm(`Fahrzeug ${f?.kennzeichen || ''} wirklich löschen? Das lässt sich nicht rückgängig machen.`)) return;
     const { error } = await supabase.from('kfz_fahrzeuge').delete().eq('id', id);
     if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
     setFahrzeuge((l) => l.filter((x) => x.id !== id));

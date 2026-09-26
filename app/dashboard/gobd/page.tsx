@@ -56,6 +56,11 @@ export default function GobdPage() {
   });
   const [entwurfId, setEntwurfId] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
+  // F22 (26.09.2026): Die Verfahrensdokumentation gehoert dem Betrieb und wird
+  // vom Inhaber gefuehrt. Ein Mitarbeiter mit Freigabe bekam bisher einen
+  // leeren Entwurf mit SEINEN Profildaten und haette eine zweite, falsche
+  // Doku unter eigener Kennung angelegt. Jetzt: klarer Hinweis statt Formular.
+  const [binMitarbeiter, setBinMitarbeiter] = useState(false);
   const [speichert, setSpeichert] = useState(false);
   const [pdfLaeuft, setPdfLaeuft] = useState(false);
   const [finalisiert, setFinalisiert] = useState(false);
@@ -69,6 +74,9 @@ export default function GobdPage() {
       const id = userData?.user?.id;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      const { data: ichMa } = await supabase.from('mitarbeiter')
+        .select('id').eq('auth_user_id', id).maybeSingle();
+      if (ichMa) { setBinMitarbeiter(true); setLaden(false); return; }
 
       const basis: Doku = {
         firmenkopf: leererKopf(),
@@ -220,6 +228,14 @@ export default function GobdPage() {
   }
 
   if (laden) return <div style={styles.page}><div style={styles.hint}>Lädt …</div></div>;
+  if (binMitarbeiter) return (
+    <div style={styles.page}>
+      <div style={styles.hint}>
+        Die GoBD-Verfahrensdokumentation führt der Inhaber des Betriebs — sie beschreibt die Buchführung der ganzen Firma.
+        Bitte wenden Sie sich an Ihren Chef, wenn Sie etwas ergänzen möchten.
+      </div>
+    </div>
+  );
 
   const k = doku.firmenkopf;
 

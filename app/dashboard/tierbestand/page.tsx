@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import {
-  TIERARTEN, BEWEGUNG_ARTEN, MELDEFRIST_TAGE_STD, meldeStatus, fristRest, zaehleTierbestand,
+  TIERARTEN, BEWEGUNG_ARTEN, MELDEFRIST_TAGE_STD, meldeStatus, fristRest, zaehleTierbestand, istZugang,
   type MeldeStatus,
 } from '@/lib/tierbestand';
 import { augeTierbestand } from '@/lib/auge';
@@ -133,13 +133,24 @@ export default function TierbestandPage() {
     if (!uid || !nb.gruppe_id) { setFehler('Bitte eine Gruppe wählen.'); return; }
     setBusy('bewegung'); setFehler(null); setOk(null);
     try {
+      const anzahl = Math.round(num(nb.anzahl)) || 1;
+      // F16 (26.09.2026): Bestand der Gruppe mitfuehren. Vorher blieb
+      // „aktueller_bestand" fuer immer auf dem Anfangswert.
+      const { data: g, error: eG } = await supabase.from('tier_gruppe').select('aktueller_bestand').eq('id', nb.gruppe_id).single();
+      if (eG || !g) throw eG ?? new Error('Gruppe nicht gefunden');
+      const alt = Number((g as { aktueller_bestand: number | null }).aktueller_bestand) || 0;
+      const neuBestand = alt + (istZugang(nb.art) ? anzahl : -anzahl);
+      if (neuBestand < 0 && !window.confirm(`Der Bestand wäre danach ${neuBestand} (bisher ${alt}). Trotzdem erfassen? Der Bestand wird dann auf 0 gesetzt.`)) { return; }
       const { error } = await supabase.from('tier_bewegung').insert({
-        owner_user_id: besitzer ?? uid, gruppe_id: nb.gruppe_id, datum: nb.datum, art: nb.art, anzahl: Math.round(num(nb.anzahl)) || 1,
+        owner_user_id: besitzer ?? uid, gruppe_id: nb.gruppe_id, datum: nb.datum, art: nb.art, anzahl,
         ohrmarke: nb.ohrmarke.trim() || null, partner: nb.partner.trim() || null, gemeldet: false,
       });
       if (error) throw error;
+      const { error: eB } = await supabase.from('tier_gruppe').update({ aktueller_bestand: Math.max(0, neuBestand) }).eq('id', nb.gruppe_id);
       setNb({ gruppe_id: '', datum: H, art: 'zugang', anzahl: '1', ohrmarke: '', partner: '' });
-      setOk('Bewegung erfasst.'); await laden_();
+      if (eB) setFehler('Bewegung erfasst, aber der Bestand konnte nicht angepasst werden: ' + eB.message);
+      else setOk(`Bewegung erfasst — Bestand jetzt ${Math.max(0, neuBestand)}.`);
+      await laden_();
     } catch (err: unknown) { setFehler('Speichern fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }

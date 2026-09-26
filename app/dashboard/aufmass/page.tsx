@@ -40,7 +40,7 @@ import { aufmassPdf } from '../_components/aufmassPdf';
 import { parseGaeb, baueGaeb, type GaebLV } from '@/lib/gaeb';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
-import { leseZahl } from '@/lib/zahlen';
+import { leseZahl, zahlFeld } from '@/lib/zahlen';
 
 const MODUL = 'aufmasse';
 
@@ -662,9 +662,10 @@ export default function AufmassPage() {
                                 <input
                                   style={{ ...styles.posInput, textAlign: 'right' }}
                                   disabled={gesperrt}
-                                  defaultValue={pauschal
-                                    ? (p.festpreis_netto != null ? String(p.festpreis_netto) : '')
-                                    : (p.einzelpreis_netto != null ? String(p.einzelpreis_netto) : '')}
+                                  // F19 (26.09.2026): mit Komma vorbelegen. String(85.125) ergab
+                                  // „85.125" — beim Verlassen des Feldes las der deutsche Leser
+                                  // daraus 85.125 € (Tausenderpunkt). Die Menge bleibt bewusst anders.
+                                  defaultValue={pauschal ? zahlFeld(p.festpreis_netto) : zahlFeld(p.einzelpreis_netto)}
                                   placeholder="—"
                                   onBlur={(e) => positionAendern(p.id, pauschal
                                     ? { festpreis_netto: num(e.target.value) }

@@ -145,6 +145,9 @@ export default function StandortePage() {
 
   async function loeschen(s: Standort) {
     setOk(null); setFehler(null);
+    // F5 (26.09.2026): Der Hauptsitz ist nicht löschbar — erst einen anderen
+    // Standort zum Hauptsitz machen. Sonst hing die Firma ohne Hauptsitz da.
+    if (s.ist_hauptsitz) { setFehler('Der Hauptsitz kann nicht gelöscht werden. Machen Sie zuerst einen anderen Standort zum Hauptsitz.'); setLoeschId(null); return; }
     const { error } = await supabase.from('standorte').delete().eq('id', s.id);
     if (error) { setFehler('Konnte nicht gelöscht werden.'); setLoeschId(null); return; }
     setLoeschId(null);
@@ -223,7 +226,9 @@ export default function StandortePage() {
               <button style={styles.btnMini} onClick={() => bearbeitenStart(s)}>Bearbeiten</button>
               {!s.ist_hauptsitz && <button style={styles.btnMini} onClick={() => alsHauptsitz(s)}>Als Hauptsitz</button>}
               <button style={styles.btnMini} onClick={() => aktivUmschalten(s)}>{s.aktiv ? 'Deaktivieren' : 'Aktivieren'}</button>
-              {loeschId === s.id ? (
+              {s.ist_hauptsitz ? (
+                <span style={{ fontSize: 12, color: C.textDim }} title="Machen Sie zuerst einen anderen Standort zum Hauptsitz.">Hauptsitz · nicht löschbar</span>
+              ) : loeschId === s.id ? (
                 <>
                   <button style={styles.btnDanger} onClick={() => loeschen(s)}>Wirklich löschen</button>
                   <button style={styles.btnMini} onClick={() => setLoeschId(null)}>Abbrechen</button>

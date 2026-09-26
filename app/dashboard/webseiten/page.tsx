@@ -73,12 +73,20 @@ export default function WebseitenPage() {
     setCi((data as CiWeb) ?? null);
   }, []);
 
-  const ladeLive = useCallback(async (userId: string, slug: string) => {
-    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status, domain, chat_domains').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
-    const d = data as { oeffentlich_id: string | null; status: string; domain: string | null; chat_domains: string[] | null } | null;
+  // F2 (26.09.2026): auch die gespeicherten Bausteine laden. Vorher zeigte die
+  // Seite nach jedem Neuladen wieder die Vorlage — und das naechste Speichern
+  // ueberschrieb die eigene, gespeicherte Seite damit.
+  const ladeLive = useCallback(async (userId: string, slug: string, bausteineUebernehmen = false) => {
+    const { data } = await supabase.from('web_seiten').select('oeffentlich_id, status, domain, chat_domains, bloecke').eq('owner_user_id', userId).eq('slug', slug).maybeSingle();
+    const d = data as { oeffentlich_id: string | null; status: string; domain: string | null; chat_domains: string[] | null; bloecke: Block[] | null } | null;
     setLiveInfo(d ? { oeffentlich_id: d.oeffentlich_id, status: d.status } : null);
     setDomain(d?.domain || '');
     setChatDomains((d?.chat_domains ?? []).join('\n'));
+    if (bausteineUebernehmen && Array.isArray(d?.bloecke) && d.bloecke.length > 0) {
+      setEditBloecke(d.bloecke);
+      setModus('editor');
+      setMeldung('Ihre gespeicherte Seite ist geladen — Sie bearbeiten den gespeicherten Stand.');
+    }
   }, []);
 
   useEffect(() => {
@@ -91,14 +99,15 @@ export default function WebseitenPage() {
     })();
   }, [ladeCi]);
 
-  useEffect(() => { if (uid) ladeLive(uid, zweck); }, [uid, zweck, ladeLive]);
+  useEffect(() => { if (uid) ladeLive(uid, zweck, true); }, [uid, zweck, ladeLive]);
 
   // Beim Zweck-Wechsel das KI-Ergebnis verwerfen (es gehörte zum alten Zweck).
   function waehleZweck(z: string) { setZweck(z); setKiBloecke(null); setEditBloecke(null); setMeldung(null); setGespeichert(null); if (modus === 'editor') setModus('vorlage'); }
 
   function editorStart() {
     if (!ci) return;
-    setEditBloecke(kiBloecke ?? baueVorlage(ci, zweck).bloecke);
+    // F2: ein geladener, gespeicherter Stand geht vor.
+    setEditBloecke(editBloecke ?? kiBloecke ?? baueVorlage(ci, zweck).bloecke);
     setModus('editor');
     setGespeichert(null);
   }
@@ -132,30 +141,43 @@ export default function WebseitenPage() {
     setKiLaden(false);
   }
 
-  async function speichern() {
-    if (!uid || !ci) return;
+  // F2 (26.09.2026): Speichern setzte IMMER status 'entwurf' — jede Aenderung
+  // (auch Domain und Berater-Freigabe, die intern speichern() riefen) nahm
+  // eine veroeffentlichte Seite offline. Jetzt: bestehende Zeile nur bei den
+  // Inhalten aktualisieren, der Live-Status bleibt, wie er ist.
+  async function speichern(): Promise<boolean> {
+    if (!uid || !ci) return false;
     setFehler(null); setGespeichert(null); setSpeichert(true);
-    const row = {
-      owner_user_id: uid,
+    const inhalt = {
       titel: (ci.firma ?? 'Meine Seite').toString(),
-      slug: zweck,
-      zweck,
-      status: 'entwurf',
       ist_startseite: zweck === 'webseite',
       bloecke: aktuelleBloecke,
       aktualisiert_am: new Date().toISOString(),
     };
-    const { error } = await supabase.from('web_seiten').upsert(row, { onConflict: 'owner_user_id,slug' });
-    if (error) { setFehler('Konnte nicht gespeichert werden.'); setSpeichert(false); return; }
-    setGespeichert('Seite gespeichert.');
+    const { data: da } = await supabase.from('web_seiten').select('id, status').eq('owner_user_id', uid).eq('slug', zweck).maybeSingle();
+    const vorhanden = da as { id: string; status: string } | null;
+    const { error } = vorhanden
+      ? await supabase.from('web_seiten').update(inhalt).eq('id', vorhanden.id)
+      : await supabase.from('web_seiten').insert({ ...inhalt, owner_user_id: uid, slug: zweck, zweck, status: 'entwurf' });
+    if (error) { setFehler('Konnte nicht gespeichert werden.'); setSpeichert(false); return false; }
+    setGespeichert(vorhanden?.status === 'live' ? 'Gespeichert — die Änderungen sind sofort auf Ihrer Live-Seite.' : 'Seite gespeichert.');
     setSpeichert(false);
     await ladeLive(uid, zweck);
+    return true;
+  }
+
+  /** F2: Zeile anlegen, falls es sie noch nicht gibt — ohne Inhalte zu überschreiben. */
+  async function zeileSicherstellen(): Promise<boolean> {
+    if (!uid) return false;
+    const { data } = await supabase.from('web_seiten').select('id').eq('owner_user_id', uid).eq('slug', zweck).maybeSingle();
+    if (data) return true;
+    return speichern();
   }
 
   async function setzeLive(live: boolean) {
     if (!uid || !ci) return;
     setFehler(null); setVeroeffLaden(true);
-    await speichern(); // aktuelle Bausteine sichern (Zeile anlegen, falls nötig)
+    if (!(await speichern())) { setVeroeffLaden(false); return; } // aktuelle Bausteine sichern (Zeile anlegen, falls nötig)
     try {
       const res = await fetch('/api/webseite-veroeffentlichen', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -174,7 +196,7 @@ export default function WebseitenPage() {
     if (!uid) return;
     setDomainMsg(null); setDomainSpeichert(true);
     const norm = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-    await speichern(); // Zeile sicherstellen
+    await zeileSicherstellen(); // F2: nur anlegen, nie die Seite überschreiben oder offline nehmen
     const { error } = await supabase.from('web_seiten')
       .update({ domain: norm || null, aktualisiert_am: new Date().toISOString() })
       .eq('owner_user_id', uid).eq('slug', zweck);
@@ -196,7 +218,7 @@ export default function WebseitenPage() {
     if (!uid) return;
     setChatMsg(null); setChatSpeichert(true);
     const liste = leseDomainListe(chatDomains);
-    await speichern(); // Zeile sicherstellen
+    await zeileSicherstellen(); // F2: nur anlegen, nie die Seite überschreiben oder offline nehmen
     const { error } = await supabase.from('web_seiten')
       .update({ chat_domains: liste, aktualisiert_am: new Date().toISOString() })
       .eq('owner_user_id', uid).eq('slug', zweck);

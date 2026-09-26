@@ -51,7 +51,7 @@ export default function FilialvergleichPage() {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [rSt, rMa, rEnt, rRe, rKa, rAu, rMod] = await Promise.all([
+    const [rSt, rMa, rEnt, rRe, rKa, rAu, rMod, rZu] = await Promise.all([
       supabase.from('standorte').select('id, name, ist_hauptsitz, aktiv').order('ist_hauptsitz', { ascending: false }).order('name', { ascending: true }),
       supabase.from('mitarbeiter').select('id, vorname, nachname, leitungsrolle, standort_id'),
       supabase.from('personal_entsendung').select('mitarbeiter_id, ziel_standort_id, von_datum, bis_datum'),
@@ -59,6 +59,11 @@ export default function FilialvergleichPage() {
       supabase.from('kassen_belege').select('standort_id, brutto_summe, storniert'),
       supabase.from('auftraege').select('standort_id'),
       supabase.from('standort_module').select('standort_id, aktiv'),
+      // F4 (26.09.2026): Die Seite Filialleitung speichert, welche Standorte
+      // eine Leitung abdeckt, in mitarbeiter_standorte. Vorher las der
+      // Vergleich nur mitarbeiter.standort_id — dort eingetragene Leitungen
+      // tauchten hier nie auf.
+      supabase.from('mitarbeiter_standorte').select('mitarbeiter_id, standort_id'),
     ]);
     if (rSt.error) { setFehler('Daten konnten nicht geladen werden.'); return; }
 
@@ -104,13 +109,21 @@ export default function FilialvergleichPage() {
     const ausJe: Record<string, number> = {};
     ((rMod.data as { standort_id: string; aktiv: boolean }[]) ?? []).forEach((z) => { if (z.aktiv === false) ausJe[z.standort_id] = (ausJe[z.standort_id] ?? 0) + 1; });
 
+    // F4: abgedeckte Standorte je Mitarbeiter (aus der Seite Filialleitung)
+    const abgedeckt: Record<string, Set<string>> = {};
+    ((rZu.data as { mitarbeiter_id: string; standort_id: string }[] | null) ?? []).forEach((z) => {
+      (abgedeckt[z.mitarbeiter_id] ??= new Set()).add(z.standort_id);
+    });
+
     setOhneFiliale({ umsatz: umsatzOhne, kasse: kasseOhne, auftraege: aufOhne });
 
     setZeilen(standorte.map((s) => {
       const heimatMa = mitarbeiter.filter((m) => m.standort_id === s.id);
       const heimatDa = heimatMa.filter((m) => !entsandtWeg.has(m.id)).length;
       const gaeste = gaesteJeStandort[s.id] ?? 0;
-      const leitungen = heimatMa.filter((m) => !!m.leitungsrolle).map((m) => ({ name: maName(m), rolle: m.leitungsrolle as string }));
+      const leitungen = mitarbeiter
+        .filter((m) => !!m.leitungsrolle && (m.standort_id === s.id || (abgedeckt[m.id]?.has(s.id) ?? false)))
+        .map((m) => ({ name: maName(m), rolle: m.leitungsrolle as string }));
       return {
         standort: s,
         umsatz: umsatzJe[s.id] ?? 0, offen: offenJe[s.id] ?? 0, kasse: kasseJe[s.id] ?? 0, auftraege: aufJe[s.id] ?? 0,

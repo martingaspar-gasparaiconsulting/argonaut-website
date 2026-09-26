@@ -12,7 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import {
-  STOER_KATALOG, kategorieLabel, kennzahlBuchung, stoerungNachKategorie, zaehleBde,
+  STOER_KATALOG, kategorieLabel, kennzahlBuchung, stoerungNachKategorie, zaehleBde, istGeplanteKategorie,
   type BuchungLite, type StoerungLite,
 } from '@/lib/bde';
 import { augeBde } from '@/lib/auge';
@@ -113,9 +113,15 @@ export default function BdePage() {
   }, [laden_]);
 
   // Störzeit je Buchung
+  // F12: Pausen (geplant) getrennt von echten Stoerungen summieren.
   const stzMap = useMemo(() => {
     const map = new Map<string, number>();
-    for (const s of stoerungen) map.set(s.buchung_id, (map.get(s.buchung_id) || 0) + (Number(s.dauer_min) || 0));
+    for (const s of stoerungen) if (!istGeplanteKategorie(s.kategorie)) map.set(s.buchung_id, (map.get(s.buchung_id) || 0) + (Number(s.dauer_min) || 0));
+    return map;
+  }, [stoerungen]);
+  const geplMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of stoerungen) if (istGeplanteKategorie(s.kategorie)) map.set(s.buchung_id, (map.get(s.buchung_id) || 0) + (Number(s.dauer_min) || 0));
     return map;
   }, [stoerungen]);
   const stoerProBuchung = useMemo(() => {
@@ -208,7 +214,7 @@ export default function BdePage() {
 
   function druckePdf(b: Buchung) {
     const st = stoerProBuchung.get(b.id) || [];
-    const k = kennzahlBuchung(b as BuchungLite, stzMap.get(b.id) || 0);
+    const k = kennzahlBuchung(b as BuchungLite, stzMap.get(b.id) || 0, geplMap.get(b.id) || 0);
     const m = maschineVon(b.maschine_id);
     bdePdf({
       aussteller: aussteller || 'Mein Betrieb',
@@ -349,7 +355,7 @@ export default function BdePage() {
           {sichtbareBuchungen.length === 0 ? (
             <div style={styles.hint}>Noch keine Buchungen{filterMaschine ? ' für diese Maschine' : ''} — starten Sie oben eine Laufzeit oder buchen Sie eine Menge. Erst dann rechnen sich Auslastung und Stückkosten.</div>
           ) : sichtbareBuchungen.map((b) => {
-            const k = kennzahlBuchung(b as BuchungLite, stzMap.get(b.id) || 0);
+            const k = kennzahlBuchung(b as BuchungLite, stzMap.get(b.id) || 0, geplMap.get(b.id) || 0);
             const st = stoerProBuchung.get(b.id) || [];
             const m = maschineVon(b.maschine_id);
             const pareto = stoerungNachKategorie(st as StoerungLite[]);

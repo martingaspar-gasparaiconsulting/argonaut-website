@@ -17,10 +17,11 @@ import { createBrowserClient } from '@supabase/ssr';
 import {
   artInfo, MEHRHEITEN, TOP_VORSCHLAEGE, pruefeEinladung, spaetesteEinladung, auszaehlen, anfechtungsFristen,
   naechsteBeschlussNummer, ordneTops, einladungText, protokollText, sammlungZeile, offenePlatzhalter,
-  heuteBerlin, datumDe,
+  heuteBerlin, datumDe, topIstBeschluss,
   type VersammlungArt, type Mehrheit, type Top,
 } from '@/lib/versammlungObjekte';
 import { leseZahl } from '@/lib/zahlen';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -101,7 +102,7 @@ export default function VersammlungenSeite({ art }: { art: VersammlungArt }) {
     setFehler(null); setOk(null);
     if (!neu.termin) { setFehler('Bitte das Datum der Versammlung angeben.'); return; }
     setBusy(true);
-    const tops = TOP_VORSCHLAEGE[art].map((t, i) => ({ nr: i + 1, titel: t, beschluss: /Beschluss|Entlastung|Wahl|Genehmigung/.test(t) }));
+    const tops = TOP_VORSCHLAEGE[art].map((t, i) => ({ nr: i + 1, titel: t, beschluss: topIstBeschluss(t) })); // F13
     const { error } = await supabase.from('versammlung').insert({
       art, objekt: neu.objekt.trim() || null, titel: neu.titel.trim() || null, termin: neu.termin, uhrzeit: neu.uhrzeit || null, ort: neu.ort.trim() || null, online: neu.online.trim() || null,
       frist_tage: Math.max(0, Math.round(Number(neu.frist) || info.fristTage)), post: neu.post, tagesordnung: tops, status: 'geplant',
@@ -184,12 +185,13 @@ function VersammlungKarte({ v, art, heute, firma, offen, onToggle, beschluesse, 
 
   async function speichern(extra: Record<string, unknown> = {}, meldung = 'Gespeichert.') {
     setBusy(true); onFehler(null); onOk(null);
-    const { error } = await supabase.from('versammlung').update({
+    const { data: geschrieben, error } = await supabase.from('versammlung').update({
       tagesordnung: ordneTops(tops), beginn: d.beginn || null, ende: d.ende || null, leitung: d.leitung.trim() || null, protokollfuehrung: d.protokollfuehrung.trim() || null,
       anwesend: d.anwesend.trim() || null, beirat: d.beirat, notizen, aktualisiert_am: new Date().toISOString(), ...extra,
-    }).eq('id', v.id);
+    }).eq('id', v.id).select('id');
     setBusy(false);
     if (error) { onFehler('Speichern fehlgeschlagen: ' + error.message); return; }
+    if (nichtsGeschrieben(geschrieben)) { onFehler(NICHT_GESPEICHERT); return; } // F20
     onOk(meldung); await neuLaden();
   }
 
@@ -330,8 +332,10 @@ function Sammlung({ art, liste, beschluesse, onFehler, onOk, neuLaden }: { art: 
   async function vermerk(b: Beschluss, feldName: 'angefochten_am' | 'aufgehoben_am') {
     const d = window.prompt('Datum (JJJJ-MM-TT):', heuteBerlin());
     if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-    const { error } = await supabase.from('versammlung_beschluss').update({ [feldName]: d }).eq('id', b.id);
-    if (error) onFehler('Speichern fehlgeschlagen: ' + error.message); else { onOk('Vermerk eingetragen.'); await neuLaden(); }
+    const { data: geschrieben, error } = await supabase.from('versammlung_beschluss').update({ [feldName]: d }).eq('id', b.id).select('id');
+    if (error) onFehler('Speichern fehlgeschlagen: ' + error.message);
+    else if (nichtsGeschrieben(geschrieben)) onFehler(NICHT_GESPEICHERT); // F20
+    else { onOk('Vermerk eingetragen.'); await neuLaden(); }
   }
   function drucken() {
     const w = window.open('', '_blank');

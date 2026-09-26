@@ -166,6 +166,17 @@ export function naechsteBeschlussNummer(vorhanden: (number | null | undefined)[]
 
 export type Top = { nr: number; titel: string; beschluss: boolean; erlaeuterung?: string | null };
 
+/**
+ * F13 (26.09.2026): Wird ueber diesen TOP abgestimmt? Vorher reichte das Wort
+ * „Beschluss" im Titel — damit galten „Verschiedenes (ohne Beschluss)" und
+ * „… Feststellung der Beschlussfaehigkeit" als Beschluss-TOP.
+ */
+export function topIstBeschluss(titel: string): boolean {
+  const t = String(titel ?? '');
+  if (/ohne Beschluss|Beschlussfähigkeit|Beschlussfaehigkeit|^\s*Verschiedenes/i.test(t)) return false;
+  return /Beschluss|Entlastung|Wahl|Genehmigung/i.test(t);
+}
+
 /** TOPs sauber durchnummerieren, leere raus. */
 export function ordneTops(tops: Top[]): Top[] {
   return tops.filter((t) => (t.titel ?? '').trim()).map((t, i) => ({ ...t, nr: i + 1, titel: t.titel.trim() }));

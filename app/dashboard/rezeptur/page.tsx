@@ -19,7 +19,7 @@ import {
 import { augeRezeptur } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
-import { leseZahlOder } from '@/lib/zahlen';
+import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -75,8 +75,8 @@ export default function RezepturRechner() {
   const ladeZutaten = useCallback(async (rid: string) => {
     const { data } = await supabase.from('rezeptur_zutaten').select('*').eq('rezeptur_id', rid).order('position', { ascending: true });
     const rows = ((data as Record<string, unknown>[]) ?? []).map((z) => ({
-      id: String(z.id), bezeichnung: String(z.bezeichnung ?? ''), menge: z.menge != null ? String(z.menge) : '',
-      einheit: String(z.einheit ?? 'kg'), preis_pro_einheit: z.preis_pro_einheit != null ? String(z.preis_pro_einheit) : '',
+      id: String(z.id), bezeichnung: String(z.bezeichnung ?? ''), menge: zahlFeld(z.menge), // F9: vorher String() -> „2.125" -> beim Speichern 2125
+      einheit: String(z.einheit ?? 'kg'), preis_pro_einheit: zahlFeld(z.preis_pro_einheit),
       rolle: String(z.rolle ?? 'sonstige'),
     }));
     setZutaten(rows.length ? rows : [{ ...LEER_ZUTAT }]);
@@ -97,6 +97,7 @@ export default function RezepturRechner() {
   useEffect(() => {
     const r = rezepte.find((x) => x.id === aktivId) ?? null;
     setEck(r);
+    setEckText({});
     if (aktivId) void ladeZutaten(aktivId); else setZutaten([]);
     setZielMenge('');
   }, [aktivId, rezepte, ladeZutaten]);
@@ -133,8 +134,12 @@ export default function RezepturRechner() {
     if (!eck || !besitzer) return;
     setBusy(true); setFehler(null); setOk(null);
     try {
-      // Einfach & sicher: bestehende Zutaten ersetzen.
-      await supabase.from('rezeptur_zutaten').delete().eq('rezeptur_id', eck.id);
+      // F9 (26.09.2026): erst die NEUEN Zeilen speichern, dann die alten
+      // loeschen. Vorher wurde zuerst alles geloescht — scheiterte danach das
+      // Speichern, war die ganze Zutatenliste weg.
+      const { data: alt, error: eAlt } = await supabase.from('rezeptur_zutaten').select('id').eq('rezeptur_id', eck.id);
+      if (eAlt) throw eAlt;
+      const altIds = ((alt as { id: string }[] | null) ?? []).map((r) => r.id);
       const rows = zutaten
         .filter((z) => z.bezeichnung.trim() || num(z.menge) > 0)
         .map((z, i) => ({
@@ -144,6 +149,7 @@ export default function RezepturRechner() {
           rolle: z.rolle || 'sonstige',
         }));
       if (rows.length) { const { error } = await supabase.from('rezeptur_zutaten').insert(rows); if (error) throw error; }
+      if (altIds.length) { const { error: eDel } = await supabase.from('rezeptur_zutaten').delete().in('id', altIds); if (eDel) throw eDel; }
       await ladeZutaten(eck.id); setOk('Zutaten gespeichert.');
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(false); }
@@ -174,6 +180,17 @@ export default function RezepturRechner() {
   function zutatDazu() { setZutaten((r) => [...r, { ...LEER_ZUTAT }]); }
   function zutatWeg(i: number) { setZutaten((r) => (r.length > 1 ? r.filter((_, k) => k !== i) : r)); }
   function setEckF<K extends keyof Rezept>(k: K, v: Rezept[K]) { setEck((e) => (e ? { ...e, [k]: v } : e)); }
+  // F9 (26.09.2026): Zahlenfelder der Eckdaten als TEXT fuehren. Vorher stand
+  // die Zahl direkt im Feld — ein Komma liess sich nicht tippen („2," -> 2)
+  // und 2.125 aus der Datenbank erschien als „2.125" (= 2125 beim Speichern).
+  const [eckText, setEckText] = useState<Record<string, string>>({});
+  type EckZahl = 'basis_menge' | 'portionen' | 'backverlust_prozent' | 'foodcost_ziel';
+  function eckWert(k: EckZahl): string { return eckText[k] ?? zahlFeld(eck?.[k]); }
+  function eckZahl(k: EckZahl, text: string, ganz = false) {
+    setEckText((t) => ({ ...t, [k]: text }));
+    const n = num(text);
+    setEckF(k, text.trim() === '' ? null : (ganz ? Math.round(n) : n));
+  }
 
   // --- Live-Rechner (aus lib/rezeptur) ---
   const rechner = useMemo(() => {
@@ -245,18 +262,18 @@ export default function RezepturRechner() {
               </label>
               <label style={styles.lab}>Ausbeute-Menge
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <input style={styles.inp} inputMode="decimal" value={eck.basis_menge ?? ''} onChange={(e) => setEckF('basis_menge', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 16" />
+                  <input style={styles.inp} inputMode="decimal" value={eckWert('basis_menge')} onChange={(e) => eckZahl('basis_menge', e.target.value)} placeholder="z. B. 16" />
                   <input style={{ ...styles.inp, maxWidth: 70 }} value={eck.basis_einheit ?? ''} onChange={(e) => setEckF('basis_einheit', e.target.value)} placeholder="kg" />
                 </div>
               </label>
               <NurVoll>
-                <label style={styles.lab}>Portionen<input style={styles.inp} inputMode="numeric" value={eck.portionen ?? ''} onChange={(e) => setEckF('portionen', e.target.value === '' ? null : Math.round(num(e.target.value)))} placeholder="optional" /></label>
+                <label style={styles.lab}>Portionen<input style={styles.inp} inputMode="numeric" value={eckWert('portionen')} onChange={(e) => eckZahl('portionen', e.target.value, true)} placeholder="optional" /></label>
               </NurVoll>
               <NurVoll>
-                <label style={styles.lab}>Backverlust %<input style={styles.inp} inputMode="decimal" value={eck.backverlust_prozent ?? ''} onChange={(e) => setEckF('backverlust_prozent', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 12" /></label>
+                <label style={styles.lab}>Backverlust %<input style={styles.inp} inputMode="decimal" value={eckWert('backverlust_prozent')} onChange={(e) => eckZahl('backverlust_prozent', e.target.value)} placeholder="z. B. 12" /></label>
               </NurVoll>
               <NurVoll>
-                <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eck.foodcost_ziel ?? ''} onChange={(e) => setEckF('foodcost_ziel', e.target.value === '' ? null : num(e.target.value))} placeholder="z. B. 30" /></label>
+                <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eckWert('foodcost_ziel')} onChange={(e) => eckZahl('foodcost_ziel', e.target.value)} placeholder="z. B. 30" /></label>
               </NurVoll>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>

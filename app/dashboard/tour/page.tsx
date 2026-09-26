@@ -180,6 +180,17 @@ export default function TourPage() {
     finally { setBusy(null); }
   }
 
+  // F18 (26.09.2026): Tour-Status war nur „geplant" — nie änderbar.
+  async function tourStatus(t: Tour, status: string) {
+    setBusy(t.id); setFehler(null);
+    try {
+      const { error } = await supabase.from('tour').update({ status }).eq('id', t.id);
+      if (error) throw error;
+      setTouren((l) => l.map((x) => (x.id === t.id ? { ...x, status } : x)));
+    } catch (err: unknown) { setFehler('Status fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
+    finally { setBusy(null); }
+  }
+
   async function statusSetzen(s: Stopp, status: string) {
     setBusy(s.id); setFehler(null);
     try {
@@ -266,7 +277,12 @@ export default function TourPage() {
                       return (
                         <tr key={t.id}>
                           <td style={styles.td}>{fmtDatum(t.datum)}</td>
-                          <td style={styles.td}>{t.bezeichnung}<span style={{ color: C.textDim }}> · {TOUR_META[t.status] || t.status}</span><EigeneFelderAnzeige felder={felder} werte={werteMap[t.id]} /></td>
+                          <td style={styles.td}>{t.bezeichnung}{' '}
+                            <select aria-label="Status der Tour" value={t.status} disabled={busy === t.id} onChange={(e) => tourStatus(t, e.target.value)}
+                              style={{ background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12.5, padding: '1px 4px' }}>
+                              {Object.entries(TOUR_META).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                            </select>
+                            <EigeneFelderAnzeige felder={felder} werte={werteMap[t.id]} /></td>
                           <td style={{ ...styles.td, color: C.textDim }}>{t.fahrer || '—'}</td>
                           <td style={{ ...styles.td, textAlign: 'right' }}>{fortschrittProzent(ts)}% <span style={{ color: C.textDim }}>({ts.length})</span></td>
                           <td style={{ ...styles.td, textAlign: 'right' }}><button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} onClick={() => { setAktivId(t.id); setTab('stopps'); }}>öffnen ›</button></td>

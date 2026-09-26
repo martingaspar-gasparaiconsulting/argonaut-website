@@ -974,6 +974,13 @@ export type PruefBericht = {
   trenner: TrennerBefund;
   /** Hinweise zur ganzen Datei (nicht zu einer Zeile) — gehören über den Bericht. */
   hinweise: string[];
+  /**
+   * F6 (26.09.2026): Zeilennummer in der DATEI je Satz (gleiche Reihenfolge
+   * wie saetze). Vorher rechnete die Seite die Nummer aus der Position in der
+   * gefilterten Liste — nach der ersten fehlerhaften oder doppelten Zeile
+   * stimmte jede Fehlermeldung nicht mehr.
+   */
+  zeilenNummern: number[];
 };
 
 /**
@@ -1017,6 +1024,7 @@ export function pruefeAlles(
   const warnungen: ZeilenFehler[] = [];
   const hinweise: string[] = [];
   const gesehen = new Set<string>();
+  const zeilenNummern: number[] = [];
   let dubletten = 0;
 
   // BEFUND 3: einmal fuer die ganze Datei entscheiden, nicht je Zelle.
@@ -1045,6 +1053,7 @@ export function pruefeAlles(
       }
     }
     saetze.push(e.werte);
+    zeilenNummern.push(nummer);
   });
 
   return {
@@ -1055,5 +1064,6 @@ export function pruefeAlles(
     dubletten_in_datei: dubletten,
     trenner,
     hinweise,
+    zeilenNummern,
   };
 }

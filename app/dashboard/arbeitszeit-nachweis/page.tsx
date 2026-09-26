@@ -50,6 +50,11 @@ export default function ArbeitszeitNachweisPage() {
   const [ruhezeit10, setRuhezeit10] = useState(false);
   const [warn8h, setWarn8h] = useState(true);
   const [pdfLaeuft, setPdfLaeuft] = useState(false);
+  // F22 (26.09.2026): Mitarbeiter mit Freigabe sahen bisher eine leere Liste
+  // (Abfrage nur owner_user_id = eigene Kennung). Jetzt: Mitarbeiter sehen
+  // ihren EIGENEN Nachweis; alle Mitarbeiter und das PDF (mit Arbeitgeber-
+  // Unterschrift) bleiben beim Inhaber.
+  const [binMitarbeiter, setBinMitarbeiter] = useState(false);
 
   // Mitarbeiter des Chefs laden
   useEffect(() => {
@@ -60,7 +65,12 @@ export default function ArbeitszeitNachweisPage() {
       const { data } = await supabase.from('mitarbeiter')
         .select('id,vorname,nachname').eq('owner_user_id', uid)
         .order('nachname', { ascending: true });
-      const liste = (data as Mitarbeiter[]) ?? [];
+      let liste = (data as Mitarbeiter[]) ?? [];
+      if (liste.length === 0) {
+        const { data: ich } = await supabase.from('mitarbeiter')
+          .select('id,vorname,nachname').eq('auth_user_id', uid).maybeSingle();
+        if (ich) { liste = [ich as Mitarbeiter]; setBinMitarbeiter(true); }
+      }
       setMaListe(liste);
       if (liste.length > 0) setMaId(liste[0].id);
       else setLaden(false);
@@ -165,10 +175,14 @@ export default function ArbeitszeitNachweisPage() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto' }}>
+          {binMitarbeiter ? (
+            <span style={{ fontSize: 13, color: C.textDim }}>Sie sehen Ihren eigenen Nachweis. Das PDF mit Unterschrift erstellt der Inhaber.</span>
+          ) : (
           <button onClick={pdfErzeugen} disabled={pdfLaeuft || !maId || nachweis.tage.length === 0}
             style={{ ...styles.pdfBtn, opacity: (pdfLaeuft || nachweis.tage.length === 0) ? 0.55 : 1, cursor: (pdfLaeuft || nachweis.tage.length === 0) ? 'not-allowed' : 'pointer' }}>
             {pdfLaeuft ? 'Erstellt PDF …' : '📄 Als PDF'}
           </button>
+          )}
         </div>
       </div>
 

@@ -165,6 +165,10 @@ export function istFrei(
 // ---------- Status zum Zeitpunkt ----------
 export function istAktuellBelegt(v: Belegzeit, jetzt: string | Date = new Date()): boolean {
   if (v.status === 'storniert' || v.status === 'ausgecheckt') return false;
+  // F14 (26.09.2026): Wer eingecheckt ist, belegt die Einheit — bis zum
+  // Check-out, auch vor dem gebuchten Beginn (frueher Check-in) und am
+  // Abreisetag nach 0 Uhr. Vorher sprang das Schild dann auf „frei".
+  if (v.status === 'eingecheckt') return true;
   const t = toDate(jetzt).getTime();
   return toDate(v.von).getTime() <= t && t < toDate(v.bis).getTime();
 }
@@ -217,7 +221,8 @@ export function zaehleBelegung(
     aktiveEinheiten,
     belegtJetzt,
     freiJetzt: Math.max(aktiveEinheiten - belegtJetzt, 0),
-    anreisenHeute: vorgaenge.filter(v => istAnreise(v, jetzt) && v.status !== 'ausgecheckt').length,
+    // F14: Wer schon eingecheckt ist, reist heute nicht mehr an.
+    anreisenHeute: vorgaenge.filter(v => istAnreise(v, jetzt) && v.status !== 'ausgecheckt' && v.status !== 'eingecheckt').length,
     abreisenHeute: vorgaenge.filter(v => istAbreise(v, jetzt) && v.status !== 'ausgecheckt').length,
     reservierungenOffen: vorgaenge.filter(v => v.status === 'reserviert').length,
   };

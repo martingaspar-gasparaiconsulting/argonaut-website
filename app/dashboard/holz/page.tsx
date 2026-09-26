@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import KiAuge from '../_components/KiAuge';
 import { augeHolz } from '@/lib/auge';
 import {
@@ -226,8 +227,9 @@ export default function HolzSortimentPage() {
         const { error } = await supabase.from('holz_sortiment').insert(payload);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('holz_sortiment').update(payload).eq('id', form.id);
+        const { data: geschrieben1, error } = await supabase.from('holz_sortiment').update(payload).eq('id', form.id).select('id');
         if (error) throw error;
+        if (nichtsGeschrieben(geschrieben1)) throw new Error(NICHT_GESPEICHERT);
       }
       setGespeichertHinweis(true); setTimeout(() => setGespeichertHinweis(false), 2500);
       await laden_();
@@ -250,8 +252,9 @@ export default function HolzSortimentPage() {
       : `„${name}" aus dem Verkauf nehmen?\n\nDie Variante bleibt erhalten — bestehende Belege ändern sich nicht.`;
     if (!window.confirm(frage)) return;
     try {
-      const { error } = await supabase.from('holz_sortiment').update({ aktiv: zielAktiv }).eq('id', s.id);
+      const { data: geschrieben2, error } = await supabase.from('holz_sortiment').update({ aktiv: zielAktiv }).eq('id', s.id).select('id');
       if (error) throw error;
+      if (nichtsGeschrieben(geschrieben2)) throw new Error(NICHT_GESPEICHERT);
       setModalAuf(false);
       await laden_();
     } catch (e: unknown) {

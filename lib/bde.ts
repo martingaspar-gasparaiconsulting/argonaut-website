@@ -50,9 +50,26 @@ export interface BuchungLite {
   ideal_takt_sek?: number;     // Idealzeit je Teil (Sek) — aus Maschine oder Buchung
 }
 
-/** Summe der Störzeiten in Minuten. */
+// ▄▄▄ F12 (26.09.2026) — Pausen sind KEINE Stoerung ▄▄▄
+// Die Kategorie „Pause / geplant" (Pause, Schichtende, Betriebsruhe) zaehlte
+// bis F12 wie eine Stoerung: sie senkte Verfuegbarkeit und OEE. Nach der
+// OEE-Lehre ist geplanter Stillstand gar keine Planbelegungszeit. Jetzt:
+// geplante Zeiten werden von der Planbelegung ABGEZOGEN, ungeplante bleiben
+// Stoerzeit. Wer 480 min plant und 30 min Pause bucht, hat 450 min Plan.
+
+/** Gehoert die Kategorie zu den geplanten Stillstaenden (Pause …)? */
+export function istGeplanteKategorie(kategorie: string | undefined): boolean {
+  return !!STOER_KATALOG.find((k) => k.key === kategorie)?.geplant;
+}
+
+/** Summe der UNGEPLANTEN Störzeiten in Minuten (Pausen zählen nicht). */
 export function stoerzeitSumme(stoerungen: StoerungLite[]): number {
-  return r0((stoerungen || []).reduce((s, x) => s + (Number(x.dauer_min) || 0), 0));
+  return r0((stoerungen || []).filter((x) => !istGeplanteKategorie(x.kategorie)).reduce((s, x) => s + (Number(x.dauer_min) || 0), 0));
+}
+
+/** Summe der geplanten Stillstände (Pause, Schichtende, Betriebsruhe) in Minuten. */
+export function geplanteZeitSumme(stoerungen: StoerungLite[]): number {
+  return r0((stoerungen || []).filter((x) => istGeplanteKategorie(x.kategorie)).reduce((s, x) => s + (Number(x.dauer_min) || 0), 0));
 }
 
 /** Laufzeit = Planbelegung − Störzeit, nie negativ. */
@@ -96,8 +113,9 @@ export interface BdeKennzahl {
  * Leistung (Standardpraxis), damit fehlerhafte Idealtakte den OEE nicht über 100 %
  * treiben; `leistungRoh` bleibt zur Kontrolle erhalten.
  */
-export function kennzahlBuchung(b: BuchungLite, stoerzeit_min: number): BdeKennzahl {
-  const plan = Number(b.planbelegung_min) || 0;
+export function kennzahlBuchung(b: BuchungLite, stoerzeit_min: number, geplant_min = 0): BdeKennzahl {
+  // F12: geplante Stillstaende verkuerzen die Planbelegung, sind kein Verlust.
+  const plan = Math.max(0, (Number(b.planbelegung_min) || 0) - (Number(geplant_min) || 0));
   const stz = Number(stoerzeit_min) || 0;
   const lauf = laufzeitMin(plan, stz);
   const v = verfuegbarkeit(lauf, plan);
@@ -122,10 +140,10 @@ export interface BdeAggregat {
 }
 
 /** OEE über mehrere Buchungen: Zeiten & Mengen summieren, dann Kennzahlen bilden. */
-export function aggregat(items: { b: BuchungLite; stoerzeit_min: number }[]): BdeAggregat {
+export function aggregat(items: { b: BuchungLite; stoerzeit_min: number; geplant_min?: number }[]): BdeAggregat {
   let plan = 0, stz = 0, lauf = 0, mg = 0, gut = 0, taktMenge = 0;
   for (const it of items || []) {
-    const p = Number(it.b.planbelegung_min) || 0;
+    const p = Math.max(0, (Number(it.b.planbelegung_min) || 0) - (Number(it.geplant_min) || 0)); // F12
     const s = Number(it.stoerzeit_min) || 0;
     const l = laufzeitMin(p, s);
     plan += p; stz += s; lauf += l;
@@ -175,13 +193,20 @@ export function zaehleBde(
 ): BdeKpi {
   // Störzeit je Buchung gruppieren
   const stzProBuchung = new Map<string, number>();
+  const geplProBuchung = new Map<string, number>();   // F12
   for (const s of stoerungen || []) {
     if (!s.buchung_id) continue;
-    stzProBuchung.set(s.buchung_id, (stzProBuchung.get(s.buchung_id) || 0) + (Number(s.dauer_min) || 0));
+    const ziel = istGeplanteKategorie(s.kategorie) ? geplProBuchung : stzProBuchung;
+    ziel.set(s.buchung_id, (ziel.get(s.buchung_id) || 0) + (Number(s.dauer_min) || 0));
   }
-  const items = (buchungen || []).map((b) => ({ b, stoerzeit_min: b.id ? (stzProBuchung.get(b.id) || 0) : 0 }));
+  const items = (buchungen || []).map((b) => ({
+    b,
+    stoerzeit_min: b.id ? (stzProBuchung.get(b.id) || 0) : 0,
+    geplant_min: b.id ? (geplProBuchung.get(b.id) || 0) : 0,
+  }));
   const agg = aggregat(items);
-  const top = stoerungNachKategorie(stoerungen || [])[0] || null;
+  // Top-Stoergrund: nur echte Stoerungen, keine Pausen.
+  const top = stoerungNachKategorie((stoerungen || []).filter((s) => !istGeplanteKategorie(s.kategorie)))[0] || null;
   return {
     maschinenAktiv: (maschinen || []).filter((m) => (m.status ?? 'aktiv') === 'aktiv').length,
     buchungen: (buchungen || []).length,

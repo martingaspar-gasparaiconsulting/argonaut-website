@@ -245,9 +245,11 @@ export default function AutomationenPage() {
         if (error) throw error;
         setOk('Automation gespeichert.');
       } else {
-        const { error } = await supabase.from('automation_regeln').insert({ ...satz, aktiv: true });
+        // F7 (26.09.2026): neu angelegt = PAUSIERT. Vorher sofort aktiv —
+        // eine halb fertige Regel konnte schon Mails an Kunden schicken.
+        const { error } = await supabase.from('automation_regeln').insert({ ...satz, aktiv: false });
         if (error) throw error;
-        setOk('Automation angelegt — sie ist ab sofort aktiv.');
+        setOk('Automation angelegt — sie ist noch pausiert. Prüfen Sie die Regel und klicken Sie dann „Aktivieren“.');
       }
       setF({ ...LEER }); setFormOffen(false); await alles();
     } catch (err: unknown) {
