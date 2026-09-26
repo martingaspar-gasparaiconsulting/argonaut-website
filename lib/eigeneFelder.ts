@@ -59,3 +59,21 @@ export function leereWerte(felder: EigenesFeld[]): Record<string, string> {
   for (const f of felder) o[f.id] = '';
   return o;
 }
+
+// ============================================================================
+// B1c (26.09.2026) — EIGENE FELDER GEHÖREN DEM BETRIEB
+//
+// Der Fehler: Auf rund 27 Seiten (Werkstatt, Service, CRM, Anlagen, Personal
+// …) wurden Werte und Felddefinitionen mit der Kennung der ANGEMELDETEN Person
+// gespeichert. Trägt ein Mitarbeiter ein eigenes Feld aus, sieht der Chef den
+// Wert nicht — und legt ein Mitarbeiter ein Feld an, fehlt es beim Chef ganz.
+// Die Lösung sitzt an EINER Stelle: speichereWerte() und der Feld-Manager
+// fragen selbst nach dem Betrieb (mein_chef_id). Beim Chef ist das null, dann
+// gilt die übergebene Kennung. So kann keine Seite es mehr falsch machen.
+// ============================================================================
+
+/** Betriebs-Kennung: beim Mitarbeiter der Chef, sonst die übergebene Kennung. */
+export function betriebsKennung(chef: unknown, fallback: string | null | undefined): string | null {
+  if (typeof chef === 'string' && chef.trim()) return chef.trim();
+  return fallback ? String(fallback) : null;
+}

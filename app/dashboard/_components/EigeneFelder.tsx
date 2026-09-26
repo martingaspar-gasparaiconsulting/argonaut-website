@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { FELD_TYPEN, feldTypLabel, parseOptionen, formatWert, istFeldTyp, type EigenesFeld, type FeldTyp } from '@/lib/eigeneFelder';
+import { FELD_TYPEN, feldTypLabel, parseOptionen, formatWert, istFeldTyp, betriebsKennung, type EigenesFeld, type FeldTyp } from '@/lib/eigeneFelder';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -27,6 +27,26 @@ const C = {
 };
 
 // ---------------- Datenzugriff ----------------
+
+// B1c (26.09.2026): Eigene Felder und ihre Werte gehören dem BETRIEB. Beim
+// Mitarbeiter liefert mein_chef_id() die Kennung des Chefs, beim Chef null.
+// Gemerkt je angemeldeter Person, damit ein Benutzerwechsel ohne Neuladen
+// nicht die falsche Kennung erbt.
+let betriebCache: { uid: string; chef: Promise<string | null> } | null = null;
+async function betriebsId(fallback: string | null | undefined): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  const uid = data?.session?.user?.id ?? '';
+  if (!betriebCache || betriebCache.uid !== uid) {
+    const chef = (async () => {
+      try {
+        const r = await supabase.rpc('mein_chef_id');
+        return typeof r.data === 'string' && r.data ? r.data : null;
+      } catch { return null; }
+    })();
+    betriebCache = { uid, chef };
+  }
+  return betriebsKennung(await betriebCache.chef, fallback || uid || null);
+}
 
 export async function ladeFelder(modul: string): Promise<EigenesFeld[]> {
   const { data } = await supabase.from('eigenes_feld')
@@ -59,13 +79,14 @@ export async function ladeWerte(modul: string, datensatzIds: string[]): Promise<
 
 export async function speichereWerte(modul: string, datensatzId: string | null | undefined, ownerId: string | null | undefined, werte: Record<string, string>): Promise<void> {
   if (!datensatzId) return;
+  const betrieb = await betriebsId(ownerId);
   for (const [feldId, roh] of Object.entries(werte)) {
     const w = (roh ?? '').toString().trim();
     if (!w) {
       await supabase.from('eigenes_feld_wert').delete().eq('feld_id', feldId).eq('datensatz_id', datensatzId);
     } else {
       await supabase.from('eigenes_feld_wert').upsert(
-        { owner_user_id: ownerId, modul, datensatz_id: datensatzId, feld_id: feldId, wert: w, aktualisiert_am: new Date().toISOString() },
+        { owner_user_id: betrieb, modul, datensatz_id: datensatzId, feld_id: feldId, wert: w, aktualisiert_am: new Date().toISOString() },
         { onConflict: 'feld_id,datensatz_id' },
       );
     }
@@ -89,8 +110,9 @@ export function EigeneFelderManager({ modul, ownerId, onChange }: { modul: strin
     if (!label.trim() || busy) return;
     setBusy(true);
     try {
+      const betrieb = await betriebsId(ownerId);
       await supabase.from('eigenes_feld').insert({
-        owner_user_id: ownerId, modul, label: label.trim(), feld_typ: typ,
+        owner_user_id: betrieb, modul, label: label.trim(), feld_typ: typ,
         optionen: typ === 'auswahl' ? parseOptionen(optionen) : [], reihenfolge: felder.length,
       });
       setLabel(''); setOptionen(''); setTyp('text');
@@ -111,7 +133,7 @@ export function EigeneFelderManager({ modul, ownerId, onChange }: { modul: strin
       </button>
       {offen && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>Legen Sie sich eigene Spalten an — sie erscheinen dann im Formular und in der Liste. Nur Sie sehen Ihre Felder.</div>
+          <div style={{ color: C.textDim, fontSize: 13, marginBottom: 10 }}>Legen Sie eigene Spalten an — sie erscheinen dann im Formular und in der Liste. Die Felder und ihre Einträge gelten für den ganzen Betrieb: Chef und Mitarbeiter sehen dieselben.</div>
           {felder.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
               {felder.map((f) => (
