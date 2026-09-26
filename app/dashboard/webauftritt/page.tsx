@@ -61,6 +61,7 @@ export default function WebauftrittPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [rechtTab, setRechtTab] = useState<'impressum' | 'datenschutz' | 'agb'>('impressum');
   const [logoFehler, setLogoFehler] = useState(false);
+  const [logoLaedt, setLogoLaedt] = useState(false);
   const [kopiert, setKopiert] = useState(false);
 
   const ladeCi = useCallback(async (userId: string) => {
@@ -202,7 +203,26 @@ export default function WebauftrittPage() {
                 {SCHRIFTEN.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </label>
-            <Feld label="Logo (Web-Adresse zum Bild)" value={ci.logo_url} onChange={(v) => setF('logo_url', v)} placeholder="https://…/logo.png  ·  direkter Upload folgt" />
+            <Feld label="Logo (Web-Adresse zum Bild)" value={ci.logo_url} onChange={(v) => setF('logo_url', v)} placeholder="https://…/logo.png — oder unten hochladen" />
+            {/* G3c (26.09.2026): Logo direkt hochladen — nutzt den Foto-Upload des Website-Bauers (Bucket „webseiten"). */}
+            <label style={{ display: 'inline-block', marginTop: 6, fontSize: 13.5, cursor: logoLaedt ? 'wait' : 'pointer', color: '#00e5ff' }}>
+              {logoLaedt ? 'Lädt hoch …' : '⬆ Logo hochladen (PNG, JPG, WebP · max. 8 MB)'}
+              <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} disabled={logoLaedt}
+                onChange={async (e) => {
+                  const datei = e.target.files?.[0]; e.target.value = '';
+                  if (!datei) return;
+                  setLogoLaedt(true); setFehler(null); setOk(null);
+                  try {
+                    const fd = new FormData(); fd.append('datei', datei);
+                    const res = await fetch('/api/webseite-foto', { method: 'POST', body: fd });
+                    const j = await res.json().catch(() => ({}));
+                    if (!res.ok || !j?.url) { setFehler(j?.error || 'Logo konnte nicht hochgeladen werden.'); return; }
+                    setF('logo_url', j.url);
+                    setOk('Logo hochgeladen — bitte unten „💾 Firmen-Auftritt speichern" klicken, dann erscheint es auf Rechnungen, Angeboten und der Webseite.');
+                  } catch { setFehler('Verbindung fehlgeschlagen. Bitte erneut versuchen.'); }
+                  finally { setLogoLaedt(false); }
+                }} />
+            </label>
           </div>
 
           {/* 3) Kontakt */}

@@ -92,3 +92,19 @@ export function zaehleSpenden(
     offeneBestaetigungen: spenden.filter((s) => !s.bestaetigt).length,
   };
 }
+
+/**
+ * G5 (26.09.2026): Nächste Nummer der Zuwendungsbestätigung — je Jahr neu,
+ * höchste vergebene Nummer des Jahres plus 1. Vorher wurden ALLE Bestätigungen
+ * aller Jahre gezählt (2027 hätte z. B. mit ZB-2027-047 begonnen), und nach
+ * einer Löschung konnte eine Nummer doppelt vergeben werden.
+ */
+export function naechsteZbNummer(vorhandene: (string | null | undefined)[], jahr: number): string {
+  const muster = new RegExp(`^ZB-${jahr}-(\\d+)$`);
+  let max = 0;
+  for (const nr of vorhandene) {
+    const m = muster.exec(String(nr ?? '').trim());
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `ZB-${jahr}-${String(max + 1).padStart(3, '0')}`;
+}

@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { signaturStarten } from '@/lib/signaturStart';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
@@ -43,6 +44,11 @@ type Angebot = {
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
   kunde_email: string | null; kontakt_id: string | null;
 };
+
+/** G4: Angenommene oder abgerechnete Angebote werden nicht gelöscht. */
+function angebotLoeschbar(a: Pick<Angebot, 'status' | 'rechnung_id'>): boolean {
+  return a.status !== 'angenommen' && !a.rechnung_id;
+}
 
 const STATUS_FARBE: Record<string, string> = {
   entwurf: C.textDim, gesendet: C.cyan, angenommen: C.green, abgelehnt: C.danger, abgelaufen: C.warn,
@@ -181,10 +187,18 @@ export default function AngebotePage() {
     } finally { setBusy(null); }
   }
   async function loeschen(a: Angebot) {
+    // G4 (26.09.2026): Rückfrage; angenommene bzw. schon abgerechnete Angebote
+    // bleiben stehen (Beleg des Auftrags). Vorher löschte 🗑 sofort alles.
+    if (!angebotLoeschbar(a)) {
+      setFehler(`Angebot ${a.angebotsnummer ?? ''} ist angenommen bzw. abgerechnet und bleibt als Beleg erhalten. Setzen Sie es bei Bedarf auf „abgelehnt".`);
+      return;
+    }
+    if (typeof window !== 'undefined' && !window.confirm(`Angebot ${a.angebotsnummer ?? ''} „${a.titel}" wirklich löschen? Das lässt sich nicht rückgängig machen.`)) return;
     setBusy(a.id);
     try {
-      const { error } = await supabase.from('angebote').delete().eq('id', a.id);
+      const { data: weg, error } = await supabase.from('angebote').delete().eq('id', a.id).select('id');
       if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
+      if (nichtsGeschrieben(weg)) { setFehler(NICHT_GELOESCHT); return; }
       setListe((l) => l.filter((x) => x.id !== a.id));
     } finally { setBusy(null); }
   }
@@ -319,7 +333,7 @@ export default function AngebotePage() {
                 {a.status === 'angenommen' && (a.rechnung_id
                   ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ Rechnung</span>
                   : <button style={{ ...styles.mini, color: C.navy, background: C.gold, borderColor: C.gold }} disabled={busy === a.id} onClick={() => inRechnung(a)}>→ Rechnung</button>)}
-                <button style={styles.miniWeg} disabled={busy === a.id} onClick={() => loeschen(a)}>🗑</button>
+                {angebotLoeschbar(a) && <button style={styles.miniWeg} disabled={busy === a.id} onClick={() => loeschen(a)} title="Angebot löschen (mit Rückfrage)">🗑</button>}
               </div>
             </div>
           ))}

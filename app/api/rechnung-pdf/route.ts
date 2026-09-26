@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-server';
 import { baueBezahllink } from '@/lib/bezahllink';
 import type { IntegrationDatensatz } from '@/lib/konnektoren';
 import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
+import { pflichtangabenFuss } from '@/lib/rechnungFuss';
 // PUNKT 54 (21.09.2026): die Geldlogik der Schlussrechnung kommt aus der
 // getesteten Bibliothek; hier wird nur noch daraus HTML gemacht.
 import { baueSchlussrechnung, type AbschlagPosten } from '@/lib/abschlagsrechnung';
@@ -97,6 +98,12 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   const markeLogo = marke.logo;
   const markeName = marke.name;
   const theadText = marke.theadText;
+
+  // G3b (26.09.2026): Pflichtangaben im Fuß (Rechtsform, Sitz, Register, Geschäftsführung)
+  const fussPflicht = pflichtangabenFuss({
+    name: aussteller?.name, rechtsform: aussteller?.rechtsform, ort: aussteller?.ort,
+    geschaeftsfuehrer: aussteller?.geschaeftsfuehrer, registergericht: aussteller?.registergericht, hrb: aussteller?.hrb,
+  });
 
   // Steuernummer ODER USt-IdNr genügt (§14) — wir zeigen, was vorhanden ist.
   const steuerZeile =
@@ -439,7 +446,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   ${rechnung?.notizen ? `<div class="notizen">${esc(rechnung.notizen)}</div>` : ''}
 
-  <div class="fuss">${markeName ? esc(markeName) + ' &middot; ' : ''}${heute}</div>
+  <div class="fuss">${fussPflicht.zeile ? esc(fussPflicht.zeile) + '<br>' : (markeName ? esc(markeName) + ' &middot; ' : '')}${heute}${fussPflicht.fehlt.length ? `<br><span class="warn">⚠ In den Firmendaten ergänzen: ${esc(fussPflicht.fehlt.join(', '))}</span>` : ''}</div>
 </body></html>`;
 }
 

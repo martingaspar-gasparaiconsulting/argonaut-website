@@ -274,7 +274,7 @@ export default function RechnungDetail() {
       const { data: prof } = await supabase
         .from("profiles")
         .select(
-          "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic"
+          "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic, firma_rechtsform, firma_geschaeftsfuehrer, firma_registergericht, firma_hrb"
         )
         .eq("id", user.id)
         .single();
@@ -657,6 +657,12 @@ export default function RechnungDetail() {
         bank_iban: p.firma_iban || "",
         bank_bic: p.firma_bic || "",
         bank_name: p.firma_bank || "",
+        // G3b (26.09.2026): Pflichtangaben für den Fuß (§ 35a GmbHG, § 37a HGB)
+        ort: p.firma_ort || "",
+        rechtsform: p.firma_rechtsform || "",
+        geschaeftsfuehrer: p.firma_geschaeftsfuehrer || "",
+        registergericht: p.firma_registergericht || "",
+        hrb: p.firma_hrb || "",
       };
 
       const res = await fetch("/api/rechnung-pdf", {
@@ -755,6 +761,11 @@ export default function RechnungDetail() {
 
   // ---------- Stornieren / Reaktivieren (manueller Status) ----------
   async function stornoUmschalten(neu: "storniert" | "offen") {
+    // G3a (26.09.2026): Rückfrage — vorher geschah beides sofort.
+    const frage = neu === "storniert"
+      ? `Rechnung ${rechnung?.rechnungsnummer ?? ""} stornieren?\n\nSie bleibt als „storniert" erhalten (GoBD) und zählt nicht mehr als Umsatz. Ist sie schon beim Kunden, braucht es zusätzlich eine Stornorechnung.`
+      : `Rechnung ${rechnung?.rechnungsnummer ?? ""} wieder aktivieren?\n\nDer Zahlstatus wird aus den erfassten Zahlungen neu berechnet.`;
+    if (typeof window !== "undefined" && !window.confirm(frage)) return;
     setFehler(null);
     const { error } = await supabase
       .from("rechnungen")

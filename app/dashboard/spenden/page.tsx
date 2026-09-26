@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden } from '@/lib/spenden';
+import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden, naechsteZbNummer } from '@/lib/spenden';
 import Leerzustand from '../_components/Leerzustand';
 import { augeSpenden } from '@/lib/auge';
 import { zuwendungPdf } from '@/lib/zuwendungPdf';
@@ -135,7 +135,7 @@ export default function SpendenPage() {
     if (!eForm.org_name) { setFehler('Bitte zuerst unter „Vereinsdaten" mindestens den Namen der Körperschaft hinterlegen.'); setTab('einstellungen'); return; }
     setBusy(s.id); setFehler(null); setOk(null);
     try {
-      const nr = s.bestaetigung_nr || `ZB-${JAHR}-${String(spenden.filter((x) => x.bestaetigung_nr).length + 1).padStart(3, '0')}`;
+      const nr = s.bestaetigung_nr || naechsteZbNummer(spenden.map((x) => x.bestaetigung_nr), JAHR); // G5: je Jahr neu, max + 1
       const unterschriftPng = await ladeMeineUnterschrift(supabase);
       zuwendungPdf({ ...eForm, unterschriftPng }, { ...s, bestaetigung_nr: nr });
       if (!s.bestaetigt) {
