@@ -35,6 +35,8 @@ type Reise = {
   abreise: string | null; rueckkehr: string | null; km: number | null; fahrzeug: string | null;
   fahrt_betrag: number | null; verpflegung_netto: number | null; uebernachtung: number | null;
   sonstige: number | null; gesamt: number | null; status: string;
+  // G2 (26.09.2026): Mahlzeiten und Notiz werden mitgeladen, damit „Bearbeiten" sie nicht auf 0/leer setzt
+  fruehstueck_anz?: number | null; mittag_anz?: number | null; abend_anz?: number | null; notiz?: string | null;
 };
 
 const LEER = {
@@ -62,7 +64,7 @@ export default function ReisekostenPage() {
   const laden_ = useCallback(async () => {
     setLaden(true);
     try {
-      const { data } = await supabase.from('reisekosten').select('id, reisender, anlass, ziel, abreise, rueckkehr, km, fahrzeug, fahrt_betrag, verpflegung_netto, uebernachtung, sonstige, gesamt, status').order('abreise', { ascending: false });
+      const { data } = await supabase.from('reisekosten').select('id, reisender, anlass, ziel, abreise, rueckkehr, km, fahrzeug, fahrt_betrag, verpflegung_netto, uebernachtung, sonstige, gesamt, status, fruehstueck_anz, mittag_anz, abend_anz, notiz').order('abreise', { ascending: false });
       const rows = (data as Reise[]) ?? [];
       setReisen(rows);
       setFelder(await ladeFelder(MODUL));
@@ -131,9 +133,10 @@ export default function ReisekostenPage() {
     setForm({
       reisender: r.reisender || '', anlass: r.anlass || '', ziel: r.ziel || '',
       abreise: loc(r.abreise), rueckkehr: loc(r.rueckkehr), km: r.km != null ? zahlFeld(r.km) : '',
-      fahrzeug: r.fahrzeug || 'pkw', fruehstueck: '0', mittag: '0', abend: '0',
+      fahrzeug: r.fahrzeug || 'pkw',
+      fruehstueck: String(r.fruehstueck_anz ?? 0), mittag: String(r.mittag_anz ?? 0), abend: String(r.abend_anz ?? 0),
       uebernachtung: r.uebernachtung != null ? zahlFeld(r.uebernachtung) : '', sonstige: r.sonstige != null ? zahlFeld(r.sonstige) : '',
-      status: r.status || 'offen', notiz: '',
+      status: r.status || 'offen', notiz: r.notiz ?? '',
     });
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
