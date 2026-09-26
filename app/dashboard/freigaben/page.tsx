@@ -213,7 +213,7 @@ export default function FreigabenPage() {
 
       {/* Asset-Karten */}
       {assets.length === 0 ? (
-        <Leerzustand icon="🎨" titel="Noch keine Assets" text="Verwalte Kreativ-Assets mit Versionsständen und Kunden-Freigabe." schritte={["Asset oben anlegen", "Version hochladen", "Zur Freigabe an den Kunden geben"]} />
+        <Leerzustand icon="🎨" titel="Noch keine Assets" text="Verwalten Sie Kreativ-Assets mit Versionsständen und Kunden-Freigabe." schritte={["Asset oben anlegen", "Version hochladen", "Zur Freigabe an den Kunden geben"]} />
       ) : assets.map((a) => {
         const vs = (versProAsset.get(a.id) || []).slice().sort((x, y) => y.version_nr - x.version_nr);
         const st = assetStatus(vs as VersionLite[]);

@@ -275,11 +275,11 @@ export default function AutomationenPage() {
     try {
       const { error } = await supabase.from('automation_regeln').delete().eq('id', r.id);
       if (error) throw error;
-      setOk('Automation geloescht.');
+      setOk('Automation gelöscht.');
       if (f.id === r.id) { setF({ ...LEER }); setFormOffen(false); }
       await alles();
     } catch (err: unknown) {
-      setFehler('Loeschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+      setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
   }
 
@@ -303,7 +303,7 @@ export default function AutomationenPage() {
         {[
           { label: 'Aktive Automationen', wert: String(aktiveZahl), farbe: C.green },
           { label: 'Angelegt insgesamt', wert: String(regeln.length), farbe: C.cyan },
-          { label: 'Ausgefuehrt (7 Tage)', wert: String(laeufe7), farbe: C.gold },
+          { label: 'Ausgeführt (7 Tage)', wert: String(laeufe7), farbe: C.gold },
           { label: 'Zuletzt gelaufen', wert: log[0] ? fmtZeit(log[0].ausgefuehrt_am) : 'noch nie', farbe: C.textDim },
         ].map((k) => (
           <div key={k.label} style={{ ...karte, marginBottom: 0, padding: 14 }}>

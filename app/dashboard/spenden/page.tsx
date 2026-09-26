@@ -203,7 +203,7 @@ export default function SpendenPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {spenden.length === 0 ? <Leerzustand icon="🎗️" titel="Noch keine Zuwendungen" text="Erfasse Geld- und Sachspenden und erstelle Zuwendungsbestätigungen nach amtlichem Muster." schritte={["Zuwendung oben anlegen", "Art und Betrag erfassen", "Zuwendungsbestätigung (§50 EStDV) ausgeben"]} /> : (
+              {spenden.length === 0 ? <Leerzustand icon="🎗️" titel="Noch keine Zuwendungen" text="Erfassen Sie Geld- und Sachspenden und erstellen Zuwendungsbestätigungen nach amtlichem Muster." schritte={["Zuwendung oben anlegen", "Art und Betrag erfassen", "Zuwendungsbestätigung (§50 EStDV) ausgeben"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Spender</th><th style={styles.th}>Art</th><th style={{ ...styles.th, textAlign: 'right' }}>Betrag</th><th style={styles.th}>Bestätigung</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

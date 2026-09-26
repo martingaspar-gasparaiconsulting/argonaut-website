@@ -742,7 +742,7 @@ export default function WartungPage() {
             {historieBusy ? (
               <div style={styles.hint}>Lädt …</div>
             ) : historieRows.length === 0 ? (
-              <Leerzustand icon="🛠️" titel="Noch keine Wartungsverträge" text="Lege wiederkehrende Wartungsverträge mit Fälligkeits-Ampel an." schritte={["Vertrag über „✓ Wartung + Protokoll“ anlegen", "Intervall und nächste Fälligkeit setzen", "Bei Fälligkeit zur Rechnung übernehmen"]} />
+              <Leerzustand icon="🛠️" titel="Noch keine Wartungsverträge" text="Legen Sie wiederkehrende Wartungsverträge mit Fälligkeits-Ampel an." schritte={["Vertrag über „✓ Wartung + Protokoll“ anlegen", "Intervall und nächste Fälligkeit setzen", "Bei Fälligkeit zur Rechnung übernehmen"]} />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {historieRows.map((h) => {

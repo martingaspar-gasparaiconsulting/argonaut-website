@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { DICHTE, optimiereZuschnitt, gewicht, gewichtProMeter } from '@/lib/zuschnitt';
 import Leerzustand from '../_components/Leerzustand';
 import { augeZuschnitt } from '@/lib/auge';
@@ -143,9 +144,11 @@ export default function ZuschnittPage() {
   }
 
   async function teilLoeschen(t: Teil) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     setBusy(t.id); setFehler(null);
     try {
-      const { error } = await supabase.from('zuschnitt_teil').delete().eq('id', t.id);
+      const { data: weg, error } = await supabase.from('zuschnitt_teil').delete().eq('id', t.id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { throw new Error(NICHT_GELOESCHT); }
       if (error) throw error;
       await laden_();
     } catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
@@ -205,7 +208,7 @@ export default function ZuschnittPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {projekte.length === 0 ? <Leerzustand icon="✂️" titel="Noch keine Zuschnitt-Projekte" text="Lege ein Projekt mit Teileliste an — ARGONAUT optimiert Stangenbedarf und Verschnitt." schritte={["Projekt oben anlegen", "Teile und Materiallänge erfassen", "Schnittplan optimieren lassen"]} /> : (
+              {projekte.length === 0 ? <Leerzustand icon="✂️" titel="Noch keine Zuschnitt-Projekte" text="Legen Sie ein Projekt mit Teileliste an — ARGONAUT optimiert Stangenbedarf und Verschnitt." schritte={["Projekt oben anlegen", "Teile und Materiallänge erfassen", "Schnittplan optimieren lassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Projekt</th><th style={styles.th}>Material</th><th style={{ ...styles.th, textAlign: 'right' }}>Stangenlänge</th><th style={{ ...styles.th, textAlign: 'right' }}>Teile</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

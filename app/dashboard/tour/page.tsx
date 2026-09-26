@@ -268,7 +268,7 @@ export default function TourPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {touren.length === 0 ? <Leerzustand icon="🗺️" titel="Noch keine Touren" text="Plane Liefertouren mit Stopps und elektronischem Abliefernachweis." schritte={["Tour oben anlegen", "Stopps und Empfänger zuordnen", "Unterwegs Status und Unterschrift erfassen"]} /> : (
+              {touren.length === 0 ? <Leerzustand icon="🗺️" titel="Noch keine Touren" text="Planen Sie Liefertouren mit Stopps und elektronischem Abliefernachweis." schritte={["Tour oben anlegen", "Stopps und Empfänger zuordnen", "Unterwegs Status und Unterschrift erfassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Tour</th><th style={styles.th}>Fahrer</th><th style={{ ...styles.th, textAlign: 'right' }}>Stopps</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

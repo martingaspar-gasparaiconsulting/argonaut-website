@@ -77,9 +77,9 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
         })
         const data = (await res.json()) as KiAntwort
         if (data && data.ok) setKi(data)
-        else setKiFehler('Die KI-Pruefung konnte nicht geladen werden.')
+        else setKiFehler('Die KI-Prüfung konnte nicht geladen werden.')
       } catch {
-        setKiFehler('Verbindungsfehler bei der KI-Pruefung.')
+        setKiFehler('Verbindungsfehler bei der KI-Prüfung.')
       } finally {
         setLaedt(false)
       }
@@ -102,7 +102,7 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)' }}>{'\uD83D\uDC41'}</span>
-          <span>Firmendaten pruefen</span>
+          <span>Firmendaten prüfen</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: gesamtFarbe, boxShadow: '0 0 8px ' + gesamtFarbe }} />
@@ -113,7 +113,7 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
       {offen ? (
         <div style={panel}>
           {/* Deterministische Formal-Checkliste */}
-          <p style={sektionTitel}>Formale Pruefung</p>
+          <p style={sektionTitel}>Formale Prüfung</p>
           <div style={{ display: 'grid', gap: '8px', marginBottom: '22px' }}>
             {bericht.ergebnisse.map((r) => (
               <div key={r.feld + r.label} style={zeileStil}>
@@ -125,9 +125,9 @@ export default function PruefAuge({ daten }: { daten: FirmaFelder }) {
           </div>
 
           {/* KI-Plausibilitaet */}
-          <p style={sektionTitel}>KI-Plausibilitaet</p>
+          <p style={sektionTitel}>KI-Plausibilität</p>
           {laedt ? (
-            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>Die KI prueft die Daten auf inhaltliche Stimmigkeit…</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)' }}>Die KI prüft die Daten auf inhaltliche Stimmigkeit…</p>
           ) : kiFehler ? (
             <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: '#ef4444' }}>{kiFehler}</p>
           ) : ki ? (

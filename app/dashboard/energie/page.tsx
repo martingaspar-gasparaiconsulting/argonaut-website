@@ -134,7 +134,7 @@ export default function EnergiePage() {
         <div style={styles.row}>
           <input style={{ ...styles.inp, flex: 1 }} value={na.bezeichnung} onChange={(e) => setNa({ ...na, bezeichnung: e.target.value })} placeholder="Bezeichnung (z. B. PV Dach Halle)" />
           <select style={styles.inp} value={na.typ} onChange={(e) => setNa({ ...na, typ: e.target.value })}>
-            <option>PV</option><option>Waermepumpe</option><option>BHKW</option><option>Speicher</option><option>Sonstige</option>
+            <option>PV</option><option>Wärmepumpe</option><option>BHKW</option><option>Speicher</option><option>Sonstige</option>
           </select>
           <input style={{ ...styles.inp, width: 130 }} value={na.standort} onChange={(e) => setNa({ ...na, standort: e.target.value })} placeholder="Standort" />
           <NurVoll><label style={styles.lab}>kW<input style={{ ...styles.inp, width: 70 }} value={na.leistung_kw} onChange={(e) => setNa({ ...na, leistung_kw: e.target.value })} inputMode="decimal" /></label></NurVoll>
@@ -160,7 +160,7 @@ export default function EnergiePage() {
                 </button>
               );
             })}
-            {!anlagen.length && <Leerzustand icon="⚡" titel="Noch keine Anlagen" text="Verwalte Anlagen (PV/Wärmepumpe/BHKW) mit Wartungs-Ampel und Ablesungen." schritte={["Anlage oben anlegen", "Typ und Leistung erfassen", "Ablesungen und Wartung pflegen"]} />}
+            {!anlagen.length && <Leerzustand icon="⚡" titel="Noch keine Anlagen" text="Verwalten Sie Anlagen (PV/Wärmepumpe/BHKW) mit Wartungs-Ampel und Ablesungen." schritte={["Anlage oben anlegen", "Typ und Leistung erfassen", "Ablesungen und Wartung pflegen"]} />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             {!aktiv ? <p style={styles.dim}>Links eine Anlage wählen.</p> : (

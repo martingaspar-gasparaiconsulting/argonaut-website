@@ -441,7 +441,7 @@ export default function ReservierungPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {plaetze.length === 0 ? <Leerzustand icon="🪑" titel="Noch keine Plätze" text="Lege Tische, Lagerplätze oder Abholstationen an." schritte={["Platz oben anlegen", "Kapazität/Bezeichnung erfassen", "Plätze für Vorgänge nutzen"]} /> : (
+              {plaetze.length === 0 ? <Leerzustand icon="🪑" titel="Noch keine Plätze" text="Legen Sie Tische, Lagerplätze oder Abholstationen an." schritte={["Platz oben anlegen", "Kapazität/Bezeichnung erfassen", "Plätze für Vorgänge nutzen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Art</th><th style={styles.th}>Bezeichnung</th><th style={styles.th}>Standort</th>

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import Leerzustand from '../_components/Leerzustand';
 import {
   OBJEKT_ARTEN, VERMARKTUNG_ARTEN, AUSWEIS_TYPEN, STATUS_INFO,
@@ -186,8 +187,9 @@ export default function ExposePage() {
   }
 
   async function interLoeschen(id: string) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     setBusy(id); setFehler(null);
-    try { await supabase.from('expose_interessent').delete().eq('id', id); await laden_(); }
+    try { const { data: weg, error } = await supabase.from('expose_interessent').delete().eq('id', id).select('id'); if (error) throw error; if (nichtsGeschrieben(weg)) throw new Error(NICHT_GELOESCHT); await laden_(); }
     catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -320,7 +322,7 @@ export default function ExposePage() {
       {/* ---------- LISTE ---------- */}
       {laden ? <p style={styles.hint}>Lädt …</p> : (
         <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-          {exposes.length === 0 ? <Leerzustand icon="🏡" titel="Noch keine Exposés" text="Erstelle Immobilien-Exposés mit Energieklasse und druckfertigem PDF." schritte={["Exposé oben anlegen", "Objektdaten und Energieausweis erfassen", "Als PDF exportieren"]} /> : (
+          {exposes.length === 0 ? <Leerzustand icon="🏡" titel="Noch keine Exposés" text="Erstellen Sie Immobilien-Exposés mit Energieklasse und druckfertigem PDF." schritte={["Exposé oben anlegen", "Objektdaten und Energieausweis erfassen", "Als PDF exportieren"]} /> : (
             <table style={styles.table}>
               <thead><tr>
                 <th style={styles.th}>Objekt</th><th style={styles.th}>Ort</th>

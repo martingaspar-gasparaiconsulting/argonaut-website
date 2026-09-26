@@ -222,7 +222,7 @@ export default function FoerderAngebotPage() {
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : liste.length === 0 ? (
-        <Leerzustand icon="📑" titel="Noch keine Förderangebote" text="Erstelle förder-taugliche Angebote mit Live-Förderschätzung und PDF." schritte={["Oben ein Angebot erstellen", "Positionen erfassen und Förderung prüfen", "Als PDF speichern"]} />
+        <Leerzustand icon="📑" titel="Noch keine Förderangebote" text="Erstellen Sie förder-taugliche Angebote mit Live-Förderschätzung und PDF." schritte={["Oben ein Angebot erstellen", "Positionen erfassen und Förderung prüfen", "Als PDF speichern"]} />
       ) : (
         <div style={styles.liste}>
           {liste.map((a) => (

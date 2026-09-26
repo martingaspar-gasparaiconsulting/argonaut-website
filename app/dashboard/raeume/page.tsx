@@ -283,7 +283,7 @@ export default function RaeumeSeite() {
             <button style={btnGold} onClick={() => openRessource()}>+ Ressource</button>
           </div>
           {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
-          {ressourcen.length === 0 ? <Leerzustand icon="🏫" titel="Noch keine Ressourcen" text="Lege Räume und Ausstattung an, die belegt werden können." schritte={["Ressource oben anlegen", "Typ und Kapazität erfassen", "Im Belegungsplan buchen"]} /> : (
+          {ressourcen.length === 0 ? <Leerzustand icon="🏫" titel="Noch keine Ressourcen" text="Legen Sie Räume und Ausstattung an, die belegt werden können." schritte={["Ressource oben anlegen", "Typ und Kapazität erfassen", "Im Belegungsplan buchen"]} /> : (
             <div style={{ display: "grid", gap: 8 }}>
               {ressourcen.map((r) => (
                 <div key={r.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>

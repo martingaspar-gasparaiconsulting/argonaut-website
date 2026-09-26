@@ -609,7 +609,7 @@ const BEISPIELE: Record<string, Record<string, string>> = {
   },
   rechnungen: {
     rechnungsnummer: 'RE-2025-0142|RE-2025-0143|RE-2025-0144',
-    titel: 'Wartung Anlage Halle 2|Montage Tuerelement|Materiallieferung KW 22',
+    titel: 'Wartung Anlage Halle 2|Montage Türelement|Materiallieferung KW 22',
     rechnungsdatum: '12.05.2025|28.05.2025|02.06.2025',
     faelligkeitsdatum: '26.05.2025|11.06.2025|16.06.2025',
     netto_summe: '1250,00|480,00|318,50',

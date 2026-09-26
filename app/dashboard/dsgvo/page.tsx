@@ -177,8 +177,8 @@ export default function DsgvoPage() {
       })),
     );
     setUebernimmt(false);
-    if (error) { setFehler('Konnte nicht uebernommen werden: ' + error.message); return; }
-    setOk(`${offeneVorschlaege.length} Vorschlag/Vorschlaege uebernommen — bitte durchsehen und an Ihren Betrieb anpassen.`);
+    if (error) { setFehler('Konnte nicht übernommen werden: ' + error.message); return; }
+    setOk(`${offeneVorschlaege.length} Vorschlag/Vorschläge übernommen — bitte durchsehen und an Ihren Betrieb anpassen.`);
     laden_();
   };
 

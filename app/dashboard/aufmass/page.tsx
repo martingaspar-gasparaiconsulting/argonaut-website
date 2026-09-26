@@ -463,8 +463,8 @@ export default function AufmassPage() {
           <Leerzustand
             icon="📐"
             titel="Noch keine Aufmaße"
-            text="Am Objekt gemessen, im Büro abgerechnet: Aus dem Aufmaß werden Positionen, aus den Positionen wird das Angebot."
-            schritte={["Oben rechts ein Aufmaß anlegen", "Positionen mit Maßen erfassen", "Aufmaß in ein Angebot übernehmen"]}
+            text="Am Objekt gemessen, im Büro abgerechnet: Aus dem Aufmaß werden Positionen, aus den Positionen wird die Rechnung (oder eine GAEB-Datei fürs Angebot)."
+            schritte={["Oben rechts ein Aufmaß anlegen", "Positionen mit Maßen erfassen", "Rechnung erstellen oder als GAEB exportieren"]}
           />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

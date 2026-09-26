@@ -427,7 +427,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 // Tabellen
 // ============================================================
 function MitarbeiterTabelle({ rows, onAdd, onSelect, felder, werteMap, standortNamen }: { rows: Mitarbeiter[]; onAdd: () => void; onSelect: (id: string) => void; felder: EigenesFeld[]; werteMap: Record<string, Record<string, string>>; standortNamen: Record<string, string> }) {
-  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt, Stunden und Standort ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
+  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt und Wochenstunden ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   return (
     <table style={styles.table}>
       <thead><tr><Th>Name</Th><Th>Position</Th><Th>Kontakt</Th><Th>Eintritt</Th><Th>Status</Th></tr></thead>
@@ -488,7 +488,7 @@ function GastBadge({ aus, bis }: { aus?: string; bis?: string | null }) {
 }
 
 function MitarbeiterHrTabelle({ rows, abw, chk, schul, onAdd, onSelect, standortNamen }: { rows: Mitarbeiter[]; abw: AbwLite[]; chk: ChkLite[]; schul: SchulLite[]; onAdd: () => void; onSelect: (id: string) => void; standortNamen: Record<string, string> }) {
-  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt, Stunden und Standort ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
+  if (rows.length === 0) return <EmptyState title="Noch keine Mitarbeitenden" text="Legen Sie die erste Person an — der Name genügt, alles Weitere können Sie später ergänzen." schritte={["Person mit Namen anlegen", "Eintritt und Wochenstunden ergänzen", "Zugang für die Zeiterfassung freischalten"]} onAdd={onAdd} addLabel="Mitarbeiter anlegen" />;
   const jahr = new Date().getFullYear();
   const jahrStr = String(jahr);
   const heute = heuteISO();

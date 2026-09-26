@@ -150,8 +150,8 @@ const F_PROJEKT: FeldDef[] = [
 export const TRIGGER: TriggerDef[] = [
   {
     key: 'rechnung_ueberfaellig',
-    label: 'Rechnung ist ueberfaellig',
-    hinweis: 'Faellt, wenn eine unbezahlte Rechnung ihr Faelligkeitsdatum ueberschritten hat.',
+    label: 'Rechnung ist überfällig',
+    hinweis: 'Fällt, wenn eine unbezahlte Rechnung ihr Fälligkeitsdatum überschritten hat.',
     zielTyp: 'rechnung',
     tabelle: 'rechnungen',
     datumFeld: 'faelligkeitsdatum',
@@ -162,7 +162,7 @@ export const TRIGGER: TriggerDef[] = [
   {
     key: 'rechnung_bezahlt',
     label: 'Rechnung wurde bezahlt',
-    hinweis: 'Faellt, nachdem eine Rechnung als bezahlt markiert wurde (z.B. fuer ein Dankeschoen).',
+    hinweis: 'Fällt, nachdem eine Rechnung als bezahlt markiert wurde (z.B. für ein Dankeschön).',
     zielTyp: 'rechnung',
     tabelle: 'rechnungen',
     datumFeld: 'bezahlt_am',
@@ -173,7 +173,7 @@ export const TRIGGER: TriggerDef[] = [
   {
     key: 'angebot_ohne_antwort',
     label: 'Angebot ohne Antwort',
-    hinweis: 'Faellt, wenn ein verschicktes Angebot nach der Wartezeit noch nicht beantwortet wurde.',
+    hinweis: 'Fällt, wenn ein verschicktes Angebot nach der Wartezeit noch nicht beantwortet wurde.',
     zielTyp: 'angebot',
     tabelle: 'angebote',
     datumFeld: 'erstellt_am',
@@ -183,8 +183,8 @@ export const TRIGGER: TriggerDef[] = [
   },
   {
     key: 'angebot_laeuft_ab',
-    label: 'Angebot laeuft ab',
-    hinweis: 'Faellt rund um das Gueltig-bis-Datum eines offenen Angebots.',
+    label: 'Angebot läuft ab',
+    hinweis: 'Fällt rund um das Gültig-bis-Datum eines offenen Angebots.',
     zielTyp: 'angebot',
     tabelle: 'angebote',
     datumFeld: 'gueltig_bis',
@@ -195,7 +195,7 @@ export const TRIGGER: TriggerDef[] = [
   {
     key: 'angebot_angenommen',
     label: 'Angebot wurde angenommen',
-    hinweis: 'Faellt, nachdem ein Kunde ein Angebot angenommen hat.',
+    hinweis: 'Fällt, nachdem ein Kunde ein Angebot angenommen hat.',
     zielTyp: 'angebot',
     tabelle: 'angebote',
     datumFeld: 'angenommen_am',
@@ -205,8 +205,8 @@ export const TRIGGER: TriggerDef[] = [
   },
   {
     key: 'aufgabe_ueberfaellig',
-    label: 'Aufgabe ist ueberfaellig',
-    hinweis: 'Faellt, wenn eine nicht erledigte Aufgabe ihr Faellig-am-Datum ueberschritten hat.',
+    label: 'Aufgabe ist überfällig',
+    hinweis: 'Fällt, wenn eine nicht erledigte Aufgabe ihr Fällig-am-Datum überschritten hat.',
     zielTyp: 'aufgabe',
     tabelle: 'aufgaben',
     datumFeld: 'faellig_am',
@@ -216,8 +216,8 @@ export const TRIGGER: TriggerDef[] = [
   },
   {
     key: 'kontakt_wiedervorlage',
-    label: 'Kontakt-Wiedervorlage faellig',
-    hinweis: 'Faellt, wenn beim Kontakt das Datum "naechster Kontakt" erreicht ist.',
+    label: 'Kontakt-Wiedervorlage fällig',
+    hinweis: 'Fällt, wenn beim Kontakt das Datum "nächster Kontakt" erreicht ist.',
     zielTyp: 'kontakt',
     tabelle: 'kontakte',
     datumFeld: 'naechster_kontakt_am',
@@ -227,8 +227,8 @@ export const TRIGGER: TriggerDef[] = [
   },
   {
     key: 'kontakt_lange_still',
-    label: 'Lange nichts vom Kunden gehoert',
-    hinweis: 'Faellt, wenn der letzte Kontakt laenger her ist als die eingestellte Wartezeit.',
+    label: 'Lange nichts vom Kunden gehört',
+    hinweis: 'Fällt, wenn der letzte Kontakt länger her ist als die eingestellte Wartezeit.',
     zielTyp: 'kontakt',
     tabelle: 'kontakte',
     datumFeld: 'letzter_kontakt_am',
@@ -239,7 +239,7 @@ export const TRIGGER: TriggerDef[] = [
   {
     key: 'projekt_endet',
     label: 'Projekt-Enddatum erreicht',
-    hinweis: 'Faellt rund um das Enddatum eines laufenden Projekts.',
+    hinweis: 'Fällt rund um das Enddatum eines laufenden Projekts.',
     zielTyp: 'projekt',
     tabelle: 'projekte',
     datumFeld: 'end_datum',
@@ -277,7 +277,7 @@ export const AKTIONEN: AktionDef[] = [
       { key: 'titel', label: 'Titel der Aufgabe', typ: 'text', pflicht: true, standard: 'Nachfassen: {{name}}' },
       { key: 'beschreibung', label: 'Beschreibung', typ: 'mehrzeilig' },
       { key: 'prioritaet', label: 'Prioritaet', typ: 'auswahl', optionen: ['niedrig', 'normal', 'hoch', 'dringend'], standard: 'normal' },
-      { key: 'faellig_in_tagen', label: 'Faellig in ... Tagen', typ: 'zahl', standard: 3 },
+      { key: 'faellig_in_tagen', label: 'Fällig in ... Tagen', typ: 'zahl', standard: 3 },
     ],
   },
   {
@@ -294,8 +294,8 @@ export const AKTIONEN: AktionDef[] = [
   },
   {
     key: 'status_aendern',
-    label: 'Status aendern',
-    hinweis: 'Setzt den Status des ausloesenden Datensatzes auf einen neuen Wert.',
+    label: 'Status ändern',
+    hinweis: 'Setzt den Status des auslösenden Datensatzes auf einen neuen Wert.',
     zielTypen: null,
     felder: [
       { key: 'neuer_status', label: 'Neuer Status', typ: 'text', pflicht: true },
@@ -303,17 +303,17 @@ export const AKTIONEN: AktionDef[] = [
   },
   {
     key: 'mahnstufe_erhoehen',
-    label: 'Mahnstufe erhoehen',
-    hinweis: 'Zaehlt die Mahnstufe der Rechnung um 1 hoch und setzt das Mahndatum (Mahnwesen).',
+    label: 'Mahnstufe erhöhen',
+    hinweis: 'Zählt die Mahnstufe der Rechnung um 1 hoch und setzt das Mahndatum (Mahnwesen).',
     zielTypen: ['rechnung'],
     felder: [
-      { key: 'hoechste_stufe', label: 'Nicht hoeher als Stufe', typ: 'zahl', standard: 3 },
+      { key: 'hoechste_stufe', label: 'Nicht höher als Stufe', typ: 'zahl', standard: 3 },
     ],
   },
   {
     key: 'notiz_anhaengen',
-    label: 'Notiz anhaengen',
-    hinweis: 'Haengt eine Zeile an das Notizfeld des Datensatzes an.',
+    label: 'Notiz anhängen',
+    hinweis: 'Hängt eine Zeile an das Notizfeld des Datensatzes an.',
     zielTypen: null,
     felder: [
       { key: 'text', label: 'Notiz-Text', typ: 'mehrzeilig', pflicht: true, standard: 'Automatisch: {{regel}} am {{heute}}' },
@@ -458,7 +458,7 @@ export function pruefeRegel(regel: AutomationRegel, datensatz: Datensatz, jetzt:
   const tage = tageZwischen(ausloeseDatum, jetzt);
   const warte = Math.max(0, Math.trunc(Number(regel.wartezeit_tage) || 0));
   if (tage < warte) {
-    return { trifft: false, grund: `Wartezeit laeuft noch (${tage} von ${warte} Tagen)`, tageSeitAusloeser: tage };
+    return { trifft: false, grund: `Wartezeit läuft noch (${tage} von ${warte} Tagen)`, tageSeitAusloeser: tage };
   }
 
   if (!pruefeAlleBedingungen(regel.bedingung, datensatz)) {
@@ -577,20 +577,20 @@ export type RegelVorlage = {
 export const VORLAGEN: RegelVorlage[] = [
   {
     name: 'Freundliche Zahlungserinnerung',
-    beschreibung: 'Drei Tage nach Faelligkeit eine hoefliche Erinnerung an den Kunden.',
+    beschreibung: 'Drei Tage nach Fälligkeit eine höfliche Erinnerung an den Kunden.',
     trigger_typ: 'rechnung_ueberfaellig',
     bedingung: [{ feld: 'mahnstufe', operator: 'gleich', wert: 0 }],
     aktion_typ: 'mail_senden',
     aktion_config: {
       an: 'kunde',
       betreff: 'Zahlungserinnerung zu Rechnung {{nummer}}',
-      text: 'Guten Tag {{name}},\n\nunsere Rechnung {{nummer}} ueber {{betrag}} war am {{datum}} faellig. Vermutlich ist das im Alltag untergegangen — wir bitten Sie um Ausgleich.\n\nSollten Sie bereits gezahlt haben, betrachten Sie diese Nachricht bitte als gegenstandslos.\n\nFreundliche Gruesse',
+      text: 'Guten Tag {{name}},\n\nunsere Rechnung {{nummer}} über {{betrag}} war am {{datum}} fällig. Vermutlich ist das im Alltag untergegangen — wir bitten Sie um Ausgleich.\n\nSollten Sie bereits gezahlt haben, betrachten Sie diese Nachricht bitte als gegenstandslos.\n\nFreundliche Grüße',
     },
     wartezeit_tage: 3,
   },
   {
     name: 'Mahnstufe nach 14 Tagen',
-    beschreibung: 'Zaehlt die Mahnstufe hoch, wenn nach zwei Wochen kein Geld da ist.',
+    beschreibung: 'Zählt die Mahnstufe hoch, wenn nach zwei Wochen kein Geld da ist.',
     trigger_typ: 'rechnung_ueberfaellig',
     bedingung: [],
     aktion_typ: 'mahnstufe_erhoehen',
@@ -599,13 +599,13 @@ export const VORLAGEN: RegelVorlage[] = [
   },
   {
     name: 'Angebot nachfassen',
-    beschreibung: 'Legt fuenf Tage nach dem Versand eine Aufgabe zum Nachfassen an.',
+    beschreibung: 'Legt fünf Tage nach dem Versand eine Aufgabe zum Nachfassen an.',
     trigger_typ: 'angebot_ohne_antwort',
     bedingung: [],
     aktion_typ: 'aufgabe_anlegen',
     aktion_config: {
       titel: 'Angebot nachfassen: {{name}}',
-      beschreibung: 'Angebot "{{titel}}" ueber {{betrag}} ist seit {{tage}} Tagen ohne Antwort.',
+      beschreibung: 'Angebot "{{titel}}" über {{betrag}} ist seit {{tage}} Tagen ohne Antwort.',
       prioritaet: 'hoch',
       faellig_in_tagen: 1,
     },
@@ -619,7 +619,7 @@ export const VORLAGEN: RegelVorlage[] = [
     aktion_typ: 'aufgabe_anlegen',
     aktion_config: {
       titel: 'ANRUFEN: {{name}} ({{betrag}})',
-      beschreibung: 'Grosses Angebot "{{titel}}" — persoenlich nachfassen.',
+      beschreibung: 'Großes Angebot "{{titel}}" — persönlich nachfassen.',
       prioritaet: 'dringend',
       faellig_in_tagen: 0,
     },
@@ -627,13 +627,13 @@ export const VORLAGEN: RegelVorlage[] = [
   },
   {
     name: 'Wiedervorlage beim Kunden',
-    beschreibung: 'Erzeugt eine Aufgabe, sobald die Wiedervorlage eines Kontakts faellig ist.',
+    beschreibung: 'Erzeugt eine Aufgabe, sobald die Wiedervorlage eines Kontakts fällig ist.',
     trigger_typ: 'kontakt_wiedervorlage',
     bedingung: [],
     aktion_typ: 'aufgabe_anlegen',
     aktion_config: {
       titel: 'Kontakt pflegen: {{name}}',
-      beschreibung: 'Wiedervorlage war am {{datum}} faellig.',
+      beschreibung: 'Wiedervorlage war am {{datum}} fällig.',
       prioritaet: 'normal',
       faellig_in_tagen: 2,
     },
@@ -647,14 +647,14 @@ export const VORLAGEN: RegelVorlage[] = [
     aktion_typ: 'mail_senden',
     aktion_config: {
       an: 'kunde',
-      betreff: 'Vielen Dank fuer Ihre Zahlung',
-      text: 'Guten Tag {{name}},\n\nvielen Dank — der Betrag von {{betrag}} zu Rechnung {{nummer}} ist bei uns eingegangen.\n\nWir freuen uns auf die weitere Zusammenarbeit.\n\nFreundliche Gruesse',
+      betreff: 'Vielen Dank für Ihre Zahlung',
+      text: 'Guten Tag {{name}},\n\nvielen Dank — der Betrag von {{betrag}} zu Rechnung {{nummer}} ist bei uns eingegangen.\n\nWir freuen uns auf die weitere Zusammenarbeit.\n\nFreundliche Grüße',
     },
     wartezeit_tage: 2,
   },
   {
     name: 'Ueberfaellige Aufgabe eskalieren',
-    beschreibung: 'Setzt eine Aufgabe, die drei Tage ueberfaellig ist, auf dringend.',
+    beschreibung: 'Setzt eine Aufgabe, die drei Tage überfällig ist, auf dringend.',
     trigger_typ: 'aufgabe_ueberfaellig',
     bedingung: [{ feld: 'prioritaet', operator: 'ungleich', wert: 'dringend' }],
     aktion_typ: 'status_aendern',
@@ -663,7 +663,7 @@ export const VORLAGEN: RegelVorlage[] = [
   },
   {
     name: 'Projektende vorbereiten',
-    beschreibung: 'Legt kurz vor dem Projektende eine Aufgabe fuer die Schlussrechnung an.',
+    beschreibung: 'Legt kurz vor dem Projektende eine Aufgabe für die Schlussrechnung an.',
     trigger_typ: 'projekt_endet',
     bedingung: [],
     aktion_typ: 'aufgabe_anlegen',
@@ -680,7 +680,7 @@ export const VORLAGEN: RegelVorlage[] = [
 /** Pruefung vor dem Speichern — gibt eine Liste von Klartext-Fehlern zurueck. */
 export function pruefeRegelEingabe(regel: Partial<AutomationRegel>): string[] {
   const fehler: string[] = [];
-  if (!String(regel.name ?? '').trim()) fehler.push('Bitte einen Namen fuer die Automation vergeben.');
+  if (!String(regel.name ?? '').trim()) fehler.push('Bitte einen Namen für die Automation vergeben.');
 
   const t = regel.trigger_typ ? triggerDef(regel.trigger_typ) : undefined;
   if (!t) fehler.push('Bitte einen Ausloeser waehlen.');

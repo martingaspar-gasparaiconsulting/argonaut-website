@@ -217,7 +217,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!sofort.length && <Leerzustand icon="📋" titel="Noch keine Meldungen" text="Melde neue Beschäftigte vor Arbeitsbeginn (Sofortmeldung)." schritte={["Beschäftigten erfassen", "Vor Arbeitsbeginn melden", "Nachweis ablegen"]} />}
+          {!sofort.length && <Leerzustand icon="📋" titel="Noch keine Meldungen" text="Melden Sie neue Beschäftigte vor Arbeitsbeginn (Sofortmeldung)." schritte={["Beschäftigten erfassen", "Vor Arbeitsbeginn melden", "Nachweis ablegen"]} />}
         </div>
       </div>
 
@@ -298,7 +298,7 @@ export default function CompliancePage() {
               </div>
             );
           })}
-          {!pruef.length && <Leerzustand icon="⏰" titel="Noch keine Prüffristen" text="Behalte Bauabzugsteuer-relevante Fristen im Blick." schritte={["Prüffrist anlegen", "Datum erfassen", "Rechtzeitig erinnert werden"]} />}
+          {!pruef.length && <Leerzustand icon="⏰" titel="Noch keine Prüffristen" text="Behalten Sie Bauabzugsteuer-relevante Fristen im Blick." schritte={["Prüffrist anlegen", "Datum erfassen", "Rechtzeitig erinnert werden"]} />}
         </div>
       </div>
 

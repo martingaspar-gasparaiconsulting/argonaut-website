@@ -229,7 +229,7 @@ export default function ReisekostenPage() {
           <div style={styles.cardTitel}>Reisen</div>
           {reisen.length > 0 && <button style={styles.ghost} onClick={csvExport}>⬇ CSV-Export</button>}
         </div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : reisen.length === 0 ? <Leerzustand icon="🧳" titel="Noch keine Reisen erfasst" text="Erfasse Dienstreisen — ARGONAUT rechnet Verpflegungspauschale und Fahrtkosten automatisch." schritte={["Reise oben anlegen", "Reisetage, Ziele und km eintragen", "Gesamtbetrag übernehmen"]} /> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : reisen.length === 0 ? <Leerzustand icon="🧳" titel="Noch keine Reisen erfasst" text="Erfassen Sie Dienstreisen — ARGONAUT rechnet Verpflegungspauschale und Fahrtkosten automatisch." schritte={["Reise oben anlegen", "Reisetage, Ziele und km eintragen", "Gesamtbetrag übernehmen"]} /> : (
           <div style={{ overflowX: 'auto', marginTop: 8 }}>
             <table style={styles.table}>
               <thead><tr>

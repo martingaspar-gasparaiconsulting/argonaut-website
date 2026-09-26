@@ -300,7 +300,7 @@ export default function EingangsbelegePage() {
           <div style={styles.cardTitel}>Belege</div>
           {belege.length > 0 && <button style={styles.ghost} onClick={csvExport}>⬇ CSV-Export (DATEV/Steuerberater)</button>}
         </div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : belege.length === 0 ? <Leerzustand icon="🧾" titel="Noch keine Belege" text="Lade Eingangsrechnungen als Foto/PDF hoch — die KI liest Lieferant, Datum und Betrag." schritte={["Oben den ersten Beleg hochladen", "Erkannte Daten prüfen", "GoBD-sicher speichern und der Buchhaltung zuordnen"]} /> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : belege.length === 0 ? <Leerzustand icon="🧾" titel="Noch keine Belege" text="Laden Sie Eingangsrechnungen als Foto/PDF hoch — die KI liest Lieferant, Datum und Betrag." schritte={["Oben den ersten Beleg hochladen", "Erkannte Daten prüfen", "GoBD-sicher speichern und der Buchhaltung zuordnen"]} /> : (
           <div style={{ overflowX: 'auto', marginTop: 8 }}>
             <table style={styles.table}>
               <thead><tr>

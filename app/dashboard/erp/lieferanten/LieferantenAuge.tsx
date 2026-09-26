@@ -114,7 +114,7 @@ export default function LieferantenAuge({ lieferanten }: { lieferanten: Lieferan
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: 'clamp(18px, 1.56vw, 25px)' }}>{'\uD83D\uDC41'}</span>
-          <span>Lieferanten-Daten pruefen</span>
+          <span>Lieferanten-Daten prüfen</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: gesamtFarbe, boxShadow: '0 0 8px ' + gesamtFarbe }} />

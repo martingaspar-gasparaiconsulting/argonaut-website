@@ -254,7 +254,7 @@ export default function TierbestandPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {gruppen.length === 0 ? <Leerzustand icon="🐄" titel="Noch keine Bestände" text="Erfasse Tiergruppen je Tierart mit VVVO-Nummer." schritte={["Tiergruppe oben anlegen", "Tierart und Bestand erfassen", "Bewegungen und Stichtag melden"]} /> : (
+              {gruppen.length === 0 ? <Leerzustand icon="🐄" titel="Noch keine Bestände" text="Erfassen Sie Tiergruppen je Tierart mit VVVO-Nummer." schritte={["Tiergruppe oben anlegen", "Tierart und Bestand erfassen", "Bewegungen und Stichtag melden"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Gruppe</th><th style={styles.th}>Tierart</th><th style={styles.th}>VVVO-Nr.</th><th style={{ ...styles.th, textAlign: 'right' }}>Bestand</th><th style={styles.th}>Standort</th></tr></thead>
                   <tbody>

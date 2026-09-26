@@ -308,7 +308,7 @@ export default function BautagebuchPage() {
             <button onClick={() => { setEintragForm({ ...LEER_EINTRAG }); setEintragExtra({}); setEintragModal(true); }} style={styles.primaerBtn}>+ Neuer Eintrag</button>
           </div>
           {eintraege.length === 0 ? (
-            <Leerzustand icon="📓" titel="Noch kein Eintrag" text="Dokumentiere den Baufortschritt als Regiebericht." schritte={["Baustelle oben wählen", "Regiebericht oben rechts anlegen", "Wetter, Arbeiten und Stunden erfassen"]} />
+            <Leerzustand icon="📓" titel="Noch kein Eintrag" text="Dokumentieren Sie den Baufortschritt als Regiebericht." schritte={["Baustelle oben wählen", "Regiebericht oben rechts anlegen", "Wetter, Personal vor Ort und Arbeiten erfassen"]} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {eintraege.map((e) => {

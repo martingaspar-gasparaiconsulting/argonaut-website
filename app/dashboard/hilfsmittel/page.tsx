@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { VERSORGUNG_STATUS, kvSumme, mehrkostenSumme, gesamtSumme, hmvGueltig, zaehleVersorgung } from '@/lib/hilfsmittel';
 import Leerzustand from '../_components/Leerzustand';
 import { augeHilfsmittel } from '@/lib/auge';
@@ -133,8 +134,10 @@ export default function HilfsmittelPage() {
   }
 
   async function positionLoeschen(p: Position) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     setBusy(p.id); setFehler(null);
-    try { const { error } = await supabase.from('hilfsmittel_position').delete().eq('id', p.id); if (error) throw error; await laden_(); }
+    try { const { data: weg, error } = await supabase.from('hilfsmittel_position').delete().eq('id', p.id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { throw new Error(NICHT_GELOESCHT); } if (error) throw error; await laden_(); }
     catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -213,7 +216,7 @@ export default function HilfsmittelPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {versorgungen.length === 0 ? <Leerzustand icon="🦽" titel="Noch keine Versorgungen" text="Erfasse Hilfsmittel-Versorgungen von der Verordnung bis zur Genehmigung." schritte={["Versorgung oben anlegen", "Positionen mit HMV-Nummer erfassen", "Kostenvoranschlag und Genehmigung dokumentieren"]} /> : (
+              {versorgungen.length === 0 ? <Leerzustand icon="🦽" titel="Noch keine Versorgungen" text="Erfassen Sie Hilfsmittel-Versorgungen von der Verordnung bis zur Genehmigung." schritte={["Versorgung oben anlegen", "Positionen mit HMV-Nummer erfassen", "Kostenvoranschlag und Genehmigung dokumentieren"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Versicherter</th><th style={styles.th}>Krankenkasse</th><th style={styles.th}>Status</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

@@ -576,7 +576,7 @@ export default function SchichtplanPage() {
 
   async function loescheSchicht() {
     if (!schichtModal?.id) return;
-    if (!confirm('Diese Schicht wirklich loeschen?')) return;
+    if (!confirm('Diese Schicht wirklich löschen?')) return;
     setSpeichern(true);
     try {
       const res = await supabase.from('hr_schichten').delete().eq('id', schichtModal.id);
@@ -584,7 +584,7 @@ export default function SchichtplanPage() {
       setSchichtModal(null);
       await ladeDaten();
     } catch (e: any) {
-      alert('Loeschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+      alert('Löschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     } finally {
       setSpeichern(false);
     }
@@ -627,7 +627,7 @@ export default function SchichtplanPage() {
         neu.push(schichtDatensatzAus(datum));
       }
       if (neu.length === 0) {
-        alert('In dieser Woche sind bei diesem Mitarbeiter schon an allen (geoeffneten) Tagen Schichten eingetragen.');
+        alert('In dieser Woche sind bei diesem Mitarbeiter schon an allen (geöffneten) Tagen Schichten eingetragen.');
         setSpeichern(false);
         return;
       }
@@ -687,13 +687,13 @@ export default function SchichtplanPage() {
   }
 
   async function loescheVorlage(id: string) {
-    if (!confirm('Vorlage wirklich loeschen?')) return;
+    if (!confirm('Vorlage wirklich löschen?')) return;
     try {
       const res = await supabase.from('hr_schicht_vorlagen').delete().eq('id', id);
       if (res.error) throw res.error;
       await ladeDaten();
     } catch (e: any) {
-      alert('Loeschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+      alert('Löschen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
     }
   }
 
@@ -1240,7 +1240,7 @@ export default function SchichtplanPage() {
                                 color: BRAND.textDim, padding: '4px 0', cursor: 'pointer',
                                 fontSize: 'clamp(16px, 1.38vw, 22px)', lineHeight: 1, fontFamily: 'DM Sans, sans-serif',
                               }}
-                              title="Schicht hinzufuegen"
+                              title="Schicht hinzufügen"
                             >
                               +
                             </button>
@@ -1296,7 +1296,7 @@ export default function SchichtplanPage() {
             {/* Schnellwahl Vorlage */}
             {vorlagen.length > 0 && (
               <div style={{ marginBottom: 14 }}>
-                <label style={labelStil}>Schichtart uebernehmen</label>
+                <label style={labelStil}>Schichtart übernehmen</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {vorlagen.map((v) => (
                     <button key={v.id} onClick={() => wendeVorlageAn(v)} style={{
@@ -1370,7 +1370,7 @@ export default function SchichtplanPage() {
               <label style={labelStil}>Rolle / Bezeichnung (optional)</label>
               <input
                 type="text" style={inputStil}
-                placeholder="z.B. Fruehschicht, Maschinenfuehrer"
+                placeholder="z.B. Frühschicht, Maschinenführer"
                 value={schichtModal.rolle}
                 onChange={(e) => setSchichtModal({ ...schichtModal, rolle: e.target.value })}
               />
@@ -1645,7 +1645,7 @@ export default function SchichtplanPage() {
               <label style={labelStil}>Neue Schichtart</label>
               <input
                 type="text" style={{ ...inputStil, marginBottom: 10 }}
-                placeholder="Name, z.B. Spaetschicht"
+                placeholder="Name, z.B. Spätschicht"
                 value={neueVorlage.name}
                 onChange={(e) => setNeueVorlage({ ...neueVorlage, name: e.target.value })}
               />

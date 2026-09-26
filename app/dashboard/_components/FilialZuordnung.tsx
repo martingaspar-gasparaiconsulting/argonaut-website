@@ -97,8 +97,8 @@ export default function FilialZuordnung({
             style={{ background: '#0D1E35', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 18, padding: 32, width: '100%', maxWidth: 460, maxHeight: '80vh', overflowY: 'auto' }}
           >
             <h3 style={{ fontSize: 'clamp(18px, 1.56vw, 25px)', fontWeight: 800, margin: '0 0 6px' }}>{label} zuordnen</h3>
-            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)', margin: '0 0 6px' }}>Waehlen Sie, welche Filialen das bekommen.</p>
-            <p style={{ fontSize: 'clamp(12px, 1vw, 16px)', color: '#00e5ff', margin: '0 0 18px' }}>Kein Haekchen = fuer alle Filialen sichtbar.</p>
+            <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.5)', margin: '0 0 6px' }}>Wählen Sie, welche Filialen das bekommen.</p>
+            <p style={{ fontSize: 'clamp(12px, 1vw, 16px)', color: '#00e5ff', margin: '0 0 18px' }}>Kein Häkchen = für alle Filialen sichtbar.</p>
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
               <button onClick={() => alle(true)} style={miniStyle}>Alle markieren</button>

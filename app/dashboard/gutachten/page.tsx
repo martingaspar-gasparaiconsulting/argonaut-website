@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { HONORARGRUPPEN, KATEGORIEN, honorar, honorarsatz, summePositionen, zaehleGutachten } from '@/lib/gutachten';
 import Leerzustand from '../_components/Leerzustand';
 import { augeGutachten } from '@/lib/auge';
@@ -137,8 +138,10 @@ export default function GutachtenPage() {
   }
 
   async function positionLoeschen(p: Position) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     setBusy(p.id); setFehler(null);
-    try { const { error } = await supabase.from('gutachten_position').delete().eq('id', p.id); if (error) throw error; await laden_(); }
+    try { const { data: weg, error } = await supabase.from('gutachten_position').delete().eq('id', p.id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { throw new Error(NICHT_GELOESCHT); } if (error) throw error; await laden_(); }
     catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -217,7 +220,7 @@ export default function GutachtenPage() {
           {(besitzer ?? uid) && <EigeneFelderManager modul={MODUL} ownerId={(besitzer ?? uid) as string} onChange={laden_} />}
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {gutachten.length === 0 ? <Leerzustand icon="⚖️" titel="Noch keine Gutachten" text="Erstelle strukturierte Gutachten mit JVEG-Honorar-Rechner." schritte={["Gutachten oben anlegen", "Befund und Bewertung als Positionen erfassen", "Honorar berechnen lassen"]} /> : (
+              {gutachten.length === 0 ? <Leerzustand icon="⚖️" titel="Noch keine Gutachten" text="Erstellen Sie strukturierte Gutachten mit JVEG-Honorar-Rechner." schritte={["Gutachten oben anlegen", "Befund und Bewertung als Positionen erfassen", "Honorar berechnen lassen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr><th style={styles.th}>Datum</th><th style={styles.th}>Titel</th><th style={styles.th}>Auftraggeber</th><th style={styles.th}>Status</th><th style={{ ...styles.th, textAlign: 'right' }}>Aktion</th></tr></thead>
                   <tbody>

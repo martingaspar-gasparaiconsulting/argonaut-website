@@ -215,10 +215,10 @@ async function warneBetreiber(
     await merkeWarnung(admin, userId)
     const html = mailLayout(
       'KI-Nutzung auffaellig',
-      `<p style="margin:0 0 14px;">Ein Konto faellt bei der KI-Nutzung auf:</p>
+      `<p style="margin:0 0 14px;">Ein Konto fällt bei der KI-Nutzung auf:</p>
        <ul style="margin:0 0 14px;padding-left:18px;">${zeilen.map((z) => `<li>${z}</li>`).join('')}</ul>
        <p style="margin:0 0 14px;">Nutzer-ID: <code>${userId}</code></p>
-       <p style="margin:16px 0 0;">Diese Meldung geht hoechstens einmal pro Nutzer und Tag raus.</p>`,
+       <p style="margin:16px 0 0;">Diese Meldung geht höchstens einmal pro Nutzer und Tag raus.</p>`,
     )
     await sendeMail({ an: 'info@argonaut-os.com', betreff, html })
   } catch (e) {

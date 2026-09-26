@@ -315,7 +315,7 @@ export default function BelegungPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {vorgaenge.length === 0 ? <Leerzustand icon="📅" titel="Noch keine Belegungen" text="Buche Einheiten mit Verfügbarkeits-Check, Preis und Kaution." schritte={["Einheit anlegen (Reiter „Einheiten“)", "Belegung mit Zeitraum erfassen", "Verfügbarkeit und Preis prüfen"]} /> : (
+              {vorgaenge.length === 0 ? <Leerzustand icon="📅" titel="Noch keine Belegungen" text="Buchen Sie Einheiten mit Verfügbarkeits-Check, Preis und Kaution." schritte={["Einheit anlegen (Reiter „Einheiten“)", "Belegung mit Zeitraum erfassen", "Verfügbarkeit und Preis prüfen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Einheit</th><th style={styles.th}>Gast</th><th style={styles.th}>Zeitraum</th>
@@ -387,7 +387,7 @@ export default function BelegungPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {einheiten.length === 0 ? <Leerzustand icon="🏠" titel="Noch keine Einheiten" text="Lege buchbare Einheiten an (Wohnung, Stellplatz, Halle …)." schritte={["Einheit oben anlegen", "Preis je Nacht/Tag/Stunde setzen", "Grundgebühr und Kaution hinterlegen"]} /> : (
+              {einheiten.length === 0 ? <Leerzustand icon="🏠" titel="Noch keine Einheiten" text="Legen Sie buchbare Einheiten an (Wohnung, Stellplatz, Halle …)." schritte={["Einheit oben anlegen", "Preis je Nacht/Tag/Stunde setzen", "Grundgebühr und Kaution hinterlegen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Einheit</th><th style={styles.th}>Kategorie</th><th style={styles.th}>Abrechnung</th>

@@ -246,7 +246,7 @@ export default function AboRechnungenPage() {
       {/* Liste */}
       <div style={{ ...styles.card, marginTop: 16 }}>
         <div style={styles.cardTitel}>Vorlagen</div>
-        {laden ? <p style={styles.dim}>Lädt …</p> : abos.length === 0 ? <Leerzustand icon="🔁" titel="Noch keine Abo-Vorlagen" text="Lege wiederkehrende Rechnungen an (Wartung, Retainer, Miete …) — fällige werden zur echten Rechnung." schritte={["Vorlage oben anlegen", "Empfänger, Positionen und Intervall erfassen", "Bei Fälligkeit Rechnung erzeugen"]} /> : (
+        {laden ? <p style={styles.dim}>Lädt …</p> : abos.length === 0 ? <Leerzustand icon="🔁" titel="Noch keine Abo-Vorlagen" text="Legen Sie wiederkehrende Rechnungen an (Wartung, Retainer, Miete …) — fällige werden zur echten Rechnung." schritte={["Vorlage oben anlegen", "Empfänger, Positionen und Intervall erfassen", "Bei Fälligkeit Rechnung erzeugen"]} /> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {abos.map((a) => {
               const netto = (Array.isArray(a.positionen) ? a.positionen : []).reduce((x, p) => x + (Number(p.menge) || 1) * (Number(p.einzelpreis) || 0), 0);

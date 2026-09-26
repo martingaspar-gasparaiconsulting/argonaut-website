@@ -309,7 +309,7 @@ export default function MitgliederPage() {
           <button onClick={neu} style={styles.primaer}>+ Neues Mitglied</button>
         </div>
         {laden ? <div style={styles.hint}>Lädt …</div> : liste.length === 0 ? (
-          <Leerzustand icon="👥" titel="Noch keine Mitglieder" text="Verwalte Mitglieder mit Beitrag, Intervall und SEPA-Mandat." schritte={["Mitglied oben rechts anlegen", "Beitrag, Intervall und IBAN erfassen", "SEPA-Lastschrift fürs Bankprogramm erzeugen"]} />
+          <Leerzustand icon="👥" titel="Noch keine Mitglieder" text="Verwalten Sie Mitglieder mit Beitrag, Intervall und SEPA-Mandat." schritte={["Mitglied oben rechts anlegen", "Beitrag, Intervall und IBAN erfassen", "SEPA-Lastschrift fürs Bankprogramm erzeugen"]} />
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={styles.table}>

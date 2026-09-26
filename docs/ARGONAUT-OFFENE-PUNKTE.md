@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 27 von 49 erledigt** (F1–F22 gebaut: F2–F22 mit _p111, F1 mit _p112; B1a/B1b live; A3–A5 live; A1 und A2 zählen nicht mit)
+**Stand: 32 von 49 erledigt** (K1–K5 mit _p113; F1–F22 live; B1a/B1b live; A3–A5 live; A1 und A2 zählen nicht mit)
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -85,11 +85,11 @@ Ablauf: Claude schreibt vorher je Punkt **Fehler + Lösung** auf, dann wird geba
 
 | Nr. | Was | Stand |
 |---|---|---|
-| K1 | Löschen ohne Rückfrage an vielen Stellen (BDE, Erträge, Chargen, Fertigung, Zuschnitt, Betriebskosten, Exposé, Gutachten, Hilfsmittel, Ernte, Bau & LV) | ⬜ |
-| K2 | Du-Form in Leerzuständen (ca. 15 Seiten) | ⬜ |
-| K3 | Fehlende Umlaute („Waermepumpe", „bestaetigt", „Waehlen" …) | ⬜ |
-| K4 | Leertexte versprechen, was es nicht gibt („Kaution buchen", „in Angebot übernehmen", Standort-Feld, Stunden im Bautagebuch) | ⬜ |
-| K5 | Für ca. 20 Branchen-Tabellen fehlt die SQL-Datei im Repo — eine Leseabfrage in Supabase klärt die Zugriffsregeln | ⬜ |
+| K1 | Löschen ohne Rückfrage an vielen Stellen (BDE, Erträge, Chargen, Fertigung, Zuschnitt, Betriebskosten, Exposé, Gutachten, Hilfsmittel, Ernte, Bau & LV) | ✅ gebaut (_p113) — 12 Stellen mit Rückfrage und Meldung, wenn nichts gelöscht wurde |
+| K2 | Du-Form in Leerzuständen (ca. 15 Seiten) | ✅ gebaut (_p113) — 29 Leertexte auf „Sie“, Wächter-Test |
+| K3 | Fehlende Umlaute („Waermepumpe", „bestaetigt", „Waehlen" …) | ✅ gebaut (_p113) — sichtbare Texte in 36 Dateien; Rechnungs-Texte (Abschlag, Einbehalt, Skonto, § 13b, USt-IdNr) bewusst NICHT angefasst → zu G |
+| K4 | Leertexte versprechen, was es nicht gibt („Kaution buchen", „in Angebot übernehmen", Standort-Feld, Stunden im Bautagebuch) | ✅ gebaut (_p113) — Aufmaß, Verleih, Personal, Bautagebuch |
+| K5 | Für ca. 20 Branchen-Tabellen fehlt die SQL-Datei im Repo — eine Leseabfrage in Supabase klärt die Zugriffsregeln | ✅ Abfrage geliefert (supabase-sql/k5-zugriffsregeln-befund.sql, nur lesen) — Auswertung, sobald docs/k5-befund.csv im Repo liegt |
 
 ## 6. Ganz am Ende — Test-Checklisten und Testtage (Martins Auftrag 25.09.)
 

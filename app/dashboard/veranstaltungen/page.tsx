@@ -276,7 +276,7 @@ export default function VeranstaltungenPage() {
 
       {/* Event-Karten */}
       {events.length === 0 ? (
-        <Leerzustand icon="🎫" titel="Noch keine Veranstaltungen" text="Lege Events mit Kapazität und Ticketpreis an — Auslastung und Einnahmen rechnen sich automatisch." schritte={["Veranstaltung oben anlegen", "Anmeldungen erfassen", "Teilnehmerliste als PDF"]} />
+        <Leerzustand icon="🎫" titel="Noch keine Veranstaltungen" text="Legen Sie Events mit Kapazität und Ticketpreis an — Auslastung und Einnahmen rechnen sich automatisch." schritte={["Veranstaltung oben anlegen", "Anmeldungen erfassen", "Teilnehmerliste als PDF"]} />
       ) : events.map((ev) => {
         const abs = (anmProEvent.get(ev.id) || []).slice().sort((x, y) => (x.angemeldet_am || '').localeCompare(y.angemeldet_am || ''));
         const k = eventKennzahl(ev as EventLite, abs as AnmeldungLite[]);

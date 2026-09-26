@@ -216,13 +216,13 @@ export default function TerminWertPage() {
           <div style={{ color: C.textDim, fontSize: 12.5, marginBottom: 14 }}>
             Fuer Kanaele, die Zeit statt Geld kosten. Auch der Anruf, bei dem niemand rangeht, zaehlt mit.
           </div>
-          <Feld label="Aktivitaeten je gewonnenem Kunden" einheit="Stueck" wert={f.aktivitaeten} onChange={setzen('aktivitaeten')}
+          <Feld label="Aktivitäten je gewonnenem Kunden" einheit="Stueck" wert={f.aktivitaeten} onChange={setzen('aktivitaeten')}
                 hinweis="Anrufe, Nachrichten oder Besuche — grob geschaetzt reicht" />
           <div style={{ marginTop: 14 }}>
             <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 28, color: jeAktivitaet != null ? C.gold : C.textDim, lineHeight: 1.1 }}>
               {euroGenau(jeAktivitaet)}
             </div>
-            <div style={{ color: C.text, fontSize: 13, marginTop: 4 }}>Wert je Aktivitaet</div>
+            <div style={{ color: C.text, fontSize: 13, marginTop: 4 }}>Wert je Aktivität</div>
           </div>
         </div>
       </div>

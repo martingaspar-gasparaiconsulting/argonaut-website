@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import KiAuge from "../_components/KiAuge";
 import { augeErnte } from "@/lib/auge";
 import {
@@ -265,7 +266,9 @@ export default function ErnteSeite() {
     await ladeAlles();
   }
   async function loescheVerkauf(id: string) {
-    const { error } = await supabase.from("markt_verkauf").delete().eq("id", id);
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
+    const { data: weg, error } = await supabase.from("markt_verkauf").delete().eq("id", id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { window.alert(NICHT_GELOESCHT); return; }
     if (error) { window.alert("Fehler: " + error.message); return; }
     await ladeAlles();
   }

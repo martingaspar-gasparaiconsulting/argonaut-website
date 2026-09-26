@@ -268,7 +268,7 @@ export default function VerleihPage() {
 
           {laden ? <p style={styles.hint}>Lädt …</p> : (
             <div style={{ ...styles.card, marginTop: 16, padding: 0, overflowX: 'auto' }}>
-              {vorgaenge.length === 0 ? <Leerzustand icon="🔑" titel="Noch keine Ausleihen" text="Verleihe Mietgegenstände: reservieren → ausgeben → zurücknehmen." schritte={["Mietgegenstand anlegen (Reiter „Mietgegenstände“)", "Ausleihe mit Zeitraum erfassen", "Ausgabe, Rückgabe und Kaution buchen"]} /> : (
+              {vorgaenge.length === 0 ? <Leerzustand icon="🔑" titel="Noch keine Ausleihen" text="Verleihen Sie Mietgegenstände: reservieren → ausgeben → zurücknehmen." schritte={["Mietgegenstand anlegen (Reiter „Mietgegenstände“)", "Ausleihe mit Zeitraum erfassen", "Ausgabe und Rückgabe vermerken, dann Rechnung erstellen"]} /> : (
                 <table style={styles.table}>
                   <thead><tr>
                     <th style={styles.th}>Gegenstand</th><th style={styles.th}>Mieter</th><th style={styles.th}>Zeitraum</th>

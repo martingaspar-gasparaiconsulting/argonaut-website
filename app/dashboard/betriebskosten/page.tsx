@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import {
   BETRKV_KATALOG, HEIZ_VERBRAUCH_STD, heizAnteilGueltig,
   abrechnungFuerEinheit, verteilteSumme, gesamtKosten, zaehleBk,
@@ -178,8 +179,9 @@ export default function BetriebskostenPage() {
   }
 
   async function loesche(tabelle: string, id: string) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     setBusy(id); setFehler(null);
-    try { await supabase.from(tabelle).delete().eq('id', id); await laden_(); }
+    try { const { data: weg, error } = await supabase.from(tabelle).delete().eq('id', id).select('id'); if (error) throw error; if (nichtsGeschrieben(weg)) throw new Error(NICHT_GELOESCHT); await laden_(); }
     catch (err: unknown) { setFehler('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setBusy(null); }
   }

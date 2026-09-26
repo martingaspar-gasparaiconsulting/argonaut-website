@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import KiAuge from "../_components/KiAuge";
@@ -218,7 +219,9 @@ export default function ChargenSeite() {
     await ladeAlles();
   }
   async function delVerwendung(id: string) {
-    const { error } = await supabase.from("charge_verwendung").delete().eq("id", id);
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
+    const { data: weg, error } = await supabase.from("charge_verwendung").delete().eq("id", id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { window.alert(NICHT_GELOESCHT); return; }
     if (error) { window.alert("Fehler: " + error.message); return; }
     await ladeAlles();
   }
@@ -249,7 +252,9 @@ export default function ChargenSeite() {
     await ladeAlles();
   }
   async function delMerkmal(id: string) {
-    const { error } = await supabase.from("charge_merkmal").delete().eq("id", id);
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
+    const { data: weg, error } = await supabase.from("charge_merkmal").delete().eq("id", id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { window.alert(NICHT_GELOESCHT); return; }
     if (error) { window.alert("Fehler: " + error.message); return; }
     await ladeAlles();
   }

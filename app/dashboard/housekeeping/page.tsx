@@ -302,7 +302,7 @@ export default function HousekeepingSeite() {
           {userId && <EigeneFelderManager modul={MODUL} ownerId={userId} onChange={ladeAlles} />}
 
           {zimmer.length === 0 ? (
-            <Leerzustand icon="🛎️" titel="Noch keine Zimmer" text="Lege Zimmer/Einheiten an und pflege den Reinigungsstatus." schritte={["Zimmer oben anlegen", "Etage und Kategorie erfassen", "Reinigungsstatus durchschalten"]} />
+            <Leerzustand icon="🛎️" titel="Noch keine Zimmer" text="Legen Sie Zimmer/Einheiten an und pflegen den Reinigungsstatus." schritte={["Zimmer oben anlegen", "Etage und Kategorie erfassen", "Reinigungsstatus durchschalten"]} />
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {zimmer.map((z) => {

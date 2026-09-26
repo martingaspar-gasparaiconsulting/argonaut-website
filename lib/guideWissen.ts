@@ -1461,7 +1461,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Beim Abholen „⇧ Auslagern" — der Satz verschwindet aus der Liste und zählt unten als „bereits ausgelagert (Historie)"',
       'Oben führen „🛡 Schadenabwicklung mit Versicherern" und „🛂 GwG-Identifizierung" zu den Unterseiten',
     ],
-    probe: { anlegen: 'Ein Fahrzeug mit Kennzeichen „TEST" über „💾 Fahrzeug speichern".', loeschen: '🗑 am Fahrzeug — Achtung: Es wird sofort und ohne Rückfrage gelöscht. Eingelagerte Reifen lassen sich nur „⇧ Auslagern", nicht löschen.' },
+    probe: { anlegen: 'Ein Fahrzeug mit Kennzeichen „TEST" über „💾 Fahrzeug speichern".', loeschen: '🗑 am Fahrzeug — Es wird nach einer Rückfrage gelöscht. Eingelagerte Reifen lassen sich nur „⇧ Auslagern", nicht löschen.' },
     landetIn: [{ text: 'Schadenabwicklung (Fahrzeug aus der Kartei)', href: '/dashboard/kfz/schaden' }],
   },
   '/dashboard/kfz/schaden': {
@@ -1639,12 +1639,12 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Mit „⚙️ Eigene Felder" legen Sie zusätzliche Spalten für Aufträge an; sie erscheinen im Formular (Ansicht „Voll") und in der Liste',
       'Ist oben ein Standort gewählt, zeigt die Liste dessen Aufträge und die ohne Standort',
     ],
-    probe: { anlegen: 'Einen Fertigungsauftrag mit Produkt „Test" anlegen.', loeschen: 'Löschen gibt es hier nicht — den Auftrag auf „Storniert" setzen. Eine Probe-Komponente verschwindet mit ✕ (sofort, ohne Rückfrage); eine Probe-Stückliste bleibt stehen.' },
+    probe: { anlegen: 'Einen Fertigungsauftrag mit Produkt „Test" anlegen.', loeschen: 'Löschen gibt es hier nicht — den Auftrag auf „Storniert" setzen. Eine Probe-Komponente verschwindet mit ✕ (mit Rückfrage); eine Probe-Stückliste bleibt stehen.' },
   },
   '/dashboard/bde': {
     zweck: 'Betriebsdatenerfassung: Maschinen anlegen, je Schicht oder Auftrag Laufzeit, Mengen und Störgründe buchen. Die Seite rechnet daraus live die OEE (Verfügbarkeit × Leistung × Qualität) und erstellt je Buchung einen Schichtbericht als PDF.',
     wer: 'beide',
-    werText: 'Wer das Modul BDE / MDE hat, bucht hier. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Achtung: Maschinen, Störungen und Buchungen löschen mit ✕ sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul BDE / MDE hat, bucht hier. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Maschinen, Störungen und Buchungen löschen mit ✕ nach einer Rückfrage.',
     schritte: [
       'Reiter „Maschinen": „Bezeichnung" (z. B. „CNC-Fräse 1"), „Maschinen-Nr.", „Standort", „Idealtakt (Sek./Teil)" und „Status" eintragen, dann „＋ Maschine"',
       'Reiter „Buchungen & OEE": unter „Neue Buchung (Schicht / Auftrag)" die Maschine wählen — der Idealtakt wird übernommen. „Datum", „Auftrag", „Schicht", „Bediener" ergänzen',
@@ -1654,12 +1654,12 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„📄 Schichtbericht" druckt das PDF, „✓ abschließen" schließt die Buchung ab („↩ wieder öffnen" macht es rückgängig)',
       'Liegt die Roh-Leistung über 100 %, erscheint „Takt/Menge prüfen" — die OEE wird dann auf 100 % begrenzt',
     ],
-    probe: { anlegen: 'Maschine „Test", dann eine Buchung mit 60 Minuten Planbelegung.', loeschen: '„✕ Buchung" an der Buchung und ✕ an der Maschine im Reiter „Maschinen" — beides löscht sofort, ohne Rückfrage.' },
+    probe: { anlegen: 'Maschine „Test", dann eine Buchung mit 60 Minuten Planbelegung.', loeschen: '„✕ Buchung" an der Buchung und ✕ an der Maschine im Reiter „Maschinen" — beides löscht mit Rückfrage.' },
   },
   '/dashboard/chargen': {
     zweck: 'Chargen und Seriennummern führen: Status, MHD, Rückverfolgbarkeit (woraus die Charge besteht, wohin sie ging) und Prüfplan mit Soll ± Toleranz, der jedes Merkmal als i.O. oder n.i.O. bewertet. Je Charge ein Nachweis als PDF.',
     wer: 'beide',
-    werText: 'Wer das Modul Chargen & Prüfplan hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Charge und Prüfung löschen mit Rückfrage; Rückverfolgungs-Einträge und Merkmale löschen mit ✕ sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul Chargen & Prüfplan hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Charge und Prüfung löschen mit Rückfrage; Rückverfolgungs-Einträge und Merkmale löschen mit ✕, ebenfalls mit Rückfrage.',
     schritte: [
       '„+ Charge / Serie": „Chargen-/Seriennummer *" (Pflicht), „Typ" (Charge oder Seriennummer), „Bezeichnung", optional „Basis-Artikel", „Menge", „Einheit", „Herstelldatum" und „Status". In der Ansicht „Voll" zusätzlich MHD, Herkunft, Auftrag / Los und Bemerkung. Dann „Speichern"',
       'An der Charge „▼ Details" öffnen. Unter „Status setzen" zwischen Freigegeben, Quarantäne, Gesperrt und Verbraucht wechseln',
@@ -1705,7 +1705,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/ertraege': {
     zweck: 'Anlagen (Photovoltaik, BHKW, Windkraft, Batteriespeicher, Wärmepumpe) mit Nennleistung und Jahres-Soll anlegen und Ablesungen je Zeitraum erfassen. Die Seite rechnet Soll-Erreichung, spezifischen Ertrag, Verfügbarkeit, Eigenverbrauch und Erlös; je Anlage ein Ertragsbericht als PDF.',
     wer: 'beide',
-    werText: 'Wer das Modul Erträge & Monitoring hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Achtung: Anlagen und Ablesungen löschen mit ✕ sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul Erträge & Monitoring hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Anlagen und Ablesungen löschen mit ✕ nach einer Rückfrage.',
     schritte: [
       'Reiter „Anlagen": „Bezeichnung", „Typ", „Nennleistung", „Jahres-Soll" (vorbelegt mit 950 kWh je kWp und Jahr), „Einspeisevergütung (ct/kWh)", „Strompreis (ct/kWh)" und „Status" eintragen, dann „＋ Anlage". Bei PV nennt die Seite 800–1.200 kWh/kWp als Orientierung',
       'Reiter „Ablesungen & Erträge": Anlage wählen, „Zeitraum von" und „Zeitraum bis", „Ertrag (kWh)" (Pflicht), dazu Eigenverbrauch, Einspeisung, Gesamtverbrauch und „Ausfall (Std.)". Die Vorschau zeigt die Kennzahlen, dann „＋ Ablesung"',
@@ -1713,12 +1713,12 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Oben stehen Soll-Erreichung, Verfügbarkeit, Ertrag, Eigenverbrauch, Erlös und die Zahl der Anlagen unter Soll; mit „Filter Anlage" nur eine ansehen',
       'An jeder Anlage mit Ablesungen erstellt „📄 Ertragsbericht" das PDF',
     ],
-    probe: { anlegen: 'Anlage „Test" anlegen und eine Ablesung mit 100 kWh erfassen.', loeschen: '✕ an der Ablesung in der Tabelle und ✕ an der Anlage im Reiter „Anlagen" — beides löscht sofort, ohne Rückfrage.' },
+    probe: { anlegen: 'Anlage „Test" anlegen und eine Ablesung mit 100 kWh erfassen.', loeschen: '✕ an der Ablesung in der Tabelle und ✕ an der Anlage im Reiter „Anlagen" — beides löscht mit Rückfrage.' },
   },
   '/dashboard/zuschnitt': {
     zweck: 'Zuschnitt planen: Teilelisten auf Stangen verteilen und dabei Stangenbedarf, Verschnitt in Prozent, Schnittplan und Materialgewicht ausrechnen. Der Zuschnittplan lässt sich als PDF ausgeben.',
     wer: 'beide',
-    werText: 'Wer das Modul Zuschnitt hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Projekte lassen sich hier nicht löschen; Teile löschen mit „löschen" sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul Zuschnitt hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Projekte lassen sich hier nicht löschen; Teile löschen mit „löschen" mit Rückfrage.',
     schritte: [
       'Reiter „📁 Projekte": „Bezeichnung", „Material" (z. B. „Vierkantrohr 40x40x3"), „Stangenlänge (mm)" (Vorgabe 6000) und „Sägeblatt / Schnittfuge (mm)" (Vorgabe 3) eintragen',
       'Für das Gewicht zusätzlich „Material (Dichte, für Gewicht)" wählen (Stahl, Edelstahl, Aluminium, Messing, Kupfer) und den „Querschnitt (mm², für Gewicht)" angeben. Dann „＋ Anlegen & öffnen"',
@@ -1726,7 +1726,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Das „Zuschnitt-Ergebnis" zeigt „Stangen nötig", „Verschnitt", „Materiallänge", gegebenenfalls „Gewicht gesamt" und je Stange die Schnitte samt Rest. Teile, die länger als die Stange sind, werden rot gemeldet und nicht eingeplant',
       '„📄 Zuschnittplan" erstellt das PDF. Ein bestehendes Projekt öffnen Sie in der Projektliste mit „öffnen ›"',
     ],
-    probe: { anlegen: 'Projekt „Test" mit einem Teil von 1000 mm anlegen.', loeschen: 'Das Teil mit „löschen" entfernen (sofort, ohne Rückfrage). Das Projekt selbst lässt sich hier nicht löschen.' },
+    probe: { anlegen: 'Projekt „Test" mit einem Teil von 1000 mm anlegen.', loeschen: 'Das Teil mit „löschen" entfernen (mit Rückfrage). Das Projekt selbst lässt sich hier nicht löschen.' },
     landetIn: [{ text: 'Kalkulator (Verschnitt je Material unter „Aus Ihrer Praxis gelernt")', href: '/dashboard/kalkulator' }],
   },
   '/dashboard/kalkulator': {
@@ -1814,7 +1814,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/expose': {
     zweck: 'Exposés für Kauf- oder Mietobjekte erstellen: mit automatischer Energieeffizienzklasse, Prüfung der Pflichtangaben für Anzeigen nach GEG § 87, Preis pro m², Provision, Vermarktungsstatus, druckfertigem Exposé-PDF und einer Interessentenliste je Objekt.',
     wer: 'beide',
-    werText: 'Wer das Modul hat. Exposés lassen sich nicht löschen, nur im Status weiterschalten. Interessenten entfernt der Knopf „✕“ sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul hat. Exposés lassen sich nicht löschen, nur im Status weiterschalten. Interessenten entfernt der Knopf „✕“ mit Rückfrage.',
     schritte: [
       'Unter „Neues Exposé“: „Bezeichnung“, „Objektart“, „Vermarktung“ (Kauf oder Miete), „Ort“, „Adresse“, „Kaufpreis“ bzw. „Kaltmiete/Monat“, optional „Nebenkosten/Hausgeld“ und „Provision (%, optional)“, dazu „Wohnfläche (m²)“, „Zimmer“, „Baujahr“',
       'Bereich „Energieausweis (GEG §87-Pflichtangaben)“: „Energieausweis liegt vor“ anhaken, „Ausweis-Art“, „Endenergie kWh/(m²·a)“ und „Energieträger Heizung“ eintragen — die Energieeffizienzklasse erscheint sofort. Fehlt etwas, steht dort „⚠ Für eine Anzeige nach GEG §87 fehlt noch: …“',
@@ -1823,13 +1823,13 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Unter „Interessenten & Leads“ bei „Objekt“ das Exposé wählen, „Name“, „E-Mail“, „Telefon“, „Status“ eintragen und „＋ Interessent“. Den Status (Neu, Besichtigung, Angebot, Zusage, Abgesagt) direkt in der Liste umstellen',
       'Oben zählen die Kacheln aktive, reservierte und abgeschlossene Objekte, „GEG-Lücken“ und offene Interessenten',
     ],
-    probe: { anlegen: 'Ein Exposé „Test“ anlegen und einen Interessenten „Test“ dazu.', loeschen: 'Den Interessenten mit „✕“ entfernen — sofort, ohne Rückfrage. Das Exposé selbst lässt sich hier nicht löschen; es bleibt als „📝 Entwurf“ stehen.' },
+    probe: { anlegen: 'Ein Exposé „Test“ anlegen und einen Interessenten „Test“ dazu.', loeschen: 'Den Interessenten mit „✕“ entfernen — mit Rückfrage. Das Exposé selbst lässt sich hier nicht löschen; es bleibt als „📝 Entwurf“ stehen.' },
     vorher: [{ text: 'Energieausweis des Objekts zur Hand haben' }],
   },
   '/dashboard/betriebskosten': {
     zweck: 'Die Betriebskostenabrechnung: Kosten nach § 2 BetrKV auf die Einheiten umlegen — nach Wohnfläche, Personen, Einheiten oder Verbrauch, Heizkosten nach HeizkostenV mit 50–70 % Verbrauchsanteil. Ergebnis ist der Saldo je Einheit (Nachzahlung oder Guthaben) und ein Abrechnungs-PDF.',
     wer: 'chef',
-    werText: 'Sensibel: nur für den Chef oder mit ausdrücklicher Freigabe. Einheiten und Kostenarten entfernt der Knopf „✕“ sofort, ohne Rückfrage. Eine Abrechnung selbst lässt sich nicht löschen.',
+    werText: 'Sensibel: nur für den Chef oder mit ausdrücklicher Freigabe. Einheiten und Kostenarten entfernt der Knopf „✕“ mit Rückfrage. Eine Abrechnung selbst lässt sich nicht löschen.',
     schritte: [
       'Unter „Neue Abrechnung“ „Objekt/Bezeichnung“ eintragen, „Zeitraum von“ und „Zeitraum bis“ prüfen (vorbelegt: letztes Kalenderjahr) und „＋ Abrechnung anlegen“. Eine vorhandene Abrechnung wählen Sie oben bei „Vorhandene Abrechnung“',
       '„Einheiten / Mieter“: je Wohnung „Einheit“, „Mieter“, „Wohnfläche (m²)“, „Personen“, „Verbrauch (Heizung)“ und „Vorauszahlung (€)“ eintragen, dann „＋ Einheit“',
@@ -1837,7 +1837,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Die Hinweise oben zeigen, was an der Abrechnung noch klemmt, z. B. Heizkosten ohne Verbrauchswerte. Die Kacheln zeigen Kosten, Vorauszahlungen, Saldo und „Heiz-Lücken“',
       'In der Ergebnistabelle steht je Einheit Kostenanteil, Vorauszahlung und „Nachzahlung“ bzw. „Guthaben“. „📄 Abrechnung“ erzeugt das PDF für den Mieter',
     ],
-    probe: { anlegen: 'Eine Abrechnung „Test“ anlegen, darin eine Einheit und eine Kostenart.', loeschen: 'Einheit und Kostenart mit „✕“ entfernen — sofort, ohne Rückfrage. Die leere Abrechnung „Test“ bleibt in der Auswahl stehen; einen Löschen-Knopf dafür gibt es nicht.' },
+    probe: { anlegen: 'Eine Abrechnung „Test“ anlegen, darin eine Einheit und eine Kostenart.', loeschen: 'Einheit und Kostenart mit „✕“ entfernen — mit Rückfrage. Die leere Abrechnung „Test“ bleibt in der Auswahl stehen; einen Löschen-Knopf dafür gibt es nicht.' },
     vorher: [{ text: 'Einheiten und Mietverträge in der Immobilienverwaltung', href: '/dashboard/immobilien' }],
   },
   '/dashboard/objekte': {
@@ -2010,7 +2010,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/gutachten': {
     zweck: 'Gutachten strukturiert erstellen: Kopfdaten, Positionen getrennt nach Befund, Bewertung, Mangel und Empfehlung, JVEG-Honorar (Honorargruppe × Stunden) und ein Gutachten-PDF.',
     wer: 'beide',
-    werText: 'Wer das Modul „Gutachten" freigeschaltet hat, legt Gutachten und Positionen an. Ein Gutachten selbst lässt sich hier nicht löschen; Positionen löscht „löschen" sofort, ohne Rückfrage.',
+    werText: 'Wer das Modul „Gutachten" freigeschaltet hat, legt Gutachten und Positionen an. Ein Gutachten selbst lässt sich hier nicht löschen; Positionen löscht „löschen" mit Rückfrage.',
     schritte: [
       'Reiter „📁 Gutachten": „Titel" (Pflicht), „Auftraggeber", „Objekt", „Art", „Datum", „Gutachter", in der Ansicht „Voll" auch „Aktenzeichen"',
       'Optional „JVEG-Honorargruppe" und „Stunden" — darunter erscheint das JVEG-Honorar laut hinterlegtem Stundensatz. „Zusammenfassung / Fazit" ergänzen',
@@ -2019,7 +2019,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„📄 Gutachten-PDF" erzeugt das Gutachten; eine unter „Mein Bereich" hinterlegte Unterschrift wird eingesetzt, sonst bleibt die Signaturlinie leer',
       '„✓ fertigstellen" setzt den Status auf fertig, „↩ auf Entwurf" nimmt das zurück. In der Liste öffnet „öffnen ›" ein Gutachten wieder',
     ],
-    probe: { anlegen: 'Ein Gutachten „Test" anlegen und eine Position hinzufügen.', loeschen: 'Die Position mit „löschen" entfernen — sofort, ohne Rückfrage. Das Gutachten selbst lässt sich hier nicht löschen, darum lieber die Übungswelt nutzen.' },
+    probe: { anlegen: 'Ein Gutachten „Test" anlegen und eine Position hinzufügen.', loeschen: 'Die Position mit „löschen" entfernen — mit Rückfrage. Das Gutachten selbst lässt sich hier nicht löschen, darum lieber die Übungswelt nutzen.' },
     vorher: [{ text: 'Unterschrift unter „Meine Unterschrift" hinterlegen', href: '/dashboard/mein-bereich' }],
   },
 
@@ -2081,7 +2081,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Über „Status" weiterschalten: „Genehmigt" (das Datum wird gesetzt), „Abgelehnt", „Versorgt", „Abgerechnet"',
       'Eigene Spalten legen Sie über „⚙️ Eigene Felder" an',
     ],
-    probe: { anlegen: 'Eine Versorgung für „Test Versicherter" mit einer Position anlegen.', loeschen: 'Eine Position entfernt „löschen" in der Positionsliste — sofort, ohne Rückfrage. Eine ganze Versorgung lässt sich auf der Seite nicht löschen.' },
+    probe: { anlegen: 'Eine Versorgung für „Test Versicherter" mit einer Position anlegen.', loeschen: 'Eine Position entfernt „löschen" in der Positionsliste — mit Rückfrage. Eine ganze Versorgung lässt sich auf der Seite nicht löschen.' },
   },
   '/dashboard/tier': {
     zweck: 'Tierkartei mit Halter: Tiere anlegen, Behandlungen, Impfungen und Untersuchungen mit Wiederholungs-Fälligkeit festhalten und die offenen Leistungen als Rechnung an den Halter geben.',
@@ -2269,14 +2269,14 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/ernte': {
     zweck: 'Ernte erfassen und ins Lager buchen, den Produkt-Katalog für den Marktstand pflegen und Markttage abrechnen — die Verkäufe lassen sich als Einnahmen in die Finanzen übertragen.',
     wer: 'beide',
-    werText: 'Wer das Modul „Ernte & Direktvermarktung" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Ernte-Posten und Produkte werden mit Rückfrage gelöscht, einzelne Verkäufe sofort und ohne Rückfrage.',
+    werText: 'Wer das Modul „Ernte & Direktvermarktung" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Ernte-Posten und Produkte werden mit Rückfrage gelöscht, einzelne Verkäufe ebenfalls mit Rückfrage.',
     schritte: [
       'Reiter „🌾 Ernte": „+ Ernte erfassen", „Kultur *" (Pflicht), „Datum", „Menge", „Einheit", „Status" und am besten einen „Lager-Artikel" wählen. Qualität, Lagerort, Schlag und Notiz nur in der Ansicht „Voll". Dann „Speichern"',
       '„📦 Ins Lager" bucht die Menge als Zugang: auf den gewählten Lager-Artikel, sonst über Artikelnummer oder Namen — findet sich keiner, wird ein neuer Artikel angelegt. Danach steht „✓ im Lager", ein zweites Buchen ist nicht möglich. „✓ verkauft" setzt den Status',
       'Reiter „🥕 Produkte": „+ Produkt" mit „Bezeichnung *", „Kategorie", „Einheit", „Preis (€, inkl. MwSt)", „MwSt-Satz (%)", „Herkunft", „Bio" und „verfügbar". Mit „⤓ CSV importieren" geht es auch als Liste; „ausblenden" nimmt ein Produkt aus dem Verkauf',
       'Reiter „🧺 Markttage": unter „Verkauf buchen" „Datum", „Markt / Ort", „Produkt" und „Menge" wählen — der Einzelpreis kommt aus dem Produkt — dann „+ Verkauf". Die Verkäufe werden je Tag und Ort zu einem Markttag mit netto, MwSt und brutto gebündelt',
       '„📄 Abrechnung" am Markttag erzeugt das PDF. „In Finanzen buchen" überträgt alle Marktverkäufe als Einnahmen (Zahlungsart „Bar (Markt)") — mehrfaches Klicken bucht nichts doppelt',
-      'Achtung: „✕" an einem einzelnen Verkauf löscht sofort, ohne Rückfrage',
+      '„✕" an einem einzelnen Verkauf löscht nach einer Rückfrage',
     ],
     probe: { anlegen: 'Einen Ernte-Posten „Test" ohne Menge anlegen — so wird nichts ins Lager gebucht.', loeschen: '„✕" am Ernte-Posten, mit Rückfrage. Wurde er schon „📦 Ins Lager" gebucht, bleibt der Lagerbestand erhöht.' },
     landetIn: [{ text: 'Lager (Artikel und Bestand)', href: '/dashboard/erp' }, { text: 'Finanzen', href: '/dashboard/finanzen' }, { text: 'EÜR', href: '/dashboard/euer' }],
@@ -2458,7 +2458,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/bau-lv': {
     zweck: 'Leistungsverzeichnisse (LV) mit Positionen und Nachträgen kalkulieren und daraus eine Rechnung erstellen — dazu im zweiten Reiter Abnahmeprotokolle mit Mängelliste.',
     wer: 'chef',
-    werText: 'Gedacht für den Chef: Er legt LVs, Positionen und Abnahmen an. Mitarbeiter sehen die LVs und Abnahmen des Chefs und dürfen laut Zugriffsregeln Positionen darin ändern und löschen. Positionen löscht das ✕ sofort, ohne Rückfrage. Ganze LVs und Abnahmeprotokolle haben auf dieser Seite keinen Lösch-Knopf.',
+    werText: 'Gedacht für den Chef: Er legt LVs, Positionen und Abnahmen an. Mitarbeiter sehen die LVs und Abnahmen des Chefs und dürfen laut Zugriffsregeln Positionen darin ändern und löschen. Positionen löscht das ✕ nach einer Rückfrage. Ganze LVs und Abnahmeprotokolle haben auf dieser Seite keinen Lösch-Knopf.',
     schritte: [
       'Reiter „📐 LV / Kalkulation“: unter „Neues Leistungsverzeichnis“ Titel und „Kunde“ eintragen und „＋ Anlegen“',
       'Links das LV anklicken. Unten eine Position erfassen: „Kurztext“, „Menge“, Einheit, „EP €“ und 19 % oder 7 % — in der Ansicht „Voll“ auch „OZ“ (Ordnungszahl). Mit „＋ Position“ speichern; die Netto-Summe rechnet sich neu',
@@ -2468,7 +2468,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Mängel mit Beschreibung und „Frist“ über „＋ Mangel“ sammeln, dann „💾 Abnahme speichern“',
       'Oben führt „🧷 Nachträge & Gewährleistung“ zu Ankündigung, Angebot und Abrechnung von Nachträgen sowie zu Fristen und Sicherheiten nach der Abnahme',
     ],
-    probe: { anlegen: 'Ein LV „Test“ anlegen und eine Position „Probe“ mit Menge 1 und EP 10 erfassen.', loeschen: 'Die Position mit ✕ entfernen — sie ist sofort weg, ohne Rückfrage. Das LV selbst lässt sich hier nicht löschen.' },
+    probe: { anlegen: 'Ein LV „Test“ anlegen und eine Position „Probe“ mit Menge 1 und EP 10 erfassen.', loeschen: 'Die Position mit ✕ entfernen — nach einer Rückfrage ist sie weg. Das LV selbst lässt sich hier nicht löschen.' },
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Nachträge & Gewährleistung', href: '/dashboard/bau-lv/ablaeufe' }],
   },
   '/dashboard/bautagebuch': {

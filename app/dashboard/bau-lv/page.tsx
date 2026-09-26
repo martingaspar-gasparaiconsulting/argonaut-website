@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -137,8 +138,10 @@ export default function BauLvPage() {
     } finally { setBusy(false); }
   }
   async function posLoeschen(id: string) {
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
     if (!aktivLv) return;
-    const { error } = await supabase.from('bau_lv_positionen').delete().eq('id', id);
+    const { data: weg, error } = await supabase.from('bau_lv_positionen').delete().eq('id', id).select('id');
+    if (!error && nichtsGeschrieben(weg)) { setFehler(NICHT_GELOESCHT); return; }
     if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
     await ladePositionen(aktivLv.id); await summeAktualisieren(aktivLv.id);
   }
@@ -205,7 +208,7 @@ export default function BauLvPage() {
                     <EigeneFelderAnzeige felder={felder} werte={werteMap[lv.id]} />
                   </button>
                 ))}
-                {!lvs.length && <Leerzustand icon="📐" titel="Noch keine Leistungsverzeichnisse" text="Kalkuliere LVs mit Nachträgen und erzeuge daraus Rechnungen." schritte={["LV oben anlegen", "Positionen kalkulieren", "In Rechnung übernehmen"]} />}
+                {!lvs.length && <Leerzustand icon="📐" titel="Noch keine Leistungsverzeichnisse" text="Kalkulieren Sie LVs mit Nachträgen und erzeugen daraus Rechnungen." schritte={["LV oben anlegen", "Positionen kalkulieren", "In Rechnung übernehmen"]} />}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>

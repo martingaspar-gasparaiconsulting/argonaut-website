@@ -63,11 +63,11 @@ function formatDate(iso: string | null): string {
 type ScoreInfo = { label: string; color: string }
 function scoreInfo(score: number | null): ScoreInfo | null {
   switch (score) {
-    case 5: return { label: 'Prioritaet 5 - Heiss', color: '#22c55e' }
-    case 4: return { label: 'Prioritaet 4 - Hoch',  color: '#84cc16' }
-    case 3: return { label: 'Prioritaet 3 - Mittel', color: '#C9A84C' }
-    case 2: return { label: 'Prioritaet 2 - Niedrig', color: '#e08c3c' }
-    case 1: return { label: 'Prioritaet 1 - Gering', color: '#b5677a' }
+    case 5: return { label: 'Priorität 5 - Heiss', color: '#22c55e' }
+    case 4: return { label: 'Priorität 4 - Hoch',  color: '#84cc16' }
+    case 3: return { label: 'Priorität 3 - Mittel', color: '#C9A84C' }
+    case 2: return { label: 'Priorität 2 - Niedrig', color: '#e08c3c' }
+    case 1: return { label: 'Priorität 1 - Gering', color: '#b5677a' }
     default: return null
   }
 }
@@ -290,10 +290,10 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
 
                 {l.ki_zusammenfassung ? (
                   <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.18)', borderRadius: '10px' }}>
-                    <p style={{ margin: 0, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#00e5ff' }}>KI-Einschaetzung</p>
+                    <p style={{ margin: 0, fontSize: 'clamp(11px, 0.94vw, 15px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#00e5ff' }}>KI-Einschätzung</p>
                     <p style={{ margin: '6px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.78)', lineHeight: 1.5 }}>{l.ki_zusammenfassung}</p>
                     {l.ki_naechster_schritt ? (
-                      <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}><strong style={{ color: '#C9A84C' }}>Naechster Schritt:</strong> {l.ki_naechster_schritt}</p>
+                      <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}><strong style={{ color: '#C9A84C' }}>Nächster Schritt:</strong> {l.ki_naechster_schritt}</p>
                     ) : null}
                   </div>
                 ) : null}

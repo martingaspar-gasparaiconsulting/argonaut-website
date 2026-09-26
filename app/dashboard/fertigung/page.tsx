@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -107,7 +108,13 @@ export default function FertigungPage() {
     if (error) { setFehler('Komponente konnte nicht gespeichert werden.'); return; }
     setNp({ komponente: '', menge: '1', einheit: 'Stk' }); await ladePos(aktivSl.id);
   }
-  async function posLoeschen(id: string) { if (!aktivSl) return; await supabase.from('fertigung_stueckliste_positionen').delete().eq('id', id); await ladePos(aktivSl.id); }
+  async function posLoeschen(id: string) {
+    if (!aktivSl) return;
+    if (typeof window !== 'undefined' && !window.confirm('Wirklich löschen? Das lässt sich nicht rückgängig machen.')) return; // K1
+    const { data: weg, error } = await supabase.from('fertigung_stueckliste_positionen').delete().eq('id', id).select('id');
+    if (error || nichtsGeschrieben(weg)) { setFehler(error ? 'Löschen fehlgeschlagen: ' + error.message : NICHT_GELOESCHT); return; }
+    await ladePos(aktivSl.id);
+  }
 
   async function auftragAnlegen() {
     if (!besitzer || !na.produkt.trim()) { setFehler('Bitte ein Produkt angeben.'); return; }
