@@ -306,6 +306,13 @@ export default function ImportCenterPage() {
       const { data: nutzer } = await supabase.auth.getUser();
       const uid = nutzer?.user?.id;
       if (!uid) throw new Error('Nicht angemeldet.');
+      // B1b-2 (26.09.26): Importierte Kontakte gehoeren dem Betrieb (beim Mitarbeiter
+      // der Chef) — sonst sieht der Chef sie nicht. Andere Ziele bleiben wie bisher.
+      let neuOwner = uid;
+      if (ziel.tabelle === 'kontakte') {
+        const { data: chefId } = await supabase.rpc('mein_chef_id');
+        if (typeof chefId === 'string' && chefId) neuOwner = chefId;
+      }
 
       // Bereits vorhandene Schlüssel laden — damit nichts doppelt entsteht.
       const vorhanden = new Map<string, string>();
@@ -333,7 +340,7 @@ export default function ImportCenterPage() {
           else erg.uebersprungen++;
           return;
         }
-        neu.push({ ...satz, owner_user_id: uid });
+        neu.push({ ...satz, owner_user_id: neuOwner });
         neuZeile.push(dateiZeile);
       });
 

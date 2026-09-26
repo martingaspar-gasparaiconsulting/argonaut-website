@@ -173,6 +173,9 @@ export default function KontaktImportPage() {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); return; }
+      // B1b-2 (26.09.26): Kontakte gehoeren dem Betrieb (beim Mitarbeiter der Chef).
+      const { data: chefId } = await supabase.rpc('mein_chef_id');
+      const betrieb = typeof chefId === 'string' && chefId ? chefId : uid;
 
       // Lauf protokollieren, bevor geschrieben wird.
       const { data: lauf } = await supabase.from('import_laeufe').insert({
@@ -190,7 +193,7 @@ export default function KontaktImportPage() {
 
         for (const z of teil) {
           const nutzlast: Record<string, unknown> = {
-            owner_user_id: uid,
+            owner_user_id: betrieb,
             vorname: z.daten.vorname ?? null,
             nachname: z.daten.nachname ?? null,
             firma: z.daten.firmenname ?? null,

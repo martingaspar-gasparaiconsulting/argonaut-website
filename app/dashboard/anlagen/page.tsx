@@ -52,6 +52,7 @@ function dtag(iso: string | null) { if (!iso) return '—'; const p = iso.slice(
 
 export default function AnlagenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [anlagen, setAnlagen] = useState<Anlage[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -86,7 +87,10 @@ export default function AnlagenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
+      await laden_();
     })();
   }, [laden_]);
 
@@ -107,7 +111,7 @@ export default function AnlagenPage() {
     if (abgegangen && !form.abgang_am) { setFehler('Bitte das Abgangsdatum angeben (Tag des Verkaufs bzw. der Ausmusterung) — sonst stimmt die AfA nicht.'); return; }
     if (abgegangen && form.anschaffungsdatum && form.abgang_am < form.anschaffungsdatum) { setFehler('Das Abgangsdatum liegt vor dem Anschaffungsdatum.'); return; }
     const payload = {
-      owner_user_id: uid, bezeichnung: form.bezeichnung.trim(), kategorie: form.kategorie.trim() || null,
+      owner_user_id: besitzer ?? uid, bezeichnung: form.bezeichnung.trim(), kategorie: form.kategorie.trim() || null,
       anschaffungsdatum: form.anschaffungsdatum || null, anschaffungskosten: num(form.anschaffungskosten),
       nutzungsdauer_jahre: intv(form.nutzungsdauer_jahre) || 1, notiz: form.notiz.trim() || null,
       status: form.status, abgang_am: abgegangen ? form.abgang_am : null, updated_at: new Date().toISOString(),

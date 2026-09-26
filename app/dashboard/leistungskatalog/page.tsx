@@ -90,6 +90,7 @@ function num(s: string): number | null { return leseZahl(s); }
 
 export default function LeistungskatalogPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<KatalogRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -121,6 +122,8 @@ export default function LeistungskatalogPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
     })();
   }, []);
 
@@ -234,7 +237,7 @@ export default function LeistungskatalogPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         bezeichnung: form.bezeichnung.trim(),
         kuerzel: form.kuerzel.trim() || null,
         kategorie: form.kategorie.trim() || null,
@@ -368,7 +371,7 @@ export default function LeistungskatalogPage() {
       const preis = num(val(row, impMap.stundensatz));
       const menge = erkannt.art === 'stueck';
       neu.push({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         bezeichnung: bez,
         kategorie: val(row, impMap.kategorie) || null,
         erfassungsart: erkannt.art,

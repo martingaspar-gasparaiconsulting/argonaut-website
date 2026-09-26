@@ -69,6 +69,7 @@ const LEER_POS: Pos = { bezeichnung: '', netto: '' };
 
 export default function FoerderAngebotPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kontakte, setKontakte] = useState<{ id: string; name: string }[]>([]);
   const [liste, setListe] = useState<Angebot[]>([]);
   const [laden, setLaden] = useState(true);
@@ -103,6 +104,8 @@ export default function FoerderAngebotPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
       const { data: kd } = await supabase.from('kontakte').select('id, anzeigename, vorname, nachname, name, email').order('anzeigename', { ascending: true });
       setKontakte(((kd as Record<string, string>[]) ?? []).map((k) => ({
         id: k.id,
@@ -131,7 +134,7 @@ export default function FoerderAngebotPage() {
       const posClean = positionen.filter((p) => p.bezeichnung.trim() || num(p.netto) > 0)
         .map((p) => ({ bezeichnung: p.bezeichnung.trim(), netto: num(p.netto) }));
       const { data, error } = await supabase.from('foerder_angebote')
-        .insert({ owner_user_id: uid, kunde_name: kunde.trim(), titel: titel.trim() || 'Förder-Angebot', positionen: posClean, netto_summe: netto, foerderquote: quote, notiz: notiz.trim() || null, leistungsbeschreibung: beschreibung.trim() || null })
+        .insert({ owner_user_id: besitzer ?? uid, kunde_name: kunde.trim(), titel: titel.trim() || 'Förder-Angebot', positionen: posClean, netto_summe: netto, foerderquote: quote, notiz: notiz.trim() || null, leistungsbeschreibung: beschreibung.trim() || null })
         .select('id, kunde_name, titel, positionen, netto_summe, foerderquote, notiz').single();
       if (error) { setFehler('Speichern fehlgeschlagen.'); return; }
       try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch {}

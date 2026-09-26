@@ -98,6 +98,7 @@ function dauer(minuten: number): string {
 
 export default function KalkulatorPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [gewerk, setGewerk] = useState<string>('');
   const [k, setK] = useState<Kalkulation | null>(null);
   const [name, setName] = useState('');
@@ -164,6 +165,9 @@ export default function KalkulatorPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       setUid(data?.user?.id ?? null);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      // Die Kalkulations-Normen (Stundensaetze je Gewerk) sind Einstellungen und bleiben beim Chef (B1b-1).
+      { const id = data?.user?.id ?? null; const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
       await laden();
       await zuschnittLaden();
     })();
@@ -272,7 +276,7 @@ export default function KalkulatorPage() {
     setBusy('speichern'); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('kalkulationen').insert({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         name: name.trim() || 'Kalkulation',
         gewerk: gewerk || null,
         menge: k.menge, einheit: k.einheit,
@@ -337,7 +341,7 @@ export default function KalkulatorPage() {
     setBusy('katalog'); setFehler(null); setOk(null);
     try {
       const eintrag = alsKatalogEintrag({ ...q, kategorie: gewerk ? (gewerkDef(gewerk)?.label ?? 'Kalkuliert') : 'Kalkuliert' });
-      const { error } = await supabase.from('leistungskatalog').insert({ owner_user_id: uid, ...eintrag });
+      const { error } = await supabase.from('leistungskatalog').insert({ owner_user_id: besitzer ?? uid, ...eintrag });
       if (error) throw error;
       setOk(`„${eintrag.bezeichnung}" liegt jetzt im Leistungskatalog — ${euro(q.preisJeEinheit)} je ${eintrag.einheit}.`);
     } catch (err: unknown) {
@@ -359,7 +363,7 @@ export default function KalkulatorPage() {
         // Neues Angebot mit genau dieser einen Position.
         const summen = angebotsSummen([pos]);
         const { data: neu, error } = await supabase.from('angebote').insert({
-          owner_user_id: uid,
+          owner_user_id: besitzer ?? uid,
           standort_id: konkreterStandort(leseStandortCookie()),
           kunde_name: kundeName.trim() || 'Kunde',
           titel: q.name,
@@ -370,7 +374,7 @@ export default function KalkulatorPage() {
 
         const angebotId = (neu as { id: string }).id;
         const { error: posFehler } = await supabase.from('angebot_positionen').insert({
-          owner_user_id: uid, angebot_id: angebotId, position: 1, ...pos,
+          owner_user_id: besitzer ?? uid, angebot_id: angebotId, position: 1, ...pos,
         });
         if (posFehler) {
           // Kein halbfertiges Angebot stehen lassen.
@@ -388,7 +392,7 @@ export default function KalkulatorPage() {
         const naechste = bestehende.reduce((max, p) => Math.max(max, Number(p.position) || 0), 0) + 1;
 
         const { error: posFehler } = await supabase.from('angebot_positionen').insert({
-          owner_user_id: uid, angebot_id: zielAngebot, position: naechste, ...pos,
+          owner_user_id: besitzer ?? uid, angebot_id: zielAngebot, position: naechste, ...pos,
         });
         if (posFehler) throw posFehler;
 

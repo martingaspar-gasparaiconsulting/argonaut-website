@@ -41,6 +41,7 @@ const LEER = { datum: heute(), beschreibung: '', stunden: '', stundensatz: '', k
 
 export default function ProjektAbrechnungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [projekte, setProjekte] = useState<Projekt[]>([]);
   const [projektId, setProjektId] = useState('');
   const [liste, setListe] = useState<Leistung[]>([]);
@@ -57,6 +58,8 @@ export default function ProjektAbrechnungPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
       // Standard-Stundensatz laden und vorbelegen (M1) — nicht-brechend, prefill nur.
       const { data: prof } = await supabase.from('profiles').select('standard_stundensatz').eq('id', id).maybeSingle();
       const stdSatz = prof?.standard_stundensatz;
@@ -89,7 +92,7 @@ export default function ProjektAbrechnungPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('projektleistungen').insert({
-        owner_user_id: uid, projekt_id: projektId, kunde_name: form.kunde_name.trim() || null,
+        owner_user_id: besitzer ?? uid, projekt_id: projektId, kunde_name: form.kunde_name.trim() || null,
         datum: form.datum || heute(), beschreibung: form.beschreibung.trim(),
         stunden: num(form.stunden), stundensatz: num(form.stundensatz), mwst_satz: 19,
       });

@@ -72,6 +72,7 @@ function rechne(pos: Pos[]) {
 
 export default function AngebotePage() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [liste, setListe] = useState<Angebot[]>([]);
   const [laden, setLaden] = useState(true);
@@ -105,6 +106,8 @@ export default function AngebotePage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      // B1b-2 (26.09.26): owner_user_id ist der Betrieb (beim Mitarbeiter der Chef).
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
       const { data: kd } = await supabase.from('kontakte').select('id, anzeigename, vorname, nachname, name, email').order('anzeigename', { ascending: true });
       setKontakte(((kd as Record<string, string>[]) ?? []).map((k) => ({
         id: k.id, email: k.email || '',
@@ -143,14 +146,14 @@ export default function AngebotePage() {
       const gewaehlt = kontakte.find((k) => k.id === kontaktId) || kontakte.find((k) => k.name === kunde.trim());
       const s = rechne(posClean);
       const { data: ang, error } = await supabase.from('angebote').insert({
-        owner_user_id: uid, standort_id: konkreterStandort(leseStandortCookie()), kontakt_id: gewaehlt?.id ?? null, kunde_name: kunde.trim(), kunde_email: gewaehlt?.email || null,
+        owner_user_id: besitzer ?? uid, standort_id: konkreterStandort(leseStandortCookie()), kontakt_id: gewaehlt?.id ?? null, kunde_name: kunde.trim(), kunde_email: gewaehlt?.email || null,
         titel: titel.trim() || 'Angebot', status: 'entwurf', gueltig_bis: gueltig || null,
         netto_summe: s.netto, mwst_summe: s.mwst, brutto_summe: s.brutto, notiz: notiz.trim() || null,
       }).select('id, token').single();
       if (error || !ang) { setFehler('Angebot konnte nicht gespeichert werden.'); return; }
 
       const posRows = posClean.map((p, i) => ({
-        owner_user_id: uid, angebot_id: ang.id, position: i + 1,
+        owner_user_id: besitzer ?? uid, angebot_id: ang.id, position: i + 1,
         bezeichnung: p.bezeichnung.trim() || '(ohne Bezeichnung)', menge: num(p.menge), einheit: p.einheit.trim() || 'Stk',
         einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz), gesamt_netto: Math.round(num(p.menge) * num(p.einzelpreis) * 100) / 100,
       }));

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { ladeBetriebProfil } from '@/lib/betriebProfil';
 import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
 
 export const runtime = 'nodejs';
@@ -47,8 +48,8 @@ export async function GET(req: NextRequest) {
     const positionen = (posRaw || []) as Pos[];
     const rabattBetrag = Number((a as Record<string, unknown>).rabatt_betrag) || 0;
 
-    const { data: pRaw } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    const p = (pRaw || {}) as Record<string, unknown>;
+    // B1b-2 (26.09.26): Firmendaten vom Betrieb, nicht von der angemeldeten Person.
+    const p = await ladeBetriebProfil(supabase, user.id);
     const firma = pick(p, ['firma_name', 'full_name']) || 'Ihr Betrieb';
     const strasse = pick(p, ['strasse', 'adresse', 'anschrift', 'street']);
     const plzOrt = [pick(p, ['plz', 'postleitzahl', 'zip']), pick(p, ['ort', 'stadt', 'city'])].filter(Boolean).join(' ');
