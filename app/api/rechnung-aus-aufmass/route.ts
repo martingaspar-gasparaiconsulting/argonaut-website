@@ -6,6 +6,7 @@ import {
   type PositionBasis,
 } from "@/app/dashboard/_components/aufmassLogik";
 import { cent } from "@/app/dashboard/_components/steuerLogik";
+import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
+    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
+    const nurChef = await rechnungsRechtFehlt(supabase);
+    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
 
     // ---------- 1) Aufmaß laden (RLS schützt auf owner) ----------
     const { data: aufmass, error: aErr } = await supabase

@@ -25,6 +25,7 @@ import { parseUmsaetze, erkenneFormat, FORMAT_NAMEN } from '@/lib/bankFormate';
 import KiAuge from '../_components/KiAuge';
 import { augeBanking } from '@/lib/auge';
 import { zaehleBanking } from '@/lib/augeZaehler';
+import { istMitarbeiterKennung, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -114,6 +115,9 @@ export default function BankingSeite() {
       // Der Datenbank-Trigger setzt daraus „teilbezahlt" bzw. „bezahlt".
       const { data: u } = await supabase.auth.getUser();
       if (!u?.user) throw new Error('Nicht angemeldet.');
+      // B1b-2 (26.09.26): Zahlungen erfasst nur die Geschaeftsleitung.
+      const { data: chefId } = await supabase.rpc('mein_chef_id');
+      if (istMitarbeiterKennung(chefId)) throw new Error(ZAHLUNG_NUR_CHEF);
       const heuteIso = new Date().toISOString().slice(0, 10);
       const { error } = await supabase.from('zahlungen').insert({
         owner_user_id: u.user.id, rechnung_id: m.rechnungId,

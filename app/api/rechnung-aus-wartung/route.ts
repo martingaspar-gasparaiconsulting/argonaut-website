@@ -3,6 +3,7 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { wartungPositionen, darfAbrechnen } from "@/lib/wiederkehr";
+import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,9 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
+    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
+    const nurChef = await rechnungsRechtFehlt(supabase);
+    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
 
     // RLS entscheidet, ob der Nutzer diesen Vertrag sehen darf (Chef/Mitarbeiter).
     const { data: v, error: vErr } = await supabase

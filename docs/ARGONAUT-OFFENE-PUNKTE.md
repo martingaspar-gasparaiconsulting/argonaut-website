@@ -3,7 +3,7 @@
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
 
-**Stand: 49 von 50 erledigt** (B1c mit _p119 + SQL b1c; G9–G14 mit _p118 + SQL g-paket-g9-g14; G6–G8 live mit _p117, G3–G5 mit _p116; B1b Gruppe 4, G1–G2, K1–K5, F1–F22 live; A1 und A2 zählen nicht mit)
+**Stand: 50 von 50 erledigt** (B1b-2 mit _p120/_p121 + SQL b1b2; B1c mit _p119; G9–G14 mit _p118; G6–G8 mit _p117, G3–G5 mit _p116; B1b Gruppe 4, G1–G2, K1–K5, F1–F22 live; A1 und A2 zählen nicht mit). Als Nächstes: Abschnitt 6 — drei Test-Checklisten.
 
 ## 1. Assistent fertigbauen — Claude baut allein
 
@@ -23,7 +23,7 @@ Reihenfolge von Martin freigegeben am 25.09.2026.
 | B1b | Besitzer-Fehler Teil B, Gruppe 3 Arbeitsseiten (Aufmaß, Nachweise, Objektzeiten, Service-Verlauf, Hotelzimmer, Immobilien-Einheiten und Mietverträge, Wartungsverträge): SQL-Regel + Code | ✅ gebaut (_p110 + SQL) |
 | B1b-1 | Gruppe 1 Zugänge und Einstellungen — bleiben beim Chef (Empfehlung) | ✅ entschieden 26.09.: Zugänge und Einstellungen bleiben beim Chef |
 | B1b-4 | Gruppe 4 (Befund K5): Aufgaben, Kommentare, Auftragspositionen, Kontakt-Tags und -Aktivitäten, Projekt-Beteiligte/-Teams/-Vorlagen, Verkaufschancen, Objekte, Ressourcen, Korrespondenz, Post, Text-Werkstatt | ✅ live (_p115 + SQL b1b-gruppe4) |
-| B1b-2 | Gruppe 2 Geld (Rechnung aus …, Angebote, Zahlungen, Kalkulator, Projektabrechnung, Förder-Angebot) — kommt zu G | ⬜ Vorschlag Fehler + Lösung am 26.09. vorgelegt, wartet auf Martins „so“ |
+| B1b-2 | Gruppe 2 Geld (Rechnung aus …, Angebote, Zahlungen, Kalkulator, Projektabrechnung, Förder-Angebot) — kommt zu G | ✅ gebaut (_p120 + _p121 + SQL b1b2, Martins „so“ 26.09.) — Angebote, Kalkulator, Projektabrechnung, Förder-Angebot, Leistungskatalog, Anlagen und Kontakte gehören dem Betrieb; PDFs mit Firmendaten des Betriebs; Rechnungen und Zahlungen erstellt nur die Geschäftsleitung (17 Wege + Zahlungen/Banking) |
 | B1c | Eigene Felder auf den übrigen Seiten (Werkstatt, Service …) ebenfalls dem Betrieb zuordnen | ✅ gebaut (_p119 + SQL b1c) — zentral in EigeneFelder: Felder und Werte immer mit Betriebs-Kennung; alte Mitarbeiter-Einträge umgehängt |
 
 ## 3. Geld und Abläufe — nur gemeinsam

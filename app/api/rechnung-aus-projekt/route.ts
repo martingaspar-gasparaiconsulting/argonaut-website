@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
+import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
+    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
+    const nurChef = await rechnungsRechtFehlt(supabase);
+    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
 
     // 1) Offene Leistungen des Projekts (RLS: nur eigene)
     const { data: posRaw, error: pErr } = await supabase
