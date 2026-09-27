@@ -51,6 +51,7 @@ import {
   planeRueckgaengig, bestandSchluessel, type ArtikelRoh, type StandortRoh, type BestandRoh, type BestandBuchung,
 } from '@/lib/importBestand';
 import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
+import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRechte';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -303,6 +304,8 @@ export default function ImportCenterPage() {
   const [ich, setIch] = useState<string | null>(null);
   /** Schritt 3 Teil 2: angemeldet als Mitarbeiter (nicht Chef)? Dann keine „nur Chef"-Ziele. */
   const [binMitarbeiter, setBinMitarbeiter] = useState(false);
+  /** Paket 137: Bereiche und „darf ändern" des angemeldeten Mitarbeiters (null = noch nicht geladen). */
+  const [rechtStand, setRechtStand] = useState<RechtStand | null>(null);
   const [namen, setNamen] = useState<Record<string, string>>({});
 
   // --- Schritt 2: Feldkatalog aus der Datenbank, Altsysteme -----------------
@@ -443,6 +446,24 @@ export default function ImportCenterPage() {
         const { data: chef } = await supabase.rpc('mein_chef_id');
         setBinMitarbeiter(typeof chef === 'string' && !!chef && chef !== data?.user?.id);
       } catch { /* dann eben wie Chef — die Datenbank-Regeln schuetzen trotzdem */ }
+      // Paket 137: Rechte wie im Menue — keine eigene mitarbeiter-Zeile = Chef.
+      try {
+        const uid = data?.user?.id;
+        const { data: meine } = uid
+          ? await supabase.from('mitarbeiter').select('id').eq('auth_user_id', uid).maybeSingle()
+          : { data: null };
+        const maId = (meine as { id?: string } | null)?.id;
+        if (!maId) setRechtStand({ chef: true, module: [], schreibModule: null });
+        else {
+          const r1 = await supabase.from('mitarbeiter_rechte').select('module, schreib_module').eq('mitarbeiter_id', maId).maybeSingle();
+          if (!r1.error) setRechtStand(leseRechtStand(r1.data, true));
+          else {
+            // Ohne Spalte schreib_module (altes Datenbank-Update): Bereich allein, wie bisher.
+            const r2 = await supabase.from('mitarbeiter_rechte').select('module').eq('mitarbeiter_id', maId).maybeSingle();
+            setRechtStand(leseRechtStand(r2.data, false));
+          }
+        }
+      } catch { setRechtStand({ chef: false, module: [], schreibModule: [] }); }
       const { data: ma } = await supabase.from('mitarbeiter').select('auth_user_id, vorname, nachname');
       const n: Record<string, string> = {};
       for (const m of ((ma ?? []) as { auth_user_id: string | null; vorname: string | null; nachname: string | null }[])) {
@@ -533,6 +554,8 @@ export default function ImportCenterPage() {
   // gespeichert). Offene Posten (Rechnungen) sind ausgenommen — Geld-Daten
   // werden nicht per Knopf geloescht.
   async function rueckgaengig(j: Job) {
+    const recht = importErlaubt(j.ziel, rechtStand);
+    if (!recht.ok) { setFehler(recht.grund); return; }
     const z = zielDef(j.ziel);
     const ids = (j.angelegte_ids ?? []).filter(Boolean);
     if (!z || ids.length === 0 || z.tabelle === 'rechnungen') return;
@@ -587,6 +610,9 @@ export default function ImportCenterPage() {
   }
 
   function zielWaehlen(key: string) {
+    // Paket 137: nur mit Freigabe fuer diesen Bereich.
+    const recht = importErlaubt(key, rechtStand);
+    if (!recht.ok) { setFehler(recht.grund); return; }
     // Paket 128: Ziele, die das Datenbank-Update brauchen, nicht halb oeffnen.
     const z = zielDef(key);
     if (z?.nurMitKatalog && dbSpalten !== null && !dbSpalten.some((c) => c.tabelle === z.tabelle)) {
@@ -1221,6 +1247,8 @@ export default function ImportCenterPage() {
    * bleibt der heutige Stand (sonst wuerde eine echte Buchung ueberschrieben).
    */
   async function rueckgaengigBestand(j: Job) {
+    const recht = importErlaubt(j.ziel, rechtStand);
+    if (!recht.ok) { setFehler(recht.grund); return; }
     setBusy('rueck'); setFehler(null); setHinweis(null);
     try {
       const { data, error } = await supabase.from('import_jobs').select('rueck_daten').eq('id', j.id).single();
@@ -1259,6 +1287,9 @@ export default function ImportCenterPage() {
 
   async function importieren() {
     if (!datei || !ziel || !bericht || bericht.gut === 0) return;
+    // Paket 137: Freigabe pruefen — auch wenn das Ziel per Link (?ziel=) vorgewaehlt war.
+    const recht = importErlaubt(ziel.key, rechtStand);
+    if (!recht.ok) { setFehler(recht.grund); return; }
     // Paket 127: Bestellungen mit Positionen gehen einen eigenen Weg (Kopf + Positionen).
     if (ziel.kinder) { await importiereMitPositionen(); return; }
     // Paket 136: Zaehlstaende je Filiale — Korrektur statt Anlegen.
@@ -1835,7 +1866,9 @@ export default function ImportCenterPage() {
               // Schritt 3: neue Ziele erst, wenn die Datenbank sie kennt (SQL p125).
               const mitKatalog = (!z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle))
                 && (!z.kinder || !!dbSpalten?.some((c) => c.tabelle === z.kinder!.tabelle));
-              const bereit = mitKatalog && !(z.nurChef && binMitarbeiter);
+              const bereitKatalog = mitKatalog && !(z.nurChef && binMitarbeiter);
+              const recht = importErlaubt(z.key, rechtStand);
+              const bereit = bereitKatalog && recht.ok;
               return (
                 <button
                   key={z.key} type="button" onClick={() => bereit && zielWaehlen(z.key)} disabled={!bereit}
@@ -1851,6 +1884,7 @@ export default function ImportCenterPage() {
                   <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
                   {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update der Import-Pakete (zuletzt „p128-import-karten1“).</div>}
                   {mitKatalog && z.nurChef && binMitarbeiter && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Diese Daten importiert nur die Geschäftsleitung.</div>}
+                  {bereitKatalog && !recht.ok && rechtStand && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>{recht.grund}</div>}
                 </button>
               );
             })}
