@@ -77,6 +77,7 @@
 // ============================================================================
 
 import { leseZahl as leseZahlGemeinsam, leseZahlMitTrenner, centRunden } from './zahlen';
+import { FOERDER_PROGRAMME } from '../app/dashboard/foerdermittel/programme';
 import { datumPlusMonate } from './wiederkehr';
 
 // ---------------------------------------------------------------------------
@@ -2208,6 +2209,38 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
     ],
   },
+  // Paket 139: GEMEINSAM freigegeben 27.09.2026 — Foerdervorhaben, nur Chef.
+  {
+    key: 'foerdervorhaben',
+    label: 'Fördervorhaben',
+    icon: '💰',
+    tabelle: 'foerder_vorhaben',
+    beschreibung: 'Beantragte und bewilligte Förderprogramme mit Fristen, Beträgen und Stand des Verwendungsnachweises. '
+      + 'Programme aus dem ARGONAUT-Katalog werden erkannt, andere als eigenes Vorhaben übernommen. Nur die Geschäftsleitung.',
+    schluesselFelder: ['programm_key'],
+    eigeneFelderModul: 'foerdermittel',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/foerdermittel',
+    listen: [
+      { feld: 'status', label: 'Status', standard: 'interessiert', textFeld: 'notiz', liste: liste(['interessiert', 'beantragt', 'bewilligt', 'abgelehnt', 'abgeschlossen'], { geplant: 'interessiert', idee: 'interessiert', vorgemerkt: 'interessiert', gestellt: 'beantragt', eingereicht: 'beantragt', 'in pruefung': 'beantragt', antrag: 'beantragt', zugesagt: 'bewilligt', genehmigt: 'bewilligt', zuwendungsbescheid: 'bewilligt', laufend: 'bewilligt', abgelehnt: 'abgelehnt', ablehnung: 'abgelehnt', erledigt: 'abgeschlossen', beendet: 'abgeschlossen', ausgezahlt: 'abgeschlossen' }) },
+      { feld: 'nachweis_status', label: 'Nachweis', standard: 'offen', textFeld: 'notiz', liste: liste(['offen', 'eingereicht', 'anerkannt'], { ausstehend: 'offen', fehlt: 'offen', abgegeben: 'eingereicht', versendet: 'eingereicht', geprueft: 'anerkannt', akzeptiert: 'anerkannt', erledigt: 'anerkannt' }) },
+    ],
+    felder: [
+      { key: 'programm_name', label: 'Programm', typ: 'text', pflicht: true, alias: ['programm', 'programmname', 'foerderprogramm', 'förderprogramm', 'foerderung', 'förderung', 'vorhaben', 'massnahme', 'maßnahme'] },
+      { key: 'programm_key', label: 'Programm-Schlüssel (ARGONAUT)', typ: 'text', nurExakt: true, nichtInVorlage: true, alias: ['programm_key'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'interessiert', hinweis: 'interessiert · beantragt · bewilligt · abgelehnt · abgeschlossen', alias: ['status', 'stand', 'antragsstatus'] },
+      { key: 'frist', label: 'Frist', typ: 'datum', alias: ['frist', 'antragsfrist', 'einreichfrist', 'deadline'] },
+      { key: 'bewilligt_betrag', label: 'Bewilligt (€)', typ: 'zahl', alias: ['bewilligt', 'bewilligt betrag', 'bewilligter betrag', 'zuschuss', 'foerdersumme', 'fördersumme', 'zuwendung'] },
+      { key: 'verwendet_betrag', label: 'Verwendet (€)', typ: 'zahl', alias: ['verwendet', 'verwendet betrag', 'abgerufen', 'ausgegeben', 'verbraucht'] },
+      { key: 'bewilligung_von', label: 'Bewilligung von', typ: 'datum', alias: ['bewilligung von', 'bewilligungszeitraum von', 'laufzeit von', 'beginn'] },
+      { key: 'bewilligung_bis', label: 'Bewilligung bis', typ: 'datum', alias: ['bewilligung bis', 'bewilligungszeitraum bis', 'laufzeit bis', 'ende'] },
+      { key: 'nachweis_frist', label: 'Nachweis-Frist', typ: 'datum', alias: ['nachweis frist', 'nachweisfrist', 'verwendungsnachweis bis', 'vn frist'] },
+      { key: 'nachweis_status', label: 'Nachweis', typ: 'text', standard: 'offen', hinweis: 'offen · eingereicht · anerkannt', alias: ['nachweis', 'nachweis status', 'verwendungsnachweis'] },
+      { key: 'sachbericht', label: 'Sachbericht', typ: 'text', alias: ['sachbericht', 'bericht'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar', 'aktenzeichen', 'foerderkennzeichen', 'förderkennzeichen'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2577,6 +2610,19 @@ Object.assign(BEISPIELE, {
     gueltig_bis: '31.12.2028|31.12.2029|31.12.2029',
     status: 'aktiv|aktiv|aktiv',
     notiz: '||',
+  },
+  foerdervorhaben: {
+    programm_name: 'Energieberatung im Mittelstand (EBM)|Landes-Digitalbonus / Digitalisierungsprämie|Innovationsgutschein Musterland',
+    status: 'bewilligt|beantragt|interessiert',
+    frist: '|30.11.2026|31.03.2027',
+    bewilligt_betrag: '6.000,00||',
+    verwendet_betrag: '2.400,00||',
+    bewilligung_von: '01.03.2026||',
+    bewilligung_bis: '28.02.2027||',
+    nachweis_frist: '31.05.2027||',
+    nachweis_status: 'offen||',
+    sachbericht: '||',
+    notiz: 'Förderkennzeichen 123-ABC||',
   },
   bestand_filiale: {
     artikelnummer: 'L-1001|L-1001|L-1002',
@@ -3019,6 +3065,8 @@ function nachbereiten(
   if (zielKey === 'nutzungsrechte') nutzungNachbereiten(werte, nummer, warnungen);
   // Paket 138
   if (zielKey === 'gutscheine') gutscheinNachbereiten(werte, nummer, warnungen);
+  // Paket 139
+  if (zielKey === 'foerdervorhaben') foerderNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3440,6 +3488,66 @@ function gutscheinNachbereiten(werte: Record<string, unknown>, nummer: number, w
   }
   if (typeof werte.gueltig_bis === 'string' && typeof werte.ausgestellt_am === 'string' && werte.gueltig_bis < werte.ausgestellt_am) {
     warnungen.push({ zeile: nummer, feld: 'Gültig bis', meldung: 'Gültig bis liegt vor dem Ausstellungsdatum — bitte prüfen.' });
+  }
+}
+
+/**
+ * Paket 139: Ein Foerderprogramm aus der Datei dem ARGONAUT-Katalog zuordnen
+ * (genauer Name, Schluessel, Kuerzel in Klammern wie „EBM", oder eindeutiger
+ * Teil des Namens ab 8 Zeichen). Mehrdeutig oder unbekannt -> null.
+ */
+export function foerderProgrammFinden(eingabe: unknown): { key: string; name: string } | null {
+  const n = normal(String(eingabe ?? ''));
+  if (!n) return null;
+  const alle = FOERDER_PROGRAMME.map((p) => ({ key: p.key, name: p.name, traeger: p.traeger }));
+  const genau = alle.filter((p) => normal(p.name) === n || normal(p.key) === n);
+  if (genau.length === 1) return { key: genau[0].key, name: genau[0].name };
+  const kuerzel = alle.filter((p) => [...p.name.matchAll(/\(([^)]+)\)/g)].some((m) => normal(m[1]) === n));
+  if (kuerzel.length === 1) return { key: kuerzel[0].key, name: kuerzel[0].name };
+  const raus = (p: { key: string; name: string }) => ({ key: p.key, name: p.name });
+  if (n.length >= 8) {
+    const teil = alle.filter((p) => normal(p.name).includes(n));
+    if (teil.length === 1) return raus(teil[0]);
+  }
+  // Alle Woerter der Eingabe (ab 3 Zeichen) stehen in Name + Traeger — und nur bei EINEM Programm.
+  const woerter = n.split(' ').filter((w) => w.length >= 3);
+  if (woerter.length >= 2) {
+    const passt = alle.filter((p) => {
+      const heu = new Set(normal(`${p.name} ${p.traeger}`).split(' '));
+      return woerter.every((w) => heu.has(w));
+    });
+    if (passt.length === 1) return raus(passt[0]);
+  }
+  return null;
+}
+
+/** Paket 139: eigener Schluessel fuer ein Programm, das der Katalog nicht kennt. */
+export function foerderEigenerKey(name: string): string {
+  return 'import-' + normal(name).replace(/\s+/g, '-').slice(0, 60);
+}
+
+/**
+ * Paket 139: Foerdervorhaben (GEMEINSAM freigegeben 27.09.2026, nur Chef).
+ * Programm -> Katalog-Schluessel, sonst eigener Schluessel „import-…" mit
+ * Hinweis; der Name aus der Datei bleibt immer stehen.
+ */
+function foerderNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const name = String(werte.programm_name ?? '').trim();
+  if (!werte.programm_key && name) {
+    const t = foerderProgrammFinden(name);
+    if (t) werte.programm_key = t.key;
+    else {
+      werte.programm_key = foerderEigenerKey(name);
+      warnungen.push({ zeile: nummer, feld: 'Programm', meldung: `„${name}" steht nicht im ARGONAUT-Förderkatalog — als eigenes Vorhaben übernommen.` });
+    }
+  }
+  const zahl = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const bew = zahl(werte.bewilligt_betrag); const verw = zahl(werte.verwendet_betrag);
+  if (bew !== null && verw !== null && verw > bew + 0.005) {
+    warnungen.push({ zeile: nummer, feld: 'Verwendet', meldung: 'Verwendet ist höher als bewilligt — bitte prüfen (Rückforderung?).' });
+  }
+  if (typeof werte.bewilligung_von === 'string' && typeof werte.bewilligung_bis === 'string' && werte.bewilligung_bis < werte.bewilligung_von) {
+    warnungen.push({ zeile: nummer, feld: 'Bewilligung bis', meldung: 'Bewilligungszeitraum endet vor dem Beginn — bitte prüfen.' });
   }
 }
 

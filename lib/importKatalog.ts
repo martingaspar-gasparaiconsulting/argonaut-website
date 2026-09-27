@@ -126,7 +126,7 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
 
   // --- Finanzen & Förderung -------------------------------------------------
   { key: 'rechnungen', label: 'Offene Rechnungen (Altsystem)', icon: '🧾', beschreibung: 'Bestehende Rechnungen mit Zahlungsstand aus dem alten System übernehmen.', musterZiel: 'rechnungen', zielHref: '/dashboard/rechnungen', motor: 'rechnungen', gruppe: 'finanzen' },
-  { key: 'foerdervorhaben', label: 'Fördervorhaben', icon: '💰', beschreibung: 'Fördervorhaben mit Nachweis-Fristen.', vorlage: V + 'foerdervorhaben-import-vorlage.csv', zielHref: '/dashboard/foerdermittel', gruppe: 'finanzen' },
+  { key: 'foerdervorhaben', label: 'Fördervorhaben', icon: '💰', beschreibung: 'Beantragte und bewilligte Förderungen mit Fristen und Verwendungsnachweis (nur Geschäftsleitung).', musterZiel: 'foerdervorhaben', zielHref: '/dashboard/foerdermittel', motor: 'foerdervorhaben', gruppe: 'finanzen' },
   { key: 'kassen', label: 'Kassen & TSE', icon: '🧮', beschreibung: 'Kassen und TSE je Betriebsstätte für die Mitteilung ans Finanzamt.', musterZiel: 'kassen', zielHref: '/dashboard/kasse/meldung', motor: 'kassen', gruppe: 'finanzen' },
   { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial).', vorlage: V + 'spenden-import-vorlage.csv', zielHref: '/dashboard/spenden', gruppe: 'finanzen' },
 ];
