@@ -475,21 +475,41 @@ export default function PreislisteCockpit() {
             Preise direkt in der Zelle anklicken und ändern.
           </p>
         </div>
-        <a
-          href="/dashboard/erp/preisliste/import"
-          style={{
-            padding: "11px 20px",
-            borderRadius: 8,
-            background: C.gold,
-            color: C.navy,
-            fontWeight: 700,
-            fontSize: 'clamp(14px, 1.25vw, 20px)',
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
-          🪄 KI-Import
-        </a>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {/* Umzug Schritt 2: Dateien laufen durch den EINEN Import-Motor; der KI-Import bleibt fuer Rohtext. */}
+          <a
+            href="/dashboard/import?ziel=artikel"
+            title="CSV, Excel oder Großhändler-Liste einlesen — mit Eigenen Feldern und Spalten-Bilanz"
+            style={{
+              padding: "11px 20px",
+              borderRadius: 8,
+              background: "transparent",
+              border: `1px solid ${C.gold}`,
+              color: C.gold,
+              fontWeight: 700,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            📥 Datei importieren
+          </a>
+          <a
+            href="/dashboard/erp/preisliste/import"
+            style={{
+              padding: "11px 20px",
+              borderRadius: 8,
+              background: C.gold,
+              color: C.navy,
+              fontWeight: 700,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🪄 KI-Import
+          </a>
+        </div>
       </div>
 
       {/* KPIs */}

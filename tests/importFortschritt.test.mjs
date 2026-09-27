@@ -130,6 +130,8 @@ test('Datei-Weg: CSV im Browser, Excel am Server bis 4 MB', () => {
   assert.equal(dateiWeg('KUNDEN.TXT', 1000).weg, 'browser');
   assert.equal(dateiWeg('kunden.csv', 300 * 1024 * 1024).weg, 'zu_gross');
   assert.equal(dateiWeg('artikel.xlsx', 2 * 1024 * 1024).weg, 'server');
+  // Schritt 2: altes .xls liest der Browser selbst (lib/xlsLeser), auch ueber 4 MB.
+  assert.equal(dateiWeg('opos.xls', 6 * 1024 * 1024).weg, 'browser');
   const x = dateiWeg('artikel.xlsx', 6 * 1024 * 1024);
   assert.equal(x.weg, 'zu_gross');
   assert.match(x.hinweis, /CSV/);
@@ -170,7 +172,8 @@ test('Import-Seite benutzt Pakete, seitenweisen Abgleich und Browser-Lesen', () 
   assert.ok(!s.includes('.limit(20000)'), 'kein Abgleich mehr mit stiller 1.000er-Kappung');
   assert.ok(/\.range\(von, von \+ LESE_SEITE - 1\)/.test(s), 'Abgleich seitenweise');
   assert.equal(LESE_SEITE, 1000);
-  assert.ok(s.includes('ladeImBrowser(') && s.includes('leseCsv(dekodiere('), 'CSV im Browser lesen');
+  // Schritt 2: dekodiert wird einmal, dann DATEV-Pruefung, dann leseCsv.
+  assert.ok(s.includes('ladeImBrowser(') && s.includes('dekodiere(bytes)') && s.includes('leseCsv(text)'), 'CSV im Browser lesen');
   assert.ok(s.includes('xhr.upload.onprogress'), 'Excel-Upload mit Fortschritt');
   assert.ok(s.includes("status: 'laeuft'"), 'Protokoll vor dem ersten Paket');
   assert.equal((s.match(/await fortschreiben\('laeuft'\)/g) ?? []).length, 2, 'Protokoll nach jedem Paket (Anlegen und Aendern)');

@@ -24,10 +24,21 @@ import { BRANCHEN_PAKETE, KERN_MODULE, paketModule } from '@/lib/pakete';
 import { MODUL_PFAD } from '@/lib/rechte';
 import { csvZeile } from '@/lib/csvSchreiben';
 import {
-  ZIELE, zielDef, errateMapping, fehlendePflichtfelder, pruefeAlles,
+  ZIELE, zielDef, fehlendePflichtfelder, pruefeAlles,
   baueMustervorlage, passtZuordnung, leseCsv,
   type Mapping, type PruefBericht, type ZeilenFehler,
 } from '@/lib/importParser';
+import {
+  EIGEN, NICHT, MOTOR_TABELLEN, GRUND, eindeutigeKoepfe, katalogFuerZiel, vorschlagMapping, bereinigeMapping,
+  spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
+  findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
+  type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
+} from '@/lib/importMotor';
+import {
+  ALTSYSTEME, altsystem, anleitung, sperrText, sucheAltsysteme, gruppiereAltsysteme, sichtbareAltsysteme,
+  bereinigeWahl, erkenneAltsystem, zaehleAltsysteme, istBelegt, type Altsystem,
+} from '@/lib/altsysteme';
+import { leseXls } from '@/lib/xlsLeser';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
   formatDauer, formatBytes, zahlDe, uhrzeitBerlin, gesamtFortschritt, dateiProzent, verschluckt,
@@ -65,6 +76,8 @@ type Datei = {
   abgeschnitten: number;
   /** Groesse in Bytes (fuer Protokoll und Hochrechnung). */
   groesse: number;
+  /** Schritt 2: DATEV-Formatkopf, wenn die Datei eine DATEV-Datei ist. */
+  datev?: DatevKopf | null;
 };
 
 type ImportErgebnis = {
@@ -82,7 +95,18 @@ type ImportErgebnis = {
   angehalten: boolean;
   dauerMs: number;
   zeilenProS: number | null;
+  // --- Schritt 2: Eigene Felder ---
+  eigeneWerte: number;
+  eigeneFelderNeu: number;
+  /** Eigene Felder konnten nicht angelegt werden -> Werte stehen in den Notizen. */
+  eigeneAlsNotiz: number;
+  eigeneFehler: string[];
 };
+
+/** Schritt 2: gemerkte Altsystem-Wahl des Betriebs. */
+type Wahl = { systeme: string[]; ausgeblendet: string[]; nur_meine: boolean };
+const WAHL_SPEICHER = 'argonaut_import_altsysteme';
+const LEERE_WAHL: Wahl = { systeme: [], ausgeblendet: [], nur_meine: false };
 
 type Umzug = {
   id: string; name: string; geplante_dateien: number | null;
@@ -259,8 +283,25 @@ export default function ImportCenterPage() {
   const [ich, setIch] = useState<string | null>(null);
   const [namen, setNamen] = useState<Record<string, string>>({});
 
-  const ziel = useMemo(() => (zielKey ? zielDef(zielKey) : undefined), [zielKey]);
-  const offenePflicht = useMemo(() => (zielKey ? fehlendePflichtfelder(mapping, zielKey) : []), [mapping, zielKey]);
+  // --- Schritt 2: Feldkatalog aus der Datenbank, Altsysteme -----------------
+  /** null = noch nicht geladen oder SQL p124 fehlt (dann fester Katalog). */
+  const [dbSpalten, setDbSpalten] = useState<KatalogSpalte[] | null>(null);
+  const [wahl, setWahl] = useState<Wahl>(LEERE_WAHL);
+  const [wahlInDb, setWahlInDb] = useState(false);
+  const [systemeOffen, setSystemeOffen] = useState(false);
+  const [systemSuche, setSystemSuche] = useState('');
+  const [anleitungOffen, setAnleitungOffen] = useState<string | null>(null);
+  /** Aus welchem Altsystem stammt die aktuelle Datei ('' = unbekannt). */
+  const [dateiSystem, setDateiSystem] = useState('');
+  const [spaltenOffen, setSpaltenOffen] = useState(false);
+
+  const katalog = useMemo(() => (zielKey ? katalogFuerZiel(zielKey, dbSpalten) : null), [zielKey, dbSpalten]);
+  const ziel = katalog?.ziel;
+  const offenePflicht = useMemo(() => (zielKey && ziel ? fehlendePflichtfelder(mapping, zielKey, ziel) : []), [mapping, zielKey, ziel]);
+  const bilanz: SpaltenBilanz | null = useMemo(
+    () => (datei && ziel ? spaltenBilanz(datei.kopf, datei.zeilen, mapping, ziel) : null),
+    [datei, ziel, mapping],
+  );
 
   const verlaufLaden = useCallback(async () => {
     const SPALTEN = 'id,ziel,dateiname,status,kopfzeilen,mapping,zeilen_gesamt,zeilen_ok,zeilen_fehler,als_vorlage,vorlage_name,erstellt_am';
@@ -289,6 +330,87 @@ export default function ImportCenterPage() {
       .order('erstellt_am', { ascending: false }).limit(40);
     setVerlauf((r2.data as unknown as Job[]) ?? []);
   }, []);
+
+  // Schritt 2: Feldkatalog aus der Datenbank (SQL p124). Fehlt die Funktion,
+  // bleibt dbSpalten null und der feste Katalog gilt — ohne die neuen Felder.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('import_feldkatalog', { p_tabellen: [...MOTOR_TABELLEN] });
+        if (!error && Array.isArray(data) && data.length > 0) setDbSpalten(data as KatalogSpalte[]);
+      } catch { /* ohne Katalog weiter wie bisher */ }
+    })();
+  }, []);
+
+  // Schritt 2: gemerkte Altsystem-Wahl (Datenbank, sonst Browser).
+  useEffect(() => {
+    (async () => {
+      let geladen: Wahl | null = null;
+      try {
+        const { data, error } = await supabase.from('import_altsystem_wahl').select('systeme, ausgeblendet, nur_meine').limit(1);
+        if (!error) {
+          setWahlInDb(true);
+          const z = (data as unknown as Wahl[] | null)?.[0];
+          if (z) geladen = { systeme: bereinigeWahl(z.systeme), ausgeblendet: bereinigeWahl(z.ausgeblendet), nur_meine: !!z.nur_meine };
+        }
+      } catch { /* Tabelle fehlt: Browser */ }
+      if (!geladen) {
+        try {
+          const roh = window.localStorage.getItem(WAHL_SPEICHER);
+          if (roh) {
+            const z = JSON.parse(roh) as Partial<Wahl>;
+            geladen = { systeme: bereinigeWahl(z.systeme), ausgeblendet: bereinigeWahl(z.ausgeblendet), nur_meine: !!z.nur_meine };
+          }
+        } catch { /* egal */ }
+      }
+      if (geladen) setWahl(geladen);
+    })();
+  }, []);
+
+  // Schritt 2: Modul-Knoepfe oeffnen den Motor mit vorgewaehltem Ziel (?ziel=kontakte).
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const z = q.get('ziel');
+      if (z && ZIELE.some((x) => x.key === z)) setZielKey(z);
+      const sys = q.get('system');
+      if (sys && altsystem(sys)) setDateiSystem(sys);
+    } catch { /* ohne Vorwahl */ }
+  }, []);
+
+  async function wahlSpeichern(neu: Wahl) {
+    setWahl(neu);
+    try { window.localStorage.setItem(WAHL_SPEICHER, JSON.stringify(neu)); } catch { /* egal */ }
+    if (!wahlInDb) return;
+    try {
+      const { uid, betrieb } = await betriebUndIch();
+      await supabase.from('import_altsystem_wahl').upsert({
+        owner_user_id: betrieb, systeme: neu.systeme, ausgeblendet: neu.ausgeblendet, nur_meine: neu.nur_meine,
+        aktualisiert_am: new Date().toISOString(), aktualisiert_von: uid,
+      }, { onConflict: 'owner_user_id' });
+    } catch { /* bleibt im Browser gemerkt */ }
+  }
+  function systemUmschalten(key: string) {
+    const drin = wahl.systeme.includes(key);
+    void wahlSpeichern({
+      ...wahl,
+      systeme: drin ? wahl.systeme.filter((k) => k !== key) : [...wahl.systeme, key],
+      ausgeblendet: wahl.ausgeblendet.filter((k) => k !== key),
+    });
+    if (!drin) setAnleitungOffen(key);
+  }
+  function systemAusblenden(key: string) {
+    void wahlSpeichern({
+      ...wahl,
+      systeme: wahl.systeme.filter((k) => k !== key),
+      ausgeblendet: wahl.ausgeblendet.includes(key) ? wahl.ausgeblendet : [...wahl.ausgeblendet, key],
+    });
+  }
+  function importAusSystem(sysKey: string, zKey: string) {
+    zielWaehlen(zKey);
+    setDateiSystem(sysKey);
+    try { document.getElementById('import-ziel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* egal */ }
+  }
 
   // Wer bin ich, wie heissen die Kolleginnen und Kollegen (Spalte „Wer").
   useEffect(() => {
@@ -402,6 +524,12 @@ export default function ImportCenterPage() {
         const n = ((data as unknown[]) ?? []).length;
         geloescht += n; gescheitert += teil.length - n;
       }
+      // Schritt 2: die Eigenen-Feld-Werte dieser Datensaetze gehen mit.
+      if (z.eigeneFelderModul) {
+        for (let i = 0; i < ids.length; i += 200) {
+          await supabase.from('eigenes_feld_wert').delete().eq('modul', z.eigeneFelderModul).in('datensatz_id', ids.slice(i, i + 200));
+        }
+      }
       await supabase.from('import_jobs').update({ status: 'rueckgaengig', rueckgaengig_am: new Date().toISOString() }).eq('id', j.id);
       setHinweis(gescheitert === 0
         ? `Import rückgängig gemacht — ${geloescht} Datensätze gelöscht.`
@@ -421,7 +549,7 @@ export default function ImportCenterPage() {
   }
 
   function zuruecksetzen(behalteZiel = false) {
-    if (!behalteZiel) setZielKey('');
+    if (!behalteZiel) { setZielKey(''); setDateiSystem(''); }
     setDatei(null); setMapping({}); setBericht(null); setErgebnis(null);
     setFehler(null); setHinweis(null); setBalken(null);
   }
@@ -468,13 +596,32 @@ export default function ImportCenterPage() {
         phaseEnde('laden');
         setBalken({ phase: 'lesen', anteil: 0.4, zaehler: `${formatBytes(f.size)} geladen · wird gelesen …` });
         await kurzLuft();
-        const tab = leseCsv(dekodiere(bytes));
-        leseHinweise.push(...tab.hinweise);
-        neu = {
-          dateiname: f.name, blatt: null, trennzeichen: tab.trennzeichen,
-          kopf: tab.kopf.map((h, i) => (h.trim() || `Spalte ${i + 1}`)),
-          zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
-        };
+        if (dateiArt(f.name, bytes.subarray(0, 8)) === 'xls') {
+          // Schritt 2: altes Excel (.xls, z. B. DATEV-OPOS) — im Browser gelesen.
+          const x = leseXls(bytes);
+          leseHinweise.push(...x.hinweise);
+          const [kopfZeile, ...rest] = x.zeilen;
+          neu = {
+            dateiname: f.name, blatt: x.blatt, trennzeichen: '',
+            kopf: eindeutigeKoepfe(kopfZeile ?? []),
+            zeilen: rest.map((z) => { const k = [...z]; while (k.length < (kopfZeile?.length ?? 0)) k.push(''); return k; }),
+            abgeschnitten: 0, groesse: f.size,
+          };
+        } else {
+          const text = dekodiere(bytes);
+          // Schritt 2: DATEV-Format (Kopf "EXTF") erkennen — erste Zeile ist
+          // der Formatkopf, die Spaltennamen stehen in der zweiten.
+          const dv = leseDatev(text);
+          if (dv?.fehler) throw new Error(dv.fehler);
+          const tab = dv ? dv.tabelle : leseCsv(text);
+          leseHinweise.push(...tab.hinweise);
+          neu = {
+            dateiname: f.name, blatt: null, trennzeichen: tab.trennzeichen,
+            kopf: eindeutigeKoepfe(tab.kopf),
+            zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
+            datev: dv ? dv.kopf : null,
+          };
+        }
         if (neu.kopf.length === 0) throw new Error('In der Datei ist keine Kopfzeile mit Spaltennamen zu erkennen.');
       } else {
         const daten = await ladeUeberServer(
@@ -487,7 +634,7 @@ export default function ImportCenterPage() {
           dateiname: daten.dateiname ?? f.name,
           blatt: daten.blatt ?? null,
           trennzeichen: daten.trennzeichen ?? '',
-          kopf: daten.kopf ?? [],
+          kopf: eindeutigeKoepfe(daten.kopf ?? []),
           zeilen: daten.zeilen ?? [],
           abgeschnitten: daten.abgeschnitten ?? 0,
           groesse: f.size,
@@ -504,14 +651,32 @@ export default function ImportCenterPage() {
         (j) => j.als_vorlage && j.ziel === zielKey && passtZuordnung(j.kopfzeilen ?? [], neu.kopf) && j.mapping
       );
 
+      // Schritt 2: aus welchem Altsystem? (erkannt oder vorher angeklickt)
+      const erkannt = erkenneAltsystem(neu.kopf);
+      const system = dateiSystem || erkannt?.key || '';
+      if (!dateiSystem && erkannt) setDateiSystem(erkannt.key);
+      const zielJetzt = katalogFuerZiel(zielKey, dbSpalten)?.ziel;
+      if (!zielJetzt) throw new Error('Unbekanntes Import-Ziel.');
+
       if (gemerkt?.mapping) {
-        setMapping(gemerkt.mapping);
+        setMapping(bereinigeMapping(neu.kopf, gemerkt.mapping, zielJetzt));
         setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · gespeicherte Zuordnung von „${gemerkt.vorlage_name || gemerkt.dateiname || 'früherem Import'}" übernommen.`);
       } else {
-        const geraten = errateMapping(neu.kopf, zielKey);
+        const geraten = vorschlagMapping(neu.kopf, neu.zeilen, zielJetzt, {
+          systeme: [system, ...wahl.systeme].filter(Boolean), datev: !!neu.datev,
+        });
         setMapping(geraten);
-        const erkannt = Object.values(geraten).filter(Boolean).length;
-        setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · ${erkannt} von ${neu.kopf.length} Spalten automatisch erkannt. Bitte kurz prüfen.`);
+        const inFeldern = Object.values(geraten).filter((v) => v && v !== EIGEN).length;
+        const alsEigen = Object.values(geraten).filter((v) => v === EIGEN).length;
+        setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · ${inFeldern} von ${neu.kopf.length} Spalten automatisch erkannt`
+          + (alsEigen > 0 ? `, ${alsEigen} werden als Eigene Felder übernommen` : '') + '. Bitte kurz prüfen.');
+      }
+      if (erkannt && !dateiSystem) setHinweis((h) => `${h ?? ''} Erkannt: Export aus ${erkannt.name}.`);
+      if (neu.datev) {
+        const kontoIdx = neu.kopf.findIndex((k) => k.trim().toLowerCase() === 'konto');
+        const z = kontoIdx >= 0 ? datevZaehlen(neu.zeilen, kontoIdx, neu.datev.sachkontenlaenge) : null;
+        setHinweis((h) => `${h ?? ''} DATEV-Format erkannt (${neu.datev?.formatname || 'Stammdaten'})`
+          + (z ? `: ${zahlDe(z.debitoren)} Debitoren (Kunden), ${zahlDe(z.kreditoren)} Kreditoren (Lieferanten). Die jeweils anderen werden beim Prüfen mit Grund aussortiert — importieren Sie die Datei dafür ein zweites Mal mit dem anderen Ziel.` : '.'));
       }
       if (leseHinweise.length > 0) setHinweis((h) => `${h ?? ''} ${leseHinweise.join(' ')}`);
       if (neu.abgeschnitten > 0) {
@@ -527,7 +692,8 @@ export default function ImportCenterPage() {
     setMapping((m) => {
       const neu = { ...m };
       // Ein Zielfeld darf nur einmal belegt sein — sonst überschreiben sich zwei Spalten.
-      if (feldKey) for (const [s, k] of Object.entries(neu)) if (k === feldKey && s !== spalte) neu[s] = '';
+      // „Eigenes Feld" darf beliebig oft vorkommen (jede Spalte wird ihr eigenes Feld).
+      if (feldKey && feldKey !== EIGEN) for (const [s, k] of Object.entries(neu)) if (k === feldKey && s !== spalte) neu[s] = EIGEN;
       neu[spalte] = feldKey;
       return neu;
     });
@@ -536,13 +702,17 @@ export default function ImportCenterPage() {
 
   // --- Prüfen ---------------------------------------------------------------
   function pruefen() {
-    if (!datei || !zielKey) return;
+    if (!datei || !zielKey || !ziel) return;
     setBusy('pruefen'); setFehler(null);
     try {
       const t0 = Date.now();
       // Die Zeit bis hierher war Ihre Zuordnung — sie zaehlt nicht als Rechenzeit.
       if (lesenEndeRef.current) phasenRef.current.zuordnen = t0 - lesenEndeRef.current;
-      const b = pruefeAlles(zielKey, mapping, datei.kopf, datei.zeilen);
+      const kontoIdx = datei.datev ? datei.kopf.findIndex((k) => k.trim().toLowerCase() === 'konto') : -1;
+      const b = pruefeAlles(zielKey, mapping, datei.kopf, datei.zeilen, {
+        ziel,
+        ablehnen: datei.datev ? datevAblehnung(zielKey, kontoIdx, datei.datev.sachkontenlaenge) : undefined,
+      });
       phasenRef.current.pruefen = Date.now() - t0;
       setBericht(b);
       setErgebnis(null);
@@ -581,6 +751,7 @@ export default function ImportCenterPage() {
       angelegt: 0, aktualisiert: 0, uebersprungen: 0, fehlgeschlagen: 0, fehler: [],
       gelesen: bericht.gesamt, doppelt, abgelehnt: Math.max(0, bericht.schlecht - doppelt),
       offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
+      eigeneWerte: 0, eigeneFelderNeu: 0, eigeneAlsNotiz: 0, eigeneFehler: [],
     };
     const angelegteIds: string[] = [];
     let jobId: string | null = null;
@@ -624,40 +795,103 @@ export default function ImportCenterPage() {
     try {
       const { uid, betrieb } = await betriebUndIch();
       uidFuerAlt = uid;
-      // B1b-2 (26.09.26): Importierte Kontakte gehoeren dem Betrieb (beim Mitarbeiter
-      // der Chef) — sonst sieht der Chef sie nicht. Andere Ziele bleiben wie bisher.
-      let neuOwner = uid;
-      if (ziel.tabelle === 'kontakte') neuOwner = betrieb;
+      // Schritt 2: ALLE importierten Daten gehoeren dem Betrieb (beim Mitarbeiter
+      // der Chef) — nicht mehr nur Kontakte. Die Regeln der Tabellen entscheiden,
+      // wer was anlegen darf; scheitert es, steht es mit Grund im Bericht.
+      const neuOwner = betrieb;
 
-      // Bereits vorhandene Schlüssel laden — damit nichts doppelt entsteht.
-      // Schritt 0: SEITENWEISE. Supabase liefert je Abfrage hoechstens 1.000
-      // Zeilen; vorher sah die Pruefung ab dem 1.001. Eintrag nichts mehr.
+      // Bereits vorhandene Eintraege laden — damit nichts doppelt entsteht.
+      // Schritt 0: SEITENWEISE (Supabase liefert je Abfrage hoechstens 1.000).
+      // Schritt 2: ueber ALLE Erkennungsfelder (Kundennummer, Alt-ID, E-Mail …).
       setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Abgleich mit vorhandenen Einträgen …' });
-      const vorhanden = new Map<string, string>();
-      if (ziel.schluessel) {
+      const erkennung = erkennungsFelder(ziel);
+      let bestand = new Map<string, string>();
+      if (erkennung.length > 0) {
+        const alle: Record<string, unknown>[] = [];
         for (let von = 0; von < 5000000; von += LESE_SEITE) {
-          // Der dynamische Spaltenname laesst sich vom Supabase-Typparser nicht
-          // aufloesen — deshalb der Umweg ueber unknown.
+          // Dynamische Spaltennamen kann der Supabase-Typparser nicht aufloesen —
+          // deshalb der Umweg ueber unknown.
           const { data: alt, error } = await supabase.from(ziel.tabelle)
-            .select(`id,${ziel.schluessel}`).order('id').range(von, von + LESE_SEITE - 1);
+            .select(`id,${erkennung.join(',')}`).order('id').range(von, von + LESE_SEITE - 1);
           if (error) throw new Error('Abgleich mit den vorhandenen Einträgen fehlgeschlagen: ' + error.message);
           const liste = (alt ?? []) as unknown as Record<string, unknown>[];
-          for (const z of liste) {
-            const sch = String(z[ziel.schluessel] ?? '').trim().toLowerCase();
-            if (sch) vorhanden.set(sch, String(z.id));
-          }
+          alle.push(...liste);
           if (liste.length < LESE_SEITE) break;
         }
+        bestand = baueBestandIndex(alle, erkennung);
       }
+
+      // Schritt 2: Eigene Felder vorbereiten — vorhandene wiederfinden, neue anlegen.
+      // Klappt das nicht (fehlende Rechte o. Ae.), wandern die Werte in die
+      // Notizen: verschluckt wird nichts.
+      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping);
+      const feldIdJeSpalte: Record<string, string> = {};
+      const modul = ziel.eigeneFelderModul ?? ziel.key;
+      const notizFeld = ziel.felder.some((f) => f.key === 'notizen');
+      let eigeneAlsNotiz = false;
+      if (eigene.length > 0) {
+        try {
+          const { data: da, error: e1 } = await supabase.from('eigenes_feld').select('id, label').eq('modul', modul);
+          if (e1) throw new Error(e1.message);
+          const zuordnung = eigeneFelderZuordnen(eigene, ((da ?? []) as unknown as { id: string; label: string }[]));
+          Object.assign(feldIdJeSpalte, zuordnung.vorhanden);
+          if (zuordnung.neu.length > 0) {
+            const start = (da ?? []).length;
+            const { data: angelegt, error: e2 } = await supabase.from('eigenes_feld').insert(
+              zuordnung.neu.map((e, i) => ({
+                owner_user_id: betrieb, modul, label: e.spalte.slice(0, 120), feld_typ: e.typ, optionen: [], reihenfolge: start + i,
+              })),
+            ).select('id, label');
+            if (e2) throw new Error(e2.message);
+            for (const f of ((angelegt ?? []) as unknown as { id: string; label: string }[])) {
+              const e = zuordnung.neu.find((x) => x.spalte.slice(0, 120) === f.label);
+              if (e) feldIdJeSpalte[e.spalte] = f.id;
+            }
+            erg.eigeneFelderNeu = (angelegt ?? []).length;
+          }
+          if (eigene.some((e) => !feldIdJeSpalte[e.spalte])) throw new Error('nicht alle Eigenen Felder ließen sich anlegen');
+        } catch (e) {
+          eigeneAlsNotiz = notizFeld;
+          erg.eigeneFehler.push(`Eigene Felder: ${e instanceof Error ? e.message : 'Fehler'} — `
+            + (notizFeld ? 'die Werte stehen stattdessen in den Notizen.' : 'die Werte stehen im Bericht.'));
+        }
+      }
+      /** Die Werte der Eigenen Felder zu einer Dateizeile. */
+      const eigeneZuZeile = (dateiZeile: number) => (eigene.length > 0 && dateiZeile >= 2
+        ? eigeneWerteDerZeile(datei.zeilen[dateiZeile - 2] ?? [], eigene) : []);
+      /** Eigene-Feld-Werte schreiben (nach dem Anlegen, mit der echten id). */
+      const eigeneSchreiben = async (paare: { id: string; dateiZeile: number }[]) => {
+        if (eigene.length === 0 || eigeneAlsNotiz) return;
+        const zeilen = paare.flatMap((p) => eigeneZuZeile(p.dateiZeile)
+          .filter((w) => feldIdJeSpalte[w.spalte])
+          .map((w) => ({
+            owner_user_id: betrieb, modul, datensatz_id: p.id, feld_id: feldIdJeSpalte[w.spalte],
+            wert: w.wert, aktualisiert_am: new Date().toISOString(),
+          })));
+        for (let i = 0; i < zeilen.length; i += PAKET_GROESSE) {
+          const teil = zeilen.slice(i, i + PAKET_GROESSE);
+          const { error } = await supabase.from('eigenes_feld_wert').upsert(teil, { onConflict: 'feld_id,datensatz_id' });
+          if (error) erg.eigeneFehler.push(`${teil.length} Werte der Eigenen Felder: ${error.message}`);
+          else erg.eigeneWerte += teil.length;
+        }
+      };
 
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
 
-      bericht.saetze.forEach((satz, idx) => {
+      bericht.saetze.forEach((satz0, idx) => {
         const dateiZeile = bericht.zeilenNummern?.[idx] ?? 0;
-        const sch = ziel.schluessel ? String(satz[ziel.schluessel] ?? '').trim().toLowerCase() : '';
-        const treffer = sch ? vorhanden.get(sch) : undefined;
+        let satz = satz0;
+        if (eigeneAlsNotiz) {
+          const extra = eigeneZuZeile(dateiZeile);
+          if (extra.length > 0) {
+            const zusatz = 'Weitere Angaben aus dem Altsystem:\n' + extra.map((w) => `${w.spalte}: ${w.wert}`).join('\n');
+            satz = { ...satz0, notizen: satz0.notizen ? `${String(satz0.notizen)}\n${zusatz}` : zusatz };
+            erg.eigeneAlsNotiz++;
+          }
+        }
+        const treffer = findeImBestand(satz, erkennung, bestand);
         if (treffer) {
           if (beiDublette === 'aktualisieren') zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
           else erg.uebersprungen++;
@@ -711,7 +945,16 @@ export default function ImportCenterPage() {
         const { data: neuIds, error } = await supabase.from(ziel.tabelle).insert(stapel).select('id');
         if (!error) {
           erg.angelegt += stapel.length;
-          ((neuIds as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+          const ids = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
+          ids.forEach((id) => angelegteIds.push(id));
+          // Die Datenbank liefert die ids in der Reihenfolge des Einfuegens.
+          // Stimmt die Anzahl nicht, wird nichts geraten: Eigene-Feld-Werte
+          // dieses Pakets gehen dann als Hinweis in den Bericht.
+          if (ids.length === stapel.length) {
+            await eigeneSchreiben(ids.map((id, j) => ({ id, dateiZeile: neuZeile[p.von + j] ?? 0 })));
+          } else if (eigene.length > 0) {
+            erg.eigeneFehler.push(`Paket ab Zeile ${neuZeile[p.von] ?? '?'}: Eigene Felder nicht zugeordnet (Rückmeldung unvollständig).`);
+          }
         } else {
           for (let j = 0; j < stapel.length; j++) {
             const einzeln = stapel[j];
@@ -725,7 +968,8 @@ export default function ImportCenterPage() {
               });
             } else {
               erg.angelegt++;
-              ((eineId as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+              const id = ((eineId as { id: string }[] | null) ?? [])[0]?.id;
+              if (id) { angelegteIds.push(id); await eigeneSchreiben([{ id: String(id), dateiZeile: neuZeile[p.von + j] ?? 0 }]); }
             }
           }
         }
@@ -740,7 +984,7 @@ export default function ImportCenterPage() {
         await Promise.all(zuAendern.slice(p.von, p.bis).map(async (a) => {
           const { error } = await supabase.from(ziel.tabelle).update(a.werte).eq('id', a.id);
           if (error) { erg.fehlgeschlagen++; erg.fehler.push({ zeile: a.zeile, feld: '', meldung: error.message }); }
-          else erg.aktualisiert++;
+          else { erg.aktualisiert++; await eigeneSchreiben([{ id: a.id, dateiZeile: a.zeile }]); }
         }));
         erledigt += p.bis - p.von;
         zeigeStand();
@@ -954,8 +1198,25 @@ export default function ImportCenterPage() {
           </div>
         )}
 
+        {/* --- Schritt 2: Aus welchem System ziehen Sie um? --- */}
+        <AltsystemKarte
+          wahl={wahl}
+          offen={systemeOffen}
+          setOffen={setSystemeOffen}
+          suche={systemSuche}
+          setSuche={setSystemSuche}
+          anleitungOffen={anleitungOffen}
+          setAnleitungOffen={setAnleitungOffen}
+          umschalten={systemUmschalten}
+          ausblenden={systemAusblenden}
+          nurMeine={(v) => void wahlSpeichern({ ...wahl, nur_meine: v })}
+          allesZeigen={() => void wahlSpeichern({ ...wahl, ausgeblendet: [], nur_meine: false })}
+          importieren={importAusSystem}
+          gemerktIn={wahlInDb ? 'betrieb' : 'browser'}
+        />
+
         {/* --- 1 Ziel --- */}
-        <div style={styles.stufe}>
+        <div style={styles.stufe} id="import-ziel">
           <div style={styles.stufenTitel}>1 · Was möchten Sie importieren?</div>
           <div style={styles.zielGrid}>
             {ZIELE.map((z) => (
@@ -980,10 +1241,29 @@ export default function ImportCenterPage() {
           <div style={styles.stufe}>
             <div style={styles.stufenTitel}>2 · Datei auswählen</div>
             <p style={styles.stufenText}>
-              Excel (.xlsx) oder CSV. Die erste Zeile muss die Spaltenüberschriften enthalten.
-              CSV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
-              Excel wird auf dem Server gelesen und sofort verworfen, <b style={{ color: C.text }}>nicht gespeichert</b>.
+              Excel (.xlsx, auch altes .xls), CSV oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
+              Spaltenüberschriften enthalten — beim DATEV-Format erkennt ARGONAUT den Formatkopf selbst.
+              CSV, .xls und DATEV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
+              .xlsx wird auf dem Server gelesen und sofort verworfen, <b style={{ color: C.text }}>nicht gespeichert</b>.
             </p>
+            <div style={{ ...styles.vorlagenLeiste, background: 'rgba(201,168,76,0.06)', borderColor: 'rgba(201,168,76,0.25)' }}>
+              <label style={{ ...styles.feldLabel, flex: '1 1 260px' }}>
+                Die Datei stammt aus
+                <select value={dateiSystem} onChange={(e) => setDateiSystem(e.target.value)} style={styles.select}>
+                  <option value="">— unbekannt / Excel-Liste</option>
+                  {(wahl.systeme.length > 0 ? wahl.systeme.map((k) => altsystem(k)).filter((x): x is Altsystem => !!x) : ALTSYSTEME)
+                    .filter((x) => x.ziele.includes(ziel.key as never))
+                    .map((x) => <option key={x.key} value={x.key}>{x.name}</option>)}
+                </select>
+              </label>
+              <span style={{ color: C.dim, fontSize: 12.5, flex: '2 1 300px' }}>
+                Mit dem richtigen System erkennt ARGONAUT die Spalten zuerst an dessen Spaltennamen. Beim Einlesen wird das
+                System auch selbst erkannt, wenn genug Spalten passen.
+                {dateiSystem && altsystem(dateiSystem) && (
+                  <> {' '}<button type="button" onClick={() => { setSystemeOffen(true); setAnleitungOffen(dateiSystem); }} style={styles.linkKnopf}>Export-Anleitung für {altsystem(dateiSystem)?.name} ›</button></>
+                )}
+              </span>
+            </div>
             <div style={styles.vorlagenLeiste}>
               <span style={{ color: C.dim, fontSize: 13 }}>Noch keine passende Datei zur Hand?</span>
               <button type="button" onClick={vorlageHerunterladen} style={{ ...styles.btnRand, fontSize: 13, padding: '8px 13px' }}>
@@ -1021,7 +1301,7 @@ export default function ImportCenterPage() {
             <div style={styles.stufenTitel}>3 · Spalten zuordnen</div>
             <p style={styles.stufenText}>
               Links steht, was in Ihrer Datei steht — rechts, wo es in ARGONAUT landet. Was automatisch
-              erkannt wurde, ist schon eingestellt. Spalten auf „— nicht importieren" werden ignoriert.
+              erkannt wurde, ist schon eingestellt. Spalten auf „— nicht übernehmen“ stehen mit Grund im Prüfergebnis.
             </p>
 
             {offenePflicht.length > 0 && (
@@ -1030,6 +1310,13 @@ export default function ImportCenterPage() {
                 Ohne dieses Feld kann nicht importiert werden.
               </div>
             )}
+            <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.55, marginBottom: 10 }}>
+              {katalog?.ausDb
+                ? <>✓ Feldliste aus Ihrer Datenbank ({ziel.felder.length} Felder{katalog.zusatz.length > 0 ? `, davon ${katalog.zusatz.length} nur in Ihrer Datenbank` : ''}).</>
+                : <>ℹ️ Feldliste ohne Datenbank-Abgleich (Datenbank-Update „p124-import-motor“ fehlt noch) — neue Felder wie Kundennummer und Adresse erscheinen danach.</>}
+              {' '}Spalten ohne passendes Feld werden als <b style={{ color: C.text }}>Eigenes Feld</b> übernommen — sie erscheinen danach im Modul unter „⚙️ Eigene Felder“.
+              {datei.datev && <> <b style={{ color: C.gold }}>DATEV-Format erkannt.</b></>}
+            </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={styles.tabelle}>
@@ -1042,23 +1329,39 @@ export default function ImportCenterPage() {
                 </thead>
                 <tbody>
                   {datei.kopf.map((spalte, i) => {
-                    const beispiele = datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
+                    const leer = spalteLeer(datei.zeilen, i);
+                    // Leere Spalten nur auf Wunsch zeigen — bei DATEV sind es Hunderte.
+                    if (leer && !spaltenOffen && !istBankSpalte(spalte)) return null;
+                    const beispiele = istBankSpalte(spalte) ? [] : datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
                     const gewaehlt = mapping[spalte] ?? '';
                     const feldDef = ziel.felder.find((f) => f.key === gewaehlt);
+                    const bank = istBankSpalte(spalte);
                     return (
                       <tr key={spalte + i}>
                         <td style={styles.td}><b>{spalte}</b></td>
                         <td style={{ ...styles.td, color: C.dim, fontSize: 12.5 }}>
-                          {beispiele.length ? beispiele.join(' · ') : <i>leer</i>}
+                          {bank ? <i>ausgeblendet (Bankdaten)</i> : beispiele.length ? beispiele.join(' · ') : <i>leer</i>}
                         </td>
                         <td style={styles.td}>
-                          <select value={gewaehlt} onChange={(e) => feldSetzen(spalte, e.target.value)} style={styles.select}>
-                            <option value="">— nicht importieren</option>
-                            {ziel.felder.map((f) => (
-                              <option key={f.key} value={f.key}>{f.label}{f.pflicht ? ' *' : ''}</option>
-                            ))}
-                          </select>
-                          {feldDef?.hinweis && <div style={{ color: C.dim, fontSize: 11.5, marginTop: 4 }}>{feldDef.hinweis}</div>}
+                          {bank ? (
+                            <div style={{ color: C.warn, fontSize: 12.5, lineHeight: 1.5 }}>🔒 nicht übernommen — {GRUND.bank}</div>
+                          ) : (
+                            <>
+                              <select value={gewaehlt} onChange={(e) => feldSetzen(spalte, e.target.value)} style={styles.select}>
+                                <option value={NICHT}>— nicht übernehmen</option>
+                                <option value={EIGEN}>➕ als Eigenes Feld „{spalte.slice(0, 40)}“</option>
+                                {ziel.felder.map((f) => (
+                                  <option key={f.key} value={f.key}>{f.label}{f.pflicht ? ' *' : ''}</option>
+                                ))}
+                              </select>
+                              {feldDef?.hinweis && <div style={{ color: C.dim, fontSize: 11.5, marginTop: 4 }}>{feldDef.hinweis}</div>}
+                              {gewaehlt === NICHT && (
+                                <div style={{ color: leer ? C.dim : C.warn, fontSize: 11.5, marginTop: 4 }}>
+                                  {leer ? GRUND.leer : 'Wird nicht übernommen und steht so im Bericht. Lieber als Eigenes Feld behalten?'}
+                                </div>
+                              )}
+                            </>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1066,6 +1369,12 @@ export default function ImportCenterPage() {
                 </tbody>
               </table>
             </div>
+
+            {datei.kopf.some((_, i) => spalteLeer(datei.zeilen, i)) && (
+              <button type="button" onClick={() => setSpaltenOffen((o) => !o)} style={{ ...styles.linkKnopf, marginTop: 8 }}>
+                {spaltenOffen ? 'Leere Spalten ausblenden' : `${datei.kopf.filter((_, i) => spalteLeer(datei.zeilen, i)).length} leere Spalten zeigen`}
+              </button>
+            )}
 
             <div style={{ display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" onClick={pruefen} disabled={busy !== null || offenePflicht.length > 0} style={{ ...styles.btnGold, opacity: busy !== null || offenePflicht.length > 0 ? 0.5 : 1 }}>
@@ -1087,6 +1396,8 @@ export default function ImportCenterPage() {
               <Zahl wert={bericht.schlecht} label="fallen raus" farbe={bericht.schlecht > 0 ? C.danger : C.dim} />
               <Zahl wert={bericht.warnungen.length} label="Warnungen" farbe={bericht.warnungen.length > 0 ? C.warn : C.dim} />
             </div>
+
+            {bilanz && <SpaltenBilanzKasten bilanz={bilanz} />}
 
             {bericht.dubletten_in_datei > 0 && (
               <div style={styles.warnKasten}>
@@ -1126,10 +1437,10 @@ export default function ImportCenterPage() {
               </div>
             )}
 
-            {ziel.schluessel && (
+            {erkennungsFelder(ziel).length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <div style={{ color: C.dim, fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>
-                  Wenn ein Eintrag schon vorhanden ist (erkannt über {ziel.felder.find((f) => f.key === ziel.schluessel)?.label}):
+                  Wenn ein Eintrag schon vorhanden ist (erkannt über {erkennungsFelder(ziel).map((k) => ziel.felder.find((f) => f.key === k)?.label ?? k).join(' oder ')}):
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {([['ueberspringen', 'Überspringen — Vorhandenes bleibt unangetastet'], ['aktualisieren', 'Aktualisieren — Vorhandenes wird überschrieben']] as const).map(([wert, text]) => (
@@ -1214,14 +1525,23 @@ export default function ImportCenterPage() {
                   </div>
                   {ergebnis.angehalten && (
                     <div style={{ marginTop: 4, color: C.warn }}>
-                      {ziel?.schluessel
-                        ? `Weitermachen: dieselbe Datei noch einmal importieren (Einstellung „Überspringen") — schon Übernommenes wird über „${ziel.felder.find((f) => f.key === ziel.schluessel)?.label ?? ziel.schluessel}" erkannt und nicht doppelt angelegt.`
+                      {ziel && erkennungsFelder(ziel).length > 0
+                        ? `Weitermachen: dieselbe Datei noch einmal importieren (Einstellung „Überspringen") — schon Übernommenes wird über „${erkennungsFelder(ziel).map((k) => ziel.felder.find((f) => f.key === k)?.label ?? k).join('" oder „')}" erkannt und nicht doppelt angelegt.`
                         : 'Diese Liste hat kein Erkennungsmerkmal. Zum Weitermachen den Import unten rückgängig machen und neu starten — sonst entstehen Doppelte.'}
                     </div>
                   )}
                 </div>
               );
             })()}
+            {(ergebnis.eigeneWerte > 0 || ergebnis.eigeneAlsNotiz > 0 || ergebnis.eigeneFehler.length > 0) && (
+              <div style={{ ...styles.hinweisKasten, marginBottom: 10 }}>
+                <b style={{ color: C.text }}>Eigene Felder:</b>{' '}
+                {zahlDe(ergebnis.eigeneWerte)} Werte gespeichert
+                {ergebnis.eigeneFelderNeu > 0 && ` · ${zahlDe(ergebnis.eigeneFelderNeu)} Felder neu angelegt`}
+                {ergebnis.eigeneAlsNotiz > 0 && ` · bei ${zahlDe(ergebnis.eigeneAlsNotiz)} Einträgen in die Notizen geschrieben`}
+                {ergebnis.eigeneFehler.slice(0, 5).map((t, i) => <div key={i} style={{ color: C.warn, marginTop: 4 }}>⚠ {t}</div>)}
+              </div>
+            )}
             {ergebnis.fehler.length > 0 && (
               <div style={styles.meldungsListe}>
                 {ergebnis.fehler.slice(0, MAX_FEHLER_ANZEIGE).map((f, i) => (
@@ -1383,13 +1703,186 @@ export default function ImportCenterPage() {
                   <div style={styles.karteText}>{s.beschreibung}</div>
                   <div style={styles.karteAktionen}>
                     <VorlagenKnopf quelle={s} />
-                    <a href={s.zielHref} style={styles.btnZiel}>Zum Import ›</a>
+                    {s.motor ? (
+                      <button
+                        type="button"
+                        onClick={() => { zielWaehlen(s.motor as string); try { document.getElementById('import-ziel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* egal */ } }}
+                        style={{ ...styles.btnZiel, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        Hier importieren ›
+                      </button>
+                    ) : (
+                      <a href={s.zielHref} style={styles.btnZiel}>Zum Import ›</a>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ))
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Schritt 2: „Aus welchem System ziehen Sie um?"
+// ============================================================================
+
+function AltsystemKarte(p: {
+  wahl: Wahl;
+  offen: boolean; setOffen: (v: boolean) => void;
+  suche: string; setSuche: (v: string) => void;
+  anleitungOffen: string | null; setAnleitungOffen: (v: string | null) => void;
+  umschalten: (key: string) => void;
+  ausblenden: (key: string) => void;
+  nurMeine: (v: boolean) => void;
+  allesZeigen: () => void;
+  importieren: (system: string, ziel: string) => void;
+  gemerktIn: 'betrieb' | 'browser';
+}) {
+  const meine = p.wahl.systeme.map((k) => altsystem(k)).filter((x): x is Altsystem => !!x);
+  const sichtbar = sucheAltsysteme(sichtbareAltsysteme(ALTSYSTEME, p.wahl, p.wahl.nur_meine), p.suche);
+  const gruppen = gruppiereAltsysteme(sichtbar);
+  const kpi = zaehleAltsysteme();
+  const zielName: Record<string, string> = { kontakte: 'Kunden', lieferanten: 'Lieferanten', artikel: 'Artikel', rechnungen: 'Offene Posten' };
+
+  return (
+    <div style={{ ...styles.stufe, borderColor: meine.length > 0 ? 'rgba(0,229,255,0.35)' : C.border }}>
+      <div style={styles.stufenTitel}>🧭 Aus welchem System ziehen Sie um?</div>
+      <p style={styles.stufenText}>
+        Haken Sie Ihre bisherigen Programme an — Sie bekommen je Programm eine Schritt-für-Schritt-Anleitung für den
+        Export, und ARGONAUT erkennt die Spalten dieser Programme beim Einlesen zuerst. Fremde Programme können Sie
+        ausblenden. {p.gemerktIn === 'betrieb' ? 'Ihre Auswahl gilt für den ganzen Betrieb.' : 'Ihre Auswahl wird in diesem Browser gemerkt.'}
+      </p>
+
+      {meine.length > 0 && (
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          {meine.map((sys) => {
+            const a = anleitung(sys);
+            const sperre = sperrText(sys);
+            const auf = p.anleitungOffen === sys.key;
+            return (
+              <div key={sys.key} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', background: 'rgba(10,22,40,0.5)' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <b style={{ fontSize: 14.5 }}>{sys.name}</b>
+                  <span style={{ color: C.dim, fontSize: 12.5 }}>{sys.daten}</span>
+                  {!a.belegt && <span style={styles.marke}>Export beim Hersteller erfragen</span>}
+                  {sys.datev && <span style={{ ...styles.marke, color: C.cyan, borderColor: 'rgba(0,229,255,0.4)' }}>DATEV-Format</span>}
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => p.setAnleitungOffen(auf ? null : sys.key)} style={styles.linkKnopf}>
+                      {auf ? 'Anleitung zu' : 'Anleitung ›'}
+                    </button>
+                    <button type="button" onClick={() => p.umschalten(sys.key)} style={{ ...styles.linkKnopf, color: C.dim }} title="Aus meiner Liste nehmen">✕</button>
+                  </span>
+                </div>
+                {auf && (
+                  <div style={{ marginTop: 10, fontSize: 13.5, lineHeight: 1.6 }}>
+                    {sperre && <div style={{ ...styles.warnKasten, margin: '0 0 10px' }}>🔒 {sperre}</div>}
+                    <ol style={{ margin: '0 0 8px', paddingLeft: 20 }}>
+                      {a.schritte.map((t, i) => <li key={i} style={{ marginBottom: 3 }}>{t}</li>)}
+                    </ol>
+                    {(sys.hinweise ?? []).map((h, i) => <div key={i} style={{ color: C.warn, fontSize: 12.5 }}>⚠ {h}</div>)}
+                    {sys.formate.length > 0 && <div style={{ color: C.dim, fontSize: 12.5, marginTop: 4 }}>Formate: {sys.formate.join(' · ')}</div>}
+                    {sys.quelle && (
+                      <div style={{ color: C.dim, fontSize: 11.5, marginTop: 2 }}>
+                        Quelle: {sys.quelle}{sys.drittquelle ? ' (nicht vom Hersteller — bitte gegenprüfen)' : ' (Hilfe des Herstellers)'}
+                      </div>
+                    )}
+                    {!sperre && sys.ziele.length > 0 && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                        {sys.ziele.map((z) => (
+                          <button key={z} type="button" onClick={() => p.importieren(sys.key, z)} style={{ ...styles.btnRand, fontSize: 12.5, padding: '7px 11px', borderColor: C.cyan, color: C.cyan }}>
+                            📥 {zielName[z] ?? z} aus {sys.name} importieren
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!sperre && sys.ziele.length === 0 && (
+                      <div style={{ color: C.dim, fontSize: 12.5, marginTop: 6 }}>
+                        Diese Daten übernimmt ARGONAUT in einem späteren Schritt des Umzugs (Termine, Projekte, Mitarbeiter).
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button type="button" onClick={() => p.setOffen(!p.offen)} style={styles.btnRand}>
+          {p.offen ? 'Liste schließen' : meine.length > 0 ? 'Weitere Programme anhaken' : `Programme anhaken (${kpi.gesamt} zur Auswahl)`}
+        </button>
+        {p.offen && (
+          <>
+            <input value={p.suche} onChange={(e) => p.setSuche(e.target.value)} placeholder="🔍 Programm suchen …" style={{ ...styles.eingabe, flex: '1 1 200px' }} />
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', color: C.dim, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={p.wahl.nur_meine} onChange={(e) => p.nurMeine(e.target.checked)} /> nur meine zeigen
+            </label>
+            {p.wahl.ausgeblendet.length > 0 && (
+              <button type="button" onClick={p.allesZeigen} style={styles.linkKnopf}>{p.wahl.ausgeblendet.length} ausgeblendete wieder zeigen</button>
+            )}
+          </>
+        )}
+      </div>
+
+      {p.offen && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ color: C.dim, fontSize: 12, marginBottom: 8 }}>
+            {kpi.gesamt} Programme · {kpi.belegt} mit belegter Export-Anleitung · {kpi.datev} mit DATEV-Format. Klick = anhaken, ✕ = ausblenden.
+          </div>
+          {gruppen.length === 0 && <div style={{ color: C.dim, fontSize: 13 }}>Kein Programm passt. Nicht dabei? Dann „Excel / eigene Listen“ anhaken — jede Liste mit Überschriften geht.</div>}
+          {gruppen.map((g) => (
+            <div key={g.key} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{g.icon} {g.label}</div>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {g.systeme.map((sys) => {
+                  const an = p.wahl.systeme.includes(sys.key);
+                  return (
+                    <span key={sys.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <button type="button" onClick={() => p.umschalten(sys.key)} style={an ? styles.chipAktiv : styles.chip} title={istBelegt(sys) ? sys.daten : 'Export-Weg beim Hersteller erfragen'}>
+                        {an ? '✓ ' : ''}{sys.name}{!istBelegt(sys) ? ' ?' : ''}
+                      </button>
+                      {!an && (
+                        <button type="button" onClick={() => p.ausblenden(sys.key)} style={{ ...styles.linkKnopf, color: C.dim, padding: '0 4px' }} title="Nicht mein Programm — ausblenden">✕</button>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Wohin ging jede Spalte? Feld · Eigenes Feld · nicht übernommen (mit Grund). */
+function SpaltenBilanzKasten({ bilanz }: { bilanz: SpaltenBilanz }) {
+  const [offen, setOffen] = useState(false);
+  const eigen = bilanz.eintraege.filter((e) => e.art === 'eigen');
+  const nicht = bilanz.eintraege.filter((e) => e.art === 'nicht');
+  const nichtOhneLeer = nicht.filter((e) => e.grund !== GRUND.leer);
+  const leer = nicht.length - nichtOhneLeer.length;
+  return (
+    <div style={{ ...styles.hinweisKasten, marginBottom: 12 }}>
+      <b style={{ color: C.text }}>Spalten-Bilanz:</b> {bilanz.gesamt} Spalten = {bilanz.feld} in Feldern
+      + {bilanz.eigen} als Eigene Felder + {bilanz.nicht} nicht übernommen
+      {' · '}<b style={{ color: bilanz.verschluckt === 0 ? C.green : C.danger }}>{bilanz.verschluckt} verschluckt</b>
+      {(eigen.length > 0 || nicht.length > 0) && (
+        <button type="button" onClick={() => setOffen(!offen)} style={{ ...styles.linkKnopf, marginLeft: 8 }}>{offen ? 'zu' : 'Einzelheiten ›'}</button>
+      )}
+      {offen && (
+        <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.7 }}>
+          {eigen.length > 0 && <div><b style={{ color: C.cyan }}>Als Eigene Felder:</b> {eigen.map((e) => e.spalte).join(' · ')}</div>}
+          {nichtOhneLeer.map((e) => (
+            <div key={e.spalte} style={{ color: C.warn }}>✕ „{e.spalte}“ nicht übernommen, weil: {e.grund}</div>
+          ))}
+          {leer > 0 && <div>{leer} Spalten sind in allen Zeilen leer und werden deshalb nicht übernommen.</div>}
+        </div>
       )}
     </div>
   );
@@ -1487,6 +1980,8 @@ const styles: Record<string, CSSProperties> = {
   karteAktionen: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 'auto' },
   btnVorlage: { color: C.gold, textDecoration: 'none', fontWeight: 700, fontSize: 13, border: `1px solid ${C.gold}`, borderRadius: 9, padding: '7px 12px' },
   keineVorlage: { color: C.dim, fontSize: 12, fontStyle: 'italic' },
+  linkKnopf: { background: 'transparent', border: 'none', color: C.cyan, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, padding: 0, fontFamily: 'inherit' },
+  marke: { fontSize: 11, fontWeight: 800, color: C.warn, border: '1px solid rgba(224,162,76,0.45)', borderRadius: 999, padding: '2px 8px' },
   btnZiel: { color: C.navy, background: C.cyan, textDecoration: 'none', fontWeight: 700, fontSize: 13, borderRadius: 9, padding: '7px 12px', marginLeft: 'auto' },
   leer: { marginTop: 24, background: C.navy2, border: `1px dashed ${C.border}`, borderRadius: 14, padding: '36px 20px', textAlign: 'center', color: C.dim },
 };

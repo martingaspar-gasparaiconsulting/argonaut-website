@@ -300,6 +300,24 @@ export default function LieferantenCockpit() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {/* Umzug Schritt 2: Dateien (CSV, Excel, DATEV) laufen durch den EINEN Import-Motor. */}
+          <a
+            href="/dashboard/import?ziel=lieferanten"
+            title="CSV, Excel oder DATEV-Kreditoren einlesen — mit Eigenen Feldern und Spalten-Bilanz"
+            style={{
+              padding: "10px 18px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.05)",
+              border: `1px solid ${C.border}`,
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 'clamp(14px, 1.25vw, 20px)',
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            📥 Datei importieren
+          </a>
           <a
             href="/dashboard/erp/lieferanten/import"
             style={{

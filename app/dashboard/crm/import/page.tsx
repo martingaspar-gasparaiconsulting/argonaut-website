@@ -260,6 +260,14 @@ export default function KontaktImportPage() {
         <a href="/dashboard/crm" style={styles.ghostBtn}>← Zum CRM</a>
       </div>
 
+      {/* Umzug Schritt 2 (27.09.2026): die Kunden-Tueren fuehren auf EINEN Motor. Diese Seite bleibt (nichts geloescht). */}
+      <div style={{ margin: '14px 0 4px', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 12, padding: '12px 14px', background: 'rgba(0,229,255,0.06)', color: C.textDim, fontSize: 14, lineHeight: 1.55 }}>
+        <b style={{ color: C.text }}>Neu: das Import-Center übernimmt Kunden jetzt vollständig</b> — mit Kundennummer, Adresse,
+        Eigenen Feldern, DATEV-Debitoren, Anleitungen für Ihr bisheriges Programm und einer Bilanz, dass keine Spalte verloren geht.{' '}
+        <a href="/dashboard/import?ziel=kontakte" style={{ color: C.cyan, fontWeight: 800 }}>Zum Import-Center ›</a>
+        <div style={{ fontSize: 12.5, marginTop: 4 }}>Diese Seite bleibt für das Zusammenführen ähnlicher Kontakte erhalten.</div>
+      </div>
+
       {/* Schrittanzeige */}
       <div style={styles.schritte}>
         {(['Datei', 'Spalten zuordnen', 'Prüfen', 'Fertig'] as const).map((label, i) => (

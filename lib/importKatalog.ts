@@ -40,6 +40,14 @@ export type ImportQuelle = {
   musterZiel?: string;
   /** Wohin der eigentliche Import fuehrt (Modul-Seite). */
   zielHref: string;
+  /**
+   * Umzug Schritt 2 (27.09.2026): Diese Datenart laeuft durch den Import-Motor
+   * hier im Import-Center (Schluessel eines Ziels in lib/importParser ZIELE).
+   * Die Karte oeffnet dann den Motor statt der alten Modul-Seite — die
+   * doppelte Tuer fuehrt auf denselben Weg. zielHref bleibt fuer den
+   * Branchen-Filter (welches Modul gehoert dazu).
+   */
+  motor?: string;
   gruppe: ImportGruppeKey;
 };
 
@@ -54,9 +62,9 @@ const V = '/vorlagen/';
 
 export const IMPORT_QUELLEN: ImportQuelle[] = [
   // --- Stammdaten -----------------------------------------------------------
-  { key: 'kontakte', label: 'Kontakte / CRM', icon: '🤝', beschreibung: 'Kunden und Firmen ins CRM übernehmen.', musterZiel: 'kontakte', zielHref: '/dashboard/crm/import', gruppe: 'stammdaten' },
-  { key: 'artikel', label: 'Artikel & Preise (Lager)', icon: '📦', beschreibung: 'Sortiment und Preisliste ins ERP/Lager laden.', musterZiel: 'artikel', zielHref: '/dashboard/erp/preisliste', gruppe: 'stammdaten' },
-  { key: 'lieferanten', label: 'Lieferanten', icon: '🏭', beschreibung: 'Lieferanten-Stammdaten für Einkauf und ERP.', vorlage: V + 'lieferanten-import-vorlage.csv', zielHref: '/dashboard/erp/lieferanten', gruppe: 'stammdaten' },
+  { key: 'kontakte', label: 'Kontakte / CRM', icon: '🤝', beschreibung: 'Kunden und Firmen ins CRM übernehmen.', musterZiel: 'kontakte', zielHref: '/dashboard/crm/import', motor: 'kontakte', gruppe: 'stammdaten' },
+  { key: 'artikel', label: 'Artikel & Preise (Lager)', icon: '📦', beschreibung: 'Sortiment und Preisliste ins ERP/Lager laden.', musterZiel: 'artikel', zielHref: '/dashboard/erp/preisliste', motor: 'artikel', gruppe: 'stammdaten' },
+  { key: 'lieferanten', label: 'Lieferanten', icon: '🏭', beschreibung: 'Lieferanten-Stammdaten für Einkauf und ERP.', vorlage: V + 'lieferanten-import-vorlage.csv', zielHref: '/dashboard/erp/lieferanten', motor: 'lieferanten', gruppe: 'stammdaten' },
   { key: 'varianten', label: 'Artikel-Varianten & Matrix', icon: '🧩', beschreibung: 'Varianten-Gruppen (Größe/Farbe) für den Handel.', vorlage: V + 'varianten-import-vorlage.csv', zielHref: '/dashboard/varianten', gruppe: 'stammdaten' },
 
   // --- Verträge & Objekte ---------------------------------------------------
@@ -94,7 +102,7 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'freigaben', label: 'Freigaben & Assets', icon: '✅', beschreibung: 'Kreativ-Assets für Freigaben & Proofing.', vorlage: V + 'freigaben-assets-import-vorlage.csv', zielHref: '/dashboard/freigaben', gruppe: 'betrieb' },
 
   // --- Finanzen & Förderung -------------------------------------------------
-  { key: 'rechnungen', label: 'Offene Rechnungen (Altsystem)', icon: '🧾', beschreibung: 'Bestehende Rechnungen mit Zahlungsstand aus dem alten System übernehmen.', musterZiel: 'rechnungen', zielHref: '/dashboard/rechnungen', gruppe: 'finanzen' },
+  { key: 'rechnungen', label: 'Offene Rechnungen (Altsystem)', icon: '🧾', beschreibung: 'Bestehende Rechnungen mit Zahlungsstand aus dem alten System übernehmen.', musterZiel: 'rechnungen', zielHref: '/dashboard/rechnungen', motor: 'rechnungen', gruppe: 'finanzen' },
   { key: 'foerdervorhaben', label: 'Fördervorhaben', icon: '💰', beschreibung: 'Fördervorhaben mit Nachweis-Fristen.', vorlage: V + 'foerdervorhaben-import-vorlage.csv', zielHref: '/dashboard/foerdermittel', gruppe: 'finanzen' },
   { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial).', vorlage: V + 'spenden-import-vorlage.csv', zielHref: '/dashboard/spenden', gruppe: 'finanzen' },
 ];

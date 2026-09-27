@@ -62,7 +62,8 @@ test('PDFs holen die Firmendaten vom Betrieb', () => {
 test('Kontakte: Importe gehoeren dem Betrieb, SQL ohne Loeschrecht und ohne Rechnungs-Regeln', () => {
   assert.ok(lies('app/dashboard/crm/import/page.tsx').includes('owner_user_id: betrieb,'));
   const imp = lies('app/dashboard/import/page.tsx');
-  assert.ok(imp.includes("if (ziel.tabelle === 'kontakte')") && imp.includes('owner_user_id: neuOwner'));
+  // Umzug Schritt 2 (27.09.2026): seitdem gehoeren ALLE Import-Ziele dem Betrieb, nicht nur Kontakte.
+  assert.ok(imp.includes('const neuOwner = betrieb;') && imp.includes('owner_user_id: neuOwner'));
   const sql = lies('supabase-sql/b1b2-geld-kontakte.sql').replace(/--[^\n]*/g, '');
   const liste = sql.slice(sql.indexOf('tabellen text[]'), sql.indexOf('umhaengen text[]'));
   for (const t of ['angebote', 'angebot_positionen', 'kalkulationen', 'leistungskatalog', 'projektleistungen', 'foerder_angebote', 'kontakte']) assert.ok(liste.includes(`'${t}'`), t);

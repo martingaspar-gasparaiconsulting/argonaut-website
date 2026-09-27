@@ -464,6 +464,27 @@ export type ZielFeld = {
   /** Schreibweisen, unter denen dieses Feld in fremden Dateien auftaucht. */
   alias: string[];
   standard?: string | number | boolean;
+  /**
+   * Schritt 2 (27.09.2026): Diese Spalte gibt es erst mit dem SQL von
+   * Paket 124 (oder nur in manchen Datenbanken). Der Motor bietet das Feld nur
+   * an, wenn der Feldkatalog aus der Datenbank es bestaetigt — sonst wuerde
+   * das Einspielen an einer fehlenden Spalte scheitern.
+   */
+  neu?: boolean;
+  /**
+   * Kein eigenes Datenbankfeld: wird beim Pruefen in echte Felder umgesetzt.
+   *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
+   *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
+   */
+  virtuell?: 'name_zerlegen' | 'adresse_teil';
+  /** Nicht als Spalte in die Mustervorlage (z. B. virtuelle Felder). */
+  nichtInVorlage?: boolean;
+  /**
+   * Nur bei exakt gleichem Spaltennamen zuordnen, nie per Teiltreffer —
+   * fuer Felder, die nur die Datenbank kennt (deren Namen sind technisch
+   * und wuerden sonst zufaellig passen).
+   */
+  nurExakt?: boolean;
 };
 
 export type ImportZiel = {
@@ -474,6 +495,14 @@ export type ImportZiel = {
   beschreibung: string;
   /** Feld, ueber das Dubletten erkannt werden (leer = keine Dublettenpruefung). */
   schluessel?: string;
+  /**
+   * Schritt 2: ALLE Felder, an denen ein vorhandener Eintrag erkannt wird —
+   * in dieser Reihenfolge. Ein Treffer in irgendeinem genuegt. Bei Kunden
+   * aus DATEV fehlt oft die E-Mail, die Kundennummer (Debitorenkonto) nie.
+   */
+  schluesselFelder?: string[];
+  /** Modul-Schluessel fuer „Eigene Felder" (eigenes_feld.modul). */
+  eigeneFelderModul?: string;
   felder: ZielFeld[];
 };
 
@@ -485,16 +514,29 @@ export const ZIELE: ImportZiel[] = [
     tabelle: 'kontakte',
     beschreibung: 'Kundenliste aus der alten Software oder aus Excel ins CRM übernehmen.',
     schluessel: 'email',
+    schluesselFelder: ['kundennummer', 'import_schluessel', 'email'],
+    eigeneFelderModul: 'kontakte',
     felder: [
-      { key: 'firma', label: 'Firma', typ: 'text', alias: ['firma', 'firmenname', 'unternehmen', 'company', 'kunde', 'kundenname', 'name der firma', 'organisation'] },
-      { key: 'vorname', label: 'Vorname', typ: 'text', alias: ['vorname', 'first name', 'firstname', 'rufname'] },
-      { key: 'nachname', label: 'Nachname', typ: 'text', alias: ['nachname', 'name', 'last name', 'lastname', 'familienname', 'ansprechpartner'] },
-      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e mail', 'emailadresse', 'e-mail-adresse'] },
-      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'telefonnummer', 'phone', 'festnetz', 'mobil', 'handy'] },
-      { key: 'position', label: 'Position', typ: 'text', alias: ['position', 'funktion', 'rolle', 'titel'] },
-      { key: 'status', label: 'Status', typ: 'text', standard: 'interessent', hinweis: 'interessent · aktiv · kunde · inaktiv', alias: ['status', 'kundenstatus'] },
-      { key: 'quelle', label: 'Quelle', typ: 'text', alias: ['quelle', 'herkunft', 'source', 'kanal'] },
-      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'bemerkungen', 'kommentar', 'anmerkung'] },
+      { key: 'kundennummer', label: 'Kundennummer', typ: 'text', neu: true, alias: ['kundennummer', 'kundennr', 'kunden-nr', 'kunden nr', 'kd-nr', 'kdnr', 'debitor', 'debitorennummer', 'debitorenkonto', 'customer number', 'customer id', 'customer no'] },
+      { key: 'anrede', label: 'Anrede', typ: 'text', neu: true, alias: ['anrede', 'salutation', 'briefanrede'] },
+      { key: 'firma', label: 'Firma', typ: 'text', alias: ['firma', 'firmenname', 'unternehmen', 'company', 'company name', 'kunde', 'kundenname', 'name der firma', 'organisation', 'organization', 'organization name', 'account name'] },
+      { key: 'vorname', label: 'Vorname', typ: 'text', alias: ['vorname', 'first name', 'firstname', 'given name', 'rufname'] },
+      { key: 'nachname', label: 'Nachname', typ: 'text', alias: ['nachname', 'last name', 'lastname', 'surname', 'family name', 'familienname', 'ansprechpartner'] },
+      { key: 'name_komplett', label: 'Name (wird zerlegt)', typ: 'text', virtuell: 'name_zerlegen', nichtInVorlage: true, hinweis: '„Müller, Anna" oder „Anna Müller" — wird in Vor- und Nachname zerlegt; Firmennamen (GmbH, KG …) landen bei Firma.', alias: ['name', 'full name', 'vollstaendiger name', 'kontakt', 'contact name', 'matchcode'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e mail', 'emailadresse', 'e-mail-adresse', 'email address', 'e-mail address', 'email 1 value'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'telefonnummer', 'phone', 'phone number', 'festnetz', 'business phone', 'telefon geschaeftlich'] },
+      { key: 'mobil', label: 'Mobil', typ: 'text', neu: true, alias: ['mobil', 'handy', 'mobiltelefon', 'mobilnummer', 'mobile', 'mobile phone', 'mobile phone number', 'cell', 'cell phone'] },
+      { key: 'position', label: 'Position', typ: 'text', alias: ['position', 'funktion', 'rolle', 'titel', 'job title', 'jobtitel'] },
+      { key: 'strasse', label: 'Straße', typ: 'text', neu: true, alias: ['strasse', 'straße', 'str', 'strasse und hausnummer', 'anschrift', 'adresse', 'street', 'street address', 'address', 'address line 1', 'addressline1', 'address1'] },
+      { key: 'plz', label: 'PLZ', typ: 'text', neu: true, alias: ['plz', 'postleitzahl', 'zip', 'zip code', 'postal code', 'postcode'] },
+      { key: 'ort', label: 'Ort', typ: 'text', neu: true, alias: ['ort', 'stadt', 'wohnort', 'city', 'town'] },
+      { key: 'land', label: 'Land', typ: 'text', neu: true, alias: ['land', 'staat', 'country', 'country region', 'country code', 'laenderkennzeichen'] },
+      { key: 'website', label: 'Website', typ: 'text', neu: true, alias: ['website', 'webseite', 'homepage', 'internet', 'url', 'web'] },
+      { key: 'ust_id', label: 'USt-IdNr.', typ: 'text', neu: true, alias: ['ust-id', 'ust id', 'ustid', 'ust-idnr', 'ust idnr', 'umsatzsteuer-id', 'eu-ustid', 'vat', 'vat id', 'vat number', 'tax id'] },
+      { key: 'import_schluessel', label: 'Nummer im Altsystem', typ: 'text', neu: true, hinweis: 'Die Kennung aus dem alten Programm (z. B. „Record ID") — damit ein zweiter Import denselben Eintrag wiedererkennt.', alias: ['record id', 'datensatz id', 'alt id', 'altnummer', 'id altsystem', 'externe id', 'external id', 'import id'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'interessent', hinweis: 'interessent · aktiv · kunde · inaktiv', alias: ['status', 'kundenstatus', 'lifecycle stage'] },
+      { key: 'quelle', label: 'Quelle', typ: 'text', alias: ['quelle', 'herkunft', 'source', 'kanal', 'lead source'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'bemerkungen', 'kommentar', 'anmerkung', 'notes', 'note'] },
     ],
   },
   {
@@ -504,9 +546,11 @@ export const ZIELE: ImportZiel[] = [
     tabelle: 'artikel',
     beschreibung: 'Sortiment, Preise und Lagerbestände ins ERP laden.',
     schluessel: 'artikelnummer',
+    schluesselFelder: ['artikelnummer', 'ean'],
+    eigeneFelderModul: 'artikel',
     felder: [
       { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'artikel', 'artikelbezeichnung', 'name', 'produkt', 'produktname', 'beschreibung kurz', 'titel'] },
-      { key: 'artikelnummer', label: 'Artikelnummer', typ: 'text', alias: ['artikelnummer', 'artikelnr', 'artikel-nr', 'art nr', 'artnr', 'nummer', 'sku', 'nr'] },
+      { key: 'artikelnummer', label: 'Artikelnummer', typ: 'text', alias: ['artikelnummer', 'artikelnr', 'artikel-nr', 'art nr', 'artnr', 'nummer', 'sku', 'nr', 'seller-sku', 'item number', 'product code'] },
       { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'langtext', 'details', 'text'] },
       { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'warengruppe', 'gruppe', 'sparte', 'rubrik'] },
       { key: 'einheit', label: 'Einheit', typ: 'text', standard: 'Stk', alias: ['einheit', 'me', 'mengeneinheit', 'verpackungseinheit', 'einh'] },
@@ -526,12 +570,19 @@ export const ZIELE: ImportZiel[] = [
     tabelle: 'lieferanten',
     beschreibung: 'Lieferanten-Stammdaten für Einkauf und Bestellwesen.',
     schluessel: 'name',
+    schluesselFelder: ['lieferantennummer', 'name'],
+    eigeneFelderModul: 'lieferanten',
     felder: [
-      { key: 'name', label: 'Name', typ: 'text', pflicht: true, alias: ['name', 'lieferant', 'firma', 'firmenname', 'unternehmen'] },
+      { key: 'lieferantennummer', label: 'Lieferantennummer', typ: 'text', neu: true, alias: ['lieferantennummer', 'lieferantennr', 'lieferanten-nr', 'lief-nr', 'kreditor', 'kreditorennummer', 'kreditorenkonto', 'supplier number', 'vendor number', 'vendor id'] },
+      { key: 'name', label: 'Name', typ: 'text', pflicht: true, alias: ['name', 'lieferant', 'firma', 'firmenname', 'unternehmen', 'company', 'supplier', 'vendor'] },
       { key: 'ansprechpartner', label: 'Ansprechpartner', typ: 'text', alias: ['ansprechpartner', 'kontakt', 'kontaktperson', 'zustaendig'] },
       { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e-mail-adresse'] },
       { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'telefonnummer', 'phone'] },
-      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'strasse', 'straße', 'ort'] },
+      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'address'] },
+      { key: 'adresse_strasse', label: 'Straße (zur Adresse)', typ: 'text', virtuell: 'adresse_teil', nichtInVorlage: true, alias: ['strasse', 'straße', 'str', 'street'] },
+      { key: 'adresse_plz', label: 'PLZ (zur Adresse)', typ: 'text', virtuell: 'adresse_teil', nichtInVorlage: true, alias: ['plz', 'postleitzahl', 'zip', 'postal code'] },
+      { key: 'adresse_ort', label: 'Ort (zur Adresse)', typ: 'text', virtuell: 'adresse_teil', nichtInVorlage: true, alias: ['ort', 'stadt', 'city'] },
+      { key: 'ust_id', label: 'USt-IdNr.', typ: 'text', neu: true, alias: ['ust-id', 'ust id', 'ustid', 'ust-idnr', 'eu-ustid', 'vat id', 'vat number'] },
       { key: 'website', label: 'Website', typ: 'text', alias: ['website', 'webseite', 'url', 'internet', 'homepage'] },
       { key: 'kundennummer', label: 'Unsere Kundennummer', typ: 'text', alias: ['kundennummer', 'kundennr', 'kunden-nr', 'unsere nummer'] },
       { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar'] },
@@ -544,6 +595,8 @@ export const ZIELE: ImportZiel[] = [
     tabelle: 'rechnungen',
     beschreibung: 'Unbezahlte Rechnungen aus der alten Buchhaltung übernehmen — damit Mahnwesen und Cashflow von Tag eins stimmen.',
     schluessel: 'rechnungsnummer',
+    schluesselFelder: ['rechnungsnummer'],
+    eigeneFelderModul: 'rechnungen',
     felder: [
       { key: 'rechnungsnummer', label: 'Rechnungsnummer', typ: 'text', pflicht: true, alias: ['rechnungsnummer', 'rechnungsnr', 'rg-nr', 'rgnr', 'belegnummer', 'beleg-nr', 'nummer', 'nr'] },
       { key: 'titel', label: 'Titel / Betreff', typ: 'text', alias: ['titel', 'betreff', 'bezeichnung', 'leistung', 'text', 'buchungstext'] },
@@ -573,6 +626,16 @@ export function zielDef(key: string): ImportZiel | undefined {
 
 const BEISPIELE: Record<string, Record<string, string>> = {
   kontakte: {
+    kundennummer: 'K-1001|K-1002|K-1003',
+    anrede: 'Frau|Herr|Frau',
+    strasse: 'Hauptstraße 12|Industriering 4|Am Markt 3',
+    plz: '45127|70565|71032',
+    ort: 'Essen|Stuttgart|Böblingen',
+    land: 'DE|DE|DE',
+    mobil: '|0170 9876543|',
+    website: 'www.muster.de|www.beispiel-handwerk.de|',
+    ust_id: 'DE123456789||',
+    import_schluessel: '||',
     firma: 'Muster GmbH|Beispiel Handwerk e.K.|',
     vorname: 'Anna|Thomas|Petra',
     nachname: 'Berger|Klein|Wagner',
@@ -598,6 +661,8 @@ const BEISPIELE: Record<string, Record<string, string>> = {
     aktiv: 'ja|ja|ja',
   },
   lieferanten: {
+    lieferantennummer: 'L-01|L-02|L-03',
+    ust_id: 'DE987654321||',
     name: 'Grosshandel Nord GmbH|Werkzeug Sued AG|Elektro Mitte KG',
     ansprechpartner: 'Frau Meier|Herr Bauer|',
     email: 'bestellung@grosshandel-nord.de|vertrieb@werkzeug-sued.de|info@elektro-mitte.de',
@@ -642,10 +707,11 @@ export function baueMustervorlage(zielKey: string): string {
   if (!ziel) return '';
 
   const beispiel = BEISPIELE[zielKey] ?? {};
-  const kopf = ziel.felder.map((f) => f.label + (f.pflicht ? ' *' : ''));
+  const felder = ziel.felder.filter((f) => !f.nichtInVorlage);
+  const kopf = felder.map((f) => f.label + (f.pflicht ? ' *' : ''));
 
   const zeilen: string[][] = Array.from({ length: ZEILEN_JE_MUSTERVORLAGE }, () => [] as string[]);
-  for (const f of ziel.felder) {
+  for (const f of felder) {
     const teile = (beispiel[f.key] ?? '').split('|');
     for (let i = 0; i < ZEILEN_JE_MUSTERVORLAGE; i++) {
       zeilen[i]?.push(teile[i] ?? '');
@@ -687,18 +753,39 @@ export type Mapping = Record<string, string>;
  */
 export function errateMapping(kopf: string[], zielKey: string): Mapping {
   const ziel = zielDef(zielKey);
-  const map: Mapping = {};
-  if (!ziel) return map;
+  if (!ziel) return {};
+  return errateMappingFuer(kopf, ziel);
+}
 
+/**
+ * Schritt 2: dieselbe Erkennung fuer ein Ziel mit Feldern aus dem
+ * Feldkatalog der Datenbank — plus die belegten Spaltennamen eines
+ * Altsystems (extraAlias), die VOR allen allgemeinen Aliasen zaehlen.
+ */
+export function errateMappingFuer(kopf: string[], ziel: ImportZiel, extraAlias: Record<string, string[]> = {}): Mapping {
+  const map: Mapping = {};
   const vergeben = new Set<string>();
+  const feldKeys = new Set(ziel.felder.map((f) => f.key));
+
+  // Stufe 0: belegte Spaltennamen des Altsystems (exakt)
+  for (const spalte of kopf) {
+    const n = normal(spalte);
+    if (!n) continue;
+    for (const [feld, namen] of Object.entries(extraAlias)) {
+      if (!feldKeys.has(feld) || vergeben.has(feld)) continue;
+      if (namen.some((x) => normal(x) === n)) { map[spalte] = feld; vergeben.add(feld); break; }
+    }
+  }
 
   const kandidaten = ziel.felder.map((f) => ({
     key: f.key,
+    nurExakt: !!f.nurExakt,
     begriffe: [normal(f.key), normal(f.label), ...f.alias.map(normal)].filter((x) => x.length > 0),
   }));
 
   // Stufe 1: exakte Treffer
   for (const spalte of kopf) {
+    if (map[spalte]) continue;
     const n = normal(spalte);
     if (!n) continue;
     const treffer = kandidaten.find((k) => !vergeben.has(k.key) && k.begriffe.includes(n));
@@ -712,7 +799,7 @@ export function errateMapping(kopf: string[], zielKey: string): Mapping {
     if (n.length < 2) continue;
     let bester: { key: string; laenge: number } | null = null;
     for (const k of kandidaten) {
-      if (vergeben.has(k.key)) continue;
+      if (vergeben.has(k.key) || k.nurExakt) continue;
       for (const b of k.begriffe) {
         if (b.length < 3) continue;
         if (n === b || n.includes(b) || b.includes(n)) {
@@ -728,8 +815,8 @@ export function errateMapping(kopf: string[], zielKey: string): Mapping {
 }
 
 /** Welche Pflichtfelder sind im Mapping noch nicht zugeordnet? */
-export function fehlendePflichtfelder(mapping: Mapping, zielKey: string): ZielFeld[] {
-  const ziel = zielDef(zielKey);
+export function fehlendePflichtfelder(mapping: Mapping, zielKey: string, zielObjekt?: ImportZiel): ZielFeld[] {
+  const ziel = zielObjekt ?? zielDef(zielKey);
   if (!ziel) return [];
   const zugeordnet = new Set(Object.values(mapping).filter(Boolean));
   return ziel.felder.filter((f) => f.pflicht && !zugeordnet.has(f.key));
@@ -772,6 +859,17 @@ export type ZeilenOptionen = {
   steuersatz?: number;
   /** Bezugsdatum fuer zweistellige Jahreszahlen. */
   heute?: Date;
+  /**
+   * Schritt 2: das Ziel mit den Feldern aus dem Feldkatalog der Datenbank.
+   * Ohne Angabe gilt der feste Katalog (ZIELE) wie bisher.
+   */
+  ziel?: ImportZiel;
+  /**
+   * Schritt 2: eine Zeile begruendet ablehnen, bevor sie geprueft wird —
+   * z. B. ein Kreditor in einer DATEV-Datei, die als Kunden importiert wird.
+   * Gibt den Grund zurueck oder null.
+   */
+  ablehnen?: (zeile: string[]) => { feld: string; grund: string } | null;
 };
 
 /** Standard-Steuersatz, wenn keiner uebergeben wird. Eine EINGABE, kein Gesetz. */
@@ -789,10 +887,12 @@ export function pruefeZeile(
   nummer: number,
   opt: ZeilenOptionen = {},
 ): ZeilenErgebnis {
-  const ziel = zielDef(zielKey);
+  const ziel = opt.ziel ?? zielDef(zielKey);
   const fehler: ZeilenFehler[] = [];
   const warnungen: ZeilenFehler[] = [];
   if (!ziel) return { werte: null, fehler: [{ zeile: nummer, feld: '', meldung: 'Unbekanntes Import-Ziel' }], warnungen };
+  const abgelehnt = opt.ablehnen?.(zeile) ?? null;
+  if (abgelehnt) return { werte: null, fehler: [{ zeile: nummer, feld: abgelehnt.feld, meldung: abgelehnt.grund }], warnungen };
   const dezimal = opt.dezimal ?? 'unbekannt';
   const heute = opt.heute ?? new Date();
 
@@ -867,6 +967,7 @@ export function pruefeZeile(
 
   if (fehler.length > 0) return { werte: null, fehler, warnungen };
 
+  virtuelleFelderAufloesen(ziel, werte);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD);
 
   // Eine Zeile ohne jeden Inhalt ist kein Datensatz.
@@ -948,13 +1049,94 @@ function nachbereiten(
 
   if (zielKey === 'kontakte') {
     const erlaubt = ['interessent', 'aktiv', 'kunde', 'inaktiv'];
+    if (typeof werte.status === 'string') {
+      const uebersetzt = STATUS_UEBERSETZUNG[normal(werte.status)];
+      if (uebersetzt) werte.status = uebersetzt;
+    }
     if (typeof werte.status === 'string' && !erlaubt.includes(werte.status.toLowerCase())) {
-      warnungen.push({ zeile: nummer, feld: 'Status', meldung: `"${werte.status}" ist kein bekannter Status — auf "interessent" gesetzt` });
+      warnungen.push({ zeile: nummer, feld: 'Status', meldung: `"${werte.status}" ist kein bekannter Status — auf "interessent" gesetzt (der alte Wert steht in den Notizen)` });
+      // Schritt 2 „nichts verschluckt": der alte Wert geht nicht verloren.
+      const alt = `Status im Altsystem: ${werte.status}`;
+      werte.notizen = typeof werte.notizen === 'string' && werte.notizen ? `${werte.notizen}\n${alt}` : alt;
       werte.status = 'interessent';
     } else if (typeof werte.status === 'string') {
       werte.status = werte.status.toLowerCase();
     }
   }
+}
+
+/**
+ * Status-Woerter fremder Systeme (HubSpot-Lebenszyklus, englische Exporte,
+ * deutsche Umschreibungen) auf die vier ARGONAUT-Werte. Schluessel normalisiert.
+ */
+export const STATUS_UEBERSETZUNG: Record<string, string> = {
+  customer: 'kunde', kunde: 'kunde', bestandskunde: 'kunde', stammkunde: 'kunde', client: 'kunde',
+  lead: 'interessent', subscriber: 'interessent', marketingqualifiedlead: 'interessent',
+  salesqualifiedlead: 'interessent', 'marketing qualified lead': 'interessent',
+  'sales qualified lead': 'interessent', opportunity: 'interessent', prospect: 'interessent',
+  interessent: 'interessent', neukunde: 'interessent', 'potenzieller kunde': 'interessent',
+  evangelist: 'kunde', active: 'aktiv', aktiv: 'aktiv', inactive: 'inaktiv', inaktiv: 'inaktiv',
+  ehemalig: 'inaktiv', 'ehemaliger kunde': 'inaktiv', former: 'inaktiv', gesperrt: 'inaktiv',
+};
+
+/** Rechtsformen, an denen ein Firmenname zu erkennen ist. */
+const RECHTSFORM = /\b(gmbh|ag|kg|ohg|gbr|ug|e\.?\s?k\.?|e\.?\s?v\.?|mbh|se|co\.?|inc|ltd|llc|partg|stiftung|verein|genossenschaft|eg)\b/i;
+
+/** „Müller, Anna" / „Anna Müller" / „Dr. Anna Müller" -> Vor- und Nachname. */
+export function zerlegeName(roh: string): { vorname: string; nachname: string; firma: string } {
+  const s = String(roh ?? '').replace(/\s+/g, ' ').trim();
+  if (!s) return { vorname: '', nachname: '', firma: '' };
+  if (RECHTSFORM.test(s) || /&/.test(s)) return { vorname: '', nachname: '', firma: s };
+  if (s.includes(',')) {
+    const [nach, ...rest] = s.split(',');
+    return { vorname: rest.join(',').trim(), nachname: nach.trim(), firma: '' };
+  }
+  const teile = s.split(' ').filter((t) => !/^(herr|frau|dr\.?|prof\.?|dipl\.?-?\w*\.?)$/i.test(t));
+  if (teile.length <= 1) return { vorname: '', nachname: teile[0] ?? s, firma: '' };
+  // Namenszusaetze gehoeren zum Nachnamen: „Anna von der Heide"
+  let ab = teile.length - 1;
+  while (ab > 1 && /^(von|van|de|der|den|zu|zum|zur|la|le|di|da)$/i.test(teile[ab - 1])) ab--;
+  return { vorname: teile.slice(0, ab).join(' '), nachname: teile.slice(ab).join(' '), firma: '' };
+}
+
+/**
+ * Virtuelle Felder in echte umsetzen und dann entfernen — sie duerfen nie
+ * als Spalte in die Datenbank gehen.
+ */
+export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string, unknown>): void {
+  const virtuelle = ziel.felder.filter((f) => f.virtuell);
+  if (virtuelle.length === 0) return;
+  const leer = (v: unknown) => v === undefined || v === null || String(v).trim() === '';
+
+  if (typeof werte.name_komplett === 'string' && werte.name_komplett.trim()) {
+    const z = zerlegeName(werte.name_komplett);
+    if (z.firma) { if (leer(werte.firma)) werte.firma = z.firma; }
+    else if (leer(werte.vorname) && leer(werte.nachname)) {
+      if (z.vorname) werte.vorname = z.vorname;
+      werte.nachname = z.nachname;
+    } else if (leer(werte.nachname)) werte.nachname = werte.name_komplett.trim();
+  }
+
+  const strasse = String(werte.adresse_strasse ?? '').trim();
+  const plz = String(werte.adresse_plz ?? '').trim();
+  const ort = String(werte.adresse_ort ?? '').trim();
+  if (strasse || plz || ort) {
+    const zusammen = [strasse, [plz, ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    werte.adresse = leer(werte.adresse) ? zusammen : `${String(werte.adresse).trim()}, ${zusammen}`;
+  }
+
+  for (const f of virtuelle) delete werte[f.key];
+}
+
+/** Alle Erkennungs-Werte eines Satzes als „feld:wert" (klein, getrimmt). */
+export function schluesselWerte(satz: Record<string, unknown>, ziel: ImportZiel): string[] {
+  const felder = ziel.schluesselFelder ?? (ziel.schluessel ? [ziel.schluessel] : []);
+  const raus: string[] = [];
+  for (const f of felder) {
+    const v = String(satz[f] ?? '').trim().toLowerCase();
+    if (v) raus.push(`${f}:${v}`);
+  }
+  return raus;
 }
 
 // ---------------------------------------------------------------------------
@@ -987,8 +1169,8 @@ export type PruefBericht = {
  * Sammelt alle Werte der Zahlenspalten, damit der Dezimaltrenner an der
  * DATEI entschieden wird und nicht an der einzelnen Zelle.
  */
-export function zahlenWerte(zielKey: string, mapping: Mapping, kopf: string[], zeilen: string[][]): string[] {
-  const ziel = zielDef(zielKey);
+export function zahlenWerte(zielKey: string, mapping: Mapping, kopf: string[], zeilen: string[][], zielObjekt?: ImportZiel): string[] {
+  const ziel = zielObjekt ?? zielDef(zielKey);
   if (!ziel) return [];
   const zahlFelder = new Set(ziel.felder.filter((f) => f.typ === 'zahl').map((f) => f.key));
   const spalten: number[] = [];
@@ -1018,7 +1200,7 @@ export function pruefeAlles(
   zeilen: string[][],
   opt: ZeilenOptionen = {},
 ): PruefBericht {
-  const ziel = zielDef(zielKey);
+  const ziel = opt.ziel ?? zielDef(zielKey);
   const saetze: Record<string, unknown>[] = [];
   const fehler: ZeilenFehler[] = [];
   const warnungen: ZeilenFehler[] = [];
@@ -1030,7 +1212,7 @@ export function pruefeAlles(
   // BEFUND 3: einmal fuer die ganze Datei entscheiden, nicht je Zelle.
   const trenner = opt.dezimal
     ? { dezimal: opt.dezimal, sicher: true, mehrdeutige: [], hinweis: null }
-    : rateDezimaltrenner(zahlenWerte(zielKey, mapping, kopf, zeilen));
+    : rateDezimaltrenner(zahlenWerte(zielKey, mapping, kopf, zeilen, ziel));
   if (trenner.hinweis) hinweise.push(trenner.hinweis);
 
   const zeilenOpt: ZeilenOptionen = { ...opt, dezimal: trenner.dezimal };
@@ -1041,16 +1223,18 @@ export function pruefeAlles(
     warnungen.push(...e.warnungen);
     if (!e.werte) { fehler.push(...e.fehler); return; }
 
-    if (ziel?.schluessel) {
-      const s = String(e.werte[ziel.schluessel] ?? '').trim().toLowerCase();
-      if (s) {
-        if (gesehen.has(s)) {
-          dubletten++;
-          warnungen.push({ zeile: nummer, feld: ziel.felder.find((f) => f.key === ziel.schluessel)?.label ?? ziel.schluessel, meldung: `"${s}" kommt in der Datei mehrfach vor — nur der erste Eintrag wird übernommen` });
-          return;
-        }
-        gesehen.add(s);
+    if (ziel && (ziel.schluesselFelder || ziel.schluessel)) {
+      // Schritt 2: an JEDEM Erkennungsfeld (Kundennummer, Alt-ID, E-Mail …).
+      const werte = schluesselWerte(e.werte, ziel);
+      const doppelt = werte.find((w) => gesehen.has(w));
+      if (doppelt) {
+        dubletten++;
+        const feldKey = doppelt.slice(0, doppelt.indexOf(':'));
+        const wert = doppelt.slice(doppelt.indexOf(':') + 1);
+        warnungen.push({ zeile: nummer, feld: ziel.felder.find((f) => f.key === feldKey)?.label ?? feldKey, meldung: `"${wert}" kommt in der Datei mehrfach vor — nur der erste Eintrag wird übernommen` });
+        return;
       }
+      for (const w of werte) gesehen.add(w);
     }
     saetze.push(e.werte);
     zeilenNummern.push(nummer);

@@ -341,7 +341,8 @@ export type DateiWeg = { weg: 'browser' | 'server' | 'zu_gross'; hinweis: string
  */
 export function dateiWeg(name: string, bytes: number): DateiWeg {
   const endung = (name.toLowerCase().split('.').pop() ?? '');
-  const excel = endung === 'xlsx' || endung === 'xlsm' || endung === 'xls';
+  // Schritt 2: altes .xls liest der Browser selbst (lib/xlsLeser) — nur .xlsx geht an den Server.
+  const excel = endung === 'xlsx' || endung === 'xlsm';
   if (!excel) {
     if (bytes > GRENZEN_UMZUG.browserDateiBytes) {
       return { weg: 'zu_gross', hinweis: `Die Datei ist ${formatBytes(bytes)} groß. Im Browser gehen bis ${formatBytes(GRENZEN_UMZUG.browserDateiBytes)} je Datei — bitte im Altsystem in mehrere Dateien exportieren.` };

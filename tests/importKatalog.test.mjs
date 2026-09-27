@@ -105,7 +105,9 @@ test('jede erzeugte Vorlage hat Kopfzeile plus drei Beispielzeilen, alle gleich 
 test('Pflichtfelder sind in JEDER Beispielzeile gefuellt', () => {
   for (const q of IMPORT_QUELLEN.filter((x) => x.musterZiel)) {
     const ziel = zielDef(q.musterZiel);
-    const pflicht = ziel.felder.map((f, i) => (f.pflicht ? i : -1)).filter((i) => i >= 0);
+    // Schritt 2: virtuelle Felder stehen nicht in der Vorlage — Spalten zaehlen ohne sie.
+    const vorlagenFelder = ziel.felder.filter((f) => !f.nichtInVorlage);
+    const pflicht = vorlagenFelder.map((f, i) => (f.pflicht ? i : -1)).filter((i) => i >= 0);
     if (pflicht.length === 0) continue;
     const zeilen = baueMustervorlage(q.musterZiel).replace(/^﻿/, '').trim().split('\r\n').slice(1);
     for (const z of zeilen) {
@@ -123,7 +125,7 @@ test('die eigene Vorlage wird vom eigenen Parser wieder erkannt', () => {
     const kopf = baueMustervorlage(q.musterZiel).replace(/^﻿/, '').split('\r\n')[0].split(';');
     const map = errateMapping(kopf, q.musterZiel);
     const ziel = zielDef(q.musterZiel);
-    for (const f of ziel.felder) {
+    for (const f of ziel.felder.filter((x) => !x.nichtInVorlage)) {
       assert.ok(Object.values(map).includes(f.key),
         `Feld "${f.key}" der Vorlage ${q.musterZiel} wird beim Wiedereinlesen nicht erkannt`);
     }
