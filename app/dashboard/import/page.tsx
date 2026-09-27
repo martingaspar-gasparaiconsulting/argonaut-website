@@ -34,7 +34,7 @@ import {
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
-  nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag,
+  nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag, nachschlagPflichtGrund,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -1265,6 +1265,12 @@ export default function ImportCenterPage() {
         if (nach) {
           const r = loeseNachschlag(satz0.__nach !== undefined ? satz0 : { ...satz0, __nach: satzRoh.__nach }, nach, nachIndex, nachVirtuell);
           satz0 = r.satz;
+          // Paket 134: ohne gefundenen Eintrag keine Zeile (Anmeldung ohne Kurs) — mit Grund statt Datenbankfehler.
+          if (nach.pflicht && !r.gefunden) {
+            erg.fehlgeschlagen++;
+            erg.fehler.push({ zeile: dateiZeile, feld: nach.label, meldung: nachschlagPflichtGrund(nach, r.name) });
+            return;
+          }
           if (r.name && !r.gefunden) nachOhne++;
           const nr = posNr?.[idx];
           if (nach.positionSpalte && typeof nr === 'number' && satz0[nach.positionSpalte] == null) satz0[nach.positionSpalte] = nr;

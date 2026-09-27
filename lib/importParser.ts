@@ -630,6 +630,14 @@ export type ImportZiel = {
     anlegenMit?: Record<string, string | number | boolean | null>;
     /** Paket 129: Spalte, in die die laufende Nummer je Eintrag kommt (Zutat 1, 2 …; Stopp 1, 2 …), wenn die Datei keine hat. */
     positionSpalte?: string;
+    /**
+     * Paket 134: Ohne gefundenen Eintrag keine Zeile (Anmeldung ohne Kurs,
+     * Interessent ohne Exposé) — die Zeile faellt mit Grund heraus, statt
+     * das ganze Paket an der Datenbank scheitern zu lassen.
+     */
+    pflicht?: boolean;
+    /** Paket 134: Anzeige Mehrzahl fuer den Grund („die Kurse"). */
+    mehrzahl?: string;
   };
   /** Wohin nach dem Import geschaut wird. */
   ergebnisHref?: string;
@@ -651,6 +659,11 @@ export type ImportZiel = {
    * z. B. „Angebot" in einer gemischten Auftrags-/Angebotsliste.
    */
   ablehnenWenn?: { feld: string; werte: string[]; grund: string };
+  /**
+   * Paket 134: Wertegrenzen, die die Datenbank prueft (check-Regel). Eine
+   * Zeile ausserhalb faellt mit Grund heraus — sonst scheitert das ganze Paket.
+   */
+  grenzen?: { feld: string; groesserAls?: number; hoechstens?: number; grund: string }[];
   felder: ZielFeld[];
 };
 
@@ -1967,6 +1980,149 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'massnahme', 'maßnahme', 'notizen'] },
     ],
   },
+  // --- Paket 134: Umzug Schritt 4 Teil 3 — Pflanzenschutz, Immobilien, Bildung/Vereine ---
+  {
+    key: 'psm',
+    label: 'Pflanzenschutz (Schlagkartei)',
+    icon: '🌿',
+    tabelle: 'schlag_psm',
+    beschreibung: 'Pflanzenschutz-Anwendungen je Schlag mit Mittel, Zulassungsnummer und Aufwandmenge (Aufzeichnungspflicht). Fehlende Schläge werden angelegt.',
+    schluesselFelder: ['schlag_id+datum+mittel_name', '__nach+datum+mittel_name'],
+    eigeneFelderModul: 'schlag_psm',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/schlagkartei',
+    nachschlag: { ausFeld: 'schlag', tabelle: 'schlag', nameSpalte: 'bezeichnung', spalte: 'schlag_id', anlegen: true, label: 'Schlag', anlegenMit: { status: 'aktiv' } },
+    listen: [
+      { feld: 'verwendungsart', label: 'Verwendungsart', standard: 'freiland', liste: liste(['freiland', 'gewaechshaus', 'saatgut'], { feld: 'freiland', acker: 'freiland', gewächshaus: 'gewaechshaus', unterglas: 'gewaechshaus', 'unter glas': 'gewaechshaus', beize: 'saatgut', saatgutbehandlung: 'saatgut' }) },
+      { feld: 'aufwand_einheit', label: 'Einheit', standard: 'l/ha', liste: liste(['l/ha', 'kg/ha'], { l: 'l/ha', 'l ha': 'l/ha', liter: 'l/ha', kg: 'kg/ha', 'kg ha': 'kg/ha' }) },
+    ],
+    felder: [
+      { key: 'schlag', label: 'Schlag', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Wird mit Ihren Schlägen verknüpft; fehlende werden angelegt.', alias: ['schlag', 'schlagname', 'feldstueck', 'feldstück', 'feld'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'anwendungsdatum', 'behandelt am', 'ausgebracht am'] },
+      { key: 'startzeit', label: 'Uhrzeit', typ: 'text', alias: ['startzeit', 'uhrzeit', 'beginn', 'zeit'] },
+      { key: 'mittel_name', label: 'Mittel', typ: 'text', pflicht: true, alias: ['mittel name', 'mittel', 'pflanzenschutzmittel', 'psm', 'produkt', 'handelsname'] },
+      { key: 'zulassungsnr', label: 'Zulassungsnummer', typ: 'text', alias: ['zulassungsnr', 'zulassungsnummer', 'zulassung', 'zul nr', 'kennnummer'] },
+      { key: 'aufwandmenge', label: 'Aufwandmenge', typ: 'zahl', standard: 0, alias: ['aufwandmenge', 'menge', 'aufwand', 'menge ha', 'dosis'] },
+      { key: 'aufwand_einheit', label: 'Einheit', typ: 'text', standard: 'l/ha', hinweis: 'l/ha · kg/ha', alias: ['aufwand einheit', 'einheit', 'me'] },
+      { key: 'verwendungsart', label: 'Verwendungsart', typ: 'text', standard: 'freiland', hinweis: 'freiland · gewaechshaus · saatgut', alias: ['verwendungsart', 'anwendungsart', 'art'] },
+      { key: 'kultur', label: 'Kultur', typ: 'text', alias: ['kultur', 'frucht', 'hauptfrucht'] },
+      { key: 'flaeche_ha', label: 'Behandelte Fläche (ha)', typ: 'zahl', alias: ['flaeche ha', 'fläche ha', 'behandelte flaeche', 'behandelte fläche', 'flaeche', 'fläche', 'ha'] },
+      { key: 'eppo_code', label: 'EPPO-Code', typ: 'text', alias: ['eppo code', 'eppo', 'eppo kultur'] },
+      { key: 'bbch_stadium', label: 'BBCH-Stadium', typ: 'text', alias: ['bbch stadium', 'bbch', 'stadium', 'entwicklungsstadium'] },
+      { key: 'anwendungsgebiet', label: 'Anwendungsgebiet', typ: 'text', alias: ['anwendungsgebiet', 'schaderreger', 'indikation', 'gegen'] },
+      { key: 'wartezeit_tage', label: 'Wartezeit (Tage)', typ: 'zahl', alias: ['wartezeit tage', 'wartezeit', 'wz'] },
+      { key: 'anwender', label: 'Anwender', typ: 'text', alias: ['anwender', 'fahrer', 'ausgebracht von', 'sachkunde', 'sachkundenachweis'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen'] },
+    ],
+  },
+  {
+    key: 'einheiten',
+    label: 'Mieteinheiten (Immobilien)',
+    icon: '🏢',
+    tabelle: 'immo_einheiten',
+    beschreibung: 'Wohnungen, Gewerbeeinheiten und Stellplätze je Objekt mit Fläche und Soll-Miete.',
+    schluesselFelder: ['objekt+bezeichnung'],
+    eigeneFelderModul: 'immo_einheiten',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/immobilien',
+    listen: [{ feld: 'status', label: 'Status', standard: 'frei', textFeld: 'notiz', liste: liste(['frei', 'vermietet'], { leer: 'frei', leerstand: 'frei', verfuegbar: 'frei', verfügbar: 'frei', belegt: 'vermietet', vermietet: 'vermietet', bewohnt: 'vermietet' }) }],
+    felder: [
+      { key: 'objekt', label: 'Objekt / Gebäude', typ: 'text', alias: ['objekt', 'gebaeude', 'gebäude', 'haus', 'liegenschaft', 'adresse', 'anschrift'] },
+      { key: 'bezeichnung', label: 'Einheit', typ: 'text', pflicht: true, alias: ['bezeichnung', 'einheit', 'wohnung', 'we', 'whg', 'lage', 'einheit nr', 'wohnungsnummer'] },
+      { key: 'flaeche_qm', label: 'Fläche (m²)', typ: 'zahl', alias: ['flaeche qm', 'fläche', 'flaeche', 'wohnflaeche', 'wohnfläche', 'qm', 'm2', 'm²'] },
+      { key: 'zimmer', label: 'Zimmer', typ: 'zahl', alias: ['zimmer', 'raeume', 'räume', 'zimmeranzahl'] },
+      { key: 'kaltmiete', label: 'Kaltmiete (Soll)', typ: 'zahl', standard: 0, alias: ['kaltmiete', 'grundmiete', 'nettokaltmiete', 'miete kalt', 'sollmiete'] },
+      { key: 'nebenkosten', label: 'Nebenkosten (Soll)', typ: 'zahl', standard: 0, alias: ['nebenkosten', 'nk', 'betriebskosten', 'nk vorauszahlung', 'vorauszahlung'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'frei', hinweis: 'frei · vermietet', alias: ['status', 'belegung'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'ausstattung'] },
+    ],
+  },
+  {
+    key: 'mietvertraege',
+    label: 'Mietverträge',
+    icon: '📜',
+    tabelle: 'immo_mietvertraege',
+    beschreibung: 'Laufende und beendete Mietverträge mit Mieter, Beginn und Miete — mit der Einheit verknüpft (fehlende Einheiten werden als vermietet angelegt). Es werden keine Mieteingänge oder Kautionsbuchungen erzeugt.',
+    schluesselFelder: ['einheit_id+mieter_name+beginn', '__nach+mieter_name+beginn'],
+    eigeneFelderModul: 'immo_mietvertraege',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/immobilien',
+    nachschlag: { ausFeld: 'einheit', tabelle: 'immo_einheiten', nameSpalte: 'bezeichnung', spalte: 'einheit_id', anlegen: true, label: 'Einheit', anlegenMit: { status: 'vermietet' }, textFeld: 'notiz' },
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv', 'beendet'], { laufend: 'aktiv', aktiv: 'aktiv', bestehend: 'aktiv', beendet: 'beendet', ausgezogen: 'beendet', abgelaufen: 'beendet', aufgehoben: 'beendet' }) }],
+    felder: [
+      { key: 'einheit', label: 'Einheit', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Name der Einheit wie in Ihren Mieteinheiten; fehlende werden angelegt.', alias: ['einheit', 'wohnung', 'we', 'whg', 'mietobjekt', 'einheit nr'] },
+      { key: 'mieter_name', label: 'Mieter', typ: 'text', pflicht: true, alias: ['mieter name', 'mieter', 'name', 'mietername', 'vertragspartner'] },
+      { key: 'mieter_email', label: 'Mieter E-Mail', typ: 'text', alias: ['mieter email', 'email', 'e-mail', 'mail'] },
+      { key: 'beginn', label: 'Mietbeginn', typ: 'datum', alias: ['beginn', 'mietbeginn', 'vertragsbeginn', 'einzug', 'ab'] },
+      { key: 'ende', label: 'Mietende', typ: 'datum', alias: ['ende', 'mietende', 'vertragsende', 'auszug', 'bis'] },
+      { key: 'kaltmiete', label: 'Kaltmiete', typ: 'zahl', standard: 0, alias: ['kaltmiete', 'grundmiete', 'nettokaltmiete', 'miete'] },
+      { key: 'nebenkosten', label: 'Nebenkosten', typ: 'zahl', standard: 0, alias: ['nebenkosten', 'nk', 'nk vorauszahlung', 'betriebskosten', 'vorauszahlung'] },
+      { key: 'kaution', label: 'Kaution (vereinbart)', typ: 'zahl', standard: 0, hinweis: 'Nur die vereinbarte Höhe — Kautionskonto und Zahlungen übernehmen wir gemeinsam.', alias: ['kaution', 'mietsicherheit', 'sicherheit'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · beendet', alias: ['status', 'vertragsstatus'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen'] },
+    ],
+  },
+  {
+    key: 'interessenten',
+    label: 'Exposé-Interessenten',
+    icon: '🙋',
+    tabelle: 'expose_interessent',
+    beschreibung: 'Interessenten je Exposé mit Kontaktdaten und Stand. Vorher die Exposé-Objekte importieren. Werbe-Einwilligungen werden nie aus Dateien übernommen.',
+    schluesselFelder: ['expose_id+email', 'expose_id+name'],
+    eigeneFelderModul: 'expose_interessent',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/expose',
+    nachschlag: { ausFeld: 'expose', tabelle: 'expose', nameSpalte: 'bezeichnung', spalte: 'expose_id', label: 'Exposé', pflicht: true, mehrzahl: 'die Exposé-Objekte' },
+    listen: [{ feld: 'status', label: 'Status', standard: 'neu', textFeld: 'notiz', liste: liste(['neu', 'besichtigung', 'angebot', 'zusage', 'abgesagt'], { offen: 'neu', anfrage: 'neu', kontakt: 'neu', besichtigt: 'besichtigung', termin: 'besichtigung', 'besichtigung vereinbart': 'besichtigung', verhandlung: 'angebot', reserviert: 'zusage', gekauft: 'zusage', 'mietvertrag': 'zusage', absage: 'abgesagt', 'kein interesse': 'abgesagt', verloren: 'abgesagt' }) }],
+    felder: [
+      { key: 'expose', label: 'Exposé', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Bezeichnung wie in Ihren Exposé-Objekten.', alias: ['expose', 'exposé', 'objekt', 'immobilie', 'angebot', 'objektname'] },
+      { key: 'name', label: 'Name', typ: 'text', pflicht: true, alias: ['name', 'interessent', 'kontakt', 'kunde', 'vollstaendiger name'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'mobil', 'handy', 'phone'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'neu', hinweis: 'neu · besichtigung · angebot · zusage · abgesagt', alias: ['status', 'stand', 'phase'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'nachricht', 'anfrage text'] },
+    ],
+  },
+  {
+    key: 'anmeldungen',
+    label: 'Kurs-Anmeldungen',
+    icon: '📝',
+    tabelle: 'bildung_anmeldungen',
+    beschreibung: 'Teilnehmer je Kurs mit Stand der Anmeldung. Vorher die Kurse importieren — Anmeldungen ohne passenden Kurs bleiben mit Grund in der Datei.',
+    schluesselFelder: ['kurs_id+email', 'kurs_id+name'],
+    eigeneFelderModul: 'bildung_anmeldungen',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/bildung',
+    nachschlag: { ausFeld: 'kurs', tabelle: 'bildung_kurse', nameSpalte: 'titel', spalte: 'kurs_id', label: 'Kurs', pflicht: true, mehrzahl: 'die Kurse' },
+    listen: [{ feld: 'status', label: 'Status', standard: 'angemeldet', liste: liste(['angemeldet', 'bestaetigt', 'teilgenommen', 'storniert'], { neu: 'angemeldet', offen: 'angemeldet', gebucht: 'angemeldet', bestätigt: 'bestaetigt', bezahlt: 'bestaetigt', fix: 'bestaetigt', anwesend: 'teilgenommen', abgeschlossen: 'teilgenommen', bestanden: 'teilgenommen', abgesagt: 'storniert', abgemeldet: 'storniert', ausgefallen: 'storniert' }) }],
+    felder: [
+      { key: 'kurs', label: 'Kurs', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Kurstitel wie in Ihren Kursen.', alias: ['kurs', 'kursname', 'kurstitel', 'seminar', 'veranstaltung', 'lehrgang'] },
+      { key: 'name', label: 'Teilnehmer', typ: 'text', pflicht: true, alias: ['name', 'teilnehmer', 'teilnehmerin', 'person', 'vollstaendiger name'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'angemeldet', hinweis: 'angemeldet · bestaetigt · teilgenommen · storniert', alias: ['status', 'stand', 'anmeldestatus'] },
+    ],
+  },
+  {
+    key: 'ehrenamt',
+    label: 'Ehrenamts-Stunden',
+    icon: '🙌',
+    tabelle: 'verein_ehrenamt',
+    beschreibung: 'Geleistete Ehrenamtsstunden je Person und Tag (höchstens 24 Stunden je Eintrag).',
+    schluesselFelder: ['person+datum+taetigkeit', 'person+datum'],
+    eigeneFelderModul: 'verein_ehrenamt',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/verein',
+    ausblenden: ['mitglied_id', 'erstellt_von'],
+    grenzen: [{ feld: 'stunden', groesserAls: 0, hoechstens: 24, grund: 'Stunden müssen größer als 0 und höchstens 24 je Eintrag sein — bitte auf mehrere Tage aufteilen.' }],
+    felder: [
+      { key: 'person', label: 'Person', typ: 'text', pflicht: true, alias: ['person', 'name', 'mitglied', 'helfer', 'helferin', 'ehrenamtliche'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'tag', 'einsatz am', 'am'] },
+      { key: 'stunden', label: 'Stunden', typ: 'zahl', pflicht: true, alias: ['stunden', 'std', 'dauer', 'zeit h', 'anzahl stunden'] },
+      { key: 'taetigkeit', label: 'Tätigkeit', typ: 'text', alias: ['taetigkeit', 'tätigkeit', 'aufgabe', 'einsatz', 'arbeit', 'bemerkung'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -2217,6 +2373,67 @@ Object.assign(BEISPIELE, {
     letzte_kontrolle: '15.05.2026|15.05.2026|01.09.2026',
     naechste_kontrolle: '||',
     notiz: '|Totholz in der Krone|Pilzbefall Stammfuß',
+  },
+  // Paket 134
+  psm: {
+    schlag: 'Am Bach|Großer Acker|Am Bach',
+    datum: '12.04.2026|20.04.2026|05.05.2026',
+    startzeit: '07:30|18:00|',
+    mittel_name: 'Beispielmittel Herbizid|Beispielmittel Fungizid|Beispielmittel Herbizid',
+    zulassungsnr: '000000-00|000001-00|000000-00',
+    aufwandmenge: '1,5|0,8|1,5',
+    aufwand_einheit: 'l/ha|l/ha|l/ha',
+    verwendungsart: 'freiland|freiland|freiland',
+    kultur: 'Winterweizen|Wintergerste|Winterweizen',
+    flaeche_ha: '4,2|6|4,2',
+    eppo_code: 'TRZAW|HORVW|TRZAW',
+    bbch_stadium: '25|32|37',
+    anwendungsgebiet: 'Unkräuter|Mehltau|Unkräuter',
+    wartezeit_tage: '|35|',
+    anwender: 'M. Huber|M. Huber|',
+    notiz: '||',
+  },
+  einheiten: {
+    objekt: 'Seestraße 5, 71032 Böblingen|Seestraße 5, 71032 Böblingen|Marktplatz 3, 71083 Herrenberg',
+    bezeichnung: 'Seestraße 5 · EG links|Seestraße 5 · 1. OG rechts|Marktplatz 3 · Laden',
+    flaeche_qm: '62,5|71|85',
+    zimmer: '2|3|',
+    kaltmiete: '720,00|810,00|1.450,00',
+    nebenkosten: '180,00|200,00|260,00',
+    status: 'vermietet|frei|vermietet',
+    notiz: 'Balkon||',
+  },
+  mietvertraege: {
+    einheit: 'Seestraße 5 · EG links|Marktplatz 3 · Laden|Seestraße 5 · 1. OG rechts',
+    mieter_name: 'Familie Kaya|Muster GmbH|Herr Brandl',
+    mieter_email: 'kaya@web.de|info@muster.de|',
+    beginn: '01.04.2021|01.01.2024|01.05.2019',
+    ende: '||31.08.2026',
+    kaltmiete: '720,00|1.450,00|780,00',
+    nebenkosten: '180,00|260,00|190,00',
+    kaution: '2.160,00|4.350,00|2.340,00',
+    status: 'aktiv|aktiv|beendet',
+    notiz: '||',
+  },
+  interessenten: {
+    expose: 'Helle 3-Zimmer-Wohnung|Helle 3-Zimmer-Wohnung|Baugrundstück Süd',
+    name: 'Anna Weiß|Georg Faulhaber|Sven Klein',
+    email: 'a.weiss@web.de||s.klein@web.de',
+    telefon: '|0151 1234567|',
+    status: 'besichtigung|neu|abgesagt',
+    notiz: 'Termin 03.10.||',
+  },
+  anmeldungen: {
+    kurs: 'Erste Hilfe Grundkurs|Erste Hilfe Grundkurs|Excel für Einsteiger',
+    name: 'Kevin Stadler|Leon Kaltenbach|Anna Weiß',
+    email: 'k.stadler@web.de||a.weiss@web.de',
+    status: 'bestaetigt|angemeldet|teilgenommen',
+  },
+  ehrenamt: {
+    person: 'Maria Huber|Peter Ott|Maria Huber',
+    datum: '06.09.2026|06.09.2026|13.09.2026',
+    stunden: '4|2,5|3',
+    taetigkeit: 'Vereinsfest Aufbau|Kasse|Jugendtraining',
   },
 } as Record<string, Record<string, string>>);
 
@@ -2527,6 +2744,15 @@ export function pruefeZeile(
 
   virtuelleFelderAufloesen(ziel, werte);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
+  // Paket 134: Grenzen der Datenbank (check-Regeln) vorher pruefen
+  for (const g of ziel.grenzen ?? []) {
+    const v = werte[g.feld];
+    if (typeof v !== 'number') continue;
+    if ((g.groesserAls !== undefined && !(v > g.groesserAls)) || (g.hoechstens !== undefined && v > g.hoechstens)) {
+      const label = ziel.felder.find((f) => f.key === g.feld)?.label ?? g.feld;
+      return { werte: null, fehler: [{ zeile: nummer, feld: label, meldung: g.grund }], warnungen };
+    }
+  }
   // Paket 132: Ortszeit -> Zeitpunkt (erst NACH der Nacharbeit, die mit Ortszeit rechnet)
   for (const f of ziel.felder) {
     if (f.typ !== 'zeitpunkt' || typeof werte[f.key] !== 'string') continue;

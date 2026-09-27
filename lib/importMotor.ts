@@ -63,6 +63,8 @@ export const MOTOR_TABELLEN = [
   'einsaetze', 'tickets', 'inventar', 'verleih_artikel',
   // Paket 133: Umzug Schritt 4 Teil 2 — Lebensmittel, Kasse, Beratung, Land-/Forstwirtschaft
   'lm_haccp_plan', 'lm_haccp', 'kassen_system', 'agentur_retainer', 'schlag_duengung', 'forst_objekte', 'forst_baeume',
+  // Paket 134: Umzug Schritt 4 Teil 3 — Pflanzenschutz, Immobilien, Bildung/Vereine
+  'schlag_psm', 'immo_einheiten', 'immo_mietvertraege', 'expose_interessent', 'bildung_anmeldungen', 'verein_ehrenamt',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -886,6 +888,14 @@ export function loeseNachschlag(
     raus[n.textFeld] = alt ? `${alt}\n${zeile}` : zeile;
   }
   return { satz: raus, gefunden: false, name };
+}
+
+/** Paket 134: Grund, wenn ein Pflicht-Nachschlag (Kurs, Exposé) nicht gefunden wurde. */
+export function nachschlagPflichtGrund(n: { label: string; mehrzahl?: string }, name: string): string {
+  const was = n.mehrzahl ?? `die ${n.label}-Einträge`;
+  return name
+    ? `${n.label} „${name}" nicht gefunden. Bitte zuerst ${was} importieren (genau gleicher Name), dann diese Datei noch einmal.`
+    : `Kein ${n.label} angegeben — ohne ${n.label} kann dieser Eintrag nicht angelegt werden.`;
 }
 
 // ---------------------------------------------------------------------------

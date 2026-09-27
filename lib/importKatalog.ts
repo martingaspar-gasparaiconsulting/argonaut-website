@@ -111,6 +111,13 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'duengung', label: 'Düngung (Schlagkartei)', icon: '🧪', beschreibung: 'Düngemaßnahmen je Schlag mit Nährstoffen.', musterZiel: 'duengung', zielHref: '/dashboard/schlagkartei', motor: 'duengung', gruppe: 'betrieb' },
   { key: 'forst_objekte', label: 'Forst-/Baum-Objekte', icon: '🌳', beschreibung: 'Grundstücke und Anlagen mit Baumbestand.', musterZiel: 'forst_objekte', zielHref: '/dashboard/forst', motor: 'forst_objekte', gruppe: 'vertraege_objekte' },
   { key: 'forst_baeume', label: 'Bäume (Baumkataster)', icon: '🌲', beschreibung: 'Bäume je Objekt mit Zustand und Kontrolle.', musterZiel: 'forst_baeume', zielHref: '/dashboard/forst', motor: 'forst_baeume', gruppe: 'vertraege_objekte' },
+  // Paket 134: Umzug Schritt 4 Teil 3
+  { key: 'psm', label: 'Pflanzenschutz (Schlagkartei)', icon: '🌿', beschreibung: 'Pflanzenschutz-Anwendungen je Schlag mit Zulassungsnummer.', musterZiel: 'psm', zielHref: '/dashboard/schlagkartei', motor: 'psm', gruppe: 'betrieb' },
+  { key: 'einheiten', label: 'Mieteinheiten', icon: '🏢', beschreibung: 'Wohnungen und Gewerbeeinheiten je Objekt mit Soll-Miete.', musterZiel: 'einheiten', zielHref: '/dashboard/immobilien', motor: 'einheiten', gruppe: 'vertraege_objekte' },
+  { key: 'mietvertraege', label: 'Mietverträge', icon: '📜', beschreibung: 'Laufende und beendete Mietverträge je Einheit.', musterZiel: 'mietvertraege', zielHref: '/dashboard/immobilien', motor: 'mietvertraege', gruppe: 'vertraege_objekte' },
+  { key: 'interessenten', label: 'Exposé-Interessenten', icon: '🙋', beschreibung: 'Interessenten je Exposé mit Stand.', musterZiel: 'interessenten', zielHref: '/dashboard/expose', motor: 'interessenten', gruppe: 'vertraege_objekte' },
+  { key: 'anmeldungen', label: 'Kurs-Anmeldungen', icon: '📝', beschreibung: 'Teilnehmer je Kurs mit Anmeldestand.', musterZiel: 'anmeldungen', zielHref: '/dashboard/bildung', motor: 'anmeldungen', gruppe: 'betrieb' },
+  { key: 'ehrenamt', label: 'Ehrenamts-Stunden', icon: '🙌', beschreibung: 'Geleistete Stunden je Person und Tag.', musterZiel: 'ehrenamt', zielHref: '/dashboard/verein', motor: 'ehrenamt', gruppe: 'betrieb' },
   { key: 'freigaben', label: 'Freigaben & Assets', icon: '✅', beschreibung: 'Kreativ-Assets für Freigaben & Proofing.', vorlage: V + 'freigaben-assets-import-vorlage.csv', zielHref: '/dashboard/freigaben', motor: 'freigaben', gruppe: 'betrieb' },
 
   // --- Finanzen & Förderung -------------------------------------------------
