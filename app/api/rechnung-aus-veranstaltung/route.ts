@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
+import { ladeBetriebProfil } from "@/lib/betriebProfil";
 
 export const runtime = "nodejs";
 
@@ -26,9 +28,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     const { data: a, error: aErr } = await supabase.from('event_anmeldung').select('*').eq('id', anmeldungId).maybeSingle();
     if (aErr || !a) return NextResponse.json({ error: 'Anmeldung nicht gefunden.' }, { status: 404 });
@@ -43,7 +47,8 @@ export async function POST(req: Request) {
     const eventTitel = String(ev?.titel || 'Veranstaltung').trim();
 
     // Kleinunternehmer §19 → 0 %, sonst Standard 19 % (Ticketpreis ist Brutto).
-    const { data: prof } = await supabase.from('profiles').select('kleinunternehmer').eq('id', user.id).maybeSingle();
+    // Kleinunternehmer-Regel gilt für den BETRIEB, nicht für die Person, die klickt.
+    const prof = await ladeBetriebProfil(supabase, user.id);
     const klein = !!prof?.kleinunternehmer;
     const satz = klein ? 0 : 19;
 
@@ -51,7 +56,7 @@ export async function POST(req: Request) {
     const einzelNetto = cent(nettoGesamt / plaetze);
     const bezeichnung = `Ticket: ${eventTitel}`.slice(0, 300);
     const rechnungsPosten = [{
-      owner_user_id: user.id, position: 1,
+      owner_user_id: betrieb, position: 1,
       bezeichnung, menge: plaetze, einheit: 'Ticket', einzelpreis: einzelNetto,
       mwst_satz: satz, gesamt_netto: cent(plaetze * einzelNetto),
     }];
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
     const faellig = new Date(heute); faellig.setDate(faellig.getDate() + 14);
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from('rechnungen').insert({
-      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
       titel: bezeichnung, empfaenger_name: a.name || null, zahlungsstatus: 'offen',
       rechnungsdatum, leistungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto,
@@ -85,7 +90,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Positionen konnten nicht übernommen werden. Die Rechnung wurde storniert.' }, { status: 500 });
     }
 
-    const { error: updErr } = await supabase.from('event_anmeldung').update({ rechnung_id: rechnungId }).eq('id', anmeldungId);
+    const { error: updErr } = await schreiber.from('event_anmeldung').update({ rechnung_id: rechnungId }).eq('id', anmeldungId).eq('owner_user_id', betrieb);
     if (updErr) console.error('Anmeldung verknüpfen fehlgeschlagen:', updErr.message);
 
     return NextResponse.json({ rechnungId });

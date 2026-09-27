@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -31,9 +32,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // 1) Offene Leistungen des Projekts (RLS: nur eigene)
     const { data: posRaw, error: pErr } = await supabase
@@ -54,7 +57,7 @@ export async function POST(req: Request) {
       const einzelpreis = cent(Number(p.stundensatz) || 0);
       const datumTxt = p.datum ? new Date(p.datum).toLocaleDateString("de-DE") : "";
       return {
-        owner_user_id: user.id, position: i + 1,
+        owner_user_id: betrieb, position: i + 1,
         bezeichnung: (datumTxt ? `${datumTxt} · ` : "") + (p.beschreibung || "Leistung"),
         menge, einheit: "Std", einzelpreis,
         mwst_satz: Number(p.mwst_satz) || MWST_STD,
@@ -71,7 +74,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
+        owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
         titel: proj?.name ? `Projekt: ${proj.name}` : "Projektabrechnung",
         empfaenger_name: kunde, zahlungsstatus: "offen",
         rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
@@ -97,9 +100,10 @@ export async function POST(req: Request) {
     }
 
     // 5) Leistungen als abgerechnet markieren
-    const { error: updErr } = await supabase.from("projektleistungen")
+    const { error: updErr } = await schreiber.from("projektleistungen")
       .update({ abgerechnet: true, rechnung_id: rechnungId })
-      .in("id", leistungen.map((l) => l.id));
+      .in("id", leistungen.map((l) => l.id))
+      .eq("owner_user_id", betrieb);
     if (updErr) console.error("projektleistungen markieren fehlgeschlagen:", updErr.message);
 
     return NextResponse.json({ rechnungId, anzahl: leistungen.length });

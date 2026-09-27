@@ -3,7 +3,8 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { resArtInfo, type ResArt } from "@/lib/reservierung";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -25,9 +26,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     const { data: v, error: vErr } = await supabase.from('reservierung_vorgang').select('*').eq('id', vorgangId).maybeSingle();
     if (vErr || !v) return NextResponse.json({ error: 'Vorgang nicht gefunden.' }, { status: 404 });
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
     const mengeC = cent(1);
     const einzelpreis = cent(betragNetto);
     const rechnungsPosten = [{
-      owner_user_id: user.id, position: 1,
+      owner_user_id: betrieb, position: 1,
       bezeichnung, menge: mengeC, einheit: 'Pauschale', einzelpreis,
       mwst_satz: satz, gesamt_netto: cent(mengeC * einzelpreis),
     }];
@@ -62,7 +65,7 @@ export async function POST(req: Request) {
     const faellig = new Date(heute); faellig.setDate(faellig.getDate() + 14);
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from('rechnungen').insert({
-      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: v.kontakt_id || null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: v.kontakt_id || null, firma_id: null,
       titel: bezeichnung, empfaenger_name: v.kunde_name || null, zahlungsstatus: 'offen',
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: 'EUR',
@@ -84,7 +87,7 @@ export async function POST(req: Request) {
     }
 
     // Vorgang mit der Rechnung verknüpfen (verhindert Doppel-Rechnung).
-    const { error: updErr } = await supabase.from('reservierung_vorgang').update({ rechnung_id: rechnungId }).eq('id', vorgangId);
+    const { error: updErr } = await schreiber.from('reservierung_vorgang').update({ rechnung_id: rechnungId }).eq('id', vorgangId).eq('owner_user_id', betrieb);
     if (updErr) console.error('Reservierung-Vorgang verknüpfen fehlgeschlagen:', updErr.message);
 
     return NextResponse.json({ rechnungId });

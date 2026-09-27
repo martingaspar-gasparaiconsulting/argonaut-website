@@ -6,7 +6,8 @@ import {
   type PositionBasis,
 } from "@/app/dashboard/_components/aufmassLogik";
 import { cent } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -46,9 +47,11 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // ---------- 1) Aufmaß laden (RLS schützt auf owner) ----------
     const { data: aufmass, error: aErr } = await supabase
@@ -124,7 +127,7 @@ export async function POST(req: Request) {
       const bez = (p.bezeichnung?.trim() || "(ohne Bezeichnung)") + (weg && !pauschal ? ` (${weg})` : "");
 
       return {
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         position: i + 1,
         bezeichnung: bez,
         menge,
@@ -161,7 +164,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         standort_id: standortId,
         auftrag_id: null,
         kontakt_id: null,
@@ -215,10 +218,11 @@ export async function POST(req: Request) {
     // ---------- 9) Aufmaß verknüpfen und sperren ----------
     // Erst jetzt. Scheitert es, ist die Rechnung trotzdem gültig — aber das
     // Aufmaß bliebe offen. Deshalb wird der Fehler protokolliert und gemeldet.
-    const { error: updErr } = await supabase
+    const { error: updErr } = await schreiber
       .from("aufmasse")
       .update({ rechnung_id: rechnungId, status: "abgerechnet" })
-      .eq("id", aufmass.id);
+      .eq("id", aufmass.id)
+      .eq("owner_user_id", betrieb);
 
     if (updErr) {
       console.error("aufmasse.rechnung_id konnte nicht gesetzt werden:", updErr.message);

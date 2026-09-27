@@ -654,7 +654,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/rechnungen': {
     zweck: 'Übersicht aller Ausgangsrechnungen mit Kennzahlen (Offen, Überfällig, Bezahlt, Umsatz, Ø Zahlungsdauer), Suche, Status-Filter und Fälligkeits-Ampel. In der einzelnen Rechnung pflegen Sie Positionen, buchen Zahlungseingänge, laden das PDF herunter oder stornieren.',
     wer: 'beide',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Eine Rechnung lässt sich nicht löschen, nur stornieren. Erfasste Zahlungen lassen sich mit Rückfrage löschen.',
+    werText: 'Sehen: Chef oder Mitarbeiter mit Freigabe (sensibel). Erstellen, bearbeiten und Zahlungen erfassen: Chef oder Mitarbeiter mit dem Recht „💶 Darf abrechnen“ — die Rechnung gehört immer dem Betrieb, der Chef bekommt eine Meldung. Stornieren, Reaktivieren und Zahlungen löschen (mit Rückfrage) nur der Chef. Eine Rechnung lässt sich nicht löschen, nur stornieren.',
     schritte: [
       'Auf dieser Seite gibt es keinen Knopf für eine neue Rechnung. Rechnungen entstehen aus einem Angebot („→ Rechnung“), einem Auftrag oder unter „Wiederkehrende Rechnungen“',
       'Oben suchen („Suche nach Nummer, Titel, Kontakt, Firma…“) oder filtern: „Alle“, „Offen“, „Überfällig“, „Teilbezahlt“, „Bezahlt“, „Storniert“',
@@ -782,7 +782,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/mahnwesen': {
     zweck: 'Das Mahn-Cockpit für überfällige Rechnungen (fällig, noch Geld offen, weder bezahlt noch storniert), die längste Verspätung oben. Hier sehen Sie die Mahnstufe von „Überfällig“ bis „Letzte Mahnung“, stufen einzeln oder alle auf einmal hoch und kommen zum Mahnschreiben.',
     wer: 'beide',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hier wird nichts angelegt oder gelöscht, nur die Mahnstufe an der Rechnung geändert.',
+    werText: 'Sehen: Chef oder Mitarbeiter mit Freigabe (sensibel). Mahnstufe setzen und Mahnungen festschreiben: Chef oder Mitarbeiter mit dem Recht „💶 Darf abrechnen“. Hier wird nichts gelöscht.',
     schritte: [
       'Oben die Kennzahlen lesen: „Überfällige Rechnungen“, „Offener Betrag“, „Noch nicht gemahnt“, „In Mahnung“',
       'In der Tabelle je Rechnung Nummer, Empfänger, Verzug in Tagen, offenen Betrag und aktuelle Mahnstufe prüfen',
@@ -796,7 +796,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/zahlungen': {
     zweck: 'Alles Geld an einem Ort: Unter „⬇ Eingänge“ bestätigen Sie Zahlungen, die Kunden im Portal gemeldet haben, und sehen die erhaltenen Zahlungen. Unter „⬆ Ausgänge“ haken Sie Eingangsbelege als bezahlt ab und sehen die monatliche Summe laufender Verträge und Abos.',
     wer: 'beide',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hier wird nur der Zahlungsstatus gesetzt, anlegen oder löschen ist nicht möglich.',
+    werText: 'Sehen: Chef oder Mitarbeiter mit Freigabe (sensibel). Zahlung bestätigen: Chef oder Mitarbeiter mit dem Recht „💶 Darf abrechnen“. Löschen ist hier nicht möglich.',
     schritte: [
       'Reiter „⬇ Eingänge“: Unter „💬 Vom Kunden gemeldet — bitte bestätigen“ stehen Rechnungen, bei denen der Kunde im Portal „Ich habe bezahlt“ geklickt hat',
       'Erst den Geldeingang auf dem Konto prüfen, dann „✓ Als bezahlt bestätigen“: Betrag (vorbelegt mit dem offenen Rest) und Eingangsdatum eintragen. Weniger als offen ergibt „teilbezahlt“, der Rest bleibt offen',
@@ -917,7 +917,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/sepa-einzug': {
     zweck: 'SEPA-Lastschrift für offene Rechnungen: Sie hinterlegen einmal Ihre Gläubigerdaten und je Kontakt ein Mandat. Danach erzeugt die Seite aus den ausgewählten Rechnungen eine Sammellastschrift-Datei (XML) für Ihr Online-Banking. Das Geld zieht Ihre Bank ein, ARGONAUT erstellt nur die Datei.',
     wer: 'chef',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Mandate lassen sich hier nur bearbeiten, nicht löschen.',
+    werText: 'Nur der Chef: Gläubigerdaten, SEPA-Datei und Zurücksetzen hängen an den Bankdaten des Betriebs. Mitarbeiter mit Freigabe sehen die Liste. Mandate lassen sich hier nur bearbeiten, nicht löschen.',
     schritte: [
       'Unter „🏦 Ihre SEPA-Gläubigerdaten“ die Felder „Gläubiger-ID“, „Kontoinhaber“, „IBAN (Empfänger)“ und bei Bedarf „BIC (optional)“ ausfüllen, dann „Gläubigerdaten speichern“. Die Gläubiger-ID gibt es kostenlos bei der Deutschen Bundesbank',
       'Unter „📝 Mandat je Kontakt“ einen „Kontakt“ wählen und „IBAN“, „Mandatsreferenz“ sowie „Mandat unterschrieben am“ eintragen, dann „💾 Mandat speichern“. Eine IBAN mit falscher Prüfsumme wird abgelehnt',
@@ -998,7 +998,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/banking': {
     zweck: 'Einen Umsatz-Export Ihrer Bank (CAMT.053, MT940 oder CSV) gegen die offenen Rechnungen abgleichen und Zahlungseingänge per Klick als bezahlt markieren. Die automatische Bankanbindung ist nur geplant: Zugänge lassen sich hinterlegen, ein Abruf findet aber nicht statt.',
     wer: 'chef',
-    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hinterlegte Bank-Zugänge werden mit Rückfrage entfernt. „✓ als bezahlt“ erfasst die Überweisung als Zahlung (echter Betrag, Buchungsdatum).',
+    werText: 'Chef oder Mitarbeiter mit Freigabe (sensibel). Hinterlegte Bank-Zugänge werden mit Rückfrage entfernt. „✓ als bezahlt“ erfasst die Überweisung als Zahlung (echter Betrag, Buchungsdatum) — beim Mitarbeiter nur mit dem Recht „💶 Darf abrechnen“.',
     schritte: [
       'Im Online-Banking die Umsätze exportieren, am besten als CAMT.053 oder MT940. Bei CSV bitte mit Kopfzeile',
       'Den Inhalt in das Textfeld einfügen oder „📁 Datei wählen“. Das erkannte Format steht daneben',
@@ -1195,7 +1195,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/rechte': {
     zweck: 'Legt für jeden Mitarbeiter fest, welche Bereiche er sieht und wo er zusätzlich speichern und löschen darf („✏️ darf ändern“) — mit Vorlagen per Klick und der Verteil-Vollmacht für Administratoren. Der Chef sieht immer alles, „Übersicht“ und „Mein Bereich“ sieht jeder.',
     wer: 'chef',
-    werText: 'Nur der Chef — und Mitarbeiter mit Verteil-Vollmacht (Administrator), die aber nur Module weitergeben, die sie selbst haben. Administratoren ernennt nur der Eigentümer.',
+    werText: 'Nur der Chef — und Mitarbeiter mit Verteil-Vollmacht (Administrator), die aber nur Module weitergeben, die sie selbst haben. Administratoren ernennt nur der Eigentümer, und nur er vergibt das Recht „💶 Darf abrechnen“.',
     schritte: [
       'Mitarbeiter zuerst unter „Personal“ anlegen. Ohne Mitarbeiter zeigt die Seite „Noch keine Mitarbeiter“',
       'Beim Mitarbeiter eine Vorlage wählen („Lager“, „Produktion“, „Büro“, „Vertrieb“, „Alle“, „Keine“) und danach einzelne Häkchen anpassen',

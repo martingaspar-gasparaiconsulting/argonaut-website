@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -31,9 +32,11 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // ---------- 1) Auftrag laden (RLS schuetzt auf owner) ----------
     const { data: auftrag, error: auftragErr } = await supabase
@@ -86,7 +89,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         standort_id: standortId,
         auftrag_id: auftrag.id,
         kontakt_id: auftrag.kontakt_id ?? null,
@@ -114,7 +117,7 @@ export async function POST(req: Request) {
 
     // ---------- 5) Positionen 1:1 uebernehmen ----------
     const posListe = (positionen || []).map((p: any, i: number) => ({
-      owner_user_id: user.id,
+      owner_user_id: betrieb,
       rechnung_id: rechnungId,
       position: p.position ?? i + 1,
       bezeichnung: p.bezeichnung ?? null,
@@ -135,10 +138,11 @@ export async function POST(req: Request) {
     }
 
     // ---------- 6) Nahtstelle zurueckschreiben ----------
-    const { error: updErr } = await supabase
+    const { error: updErr } = await schreiber
       .from("auftraege")
       .update({ rechnung_id: rechnungId })
-      .eq("id", auftrag.id);
+      .eq("id", auftrag.id)
+      .eq("owner_user_id", betrieb);
 
     if (updErr) {
       console.error("auftraege.rechnung_id konnte nicht gesetzt werden:", updErr.message);

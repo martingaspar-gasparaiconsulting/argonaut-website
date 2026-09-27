@@ -18,7 +18,7 @@ import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
 import { augeZahlungen } from '@/lib/auge';
 import { zaehleZahlungen } from '@/lib/augeZaehler';
-import { istMitarbeiterKennung, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
+import { abrechnungPruefen, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -93,11 +93,11 @@ export default function ZahlungenPage() {
     try {
       const { data: u } = await supabase.auth.getUser();
       if (!u?.user) throw new Error('Nicht angemeldet.');
-      // B1b-2 (26.09.26): Zahlungen erfasst nur die Geschaeftsleitung.
-      const { data: chefId } = await supabase.rpc('mein_chef_id');
-      if (istMitarbeiterKennung(chefId)) throw new Error(ZAHLUNG_NUR_CHEF);
+      // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Zahlung gehört dem Betrieb.
+      const abr = await abrechnungPruefen(supabase, u.user.id, ZAHLUNG_NUR_CHEF);
+      if (!abr.ok) throw new Error(abr.fehler);
       const { error } = await supabase.from('zahlungen').insert({
-        owner_user_id: u.user.id, rechnung_id: r.id, betrag, zahlungsdatum: datum, zahlungsart: 'Überweisung', referenz: null,
+        owner_user_id: abr.betrieb, rechnung_id: r.id, betrag, zahlungsdatum: datum, zahlungsart: 'Überweisung', referenz: null,
       });
       if (error) throw error;
       await laden_();

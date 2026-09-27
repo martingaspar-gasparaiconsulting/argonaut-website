@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -27,9 +28,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     const { data: lv, error: lErr } = await supabase.from("bau_lv")
       .select("id, titel, kunde_name, kontakt_id, rechnung_id").eq("id", lvId).single();
@@ -53,7 +56,7 @@ export async function POST(req: Request) {
       const oz = p.ordnungszahl ? `${p.ordnungszahl} · ` : "";
       const nt = p.ist_nachtrag ? "[Nachtrag] " : "";
       return {
-        owner_user_id: user.id, position: i + 1,
+        owner_user_id: betrieb, position: i + 1,
         bezeichnung: `${nt}${oz}${p.kurztext || "Position"}`,
         menge, einheit: (p.einheit || "").trim() || "Stk", einzelpreis,
         mwst_satz: Number(p.mwst_satz) || MWST_STD,
@@ -67,7 +70,7 @@ export async function POST(req: Request) {
     const faellig = new Date(heute); faellig.setDate(faellig.getDate() + 14);
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: lv.kontakt_id ?? null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: lv.kontakt_id ?? null, firma_id: null,
       titel: lv.titel || "Leistungsverzeichnis", empfaenger_name: lv.kunde_name?.trim() || null, zahlungsstatus: "offen",
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Positionen konnten nicht übernommen werden. Die Rechnung wurde storniert." }, { status: 500 });
     }
 
-    await supabase.from("bau_lv").update({ rechnung_id: rechnungId, status: "abgerechnet", aktualisiert_am: new Date().toISOString() }).eq("id", lv.id);
+    await schreiber.from("bau_lv").update({ rechnung_id: rechnungId, status: "abgerechnet", aktualisiert_am: new Date().toISOString() }).eq("id", lv.id).eq("owner_user_id", betrieb);
 
     return NextResponse.json({ rechnungId, bereitsVorhanden: false });
   } catch (err: unknown) {

@@ -15,6 +15,7 @@ import {
   PAUSCHALE_B2B,
 } from "@/lib/verzugszins";
 import { zahlText } from '@/lib/zahlen';
+import { abrechnungPruefen, istMitarbeiterKennung, MAHNUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4b — MAHNUNG ERSTELLEN
@@ -212,14 +213,24 @@ export default function MahnungErstellen() {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select(
-          "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic"
-        )
-        .eq("id", user.id)
-        .single();
-      if (prof) setFirmenprofil(prof);
+      // „Darf abrechnen" (27.09.26): Beim Mitarbeiter kommt der Absender vom BETRIEB.
+      const { data: chefId } = await supabase.rpc("mein_chef_id");
+      if (istMitarbeiterKennung(chefId)) {
+        try {
+          const res = await fetch("/api/betrieb-firmendaten");
+          const j = await res.json();
+          if (res.ok && j?.firma) setFirmenprofil(j.firma);
+        } catch { /* ohne Absender bleibt das Feld leer */ }
+      } else {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select(
+            "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic"
+          )
+          .eq("id", user.id)
+          .single();
+        if (prof) setFirmenprofil(prof);
+      }
     }
 
     // #3: Historie mitladen
@@ -439,6 +450,13 @@ export default function MahnungErstellen() {
     setSendBusy(true);
     setFehler(null);
     setErfolg(null);
+    // „Darf abrechnen" (27.09.26): Mahnung festschreiben nur Chef oder wer das Recht hat.
+    const recht = await abrechnungPruefen(supabase, "", MAHNUNG_NUR_CHEF);
+    if (!recht.ok) {
+      setFehler(recht.fehler);
+      setSendBusy(false);
+      return;
+    }
     const heute = new Date().toISOString().slice(0, 10);
 
     // 1) GoBD-Nachweis zuerst schreiben (append-only Historie)
@@ -454,7 +472,7 @@ export default function MahnungErstellen() {
       ist_verbraucher: istVerbraucher,
       tage_ueberfaellig: tageUeberfaellig,
       kanal: "pdf",
-      // owner_user_id wird per DB-Default (auth.uid()) gesetzt
+      // owner_user_id per DB-Vorgabe: coalesce(mein_chef_id(), auth.uid()) = der Betrieb (darf-abrechnen.sql)
     });
     if (histErr) {
       setFehler("Konnte den Historie-Eintrag nicht speichern: " + histErr.message);

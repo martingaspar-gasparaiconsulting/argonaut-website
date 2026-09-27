@@ -1,4 +1,4 @@
-# ARGONAUT OS · Offene Punkte (Stand 26.09.2026)
+# ARGONAUT OS · Offene Punkte (Stand 27.09.2026)
 
 Eine Liste für alles, was noch zu bauen oder zu ändern ist. Wird nach jedem Push fortgeschrieben.
 Reihenfolge von Martin freigegeben am 25.09.2026.
@@ -91,6 +91,18 @@ Ablauf: Claude schreibt vorher je Punkt **Fehler + Lösung** auf, dann wird geba
 | K3 | Fehlende Umlaute („Waermepumpe", „bestaetigt", „Waehlen" …) | ✅ gebaut (_p113) — sichtbare Texte in 36 Dateien; Rechnungs-Texte (Abschlag, Einbehalt, Skonto, § 13b, USt-IdNr) bewusst NICHT angefasst → zu G |
 | K4 | Leertexte versprechen, was es nicht gibt („Kaution buchen", „in Angebot übernehmen", Standort-Feld, Stunden im Bautagebuch) | ✅ gebaut (_p113) — Aufmaß, Verleih, Personal, Bautagebuch |
 | K5 | Für ca. 20 Branchen-Tabellen fehlt die SQL-Datei im Repo — eine Leseabfrage in Supabase klärt die Zugriffsregeln | ✅ Abfrage geliefert (supabase-sql/k5-zugriffsregeln-befund.sql, nur lesen) — Auswertung, sobald docs/k5-befund.csv im Repo liegt |
+
+## 5b. Nachtrag 27.09.2026 — Recht „💶 Darf abrechnen" (Martins Entscheidung)
+
+Die harte Sperre aus B1b-2 („Rechnungen nur der Chef") passte nicht zum echten Betrieb: Die Büroleitung muss abrechnen, der Chef kontrolliert.
+
+| Nr. | Was | Stand |
+|---|---|---|
+| R1 | Recht „💶 Darf abrechnen" je Mitarbeiter, vergibt nur der Eigentümer (Rechte-Seite) | ✅ gebaut (_p122 + SQL darf-abrechnen) |
+| R2 | Rechnungen, Positionen, Zahlungen, Mahnungen gehören immer dem Betrieb; „erstellt von" + Glocke beim Chef | ✅ gebaut (_p122) |
+| R3 | Stornieren, Reaktivieren, Zahlungen löschen, SEPA bleiben beim Chef (DB-Wächter) | ✅ gebaut (_p122) |
+| R4 | Claude-Befund: Wiederkehr-Lauf legte Rechnungen auf die Kennung des Mitarbeiters an — geschlossen | ✅ gebaut (_p122) |
+| R5 | Claude-Befund: PDF/Mail/Archiv beim Mitarbeiter ohne Absender, Logo, Bezahllink, GoBD-Archiv unter falscher Kennung — geschlossen | ✅ gebaut (_p122) |
 
 ## 6. Ganz am Ende — Test-Checklisten und Testtage (Martins Auftrag 25.09.)
 

@@ -22,6 +22,7 @@ import {
 } from "../../_components/AbschlagsKarten";
 import { satzAusBetraegen } from "@/lib/abschlagsrechnung";
 import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
+import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_CHEF, ZAHLUNG_LOESCHEN_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
@@ -157,6 +158,10 @@ export default function RechnungDetail() {
   const [kontakt, setKontakt] = useState<any>(null);
   const [firma, setFirma] = useState<any>(null);
   const [firmenprofil, setFirmenprofil] = useState<any>(null);
+  // „Darf abrechnen" (27.09.26): Wer schaut gerade — Chef oder Mitarbeiter, mit oder ohne Recht?
+  const [istMa, setIstMa] = useState(false);
+  const [darfAbrechnen, setDarfAbrechnen] = useState(true);
+  const [ersteller, setErsteller] = useState<string | null>(null);
 
   const [titel, setTitel] = useState("");
   const [status, setStatus] = useState<StatusKey>("offen");
@@ -270,15 +275,44 @@ export default function RechnungDetail() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    // „Darf abrechnen" (27.09.26): Beim Mitarbeiter ist das eigene Profil leer —
+    // der Absender kommt vom BETRIEB (Server-Route, nur Rechnungsfelder).
+    let mitarbeiter = false;
     if (user) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select(
-          "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic, firma_rechtsform, firma_geschaeftsfuehrer, firma_registergericht, firma_hrb"
-        )
-        .eq("id", user.id)
-        .single();
-      if (prof) setFirmenprofil(prof);
+      const { data: chefId } = await supabase.rpc("mein_chef_id");
+      mitarbeiter = istMitarbeiterKennung(chefId);
+      setIstMa(mitarbeiter);
+      if (mitarbeiter) {
+        const { data: darf, error: dErr } = await supabase.rpc("darf_ich_abrechnen");
+        setDarfAbrechnen(!dErr && darf === true);
+        try {
+          const res = await fetch("/api/betrieb-firmendaten");
+          const j = await res.json();
+          if (res.ok && j?.firma) setFirmenprofil(j.firma);
+        } catch { /* ohne Absender bleibt der Hinweis im PDF */ }
+      } else {
+        setDarfAbrechnen(true);
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select(
+            "firma_name, firma_strasse, firma_plz, firma_ort, firma_telefon, firma_email, firma_ust_id, firma_steuernummer, firma_iban, firma_bank, firma_bic, firma_rechtsform, firma_geschaeftsfuehrer, firma_registergericht, firma_hrb"
+          )
+          .eq("id", user.id)
+          .single();
+        if (prof) setFirmenprofil(prof);
+      }
+    }
+
+    // Wer hat die Rechnung angelegt? Nur anzeigen, wenn es nicht der Betrieb selbst war.
+    setErsteller(null);
+    if (r.erstellt_von && r.erstellt_von !== r.owner_user_id) {
+      const { data: wer } = await supabase
+        .from("mitarbeiter")
+        .select("vorname, nachname")
+        .eq("auth_user_id", r.erstellt_von)
+        .maybeSingle();
+      const name = wer ? `${wer.vorname ?? ""} ${wer.nachname ?? ""}`.trim() : "";
+      setErsteller(name || "einem Mitarbeiter");
     }
 
     setDirty(false);
@@ -364,6 +398,11 @@ export default function RechnungDetail() {
         setSpeichern(false);
         return;
       }
+      if (istMa && !darfAbrechnen) {
+        setFehler(RECHNUNG_NUR_CHEF);
+        setSpeichern(false);
+        return;
+      }
 
       // Fälligkeit automatisch aus Rechnungsdatum + Zahlungsziel, falls Ziel gesetzt
       let faellig = faelligkeitsdatum || null;
@@ -391,7 +430,8 @@ export default function RechnungDetail() {
       let pos = 1;
       for (const z of zeilen) {
         const datensatz: any = {
-          owner_user_id: user.id,
+          // Positionen gehören dem Betrieb, dem auch die Rechnung gehört (27.09.26)
+          owner_user_id: rechnung?.owner_user_id ?? user.id,
           rechnung_id: id,
           position: pos,
           bezeichnung: z.bezeichnung || null,
@@ -722,8 +762,14 @@ export default function RechnungDetail() {
         setZBusy(false);
         return;
       }
+      if (istMa && !darfAbrechnen) {
+        setFehler(ZAHLUNG_NUR_CHEF);
+        setZBusy(false);
+        return;
+      }
       const { error } = await supabase.from("zahlungen").insert({
-        owner_user_id: user.id,
+        // Die Zahlung gehört dem Betrieb der Rechnung (27.09.26)
+        owner_user_id: rechnung?.owner_user_id ?? user.id,
         rechnung_id: id,
         betrag: betragNum,
         zahlungsdatum: zDatum,
@@ -749,6 +795,10 @@ export default function RechnungDetail() {
   }
 
   async function zahlungLoeschen(zid: string) {
+    if (istMa) {
+      setFehler(ZAHLUNG_LOESCHEN_NUR_CHEF);
+      return;
+    }
     if (!window.confirm("Diese Zahlung wirklich löschen? Der Rechnungsstatus wird neu berechnet.")) return;
     setFehler(null);
     const { error } = await supabase.from("zahlungen").delete().eq("id", zid);
@@ -761,6 +811,10 @@ export default function RechnungDetail() {
 
   // ---------- Stornieren / Reaktivieren (manueller Status) ----------
   async function stornoUmschalten(neu: "storniert" | "offen") {
+    if (istMa) {
+      setFehler(STORNO_NUR_CHEF);
+      return;
+    }
     // G3a (26.09.2026): Rückfrage — vorher geschah beides sofort.
     const frage = neu === "storniert"
       ? `Rechnung ${rechnung?.rechnungsnummer ?? ""} stornieren?\n\nSie bleibt als „storniert" erhalten (GoBD) und zählt nicht mehr als Umsatz. Ist sie schon beim Kunden, braucht es zusätzlich eine Stornorechnung.`
@@ -896,6 +950,18 @@ export default function RechnungDetail() {
             >
               {stCfg.icon} {stCfg.label}
             </span>
+            {ersteller && (
+              <span
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 'clamp(12.5px, 1.13vw, 18px)',
+                  fontWeight: 600,
+                  color: C.textDim,
+                }}
+              >
+                erstellt von {ersteller}
+              </span>
+            )}
           </h1>
           <p style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)', margin: "8px 0 0" }}>
             {empfaengerName}
@@ -965,7 +1031,7 @@ export default function RechnungDetail() {
               wird automatisch aus den erfassten Zahlungen berechnet
             </span>
             <div style={{ flex: 1 }} />
-            {status !== "storniert" ? (
+            {istMa ? null : status !== "storniert" ? (
               <button onClick={() => stornoUmschalten("storniert")} style={stornoBtn}>
                 Stornieren
               </button>
@@ -1023,6 +1089,7 @@ export default function RechnungDetail() {
                   <div style={{ textAlign: "right", fontWeight: 700, color: C.green }}>
                     {geld(z.betrag, waehrung)}
                   </div>
+                  {!istMa && (
                   <button
                     onClick={() => zahlungLoeschen(z.id)}
                     title="Zahlung löschen"
@@ -1036,6 +1103,7 @@ export default function RechnungDetail() {
                   >
                     🗑
                   </button>
+                  )}
                 </div>
               ))}
             </div>

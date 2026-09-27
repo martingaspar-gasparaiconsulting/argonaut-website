@@ -3,7 +3,8 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { pruefeEmpfaenger, reservierteZeiten } from "@/lib/objektzeitRechnung";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -42,9 +43,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // Objekt für Titel + Fallback-Stundensatz.
     const { data: obj } = await supabase.from("objekte").select("bezeichnung, stundensatz_netto").eq("id", objektId).maybeSingle();
@@ -73,15 +76,15 @@ export async function POST(req: Request) {
     }
 
     // Erst reservieren: nur Zeilen, die jetzt von false auf true springen.
-    const { data: umgesprungen, error: resErr } = await supabase.from("objekt_zeiten")
+    const { data: umgesprungen, error: resErr } = await schreiber.from("objekt_zeiten")
       .update({ abgerechnet: true })
-      .in("id", kandidaten.map((z) => z.id)).eq("abgerechnet", false)
+      .in("id", kandidaten.map((z) => z.id)).eq("abgerechnet", false).eq("owner_user_id", betrieb)
       .select("id");
     if (resErr) return NextResponse.json({ error: "Objektzeiten konnten nicht reserviert werden." }, { status: 500 });
     const abrechenbar = reservierteZeiten(kandidaten, umgesprungen as { id: string }[] | null);
     if (!abrechenbar.length) return NextResponse.json({ error: "Diese Zeiten werden gerade schon abgerechnet — bitte die Seite neu laden." }, { status: 409 });
     const freigeben = async () => {
-      await supabase.from("objekt_zeiten").update({ abgerechnet: false, rechnung_id: null }).in("id", abrechenbar.map((z) => z.id));
+      await schreiber.from("objekt_zeiten").update({ abgerechnet: false, rechnung_id: null }).in("id", abrechenbar.map((z) => z.id)).eq("owner_user_id", betrieb);
     };
 
     const rechnungsPosten = abrechenbar.map((z, i) => {
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
       const einzelpreis = cent(satz);
       const datumTxt = z.datum ? new Date(z.datum).toLocaleDateString("de-DE") : "";
       return {
-        owner_user_id: user.id, position: i + 1,
+        owner_user_id: betrieb, position: i + 1,
         bezeichnung: (datumTxt ? `${datumTxt} · ` : "") + (z.taetigkeit || "Objektzeit"),
         menge, einheit: "Std", einzelpreis,
         mwst_satz: Number(z.mwst_satz) || MWST_STD,
@@ -108,7 +111,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: empf.kontaktId, firma_id: null,
+        owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: empf.kontaktId, firma_id: null,
         titel: obj?.bezeichnung ? `Objekt: ${obj.bezeichnung}` : "Objektzeiten-Abrechnung",
         empfaenger_name: empfaengerName, zahlungsstatus: "offen",
         rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
@@ -136,9 +139,10 @@ export async function POST(req: Request) {
 
     // Die Zeiten sind schon reserviert (abgerechnet = true) — jetzt nur noch
     // die Rechnung dazuschreiben. Scheitert das, bleiben sie trotzdem gesperrt.
-    const { error: updErr } = await supabase.from("objekt_zeiten")
+    const { error: updErr } = await schreiber.from("objekt_zeiten")
       .update({ rechnung_id: rechnungId })
-      .in("id", abrechenbar.map((z) => z.id));
+      .in("id", abrechenbar.map((z) => z.id))
+      .eq("owner_user_id", betrieb);
     if (updErr) console.error("objekt_zeiten Rechnungsnummer eintragen fehlgeschlagen:", updErr.message);
 
     return NextResponse.json({ rechnungId, anzahl: abrechenbar.length });

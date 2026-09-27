@@ -20,7 +20,9 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
+import { ladeBetriebProfil } from "@/lib/betriebProfil";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,12 +41,15 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // Kleinunternehmer-Einstellung (§19, global im Profil) → 0 % auf alles, Vorrang vor Positions-Sätzen.
-    const { data: prof } = await supabase.from("profiles").select("kleinunternehmer").eq("id", user.id).maybeSingle();
+    // Kleinunternehmer-Regel gilt für den BETRIEB, nicht für die Person, die klickt.
+    const prof = await ladeBetriebProfil(supabase, user.id);
     const kleinunternehmer = !!prof?.kleinunternehmer;
 
     // ---- 1) Bestellung laden (RLS schützt auf owner) ----
@@ -76,7 +81,7 @@ export async function POST(req: Request) {
       const satz = kleinunternehmer ? 0 : (Number(p?.mwst) > 0 ? Number(p.mwst) : STANDARD_MWST);
       const nettoEinzel = cent(bruttoEinzel / (1 + satz / 100));
       return {
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         position: i + 1,
         bezeichnung: (p?.bezeichnung || "Position").toString().slice(0, 300),
         menge,
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
 
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
       titel, empfaenger_name: b.besteller || null, zahlungsstatus: "offen", kleinunternehmer,
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: ZAHLUNGSZIEL_TAGE, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
@@ -119,7 +124,7 @@ export async function POST(req: Request) {
     }
 
     // ---- 6) Nahtstelle zurückschreiben (verhindert Doppel-Rechnung) ----
-    const { error: updErr } = await supabase.from("shop_bestellungen").update({ rechnung_id: rechnungId }).eq("id", bestellungId);
+    const { error: updErr } = await schreiber.from("shop_bestellungen").update({ rechnung_id: rechnungId }).eq("id", bestellungId).eq("owner_user_id", betrieb);
     if (updErr) console.error("shop_bestellungen.rechnung_id nicht gesetzt:", updErr.message);
 
     return NextResponse.json({ rechnungId, bereitsVorhanden: false });

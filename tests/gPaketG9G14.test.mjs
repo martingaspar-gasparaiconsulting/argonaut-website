@@ -71,7 +71,7 @@ test('G11 Objektzeiten: erst reservieren, nie ohne Empfaenger', () => {
   const reservieren = r.indexOf('.update({ abgerechnet: true })');
   const anlegen = r.indexOf('.from("rechnungen")\n      .insert(');
   assert.ok(reservieren > 0 && anlegen > reservieren, 'Reservieren muss VOR dem Anlegen der Rechnung stehen');
-  assert.ok(r.includes('.eq("abgerechnet", false)\n      .select("id")'));
+  assert.ok(r.includes('.eq("abgerechnet", false).eq("owner_user_id", betrieb)\n      .select("id")')) // 27.09.: plus Betriebs-Grenze (Darf abrechnen);
   assert.ok(r.includes('empfaenger_name: empfaengerName') && !r.includes('empfaenger_name: null'));
   assert.equal((r.match(/await freigeben\(\);/g) || []).length, 2);
   const p = lies('app/dashboard/objektzeiten/page.tsx');

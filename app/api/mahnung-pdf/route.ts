@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { betriebLeser } from '@/lib/abrechnungServer';
 import { baueMarke, CI_SPALTEN, type CiRoh, type Marke } from '@/lib/markeCi';
 import { forderungsAufstellung } from '@/lib/verzugszins';
 
@@ -254,7 +255,9 @@ export async function POST(req: NextRequest) {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: ciData } = await supabase.from('web_ci').select(CI_SPALTEN).limit(1);
+        // Logo und Farben des BETRIEBS — auch beim Mitarbeiter (27.09.26).
+        const { leser, betrieb } = await betriebLeser(supabase, user.id);
+        const { data: ciData } = await leser.from('web_ci').select(CI_SPALTEN).eq('owner_user_id', betrieb).limit(1);
         ciRoh = ((Array.isArray(ciData) && ciData[0]) || null) as unknown as CiRoh;
       }
     } catch { /* CI ist optional — ohne CI neutrales Standardlayout */ }

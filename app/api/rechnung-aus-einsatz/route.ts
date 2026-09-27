@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -46,9 +47,11 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // ---------- 1) Einsatz laden (RLS: owner_all schützt auf Chef) ----------
     const { data: einsatz, error: eErr } = await supabase
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
       const menge = cent(Number(p.menge) || 0);
       const einzelpreis = cent(Number(p.einzelpreis_netto) || 0);
       return {
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         position: i + 1,
         bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
         menge,
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         standort_id: standortId,
         auftrag_id: einsatz.auftrag_id ?? null,
         kontakt_id: einsatz.kontakt_id ?? null,
@@ -164,10 +167,11 @@ export async function POST(req: Request) {
     }
 
     // ---------- 7) Nahtstelle zurückschreiben ----------
-    const { error: updErr } = await supabase
+    const { error: updErr } = await schreiber
       .from("einsaetze")
       .update({ rechnung_id: rechnungId })
-      .eq("id", einsatz.id);
+      .eq("id", einsatz.id)
+      .eq("owner_user_id", betrieb);
     if (updErr) {
       console.error("einsaetze.rechnung_id konnte nicht gesetzt werden:", updErr.message);
       // Rechnung ist trotzdem erstellt — kein harter Abbruch

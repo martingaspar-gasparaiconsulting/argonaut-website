@@ -17,24 +17,19 @@ test('Wer ist Mitarbeiter? mein_chef_id liefert einen Chef', async () => {
   assert.match(ZAHLUNG_NUR_CHEF, /Geschäftsleitung/);
 });
 
-test('Alle 17 Rechnung-aus-Wege weisen Mitarbeiter ab, bevor etwas entsteht', () => {
+// Seit 27.09.2026 („Darf abrechnen") prueft tests/darfAbrechnen.test.mjs die
+// 17 Rechnung-aus-Wege sowie Zahlungen und Banking — die harte Chef-Sperre ist
+// dort durch das Recht ersetzt. Hier bleibt nur: vor dem Anlegen wird geprueft.
+test('Alle 17 Rechnung-aus-Wege pruefen das Recht, bevor etwas entsteht', () => {
   const ordner = fs.readdirSync(new URL('../app/api/', import.meta.url)).filter((d) => d.startsWith('rechnung-aus-'));
   assert.equal(ordner.length, 17);
   for (const d of ordner) {
     const s = lies(`app/api/${d}/route.ts`);
-    const pruef = s.indexOf('const nurChef = await rechnungsRechtFehlt(supabase);');
+    const pruef = s.indexOf('const abr = await abrechnungPruefen(supabase, user.id);');
     assert.ok(pruef > 0, d);
-    assert.ok(s.includes('if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });'), d);
+    assert.ok(s.includes('if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });'), d);
     const anlegen = s.search(/from\(["']rechnungen["']\)\s*\.insert\(/);
     assert.ok(anlegen < 0 || pruef < anlegen, d + ': Pruefung muss vor dem Anlegen stehen');
-  }
-});
-
-test('Zahlungen und Banking: nur die Geschaeftsleitung erfasst Zahlungen', () => {
-  for (const p of ['app/dashboard/zahlungen/page.tsx', 'app/dashboard/banking/page.tsx']) {
-    const s = lies(p);
-    const pruef = s.indexOf('if (istMitarbeiterKennung(chefId)) throw new Error(ZAHLUNG_NUR_CHEF);');
-    assert.ok(pruef > 0 && pruef < s.indexOf(".from('zahlungen').insert("), p);
   }
 });
 

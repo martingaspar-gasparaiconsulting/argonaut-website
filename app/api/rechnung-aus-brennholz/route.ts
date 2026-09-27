@@ -39,7 +39,8 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { summiere, cent, type Position } from "@/app/dashboard/_components/positionsLogik";
 import { istBearbeitbar, statusInfo } from "@/app/dashboard/_components/auftragLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,9 +71,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // ---- 1) Auftrag laden (RLS schützt auf owner) ----------------------
     const { data: auftrag, error: aErr } = await supabase
@@ -158,7 +161,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         standort_id: standortId,
         auftrag_id: null,                       // kein US-CORE-Auftrag
         kontakt_id: auftrag.kontakt_id,         // ⚠️ anders als Werkstatt: echter CRM-Kunde
@@ -200,7 +203,7 @@ export async function POST(req: Request) {
         : p.bezeichnung;
 
       return {
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         rechnung_id: rechnungId,
         position: p.position_nr ?? i + 1,
         bezeichnung: bez,
@@ -219,10 +222,11 @@ export async function POST(req: Request) {
     }
 
     // ---- 8) Nahtstelle zurückschreiben ------------------------------------
-    const { error: updErr } = await supabase
+    const { error: updErr } = await schreiber
       .from("holz_auftraege")
       .update({ rechnung_id: rechnungId, status: "abgerechnet" })
-      .eq("id", auftrag.id);
+      .eq("id", auftrag.id)
+      .eq("owner_user_id", betrieb);
 
     if (updErr) console.error("holz_auftraege.rechnung_id nicht gesetzt:", updErr.message);
 

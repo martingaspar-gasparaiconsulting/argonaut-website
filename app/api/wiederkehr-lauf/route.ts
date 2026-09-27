@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
 import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import {
   wartungPositionen, darfAbrechnen, darfAboAbrechnen,
@@ -195,6 +197,14 @@ export async function POST(req: Request) {
       });
     }
 
+    // „Darf abrechnen" (27.09.26): Vorher legte ein Mitarbeiter hier Rechnungen
+    // auf seine eigene Kennung an — der Chef sah sie nie. Jetzt: Chef oder
+    // Mitarbeiter mit Haken, und alles gehört dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
+
     const details: DetailEintrag[] = [];
     const rechnungIds: string[] = [];
     let anzahlWartung = 0, anzahlAbo = 0, anzahlFehler = 0, summeNetto = 0;
@@ -203,7 +213,7 @@ export async function POST(req: Request) {
     for (const w of faelligeWartung) {
       const titel = String(w.titel || "Wartungsvertrag");
       const r = await rechnungAnlegen(
-        supabase, user.id,
+        supabase, betrieb,
         { titel, empfaenger_name: (w.kunde_name as string) ?? null, kontakt_id: (w.kontakt_id as string) ?? null, standort_id: (w.standort_id as string) ?? standortId },
         wartungPositionen(w)
       );
@@ -212,9 +222,10 @@ export async function POST(req: Request) {
         details.push({ quelle: "wartung", id: String(w.id), titel, fehler: r.error || "Unbekannt" });
         continue;
       }
-      await supabase.from("wartungsvertraege")
+      await schreiber.from("wartungsvertraege")
         .update({ letzte_abrechnung_am: heute, aktualisiert_am: new Date().toISOString() })
-        .eq("id", w.id as string);
+        .eq("id", w.id as string)
+        .eq("owner_user_id", betrieb);
       anzahlWartung++; summeNetto += r.netto || 0; rechnungIds.push(r.rechnungId);
       details.push({ quelle: "wartung", id: String(w.id), titel, rechnungId: r.rechnungId });
     }
@@ -225,7 +236,7 @@ export async function POST(req: Request) {
       const posRoh = Array.isArray(a.positionen) ? (a.positionen as Posten[]) : [];
       const pos = posRoh.filter((p) => (Number(p?.einzelpreis) || 0) > 0 || (Number(p?.menge) || 0) > 0);
       const r = await rechnungAnlegen(
-        supabase, user.id,
+        supabase, betrieb,
         { titel, empfaenger_name: (a.empfaenger_name as string) ?? null, kontakt_id: (a.kontakt_id as string) ?? null, standort_id: (a.standort_id as string) ?? standortId },
         pos
       );
@@ -235,16 +246,17 @@ export async function POST(req: Request) {
         continue;
       }
       const naechste = naechstesAboDatum(String(a.naechste_faellig ?? ""), String(a.intervall || "monat"), heute);
-      await supabase.from("abo_rechnungen")
+      await schreiber.from("abo_rechnungen")
         .update({ naechste_faellig: naechste, zuletzt_erzeugt: heute, anzahl_erzeugt: (Number(a.anzahl_erzeugt) || 0) + 1, updated_at: new Date().toISOString() })
-        .eq("id", a.id as string);
+        .eq("id", a.id as string)
+        .eq("owner_user_id", betrieb);
       anzahlAbo++; summeNetto += r.netto || 0; rechnungIds.push(r.rechnungId);
       details.push({ quelle: "abo", id: String(a.id), titel, rechnungId: r.rechnungId });
     }
 
     // --- Lauf protokollieren (Audit) ---
-    await supabase.from("wiederkehr_lauf").insert({
-      owner_user_id: user.id,
+    await schreiber.from("wiederkehr_lauf").insert({
+      owner_user_id: betrieb,
       gestartet_von: user.id,
       anzahl_wartung: anzahlWartung,
       anzahl_abo: anzahlAbo,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
 import { girocodeVonDaten } from '../../../lib/girocode';
 import { createClient } from '@/lib/supabase-server';
+import { betriebLeser } from '@/lib/abrechnungServer';
 import { baueBezahllink } from '@/lib/bezahllink';
 import type { IntegrationDatensatz } from '@/lib/konnektoren';
 import { baueMarke, CI_SPALTEN, type CiRoh } from '@/lib/markeCi';
@@ -471,8 +472,10 @@ export async function POST(req: NextRequest) {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: zi } = await supabase.from('betrieb_integrationen')
-            .select('typ, anbieter, config, aktiv').eq('owner_user_id', user.id).eq('typ', 'zahlung').maybeSingle();
+          // Bezahl-Anbieter gehört dem Betrieb — auch wenn ein Mitarbeiter das PDF erstellt (27.09.26).
+          const { leser, betrieb } = await betriebLeser(supabase, user.id);
+          const { data: zi } = await leser.from('betrieb_integrationen')
+            .select('typ, anbieter, config, aktiv').eq('owner_user_id', betrieb).eq('typ', 'zahlung').maybeSingle();
           bezahllink = baueBezahllink(zi as IntegrationDatensatz | null, Number(rechnung?.brutto_summe) || 0);
         }
       }
@@ -484,8 +487,11 @@ export async function POST(req: NextRequest) {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase.from('web_ci')
+        // Logo und Farben des BETRIEBS — auch beim Mitarbeiter (27.09.26).
+        const { leser, betrieb } = await betriebLeser(supabase, user.id);
+        const { data } = await leser.from('web_ci')
           .select(CI_SPALTEN)
+          .eq('owner_user_id', betrieb)
           .limit(1);
         ci = (Array.isArray(data) && data[0]) || null;
       }

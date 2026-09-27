@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
+import { istMitarbeiterKennung } from '@/lib/nurGeschaeftsleitung';
+import { quellSchreiber } from '@/lib/abrechnungServer';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +32,13 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
+    // „Darf abrechnen" (27.09.26): Absender (Firmenname, Antwortadresse, Farbe) ist
+    // immer der BETRIEB. Schickte ein Mitarbeiter, stand bisher „Ihr Dienstleister"
+    // ohne Antwortadresse in der Mail — sein eigenes Profil hat keine Firmendaten.
+    let chef: unknown = null;
+    try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
+    const mitarbeiter = istMitarbeiterKennung(chef);
+    const absenderId = mitarbeiter ? String(chef).trim() : user.id;
 
     const body = await req.json().catch(() => ({}));
     const an = typeof body?.an === 'string' ? body.an.trim() : '';
@@ -59,7 +68,7 @@ export async function POST(req: NextRequest) {
       <p>Bei Fragen antworten Sie einfach auf diese E-Mail.</p>
       <p>Vielen Dank.</p>`;
 
-    const brand = await absenderBranding(supabase, user.id);
+    const brand = await absenderBranding(quellSchreiber(supabase, { mitarbeiter }), absenderId);
     const html = kundenMailLayout(brand.firma, brand.akzent, 'Ihre Rechnung', inhalt);
 
     const r = await sendeMail({

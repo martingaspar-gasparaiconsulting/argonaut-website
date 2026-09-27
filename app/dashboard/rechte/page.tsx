@@ -127,6 +127,8 @@ type Mitarbeiter = {
   auth_user_id: string | null;
   rolle: string | null;
   darf_verteilen: boolean | null;
+  // „Darf abrechnen" (27.09.26) — eigene Abfrage, damit die Seite auch ohne die neue Spalte lädt
+  darf_abrechnen?: boolean | null;
 };
 // PUNKT 8: schreibModule als zweite Achse ergaenzt (Sicht = module, Aendern = schreibModule).
 type Recht = { rolle: string | null; module: string[]; schreibModule: string[] };
@@ -162,6 +164,10 @@ export default function RechtePage() {
 
   // 2c: laeuft gerade ein Vollmacht-Wechsel fuer diesen Mitarbeiter?
   const [vollmachtBusyId, setVollmachtBusyId] = useState<string | null>(null);
+
+  // „Darf abrechnen" (27.09.26): läuft gerade ein Wechsel? Fehlt die Spalte (SQL noch nicht gelaufen)?
+  const [abrBusyId, setAbrBusyId] = useState<string | null>(null);
+  const [abrSpalteFehlt, setAbrSpalteFehlt] = useState(false);
 
   async function laden_() {
     setLaden(true);
@@ -244,6 +250,16 @@ export default function RechtePage() {
       if (mRes.error) throw mRes.error;
 
       const liste = (mRes.data as Mitarbeiter[]) || [];
+      // „Darf abrechnen" getrennt laden: Eine unbekannte Spalte würde sonst die
+      // GANZE Liste leeren (Supabase bricht die Abfrage komplett ab).
+      const abrRes = await supabase.from("mitarbeiter").select("id,darf_abrechnen");
+      if (abrRes.error) {
+        setAbrSpalteFehlt(true);
+      } else {
+        setAbrSpalteFehlt(false);
+        const abrMap = new Map(((abrRes.data as { id: string; darf_abrechnen: boolean | null }[]) || []).map((z) => [z.id, z.darf_abrechnen]));
+        liste.forEach((m) => { m.darf_abrechnen = abrMap.get(m.id) ?? false; });
+      }
       setMitarbeiter(liste);
 
       const map: Record<string, Recht> = {};
@@ -412,6 +428,34 @@ export default function RechtePage() {
   const name = (m: Mitarbeiter) =>
     [m.vorname, m.nachname].filter(Boolean).join(" ").trim() || "Mitarbeiter";
 
+  // --- „Darf abrechnen" (nur Eigentümer) ------------------------------
+  // Wer den Haken hat, erstellt Rechnungen, erfasst Zahlungen und verschickt
+  // Mahnungen — immer im Namen des Betriebs. Stornieren, Reaktivieren und
+  // Zahlungen löschen bleibt beim Eigentümer. Die DB erlaubt das Setzen nur
+  // dem Owner (mitarbeiter_update_own) — zweite Absicherung.
+  async function abrechnenSetzen(m: Mitarbeiter, an: boolean) {
+    if (meineRolle !== "eigentuemer") return;
+    const frage = an
+      ? `${name(m)} darf ab jetzt Rechnungen erstellen, Zahlungen erfassen und Mahnungen verschicken — immer im Namen des Betriebs.\n\nSie sehen jede Rechnung sofort und bekommen eine Meldung in der Glocke. Stornieren und Löschen bleibt bei Ihnen.\n\nFreigeben?`
+      : `${name(m)} das Recht „Darf abrechnen" entziehen?`;
+    if (typeof window !== "undefined" && !window.confirm(frage)) return;
+    setAbrBusyId(m.id);
+    setFehler(null);
+    try {
+      const { data, error } = await supabase
+        .from("mitarbeiter")
+        .update({ darf_abrechnen: an })
+        .eq("id", m.id)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("nicht gespeichert — nur der Eigentümer darf das setzen");
+      setMitarbeiter((prev) => prev.map((x) => (x.id === m.id ? { ...x, darf_abrechnen: an } : x)));
+    } catch (e: any) {
+      setFehler("„Darf abrechnen\" ändern fehlgeschlagen: " + (e?.message || "unbekannt"));
+    }
+    setAbrBusyId(null);
+  }
+
   const hatMitarbeiter = mitarbeiter.length > 0;
 
   return (
@@ -516,6 +560,8 @@ export default function RechtePage() {
             const ok = okId === m.id;
             const istVerteiler = !!m.darf_verteilen;
             const vBusy = vollmachtBusyId === m.id;
+            const darfAbr = !!m.darf_abrechnen;
+            const aBusy = abrBusyId === m.id;
             return (
               <div
                 key={m.id}
@@ -616,6 +662,54 @@ export default function RechtePage() {
                         : istVerteiler
                         ? "Vollmacht entziehen"
                         : "⚡ Als Administrator einsetzen"}
+                    </button>
+                  </div>
+                )}
+
+                {/* „Darf abrechnen" (27.09.26) — NUR für den Eigentümer sichtbar */}
+                {meineRolle === "eigentuemer" && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      background: darfAbr ? `${C.green}12` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${darfAbr ? C.green + "55" : C.border}`,
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      marginBottom: 16,
+                    }}
+                  >
+                    <span style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim, flex: "1 1 320px" }}>
+                      💶 Darf abrechnen:{" "}
+                      <strong style={{ color: darfAbr ? C.green : "#fff" }}>
+                        {darfAbr ? "Ja — Rechnungen, Zahlungen, Mahnungen für den Betrieb" : "Nein"}
+                      </strong>
+                      <br />
+                      <span style={{ fontSize: 'clamp(12px, 1.05vw, 16px)' }}>
+                        {abrSpalteFehlt
+                          ? "Noch nicht verfügbar — zuerst den SQL-Block „darf-abrechnen“ in Supabase ausführen."
+                          : "Wirkt zusammen mit der Freigabe „🧾 Rechnungen“ (Sitz-Typ Voll-Nutzer). Stornieren und Löschen bleibt bei Ihnen."}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => abrechnenSetzen(m, !darfAbr)}
+                      disabled={aBusy || abrSpalteFehlt}
+                      style={{
+                        background: darfAbr ? "transparent" : C.green,
+                        color: darfAbr ? C.textDim : C.navy,
+                        border: `1px solid ${darfAbr ? C.border : C.green}`,
+                        borderRadius: 999,
+                        padding: "7px 14px",
+                        fontSize: 'clamp(12.5px, 1.13vw, 18px)',
+                        fontWeight: 700,
+                        cursor: aBusy ? "wait" : abrSpalteFehlt ? "not-allowed" : "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                        opacity: aBusy || abrSpalteFehlt ? 0.6 : 1,
+                      }}
+                    >
+                      {aBusy ? "Ändert…" : darfAbr ? "Recht entziehen" : "💶 Abrechnen erlauben"}
                     </button>
                   </div>
                 )}

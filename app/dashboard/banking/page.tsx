@@ -25,7 +25,7 @@ import { parseUmsaetze, erkenneFormat, FORMAT_NAMEN } from '@/lib/bankFormate';
 import KiAuge from '../_components/KiAuge';
 import { augeBanking } from '@/lib/auge';
 import { zaehleBanking } from '@/lib/augeZaehler';
-import { istMitarbeiterKennung, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
+import { abrechnungPruefen, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -115,12 +115,12 @@ export default function BankingSeite() {
       // Der Datenbank-Trigger setzt daraus „teilbezahlt" bzw. „bezahlt".
       const { data: u } = await supabase.auth.getUser();
       if (!u?.user) throw new Error('Nicht angemeldet.');
-      // B1b-2 (26.09.26): Zahlungen erfasst nur die Geschaeftsleitung.
-      const { data: chefId } = await supabase.rpc('mein_chef_id');
-      if (istMitarbeiterKennung(chefId)) throw new Error(ZAHLUNG_NUR_CHEF);
+      // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Zahlung gehört dem Betrieb.
+      const abr = await abrechnungPruefen(supabase, u.user.id, ZAHLUNG_NUR_CHEF);
+      if (!abr.ok) throw new Error(abr.fehler);
       const heuteIso = new Date().toISOString().slice(0, 10);
       const { error } = await supabase.from('zahlungen').insert({
-        owner_user_id: u.user.id, rechnung_id: m.rechnungId,
+        owner_user_id: abr.betrieb, rechnung_id: m.rechnungId,
         betrag: Math.round(m.transaktion.betrag * 100) / 100,
         zahlungsdatum: buchungsDatumIso(m.transaktion.datum, heuteIso),
         zahlungsart: 'Überweisung',

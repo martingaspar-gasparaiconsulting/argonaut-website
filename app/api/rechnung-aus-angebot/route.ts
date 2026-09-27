@@ -3,7 +3,8 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { positionsNetto } from "@/lib/angebotRabatt";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -29,9 +30,11 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // 1) Angebot laden (RLS: nur eigene)
     const { data: ang, error: aErr } = await supabase.from("angebote")
@@ -65,7 +68,7 @@ export async function POST(req: Request) {
       const netto = positionsNetto(mengeRoh, einzelRoh, rabatt);
       const einzelEff = mengeRoh > 0 ? cent(netto / mengeRoh) : cent(einzelRoh);
       return {
-        owner_user_id: user.id, position: i + 1,
+        owner_user_id: betrieb, position: i + 1,
         bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
         menge: cent(mengeRoh), einheit: (p.einheit || "").trim() || "Stk", einzelpreis: einzelEff,
         mwst_satz: Number(p.mwst_satz) || MWST_STD,
@@ -81,7 +84,7 @@ export async function POST(req: Request) {
     // Filial-Stempel: bevorzugt der Standort des Angebots, sonst der aktive Standort (Cookie). Fail-open: null.
     const standortId = ang.standort_id ?? standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: user.id, standort_id: standortId, auftrag_id: null, kontakt_id: ang.kontakt_id ?? null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: ang.kontakt_id ?? null, firma_id: null,
       titel: ang.titel || "Angebot", empfaenger_name: ang.kunde_name?.trim() || null, zahlungsstatus: "offen",
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
     }
 
     // 7) Nahtstelle zurueckschreiben
-    await supabase.from("angebote").update({ rechnung_id: rechnungId, aktualisiert_am: new Date().toISOString() }).eq("id", ang.id);
+    await schreiber.from("angebote").update({ rechnung_id: rechnungId, aktualisiert_am: new Date().toISOString() }).eq("id", ang.id).eq("owner_user_id", betrieb);
 
     return NextResponse.json({ rechnungId, bereitsVorhanden: false });
   } catch (err: unknown) {

@@ -58,7 +58,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nicht angemeldet.' }, { status: 401 });
     }
     // Die Kennung kommt aus der Sitzung, NIE aus dem Formular.
-    const ownerId = user.id;
+    // „Darf abrechnen" (27.09.26): Das Archiv gehört dem BETRIEB. Archiviert ein
+    // Mitarbeiter, landete die Datei bisher unter seiner eigenen Kennung — im
+    // GoBD-Archiv des Chefs fehlte sie. mein_chef_id() läuft mit der Sitzung.
+    let ownerId = user.id;
+    try {
+      const { data: chef } = await nutzerClient.rpc('mein_chef_id');
+      if (typeof chef === 'string' && chef.trim()) ownerId = chef.trim();
+    } catch { /* ohne Funktion: eigene Kennung wie bisher */ }
 
     const form = await req.formData();
     const datei = form.get('datei');

@@ -15,6 +15,7 @@ import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
 import { signaturStarten } from '@/lib/signaturStart';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { istMitarbeiterKennung, SEPA_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 const MODUL = 'kunden_mandate';
 
 const supabase = createBrowserClient(
@@ -54,6 +55,8 @@ function offenerRest(r: { brutto_summe: number | null; bezahlter_betrag?: number
 
 export default function SepaEinzugPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // „Darf abrechnen" (27.09.26): SEPA bleibt Chefsache — Bankdaten des Betriebs.
+  const [istMa, setIstMa] = useState(false);
   const [firma, setFirma] = useState('');
   const [cred, setCred] = useState({ glaeubiger: '', inhaber: '', iban: '', bic: '' });
   const [credBusy, setCredBusy] = useState(false);
@@ -125,6 +128,8 @@ export default function SepaEinzugPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      const { data: chefId } = await supabase.rpc('mein_chef_id');
+      setIstMa(istMitarbeiterKennung(chefId));
       const { data: p } = await supabase.from('profiles')
         .select('firma_name, sepa_glaeubiger_id, sepa_kontoinhaber, sepa_iban, sepa_bic').eq('id', id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
@@ -139,6 +144,7 @@ export default function SepaEinzugPage() {
 
   async function credSpeichern() {
     if (!uid) return;
+    if (istMa) { setFehler(SEPA_NUR_CHEF); return; }
     setCredBusy(true); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('profiles').update({
@@ -219,6 +225,7 @@ export default function SepaEinzugPage() {
 
   async function sepaErzeugen() {
     setFehler(null); setOk(null);
+    if (istMa) { setFehler(SEPA_NUR_CHEF); return; }
     if (!cred.glaeubiger.trim() || !cred.iban.trim() || !cred.inhaber.trim()) {
       setFehler('Bitte zuerst die Gläubigerdaten (Gläubiger-ID, Kontoinhaber, IBAN) oben speichern.'); return;
     }
@@ -386,6 +393,7 @@ export default function SepaEinzugPage() {
                 <span style={{ flex: 1 }}>{kontaktMap[r.kontakt_id as string] || r.empfaenger_name || '—'} · Einzug {r.sepa_datei_am}</span>
                 <span>{eur(offenerRest(r))}</span>
                 <button style={styles.ghost} onClick={async () => {
+                  if (istMa) { setFehler(SEPA_NUR_CHEF); return; }
                   if (!window.confirm(`Rechnung ${r.rechnungsnummer || ''} wieder zum Einzug freigeben? Nur tun, wenn die Bank die Lastschrift NICHT ausgeführt hat.`)) return;
                   const { error } = await supabase.from('rechnungen').update({ sepa_datei_am: null }).eq('id', r.id);
                   if (error) setFehler('Zurücksetzen fehlgeschlagen: ' + error.message); else await laden_();

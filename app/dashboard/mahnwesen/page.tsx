@@ -10,6 +10,7 @@ import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { verzugszinsen, pauschale, verbraucherVorschlag } from "@/lib/verzugszins";
 import { zahlText } from '@/lib/zahlen';
+import { abrechnungPruefen, MAHNUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-3 — MAHN-COCKPIT
@@ -256,6 +257,12 @@ export default function MahnwesenCockpit() {
 
   async function mahnstufeSetzen(r: Rechnung, neu: number) {
     if (busyId) return;
+    // „Darf abrechnen" (27.09.26): Mahnstufen setzt der Chef oder wer das Recht hat.
+    const recht = await abrechnungPruefen(supabase, "", MAHNUNG_NUR_CHEF);
+    if (!recht.ok) {
+      setFehler(recht.fehler);
+      return;
+    }
     setBusyId(r.id);
     setFehler(null);
     const heute = new Date().toISOString().slice(0, 10);
@@ -284,6 +291,13 @@ export default function MahnwesenCockpit() {
     const kandidaten = sammelKandidaten;
     if (kandidaten.length === 0) {
       setSammelConfirm(false);
+      return;
+    }
+    // „Darf abrechnen" (27.09.26): Mahnlauf nur Chef oder wer das Recht hat.
+    const recht = await abrechnungPruefen(supabase, "", MAHNUNG_NUR_CHEF);
+    if (!recht.ok) {
+      setSammelConfirm(false);
+      setFehler(recht.fehler);
       return;
     }
     setSammelBusy(true);

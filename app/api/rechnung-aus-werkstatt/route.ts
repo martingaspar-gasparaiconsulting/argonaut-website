@@ -6,7 +6,8 @@ import {
   type PositionBasis,
 } from "@/app/dashboard/_components/leistungLogik";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
-import { rechnungsRechtFehlt } from "@/lib/nurGeschaeftsleitung";
+import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
+import { quellSchreiber } from "@/lib/abrechnungServer";
 
 export const runtime = "nodejs";
 
@@ -67,9 +68,11 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Nicht eingeloggt." }, { status: 401 });
     }
-    // B1b-2 (26.09.26): Rechnungen erstellt nur die Geschäftsleitung.
-    const nurChef = await rechnungsRechtFehlt(supabase);
-    if (nurChef) return NextResponse.json({ error: nurChef }, { status: 403 });
+    // „Darf abrechnen" (27.09.26): Chef oder Mitarbeiter mit Haken. Die Rechnung gehört immer dem Betrieb.
+    const abr = await abrechnungPruefen(supabase, user.id);
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const betrieb = abr.betrieb;
+    const schreiber = quellSchreiber(supabase, abr);
 
     // ---------- 1) Werkstatt-Auftrag laden (RLS schützt auf owner) ----------
     const { data: auftrag, error: auftragErr } = await supabase
@@ -158,7 +161,7 @@ export async function POST(req: Request) {
         (p.extern ? ` (extern${p.extern_firma ? " · " + p.extern_firma : ""})` : "");
 
       return {
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         position: i + 1,
         bezeichnung: bez,
         menge,
@@ -197,7 +200,7 @@ export async function POST(req: Request) {
     const { data: neueRechnung, error: rErr } = await supabase
       .from("rechnungen")
       .insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         standort_id: standortId,
         auftrag_id: null,          // kein US-CORE-Auftrag; Werkstatt-Verknüpfung läuft über werkstatt_auftraege.rechnung_id
         kontakt_id: null,          // Werkstatt-Kunde ist Freitext -> siehe empfaenger_name
@@ -253,10 +256,11 @@ export async function POST(req: Request) {
     }
 
     // ---------- 7) Nahtstelle zurückschreiben ----------
-    const { error: updErr } = await supabase
+    const { error: updErr } = await schreiber
       .from("werkstatt_auftraege")
       .update({ rechnung_id: rechnungId, aktualisiert_am: new Date().toISOString() })
-      .eq("id", auftrag.id);
+      .eq("id", auftrag.id)
+      .eq("owner_user_id", betrieb);
     if (updErr) {
       console.error("werkstatt_auftraege.rechnung_id konnte nicht gesetzt werden:", updErr.message);
       // Rechnung ist trotzdem erstellt — kein harter Abbruch
