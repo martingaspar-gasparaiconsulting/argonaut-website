@@ -156,6 +156,8 @@ type ProtokollForm = {
 
 export default function WartungPage() {
   const [uid, setUid] = useState<string | null>(null);
+  /** Paket 125 (Claude-Befund): der Betrieb (beim Mitarbeiter der Chef) — neue Vertraege gehoeren ihm. */
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<WartungRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -195,6 +197,10 @@ export default function WartungPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      try {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      } catch { setBesitzer(id); }
     })();
   }, []);
 
@@ -307,8 +313,11 @@ export default function WartungPage() {
 
     setSpeichert(true); setFehler(null);
     try {
+      // Paket 125: owner nur beim ANLEGEN (Betrieb). Beim Aendern bleibt der
+      // Besitzer, wie er ist — vorher schrieb ein Mitarbeiter seine eigene
+      // Kennung hinein, und das Speichern eines Chef-Vertrags scheiterte.
       const payload = {
-        owner_user_id: uid,
+        ...(form.id ? {} : { owner_user_id: besitzer ?? uid }),
         titel: form.titel.trim(),
         kunde_name: form.kunde_name.trim() || null,
         kontakt_id: form.kontakt_id || null,

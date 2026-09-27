@@ -32,6 +32,7 @@ import {
   EIGEN, NICHT, MOTOR_TABELLEN, GRUND, eindeutigeKoepfe, katalogFuerZiel, vorschlagMapping, bereinigeMapping,
   spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
+  sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, type KundeRoh,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -39,6 +40,7 @@ import {
   bereinigeWahl, erkenneAltsystem, zaehleAltsysteme, istBelegt, type Altsystem,
 } from '@/lib/altsysteme';
 import { leseXls } from '@/lib/xlsLeser';
+import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
   formatDauer, formatBytes, zahlDe, uhrzeitBerlin, gesamtFortschritt, dateiProzent, verschluckt,
@@ -101,6 +103,10 @@ type ImportErgebnis = {
   /** Eigene Felder konnten nicht angelegt werden -> Werte stehen in den Notizen. */
   eigeneAlsNotiz: number;
   eigeneFehler: string[];
+  // --- Schritt 3: Verknuepfung mit dem Kunden ---
+  kundeVerknuepft: number;
+  kundeOhne: number;
+  kundeHinweise: string[];
 };
 
 /** Schritt 2: gemerkte Altsystem-Wahl des Betriebs. */
@@ -752,6 +758,7 @@ export default function ImportCenterPage() {
       gelesen: bericht.gesamt, doppelt, abgelehnt: Math.max(0, bericht.schlecht - doppelt),
       offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
       eigeneWerte: 0, eigeneFelderNeu: 0, eigeneAlsNotiz: 0, eigeneFehler: [],
+      kundeVerknuepft: 0, kundeOhne: 0, kundeHinweise: [],
     };
     const angelegteIds: string[] = [];
     let jobId: string | null = null;
@@ -876,12 +883,61 @@ export default function ImportCenterPage() {
         }
       };
 
+      // Schritt 3: Kunden laden, damit Offene Posten, Chancen, Aktivitaeten
+      // und Wartungsvertraege am richtigen Kunden haengen.
+      let kundenIndex: ReturnType<typeof baueKundenIndex> | null = null;
+      if (ziel.kundeVerweis) {
+        setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Kunden zum Verknüpfen laden …' });
+        const kontakte: KundeRoh[] = [];
+        let spalten = 'id,kundennummer,import_schluessel,email,firma,vorname,nachname,firma_id';
+        for (let von = 0; von < 5000000; von += LESE_SEITE) {
+          let r = await supabase.from('kontakte').select(spalten).order('id').range(von, von + LESE_SEITE - 1);
+          if (r.error && von === 0) {
+            // ohne SQL p124 gibt es keine Kundennummer — dann ueber E-Mail und Namen
+            spalten = 'id,email,firma,vorname,nachname,firma_id';
+            r = await supabase.from('kontakte').select(spalten).order('id').range(von, von + LESE_SEITE - 1);
+          }
+          if (r.error) throw new Error('Kunden zum Verknüpfen konnten nicht geladen werden: ' + r.error.message);
+          const liste = (r.data ?? []) as unknown as KundeRoh[];
+          kontakte.push(...liste);
+          if (liste.length < LESE_SEITE) break;
+        }
+        kundenIndex = baueKundenIndex(kontakte);
+      }
+
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
 
-      bericht.saetze.forEach((satz0, idx) => {
+      bericht.saetze.forEach((satzRoh, idx) => {
         const dateiZeile = bericht.zeilenNummern?.[idx] ?? 0;
+        let satz0 = fuerDatenbank(satzRoh);
+        if (ziel.kundeVerweis && kundenIndex) {
+          const v = verknuepfeKunde(satzRoh, ziel.kundeVerweis, kundenIndex);
+          satz0 = v.satz;
+          if (v.treffer.art === 'gefunden') erg.kundeVerknuepft++;
+          else {
+            erg.kundeOhne++;
+            const grund = v.treffer.art === 'mehrdeutig'
+              ? `„${v.gesucht || 'Text'}" passt zu ${v.treffer.anzahl} Kunden — nicht verknüpft`
+              : v.gesucht ? `Kunde „${v.gesucht}" nicht gefunden` : 'kein Kunde angegeben';
+            if (ziel.kundeVerweis.pflicht) {
+              // Ohne Kunden gibt es hier keinen Datensatz (z. B. Aktivitaet ohne Zeitleiste).
+              erg.fehlgeschlagen++;
+              erg.fehler.push({ zeile: dateiZeile, feld: 'Kunde', meldung: `${grund}. Bitte zuerst die Kunden importieren, dann diese Datei noch einmal.` });
+              return;
+            }
+            if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne Kunde übernommen.`);
+          }
+        }
+        // Schritt 3: Wartungsvertraege — naechste Faelligkeit wie im Modul rechnen.
+        if (ziel.key === 'wartungsvertraege' && !satz0.naechste_faelligkeit_am) {
+          satz0.naechste_faelligkeit_am = naechsteFaelligkeitString({
+            letzte_wartung_am: (satz0.letzte_wartung_am as string | null) ?? null,
+            beginn_am: (satz0.beginn_am as string | null) ?? null,
+            intervall_monate: typeof satz0.intervall_monate === 'number' ? satz0.intervall_monate : 12,
+          } as Parameters<typeof naechsteFaelligkeitString>[0]);
+        }
         let satz = satz0;
         if (eigeneAlsNotiz) {
           const extra = eigeneZuZeile(dateiZeile);
@@ -1219,20 +1275,26 @@ export default function ImportCenterPage() {
         <div style={styles.stufe} id="import-ziel">
           <div style={styles.stufenTitel}>1 · Was möchten Sie importieren?</div>
           <div style={styles.zielGrid}>
-            {ZIELE.map((z) => (
-              <button
-                key={z.key} type="button" onClick={() => zielWaehlen(z.key)}
-                style={{
-                  ...styles.zielKarte,
-                  borderColor: zielKey === z.key ? C.gold : C.border,
-                  background: zielKey === z.key ? 'rgba(201,168,76,0.12)' : 'rgba(10,22,40,0.5)',
-                }}
-              >
-                <div style={{ fontSize: 22 }}>{z.icon}</div>
-                <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>{z.label}</div>
-                <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
-              </button>
-            ))}
+            {ZIELE.map((z) => {
+              // Schritt 3: neue Ziele erst, wenn die Datenbank sie kennt (SQL p125).
+              const bereit = !z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle);
+              return (
+                <button
+                  key={z.key} type="button" onClick={() => bereit && zielWaehlen(z.key)} disabled={!bereit}
+                  style={{
+                    ...styles.zielKarte,
+                    borderColor: zielKey === z.key ? C.gold : C.border,
+                    background: zielKey === z.key ? 'rgba(201,168,76,0.12)' : 'rgba(10,22,40,0.5)',
+                    opacity: bereit ? 1 : 0.5, cursor: bereit ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <div style={{ fontSize: 22 }}>{z.icon}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>{z.label}</div>
+                  <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
+                  {!bereit && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update „p125-import-schritt3“.</div>}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1331,7 +1393,8 @@ export default function ImportCenterPage() {
                   {datei.kopf.map((spalte, i) => {
                     const leer = spalteLeer(datei.zeilen, i);
                     // Leere Spalten nur auf Wunsch zeigen — bei DATEV sind es Hunderte.
-                    if (leer && !spaltenOffen && !istBankSpalte(spalte)) return null;
+                    const sperre = sperrGrund(spalte);
+                    if (leer && !spaltenOffen && !sperre) return null;
                     const beispiele = istBankSpalte(spalte) ? [] : datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
                     const gewaehlt = mapping[spalte] ?? '';
                     const feldDef = ziel.felder.find((f) => f.key === gewaehlt);
@@ -1343,8 +1406,8 @@ export default function ImportCenterPage() {
                           {bank ? <i>ausgeblendet (Bankdaten)</i> : beispiele.length ? beispiele.join(' · ') : <i>leer</i>}
                         </td>
                         <td style={styles.td}>
-                          {bank ? (
-                            <div style={{ color: C.warn, fontSize: 12.5, lineHeight: 1.5 }}>🔒 nicht übernommen — {GRUND.bank}</div>
+                          {sperre ? (
+                            <div style={{ color: C.warn, fontSize: 12.5, lineHeight: 1.5 }}>🔒 nicht übernommen — {sperre}</div>
                           ) : (
                             <>
                               <select value={gewaehlt} onChange={(e) => feldSetzen(spalte, e.target.value)} style={styles.select}>
@@ -1533,6 +1596,14 @@ export default function ImportCenterPage() {
                 </div>
               );
             })()}
+            {(ergebnis.kundeVerknuepft > 0 || ergebnis.kundeOhne > 0) && (
+              <div style={{ ...styles.hinweisKasten, marginBottom: 10 }}>
+                <b style={{ color: C.text }}>Mit Kunden verknüpft:</b> {zahlDe(ergebnis.kundeVerknuepft)}
+                {ergebnis.kundeOhne > 0 && <> · <span style={{ color: C.warn }}>{zahlDe(ergebnis.kundeOhne)} ohne Kunde</span></>}
+                {ergebnis.kundeHinweise.slice(0, 8).map((t, i) => <div key={i} style={{ color: C.warn, marginTop: 3, fontSize: 12.5 }}>⚠ {t}</div>)}
+                {ergebnis.kundeHinweise.length > 8 && <div style={{ marginTop: 3, fontSize: 12.5 }}>… und {ergebnis.kundeHinweise.length - 8} weitere.</div>}
+              </div>
+            )}
             {(ergebnis.eigeneWerte > 0 || ergebnis.eigeneAlsNotiz > 0 || ergebnis.eigeneFehler.length > 0) && (
               <div style={{ ...styles.hinweisKasten, marginBottom: 10 }}>
                 <b style={{ color: C.text }}>Eigene Felder:</b>{' '}
@@ -1890,6 +1961,8 @@ function SpaltenBilanzKasten({ bilanz }: { bilanz: SpaltenBilanz }) {
 
 /** Wohin nach dem Import geschaut wird. */
 function katalogZiel(zielKey: string): string {
+  const eigen = zielDef(zielKey)?.ergebnisHref;
+  if (eigen) return eigen;
   const wege: Record<string, string> = {
     kontakte: '/dashboard/crm',
     artikel: '/dashboard/erp',

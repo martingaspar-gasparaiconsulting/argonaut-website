@@ -68,7 +68,7 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'varianten', label: 'Artikel-Varianten & Matrix', icon: '🧩', beschreibung: 'Varianten-Gruppen (Größe/Farbe) für den Handel.', vorlage: V + 'varianten-import-vorlage.csv', zielHref: '/dashboard/varianten', gruppe: 'stammdaten' },
 
   // --- Verträge & Objekte ---------------------------------------------------
-  { key: 'wartungsvertraege', label: 'Wartungsverträge', icon: '🔧', beschreibung: 'Bestehende Wartungs-/Abo-Verträge übernehmen.', vorlage: V + 'wartungsvertraege-import-vorlage.csv', zielHref: '/dashboard/wartung', gruppe: 'vertraege_objekte' },
+  { key: 'wartungsvertraege', label: 'Wartungsverträge', icon: '🔧', beschreibung: 'Bestehende Wartungs-/Abo-Verträge übernehmen.', vorlage: V + 'wartungsvertraege-import-vorlage.csv', zielHref: '/dashboard/wartung', motor: 'wartungsvertraege', gruppe: 'vertraege_objekte' },
   { key: 'objekte', label: 'Objekt-/Asset-Register', icon: '🏛', beschreibung: 'Anlagen, Geräte, Objekte mit Prüffristen.', vorlage: V + 'objekte-import-vorlage.csv', zielHref: '/dashboard/objekte', gruppe: 'vertraege_objekte' },
   { key: 'betriebskosten', label: 'Betriebskosten-Einheiten', icon: '🧾', beschreibung: 'Mieteinheiten für die Betriebskostenabrechnung.', vorlage: V + 'betriebskosten-einheiten-import-vorlage.csv', zielHref: '/dashboard/betriebskosten', gruppe: 'vertraege_objekte' },
   { key: 'expose', label: 'Exposé-Objekte', icon: '🏠', beschreibung: 'Immobilien-Objekte für Exposé & Vermarktung.', vorlage: V + 'expose-import-vorlage.csv', zielHref: '/dashboard/expose', gruppe: 'vertraege_objekte' },

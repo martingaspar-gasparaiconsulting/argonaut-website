@@ -91,7 +91,8 @@ test('Datentypen und Beschriftung', () => {
   assert.equal(feldTypAusDb('uuid'), null);
   assert.equal(feldTypAusDb('jsonb'), null);
   assert.equal(spaltenLabel('letzter_kontakt_am'), 'Letzter kontakt am');
-  assert.deepEqual([...MOTOR_TABELLEN], ['kontakte', 'lieferanten', 'artikel', 'rechnungen']);
+  // Paket 125 (Schritt 3) hat die Liste um fuenf Ziele erweitert.
+  assert.deepEqual([...MOTOR_TABELLEN].slice(0, 4), ['kontakte', 'lieferanten', 'artikel', 'rechnungen']);
 });
 
 // --- Bankdaten ---------------------------------------------------------------

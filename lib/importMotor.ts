@@ -43,7 +43,11 @@ export const EIGEN = '@eigen';
 export const NICHT = '';
 
 /** Die Ziele, fuer die der Motor den Feldkatalog aus der Datenbank laedt. */
-export const MOTOR_TABELLEN = ['kontakte', 'lieferanten', 'artikel', 'rechnungen'] as const;
+export const MOTOR_TABELLEN = [
+  'kontakte', 'lieferanten', 'artikel', 'rechnungen',
+  // Schritt 3 (Paket 125)
+  'leistungskatalog', 'wartungsvertraege', 'verkaufschancen', 'kontakt_aktivitaeten', 'leads',
+] as const;
 
 // ---------------------------------------------------------------------------
 // 1) Kopfzeile: eindeutige Spaltennamen
@@ -88,6 +92,14 @@ export const SYSTEM_SPALTEN = new Set([
   'id', 'owner_user_id', 'user_id', 'erstellt_von', 'geaendert_von', 'created_by', 'updated_by',
   'created_at', 'updated_at', 'erstellt_am', 'aktualisiert_am', 'geaendert_am', 'deleted_at', 'geloescht_am',
   'standort_id', 'mandant_id', 'tenant_id', 'betrieb_id', 'firma_id', 'lead_id', 'kontakt_id',
+  // Werbe-Einwilligungen nie aus einer Datei (UWG) — siehe istEinwilligungSpalte
+  'werbung_einwilligung', 'einwilligung_am', 'ist_bestand',
+  // von ARGONAUT selbst gefuellt
+  'score', 'ki_intent', 'ki_zusammenfassung', 'ki_naechster_schritt', 'stufe', 'stufe_geaendert_am',
+  'nachfass_status', 'nachfass_schritt', 'nachfass_faellig_am', 'nachfass_zuletzt_am', 'angebot_entwurf',
+  'angebot_status', 'angebot_erstellt_am', 'angebot_versendet_am', 'kampagne_id', 'ki_generiert',
+  'erinnerung_gesendet_am', 'letzte_abrechnung_am', 'archiviert', 'aw_minuten', 'stundensatz_netto', 'einheitspreis_netto',
+  'termin_gebucht_am', 'termin_gehalten_am', 'kunde_seit',
 ]);
 
 /** Postgres-Datentyp -> Feldtyp des Motors (null = nicht aus Dateien befuellbar). */
@@ -130,6 +142,8 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
   const eigene = (dbSpalten ?? []).filter((c) => c.tabelle === basis.tabelle);
 
   if (eigene.length === 0) {
+    // Schritt 3: neue Ziele nur mit Katalog — ohne ihn ist nicht sicher, welche Spalten es gibt.
+    if (basis.nurMitKatalog) return { ziel: { ...basis, felder: [] }, fehlend: [...basis.felder], zusatz: [], ausDb: false };
     const felder = basis.felder.filter((f) => !f.neu);
     return { ziel: { ...basis, felder }, fehlend: basis.felder.filter((f) => f.neu), zusatz: [], ausDb: false };
   }
@@ -144,6 +158,10 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
   for (const f of basis.felder) {
     if (f.virtuell === 'name_zerlegen') { (nutzbar('nachname') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'adresse_teil') { (nutzbar('adresse') ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'kunde_verweis') { (basis.kundeVerweis && vorhanden.has(basis.kundeVerweis.spalte) ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'preis') { (vorhanden.has('stundensatz_netto') || vorhanden.has('einheitspreis_netto') ? felder : fehlend).push(f); continue; }
     if (nutzbar(f.key)) {
       const c = vorhanden.get(f.key)!;
       felder.push(c.pflicht && !f.pflicht && f.standard === undefined ? { ...f, pflicht: true } : f);
@@ -175,6 +193,24 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
 
 const BANK = /\b(iban|bic|swift|blz|bankleitzahl|bank[a-z]*|kontonummer|konto nr|kontonr|kontoinhaber|sepa|mandat[a-z]*|mandatsreferenz|kreditkarte|kartennummer|creditcard|credit card|account number|routing)\b/;
 
+const EINWILLIGUNG = /\b(einwilligung[a-z]*|opt in|optin|double opt in|newsletter|werbung|marketing (erlaubt|einwilligung)|accepts email marketing|accepts sms marketing|email marketing|consent|dsgvo zustimmung)\b/;
+
+/**
+ * Werbe-Einwilligung (Newsletter, „Accepts Email Marketing", Opt-in)? Die
+ * uebernimmt ARGONAUT nie aus einer Datei: ob sie rechtlich traegt, muss
+ * vorher geprueft sein (UWG § 7). Sie steht mit Grund in „nicht übernommen".
+ */
+export function istEinwilligungSpalte(spalte: string): boolean {
+  return EINWILLIGUNG.test(normal(spalte));
+}
+
+/** Gesperrt aus Rechtsgruenden (Bank oder Werbe-Einwilligung) — mit Grund. */
+export function sperrGrund(spalte: string): string | null {
+  if (istBankSpalte(spalte)) return GRUND.bank;
+  if (istEinwilligungSpalte(spalte)) return GRUND.einwilligung;
+  return null;
+}
+
 /** Ist das eine Spalte mit Bankverbindung, Mandat oder Kartendaten? */
 export function istBankSpalte(spalte: string): boolean {
   return BANK.test(normal(spalte));
@@ -182,6 +218,7 @@ export function istBankSpalte(spalte: string): boolean {
 
 export const GRUND = {
   bank: 'Bankdaten (IBAN, BIC, Mandate) übernimmt ARGONAUT nur nach gemeinsamer Freigabe — sie bleiben in Ihrer Datei.',
+  einwilligung: 'Werbe-Einwilligungen übernimmt ARGONAUT nicht aus einer Datei — ob sie rechtlich tragen, wird vorher geprüft.',
   leer: 'Die Spalte ist in allen Zeilen leer.',
   abgewaehlt: 'Sie haben „nicht übernehmen" gewählt.',
 } as const;
@@ -230,7 +267,7 @@ export function vorschlagMapping(
   const geraten = errateMappingFuer([...kopf], ziel, zusatzAliase(ziel.key, opt));
   const raus: Mapping = {};
   kopf.forEach((spalte, i) => {
-    if (istBankSpalte(spalte)) { raus[spalte] = NICHT; return; }
+    if (sperrGrund(spalte)) { raus[spalte] = NICHT; return; }
     const feld = geraten[spalte];
     if (feld) { raus[spalte] = feld; return; }
     raus[spalte] = spalteLeer(zeilen, i) ? NICHT : EIGEN;
@@ -249,7 +286,7 @@ export function bereinigeMapping(kopf: readonly string[], mapping: Mapping, ziel
   const vergeben = new Set<string>();
   for (const spalte of kopf) {
     const wert = mapping[spalte] ?? NICHT;
-    if (istBankSpalte(spalte)) { raus[spalte] = NICHT; continue; }
+    if (sperrGrund(spalte)) { raus[spalte] = NICHT; continue; }
     if (wert === EIGEN || wert === NICHT) { raus[spalte] = wert; continue; }
     if (!keys.has(wert) || vergeben.has(wert)) { raus[spalte] = EIGEN; continue; }
     raus[spalte] = wert; vergeben.add(wert);
@@ -287,7 +324,8 @@ export function spaltenBilanz(
 ): SpaltenBilanz {
   const eintraege: SpaltenEintrag[] = kopf.map((spalte, i) => {
     const wert = mapping[spalte];
-    if (istBankSpalte(spalte)) return { spalte, art: 'nicht', grund: GRUND.bank };
+    const sperre = sperrGrund(spalte);
+    if (sperre) return { spalte, art: 'nicht', grund: sperre };
     if (wert === EIGEN) return { spalte, art: 'eigen', ziel: spalte };
     if (wert && wert !== NICHT) {
       const f = ziel.felder.find((x) => x.key === wert);
@@ -326,7 +364,7 @@ export function eigenTyp(werte: readonly string[]): 'text' | 'zahl' | 'datum' {
 export function eigeneSpalten(kopf: readonly string[], zeilen: readonly string[][], mapping: Mapping): EigeneSpalte[] {
   const raus: EigeneSpalte[] = [];
   kopf.forEach((spalte, index) => {
-    if (mapping[spalte] !== EIGEN || istBankSpalte(spalte)) return;
+    if (mapping[spalte] !== EIGEN || sperrGrund(spalte)) return;
     raus.push({ spalte, index, typ: eigenTyp(zeilen.map((z) => z[index] ?? '')) });
   });
   return raus;
@@ -411,6 +449,142 @@ export function findeImBestand(satz: Record<string, unknown>, felder: readonly s
     if (id) return id;
   }
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// 7b) Schritt 3: Verknuepfung mit dem Kunden
+// ---------------------------------------------------------------------------
+
+export type KundeRoh = {
+  id?: unknown; kundennummer?: unknown; email?: unknown; firma?: unknown;
+  vorname?: unknown; nachname?: unknown; firma_id?: unknown; import_schluessel?: unknown;
+};
+export type KundenIndex = {
+  nummer: Map<string, string[]>;
+  email: Map<string, string[]>;
+  name: Map<string, string[]>;
+  firmaId: Map<string, string | null>;
+  /** alle Kundennummern — fuer die Suche im Freitext */
+  nummern: string[];
+};
+
+function klein(v: unknown): string { return String(v ?? '').trim().toLowerCase(); }
+function dazu(m: Map<string, string[]>, k: string, id: string) {
+  if (!k) return;
+  const l = m.get(k) ?? [];
+  if (!l.includes(id)) l.push(id);
+  m.set(k, l);
+}
+
+/** Nachschlagetabellen aus den Kontakten des Betriebs. */
+export function baueKundenIndex(kontakte: readonly KundeRoh[]): KundenIndex {
+  const idx: KundenIndex = { nummer: new Map(), email: new Map(), name: new Map(), firmaId: new Map(), nummern: [] };
+  for (const k of kontakte) {
+    const id = k?.id ? String(k.id) : '';
+    if (!id) continue;
+    idx.firmaId.set(id, k.firma_id ? String(k.firma_id) : null);
+    dazu(idx.nummer, klein(k.kundennummer), id);
+    dazu(idx.nummer, klein(k.import_schluessel), id);
+    dazu(idx.email, klein(k.email), id);
+    dazu(idx.name, normal(String(k.firma ?? '')), id);
+    dazu(idx.name, normal([k.vorname, k.nachname].filter(Boolean).join(' ')), id);
+    dazu(idx.name, normal([k.nachname, k.vorname].filter(Boolean).join(' ')), id);
+    const nr = String(k.kundennummer ?? '').trim();
+    if (nr.length >= 3) idx.nummern.push(nr);
+  }
+  return idx;
+}
+
+export type KundeTreffer =
+  | { art: 'gefunden'; id: string; firmaId: string | null; ueber: 'nummer' | 'email' | 'name' | 'text' }
+  | { art: 'mehrdeutig'; anzahl: number }
+  | { art: 'keiner' };
+
+/**
+ * Den Kunden zu einem Wert finden: Kundennummer, dann E-Mail, dann der
+ * GENAUE Name (Firma oder Vor- + Nachname). Passen mehrere, wird nichts
+ * verknuepft — ein falsch zugeordneter Offener Posten waere schlimmer als
+ * keiner.
+ */
+export function findeKunde(wert: unknown, idx: KundenIndex): KundeTreffer {
+  const w = klein(wert);
+  if (!w) return { art: 'keiner' };
+  const stufen: [Map<string, string[]>, string, 'nummer' | 'email' | 'name'][] = [
+    [idx.nummer, w, 'nummer'], [idx.email, w, 'email'], [idx.name, normal(String(wert)), 'name'],
+  ];
+  for (const [m, k, ueber] of stufen) {
+    const ids = m.get(k);
+    if (!ids || ids.length === 0) continue;
+    if (ids.length > 1) return { art: 'mehrdeutig', anzahl: ids.length };
+    return { art: 'gefunden', id: ids[0], firmaId: idx.firmaId.get(ids[0]) ?? null, ueber };
+  }
+  return { art: 'keiner' };
+}
+
+/**
+ * Eine bekannte Kundennummer im Freitext finden („Kunde K-1008 Schreinerei …").
+ * Nur ganze Woerter, nur Nummern, die es im Bestand gibt — und nur, wenn
+ * genau EINE vorkommt.
+ */
+export function kundeAusText(texte: readonly unknown[], idx: KundenIndex): KundeTreffer {
+  const text = texte.map((t) => String(t ?? '')).join(' ');
+  if (!text.trim() || idx.nummern.length === 0) return { art: 'keiner' };
+  const gefunden = new Set<string>();
+  for (const nr of idx.nummern) {
+    const muster = new RegExp(`(^|[^\\p{L}\\p{N}-])${nr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}-])`, 'iu');
+    if (muster.test(text)) {
+      for (const id of idx.nummer.get(nr.toLowerCase()) ?? []) gefunden.add(id);
+    }
+  }
+  if (gefunden.size === 0) return { art: 'keiner' };
+  if (gefunden.size > 1) return { art: 'mehrdeutig', anzahl: gefunden.size };
+  const id = [...gefunden][0];
+  return { art: 'gefunden', id, firmaId: idx.firmaId.get(id) ?? null, ueber: 'text' };
+}
+
+/**
+ * Einen Satz mit dem Kunden verknuepfen (nach ziel.kundeVerweis). Gibt den
+ * Satz OHNE Hilfsfelder zurueck plus was passiert ist.
+ */
+export function verknuepfeKunde(
+  satz: Record<string, unknown>,
+  verweis: NonNullable<ImportZiel['kundeVerweis']>,
+  idx: KundenIndex,
+): { satz: Record<string, unknown>; treffer: KundeTreffer; gesucht: string } {
+  const raus = fuerDatenbank(satz);
+  let gesucht = String(satz.__kunde ?? '').trim();
+  let treffer: KundeTreffer = gesucht ? findeKunde(gesucht, idx) : { art: 'keiner' };
+  // Nummer nicht gefunden, aber ein Name dabei: dann ueber den Namen.
+  const zweit = String(satz.__kunde2 ?? '').trim();
+  if (treffer.art === 'keiner' && zweit) {
+    const t2 = findeKunde(zweit, idx);
+    if (t2.art !== 'keiner') { treffer = t2; gesucht = zweit; }
+  }
+  if (treffer.art === 'keiner' && !gesucht) {
+    for (const f of verweis.ausFeldern ?? []) {
+      const v = String(satz[f] ?? '').trim();
+      if (!v) continue;
+      gesucht = v;
+      treffer = findeKunde(v, idx);
+      break;
+    }
+  }
+  if (treffer.art === 'keiner' && verweis.textSuche) {
+    const t = kundeAusText(verweis.textSuche.map((f) => satz[f]), idx);
+    if (t.art !== 'keiner') treffer = t;
+  }
+  if (treffer.art === 'gefunden') {
+    raus[verweis.spalte] = treffer.id;
+    if (verweis.firmaSpalte && treffer.firmaId && !raus[verweis.firmaSpalte]) raus[verweis.firmaSpalte] = treffer.firmaId;
+  }
+  return { satz: raus, treffer, gesucht };
+}
+
+/** Hilfsfelder (beginnen mit __) duerfen nie in die Datenbank. */
+export function fuerDatenbank(satz: Record<string, unknown>): Record<string, unknown> {
+  const raus: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(satz)) if (!k.startsWith('__')) raus[k] = v;
+  return raus;
 }
 
 // ---------------------------------------------------------------------------

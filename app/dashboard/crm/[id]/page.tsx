@@ -83,7 +83,24 @@ interface Kontakt {
   notizen: string | null;
   created_at: string | null;
   updated_at: string | null;
+  // Umzug Schritt 3 (Paket 124/125): Felder aus dem Import. Optional — vor
+  // dem SQL p124 gibt es die Spalten nicht, dann fehlen sie im select('*').
+  kundennummer?: string | null;
+  anrede?: string | null;
+  mobil?: string | null;
+  website?: string | null;
+  ust_id?: string | null;
 }
+
+/** Die Import-Felder in Anzeige-Reihenfolge (Adresse steht im Adressblock). */
+const IMPORT_FELDER = [
+  { key: 'kundennummer', label: 'Kundennummer' },
+  { key: 'anrede', label: 'Anrede' },
+  { key: 'mobil', label: 'Mobil' },
+  { key: 'website', label: 'Website' },
+  { key: 'ust_id', label: 'USt-IdNr.' },
+] as const;
+type ImportFeldKey = (typeof IMPORT_FELDER)[number]['key'];
 
 interface Aktivitaet {
   id: string;
@@ -131,6 +148,8 @@ interface FormState {
   status: string;
   quelle: string;
   betreuungs_intervall_tage: string;
+  /** Schritt 3: nur die Import-Felder, die es in der Datenbank gibt. */
+  extra: Partial<Record<ImportFeldKey, string>>;
 }
 
 function tageSeit(iso: string | null): number | null {
@@ -355,6 +374,9 @@ export default function CrmDetailPage() {
       status: kontakt.status || "interessent",
       quelle: kontakt.quelle || "",
       betreuungs_intervall_tage: String(kontakt.betreuungs_intervall_tage || 30),
+      extra: Object.fromEntries(
+        IMPORT_FELDER.filter((f) => f.key in kontakt).map((f) => [f.key, String(kontakt[f.key] ?? '')]),
+      ) as Partial<Record<ImportFeldKey, string>>,
     });
     setBearbeiten(true);
   }
@@ -379,6 +401,10 @@ export default function CrmDetailPage() {
       quelle: form.quelle || null,
       betreuungs_intervall_tage:
         parseInt(form.betreuungs_intervall_tage, 10) || 30,
+      // Schritt 3: nur Spalten, die beim Laden da waren — sonst scheitert das Speichern.
+      ...Object.fromEntries(
+        Object.entries(form.extra).map(([k, v]) => [k, String(v ?? '').trim() || null]),
+      ),
     };
     const { error } = await supabase
       .from("kontakte")
@@ -1513,6 +1539,18 @@ export default function CrmDetailPage() {
                 />
                 <Info label="Firma" wert={kontakt.firma} />
                 <Info label="Position / Rolle" wert={kontakt.position} />
+                {IMPORT_FELDER.filter((f) => f.key in kontakt).map((f) => (
+                  <Info
+                    key={f.key}
+                    label={f.label}
+                    wert={kontakt[f.key] ?? null}
+                    link={
+                      f.key === 'mobil' && kontakt.mobil ? `tel:${kontakt.mobil}`
+                        : f.key === 'website' && kontakt.website ? (/^https?:\/\//i.test(kontakt.website) ? kontakt.website : `https://${kontakt.website}`)
+                        : undefined
+                    }
+                  />
+                ))}
                 <Info label="Status" wert={kontakt.status} />
                 <Info label="Quelle" wert={kontakt.quelle} />
                 <Info
@@ -1610,6 +1648,15 @@ export default function CrmDetailPage() {
                 <Feld label="Position / Rolle">
                   <input style={inp} value={form.position} onChange={(e) => feld("position", e.target.value)} />
                 </Feld>
+                {IMPORT_FELDER.filter((f) => f.key in form.extra).map((f) => (
+                  <Feld key={f.key} label={f.label}>
+                    <input
+                      style={inp}
+                      value={form.extra[f.key] ?? ''}
+                      onChange={(e) => setForm((alt) => (alt ? { ...alt, extra: { ...alt.extra, [f.key]: e.target.value } } : alt))}
+                    />
+                  </Feld>
+                ))}
                 <Feld label="Status">
                   <select style={inp} value={form.status} onChange={(e) => feld("status", e.target.value)}>
                     {STATUS_OPTIONEN.map((s) => (

@@ -476,7 +476,13 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis';
+  /**
+   * Schritt 3: bei virtuell 'anhang' — an welches Textfeld der Wert als
+   * „Label: Wert" angehaengt wird (z. B. Bearbeiter an den Inhalt einer
+   * Aktivitaet). So bleibt eine Spalte sichtbar, fuer die es kein Feld gibt.
+   */
+  anhangAn?: string;
   /** Nicht als Spalte in die Mustervorlage (z. B. virtuelle Felder). */
   nichtInVorlage?: boolean;
   /**
@@ -503,7 +509,39 @@ export type ImportZiel = {
   schluesselFelder?: string[];
   /** Modul-Schluessel fuer „Eigene Felder" (eigenes_feld.modul). */
   eigeneFelderModul?: string;
+  /**
+   * Schritt 3: Dieses Ziel wird nur angeboten, wenn der Feldkatalog aus der
+   * Datenbank die Tabelle kennt (SQL Paket 125). Ohne Katalog waere nicht
+   * sicher, welche Spalten es gibt.
+   */
+  nurMitKatalog?: boolean;
+  /**
+   * Schritt 3: Verknuepfung mit dem Kunden. Der Motor sucht den Kontakt ueber
+   * Kundennummer, E-Mail, Firmen- oder Personennamen und schreibt dessen id in
+   * `spalte` (und die Firma in `firmaSpalte`). `pflicht`: ohne Kunden keine Zeile.
+   * `ausFeldern`: echte Felder, deren Wert zugleich als Kunde gilt (kunde_name).
+   * `textSuche`: Felder, in denen eine bekannte Kundennummer stehen kann
+   * („Kunde K-1008 …" in den Notizen einer Offenen-Posten-Liste).
+   */
+  kundeVerweis?: { spalte: string; firmaSpalte?: string; pflicht?: boolean; ausFeldern?: string[]; textSuche?: string[] };
+  /** Wohin nach dem Import geschaut wird. */
+  ergebnisHref?: string;
   felder: ZielFeld[];
+};
+
+/** Das Kunden-Verweisfeld — gleich fuer alle Ziele mit kundeVerweis. */
+const KUNDE_FELD: ZielFeld = {
+  key: 'kunde', label: 'Kunde (Nummer, Name oder E-Mail)', typ: 'text', virtuell: 'kunde_verweis',
+  hinweis: 'Wird mit Ihren Kunden in ARGONAUT verknüpft — über Kundennummer, E-Mail oder den genauen Namen.',
+  alias: ['kunde', 'kundenname', 'kunden name', 'customer', 'client', 'rechnungsempfaenger', 'empfaenger', 'auftraggeber', 'firma'],
+};
+/**
+ * Die Kundennummer zum Verknuepfen — eigenes Feld, weil viele Listen Nummer
+ * UND Namen fuehren. Die Nummer zaehlt zuerst, der Name nur, wenn sie fehlt.
+ */
+const KUNDE_NR_FELD: ZielFeld = {
+  key: 'kunde_nummer', label: 'Kundennummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true,
+  alias: ['kundennummer', 'kundennr', 'kunden-nr', 'kunden nr', 'kd-nr', 'kdnr', 'debitor', 'debitorennummer', 'debitorenkonto', 'konto', 'customer number', 'customer id', 'customer no'],
 };
 
 export const ZIELE: ImportZiel[] = [
@@ -597,9 +635,12 @@ export const ZIELE: ImportZiel[] = [
     schluessel: 'rechnungsnummer',
     schluesselFelder: ['rechnungsnummer'],
     eigeneFelderModul: 'rechnungen',
+    kundeVerweis: { spalte: 'kontakt_id', firmaSpalte: 'firma_id', textSuche: ['titel', 'notizen'] },
     felder: [
       { key: 'rechnungsnummer', label: 'Rechnungsnummer', typ: 'text', pflicht: true, alias: ['rechnungsnummer', 'rechnungsnr', 'rg-nr', 'rgnr', 'belegnummer', 'beleg-nr', 'nummer', 'nr'] },
       { key: 'titel', label: 'Titel / Betreff', typ: 'text', alias: ['titel', 'betreff', 'bezeichnung', 'leistung', 'text', 'buchungstext'] },
+      KUNDE_FELD,
+      KUNDE_NR_FELD,
       { key: 'rechnungsdatum', label: 'Rechnungsdatum', typ: 'datum', alias: ['rechnungsdatum', 'datum', 'belegdatum', 'rg-datum'] },
       { key: 'faelligkeitsdatum', label: 'Fällig am', typ: 'datum', alias: ['faelligkeitsdatum', 'fällig am', 'faellig', 'fällig', 'faelligkeit', 'zahlungsziel datum', 'due date'] },
       { key: 'netto_summe', label: 'Netto', typ: 'zahl', standard: 0, alias: ['netto', 'netto summe', 'nettobetrag', 'betrag netto', 'summe netto'] },
@@ -608,6 +649,132 @@ export const ZIELE: ImportZiel[] = [
       { key: 'bezahlter_betrag', label: 'Bereits bezahlt', typ: 'zahl', standard: 0, alias: ['bezahlt', 'bezahlter betrag', 'anzahlung', 'teilzahlung', 'gezahlt'] },
       { key: 'zahlungsstatus', label: 'Status', typ: 'text', standard: 'offen', hinweis: 'offen · teilbezahlt · bezahlt · ueberfaellig', alias: ['status', 'zahlungsstatus', 'zahlstatus'] },
       { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar'] },
+    ],
+  },
+  {
+    key: 'leistungskatalog',
+    label: 'Leistungskatalog',
+    icon: '🛠',
+    tabelle: 'leistungskatalog',
+    beschreibung: 'Stundensätze, Montagepauschalen und Leistungen mit Einheit und Preis — die Grundlage für Angebote und Aufmaß.',
+    schluessel: 'bezeichnung',
+    schluesselFelder: ['bezeichnung'],
+    eigeneFelderModul: 'leistungskatalog',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/leistungskatalog',
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'leistung', 'leistungsbezeichnung', 'name', 'titel', 'position', 'description'] },
+      { key: 'kuerzel', label: 'Kürzel', typ: 'text', alias: ['kuerzel', 'kürzel', 'kurzzeichen', 'leistungsnummer', 'leistungsnr', 'nummer', 'nr', 'code'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'gruppe', 'leistungsgruppe', 'bereich', 'gewerk'] },
+      { key: 'einheit', label: 'Einheit', typ: 'text', hinweis: 'Std, Min, AW oder eine Mengeneinheit (Stück, m², lfm …) — daraus ergibt sich die Erfassungsart.', alias: ['einheit', 'me', 'mengeneinheit', 'unit'] },
+      { key: 'erfassungsart', label: 'Erfassungsart', typ: 'text', hinweis: 'stunden · minuten · aw · stueck — leer: aus der Einheit', alias: ['erfassungsart', 'abrechnungsart', 'art'] },
+      { key: 'standard_wert', label: 'Standardwert (Zeit/Menge)', typ: 'zahl', standard: 1, alias: ['standardwert', 'standard wert', 'zeitwert', 'vorgabezeit', 'dauer', 'menge'] },
+      { key: 'preis', label: 'Preis netto', typ: 'zahl', virtuell: 'preis', nichtInVorlage: true, hinweis: 'Je nach Einheit Stundensatz oder Einheitspreis.', alias: ['preis', 'preis netto', 'nettopreis', 'vk', 'verkaufspreis', 'stundensatz', 'einheitspreis', 'ep', 'price'] },
+      { key: 'festpreis_netto', label: 'Festpreis netto', typ: 'zahl', alias: ['festpreis', 'pauschale', 'pauschalpreis'] },
+      { key: 'mwst_satz', label: 'MwSt-Satz %', typ: 'zahl', standard: 19, alias: ['mwst', 'mwst satz', 'ust satz', 'steuersatz'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'langtext', 'beschreibung'] },
+      { key: 'aktiv', label: 'Aktiv', typ: 'jaNein', standard: true, alias: ['aktiv'] },
+    ],
+  },
+  {
+    key: 'wartungsvertraege',
+    label: 'Wartungsverträge',
+    icon: '🔧',
+    tabelle: 'wartungsvertraege',
+    beschreibung: 'Laufende Wartungs- und Prüfverträge mit Intervall und letzter Wartung — die nächste Fälligkeit rechnet ARGONAUT selbst.',
+    schluessel: 'vertragsnummer',
+    schluesselFelder: ['vertragsnummer'],
+    eigeneFelderModul: 'wartungsvertraege',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['kunde_name'] },
+    ergebnisHref: '/dashboard/wartung',
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'bezeichnung', 'leistung', 'vertrag', 'vertragsart', 'name'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', hinweis: 'Wird zusätzlich mit dem Kunden in ARGONAUT verknüpft, wenn er dort schon steht.', alias: ['kunde_name', 'kunde', 'kundenname', 'auftraggeber', 'customer'] },
+      { key: 'vertragsnummer', label: 'Vertragsnummer', typ: 'text', alias: ['vertragsnummer', 'vertragsnr', 'vertrag nr', 'nummer', 'nr'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · pausiert · gekuendigt · abgelaufen', alias: ['status'] },
+      { key: 'beginn_am', label: 'Beginn', typ: 'datum', alias: ['beginn_am', 'beginn', 'vertragsbeginn', 'start', 'seit'] },
+      { key: 'intervall_monate', label: 'Intervall (Monate)', typ: 'zahl', standard: 12, alias: ['intervall_monate', 'intervall', 'intervall monate', 'turnus', 'rhythmus'] },
+      { key: 'letzte_wartung_am', label: 'Letzte Wartung', typ: 'datum', alias: ['letzte_wartung_am', 'letzte wartung', 'zuletzt', 'letzte pruefung'] },
+      { key: 'naechste_faelligkeit_am', label: 'Nächste Fälligkeit', typ: 'datum', hinweis: 'Leer: aus letzter Wartung (oder Beginn) plus Intervall.', alias: ['naechste_faelligkeit_am', 'naechste faelligkeit', 'nächste wartung', 'faellig', 'fällig'] },
+      { key: 'erinnerung_tage_vorher', label: 'Erinnerung (Tage vorher)', typ: 'zahl', standard: 30, alias: ['erinnerung_tage_vorher', 'erinnerung', 'vorlauf'] },
+      { key: 'betrag_netto', label: 'Betrag netto', typ: 'zahl', alias: ['betrag_netto', 'betrag', 'preis', 'jahresbetrag', 'netto'] },
+      { key: 'mwst_satz', label: 'MwSt-Satz %', typ: 'zahl', alias: ['mwst_satz', 'mwst', 'ust satz'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'umfang', 'leistungsumfang'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'verkaufschancen',
+    label: 'Verkaufschancen',
+    icon: '🎯',
+    tabelle: 'verkaufschancen',
+    beschreibung: 'Offene Deals mit Phase, Wert und Wahrscheinlichkeit — landen in der Pipeline, mit dem Kunden verknüpft.',
+    schluessel: 'titel',
+    schluesselFelder: ['titel'],
+    eigeneFelderModul: 'verkaufschancen',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', firmaSpalte: 'firma_id' },
+    ergebnisHref: '/dashboard/crm/pipeline',
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'deal', 'deal name', 'chance', 'bezeichnung', 'name', 'opportunity', 'betreff'] },
+      KUNDE_FELD,
+      KUNDE_NR_FELD,
+      { key: 'phase', label: 'Phase', typ: 'text', standard: 'erstkontakt', hinweis: 'erstkontakt · qualifiziert · angebot · verhandlung · gewonnen · verloren', alias: ['phase', 'stage', 'deal stage', 'status', 'stufe'] },
+      { key: 'wert', label: 'Wert netto', typ: 'zahl', alias: ['wert', 'wert netto', 'betrag', 'volumen', 'amount', 'deal value', 'umsatz'] },
+      { key: 'wahrscheinlichkeit', label: 'Wahrscheinlichkeit %', typ: 'zahl', alias: ['wahrscheinlichkeit', 'wahrscheinlichkeit %', 'probability', 'chance %'] },
+      { key: 'erwartetes_abschlussdatum', label: 'Abschluss erwartet', typ: 'datum', alias: ['abschluss erwartet', 'abschlussdatum', 'erwartetes abschlussdatum', 'close date', 'expected close date'] },
+      { key: 'ansprechpartner', label: 'Ansprechpartner (in die Notizen)', typ: 'text', virtuell: 'anhang', anhangAn: 'notizen', nichtInVorlage: true, alias: ['ansprechpartner', 'kontaktperson', 'contact'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung', 'beschreibung', 'notes'] },
+    ],
+  },
+  {
+    key: 'kontakt_aktivitaeten',
+    label: 'Aktivitäten & Gesprächsnotizen',
+    icon: '📞',
+    tabelle: 'kontakt_aktivitaeten',
+    beschreibung: 'Anrufe, E-Mails, Termine und Notizen aus dem alten CRM — erscheinen in der Zeitleiste des Kunden.',
+    eigeneFelderModul: 'kontakt_aktivitaeten',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', pflicht: true },
+    ergebnisHref: '/dashboard/crm',
+    felder: [
+      KUNDE_FELD,
+      KUNDE_NR_FELD,
+      { key: 'aktivitaet_am', label: 'Datum', typ: 'datum', alias: ['datum', 'aktivitaet am', 'am', 'zeitpunkt', 'date', 'erstellt'] },
+      { key: 'typ', label: 'Art', typ: 'text', standard: 'notiz', hinweis: 'anruf · email · termin · notiz — alles andere wird Notiz, die Art steht im Text', alias: ['typ', 'art', 'aktivitaet', 'activity type', 'type', 'kanal'] },
+      { key: 'inhalt', label: 'Inhalt', typ: 'text', pflicht: true, alias: ['inhalt', 'betreff', 'notiz', 'text', 'beschreibung', 'subject', 'body', 'note'] },
+      { key: 'bearbeiter', label: 'Bearbeiter (in den Inhalt)', typ: 'text', virtuell: 'anhang', anhangAn: 'inhalt', nichtInVorlage: true, alias: ['bearbeiter', 'mitarbeiter', 'owner', 'zustaendig', 'user'] },
+      { key: 'wiedervorlage', label: 'Wiedervorlage (in den Inhalt)', typ: 'text', virtuell: 'anhang', anhangAn: 'inhalt', nichtInVorlage: true, alias: ['wiedervorlage', 'follow up', 'naechster kontakt'] },
+    ],
+  },
+  {
+    key: 'leads',
+    label: 'Leads & Anfragen',
+    icon: '📨',
+    tabelle: 'leads',
+    beschreibung: 'Offene Anfragen aus Website, Telefon und altem CRM — landen in der Lead-Liste. Werbe-Einwilligungen werden nicht übernommen.',
+    schluessel: 'email',
+    schluesselFelder: ['email'],
+    eigeneFelderModul: 'leads',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/leads',
+    felder: [
+      { key: 'name', label: 'Name', typ: 'text', alias: ['name', 'kontaktname', 'full name'] },
+      { key: 'lead_vorname', label: 'Vorname (zum Namen)', typ: 'text', virtuell: 'name_teil', nichtInVorlage: true, alias: ['vorname', 'first name'] },
+      { key: 'lead_nachname', label: 'Nachname (zum Namen)', typ: 'text', virtuell: 'name_teil', nichtInVorlage: true, alias: ['nachname', 'last name'] },
+      { key: 'lead_firma', label: 'Firma (zum Namen)', typ: 'text', virtuell: 'name_teil', nichtInVorlage: true, alias: ['firma', 'firmenname', 'company'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e-mail-adresse'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'telefonnummer', 'phone', 'mobil', 'handy'] },
+      { key: 'plz', label: 'PLZ', typ: 'text', alias: ['plz', 'postleitzahl', 'zip'] },
+      { key: 'ort', label: 'Ort', typ: 'text', hinweis: '„71116 Gärtringen" wird in PLZ und Ort geteilt.', alias: ['ort', 'stadt', 'city', 'wohnort'] },
+      { key: 'dienstleistung', label: 'Anliegen / Leistung', typ: 'text', alias: ['anliegen', 'dienstleistung', 'leistung', 'interesse', 'thema', 'betreff'] },
+      { key: 'nachricht', label: 'Nachricht', typ: 'text', alias: ['nachricht', 'notiz', 'notizen', 'bemerkung', 'text', 'message'] },
+      { key: 'quelle', label: 'Quelle', typ: 'text', standard: 'Import', alias: ['quelle', 'herkunft', 'kanal', 'source'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'neu', hinweis: 'neu · offen · gewonnen · verloren', alias: ['status', 'lead status'] },
+      { key: 'lead_nummer', label: 'Lead-Nr. (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['lead-nr', 'lead nr', 'leadnummer', 'anfrage nr'] },
+      { key: 'eingang_am', label: 'Eingang am (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['eingang am', 'eingang', 'eingegangen', 'anfrage vom', 'create date'] },
+      { key: 'budget', label: 'Budget (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['budget', 'budget geschaetzt', 'budget (geschätzt)'] },
     ],
   },
 ];
@@ -673,6 +840,7 @@ const BEISPIELE: Record<string, Record<string, string>> = {
     notizen: 'Lieferung Di und Do|Ab 500 EUR frei Haus|Nur Abholung',
   },
   rechnungen: {
+    kunde: 'K-1001|K-1002|info@muster.de',
     rechnungsnummer: 'RE-2025-0142|RE-2025-0143|RE-2025-0144',
     titel: 'Wartung Anlage Halle 2|Montage Türelement|Materiallieferung KW 22',
     rechnungsdatum: '12.05.2025|28.05.2025|02.06.2025',
@@ -685,6 +853,63 @@ const BEISPIELE: Record<string, Record<string, string>> = {
     notizen: 'Aus Altsystem uebernommen|Anzahlung erhalten|',
   },
 };
+
+// Schritt 3: Beispiele der weiteren Ziele (gleiche Musterfirma wie oben)
+Object.assign(BEISPIELE, {
+  leistungskatalog: {
+    bezeichnung: 'Montagestunde Geselle|Steckdose setzen inkl. Material|Kabelkanal verlegen',
+    kuerzel: 'L-01|L-02|L-03',
+    kategorie: 'Arbeitszeit|Installation|Installation',
+    einheit: 'Std|Stück|lfm',
+    erfassungsart: '||',
+    standard_wert: '1|1|1',
+    festpreis_netto: '||',
+    mwst_satz: '19|19|19',
+    notiz: '|inkl. Anfahrt im Stadtgebiet|',
+    aktiv: 'ja|ja|ja',
+  },
+  wartungsvertraege: {
+    titel: 'Prüfung ortsveränderliche Geräte|Wartung Ladeinfrastruktur|E-Check Wohnanlage',
+    kunde_name: 'Muster GmbH|Beispiel Handwerk e.K.|Petra Wagner',
+    vertragsnummer: 'W-0001|W-0002|W-0003',
+    status: 'aktiv|aktiv|pausiert',
+    beginn_am: '01.03.2023|15.07.2024|01.01.2022',
+    intervall_monate: '12|24|48',
+    letzte_wartung_am: '01.03.2026|15.07.2024|',
+    naechste_faelligkeit_am: '||',
+    erinnerung_tage_vorher: '30|30|30',
+    betrag_netto: '480,00|2.280,00|350,00',
+    mwst_satz: '19|19|19',
+    beschreibung: 'DGUV V3 laut Vertrag|4 Ladepunkte|',
+    notiz: '||',
+  },
+  verkaufschancen: {
+    titel: 'Hallenbeleuchtung auf LED|Wallbox Firmenparkplatz|PV-Anlage Privathaus',
+    kunde: 'K-1001|K-1002|p.wagner@web.de',
+    phase: 'erstkontakt|angebot|verhandlung',
+    wert: '28.000,00|6.400,00|18.900,00',
+    wahrscheinlichkeit: '10|50|70',
+    erwartetes_abschlussdatum: '31.12.2026|15.11.2026|30.10.2026',
+    notizen: '||',
+  },
+  kontakt_aktivitaeten: {
+    kunde: 'K-1001|K-1002|p.wagner@web.de',
+    aktivitaet_am: '22.09.2026|28.08.2026|02.09.2026',
+    typ: 'Anruf|E-Mail|Termin',
+    inhalt: 'Interesse an Wallbox|Angebot nachgefasst|Aufmaß vor Ort',
+  },
+  leads: {
+    name: 'Georg Faulhaber|Sven Klein|Muster GmbH',
+    email: 'g.faulhaber@web.de|s.klein@web.de|info@muster.de',
+    telefon: '0151 1234567|0176 7654321|0201 1234567',
+    plz: '71116|71083|45127',
+    ort: 'Gärtringen|Herrenberg|Essen',
+    dienstleistung: 'PV-Anlage mit Speicher|Wallbox|Beleuchtung Halle',
+    nachricht: '||',
+    quelle: 'Empfehlung|Website|Messe',
+    status: 'neu|offen|neu',
+  },
+} as Record<string, Record<string, string>>);
 
 /**
  * Wie viele Beispielzeilen eine Mustervorlage bekommt. Drei Zeilen zeigen
@@ -802,7 +1027,9 @@ export function errateMappingFuer(kopf: string[], ziel: ImportZiel, extraAlias: 
       if (vergeben.has(k.key) || k.nurExakt) continue;
       for (const b of k.begriffe) {
         if (b.length < 3) continue;
-        if (n === b || n.includes(b) || b.includes(n)) {
+        // Schritt 3: nur GANZE Woerter. Vorher wurde „Kundengruppe" zu Firma
+        // (steckt „kunde" drin) und „Art" zu Artikelnummer — still falsch.
+        if (n === b || (' ' + n + ' ').includes(' ' + b + ' ') || (' ' + b + ' ').includes(' ' + n + ' ')) {
           if (!bester || b.length > bester.laenge) bester = { key: k.key, laenge: b.length };
         }
       }
@@ -850,6 +1077,8 @@ export type ZeilenErgebnis = {
 export const GELDFELDER: readonly string[] = [
   'netto_summe', 'mwst_summe', 'brutto_summe', 'bezahlter_betrag',
   'einkaufspreis', 'verkaufspreis',
+  // Schritt 3: Preise und Werte der weiteren Ziele
+  'preis', 'festpreis_netto', 'wert', 'betrag_netto',
 ];
 
 export type ZeilenOptionen = {
@@ -1047,6 +1276,22 @@ function nachbereiten(
     }
   }
 
+  if (zielKey === 'leistungskatalog') leistungNachbereiten(werte, nummer, warnungen);
+  if (zielKey === 'verkaufschancen') {
+    aufListe(werte, 'phase', PHASEN, 'erstkontakt', 'notizen', 'Phase', nummer, warnungen);
+    if (typeof werte.wahrscheinlichkeit === 'number' && werte.wahrscheinlichkeit > 0 && werte.wahrscheinlichkeit <= 1) {
+      werte.wahrscheinlichkeit = Math.round(werte.wahrscheinlichkeit * 100);   // 0,25 -> 25 %
+    }
+  }
+  if (zielKey === 'kontakt_aktivitaeten') aufListe(werte, 'typ', AKTIVITAET_TYPEN, 'notiz', 'inhalt', 'Art', nummer, warnungen, true);
+  if (zielKey === 'wartungsvertraege') aufListe(werte, 'status', WARTUNG_STATUS, 'aktiv', 'notiz', 'Status', nummer, warnungen);
+  if (zielKey === 'leads') {
+    aufListe(werte, 'status', LEAD_STATUS, 'offen', 'nachricht', 'Status', nummer, warnungen, true);
+    const ort = String(werte.ort ?? '').trim();
+    const m = ort.match(/^(\d{5})\s+(.+)$/);
+    if (m && !String(werte.plz ?? '').trim()) { werte.plz = m[1]; werte.ort = m[2]; }
+  }
+
   if (zielKey === 'kontakte') {
     const erlaubt = ['interessent', 'aktiv', 'kunde', 'inaktiv'];
     if (typeof werte.status === 'string') {
@@ -1063,6 +1308,102 @@ function nachbereiten(
       werte.status = werte.status.toLowerCase();
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 3: Wertelisten der weiteren Ziele (am Code belegt, siehe Kommentar)
+// ---------------------------------------------------------------------------
+
+/** verkaufschancen.phase (app/dashboard/crm/pipeline). Schluessel normalisiert. */
+export const PHASEN: Record<string, string> = {
+  erstkontakt: 'erstkontakt', neu: 'erstkontakt', lead: 'erstkontakt', 'first contact': 'erstkontakt', appointmentscheduled: 'erstkontakt',
+  qualifiziert: 'qualifiziert', qualified: 'qualifiziert', qualifiedtobuy: 'qualifiziert', bedarfsanalyse: 'qualifiziert',
+  angebot: 'angebot', 'angebot versendet': 'angebot', proposal: 'angebot', presentationscheduled: 'angebot', 'proposal made': 'angebot',
+  verhandlung: 'verhandlung', negotiation: 'verhandlung', decisionmakerboughtin: 'verhandlung', contractsent: 'verhandlung',
+  gewonnen: 'gewonnen', won: 'gewonnen', 'closed won': 'gewonnen', closedwon: 'gewonnen', auftrag: 'gewonnen',
+  verloren: 'verloren', lost: 'verloren', 'closed lost': 'verloren', closedlost: 'verloren', abgesagt: 'verloren',
+};
+/** kontakt_aktivitaeten.typ (app/dashboard/crm/[id]). */
+export const AKTIVITAET_TYPEN: Record<string, string> = {
+  anruf: 'anruf', telefonat: 'anruf', telefon: 'anruf', call: 'anruf', rueckruf: 'anruf',
+  email: 'email', 'e mail': 'email', mail: 'email',
+  termin: 'termin', 'termin vor ort': 'termin', besuch: 'termin', meeting: 'termin', treffen: 'termin', vor_ort: 'termin', 'vor ort': 'termin',
+  notiz: 'notiz', note: 'notiz', vermerk: 'notiz',
+};
+/** wartungsvertraege.status (app/dashboard/wartung). */
+export const WARTUNG_STATUS: Record<string, string> = {
+  aktiv: 'aktiv', laufend: 'aktiv', active: 'aktiv',
+  pausiert: 'pausiert', ruht: 'pausiert', paused: 'pausiert',
+  gekuendigt: 'gekuendigt', gekündigt: 'gekuendigt', cancelled: 'gekuendigt', canceled: 'gekuendigt',
+  abgelaufen: 'abgelaufen', beendet: 'abgelaufen', expired: 'abgelaufen',
+};
+/** leads.status (app/dashboard/leads). */
+export const LEAD_STATUS: Record<string, string> = {
+  neu: 'neu', new: 'neu', offen: 'offen', open: 'offen', kontaktiert: 'offen', qualifiziert: 'offen',
+  'termin vereinbart': 'offen', 'in bearbeitung': 'offen', contacted: 'offen',
+  gewonnen: 'gewonnen', won: 'gewonnen', kunde: 'gewonnen', auftrag: 'gewonnen',
+  verloren: 'verloren', lost: 'verloren', 'kein bedarf': 'verloren', abgesagt: 'verloren', abgelehnt: 'verloren',
+};
+
+/**
+ * Einen Wert auf eine feste Liste bringen. Unbekannt -> Standard, und der
+ * alte Wert wandert als „Label im Altsystem: X" in das Textfeld — nichts
+ * verschluckt. `still`: ohne Warnung, wenn die Umsetzung zu erwarten ist
+ * (z. B. „kontaktiert" -> offen bei Leads; der alte Wert steht trotzdem da).
+ */
+function aufListe(
+  werte: Record<string, unknown>, feld: string, liste: Record<string, string>, standard: string,
+  textFeld: string, label: string, nummer: number, warnungen: ZeilenFehler[], alteImmerMerken = false,
+): void {
+  const roh = werte[feld];
+  if (typeof roh !== 'string' || !roh.trim()) return;
+  const n = normal(roh);
+  const treffer = liste[n] ?? liste[n.replace(/\s+/g, '')];
+  const merken = () => {
+    const alt = `${label} im Altsystem: ${roh.trim()}`;
+    werte[textFeld] = typeof werte[textFeld] === 'string' && String(werte[textFeld]).trim() ? `${String(werte[textFeld]).trim()}\n${alt}` : alt;
+  };
+  if (treffer) {
+    if (alteImmerMerken && normal(treffer).replace(/\s+/g, '') !== n.replace(/\s+/g, '')) merken();
+    werte[feld] = treffer;
+    return;
+  }
+  warnungen.push({ zeile: nummer, feld: label, meldung: `"${roh}" ist kein bekannter Wert — auf "${standard}" gesetzt (der alte Wert steht im Text)` });
+  merken();
+  werte[feld] = standard;
+}
+
+/** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */
+const MENGEN_EINHEIT: Record<string, string> = {
+  stueck: 'Stück', 'stück': 'Stück', stk: 'Stück', st: 'Stück', pauschal: 'Stück', psch: 'Stück', pau: 'Stück',
+  ha: 'ha', fm: 'fm', srm: 'Srm', rm: 'Rm', m3: 'm³', 'm³': 'm³', m2: 'm²', 'm²': 'm²', qm: 'm²', lfm: 'lfm', m: 'lfm', kg: 'kg', t: 't',
+};
+
+/**
+ * Leistungskatalog wie das Modul selbst: die Einheit bestimmt die
+ * Erfassungsart; der Preis wird Stundensatz (Zeit) oder Einheitspreis (Menge).
+ */
+function leistungNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const einheitRoh = String(werte.einheit ?? '').trim();
+  const e = einheitRoh.toLowerCase().replace(/\.$/, '');
+  let art = String(werte.erfassungsart ?? '').trim().toLowerCase();
+  if (!['stunden', 'minuten', 'aw', 'stueck'].includes(art)) {
+    if (art) warnungen.push({ zeile: nummer, feld: 'Erfassungsart', meldung: `"${werte.erfassungsart}" unbekannt — aus der Einheit bestimmt` });
+    if (/^(std|stunde|stunden|h|hour|hours)$/.test(e)) art = 'stunden';
+    else if (/^(min|minute|minuten)$/.test(e)) art = 'minuten';
+    else if (/^(aw|arbeitswert|arbeitswerte)$/.test(e)) art = 'aw';
+    else if (e) art = 'stueck';
+    else art = 'stunden';
+  }
+  werte.erfassungsart = art;
+  if (art === 'stueck') werte.einheit = MENGEN_EINHEIT[e] ?? (einheitRoh || 'Stück');
+  else delete werte.einheit;
+  if (art === 'aw') werte.aw_minuten = 6;
+  if (typeof werte.preis === 'number') {
+    if (art === 'stueck') werte.einheitspreis_netto = werte.preis;
+    else werte.stundensatz_netto = werte.preis;
+  }
+  delete werte.preis;
 }
 
 /**
@@ -1117,6 +1458,31 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
     } else if (leer(werte.nachname)) werte.nachname = werte.name_komplett.trim();
   }
 
+  // Schritt 3: Kunde merken (die Verknuepfung macht die Seite mit dem Bestand).
+  const kNr = typeof werte.kunde_nummer === 'string' ? werte.kunde_nummer.trim() : '';
+  const kName = typeof werte.kunde === 'string' ? werte.kunde.trim() : '';
+  if (kNr || kName) werte.__kunde = kNr || kName;
+  if (kNr && kName) werte.__kunde2 = kName;
+
+  // Schritt 3: Vorname/Nachname/Firma -> ein Namensfeld (Leads).
+  const vn = String(werte.lead_vorname ?? '').trim();
+  const nn = String(werte.lead_nachname ?? '').trim();
+  const fi = String(werte.lead_firma ?? '').trim();
+  if ((vn || nn || fi) && leer(werte.name)) {
+    const person = [vn, nn].filter(Boolean).join(' ');
+    werte.name = person && fi ? `${person} · ${fi}` : (person || fi);
+  }
+
+  // Schritt 3: Spalten ohne eigenes Feld als „Label: Wert" an ein Textfeld haengen.
+  for (const f of virtuelle) {
+    if (f.virtuell !== 'anhang' || !f.anhangAn) continue;
+    const v = String(werte[f.key] ?? '').trim();
+    if (!v) continue;
+    const label = f.label.replace(/\s*\(.*\)\s*$/, '');
+    const zeile = `${label}: ${v}`;
+    werte[f.anhangAn] = leer(werte[f.anhangAn]) ? zeile : `${String(werte[f.anhangAn]).trim()}\n${zeile}`;
+  }
+
   const strasse = String(werte.adresse_strasse ?? '').trim();
   const plz = String(werte.adresse_plz ?? '').trim();
   const ort = String(werte.adresse_ort ?? '').trim();
@@ -1125,7 +1491,8 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
     werte.adresse = leer(werte.adresse) ? zusammen : `${String(werte.adresse).trim()}, ${zusammen}`;
   }
 
-  for (const f of virtuelle) delete werte[f.key];
+  // 'preis' rechnet nachbereiten() um (Stundensatz oder Einheitspreis) und entfernt es dort.
+  for (const f of virtuelle) if (f.virtuell !== 'preis') delete werte[f.key];
 }
 
 /** Alle Erkennungs-Werte eines Satzes als „feld:wert" (klein, getrimmt). */
