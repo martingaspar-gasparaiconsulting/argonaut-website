@@ -104,11 +104,19 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'tickets', label: 'Service-Tickets', icon: '🎫', beschreibung: 'Offene und alte Tickets mit Nummer, Status und Priorität.', musterZiel: 'tickets', zielHref: '/dashboard/service', motor: 'tickets', gruppe: 'betrieb' },
   { key: 'inventar', label: 'Inventar & Geräte', icon: '🧰', beschreibung: 'Werkzeuge und Geräte mit Inventarnummer und nächster Prüfung.', musterZiel: 'inventar', zielHref: '/dashboard/erp/inventar', motor: 'inventar', gruppe: 'betrieb' },
   { key: 'verleih', label: 'Mietgegenstände (Verleih)', icon: '🔑', beschreibung: 'Vermietbare Geräte mit Tages-/Wochensatz und Kaution.', musterZiel: 'verleih', zielHref: '/dashboard/verleih', motor: 'verleih', gruppe: 'betrieb' },
+  // Paket 133: Umzug Schritt 4 Teil 2
+  { key: 'haccp_plan', label: 'HACCP-Plan', icon: '🌡', beschreibung: 'Kontrollpunkte mit Sollwert und Intervall.', musterZiel: 'haccp_plan', zielHref: '/dashboard/lebensmittel', motor: 'haccp_plan', gruppe: 'betrieb' },
+  { key: 'haccp', label: 'HACCP-Kontrollen', icon: '🧾', beschreibung: 'Frühere Temperatur- und Hygienekontrollen.', musterZiel: 'haccp', zielHref: '/dashboard/lebensmittel', motor: 'haccp', gruppe: 'betrieb' },
+  { key: 'retainer', label: 'Retainer / Rahmenverträge', icon: '🤝', beschreibung: 'Betreuungsverträge mit Monatsstunden und Stundensatz.', musterZiel: 'retainer', zielHref: '/dashboard/agentur', motor: 'retainer', gruppe: 'vertraege_objekte' },
+  { key: 'duengung', label: 'Düngung (Schlagkartei)', icon: '🧪', beschreibung: 'Düngemaßnahmen je Schlag mit Nährstoffen.', musterZiel: 'duengung', zielHref: '/dashboard/schlagkartei', motor: 'duengung', gruppe: 'betrieb' },
+  { key: 'forst_objekte', label: 'Forst-/Baum-Objekte', icon: '🌳', beschreibung: 'Grundstücke und Anlagen mit Baumbestand.', musterZiel: 'forst_objekte', zielHref: '/dashboard/forst', motor: 'forst_objekte', gruppe: 'vertraege_objekte' },
+  { key: 'forst_baeume', label: 'Bäume (Baumkataster)', icon: '🌲', beschreibung: 'Bäume je Objekt mit Zustand und Kontrolle.', musterZiel: 'forst_baeume', zielHref: '/dashboard/forst', motor: 'forst_baeume', gruppe: 'vertraege_objekte' },
   { key: 'freigaben', label: 'Freigaben & Assets', icon: '✅', beschreibung: 'Kreativ-Assets für Freigaben & Proofing.', vorlage: V + 'freigaben-assets-import-vorlage.csv', zielHref: '/dashboard/freigaben', motor: 'freigaben', gruppe: 'betrieb' },
 
   // --- Finanzen & Förderung -------------------------------------------------
   { key: 'rechnungen', label: 'Offene Rechnungen (Altsystem)', icon: '🧾', beschreibung: 'Bestehende Rechnungen mit Zahlungsstand aus dem alten System übernehmen.', musterZiel: 'rechnungen', zielHref: '/dashboard/rechnungen', motor: 'rechnungen', gruppe: 'finanzen' },
   { key: 'foerdervorhaben', label: 'Fördervorhaben', icon: '💰', beschreibung: 'Fördervorhaben mit Nachweis-Fristen.', vorlage: V + 'foerdervorhaben-import-vorlage.csv', zielHref: '/dashboard/foerdermittel', gruppe: 'finanzen' },
+  { key: 'kassen', label: 'Kassen & TSE', icon: '🧮', beschreibung: 'Kassen und TSE je Betriebsstätte für die Mitteilung ans Finanzamt.', musterZiel: 'kassen', zielHref: '/dashboard/kasse/meldung', motor: 'kassen', gruppe: 'finanzen' },
   { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial).', vorlage: V + 'spenden-import-vorlage.csv', zielHref: '/dashboard/spenden', gruppe: 'finanzen' },
 ];
 

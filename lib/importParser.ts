@@ -1803,6 +1803,170 @@ export const ZIELE: ImportZiel[] = [
       { key: 'verleih_status', label: 'Status im Altsystem', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['status', 'zustand'] },
     ],
   },
+  // --- Paket 133: Umzug Schritt 4 Teil 2 — Lebensmittel, Kasse, Beratung, Land-/Forstwirtschaft ---
+  {
+    key: 'haccp_plan',
+    label: 'HACCP-Plan (Kontrollpunkte)',
+    icon: '🌡',
+    tabelle: 'lm_haccp_plan',
+    beschreibung: 'Kontrollpunkte mit Sollwert und Intervall (Kühlhaus, Fritteuse, Wareneingang …) — erscheinen gleich im HACCP-Plan mit Fälligkeit.',
+    schluesselFelder: ['kontrollpunkt'],
+    eigeneFelderModul: 'lm_haccp_plan',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/lebensmittel',
+    felder: [
+      { key: 'kontrollpunkt', label: 'Kontrollpunkt', typ: 'text', pflicht: true, alias: ['kontrollpunkt', 'ccp', 'pruefpunkt', 'prüfpunkt', 'messpunkt', 'geraet', 'gerät', 'bereich', 'bezeichnung'] },
+      { key: 'sollwert', label: 'Sollwert', typ: 'text', alias: ['sollwert', 'soll', 'grenzwert', 'zielwert', 'vorgabe', 'kritischer grenzwert'] },
+      { key: 'intervall_tage', label: 'Intervall (Tage)', typ: 'text', standard: '1', hinweis: 'Zahl in Tagen oder „täglich", „wöchentlich", „monatlich".', alias: ['intervall tage', 'intervall', 'haeufigkeit', 'häufigkeit', 'turnus', 'rhythmus', 'frequenz'] },
+      { key: 'letzte_kontrolle', label: 'Letzte Kontrolle', typ: 'datum', alias: ['letzte kontrolle', 'zuletzt geprueft', 'zuletzt geprüft', 'letzte messung'] },
+      { key: 'aktiv', label: 'Aktiv', typ: 'jaNein', standard: true, alias: ['aktiv', 'in betrieb'] },
+    ],
+  },
+  {
+    key: 'haccp',
+    label: 'HACCP-Kontrollen (Protokoll)',
+    icon: '🧾',
+    tabelle: 'lm_haccp',
+    beschreibung: 'Frühere Temperatur- und Hygienekontrollen — mit dem Kontrollpunkt im Plan verknüpft, wenn der Name passt. Unklares Ergebnis gilt als Abweichung.',
+    schluesselFelder: ['datum+kontrollpunkt+messwert'],
+    eigeneFelderModul: 'lm_haccp',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/lebensmittel',
+    nachschlag: { ausFeld: 'kontrollpunkt', tabelle: 'lm_haccp_plan', nameSpalte: 'kontrollpunkt', spalte: 'plan_id', label: 'Kontrollpunkt' },
+    felder: [
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'kontrolliert am', 'gemessen am', 'pruefdatum', 'prüfdatum', 'tag'] },
+      { key: 'kontrollpunkt', label: 'Kontrollpunkt', typ: 'text', pflicht: true, alias: ['kontrollpunkt', 'ccp', 'pruefpunkt', 'prüfpunkt', 'messpunkt', 'geraet', 'gerät', 'bereich'] },
+      { key: 'messwert', label: 'Messwert', typ: 'text', alias: ['messwert', 'wert', 'temperatur', 'ist', 'istwert', 'ergebnis messung'] },
+      { key: 'in_ordnung', label: 'In Ordnung', typ: 'text', hinweis: 'i. O. / n. i. O. — ja / nein. Leer = in Ordnung, Unklares = Abweichung.', alias: ['in ordnung', 'io', 'i o', 'ok', 'ergebnis', 'bewertung', 'status'] },
+      { key: 'massnahme', label: 'Maßnahme', typ: 'text', alias: ['massnahme', 'maßnahme', 'korrekturmassnahme', 'korrekturmaßnahme', 'bemerkung', 'aktion'] },
+      { key: 'pruefer', label: 'Prüfer', typ: 'text', alias: ['pruefer', 'prüfer', 'kontrolliert von', 'mitarbeiter', 'kuerzel', 'kürzel', 'unterschrift'] },
+    ],
+  },
+  {
+    key: 'kassen',
+    label: 'Kassen & TSE (Stammdaten)',
+    icon: '🧮',
+    tabelle: 'kassen_system',
+    beschreibung: 'Kassen, Taxameter und ihre TSE je Betriebsstätte — Grundlage für die Mitteilung an das Finanzamt (§ 146a AO). Gemeldet wird erst nach Ihrer Prüfung.',
+    schluesselFelder: ['seriennummer', 'tse_seriennummer', 'betriebsstaette+modell'],
+    eigeneFelderModul: 'kassen_system',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/kasse/meldung',
+    listen: [{ feld: 'art', label: 'Art', standard: 'sonstiges', textFeld: 'notiz', liste: liste(['kasse_pc', 'kasse_app', 'registrierkasse', 'taxameter', 'wegstreckenzaehler', 'sonstiges'], { pc: 'kasse_pc', 'pc kasse': 'kasse_pc', pos: 'kasse_pc', 'pos system': 'kasse_pc', kassensystem: 'kasse_pc', app: 'kasse_app', tablet: 'kasse_app', ipad: 'kasse_app', 'tablet kasse': 'kasse_app', 'app kasse': 'kasse_app', registrierkasse: 'registrierkasse', 'elektronische registrierkasse': 'registrierkasse', ecr: 'registrierkasse', kasse: 'registrierkasse', taxi: 'taxameter', wegstreckenzähler: 'wegstreckenzaehler', mietwagen: 'wegstreckenzaehler' }) }],
+    felder: [
+      { key: 'betriebsstaette', label: 'Betriebsstätte', typ: 'text', pflicht: true, alias: ['betriebsstaette', 'betriebsstätte', 'filiale', 'standort', 'laden', 'adresse'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'sonstiges', hinweis: 'kasse_pc · kasse_app · registrierkasse · taxameter · wegstreckenzaehler · sonstiges', alias: ['art', 'typ', 'kassenart', 'geraeteart'] },
+      { key: 'hersteller', label: 'Hersteller', typ: 'text', alias: ['hersteller', 'marke', 'fabrikat'] },
+      { key: 'modell', label: 'Modell', typ: 'text', alias: ['modell', 'typbezeichnung', 'geraet', 'gerät', 'kasse'] },
+      { key: 'software', label: 'Software', typ: 'text', alias: ['software', 'kassensoftware', 'programm', 'version'] },
+      { key: 'seriennummer', label: 'Seriennummer', typ: 'text', alias: ['seriennummer', 'serien nr', 'sn', 'geraetenummer', 'kassennummer', 'kassen nr'] },
+      { key: 'anschaffung_am', label: 'Anschaffung', typ: 'datum', alias: ['anschaffung am', 'anschaffung', 'anschaffungsdatum', 'in betrieb seit', 'inbetriebnahme'] },
+      { key: 'gemietet', label: 'Gemietet / geleast', typ: 'jaNein', standard: false, alias: ['gemietet', 'miete', 'geleast', 'leasing', 'mietgeraet'] },
+      { key: 'ausser_betrieb_am', label: 'Außer Betrieb am', typ: 'datum', alias: ['ausser betrieb am', 'außer betrieb am', 'ausser betrieb', 'stillgelegt am', 'abgemeldet am'] },
+      { key: 'ausser_grund', label: 'Grund außer Betrieb', typ: 'text', alias: ['ausser grund', 'grund', 'grund ausser betrieb', 'stilllegungsgrund'] },
+      { key: 'tse_art', label: 'TSE-Art', typ: 'text', alias: ['tse art', 'tse typ', 'tse', 'sicherheitseinrichtung'] },
+      { key: 'tse_seriennummer', label: 'TSE-Seriennummer', typ: 'text', alias: ['tse seriennummer', 'tse serial', 'tse sn', 'tse nummer'] },
+      { key: 'tse_bsi_id', label: 'TSE BSI-Zertifizierung', typ: 'text', alias: ['tse bsi id', 'bsi id', 'bsi zertifizierung', 'bsi k tr', 'zertifizierungs id'] },
+      { key: 'tse_anschaffung_am', label: 'TSE-Anschaffung', typ: 'datum', alias: ['tse anschaffung am', 'tse anschaffung', 'tse seit', 'tse in betrieb'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen'] },
+    ],
+  },
+  {
+    key: 'retainer',
+    label: 'Retainer / Rahmenverträge',
+    icon: '🤝',
+    tabelle: 'agentur_retainer',
+    beschreibung: 'Laufende Betreuungs- und Rahmenverträge mit Monatsstunden und Stundensatz — mit dem Kunden verknüpft, wenn es ihn gibt. Es wird nichts abgerechnet.',
+    schluesselFelder: ['kunde_name+bezeichnung'],
+    eigeneFelderModul: 'agentur_retainer',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['kunde_name'] },
+    ergebnisHref: '/dashboard/agentur',
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv', 'pausiert', 'beendet'], { laufend: 'aktiv', aktiv: 'aktiv', active: 'aktiv', ruhend: 'pausiert', pause: 'pausiert', paused: 'pausiert', gekuendigt: 'beendet', gekündigt: 'beendet', abgelaufen: 'beendet', ended: 'beendet', inaktiv: 'beendet' }) }],
+    felder: [
+      { key: 'kunde_nummer', label: 'Kundennummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true, alias: ['kundennummer', 'kundennr', 'kunden nr', 'kd nr', 'debitor'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'auftraggeber', 'mandant', 'client', 'firma'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', standard: 'Retainer', alias: ['bezeichnung', 'vertrag', 'paket', 'leistung', 'titel', 'name'] },
+      { key: 'monatsstunden', label: 'Stunden je Monat', typ: 'zahl', standard: 0, alias: ['monatsstunden', 'stunden monat', 'stunden pro monat', 'kontingent', 'stundenkontingent', 'std monat'] },
+      { key: 'stundensatz', label: 'Stundensatz', typ: 'zahl', standard: 0, alias: ['stundensatz', 'satz', 'preis stunde', 'euro stunde', 'honorar'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · pausiert · beendet', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'leistungsumfang'] },
+      { key: 'monatsbetrag', label: 'Monatsbetrag (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['monatsbetrag', 'pauschale', 'monatspauschale', 'betrag monat', 'fee'] },
+      { key: 'laufzeit', label: 'Laufzeit (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['laufzeit', 'beginn', 'start', 'ende', 'kuendigungsfrist', 'kündigungsfrist'] },
+    ],
+  },
+  {
+    key: 'duengung',
+    label: 'Düngung (Schlagkartei)',
+    icon: '🧪',
+    tabelle: 'schlag_duengung',
+    beschreibung: 'Düngemaßnahmen je Schlag mit Menge und Nährstoffen (DüV-Aufzeichnung). Fehlende Schläge werden mit ihrem Namen angelegt — Fläche bitte nachtragen.',
+    schluesselFelder: ['schlag_id+datum+duengemittel', '__nach+datum+duengemittel'],
+    eigeneFelderModul: 'schlag_duengung',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/schlagkartei',
+    nachschlag: { ausFeld: 'schlag', tabelle: 'schlag', nameSpalte: 'bezeichnung', spalte: 'schlag_id', anlegen: true, label: 'Schlag', anlegenMit: { status: 'aktiv' } },
+    listen: [
+      { feld: 'art', label: 'Art', standard: 'mineralisch', textFeld: 'notiz', liste: liste(['mineralisch', 'organisch'], { mineral: 'mineralisch', handelsduenger: 'mineralisch', handelsdünger: 'mineralisch', kunstduenger: 'mineralisch', kunstdünger: 'mineralisch', wirtschaftsduenger: 'organisch', wirtschaftsdünger: 'organisch', guelle: 'organisch', gülle: 'organisch', mist: 'organisch', gaerrest: 'organisch', gärrest: 'organisch', kompost: 'organisch', jauche: 'organisch' }) },
+      { feld: 'einheit', label: 'Einheit', standard: 'kg/ha', textFeld: 'notiz', liste: liste(['kg/ha', 'm3/ha', 'dt/ha', 't/ha'], { 'kg ha': 'kg/ha', kg: 'kg/ha', 'm³/ha': 'm3/ha', 'cbm/ha': 'm3/ha', m3: 'm3/ha', cbm: 'm3/ha', 'dt ha': 'dt/ha', dt: 'dt/ha', 't ha': 't/ha', t: 't/ha' }) },
+    ],
+    felder: [
+      { key: 'schlag', label: 'Schlag', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Wird mit Ihren Schlägen verknüpft; fehlende werden angelegt.', alias: ['schlag', 'schlagname', 'feldstueck', 'feldstück', 'feld', 'flaeche', 'fläche'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'ausgebracht am', 'duengedatum', 'düngedatum', 'termin'] },
+      { key: 'duengemittel', label: 'Düngemittel', typ: 'text', alias: ['duengemittel', 'düngemittel', 'duenger', 'dünger', 'produkt', 'mittel'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'mineralisch', hinweis: 'mineralisch · organisch', alias: ['art', 'duengerart', 'düngerart', 'typ'] },
+      { key: 'menge', label: 'Menge je ha', typ: 'zahl', standard: 0, alias: ['menge', 'menge ha', 'aufwandmenge', 'menge je ha', 'ausbringmenge'] },
+      { key: 'einheit', label: 'Einheit', typ: 'text', standard: 'kg/ha', hinweis: 'kg/ha · m3/ha · dt/ha · t/ha', alias: ['einheit', 'me'] },
+      { key: 'n_gesamt', label: 'Gesamt-N (kg N/ha)', typ: 'zahl', standard: 0, alias: ['n gesamt', 'gesamt n', 'n', 'stickstoff', 'n kg ha', 'kg n ha'] },
+      { key: 'n_verfuegbar', label: 'Verfügbarer N (kg N/ha)', typ: 'zahl', alias: ['n verfuegbar', 'n verfügbar', 'verfuegbarer n', 'verfügbarer n', 'nh4', 'pflanzenverfuegbar'] },
+      { key: 'p2o5', label: 'P2O5 (kg/ha)', typ: 'zahl', standard: 0, alias: ['p2o5', 'phosphat', 'p'] },
+      { key: 'anwender', label: 'Anwender', typ: 'text', alias: ['anwender', 'fahrer', 'ausgebracht von', 'mitarbeiter'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen'] },
+    ],
+  },
+  {
+    key: 'forst_objekte',
+    label: 'Forst-/Baum-Objekte',
+    icon: '🌳',
+    tabelle: 'forst_objekte',
+    beschreibung: 'Grundstücke, Parks und Anlagen mit Baumbestand für das Baumkataster.',
+    schluesselFelder: ['bezeichnung'],
+    eigeneFelderModul: 'forst_objekte',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/forst',
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'objekt', 'grundstueck', 'grundstück', 'anlage', 'park', 'name', 'liegenschaft'] },
+      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'lage', 'strasse', 'straße', 'ort'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'eigentuemer', 'eigentümer', 'auftraggeber'] },
+    ],
+  },
+  {
+    key: 'forst_baeume',
+    label: 'Bäume (Baumkataster)',
+    icon: '🌲',
+    tabelle: 'forst_baeume',
+    beschreibung: 'Bäume je Objekt mit Art, Maßen, Zustand und Kontrollintervall — die nächste Kontrolle wird wie im Modul gerechnet. Fehlende Objekte werden angelegt.',
+    schluesselFelder: ['objekt_id+notiz', '__nach+notiz'],
+    eigeneFelderModul: 'forst_baeume',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/forst',
+    nachschlag: { ausFeld: 'objekt', tabelle: 'forst_objekte', nameSpalte: 'bezeichnung', spalte: 'objekt_id', anlegen: true, label: 'Objekt' },
+    listen: [{ feld: 'zustand', label: 'Zustand', standard: 'gut', textFeld: 'notiz', liste: liste(['gut', 'beobachten', 'kritisch'], { vital: 'gut', gesund: 'gut', ok: 'gut', 'leicht geschaedigt': 'beobachten', 'leicht geschädigt': 'beobachten', mittel: 'beobachten', maessig: 'beobachten', mäßig: 'beobachten', geschaedigt: 'kritisch', geschädigt: 'kritisch', 'stark geschaedigt': 'kritisch', 'stark geschädigt': 'kritisch', abgaengig: 'kritisch', abgängig: 'kritisch', 'nicht verkehrssicher': 'kritisch', faellen: 'kritisch', fällen: 'kritisch', tot: 'kritisch' }) }],
+    folgeDatum: [{ ziel: 'naechste_kontrolle', aus: 'letzte_kontrolle', monateFeld: 'kontrollintervall_monate' }],
+    felder: [
+      { key: 'objekt', label: 'Objekt', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Wird mit Ihren Objekten verknüpft; fehlende werden angelegt.', alias: ['objekt', 'grundstueck', 'grundstück', 'anlage', 'park', 'standort', 'liegenschaft'] },
+      { key: 'baum_nr', label: 'Baum-Nr.', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', hinweis: 'Steht in der Notiz und erkennt den Baum beim zweiten Import wieder.', alias: ['baum nr', 'baumnummer', 'baum nummer', 'nr', 'nummer', 'baum id', 'plakette'] },
+      { key: 'art', label: 'Baumart', typ: 'text', alias: ['art', 'baumart', 'gattung', 'spezies', 'botanischer name', 'deutscher name'] },
+      { key: 'hoehe_m', label: 'Höhe (m)', typ: 'zahl', alias: ['hoehe m', 'höhe m', 'hoehe', 'höhe', 'baumhoehe', 'baumhöhe'] },
+      { key: 'stammdurchmesser_cm', label: 'Stammdurchmesser (cm)', typ: 'zahl', alias: ['stammdurchmesser cm', 'stammdurchmesser', 'bhd', 'durchmesser', 'stammumfang'] },
+      { key: 'zustand', label: 'Zustand', typ: 'text', standard: 'gut', hinweis: 'gut · beobachten · kritisch', alias: ['zustand', 'vitalitaet', 'vitalität', 'ampel', 'verkehrssicherheit'] },
+      { key: 'kontrollintervall_monate', label: 'Kontrollintervall (Monate)', typ: 'zahl', standard: 12, alias: ['kontrollintervall monate', 'kontrollintervall', 'intervall', 'regelkontrolle'] },
+      { key: 'letzte_kontrolle', label: 'Letzte Kontrolle', typ: 'datum', alias: ['letzte kontrolle', 'kontrolliert am', 'kontrolle am', 'kontrolldatum'] },
+      { key: 'naechste_kontrolle', label: 'Nächste Kontrolle', typ: 'datum', hinweis: 'Leer: letzte Kontrolle + Intervall.', alias: ['naechste kontrolle', 'nächste kontrolle', 'faellig', 'fällig'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'massnahme', 'maßnahme', 'notizen'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -1982,6 +2146,77 @@ Object.assign(BEISPIELE, {
     wochensatz: '590,00|180,00|',
     kaution: '500,00|100,00|50,00',
     anzahl: '1|2|4',
+  },
+  // Paket 133
+  haccp_plan: {
+    kontrollpunkt: 'Kühlhaus 1|Fritteuse|Wareneingang Fleisch',
+    sollwert: 'max. 4 °C|max. 175 °C|max. 7 °C',
+    intervall_tage: 'täglich|1|wöchentlich',
+    letzte_kontrolle: '26.09.2026||',
+    aktiv: 'ja|ja|ja',
+  },
+  haccp: {
+    datum: '25.09.2026|25.09.2026|26.09.2026',
+    kontrollpunkt: 'Kühlhaus 1|Fritteuse|Kühlhaus 1',
+    messwert: '3,5 °C|178 °C|6 °C',
+    in_ordnung: 'i.O.|n.i.O.|n.i.O.',
+    massnahme: '|Öl gewechselt, Thermostat geprüft|Tür geschlossen, nach 30 min 4 °C',
+    pruefer: 'MK|MK|LB',
+  },
+  kassen: {
+    betriebsstaette: 'Hauptstraße 12, 71032 Böblingen|Hauptstraße 12, 71032 Böblingen|Marktplatz 3, 71083 Herrenberg',
+    art: 'kasse_pc|kasse_app|registrierkasse',
+    hersteller: 'Muster Kassen GmbH|Beispiel POS|Muster Kassen GmbH',
+    modell: 'MK 500|Tablet Pro|MK 100',
+    software: 'MK-POS 4.2|Beispiel POS 2026|',
+    seriennummer: 'MK5-100231|BP-77812|MK1-004411',
+    anschaffung_am: '01.03.2024|15.01.2026|01.06.2021',
+    gemietet: 'nein|ja|nein',
+    ausser_betrieb_am: '||31.08.2026',
+    ausser_grund: '||Defekt, ersetzt',
+    tse_art: 'USB-TSE|Cloud-TSE|SD-TSE',
+    tse_seriennummer: 'TSE-9001|TSE-C-4412|TSE-SD-1177',
+    tse_bsi_id: 'BSI-K-TR-0000-2023|BSI-K-TR-0001-2024|BSI-K-TR-0002-2021',
+    tse_anschaffung_am: '01.03.2024|15.01.2026|01.06.2021',
+    notiz: '||',
+  },
+  retainer: {
+    kunde_name: 'Muster GmbH|Familie Kaya|Beispiel AG',
+    bezeichnung: 'Social Media Betreuung|Website-Pflege|Retainer',
+    monatsstunden: '20|4|10',
+    stundensatz: '95,00|85,00|110,00',
+    status: 'aktiv|pausiert|aktiv',
+    notiz: 'Monatlich Reporting||',
+  },
+  duengung: {
+    schlag: 'Am Bach|Großer Acker|Am Bach',
+    datum: '15.03.2026|20.03.2026|10.04.2026',
+    duengemittel: 'KAS 27|Rindergülle|KAS 27',
+    art: 'mineralisch|organisch|mineralisch',
+    menge: '200|25|150',
+    einheit: 'kg/ha|m3/ha|kg/ha',
+    n_gesamt: '54|80|40,5',
+    n_verfuegbar: '|40|',
+    p2o5: '0|35|0',
+    anwender: 'M. Huber|M. Huber|',
+    notiz: '||',
+  },
+  forst_objekte: {
+    bezeichnung: 'Stadtpark Nord|Schulhof Grundschule|Friedhof Ost',
+    adresse: 'Parkstraße 1, 71032 Böblingen|Schulweg 4, 71032 Böblingen|',
+    notiz: 'Eigentümer: Stadt||',
+  },
+  forst_baeume: {
+    objekt: 'Stadtpark Nord|Stadtpark Nord|Schulhof Grundschule',
+    baum_nr: '1|2|17',
+    art: 'Stieleiche|Rotbuche|Bergahorn',
+    hoehe_m: '22|18,5|14',
+    stammdurchmesser_cm: '65|48|40',
+    zustand: 'gut|beobachten|kritisch',
+    kontrollintervall_monate: '12|12|6',
+    letzte_kontrolle: '15.05.2026|15.05.2026|01.09.2026',
+    naechste_kontrolle: '||',
+    notiz: '|Totholz in der Krone|Pilzbefall Stammfuß',
   },
 } as Record<string, Record<string, string>>);
 
@@ -2391,6 +2626,9 @@ function nachbereiten(
   // Paket 132
   if (zielKey === 'einsaetze') einsatzNachbereiten(werte, nummer, warnungen);
   if (zielKey === 'verleih' && typeof werte.anzahl === 'number') werte.anzahl = Math.max(1, Math.round(werte.anzahl));
+  // Paket 133
+  if (zielKey === 'haccp_plan') werte.intervall_tage = intervallTage(werte.intervall_tage, nummer, warnungen);
+  if (zielKey === 'haccp') haccpNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -2654,6 +2892,47 @@ export function plusMinutenLokal(lokal: string, minuten: number): string {
   const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + minuten * 60000);
   const z = (n: number) => String(n).padStart(2, '0');
   return `${t.getUTCFullYear()}-${z(t.getUTCMonth() + 1)}-${z(t.getUTCDate())}T${z(t.getUTCHours())}:${z(t.getUTCMinutes())}`;
+}
+
+/** Paket 133: HACCP-Intervall — Zahl in Tagen oder Wort. Unbekannt -> taeglich (lieber zu oft kontrollieren). */
+const INTERVALL_WORT: Record<string, number> = {
+  taeglich: 1, 'jeden tag': 1, daily: 1, 'je schicht': 1, schichtweise: 1, 'pro schicht': 1,
+  woechentlich: 7, 'jede woche': 7, weekly: 7, '14 taegig': 14, 'alle 2 wochen': 14, zweiwoechentlich: 14,
+  monatlich: 30, 'jeden monat': 30, monthly: 30, vierteljaehrlich: 90, quartalsweise: 90, halbjaehrlich: 182, jaehrlich: 365, yearly: 365,
+};
+export function intervallTage(wert: unknown, nummer = 0, warnungen: ZeilenFehler[] = []): number {
+  const roh = String(wert ?? '').trim();
+  if (!roh) return 1;
+  const n = normal(roh);
+  if (INTERVALL_WORT[n] !== undefined) return INTERVALL_WORT[n];
+  const z = leseZahl(roh.replace(/\s*(tage?|d)$/i, ''), 'unbekannt');
+  if (z !== null && z > 0) return Math.max(1, Math.round(z));
+  warnungen.push({ zeile: nummer, feld: 'Intervall', meldung: `"${roh}" ist kein Intervall — auf täglich gesetzt (lieber zu oft als zu selten kontrollieren).` });
+  return 1;
+}
+
+/**
+ * Paket 133: HACCP-Ergebnis. Lebensmittelsicherheit: ein UNKLARES Ergebnis
+ * gilt als Abweichung, nie stillschweigend als „in Ordnung".
+ */
+const HACCP_OK = new Set(['i o', 'io', 'i.o', 'ok', 'ja', 'j', 'x', '1', 'true', 'wahr', 'in ordnung', 'passt', 'gut', 'bestanden', 'erfuellt', 'yes', 'pass']);
+const HACCP_NICHT = new Set(['n i o', 'nio', 'nicht ok', 'nein', 'n', '0', 'false', 'falsch', 'abweichung', 'nicht in ordnung', 'mangel', 'maengel', 'nicht bestanden', 'no', 'fail', 'kritisch']);
+function haccpNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const roh = String(werte.in_ordnung ?? '').trim();
+  const n = normal(roh);
+  let ok: boolean;
+  if (!roh || HACCP_OK.has(n)) ok = true;
+  else if (HACCP_NICHT.has(n)) ok = false;
+  else {
+    ok = false;
+    warnungen.push({ zeile: nummer, feld: 'In Ordnung', meldung: `"${roh}" ist kein klares Ergebnis — als Abweichung übernommen, bitte prüfen.` });
+  }
+  werte.in_ordnung = ok;
+  if (!ok) {
+    const alt = roh ? `Ergebnis im Altsystem: ${roh}` : '';
+    const m = String(werte.massnahme ?? '').trim();
+    werte.massnahme = [m || 'Abweichung aus dem Altsystem übernommen — Maßnahme bitte prüfen', alt].filter(Boolean).join('\n');
+  }
 }
 
 /** Paket 132: So heisst der Chef in Plantafeln — Einsatz der Geschaeftsleitung statt eines Mitarbeiters. */

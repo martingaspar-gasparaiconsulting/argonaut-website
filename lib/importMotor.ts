@@ -61,6 +61,8 @@ export const MOTOR_TABELLEN = [
   'bk_einheit', 'bk_abrechnung', 'reservierung_vorgang',
   // Paket 132: Umzug Schritt 4 — Handwerk & Handel
   'einsaetze', 'tickets', 'inventar', 'verleih_artikel',
+  // Paket 133: Umzug Schritt 4 Teil 2 — Lebensmittel, Kasse, Beratung, Land-/Forstwirtschaft
+  'lm_haccp_plan', 'lm_haccp', 'kassen_system', 'agentur_retainer', 'schlag_duengung', 'forst_objekte', 'forst_baeume',
 ] as const;
 
 // ---------------------------------------------------------------------------
