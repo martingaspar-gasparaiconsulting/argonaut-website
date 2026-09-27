@@ -47,6 +47,8 @@ export const MOTOR_TABELLEN = [
   'kontakte', 'lieferanten', 'artikel', 'rechnungen',
   // Schritt 3 (Paket 125)
   'leistungskatalog', 'wartungsvertraege', 'verkaufschancen', 'kontakt_aktivitaeten', 'leads',
+  // Schritt 3 Teil 2 (Paket 126)
+  'mitarbeiter', 'auftraege', 'projekte', 'vertraege', 'anlagegueter', 'fahrzeuge', 'eingangsbelege',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -161,6 +163,7 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'kunde_verweis') { (basis.kundeVerweis && vorhanden.has(basis.kundeVerweis.spalte) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'filter') { felder.push(f); continue; }
     if (f.virtuell === 'preis') { (vorhanden.has('stundensatz_netto') || vorhanden.has('einheitspreis_netto') ? felder : fehlend).push(f); continue; }
     if (nutzbar(f.key)) {
       const c = vorhanden.get(f.key)!;
@@ -170,8 +173,9 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
 
   const bekannt = new Set(basis.felder.map((f) => f.key));
   const zusatz: ZielFeld[] = [];
+  const aus = new Set(basis.ausblenden ?? []);
   for (const c of eigene) {
-    if (bekannt.has(c.spalte) || SYSTEM_SPALTEN.has(c.spalte) || c.generiert) continue;
+    if (bekannt.has(c.spalte) || SYSTEM_SPALTEN.has(c.spalte) || c.generiert || aus.has(c.spalte)) continue;
     const typ = feldTypAusDb(c.datentyp);
     if (!typ) continue;
     zusatz.push({
@@ -204,10 +208,17 @@ export function istEinwilligungSpalte(spalte: string): boolean {
   return EINWILLIGUNG.test(normal(spalte));
 }
 
-/** Gesperrt aus Rechtsgruenden (Bank oder Werbe-Einwilligung) — mit Grund. */
-export function sperrGrund(spalte: string): string | null {
+/**
+ * Gesperrt aus Rechtsgruenden (Bank, Werbe-Einwilligung) oder weil das Ziel
+ * es verbietet (Mitarbeiter: Lohn, SV-/Steuernummer, Zugaenge) — mit Grund.
+ */
+export function sperrGrund(spalte: string, ziel?: Pick<ImportZiel, 'sperren'> | null): string | null {
   if (istBankSpalte(spalte)) return GRUND.bank;
   if (istEinwilligungSpalte(spalte)) return GRUND.einwilligung;
+  const n = normal(spalte);
+  for (const s of ziel?.sperren ?? []) {
+    if (new RegExp(`\\b(?:${s.muster})`).test(n)) return s.grund;
+  }
   return null;
 }
 
@@ -267,7 +278,7 @@ export function vorschlagMapping(
   const geraten = errateMappingFuer([...kopf], ziel, zusatzAliase(ziel.key, opt));
   const raus: Mapping = {};
   kopf.forEach((spalte, i) => {
-    if (sperrGrund(spalte)) { raus[spalte] = NICHT; return; }
+    if (sperrGrund(spalte, ziel)) { raus[spalte] = NICHT; return; }
     const feld = geraten[spalte];
     if (feld) { raus[spalte] = feld; return; }
     raus[spalte] = spalteLeer(zeilen, i) ? NICHT : EIGEN;
@@ -286,7 +297,7 @@ export function bereinigeMapping(kopf: readonly string[], mapping: Mapping, ziel
   const vergeben = new Set<string>();
   for (const spalte of kopf) {
     const wert = mapping[spalte] ?? NICHT;
-    if (sperrGrund(spalte)) { raus[spalte] = NICHT; continue; }
+    if (sperrGrund(spalte, ziel)) { raus[spalte] = NICHT; continue; }
     if (wert === EIGEN || wert === NICHT) { raus[spalte] = wert; continue; }
     if (!keys.has(wert) || vergeben.has(wert)) { raus[spalte] = EIGEN; continue; }
     raus[spalte] = wert; vergeben.add(wert);
@@ -324,7 +335,7 @@ export function spaltenBilanz(
 ): SpaltenBilanz {
   const eintraege: SpaltenEintrag[] = kopf.map((spalte, i) => {
     const wert = mapping[spalte];
-    const sperre = sperrGrund(spalte);
+    const sperre = sperrGrund(spalte, ziel);
     if (sperre) return { spalte, art: 'nicht', grund: sperre };
     if (wert === EIGEN) return { spalte, art: 'eigen', ziel: spalte };
     if (wert && wert !== NICHT) {
@@ -361,10 +372,10 @@ export function eigenTyp(werte: readonly string[]): 'text' | 'zahl' | 'datum' {
 }
 
 /** Welche Spalten werden Eigene Felder, mit geratenem Typ. */
-export function eigeneSpalten(kopf: readonly string[], zeilen: readonly string[][], mapping: Mapping): EigeneSpalte[] {
+export function eigeneSpalten(kopf: readonly string[], zeilen: readonly string[][], mapping: Mapping, ziel?: Pick<ImportZiel, 'sperren'> | null): EigeneSpalte[] {
   const raus: EigeneSpalte[] = [];
   kopf.forEach((spalte, index) => {
-    if (mapping[spalte] !== EIGEN || sperrGrund(spalte)) return;
+    if (mapping[spalte] !== EIGEN || sperrGrund(spalte, ziel)) return;
     raus.push({ spalte, index, typ: eigenTyp(zeilen.map((z) => z[index] ?? '')) });
   });
   return raus;
@@ -420,7 +431,20 @@ export function eigenFeldTyp(typ: EigeneSpalte['typ']): 'text' | 'zahl' | 'datum
 export function erkennungsFelder(ziel: ImportZiel): string[] {
   const keys = new Set(ziel.felder.map((f) => f.key));
   const liste = ziel.schluesselFelder ?? (ziel.schluessel ? [ziel.schluessel] : []);
-  return liste.filter((k) => keys.has(k));
+  // „lieferant+belegnummer": nur, wenn es beide Spalten gibt
+  return liste.filter((k) => k.split('+').every((t) => keys.has(t)));
+}
+
+/** Die Datenbank-Spalten zu den Erkennungsfeldern (fuer das select). */
+export function erkennungsSpalten(felder: readonly string[]): string[] {
+  const raus: string[] = [];
+  for (const f of felder) for (const t of f.split('+')) if (!raus.includes(t)) raus.push(t);
+  return raus;
+}
+
+function erkennungsWert(z: Record<string, unknown>, f: string): string {
+  const teile = f.split('+').map((t) => String(z[t] ?? '').trim().toLowerCase());
+  return teile.every(Boolean) ? teile.join('|') : '';
 }
 
 /**
@@ -433,7 +457,7 @@ export function baueBestandIndex(zeilen: readonly Record<string, unknown>[], fel
     const id = z?.id;
     if (id === undefined || id === null) continue;
     for (const f of felder) {
-      const v = String(z[f] ?? '').trim().toLowerCase();
+      const v = erkennungsWert(z, f);
       if (v && !index.has(`${f}:${v}`)) index.set(`${f}:${v}`, String(id));
     }
   }
@@ -443,7 +467,7 @@ export function baueBestandIndex(zeilen: readonly Record<string, unknown>[], fel
 /** Den vorhandenen Eintrag zu einem Satz finden — ueber irgendein Erkennungsfeld. */
 export function findeImBestand(satz: Record<string, unknown>, felder: readonly string[], index: Map<string, string>): string | undefined {
   for (const f of felder) {
-    const v = String(satz[f] ?? '').trim().toLowerCase();
+    const v = erkennungsWert(satz, f);
     if (!v) continue;
     const id = index.get(`${f}:${v}`);
     if (id) return id;

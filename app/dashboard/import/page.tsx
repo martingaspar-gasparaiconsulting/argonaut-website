@@ -32,7 +32,7 @@ import {
   EIGEN, NICHT, MOTOR_TABELLEN, GRUND, eindeutigeKoepfe, katalogFuerZiel, vorschlagMapping, bereinigeMapping,
   spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
-  sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, type KundeRoh,
+  sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -287,6 +287,8 @@ export default function ImportCenterPage() {
   const [planEinheit, setPlanEinheit] = useState<MengenEinheit>('MB');
   const [jetzt, setJetzt] = useState(() => Date.now());
   const [ich, setIch] = useState<string | null>(null);
+  /** Schritt 3 Teil 2: angemeldet als Mitarbeiter (nicht Chef)? Dann keine „nur Chef"-Ziele. */
+  const [binMitarbeiter, setBinMitarbeiter] = useState(false);
   const [namen, setNamen] = useState<Record<string, string>>({});
 
   // --- Schritt 2: Feldkatalog aus der Datenbank, Altsysteme -----------------
@@ -423,6 +425,10 @@ export default function ImportCenterPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       setIch(data?.user?.id ?? null);
+      try {
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        setBinMitarbeiter(typeof chef === 'string' && !!chef && chef !== data?.user?.id);
+      } catch { /* dann eben wie Chef — die Datenbank-Regeln schuetzen trotzdem */ }
       const { data: ma } = await supabase.from('mitarbeiter').select('auth_user_id, vorname, nachname');
       const n: Record<string, string> = {};
       for (const m of ((ma ?? []) as { auth_user_id: string | null; vorname: string | null; nachname: string | null }[])) {
@@ -819,7 +825,7 @@ export default function ImportCenterPage() {
           // Dynamische Spaltennamen kann der Supabase-Typparser nicht aufloesen —
           // deshalb der Umweg ueber unknown.
           const { data: alt, error } = await supabase.from(ziel.tabelle)
-            .select(`id,${erkennung.join(',')}`).order('id').range(von, von + LESE_SEITE - 1);
+            .select(`id,${erkennungsSpalten(erkennung).join(',')}`).order('id').range(von, von + LESE_SEITE - 1);
           if (error) throw new Error('Abgleich mit den vorhandenen Einträgen fehlgeschlagen: ' + error.message);
           const liste = (alt ?? []) as unknown as Record<string, unknown>[];
           alle.push(...liste);
@@ -831,7 +837,7 @@ export default function ImportCenterPage() {
       // Schritt 2: Eigene Felder vorbereiten — vorhandene wiederfinden, neue anlegen.
       // Klappt das nicht (fehlende Rechte o. Ae.), wandern die Werte in die
       // Notizen: verschluckt wird nichts.
-      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping);
+      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel);
       const feldIdJeSpalte: Record<string, string> = {};
       const modul = ziel.eigeneFelderModul ?? ziel.key;
       const notizFeld = ziel.felder.some((f) => f.key === 'notizen');
@@ -1277,7 +1283,8 @@ export default function ImportCenterPage() {
           <div style={styles.zielGrid}>
             {ZIELE.map((z) => {
               // Schritt 3: neue Ziele erst, wenn die Datenbank sie kennt (SQL p125).
-              const bereit = !z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle);
+              const mitKatalog = !z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle);
+              const bereit = mitKatalog && !(z.nurChef && binMitarbeiter);
               return (
                 <button
                   key={z.key} type="button" onClick={() => bereit && zielWaehlen(z.key)} disabled={!bereit}
@@ -1291,7 +1298,8 @@ export default function ImportCenterPage() {
                   <div style={{ fontSize: 22 }}>{z.icon}</div>
                   <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>{z.label}</div>
                   <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
-                  {!bereit && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update „p125-import-schritt3“.</div>}
+                  {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update „p126-import-schritt3b“.</div>}
+                  {mitKatalog && z.nurChef && binMitarbeiter && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Diese Daten importiert nur die Geschäftsleitung.</div>}
                 </button>
               );
             })}
@@ -1393,7 +1401,7 @@ export default function ImportCenterPage() {
                   {datei.kopf.map((spalte, i) => {
                     const leer = spalteLeer(datei.zeilen, i);
                     // Leere Spalten nur auf Wunsch zeigen — bei DATEV sind es Hunderte.
-                    const sperre = sperrGrund(spalte);
+                    const sperre = sperrGrund(spalte, ziel);
                     if (leer && !spaltenOffen && !sperre) return null;
                     const beispiele = istBankSpalte(spalte) ? [] : datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
                     const gewaehlt = mapping[spalte] ?? '';

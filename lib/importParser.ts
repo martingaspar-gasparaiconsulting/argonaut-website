@@ -476,7 +476,7 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter';
   /**
    * Schritt 3: bei virtuell 'anhang' — an welches Textfeld der Wert als
    * „Label: Wert" angehaengt wird (z. B. Bearbeiter an den Inhalt einer
@@ -526,6 +526,24 @@ export type ImportZiel = {
   kundeVerweis?: { spalte: string; firmaSpalte?: string; pflicht?: boolean; ausFeldern?: string[]; textSuche?: string[] };
   /** Wohin nach dem Import geschaut wird. */
   ergebnisHref?: string;
+  /**
+   * Schritt 3 Teil 2: Datenbank-Spalten, die der Katalog NICHT als Feld
+   * anbieten darf (Rechte, Zugaenge, Spalten einer anderen Nutzung derselben
+   * Tabelle).
+   */
+  ausblenden?: string[];
+  /**
+   * Spalten, die in diesem Ziel gesperrt sind — `muster` ist ein regulaerer
+   * Ausdruck auf den vereinheitlichten Spaltennamen (siehe normal()).
+   */
+  sperren?: { muster: string; grund: string }[];
+  /** Nur der Chef darf diese Daten anlegen (die Datenbank-Regeln verlangen es ohnehin). */
+  nurChef?: boolean;
+  /**
+   * Zeilen mit diesem Wert in einem Filterfeld fallen mit Grund heraus —
+   * z. B. „Angebot" in einer gemischten Auftrags-/Angebotsliste.
+   */
+  ablehnenWenn?: { feld: string; werte: string[]; grund: string };
   felder: ZielFeld[];
 };
 
@@ -775,6 +793,198 @@ export const ZIELE: ImportZiel[] = [
       { key: 'lead_nummer', label: 'Lead-Nr. (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['lead-nr', 'lead nr', 'leadnummer', 'anfrage nr'] },
       { key: 'eingang_am', label: 'Eingang am (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['eingang am', 'eingang', 'eingegangen', 'anfrage vom', 'create date'] },
       { key: 'budget', label: 'Budget (in die Nachricht)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachricht', nichtInVorlage: true, alias: ['budget', 'budget geschaetzt', 'budget (geschätzt)'] },
+    ],
+  },
+  {
+    key: 'mitarbeiter',
+    label: 'Mitarbeiter (nur Chef)',
+    icon: '👷',
+    tabelle: 'mitarbeiter',
+    beschreibung: 'Stammdaten Ihres Teams: Name, Kontakt, Tätigkeit, Eintritt, Wochenstunden, Urlaubsanspruch. Ohne Zugänge, ohne Lohn- und Bankdaten.',
+    schluessel: 'email',
+    schluesselFelder: ['email', 'vorname+nachname'],
+    eigeneFelderModul: 'mitarbeiter',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/personal',
+    ausblenden: ['auth_user_id', 'rolle', 'nutzer_typ', 'darf_verteilen', 'darf_abrechnen', 'leitungsrolle', 'sv_nummer', 'steuer_id', 'iban', 'notfall_kontakt'],
+    sperren: [
+      { muster: '(sv|sozialversicherung)', grund: 'Sozialversicherungs- und Steuernummern übernimmt ARGONAUT nicht aus einer Datei — die tragen Sie in der Personalakte ein.' },
+      { muster: '(steuer id|steuerid|steuer identifikation|identifikationsnummer|steuerklasse)', grund: 'Sozialversicherungs- und Steuernummern übernimmt ARGONAUT nicht aus einer Datei — die tragen Sie in der Personalakte ein.' },
+      { muster: '(brutto|lohn|gehalt|verguetung|stundenlohn|entgelt)', grund: 'Lohn- und Gehaltsdaten gehören ins Lohnprogramm und werden nicht importiert.' },
+      { muster: '(login|zugang|passwort|kennwort|benutzer|rolle|recht)', grund: 'Zugänge und Rechte richten Sie unter Personal mit „Einladen" ein — nie aus einer Datei.' },
+    ],
+    felder: [
+      { key: 'vorname', label: 'Vorname', typ: 'text', pflicht: true, alias: ['vorname', 'first name'] },
+      { key: 'nachname', label: 'Nachname', typ: 'text', pflicht: true, alias: ['nachname', 'name', 'last name', 'familienname'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e-mail-adresse'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'mobil', 'handy', 'telefonnummer'] },
+      { key: 'position', label: 'Tätigkeit / Position', typ: 'text', alias: ['position', 'taetigkeit', 'tätigkeit', 'funktion', 'beruf', 'stelle', 'job title'] },
+      { key: 'abteilung', label: 'Abteilung', typ: 'text', alias: ['abteilung', 'bereich', 'team', 'kostenstelle'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · inaktiv · beurlaubt', alias: ['status'] },
+      { key: 'eintrittsdatum', label: 'Eintritt', typ: 'datum', alias: ['eintritt', 'eintrittsdatum', 'beschaeftigt seit', 'seit', 'start'] },
+      { key: 'austrittsdatum', label: 'Austritt', typ: 'datum', alias: ['austritt', 'austrittsdatum', 'ausgeschieden am'] },
+      { key: 'geburtsdatum', label: 'Geburtsdatum', typ: 'datum', alias: ['geburtsdatum', 'geboren', 'geburtstag'] },
+      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'wohnort'] },
+      { key: 'wochenstunden', label: 'Wochenstunden', typ: 'zahl', alias: ['wochenstunden', 'stunden pro woche', 'arbeitszeit', 'sollstunden'] },
+      { key: 'arbeitszeit_modell', label: 'Arbeitszeitmodell', typ: 'text', hinweis: 'vollzeit · teilzeit · minijob · midijob', alias: ['arbeitszeit_modell', 'arbeitszeitmodell', 'beschaeftigungsart', 'anstellung'] },
+      { key: 'urlaubsanspruch_tage', label: 'Urlaubsanspruch (Tage)', typ: 'zahl', alias: ['urlaubsanspruch', 'urlaubstage', 'urlaub anspruch', 'jahresurlaub'] },
+    ],
+  },
+  {
+    key: 'auftraege',
+    label: 'Laufende Aufträge',
+    icon: '📋',
+    tabelle: 'auftraege',
+    beschreibung: 'Offene Aufträge mit Kunde, Zeitraum und Netto-Betrag. Angebote in derselben Liste werden aussortiert — die übernehmen wir gemeinsam.',
+    schluessel: 'auftragsnummer',
+    schluesselFelder: ['auftragsnummer'],
+    eigeneFelderModul: 'auftraege',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', firmaSpalte: 'firma_id' },
+    ergebnisHref: '/dashboard/auftraege',
+    ablehnenWenn: { feld: 'belegart', werte: ['angebot', 'angebote', 'kostenvoranschlag', 'quote', 'offer'], grund: 'Das ist ein Angebot. Angebote übernehmen wir gemeinsam mit Ihnen (eigener Schritt) — diese Zeile bleibt in Ihrer Datei.' },
+    felder: [
+      { key: 'auftragsnummer', label: 'Auftragsnummer', typ: 'text', hinweis: 'Leer: ARGONAUT vergibt AU-Jahr-Nummer.', alias: ['auftragsnummer', 'auftragsnr', 'nummer', 'nr', 'auftrag nr', 'order number'] },
+      { key: 'belegart', label: 'Art (Auftrag/Angebot)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['art', 'belegart', 'typ', 'dokumentart'] },
+      KUNDE_FELD,
+      KUNDE_NR_FELD,
+      { key: 'titel', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['titel', 'bezeichnung', 'betreff', 'leistung', 'projekt', 'auftrag'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'beauftragt', hinweis: 'entwurf · beauftragt · in_bearbeitung · abgeschlossen · storniert', alias: ['status', 'auftragsstatus'] },
+      { key: 'auftragsdatum', label: 'Beginn / Auftragsdatum', typ: 'datum', alias: ['auftragsdatum', 'von', 'beginn', 'start', 'datum', 'auftrag vom'] },
+      { key: 'lieferdatum', label: 'Ende / Liefertermin', typ: 'datum', alias: ['lieferdatum', 'bis', 'bis gueltig bis', 'bis / gültig bis', 'ende', 'fertigstellung', 'liefertermin'] },
+      { key: 'netto_summe', label: 'Betrag netto', typ: 'zahl', alias: ['betrag netto', 'netto', 'auftragswert', 'summe netto', 'betrag', 'wert'] },
+      { key: 'stand', label: 'Stand (in die Notizen)', typ: 'text', virtuell: 'anhang', anhangAn: 'notizen', nichtInVorlage: true, alias: ['stand', 'fortschritt', 'erledigt', 'fertig %'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung', 'beschreibung'] },
+    ],
+  },
+  {
+    key: 'projekte',
+    label: 'Projekte / Baustellen',
+    icon: '🏗',
+    tabelle: 'projekte',
+    beschreibung: 'Laufende Projekte und Baustellen mit Zeitraum, Budget und Verantwortlichem.',
+    schluessel: 'name',
+    schluesselFelder: ['name'],
+    eigeneFelderModul: 'projekte',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/projekte',
+    felder: [
+      { key: 'name', label: 'Projektname', typ: 'text', pflicht: true, alias: ['name', 'projekt', 'projektname', 'baustelle', 'bezeichnung', 'titel'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'details', 'notiz', 'notizen'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · pausiert · abgeschlossen · abgebrochen', alias: ['status'] },
+      { key: 'prioritaet', label: 'Priorität', typ: 'text', standard: 'normal', hinweis: 'niedrig · normal · hoch · dringend', alias: ['prioritaet', 'priorität', 'prio', 'wichtigkeit'] },
+      { key: 'start_datum', label: 'Start', typ: 'datum', alias: ['start', 'start_datum', 'beginn', 'von', 'baubeginn'] },
+      { key: 'end_datum', label: 'Ende', typ: 'datum', alias: ['ende', 'end_datum', 'bis', 'fertigstellung', 'abnahme'] },
+      { key: 'budget', label: 'Budget', typ: 'zahl', alias: ['budget', 'auftragswert', 'volumen'] },
+      { key: 'verantwortlich', label: 'Verantwortlich', typ: 'text', alias: ['verantwortlich', 'bauleiter', 'projektleiter', 'zustaendig'] },
+    ],
+  },
+  {
+    key: 'vertraege',
+    label: 'Laufende Kosten & Verträge',
+    icon: '📑',
+    tabelle: 'vertraege',
+    beschreibung: 'Miete, Leasing, Versicherungen, Abos mit Kosten, Laufzeit und Kündigungsfrist — die Fristen-Ampel rechnet ab dem ersten Tag.',
+    schluessel: 'vertragsnummer',
+    schluesselFelder: ['vertragsnummer', 'bezeichnung+vertragspartner'],
+    eigeneFelderModul: 'vertraege',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/vertraege',
+    // Dieselbe Tabelle traegt die Betreiberkosten aus dem Command Center mit anderen Spalten.
+    ausblenden: ['anbieter', 'art', 'betrag', 'intervall', 'absetzbar_prozent', 'start_datum', 'ende_datum', 'notiz', 'aktiv', 'kuendigung_grund', 'kuendigung_am', 'kunde_id'],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'vertrag', 'titel', 'name', 'leistung'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', hinweis: 'z. B. Miete, Leasing, Versicherung, Wartung, Abo/Lizenz, Lieferant', alias: ['kategorie', 'art', 'vertragsart', 'typ'] },
+      { key: 'vertragspartner', label: 'Vertragspartner', typ: 'text', alias: ['vertragspartner', 'anbieter', 'partner', 'versicherer', 'vermieter', 'leasinggeber', 'lieferant'] },
+      { key: 'vertragsnummer', label: 'Vertragsnummer', typ: 'text', alias: ['vertragsnummer', 'vertragsnr', 'versicherungsnummer', 'kundennummer', 'nummer'] },
+      { key: 'beginn', label: 'Beginn', typ: 'datum', alias: ['beginn', 'start', 'vertragsbeginn', 'seit'] },
+      { key: 'ende', label: 'Ende', typ: 'datum', alias: ['ende', 'laufzeit bis', 'vertragsende', 'bis'] },
+      { key: 'kuendigungsfrist_tage', label: 'Kündigungsfrist (Tage)', typ: 'zahl', standard: 0, alias: ['kuendigungsfrist', 'kündigungsfrist', 'kuendigungsfrist tage', 'frist'] },
+      { key: 'auto_verlaengerung', label: 'Verlängert sich automatisch', typ: 'jaNein', alias: ['auto verlaengerung', 'verlaengert sich', 'automatische verlaengerung', 'stillschweigende verlaengerung'] },
+      { key: 'verlaengerung_monate', label: 'Verlängerung (Monate)', typ: 'zahl', alias: ['verlaengerung monate', 'verlaengerung', 'verlängerung'] },
+      { key: 'kosten_betrag', label: 'Kosten', typ: 'zahl', alias: ['kosten', 'betrag', 'beitrag', 'rate', 'miete', 'kosten betrag'] },
+      { key: 'kosten_intervall', label: 'Intervall', typ: 'text', standard: 'monatlich', hinweis: 'monatlich · quartalsweise · jaehrlich · einmalig', alias: ['intervall', 'zahlweise', 'turnus', 'kosten intervall'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · gekuendigt · beendet', alias: ['status'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'bemerkung', 'notiz'] },
+    ],
+  },
+  {
+    key: 'anlagegueter',
+    label: 'Anlagen (Anlagenverzeichnis)',
+    icon: '🏷',
+    tabelle: 'anlagegueter',
+    beschreibung: 'Anlagevermögen mit Anschaffung, Kosten und Nutzungsdauer — für die Abschreibung in der Buchhaltung.',
+    schluessel: 'bezeichnung',
+    schluesselFelder: ['bezeichnung+anschaffungsdatum'],
+    eigeneFelderModul: 'anlagegueter',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/anlagen',
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'anlage', 'wirtschaftsgut', 'gegenstand', 'name'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'anlagenklasse', 'gruppe', 'konto'] },
+      { key: 'anschaffungsdatum', label: 'Anschaffung', typ: 'datum', alias: ['anschaffungsdatum', 'anschaffung', 'kaufdatum', 'zugang', 'datum'] },
+      { key: 'anschaffungskosten', label: 'Anschaffungskosten netto', typ: 'zahl', alias: ['anschaffungskosten', 'ak', 'kaufpreis', 'anschaffungswert', 'netto'] },
+      { key: 'nutzungsdauer_jahre', label: 'Nutzungsdauer (Jahre)', typ: 'zahl', alias: ['nutzungsdauer', 'nd', 'nutzungsdauer jahre', 'jahre', 'afa jahre'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · verkauft · ausgemustert', alias: ['status'] },
+      { key: 'abgang_am', label: 'Abgang am', typ: 'datum', alias: ['abgang', 'abgang am', 'verkauft am', 'ausgemustert am'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'fahrzeuge',
+    label: 'Fuhrpark',
+    icon: '🚐',
+    tabelle: 'fahrzeuge',
+    beschreibung: 'Fahrzeuge mit Kennzeichen, TÜV, UVV, Versicherung und Kilometerstand — die Fristen erscheinen gleich in der Fahrzeugakte.',
+    schluessel: 'kennzeichen',
+    schluesselFelder: ['kennzeichen', 'fahrgestellnummer'],
+    eigeneFelderModul: 'fahrzeuge',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/erp/fuhrpark',
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'fahrzeug', 'modell', 'name', 'typbezeichnung'] },
+      { key: 'kennzeichen', label: 'Kennzeichen', typ: 'text', alias: ['kennzeichen', 'amtliches kennzeichen', 'kfz kennzeichen', 'plate'] },
+      { key: 'fahrzeugtyp', label: 'Fahrzeugtyp', typ: 'text', alias: ['fahrzeugtyp', 'typ', 'art', 'klasse'] },
+      { key: 'fahrgestellnummer', label: 'Fahrgestellnummer', typ: 'text', alias: ['fahrgestellnummer', 'fin', 'vin', 'fahrzeugidentnummer'] },
+      { key: 'erstzulassung', label: 'Erstzulassung', typ: 'datum', alias: ['erstzulassung', 'ez', 'zulassung'] },
+      { key: 'tuev_bis', label: 'TÜV bis', typ: 'datum', alias: ['tuev', 'tüv', 'tuev bis', 'hu', 'hauptuntersuchung'] },
+      { key: 'wartung_bis', label: 'Wartung bis', typ: 'datum', alias: ['wartung', 'wartung bis', 'inspektion', 'service faellig'] },
+      { key: 'versicherung_bis', label: 'Versicherung bis', typ: 'datum', alias: ['versicherung', 'versicherung bis'] },
+      { key: 'uvv_bis', label: 'UVV bis', typ: 'datum', alias: ['uvv', 'uvv bis', 'uvv pruefung'] },
+      { key: 'leasing_ende', label: 'Leasing-Ende', typ: 'datum', alias: ['leasing ende', 'leasingende', 'leasing bis'] },
+      { key: 'km_stand', label: 'Kilometerstand', typ: 'zahl', alias: ['km', 'km stand', 'kilometerstand', 'laufleistung'] },
+      { key: 'kraftstoff', label: 'Kraftstoff', typ: 'text', alias: ['kraftstoff', 'antrieb', 'treibstoff', 'fuel'] },
+      { key: 'tank_liter', label: 'Tankgröße (Liter)', typ: 'zahl', alias: ['tank', 'tankgroesse', 'tankinhalt', 'tank liter'] },
+      { key: 'fahrer_name', label: 'Fester Fahrer', typ: 'text', alias: ['fahrer', 'fester fahrer', 'fahrer name', 'nutzer'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung'] },
+      { key: 'aktiv', label: 'Aktiv', typ: 'jaNein', standard: true, alias: ['aktiv'] },
+    ],
+  },
+  {
+    key: 'eingangsbelege',
+    label: 'Eingangsrechnungen (Liste)',
+    icon: '📥',
+    tabelle: 'eingangsbelege',
+    beschreibung: 'Alte Eingangsrechnungen aus einer Liste (ohne Beleg-Datei) — für Übersicht, Auswertung und den Abgleich mit dem Konto.',
+    schluessel: 'belegnummer',
+    schluesselFelder: ['lieferant+belegnummer'],
+    eigeneFelderModul: 'eingangsbelege',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/eingangsbelege',
+    ausblenden: ['datei_pfad', 'datev_konto', 'datev_rahmen', 'einsatz_id', 'kennzeichen', 'bewirtung_anlass', 'bewirtung_teilnehmer'],
+    felder: [
+      { key: 'lieferant', label: 'Lieferant', typ: 'text', pflicht: true, alias: ['lieferant', 'kreditor', 'rechnungssteller', 'firma', 'name', 'vendor', 'supplier'] },
+      { key: 'belegnummer', label: 'Rechnungsnummer', typ: 'text', alias: ['belegnummer', 'rechnungsnummer', 'rechnungsnr', 'beleg nr', 'nummer', 'nr'] },
+      { key: 'belegdatum', label: 'Rechnungsdatum', typ: 'datum', alias: ['belegdatum', 'rechnungsdatum', 'datum'] },
+      { key: 'netto', label: 'Netto', typ: 'zahl', alias: ['netto', 'nettobetrag', 'betrag netto'] },
+      { key: 'ust_satz', label: 'USt-Satz %', typ: 'zahl', alias: ['ust satz', 'mwst satz', 'steuersatz', 'ust %', 'mwst %'] },
+      { key: 'ust_betrag', label: 'USt-Betrag', typ: 'zahl', alias: ['ust', 'ust betrag', 'mwst', 'mwst betrag', 'vorsteuer'] },
+      { key: 'brutto', label: 'Brutto', typ: 'zahl', alias: ['brutto', 'bruttobetrag', 'betrag', 'gesamt', 'rechnungsbetrag'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'kostenart', 'aufwand', 'gruppe'] },
+      { key: 'bezahlt_am', label: 'Bezahlt am', typ: 'datum', alias: ['bezahlt am', 'bezahlt', 'zahlungsdatum', 'ausgeglichen am'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'erfasst', hinweis: 'erfasst · geprueft · gebucht', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'buchungstext'] },
     ],
   },
 ];
@@ -1079,6 +1289,8 @@ export const GELDFELDER: readonly string[] = [
   'einkaufspreis', 'verkaufspreis',
   // Schritt 3: Preise und Werte der weiteren Ziele
   'preis', 'festpreis_netto', 'wert', 'betrag_netto',
+  // Schritt 3 Teil 2
+  'netto', 'ust_betrag', 'brutto', 'anschaffungskosten', 'kosten_betrag', 'budget_betrag',
 ];
 
 export type ZeilenOptionen = {
@@ -1122,6 +1334,15 @@ export function pruefeZeile(
   if (!ziel) return { werte: null, fehler: [{ zeile: nummer, feld: '', meldung: 'Unbekanntes Import-Ziel' }], warnungen };
   const abgelehnt = opt.ablehnen?.(zeile) ?? null;
   if (abgelehnt) return { werte: null, fehler: [{ zeile: nummer, feld: abgelehnt.feld, meldung: abgelehnt.grund }], warnungen };
+  // Schritt 3 Teil 2: Filterfeld des Ziels (z. B. Art = Angebot)
+  if (ziel.ablehnenWenn) {
+    const i = kopf.findIndex((sp) => mapping[sp] === ziel.ablehnenWenn!.feld);
+    const w = i >= 0 ? normal(zeile[i] ?? '') : '';
+    if (w && ziel.ablehnenWenn.werte.some((x) => normal(x) === w)) {
+      const label = ziel.felder.find((f) => f.key === ziel.ablehnenWenn!.feld)?.label ?? ziel.ablehnenWenn.feld;
+      return { werte: null, fehler: [{ zeile: nummer, feld: label, meldung: ziel.ablehnenWenn.grund }], warnungen };
+    }
+  }
   const dezimal = opt.dezimal ?? 'unbekannt';
   const heute = opt.heute ?? new Date();
 
@@ -1277,6 +1498,58 @@ function nachbereiten(
   }
 
   if (zielKey === 'leistungskatalog') leistungNachbereiten(werte, nummer, warnungen);
+  // Schritt 3 Teil 2
+  if (zielKey === 'mitarbeiter') {
+    aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
+    aufListe(werte, 'arbeitszeit_modell', ARBEITSZEIT, 'vollzeit', '', 'Arbeitszeitmodell', nummer, warnungen);
+  }
+  if (zielKey === 'auftraege') {
+    aufListe(werte, 'status', AUFTRAG_STATUS, 'beauftragt', 'notizen', 'Status', nummer, warnungen);
+    const netto = typeof werte.netto_summe === 'number' ? werte.netto_summe : null;
+    if (netto !== null && typeof werte.brutto_summe !== 'number') {
+      const satz = steuersatz;
+      werte.mwst_summe = centRunden(netto * satz / 100);
+      werte.brutto_summe = centRunden(netto + (werte.mwst_summe as number));
+      warnungen.push({ zeile: nummer, feld: 'MwSt', meldung: `Nur Netto geliefert — MwSt und Brutto mit ${satz} % gerechnet.` });
+    }
+  }
+  if (zielKey === 'projekte') {
+    aufListe(werte, 'status', PROJEKT_STATUS, 'aktiv', 'beschreibung', 'Status', nummer, warnungen);
+    aufListe(werte, 'prioritaet', PRIORITAET, 'normal', 'beschreibung', 'Priorität', nummer, warnungen);
+  }
+  if (zielKey === 'vertraege') {
+    aufListe(werte, 'kosten_intervall', INTERVALL, 'monatlich', 'notizen', 'Intervall', nummer, warnungen);
+    aufListe(werte, 'status', VERTRAG_STATUS, 'aktiv', 'notizen', 'Status', nummer, warnungen);
+  }
+  if (zielKey === 'anlagegueter') {
+    aufListe(werte, 'status', ANLAGE_STATUS, 'aktiv', 'notiz', 'Status', nummer, warnungen);
+    if (typeof werte.nutzungsdauer_jahre !== 'number' || werte.nutzungsdauer_jahre <= 0) {
+      warnungen.push({ zeile: nummer, feld: 'Nutzungsdauer', meldung: 'Keine Nutzungsdauer — die Datenbank setzt 1 Jahr. Bitte in den Anlagen korrigieren, sonst stimmt die Abschreibung nicht.' });
+      delete werte.nutzungsdauer_jahre;
+    }
+    if (werte.status !== 'aktiv' && !werte.abgang_am) {
+      warnungen.push({ zeile: nummer, feld: 'Abgang am', meldung: 'Verkauft/ausgemustert ohne Abgangsdatum — bitte in den Anlagen nachtragen.' });
+    }
+  }
+  if (zielKey === 'eingangsbelege') {
+    aufListe(werte, 'status', BELEG_STATUS, 'erfasst', 'notiz', 'Status', nummer, warnungen);
+    const n = typeof werte.netto === 'number' ? werte.netto : null;
+    const u = typeof werte.ust_betrag === 'number' ? werte.ust_betrag : null;
+    const b = typeof werte.brutto === 'number' ? werte.brutto : null;
+    const satz = typeof werte.ust_satz === 'number' ? werte.ust_satz : null;
+    if (b === null && n !== null) {
+      const ust = u ?? (satz !== null ? centRunden(n * satz / 100) : null);
+      if (ust !== null) { werte.ust_betrag = ust; werte.brutto = centRunden(n + ust); }
+    } else if (b !== null && n === null) {
+      const s2 = satz ?? steuersatz;
+      werte.netto = centRunden(b / (1 + s2 / 100));
+      werte.ust_betrag = centRunden(b - (werte.netto as number));
+      if (satz === null) warnungen.push({ zeile: nummer, feld: 'USt', meldung: `Nur Brutto geliefert — Netto und USt mit ${s2} % zurückgerechnet.` });
+    }
+    if (typeof werte.ust_satz !== 'number' && typeof werte.netto === 'number' && typeof werte.ust_betrag === 'number' && werte.netto !== 0) {
+      werte.ust_satz = Math.round((werte.ust_betrag / werte.netto) * 100);
+    }
+  }
   if (zielKey === 'verkaufschancen') {
     aufListe(werte, 'phase', PHASEN, 'erstkontakt', 'notizen', 'Phase', nummer, warnungen);
     if (typeof werte.wahrscheinlichkeit === 'number' && werte.wahrscheinlichkeit > 0 && werte.wahrscheinlichkeit <= 1) {
@@ -1360,6 +1633,7 @@ function aufListe(
   const n = normal(roh);
   const treffer = liste[n] ?? liste[n.replace(/\s+/g, '')];
   const merken = () => {
+    if (!textFeld) return;
     const alt = `${label} im Altsystem: ${roh.trim()}`;
     werte[textFeld] = typeof werte[textFeld] === 'string' && String(werte[textFeld]).trim() ? `${String(werte[textFeld]).trim()}\n${alt}` : alt;
   };
@@ -1368,10 +1642,30 @@ function aufListe(
     werte[feld] = treffer;
     return;
   }
-  warnungen.push({ zeile: nummer, feld: label, meldung: `"${roh}" ist kein bekannter Wert — auf "${standard}" gesetzt (der alte Wert steht im Text)` });
+  warnungen.push({ zeile: nummer, feld: label, meldung: `"${roh}" ist kein bekannter Wert — auf "${standard}" gesetzt` + (textFeld ? ' (der alte Wert steht im Text)' : ' (bitte prüfen)') });
   merken();
   werte[feld] = standard;
 }
+
+/** Schritt 3 Teil 2: Wertelisten (am Code belegt, Quelle je Liste). */
+export const MA_STATUS: Record<string, string> = { aktiv: 'aktiv', beschaeftigt: 'aktiv', inaktiv: 'inaktiv', ausgeschieden: 'inaktiv', ausgetreten: 'inaktiv', beurlaubt: 'beurlaubt', elternzeit: 'beurlaubt', ruhend: 'beurlaubt' };
+export const ARBEITSZEIT: Record<string, string> = { vollzeit: 'vollzeit', vz: 'vollzeit', teilzeit: 'teilzeit', tz: 'teilzeit', minijob: 'minijob', geringfuegig: 'minijob', '520': 'minijob', '538': 'minijob', midijob: 'midijob', uebergangsbereich: 'midijob' };
+export const AUFTRAG_STATUS: Record<string, string> = {
+  entwurf: 'entwurf', beauftragt: 'beauftragt', auftrag: 'beauftragt', erteilt: 'beauftragt', offen: 'beauftragt', angenommen: 'beauftragt',
+  in_bearbeitung: 'in_bearbeitung', 'in bearbeitung': 'in_bearbeitung', laufend: 'in_bearbeitung', 'in arbeit': 'in_bearbeitung', begonnen: 'in_bearbeitung',
+  abgeschlossen: 'abgeschlossen', fertig: 'abgeschlossen', erledigt: 'abgeschlossen', storniert: 'storniert', abgebrochen: 'storniert',
+};
+export const PROJEKT_STATUS: Record<string, string> = { aktiv: 'aktiv', laufend: 'aktiv', offen: 'aktiv', 'in arbeit': 'aktiv', pausiert: 'pausiert', ruht: 'pausiert', abgeschlossen: 'abgeschlossen', fertig: 'abgeschlossen', erledigt: 'abgeschlossen', abgebrochen: 'abgebrochen', storniert: 'abgebrochen' };
+export const PRIORITAET: Record<string, string> = { niedrig: 'niedrig', gering: 'niedrig', low: 'niedrig', normal: 'normal', mittel: 'normal', medium: 'normal', hoch: 'hoch', high: 'hoch', dringend: 'dringend', urgent: 'dringend', 'sehr hoch': 'dringend' };
+export const INTERVALL: Record<string, string> = {
+  monatlich: 'monatlich', monat: 'monatlich', mtl: 'monatlich', monthly: 'monatlich',
+  quartalsweise: 'quartalsweise', quartal: 'quartalsweise', vierteljaehrlich: 'quartalsweise', quarterly: 'quartalsweise',
+  jaehrlich: 'jaehrlich', jahr: 'jaehrlich', 'p a': 'jaehrlich', jaehrl: 'jaehrlich', yearly: 'jaehrlich', annual: 'jaehrlich',
+  einmalig: 'einmalig', once: 'einmalig',
+};
+export const VERTRAG_STATUS: Record<string, string> = { aktiv: 'aktiv', laufend: 'aktiv', gekuendigt: 'gekuendigt', beendet: 'beendet', abgelaufen: 'beendet' };
+export const ANLAGE_STATUS: Record<string, string> = { aktiv: 'aktiv', 'im bestand': 'aktiv', verkauft: 'verkauft', veraeussert: 'verkauft', ausgemustert: 'ausgemustert', verschrottet: 'ausgemustert', abgang: 'ausgemustert' };
+export const BELEG_STATUS: Record<string, string> = { erfasst: 'erfasst', offen: 'erfasst', neu: 'erfasst', geprueft: 'geprueft', freigegeben: 'geprueft', gebucht: 'gebucht', verbucht: 'gebucht' };
 
 /** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */
 const MENGEN_EINHEIT: Record<string, string> = {
@@ -1493,6 +1787,7 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
 
   // 'preis' rechnet nachbereiten() um (Stundensatz oder Einheitspreis) und entfernt es dort.
   for (const f of virtuelle) if (f.virtuell !== 'preis') delete werte[f.key];
+  // Filterfelder sind nur zum Aussortieren da (siehe ablehnenWenn).
 }
 
 /** Alle Erkennungs-Werte eines Satzes als „feld:wert" (klein, getrimmt). */
@@ -1500,8 +1795,9 @@ export function schluesselWerte(satz: Record<string, unknown>, ziel: ImportZiel)
   const felder = ziel.schluesselFelder ?? (ziel.schluessel ? [ziel.schluessel] : []);
   const raus: string[] = [];
   for (const f of felder) {
-    const v = String(satz[f] ?? '').trim().toLowerCase();
-    if (v) raus.push(`${f}:${v}`);
+    // Schritt 3 Teil 2: „lieferant+belegnummer" = beide zusammen erkennen
+    const teile = f.split('+').map((t) => String(satz[t] ?? '').trim().toLowerCase());
+    if (teile.every(Boolean)) raus.push(`${f}:${teile.join('|')}`);
   }
   return raus;
 }
