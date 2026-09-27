@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { EigeneFelderAnzeige, ladeFelder, ladeWerte } from "../../../_components/EigeneFelder";
+import type { EigenesFeld } from "@/lib/eigeneFelder";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E4 Lieferanten-Detailseite
@@ -85,6 +87,9 @@ export default function LieferantDetail() {
   const [form, setForm] = useState<FormState | null>(null);
   const [speichern, setSpeichern] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // Paket 127: Eigene Felder (z. B. aus dem Lieferanten-Import) sichtbar machen.
+  const [eigeneFelder, setEigeneFelder] = useState<EigenesFeld[]>([]);
+  const [eigeneWerte, setEigeneWerte] = useState<Record<string, string> | undefined>(undefined);
 
   useEffect(() => {
     lade();
@@ -106,6 +111,11 @@ export default function LieferantDetail() {
       .eq("lieferant_id", lieferantId)
       .order("bezeichnung", { ascending: true });
     setArtikel((art as ArtikelKurz[]) ?? []);
+    try {
+      const felder = await ladeFelder("lieferanten");
+      setEigeneFelder(felder);
+      if (felder.length > 0) setEigeneWerte((await ladeWerte("lieferanten", [lieferantId]))[lieferantId]);
+    } catch { /* ohne Eigene Felder weiter */ }
     setLaden(false);
   }
 
@@ -381,6 +391,14 @@ export default function LieferantDetail() {
             {lieferant.notizen || "Keine Notizen hinterlegt."}
           </div>
         </div>
+
+        {/* Paket 127: Eigene Felder (nur wenn welche gefuellt sind) */}
+        {eigeneFelder.some((f) => (eigeneWerte?.[f.id] ?? "").trim() !== "") && (
+          <div style={card}>
+            <h3 style={{ margin: "0 0 10px", fontSize: 'clamp(16px, 1.38vw, 22px)' }}>Eigene Felder</h3>
+            <EigeneFelderAnzeige felder={eigeneFelder} werte={eigeneWerte} />
+          </div>
+        )}
       </div>
 
       {/* Artikel dieses Lieferanten */}

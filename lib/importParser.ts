@@ -476,7 +476,13 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position';
+  /**
+   * Paket 127: bei virtuell 'position' — die Spalte in der Positionen-Tabelle
+   * (ziel.kinder.tabelle). null = nur zur Kontrolle (z. B. Gesamtpreis, der
+   * aus Menge x Einzelpreis nachgerechnet wird).
+   */
+  positionSpalte?: string | null;
   /**
    * Schritt 3: bei virtuell 'anhang' — an welches Textfeld der Wert als
    * „Label: Wert" angehaengt wird (z. B. Bearbeiter an den Inhalt einer
@@ -523,7 +529,25 @@ export type ImportZiel = {
    * `textSuche`: Felder, in denen eine bekannte Kundennummer stehen kann
    * („Kunde K-1008 …" in den Notizen einer Offenen-Posten-Liste).
    */
-  kundeVerweis?: { spalte: string; firmaSpalte?: string; pflicht?: boolean; ausFeldern?: string[]; textSuche?: string[] };
+  kundeVerweis?: {
+    spalte: string; firmaSpalte?: string; pflicht?: boolean; ausFeldern?: string[]; textSuche?: string[];
+    /**
+     * Paket 127: WORAUF verwiesen wird. Standard: die Kunden (kontakte).
+     * 'mitarbeiter' (Qualifikationen: ueber Personalnummer als Eigenes Feld,
+     * E-Mail oder Namen), 'lieferanten' (Bestellungen).
+     */
+    quelle?: 'kontakte' | 'mitarbeiter' | 'lieferanten';
+    /** Anzeige: „Mitarbeiter", „Lieferant" (Standard „Kunde"). */
+    label?: string;
+    /** Anzeige Mehrzahl: „die Mitarbeiter" (Standard „die Kunden"). */
+    mehrzahl?: string;
+  };
+  /**
+   * Paket 127: Eine Datei-Zeile ist eine POSITION; Zeilen mit gleichem
+   * Kopf-Feld (Bestellnummer) werden zu einem Beleg gruppiert. Die Positionen
+   * landen in kinder.tabelle, verknuepft ueber kinder.fremdschluessel.
+   */
+  kinder?: { tabelle: string; fremdschluessel: string; kopfFeld: string };
   /** Wohin nach dem Import geschaut wird. */
   ergebnisHref?: string;
   /**
@@ -987,6 +1011,75 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'buchungstext'] },
     ],
   },
+  // --- Paket 127: Schritt 3 Rest ---------------------------------------------
+  {
+    key: 'mitarbeiter_qualifikation',
+    label: 'Qualifikationen (nur Chef)',
+    icon: '🎓',
+    tabelle: 'mitarbeiter_qualifikation',
+    beschreibung: 'Befähigungen und Schulungen je Mitarbeiter mit „gültig bis" — erscheinen gleich in der Dispo mit Ampel. Vorher die Mitarbeiter importieren.',
+    // Erkennung im Bestand: Mitarbeiter + Art (so ist die Tabelle eindeutig).
+    // „__kunde+art" erkennt Doppelte INNERHALB der Datei, bevor verknuepft ist.
+    schluesselFelder: ['mitarbeiter_id+art', '__kunde+art'],
+    nurMitKatalog: true,
+    nurChef: true,
+    kundeVerweis: { spalte: 'mitarbeiter_id', pflicht: true, quelle: 'mitarbeiter', label: 'Mitarbeiter', mehrzahl: 'die Mitarbeiter' },
+    ergebnisHref: '/dashboard/dispo/qualifikationen',
+    felder: [
+      {
+        key: 'kunde', label: 'Mitarbeiter (Name oder E-Mail)', typ: 'text', virtuell: 'kunde_verweis',
+        hinweis: 'Wird mit Ihren Mitarbeitern verknüpft — über Personalnummer, E-Mail oder den genauen Namen.',
+        alias: ['name', 'mitarbeiter', 'mitarbeitername', 'mitarbeiter name', 'person', 'e-mail', 'email', 'employee'],
+      },
+      {
+        key: 'kunde_nummer', label: 'Personalnummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true,
+        alias: ['personalnummer', 'personalnr', 'pers nr', 'pers-nr', 'persnr', 'mitarbeiternummer', 'ma nr', 'ma-nr', 'employee id', 'employee number'],
+      },
+      { key: 'art', label: 'Qualifikation', typ: 'text', pflicht: true, hinweis: 'Bekannte Befähigungen (z. B. Elektrofachkraft, Ersthelfer) werden für die Dispo erkannt; alle anderen bleiben mit ihrem Namen erhalten.', alias: ['qualifikation', 'befaehigung', 'schulung', 'zertifikat', 'nachweis art', 'art', 'bezeichnung', 'qualification', 'certificate'] },
+      { key: 'gueltig_bis', label: 'Gültig bis', typ: 'datum', alias: ['gueltig bis', 'gültig bis', 'ablauf', 'ablaufdatum', 'befristet bis', 'naechste pruefung', 'valid until', 'expires'] },
+      { key: 'nachweis', label: 'Nachweis / Bemerkung', typ: 'text', alias: ['nachweis', 'bemerkung', 'notiz', 'aussteller', 'zertifikatsnummer'] },
+      { key: 'erworben', label: 'Erworben am (in den Nachweis)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachweis', nichtInVorlage: true, alias: ['erworben', 'erworben am', 'ausgestellt', 'ausgestellt am', 'datum', 'schulungsdatum', 'seit'] },
+      { key: 'quali_status', label: 'Status im Altsystem (in den Nachweis)', typ: 'text', virtuell: 'anhang', anhangAn: 'nachweis', nichtInVorlage: true, alias: ['status'] },
+    ],
+  },
+  {
+    key: 'bestellungen',
+    label: 'Bestellungen mit Positionen',
+    icon: '🛒',
+    tabelle: 'bestellungen',
+    beschreibung: 'Offene und gelieferte Bestellungen bei Lieferanten — eine Zeile je Position, gleiche Bestellnummer = eine Bestellung. Vorher Lieferanten und Artikel importieren.',
+    // Keine Doppelten-Pruefung je Zeile: mehrere Zeilen mit derselben
+    // Bestellnummer sind hier gewollt (Positionen). Erkannt wird je Bestellung.
+    schluesselFelder: [],
+    eigeneFelderModul: 'bestellungen',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'lieferant_id', quelle: 'lieferanten', label: 'Lieferant', mehrzahl: 'die Lieferanten' },
+    kinder: { tabelle: 'bestellpositionen', fremdschluessel: 'bestellung_id', kopfFeld: 'bestellnummer' },
+    ergebnisHref: '/dashboard/erp/bestellungen',
+    felder: [
+      { key: 'bestellnummer', label: 'Bestellnummer', typ: 'text', pflicht: true, hinweis: 'Zeilen mit gleicher Nummer werden eine Bestellung.', alias: ['bestellnummer', 'bestellnr', 'bestell nr', 'best nr', 'bestellung', 'bestellung nr', 'einkaufsnummer', 'order number', 'po number', 'purchase order'] },
+      { key: 'bestelldatum', label: 'Bestelldatum', typ: 'datum', alias: ['bestelldatum', 'bestellt am', 'datum', 'order date'] },
+      { key: 'lieferdatum_erwartet', label: 'Liefertermin', typ: 'datum', alias: ['liefertermin', 'lieferdatum', 'erwartet', 'lieferung erwartet', 'wunschtermin', 'delivery date'] },
+      {
+        key: 'kunde', label: 'Lieferant (Name oder E-Mail)', typ: 'text', virtuell: 'kunde_verweis',
+        hinweis: 'Wird mit Ihren Lieferanten verknüpft — über Lieferantennummer, E-Mail oder den genauen Namen.',
+        alias: ['lieferant', 'lieferantenname', 'lieferant name', 'kreditor name', 'firma', 'supplier', 'vendor'],
+      },
+      {
+        key: 'kunde_nummer', label: 'Lieferantennummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true,
+        alias: ['lieferantennummer', 'lieferantennr', 'lieferanten nr', 'lief nr', 'kreditor', 'kreditorennummer', 'supplier number', 'vendor number'],
+      },
+      { key: 'status', label: 'Status', typ: 'text', hinweis: 'je Position: bestellt · teilgeliefert · geliefert · storniert — der Status der Bestellung ergibt sich daraus', alias: ['status', 'bestellstatus', 'positionsstatus', 'lieferstatus'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung', 'kommentar'] },
+      { key: 'artikelnummer', label: 'Artikelnummer (Position)', typ: 'text', virtuell: 'position', positionSpalte: null, hinweis: 'Wird mit Ihren Artikeln verknüpft.', alias: ['artikelnummer', 'artikelnr', 'artikel nr', 'art nr', 'materialnummer', 'sku', 'item number'] },
+      { key: 'bezeichnung', label: 'Bezeichnung (Position)', typ: 'text', virtuell: 'position', positionSpalte: 'bezeichnung', alias: ['bezeichnung', 'artikel', 'artikelbezeichnung', 'text', 'beschreibung', 'produkt', 'description'] },
+      { key: 'menge', label: 'Menge (Position)', typ: 'zahl', pflicht: true, virtuell: 'position', positionSpalte: 'menge', alias: ['menge', 'anzahl', 'bestellmenge', 'stueck', 'qty', 'quantity'] },
+      { key: 'einheit', label: 'Einheit (Position)', typ: 'text', virtuell: 'position', positionSpalte: null, hinweis: 'Kommt vom Artikel; ohne Artikel steht sie in der Bezeichnung.', alias: ['einheit', 'me', 'mengeneinheit', 'unit'] },
+      { key: 'einzelpreis', label: 'Einzelpreis netto (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'einzelpreis', alias: ['einzelpreis', 'ek', 'ek preis', 'stueckpreis', 'einkaufspreis', 'preis', 'unit price'] },
+      { key: 'gesamt_netto', label: 'Gesamt netto (Kontrolle)', typ: 'zahl', virtuell: 'position', positionSpalte: null, hinweis: 'Wird mit Menge × Einzelpreis verglichen.', alias: ['gesamt netto', 'gesamt', 'gesamtpreis', 'positionswert', 'summe', 'betrag netto', 'netto'] },
+      { key: 'menge_geliefert', label: 'Bereits geliefert (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge_geliefert', alias: ['geliefert', 'gelieferte menge', 'menge geliefert', 'erhalten', 'eingegangen'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -1291,6 +1384,8 @@ export const GELDFELDER: readonly string[] = [
   'preis', 'festpreis_netto', 'wert', 'betrag_netto',
   // Schritt 3 Teil 2
   'netto', 'ust_betrag', 'brutto', 'anschaffungskosten', 'kosten_betrag', 'budget_betrag',
+  // Paket 127: Bestellpositionen
+  'einzelpreis', 'gesamt_netto',
 ];
 
 export type ZeilenOptionen = {
@@ -1498,6 +1593,8 @@ function nachbereiten(
   }
 
   if (zielKey === 'leistungskatalog') leistungNachbereiten(werte, nummer, warnungen);
+  // Paket 127
+  if (zielKey === 'mitarbeiter_qualifikation') qualiNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -1667,6 +1764,54 @@ export const VERTRAG_STATUS: Record<string, string> = { aktiv: 'aktiv', laufend:
 export const ANLAGE_STATUS: Record<string, string> = { aktiv: 'aktiv', 'im bestand': 'aktiv', verkauft: 'verkauft', veraeussert: 'verkauft', ausgemustert: 'ausgemustert', verschrottet: 'ausgemustert', abgang: 'ausgemustert' };
 export const BELEG_STATUS: Record<string, string> = { erfasst: 'erfasst', offen: 'erfasst', neu: 'erfasst', geprueft: 'geprueft', freigegeben: 'geprueft', gebucht: 'gebucht', verbucht: 'gebucht' };
 
+/**
+ * Paket 127: Qualifikationen auf die Schluessel der Dispo (lib/dispoPlus.ts
+ * QUALIFIKATIONEN). Muster auf dem vereinheitlichten Text (normal()). Was
+ * nicht passt, bleibt mit seinem Namen als eigene Befaehigung erhalten.
+ */
+export const QUALI_MUSTER: [RegExp, string][] = [
+  [/\b(elektrofachkraft|efk)\b/, 'elektrofachkraft'],
+  [/\b(elektrotechnisch unterwiesen\w*|eup)\b/, 'eup'],
+  [/\b(gas|gasinstallation|installateurverzeichnis)\b/, 'gas'],
+  [/\b(kaeltemittel\w*|f gase|chemklimaschutzv)\b/, 'kaeltemittel'],
+  [/\b(trinkwasser\w*|vdi 6023)\b/, 'trinkwasser'],
+  [/\b(stapler\w*|gabelstapler|flurfoerderzeug\w*)\b/, 'stapler'],
+  [/\b(hubarbeitsbuehne\w*|arbeitsbuehne|hebebuehne|ipaf)\b/, 'hubarbeitsbuehne'],
+  [/\b(psa|absturzsicherung|psaga|auffanggurt)\b/, 'psa_absturz'],
+  [/\b(geruest\w*)\b/, 'geruest'],
+  [/\b(schweiss\w*)\b/, 'schweissen'],
+  [/\b(asbest\w*|trgs 519)\b/, 'asbest'],
+  [/\b(fuehrerschein (c|c1|ce|c1e)|klasse (c|c1|ce))\b/, 'fuehrerschein_c'],
+  [/\b(erste hilfe|ersthelfer\w*|betriebshelfer)\b/, 'erste_hilfe'],
+  [/\b(brandschutzhelfer\w*)\b/, 'brandschutzhelfer'],
+];
+
+/** Den Dispo-Schluessel zu einem Qualifikations-Text finden (oder null). */
+export function qualiSchluessel(text: string): string | null {
+  const n = normal(text);
+  if (!n) return null;
+  for (const [muster, key] of QUALI_MUSTER) if (muster.test(n)) return key;
+  return null;
+}
+
+function qualiNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const roh = String(werte.art ?? '').trim();
+  if (!roh) return;
+  const key = qualiSchluessel(roh);
+  if (key) {
+    werte.art = key;
+    // Der genaue Name aus dem Altsystem („Erste Hilfe (Betriebshelfer)") bleibt sichtbar.
+    const alt = `Bezeichnung im Altsystem: ${roh}`;
+    werte.nachweis = typeof werte.nachweis === 'string' && werte.nachweis.trim() ? `${werte.nachweis.trim()}\n${alt}` : alt;
+    return;
+  }
+  werte.art = roh.slice(0, 120);
+  warnungen.push({
+    zeile: nummer, feld: 'Qualifikation',
+    meldung: `„${roh}" ist keine Befähigung aus der Dispo-Liste — mit diesem Namen übernommen (in der Dispo sichtbar, aber nicht als Anforderung wählbar).`,
+  });
+}
+
 /** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */
 const MENGEN_EINHEIT: Record<string, string> = {
   stueck: 'Stück', 'stück': 'Stück', stk: 'Stück', st: 'Stück', pauschal: 'Stück', psch: 'Stück', pau: 'Stück',
@@ -1786,7 +1931,8 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
   }
 
   // 'preis' rechnet nachbereiten() um (Stundensatz oder Einheitspreis) und entfernt es dort.
-  for (const f of virtuelle) if (f.virtuell !== 'preis') delete werte[f.key];
+  // Paket 127: 'position' bleibt — gruppiereBestellungen() holt die Positionen heraus.
+  for (const f of virtuelle) if (f.virtuell !== 'preis' && f.virtuell !== 'position') delete werte[f.key];
   // Filterfelder sind nur zum Aussortieren da (siehe ablehnenWenn).
 }
 

@@ -224,3 +224,12 @@ Am Code-Stand `4cab5b5` gezählt (Stellen mit `.from('tabelle')`):
 | `import_laeufe` + `import_zeilen` / `import_jobs` | `import_laeufe` nur im alten CRM-Import, `import_zeilen` nirgends benutzt | Protokoll ist `import_jobs` |
 
 **Türen:** Der CRM-Import (`/dashboard/crm/import`) bleibt für das Zusammenführen ähnlicher Kontakte und zeigt jetzt auf das Import-Center. Lieferanten- und Preislisten-Import sind KI-Aufräumer für Rohtext (Schritt 5) und bleiben; daneben führt „📥 Datei importieren“ auf den Motor.
+
+## Nachtrag Paket 127 (Schritt 3 Rest, 27.09.2026)
+
+| Datei | Ziel | Import jetzt |
+|---|---|---|
+| Qualifikationen / Schulungen | `mitarbeiter_qualifikation` (Dispo-Befähigungen) | ✅ Import-Center, nur Chef. Verknüpfung mit dem Mitarbeiter über Personalnummer (Eigenes Feld aus dem Mitarbeiter-Import), E-Mail oder genauen Namen. Bekannte Befähigungen (Elektrofachkraft, Ersthelfer, Hubarbeitsbühne …) werden auf die Dispo-Liste gebracht, alle anderen bleiben mit ihrem Namen. |
+| Bestellungen mit Positionen | `bestellungen` + `bestellpositionen` (ERP-Bestellwesen) | ✅ Import-Center. Eine Zeile je Position, gleiche Bestellnummer = eine Bestellung; Lieferant aus `lieferanten`, Artikel über die Artikelnummer. |
+
+**Entscheidung Bestellungen:** Führend ist das Bestellwesen im ERP (`bestellungen`/`bestellpositionen`, Lieferant aus `lieferanten`) — dort landen Lieferanten- und Artikel-Import, Nachbestellung und Wareneingang. Das Einkaufs-Modul (`bestellung`/`bestellung_position`, Lieferant aus `lieferant`) bleibt unverändert; eine Zusammenführung wäre eine eigene Entscheidung.

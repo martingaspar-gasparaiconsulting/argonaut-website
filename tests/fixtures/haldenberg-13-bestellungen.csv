@@ -1,0 +1,46 @@
+﻿Bestellnummer;Bestelldatum;Lieferant;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamt netto;Status
+B-2026-0410;13.09.2026;Vollmann Licht- und Systemtechnik;B-8012;DALI-Gateway 64 Adressen;100;Stk;468,00;46.800,00;bestellt
+B-2026-0410;10.09.2026;Vollmann Licht- und Systemtechnik;B-5004;LED-Strahler 30 W mit Bewegungsmelder;10;Stk;28,90;289,00;bestellt
+B-2026-0410;15.09.2026;Vollmann Licht- und Systemtechnik;B-5002;LED-Panel 1200x300, 40 W, 4000 K;10;Stk;58,00;580,00;bestellt
+B-2026-0411;19.09.2026;Schaltgerätebau Ostermeier GmbH;V-8020;Zählerschrank 5-Feld mit Verteilerfeld, komplett;100;Stk;1.875,00;187.500,00;teilgeliefert
+B-2026-0411;22.09.2026;Schaltgerätebau Ostermeier GmbH;V-4005;FI/LS-Kombi 16 A / 30 mA;500;Stk;62,50;31.250,00;geliefert
+B-2026-0411;11.09.2026;Schaltgerätebau Ostermeier GmbH;V-8019;Zählerschrank 4-Feld, APZ, komplett;2;Stk;1.368,00;2.736,00;geliefert
+B-2026-0412;10.09.2026;Lichtmanufaktur Albrand;B-8011;Zentralbatterie-System 24 Kreise;500;Stk;6.840,00;3.420.000,00;bestellt
+B-2026-0412;12.09.2026;Lichtmanufaktur Albrand;B-8009;LED-Mastleuchte 60 W, Parkplatz;25;Stk;389,00;9.725,00;geliefert
+B-2026-0412;17.09.2026;Lichtmanufaktur Albrand;B-8001;LED-Hallenstrahler 150 W, 21.000 lm;5;Stk;168,00;840,00;teilgeliefert
+B-2026-0413;23.09.2026;Voltara Speichertechnik GmbH;P-9004;PV-Wechselrichter 20 kW, 3-phasig;100;Stk;2.890,00;289.000,00;teilgeliefert
+B-2026-0413;16.09.2026;Voltara Speichertechnik GmbH;P-9015;PV-Überspannungsschutz DC Typ 1+2;25;Stk;142,00;3.550,00;bestellt
+B-2026-0413;15.09.2026;Voltara Speichertechnik GmbH;P-9013;Leistungsoptimierer 450 W;500;Stk;46,80;23.400,00;bestellt
+B-2026-0414;21.09.2026;Kabelwerk Remstal GmbH;L-8003;Mantelleitung NYM-J 5x1,5 mm², Meterware (Trommel);1.000;m;1,12;1.120,00;teilgeliefert
+B-2026-0414;16.09.2026;Kabelwerk Remstal GmbH;L-8022;H07RN-F 5G6 Gummischlauchleitung, Meterware;500;m;6,85;3.425,00;bestellt
+B-2026-0414;15.09.2026;Kabelwerk Remstal GmbH;L-8008;Mantelleitung NYM-J 7x1,5 mm², Meterware (Trommel);10;m;1,58;15,80;geliefert
+B-2026-0415;10.09.2026;Voltara Speichertechnik GmbH;P-9014;DC-Freischalter 1.000 V;5;Stk;88,00;440,00;bestellt
+B-2026-0415;23.09.2026;Voltara Speichertechnik GmbH;P-9010;PV-Modul 450 Wp, Glas-Glas, schwarz;100;Stk;112,40;11.240,00;geliefert
+B-2026-0415;23.09.2026;Voltara Speichertechnik GmbH;P-9013;Leistungsoptimierer 450 W;100;Stk;46,80;4.680,00;teilgeliefert
+B-2026-0416;10.09.2026;Ladepunkt Süd GmbH;E-9005;Lastmanagement-Controller für 10 Ladepunkte;10;Stk;1.188,00;11.880,00;teilgeliefert
+B-2026-0416;27.09.2026;Ladepunkt Süd GmbH;E-9003;Wallbox 11 kW Duo, 2 Ladepunkte;5;Stk;2.346,00;11.730,00;bestellt
+B-2026-0416;14.09.2026;Ladepunkt Süd GmbH;E-9002;Wallbox 22 kW, OCPP, MID-Zähler;100;Stk;1.389,00;138.900,00;teilgeliefert
+B-2026-0417;25.09.2026;Messgeräte Kallenbach KG;W-9001;Installationstester VDE 0100 mit Zubehör;1.000;Stk;1.890,00;1.890.000,00;bestellt
+B-2026-0417;11.09.2026;Messgeräte Kallenbach KG;W-9006;Zangenmessgerät AC/DC 600 A;100;Stk;186,00;18.600,00;bestellt
+B-2026-0417;23.09.2026;Messgeräte Kallenbach KG;W-9012;Abisolierzange automatisch;100;Stk;42,00;4.200,00;bestellt
+B-2026-0418;24.09.2026;Sütterlin Elektro-Großhandel GmbH;S-2009;Dimmer-Einsatz LED 3-100 W, Universal;10;Stk;34,50;345,00;teilgeliefert
+B-2026-0418;16.09.2026;Sütterlin Elektro-Großhandel GmbH;S-2001;Schalter-Einsatz Universal, Wechsel;500;Stk;3,85;1.925,00;bestellt
+B-2026-0418;11.09.2026;Sütterlin Elektro-Großhandel GmbH;S-2002;Schalter-Einsatz Kreuzschaltung;100;Stk;6,20;620,00;bestellt
+B-2026-0419;08.09.2026;Busware KNX-Systeme GmbH;T-8001;KNX-Jalousieaktor 8-fach;5;Stk;312,00;1.560,00;bestellt
+B-2026-0419;23.09.2026;Busware KNX-Systeme GmbH;T-8002;KNX-Dimmaktor 4-fach, universal;500;Stk;348,00;174.000,00;bestellt
+B-2026-0419;09.09.2026;Busware KNX-Systeme GmbH;T-8003;KNX-Tastsensor 4-fach mit Temperaturfühler;25;Stk;142,00;3.550,00;bestellt
+B-2026-0420;24.09.2026;Ladepunkt Süd GmbH;E-9006;Ladekabel Typ 2, 7 m, 22 kW;2;Stk;164,00;328,00;bestellt
+B-2026-0420;16.09.2026;Ladepunkt Süd GmbH;E-9007;Wallbox-Standfuß Edelstahl;100;Stk;289,00;28.900,00;teilgeliefert
+B-2026-0420;22.09.2026;Ladepunkt Süd GmbH;E-9001;Wallbox 11 kW, RFID, eichrechtskonform;10;Stk;1.045,00;10.450,00;bestellt
+B-2026-0421;22.09.2026;Netzwerkteile Brügger;N-9009;RJ45-Stecker feldkonfektionierbar;2;Stk;7,90;15,80;bestellt
+B-2026-0421;24.09.2026;Netzwerkteile Brügger;N-9003;Patchpanel Cat.6a, 24 Port;5;Stk;98,00;490,00;teilgeliefert
+B-2026-0421;07.09.2026;Netzwerkteile Brügger;N-9005;Datendose Cat.6a 2-fach UP;1.000;Stk;14,80;14.800,00;bestellt
+B-2026-0422;12.09.2026;Ladepunkt Süd GmbH;E-9003;Wallbox 11 kW Duo, 2 Ladepunkte;5;Stk;2.346,00;11.730,00;geliefert
+B-2026-0422;10.09.2026;Ladepunkt Süd GmbH;E-9006;Ladekabel Typ 2, 7 m, 22 kW;100;Stk;164,00;16.400,00;bestellt
+B-2026-0422;26.09.2026;Ladepunkt Süd GmbH;E-9001;Wallbox 11 kW, RFID, eichrechtskonform;2;Stk;1.045,00;2.090,00;bestellt
+B-2026-0423;27.09.2026;Vollmann Licht- und Systemtechnik;B-8004;LED-Downlight 12 W, 4000 K, IP44;5;Stk;18,90;94,50;teilgeliefert
+B-2026-0423;23.09.2026;Vollmann Licht- und Systemtechnik;B-5002;LED-Panel 1200x300, 40 W, 4000 K;500;Stk;58,00;29.000,00;geliefert
+B-2026-0423;19.09.2026;Vollmann Licht- und Systemtechnik;B-8005;LED-Downlight 18 W, DALI;10;Stk;36,50;365,00;bestellt
+B-2026-0424;10.09.2026;Sonnenfeld Photovoltaik-Vertrieb;P-9012;Energiemanager mit Smart Meter;2;Stk;489,00;978,00;bestellt
+B-2026-0424;21.09.2026;Sonnenfeld Photovoltaik-Vertrieb;P-9001;PV-Wechselrichter 5 kW, 3-phasig, Hybrid;500;Stk;1.289,00;644.500,00;teilgeliefert
+B-2026-0424;10.09.2026;Sonnenfeld Photovoltaik-Vertrieb;P-9005;Batteriespeicher 5 kWh, Modul;2;Stk;2.450,00;4.900,00;bestellt

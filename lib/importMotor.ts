@@ -49,6 +49,8 @@ export const MOTOR_TABELLEN = [
   'leistungskatalog', 'wartungsvertraege', 'verkaufschancen', 'kontakt_aktivitaeten', 'leads',
   // Schritt 3 Teil 2 (Paket 126)
   'mitarbeiter', 'auftraege', 'projekte', 'vertraege', 'anlagegueter', 'fahrzeuge', 'eingangsbelege',
+  // Schritt 3 Teil 3 (Paket 127) — bestellpositionen nur fuer die Positionen der Bestellungen
+  'mitarbeiter_qualifikation', 'bestellungen', 'bestellpositionen',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -151,6 +153,8 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
   }
 
   const vorhanden = new Map(eigene.map((c) => [c.spalte, c]));
+  // Paket 127: Positionen (Bestellungen) — deren Spalten stehen in der Kinder-Tabelle.
+  const kinderSpalten = new Set((dbSpalten ?? []).filter((c) => basis.kinder && c.tabelle === basis.kinder.tabelle && !c.generiert).map((c) => c.spalte));
   const nutzbar = (key: string) => {
     const c = vorhanden.get(key);
     return !!c && !c.generiert;
@@ -164,6 +168,12 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'filter') { felder.push(f); continue; }
+    if (f.virtuell === 'position') {
+      const ok = basis.kinder && kinderSpalten.has(basis.kinder.fremdschluessel)
+        && (f.positionSpalte === null || f.positionSpalte === undefined || kinderSpalten.has(f.positionSpalte));
+      (ok ? felder : fehlend).push(f);
+      continue;
+    }
     if (f.virtuell === 'preis') { (vorhanden.has('stundensatz_netto') || vorhanden.has('einheitspreis_netto') ? felder : fehlend).push(f); continue; }
     if (nutzbar(f.key)) {
       const c = vorhanden.get(f.key)!;
@@ -430,6 +440,9 @@ export function eigenFeldTyp(typ: EigeneSpalte['typ']): 'text' | 'zahl' | 'datum
 /** Welche Erkennungsfelder dieses Ziel in DIESER Datenbank hat. */
 export function erkennungsFelder(ziel: ImportZiel): string[] {
   const keys = new Set(ziel.felder.map((f) => f.key));
+  // Paket 127: die Verweis-Spalte (mitarbeiter_id) ist kein Feld, steht aber
+  // nach dem Verknuepfen im Satz — „mitarbeiter_id+art" erkennt den Bestand.
+  if (ziel.kundeVerweis) keys.add(ziel.kundeVerweis.spalte);
   const liste = ziel.schluesselFelder ?? (ziel.schluessel ? [ziel.schluessel] : []);
   // „lieferant+belegnummer": nur, wenn es beide Spalten gibt
   return liste.filter((k) => k.split('+').every((t) => keys.has(t)));
@@ -743,4 +756,39 @@ export function dateiArt(name: string, anfang?: Uint8Array): DateiArt {
   if (endung === 'csv' || endung === 'txt' || endung === 'tsv' || endung === '') return 'csv';
   if (ole) return 'xls';
   return 'unbekannt';
+}
+
+// ---------------------------------------------------------------------------
+// 10) Paket 127: Verweise auf Mitarbeiter und Lieferanten
+//
+// Derselbe Suchweg wie bei den Kunden (Nummer -> E-Mail -> genauer Name,
+// mehrdeutig nie) — nur die Quelle ist eine andere. Die Datensaetze werden
+// in die Form eines Kunden gebracht, damit findeKunde() unveraendert bleibt.
+// ---------------------------------------------------------------------------
+
+/** Ist dieses Eigene Feld die Personalnummer? („Personalnummer", „Pers.-Nr.", „MA-Nr") */
+export function istPersonalnummerLabel(label: unknown): boolean {
+  const n = normal(String(label ?? ''));
+  return /^(personalnummer|personalnr|personal nr|pers nr|persnr|mitarbeiternummer|mitarbeiter nr|ma nr|manr|employee id|employee number)$/.test(n);
+}
+
+export type MitarbeiterRoh = { id?: unknown; vorname?: unknown; nachname?: unknown; email?: unknown };
+
+/**
+ * Mitarbeiter als Verweis-Ziel. Die Personalnummer gibt es nicht als Spalte —
+ * der Mitarbeiter-Import legt sie als Eigenes Feld an (Paket 126). `personalNr`
+ * ist datensatz_id -> Wert dieses Eigenen Feldes.
+ */
+export function verweisAusMitarbeitern(liste: readonly MitarbeiterRoh[], personalNr: Readonly<Record<string, string>> = {}): KundeRoh[] {
+  return liste.filter((m) => m?.id).map((m) => ({
+    id: m.id, email: m.email, vorname: m.vorname, nachname: m.nachname,
+    kundennummer: personalNr[String(m.id)] ?? null,
+  }));
+}
+
+export type LieferantRoh = { id?: unknown; name?: unknown; email?: unknown; lieferantennummer?: unknown };
+
+/** Lieferanten als Verweis-Ziel (Nummer, E-Mail, Name). */
+export function verweisAusLieferanten(liste: readonly LieferantRoh[]): KundeRoh[] {
+  return liste.filter((l) => l?.id).map((l) => ({ id: l.id, email: l.email, firma: l.name, kundennummer: l.lieferantennummer ?? null }));
 }

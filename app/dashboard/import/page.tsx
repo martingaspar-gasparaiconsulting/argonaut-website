@@ -33,6 +33,7 @@ import {
   spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
+  verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -40,6 +41,10 @@ import {
   bereinigeWahl, erkenneAltsystem, zaehleAltsysteme, istBelegt, type Altsystem,
 } from '@/lib/altsysteme';
 import { leseXls } from '@/lib/xlsLeser';
+import {
+  gruppiereBestellungen, baueArtikelIndex, kopfFuerDatenbank, positionFuerDatenbank, bestellSumme,
+} from '@/lib/importBestellungen';
+import type { ImportZiel } from '@/lib/importParser';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -107,6 +112,9 @@ type ImportErgebnis = {
   kundeVerknuepft: number;
   kundeOhne: number;
   kundeHinweise: string[];
+  /** Paket 127: Zusammenfassung und Hinweise (z. B. Bestellungen mit Positionen). */
+  zusammenfassung?: string;
+  zusatzHinweise?: string[];
 };
 
 /** Schritt 2: gemerkte Altsystem-Wahl des Betriebs. */
@@ -529,6 +537,12 @@ export default function ImportCenterPage() {
     setBusy('rueck'); setFehler(null); setHinweis(null);
     let geloescht = 0; let gescheitert = 0;
     try {
+      // Paket 127: Positionen (Bestellungen) zuerst — sonst bliebe ein Rest ohne Kopf.
+      if (z.kinder) {
+        for (let i = 0; i < ids.length; i += 200) {
+          await supabase.from(z.kinder.tabelle).delete().in(z.kinder.fremdschluessel, ids.slice(i, i + 200));
+        }
+      }
       for (let i = 0; i < ids.length; i += 200) {
         const teil = ids.slice(i, i + 200);
         const { data, error } = await supabase.from(z.tabelle).delete().in('id', teil).select('id');
@@ -749,8 +763,292 @@ export default function ImportCenterPage() {
     setAnhaltenGewuenscht(true);
   }
 
+  // --- Paket 127: Verweis-Ziele laden (Kunden, Mitarbeiter, Lieferanten) ---
+  /** Alle Zeilen einer Tabelle seitenweise; faellt beim ersten Fehler auf die zweite Spaltenliste zurueck. */
+  async function allesLaden(tabelle: string, spaltenListen: string[], was: string): Promise<Record<string, unknown>[]> {
+    let spalten = spaltenListen[0];
+    const alle: Record<string, unknown>[] = [];
+    for (let von = 0; von < 5000000; von += LESE_SEITE) {
+      let r = await supabase.from(tabelle).select(spalten).order('id').range(von, von + LESE_SEITE - 1);
+      if (r.error && von === 0 && spaltenListen[1]) {
+        // z. B. ohne SQL p124 gibt es keine Kunden-/Lieferantennummer
+        spalten = spaltenListen[1];
+        r = await supabase.from(tabelle).select(spalten).order('id').range(von, von + LESE_SEITE - 1);
+      }
+      if (r.error) throw new Error(`${was} konnten nicht geladen werden: ${r.error.message}`);
+      const liste = (r.data ?? []) as unknown as Record<string, unknown>[];
+      alle.push(...liste);
+      if (liste.length < LESE_SEITE) break;
+    }
+    return alle;
+  }
+
+  /** Nachschlage-Tabelle fuer den Verweis eines Ziels — gleicher Suchweg fuer alle Quellen. */
+  async function ladeVerweisIndex(verweis: NonNullable<ImportZiel['kundeVerweis']>) {
+    const quelle = verweis.quelle ?? 'kontakte';
+    const mehrzahl = (verweis.mehrzahl ?? 'die Kunden').replace(/^die /, '');
+    setBalken({ phase: 'einspielen', anteil: 0, zaehler: `${mehrzahl} zum Verknüpfen laden …` });
+    if (quelle === 'mitarbeiter') {
+      const ma = await allesLaden('mitarbeiter', ['id,vorname,nachname,email'], 'Mitarbeiter zum Verknüpfen');
+      // Die Personalnummer ist ein Eigenes Feld (Mitarbeiter-Import, Paket 126).
+      const nummern: Record<string, string> = {};
+      try {
+        const { data: felder } = await supabase.from('eigenes_feld').select('id, label').eq('modul', 'mitarbeiter');
+        const ids = ((felder ?? []) as unknown as { id: string; label: string }[]).filter((f) => istPersonalnummerLabel(f.label)).map((f) => f.id);
+        if (ids.length > 0) {
+          for (let von = 0; von < 5000000; von += LESE_SEITE) {
+            const { data, error } = await supabase.from('eigenes_feld_wert').select('datensatz_id, wert')
+              .in('feld_id', ids).order('datensatz_id').order('feld_id').range(von, von + LESE_SEITE - 1);
+            if (error) break;
+            const liste = (data ?? []) as unknown as { datensatz_id: string; wert: string | null }[];
+            for (const w of liste) if (w.wert && !nummern[String(w.datensatz_id)]) nummern[String(w.datensatz_id)] = String(w.wert);
+            if (liste.length < LESE_SEITE) break;
+          }
+        }
+      } catch { /* ohne Personalnummer: ueber E-Mail und Namen */ }
+      return baueKundenIndex(verweisAusMitarbeitern(ma as MitarbeiterRoh[], nummern));
+    }
+    if (quelle === 'lieferanten') {
+      const l = await allesLaden('lieferanten', ['id,name,email,lieferantennummer', 'id,name,email'], 'Lieferanten zum Verknüpfen');
+      return baueKundenIndex(verweisAusLieferanten(l as LieferantRoh[]));
+    }
+    const k = await allesLaden('kontakte', [
+      'id,kundennummer,import_schluessel,email,firma,vorname,nachname,firma_id',
+      'id,email,firma,vorname,nachname,firma_id',
+    ], 'Kunden zum Verknüpfen');
+    return baueKundenIndex(k as KundeRoh[]);
+  }
+
+  // --- Paket 127: Bestellungen mit Positionen ---------------------------------
+  // Eine Datei-Zeile = eine Position; gleiche Bestellnummer = eine Bestellung.
+  // Kopf nach bestellungen, Positionen nach bestellpositionen (Bestellwesen im
+  // ERP). Scheitern die Positionen einer Bestellung, wird ihr Kopf wieder
+  // entfernt — halbe Bestellungen entstehen nicht. Die Zeilen-Bilanz zaehlt
+  // Datei-Zeilen (= Positionen), damit sie wie bei allen Importen aufgeht.
+  async function importiereMitPositionen() {
+    if (!datei || !ziel || !bericht || !ziel.kinder) return;
+    const kinder = ziel.kinder;
+    const vorab = bestellSumme(gruppiereBestellungen(bericht.saetze, bericht.zeilenNummern).bestellungen);
+    if (typeof window !== 'undefined' && !window.confirm(
+      `${zahlDe(vorab.bestellungen)} Bestellungen mit ${zahlDe(vorab.positionen)} Positionen werden jetzt in „${ziel.label}" geschrieben. `
+      + 'Bestellnummern, die es schon gibt, werden übersprungen. Fortfahren?'
+    )) return;
+
+    setBusy('import'); setFehler(null);
+    anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    messRef.current = [];
+    const erg: ImportErgebnis = {
+      angelegt: 0, aktualisiert: 0, uebersprungen: 0, fehlgeschlagen: 0, fehler: [],
+      gelesen: bericht.gesamt, doppelt: 0, abgelehnt: bericht.schlecht,
+      offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
+      eigeneWerte: 0, eigeneFelderNeu: 0, eigeneAlsNotiz: 0, eigeneFehler: [],
+      kundeVerknuepft: 0, kundeOhne: 0, kundeHinweise: [], zusatzHinweise: [],
+    };
+    const angelegteIds: string[] = [];
+    let gesamtZeilen = 0;
+    let erledigt = 0;
+    const einspielStart = Date.now();
+    try {
+      const { uid, betrieb } = await betriebUndIch();
+
+      setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Abgleich mit vorhandenen Bestellungen …' });
+      const vorhanden = new Set((await allesLaden(ziel.tabelle, ['id,bestellnummer'], 'Vorhandene Bestellungen'))
+        .map((b) => String(b.bestellnummer ?? '').trim().toLowerCase()).filter(Boolean));
+      setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Artikel zum Verknüpfen laden …' });
+      const artikelIndex = baueArtikelIndex(await allesLaden('artikel', ['id,artikelnummer,einheit'], 'Artikel zum Verknüpfen'));
+      const lieferantenIndex = ziel.kundeVerweis ? await ladeVerweisIndex(ziel.kundeVerweis) : null;
+
+      const g = gruppiereBestellungen(bericht.saetze, bericht.zeilenNummern, artikelIndex);
+      for (const a of g.abgelehnt) {
+        erg.fehlgeschlagen += a.zeilen.length;
+        for (const z of a.zeilen) erg.fehler.push({ zeile: z, feld: 'Lieferant', meldung: a.grund });
+      }
+      for (const b of g.bestellungen) for (const w of b.warnungen) erg.zusatzHinweise!.push(`Zeile ${w.zeile}: ${w.meldung}`);
+
+      // Eigene Felder: je Bestellung die Werte der ersten Zeile, in der sie stehen.
+      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel);
+      const modul = ziel.eigeneFelderModul ?? ziel.key;
+      const feldIdJeSpalte: Record<string, string> = {};
+      if (eigene.length > 0) {
+        try {
+          const { data: da, error: e1 } = await supabase.from('eigenes_feld').select('id, label').eq('modul', modul);
+          if (e1) throw new Error(e1.message);
+          const zuordnung = eigeneFelderZuordnen(eigene, ((da ?? []) as unknown as { id: string; label: string }[]));
+          Object.assign(feldIdJeSpalte, zuordnung.vorhanden);
+          if (zuordnung.neu.length > 0) {
+            const start = (da ?? []).length;
+            const { data: angelegt, error: e2 } = await supabase.from('eigenes_feld').insert(
+              zuordnung.neu.map((e, i) => ({ owner_user_id: betrieb, modul, label: e.spalte.slice(0, 120), feld_typ: e.typ, optionen: [], reihenfolge: start + i })),
+            ).select('id, label');
+            if (e2) throw new Error(e2.message);
+            for (const f of ((angelegt ?? []) as unknown as { id: string; label: string }[])) {
+              const e = zuordnung.neu.find((x) => x.spalte.slice(0, 120) === f.label);
+              if (e) feldIdJeSpalte[e.spalte] = f.id;
+            }
+            erg.eigeneFelderNeu = (angelegt ?? []).length;
+          }
+        } catch (e) {
+          erg.eigeneFehler.push(`Eigene Felder: ${e instanceof Error ? e.message : 'Fehler'} — die Werte stehen in den Notizen der Bestellung.`);
+        }
+      }
+
+      type Vorhaben = { kopf: Record<string, unknown>; b: (typeof g.bestellungen)[number] };
+      const vorhaben: Vorhaben[] = [];
+      for (const b of g.bestellungen) {
+        if (vorhanden.has(b.kopf.bestellnummer.toLowerCase())) { erg.uebersprungen += b.zeilen.length; continue; }
+        let kopf = kopfFuerDatenbank(b.kopf);
+        if (ziel.kundeVerweis && lieferantenIndex) {
+          const v = verknuepfeKunde({ ...kopf, __kunde: b.kopf.__kunde, __kunde2: b.kopf.__kunde2 }, ziel.kundeVerweis, lieferantenIndex);
+          kopf = v.satz;
+          if (v.treffer.art === 'gefunden') erg.kundeVerknuepft++;
+          else {
+            erg.kundeOhne++;
+            const grund = v.treffer.art === 'mehrdeutig'
+              ? `„${v.gesucht}" passt zu ${v.treffer.anzahl} Lieferanten — nicht verknüpft`
+              : v.gesucht ? `Lieferant „${v.gesucht}" nicht gefunden` : 'kein Lieferant angegeben';
+            erg.kundeHinweise.push(`Bestellung ${b.kopf.bestellnummer}: ${grund} — ohne Lieferant übernommen (der Name steht in den Notizen).`);
+            if (v.gesucht) kopf.notizen = [kopf.notizen, `Lieferant im Altsystem: ${v.gesucht}`].filter(Boolean).join('\n');
+          }
+        }
+        // Eigene Felder ohne Feld (Fehler oben) -> in die Notizen
+        if (eigene.length > 0) {
+          const werte = new Map<string, string>();
+          for (const z of b.zeilen) for (const w of eigeneWerteDerZeile(datei.zeilen[z - 2] ?? [], eigene)) if (!werte.has(w.spalte)) werte.set(w.spalte, w.wert);
+          const ohneFeld = [...werte].filter(([sp]) => !feldIdJeSpalte[sp]);
+          if (ohneFeld.length > 0) {
+            kopf.notizen = [kopf.notizen, 'Weitere Angaben aus dem Altsystem:', ...ohneFeld.map(([sp, w]) => `${sp}: ${w}`)].filter(Boolean).join('\n');
+            erg.eigeneAlsNotiz++;
+          }
+        }
+        vorhaben.push({ kopf: { ...kopf, owner_user_id: betrieb }, b });
+      }
+      gesamtZeilen = vorhaben.reduce((n, v) => n + v.b.zeilen.length, 0);
+
+      const zeigeStand = () => {
+        messRef.current.push({ t: Date.now(), n: erledigt });
+        setBalken({
+          phase: 'einspielen',
+          anteil: gesamtZeilen > 0 ? erledigt / gesamtZeilen : 1,
+          zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamtZeilen)} Positionen eingespielt`,
+          rest: restText(restMs(erledigt, gesamtZeilen, tempoProMs(messRef.current))),
+        });
+      };
+      zeigeStand();
+
+      // In Paketen zu 100 Bestellungen: Koepfe, dann alle ihre Positionen.
+      for (const p of pakete(vorhaben.length, 100)) {
+        if (anhaltenRef.current) break;
+        const teil = vorhaben.slice(p.von, p.bis);
+        const { data: koepfe, error } = await supabase.from(ziel.tabelle).insert(teil.map((v) => v.kopf)).select('id, bestellnummer');
+        let paare: { id: string; v: Vorhaben }[] = [];
+        if (!error) {
+          const nachNr = new Map(((koepfe ?? []) as unknown as { id: string; bestellnummer: string }[]).map((k) => [String(k.bestellnummer), String(k.id)]));
+          paare = teil.map((v) => ({ id: nachNr.get(v.b.kopf.bestellnummer) ?? '', v })).filter((x) => x.id);
+        } else {
+          // Paket gescheitert: einzeln, damit die schuldige Bestellung benannt ist.
+          for (const v of teil) {
+            const r = await supabase.from(ziel.tabelle).insert(v.kopf).select('id').single();
+            if (r.error || !r.data) {
+              erg.fehlgeschlagen += v.b.zeilen.length;
+              erg.fehler.push({ zeile: v.b.zeilen[0] ?? 0, feld: 'Bestellnummer', meldung: `Bestellung ${v.b.kopf.bestellnummer}: ${r.error?.message ?? 'nicht angelegt'}` });
+            } else paare.push({ id: String((r.data as { id: string }).id), v });
+          }
+        }
+        // Positionen je Paket in einem Rutsch, sonst je Bestellung.
+        const allePos = paare.flatMap((x) => x.v.b.positionen.map((pos) => ({ ...positionFuerDatenbank(pos, x.id), owner_user_id: betrieb })));
+        const { error: ePos } = allePos.length > 0 ? await supabase.from(kinder.tabelle).insert(allePos) : { error: null };
+        const fertig: typeof paare = [];
+        if (!ePos) fertig.push(...paare);
+        else {
+          for (const x of paare) {
+            const r = await supabase.from(kinder.tabelle).insert(x.v.b.positionen.map((pos) => ({ ...positionFuerDatenbank(pos, x.id), owner_user_id: betrieb })));
+            if (r.error) {
+              await supabase.from(ziel.tabelle).delete().eq('id', x.id);   // keine halbe Bestellung
+              erg.fehlgeschlagen += x.v.b.zeilen.length;
+              erg.fehler.push({ zeile: x.v.b.zeilen[0] ?? 0, feld: 'Positionen', meldung: `Bestellung ${x.v.b.kopf.bestellnummer}: ${r.error.message} — Bestellung nicht übernommen.` });
+            } else fertig.push(x);
+          }
+        }
+        for (const x of fertig) {
+          angelegteIds.push(x.id);
+          erg.angelegt += x.v.b.zeilen.length;
+          // Eigene-Feld-Werte an die Bestellung
+          if (eigene.length > 0) {
+            const werte = new Map<string, string>();
+            for (const z of x.v.b.zeilen) for (const w of eigeneWerteDerZeile(datei.zeilen[z - 2] ?? [], eigene)) if (!werte.has(w.spalte)) werte.set(w.spalte, w.wert);
+            const zeilen = [...werte].filter(([sp]) => feldIdJeSpalte[sp]).map(([sp, wert]) => ({
+              owner_user_id: betrieb, modul, datensatz_id: x.id, feld_id: feldIdJeSpalte[sp], wert, aktualisiert_am: new Date().toISOString(),
+            }));
+            if (zeilen.length > 0) {
+              const { error: eW } = await supabase.from('eigenes_feld_wert').upsert(zeilen, { onConflict: 'feld_id,datensatz_id' });
+              if (eW) erg.eigeneFehler.push(`Bestellung ${x.v.b.kopf.bestellnummer}: ${eW.message}`); else erg.eigeneWerte += zeilen.length;
+            }
+          }
+        }
+        erledigt += teil.reduce((n, v) => n + v.b.zeilen.length, 0);
+        zeigeStand();
+      }
+
+      erg.offen = Math.max(0, gesamtZeilen - erledigt);
+      erg.angehalten = erg.offen > 0;
+      const einspielMs = Date.now() - einspielStart;
+      erg.dauerMs = (phasenRef.current.laden ?? 0) + (phasenRef.current.lesen ?? 0) + (phasenRef.current.pruefen ?? 0) + einspielMs;
+      erg.zeilenProS = einspielMs >= 1000 && erledigt > 0 ? erledigt / (einspielMs / 1000) : null;
+      erg.zusammenfassung = `${zahlDe(angelegteIds.length)} Bestellungen mit ${zahlDe(erg.angelegt)} Positionen angelegt`
+        + ` (${zahlDe(g.bestellungen.length)} Bestellnummern in der Datei)`
+        + (erg.uebersprungen > 0 ? ` · ${zahlDe(erg.uebersprungen)} Zeilen gehören zu schon vorhandenen Bestellnummern` : '');
+      const status = erg.angehalten ? 'angehalten' : erg.fehlgeschlagen > 0 ? 'teilweise' : 'fertig';
+
+      // Protokoll (neues Schema mit Messwerten, sonst wie bisher)
+      const jobSatz: Record<string, unknown> = {
+        owner_user_id: neuesSchema ? betrieb : uid,
+        ziel: zielKey, dateiname: datei.dateiname,
+        status: !neuesSchema && status === 'angehalten' ? 'abgebrochen' : status,
+        kopfzeilen: datei.kopf, mapping,
+        zeilen_gesamt: bericht.gesamt, zeilen_ok: erg.angelegt, zeilen_fehler: erg.fehlgeschlagen + bericht.schlecht,
+        fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
+        als_vorlage: merken, vorlage_name: merken ? datei.dateiname : null,
+        beendet_am: new Date().toISOString(), angelegte_ids: angelegteIds,
+        ...(neuesSchema ? {
+          erstellt_von: uid, zeilen_gelesen: bericht.gesamt, zeilen_uebersprungen: erg.uebersprungen,
+          zeilen_abgelehnt: erg.abgelehnt, zeilen_doppelt: 0, zeilen_gescheitert: erg.fehlgeschlagen, zeilen_offen: erg.offen,
+          warnungen: bericht.warnungen.length + (erg.zusatzHinweise?.length ?? 0), umzug_id: umzug?.id ?? null,
+          dateigroesse: datei.groesse, gestartet_am: new Date(dateiStartRef.current || einspielStart).toISOString(),
+          dauer_ms: erg.dauerMs, zeilen_pro_s: erg.zeilenProS ? Math.round(erg.zeilenProS * 100) / 100 : null,
+          phasen_ms: { ...phasenRef.current, einspielen: einspielMs },
+        } : {}),
+      };
+      const { error: jobFehler } = await supabase.from('import_jobs').insert(jobSatz);
+      if (jobFehler) {
+        const { angelegte_ids: _weg, ...ohne } = jobSatz;
+        void _weg;
+        await supabase.from('import_jobs').insert(ohne);
+      }
+
+      setErgebnis(erg);
+      setBalken({
+        phase: erg.angehalten ? 'einspielen' : 'fertig',
+        anteil: gesamtZeilen > 0 ? erledigt / gesamtZeilen : 1,
+        angehalten: erg.angehalten,
+        zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamtZeilen)} Positionen eingespielt · ${formatDauer(erg.dauerMs)} Rechenzeit`,
+        wartet: erg.angehalten ? `angehalten — ${zahlDe(erg.offen)} Positionen noch offen` : null,
+      });
+      await verlaufLaden();
+      setHinweis(erg.zusammenfassung);
+    } catch (err: unknown) {
+      setFehler(`Import abgebrochen: ${err instanceof Error ? err.message : 'Fehler'}`
+        + (angelegteIds.length > 0 ? ` Bis dahin ${zahlDe(angelegteIds.length)} Bestellungen übernommen.` : ''));
+      setBalken((b) => (b ? { ...b, fehler: true, rest: null, wartet: 'abgebrochen' } : null));
+    } finally {
+      setBusy(null);
+      anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    }
+  }
+
   async function importieren() {
     if (!datei || !ziel || !bericht || bericht.gut === 0) return;
+    // Paket 127: Bestellungen mit Positionen gehen einen eigenen Weg (Kopf + Positionen).
+    if (ziel.kinder) { await importiereMitPositionen(); return; }
     if (typeof window !== 'undefined' && !window.confirm(
       `${zahlDe(bericht.gut)} Datensätze werden jetzt in „${ziel.label}" geschrieben. Fortfahren?`
     )) return;
@@ -892,24 +1190,8 @@ export default function ImportCenterPage() {
       // Schritt 3: Kunden laden, damit Offene Posten, Chancen, Aktivitaeten
       // und Wartungsvertraege am richtigen Kunden haengen.
       let kundenIndex: ReturnType<typeof baueKundenIndex> | null = null;
-      if (ziel.kundeVerweis) {
-        setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Kunden zum Verknüpfen laden …' });
-        const kontakte: KundeRoh[] = [];
-        let spalten = 'id,kundennummer,import_schluessel,email,firma,vorname,nachname,firma_id';
-        for (let von = 0; von < 5000000; von += LESE_SEITE) {
-          let r = await supabase.from('kontakte').select(spalten).order('id').range(von, von + LESE_SEITE - 1);
-          if (r.error && von === 0) {
-            // ohne SQL p124 gibt es keine Kundennummer — dann ueber E-Mail und Namen
-            spalten = 'id,email,firma,vorname,nachname,firma_id';
-            r = await supabase.from('kontakte').select(spalten).order('id').range(von, von + LESE_SEITE - 1);
-          }
-          if (r.error) throw new Error('Kunden zum Verknüpfen konnten nicht geladen werden: ' + r.error.message);
-          const liste = (r.data ?? []) as unknown as KundeRoh[];
-          kontakte.push(...liste);
-          if (liste.length < LESE_SEITE) break;
-        }
-        kundenIndex = baueKundenIndex(kontakte);
-      }
+      if (ziel.kundeVerweis) kundenIndex = await ladeVerweisIndex(ziel.kundeVerweis);
+      const verweisWas = ziel.kundeVerweis?.label ?? 'Kunde';
 
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
@@ -925,15 +1207,15 @@ export default function ImportCenterPage() {
           else {
             erg.kundeOhne++;
             const grund = v.treffer.art === 'mehrdeutig'
-              ? `„${v.gesucht || 'Text'}" passt zu ${v.treffer.anzahl} Kunden — nicht verknüpft`
-              : v.gesucht ? `Kunde „${v.gesucht}" nicht gefunden` : 'kein Kunde angegeben';
+              ? `„${v.gesucht || 'Text'}" passt zu ${v.treffer.anzahl} Einträgen (${verweisWas}) — nicht verknüpft`
+              : v.gesucht ? `${verweisWas} „${v.gesucht}" nicht gefunden` : `kein ${verweisWas} angegeben`;
             if (ziel.kundeVerweis.pflicht) {
-              // Ohne Kunden gibt es hier keinen Datensatz (z. B. Aktivitaet ohne Zeitleiste).
+              // Ohne Verweis gibt es hier keinen Datensatz (z. B. Aktivitaet ohne Zeitleiste, Qualifikation ohne Mitarbeiter).
               erg.fehlgeschlagen++;
-              erg.fehler.push({ zeile: dateiZeile, feld: 'Kunde', meldung: `${grund}. Bitte zuerst die Kunden importieren, dann diese Datei noch einmal.` });
+              erg.fehler.push({ zeile: dateiZeile, feld: verweisWas, meldung: `${grund}. Bitte zuerst ${ziel.kundeVerweis.mehrzahl ?? 'die Kunden'} importieren, dann diese Datei noch einmal.` });
               return;
             }
-            if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne Kunde übernommen.`);
+            if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne ${verweisWas} übernommen.`);
           }
         }
         // Schritt 3: Wartungsvertraege — naechste Faelligkeit wie im Modul rechnen.
@@ -1283,7 +1565,8 @@ export default function ImportCenterPage() {
           <div style={styles.zielGrid}>
             {ZIELE.map((z) => {
               // Schritt 3: neue Ziele erst, wenn die Datenbank sie kennt (SQL p125).
-              const mitKatalog = !z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle);
+              const mitKatalog = (!z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle))
+                && (!z.kinder || !!dbSpalten?.some((c) => c.tabelle === z.kinder!.tabelle));
               const bereit = mitKatalog && !(z.nurChef && binMitarbeiter);
               return (
                 <button
@@ -1298,7 +1581,7 @@ export default function ImportCenterPage() {
                   <div style={{ fontSize: 22 }}>{z.icon}</div>
                   <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>{z.label}</div>
                   <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
-                  {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update „p126-import-schritt3b“.</div>}
+                  {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update der Import-Pakete (zuletzt „p127-import-schritt3c“).</div>}
                   {mitKatalog && z.nurChef && binMitarbeiter && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Diese Daten importiert nur die Geschäftsleitung.</div>}
                 </button>
               );
@@ -1596,7 +1879,9 @@ export default function ImportCenterPage() {
                   </div>
                   {ergebnis.angehalten && (
                     <div style={{ marginTop: 4, color: C.warn }}>
-                      {ziel && erkennungsFelder(ziel).length > 0
+                      {ziel?.kinder
+                        ? 'Weitermachen: dieselbe Datei noch einmal importieren — schon übernommene Bestellungen werden an der Bestellnummer erkannt und übersprungen.'
+                        : ziel && erkennungsFelder(ziel).length > 0
                         ? `Weitermachen: dieselbe Datei noch einmal importieren (Einstellung „Überspringen") — schon Übernommenes wird über „${erkennungsFelder(ziel).map((k) => ziel.felder.find((f) => f.key === k)?.label ?? k).join('" oder „')}" erkannt und nicht doppelt angelegt.`
                         : 'Diese Liste hat kein Erkennungsmerkmal. Zum Weitermachen den Import unten rückgängig machen und neu starten — sonst entstehen Doppelte.'}
                     </div>
@@ -1606,10 +1891,17 @@ export default function ImportCenterPage() {
             })()}
             {(ergebnis.kundeVerknuepft > 0 || ergebnis.kundeOhne > 0) && (
               <div style={{ ...styles.hinweisKasten, marginBottom: 10 }}>
-                <b style={{ color: C.text }}>Mit Kunden verknüpft:</b> {zahlDe(ergebnis.kundeVerknuepft)}
-                {ergebnis.kundeOhne > 0 && <> · <span style={{ color: C.warn }}>{zahlDe(ergebnis.kundeOhne)} ohne Kunde</span></>}
+                <b style={{ color: C.text }}>Verknüpft mit {ziel?.kundeVerweis?.label ?? 'Kunde'}:</b> {zahlDe(ergebnis.kundeVerknuepft)}{ziel?.kinder ? ' Bestellungen' : ''}
+                {ergebnis.kundeOhne > 0 && <> · <span style={{ color: C.warn }}>{zahlDe(ergebnis.kundeOhne)} ohne {ziel?.kundeVerweis?.label ?? 'Kunde'}</span></>}
                 {ergebnis.kundeHinweise.slice(0, 8).map((t, i) => <div key={i} style={{ color: C.warn, marginTop: 3, fontSize: 12.5 }}>⚠ {t}</div>)}
                 {ergebnis.kundeHinweise.length > 8 && <div style={{ marginTop: 3, fontSize: 12.5 }}>… und {ergebnis.kundeHinweise.length - 8} weitere.</div>}
+              </div>
+            )}
+            {(ergebnis.zusammenfassung || (ergebnis.zusatzHinweise?.length ?? 0) > 0) && (
+              <div style={{ ...styles.hinweisKasten, marginTop: 10, marginBottom: 10 }}>
+                {ergebnis.zusammenfassung && <b style={{ color: C.text }}>{ergebnis.zusammenfassung}</b>}
+                {(ergebnis.zusatzHinweise ?? []).slice(0, 12).map((t, i) => <div key={i} style={{ color: C.warn, marginTop: 3, fontSize: 12.5 }}>⚠ {t}</div>)}
+                {(ergebnis.zusatzHinweise?.length ?? 0) > 12 && <div style={{ marginTop: 3, fontSize: 12.5 }}>… und {(ergebnis.zusatzHinweise?.length ?? 0) - 12} weitere (im Fehlerbericht).</div>}
               </div>
             )}
             {(ergebnis.eigeneWerte > 0 || ergebnis.eigeneAlsNotiz > 0 || ergebnis.eigeneFehler.length > 0) && (

@@ -227,11 +227,13 @@ test('Offene Posten (Haldenberg 04): Kunde steht nur in den Notizen -> trotzdem 
 
 test('Import-Seite: Kunden laden und verknuepfen, Pflicht-Kunde, Faelligkeit, gesperrte Karten', () => {
   const s = lies('app/dashboard/import/page.tsx');
-  assert.ok(s.includes("supabase.from('kontakte').select(spalten)"), 'Kunden seitenweise laden');
+  // Paket 127: der Verweis-Lader ist allgemein (Kunden, Mitarbeiter, Lieferanten) und laedt seitenweise.
+  assert.ok(s.includes("await allesLaden('kontakte', ["), 'Kunden seitenweise laden');
+  assert.ok(s.includes('.select(spalten).order(\'id\').range(von, von + LESE_SEITE - 1)'), 'seitenweise');
   assert.ok(s.includes('verknuepfeKunde(satzRoh, ziel.kundeVerweis, kundenIndex)'));
   assert.ok(s.includes('if (ziel.kundeVerweis.pflicht)'), 'ohne Kunde keine Aktivitaet');
   assert.ok(s.includes('naechsteFaelligkeitString('), 'Wartung: naechste Faelligkeit wie im Modul');
-  assert.ok(s.includes('const mitKatalog = !z.nurMitKatalog'), 'neue Ziele erst mit Katalog');
+  assert.ok(s.includes('const mitKatalog = (!z.nurMitKatalog'), 'neue Ziele erst mit Katalog');
   assert.ok(s.includes('let satz0 = fuerDatenbank(satzRoh);'), 'Hilfsfelder nie in die Datenbank');
   assert.ok(s.includes('sperrGrund(spalte, ziel)'), 'Bank und Einwilligung gesperrt');
 });

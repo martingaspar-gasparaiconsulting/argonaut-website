@@ -381,8 +381,11 @@ export default function WartungPage() {
     const punkte = protokollForm.punkte.filter((p) => p.punkt.trim() !== '');
     setProtokollBusy(true); setFehler(null);
     try {
-      const { error: hErr } = await supabase.from('wartungshistorie').insert({
-        owner_user_id: uid,
+      // Paket 127: Das Protokoll gehoert dem BETRIEB (wie der Vertrag), damit der
+      // Chef auch die Protokolle seiner Mitarbeiter sieht; erstellt_von sagt, wer
+      // es war. Ohne SQL p127 darf der Mitarbeiter nur fuer sich selbst
+      // schreiben — dann wie bisher (niemand wird ausgesperrt).
+      const historie = {
         wartungsvertrag_id: r.id,
         durchgefuehrt_am: durchgefuehrt,
         pruefer: protokollForm.pruefer.trim() || null,
@@ -391,7 +394,11 @@ export default function WartungPage() {
         bemerkung: protokollForm.bemerkung.trim() || null,
         naechste_faelligkeit_am: naechste,
         erstellt_von: uid,
-      });
+      };
+      let { error: hErr } = await supabase.from('wartungshistorie').insert({ ...historie, owner_user_id: besitzer ?? uid });
+      if (hErr && besitzer && besitzer !== uid) {
+        ({ error: hErr } = await supabase.from('wartungshistorie').insert({ ...historie, owner_user_id: uid }));
+      }
       if (hErr) throw hErr;
       const { error: vErr } = await supabase.from('wartungsvertraege')
         .update({ letzte_wartung_am: durchgefuehrt, naechste_faelligkeit_am: naechste, erinnerung_gesendet_am: null, aktualisiert_am: new Date().toISOString() })
