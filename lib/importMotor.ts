@@ -51,6 +51,10 @@ export const MOTOR_TABELLEN = [
   'mitarbeiter', 'auftraege', 'projekte', 'vertraege', 'anlagegueter', 'fahrzeuge', 'eingangsbelege',
   // Schritt 3 Teil 3 (Paket 127) — bestellpositionen nur fuer die Positionen der Bestellungen
   'mitarbeiter_qualifikation', 'bestellungen', 'bestellpositionen',
+  // Paket 128: die ersten 15 Karten, die bisher nur eine Vorlage hatten
+  'assets', 'asset_gruppen', 'pruef_protokoll', 'bde_maschine', 'charge_los', 'expose', 'bildung_kurse',
+  'event_veranstaltung', 'reservierung_platz', 'belegung_einheit', 'erinnerung', 'gutachten', 'schlag',
+  'tier_gruppe', 'ertrag_anlage', 'proof_asset',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -168,6 +172,11 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'filter') { felder.push(f); continue; }
+    if (f.virtuell === 'nachschlag') {
+      const n = basis.nachschlag;
+      (n && (vorhanden.has(n.spalte) || (n.textFeld && nutzbar(n.textFeld))) ? felder : fehlend).push(f);
+      continue;
+    }
     if (f.virtuell === 'position') {
       const ok = basis.kinder && kinderSpalten.has(basis.kinder.fremdschluessel)
         && (f.positionSpalte === null || f.positionSpalte === undefined || kinderSpalten.has(f.positionSpalte));
@@ -791,4 +800,59 @@ export type LieferantRoh = { id?: unknown; name?: unknown; email?: unknown; lief
 /** Lieferanten als Verweis-Ziel (Nummer, E-Mail, Name). */
 export function verweisAusLieferanten(liste: readonly LieferantRoh[]): KundeRoh[] {
   return liste.filter((l) => l?.id).map((l) => ({ id: l.id, email: l.email, firma: l.name, kundennummer: l.lieferantennummer ?? null }));
+}
+
+// ---------------------------------------------------------------------------
+// 11) Paket 128: Nachschlagen ueber einen Namen (Gruppe, Objekt …)
+// ---------------------------------------------------------------------------
+
+/** name (klein, getrimmt) -> id; mehrdeutige Namen fallen heraus (nie raten). */
+export function nachschlagIndex(zeilen: readonly Record<string, unknown>[], nameSpalte: string): Map<string, string> {
+  const index = new Map<string, string>();
+  const doppelt = new Set<string>();
+  for (const z of zeilen) {
+    const n = String(z?.[nameSpalte] ?? '').trim().toLowerCase();
+    if (!n || !z?.id) continue;
+    if (index.has(n) && index.get(n) !== String(z.id)) { doppelt.add(n); continue; }
+    index.set(n, String(z.id));
+  }
+  for (const n of doppelt) index.delete(n);
+  return index;
+}
+
+/** Namen, die noch fehlen und angelegt werden sollen (je Name einmal, in Datei-Reihenfolge). */
+export function fehlendeNamen(saetze: readonly Record<string, unknown>[], index: Map<string, string>): string[] {
+  const raus: string[] = [];
+  const gesehen = new Set<string>();
+  for (const s of saetze) {
+    const name = String(s.__nach ?? '').trim();
+    const k = name.toLowerCase();
+    if (!name || index.has(k) || gesehen.has(k)) continue;
+    gesehen.add(k); raus.push(name);
+  }
+  return raus;
+}
+
+/**
+ * Den Verweis eines Satzes setzen. Kein Treffer: der Name steht im Textfeld
+ * („Gruppe: Halle 2") — verschluckt wird nichts.
+ */
+export function loeseNachschlag(
+  satz: Record<string, unknown>,
+  n: { spalte: string; textFeld?: string; label: string; ausFeld: string },
+  index: Map<string, string> | null,
+  virtuell: boolean,
+): { satz: Record<string, unknown>; gefunden: boolean; name: string } {
+  const name = String(satz.__nach ?? '').trim();
+  const raus = fuerDatenbank(satz);
+  if (!name) return { satz: raus, gefunden: false, name };
+  const id = index?.get(name.toLowerCase());
+  if (id) { raus[n.spalte] = id; return { satz: raus, gefunden: true, name }; }
+  // Nur ein virtuelles Namensfeld braucht den Text — ein echtes Feld steht schon im Satz.
+  if (virtuell && n.textFeld) {
+    const zeile = `${n.label}: ${name}`;
+    const alt = String(raus[n.textFeld] ?? '').trim();
+    raus[n.textFeld] = alt ? `${alt}\n${zeile}` : zeile;
+  }
+  return { satz: raus, gefunden: false, name };
 }

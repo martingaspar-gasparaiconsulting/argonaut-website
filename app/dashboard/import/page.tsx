@@ -34,6 +34,7 @@ import {
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
+  nachschlagIndex, fehlendeNamen, loeseNachschlag,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -581,6 +582,12 @@ export default function ImportCenterPage() {
   }
 
   function zielWaehlen(key: string) {
+    // Paket 128: Ziele, die das Datenbank-Update brauchen, nicht halb oeffnen.
+    const z = zielDef(key);
+    if (z?.nurMitKatalog && dbSpalten !== null && !dbSpalten.some((c) => c.tabelle === z.tabelle)) {
+      setFehler(`„${z.label}" braucht einmal das Datenbank-Update der Import-Pakete (zuletzt „p128-import-karten1“).`);
+      return;
+    }
     setZielKey(key);
     setDatei(null); setMapping({}); setBericht(null); setErgebnis(null); setFehler(null); setHinweis(null); setBalken(null);
   }
@@ -1062,7 +1069,7 @@ export default function ImportCenterPage() {
       gelesen: bericht.gesamt, doppelt, abgelehnt: Math.max(0, bericht.schlecht - doppelt),
       offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
       eigeneWerte: 0, eigeneFelderNeu: 0, eigeneAlsNotiz: 0, eigeneFehler: [],
-      kundeVerknuepft: 0, kundeOhne: 0, kundeHinweise: [],
+      kundeVerknuepft: 0, kundeOhne: 0, kundeHinweise: [], zusatzHinweise: [],
     };
     const angelegteIds: string[] = [];
     let jobId: string | null = null;
@@ -1193,6 +1200,32 @@ export default function ImportCenterPage() {
       if (ziel.kundeVerweis) kundenIndex = await ladeVerweisIndex(ziel.kundeVerweis);
       const verweisWas = ziel.kundeVerweis?.label ?? 'Kunde';
 
+      // Paket 128: Verweis ueber einen Namen (Gruppe eines Objekts, Objekt eines
+      // Pruefprotokolls). Fehlende Gruppen werden angelegt, wenn das Ziel es will.
+      const nach = ziel.nachschlag;
+      const nachVirtuell = !!nach && ziel.felder.some((f) => f.key === nach.ausFeld && f.virtuell === 'nachschlag');
+      let nachIndex: Map<string, string> | null = null;
+      let nachNeu = 0;
+      if (nach && dbSpalten?.some((c) => c.tabelle === ziel.tabelle && c.spalte === nach.spalte)) {
+        try {
+          setBalken({ phase: 'einspielen', anteil: 0, zaehler: `${nach.label} zum Verknüpfen laden …` });
+          nachIndex = nachschlagIndex(await allesLaden(nach.tabelle, [`id,${nach.nameSpalte}`], nach.label), nach.nameSpalte);
+          const fehlen = nach.anlegen ? fehlendeNamen(bericht.saetze, nachIndex) : [];
+          for (let i = 0; i < fehlen.length; i += 200) {
+            const { data, error } = await supabase.from(nach.tabelle)
+              .insert(fehlen.slice(i, i + 200).map((name) => ({ owner_user_id: neuOwner, [nach.nameSpalte]: name.slice(0, 200) })))
+              .select(`id,${nach.nameSpalte}`);
+            if (error) { (erg.zusatzHinweise ??= []).push(`${nach.label}: ${error.message} — die Namen stehen im Text.`); break; }
+            for (const r of ((data ?? []) as unknown as Record<string, unknown>[])) nachIndex.set(String(r[nach.nameSpalte] ?? '').trim().toLowerCase(), String(r.id));
+            nachNeu += (data ?? []).length;
+          }
+        } catch (e) {
+          nachIndex = null;
+          (erg.zusatzHinweise ??= []).push(`${nach.label}: ${e instanceof Error ? e.message : 'Fehler'} — ohne Verknüpfung, die Namen stehen im Text.`);
+        }
+      }
+      let nachOhne = 0;
+
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
@@ -1217,6 +1250,11 @@ export default function ImportCenterPage() {
             }
             if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne ${verweisWas} übernommen.`);
           }
+        }
+        if (nach) {
+          const r = loeseNachschlag(satz0.__nach !== undefined ? satz0 : { ...satz0, __nach: satzRoh.__nach }, nach, nachIndex, nachVirtuell);
+          satz0 = r.satz;
+          if (r.name && !r.gefunden) nachOhne++;
         }
         // Schritt 3: Wartungsvertraege — naechste Faelligkeit wie im Modul rechnen.
         if (ziel.key === 'wartungsvertraege' && !satz0.naechste_faelligkeit_am) {
@@ -1245,6 +1283,10 @@ export default function ImportCenterPage() {
         neuZeile.push(dateiZeile);
       });
       gesamtSchreiben = neu.length + zuAendern.length;
+      if (nach && (nachNeu > 0 || nachOhne > 0)) {
+        erg.zusammenfassung = `${nach.label}: ${nachNeu > 0 ? `${zahlDe(nachNeu)} neu angelegt` : 'alle vorhanden'}`
+          + (nachOhne > 0 ? ` · ${zahlDe(nachOhne)} Zeilen ohne Verknüpfung (${nach.label} nicht gefunden${nachVirtuell ? ', Name steht im Text' : ''})` : '');
+      }
 
       // Protokoll VOR dem ersten Paket anlegen (neues Schema). Gehoert dem
       // Betrieb, erstellt_von sagt, wer es war.
@@ -1581,7 +1623,7 @@ export default function ImportCenterPage() {
                   <div style={{ fontSize: 22 }}>{z.icon}</div>
                   <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>{z.label}</div>
                   <div style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{z.beschreibung}</div>
-                  {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update der Import-Pakete (zuletzt „p127-import-schritt3c“).</div>}
+                  {!mitKatalog && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Braucht einmal das Datenbank-Update der Import-Pakete (zuletzt „p128-import-karten1“).</div>}
                   {mitKatalog && z.nurChef && binMitarbeiter && <div style={{ color: C.warn, fontSize: 11.5, marginTop: 6 }}>Diese Daten importiert nur die Geschäftsleitung.</div>}
                 </button>
               );

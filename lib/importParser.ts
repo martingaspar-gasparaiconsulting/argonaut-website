@@ -77,6 +77,7 @@
 // ============================================================================
 
 import { leseZahl as leseZahlGemeinsam, leseZahlMitTrenner, centRunden } from './zahlen';
+import { datumPlusMonate } from './wiederkehr';
 
 // ---------------------------------------------------------------------------
 // 1) CSV zerlegen
@@ -438,6 +439,29 @@ export function jahrhundert(zweistellig: number, heute: Date = new Date()): numb
   return zweistellig <= grenze ? 2000 + zweistellig : 1900 + zweistellig;
 }
 
+/**
+ * Paket 128: Datum mit Uhrzeit — „12.10.2026 18:00", „2026-10-12 18:00:00",
+ * „2026-10-12T18:00". Ergebnis wie ein datetime-local-Feld: „2026-10-12T18:00"
+ * (ohne Uhrzeit nur „2026-10-12"). null = unlesbar.
+ */
+export function leseDatumZeit(wert: unknown, heute: Date = new Date()): string | null {
+  const s = String(wert ?? '').trim();
+  if (!s) return null;
+  const m = s.match(/^(.+?)(?:[ T,]+(\d{1,2})[:.](\d{2})(?::\d{2}(?:\.\d+)?)?\s*(?:uhr)?)?(?:z|[+-]\d{2}:?\d{2})?$/i);
+  if (!m) return null;
+  const d = leseDatumGenau(m[1], heute).datum;
+  if (!d) return null;
+  if (m[2] === undefined) return d;
+  const h = Number(m[2]); const min = Number(m[3]);
+  if (h > 23 || min > 59) return null;
+  return `${d}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** Paket 128: Datum + Monate — dieselbe Rechnung wie die Module (lib/wiederkehr, Monatsende bleibt im Monat). */
+export function plusMonate(iso: string, monate: number): string {
+  return datumPlusMonate(iso, monate);
+}
+
 /** Wie bisher: nur das Datum, ohne die Mehrdeutigkeit. */
 export function leseDatum(wert: unknown, heute: Date = new Date()): string | null {
   return leseDatumGenau(wert, heute).datum;
@@ -453,7 +477,8 @@ export function leseJaNein(wert: unknown, standard = false): boolean {
 // 3) Die Ziele: welche Felder gibt es, wie heissen sie in fremden Dateien
 // ---------------------------------------------------------------------------
 
-export type FeldTyp = 'text' | 'zahl' | 'datum' | 'jaNein';
+/** 'datumZeit' (Paket 128): „12.10.2026 18:00" -> „2026-10-12T18:00" (wie die Module es speichern). */
+export type FeldTyp = 'text' | 'zahl' | 'datum' | 'jaNein' | 'datumZeit';
 
 export type ZielFeld = {
   key: string;
@@ -476,7 +501,7 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag';
   /**
    * Paket 127: bei virtuell 'position' — die Spalte in der Positionen-Tabelle
    * (ziel.kinder.tabelle). null = nur zur Kontrolle (z. B. Gesamtpreis, der
@@ -548,6 +573,25 @@ export type ImportZiel = {
    * landen in kinder.tabelle, verknuepft ueber kinder.fremdschluessel.
    */
   kinder?: { tabelle: string; fremdschluessel: string; kopfFeld: string };
+  /**
+   * Paket 128: Wertelisten je Feld (Status, Art, Typ …) — allgemein statt je
+   * Ziel eigener Code. Schluessel sind vereinheitlicht (normal()). Unbekannt
+   * -> Standard; der alte Wert wandert als „Label im Altsystem: X" in textFeld.
+   */
+  listen?: { feld: string; liste: Record<string, string>; standard: string; textFeld?: string; label: string }[];
+  /**
+   * Paket 128: Folgedatum rechnen, wenn es fehlt (naechste Kontrolle =
+   * letzte + Intervall), genau wie das Modul es beim Anlegen tut.
+   */
+  folgeDatum?: { ziel: string; aus: string; monateFeld: string }[];
+  /**
+   * Paket 128: Verweis ueber einen NAMEN in eine Nebentabelle (Gruppe eines
+   * Objekts, Objekt eines Pruefprotokolls). Die Seite sucht `nameSpalte` in
+   * `tabelle` (genau, ohne Gross/Klein) und schreibt die id nach `spalte`;
+   * `anlegen`: fehlende Eintraege werden angelegt. Kein Treffer -> der Name
+   * steht in `textFeld` — nichts verschluckt.
+   */
+  nachschlag?: { ausFeld: string; tabelle: string; nameSpalte: string; spalte: string; anlegen?: boolean; textFeld?: string; label: string };
   /** Wohin nach dem Import geschaut wird. */
   ergebnisHref?: string;
   /**
@@ -585,6 +629,18 @@ const KUNDE_NR_FELD: ZielFeld = {
   key: 'kunde_nummer', label: 'Kundennummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true,
   alias: ['kundennummer', 'kundennr', 'kunden-nr', 'kunden nr', 'kd-nr', 'kdnr', 'debitor', 'debitorennummer', 'debitorenkonto', 'konto', 'customer number', 'customer id', 'customer no'],
 };
+
+/**
+ * Paket 128: Werteliste aus den erlaubten Werten + Synonymen bauen
+ * (Schluessel vereinheitlicht wie normal(), ohne Leerzeichen-Variante).
+ */
+function liste(erlaubt: readonly string[], synonyme: Record<string, string> = {}): Record<string, string> {
+  const raus: Record<string, string> = {};
+  const n = (x: string) => String(x).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim();
+  for (const w of erlaubt) { raus[n(w)] = w; raus[n(w).replace(/\s+/g, '')] = w; }
+  for (const [k, v] of Object.entries(synonyme)) { raus[n(k)] = v; raus[n(k).replace(/\s+/g, '')] = v; }
+  return raus;
+}
 
 export const ZIELE: ImportZiel[] = [
   {
@@ -1080,6 +1136,388 @@ export const ZIELE: ImportZiel[] = [
       { key: 'menge_geliefert', label: 'Bereits geliefert (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge_geliefert', alias: ['geliefert', 'gelieferte menge', 'menge geliefert', 'erhalten', 'eingegangen'] },
     ],
   },
+  // --- Paket 128: Karten, die bisher nur eine Vorlage hatten (Teil 1) -------
+  {
+    key: 'objekte',
+    label: 'Objekt-/Asset-Register',
+    icon: '🏛',
+    tabelle: 'assets',
+    beschreibung: 'Anlagen, Maschinen, Geräte und Objekte mit Kontrollintervall — die nächste Kontrolle wird wie im Modul gerechnet, Gruppen werden angelegt.',
+    schluesselFelder: ['kennung', 'bezeichnung+standort'],
+    eigeneFelderModul: 'assets',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/objekte',
+    nachschlag: { ausFeld: 'gruppe', tabelle: 'asset_gruppen', nameSpalte: 'bezeichnung', spalte: 'gruppe_id', anlegen: true, textFeld: 'notiz', label: 'Gruppe' },
+    listen: [
+      { feld: 'typ', label: 'Typ', standard: 'sonstiges', textFeld: 'notiz', liste: liste(['maschine', 'fahrzeug', 'pv', 'aufzug', 'werkzeug', 'klima', 'immobilie', 'baum', 'feuerloescher', 'sonstiges'], { anlage: 'pv', photovoltaik: 'pv', geraet: 'werkzeug', 'werkzeug geraet': 'werkzeug', kaelte: 'klima', 'klima kaelte': 'klima', gebaeude: 'immobilie', einheit: 'immobilie', loescher: 'feuerloescher', sonstige: 'sonstiges' }) },
+      { feld: 'zustand', label: 'Zustand', standard: 'gut', textFeld: 'notiz', liste: liste(['gut', 'beobachten', 'kritisch'], { ok: 'gut', 'in ordnung': 'gut', mittel: 'beobachten', maessig: 'beobachten', schlecht: 'kritisch', defekt: 'kritisch' }) },
+    ],
+    folgeDatum: [{ ziel: 'naechste_kontrolle', aus: 'letzte_kontrolle', monateFeld: 'kontrollintervall_monate' }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'objekt', 'anlage', 'name', 'geraet', 'gerät', 'asset'] },
+      { key: 'typ', label: 'Typ', typ: 'text', standard: 'sonstiges', hinweis: 'maschine · fahrzeug · pv · aufzug · werkzeug · klima · immobilie · baum · feuerloescher · sonstiges', alias: ['typ', 'art', 'objektart', 'kategorie'] },
+      { key: 'gruppe', label: 'Gruppe', typ: 'text', virtuell: 'nachschlag', hinweis: 'Wird mit Ihren Objekt-Gruppen verknüpft; fehlende werden angelegt.', alias: ['gruppe', 'objektgruppe', 'bereich', 'anlagengruppe'] },
+      { key: 'standort', label: 'Standort', typ: 'text', alias: ['standort', 'ort', 'raum', 'gebaeude', 'einsatzort'] },
+      { key: 'hersteller', label: 'Hersteller', typ: 'text', alias: ['hersteller', 'marke', 'fabrikat'] },
+      { key: 'kennung', label: 'Kennung / Seriennummer', typ: 'text', alias: ['kennung', 'seriennummer', 'inventarnummer', 'inventar nr', 'serien nr', 'id nummer'] },
+      { key: 'zustand', label: 'Zustand', typ: 'text', standard: 'gut', hinweis: 'gut · beobachten · kritisch', alias: ['zustand', 'ampel'] },
+      { key: 'kontrollintervall_monate', label: 'Kontrollintervall (Monate)', typ: 'zahl', standard: 12, alias: ['kontrollintervall monate', 'kontrollintervall', 'intervall', 'pruefintervall', 'intervall monate'] },
+      { key: 'letzte_kontrolle', label: 'Letzte Kontrolle', typ: 'datum', alias: ['letzte kontrolle', 'letzte pruefung', 'geprueft am', 'kontrolliert am'] },
+      { key: 'naechste_kontrolle', label: 'Nächste Kontrolle', typ: 'datum', hinweis: 'Leer: letzte Kontrolle + Intervall.', alias: ['naechste kontrolle', 'naechste pruefung', 'faellig', 'faellig am'] },
+      { key: 'anschaffungsdatum', label: 'Anschaffung', typ: 'datum', alias: ['anschaffungsdatum', 'anschaffung', 'kaufdatum', 'baujahr datum'] },
+      { key: 'anschaffungswert', label: 'Anschaffungswert', typ: 'zahl', alias: ['anschaffungswert', 'kaufpreis', 'wert', 'anschaffungskosten'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'pruefprotokolle',
+    label: 'Prüfprotokolle',
+    icon: '📋',
+    tabelle: 'pruef_protokoll',
+    beschreibung: 'Frühere Prüfungen (DGUV V3, Feuerlöscher, Leitern …) mit Ergebnis und nächster Fälligkeit — mit dem Objekt verknüpft, wenn es den Namen im Register gibt.',
+    schluesselFelder: ['objekt_bezeichnung+pruef_art+datum'],
+    eigeneFelderModul: 'pruef_protokoll',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/pruefprotokolle',
+    nachschlag: { ausFeld: 'objekt_bezeichnung', tabelle: 'assets', nameSpalte: 'bezeichnung', spalte: 'asset_id', label: 'Objekt' },
+    listen: [
+      { feld: 'ergebnis', label: 'Ergebnis', standard: 'bestanden', textFeld: 'bemerkung', liste: liste(['bestanden', 'maengel', 'durchgefallen'], { ok: 'bestanden', 'i o': 'bestanden', io: 'bestanden', 'in ordnung': 'bestanden', 'ohne maengel': 'bestanden', bestanden: 'bestanden', mangel: 'maengel', 'mit maengeln': 'maengel', 'bedingt bestanden': 'maengel', 'n i o': 'durchgefallen', nio: 'durchgefallen', 'nicht bestanden': 'durchgefallen', gesperrt: 'durchgefallen' }) },
+    ],
+    folgeDatum: [{ ziel: 'naechste_pruefung', aus: 'datum', monateFeld: 'intervall_monate' }],
+    felder: [
+      { key: 'objekt_bezeichnung', label: 'Objekt', typ: 'text', alias: ['objekt bezeichnung', 'objekt', 'geraet', 'gerät', 'anlage', 'bezeichnung', 'pruefling'] },
+      { key: 'pruef_art', label: 'Prüfart', typ: 'text', pflicht: true, alias: ['pruef art', 'pruefart', 'prüfart', 'pruefung', 'art', 'pruefungsart'] },
+      { key: 'norm', label: 'Norm', typ: 'text', alias: ['norm', 'vorschrift', 'grundlage', 'regel'] },
+      { key: 'datum', label: 'Prüfdatum', typ: 'datum', pflicht: true, alias: ['datum', 'pruefdatum', 'geprueft am', 'prüfdatum'] },
+      { key: 'pruefer', label: 'Prüfer', typ: 'text', alias: ['pruefer', 'prüfer', 'geprueft von', 'befaehigte person'] },
+      { key: 'intervall_monate', label: 'Intervall (Monate)', typ: 'zahl', alias: ['intervall monate', 'intervall', 'pruefintervall'] },
+      { key: 'naechste_pruefung', label: 'Nächste Prüfung', typ: 'datum', hinweis: 'Leer: Prüfdatum + Intervall.', alias: ['naechste pruefung', 'naechste', 'faellig', 'faellig am', 'wiederholung'] },
+      { key: 'ergebnis', label: 'Ergebnis', typ: 'text', standard: 'bestanden', hinweis: 'bestanden · maengel · durchgefallen', alias: ['ergebnis', 'befund', 'status'] },
+      { key: 'bemerkung', label: 'Bemerkung', typ: 'text', alias: ['bemerkung', 'notiz', 'maengel beschreibung', 'kommentar'] },
+    ],
+  },
+  {
+    key: 'bde',
+    label: 'Maschinen (BDE/MDE)',
+    icon: '📟',
+    tabelle: 'bde_maschine',
+    beschreibung: 'Maschinenstammdaten für die Betriebsdatenerfassung — Taktzeit und Status.',
+    schluesselFelder: ['maschinen_nr', 'bezeichnung'],
+    eigeneFelderModul: 'bde_maschine',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/bde',
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', liste: liste(['aktiv', 'wartung', 'ausgemustert'], { 'in betrieb': 'aktiv', laufend: 'aktiv', 'in wartung': 'wartung', reparatur: 'wartung', stillgelegt: 'ausgemustert', verschrottet: 'ausgemustert' }) }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'maschine', 'name', 'anlage'] },
+      { key: 'maschinen_nr', label: 'Maschinen-Nr.', typ: 'text', alias: ['maschinen nr', 'maschinennummer', 'maschinen nummer', 'nummer', 'anlagen nr', 'inventarnummer'] },
+      { key: 'standort', label: 'Standort / Halle', typ: 'text', alias: ['standort', 'halle', 'ort', 'bereich'] },
+      { key: 'ideal_takt_sek', label: 'Idealtakt (Sekunden)', typ: 'zahl', alias: ['ideal takt sek', 'idealtakt', 'taktzeit', 'takt sek', 'zykluszeit'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · wartung · ausgemustert', alias: ['status'] },
+    ],
+  },
+  {
+    key: 'chargen',
+    label: 'Chargen & Serien',
+    icon: '🔬',
+    tabelle: 'charge_los',
+    beschreibung: 'Chargen- und Serien-Lose mit MHD und Herkunft — Grundlage für Rückverfolgung und Rückruf.',
+    schluesselFelder: ['charge_nr'],
+    eigeneFelderModul: 'charge_los',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/chargen',
+    listen: [
+      { feld: 'typ', label: 'Typ', standard: 'charge', textFeld: 'bemerkung', liste: liste(['charge', 'serie'], { los: 'charge', batch: 'charge', lot: 'charge', seriennummer: 'serie', serial: 'serie' }) },
+      { feld: 'status', label: 'Status', standard: 'freigegeben', textFeld: 'bemerkung', liste: liste(['freigegeben', 'quarantaene', 'gesperrt', 'verbraucht'], { frei: 'freigegeben', ok: 'freigegeben', quarantäne: 'quarantaene', pruefung: 'quarantaene', 'in pruefung': 'quarantaene', sperre: 'gesperrt', blockiert: 'gesperrt', aufgebraucht: 'verbraucht', leer: 'verbraucht' }) },
+    ],
+    felder: [
+      { key: 'charge_nr', label: 'Chargen-Nr.', typ: 'text', pflicht: true, alias: ['charge nr', 'chargennummer', 'charge', 'los', 'los nr', 'losnummer', 'lot', 'seriennummer'] },
+      { key: 'typ', label: 'Typ', typ: 'text', standard: 'charge', hinweis: 'charge · serie', alias: ['typ', 'art'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', alias: ['bezeichnung', 'artikel', 'produkt', 'material'] },
+      { key: 'menge', label: 'Menge', typ: 'zahl', alias: ['menge', 'anzahl', 'bestand'] },
+      { key: 'einheit', label: 'Einheit', typ: 'text', alias: ['einheit', 'me', 'mengeneinheit'] },
+      { key: 'herstell_datum', label: 'Herstelldatum', typ: 'datum', alias: ['herstell datum', 'herstelldatum', 'produktionsdatum', 'hergestellt am', 'eingang'] },
+      { key: 'mhd', label: 'MHD / Verfall', typ: 'datum', alias: ['mhd', 'mindesthaltbarkeit', 'verfall', 'verbrauchen bis', 'haltbar bis'] },
+      { key: 'herkunft', label: 'Herkunft / Lieferant', typ: 'text', alias: ['herkunft', 'lieferant', 'ursprung', 'erzeuger'] },
+      { key: 'auftrag', label: 'Auftrag', typ: 'text', alias: ['auftrag', 'auftragsnummer', 'fertigungsauftrag'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'freigegeben', hinweis: 'freigegeben · quarantaene · gesperrt · verbraucht', alias: ['status', 'freigabe'] },
+      { key: 'bemerkung', label: 'Bemerkung', typ: 'text', alias: ['bemerkung', 'notiz', 'notizen'] },
+    ],
+  },
+  {
+    key: 'expose',
+    label: 'Exposé-Objekte',
+    icon: '🏠',
+    tabelle: 'expose',
+    beschreibung: 'Immobilien-Objekte für Exposé und Vermarktung. Importierte Objekte kommen als Entwurf — veröffentlicht wird erst nach Ihrer Prüfung (Pflichtangaben Energieausweis).',
+    schluesselFelder: ['bezeichnung+adresse', 'bezeichnung+ort'],
+    eigeneFelderModul: 'expose',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/expose',
+    listen: [
+      { feld: 'objekt_art', label: 'Objektart', standard: 'wohnung', textFeld: 'objekt_text', liste: liste(['wohnung', 'haus', 'gewerbe', 'grundstueck'], { etw: 'wohnung', eigentumswohnung: 'wohnung', apartment: 'wohnung', einfamilienhaus: 'haus', efh: 'haus', mehrfamilienhaus: 'haus', mfh: 'haus', reihenhaus: 'haus', doppelhaushaelfte: 'haus', buero: 'gewerbe', laden: 'gewerbe', halle: 'gewerbe', gewerbeflaeche: 'gewerbe', grundstück: 'grundstueck', bauland: 'grundstueck' }) },
+      { feld: 'vermarktung_art', label: 'Vermarktung', standard: 'kauf', textFeld: 'objekt_text', liste: liste(['kauf', 'miete'], { verkauf: 'kauf', kaufen: 'kauf', vermietung: 'miete', mieten: 'miete', pacht: 'miete' }) },
+      { feld: 'energie_typ', label: 'Energieausweis', standard: '', textFeld: 'objekt_text', liste: liste(['bedarf', 'verbrauch'], { bedarfsausweis: 'bedarf', verbrauchsausweis: 'verbrauch' }) },
+      // Nie direkt „aktiv": veroeffentlicht wird erst nach Pruefung der Pflichtangaben.
+      { feld: 'status', label: 'Status', standard: 'entwurf', textFeld: 'objekt_text', liste: liste(['entwurf', 'reserviert', 'verkauft', 'vermietet'], { aktiv: 'entwurf', online: 'entwurf', veroeffentlicht: 'entwurf', verfuegbar: 'entwurf', frei: 'entwurf' }) },
+    ],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'titel', 'objekt', 'objektname', 'name'] },
+      { key: 'objekt_art', label: 'Objektart', typ: 'text', standard: 'wohnung', hinweis: 'wohnung · haus · gewerbe · grundstueck', alias: ['objekt art', 'objektart', 'art', 'typ', 'immobilienart'] },
+      { key: 'vermarktung_art', label: 'Vermarktung', typ: 'text', standard: 'kauf', hinweis: 'kauf · miete', alias: ['vermarktung art', 'vermarktung', 'vermarktungsart', 'angebotsart'] },
+      { key: 'ort', label: 'Ort', typ: 'text', alias: ['ort', 'stadt', 'gemeinde'] },
+      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'strasse', 'straße', 'lage'] },
+      { key: 'wohnflaeche', label: 'Wohnfläche m²', typ: 'zahl', alias: ['wohnflaeche', 'wohnfläche', 'flaeche', 'nutzflaeche', 'qm'] },
+      { key: 'grundstuecksflaeche', label: 'Grundstücksfläche m²', typ: 'zahl', alias: ['grundstuecksflaeche', 'grundstücksfläche', 'grundstueck', 'grundstuecksgroesse'] },
+      { key: 'zimmer', label: 'Zimmer', typ: 'zahl', alias: ['zimmer', 'zimmeranzahl', 'raeume'] },
+      { key: 'baujahr', label: 'Baujahr', typ: 'zahl', alias: ['baujahr', 'erbaut'] },
+      { key: 'etage', label: 'Etage', typ: 'text', alias: ['etage', 'geschoss', 'stockwerk'] },
+      { key: 'verfuegbar_ab', label: 'Verfügbar ab', typ: 'datum', alias: ['verfuegbar ab', 'bezugsfrei ab', 'frei ab'] },
+      { key: 'preis', label: 'Preis', typ: 'zahl', alias: ['preis', 'kaufpreis', 'kaltmiete', 'miete'] },
+      { key: 'nebenkosten', label: 'Nebenkosten', typ: 'zahl', alias: ['nebenkosten', 'nk', 'hausgeld'] },
+      { key: 'provision_prozent', label: 'Provision %', typ: 'zahl', alias: ['provision prozent', 'provision', 'courtage', 'kaeuferprovision'] },
+      { key: 'energie_typ', label: 'Energieausweis-Art', typ: 'text', hinweis: 'bedarf · verbrauch', alias: ['energie typ', 'energieausweis', 'ausweisart', 'energieausweis art'] },
+      { key: 'energiekennwert', label: 'Energiekennwert', typ: 'zahl', alias: ['energiekennwert', 'endenergie', 'kennwert', 'kwh m2 a'] },
+      { key: 'energietraeger', label: 'Energieträger', typ: 'text', alias: ['energietraeger', 'energieträger', 'heizung', 'befeuerung'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'entwurf', hinweis: 'Aktive Objekte kommen als Entwurf.', alias: ['status'] },
+      { key: 'objekt_text', label: 'Objektbeschreibung', typ: 'text', alias: ['objekt text', 'beschreibung', 'objektbeschreibung', 'text'] },
+      { key: 'lage_text', label: 'Lagebeschreibung', typ: 'text', alias: ['lage text', 'lagebeschreibung'] },
+      { key: 'ausstattung_text', label: 'Ausstattung', typ: 'text', alias: ['ausstattung text', 'ausstattung'] },
+    ],
+  },
+  {
+    key: 'kurse',
+    label: 'Kurse',
+    icon: '🎓',
+    tabelle: 'bildung_kurse',
+    beschreibung: 'Kursangebote mit Zeitraum, Ort, Dozent, Plätzen und Preis.',
+    schluesselFelder: ['titel+start_am'],
+    eigeneFelderModul: 'bildung_kurse',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/bildung',
+    listen: [{ feld: 'art', label: 'Art', standard: 'einzeltermin', liste: liste(['einzeltermin', 'serie'], { einmalig: 'einzeltermin', termin: 'einzeltermin', tageskurs: 'einzeltermin', reihe: 'serie', kursreihe: 'serie', woechentlich: 'serie', mehrteilig: 'serie' }) }],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'kurs', 'kursname', 'bezeichnung', 'name'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'einzeltermin', hinweis: 'einzeltermin · serie', alias: ['art', 'kursart', 'typ'] },
+      { key: 'start_am', label: 'Beginn', typ: 'datum', alias: ['start am', 'start', 'beginn', 'von', 'kursbeginn'] },
+      { key: 'ende_am', label: 'Ende', typ: 'datum', alias: ['ende am', 'ende', 'bis', 'kursende'] },
+      { key: 'ort', label: 'Ort', typ: 'text', alias: ['ort', 'raum', 'veranstaltungsort'] },
+      { key: 'dozent', label: 'Dozent/in', typ: 'text', alias: ['dozent', 'dozentin', 'trainer', 'kursleitung', 'referent'] },
+      { key: 'plaetze', label: 'Plätze', typ: 'zahl', standard: 10, alias: ['plaetze', 'plätze', 'teilnehmer max', 'max teilnehmer', 'kapazitaet'] },
+      { key: 'preis', label: 'Preis', typ: 'zahl', alias: ['preis', 'kursgebuehr', 'gebuehr', 'kosten'] },
+      { key: 'zertifikat_aktiv', label: 'Teilnahmebescheinigung', typ: 'jaNein', alias: ['zertifikat aktiv', 'zertifikat', 'bescheinigung', 'teilnahmebescheinigung'] },
+    ],
+  },
+  {
+    key: 'veranstaltungen',
+    label: 'Veranstaltungen',
+    icon: '🎫',
+    tabelle: 'event_veranstaltung',
+    beschreibung: 'Events mit Beginn, Kapazität, Preis und Status.',
+    schluesselFelder: ['titel+beginn'],
+    eigeneFelderModul: 'event_veranstaltung',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/veranstaltungen',
+    listen: [
+      { feld: 'art', label: 'Art', standard: 'sonstige', liste: liste(['konzert', 'workshop', 'tagung', 'fest', 'vortrag', 'kurs', 'sonstige'], { auffuehrung: 'konzert', theater: 'konzert', seminar: 'workshop', konferenz: 'tagung', messe: 'tagung', feier: 'fest', party: 'fest', lesung: 'vortrag', webinar: 'vortrag' }) },
+      { feld: 'status', label: 'Status', standard: 'geplant', liste: liste(['geplant', 'aktiv', 'ausverkauft', 'abgesagt', 'beendet'], { offen: 'aktiv', buchbar: 'aktiv', 'im verkauf': 'aktiv', voll: 'ausverkauft', storniert: 'abgesagt', abgeschlossen: 'beendet', vorbei: 'beendet' }) },
+    ],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'veranstaltung', 'event', 'name', 'bezeichnung'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'sonstige', hinweis: 'konzert · workshop · tagung · fest · vortrag · kurs · sonstige', alias: ['art', 'typ', 'kategorie'] },
+      { key: 'ort', label: 'Ort', typ: 'text', alias: ['ort', 'location', 'veranstaltungsort', 'raum'] },
+      { key: 'beginn', label: 'Beginn', typ: 'datumZeit', alias: ['beginn', 'start', 'datum', 'von', 'einlass'] },
+      { key: 'ende', label: 'Ende', typ: 'datumZeit', alias: ['ende', 'bis'] },
+      { key: 'kapazitaet', label: 'Kapazität', typ: 'zahl', alias: ['kapazitaet', 'kapazität', 'plaetze', 'max teilnehmer', 'tickets'] },
+      { key: 'preis', label: 'Preis', typ: 'zahl', alias: ['preis', 'eintritt', 'ticketpreis'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'geplant', hinweis: 'geplant · aktiv · ausverkauft · abgesagt · beendet', alias: ['status'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'text', 'notiz'] },
+    ],
+  },
+  {
+    key: 'reservierung_plaetze',
+    label: 'Reservierbare Plätze',
+    icon: '🪑',
+    tabelle: 'reservierung_platz',
+    beschreibung: 'Tische, Lager- und Thekenplätze zum Reservieren.',
+    schluesselFelder: ['bezeichnung+standort', 'bezeichnung'],
+    eigeneFelderModul: 'reservierung_platz',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/reservierung',
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv'], { 'in betrieb': 'aktiv', 'in nutzung': 'aktiv', offen: 'aktiv', ja: 'aktiv' }) }, { feld: 'art', label: 'Art', standard: 'tisch', textFeld: 'notiz', liste: liste(['tisch', 'lagerplatz', 'theke'], { platz: 'tisch', sitzplatz: 'tisch', lager: 'lagerplatz', stellplatz: 'lagerplatz', einlagerung: 'lagerplatz', tresen: 'theke', abholung: 'theke' }) }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'tisch', 'platz', 'name', 'nummer'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'tisch', hinweis: 'tisch · lagerplatz · theke', alias: ['art', 'typ'] },
+      { key: 'standort', label: 'Bereich', typ: 'text', alias: ['standort', 'bereich', 'raum', 'zone'] },
+      { key: 'kapazitaet', label: 'Kapazität', typ: 'zahl', alias: ['kapazitaet', 'kapazität', 'plaetze', 'personen', 'sitzplaetze'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'belegung',
+    label: 'Belegungs-Einheiten',
+    icon: '🗓',
+    tabelle: 'belegung_einheit',
+    beschreibung: 'Zimmer, Ferienwohnungen, Stellplätze und Räume mit Preis je Nacht/Tag/Stunde — Buchungen folgen im Modul.',
+    schluesselFelder: ['einheit_nr', 'bezeichnung'],
+    eigeneFelderModul: 'belegung_einheit',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/belegung',
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', liste: liste(['aktiv'], { 'in betrieb': 'aktiv', 'in nutzung': 'aktiv', offen: 'aktiv', ja: 'aktiv' }) }, { feld: 'abrechnungsart', label: 'Abrechnung', standard: 'nacht', liste: liste(['nacht', 'tag', 'stunde'], { 'pro nacht': 'nacht', uebernachtung: 'nacht', 'pro tag': 'tag', tageweise: 'tag', 'pro stunde': 'stunde', stuendlich: 'stunde' }) }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'zimmer', 'einheit', 'name', 'objekt'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'zimmertyp', 'typ', 'art'] },
+      { key: 'einheit_nr', label: 'Nummer', typ: 'text', alias: ['einheit nr', 'zimmernummer', 'zimmer nr', 'nummer', 'nr'] },
+      { key: 'abrechnungsart', label: 'Abrechnung', typ: 'text', standard: 'nacht', hinweis: 'nacht · tag · stunde', alias: ['abrechnungsart', 'abrechnung', 'preis pro'] },
+      { key: 'preis_pro_einheit', label: 'Preis je Einheit', typ: 'zahl', alias: ['preis pro einheit', 'preis', 'preis pro nacht', 'uebernachtungspreis', 'tagespreis'] },
+      { key: 'grundgebuehr', label: 'Grundgebühr', typ: 'zahl', alias: ['grundgebuehr', 'grundgebühr', 'endreinigung', 'pauschale'] },
+      { key: 'kaution', label: 'Kaution', typ: 'zahl', alias: ['kaution'] },
+      { key: 'max_belegung', label: 'Max. Personen', typ: 'zahl', alias: ['max belegung', 'max personen', 'betten', 'personen'] },
+      { key: 'mwst_satz', label: 'MwSt %', typ: 'zahl', standard: 7, alias: ['mwst satz', 'mwst', 'ust', 'steuersatz'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', alias: ['status'] },
+    ],
+  },
+  {
+    key: 'erinnerungen',
+    label: 'Erinnerungen',
+    icon: '🔔',
+    tabelle: 'erinnerung',
+    beschreibung: 'Wiedervorlagen und Erinnerungstermine. Versendet wird nichts automatisch — Sie entscheiden je Erinnerung.',
+    schluesselFelder: ['titel+faellig_am'],
+    eigeneFelderModul: 'erinnerung',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/erinnerungen',
+    // E-Mail-Adressen fuer den Versand nicht aus Dateien (Werbe-Einwilligung) — die Seite waehlt den Kontakt.
+    ausblenden: ['email', 'bezug_id', 'versendet_am', 'gesendet_am'],
+    listen: [
+      { feld: 'kanal', label: 'Kanal', standard: 'telefon', textFeld: 'notiz', liste: liste(['telefon', 'email', 'sms', 'whatsapp', 'brief', 'persoenlich'], { anruf: 'telefon', tel: 'telefon', 'e mail': 'email', mail: 'email', post: 'brief', persönlich: 'persoenlich', 'vor ort': 'persoenlich' }) },
+      { feld: 'bezug_typ', label: 'Bezug', standard: 'frei', liste: liste(['termin', 'reservierung', 'frei'], { sonstiges: 'frei', allgemein: 'frei' }) },
+      { feld: 'status', label: 'Status', standard: 'offen', textFeld: 'notiz', liste: liste(['offen', 'erledigt', 'entfallen'], { neu: 'offen', faellig: 'offen', done: 'erledigt', abgeschlossen: 'erledigt', erinnert: 'erledigt', storniert: 'entfallen', abgesagt: 'entfallen' }) },
+    ],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'betreff', 'erinnerung', 'aufgabe', 'bezeichnung'] },
+      { key: 'kanal', label: 'Kanal', typ: 'text', standard: 'telefon', hinweis: 'telefon · email · sms · whatsapp · brief · persoenlich', alias: ['kanal', 'art', 'weg'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde name', 'kunde', 'kundenname', 'name', 'kontakt'] },
+      { key: 'faellig_am', label: 'Fällig am', typ: 'datum', pflicht: true, alias: ['faellig am', 'fällig am', 'faellig', 'wiedervorlage', 'datum', 'erinnern am'] },
+      { key: 'termin_am', label: 'Termin am', typ: 'datum', alias: ['termin am', 'termin', 'termindatum'] },
+      { key: 'bezug_typ', label: 'Bezug', typ: 'text', standard: 'frei', hinweis: 'termin · reservierung · frei', alias: ['bezug typ', 'bezug'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'offen', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'text'] },
+    ],
+  },
+  {
+    key: 'gutachten',
+    label: 'Gutachten',
+    icon: '📑',
+    tabelle: 'gutachten',
+    beschreibung: 'Gutachten und Sachverständigen-Vorgänge mit Auftraggeber, Objekt und Aktenzeichen.',
+    schluesselFelder: ['aktenzeichen', 'titel+datum'],
+    eigeneFelderModul: 'gutachten',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/gutachten',
+    listen: [{ feld: 'status', label: 'Status', standard: 'entwurf', textFeld: 'zusammenfassung', liste: liste(['entwurf', 'fertig'], { offen: 'entwurf', neu: 'entwurf', 'in bearbeitung': 'entwurf', laufend: 'entwurf', abgeschlossen: 'fertig', erledigt: 'fertig', versendet: 'fertig', erstellt: 'fertig' }) }],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'gutachten', 'bezeichnung', 'betreff'] },
+      { key: 'auftraggeber', label: 'Auftraggeber', typ: 'text', alias: ['auftraggeber', 'kunde', 'mandant', 'besteller'] },
+      { key: 'objekt', label: 'Objekt', typ: 'text', alias: ['objekt', 'gegenstand', 'fahrzeug', 'immobilie', 'adresse'] },
+      { key: 'art', label: 'Art', typ: 'text', alias: ['art', 'gutachtenart', 'typ'] },
+      { key: 'aktenzeichen', label: 'Aktenzeichen', typ: 'text', alias: ['aktenzeichen', 'az', 'vorgangsnummer', 'auftragsnummer'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', alias: ['datum', 'auftragsdatum', 'erstellt am', 'ortstermin'] },
+      { key: 'gutachter', label: 'Gutachter/in', typ: 'text', alias: ['gutachter', 'sachverstaendiger', 'bearbeiter'] },
+      { key: 'stunden', label: 'Stunden', typ: 'zahl', alias: ['stunden', 'aufwand', 'zeitaufwand'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'entwurf', alias: ['status'] },
+      { key: 'zusammenfassung', label: 'Zusammenfassung', typ: 'text', alias: ['zusammenfassung', 'ergebnis', 'notiz', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'schlaege',
+    label: 'Schläge (Landwirtschaft)',
+    icon: '🌾',
+    tabelle: 'schlag',
+    beschreibung: 'Feldstücke und Schläge mit Fläche und Kultur für die Schlagkartei.',
+    schluesselFelder: ['bezeichnung+flurstueck', 'bezeichnung'],
+    eigeneFelderModul: 'schlag',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/schlagkartei',
+    // Das Modul kennt nur „aktiv" (Anlegen) — andere Werte bleiben im Text.
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv'], { 'in betrieb': 'aktiv', 'in nutzung': 'aktiv', offen: 'aktiv', ja: 'aktiv' }) }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'schlag', 'schlagname', 'feldstueck', 'feldstück', 'name'] },
+      { key: 'flurstueck', label: 'Flurstück', typ: 'text', alias: ['flurstueck', 'flurstück', 'flur', 'flik', 'feldblock'] },
+      { key: 'flaeche_ha', label: 'Fläche (ha)', typ: 'zahl', alias: ['flaeche ha', 'fläche ha', 'flaeche', 'fläche', 'hektar', 'ha'] },
+      { key: 'kultur', label: 'Kultur', typ: 'text', alias: ['kultur', 'frucht', 'hauptfrucht', 'anbau'] },
+      { key: 'kultur_jahr', label: 'Anbaujahr', typ: 'zahl', alias: ['kultur jahr', 'anbaujahr', 'erntejahr', 'jahr'] },
+      { key: 'aussaat_am', label: 'Aussaat', typ: 'datum', alias: ['aussaat am', 'aussaat', 'saat', 'gesaet am'] },
+      { key: 'ernte_am', label: 'Ernte', typ: 'datum', alias: ['ernte am', 'ernte', 'geerntet am'] },
+      { key: 'standort', label: 'Standort / Gemarkung', typ: 'text', alias: ['standort', 'gemarkung', 'lage', 'ort'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'tiergruppen',
+    label: 'Tierbestand',
+    icon: '🐄',
+    tabelle: 'tier_gruppe',
+    beschreibung: 'Tiergruppen mit Betriebsnummer und aktuellem Bestand (Landwirtschaft). Einzeltier-Akten von Tierärzten kommen erst nach der Anwalts-Prüfung.',
+    schluesselFelder: ['bezeichnung+betriebsnummer', 'bezeichnung'],
+    eigeneFelderModul: 'tier_gruppe',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/tierbestand',
+    listen: [{ feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv'], { 'in betrieb': 'aktiv', 'in nutzung': 'aktiv', offen: 'aktiv', ja: 'aktiv' }) }, { feld: 'tierart', label: 'Tierart', standard: 'sonstige', textFeld: 'notiz', liste: liste(['rind', 'schwein', 'schaf', 'ziege', 'pferd', 'gefluegel', 'sonstige'], { rinder: 'rind', kuh: 'rind', kuehe: 'rind', milchkuehe: 'rind', kalb: 'rind', kaelber: 'rind', schweine: 'schwein', ferkel: 'schwein', sau: 'schwein', mastschweine: 'schwein', schafe: 'schaf', laemmer: 'schaf', ziegen: 'ziege', pferde: 'pferd', gefluegel: 'gefluegel', geflügel: 'gefluegel', huehner: 'gefluegel', legehennen: 'gefluegel', puten: 'gefluegel', enten: 'gefluegel', gaense: 'gefluegel' }) }],
+    felder: [
+      { key: 'tierart', label: 'Tierart', typ: 'text', pflicht: true, hinweis: 'rind · schwein · schaf · ziege · pferd · gefluegel · sonstige', alias: ['tierart', 'art', 'tiere'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'gruppe', 'tiergruppe', 'stall', 'name'] },
+      { key: 'betriebsnummer', label: 'Betriebsnummer (VVVO)', typ: 'text', alias: ['betriebsnummer', 'vvvo', 'vvvo nummer', 'registriernummer'] },
+      { key: 'standort', label: 'Standort / Stall', typ: 'text', alias: ['standort', 'stall', 'ort'] },
+      { key: 'meldefrist_tage', label: 'Meldefrist (Tage)', typ: 'zahl', standard: 7, alias: ['meldefrist tage', 'meldefrist'] },
+      { key: 'aktueller_bestand', label: 'Aktueller Bestand', typ: 'zahl', alias: ['aktueller bestand', 'bestand', 'anzahl', 'stueckzahl', 'tiere anzahl'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung'] },
+    ],
+  },
+  {
+    key: 'ertraege',
+    label: 'Anlagen (Erträge/Energie)',
+    icon: '☀️',
+    tabelle: 'ertrag_anlage',
+    beschreibung: 'PV-, BHKW-, Wind- und Speicher-Anlagen mit Leistung, Soll-Ertrag und Vergütung.',
+    schluesselFelder: ['bezeichnung+standort', 'bezeichnung'],
+    eigeneFelderModul: 'ertrag_anlage',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/ertraege',
+    listen: [
+      { feld: 'typ', label: 'Typ', standard: 'sonstige', liste: liste(['pv', 'bhkw', 'wind', 'speicher', 'waermepumpe', 'sonstige'], { photovoltaik: 'pv', solar: 'pv', 'pv anlage': 'pv', blockheizkraftwerk: 'bhkw', windkraft: 'wind', windrad: 'wind', batterie: 'speicher', batteriespeicher: 'speicher', wärmepumpe: 'waermepumpe', wp: 'waermepumpe' }) },
+      { feld: 'status', label: 'Status', standard: 'aktiv', liste: liste(['aktiv', 'wartung', 'stillgelegt'], { 'in betrieb': 'aktiv', laufend: 'aktiv', stoerung: 'wartung', 'in wartung': 'wartung', abgeschaltet: 'stillgelegt', ausser_betrieb: 'stillgelegt', 'ausser betrieb': 'stillgelegt' }) },
+    ],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'anlage', 'name', 'anlagenname'] },
+      { key: 'typ', label: 'Typ', typ: 'text', standard: 'sonstige', hinweis: 'pv · bhkw · wind · speicher · waermepumpe · sonstige', alias: ['typ', 'art', 'anlagentyp'] },
+      { key: 'standort', label: 'Standort', typ: 'text', alias: ['standort', 'ort', 'adresse', 'dach'] },
+      { key: 'nennleistung_kwp', label: 'Nennleistung (kWp/kW)', typ: 'zahl', alias: ['nennleistung kwp', 'nennleistung', 'leistung', 'kwp', 'kw'] },
+      { key: 'soll_spezifisch', label: 'Soll-Ertrag je kWp', typ: 'zahl', alias: ['soll spezifisch', 'soll ertrag', 'spezifischer ertrag', 'kwh kwp'] },
+      { key: 'verguetung_ct', label: 'Vergütung (ct/kWh)', typ: 'zahl', alias: ['verguetung ct', 'verguetung', 'vergütung', 'einspeiseverguetung', 'eeg verguetung'] },
+      { key: 'strompreis_ct', label: 'Strompreis (ct/kWh)', typ: 'zahl', alias: ['strompreis ct', 'strompreis', 'bezugspreis'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · wartung · stillgelegt', alias: ['status'] },
+    ],
+  },
+  {
+    key: 'freigaben',
+    label: 'Freigaben & Assets',
+    icon: '✅',
+    tabelle: 'proof_asset',
+    beschreibung: 'Kreativ-Assets (Entwürfe, Videos, Texte) für Freigabe und Proofing mit dem Kunden.',
+    schluesselFelder: ['titel+kunde', 'titel'],
+    eigeneFelderModul: 'proof_asset',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/freigaben',
+    listen: [{ feld: 'kategorie', label: 'Kategorie', standard: 'sonstige', liste: liste(['design', 'video', 'text', 'web', 'print', 'social', 'sonstige'], { grafik: 'design', logo: 'design', layout: 'design', film: 'video', clip: 'video', motion: 'video', texte: 'text', copy: 'text', website: 'web', webseite: 'web', druck: 'print', flyer: 'print', plakat: 'print', 'social media': 'social', instagram: 'social', linkedin: 'social' }) }],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', pflicht: true, alias: ['titel', 'asset', 'bezeichnung', 'name', 'datei'] },
+      { key: 'kunde', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'auftraggeber'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', standard: 'sonstige', hinweis: 'design · video · text · web · print · social · sonstige', alias: ['kategorie', 'art', 'typ'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -1495,6 +1933,13 @@ export function pruefeZeile(
       continue;
     }
 
+    if (f.typ === 'datumZeit') {
+      const dz = leseDatumZeit(eingabe, heute);
+      if (!dz) warnungen.push({ zeile: nummer, feld: f.label, meldung: `"${eingabe}" ist kein erkennbares Datum — Feld bleibt leer` });
+      else werte[f.key] = dz;
+      continue;
+    }
+
     if (f.typ === 'jaNein') { werte[f.key] = leseJaNein(eingabe, Boolean(f.standard)); continue; }
 
     werte[f.key] = eingabe;
@@ -1513,7 +1958,7 @@ export function pruefeZeile(
   if (fehler.length > 0) return { werte: null, fehler, warnungen };
 
   virtuelleFelderAufloesen(ziel, werte);
-  nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD);
+  nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
 
   // Eine Zeile ohne jeden Inhalt ist kein Datensatz.
   const hatInhalt = Object.entries(werte).some(([k, v]) => {
@@ -1544,7 +1989,15 @@ function nachbereiten(
   nummer: number,
   warnungen: ZeilenFehler[],
   steuersatz: number = STEUERSATZ_STANDARD,
+  ziel?: ImportZiel,
 ): void {
+  // Paket 128: allgemeine Wertelisten und Folgedaten des Ziels
+  for (const l of ziel?.listen ?? []) aufListe(werte, l.feld, l.liste, l.standard, l.textFeld ?? '', l.label, nummer, warnungen);
+  for (const d of ziel?.folgeDatum ?? []) {
+    const aus = typeof werte[d.aus] === 'string' ? String(werte[d.aus]).slice(0, 10) : '';
+    const monate = Number(werte[d.monateFeld]);
+    if (!werte[d.ziel] && /^\d{4}-\d{2}-\d{2}$/.test(aus) && monate > 0) werte[d.ziel] = plusMonate(aus, Math.round(monate));
+  }
   if (zielKey === 'rechnungen') {
     const netto = typeof werte.netto_summe === 'number' ? werte.netto_summe : 0;
     const mwst = typeof werte.mwst_summe === 'number' ? werte.mwst_summe : 0;
@@ -1884,6 +2337,12 @@ export function zerlegeName(roh: string): { vorname: string; nachname: string; f
  * als Spalte in die Datenbank gehen.
  */
 export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string, unknown>): void {
+  // Paket 128: Name fuer den Nachschlag merken (die Seite sucht die id) —
+  // auch wenn das Namensfeld ein echtes Feld ist (Pruefprotokoll: Objekt).
+  if (ziel.nachschlag) {
+    const n = String(werte[ziel.nachschlag.ausFeld] ?? '').trim();
+    if (n) werte.__nach = n;
+  }
   const virtuelle = ziel.felder.filter((f) => f.virtuell);
   if (virtuelle.length === 0) return;
   const leer = (v: unknown) => v === undefined || v === null || String(v).trim() === '';

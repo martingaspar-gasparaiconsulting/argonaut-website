@@ -59,7 +59,8 @@ test('Paket 127: Motor-Tabellen und SQL-Whitelist stimmen ueberein (19)', () => 
   const sql = lies('supabase-sql/p127-import-schritt3c.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  // Paket 128 erweitert den Motor weiter — p127 ist der Stand bis dahin (die ersten 19).
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].slice(0, 19).sort());
   assert.equal(whitelist.length, 19);
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);
   assert.match(sql, /whist_insert_ma/);
