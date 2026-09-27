@@ -46,6 +46,11 @@ import {
   gruppiereBestellungen, baueArtikelIndex, kopfFuerDatenbank, positionFuerDatenbank, bestellSumme,
 } from '@/lib/importBestellungen';
 import type { ImportZiel } from '@/lib/importParser';
+import {
+  baueArtikelSuche, baueStandortSuche, planeBestand, bestandSumme, bestandGrund, rueckDaten, leseRueckDaten,
+  planeRueckgaengig, bestandSchluessel, type ArtikelRoh, type StandortRoh, type BestandRoh, type BestandBuchung,
+} from '@/lib/importBestand';
+import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -1052,10 +1057,212 @@ export default function ImportCenterPage() {
     }
   }
 
+  // --- Paket 136: Bestand je Filiale ---------------------------------------
+  // Eine Bestandsliste bringt Zaehlstaende, keine neuen Datensaetze. Jede Zahl
+  // wird als KORREKTUR ueber lager_buchen gebucht — genau wie eine Inventur in
+  // der Lager-Matrix: Eintrag im Verlauf, Filialbestand und Summe am Artikel
+  // in einem Vorgang. Der alte Stand je Buchung kommt ins Protokoll
+  // (rueck_daten), damit „Rückgängig" ihn wiederherstellen kann.
+  async function ladeBestandsDaten() {
+    setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Artikel, Filialen und Bestände laden …' });
+    const artikel = await allesLaden('artikel', ['id,artikelnummer,bezeichnung,ean,aktueller_bestand,aktiv', 'id,artikelnummer,bezeichnung,aktueller_bestand'], 'Artikel');
+    const { data: st, error: eSt } = await supabase.from('standorte').select('id,name,ort,ist_hauptsitz,aktiv');
+    // Ohne Tabelle „standorte" (Multistandort nie eingerichtet) gilt: keine Filialen.
+    const standorte = eSt ? [] : ((st ?? []) as unknown as StandortRoh[]);
+    const vorhanden = standorte.length === 0 ? [] : await allesLaden('artikel_bestand_standort', ['id,artikel_id,standort_id,bestand'], 'Filialbestände');
+    return { artikel: artikel as unknown as ArtikelRoh[], standorte, vorhanden: vorhanden as unknown as BestandRoh[] };
+  }
+
+  async function importiereBestand() {
+    if (!datei || !ziel || !bericht) return;
+    setBusy('import'); setFehler(null); setHinweis(null);
+    anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    messRef.current = [];
+    const erg: ImportErgebnis = {
+      angelegt: 0, aktualisiert: 0, uebersprungen: 0, fehlgeschlagen: 0, fehler: [],
+      gelesen: bericht.gesamt, doppelt: 0, abgelehnt: bericht.schlecht,
+      offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
+      eigeneWerte: 0, eigeneFelderNeu: 0, eigeneAlsNotiz: 0, eigeneFehler: [],
+      kundeVerknuepft: 0, kundeOhne: 0, kundeHinweise: [], zusatzHinweise: [],
+    };
+    const gebucht: BestandBuchung[] = [];
+    let erledigt = 0;
+    let gesamt = 0;
+    const einspielStart = Date.now();
+    try {
+      const { uid, betrieb } = await betriebUndIch();
+      const daten = await ladeBestandsDaten();
+      const plan = planeBestand(bericht.saetze, bericht.zeilenNummern,
+        baueArtikelSuche(daten.artikel), baueStandortSuche(daten.standorte), daten.vorhanden);
+      const summe = bestandSumme(plan);
+      setBalken(null);
+      if (plan.buchungen.length > 0 && typeof window !== 'undefined' && !window.confirm(
+        `${zahlDe(summe.buchungen)} Bestände (${zahlDe(summe.artikel)} Artikel) werden jetzt als Korrektur gebucht — mit Eintrag im Lager-Verlauf. `
+        + (summe.unveraendert > 0 ? `${zahlDe(summe.unveraendert)} stimmen schon und bleiben. ` : '')
+        + (summe.abgelehnt > 0 ? `${zahlDe(summe.abgelehnt)} Zeilen können nicht zugeordnet werden (Gründe im Ergebnis). ` : '')
+        + 'Fortfahren?'
+      )) { setBusy(null); return; }
+
+      for (const a of plan.abgelehnt) erg.fehler.push({ zeile: a.zeile, feld: a.feld, meldung: a.grund });
+      erg.abgelehnt += plan.abgelehnt.length;
+      erg.doppelt = plan.doppelt.length;
+      erg.uebersprungen = plan.unveraendert.length;
+      erg.zusatzHinweise!.push(...plan.hinweise);
+      if (plan.doppelt.length > 0) erg.zusatzHinweise!.push(`${zahlDe(plan.doppelt.length)} Zeilen wiederholen einen Bestand mit derselben Zahl — einmal gebucht.`);
+
+      // Spalten ohne Feld (z. B. Lagerplatz, Mindestbestand) stehen im Verlauf-Text.
+      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel);
+      if (eigene.length > 0) erg.zusatzHinweise!.push(`Die Spalten ${eigene.map((e) => `„${e.spalte}"`).join(', ')} haben hier kein eigenes Feld — ihre Werte stehen im Lager-Verlauf bei der jeweiligen Buchung.`);
+
+      gesamt = plan.buchungen.length;
+      const zeigeStand = () => {
+        messRef.current.push({ t: Date.now(), n: erledigt });
+        setBalken({
+          phase: 'einspielen',
+          anteil: gesamt > 0 ? erledigt / gesamt : 1,
+          zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamt)} Beständen gebucht`,
+          rest: restText(restMs(erledigt, gesamt, tempoProMs(messRef.current))),
+        });
+      };
+      zeigeStand();
+
+      // Je zehn Buchungen gleichzeitig — jede ist ein eigener Vorgang in der Datenbank.
+      for (const p of pakete(plan.buchungen.length, 10)) {
+        if (anhaltenRef.current) break;
+        const teil = plan.buchungen.slice(p.von, p.bis);
+        const antworten = await Promise.all(teil.map((b) => {
+          const weitere = eigene.length > 0 ? eigeneWerteDerZeile(datei.zeilen[b.zeilen[0] - 2] ?? [], eigene) : [];
+          return supabase.rpc(RPC_BUCHEN, buchenArgumente({
+            artikelId: b.artikelId, standortId: b.standortId, art: 'korrektur', menge: b.neu,
+            herkunft: 'inventur', notiz: bestandGrund(datei.dateiname, b, weitere),
+          }));
+        }));
+        antworten.forEach((r, i) => {
+          const b = teil[i];
+          if (r.error) {
+            erg.fehlgeschlagen += 1 + (b.zeilen.length - 1);
+            erg.doppelt -= b.zeilen.length - 1;
+            erg.fehler.push({ zeile: b.zeilen[0], feld: 'Bestand', meldung: `Nicht gebucht: ${r.error.message}` });
+          } else {
+            gebucht.push(b);
+            erg.aktualisiert += 1;
+          }
+        });
+        erledigt += teil.length;
+        zeigeStand();
+      }
+
+      erg.offen = Math.max(0, gesamt - erledigt);
+      // Offene Buchungen: auch ihre Wiederholungs-Zeilen sind noch offen.
+      if (erg.offen > 0) {
+        const offeneWdh = plan.buchungen.slice(erledigt).reduce((n, b) => n + b.zeilen.length - 1, 0);
+        erg.offen += offeneWdh; erg.doppelt -= offeneWdh;
+      }
+      erg.angehalten = erg.offen > 0;
+      const einspielMs = Date.now() - einspielStart;
+      erg.dauerMs = (phasenRef.current.laden ?? 0) + (phasenRef.current.lesen ?? 0) + (phasenRef.current.pruefen ?? 0) + einspielMs;
+      erg.zeilenProS = einspielMs >= 1000 && erledigt > 0 ? erledigt / (einspielMs / 1000) : null;
+      erg.zusammenfassung = `${zahlDe(gebucht.length)} Bestände gebucht`
+        + (erg.uebersprungen > 0 ? ` · ${zahlDe(erg.uebersprungen)} stimmten schon` : '')
+        + (erg.abgelehnt > 0 ? ` · ${zahlDe(erg.abgelehnt)} Zeilen nicht zugeordnet` : '');
+      const status = erg.angehalten ? 'angehalten' : erg.fehlgeschlagen > 0 ? 'teilweise' : 'fertig';
+
+      const jobSatz: Record<string, unknown> = {
+        owner_user_id: neuesSchema ? betrieb : uid,
+        ziel: zielKey, dateiname: datei.dateiname,
+        status: !neuesSchema && status === 'angehalten' ? 'abgebrochen' : status,
+        kopfzeilen: datei.kopf, mapping,
+        zeilen_gesamt: bericht.gesamt, zeilen_ok: gebucht.length, zeilen_fehler: erg.fehlgeschlagen + erg.abgelehnt,
+        fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
+        als_vorlage: merken, vorlage_name: merken ? datei.dateiname : null,
+        beendet_am: new Date().toISOString(),
+        rueck_daten: rueckDaten(gebucht),
+        ...(neuesSchema ? {
+          erstellt_von: uid, zeilen_gelesen: bericht.gesamt, zeilen_uebersprungen: erg.uebersprungen,
+          zeilen_abgelehnt: erg.abgelehnt, zeilen_doppelt: erg.doppelt, zeilen_gescheitert: erg.fehlgeschlagen, zeilen_offen: erg.offen,
+          warnungen: bericht.warnungen.length + (erg.zusatzHinweise?.length ?? 0), umzug_id: umzug?.id ?? null,
+          dateigroesse: datei.groesse, gestartet_am: new Date(dateiStartRef.current || einspielStart).toISOString(),
+          dauer_ms: erg.dauerMs, zeilen_pro_s: erg.zeilenProS ? Math.round(erg.zeilenProS * 100) / 100 : null,
+          phasen_ms: { ...phasenRef.current, einspielen: einspielMs },
+        } : {}),
+      };
+      const { error: jobFehler } = await supabase.from('import_jobs').insert(jobSatz);
+      if (jobFehler) {
+        // Ohne SQL p136 gibt es rueck_daten nicht — Protokoll trotzdem schreiben.
+        const { rueck_daten: _weg, ...ohne } = jobSatz;
+        void _weg;
+        const { error: e2 } = await supabase.from('import_jobs').insert(ohne);
+        if (!e2) erg.zusatzHinweise!.push('Der alte Stand konnte nicht im Protokoll gespeichert werden (Datenbank-Update „p136" fehlt) — „Rückgängig" geht für diesen Import nicht. Jeder alte Stand steht aber im Lager-Verlauf („vorher …").');
+      }
+
+      setErgebnis(erg);
+      setBalken({
+        phase: erg.angehalten ? 'einspielen' : 'fertig',
+        anteil: gesamt > 0 ? erledigt / gesamt : 1,
+        angehalten: erg.angehalten,
+        zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamt)} Beständen gebucht · ${formatDauer(erg.dauerMs)} Rechenzeit`,
+        wartet: erg.angehalten ? `angehalten — ${zahlDe(gesamt - erledigt)} Bestände noch offen` : null,
+      });
+      await verlaufLaden();
+      setHinweis(erg.zusammenfassung);
+    } catch (err: unknown) {
+      setFehler(`Import abgebrochen: ${err instanceof Error ? err.message : 'Fehler'}`
+        + (gebucht.length > 0 ? ` Bis dahin ${zahlDe(gebucht.length)} Bestände gebucht (jeweils mit „vorher …" im Lager-Verlauf).` : ''));
+      setBalken((b) => (b ? { ...b, fehler: true, rest: null, wartet: 'abgebrochen' } : null));
+    } finally {
+      setBusy(null);
+      anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    }
+  }
+
+  /**
+   * Paket 136: Bestaende zuruecksetzen. Nur dort, wo heute noch genau die
+   * importierte Zahl steht — hat seitdem jemand verkauft oder gezaehlt,
+   * bleibt der heutige Stand (sonst wuerde eine echte Buchung ueberschrieben).
+   */
+  async function rueckgaengigBestand(j: Job) {
+    setBusy('rueck'); setFehler(null); setHinweis(null);
+    try {
+      const { data, error } = await supabase.from('import_jobs').select('rueck_daten').eq('id', j.id).single();
+      const rueck = error ? [] : leseRueckDaten((data as { rueck_daten?: unknown } | null)?.rueck_daten);
+      if (rueck.length === 0) {
+        setHinweis('Für diesen Import ist der alte Stand nicht gespeichert. Jeder alte Stand steht im Lager-Verlauf („vorher …") — dort lässt er sich per Korrektur zurücksetzen.');
+        return;
+      }
+      const daten = await ladeBestandsDaten();
+      const heuteFiliale = new Map(daten.vorhanden.map((v) => [bestandSchluessel(String(v.artikel_id), String(v.standort_id)), Number(v.bestand)]));
+      const heuteGesamt = new Map(daten.artikel.map((a) => [String(a.id), Number(a.aktueller_bestand) || 0]));
+      const p = planeRueckgaengig(rueck, heuteFiliale, heuteGesamt);
+      setBalken(null);
+      if (typeof window !== 'undefined' && !window.confirm(
+        `${zahlDe(p.zurueck.length)} Bestände werden auf den Stand vor dem Import zurückgesetzt (Korrektur mit Eintrag im Verlauf).`
+        + (p.geaendert.length > 0 ? ` ${zahlDe(p.geaendert.length)} wurden seitdem schon wieder gebucht und bleiben, wie sie sind.` : '')
+        + ' Fortfahren?'
+      )) return;
+      let ok = 0; let schief = 0;
+      for (let i = 0; i < p.zurueck.length; i += 10) {
+        const antworten = await Promise.all(p.zurueck.slice(i, i + 10).map((r) => supabase.rpc(RPC_BUCHEN, buchenArgumente({
+          artikelId: r.a, standortId: r.s, art: 'korrektur', menge: r.alt,
+          herkunft: 'inventur', notiz: `Import „${String(j.dateiname ?? 'Datei').slice(0, 80)}" rückgängig gemacht`,
+        }))));
+        for (const r of antworten) if (r.error) schief++; else ok++;
+      }
+      if (schief === 0) await supabase.from('import_jobs').update({ status: 'rueckgaengig', rueckgaengig_am: new Date().toISOString() }).eq('id', j.id);
+      setHinweis(`${zahlDe(ok)} Bestände zurückgesetzt.`
+        + (p.geaendert.length > 0 ? ` ${zahlDe(p.geaendert.length)} blieben, weil seitdem gebucht wurde.` : '')
+        + (schief > 0 ? ` ${zahlDe(schief)} gingen nicht (fehlendes Recht oder Artikel gelöscht) — der Import bleibt im Verlauf offen.` : ''));
+      await verlaufLaden();
+    } catch (err: unknown) {
+      setFehler('Rückgängig fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
+    } finally { setBusy(null); }
+  }
+
   async function importieren() {
     if (!datei || !ziel || !bericht || bericht.gut === 0) return;
     // Paket 127: Bestellungen mit Positionen gehen einen eigenen Weg (Kopf + Positionen).
     if (ziel.kinder) { await importiereMitPositionen(); return; }
+    // Paket 136: Zaehlstaende je Filiale — Korrektur statt Anlegen.
+    if (ziel.bestandSetzen) { await importiereBestand(); return; }
     if (typeof window !== 'undefined' && !window.confirm(
       `${zahlDe(bericht.gut)} Datensätze werden jetzt in „${ziel.label}" geschrieben. Fortfahren?`
     )) return;
@@ -1940,7 +2147,9 @@ export default function ImportCenterPage() {
                   </div>
                   {ergebnis.angehalten && (
                     <div style={{ marginTop: 4, color: C.warn }}>
-                      {ziel?.kinder
+                      {ziel?.bestandSetzen
+                        ? 'Weitermachen: dieselbe Datei noch einmal importieren — was schon gebucht ist, stimmt dann und wird übersprungen.'
+                        : ziel?.kinder
                         ? 'Weitermachen: dieselbe Datei noch einmal importieren — schon übernommene Bestellungen werden an der Bestellnummer erkannt und übersprungen.'
                         : ziel && erkennungsFelder(ziel).length > 0
                         ? `Weitermachen: dieselbe Datei noch einmal importieren (Einstellung „Überspringen") — schon Übernommenes wird über „${erkennungsFelder(ziel).map((k) => ziel.felder.find((f) => f.key === k)?.label ?? k).join('" oder „')}" erkannt und nicht doppelt angelegt.`
@@ -2044,6 +2253,12 @@ export default function ImportCenterPage() {
                         <td style={{ ...styles.td, fontSize: 12.5 }}>
                           {j.status === 'rueckgaengig' ? <span style={{ color: C.dim }}>↺ rückgängig gemacht</span>
                             : z?.tabelle === 'rechnungen' ? <span style={{ color: C.dim }} title="Offene Posten werden nicht per Knopf gelöscht.">—</span>
+                            : z?.bestandSetzen ? (j.zeilen_ok > 0 ? (
+                              <button type="button" disabled={busy !== null} onClick={() => rueckgaengigBestand(j)}
+                                style={{ background: 'transparent', border: `1px solid ${C.danger}`, color: C.danger, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12.5 }}>
+                                ↺ {j.zeilen_ok} Bestände zurücksetzen
+                              </button>
+                            ) : <span style={{ color: C.dim }}>—</span>)
                             : (j.angelegte_ids?.length ?? 0) > 0 ? (
                               <button type="button" disabled={busy !== null} onClick={() => rueckgaengig(j)}
                                 style={{ background: 'transparent', border: `1px solid ${C.danger}`, color: C.danger, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12.5 }}>

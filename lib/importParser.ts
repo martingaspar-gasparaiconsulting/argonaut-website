@@ -547,6 +547,11 @@ export type ZielFeld = {
    * und wuerden sonst zufaellig passen).
    */
   nurExakt?: boolean;
+  /**
+   * Paket 136: Eine unlesbare Zahl laesst die Zeile NICHT durch (wie bei
+   * Geldfeldern) — ein Bestand darf nicht still auf 0 gesetzt werden.
+   */
+  streng?: boolean;
 };
 
 export type ImportZiel = {
@@ -664,6 +669,12 @@ export type ImportZiel = {
    * Zeile ausserhalb faellt mit Grund heraus — sonst scheitert das ganze Paket.
    */
   grenzen?: { feld: string; groesserAls?: number; hoechstens?: number; grund: string }[];
+  /**
+   * Paket 136: Die Datei bringt ZAEHLSTAENDE, keine neuen Datensaetze
+   * (Bestand je Filiale). Die Seite legt nichts an, sondern bucht je Artikel
+   * und Filiale eine Korrektur ueber lager_buchen (lib/importBestand.ts).
+   */
+  bestandSetzen?: boolean;
   felder: ZielFeld[];
 };
 
@@ -2157,6 +2168,26 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'auflagen'] },
     ],
   },
+  // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
+  // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
+  {
+    key: 'bestand_filiale',
+    label: 'Bestand je Filiale',
+    icon: '🏬',
+    tabelle: 'artikel_bestand_standort',
+    beschreibung: 'Zählstände je Artikel und Filiale aus dem Altsystem. Jede Zahl wird als Korrektur mit Eintrag im Lager-Verlauf gebucht; '
+      + 'die Summe am Artikel rechnet ARGONAUT selbst. Zuerst Artikel und Filialen anlegen — der Artikel-Import dann am besten ohne Bestandsspalte.',
+    bestandSetzen: true,
+    ergebnisHref: '/dashboard/erp/lager',
+    felder: [
+      { key: 'artikelnummer', label: 'Artikelnummer', typ: 'text', hinweis: 'Oder EAN oder Bezeichnung — eines davon genügt.', alias: ['artikelnummer', 'artikel nr', 'artikelnr', 'art nr', 'artnr', 'sku', 'item number', 'item no', 'produktnummer', 'materialnummer', 'mat nr'] },
+      { key: 'ean', label: 'EAN / GTIN', typ: 'text', alias: ['ean', 'gtin', 'barcode', 'ean code', 'strichcode'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', alias: ['bezeichnung', 'artikel', 'artikelbezeichnung', 'produkt', 'produktname', 'artikelname', 'item', 'description'] },
+      { key: 'standort', label: 'Filiale', typ: 'text', hinweis: 'Name der Filiale wie unter Standorte (oder ihr Ort). Leer = bei genau einer Filiale diese.', alias: ['filiale', 'standort', 'niederlassung', 'geschaeft', 'geschäft', 'laden', 'markt', 'shop', 'store', 'location', 'warehouse', 'lager', 'betriebsstaette', 'betriebsstätte'] },
+      { key: 'bestand', label: 'Bestand', typ: 'zahl', pflicht: true, streng: true, hinweis: 'Gezählte Menge in dieser Filiale (setzt den Bestand, addiert nicht).', alias: ['bestand', 'lagerbestand', 'aktueller bestand', 'istbestand', 'ist bestand', 'menge', 'stueckzahl', 'stückzahl', 'anzahl', 'on hand', 'quantity', 'qty', 'zaehlmenge', 'zählmenge'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -2488,6 +2519,14 @@ Object.assign(BEISPIELE, {
     verguetung: '450,00|1.200,00|180,00',
     notiz: '||Nur mit Bildnachweis',
   },
+  bestand_filiale: {
+    artikelnummer: 'L-1001|L-1001|L-1002',
+    ean: '2047110000009|2047110000009|',
+    bezeichnung: 'Mantelleitung NYM-J 3x1,5 mm², Ring 100 m|Mantelleitung NYM-J 3x1,5 mm², Ring 100 m|Mantelleitung NYM-J 3x2,5 mm², Ring 100 m',
+    standort: 'Filiale Böblingen|Filiale Sindelfingen|Filiale Böblingen',
+    bestand: '24|6|16',
+    notiz: '|Inventur 30.09.|',
+  },
 } as Record<string, Record<string, string>>);
 
 /**
@@ -2738,7 +2777,14 @@ export function pruefeZeile(
     if (f.typ === 'zahl') {
       const n = leseZahl(eingabe, dezimal);
       if (n === null) {
-        if (GELDFELDER.includes(f.key)) {
+        if (f.streng && !GELDFELDER.includes(f.key)) {
+          fehler.push({
+            zeile: nummer,
+            feld: f.label,
+            meldung: `"${eingabe}" ist keine lesbare Menge. Die Zeile wird NICHT übernommen — ` +
+              'ein Bestand darf nicht stillschweigend auf 0 gesetzt werden.',
+          });
+        } else if (GELDFELDER.includes(f.key)) {
           fehler.push({
             zeile: nummer,
             feld: f.label,

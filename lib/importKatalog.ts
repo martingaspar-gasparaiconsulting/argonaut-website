@@ -66,6 +66,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'artikel', label: 'Artikel & Preise (Lager)', icon: '📦', beschreibung: 'Sortiment und Preisliste ins ERP/Lager laden.', musterZiel: 'artikel', zielHref: '/dashboard/erp/preisliste', motor: 'artikel', gruppe: 'stammdaten' },
   { key: 'lieferanten', label: 'Lieferanten', icon: '🏭', beschreibung: 'Lieferanten-Stammdaten für Einkauf und ERP.', vorlage: V + 'lieferanten-import-vorlage.csv', zielHref: '/dashboard/erp/lieferanten', motor: 'lieferanten', gruppe: 'stammdaten' },
   { key: 'varianten', label: 'Artikel-Varianten & Matrix', icon: '🧩', beschreibung: 'Varianten-Gruppen (Größe/Farbe) für den Handel.', vorlage: V + 'varianten-import-vorlage.csv', zielHref: '/dashboard/varianten', gruppe: 'stammdaten' },
+  // Paket 136: Zaehlstaende je Filiale — Korrektur mit Eintrag im Lager-Verlauf
+  { key: 'bestand_filiale', label: 'Bestand je Filiale', icon: '🏬', beschreibung: 'Gezählte Bestände je Artikel und Filiale übernehmen (nach dem Artikel-Import).', musterZiel: 'bestand_filiale', zielHref: '/dashboard/erp/lager', motor: 'bestand_filiale', gruppe: 'stammdaten' },
 
   // --- Verträge & Objekte ---------------------------------------------------
   { key: 'wartungsvertraege', label: 'Wartungsverträge', icon: '🔧', beschreibung: 'Bestehende Wartungs-/Abo-Verträge übernehmen.', vorlage: V + 'wartungsvertraege-import-vorlage.csv', zielHref: '/dashboard/wartung', motor: 'wartungsvertraege', gruppe: 'vertraege_objekte' },
