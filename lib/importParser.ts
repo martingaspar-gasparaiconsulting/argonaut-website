@@ -501,7 +501,9 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag' | 'nachschlagMit';
+  /** Paket 129: bei virtuell 'nachschlagMit' — Spalte des uebergeordneten Eintrags (Rezept-Typ, Tour-Datum). */
+  elternSpalte?: string;
   /**
    * Paket 127: bei virtuell 'position' — die Spalte in der Positionen-Tabelle
    * (ziel.kinder.tabelle). null = nur zur Kontrolle (z. B. Gesamtpreis, der
@@ -591,7 +593,16 @@ export type ImportZiel = {
    * `anlegen`: fehlende Eintraege werden angelegt. Kein Treffer -> der Name
    * steht in `textFeld` — nichts verschluckt.
    */
-  nachschlag?: { ausFeld: string; tabelle: string; nameSpalte: string; spalte: string; anlegen?: boolean; textFeld?: string; label: string };
+  nachschlag?: {
+    ausFeld: string; tabelle: string; nameSpalte: string; spalte: string; anlegen?: boolean; textFeld?: string; label: string;
+    /**
+     * Paket 129: feste Werte fuer neu angelegte uebergeordnete Eintraege
+     * (Tour: status 'geplant'). '@heute' = das heutige Datum.
+     */
+    anlegenMit?: Record<string, string | number | boolean | null>;
+    /** Paket 129: Spalte, in die die laufende Nummer je Eintrag kommt (Zutat 1, 2 …; Stopp 1, 2 …), wenn die Datei keine hat. */
+    positionSpalte?: string;
+  };
   /** Wohin nach dem Import geschaut wird. */
   ergebnisHref?: string;
   /**
@@ -1134,6 +1145,77 @@ export const ZIELE: ImportZiel[] = [
       { key: 'einzelpreis', label: 'Einzelpreis netto (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'einzelpreis', alias: ['einzelpreis', 'ek', 'ek preis', 'stueckpreis', 'einkaufspreis', 'preis', 'unit price'] },
       { key: 'gesamt_netto', label: 'Gesamt netto (Kontrolle)', typ: 'zahl', virtuell: 'position', positionSpalte: null, hinweis: 'Wird mit Menge × Einzelpreis verglichen.', alias: ['gesamt netto', 'gesamt', 'gesamtpreis', 'positionswert', 'summe', 'betrag netto', 'netto'] },
       { key: 'menge_geliefert', label: 'Bereits geliefert (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge_geliefert', alias: ['geliefert', 'gelieferte menge', 'menge geliefert', 'erhalten', 'eingegangen'] },
+    ],
+  },
+  // --- Paket 129: Karten mit uebergeordnetem Eintrag (Rezept, Projekt, Tour) --
+  {
+    key: 'rezeptur',
+    label: 'Rezepturen',
+    icon: '🧮',
+    tabelle: 'rezeptur_zutaten',
+    beschreibung: 'Rezepturen mit ihren Zutaten — eine Zeile je Zutat, gleicher Rezeptname = ein Rezept. Fehlende Rezepte werden angelegt.',
+    schluesselFelder: ['rezeptur_id+bezeichnung', '__nach+bezeichnung'],
+    eigeneFelderModul: 'rezeptur_zutaten',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/rezeptur',
+    nachschlag: { ausFeld: 'rezept', tabelle: 'rezepturen', nameSpalte: 'name', spalte: 'rezeptur_id', anlegen: true, label: 'Rezept', anlegenMit: { basis_einheit: 'kg', typ: 'allgemein' }, positionSpalte: 'position' },
+    listen: [
+      { feld: 'rezept_typ', label: 'Rezept-Typ', standard: 'allgemein', liste: liste(['teig', 'wurst', 'konditor', 'getraenk', 'allgemein'], { backwaren: 'teig', brot: 'teig', broetchen: 'teig', gebaeck: 'teig', fleisch: 'wurst', wurstwaren: 'wurst', zerlegen: 'wurst', torte: 'konditor', kuchen: 'konditor', konditorei: 'konditor', getränk: 'getraenk', bier: 'getraenk', sud: 'getraenk', sonstiges: 'allgemein' }) },
+      { feld: 'rolle', label: 'Rolle', standard: 'sonstige', liste: liste(['sonstige', 'mehl', 'wasser'], { zutat: 'sonstige', getreide: 'mehl', schuettung: 'wasser', schüttung: 'wasser', fluessigkeit: 'wasser' }) },
+    ],
+    felder: [
+      { key: 'rezept', label: 'Rezept', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Zeilen mit gleichem Rezeptnamen werden ein Rezept.', alias: ['rezept', 'rezeptur', 'rezeptname', 'produkt', 'artikel'] },
+      { key: 'rezept_typ', label: 'Rezept-Typ', typ: 'text', virtuell: 'nachschlagMit', elternSpalte: 'typ', hinweis: 'teig · wurst · konditor · getraenk · allgemein', alias: ['typ', 'rezept typ', 'rezeptart', 'art'] },
+      { key: 'bezeichnung', label: 'Zutat', typ: 'text', pflicht: true, alias: ['zutat', 'bezeichnung', 'rohstoff', 'komponente', 'material'] },
+      { key: 'menge', label: 'Menge', typ: 'zahl', alias: ['menge', 'anteil', 'gewicht'] },
+      { key: 'einheit', label: 'Einheit', typ: 'text', standard: 'kg', alias: ['einheit', 'me', 'mengeneinheit'] },
+      { key: 'preis_pro_einheit', label: 'Preis je Einheit', typ: 'zahl', alias: ['preis pro einheit', 'preis', 'ek', 'einkaufspreis', 'preis je einheit'] },
+      { key: 'rolle', label: 'Rolle', typ: 'text', standard: 'sonstige', hinweis: 'sonstige · mehl · wasser (für die Teigausbeute)', alias: ['rolle', 'funktion'] },
+      { key: 'position', label: 'Position', typ: 'zahl', hinweis: 'Leer: Reihenfolge in der Datei.', alias: ['position', 'pos', 'reihenfolge'] },
+    ],
+  },
+  {
+    key: 'zuschnitt',
+    label: 'Zuschnitt-Teile',
+    icon: '📐',
+    tabelle: 'zuschnitt_teil',
+    beschreibung: 'Teilelisten mit Länge und Stückzahl — je Projekt (fehlt die Spalte, kommen alle Teile in ein Projekt „Übernommen aus dem Altsystem").',
+    schluesselFelder: ['projekt_id+bezeichnung+laenge', '__nach+bezeichnung+laenge'],
+    eigeneFelderModul: 'zuschnitt_teil',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/zuschnitt',
+    nachschlag: { ausFeld: 'projekt', tabelle: 'zuschnitt_projekt', nameSpalte: 'bezeichnung', spalte: 'projekt_id', anlegen: true, label: 'Projekt', anlegenMit: { stangenlaenge: 6000, status: 'offen' } },
+    felder: [
+      { key: 'projekt', label: 'Projekt', typ: 'text', virtuell: 'nachschlag', standard: 'Übernommen aus dem Altsystem', alias: ['projekt', 'auftrag', 'projektname', 'zuschnittliste', 'liste'] },
+      { key: 'material', label: 'Material (Projekt)', typ: 'text', virtuell: 'nachschlagMit', elternSpalte: 'material', alias: ['material', 'profil', 'werkstoff'] },
+      { key: 'stangenlaenge', label: 'Stangenlänge mm (Projekt)', typ: 'zahl', virtuell: 'nachschlagMit', elternSpalte: 'stangenlaenge', alias: ['stangenlaenge', 'stangenlänge', 'rohlaenge', 'lagerlaenge'] },
+      { key: 'bezeichnung', label: 'Teil', typ: 'text', alias: ['bezeichnung', 'teil', 'position', 'pos', 'name'] },
+      { key: 'laenge', label: 'Länge (mm)', typ: 'zahl', pflicht: true, alias: ['laenge', 'länge', 'laenge mm', 'zuschnitt', 'mass', 'maß'] },
+      { key: 'anzahl', label: 'Anzahl', typ: 'zahl', standard: 1, alias: ['anzahl', 'stueck', 'stück', 'menge', 'stk'] },
+    ],
+  },
+  {
+    key: 'tour_stopps',
+    label: 'Tour-Stopps',
+    icon: '🚚',
+    tabelle: 'tour_stopp',
+    beschreibung: 'Stopps mit Empfänger und Adresse — je Tour (fehlt die Spalte, kommen alle Stopps in eine Tour von heute).',
+    schluesselFelder: ['tour_id+empfaenger+adresse', '__nach+empfaenger+adresse'],
+    eigeneFelderModul: 'tour_stopp',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/tour',
+    nachschlag: { ausFeld: 'tour', tabelle: 'tour', nameSpalte: 'bezeichnung', spalte: 'tour_id', anlegen: true, label: 'Tour', anlegenMit: { status: 'geplant', datum: '@heute' }, positionSpalte: 'reihenfolge' },
+    listen: [{ feld: 'status', label: 'Status', standard: 'offen', liste: liste(['offen', 'zugestellt', 'nicht_angetroffen', 'verweigert'], { geplant: 'offen', ausgeliefert: 'zugestellt', geliefert: 'zugestellt', erledigt: 'zugestellt', 'nicht angetroffen': 'nicht_angetroffen', abwesend: 'nicht_angetroffen', abgelehnt: 'verweigert' }) }],
+    felder: [
+      { key: 'tour', label: 'Tour', typ: 'text', virtuell: 'nachschlag', standard: 'Übernommen aus dem Altsystem', alias: ['tour', 'tourname', 'route', 'fahrt'] },
+      { key: 'tour_datum', label: 'Tour-Datum', typ: 'datum', virtuell: 'nachschlagMit', elternSpalte: 'datum', alias: ['tour datum', 'datum', 'liefertag', 'lieferdatum'] },
+      { key: 'fahrer', label: 'Fahrer (Tour)', typ: 'text', virtuell: 'nachschlagMit', elternSpalte: 'fahrer', alias: ['fahrer', 'fahrerin'] },
+      { key: 'fahrzeug', label: 'Fahrzeug (Tour)', typ: 'text', virtuell: 'nachschlagMit', elternSpalte: 'fahrzeug', alias: ['fahrzeug', 'kennzeichen', 'lkw'] },
+      { key: 'reihenfolge', label: 'Reihenfolge', typ: 'zahl', hinweis: 'Leer: Reihenfolge in der Datei.', alias: ['reihenfolge', 'stopp', 'stopp nr', 'nr', 'pos'] },
+      { key: 'empfaenger', label: 'Empfänger', typ: 'text', pflicht: true, alias: ['empfaenger', 'empfänger', 'kunde', 'name', 'firma'] },
+      { key: 'adresse', label: 'Adresse', typ: 'text', alias: ['adresse', 'anschrift', 'lieferadresse', 'strasse'] },
+      { key: 'kolli', label: 'Kolli', typ: 'zahl', standard: 1, alias: ['kolli', 'pakete', 'stueck', 'anzahl'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'offen', hinweis: 'offen · zugestellt · nicht_angetroffen · verweigert', alias: ['status'] },
     ],
   },
   // --- Paket 128: Karten, die bisher nur eine Vorlage hatten (Teil 1) -------
@@ -2343,6 +2425,19 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
     const n = String(werte[ziel.nachschlag.ausFeld] ?? '').trim();
     if (n) werte.__nach = n;
   }
+  // Paket 129: Werte fuer den uebergeordneten Eintrag (Rezept-Typ, Tour-Datum) — Wertelisten gelten auch hier.
+  const mit: Record<string, unknown> = {};
+  for (const f of ziel.felder) {
+    if (f.virtuell !== 'nachschlagMit' || !f.elternSpalte) continue;
+    const v = werte[f.key];
+    if (v === undefined || v === null || String(v).trim() === '') continue;
+    const l = ziel.listen?.find((x) => x.feld === f.key);
+    if (l && typeof v === 'string') {
+      const n = normal(v);
+      mit[f.elternSpalte] = l.liste[n] ?? l.liste[n.replace(/\s+/g, '')] ?? l.standard;
+    } else mit[f.elternSpalte] = v;
+  }
+  if (Object.keys(mit).length > 0) werte.__nachMit = mit;
   const virtuelle = ziel.felder.filter((f) => f.virtuell);
   if (virtuelle.length === 0) return;
   const leer = (v: unknown) => v === undefined || v === null || String(v).trim() === '';

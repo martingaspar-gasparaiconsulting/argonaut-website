@@ -55,6 +55,8 @@ export const MOTOR_TABELLEN = [
   'assets', 'asset_gruppen', 'pruef_protokoll', 'bde_maschine', 'charge_los', 'expose', 'bildung_kurse',
   'event_veranstaltung', 'reservierung_platz', 'belegung_einheit', 'erinnerung', 'gutachten', 'schlag',
   'tier_gruppe', 'ertrag_anlage', 'proof_asset',
+  // Paket 129: Karten mit uebergeordnetem Eintrag
+  'rezeptur_zutaten', 'rezepturen', 'zuschnitt_teil', 'zuschnitt_projekt', 'tour_stopp', 'tour',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -175,6 +177,12 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'nachschlag') {
       const n = basis.nachschlag;
       (n && (vorhanden.has(n.spalte) || (n.textFeld && nutzbar(n.textFeld))) ? felder : fehlend).push(f);
+      continue;
+    }
+    if (f.virtuell === 'nachschlagMit') {
+      const n = basis.nachschlag;
+      const ok = !!n && !!f.elternSpalte && (dbSpalten ?? []).some((c) => c.tabelle === n.tabelle && c.spalte === f.elternSpalte);
+      (ok ? felder : fehlend).push(f);
       continue;
     }
     if (f.virtuell === 'position') {
@@ -452,6 +460,8 @@ export function erkennungsFelder(ziel: ImportZiel): string[] {
   // Paket 127: die Verweis-Spalte (mitarbeiter_id) ist kein Feld, steht aber
   // nach dem Verknuepfen im Satz — „mitarbeiter_id+art" erkennt den Bestand.
   if (ziel.kundeVerweis) keys.add(ziel.kundeVerweis.spalte);
+  // Paket 129: ebenso die Nachschlag-Spalte (rezeptur_id+bezeichnung).
+  if (ziel.nachschlag) keys.add(ziel.nachschlag.spalte);
   const liste = ziel.schluesselFelder ?? (ziel.schluessel ? [ziel.schluessel] : []);
   // „lieferant+belegnummer": nur, wenn es beide Spalten gibt
   return liste.filter((k) => k.split('+').every((t) => keys.has(t)));
@@ -855,4 +865,52 @@ export function loeseNachschlag(
     raus[n.textFeld] = alt ? `${alt}\n${zeile}` : zeile;
   }
   return { satz: raus, gefunden: false, name };
+}
+
+// ---------------------------------------------------------------------------
+// 12) Paket 129: uebergeordnete Eintraege anlegen (Rezept, Zuschnitt-Projekt, Tour)
+// ---------------------------------------------------------------------------
+
+/** Heute als JJJJ-MM-TT in deutscher Zeit (fuer '@heute'). */
+export function heuteBerlin(jetzt: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(jetzt);
+}
+
+/**
+ * Die Zeilen fuer neu anzulegende uebergeordnete Eintraege: Name, feste
+ * Werte (anlegenMit, '@heute' ersetzt) und die Werte aus der ERSTEN Datei-
+ * Zeile mit diesem Namen (__nachMit: Rezept-Typ, Tour-Datum …).
+ */
+export function elternZeilen(
+  namen: readonly string[],
+  saetze: readonly Record<string, unknown>[],
+  n: { nameSpalte: string; anlegenMit?: Record<string, string | number | boolean | null> },
+  owner: string,
+  heute: string = heuteBerlin(),
+): Record<string, unknown>[] {
+  const ersteMit = new Map<string, Record<string, unknown>>();
+  for (const s of saetze) {
+    const k = String(s.__nach ?? '').trim().toLowerCase();
+    if (k && !ersteMit.has(k) && s.__nachMit && typeof s.__nachMit === 'object') ersteMit.set(k, s.__nachMit as Record<string, unknown>);
+  }
+  return namen.map((name) => {
+    const fest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(n.anlegenMit ?? {})) fest[k] = v === '@heute' ? heute : v;
+    return { ...fest, ...(ersteMit.get(name.toLowerCase()) ?? {}), owner_user_id: owner, [n.nameSpalte]: name.slice(0, 200) };
+  });
+}
+
+/**
+ * Laufende Nummer je uebergeordnetem Eintrag in Datei-Reihenfolge (1, 2, 3 …),
+ * nur wo die Datei selbst keine Nummer hat. Gibt die Nummer je Satz zurueck.
+ */
+export function positionenJeEintrag(saetze: readonly Record<string, unknown>[], spalte: string): (number | null)[] {
+  const zaehler = new Map<string, number>();
+  return saetze.map((s) => {
+    const k = String(s.__nach ?? '').trim().toLowerCase();
+    const n = (zaehler.get(k) ?? 0) + 1;
+    zaehler.set(k, n);
+    const vorhanden = s[spalte];
+    return typeof vorhanden === 'number' && vorhanden > 0 ? null : n;
+  });
 }

@@ -34,7 +34,7 @@ import {
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
-  nachschlagIndex, fehlendeNamen, loeseNachschlag,
+  nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
 import {
@@ -1213,7 +1213,8 @@ export default function ImportCenterPage() {
           const fehlen = nach.anlegen ? fehlendeNamen(bericht.saetze, nachIndex) : [];
           for (let i = 0; i < fehlen.length; i += 200) {
             const { data, error } = await supabase.from(nach.tabelle)
-              .insert(fehlen.slice(i, i + 200).map((name) => ({ owner_user_id: neuOwner, [nach.nameSpalte]: name.slice(0, 200) })))
+              // Paket 129: mit festen Werten und denen der ersten Zeile (Rezept-Typ, Tour-Datum …)
+              .insert(elternZeilen(fehlen.slice(i, i + 200), bericht.saetze, nach, neuOwner))
               .select(`id,${nach.nameSpalte}`);
             if (error) { (erg.zusatzHinweise ??= []).push(`${nach.label}: ${error.message} — die Namen stehen im Text.`); break; }
             for (const r of ((data ?? []) as unknown as Record<string, unknown>[])) nachIndex.set(String(r[nach.nameSpalte] ?? '').trim().toLowerCase(), String(r.id));
@@ -1225,6 +1226,8 @@ export default function ImportCenterPage() {
         }
       }
       let nachOhne = 0;
+      // Paket 129: laufende Nummer je Rezept/Tour, wo die Datei keine hat
+      const posNr = nach?.positionSpalte ? positionenJeEintrag(bericht.saetze, nach.positionSpalte) : null;
 
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
@@ -1255,6 +1258,8 @@ export default function ImportCenterPage() {
           const r = loeseNachschlag(satz0.__nach !== undefined ? satz0 : { ...satz0, __nach: satzRoh.__nach }, nach, nachIndex, nachVirtuell);
           satz0 = r.satz;
           if (r.name && !r.gefunden) nachOhne++;
+          const nr = posNr?.[idx];
+          if (nach.positionSpalte && typeof nr === 'number' && satz0[nach.positionSpalte] == null) satz0[nach.positionSpalte] = nr;
         }
         // Schritt 3: Wartungsvertraege — naechste Faelligkeit wie im Modul rechnen.
         if (ziel.key === 'wartungsvertraege' && !satz0.naechste_faelligkeit_am) {
