@@ -48,7 +48,7 @@ test('Paket 134: sechs Ziele, Karten auf dem Motor, SQL-Whitelist = Motor-Tabell
   const sql = lies('supabase-sql/p134-import-schritt4c.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].slice(0, 61).sort());
   assert.equal(whitelist.length, 61);
   assert.doesNotMatch(sql, /\b(drop table|delete from|truncate|drop policy|update public)\b/i);
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);

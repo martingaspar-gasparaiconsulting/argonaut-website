@@ -118,6 +118,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'interessenten', label: 'Exposé-Interessenten', icon: '🙋', beschreibung: 'Interessenten je Exposé mit Stand.', musterZiel: 'interessenten', zielHref: '/dashboard/expose', motor: 'interessenten', gruppe: 'vertraege_objekte' },
   { key: 'anmeldungen', label: 'Kurs-Anmeldungen', icon: '📝', beschreibung: 'Teilnehmer je Kurs mit Anmeldestand.', musterZiel: 'anmeldungen', zielHref: '/dashboard/bildung', motor: 'anmeldungen', gruppe: 'betrieb' },
   { key: 'ehrenamt', label: 'Ehrenamts-Stunden', icon: '🙌', beschreibung: 'Geleistete Stunden je Person und Tag.', musterZiel: 'ehrenamt', zielHref: '/dashboard/verein', motor: 'ehrenamt', gruppe: 'betrieb' },
+  // Paket 135
+  { key: 'nutzungsrechte', label: 'Nutzungsrechte', icon: '©️', beschreibung: 'Eingeräumte und eingekaufte Nutzungsrechte je Werk mit Ablauf.', musterZiel: 'nutzungsrechte', zielHref: '/dashboard/agentur/nutzungsrechte', motor: 'nutzungsrechte', gruppe: 'vertraege_objekte' },
   { key: 'freigaben', label: 'Freigaben & Assets', icon: '✅', beschreibung: 'Kreativ-Assets für Freigaben & Proofing.', vorlage: V + 'freigaben-assets-import-vorlage.csv', zielHref: '/dashboard/freigaben', motor: 'freigaben', gruppe: 'betrieb' },
 
   // --- Finanzen & Förderung -------------------------------------------------

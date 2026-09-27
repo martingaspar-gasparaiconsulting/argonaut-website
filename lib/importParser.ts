@@ -2123,6 +2123,40 @@ export const ZIELE: ImportZiel[] = [
       { key: 'taetigkeit', label: 'Tätigkeit', typ: 'text', alias: ['taetigkeit', 'tätigkeit', 'aufgabe', 'einsatz', 'arbeit', 'bemerkung'] },
     ],
   },
+  // --- Paket 135: Nutzungsrechte (Agentur/Kreative) ---
+  {
+    key: 'nutzungsrechte',
+    label: 'Nutzungsrechte (Lizenzen)',
+    icon: '©️',
+    tabelle: 'agentur_nutzungsrecht',
+    beschreibung: 'Eingeräumte Nutzungsrechte je Werk und Kunde — Art, Gebiet, Medien, Zeitraum — und das Recht, das Sie selbst vom Urheber haben. Ablaufende Rechte erscheinen gleich mit Ampel.',
+    schluesselFelder: ['werk+kunde+von', 'werk+kunde'],
+    eigeneFelderModul: 'agentur_nutzungsrecht',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/agentur/nutzungsrechte',
+    ausblenden: ['retainer_id'],
+    listen: [
+      { feld: 'recht', label: 'Recht', standard: 'einfach', textFeld: 'notiz', liste: liste(['einfach', 'ausschliesslich'], { 'nicht exklusiv': 'einfach', nichtexklusiv: 'einfach', 'non exclusive': 'einfach', einfaches: 'einfach', ausschließlich: 'ausschliesslich', exklusiv: 'ausschliesslich', exclusive: 'ausschliesslich', ausschliessliches: 'ausschliesslich' }) },
+    ],
+    felder: [
+      { key: 'werk', label: 'Werk', typ: 'text', pflicht: true, alias: ['werk', 'titel', 'motiv', 'asset', 'bild', 'foto', 'datei', 'bezeichnung'] },
+      { key: 'kunde', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'auftraggeber', 'lizenznehmer'] },
+      { key: 'werkart', label: 'Werkart', typ: 'text', alias: ['werkart', 'art', 'typ', 'medienart', 'gattung'] },
+      { key: 'recht', label: 'Recht', typ: 'text', standard: 'einfach', hinweis: 'einfach · ausschliesslich', alias: ['recht', 'rechteart', 'lizenzart', 'exklusivitaet', 'exklusivität'] },
+      { key: 'raum', label: 'Gebiet', typ: 'text', alias: ['raum', 'gebiet', 'territorium', 'region', 'land'] },
+      { key: 'medien', label: 'Nutzungsarten', typ: 'text', hinweis: 'Mehrere mit Komma: Print, Website, Social Media, Online-Werbung, TV/Video, Außenwerbung, Verpackung, Messe/Event.', alias: ['medien', 'nutzungsarten', 'nutzungsart', 'kanaele', 'kanäle', 'verwendung', 'medium'] },
+      { key: 'von', label: 'Von', typ: 'datum', alias: ['von', 'beginn', 'ab', 'gueltig ab', 'gültig ab', 'lizenzbeginn'] },
+      { key: 'bis', label: 'Bis', typ: 'datum', alias: ['bis', 'ende', 'gueltig bis', 'gültig bis', 'ablauf', 'lizenzende'] },
+      { key: 'bearbeitung', label: 'Bearbeitung erlaubt', typ: 'jaNein', standard: false, alias: ['bearbeitung', 'bearbeitungsrecht', 'aenderungen erlaubt', 'änderungen erlaubt'] },
+      { key: 'weiterlizenz', label: 'Weiterlizenz erlaubt', typ: 'jaNein', standard: false, alias: ['weiterlizenz', 'unterlizenz', 'sublizenz', 'weitergabe'] },
+      { key: 'urheber', label: 'Urheber', typ: 'text', alias: ['urheber', 'fotograf', 'fotografin', 'kreativer', 'lizenzgeber', 'quelle', 'bildagentur'] },
+      { key: 'fremd_recht', label: 'Eigenes Recht vom Urheber', typ: 'text', hinweis: 'einfach · ausschliesslich (leer, wenn Sie selbst Urheber sind)', alias: ['fremd recht', 'eigenes recht', 'recht vom urheber', 'eingekauftes recht'] },
+      { key: 'fremd_bis', label: 'Eigenes Recht bis', typ: 'datum', alias: ['fremd bis', 'eigenes recht bis', 'recht vom urheber bis'] },
+      { key: 'fremd_medien', label: 'Eigene Nutzungsarten vom Urheber', typ: 'text', alias: ['fremd medien', 'eigene nutzungsarten', 'eingekaufte nutzungsarten'] },
+      { key: 'verguetung', label: 'Vergütung', typ: 'zahl', alias: ['verguetung', 'vergütung', 'lizenzgebuehr', 'lizenzgebühr', 'honorar', 'preis'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'auflagen'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -2434,6 +2468,25 @@ Object.assign(BEISPIELE, {
     datum: '06.09.2026|06.09.2026|13.09.2026',
     stunden: '4|2,5|3',
     taetigkeit: 'Vereinsfest Aufbau|Kasse|Jugendtraining',
+  },
+  // Paket 135
+  nutzungsrechte: {
+    werk: 'Imagefoto Werkstatt|Logo-Animation|Produktfoto Wallbox',
+    kunde: 'Muster GmbH|Muster GmbH|Beispiel AG',
+    werkart: 'Foto|Video|Foto',
+    recht: 'einfach|ausschliesslich|einfach',
+    raum: 'Deutschland|DACH|weltweit',
+    medien: 'Print, Website, Social Media|TV/Video, Social Media|Website',
+    von: '01.01.2026|01.03.2026|15.06.2026',
+    bis: '31.12.2026||14.06.2027',
+    bearbeitung: 'nein|ja|nein',
+    weiterlizenz: 'nein|nein|nein',
+    urheber: 'Fotostudio Beispiel||Bildagentur Muster',
+    fremd_recht: 'einfach||einfach',
+    fremd_bis: '31.12.2027||14.06.2027',
+    fremd_medien: 'Print, Website, Social Media||Website',
+    verguetung: '450,00|1.200,00|180,00',
+    notiz: '||Nur mit Bildnachweis',
   },
 } as Record<string, Record<string, string>>);
 
@@ -2855,6 +2908,8 @@ function nachbereiten(
   // Paket 133
   if (zielKey === 'haccp_plan') werte.intervall_tage = intervallTage(werte.intervall_tage, nummer, warnungen);
   if (zielKey === 'haccp') haccpNachbereiten(werte, nummer, warnungen);
+  // Paket 135
+  if (zielKey === 'nutzungsrechte') nutzungNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3158,6 +3213,57 @@ function haccpNachbereiten(werte: Record<string, unknown>, nummer: number, warnu
     const alt = roh ? `Ergebnis im Altsystem: ${roh}` : '';
     const m = String(werte.massnahme ?? '').trim();
     werte.massnahme = [m || 'Abweichung aus dem Altsystem übernommen — Maßnahme bitte prüfen', alt].filter(Boolean).join('\n');
+  }
+}
+
+/** Paket 135: Nutzungsarten wie im Modul (lib/papiereIdentifizierung MEDIEN). */
+export const NUTZUNG_MEDIEN = ['Print', 'Website', 'Social Media', 'Online-Werbung', 'TV/Video', 'Außenwerbung', 'Verpackung', 'Messe/Event'] as const;
+const MEDIEN_SYN: Record<string, string> = {
+  print: 'Print', druck: 'Print', printmedien: 'Print', zeitung: 'Print', zeitschrift: 'Print', flyer: 'Print', broschuere: 'Print', katalog: 'Print',
+  website: 'Website', webseite: 'Website', homepage: 'Website', internet: 'Website', web: 'Website', online: 'Website',
+  'social media': 'Social Media', socialmedia: 'Social Media', social: 'Social Media', instagram: 'Social Media', facebook: 'Social Media', linkedin: 'Social Media', tiktok: 'Social Media',
+  'online werbung': 'Online-Werbung', onlinewerbung: 'Online-Werbung', ads: 'Online-Werbung', banner: 'Online-Werbung', 'google ads': 'Online-Werbung',
+  'tv video': 'TV/Video', tv: 'TV/Video', video: 'TV/Video', film: 'TV/Video', fernsehen: 'TV/Video', youtube: 'TV/Video',
+  aussenwerbung: 'Außenwerbung', plakat: 'Außenwerbung', ooh: 'Außenwerbung', 'out of home': 'Außenwerbung',
+  verpackung: 'Verpackung', packaging: 'Verpackung', etikett: 'Verpackung',
+  'messe event': 'Messe/Event', messe: 'Messe/Event', event: 'Messe/Event', veranstaltung: 'Messe/Event',
+};
+/** „Print, Web; Instagram" -> ['Print', 'Website', 'Social Media'] + Unbekanntes. */
+export function leseMedien(wert: unknown): { medien: string[]; unbekannt: string[] } {
+  const medien: string[] = [];
+  const unbekannt: string[] = [];
+  const teile = Array.isArray(wert) ? wert.map(String) : String(wert ?? '').split(/[,;|+]|\s+und\s+|\s*\/\s*(?=[A-Za-zÄÖÜäöü]{3})/);
+  for (const t of teile) {
+    const roh = t.trim();
+    if (!roh) continue;
+    const n = normal(roh);
+    const m = MEDIEN_SYN[n] ?? MEDIEN_SYN[n.replace(/\s+/g, '')] ?? NUTZUNG_MEDIEN.find((x) => normal(x) === n);
+    if (m) { if (!medien.includes(m)) medien.push(m); } else if (!unbekannt.includes(roh)) unbekannt.push(roh);
+  }
+  return { medien, unbekannt };
+}
+function nutzungNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const merke = (zeile: string) => {
+    werte.notiz = typeof werte.notiz === 'string' && werte.notiz.trim() ? `${werte.notiz.trim()}\n${zeile}` : zeile;
+  };
+  for (const [feld, label] of [['medien', 'Nutzungsarten'], ['fremd_medien', 'Eigene Nutzungsarten']] as const) {
+    if (werte[feld] === undefined) continue;
+    const { medien, unbekannt } = leseMedien(werte[feld]);
+    werte[feld] = medien;                                         // Liste (Datenbank: text[])
+    if (unbekannt.length > 0) {
+      merke(`${label} im Altsystem: ${unbekannt.join(', ')}`);
+      warnungen.push({ zeile: nummer, feld: label, meldung: `„${unbekannt.join(', ')}" ist keine bekannte Nutzungsart — steht in der Notiz, bitte zuordnen.` });
+    }
+  }
+  const fr = String(werte.fremd_recht ?? '').trim();
+  if (fr) {
+    const n = normal(fr);
+    const t = /exklusiv|ausschliess|exclusive/.test(n) && !/nicht|non/.test(n) ? 'ausschliesslich' : /einfach|nicht exklusiv|non exclusive/.test(n) ? 'einfach' : null;
+    if (t) werte.fremd_recht = t;
+    else { delete werte.fremd_recht; merke(`Eigenes Recht im Altsystem: ${fr}`); }
+  }
+  if (typeof werte.von === 'string' && typeof werte.bis === 'string' && werte.bis < werte.von) {
+    warnungen.push({ zeile: nummer, feld: 'Bis', meldung: 'Ende liegt vor dem Beginn — bitte prüfen.' });
   }
 }
 

@@ -65,6 +65,8 @@ export const MOTOR_TABELLEN = [
   'lm_haccp_plan', 'lm_haccp', 'kassen_system', 'agentur_retainer', 'schlag_duengung', 'forst_objekte', 'forst_baeume',
   // Paket 134: Umzug Schritt 4 Teil 3 — Pflanzenschutz, Immobilien, Bildung/Vereine
   'schlag_psm', 'immo_einheiten', 'immo_mietvertraege', 'expose_interessent', 'bildung_anmeldungen', 'verein_ehrenamt',
+  // Paket 135
+  'agentur_nutzungsrecht',
 ] as const;
 
 // ---------------------------------------------------------------------------
