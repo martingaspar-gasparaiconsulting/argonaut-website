@@ -59,6 +59,8 @@ export const MOTOR_TABELLEN = [
   'rezeptur_zutaten', 'rezepturen', 'zuschnitt_teil', 'zuschnitt_projekt', 'tour_stopp', 'tour',
   // Paket 130
   'bk_einheit', 'bk_abrechnung', 'reservierung_vorgang',
+  // Paket 132: Umzug Schritt 4 — Handwerk & Handel
+  'einsaetze', 'tickets', 'inventar', 'verleih_artikel',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -476,8 +478,23 @@ export function erkennungsSpalten(felder: readonly string[]): string[] {
   return raus;
 }
 
+/**
+ * Paket 132: Zeitpunkte vergleichbar machen. Die Datenbank liefert
+ * „2026-10-05T05:00:00+00:00", der Import schreibt „2026-10-05T05:00:00.000Z"
+ * (oder ohne Zone „2026-10-05T05:00") — gleicher Zeitpunkt, anderer Text.
+ * Ohne Angleichen kaeme derselbe Einsatz beim zweiten Import doppelt.
+ */
+export function vergleichsText(v: unknown): string {
+  const s = String(v ?? '').trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(:\d{2}(\.\d+)?)?(z|[+-]\d{2}(:?\d{2})?)?$/i);
+  if (!m) return s.toLowerCase();
+  const zone = m[5] ? (/^[+-]\d{2}$/.test(m[5]) ? `${m[5]}:00` : m[5]) : 'Z';
+  const t = Date.parse(`${m[1]}T${m[2]}${m[3] ?? ':00'}${zone}`);
+  return Number.isFinite(t) ? `@${t}` : s.toLowerCase();
+}
+
 function erkennungsWert(z: Record<string, unknown>, f: string): string {
-  const teile = f.split('+').map((t) => String(z[t] ?? '').trim().toLowerCase());
+  const teile = f.split('+').map((t) => vergleichsText(z[t]));
   return teile.every(Boolean) ? teile.join('|') : '';
 }
 

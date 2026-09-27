@@ -1236,7 +1236,8 @@ export default function ImportCenterPage() {
       bericht.saetze.forEach((satzRoh, idx) => {
         const dateiZeile = bericht.zeilenNummern?.[idx] ?? 0;
         let satz0 = fuerDatenbank(satzRoh);
-        if (ziel.kundeVerweis && kundenIndex) {
+        // Paket 132: Einsatz der Geschaeftsleitung („Chef") braucht keinen Mitarbeiter-Verweis.
+        if (ziel.kundeVerweis && kundenIndex && satzRoh.inhaber_einsatz !== true) {
           const v = verknuepfeKunde(satzRoh, ziel.kundeVerweis, kundenIndex);
           satz0 = v.satz;
           if (v.treffer.art === 'gefunden') erg.kundeVerknuepft++;
@@ -1251,7 +1252,14 @@ export default function ImportCenterPage() {
               erg.fehler.push({ zeile: dateiZeile, feld: verweisWas, meldung: `${grund}. Bitte zuerst ${ziel.kundeVerweis.mehrzahl ?? 'die Kunden'} importieren, dann diese Datei noch einmal.` });
               return;
             }
-            if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne ${verweisWas} übernommen.`);
+            // Paket 132: nicht gefunden -> Name ins Textfeld, damit nichts verschluckt wird.
+            const tf = ziel.kundeVerweis.textFeld;
+            if (tf && v.gesucht) {
+              const alt = `${verweisWas} im Altsystem: ${v.gesucht}`;
+              const bisher = typeof satz0[tf] === 'string' ? String(satz0[tf]).trim() : '';
+              satz0[tf] = bisher ? `${bisher}\n${alt}` : alt;
+            }
+            if (erg.kundeHinweise.length < 200) erg.kundeHinweise.push(`Zeile ${dateiZeile}: ${grund} — ohne ${verweisWas} übernommen${tf && v.gesucht ? ' (der Name steht im Text)' : ''}.`);
           }
         }
         if (nach) {

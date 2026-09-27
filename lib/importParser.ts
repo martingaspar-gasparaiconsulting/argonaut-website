@@ -457,6 +457,28 @@ export function leseDatumZeit(wert: unknown, heute: Date = new Date()): string |
   return `${d}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+/**
+ * Paket 132: Ortszeit Berlin -> echter Zeitpunkt (UTC, wie toISOString()).
+ * Die Dispo speichert Einsaetze als Zeitpunkt; „08:00" in einer Datei meint
+ * deutsche Uhrzeit — im Sommer UTC+2, im Winter UTC+1. Sommerzeit gilt vom
+ * letzten Sonntag im Maerz 01:00 UTC bis zum letzten Sonntag im Oktober 01:00 UTC.
+ */
+export function berlinZeitpunkt(lokal: string): string | null {
+  const m = String(lokal ?? '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  const letzterSonntag = (monat: number) => {
+    const ende = new Date(Date.UTC(y, monat, 0));           // letzter Tag des Monats (monat 1-basiert)
+    return ende.getUTCDate() - ende.getUTCDay();
+  };
+  const sommerVon = Date.UTC(y, 2, letzterSonntag(3), 1, 0);
+  const sommerBis = Date.UTC(y, 9, letzterSonntag(10), 1, 0);
+  const alsUtc = Date.UTC(y, mo - 1, d, h, mi);
+  const winter = alsUtc - 60 * 60000;
+  const t = winter >= sommerVon && winter < sommerBis ? alsUtc - 120 * 60000 : winter;
+  return new Date(t).toISOString();
+}
+
 /** Paket 128: Datum + Monate — dieselbe Rechnung wie die Module (lib/wiederkehr, Monatsende bleibt im Monat). */
 export function plusMonate(iso: string, monate: number): string {
   return datumPlusMonate(iso, monate);
@@ -478,7 +500,8 @@ export function leseJaNein(wert: unknown, standard = false): boolean {
 // ---------------------------------------------------------------------------
 
 /** 'datumZeit' (Paket 128): „12.10.2026 18:00" -> „2026-10-12T18:00" (wie die Module es speichern). */
-export type FeldTyp = 'text' | 'zahl' | 'datum' | 'jaNein' | 'datumZeit';
+/** 'zeitpunkt' (Paket 132): wie datumZeit, aber als echter Zeitpunkt (Berliner Ortszeit -> UTC), fuer Module mit toISOString(). */
+export type FeldTyp = 'text' | 'zahl' | 'datum' | 'jaNein' | 'datumZeit' | 'zeitpunkt';
 
 export type ZielFeld = {
   key: string;
@@ -568,6 +591,11 @@ export type ImportZiel = {
     label?: string;
     /** Anzeige Mehrzahl: „die Mitarbeiter" (Standard „die Kunden"). */
     mehrzahl?: string;
+    /**
+     * Paket 132: Nicht gefunden (und nicht Pflicht) -> der gesuchte Name wird
+     * als „Label im Altsystem: X" an dieses Textfeld gehaengt. Nichts verschluckt.
+     */
+    textFeld?: string;
   };
   /**
    * Paket 127: Eine Datei-Zeile ist eine POSITION; Zeilen mit gleichem
@@ -1651,6 +1679,130 @@ export const ZIELE: ImportZiel[] = [
       { key: 'kategorie', label: 'Kategorie', typ: 'text', standard: 'sonstige', hinweis: 'design · video · text · web · print · social · sonstige', alias: ['kategorie', 'art', 'typ'] },
     ],
   },
+  // --- Paket 132: Umzug Schritt 4 — Handwerk & Handel ------------------------
+  {
+    key: 'einsaetze',
+    label: 'Einsätze / Dispo',
+    icon: '🗓',
+    tabelle: 'einsaetze',
+    beschreibung: 'Geplante und vergangene Einsätze aus der Plantafel — mit dem Mitarbeiter verknüpft (Personalnummer, E-Mail oder Name). Vorher die Mitarbeiter importieren.',
+    // Nur mit Mitarbeiter: zwei Monteure mit demselben Auftrag zur selben Zeit sind ZWEI Einsaetze.
+    schluesselFelder: ['mitarbeiter_id+beginn_am+titel', '__kunde+beginn_am+titel'],
+    eigeneFelderModul: 'einsaetze',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'mitarbeiter_id', quelle: 'mitarbeiter', label: 'Mitarbeiter', mehrzahl: 'die Mitarbeiter', textFeld: 'beschreibung' },
+    ergebnisHref: '/dashboard/dispo',
+    ausblenden: ['termin_id', 'auftrag_id', 'rechnung_id', 'standort_id', 'quelle', 'anforderungen', 'unterwegs_am', 'vor_ort_am', 'erledigt_am',
+      'unterwegs_lat', 'unterwegs_lon', 'vor_ort_lat', 'vor_ort_lon', 'erledigt_lat', 'erledigt_lon', 'unterschrift_pfad', 'unterschrift_name',
+      'unterschrift_am', 'bericht_pfad', 'bericht_am', 'arbeitsbericht', 'arbeitsbericht_am', 'inhaber_einsatz'],
+    listen: [{ feld: 'status', label: 'Status', standard: 'geplant', textFeld: 'beschreibung', liste: liste(['geplant', 'unterwegs', 'vor_ort', 'erledigt', 'abgesagt'], { offen: 'geplant', neu: 'geplant', eingeplant: 'geplant', disponiert: 'geplant', 'auf dem weg': 'unterwegs', anfahrt: 'unterwegs', 'vor ort': 'vor_ort', 'in arbeit': 'vor_ort', laufend: 'vor_ort', fertig: 'erledigt', abgeschlossen: 'erledigt', erledigt: 'erledigt', done: 'erledigt', storniert: 'abgesagt', abgebrochen: 'abgesagt', ausgefallen: 'abgesagt' }) }],
+    felder: [
+      {
+        key: 'kunde', label: 'Mitarbeiter (Name oder E-Mail)', typ: 'text', virtuell: 'kunde_verweis',
+        hinweis: 'Wird mit Ihren Mitarbeitern verknüpft. „Chef" oder „Inhaber" = Einsatz der Geschäftsleitung. Unbekannte Namen stehen in der Beschreibung.',
+        alias: ['mitarbeiter', 'monteur', 'techniker', 'ausfuehrender', 'ausführender', 'ressource', 'mitarbeitername', 'name mitarbeiter', 'employee', 'technician'],
+      },
+      {
+        key: 'kunde_nummer', label: 'Personalnummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true,
+        alias: ['personalnummer', 'personalnr', 'pers nr', 'pers-nr', 'persnr', 'mitarbeiternummer', 'ma nr', 'ma-nr', 'employee id'],
+      },
+      { key: 'titel', label: 'Titel', typ: 'text', standard: 'Einsatz', alias: ['titel', 'einsatz', 'betreff', 'taetigkeit', 'tätigkeit', 'leistung', 'bezeichnung', 'auftrag', 'auftragsbezeichnung'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'notiz', 'notizen', 'bemerkung', 'details', 'arbeiten'] },
+      { key: 'einsatzort', label: 'Einsatzort', typ: 'text', alias: ['einsatzort', 'ort', 'adresse', 'baustelle', 'anschrift', 'objekt', 'lieferadresse'] },
+      { key: 'beginn_am', label: 'Beginn', typ: 'zeitpunkt', pflicht: true, hinweis: 'Datum und Uhrzeit (deutsche Zeit). Nur ein Datum = ganzer Tag 07:00 bis 16:00.', alias: ['beginn', 'beginn am', 'start', 'von', 'datum', 'termin', 'einsatzbeginn', 'startzeit'] },
+      { key: 'ende_am', label: 'Ende', typ: 'zeitpunkt', hinweis: 'Leer: Beginn + 1 Stunde.', alias: ['ende', 'ende am', 'bis', 'einsatzende', 'endzeit'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'geplant', hinweis: 'geplant · unterwegs · vor_ort · erledigt · abgesagt', alias: ['status', 'stand'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'auftraggeber', 'kunde name'] },
+      { key: 'kunde_email', label: 'Kunde E-Mail', typ: 'text', alias: ['kunde email', 'kunde e-mail', 'e-mail kunde', 'email'] },
+      { key: 'kunde_telefon', label: 'Kunde Telefon', typ: 'text', alias: ['kunde telefon', 'telefon kunde', 'telefon', 'tel'] },
+    ],
+  },
+  {
+    key: 'tickets',
+    label: 'Service-Tickets',
+    icon: '🎫',
+    tabelle: 'tickets',
+    beschreibung: 'Offene und alte Service-Tickets aus dem Ticket-System — Ticketnummer, Status und Priorität bleiben erhalten, der Kunde wird verknüpft, wenn es ihn gibt.',
+    schluesselFelder: ['ticket_nummer', 'betreff+kunde_name'],
+    eigeneFelderModul: 'tickets',
+    nurMitKatalog: true,
+    // Mitarbeiter duerfen Tickets des Betriebs lesen, aber nicht fuer den Betrieb anlegen (b1-befund) -> Import macht der Chef.
+    nurChef: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['kunde_email', 'kunde_name'] },
+    ergebnisHref: '/dashboard/service',
+    ausblenden: ['firma_id', 'kunde_id', 'standort_id'],
+    listen: [
+      { feld: 'status', label: 'Status', standard: 'offen', textFeld: 'beschreibung', liste: liste(['offen', 'in_bearbeitung', 'wartet', 'geloest', 'geschlossen'], { neu: 'offen', open: 'offen', new: 'offen', eingegangen: 'offen', 'in bearbeitung': 'in_bearbeitung', bearbeitung: 'in_bearbeitung', 'in progress': 'in_bearbeitung', 'in arbeit': 'in_bearbeitung', pending: 'wartet', 'on hold': 'wartet', warten: 'wartet', 'wartet auf kunde': 'wartet', gelöst: 'geloest', solved: 'geloest', resolved: 'geloest', erledigt: 'geloest', closed: 'geschlossen', abgeschlossen: 'geschlossen', archiviert: 'geschlossen' }) },
+      { feld: 'prioritaet', label: 'Priorität', standard: 'mittel', textFeld: 'beschreibung', liste: liste(['niedrig', 'mittel', 'hoch', 'dringend'], { low: 'niedrig', gering: 'niedrig', normal: 'mittel', medium: 'mittel', high: 'hoch', wichtig: 'hoch', urgent: 'dringend', kritisch: 'dringend', critical: 'dringend', 'sehr hoch': 'dringend', notfall: 'dringend' }) },
+      { feld: 'kategorie', label: 'Kategorie', standard: 'anfrage', textFeld: 'beschreibung', liste: liste(['anfrage', 'support', 'reklamation', 'sonstiges'], { frage: 'anfrage', question: 'anfrage', auskunft: 'anfrage', problem: 'support', incident: 'support', stoerung: 'support', störung: 'support', fehler: 'support', defekt: 'support', service: 'support', beschwerde: 'reklamation', complaint: 'reklamation', mangel: 'reklamation', garantie: 'reklamation', gewaehrleistung: 'reklamation', sonstige: 'sonstiges', other: 'sonstiges' }) },
+      { feld: 'kanal', label: 'Kanal', standard: 'email', textFeld: 'beschreibung', liste: liste(['email', 'telefon', 'web', 'persoenlich'], { mail: 'email', 'e-mail': 'email', phone: 'telefon', anruf: 'telefon', tel: 'telefon', portal: 'web', formular: 'web', website: 'web', chat: 'web', 'vor ort': 'persoenlich', persönlich: 'persoenlich', laden: 'persoenlich' }) },
+    ],
+    felder: [
+      { key: 'ticket_nummer', label: 'Ticketnummer', typ: 'text', hinweis: 'Die Nummer aus dem Altsystem bleibt erhalten.', alias: ['ticket nummer', 'ticketnummer', 'ticket nr', 'ticket-nr', 'ticket id', 'ticket', 'vorgangsnummer', 'vorgang nr', 'case number', 'ticket number'] },
+      { key: 'betreff', label: 'Betreff', typ: 'text', pflicht: true, alias: ['betreff', 'subject', 'titel', 'thema', 'anliegen', 'zusammenfassung', 'summary'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'description', 'text', 'nachricht', 'problem', 'details', 'problembeschreibung'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'offen', hinweis: 'offen · in_bearbeitung · wartet · geloest · geschlossen', alias: ['status', 'state', 'stand'] },
+      { key: 'prioritaet', label: 'Priorität', typ: 'text', standard: 'mittel', hinweis: 'niedrig · mittel · hoch · dringend', alias: ['prioritaet', 'priorität', 'prio', 'priority', 'dringlichkeit'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', standard: 'anfrage', hinweis: 'anfrage · support · reklamation · sonstiges', alias: ['kategorie', 'art', 'typ', 'category', 'type'] },
+      { key: 'kanal', label: 'Kanal', typ: 'text', standard: 'email', hinweis: 'email · telefon · web · persoenlich', alias: ['kanal', 'eingangskanal', 'quelle', 'channel', 'source'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'kunde name', 'anfragender', 'requester', 'firma', 'melder'] },
+      { key: 'kunde_email', label: 'Kunde E-Mail', typ: 'text', alias: ['kunde email', 'kunde e-mail', 'email', 'e-mail', 'requester email'] },
+      { key: 'kunde_telefon', label: 'Kunde Telefon', typ: 'text', alias: ['kunde telefon', 'telefon', 'tel', 'phone'] },
+      { key: 'faellig_am', label: 'Fällig am', typ: 'datum', alias: ['faellig am', 'fällig am', 'faellig', 'frist', 'sla', 'due date', 'deadline'] },
+      { key: 'geloest_am', label: 'Gelöst am', typ: 'datum', alias: ['geloest am', 'gelöst am', 'erledigt am', 'geschlossen am', 'resolved at', 'closed at'] },
+      { key: 'erstellt', label: 'Erstellt im Altsystem (in die Beschreibung)', typ: 'text', virtuell: 'anhang', anhangAn: 'beschreibung', nichtInVorlage: true, alias: ['erstellt', 'erstellt am', 'angelegt', 'angelegt am', 'eingang', 'eingegangen am', 'created', 'created at'] },
+      { key: 'bearbeiter', label: 'Bearbeiter (in die Beschreibung)', typ: 'text', virtuell: 'anhang', anhangAn: 'beschreibung', nichtInVorlage: true, alias: ['bearbeiter', 'zustaendig', 'zuständig', 'agent', 'assignee', 'owner'] },
+    ],
+  },
+  {
+    key: 'inventar',
+    label: 'Inventar & Geräte',
+    icon: '🧰',
+    tabelle: 'inventar',
+    beschreibung: 'Werkzeuge, Geräte und Betriebsausstattung mit Inventarnummer, Zustand und nächster Prüfung (z. B. DGUV V3).',
+    schluesselFelder: ['inventarnummer', 'seriennummer', 'bezeichnung+standort'],
+    eigeneFelderModul: 'inventar',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/erp/inventar',
+    ausblenden: ['firma_id'],
+    listen: [{ feld: 'zustand', label: 'Zustand', standard: 'gut', textFeld: 'notizen', liste: liste(['neu', 'gut', 'gebraucht', 'defekt', 'ausgemustert'], { neuwertig: 'neu', ok: 'gut', 'in ordnung': 'gut', einsatzbereit: 'gut', benutzt: 'gebraucht', abgenutzt: 'gebraucht', kaputt: 'defekt', reparatur: 'defekt', 'in reparatur': 'defekt', gesperrt: 'defekt', verschrottet: 'ausgemustert', entsorgt: 'ausgemustert', verkauft: 'ausgemustert' }) }],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'geraet', 'gerät', 'werkzeug', 'name', 'artikel', 'gegenstand'] },
+      { key: 'inventarnummer', label: 'Inventarnummer', typ: 'text', alias: ['inventarnummer', 'inventar nr', 'inventar-nr', 'inv nr', 'invnr', 'geraetenummer', 'gerätenummer', 'id nummer'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'gruppe', 'art', 'typ', 'geraeteart'] },
+      { key: 'seriennummer', label: 'Seriennummer', typ: 'text', alias: ['seriennummer', 'serien nr', 'serien-nr', 'sn', 'serial', 'serial number'] },
+      { key: 'standort', label: 'Standort', typ: 'text', alias: ['standort', 'lagerort', 'ort', 'fahrzeug', 'raum', 'verantwortlich'] },
+      { key: 'zustand', label: 'Zustand', typ: 'text', standard: 'gut', hinweis: 'neu · gut · gebraucht · defekt · ausgemustert', alias: ['zustand', 'status'] },
+      { key: 'anschaffungsdatum', label: 'Anschaffung', typ: 'datum', alias: ['anschaffungsdatum', 'anschaffung', 'kaufdatum', 'gekauft am'] },
+      { key: 'anschaffungswert', label: 'Anschaffungswert', typ: 'zahl', standard: 0, alias: ['anschaffungswert', 'kaufpreis', 'wert', 'preis', 'anschaffungskosten'] },
+      { key: 'naechste_pruefung_am', label: 'Nächste Prüfung', typ: 'datum', alias: ['naechste pruefung', 'nächste prüfung', 'naechste pruefung am', 'pruefung faellig', 'dguv faellig', 'faellig', 'prueftermin'] },
+      { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung', 'kommentar'] },
+      { key: 'letzte_pruefung', label: 'Letzte Prüfung (in die Notizen)', typ: 'text', virtuell: 'anhang', anhangAn: 'notizen', nichtInVorlage: true, alias: ['letzte pruefung', 'letzte prüfung', 'geprueft am', 'geprüft am'] },
+    ],
+  },
+  {
+    key: 'verleih',
+    label: 'Mietgegenstände (Verleih)',
+    icon: '🔑',
+    tabelle: 'verleih_artikel',
+    beschreibung: 'Geräte und Artikel zum Vermieten mit Tages-/Wochensatz, Kaution und Anzahl. Ausgemusterte Gegenstände werden nicht übernommen.',
+    schluesselFelder: ['inventar_nr', 'bezeichnung'],
+    eigeneFelderModul: 'verleih_artikel',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/verleih',
+    ablehnenWenn: { feld: 'verleih_status', werte: ['ausgemustert', 'verschrottet', 'entsorgt', 'verkauft', 'inaktiv', 'geloescht', 'gelöscht'], grund: 'Ausgemustert im Altsystem — wird nicht als vermietbar übernommen. Die Zeile bleibt in Ihrer Datei.' },
+    ausblenden: ['status'],
+    felder: [
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'mietgegenstand', 'geraet', 'gerät', 'artikel', 'name', 'maschine'] },
+      { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'gruppe', 'art', 'warengruppe'] },
+      { key: 'inventar_nr', label: 'Inventar-Nr.', typ: 'text', alias: ['inventar nr', 'inventarnummer', 'inventar-nr', 'inv nr', 'geraetenummer', 'mietnummer', 'artikelnummer'] },
+      { key: 'tagessatz', label: 'Tagessatz', typ: 'zahl', standard: 0, alias: ['tagessatz', 'tagesmiete', 'preis tag', 'miete tag', 'pro tag', 'tagespreis'] },
+      { key: 'wochensatz', label: 'Wochensatz', typ: 'zahl', alias: ['wochensatz', 'wochenmiete', 'preis woche', 'pro woche', 'wochenpreis'] },
+      { key: 'kaution', label: 'Kaution', typ: 'zahl', standard: 0, alias: ['kaution', 'pfand', 'sicherheit', 'deposit'] },
+      { key: 'anzahl', label: 'Anzahl', typ: 'zahl', standard: 1, alias: ['anzahl', 'menge', 'stueck', 'stück', 'bestand'] },
+      { key: 'verleih_status', label: 'Status im Altsystem', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['status', 'zustand'] },
+    ],
+  },
 ];
 
 export function zielDef(key: string): ImportZiel | undefined {
@@ -1782,6 +1934,54 @@ Object.assign(BEISPIELE, {
     nachricht: '||',
     quelle: 'Empfehlung|Website|Messe',
     status: 'neu|offen|neu',
+  },
+  // Paket 132
+  einsaetze: {
+    kunde: 'Kevin Stadler|Leon Kaltenbach|Chef',
+    titel: 'Zählerschrank tauschen|Wallbox montieren|Abnahme Baustelle',
+    beschreibung: 'Material im Fahrzeug||',
+    einsatzort: 'Hauptstraße 12, 71032 Böblingen|Industriering 4, 70565 Stuttgart|',
+    beginn_am: '05.10.2026 08:00|06.10.2026 13:30|07.10.2026',
+    ende_am: '05.10.2026 12:00||',
+    status: 'geplant|geplant|erledigt',
+    kunde_name: 'Familie Kaya|Muster GmbH|',
+    kunde_email: '|info@muster.de|',
+    kunde_telefon: '07031 123456||',
+  },
+  tickets: {
+    ticket_nummer: 'TK-2026-0041|TK-2026-0042|TK-2026-0043',
+    betreff: 'Sicherung fliegt raus|Rückfrage Angebot Wallbox|Rauchmelder piept',
+    beschreibung: 'Seit Montag, Küche|Förderung möglich?|',
+    status: 'offen|wartet|geloest',
+    prioritaet: 'hoch|mittel|niedrig',
+    kategorie: 'support|anfrage|support',
+    kanal: 'telefon|email|web',
+    kunde_name: 'Familie Kaya|Muster GmbH|Herr Brandl',
+    kunde_email: '|info@muster.de|',
+    kunde_telefon: '07031 123456||',
+    faellig_am: '06.10.2026|10.10.2026|',
+    geloest_am: '||02.10.2026',
+  },
+  inventar: {
+    bezeichnung: 'Bohrhammer SDS-Max|Leitungssucher|Stehleiter 8 Stufen',
+    inventarnummer: 'INV-0012|INV-0027|INV-0031',
+    kategorie: 'Elektrowerkzeug|Messgerät|Leiter',
+    seriennummer: 'HX-4471-22||',
+    standort: 'Fahrzeug BB-EH 12|Lager|Lager',
+    zustand: 'gut|neu|gebraucht',
+    anschaffungsdatum: '12.03.2023|01.02.2026|',
+    anschaffungswert: '689,00|249,90|',
+    naechste_pruefung_am: '12.03.2027|01.02.2027|15.11.2026',
+    notizen: 'DGUV V3 geprüft||',
+  },
+  verleih: {
+    bezeichnung: 'Minibagger 1,8 t|Rüttelplatte|Bautrockner',
+    kategorie: 'Baumaschinen|Baumaschinen|Trocknung',
+    inventar_nr: 'M-01|M-07|T-03',
+    tagessatz: '129,00|45,00|25,00',
+    wochensatz: '590,00|180,00|',
+    kaution: '500,00|100,00|50,00',
+    anzahl: '1|2|4',
   },
 } as Record<string, Record<string, string>>);
 
@@ -2066,7 +2266,7 @@ export function pruefeZeile(
       continue;
     }
 
-    if (f.typ === 'datumZeit') {
+    if (f.typ === 'datumZeit' || f.typ === 'zeitpunkt') {
       const dz = leseDatumZeit(eingabe, heute);
       if (!dz) warnungen.push({ zeile: nummer, feld: f.label, meldung: `"${eingabe}" ist kein erkennbares Datum — Feld bleibt leer` });
       else werte[f.key] = dz;
@@ -2092,6 +2292,12 @@ export function pruefeZeile(
 
   virtuelleFelderAufloesen(ziel, werte);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
+  // Paket 132: Ortszeit -> Zeitpunkt (erst NACH der Nacharbeit, die mit Ortszeit rechnet)
+  for (const f of ziel.felder) {
+    if (f.typ !== 'zeitpunkt' || typeof werte[f.key] !== 'string') continue;
+    const z = berlinZeitpunkt(werte[f.key] as string);
+    if (z) werte[f.key] = z;
+  }
 
   // Eine Zeile ohne jeden Inhalt ist kein Datensatz.
   const hatInhalt = Object.entries(werte).some(([k, v]) => {
@@ -2182,6 +2388,9 @@ function nachbereiten(
   // Paket 127
   if (zielKey === 'mitarbeiter_qualifikation') qualiNachbereiten(werte, nummer, warnungen);
   if (zielKey === 'reservierung_vorgaenge') reservierungNachbereiten(werte, nummer, warnungen);
+  // Paket 132
+  if (zielKey === 'einsaetze') einsatzNachbereiten(werte, nummer, warnungen);
+  if (zielKey === 'verleih' && typeof werte.anzahl === 'number') werte.anzahl = Math.max(1, Math.round(werte.anzahl));
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -2436,6 +2645,45 @@ function reservierungNachbereiten(werte: Record<string, unknown>, nummer: number
       warnungen.push({ zeile: nummer, feld: 'Bis', meldung: 'Kein gültiges Ende — Tischreservierung auf 2 Stunden gesetzt.' });
     }
   } else if (art !== 'tischreservierung') delete werte.bis;
+}
+
+/** Paket 132: Ortszeit „YYYY-MM-DDTHH:MM" + Minuten (ohne Zeitzone, reine Kalenderrechnung). */
+export function plusMinutenLokal(lokal: string, minuten: number): string {
+  const m = lokal.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!m) return lokal;
+  const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + minuten * 60000);
+  const z = (n: number) => String(n).padStart(2, '0');
+  return `${t.getUTCFullYear()}-${z(t.getUTCMonth() + 1)}-${z(t.getUTCDate())}T${z(t.getUTCHours())}:${z(t.getUTCMinutes())}`;
+}
+
+/** Paket 132: So heisst der Chef in Plantafeln — Einsatz der Geschaeftsleitung statt eines Mitarbeiters. */
+const CHEF_NAMEN = new Set(['chef', 'chefin', 'inhaber', 'inhaberin', 'geschaeftsfuehrer', 'geschaeftsfuehrerin', 'geschaeftsleitung', 'gf', 'meister', 'meisterin', 'ich']);
+
+/**
+ * Paket 132: Einsaetze wie die Dispo — Ende nach Beginn. Nur ein Datum = ganzer
+ * Tag 07:00 bis 16:00; kein gueltiges Ende = Beginn + 1 Stunde.
+ */
+function einsatzNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const k = normal(String(werte.__kunde ?? ''));
+  if (k && CHEF_NAMEN.has(k)) {
+    werte.inhaber_einsatz = true;
+    delete werte.__kunde;
+    delete werte.__kunde2;
+  }
+  const b = typeof werte.beginn_am === 'string' ? werte.beginn_am : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(b)) {
+    werte.beginn_am = `${b}T07:00`;
+    const e = typeof werte.ende_am === 'string' ? werte.ende_am : '';
+    if (!e || /^\d{4}-\d{2}-\d{2}$/.test(e)) werte.ende_am = `${/^\d{4}-\d{2}-\d{2}$/.test(e) && e >= b ? e : b}T16:00`;
+    warnungen.push({ zeile: nummer, feld: 'Beginn', meldung: 'Nur ein Datum ohne Uhrzeit — als ganzer Tag 07:00 bis 16:00 eingeplant.' });
+  }
+  const beginn = String(werte.beginn_am ?? '');
+  let ende = typeof werte.ende_am === 'string' ? werte.ende_am : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ende)) ende = `${ende}T16:00`;
+  if (beginn.includes('T') && !(ende > beginn)) {
+    werte.ende_am = plusMinutenLokal(beginn, 60);
+    warnungen.push({ zeile: nummer, feld: 'Ende', meldung: 'Kein gültiges Ende — Einsatz auf 1 Stunde gesetzt.' });
+  } else if (ende) werte.ende_am = ende;
 }
 
 /** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */
