@@ -1147,6 +1147,57 @@ export const ZIELE: ImportZiel[] = [
       { key: 'menge_geliefert', label: 'Bereits geliefert (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge_geliefert', alias: ['geliefert', 'gelieferte menge', 'menge geliefert', 'erhalten', 'eingegangen'] },
     ],
   },
+  // --- Paket 130: Betriebskosten-Einheiten, Reservierungs-Vorgaenge --------------
+  {
+    key: 'betriebskosten',
+    label: 'Betriebskosten-Einheiten',
+    icon: '🧾',
+    tabelle: 'bk_einheit',
+    beschreibung: 'Mieteinheiten mit Fläche, Personen, Verbrauch und Vorauszahlung — je Abrechnung (fehlt die Spalte, kommen alle in eine Abrechnung „Übernommen aus dem Altsystem" als Entwurf).',
+    schluesselFelder: ['abrechnung_id+bezeichnung', '__nach+bezeichnung'],
+    eigeneFelderModul: 'bk_einheit',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/betriebskosten',
+    nachschlag: { ausFeld: 'abrechnung', tabelle: 'bk_abrechnung', nameSpalte: 'bezeichnung', spalte: 'abrechnung_id', anlegen: true, label: 'Abrechnung', anlegenMit: { status: 'entwurf' } },
+    felder: [
+      { key: 'abrechnung', label: 'Abrechnung', typ: 'text', virtuell: 'nachschlag', standard: 'Übernommen aus dem Altsystem', alias: ['abrechnung', 'abrechnungsjahr', 'objekt', 'liegenschaft', 'haus'] },
+      { key: 'zeitraum_von', label: 'Zeitraum von (Abrechnung)', typ: 'datum', virtuell: 'nachschlagMit', elternSpalte: 'zeitraum_von', alias: ['zeitraum von', 'von', 'abrechnungszeitraum von', 'beginn'] },
+      { key: 'zeitraum_bis', label: 'Zeitraum bis (Abrechnung)', typ: 'datum', virtuell: 'nachschlagMit', elternSpalte: 'zeitraum_bis', alias: ['zeitraum bis', 'bis', 'abrechnungszeitraum bis', 'ende'] },
+      { key: 'bezeichnung', label: 'Einheit', typ: 'text', pflicht: true, alias: ['bezeichnung', 'einheit', 'wohnung', 'we', 'lage', 'mieteinheit'] },
+      { key: 'mieter_name', label: 'Mieter', typ: 'text', alias: ['mieter name', 'mieter', 'name', 'nutzer'] },
+      { key: 'wohnflaeche', label: 'Wohnfläche m²', typ: 'zahl', alias: ['wohnflaeche', 'wohnfläche', 'flaeche', 'fläche', 'qm', 'm2'] },
+      { key: 'personen', label: 'Personen', typ: 'zahl', alias: ['personen', 'personenzahl', 'bewohner'] },
+      { key: 'verbrauch', label: 'Verbrauch', typ: 'zahl', alias: ['verbrauch', 'zaehlerstand', 'verbrauchseinheiten'] },
+      { key: 'vorauszahlung', label: 'Vorauszahlung (Jahr)', typ: 'zahl', alias: ['vorauszahlung', 'vorauszahlungen', 'nk vorauszahlung', 'abschlag', 'bk vorauszahlung'] },
+    ],
+  },
+  {
+    key: 'reservierung_vorgaenge',
+    label: 'Reservierungs-Vorgänge',
+    icon: '🪑',
+    tabelle: 'reservierung_vorgang',
+    beschreibung: 'Bestehende Tischreservierungen, Einlagerungen (z. B. Reifen) und Vorbestellungen — mit Platz verknüpft, wenn es den Namen gibt. Vorher die Plätze importieren.',
+    schluesselFelder: ['art+kunde_name+von', 'art+kennzeichen'],
+    eigeneFelderModul: 'reservierung_vorgang',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/reservierung',
+    nachschlag: { ausFeld: 'platz', tabelle: 'reservierung_platz', nameSpalte: 'bezeichnung', spalte: 'platz_id', label: 'Platz', textFeld: 'gegenstand' },
+    listen: [{ feld: 'art', label: 'Art', standard: 'tischreservierung', liste: liste(['tischreservierung', 'einlagerung', 'vorbestellung'], { tisch: 'tischreservierung', reservierung: 'tischreservierung', lager: 'einlagerung', reifen: 'einlagerung', reifeneinlagerung: 'einlagerung', vorbestellen: 'vorbestellung', bestellung: 'vorbestellung', abholung: 'vorbestellung' }) }],
+    felder: [
+      { key: 'art', label: 'Art', typ: 'text', standard: 'tischreservierung', hinweis: 'tischreservierung · einlagerung · vorbestellung', alias: ['art', 'typ', 'vorgangsart'] },
+      { key: 'platz', label: 'Platz / Tisch / Lagerfach', typ: 'text', virtuell: 'nachschlag', alias: ['platz', 'tisch', 'lagerplatz', 'regal', 'fach', 'station'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', pflicht: true, alias: ['kunde name', 'kunde', 'name', 'gast', 'kundenname'] },
+      { key: 'kunde_tel', label: 'Telefon', typ: 'text', alias: ['kunde tel', 'telefon', 'tel', 'mobil', 'handy'] },
+      { key: 'von', label: 'Von / Termin', typ: 'datumZeit', pflicht: true, alias: ['von', 'datum', 'beginn', 'termin', 'eingelagert am', 'abholung am', 'uhrzeit von'] },
+      { key: 'bis', label: 'Bis', typ: 'datumZeit', alias: ['bis', 'ende'] },
+      { key: 'anzahl', label: 'Anzahl (Personen/Stück)', typ: 'zahl', alias: ['anzahl', 'personen', 'stueck', 'menge'] },
+      { key: 'gegenstand', label: 'Gegenstand', typ: 'text', alias: ['gegenstand', 'artikel', 'bestellung', 'reifen', 'beschreibung'] },
+      { key: 'kennzeichen', label: 'Kennzeichen', typ: 'text', alias: ['kennzeichen', 'kfz kennzeichen', 'amtliches kennzeichen'] },
+      { key: 'betrag', label: 'Betrag', typ: 'zahl', standard: 0, alias: ['betrag', 'preis', 'gebuehr', 'anzahlung'] },
+      { key: 'mwst_satz', label: 'MwSt %', typ: 'zahl', standard: 19, alias: ['mwst satz', 'mwst', 'ust'] },
+      { key: 'status', label: 'Status', typ: 'text', hinweis: 'je Art: reserviert/bestaetigt/erschienen/no_show/storniert · eingelagert/zur_abholung/ausgelagert/entsorgt · offen/bereit/abgeholt/storniert', alias: ['status'] },
+    ],
+  },
   // --- Paket 129: Karten mit uebergeordnetem Eintrag (Rezept, Projekt, Tour) --
   {
     key: 'rezeptur',
@@ -2130,6 +2181,7 @@ function nachbereiten(
   if (zielKey === 'leistungskatalog') leistungNachbereiten(werte, nummer, warnungen);
   // Paket 127
   if (zielKey === 'mitarbeiter_qualifikation') qualiNachbereiten(werte, nummer, warnungen);
+  if (zielKey === 'reservierung_vorgaenge') reservierungNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -2345,6 +2397,45 @@ function qualiNachbereiten(werte: Record<string, unknown>, nummer: number, warnu
     zeile: nummer, feld: 'Qualifikation',
     meldung: `„${roh}" ist keine Befähigung aus der Dispo-Liste — mit diesem Namen übernommen (in der Dispo sichtbar, aber nicht als Anforderung wählbar).`,
   });
+}
+
+/**
+ * Paket 130: Reservierungs-Vorgaenge — Status gilt je Art (lib/reservierung.ts
+ * STATUS_JE_ART, START_STATUS). Unbekannt -> Startstatus, alter Wert in den
+ * Gegenstand. Tischreservierungen brauchen ein Ende nach dem Beginn; ohne
+ * Ende: 2 Stunden (Warnung). Andere Arten haben kein Ende.
+ */
+export const RES_STATUS: Record<string, Record<string, string>> = {
+  tischreservierung: liste(['reserviert', 'bestaetigt', 'erschienen', 'no_show', 'storniert'], { bestätigt: 'bestaetigt', 'no show': 'no_show', 'nicht erschienen': 'no_show', da: 'erschienen', abgesagt: 'storniert' }),
+  einlagerung: liste(['eingelagert', 'zur_abholung', 'ausgelagert', 'entsorgt'], { 'zur abholung': 'zur_abholung', abholbereit: 'zur_abholung', abgeholt: 'ausgelagert', ausgegeben: 'ausgelagert', verschrottet: 'entsorgt' }),
+  vorbestellung: liste(['offen', 'bereit', 'abgeholt', 'storniert'], { neu: 'offen', fertig: 'bereit', abholbereit: 'bereit', erledigt: 'abgeholt', abgesagt: 'storniert' }),
+};
+export const RES_START: Record<string, string> = { tischreservierung: 'reserviert', einlagerung: 'eingelagert', vorbestellung: 'offen' };
+
+function reservierungNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const art = String(werte.art ?? 'tischreservierung');
+  const erlaubt = RES_STATUS[art] ?? RES_STATUS.tischreservierung;
+  const roh = typeof werte.status === 'string' ? werte.status.trim() : '';
+  if (!roh) werte.status = RES_START[art] ?? 'reserviert';
+  else {
+    const n = normal(roh);
+    const t = erlaubt[n] ?? erlaubt[n.replace(/\s+/g, '')];
+    if (t) werte.status = t;
+    else {
+      werte.status = RES_START[art] ?? 'reserviert';
+      warnungen.push({ zeile: nummer, feld: 'Status', meldung: `"${roh}" passt nicht zur Art — auf "${werte.status}" gesetzt (der alte Wert steht im Gegenstand)` });
+      const alt = `Status im Altsystem: ${roh}`;
+      werte.gegenstand = typeof werte.gegenstand === 'string' && werte.gegenstand.trim() ? `${werte.gegenstand.trim()}\n${alt}` : alt;
+    }
+  }
+  if (art === 'tischreservierung' && typeof werte.von === 'string' && werte.von.includes('T')) {
+    if (!(typeof werte.bis === 'string' && werte.bis > werte.von)) {
+      const [d, z] = werte.von.split('T');
+      const [h, m] = z.split(':').map(Number);
+      werte.bis = h + 2 <= 23 ? `${d}T${String(h + 2).padStart(2, '0')}:${String(m).padStart(2, '0')}` : `${d}T23:59`;
+      warnungen.push({ zeile: nummer, feld: 'Bis', meldung: 'Kein gültiges Ende — Tischreservierung auf 2 Stunden gesetzt.' });
+    }
+  } else if (art !== 'tischreservierung') delete werte.bis;
 }
 
 /** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */

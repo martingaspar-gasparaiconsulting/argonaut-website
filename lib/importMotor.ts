@@ -57,6 +57,8 @@ export const MOTOR_TABELLEN = [
   'tier_gruppe', 'ertrag_anlage', 'proof_asset',
   // Paket 129: Karten mit uebergeordnetem Eintrag
   'rezeptur_zutaten', 'rezepturen', 'zuschnitt_teil', 'zuschnitt_projekt', 'tour_stopp', 'tour',
+  // Paket 130
+  'bk_einheit', 'bk_abrechnung', 'reservierung_vorgang',
 ] as const;
 
 // ---------------------------------------------------------------------------

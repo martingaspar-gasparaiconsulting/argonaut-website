@@ -52,7 +52,8 @@ test('Paket 129: drei Ziele, Karten zeigen auf den Motor, SQL-Whitelist = Motor-
   const sql = lies('supabase-sql/p129-import-karten2.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  // Paket 130 erweitert weiter — p129 ist der Stand bis dahin (die ersten 41).
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].slice(0, 41).sort());
   assert.equal(whitelist.length, 41);
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);
   assert.doesNotMatch(sql, /\b(drop table|delete from|truncate|drop policy|update public)\b/i);
