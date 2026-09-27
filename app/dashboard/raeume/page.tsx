@@ -18,6 +18,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
 import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const MODUL = "raum_ressource";
 
@@ -58,6 +59,8 @@ export default function RaeumeSeite() {
   const [belegungen, setBelegungen] = useState<Belegung[]>([]);
   const [kurse, setKurse] = useState<{ id: string; label: string }[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  // Paket 131: neue Raeume und Belegungen gehoeren dem Betrieb (beim Mitarbeiter dem Chef).
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [nurKommend, setNurKommend] = useState(true);
   const [hinweis, setHinweis] = useState<string | null>(null);
@@ -78,7 +81,12 @@ export default function RaeumeSeite() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const eigene = userData.user?.id ?? null;
+      setUserId(eigene);
+      if (eigene) {
+        const { data: chef } = await supabase.rpc("mein_chef_id");
+        setBesitzer(betriebsKennung(chef, eigene));
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,8 +148,7 @@ export default function RaeumeSeite() {
     let datensatzId: string | null = rEdit;
     if (rEdit) error = (await supabase.from("raum_ressource").update(payload).eq("id", rEdit)).error;
     else {
-      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
-      const res = await supabase.from("raum_ressource").insert(ins).select("id").single();
+      const { ergebnis: res } = await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("raum_ressource").insert(d).select("id").single());
       error = res.error;
       if (res.data) datensatzId = (res.data as { id: string }).id;
     }
@@ -174,7 +181,7 @@ export default function RaeumeSeite() {
     const payload = { ressource_id: b.ressource_id, titel: b.titel.trim(), von: vonISO, bis: bisISO, verantwortlich: b.verantwortlich.trim() || null, teilnehmer: zahl(b.teilnehmer), kurs_id: b.kurs_id || null, status: b.status, notiz: null };
     let error = null as { message: string } | null;
     if (bEdit) error = (await supabase.from("raum_belegung").update(payload).eq("id", bEdit)).error;
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("raum_belegung").insert(ins)).error; }
+    else { error = (await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("raum_belegung").insert(d))).ergebnis.error; }
     setBusy(false);
     if (error) {
       const doppelt = /23P01|exclusion|overlap|conflicting/i.test(error.message);
@@ -227,10 +234,10 @@ export default function RaeumeSeite() {
         standort: val("standort") || null, ausstattung: val("ausstattung") || null,
         buchbar: val("buchbar").toLowerCase() !== "nein" && val("buchbar") !== "0",
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
-    const { error } = await supabase.from("raum_ressource").insert(rows);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(rows, besitzer, userId, (d) => supabase.from("raum_ressource").insert(d));
     if (error) { window.alert("Import fehlgeschlagen: " + error.message); return; }
     setHinweis(`${rows.length} Ressource(n) importiert.`); await ladeAlles();
   }

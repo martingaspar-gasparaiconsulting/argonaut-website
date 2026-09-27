@@ -22,6 +22,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from "@/lib/eigeneFelder";
 import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const MODUL = "hk_zimmer";
 
@@ -68,6 +69,8 @@ export default function HousekeepingSeite() {
   const [zimmer, setZimmer] = useState<Zimmer[]>([]);
   const [gerichte, setGerichte] = useState<Gericht[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  // Paket 131: neue Zimmer und Gerichte gehoeren dem Betrieb (beim Mitarbeiter dem Chef).
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [hinweis, setHinweis] = useState<string | null>(null);
 
@@ -86,7 +89,12 @@ export default function HousekeepingSeite() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const eigene = userData.user?.id ?? null;
+      setUserId(eigene);
+      if (eigene) {
+        const { data: chef } = await supabase.rpc("mein_chef_id");
+        setBesitzer(betriebsKennung(chef, eigene));
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,8 +149,7 @@ export default function HousekeepingSeite() {
       error = (await supabase.from("hk_zimmer").update(payload).eq("id", zEdit)).error;
       if (!error) { try { await speichereWerte(MODUL, zEdit, userId, nmExtra); } catch { /* eigene Felder optional */ } }
     } else {
-      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
-      const { data: neu, error: insErr } = await supabase.from("hk_zimmer").insert(ins).select("id").single();
+      const { ergebnis: { data: neu, error: insErr } } = await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("hk_zimmer").insert(d).select("id").single());
       error = insErr;
       if (!error && neu) { try { await speichereWerte(MODUL, (neu as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ } }
     }
@@ -189,7 +196,7 @@ export default function HousekeepingSeite() {
     const payload = { name: gForm.name.trim(), kategorie: gForm.kategorie || "Sonstiges", preis: zahl(gForm.preis), beschreibung: gForm.beschreibung.trim() || null, allergene: gForm.allergene.join(";") || null, zusatzstoffe: gForm.zusatzstoffe.join(";") || null, verfuegbar: gForm.verfuegbar, hervorgehoben: gForm.hervorgehoben, reihenfolge: zahl(gForm.reihenfolge) ?? 0 };
     let error = null as { message: string } | null;
     if (gEdit) { error = (await supabase.from("menu_gericht").update(payload).eq("id", gEdit)).error; }
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("menu_gericht").insert(ins)).error; }
+    else { error = (await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("menu_gericht").insert(d))).ergebnis.error; }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
     setGModal(false); await ladeAlles();
@@ -243,10 +250,10 @@ export default function HousekeepingSeite() {
         verfuegbar: val("verfuegbar").toLowerCase() !== "nein" && val("verfuegbar") !== "0", hervorgehoben: val("hervorgehoben").toLowerCase() === "ja" || val("hervorgehoben") === "1",
         reihenfolge: zahl(val("reihenfolge")) ?? 0,
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
-    const { error } = await supabase.from("menu_gericht").insert(rows);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(rows, besitzer, userId, (d) => supabase.from("menu_gericht").insert(d));
     if (error) { window.alert("Import fehlgeschlagen: " + error.message); return; }
     setHinweis(`${rows.length} Gericht(e) importiert.`); await ladeAlles();
   }

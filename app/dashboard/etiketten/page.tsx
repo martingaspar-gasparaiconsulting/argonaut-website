@@ -20,6 +20,7 @@ import {
 } from "@/lib/etiketten";
 import { etikettPdf } from "@/lib/etikettPdf";
 import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-2 · Etiketten & Kennzeichnung nach LMIV (EU 1169/2011)
@@ -104,6 +105,8 @@ export default function EtikettenSeite() {
   const [produkte, setProdukte] = useState<Produkt[]>([]);
   const [artikel, setArtikel] = useState<ArtikelKurz[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  // Paket 131: neue Etiketten gehoeren dem Betrieb (beim Mitarbeiter dem Chef).
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [suche, setSuche] = useState("");
   const [artFilter, setArtFilter] = useState("");
@@ -118,7 +121,12 @@ export default function EtikettenSeite() {
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
+      const eigene = userData.user?.id ?? null;
+      setUserId(eigene);
+      if (eigene) {
+        const { data: chef } = await supabase.rpc("mein_chef_id");
+        setBesitzer(betriebsKennung(chef, eigene));
+      }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,9 +208,8 @@ export default function EtikettenSeite() {
       const res = await supabase.from("etikett_produkt").update(payload).eq("id", editId);
       error = res.error;
     } else {
-      const insertObj = userId ? { ...payload, owner_user_id: userId } : payload;
-      const res = await supabase.from("etikett_produkt").insert(insertObj);
-      error = res.error;
+      const { ergebnis } = await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("etikett_produkt").insert(d));
+      error = ergebnis.error;
     }
     setSpeichern(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
@@ -272,10 +279,10 @@ export default function EtikettenSeite() {
         kohlenhydrate: znum("kohlenhydrate"), zucker: znum("zucker"), eiweiss: znum("eiweiss"), salz: znum("salz"),
         naehrwert_basis: "100 g", status: "aktiv",
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
-    const { error } = await supabase.from("etikett_produkt").insert(rows);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(rows, besitzer, userId, (d) => supabase.from("etikett_produkt").insert(d));
     if (error) { window.alert("Import fehlgeschlagen: " + error.message); return; }
     setHinweis(`${rows.length} Etikett(en) importiert.`); await ladeAlles();
   }
