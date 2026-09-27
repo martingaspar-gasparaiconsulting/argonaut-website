@@ -524,7 +524,7 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag' | 'nachschlagMit';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag' | 'nachschlagMit' | 'rechnen';
   /** Paket 129: bei virtuell 'nachschlagMit' — Spalte des uebergeordneten Eintrags (Rezept-Typ, Tour-Datum). */
   elternSpalte?: string;
   /**
@@ -2168,6 +2168,46 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notizen', 'auflagen'] },
     ],
   },
+  // Paket 138: GEMEINSAM freigegeben 27.09.2026 — Gutscheine mit Restwert,
+  // keine Einloesungen, keine Rechnung.
+  {
+    key: 'gutscheine',
+    label: 'Gutscheine & Karten',
+    icon: '🎁',
+    tabelle: 'gutschein',
+    beschreibung: 'Ausgegebene Wertgutscheine, Mehrfachkarten und Leistungsgutscheine. Übernommen wird der RESTWERT (bzw. die restlichen Nutzungen) — '
+      + 'Ursprungswert und Eingelöstes stehen in der Notiz. Es werden keine Einlösungen und keine Rechnungen angelegt.',
+    schluesselFelder: ['code'],
+    eigeneFelderModul: 'gutschein',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['empfaenger_name'] },
+    ergebnisHref: '/dashboard/gutscheine',
+    listen: [
+      { feld: 'art', label: 'Art', standard: 'wert', textFeld: 'notiz', liste: liste(['wert', 'mehrfachkarte', 'leistung'], { wertgutschein: 'wert', geldgutschein: 'wert', guthaben: 'wert', gutschein: 'wert', 'gift card': 'wert', giftcard: 'wert', 'voucher': 'wert', mehrfach: 'mehrfachkarte', '10er karte': 'mehrfachkarte', zehnerkarte: 'mehrfachkarte', '5er karte': 'mehrfachkarte', punktekarte: 'mehrfachkarte', abo: 'mehrfachkarte', paket: 'mehrfachkarte', leistungsgutschein: 'leistung', sachgutschein: 'leistung', behandlung: 'leistung', erlebnis: 'leistung' }) },
+      { feld: 'mwst_typ', label: 'Gutschein-Typ (USt)', standard: 'mehrzweck', textFeld: 'notiz', liste: liste(['mehrzweck', 'einzweck'], { mehrzweckgutschein: 'mehrzweck', einzweckgutschein: 'einzweck', mzg: 'mehrzweck', ezg: 'einzweck' }) },
+      { feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv', 'eingeloest', 'verfallen', 'storniert'], { offen: 'aktiv', gueltig: 'aktiv', 'teilweise eingeloest': 'aktiv', teileingeloest: 'aktiv', active: 'aktiv', eingelöst: 'eingeloest', verbraucht: 'eingeloest', redeemed: 'eingeloest', abgelaufen: 'verfallen', expired: 'verfallen', storno: 'storniert', cancelled: 'storniert', canceled: 'storniert' }) },
+    ],
+    felder: [
+      { key: 'code', label: 'Gutschein-Code', typ: 'text', pflicht: true, alias: ['code', 'gutscheincode', 'gutscheinnummer', 'gutschein nr', 'nummer', 'nr', 'voucher code', 'kartennummer', 'seriennummer'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'wert', hinweis: 'wert · mehrfachkarte · leistung', alias: ['art', 'typ', 'gutscheinart', 'kartenart'] },
+      { key: 'wert', label: 'Ursprungswert (€)', typ: 'zahl', alias: ['wert', 'ursprungswert', 'betrag', 'nennwert', 'ausgabewert', 'kartenpreis', 'preis', 'value'] },
+      { key: 'restwert', label: 'Restwert (€)', typ: 'zahl', virtuell: 'rechnen', hinweis: 'Wird der Startwert in ARGONAUT.', alias: ['restwert', 'restguthaben', 'guthaben', 'saldo', 'offen', 'offener betrag', 'balance', 'remaining'] },
+      { key: 'eingeloest_betrag', label: 'Bereits eingelöst (€)', typ: 'zahl', virtuell: 'rechnen', alias: ['eingeloest', 'eingelöst', 'eingeloester betrag', 'eingelöster betrag', 'verbraucht', 'redeemed'] },
+      { key: 'nutzungen_gesamt', label: 'Nutzungen gesamt', typ: 'zahl', alias: ['nutzungen', 'nutzungen gesamt', 'anzahl nutzungen', 'besuche', 'einheiten', 'anzahl'] },
+      { key: 'nutzungen_genutzt', label: 'Nutzungen genutzt', typ: 'zahl', virtuell: 'rechnen', alias: ['genutzt', 'nutzungen genutzt', 'verbrauchte nutzungen', 'besuche genutzt'] },
+      { key: 'nutzungen_rest', label: 'Nutzungen übrig', typ: 'zahl', virtuell: 'rechnen', alias: ['rest', 'restnutzungen', 'nutzungen uebrig', 'nutzungen übrig', 'verbleibend', 'offene nutzungen'] },
+      { key: 'mwst_typ', label: 'Gutschein-Typ (USt)', typ: 'text', standard: 'mehrzweck', hinweis: 'mehrzweck · einzweck', alias: ['mwst typ', 'ust typ', 'gutscheintyp', 'einzweck mehrzweck'] },
+      { key: 'mwst_satz', label: 'MwSt-Satz', typ: 'zahl', standard: 19, alias: ['mwst', 'mwst satz', 'ust', 'steuersatz'] },
+      { key: 'leistung_text', label: 'Leistung', typ: 'text', alias: ['leistung', 'leistungstext', 'inhalt', 'behandlung'] },
+      { key: 'kunde_nummer', label: 'Kundennummer (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true, alias: ['kundennummer', 'kundennr', 'kunden nr', 'kd nr'] },
+      { key: 'empfaenger_name', label: 'Empfänger', typ: 'text', alias: ['empfaenger', 'empfänger', 'beschenkter', 'inhaber', 'kunde', 'kaeufer', 'käufer', 'name'] },
+      { key: 'anlass', label: 'Anlass', typ: 'text', alias: ['anlass', 'grund', 'aktion'] },
+      { key: 'ausgestellt_am', label: 'Ausgestellt am', typ: 'datum', alias: ['ausgestellt am', 'ausgestellt', 'ausgabedatum', 'verkauft am', 'kaufdatum', 'datum'] },
+      { key: 'gueltig_bis', label: 'Gültig bis', typ: 'datum', alias: ['gueltig bis', 'gültig bis', 'ablauf', 'ablaufdatum', 'verfall', 'verfällt', 'expires'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · eingeloest · verfallen · storniert', alias: ['status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2519,6 +2559,25 @@ Object.assign(BEISPIELE, {
     verguetung: '450,00|1.200,00|180,00',
     notiz: '||Nur mit Bildnachweis',
   },
+  gutscheine: {
+    code: 'GS-2025-A7K2P|GS-2026-M3Q9X|KARTE-0042',
+    art: 'Wertgutschein|Wertgutschein|10er-Karte',
+    wert: '50,00|100,00|90,00',
+    restwert: '20,00||',
+    eingeloest_betrag: '|0,00|',
+    nutzungen_gesamt: '||10',
+    nutzungen_genutzt: '||4',
+    nutzungen_rest: '||',
+    mwst_typ: 'mehrzweck|mehrzweck|einzweck',
+    mwst_satz: '19|19|19',
+    leistung_text: '||Massage 30 Minuten',
+    empfaenger_name: 'Anna Berger|Muster GmbH|Thomas Klein',
+    anlass: 'Geburtstag|Weihnachten|',
+    ausgestellt_am: '12.12.2025|01.09.2026|15.03.2026',
+    gueltig_bis: '31.12.2028|31.12.2029|31.12.2029',
+    status: 'aktiv|aktiv|aktiv',
+    notiz: '||',
+  },
   bestand_filiale: {
     artikelnummer: 'L-1001|L-1001|L-1002',
     ean: '2047110000009|2047110000009|',
@@ -2843,6 +2902,8 @@ export function pruefeZeile(
 
   virtuelleFelderAufloesen(ziel, werte);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
+  // Paket 138: Rechenfelder sind nur Zwischenwerte — nie in die Datenbank.
+  for (const f of ziel.felder) if (f.virtuell === 'rechnen') delete werte[f.key];
   // Paket 134: Grenzen der Datenbank (check-Regeln) vorher pruefen
   for (const g of ziel.grenzen ?? []) {
     const v = werte[g.feld];
@@ -2956,6 +3017,8 @@ function nachbereiten(
   if (zielKey === 'haccp') haccpNachbereiten(werte, nummer, warnungen);
   // Paket 135
   if (zielKey === 'nutzungsrechte') nutzungNachbereiten(werte, nummer, warnungen);
+  // Paket 138
+  if (zielKey === 'gutscheine') gutscheinNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3313,6 +3376,73 @@ function nutzungNachbereiten(werte: Record<string, unknown>, nummer: number, war
   }
 }
 
+/**
+ * Paket 138: Gutscheine mit RESTWERT uebernehmen (Martin-Freigabe 27.09.2026).
+ * Der Restwert wird der Startwert in ARGONAUT; Ursprungswert und schon
+ * Eingeloestes stehen in der Notiz. Es werden KEINE Einloesungen und keine
+ * Rechnungen angelegt. Mehrfachkarten: Restnutzungen werden die Nutzungen.
+ */
+function gutscheinNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const zahl = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const eur = (n: number) => `${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+  const merke = (zeile: string) => {
+    werte.notiz = typeof werte.notiz === 'string' && werte.notiz.trim() ? `${werte.notiz.trim()}\n${zeile}` : zeile;
+  };
+  const wert = zahl(werte.wert);
+  if (werte.art === 'mehrfachkarte') {
+    const gesamt = zahl(werte.nutzungen_gesamt);
+    const genutzt = zahl(werte.nutzungen_genutzt);
+    let rest = zahl(werte.nutzungen_rest);
+    if (rest === null && gesamt !== null && genutzt !== null) rest = gesamt - genutzt;
+    if (rest !== null) {
+      rest = Math.round(rest);
+      if (rest < 0) {
+        warnungen.push({ zeile: nummer, feld: 'Restnutzungen', meldung: `Restnutzungen unter null (${rest}) — mit 0 übernommen.` });
+        rest = 0;
+      }
+      if (gesamt === null || rest !== Math.round(gesamt)) {
+        merke(`Im Altsystem: ${gesamt !== null ? `${Math.round(gesamt)} Nutzungen` : 'Nutzungen unbekannt'}${genutzt !== null ? `, davon ${Math.round(genutzt)} genutzt` : ''} — übernommen mit ${rest} verbleibenden Nutzungen.`);
+      }
+      werte.nutzungen_gesamt = rest;
+      if (rest === 0 && (werte.status === undefined || werte.status === 'aktiv')) werte.status = 'eingeloest';
+    }
+    if (werte.nutzungen_gesamt === undefined) {
+      warnungen.push({ zeile: nummer, feld: 'Nutzungen', meldung: 'Mehrfachkarte ohne Anzahl Nutzungen — bitte nach dem Import ergänzen.' });
+    }
+  } else {
+    const eingeloest = zahl(werte.eingeloest_betrag);
+    let rest = zahl(werte.restwert);
+    if (rest === null && wert !== null && eingeloest !== null) rest = wert - eingeloest;
+    if (rest !== null) {
+      rest = Math.round(rest * 100) / 100;
+      if (rest < 0) {
+        warnungen.push({ zeile: nummer, feld: 'Restwert', meldung: `Restwert unter null (${eur(rest)}) — mit 0,00 € übernommen, bitte im Altsystem prüfen.` });
+        rest = 0;
+      }
+      if (wert !== null && rest > wert + 0.005) {
+        warnungen.push({ zeile: nummer, feld: 'Restwert', meldung: `Restwert (${eur(rest)}) ist höher als der Ursprungswert (${eur(wert)}) — der Restwert gilt, bitte prüfen.` });
+      }
+      if (wert === null || Math.abs(rest - wert) > 0.005) {
+        merke(`Im Altsystem: Ursprungswert ${wert !== null ? eur(wert) : 'unbekannt'}${eingeloest !== null ? `, bereits eingelöst ${eur(eingeloest)}` : ''} — übernommen mit Restwert ${eur(rest)}.`);
+      }
+      werte.wert = rest;
+      if (rest === 0 && (werte.status === undefined || werte.status === 'aktiv')) werte.status = 'eingeloest';
+    }
+    if (werte.wert === undefined) {
+      warnungen.push({ zeile: nummer, feld: 'Wert', meldung: 'Kein Wert angegeben — mit 0,00 € übernommen, bitte ergänzen.' });
+      werte.wert = 0;
+    }
+  }
+  if (!werte.ausgestellt_am) {
+    const d = new Date();
+    werte.ausgestellt_am = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    warnungen.push({ zeile: nummer, feld: 'Ausgestellt am', meldung: 'Kein Ausstellungsdatum — heute angenommen. Die gesetzliche Frist (3 Jahre ab Jahresende) rechnet ab diesem Jahr.' });
+  }
+  if (typeof werte.gueltig_bis === 'string' && typeof werte.ausgestellt_am === 'string' && werte.gueltig_bis < werte.ausgestellt_am) {
+    warnungen.push({ zeile: nummer, feld: 'Gültig bis', meldung: 'Gültig bis liegt vor dem Ausstellungsdatum — bitte prüfen.' });
+  }
+}
+
 /** Paket 132: So heisst der Chef in Plantafeln — Einsatz der Geschaeftsleitung statt eines Mitarbeiters. */
 const CHEF_NAMEN = new Set(['chef', 'chefin', 'inhaber', 'inhaberin', 'geschaeftsfuehrer', 'geschaeftsfuehrerin', 'geschaeftsleitung', 'gf', 'meister', 'meisterin', 'ich']);
 
@@ -3482,7 +3612,8 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
 
   // 'preis' rechnet nachbereiten() um (Stundensatz oder Einheitspreis) und entfernt es dort.
   // Paket 127: 'position' bleibt — gruppiereBestellungen() holt die Positionen heraus.
-  for (const f of virtuelle) if (f.virtuell !== 'preis' && f.virtuell !== 'position') delete werte[f.key];
+  // Paket 138: 'rechnen' bleibt bis nach nachbereiten() (Restwert, Restnutzungen) und faellt dann weg.
+  for (const f of virtuelle) if (f.virtuell !== 'preis' && f.virtuell !== 'position' && f.virtuell !== 'rechnen') delete werte[f.key];
   // Filterfelder sind nur zum Aussortieren da (siehe ablehnenWenn).
 }
 

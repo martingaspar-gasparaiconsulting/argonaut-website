@@ -67,6 +67,9 @@ export const MOTOR_TABELLEN = [
   'schlag_psm', 'immo_einheiten', 'immo_mietvertraege', 'expose_interessent', 'bildung_anmeldungen', 'verein_ehrenamt',
   // Paket 135
   'agentur_nutzungsrecht',
+  // Paket 138: GEMEINSAM-Block (freigegeben 27.09.2026) — Katalog fuer alle neun Punkte auf einmal
+  'gutschein', 'foerder_vorhaben', 'mitglieder', 'spende', 'angebote', 'angebot_positionen',
+  'projektleistungen', 'immo_kaution', 'immo_zahlungen', 'shop_bestellungen',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -183,7 +186,7 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'kunde_verweis') { (basis.kundeVerweis && vorhanden.has(basis.kundeVerweis.spalte) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
-    if (f.virtuell === 'filter') { felder.push(f); continue; }
+    if (f.virtuell === 'filter' || f.virtuell === 'rechnen') { felder.push(f); continue; }
     if (f.virtuell === 'nachschlag') {
       const n = basis.nachschlag;
       (n && (vorhanden.has(n.spalte) || (n.textFeld && nutzbar(n.textFeld))) ? felder : fehlend).push(f);

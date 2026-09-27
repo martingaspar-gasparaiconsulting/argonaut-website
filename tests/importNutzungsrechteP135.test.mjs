@@ -32,7 +32,7 @@ test('Paket 135: Karte auf dem Motor, SQL-Whitelist = Motor-Tabellen (62)', () =
   const sql = lies('supabase-sql/p135-import-nutzungsrechte.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].slice(0, 62).sort(), 'Paket 138 haengt weitere an');
   assert.equal(whitelist.length, 62);
   assert.doesNotMatch(sql, /\b(drop table|delete from|truncate|drop policy|update public)\b/i);
 });

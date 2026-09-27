@@ -68,7 +68,8 @@ test('Immobilien: Einheiten und Mietvertraege nur Chef, keine Geldbuchungen', ()
   assert.equal(zielDef('mietvertraege').nurChef, true);
   assert.equal(zielDef('mietvertraege').nachschlag.anlegenMit.status, 'vermietet');
   // Keine Zahlungs-/Kautionstabellen im Motor (GEMEINSAM)
-  for (const t of ['immo_kaution', 'immo_zahlungen', 'markt_verkauf', 'shop_bestellungen']) assert.ok(!MOTOR_TABELLEN.includes(t), t);
+  // Paket 138: Kautionen, Mietzahlungen und Shop-Bestellungen hat Martin am 27.09. GEMEINSAM freigegeben (eigene Ziele, ohne Buchungen). Marktverkaeufe bleiben draussen.
+  assert.ok(!MOTOR_TABELLEN.includes('markt_verkauf'));
   const { b, z } = datei('Wohnung;Mieter;Einzug;Auszug;Grundmiete;NK;Mietsicherheit;Status;IBAN\r\n'
     + 'Seestraße 5 · EG links;Familie Kaya;01.04.2021;;720,00;180;2.160;laufend;DE02120300000000202051\r\n'
     + 'Neubau · WE 7;Herr Ott;01.10.2026;;900;210;;gekündigt;\r\n', 'mietvertraege');
